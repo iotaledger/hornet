@@ -181,28 +181,30 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			inputOutputs = append(inputOutputs, output)
 		}
 
-		// Dust validation
-		dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, iotago.MaxDustOutputsOnAddress, func(addr iotago.Address) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
-			return s.UTXO().ReadDustForAddress(addr, wfConf.dustAllowanceDiff)
-		})
+		if conflict == storage.ConflictNone {
+			// Dust validation
+			dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, iotago.MaxDustOutputsOnAddress, func(addr iotago.Address) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
+				return s.UTXO().ReadDustForAddress(addr, wfConf.dustAllowanceDiff)
+			})
 
-		// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
-		mapping, err := inputOutputs.InputToOutputMapping()
-		if err != nil {
-			return err
-		}
-		if err := transaction.SemanticallyValidate(mapping, dustValidation); err != nil {
+			// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
+			mapping, err := inputOutputs.InputToOutputMapping()
+			if err != nil {
+				return err
+			}
+			if err := transaction.SemanticallyValidate(mapping, dustValidation); err != nil {
 
-			if errors.Is(err, iotago.ErrMissingUTXO) {
-				conflict = storage.ConflictInputUTXONotFound
-			} else if errors.Is(err, iotago.ErrInputOutputSumMismatch) {
-				conflict = storage.ConflictInputOutputSumMismatch
-			} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
-				conflict = storage.ConflictInvalidSignature
-			} else if errors.Is(err, iotago.ErrInvalidDustAllowance) {
-				conflict = storage.ConflictInvalidDustAllowance
-			} else {
-				conflict = storage.ConflictSemanticValidationFailed
+				if errors.Is(err, iotago.ErrMissingUTXO) {
+					conflict = storage.ConflictInputUTXONotFound
+				} else if errors.Is(err, iotago.ErrInputOutputSumMismatch) {
+					conflict = storage.ConflictInputOutputSumMismatch
+				} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
+					conflict = storage.ConflictInvalidSignature
+				} else if errors.Is(err, iotago.ErrInvalidDustAllowance) {
+					conflict = storage.ConflictInvalidDustAllowance
+				} else {
+					conflict = storage.ConflictSemanticValidationFailed
+				}
 			}
 		}
 

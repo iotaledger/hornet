@@ -168,6 +168,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		Store().
 		BookOnWallets()
 
+	seed4WalletOutput := messageE.GeneratedUTXO()
+
 	seed2Wallet.PrintStatus()
 	seed4Wallet.PrintStatus()
 
@@ -186,6 +188,69 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te.AssertWalletBalance(seed2Wallet, 1_500_000)
 	te.AssertWalletBalance(seed3Wallet, 0)
 	te.AssertWalletBalance(seed4Wallet, 1_500_000)
+
+	// Invalid transfer from seed3 (0) to seed2 (100_000) (already spent (genesis))
+	messageF := te.NewMessageBuilder("F").
+		Parents(hornet.MessageIDs{te.Milestones[3].GetMilestone().MessageID, messageE.StoredMessageID()}).
+		FromWallet(seed3Wallet).
+		ToWallet(seed2Wallet).
+		Amount(100_000).
+		UsingOutput(te.GenesisOutput).
+		Build().
+		Store()
+
+	// Confirming milestone at message F
+	_, confStats = te.IssueAndConfirmMilestoneOnTip(messageF.StoredMessageID(), true)
+	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 0, confStats.MessagesIncludedWithTransactions)
+	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify the messages have the expected conflict reason
+	te.AssertMessageConflictReason(messageF.StoredMessageID(), storage.ConflictInputUTXOAlreadySpent)
+
+	// Verify balances
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
+	te.AssertWalletBalance(seed2Wallet, 1_500_000)
+	te.AssertWalletBalance(seed3Wallet, 0)
+	te.AssertWalletBalance(seed4Wallet, 1_500_000)
+
+	// Valid transfer from seed4 to seed3 (1_500_000)
+	messageG := te.NewMessageBuilder("G").
+		Parents(hornet.MessageIDs{te.Milestones[4].GetMilestone().MessageID, messageF.StoredMessageID()}).
+		FromWallet(seed4Wallet).
+		ToWallet(seed3Wallet).
+		Amount(1_500_000).
+		UsingOutput(seed4WalletOutput).
+		Build().
+		Store().
+		BookOnWallets()
+
+	// Valid transfer from seed4 to seed2 (1_500_000) (double spend -> already spent)
+	messageH := te.NewMessageBuilder("H").
+		Parents(hornet.MessageIDs{messageG.StoredMessageID()}).
+		FromWallet(seed4Wallet).
+		ToWallet(seed2Wallet).
+		Amount(1_500_000).
+		UsingOutput(seed4WalletOutput).
+		Build().
+		Store()
+
+	// Confirming milestone at message H
+	_, confStats = te.IssueAndConfirmMilestoneOnTip(messageH.StoredMessageID(), true)
+	require.Equal(t, 2+1, confStats.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
+	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify the messages have the expected conflict reason
+	te.AssertMessageConflictReason(messageH.StoredMessageID(), storage.ConflictInputUTXOAlreadySpentInThisMilestone)
+
+	// Verify balances
+	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
+	te.AssertWalletBalance(seed2Wallet, 1_500_000)
+	te.AssertWalletBalance(seed3Wallet, 1_500_000)
+	te.AssertWalletBalance(seed4Wallet, 0)
 }
 
 func TestWhiteFlagWithDust(t *testing.T) {

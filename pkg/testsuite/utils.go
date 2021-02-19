@@ -2,6 +2,7 @@ package testsuite
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/stretchr/testify/require"
 
@@ -129,7 +130,9 @@ func (b *MessageBuilder) Build() *Message {
 	} else {
 		if b.fakeInputs {
 			// Add a fake output with enough balance to create a valid transaction
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
+			fakeInput := iotago.UTXOInputID{}
+			copy(fakeInput[:], randBytes(iotago.TransactionIDLength))
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInput, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -258,4 +261,13 @@ func (m *Message) GeneratedUTXO() *utxo.Output {
 func (m *Message) StoredMessageID() hornet.MessageID {
 	require.NotNil(m.builder.te.TestState, m.storedMessageID)
 	return m.storedMessageID
+}
+
+// returns length amount random bytes
+func randBytes(length int) []byte {
+	var b []byte
+	for i := 0; i < length; i++ {
+		b = append(b, byte(rand.Intn(256)))
+	}
+	return b
 }
