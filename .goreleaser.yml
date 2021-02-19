@@ -12,8 +12,6 @@ builds:
   # Linux AMD64
   - id: hornet-linux-amd64
     binary: hornet
-    env:
-      - CGO_ENABLED=1
     ldflags:
       - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
     flags:
