@@ -2,6 +2,8 @@ module github.com/gohornet/hornet
 
 go 1.15
 
+replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210219001101-655bfbe0823a
+
 require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
@@ -10,8 +12,8 @@ require (
 	github.com/cockroachdb/pebble v0.0.0-20210205133808-a516e691fb72
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
-	github.com/dchest/blake2b v1.0.0
 	github.com/dgraph-io/badger/v3 v3.2011.1
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v20.10.3+incompatible
 	github.com/docker/go-connections v0.4.0

@@ -36,12 +36,11 @@
   },
   "dashboard": {
     "bindAddress": "localhost:8081",
-    "dev": false,
-    "basicAuth": {
-      "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+    "auth": {
+      "sessionTimeoutInMinutes": 4320,
+      "username": "admin",
+      "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   },
   "db": {
@@ -66,7 +65,7 @@
     "delay": 60480
   },
   "protocol": {
-    "networkID": "testnet4",
+    "networkID": "testnet5",
     "bech32HRP": "atoi",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,

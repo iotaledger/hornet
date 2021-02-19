@@ -103,7 +103,9 @@ func configure() {
 		return
 	}
 
-	deps.Echo.GET(RouteSpammer, func(c echo.Context) error {
+	g := deps.Echo.Group(RouteSpammer)
+
+	g.GET("/", func(c echo.Context) error {
 		resp, err := handleSpammerCommand(c)
 		if err != nil {
 			return err

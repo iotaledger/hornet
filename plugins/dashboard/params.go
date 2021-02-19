@@ -12,14 +12,14 @@ const (
 	CfgDashboardBindAddress = "dashboard.bindAddress"
 	// whether to run the dashboard in dev mode
 	CfgDashboardDevMode = "dashboard.dev"
-	// whether to use HTTP basic auth
-	CfgDashboardBasicAuthEnabled = "dashboard.basicAuth.enabled"
-	// the HTTP basic auth username
-	CfgDashboardBasicAuthUsername = "dashboard.basicAuth.userName"
-	// the HTTP basic auth password+salt as a scrypt hash
-	CfgDashboardBasicAuthPasswordHash = "dashboard.basicauth.passwordHash"
-	// the HTTP basic auth salt used for hashing the password
-	CfgDashboardBasicAuthPasswordSalt = "dashboard.basicauth.passwordSalt"
+	// how many minutes the auth session should last before expiring
+	CfgDashboardAuthSessionTimeout = "dashboard.auth.sessionTimeoutInMinutes"
+	// the auth username
+	CfgDashboardAuthUsername = "dashboard.auth.username"
+	// the auth password+salt as a scrypt hash
+	CfgDashboardAuthPasswordHash = "dashboard.auth.passwordHash"
+	// the auth salt used for hashing the password
+	CfgDashboardAuthPasswordSalt = "dashboard.auth.passwordSalt"
 )
 
 var params = &node.PluginParams{
@@ -29,12 +29,12 @@ var params = &node.PluginParams{
 			fs.String(CfgNodeAlias, "", "set an alias to identify a node")
 			fs.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be access from")
 			fs.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
-			fs.Bool(CfgDashboardBasicAuthEnabled, false, "whether to use HTTP basic auth")
-			fs.String(CfgDashboardBasicAuthUsername, "", "the HTTP basic auth username")
-			fs.String(CfgDashboardBasicAuthPasswordHash, "", "the HTTP basic auth username")
-			fs.String(CfgDashboardBasicAuthPasswordSalt, "", "the HTTP basic auth password+salt as a scrypt hash")
+			fs.Int(CfgDashboardAuthSessionTimeout, 4320, "how many minutes the auth session should last before expiring")
+			fs.String(CfgDashboardAuthUsername, "admin", "the auth username")
+			fs.String(CfgDashboardAuthPasswordHash, "0000000000000000000000000000000000000000000000000000000000000000", "the auth username")
+			fs.String(CfgDashboardAuthPasswordSalt, "0000000000000000000000000000000000000000000000000000000000000000", "the auth password+salt as a scrypt hash")
 			return fs
 		}(),
 	},
-	Masked: []string{CfgDashboardBasicAuthPasswordHash, CfgDashboardBasicAuthPasswordSalt},
+	Masked: []string{CfgDashboardAuthPasswordHash, CfgDashboardAuthPasswordSalt},
 }

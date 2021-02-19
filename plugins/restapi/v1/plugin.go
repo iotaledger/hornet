@@ -329,7 +329,7 @@ func configure() {
 			return err
 		}
 
-		return c.NoContent(http.StatusOK)
+		return c.NoContent(http.StatusNoContent)
 	})
 
 	routeGroup.GET(RoutePeers, func(c echo.Context) error {
