@@ -1,5 +1,5 @@
 # Documentation Area
-Everything related to Hornet.
+Everything related to HORNET.
 
 ## Run locally
 You can run a local server to run the documentation page.
