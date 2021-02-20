@@ -44,3 +44,6 @@ integration-tests/logs/*.profile
 
 # coordinator files
 coordinator.state
+
+# Docs
+book
