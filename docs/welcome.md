@@ -2,4 +2,6 @@
 
 > The IOTA community node
 
-<img src="https://raw.githubusercontent.com/gohornet/logo/master/HORNET_logo.svg?sanitize=true">
+![](./assets/HORNET_logo.svg)
+
+{{ #include ../README.md:6: }}
