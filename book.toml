@@ -3,6 +3,6 @@ authors = [""]
 language = "en"
 multilingual = false
 src = "docs"
-title = "Hornet Docs"
+title = "HORNET Docs"
 [output.html]
 theme = "src/theme"
