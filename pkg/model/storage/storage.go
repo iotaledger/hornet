@@ -121,8 +121,8 @@ func (s *Storage) configureStorages(store kvstore.KVStore, caches *profile.Cache
 func (s *Storage) FlushStorages() {
 	s.FlushMilestoneStorage()
 	s.FlushMessagesStorage()
-	s.FlushMessagesStorage()
 	s.FlushChildrenStorage()
+	s.FlushIndexationStorage()
 	s.FlushUnreferencedMessagesStorage()
 }
 
@@ -130,8 +130,8 @@ func (s *Storage) ShutdownStorages() {
 
 	s.ShutdownMilestoneStorage()
 	s.ShutdownMessagesStorage()
-	s.ShutdownMessagesStorage()
 	s.ShutdownChildrenStorage()
+	s.ShutdownIndexationStorage()
 	s.ShutdownUnreferencedMessagesStorage()
 }
 

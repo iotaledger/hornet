@@ -4,7 +4,8 @@ import "github.com/gohornet/hornet/pkg/profile"
 
 var TestProfileCaches = &profile.Caches{
 	Addresses: &profile.CacheOpts{
-		CacheTimeMs: 200,
+		CacheTimeMs:                200,
+		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
 			Enabled:                false,
 			MaxConsumersPerObject:  20,
@@ -12,7 +13,8 @@ var TestProfileCaches = &profile.Caches{
 		},
 	},
 	Children: &profile.CacheOpts{
-		CacheTimeMs: 5000,
+		CacheTimeMs:                5000,
+		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
 			Enabled:                false,
 			MaxConsumersPerObject:  20,
@@ -20,7 +22,8 @@ var TestProfileCaches = &profile.Caches{
 		},
 	},
 	Indexations: &profile.CacheOpts{
-		CacheTimeMs: 200,
+		CacheTimeMs:                200,
+		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
 			Enabled:                false,
 			MaxConsumersPerObject:  20,
@@ -28,7 +31,8 @@ var TestProfileCaches = &profile.Caches{
 		},
 	},
 	Milestones: &profile.CacheOpts{
-		CacheTimeMs: 2500,
+		CacheTimeMs:                2500,
+		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
 			Enabled:                false,
 			MaxConsumersPerObject:  20,
@@ -36,7 +40,8 @@ var TestProfileCaches = &profile.Caches{
 		},
 	},
 	Messages: &profile.CacheOpts{
-		CacheTimeMs: 5000,
+		CacheTimeMs:                5000,
+		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
 			Enabled:                false,
 			MaxConsumersPerObject:  20,
@@ -44,7 +49,8 @@ var TestProfileCaches = &profile.Caches{
 		},
 	},
 	UnreferencedMessages: &profile.CacheOpts{
-		CacheTimeMs: 100,
+		CacheTimeMs:                100,
+		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
 			Enabled:                false,
 			MaxConsumersPerObject:  20,
@@ -52,7 +58,8 @@ var TestProfileCaches = &profile.Caches{
 		},
 	},
 	IncomingMessagesFilter: &profile.CacheOpts{
-		CacheTimeMs: 2500,
+		CacheTimeMs:                2500,
+		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
 			Enabled:                false,
 			MaxConsumersPerObject:  20,

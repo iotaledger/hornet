@@ -51,10 +51,11 @@ func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, pe
 		func(key []byte, data []byte) (objectstorage.StorableObject, error) {
 			return newWorkUnit(key, serverMetrics), nil
 		},
-		objectstorage.CacheTime(time.Duration(wuCacheOpts.CacheTimeMs)),
+		objectstorage.CacheTime(time.Duration(wuCacheOpts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(false),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(false),
+		objectstorage.ReleaseExecutorWorkerCount(wuCacheOpts.ReleaseExecutorWorkerCount),
 		objectstorage.LeakDetectionEnabled(wuCacheOpts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: wuCacheOpts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -129,6 +130,7 @@ func (proc *MessageProcessor) Run(shutdownSignal <-chan struct{}) {
 	proc.wp.Start()
 	<-shutdownSignal
 	proc.wp.StopAndWait()
+	proc.workUnits.Shutdown()
 }
 
 // Process submits the given message to the processor for processing.

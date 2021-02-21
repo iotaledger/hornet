@@ -42,6 +42,7 @@ func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profil
 		objectstorage.PartitionKey(IndexationIndexLength, iotago.MessageIDLength),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(true),
+		objectstorage.ReleaseExecutorWorkerCount(opts.ReleaseExecutorWorkerCount),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,

@@ -16,8 +16,9 @@ type Caches struct {
 }
 
 type CacheOpts struct {
-	CacheTimeMs          uint64             `koanf:"cacheTimeMs"`
-	LeakDetectionOptions *LeakDetectionOpts `koanf:"leakDetection"`
+	CacheTimeMs                uint64             `koanf:"cacheTimeMs"`
+	ReleaseExecutorWorkerCount int                `koanf:"releaseExecutorWorkerCount"`
+	LeakDetectionOptions       *LeakDetectionOpts `koanf:"leakDetection"`
 }
 
 type LeakDetectionOpts struct {

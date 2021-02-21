@@ -3,6 +3,7 @@
     "caches": {
       "addresses": {
         "cacheTimeMs": 100,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
@@ -11,6 +12,7 @@
       },
       "children": {
         "cacheTimeMs": 1500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
@@ -19,6 +21,7 @@
       },
       "indexations": {
         "cacheTimeMs": 100,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
@@ -27,6 +30,7 @@
       },
       "milestones": {
         "cacheTimeMs": 500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
@@ -35,6 +39,7 @@
       },
       "messages": {
         "cacheTimeMs": 1500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
@@ -43,6 +48,7 @@
       },
       "unreferencedMessages": {
         "cacheTimeMs": 100,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
@@ -51,6 +57,7 @@
       },
       "incomingMessagesFilter": {
         "cacheTimeMs": 2000,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
@@ -63,6 +70,7 @@
     "caches": {
       "addresses": {
         "cacheTimeMs": 1500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
@@ -71,6 +79,7 @@
       },
       "children": {
         "cacheTimeMs": 1500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
@@ -79,6 +88,7 @@
       },
       "indexations": {
         "cacheTimeMs": 1500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
@@ -87,6 +97,7 @@
       },
       "milestones": {
         "cacheTimeMs": 1500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
@@ -95,6 +106,7 @@
       },
       "messages": {
         "cacheTimeMs": 1500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
@@ -103,6 +115,7 @@
       },
       "unreferencedMessages": {
         "cacheTimeMs": 1500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
@@ -111,6 +124,7 @@
       },
       "incomingMessagesFilter": {
         "cacheTimeMs": 1500,
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,

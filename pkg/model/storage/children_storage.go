@@ -48,6 +48,7 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 		objectstorage.PartitionKey(iotago.MessageIDLength, iotago.MessageIDLength),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(true),
+		objectstorage.ReleaseExecutorWorkerCount(opts.ReleaseExecutorWorkerCount),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
