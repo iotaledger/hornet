@@ -1,8 +1,11 @@
 name: Monitor Golang dependencies with Snyk
 on:
   push:
+    paths-ignore:
+      - "docs/*"
     branches:
       - develop
+
 jobs:
   security:
     runs-on: ubuntu-latest

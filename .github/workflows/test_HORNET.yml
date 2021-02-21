@@ -1,10 +1,14 @@
 name: Test HORNET
 on:
   push:
+    paths-ignore:
+      - "docs/*"
     branches:
       - master
       - develop
   pull_request:
+    paths-ignore:
+      - "docs/*"
 
 jobs:
   test:
