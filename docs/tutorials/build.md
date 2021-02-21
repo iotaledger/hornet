@@ -1,4 +1,4 @@
-This is a small tutorial on how to build HORNET if you don't want to use our [pre-built binaries](https://github.com/gohornet/hornet/releases). 
+This is a small tutorial on how to build HORNET.
 
 **Note: This tutorial assumes that you are using Ubuntu. The setup and build process may differ on other OS.**
 
@@ -37,8 +37,7 @@ This is a small tutorial on how to build HORNET if you don't want to use our [pr
   ```bash
   cd hornet
   ```
-- Checkout the branch you want to build (optional if you want to build the latest HORNET release (master)):
-  <br>As an example we want to build HORNET from the `develop` branch
+- Checkout the develop branch to build HORNET for Chrysalis (IOTA 1.5) (optional if you want to build the latest HORNET release for the current Network (IOTA 1.0), please use the `master` branch):
   ```bash
   git checkout develop
   ```
