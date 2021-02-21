@@ -46,6 +46,7 @@ func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile
 		milestoneFactory,
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
+		objectstorage.ReleaseExecutorWorkerCount(opts.ReleaseExecutorWorkerCount),
 		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{

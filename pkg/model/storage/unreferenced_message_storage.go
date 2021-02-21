@@ -45,6 +45,7 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 		objectstorage.PartitionKey(4, 32),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(true),
+		objectstorage.ReleaseExecutorWorkerCount(opts.ReleaseExecutorWorkerCount),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,

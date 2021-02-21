@@ -159,6 +159,7 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.StoreOnCreation(true),
+		objectstorage.ReleaseExecutorWorkerCount(opts.ReleaseExecutorWorkerCount),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
@@ -172,6 +173,7 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.StoreOnCreation(false),
+		objectstorage.ReleaseExecutorWorkerCount(opts.ReleaseExecutorWorkerCount),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,

@@ -120,7 +120,8 @@ var (
 	Profile8GB = &profile.Profile{
 		Caches: &profile.Caches{
 			Addresses: &profile.CacheOpts{
-				CacheTimeMs: 10000,
+				CacheTimeMs:                10000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -128,7 +129,8 @@ var (
 				},
 			},
 			Children: &profile.CacheOpts{
-				CacheTimeMs: 30000,
+				CacheTimeMs:                30000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -136,7 +138,8 @@ var (
 				},
 			},
 			Indexations: &profile.CacheOpts{
-				CacheTimeMs: 10000,
+				CacheTimeMs:                10000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -144,7 +147,8 @@ var (
 				},
 			},
 			Milestones: &profile.CacheOpts{
-				CacheTimeMs: 10000,
+				CacheTimeMs:                10000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -152,7 +156,8 @@ var (
 				},
 			},
 			Messages: &profile.CacheOpts{
-				CacheTimeMs: 30000,
+				CacheTimeMs:                30000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -160,7 +165,8 @@ var (
 				},
 			},
 			UnreferencedMessages: &profile.CacheOpts{
-				CacheTimeMs: 500,
+				CacheTimeMs:                500,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -168,7 +174,8 @@ var (
 				},
 			},
 			IncomingMessagesFilter: &profile.CacheOpts{
-				CacheTimeMs: 5000,
+				CacheTimeMs:                5000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -181,7 +188,8 @@ var (
 	Profile4GB = &profile.Profile{
 		Caches: &profile.Caches{
 			Addresses: &profile.CacheOpts{
-				CacheTimeMs: 5000,
+				CacheTimeMs:                5000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -189,7 +197,8 @@ var (
 				},
 			},
 			Children: &profile.CacheOpts{
-				CacheTimeMs: 15000,
+				CacheTimeMs:                15000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -197,7 +206,8 @@ var (
 				},
 			},
 			Indexations: &profile.CacheOpts{
-				CacheTimeMs: 5000,
+				CacheTimeMs:                5000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -205,7 +215,8 @@ var (
 				},
 			},
 			Milestones: &profile.CacheOpts{
-				CacheTimeMs: 5000,
+				CacheTimeMs:                5000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -213,7 +224,8 @@ var (
 				},
 			},
 			Messages: &profile.CacheOpts{
-				CacheTimeMs: 15000,
+				CacheTimeMs:                15000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -221,7 +233,8 @@ var (
 				},
 			},
 			UnreferencedMessages: &profile.CacheOpts{
-				CacheTimeMs: 500,
+				CacheTimeMs:                500,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -229,7 +242,8 @@ var (
 				},
 			},
 			IncomingMessagesFilter: &profile.CacheOpts{
-				CacheTimeMs: 5000,
+				CacheTimeMs:                5000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -242,7 +256,8 @@ var (
 	Profile2GB = &profile.Profile{
 		Caches: &profile.Caches{
 			Addresses: &profile.CacheOpts{
-				CacheTimeMs: 200,
+				CacheTimeMs:                200,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -250,7 +265,8 @@ var (
 				},
 			},
 			Children: &profile.CacheOpts{
-				CacheTimeMs: 5000,
+				CacheTimeMs:                5000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -258,7 +274,8 @@ var (
 				},
 			},
 			Indexations: &profile.CacheOpts{
-				CacheTimeMs: 200,
+				CacheTimeMs:                200,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -266,7 +283,8 @@ var (
 				},
 			},
 			Milestones: &profile.CacheOpts{
-				CacheTimeMs: 2500,
+				CacheTimeMs:                2500,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -274,7 +292,8 @@ var (
 				},
 			},
 			Messages: &profile.CacheOpts{
-				CacheTimeMs: 5000,
+				CacheTimeMs:                5000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -282,7 +301,8 @@ var (
 				},
 			},
 			UnreferencedMessages: &profile.CacheOpts{
-				CacheTimeMs: 100,
+				CacheTimeMs:                100,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -290,7 +310,8 @@ var (
 				},
 			},
 			IncomingMessagesFilter: &profile.CacheOpts{
-				CacheTimeMs: 2500,
+				CacheTimeMs:                2500,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -303,7 +324,8 @@ var (
 	Profile1GB = &profile.Profile{
 		Caches: &profile.Caches{
 			Addresses: &profile.CacheOpts{
-				CacheTimeMs: 100,
+				CacheTimeMs:                100,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -311,7 +333,8 @@ var (
 				},
 			},
 			Children: &profile.CacheOpts{
-				CacheTimeMs: 1500,
+				CacheTimeMs:                1500,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -319,7 +342,8 @@ var (
 				},
 			},
 			Indexations: &profile.CacheOpts{
-				CacheTimeMs: 100,
+				CacheTimeMs:                100,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -327,7 +351,8 @@ var (
 				},
 			},
 			Milestones: &profile.CacheOpts{
-				CacheTimeMs: 500,
+				CacheTimeMs:                500,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -335,7 +360,8 @@ var (
 				},
 			},
 			Messages: &profile.CacheOpts{
-				CacheTimeMs: 1500,
+				CacheTimeMs:                1500,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -343,7 +369,8 @@ var (
 				},
 			},
 			UnreferencedMessages: &profile.CacheOpts{
-				CacheTimeMs: 100,
+				CacheTimeMs:                100,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
@@ -351,7 +378,8 @@ var (
 				},
 			},
 			IncomingMessagesFilter: &profile.CacheOpts{
-				CacheTimeMs: 2000,
+				CacheTimeMs:                2000,
+				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:                false,
 					MaxConsumersPerObject:  20,
