@@ -4,7 +4,7 @@ This is a small tutorial on how to build HORNET.
 
 ### Preparations
 
-- Install Go1.14:
+- Install Go1.16:
   ```bash
      sudo add-apt-repository ppa:longsleep/golang-backports
      sudo apt update
@@ -16,15 +16,11 @@ This is a small tutorial on how to build HORNET.
   ```
   The output should be something like this:
   ```bash
-  go version go1.14 linux/amd64
+  go version go1.16 linux/amd64
   ```
 - Install git (if not already done):
   ```bash
   sudo apt install git
-  ```
-- Install `build-essential` (optional, needed for optimized PoW)
-  ```bash
-  sudo apt install build-essential
   ```
 
 ### Build HORNET
@@ -42,14 +38,10 @@ This is a small tutorial on how to build HORNET.
   git checkout develop
   ```
 - Build HORNET
-  without optimized PoW:
   ```bash
   go build
   ```
-  **or** with optimized PoW (**only available for newer x86_64 (amd64) systems**):
-  ```bash
-  go build -tags=pow_avx
-  ```
+
 - Done, now you should be able to start HORNET.
   Test, if the build was successful:
   ```bash

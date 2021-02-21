@@ -1,12 +1,14 @@
 # Summary
 
 - [Welcome](./welcome.md)
-- [Tutorials](./tutorials/README.md)
-    <!-- - [Setup HORNET](./tutorials/setup.md) -->
-    - [Build HORNET](./tutorials/build.md)
-    - [Run HORNET](./tutorials/run.md)
-    <!-- - [Run a private Tangle](./tutorials/private_tangle.md) -->
-    <!-- - [Hosting An Entry Node](./tutorials/entry_node.md) -->
+- [Tutorials](./tutorials/index.md)
+    - [IOTA 1.0](./tutorials/1.0/index.md)
+        - [Setup HORNET](./tutorials/1.0/setup.md)
+        - [Run a private Tangle](./tutorials/1.0/private_tangle.md)
+        - [Hosting An Entry Node](./tutorials/1.0/entry_node.md)
+    - [Chrysalis IOTA 1.5](./tutorials/1.5/index.md)
+        - [Build HORNET](./tutorials/1.5/build.md)
+        - [Run HORNET](./tutorials/1.5/run.md)
 - [API Reference](./api-reference.md)
 - [Troubleshooting](./troubleshooting.md)
 - [FAQ](./faq.md)
