@@ -2,7 +2,7 @@ name: Monitor Golang dependencies with Snyk
 on:
   push:
     paths-ignore:
-      - "docs/*"
+      - 'docs/**'
     branches:
       - develop
 
