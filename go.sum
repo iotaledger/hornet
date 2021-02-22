@@ -831,6 +831,8 @@ github.com/multiformats/go-varint v0.0.6 h1:gk85QWKxh3TazbLxED/NlDVv8+q+ReFJk7Y2
 github.com/multiformats/go-varint v0.0.6/go.mod h1:3Ls8CIEsrijN6+B7PbrXRPxHRPuXSrVKRY101jdMZYE=
 github.com/muxxer/hive.go v0.0.0-20210221202441-5b4af1dede83 h1:CwgJJg2alzGuPJ/QHj9McYXi6WkbFiEHrS7/d4l88Nw=
 github.com/muxxer/hive.go v0.0.0-20210221202441-5b4af1dede83/go.mod h1:vzXPZim2pTufdR4e0kH67VZW4ajcYFbrKrS1I4Flluo=
+github.com/muxxer/hive.go v0.0.0-20210222004711-d924b9529a49 h1:guAnMnM3YIpfyhJYsW11Gl+9whiFJzvb13I781wMFEs=
+github.com/muxxer/hive.go v0.0.0-20210222004711-d924b9529a49/go.mod h1:vzXPZim2pTufdR4e0kH67VZW4ajcYFbrKrS1I4Flluo=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nats-io/jwt v0.3.0/go.mod h1:fRYCDE99xlTsqUzISS1Bi75UBJ6ljOJQOAAu5VglpSg=

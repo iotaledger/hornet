@@ -143,7 +143,7 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps broadcasterdeps) *gossip.Broadcaster {
-		return gossip.NewBroadcaster(deps.Service, deps.Manager, deps.Storage)
+		return gossip.NewBroadcaster(deps.Service, deps.Manager, deps.Storage, 1000)
 	}); err != nil {
 		panic(err)
 	}

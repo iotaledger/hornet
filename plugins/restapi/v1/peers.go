@@ -60,6 +60,9 @@ func removePeer(c echo.Context) error {
 	if err != nil {
 		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
+
+	deps.PeeringConfigManager.RemovePeer(peerID)
+
 	return deps.Manager.DisconnectPeer(peerID, errors.New("peer was removed via API"))
 }
 
@@ -102,6 +105,8 @@ func addPeer(c echo.Context) (*PeerResponse, error) {
 	if info == nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "peer not found, peerID: %s", addrInfo.ID.String())
 	}
+
+	deps.PeeringConfigManager.AddPeer(multiAddr, alias)
 
 	return WrapInfoSnapshot(info), nil
 }

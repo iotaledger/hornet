@@ -59,10 +59,11 @@ const (
 
 type dependencies struct {
 	dig.In
-	Manager       *p2ppkg.Manager
-	Host          host.Host
-	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-	PeeringConfig *configuration.Configuration `name:"peeringConfig"`
+	Manager              *p2ppkg.Manager
+	Host                 host.Host
+	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	PeeringConfig        *configuration.Configuration `name:"peeringConfig"`
+	PeeringConfigManager *p2ppkg.ConfigManager
 }
 
 func provide(c *dig.Container) {
@@ -158,6 +159,69 @@ func provide(c *dig.Container) {
 	}); err != nil {
 		panic(err)
 	}
+
+	type configManagerDeps struct {
+		dig.In
+
+		PeeringConfig         *configuration.Configuration `name:"peeringConfig"`
+		PeeringConfigFilePath string                       `name:"peeringConfigFilePath"`
+	}
+
+	if err := c.Provide(func(deps configManagerDeps) *p2ppkg.ConfigManager {
+
+		p2pConfigManager := p2ppkg.NewConfigManager(func(peers []*p2ppkg.PeerConfig) error {
+			if err := deps.PeeringConfig.Set(CfgPeers, peers); err != nil {
+				return err
+			}
+
+			return deps.PeeringConfig.StoreFile(deps.PeeringConfigFilePath, []string{"p2p"})
+		})
+
+		// peers from peering config
+		var peers []*p2ppkg.PeerConfig
+		if err := deps.PeeringConfig.Unmarshal(CfgPeers, &peers); err != nil {
+			panic(fmt.Sprintf("invalid peer config: %s", err))
+		}
+
+		for i, p := range peers {
+			multiAddr, err := multiaddr.NewMultiaddr(p.MultiAddress)
+			if err != nil {
+				panic(fmt.Sprintf("invalid config peer address at pos %d: %s", i, err))
+			}
+
+			p2pConfigManager.AddPeer(multiAddr, p.Alias)
+		}
+
+		// peers from CLI arguments
+		peerIDsStr := deps.PeeringConfig.Strings(CfgP2PPeers)
+		peerAliases := deps.PeeringConfig.Strings(CfgP2PPeerAliases)
+
+		applyAliases := true
+		if len(peerIDsStr) != len(peerAliases) {
+			log.Warnf("won't apply peer aliases: you must define aliases for all defined static peers (got %d aliases, %d peers).", len(peerAliases), len(peerIDsStr))
+			applyAliases = false
+		}
+
+		for i, peerIDStr := range peerIDsStr {
+			multiAddr, err := multiaddr.NewMultiaddr(peerIDStr)
+			if err != nil {
+				panic(fmt.Sprintf("invalid CLI peer address at pos %d: %s", i, err))
+			}
+
+			var alias string
+			if applyAliases {
+				alias = peerAliases[i]
+			}
+
+			p2pConfigManager.AddPeer(multiAddr, alias)
+		}
+
+		p2pConfigManager.StoreOnChange(true)
+
+		return p2pConfigManager
+	}); err != nil {
+		panic(err)
+	}
 }
 
 func configure() {
@@ -180,31 +244,18 @@ func run() {
 
 // connects to the peers defined in the config.
 func connectConfigKnownPeers() {
-	peerIDsStr := deps.PeeringConfig.Strings(CfgP2PPeers)
-	peerAliases := deps.PeeringConfig.Strings(CfgP2PPeerAliases)
-
-	applyAliases := true
-	if len(peerIDsStr) != len(peerAliases) {
-		log.Warnf("won't apply peer aliases: you must define aliases for all defined static peers (got %d aliases, %d peers).", len(peerAliases), len(peerIDsStr))
-		applyAliases = false
-	}
-
-	for i, peerIDStr := range peerIDsStr {
-		multiAddr, err := multiaddr.NewMultiaddr(peerIDStr)
+	for _, p := range deps.PeeringConfigManager.GetPeers() {
+		multiAddr, err := multiaddr.NewMultiaddr(p.MultiAddress)
 		if err != nil {
-			panic(fmt.Sprintf("invalid config peer address at pos %d: %s", i, err))
+			panic(fmt.Sprintf("invalid peer address: %s", err))
 		}
 
 		addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
 		if err != nil {
-			panic(fmt.Sprintf("invalid config peer address info at pos %d: %s", i, err))
+			panic(fmt.Sprintf("invalid peer address info: %s", err))
 		}
 
-		var alias string
-		if applyAliases {
-			alias = peerAliases[i]
-		}
-		_ = deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, alias)
+		_ = deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, p.Alias)
 	}
 }
 
