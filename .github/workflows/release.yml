@@ -9,7 +9,7 @@ jobs:
     name: Release
     runs-on: [ubuntu-latest]
     container:
-      image: iotmod/goreleaser-cgo-cross-compiler:1.15.6
+      image: iotmod/goreleaser-cgo-cross-compiler:1.16
       volumes: [/repo]
 
     steps:
