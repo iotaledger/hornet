@@ -1,6 +1,6 @@
 module github.com/gohornet/hornet
 
-go 1.15
+go 1.16
 
 replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210222004711-d924b9529a49
 
