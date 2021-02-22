@@ -140,6 +140,11 @@ func provide(c *dig.Container) {
 	}, dig.Name("profilesConfig")); err != nil {
 		panic(err)
 	}
+	if err := c.Provide(func() string {
+		return *peeringCfgFilePath
+	}, dig.Name("peeringConfigFilePath")); err != nil {
+		panic(err)
+	}
 }
 
 func configure() {

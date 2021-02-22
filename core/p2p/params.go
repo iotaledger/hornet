@@ -16,9 +16,11 @@ const (
 	CfgP2PConnMngHighWatermark = "p2p.connectionManager.highWatermark"
 	// Defines the low watermark to use within the connection manager.
 	CfgP2PConnMngLowWatermark = "p2p.connectionManager.lowWatermark"
-	// Defines the static peers this node should retain a connection to.
+	// Defines the static peers this node should retain a connection to (config file).
+	CfgPeers = "peers"
+	// Defines the static peers this node should retain a connection to (CLI).
 	CfgP2PPeers = "p2p.peers"
-	// Defines the aliases of the static peers (must be the same length like CfgP2PPeers).
+	// Defines the aliases of the static peers (must be the same length like CfgP2PPeers) (CLI).
 	CfgP2PPeerAliases = "p2p.peerAliases"
 	// Defines the number of seconds to wait before trying to reconnect to a disconnected peer.
 	CfgP2PReconnectIntervalSeconds = "p2p.reconnectIntervalSeconds"
@@ -38,8 +40,8 @@ var params = &node.PluginParams{
 		}(),
 		"peeringConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.StringSlice(CfgP2PPeers, []string{}, "the static peers this node should retain a connection to")
-			fs.StringSlice(CfgP2PPeerAliases, []string{}, "the aliases of the static peers (must be the same amount like \"p2p.peers\")")
+			fs.StringSlice(CfgP2PPeers, []string{}, "the static peers this node should retain a connection to (CLI)")
+			fs.StringSlice(CfgP2PPeerAliases, []string{}, "the aliases of the static peers (must be the same amount like \"p2p.peers\") (CLI)")
 			return fs
 		}(),
 	},
