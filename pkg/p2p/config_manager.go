@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -12,6 +14,7 @@ import (
 type ConfigManager struct {
 	storeCallback func([]*PeerConfig) error
 	storeOnChange bool
+	peersLock     sync.RWMutex
 	peers         []*PeerConfig
 }
 
@@ -26,11 +29,18 @@ func NewConfigManager(storeCallback func([]*PeerConfig) error) *ConfigManager {
 
 // GetPeers returns all known peers.
 func (pm *ConfigManager) GetPeers() []*PeerConfig {
-	return pm.peers
+	pm.peersLock.RLock()
+	defer pm.peersLock.RUnlock()
+
+	peers := make([]*PeerConfig, len(pm.peers))
+	copy(peers, pm.peers)
+	return peers
 }
 
 // AddPeer adds a peer to the config manager.
 func (pm *ConfigManager) AddPeer(multiAddress multiaddr.Multiaddr, alias string) error {
+	pm.peersLock.Lock()
+	defer pm.peersLock.Unlock()
 
 	newPeerAddrInfo, err := peer.AddrInfoFromP2pAddr(multiAddress)
 	if err != nil {
@@ -66,6 +76,8 @@ func (pm *ConfigManager) AddPeer(multiAddress multiaddr.Multiaddr, alias string)
 
 // RemovePeer removes a peer from the config manager.
 func (pm *ConfigManager) RemovePeer(peerID peer.ID) error {
+	pm.peersLock.Lock()
+	defer pm.peersLock.Unlock()
 
 	for i, p := range pm.peers {
 		multiAddr, err := multiaddr.NewMultiaddr(p.MultiAddress)
