@@ -7,12 +7,12 @@ import (
 )
 
 // NewBroadcaster creates a new Broadcaster.
-func NewBroadcaster(service *Service, manager *p2p.Manager, storage *storage.Storage) *Broadcaster {
+func NewBroadcaster(service *Service, manager *p2p.Manager, storage *storage.Storage, broadcastQueueSize int) *Broadcaster {
 	return &Broadcaster{
 		service: service,
 		manager: manager,
 		storage: storage,
-		queue:   make(chan *Broadcast),
+		queue:   make(chan *Broadcast, broadcastQueueSize),
 	}
 }
 
