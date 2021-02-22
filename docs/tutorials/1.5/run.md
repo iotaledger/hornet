@@ -16,5 +16,4 @@ In due time, check the [Community Tutorials](../index.md#community-tutorials) fo
               ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
               ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
-                                   v0.6.0-alpha
 ```
