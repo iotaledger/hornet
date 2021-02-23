@@ -30,6 +30,8 @@
       "::1"
     ],
     "bindAddress": "0.0.0.0:14265",
+    "powEnabled": true,
+    "powWorkerCount": 1,
     "limits": {
       "bodyLength": "1M",
       "maxResults": 1000
@@ -115,7 +117,6 @@
   "node": {
     "alias": "",
     "profile": "auto",
-    "enableProofOfWork": false,
     "disablePlugins": [
       "Autopeering"
     ],
