@@ -145,7 +145,7 @@ func init() {
 var (
 	Plugin         *node.Plugin
 	powEnabled     bool
-	powParallelism int
+	powWorkerCount int
 	features       []string
 
 	// ErrNodeNotSync is returned when the node was not synced.
@@ -177,7 +177,7 @@ func configure() {
 	routeGroup := deps.Echo.Group("/api/v1")
 
 	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
-	powParallelism = deps.NodeConfig.Int(restapi.CfgRestAPIPoWParallelism)
+	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)
 
 	// Check for features
 	features = []string{}

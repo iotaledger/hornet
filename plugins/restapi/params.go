@@ -24,8 +24,8 @@ const (
 	CfgRestAPIBasicAuthPasswordSalt = "restAPI.basicAuth.passwordSalt"
 	// whether the node does PoW if messages are received via API
 	CfgRestAPIPoWEnabled = "restAPI.powEnabled"
-	// the parallelism for PoW regarding message issuance
-	CfgRestAPIPoWParallelism = "restAPI.powParallelism"
+	// the amount of workers used for calculating PoW when issuing messages via API
+	CfgRestAPIPoWWorkerCount = "restAPI.powWorkerCount"
 	// the maximum number of characters that the body of an API call may contain
 	CfgRestAPILimitsMaxBodyLength = "restAPI.limits.bodyLength"
 	// the maximum number of results that may be returned by an endpoint
@@ -62,7 +62,7 @@ var params = &node.PluginParams{
 			fs.String(CfgRestAPIBasicAuthPasswordHash, "", "the HTTP basic auth password+salt as a scrypt hash")
 			fs.String(CfgRestAPIBasicAuthPasswordSalt, "", "the HTTP basic auth salt used for hashing the password")
 			fs.Bool(CfgRestAPIPoWEnabled, false, "whether the node does PoW if messages are received via API")
-			fs.Int(CfgRestAPIPoWParallelism, 1, "the parallelism for PoW regarding message issuance")
+			fs.Int(CfgRestAPIPoWWorkerCount, 1, "the amount of workers used for calculating PoW when issuing messages via API")
 			fs.String(CfgRestAPILimitsMaxBodyLength, "1M", "the maximum number of characters that the body of an API call may contain")
 			fs.Int(CfgRestAPILimitsMaxResults, 1000, "the maximum number of results that may be returned by an endpoint")
 			return fs

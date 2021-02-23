@@ -31,7 +31,7 @@
     ],
     "bindAddress": "0.0.0.0:14265",
     "powEnabled": true,
-    "powParallelism": 1,
+    "powWorkerCount": 1,
     "limits": {
       "bodyLength": "1M",
       "maxResults": 1000

@@ -245,7 +245,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
 		}
 
-		if err := deps.PoWHandler.DoPoW(msg, nil, powParallelism); err != nil {
+		if err := deps.PoWHandler.DoPoW(msg, nil, powWorkerCount); err != nil {
 			return nil, err
 		}
 	}
