@@ -4,11 +4,11 @@ This is a small tutorial on how to build HORNET.
 
 ### Preparations
 
-- Install go1.16:
+- Install go1.16: See [golang.org](https://golang.org/doc/install) for more information.
   ```bash
-     sudo add-apt-repository ppa:longsleep/golang-backports
-     sudo apt update
-     sudo apt install golang-go
+    wget https://golang.org/dl/go1.16.linux-amd64.tar.gz
+    tar -C /usr/local -xzf go1.16.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
   ```
 - Check if Go is installed correctly:
   ```bash

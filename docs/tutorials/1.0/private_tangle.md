@@ -25,7 +25,7 @@ Adapt the configuration to your needs<br>
 
 **Coordinator settings:**
 <br>
-[Coordinator configuration docu](https://github.com/gohornet/hornet/wiki/Configuration#Coordinator)
+[Coordinator configuration](https://github.com/gohornet/hornet/wiki/Configuration#Coordinator)
 <br><br>
 Some hints:
 

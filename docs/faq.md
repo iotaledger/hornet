@@ -8,17 +8,17 @@ HORNET is a community driven IOTA fullnode. It is written in Go which makes it l
 
 ### Does HORNET run on the Mainnet?
 
-Yes, HORNET gets actively tested within the IOTA Mainnet.
+Yes, HORNET [was released in mid 2020](https://blog.iota.org/hornet-0-4-0-release-summary-2163ca444196/) and replaced the Java implementation called IRI.
 
 ---
 
 ### Can I run HORNET on a Raspberry Pi?
 
-Yes, you can run HORNET on a Raspberry Pi 4B  with an external SSD. But we recommend to run HORNET on a more powerful device.
+Yes, you can run HORNET on a Raspberry Pi 4B with an external SSD. But we recommend to run HORNET on a more powerful device.
 
 ---
 
-### I have difficulty setting up HORNET. Where can I get help?
+### I have difficulties setting up HORNET. Where can I get help?
 
 Our community loves helping you. Just ask your questions in the `#hornet` channel on the [official IOTA Discord Server](https://discord.iota.org/)
 

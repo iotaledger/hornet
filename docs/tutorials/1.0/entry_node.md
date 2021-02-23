@@ -1,4 +1,4 @@
-This is a tutorial on how to host a autopeering entry node.
+This is a tutorial on how to host an autopeering entry node.
 
 **Note: This tutorial assumes that you are using Ubuntu and our [APT install](./setup.md). The setup process may differ on other OS or install methods.**
 
