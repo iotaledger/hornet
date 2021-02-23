@@ -86,7 +86,7 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 
 func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, error) {
 
-	balance, err := deps.UTXO.AddressBalanceWithoutLocking(address)
+	balance, dustAllowed, err := deps.UTXO.AddressBalanceWithoutLocking(address)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading address balance failed: %s, error: %s", address, err)
 	}
@@ -95,6 +95,7 @@ func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, er
 		AddressType: address.Type(),
 		Address:     address.String(),
 		Balance:     balance,
+		DustAllowed: dustAllowed,
 	}, nil
 }
 
