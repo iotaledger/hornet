@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gohornet/hornet/pkg/model/migrator"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/dig"
@@ -55,7 +56,8 @@ type dependencies struct {
 	Storage         *storage.Storage
 	ServerMetrics   *metrics.ServerMetrics
 	Service         *gossip.Service
-	ReceiptService  *migrator.ReceiptService  `optional:"true"`
+	ReceiptService  *migrator.ReceiptService `optional:"true"`
+	Tangle          *tangle.Tangle
 	MigratorService *migrator.MigratorService `optional:"true"`
 	Manager         *p2p.Manager
 	RequestQueue    gossip.RequestQueue
@@ -68,6 +70,9 @@ func configure() {
 	configureInfo()
 	configurePeers()
 	configureServer()
+	if deps.ReceiptService != nil {
+		configureReceipts()
+	}
 	if deps.MigratorService != nil {
 		configureMigrator()
 	}

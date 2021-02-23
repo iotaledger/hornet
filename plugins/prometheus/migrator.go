@@ -2,11 +2,14 @@ package prometheus
 
 import (
 	"github.com/iotaledger/hive.go/events"
+	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	migratorSoftErrEncountered prometheus.Counter
+	receiptCount               prometheus.Counter
+	receiptMigrations          prometheus.Counter
 )
 
 func configureMigrator() {
@@ -21,5 +24,29 @@ func configureMigrator() {
 
 	deps.MigratorService.Events.SoftError.Attach(events.NewClosure(func(_ error) {
 		migratorSoftErrEncountered.Inc()
+	}))
+}
+
+func configureReceipts() {
+	receiptCount = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "iota_receipts_count",
+			Help: "The count of encountered receipts.",
+		},
+	)
+
+	receiptMigrations = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "iota_receipts_migration_entries_count",
+			Help: "The count of migration entries encountered.",
+		},
+	)
+
+	registry.MustRegister(receiptCount)
+	registry.MustRegister(receiptMigrations)
+
+	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.Receipt) {
+		receiptCount.Inc()
+		receiptMigrations.Add(float64(len(r.Funds)))
 	}))
 }
