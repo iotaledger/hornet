@@ -241,11 +241,11 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	if msg.Nonce == 0 {
-		if !proofOfWorkEnabled {
+		if !powEnabled {
 			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
 		}
 
-		if err := deps.PoWHandler.DoPoW(msg, nil, 1); err != nil {
+		if err := deps.PoWHandler.DoPoW(msg, nil, powParallelism); err != nil {
 			return nil, err
 		}
 	}

@@ -29,6 +29,8 @@
       "::1"
     ],
     "bindAddress": "0.0.0.0:14265",
+    "powEnabled": true,
+    "powParallelism": 1,
     "limits": {
       "bodyLength": "1M",
       "maxResults": 1000
@@ -124,7 +126,6 @@
   "node": {
     "alias": "Chrysalis Testnet",
     "profile": "auto",
-    "enableProofOfWork": true,
     "disablePlugins": [],
     "enablePlugins": [
       "Spammer"
