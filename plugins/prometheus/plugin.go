@@ -69,8 +69,7 @@ func configure() {
 	configurePeers()
 	configureServer()
 	if deps.MigratorService != nil {
-		// TODO: enable this afterwards
-		//configureMigrator()
+		configureMigrator()
 	}
 
 	if deps.NodeConfig.Bool(CfgPrometheusGoMetrics) {

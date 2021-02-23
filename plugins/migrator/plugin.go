@@ -1,8 +1,11 @@
 package migrator
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
+	"github.com/gohornet/hornet/core/gracefulshutdown"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
@@ -84,6 +87,15 @@ func run() {
 	err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		log.Infof("Starting %s ... done", Plugin.Name)
 		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
+			var critErr *migrator.CriticalError
+			var softErr *migrator.SoftError
+			switch {
+			case errors.As(err, &critErr):
+				gracefulshutdown.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err.Error()))
+				return true
+			case errors.As(err, &softErr):
+				deps.MigratorService.Events.SoftError.Trigger(err)
+			}
 			// lets just log the err and halt querying for a configured period
 			log.Warn(err)
 			time.Sleep(deps.NodeConfig.Duration(CfgMigratorQueryCooldownPeriod))

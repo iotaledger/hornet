@@ -20,7 +20,7 @@ var params = &node.PluginParams{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.String(CfgMigratorStateFilePath, "migrator.state", "path to the state file of the migrator")
-			fs.Duration(CfgMigratorQueryCooldownPeriod, 10*time.Second, "the cooldown period of the service to ask for new data")
+			fs.Duration(CfgMigratorQueryCooldownPeriod, 5*time.Second, "the cooldown period of the service to ask for new data")
 			return fs
 		}(),
 	},

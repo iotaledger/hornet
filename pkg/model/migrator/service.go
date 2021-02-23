@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
-	"go.uber.org/atomic"
 )
 
 const (
@@ -33,9 +33,15 @@ type State struct {
 	LatestIncludedIndex  uint32
 }
 
+// MigratorServiceEvents are events happening around a MigratorService.
+type MigratorServiceEvents struct {
+	// SoftError is triggered when a soft error is encountered.
+	SoftError *events.Event
+}
+
 // MigratorService is a service querying and validating batches of migrated funds.
 type MigratorService struct {
-	Healthy *atomic.Bool
+	Events *MigratorServiceEvents
 
 	validator *Validator
 	state     State
@@ -55,10 +61,12 @@ type migrationResult struct {
 // NewService creates a new MigratorService.
 func NewService(validator *Validator, stateFilePath string) *MigratorService {
 	return &MigratorService{
+		Events: &MigratorServiceEvents{
+			SoftError: events.NewEvent(events.ErrorCaller),
+		},
 		validator:     validator,
 		migrations:    make(chan *migrationResult),
 		stateFilePath: stateFilePath,
-		Healthy:       atomic.NewBool(true),
 	}
 }
 
@@ -137,7 +145,6 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 	for {
 		msIndex, migratedFunds, err := s.nextMigrations(startIndex)
 		if err != nil {
-			s.Healthy.Store(false)
 			if onError != nil && onError(err) {
 				close(s.migrations)
 				return
@@ -147,7 +154,6 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 
 		// always continue with the next index
 		startIndex = msIndex + 1
-		s.Healthy.Store(true)
 
 		for {
 			batch := migratedFunds
@@ -182,7 +188,7 @@ func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntr
 	if l >= s.state.LatestIncludedIndex {
 		return s.state.LatestMilestoneIndex, migratedFunds[s.state.LatestIncludedIndex:], nil
 	}
-	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", ErrInvalidState, s.state.LatestIncludedIndex, l)
+	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", &CriticalError{Err: ErrInvalidState}, s.state.LatestIncludedIndex, l)
 }
 
 // nextMigrations queries the next existing migrations starting from milestone index startIndex.

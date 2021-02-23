@@ -46,12 +46,12 @@ func NewValidator(api *api.API, coordinatorAddress trinary.Hash, coordinatorMerk
 func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedFundsEntry, error) {
 	confirmation, err := m.api.GetWhiteFlagConfirmation(milestoneIndex)
 	if err != nil {
-		return nil, fmt.Errorf("API call failed: %w", err)
+		return nil, fmt.Errorf("API call failed: %w", &SoftError{Err: err})
 	}
 
 	included, err := m.validateConfirmation(confirmation, milestoneIndex)
 	if err != nil {
-		return nil, fmt.Errorf("invalid confirmation data: %w", err)
+		return nil, fmt.Errorf("invalid confirmation data: %w", &CriticalError{Err: err})
 	}
 
 	migrated := make([]*iota.MigratedFundsEntry, 0, len(included))
@@ -198,7 +198,7 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 func (m *Validator) nextMigrations(startIndex uint32) (uint32, []*iota.MigratedFundsEntry, error) {
 	info, err := m.api.GetNodeInfo()
 	if err != nil {
-		return 0, nil, fmt.Errorf("failed to get node info: %w", err)
+		return 0, nil, fmt.Errorf("failed to get node info: %w", &SoftError{Err: err})
 	}
 
 	latestIndex := uint32(info.LatestMilestoneIndex)
