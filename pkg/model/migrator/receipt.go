@@ -34,15 +34,18 @@ type ReceiptService struct {
 	BackupEnabled bool
 	// Whether the service is configured to validate receipts.
 	ValidationEnabled bool
-	backupFolder      string
-	validator         *Validator
-	utxoManager       *utxo.Manager
+	// Whether the service should ignore soft errors.
+	IgnoreSoftErrors bool
+	backupFolder     string
+	validator        *Validator
+	utxoManager      *utxo.Manager
 }
 
 // NewReceiptService creates a new ReceiptService.
-func NewReceiptService(v *Validator, utxoManager *utxo.Manager, validationEnabled bool, backupEnabled bool, backupFolder string) *ReceiptService {
+func NewReceiptService(v *Validator, utxoManager *utxo.Manager, validationEnabled bool, backupEnabled bool, ignoreSoftErrors bool, backupFolder string) *ReceiptService {
 	return &ReceiptService{
 		ValidationEnabled: validationEnabled,
+		IgnoreSoftErrors:  ignoreSoftErrors,
 		BackupEnabled:     backupEnabled,
 		utxoManager:       utxoManager,
 		validator:         v,

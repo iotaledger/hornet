@@ -14,6 +14,8 @@ const (
 	CfgReceiptsBackupFolder = "receipts.backup.folder"
 	// CfgReceiptsValidatorValidate configures whether to validate receipts.
 	CfgReceiptsValidatorValidate = "receipts.validator.validate"
+	// CfgReceiptsValidatorIgnoreSoftErrors configures the node to not panic if a soft error is encountered.
+	CfgReceiptsValidatorIgnoreSoftErrors = "receipts.validator.ignoreSoftErrors"
 	// CfgReceiptsValidatorAPIAddress configures the address of the legacy node API to query for white-flag confirmation data.
 	CfgReceiptsValidatorAPIAddress = "receipts.validator.api.address"
 	// CfgReceiptsValidatorAPITimeout configures the timeout of API calls.
@@ -30,6 +32,7 @@ var params = &node.PluginParams{
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.String(CfgReceiptsBackupFolder, "./receipts", "path to the receipts backup folder")
 			fs.Bool(CfgReceiptsBackupEnabled, false, "whether to backup receipts in the backup folder")
+			fs.Bool(CfgReceiptsValidatorIgnoreSoftErrors, false, "whether to ignore soft errors and not panic if one is encountered")
 			fs.Bool(CfgReceiptsValidatorValidate, false, "whether to validate receipts")
 			fs.String(CfgReceiptsValidatorAPIAddress, "http://localhost:14265", "address of the legacy node API")
 			fs.Duration(CfgReceiptsValidatorAPITimeout, 5*time.Second, "timeout of API calls")

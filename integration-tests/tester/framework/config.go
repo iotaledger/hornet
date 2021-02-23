@@ -342,6 +342,8 @@ type ReceiptsConfig struct {
 	BackupFolder string
 	// Whether the receipts plugin should validate receipts
 	Validate bool
+	// Whether to ignore soft errors or not.
+	IgnoreSoftErrors bool
 	// The API to query.
 	APIAddress string
 	// The API timeout.
@@ -357,6 +359,7 @@ func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
 		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsBackupEnabled, receiptsConfig.BackupEnabled),
 		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsBackupFolder, receiptsConfig.BackupFolder),
 		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorValidate, receiptsConfig.Validate),
+		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorIgnoreSoftErrors, receiptsConfig.IgnoreSoftErrors),
 		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPIAddress, receiptsConfig.APIAddress),
 		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPITimeout, receiptsConfig.APITimeout),
 		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorCoordinatorAddress, receiptsConfig.CoordinatorAddress),
@@ -370,6 +373,7 @@ func DefaultReceiptValidatorConfig() ReceiptsConfig {
 		BackupEnabled:              false,
 		BackupFolder:               "./receipts",
 		Validate:                   false,
+		IgnoreSoftErrors:           false,
 		APIAddress:                 "http://localhost:14265",
 		APITimeout:                 5 * time.Second,
 		CoordinatorAddress:         "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",

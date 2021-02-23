@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -386,7 +387,16 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			if t.receiptService != nil {
 				if t.receiptService.ValidationEnabled {
 					if err := t.receiptService.Validate(rt.Receipt); err != nil {
-						return fmt.Errorf("unable to confirm milestone due to receipt validation failure: %w", err)
+						var softErr *migrator.SoftError
+						switch {
+						case errors.As(err, &softErr):
+							if !t.receiptService.IgnoreSoftErrors {
+								return err
+							}
+							t.log.Warnf("soft error encountered during receipt validation: %s", err.Error())
+						default:
+							return err
+						}
 					}
 				}
 				if t.receiptService.BackupEnabled {
