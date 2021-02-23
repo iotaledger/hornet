@@ -1,8 +1,6 @@
 package utxo
 
 import (
-	"fmt"
-
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
@@ -67,6 +65,8 @@ func (u *Manager) IsOutputUnspent(outputID *iotago.UTXOInputID) (bool, error) {
 
 func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
 
+	consumerFunc := consumer
+
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
@@ -91,7 +91,14 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 			key = byteutils.ConcatBytes(key, []byte{*opt.filterOutputType})
 		}
 	} else if opt.filterOutputType != nil {
-		return fmt.Errorf("output type filtering is only valid when also filtering for an address")
+
+		// Filter results instead of using prefix iteration
+		consumerFunc = func(output *Output) bool {
+			if output.OutputType() == *opt.filterOutputType {
+				return consumer(output)
+			}
+			return true
+		}
 	}
 
 	var i int
@@ -123,7 +130,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 			return false
 		}
 
-		return consumer(output)
+		return consumerFunc(output)
 	}); err != nil {
 		return err
 	}

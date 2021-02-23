@@ -3,11 +3,14 @@ package debug
 import (
 	"context"
 	"encoding/hex"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -113,6 +116,25 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}, nil
 }
 
+func typeFilterFromParams(c echo.Context) ([]utxo.UTXOIterateOption, error) {
+	var opts []utxo.UTXOIterateOption
+
+	typeParam := strings.ToLower(c.QueryParam("type"))
+
+	if len(typeParam) > 0 {
+		outputTypeInt, err := strconv.ParseInt(typeParam, 10, 32)
+		if err != nil {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
+		}
+		outputType := iotago.OutputType(outputTypeInt)
+		if outputType != iotago.OutputSigLockedSingleOutput && outputType != iotago.OutputSigLockedDustAllowanceOutput {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
+		}
+		return append(opts, utxo.FilterOutputType(outputType)), nil
+	}
+	return opts, nil
+}
+
 func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	outputIDs := []string{}
@@ -121,7 +143,17 @@ func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
+	opts := []utxo.UTXOIterateOption{
+		utxo.ReadLockLedger(false),
+	}
+
+	filter, err := typeFilterFromParams(c)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, filter...)
+
+	err = deps.UTXO.ForEachOutput(outputConsumerFunc, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -139,7 +171,17 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
+	opts := []utxo.UTXOIterateOption{
+		utxo.ReadLockLedger(false),
+	}
+
+	filter, err := typeFilterFromParams(c)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, filter...)
+
+	err = deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -158,7 +200,17 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachSpentOutput(spentConsumerFunc, utxo.ReadLockLedger(false))
+	opts := []utxo.UTXOIterateOption{
+		utxo.ReadLockLedger(false),
+	}
+
+	filter, err := typeFilterFromParams(c)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, filter...)
+
+	err = deps.UTXO.ForEachSpentOutput(spentConsumerFunc, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed, error: %s", err)
 	}
