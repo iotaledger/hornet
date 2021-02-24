@@ -13,7 +13,6 @@ import (
 
 	iotago "github.com/iotaledger/iota.go/v2"
 
-	powcore "github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -22,10 +21,11 @@ import (
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
+	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
 )
 
@@ -152,9 +152,10 @@ func init() {
 }
 
 var (
-	Plugin             *node.Plugin
-	proofOfWorkEnabled bool
-	features           []string
+	Plugin         *node.Plugin
+	powEnabled     bool
+	powWorkerCount int
+	features       []string
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
@@ -184,11 +185,12 @@ type dependencies struct {
 func configure() {
 	routeGroup := deps.Echo.Group("/api/v1")
 
-	proofOfWorkEnabled = deps.NodeConfig.Bool(powcore.CfgNodeEnableProofOfWork)
+	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
+	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)
 
 	// Check for features
 	features = []string{}
-	if proofOfWorkEnabled {
+	if powEnabled {
 		features = append(features, "PoW")
 	}
 
@@ -197,7 +199,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
@@ -207,7 +209,7 @@ func configure() {
 			if err != nil {
 				return err
 			}
-			return restapi.JSONResponse(c, http.StatusOK, resp)
+			return restapipkg.JSONResponse(c, http.StatusOK, resp)
 		})
 	}
 
@@ -216,7 +218,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessageData, func(c echo.Context) error {
@@ -224,7 +226,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessageBytes, func(c echo.Context) error {
@@ -242,7 +244,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessages, func(c echo.Context) error {
@@ -251,7 +253,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteMessages, func(c echo.Context) error {
@@ -260,7 +262,7 @@ func configure() {
 			return err
 		}
 		c.Response().Header().Set(echo.HeaderLocation, resp.MessageID)
-		return restapi.JSONResponse(c, http.StatusCreated, resp)
+		return restapipkg.JSONResponse(c, http.StatusCreated, resp)
 	})
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
@@ -269,7 +271,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMilestoneUTXOChanges, func(c echo.Context) error {
@@ -278,7 +280,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
@@ -287,7 +289,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressBech32Balance, func(c echo.Context) error {
@@ -296,7 +298,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressEd25519Balance, func(c echo.Context) error {
@@ -305,7 +307,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressBech32Outputs, func(c echo.Context) error {
@@ -314,7 +316,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressEd25519Outputs, func(c echo.Context) error {
@@ -323,7 +325,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteTreasury, func(c echo.Context) error {
@@ -358,7 +360,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.DELETE(RoutePeer, func(c echo.Context) error {
@@ -375,7 +377,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
@@ -384,7 +386,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteControlDatabasePrune, func(c echo.Context) error {
@@ -393,7 +395,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteControlSnapshotCreate, func(c echo.Context) error {
@@ -402,6 +404,6 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 }

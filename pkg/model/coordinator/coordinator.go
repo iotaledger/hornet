@@ -70,7 +70,7 @@ type Coordinator struct {
 	// config options
 	stateFilePath            string
 	milestoneIntervalSec     int
-	powParallelism           int
+	powWorkerCount           int
 	milestonePublicKeysCount int
 	networkID                uint64
 	powHandler               *pow.Handler
@@ -88,7 +88,7 @@ type Coordinator struct {
 // New creates a new coordinator instance.
 func New(
 	storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider,
-	stateFilePath string, milestoneIntervalSec int, powParallelism int,
+	stateFilePath string, milestoneIntervalSec int, powWorkerCount int,
 	powHandler *pow.Handler, migratorService *migrator.MigratorService, utxoManager *utxo.Manager,
 	sendMessageFunc SendMessageFunc) (*Coordinator, error) {
 
@@ -98,7 +98,7 @@ func New(
 		signerProvider:       signerProvider,
 		stateFilePath:        stateFilePath,
 		milestoneIntervalSec: milestoneIntervalSec,
-		powParallelism:       powParallelism,
+		powWorkerCount:       powWorkerCount,
 		powHandler:           powHandler,
 		sendMesssageFunc:     sendMessageFunc,
 		migratorService:      migratorService,
@@ -226,7 +226,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		}
 	}
 
-	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, receipt, mutations.MerkleTreeHash, coo.powParallelism, coo.powHandler)
+	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, receipt, mutations.MerkleTreeHash, coo.powWorkerCount, coo.powHandler)
 	if err != nil {
 		return fmt.Errorf("failed to create milestone: %w", err)
 	}
@@ -311,7 +311,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 		parents = append(parents, tips[tipStart:tipEnd]...)
 		parents = parents.RemoveDupsAndSortByLexicalOrder()
 
-		msg, err := createCheckpoint(coo.networkID, parents, coo.powParallelism, coo.powHandler)
+		msg, err := createCheckpoint(coo.networkID, parents, coo.powWorkerCount, coo.powHandler)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create checkPoint: %w", err)
 		}

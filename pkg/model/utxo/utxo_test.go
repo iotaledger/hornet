@@ -290,7 +290,7 @@ func TestUTXOLoadMethodsWithIterateOptions(t *testing.T) {
 		delete(unspentDustByOutputID, string(spent.OutputID()[:]))
 	}
 
-	balance, err := utxo.AddressBalanceWithoutLocking(address)
+	balance, _, err := utxo.AddressBalanceWithoutLocking(address)
 	require.NoError(t, err)
 	require.Equal(t, expectedBalanceOnAddress, balance)
 

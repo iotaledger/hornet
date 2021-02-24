@@ -138,6 +138,8 @@ type addressBalanceResponse struct {
 	Address string `json:"address"`
 	// The balance of the address.
 	Balance uint64 `json:"balance"`
+	// Indicates if dust is allowed on this address.
+	DustAllowed bool `json:"dustAllowed"`
 }
 
 // addressOutputsResponse defines the response of a GET outputs by address REST API call.

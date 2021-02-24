@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -92,6 +93,17 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 	flagSets, err := normalizeFlagSets(params)
 	if err != nil {
 		return nil, err
+	}
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `Usage of %s:
+%s %s
+
+Run '%s tools' to list all available tools.
+
+Command line flags:
+`, os.Args[0], Name, Version, os.Args[0])
+		flag.PrintDefaults()
 	}
 
 	parseFlags(flagSets)

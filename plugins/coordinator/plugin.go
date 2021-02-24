@@ -173,9 +173,9 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, fmt.Errorf("unknown milestone signing provider: %s", deps.NodeConfig.String(CfgCoordinatorSigningProvider))
 	}
 
-	powParallelism := deps.NodeConfig.Int(CfgCoordinatorPoWParallelism)
-	if powParallelism < 1 {
-		powParallelism = 1
+	powWorkerCount := deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)
+	if powWorkerCount < 1 {
+		powWorkerCount = 1
 	}
 
 	if deps.MigratorService == nil {
@@ -188,7 +188,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		signingProvider,
 		deps.NodeConfig.String(CfgCoordinatorStateFilePath),
 		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
-		powParallelism,
+		powWorkerCount,
 		powHandler,
 		deps.MigratorService,
 		deps.UTXOManager,

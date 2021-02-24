@@ -12,14 +12,14 @@ import (
 )
 
 // createCheckpoint creates a checkpoint message.
-func createCheckpoint(networkID uint64, parents hornet.MessageIDs, powParallelism int, powHandler *pow.Handler) (*storage.Message, error) {
+func createCheckpoint(networkID uint64, parents hornet.MessageIDs, powWorkerCount int, powHandler *pow.Handler) (*storage.Message, error) {
 	iotaMsg := &iotago.Message{
 		NetworkID: networkID,
 		Parents:   parents.ToSliceOfArrays(),
 		Payload:   nil,
 	}
 
-	if err := powHandler.DoPoW(iotaMsg, nil, powParallelism); err != nil {
+	if err := powHandler.DoPoW(iotaMsg, nil, powWorkerCount); err != nil {
 		return nil, err
 	}
 
@@ -32,7 +32,7 @@ func createCheckpoint(networkID uint64, parents hornet.MessageIDs, powParallelis
 }
 
 // createMilestone creates a signed milestone message.
-func createMilestone(index milestone.Index, networkID uint64, parents hornet.MessageIDs, signerProvider MilestoneSignerProvider, receipt *iotago.Receipt, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte, powParallelism int, powHandler *pow.Handler) (*storage.Message, error) {
+func createMilestone(index milestone.Index, networkID uint64, parents hornet.MessageIDs, signerProvider MilestoneSignerProvider, receipt *iotago.Receipt, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte, powWorkerCount int, powHandler *pow.Handler) (*storage.Message, error) {
 	milestoneIndexSigner := signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
@@ -59,7 +59,7 @@ func createMilestone(index milestone.Index, networkID uint64, parents hornet.Mes
 		return nil, err
 	}
 
-	if err := powHandler.DoPoW(iotaMsg, nil, powParallelism); err != nil {
+	if err := powHandler.DoPoW(iotaMsg, nil, powWorkerCount); err != nil {
 		return nil, err
 	}
 

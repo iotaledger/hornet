@@ -3,7 +3,6 @@ package pow
 import (
 	"time"
 
-	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/configuration"
@@ -16,26 +15,11 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
-const (
-	// defines whether the node does PoW (e.g. if messages are received via API)
-	CfgNodeEnableProofOfWork = "node.enableProofOfWork"
-)
-
 func init() {
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
-			Name:     "PoW",
-			DepsFunc: func(cDeps dependencies) { deps = cDeps },
-			Params: &node.PluginParams{
-				Params: map[string]*flag.FlagSet{
-					"nodeConfig": func() *flag.FlagSet {
-						fs := flag.NewFlagSet("", flag.ContinueOnError)
-						fs.Bool(CfgNodeEnableProofOfWork, false, "defines whether the node does PoW (e.g. if messages are received via API)")
-						return fs
-					}(),
-				},
-				Masked: nil,
-			},
+			Name:      "PoW",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Provide:   provide,
 			Configure: configure,
 			Run:       run,

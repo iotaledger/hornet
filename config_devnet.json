@@ -29,6 +29,8 @@
       "::1"
     ],
     "bindAddress": "0.0.0.0:14265",
+    "powEnabled": true,
+    "powWorkerCount": 1,
     "limits": {
       "bodyLength": "1M",
       "maxResults": 1000
@@ -119,7 +121,6 @@
   "node": {
     "alias": "Devnet",
     "profile": "auto",
-    "enableProofOfWork": true,
     "disablePlugins": [],
     "enablePlugins": [
       "Spammer"
@@ -155,7 +156,7 @@
     ]
   },
   "warpsync": {
-    "advancementRange": 50
+    "advancementRange": 150
   },
   "spammer": {
     "message": "Binary is the future.",

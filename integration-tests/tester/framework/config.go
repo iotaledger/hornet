@@ -9,7 +9,6 @@ import (
 	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/p2p"
-	"github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/core/snapshot"
 	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
@@ -213,7 +212,7 @@ type RestAPIConfig struct {
 	// Explicit permitted REST API routes.
 	PermittedRoutes []string
 	// Whether the node does proof-of-work for submitted messages.
-	EnableProofOfWork bool
+	PowEnabled bool
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -221,7 +220,7 @@ func (restAPIConfig *RestAPIConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIBindAddress, restAPIConfig.BindAddress),
 		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIPermittedRoutes, strings.Join(restAPIConfig.PermittedRoutes, ",")),
-		fmt.Sprintf("--%s=%v", pow.CfgNodeEnableProofOfWork, restAPIConfig.EnableProofOfWork),
+		fmt.Sprintf("--%s=%v", restapi.CfgRestAPIPoWEnabled, restAPIConfig.PowEnabled),
 	}
 }
 
@@ -249,7 +248,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/peers",
 			"/api/plugins/*",
 		},
-		EnableProofOfWork: true,
+		PowEnabled: true,
 	}
 }
 

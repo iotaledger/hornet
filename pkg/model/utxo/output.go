@@ -238,6 +238,20 @@ func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateO
 		defer u.ReadUnlockLedger()
 	}
 
+	consumerFunc := consumer
+
+	if opt.filterOutputType != nil {
+
+		filterType := *opt.filterOutputType
+
+		consumerFunc = func(output *Output) bool {
+			if output.OutputType() == filterType {
+				return consumer(output)
+			}
+			return true
+		}
+	}
+
 	var innerErr error
 	var i int
 	if err := u.utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixOutput}, func(key kvstore.Key, value kvstore.Value) bool {
@@ -254,7 +268,7 @@ func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateO
 			return false
 		}
 
-		return consumer(output)
+		return consumerFunc(output)
 	}); err != nil {
 		return err
 	}

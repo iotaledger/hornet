@@ -91,7 +91,7 @@ func (u *Manager) checkBalancesLedger(treasury uint64) error {
 	return nil
 }
 
-func (u *Manager) AddressBalance(address iotago.Address) (balance uint64, err error) {
+func (u *Manager) AddressBalance(address iotago.Address) (balance uint64, dustAllowed bool, err error) {
 
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()
@@ -99,18 +99,29 @@ func (u *Manager) AddressBalance(address iotago.Address) (balance uint64, err er
 	return u.AddressBalanceWithoutLocking(address)
 }
 
-func (u *Manager) AddressBalanceWithoutLocking(address iotago.Address) (balance uint64, err error) {
+func (u *Manager) AddressBalanceWithoutLocking(address iotago.Address) (balance uint64, dustAllowed bool, err error) {
 
 	addressKey, err := address.Serialize(iotago.DeSeriModeNoValidation)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 
-	b, _, _, err := u.readBalanceForAddress(addressKey)
+	b, dustAllowance, dustOutputCount, err := u.readBalanceForAddress(addressKey)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
-	return b, nil
+
+	// There is no built-in min function for int64, so inline one here
+	min := func(x, y int64) int64 {
+		if x > y {
+			return y
+		}
+		return x
+	}
+
+	dustAllowed = min(int64(dustAllowance)/iotago.DustAllowanceDivisor, iotago.MaxDustOutputsOnAddress) > dustOutputCount
+
+	return b, dustAllowed, nil
 }
 
 func (u *Manager) ReadDustForAddress(address iotago.Address, applyDiff *BalanceDiff) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
