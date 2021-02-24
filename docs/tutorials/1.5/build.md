@@ -8,6 +8,9 @@ This is a small tutorial on how to build HORNET.
   ```bash
     wget https://golang.org/dl/go1.16.linux-amd64.tar.gz
     tar -C /usr/local -xzf go1.16.linux-amd64.tar.gz
+  ```
+- Put this line to modify PATH in ~/.profile
+  ```bash
     export PATH=$PATH:/usr/local/go/bin
   ```
 - Check if Go is installed correctly:
