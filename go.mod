@@ -77,7 +77,6 @@ require (
 	golang.org/x/net v0.0.0-20210222171744-9060382bd457
 	golang.org/x/sys v0.0.0-20210223212115-eede4237b368 // indirect
 	golang.org/x/tools v0.1.0 // indirect
-	gopkg.in/jcmturner/gokrb5.v7 v7.5.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
 )
