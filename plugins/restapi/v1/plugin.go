@@ -334,7 +334,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteReceipts, func(c echo.Context) error {
@@ -343,15 +343,16 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
+
 	routeGroup.GET(RouteReceiptsMigratedAtIndex, func(c echo.Context) error {
 		resp, err := receiptsByMigratedAtIndex(c)
 		if err != nil {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RoutePeer, func(c echo.Context) error {
