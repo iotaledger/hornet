@@ -17,9 +17,13 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/iotaledger/iota.go/v2"
+	"github.com/pkg/errors"
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
 )
+
+// ErrEmptyBundle is returned when a bundle contains no transaction.
+var ErrEmptyBundle = errors.New("empty bundle")
 
 var hasher = whiteflag.NewHasher(crypto.BLAKE2b_512)
 
@@ -143,15 +147,18 @@ func (h trinaryHash) MarshalBinary() ([]byte, error) {
 }
 
 func asBundle(rawTrytes []trinary.Trytes) (bundle.Bundle, error) {
+	if len(rawTrytes) == 0 {
+		return nil, ErrEmptyBundle
+	}
 	txs, err := transaction.AsTransactionObjects(rawTrytes, nil)
 	if err != nil {
 		return nil, err
 	}
-	bundles := bundle.GroupTransactionsIntoBundles(txs)
-	if l := len(bundles); l != 1 {
-		return nil, fmt.Errorf("transactions from %d bundles instead of one", l)
+	// validate the bundle, but also accept non-migration milestone bundles
+	if err := bundle.ValidBundle(txs, false); err != nil {
+		return nil, err
 	}
-	return bundles[0], nil
+	return txs, nil
 }
 
 func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation, msIndex uint32) ([]bundle.Bundle, error) {
