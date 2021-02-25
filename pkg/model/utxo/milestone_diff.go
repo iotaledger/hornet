@@ -53,8 +53,6 @@ func (ms *MilestoneDiff) kvStorableValue() []byte {
 	if ms.TreasuryOutput != nil {
 		m.WriteBool(true)
 		m.WriteBytes(ms.TreasuryOutput.MilestoneID[:])
-		// TODO: maybe do another if and check whether any treasury output was spent
-		// could be that for the genesis or whatever we don't have any
 		m.WriteBytes(ms.SpentTreasuryOutput.MilestoneID[:])
 		return m.Bytes()
 	}
@@ -124,9 +122,13 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 			return err
 		}
 
+		// try to read from unspent and spent
 		treasuryOutput, err := utxoManager.readUnspentTreasuryOutputWithoutLocking(treasuryOutputMilestoneID)
 		if err != nil {
-			return err
+			treasuryOutput, err = utxoManager.readSpentTreasuryOutputWithoutLocking(treasuryOutputMilestoneID)
+			if err != nil {
+				return err
+			}
 		}
 
 		ms.TreasuryOutput = treasuryOutput

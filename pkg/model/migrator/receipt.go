@@ -91,7 +91,7 @@ func (rs *ReceiptService) Validate(r *iotago.Receipt) error {
 
 	var highestMigratedAtIndex uint32
 	if err := rs.utxoManager.ForEachReceiptTuple(func(rt *utxo.ReceiptTuple) bool {
-		if highestMigratedAtIndex == 0 || rt.Receipt.MigratedAt > highestMigratedAtIndex {
+		if rt.Receipt.MigratedAt > highestMigratedAtIndex {
 			highestMigratedAtIndex = rt.Receipt.MigratedAt
 		}
 		return true

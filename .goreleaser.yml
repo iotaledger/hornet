@@ -14,8 +14,6 @@ builds:
     binary: hornet
     ldflags:
       - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
-    flags:
-      - -tags=pow_avx
     main: main.go
     goos:
       - linux
@@ -30,8 +28,6 @@ builds:
     ldflags:
       - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
       - -w -extldflags "-static"
-    flags:
-      - -tags=pow_arm_c128
     main: main.go
     goos:
       - linux
@@ -46,8 +42,6 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
     ldflags:
       - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
-    flags:
-      - -tags=pow_avx
     main: main.go
     goos:
       - windows

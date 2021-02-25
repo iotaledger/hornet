@@ -156,7 +156,7 @@ type addressOutputsResponse struct {
 	OutputIDs []string `json:"outputIds"`
 }
 
-// treasuryResponse defines the response of a GET debug treasury REST API call.
+// treasuryResponse defines the response of a GET treasury REST API call.
 type treasuryResponse struct {
 	MilestoneID string `json:"milestoneId"`
 	Amount      uint64 `json:"amount"`

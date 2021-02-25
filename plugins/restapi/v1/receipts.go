@@ -1,8 +1,6 @@
 package v1
 
 import (
-	"strconv"
-
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -23,8 +21,7 @@ func receipts(_ echo.Context) (*receiptsResponse, error) {
 }
 
 func receiptsByMigratedAtIndex(c echo.Context) (*receiptsResponse, error) {
-	migratedAtStr := c.Param(ParameterMilestoneIndex)
-	migratedAt, err := strconv.ParseUint(migratedAtStr, 10, 32)
+	migratedAt, err := ParseMilestoneIndexParam(c)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid migrated at milestone index: %s, error: %s", migratedAtStr, err)
 	}

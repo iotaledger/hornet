@@ -30,7 +30,7 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgReceiptsBackupFolder, "./receipts", "path to the receipts backup folder")
+			fs.String(CfgReceiptsBackupFolder, "receipts", "path to the receipts backup folder")
 			fs.Bool(CfgReceiptsBackupEnabled, false, "whether to backup receipts in the backup folder")
 			fs.Bool(CfgReceiptsValidatorIgnoreSoftErrors, false, "whether to ignore soft errors and not panic if one is encountered")
 			fs.Bool(CfgReceiptsValidatorValidate, false, "whether to validate receipts")

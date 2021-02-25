@@ -807,6 +807,9 @@ func newUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasury
 	return func(output *utxo.TreasuryOutput) error {
 		// delete previous
 		existing, err := utxoManager.UnspentTreasuryOutput()
+		// we might not have any unspent treasury output when we're loading up a full snapshot
+		// which contains the initial treasury output in the header part, so if there is an error here,
+		// it simply means that no treasury output exists
 		if err == nil {
 			_ = utxoManager.DeleteTreasuryOutput(existing)
 		}
@@ -970,9 +973,6 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 
 	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts))
 
-	_ = s.utxo.ForEachTreasuryOutput(func(output *utxo.TreasuryOutput) bool {
-		return true
-	})
 	if err := s.utxo.CheckLedgerState(); err != nil {
 		return err
 	}
