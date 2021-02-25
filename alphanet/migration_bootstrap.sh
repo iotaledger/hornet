@@ -14,7 +14,7 @@ go run ../main.go -c config_alphanet.json \
 --node.disablePlugins="Autopeering" \
 --node.enablePlugins="Spammer,Coordinator,MQTT,Receipts,Migrator" \
 --receipts.backup.enabled="true" \
---receipts.backup.folder="./receipts" \
+--receipts.backup.folder="receipts" \
 --receipts.validator.validate="true" \
 --receipts.validator.api.address="http://127.0.0.1:14266" \
 --receipts.validator.api.timeout="10s" \

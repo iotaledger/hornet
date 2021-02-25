@@ -109,7 +109,7 @@
   "receipts": {
     "backup": {
       "enabled": false,
-      "folder": "./receipts"
+      "folder": "receipts"
     },
     "validator": {
       "validate": false,

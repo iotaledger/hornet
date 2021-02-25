@@ -370,7 +370,7 @@ func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
 func DefaultReceiptValidatorConfig() ReceiptsConfig {
 	return ReceiptsConfig{
 		BackupEnabled:              false,
-		BackupFolder:               "./receipts",
+		BackupFolder:               "receipts",
 		Validate:                   false,
 		IgnoreSoftErrors:           false,
 		APIAddress:                 "http://localhost:14265",
