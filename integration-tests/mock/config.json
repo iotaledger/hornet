@@ -1,0 +1,32 @@
+{
+  "http": {
+    "bind_address": ":14266"
+  },
+  "coordinator": {
+    "seed": "YJTQYEWGHGALXDL9MEVDUOFJFOXXFLTLLP9VDYSBOGZEQEGTPBEYQPB9GWHGKQAPFTADPJV99EVGAUGE9",
+    "security": 2,
+    "tree_depth": 8,
+    "mwm": 3
+  },
+  "white_flag": {
+    "seed": "XUCKWJVTYPUVFFBVGVMAPAGCCJSYFIBPWMWFYVZJCNMBWSVIG9WDEHIHQLCSNUZCCZWF99VIZPYKGKDRC",
+    "migrations": {
+      "1": [
+        {
+          "balance": 1000000,
+          "index": 0,
+          "security": 2,
+          "ed25519_address": "2c2bb061de51f09ce2ccee44a626762bbb766997e1c8098eaec2e3a089c65843"
+        }
+      ],
+      "200": [
+        {
+          "balance": 100000000,
+          "index": 1,
+          "security": 2,
+          "ed25519_address": "0a9a5b39438f3fe9107facd9bf6df747573a8c5050c467f4dfcc32d82e3560f8"
+        }
+      ]
+    }
+  }
+}
