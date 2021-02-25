@@ -11,8 +11,10 @@ import (
 
 const (
 	// A prefix which denotes a spent treasury output.
+	// Do not modify the value since we're writing this as a bool.
 	TreasuryOutputSpentPrefix = 1
 	// A prefix which denotes an unspent treasury output.
+	// Do not modify the value since we're writing this as a bool.
 	TreasuryOutputUnspentPrefix = 0
 )
 

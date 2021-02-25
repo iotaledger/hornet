@@ -57,6 +57,8 @@ func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedF
 	migrated := make([]*iota.MigratedFundsEntry, 0, len(included))
 	for i := range included {
 		output := included[i][0]
+		// don't need to check the error here because if it wouldn't be a migration address,
+		// it wouldn't have passed 'validateConfirmation' in the first place
 		edAddr, _ := address.ParseMigrationAddress(output.Address)
 		entry := &iota.MigratedFundsEntry{
 			Address: (*iota.Ed25519Address)(&edAddr),
