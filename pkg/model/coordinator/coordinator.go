@@ -235,6 +235,12 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		return err
 	}
 
+	if coo.migratorService != nil && receipt != nil {
+		if err := coo.migratorService.PersistState(); err != nil {
+			return fmt.Errorf("unable to persist migrator state: %w", err)
+		}
+	}
+
 	// always reference the last milestone directly to speed up syncing
 	latestMilestoneMessageID := milestoneMsg.GetMessageID()
 
