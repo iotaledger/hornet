@@ -91,7 +91,7 @@ func TestSingleHash(t *testing.T) {
 	hash, err := b.Hash(nullTransactionTrits)
 	assert.NoError(t, err)
 
-	expHash, err := curl.HashTrits(nullTransactionTrits, curl.CurlP81)
+	expHash, err := curl.HashTrits(nullTransactionTrits)
 	assert.NoError(t, err)
 	assert.Equal(t, expHash, hash)
 }
@@ -113,7 +113,7 @@ func TestHash(t *testing.T) {
 			h, err := b.Hash(tmp)
 			assert.NoError(t, err)
 
-			expHash, err := curl.HashTrits(tmp, curl.CurlP81)
+			expHash, err := curl.HashTrits(tmp)
 			assert.NoError(t, err)
 			assert.Equal(t, expHash, h)
 		}()
