@@ -78,12 +78,16 @@ func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index, receiptMigratedAt
 		return err
 	}
 
-	// TODO: delete treasury output?
-
 	if len(receiptMigratedAtIndex) > 0 {
 		placeHolder := &ReceiptTuple{Receipt: &iotago.Receipt{MigratedAt: receiptMigratedAtIndex[0]}, MilestoneIndex: msIndex}
 		if err := deleteReceipt(placeHolder, mutations); err != nil {
 			mutations.Cancel()
+			return err
+		}
+
+		// only ever delete spent treasury outputs, since the unspent treasury output must exist
+		// even after a milestone's lifetime
+		if err := deleteTreasuryOutput(diff.SpentTreasuryOutput, mutations); err != nil {
 			return err
 		}
 	}
