@@ -37,13 +37,13 @@ var (
 
 	warpSync *gossip.WarpSync
 
-	onGossipProtocolStreamCreated   *events.Closure
-	onSolidMilestoneIndexChanged    *events.Closure
-	onMilestoneSolidificationFailed *events.Closure
-	onCheckpointUpdated             *events.Closure
-	onTargetUpdated                 *events.Closure
-	onStart                         *events.Closure
-	onDone                          *events.Closure
+	onGossipProtocolStreamCreated    *events.Closure
+	onConfirmedMilestoneIndexChanged *events.Closure
+	onMilestoneSolidificationFailed  *events.Closure
+	onCheckpointUpdated              *events.Closure
+	onTargetUpdated                  *events.Closure
+	onStart                          *events.Closure
+	onDone                           *events.Closure
 )
 
 type dependencies struct {
@@ -75,12 +75,12 @@ func configureEvents() {
 
 	onGossipProtocolStreamCreated = events.NewClosure(func(p *gossip.Protocol) {
 		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *gossip.Heartbeat) {
-			warpSync.UpdateCurrent(deps.Storage.GetSolidMilestoneIndex())
+			warpSync.UpdateCurrent(deps.Storage.GetConfirmedMilestoneIndex())
 			warpSync.UpdateTarget(hb.SolidMilestoneIndex)
 		}))
 	})
 
-	onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		warpSync.UpdateCurrent(msIndex)
 	})
 
@@ -130,7 +130,7 @@ func configureEvents() {
 
 func attachEvents() {
 	deps.Service.Events.ProtocolStarted.Attach(onGossipProtocolStreamCreated)
-	deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 	deps.Tangle.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Attach(onTargetUpdated)
@@ -140,7 +140,7 @@ func attachEvents() {
 
 func detachEvents() {
 	deps.Service.Events.ProtocolStarted.Detach(onGossipProtocolStreamCreated)
-	deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 	deps.Tangle.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Detach(onTargetUpdated)

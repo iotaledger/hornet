@@ -63,8 +63,8 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.ServerMetrics,
 
-			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
-			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
+			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI),
+			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI),
 			deps.NodeConfig.Int(CfgTipSelBelowMaxDepth),
 
 			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),

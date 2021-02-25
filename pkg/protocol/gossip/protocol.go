@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	// defines how far back a node's solid milestone index can be
+	// defines how far back a node's confirmed milestone index can be
 	// but still considered synchronized.
-	minLSMISynchronizationThreshold = 2
+	minCMISynchronizationThreshold = 2
 )
 
 // ProtocolEvents happening on a Protocol.
@@ -182,17 +182,17 @@ func (p *Protocol) CouldHaveDataForMilestone(index milestone.Index) bool {
 }
 
 // IsSynced tells whether the underlying peer is synced.
-func (p *Protocol) IsSynced(lsi milestone.Index) bool {
+func (p *Protocol) IsSynced(cmi milestone.Index) bool {
 	if p.LatestHeartbeat == nil {
 		return false
 	}
 
 	latestIndex := p.LatestHeartbeat.LatestMilestoneIndex
-	if latestIndex < lsi {
-		latestIndex = lsi
+	if latestIndex < cmi {
+		latestIndex = cmi
 	}
 
-	if p.LatestHeartbeat.SolidMilestoneIndex < (latestIndex - minLSMISynchronizationThreshold) {
+	if p.LatestHeartbeat.SolidMilestoneIndex < (latestIndex - minCMISynchronizationThreshold) {
 		return false
 	}
 

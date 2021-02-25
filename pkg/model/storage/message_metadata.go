@@ -75,7 +75,7 @@ type MessageMetadata struct {
 	// oldestConeRootIndex is the lowest referenced index of the past cone of this message
 	oldestConeRootIndex milestone.Index
 
-	// coneRootCalculationIndex is the solid index ycri and ocri were calculated at
+	// coneRootCalculationIndex is the confirmed milestone index ycri and ocri were calculated at
 	coneRootCalculationIndex milestone.Index
 
 	// parents are the parents of the message

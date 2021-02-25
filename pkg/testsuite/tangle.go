@@ -35,10 +35,10 @@ func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMes
 	return cachedMsg
 }
 
-// VerifyLSMI checks if the latest solid milestone index is equal to the given milestone index.
-func (te *TestEnvironment) VerifyLSMI(index milestone.Index) {
-	lsmi := te.storage.GetSolidMilestoneIndex()
-	require.Equal(te.TestState, index, lsmi)
+// VerifyCMI checks if the confirmed milestone index is equal to the given milestone index.
+func (te *TestEnvironment) VerifyCMI(index milestone.Index) {
+	cmi := te.storage.GetConfirmedMilestoneIndex()
+	require.Equal(te.TestState, index, cmi)
 }
 
 // VerifyLMI checks if the latest milestone index is equal to the given milestone index.

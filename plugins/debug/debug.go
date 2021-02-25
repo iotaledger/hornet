@@ -31,7 +31,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}
 
 	// check if the requested milestone index would be the next one
-	if request.Index > deps.Storage.GetSolidMilestoneIndex()+1 {
+	if request.Index > deps.Storage.GetConfirmedMilestoneIndex()+1 {
 		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, common.ErrNodeNotSynced.Error())
 	}
 

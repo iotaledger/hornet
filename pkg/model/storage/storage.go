@@ -54,10 +54,10 @@ type Storage struct {
 	snapshotMutex syncutils.RWMutex
 
 	// milestones
-	solidMilestoneIndex  milestone.Index
-	solidMilestoneLock   syncutils.RWMutex
-	latestMilestoneIndex milestone.Index
-	latestMilestoneLock  syncutils.RWMutex
+	confirmedMilestoneIndex milestone.Index
+	confirmedMilestoneLock  syncutils.RWMutex
+	latestMilestoneIndex    milestone.Index
+	latestMilestoneLock     syncutils.RWMutex
 
 	// node synced
 	isNodeSynced                  bool
@@ -90,7 +90,7 @@ func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile
 	}
 
 	s.configureStorages(s.store, cachesProfile)
-	s.loadSolidMilestoneFromDatabase()
+	s.loadConfirmedMilestoneFromDatabase()
 	s.loadSnapshotInfo()
 	s.loadSolidEntryPoints()
 
@@ -135,15 +135,15 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownUnreferencedMessagesStorage()
 }
 
-func (s *Storage) loadSolidMilestoneFromDatabase() {
+func (s *Storage) loadConfirmedMilestoneFromDatabase() {
 
 	ledgerMilestoneIndex, err := s.UTXO().ReadLedgerIndex()
 	if err != nil {
 		panic(err)
 	}
 
-	// set the solid milestone index based on the ledger milestone
-	s.SetSolidMilestoneIndex(ledgerMilestoneIndex, false)
+	// set the confirmed milestone index based on the ledger milestone
+	s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
 }
 
 func (s *Storage) DatabaseSupportsCleanup() bool {

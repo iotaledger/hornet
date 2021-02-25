@@ -26,9 +26,9 @@ func publishOnTopic(topic string, payload interface{}) {
 	mqttBroker.Send(topic, jsonPayload)
 }
 
-func publishSolidMilestone(cachedMs *storage.CachedMilestone) {
+func publishConfirmedMilestone(cachedMs *storage.CachedMilestone) {
 	defer cachedMs.Release(true)
-	publishMilestoneOnTopic(topicMilestonesSolid, cachedMs.GetMilestone())
+	publishMilestoneOnTopic(topicMilestonesConfirmed, cachedMs.GetMilestone())
 }
 
 func publishLatestMilestone(cachedMs *storage.CachedMilestone) {
@@ -119,23 +119,23 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 			messageMetadataResponse.LedgerInclusionState = &inclusionState
 		} else if metadata.IsSolid() {
 			// determine info about the quality of the tip if not referenced
-			lsmi := deps.Storage.GetSolidMilestoneIndex()
-			ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMetadata.Retain(), lsmi)
+			cmi := deps.Storage.GetConfirmedMilestoneIndex()
+			ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMetadata.Retain(), cmi)
 
 			// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 			shouldPromote := false
 			shouldReattach := false
 
-			if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)) {
-				// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
+			if (cmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)) {
+				// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 				shouldPromote = false
 				shouldReattach = true
-			} else if (lsmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
-				// if the LSMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy and should be promoted
+			} else if (cmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI)) {
+				// if the CMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy and should be promoted
 				shouldPromote = true
 				shouldReattach = false
-			} else if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
-				// if the OCRI to LSMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy and should be promoted
+			} else if (cmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI)) {
+				// if the OCRI to CMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy and should be promoted
 				shouldPromote = true
 				shouldReattach = false
 			}

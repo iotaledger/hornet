@@ -7,7 +7,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
-// milestonePayload defines the payload of the milestone latest and solid topics
+// milestonePayload defines the payload of the milestone latest and confirmed topics
 type milestonePayload struct {
 	// The index of the milestone.
 	Index uint32 `json:"index"`

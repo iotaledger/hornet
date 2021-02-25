@@ -25,8 +25,8 @@ type infoResponse struct {
 	MinPowScore float64 `json:"minPowScore"`
 	// The latest known milestone index.
 	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
-	// The current solid milestone's index.
-	SolidMilestoneIndex milestone.Index `json:"solidMilestoneIndex"`
+	// The current confirmed milestone's index.
+	ConfirmedMilestoneIndex milestone.Index `json:"confirmedMilestoneIndex"`
 	// The milestone index at which the last pruning commenced.
 	PruningIndex milestone.Index `json:"pruningIndex"`
 	// The features this node exposes.

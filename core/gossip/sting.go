@@ -54,9 +54,9 @@ func addMessageEventHandlers(proto *gossip.Protocol) {
 
 		/*
 			if p.Autopeering != nil && p.LatestHeartbeat.SolidMilestoneIndex < tangle.GetSnapshotInfo().PruningIndex {
-				// peer is connected via autopeering and its latest solid milestone index is below our pruning index.
+				// peer is connected via autopeering and its solid milestone index is below our pruning index.
 				// we can't help this neighbor to become sync, so it's better to drop the connection and free the slots for other peers.
-				log.Infof("dropping autopeered neighbor %s / %s because LSMI (%d) is below our pruning index (%d)", p.Autopeering.Address(), p.Autopeering.ID(), p.LatestHeartbeat.SolidMilestoneIndex, tangle.GetSnapshotInfo().PruningIndex)
+				log.Infof("dropping autopeered neighbor %s / %s because SMI (%d) is below our pruning index (%d)", p.Autopeering.Address(), p.Autopeering.ID(), p.LatestHeartbeat.SolidMilestoneIndex, tangle.GetSnapshotInfo().PruningIndex)
 				peering.Manager().Remove(p.ID)
 				return
 			}

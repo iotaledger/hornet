@@ -165,21 +165,21 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage          *storage.Storage
-	Tangle           *tangle.Tangle
-	Manager          *p2p.Manager
-	Service          *gossip.Service
-	UTXO             *utxo.Manager
-	PoWHandler       *pow.Handler
-	MessageProcessor *gossip.MessageProcessor
-	Snapshot         *snapshot.Snapshot
-	AppInfo          *app.AppInfo
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	Storage              *storage.Storage
+	Tangle               *tangle.Tangle
+	Manager              *p2p.Manager
+	Service              *gossip.Service
+	UTXO                 *utxo.Manager
+	PoWHandler           *pow.Handler
+	MessageProcessor     *gossip.MessageProcessor
+	Snapshot             *snapshot.Snapshot
+	AppInfo              *app.AppInfo
+	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager *p2ppkg.ConfigManager
-	NetworkID        uint64                       `name:"networkId"`
-	Bech32HRP        iotago.NetworkPrefix         `name:"bech32HRP"`
-	TipSelector      *tipselect.TipSelector
-	Echo             *echo.Echo
+	NetworkID            uint64               `name:"networkId"`
+	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
+	TipSelector          *tipselect.TipSelector
+	Echo                 *echo.Echo
 }
 
 func configure() {

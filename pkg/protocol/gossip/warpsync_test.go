@@ -20,26 +20,26 @@ func TestWarpSync_Update(t *testing.T) {
 	ws.UpdateCurrent(100)
 	ws.UpdateTarget(1000)
 
-	assert.EqualValues(t, ws.CurrentSolidMs, 100)
+	assert.EqualValues(t, ws.CurrentConfirmedMs, 100)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 150)
 
-	// nothing should change besides current solid
+	// nothing should change besides current confirmed
 	ws.UpdateCurrent(120)
-	assert.EqualValues(t, ws.CurrentSolidMs, 120)
+	assert.EqualValues(t, ws.CurrentConfirmedMs, 120)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 150)
 
-	// nothing should change besides current solid
+	// nothing should change besides current confirmed
 	ws.UpdateCurrent(130)
-	assert.EqualValues(t, ws.CurrentSolidMs, 130)
+	assert.EqualValues(t, ws.CurrentConfirmedMs, 130)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 150)
 
 	// 80% reached
 	ws.UpdateCurrent(140)
-	assert.EqualValues(t, ws.CurrentSolidMs, 140)
+	assert.EqualValues(t, ws.CurrentConfirmedMs, 140)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 200)
 
 	// shouldn't update anything - simulates non synced peer sending heartbeat
 	ws.UpdateTarget(850)
-	assert.EqualValues(t, ws.CurrentSolidMs, 140)
+	assert.EqualValues(t, ws.CurrentConfirmedMs, 140)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 200)
 }

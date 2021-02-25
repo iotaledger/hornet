@@ -779,9 +779,9 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 
 	// create a prepped output producer which counts how many went through
 	var unspentOutputsCount uint64
-	lsmiUTXOProducer := newLSMIUTXOProducer(mergeUTXOManager)
+	cmiUTXOProducer := newCMIUTXOProducer(mergeUTXOManager)
 	countingOutputProducer := func() (*Output, error) {
-		output, err := lsmiUTXOProducer()
+		output, err := cmiUTXOProducer()
 		if output != nil {
 			unspentOutputsCount++
 		}

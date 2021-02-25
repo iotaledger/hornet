@@ -40,8 +40,8 @@ func (t *Tangle) RunTangleProcessor() {
 
 	// set latest known milestone from database
 	latestMilestoneFromDatabase := t.storage.SearchLatestMilestoneIndexInStore()
-	if latestMilestoneFromDatabase < t.storage.GetSolidMilestoneIndex() {
-		latestMilestoneFromDatabase = t.storage.GetSolidMilestoneIndex()
+	if latestMilestoneFromDatabase < t.storage.GetConfirmedMilestoneIndex() {
+		latestMilestoneFromDatabase = t.storage.GetConfirmedMilestoneIndex()
 	}
 
 	t.storage.SetLatestMilestoneIndex(latestMilestoneFromDatabase, t.updateSyncedAtStartup)
@@ -155,11 +155,11 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 			t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
 		}
 
-		solidMilestoneIndex := t.storage.GetSolidMilestoneIndex()
+		confirmedMilestoneIndex := t.storage.GetConfirmedMilestoneIndex()
 		if latestMilestoneIndex == 0 {
-			latestMilestoneIndex = solidMilestoneIndex
+			latestMilestoneIndex = confirmedMilestoneIndex
 		}
-		t.Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, solidMilestoneIndex)
+		t.Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, confirmedMilestoneIndex)
 
 	} else {
 		t.serverMetrics.KnownMessages.Inc()
@@ -235,13 +235,13 @@ func (t *Tangle) PrintStatus() {
 			"req(qu/pe/proc/lat): %05d/%05d/%05d/%04dms, "+
 				"reqQMs: %d, "+
 				"processor: %05d, "+
-				"LSMI/LMI: %d/%d, "+
+				"CMI/LMI: %d/%d, "+
 				"MPS (in/new/out): %05d/%05d/%05d, "+
 				"Tips (non-/semi-lazy): %d/%d",
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			t.receiveMsgWorkerPool.GetPendingQueueSize(),
-			t.storage.GetSolidMilestoneIndex(),
+			t.storage.GetConfirmedMilestoneIndex(),
 			t.storage.GetLatestMilestoneIndex(),
 			t.lastIncomingMPS,
 			t.lastNewMPS,

@@ -8,15 +8,15 @@ import (
 )
 
 var (
-	infoApp                 *prometheus.GaugeVec
-	infoMilestone           *prometheus.GaugeVec
-	infoMilestoneIndex      prometheus.Gauge
-	infoSolidMilestone      *prometheus.GaugeVec
-	infoSolidMilestoneIndex prometheus.Gauge
-	infoSnapshotIndex       prometheus.Gauge
-	infoPruningIndex        prometheus.Gauge
-	infoTips                prometheus.Gauge
-	infoMessagesToRequest   prometheus.Gauge
+	infoApp                     *prometheus.GaugeVec
+	infoMilestone               *prometheus.GaugeVec
+	infoMilestoneIndex          prometheus.Gauge
+	infoConfirmedMilestone      *prometheus.GaugeVec
+	infoConfirmedMilestoneIndex prometheus.Gauge
+	infoSnapshotIndex           prometheus.Gauge
+	infoPruningIndex            prometheus.Gauge
+	infoTips                    prometheus.Gauge
+	infoMessagesToRequest       prometheus.Gauge
 )
 
 func configureInfo() {
@@ -38,16 +38,16 @@ func configureInfo() {
 		Name: "iota_info_latest_milestone_index",
 		Help: "Latest milestone index.",
 	})
-	infoSolidMilestone = prometheus.NewGaugeVec(
+	infoConfirmedMilestone = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "iota_info_latest_solid_milestone",
-			Help: "Latest solid milestone.",
+			Name: "iota_info_confirmed_milestone",
+			Help: "Confirmed milestone.",
 		},
 		[]string{"messageID", "index"},
 	)
-	infoSolidMilestoneIndex = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "iota_info_latest_solid_milestone_index",
-		Help: "Latest solid milestone index.",
+	infoConfirmedMilestoneIndex = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "iota_info_confirmed_milestone_index",
+		Help: "Confirmed milestone index.",
 	})
 	infoSnapshotIndex = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "iota_info_snapshot_index",
@@ -71,8 +71,8 @@ func configureInfo() {
 	registry.MustRegister(infoApp)
 	registry.MustRegister(infoMilestone)
 	registry.MustRegister(infoMilestoneIndex)
-	registry.MustRegister(infoSolidMilestone)
-	registry.MustRegister(infoSolidMilestoneIndex)
+	registry.MustRegister(infoConfirmedMilestone)
+	registry.MustRegister(infoConfirmedMilestoneIndex)
 	registry.MustRegister(infoSnapshotIndex)
 	registry.MustRegister(infoPruningIndex)
 	registry.MustRegister(infoTips)
@@ -96,18 +96,18 @@ func collectInfo() {
 		cachedLatestMilestone.Release(true)
 	}
 
-	// Solid milestone index
-	smi := deps.Storage.GetSolidMilestoneIndex()
-	infoSolidMilestoneIndex.Set(float64(smi))
-	infoSolidMilestone.Reset()
-	infoSolidMilestone.WithLabelValues(hornet.GetNullMessageID().ToHex(), strconv.Itoa(int(smi))).Set(1)
+	// confirmed milestone index
+	smi := deps.Storage.GetConfirmedMilestoneIndex()
+	infoConfirmedMilestoneIndex.Set(float64(smi))
+	infoConfirmedMilestone.Reset()
+	infoConfirmedMilestone.WithLabelValues(hornet.GetNullMessageID().ToHex(), strconv.Itoa(int(smi))).Set(1)
 
-	// Solid milestone message ID
-	cachedSolidMilestone := deps.Storage.GetCachedMilestoneOrNil(smi)
-	if cachedSolidMilestone != nil {
-		infoSolidMilestone.Reset()
-		infoSolidMilestone.WithLabelValues(cachedSolidMilestone.GetMilestone().MessageID.ToHex(), strconv.Itoa(int(smi))).Set(1)
-		cachedSolidMilestone.Release(true)
+	// confirmed milestone message ID
+	cachedConfirmedMilestone := deps.Storage.GetCachedMilestoneOrNil(smi)
+	if cachedConfirmedMilestone != nil {
+		infoConfirmedMilestone.Reset()
+		infoConfirmedMilestone.WithLabelValues(cachedConfirmedMilestone.GetMilestone().MessageID.ToHex(), strconv.Itoa(int(smi))).Set(1)
+		cachedConfirmedMilestone.Release(true)
 	}
 
 	// Snapshot index and Pruning index

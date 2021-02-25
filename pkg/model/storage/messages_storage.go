@@ -27,7 +27,7 @@ func MessageIDCaller(handler interface{}, params ...interface{}) {
 }
 
 func NewMessageCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsg *CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index))(params[0].(*CachedMessage).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
+	handler.(func(cachedMsg *CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index))(params[0].(*CachedMessage).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
 }
 
 func MessageReferencedCaller(handler interface{}, params ...interface{}) {

@@ -17,7 +17,7 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone)
 
 	t.Events.ReceivedNewMilestone.Trigger(cachedMilestone) // milestone pass +1
 
-	solidMsIndex := t.storage.GetSolidMilestoneIndex()
+	confirmedMsIndex := t.storage.GetConfirmedMilestoneIndex()
 	msIndex := cachedMilestone.GetMilestone().Index
 
 	if t.storage.SetLatestMilestoneIndex(msIndex) {
@@ -26,7 +26,7 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone)
 	}
 	t.milestoneSolidifierWorkerPool.TrySubmit(msIndex, false)
 
-	if msIndex > solidMsIndex {
+	if msIndex > confirmedMsIndex {
 		t.log.Infof("Valid milestone detected! Index: %d", msIndex)
 
 		// request parent1 and parent2

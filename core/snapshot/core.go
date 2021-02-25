@@ -144,10 +144,10 @@ func configure() {
 
 func run() {
 
-	newSolidMilestoneSignal := make(chan milestone.Index)
-	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	newConfirmedMilestoneSignal := make(chan milestone.Index)
+	onConfirmedMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		select {
-		case newSolidMilestoneSignal <- msIndex:
+		case newConfirmedMilestoneSignal <- msIndex:
 		default:
 		}
 	})
@@ -155,8 +155,8 @@ func run() {
 	_ = CorePlugin.Daemon().BackgroundWorker("Snapshots", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Snapshots ... done")
 
-		deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
-		defer deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
+		defer deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 
 		for {
 			select {
@@ -165,8 +165,8 @@ func run() {
 				log.Info("Stopping Snapshots... done")
 				return
 
-			case solidMilestoneIndex := <-newSolidMilestoneSignal:
-				deps.Snapshot.HandleNewSolidMilestoneEvent(solidMilestoneIndex, shutdownSignal)
+			case confirmedMilestoneIndex := <-newConfirmedMilestoneSignal:
+				deps.Snapshot.HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex, shutdownSignal)
 			}
 		}
 	}, shutdown.PrioritySnapshots)

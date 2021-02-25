@@ -71,14 +71,14 @@ func TestConeRootIndexes(t *testing.T) {
 		te.IssueAndConfirmMilestoneOnTip(messages[len(messages)-1], false)
 
 		latestMilestone := te.Milestones[len(te.Milestones)-1]
-		lsmi := latestMilestone.GetMilestone().Index
+		cmi := latestMilestone.GetMilestone().Index
 
 		cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(messages[len(messages)-1])
-		ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, lsmi)
+		ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
 
 		minOldestConeRootIndex := milestone.Index(1)
-		if lsmi > milestone.Index(BelowMaxDepth) {
-			minOldestConeRootIndex = lsmi - milestone.Index(BelowMaxDepth)
+		if cmi > milestone.Index(BelowMaxDepth) {
+			minOldestConeRootIndex = cmi - milestone.Index(BelowMaxDepth)
 		}
 
 		require.GreaterOrEqual(te.TestState, uint32(ocri), uint32(minOldestConeRootIndex))
@@ -89,16 +89,16 @@ func TestConeRootIndexes(t *testing.T) {
 	}
 
 	latestMilestone := te.Milestones[len(te.Milestones)-1]
-	lsmi := latestMilestone.GetMilestone().Index
+	cmi := latestMilestone.GetMilestone().Index
 
 	// Use Null hash and last milestone hash as parents
 	parents := hornet.MessageIDs{latestMilestone.GetMilestone().MessageID, hornet.GetNullMessageID()}
 	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildIndexation().Store()
 
 	cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID())
-	ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, lsmi)
+	ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
 
 	// NullHash is SEP for index 0
 	require.Equal(te.TestState, uint32(0), uint32(ocri))
-	require.LessOrEqual(te.TestState, uint32(ycri), uint32(lsmi))
+	require.LessOrEqual(te.TestState, uint32(ycri), uint32(cmi))
 }
