@@ -37,6 +37,13 @@ type State struct {
 type MigratorServiceEvents struct {
 	// SoftError is triggered when a soft error is encountered.
 	SoftError *events.Event
+	// MigratedFundsFetched is triggered when new migration funds were fetched from a legacy node.
+	MigratedFundsFetched *events.Event
+}
+
+// MigratedFundsCaller is an event caller which gets migrated funds passed.
+func MigratedFundsCaller(handler interface{}, params ...interface{}) {
+	handler.(func([]*iotago.MigratedFundsEntry))(params[0].([]*iotago.MigratedFundsEntry))
 }
 
 // MigratorService is a service querying and validating batches of migrated funds.
@@ -62,7 +69,8 @@ type migrationResult struct {
 func NewService(validator *Validator, stateFilePath string) *MigratorService {
 	return &MigratorService{
 		Events: &MigratorServiceEvents{
-			SoftError: events.NewEvent(events.ErrorCaller),
+			SoftError:            events.NewEvent(events.ErrorCaller),
+			MigratedFundsFetched: events.NewEvent(MigratedFundsCaller),
 		},
 		validator:     validator,
 		migrations:    make(chan *migrationResult),
@@ -151,6 +159,8 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 			}
 			continue
 		}
+
+		s.Events.MigratedFundsFetched.Trigger(migratedFunds)
 
 		// always continue with the next index
 		startIndex = msIndex + 1

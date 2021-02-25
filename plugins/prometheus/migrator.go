@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	migratorSoftErrEncountered prometheus.Counter
-	receiptCount               prometheus.Counter
-	receiptMigrations          prometheus.Counter
+	migratorSoftErrEncountered      prometheus.Counter
+	migratorMigrationEntriesFetched prometheus.Counter
+	receiptCount                    prometheus.Counter
+	receiptMigrationEntriesApplied  prometheus.Counter
 )
 
 func configureMigrator() {
@@ -20,10 +21,21 @@ func configureMigrator() {
 		},
 	)
 
+	migratorMigrationEntriesFetched = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "iota_migrator_migration_entries_fetched_count",
+			Help: "The count of legacy migration entries fetched.",
+		},
+	)
+
 	registry.MustRegister(migratorSoftErrEncountered)
 
 	deps.MigratorService.Events.SoftError.Attach(events.NewClosure(func(_ error) {
 		migratorSoftErrEncountered.Inc()
+	}))
+
+	deps.MigratorService.Events.MigratedFundsFetched.Attach(events.NewClosure(func(funds []*iotago.MigratedFundsEntry) {
+		migratorMigrationEntriesFetched.Add(float64(len(funds)))
 	}))
 }
 
@@ -35,18 +47,18 @@ func configureReceipts() {
 		},
 	)
 
-	receiptMigrations = prometheus.NewCounter(
+	receiptMigrationEntriesApplied = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "iota_receipts_migration_entries_count",
-			Help: "The count of migration entries encountered.",
+			Name: "iota_receipts_entries_applied_count",
+			Help: "The count of migration entries applied through receipts.",
 		},
 	)
 
 	registry.MustRegister(receiptCount)
-	registry.MustRegister(receiptMigrations)
+	registry.MustRegister(receiptMigrationEntriesApplied)
 
 	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.Receipt) {
 		receiptCount.Inc()
-		receiptMigrations.Add(float64(len(r.Funds)))
+		receiptMigrationEntriesApplied.Add(float64(len(r.Funds)))
 	}))
 }
