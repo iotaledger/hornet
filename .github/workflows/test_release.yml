@@ -3,7 +3,7 @@ name: Test release
 on:
   push:
     paths-ignore:
-      - "docs/*"
+      - 'docs/**'
     branches:
       - master
 
