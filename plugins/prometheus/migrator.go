@@ -7,10 +7,9 @@ import (
 )
 
 var (
-	migratorSoftErrEncountered      prometheus.Counter
-	migratorMigrationEntriesFetched prometheus.Counter
-	receiptCount                    prometheus.Counter
-	receiptMigrationEntriesApplied  prometheus.Counter
+	migratorSoftErrEncountered     prometheus.Counter
+	receiptCount                   prometheus.Counter
+	receiptMigrationEntriesApplied prometheus.Counter
 )
 
 func configureMigrator() {
@@ -21,21 +20,10 @@ func configureMigrator() {
 		},
 	)
 
-	migratorMigrationEntriesFetched = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "iota_migrator_migration_entries_fetched_count",
-			Help: "The count of legacy migration entries fetched.",
-		},
-	)
-
 	registry.MustRegister(migratorSoftErrEncountered)
 
 	deps.MigratorService.Events.SoftError.Attach(events.NewClosure(func(_ error) {
 		migratorSoftErrEncountered.Inc()
-	}))
-
-	deps.MigratorService.Events.MigratedFundsFetched.Attach(events.NewClosure(func(funds []*iotago.MigratedFundsEntry) {
-		migratorMigrationEntriesFetched.Add(float64(len(funds)))
 	}))
 }
 

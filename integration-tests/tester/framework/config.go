@@ -386,8 +386,6 @@ type MigratorConfig struct {
 	Bootstrap bool
 	// The index of the first legacy milestone to migrate.
 	StartIndex int
-	// The auto fetch interval used to fetch for receipts.
-	AutoFetchInterval time.Duration
 	// The state file path.
 	StateFilePath string
 }
@@ -396,7 +394,6 @@ type MigratorConfig struct {
 func (migConfig *MigratorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%v", migrator.CfgMigratorBootstrap, migConfig.Bootstrap),
-		fmt.Sprintf("--%s=%s", migrator.CfgMigratorAutoFetchInterval, migConfig.AutoFetchInterval),
 		fmt.Sprintf("--%s=%d", migrator.CfgMigratorStartIndex, migConfig.StartIndex),
 		fmt.Sprintf("--%s=%s", migrator.CfgMigratorStateFilePath, migConfig.StateFilePath),
 	}
@@ -406,7 +403,6 @@ func (migConfig *MigratorConfig) CLIFlags() []string {
 func DefaultMigratorConfig() MigratorConfig {
 	return MigratorConfig{
 		Bootstrap:         false,
-		AutoFetchInterval: 10 * time.Second,
 		StartIndex:        1,
 		StateFilePath:     "migrator.state",
 	}

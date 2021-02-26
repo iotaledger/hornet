@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/core/gracefulshutdown"
-	"github.com/gohornet/hornet/plugins/coordinator"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
@@ -85,25 +84,6 @@ func configure() {
 }
 
 func run() {
-	// auto. fetch receipts in case coordinator isn't running
-	if Plugin.Node.IsSkipped(coordinator.Plugin) {
-		autoFetcherName := Plugin.Name + "-auto-fetch"
-		if err := Plugin.Node.Daemon().BackgroundWorker(autoFetcherName, func(shutdownSignal <-chan struct{}) {
-			log.Infof("Starting %s ... done", autoFetcherName)
-		out:
-			for {
-				select {
-				case <-shutdownSignal:
-					break out
-				case <-time.After(deps.NodeConfig.Duration(CfgMigratorAutoFetchInterval)):
-				}
-				_ = deps.MigratorService.Receipt()
-			}
-			log.Infof("Stopping %s ... done", autoFetcherName)
-		}, shutdown.PriorityMigrator); err != nil {
-			log.Panicf("failed to start worker: %s", err)
-		}
-	}
 	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		log.Infof("Starting %s ... done", Plugin.Name)
 		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
