@@ -81,7 +81,7 @@ func createIncludedBundles(cfg config.WhiteFlagConfig) (map[uint32][][]trinary.T
 				KeyIndex: migration.Index,
 				Security: migration.Security,
 			}}
-			migrationAddress, err := generateMigraionAddress(migration.Ed25519Address)
+			migrationAddress, err := generateMigrationAddress(migration.Ed25519Address)
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate migration address from config: %w", err)
 			}
@@ -107,7 +107,7 @@ func createIncludedBundles(cfg config.WhiteFlagConfig) (map[uint32][][]trinary.T
 	return includedBundles, nil
 }
 
-func generateMigraionAddress(bytes []byte) (trinary.Hash, error) {
+func generateMigrationAddress(bytes []byte) (trinary.Hash, error) {
 	if len(bytes) != 32 {
 		return "", consts.ErrInvalidAddress
 	}
