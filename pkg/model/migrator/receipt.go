@@ -9,6 +9,7 @@ import (
 	"path"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
+
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -42,13 +43,13 @@ type ReceiptService struct {
 }
 
 // NewReceiptService creates a new ReceiptService.
-func NewReceiptService(v *Validator, utxoManager *utxo.Manager, validationEnabled bool, backupEnabled bool, ignoreSoftErrors bool, backupFolder string) *ReceiptService {
+func NewReceiptService(validator *Validator, utxoManager *utxo.Manager, validationEnabled bool, backupEnabled bool, ignoreSoftErrors bool, backupFolder string) *ReceiptService {
 	return &ReceiptService{
 		ValidationEnabled: validationEnabled,
 		IgnoreSoftErrors:  ignoreSoftErrors,
 		BackupEnabled:     backupEnabled,
 		utxoManager:       utxoManager,
-		validator:         v,
+		validator:         validator,
 		backupFolder:      backupFolder,
 	}
 }
@@ -76,7 +77,7 @@ func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
 		return err
 	}
 	if err := ioutil.WriteFile(receiptFileName, receiptJSON, os.ModePerm); err != nil {
-		return fmt.Errorf("unable to persist receipt onto disk: %w", &SoftError{Err: err})
+		return fmt.Errorf("unable to persist receipt onto disk: %w", &CriticalError{Err: err})
 	}
 	return nil
 }

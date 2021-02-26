@@ -402,9 +402,9 @@ func (migConfig *MigratorConfig) CLIFlags() []string {
 // DefaultMigratorConfig returns the default migrator plugin config.
 func DefaultMigratorConfig() MigratorConfig {
 	return MigratorConfig{
-		Bootstrap:         false,
-		StartIndex:        1,
-		StateFilePath:     "migrator.state",
+		Bootstrap:     false,
+		StartIndex:    1,
+		StateFilePath: "migrator.state",
 	}
 }
 
