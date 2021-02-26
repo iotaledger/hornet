@@ -43,7 +43,7 @@ func init() {
 	_, powFunc = pow.GetFastestProofOfWorkImpl()
 
 	log.Println("creating migration bundles...")
-	includedBundles, err := createIncludedBundles(cfg.WhiteFlag)
+	includedBundles, err := createIncludedBundles(cfg.WhiteFlag, cfg.Coordinator.MWM)
 	if err != nil {
 		log.Fatalf("failed to create bundles: %s", err)
 	}
@@ -64,7 +64,7 @@ func init() {
 	log.Println("white flag API initialized")
 }
 
-func createIncludedBundles(cfg config.WhiteFlagConfig) (map[uint32][][]trinary.Trytes, error) {
+func createIncludedBundles(cfg config.WhiteFlagConfig, mwm int) (map[uint32][][]trinary.Trytes, error) {
 	iotaAPI := new(legacyapi.API)
 
 	includedBundles := make(map[uint32][][]trinary.Trytes)
@@ -90,17 +90,21 @@ func createIncludedBundles(cfg config.WhiteFlagConfig) (map[uint32][][]trinary.T
 				Value:   migration.Balance,
 			}}
 
-			bndl, err := iotaAPI.PrepareTransfers(cfg.Seed, transfers, legacyapi.PrepareTransfersOptions{
+			rawTrytes, err := iotaAPI.PrepareTransfers(cfg.Seed, transfers, legacyapi.PrepareTransfersOptions{
 				Inputs: inputs,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("failed to create bundle: %w", err)
 			}
-			// PrepareTransfers returns the transaction in the reversed order, so we must reverse again
+			// PrepareTransfers returns the transaction trytes in the reversed order, so we must convert and reverse
+			bndl, _ := transaction.AsTransactionObjects(rawTrytes, nil)
 			for i, j := 0, len(bndl)-1; i < j; i, j = i+1, j-1 {
 				bndl[i], bndl[j] = bndl[j], bndl[i]
 			}
-			bundles = append(bundles, bndl)
+			if err := finalizeBundle(bndl, mwm); err != nil {
+				return nil, fmt.Errorf("failed to finalize the bundle: %w", err)
+			}
+			bundles = append(bundles, transaction.MustTransactionsToTrytes(bndl))
 		}
 		includedBundles[msIndex] = bundles
 	}
@@ -192,10 +196,11 @@ func createMilestone(cfg config.CoordinatorConfig, merkleTree *merkle.MerkleTree
 	// finalize bundle by adding the bundle hash
 	bndl, err = bundle.FinalizeInsecure(bndl)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to finalize bundle: %w", err)
+		return "", nil, fmt.Errorf("failed to finalize the bundle: %w", err)
 	}
 
-	if err = doPow(txSiblings, cfg.MWM); err != nil {
+	// do PoW for the sibling transaction so that we can compute its final hash
+	if err := doPow(txSiblings, cfg.MWM); err != nil {
 		return "", nil, fmt.Errorf("failed to do PoW: %w", err)
 	}
 
@@ -241,5 +246,17 @@ func doPow(tx *transaction.Transaction, mwm int) error {
 	tx.Nonce = nonce
 	tx.Hash = transaction.TransactionHash(tx)
 
+	return nil
+}
+
+func finalizeBundle(bndl bundle.Bundle, mwm int) error {
+	trunk := consts.NullHashTrytes
+	for i := len(bndl) - 1; i >= 0; i-- {
+		bndl[i].TrunkTransaction = trunk
+		if err := doPow(&bndl[i], mwm); err != nil {
+			return fmt.Errorf("failed to do PoW for tx %d: %w", bndl[i].CurrentIndex, err)
+		}
+		trunk = bndl[i].Hash
+	}
 	return nil
 }
