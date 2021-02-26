@@ -6,8 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gohornet/hornet/integration-tests/mock/pkg/http"
-	_ "github.com/gohornet/hornet/integration-tests/mock/pkg/http/whiteflag"
+	"github.com/gohornet/hornet/integration-tests/wfmock/pkg/http"
+
+	_ "github.com/gohornet/hornet/integration-tests/wfmock/pkg/http/whiteflag"
 )
 
 func main() {

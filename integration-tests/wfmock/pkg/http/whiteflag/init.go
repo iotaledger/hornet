@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gohornet/hornet/integration-tests/mock/pkg/config"
-	httpapi "github.com/gohornet/hornet/integration-tests/mock/pkg/http"
+	"github.com/gohornet/hornet/integration-tests/wfmock/pkg/config"
+	httpapi "github.com/gohornet/hornet/integration-tests/wfmock/pkg/http"
 	"github.com/iotaledger/iota.go/address"
 	legacyapi "github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/bundle"

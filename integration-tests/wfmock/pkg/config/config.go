@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/gohornet/hornet/integration-tests/mock/pkg/hexutil"
+	"github.com/gohornet/hornet/integration-tests/wfmock/pkg/hexutil"
 	"github.com/iotaledger/iota.go/consts"
 	"github.com/iotaledger/iota.go/trinary"
 )

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	httpapi "github.com/gohornet/hornet/integration-tests/mock/pkg/http"
+	httpapi "github.com/gohornet/hornet/integration-tests/wfmock/pkg/http"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/labstack/echo/v4"
 	"github.com/mitchellh/mapstructure"

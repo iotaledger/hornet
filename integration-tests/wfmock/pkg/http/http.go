@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gohornet/hornet/integration-tests/mock/pkg/config"
+	"github.com/gohornet/hornet/integration-tests/wfmock/pkg/config"
 	"github.com/labstack/echo/v4"
 )
 
