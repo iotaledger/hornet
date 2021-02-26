@@ -40,7 +40,7 @@ type whiteFlagMilestone struct {
 func init() {
 	cfg := config.GetConfig()
 
-	_, powFunc = pow.GetFastestProofOfWorkImpl()
+	powFunc = getPOWFunc()
 
 	log.Println("creating migration bundles...")
 	includedBundles, err := createIncludedBundles(cfg.WhiteFlag, cfg.Coordinator.MWM)
@@ -62,6 +62,12 @@ func init() {
 	httpapi.RegisterHandler(strings.ToLower(GetWhiteFlagConfirmationCommand), getWhiteFlagConfirmation)
 
 	log.Println("white flag API initialized")
+}
+
+func getPOWFunc() pow.ProofOfWorkFunc {
+	name, powFunc := pow.GetFastestProofOfWorkImpl()
+	log.Printf("using '%s' PoW", name)
+	return powFunc
 }
 
 func createIncludedBundles(cfg config.WhiteFlagConfig, mwm int) (map[uint32][][]trinary.Trytes, error) {

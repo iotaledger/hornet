@@ -32,4 +32,4 @@ EXPOSE 14266/tcp
 COPY config.json /config.json
 
 COPY --from=build-env /go/bin/wfmock /
-CMD ["/mock"]
+CMD ["/wfmock"]
