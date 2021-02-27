@@ -129,7 +129,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
 		deps.NodeConfig.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
 		deps.NodeConfig.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-		time.Duration(deps.NodeConfig.Int(CfgCoordinatorTipselectHeaviestBranchSelectionTimeoutMilliseconds))*time.Millisecond,
+		deps.NodeConfig.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout),
 	)
 
 	nextCheckpointSignal = make(chan struct{})
@@ -187,7 +187,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		deps.NetworkID,
 		signingProvider,
 		deps.NodeConfig.String(CfgCoordinatorStateFilePath),
-		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
+		deps.NodeConfig.Duration(CfgCoordinatorInterval),
 		powWorkerCount,
 		powHandler,
 		deps.MigratorService,

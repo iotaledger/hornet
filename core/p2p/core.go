@@ -154,7 +154,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps mngdeps) *p2ppkg.Manager {
 		return p2ppkg.NewManager(deps.Host,
 			p2ppkg.WithManagerLogger(logger.NewLogger("P2P-Manager")),
-			p2ppkg.WithManagerReconnectInterval(time.Duration(deps.Config.Int(CfgP2PReconnectIntervalSeconds))*time.Second, 1*time.Second),
+			p2ppkg.WithManagerReconnectInterval(deps.Config.Duration(CfgP2PReconnectInterval), 1*time.Second),
 		)
 	}); err != nil {
 		panic(err)

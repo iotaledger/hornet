@@ -96,7 +96,7 @@ func configure() {
 	jwtAuth = NewJWTAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt),
-		time.Duration(deps.NodeConfig.Int(CfgDashboardAuthSessionTimeout))*time.Minute,
+		deps.NodeConfig.Duration(CfgDashboardAuthSessionTimeout),
 		deps.Host.ID().String(),
 		deps.NodePrivateKey,
 	)

@@ -44,14 +44,18 @@ func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, pe
 		serverMetrics: serverMetrics,
 		opts:          *opts,
 	}
+
 	wuCacheOpts := opts.WorkUnitCacheOpts
+	cacheTime, _ := time.ParseDuration(wuCacheOpts.CacheTime)
+	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(wuCacheOpts.LeakDetectionOptions.MaxConsumerHoldTime)
+
 	proc.workUnits = objectstorage.New(
 		nil,
 		// defines the factory function for WorkUnits.
 		func(key []byte, data []byte) (objectstorage.StorableObject, error) {
 			return newWorkUnit(key, serverMetrics), nil
 		},
-		objectstorage.CacheTime(time.Duration(wuCacheOpts.CacheTimeMs)*time.Millisecond),
+		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(false),
 		objectstorage.KeysOnly(true),
 		objectstorage.StoreOnCreation(false),
@@ -59,7 +63,7 @@ func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, pe
 		objectstorage.LeakDetectionEnabled(wuCacheOpts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: wuCacheOpts.LeakDetectionOptions.MaxConsumersPerObject,
-				MaxConsumerHoldTime:   time.Duration(wuCacheOpts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
 

@@ -97,30 +97,30 @@ type TipSelector struct {
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
 	belowMaxDepth milestone.Index
-	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
+	// retentionRulesTipsLimitNonLazy is the maximum amount of current tips for which "maxReferencedTipAgeNonLazy"
 	// and "maxChildren" are checked. if the amount of tips exceeds this limit,
 	// referenced tips get removed directly to reduce the amount of tips in the network. (non-lazy pool)
 	retentionRulesTipsLimitNonLazy int
-	// maxReferencedTipAgeSeconds is the maximum time a tip remains in the tip pool
+	// maxReferencedTipAgeNonLazy is the maximum time a tip remains in the tip pool
 	// after it was referenced by the first message.
 	// this is used to widen the cone of the tangle. (non-lazy pool)
-	maxReferencedTipAgeSecondsNonLazy time.Duration
-	// maxChildren is the maximum amount of references by other messages
+	maxReferencedTipAgeNonLazy time.Duration
+	// maxChildrenNonLazy is the maximum amount of references by other messages
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (non-lazy pool)
 	maxChildrenNonLazy uint32
 	// spammerTipsThresholdNonLazy is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = always)
 	// this is used to support the network if someone attacks the tangle by spamming a lot of tips. (non-lazy pool)
 	spammerTipsThresholdNonLazy int
-	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
+	// retentionRulesTipsLimitSemiLazy is the maximum amount of current tips for which "maxReferencedTipAgeSemiLazy"
 	// and "maxChildren" are checked. if the amount of tips exceeds this limit,
 	// referenced tips get removed directly to reduce the amount of tips in the network. (semi-lazy pool)
 	retentionRulesTipsLimitSemiLazy int
-	// maxReferencedTipAgeSeconds is the maximum time a tip remains in the tip pool
+	// maxReferencedTipAgeSemiLazy is the maximum time a tip remains in the tip pool
 	// after it was referenced by the first message.
 	// this is used to widen the cone of the tangle. (semi-lazy pool)
-	maxReferencedTipAgeSecondsSemiLazy time.Duration
-	// maxChildren is the maximum amount of references by other messages
+	maxReferencedTipAgeSemiLazy time.Duration
+	// maxChildrenSemiLazy is the maximum amount of references by other messages
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (semi-lazy pool)
 	maxChildrenSemiLazy uint32
@@ -144,11 +144,11 @@ func New(storage *storage.Storage,
 	maxDeltaMsgOldestConeRootIndexToCMI int,
 	belowMaxDepth int,
 	retentionRulesTipsLimitNonLazy int,
-	maxReferencedTipAgeSecondsNonLazy time.Duration,
+	maxReferencedTipAgeNonLazy time.Duration,
 	maxChildrenNonLazy uint32,
 	spammerTipsThresholdNonLazy int,
 	retentionRulesTipsLimitSemiLazy int,
-	maxReferencedTipAgeSecondsSemiLazy time.Duration,
+	maxReferencedTipAgeSemiLazy time.Duration,
 	maxChildrenSemiLazy uint32,
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
@@ -159,11 +159,11 @@ func New(storage *storage.Storage,
 		maxDeltaMsgOldestConeRootIndexToCMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToCMI),
 		belowMaxDepth:                         milestone.Index(belowMaxDepth),
 		retentionRulesTipsLimitNonLazy:        retentionRulesTipsLimitNonLazy,
-		maxReferencedTipAgeSecondsNonLazy:     maxReferencedTipAgeSecondsNonLazy,
+		maxReferencedTipAgeNonLazy:            maxReferencedTipAgeNonLazy,
 		maxChildrenNonLazy:                    maxChildrenNonLazy,
 		spammerTipsThresholdNonLazy:           spammerTipsThresholdNonLazy,
 		retentionRulesTipsLimitSemiLazy:       retentionRulesTipsLimitSemiLazy,
-		maxReferencedTipAgeSecondsSemiLazy:    maxReferencedTipAgeSecondsSemiLazy,
+		maxReferencedTipAgeSemiLazy:           maxReferencedTipAgeSemiLazy,
 		maxChildrenSemiLazy:                   maxChildrenSemiLazy,
 		spammerTipsThresholdSemiLazy:          spammerTipsThresholdSemiLazy,
 		nonLazyTipsMap:                        make(map[string]*Tip),
@@ -228,7 +228,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 		parentMessageIDs[parent.ToMapKey()] = struct{}{}
 	}
 
-	checkTip := func(tipsMap map[string]*Tip, parentTip *Tip, retentionRulesTipsLimit int, maxChildren uint32, maxReferencedTipAgeSeconds time.Duration) bool {
+	checkTip := func(tipsMap map[string]*Tip, parentTip *Tip, retentionRulesTipsLimit int, maxChildren uint32, maxReferencedTipAge time.Duration) bool {
 		// if the amount of known tips is above the limit, remove the tip directly
 		if len(tipsMap) > retentionRulesTipsLimit {
 			return ts.removeTipWithoutLocking(tipsMap, parentTip.MessageID)
@@ -239,7 +239,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 			return ts.removeTipWithoutLocking(tipsMap, parentTip.MessageID)
 		}
 
-		if maxReferencedTipAgeSeconds == time.Duration(0) {
+		if maxReferencedTipAge == time.Duration(0) {
 			// check for maxReferenceTipAge is disabled
 			return false
 		}
@@ -258,13 +258,13 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 		switch tip.Score {
 		case ScoreNonLazy:
 			if parentTip, exists := ts.nonLazyTipsMap[parentMessageID]; exists {
-				if checkTip(ts.nonLazyTipsMap, parentTip, ts.retentionRulesTipsLimitNonLazy, ts.maxChildrenNonLazy, ts.maxReferencedTipAgeSecondsNonLazy) {
+				if checkTip(ts.nonLazyTipsMap, parentTip, ts.retentionRulesTipsLimitNonLazy, ts.maxChildrenNonLazy, ts.maxReferencedTipAgeNonLazy) {
 					ts.serverMetrics.TipsNonLazy.Sub(1)
 				}
 			}
 		case ScoreSemiLazy:
 			if parentTip, exists := ts.semiLazyTipsMap[parentMessageID]; exists {
-				if checkTip(ts.semiLazyTipsMap, parentTip, ts.retentionRulesTipsLimitSemiLazy, ts.maxChildrenSemiLazy, ts.maxReferencedTipAgeSecondsSemiLazy) {
+				if checkTip(ts.semiLazyTipsMap, parentTip, ts.retentionRulesTipsLimitSemiLazy, ts.maxChildrenSemiLazy, ts.maxReferencedTipAgeSemiLazy) {
 					ts.serverMetrics.TipsSemiLazy.Sub(1)
 				}
 			}
@@ -427,14 +427,14 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	checkTip := func(tipsMap map[string]*Tip, tip *Tip, maxReferencedTipAgeSeconds time.Duration) bool {
+	checkTip := func(tipsMap map[string]*Tip, tip *Tip, maxReferencedTipAge time.Duration) bool {
 		if tip.TimeFirstChild.IsZero() {
 			// not referenced by another message
 			return false
 		}
 
 		// check if the tip reached its maximum age
-		if time.Since(tip.TimeFirstChild) < maxReferencedTipAgeSeconds {
+		if time.Since(tip.TimeFirstChild) < maxReferencedTipAge {
 			return false
 		}
 
@@ -444,13 +444,13 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
-		if checkTip(ts.nonLazyTipsMap, tip, ts.maxReferencedTipAgeSecondsNonLazy) {
+		if checkTip(ts.nonLazyTipsMap, tip, ts.maxReferencedTipAgeNonLazy) {
 			ts.serverMetrics.TipsNonLazy.Sub(1)
 			count++
 		}
 	}
 	for _, tip := range ts.semiLazyTipsMap {
-		if checkTip(ts.semiLazyTipsMap, tip, ts.maxReferencedTipAgeSecondsSemiLazy) {
+		if checkTip(ts.semiLazyTipsMap, tip, ts.maxReferencedTipAgeSemiLazy) {
 			ts.serverMetrics.TipsSemiLazy.Sub(1)
 			count++
 		}

@@ -34,10 +34,13 @@ func (s *Storage) GetIndexationStorageSize() int {
 
 func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
+	cacheTime, _ := time.ParseDuration(opts.CacheTime)
+	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+
 	s.indexationStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixIndexation}),
 		indexationFactory,
-		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
+		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(IndexationIndexLength, iotago.MessageIDLength),
 		objectstorage.KeysOnly(true),
@@ -46,7 +49,7 @@ func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profil
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
-				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
 }

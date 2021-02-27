@@ -108,7 +108,7 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 			return true
 		}
 
-		path := echo.GetPath(context.Request())
+		path := context.Request().URL.EscapedPath()
 		for _, prefix := range routesForMethod {
 			if strings.HasPrefix(path, prefix) {
 				return false
@@ -141,7 +141,7 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 	}
 
 	jwtAuthSkipper := func(context echo.Context) bool {
-		path := echo.GetPath(context.Request())
+		path := context.Request().URL.EscapedPath()
 		for _, prefix := range jwtAuthRoutes {
 			if strings.HasPrefix(path, prefix) {
 				return false

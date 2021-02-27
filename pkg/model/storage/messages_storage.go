@@ -153,31 +153,34 @@ func (s *Storage) GetMessageStorageSize() int {
 
 func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
+	cacheTime, _ := time.ParseDuration(opts.CacheTime)
+	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+
 	s.messagesStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixMessages}),
 		messageFactory,
-		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
+		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.StoreOnCreation(true),
 		objectstorage.ReleaseExecutorWorkerCount(opts.ReleaseExecutorWorkerCount),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
-				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
 
 	s.metadataStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixMessageMetadata}),
 		MetadataFactory,
-		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
+		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.StoreOnCreation(false),
 		objectstorage.ReleaseExecutorWorkerCount(opts.ReleaseExecutorWorkerCount),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
-				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
 }

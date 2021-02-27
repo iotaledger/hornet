@@ -69,7 +69,7 @@ type Coordinator struct {
 
 	// config options
 	stateFilePath            string
-	milestoneIntervalSec     int
+	milestoneInterval        time.Duration
 	powWorkerCount           int
 	milestonePublicKeysCount int
 	networkID                uint64
@@ -88,21 +88,21 @@ type Coordinator struct {
 // New creates a new coordinator instance.
 func New(
 	storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider,
-	stateFilePath string, milestoneIntervalSec int, powWorkerCount int,
+	stateFilePath string, milestoneInterval time.Duration, powWorkerCount int,
 	powHandler *pow.Handler, migratorService *migrator.MigratorService, utxoManager *utxo.Manager,
 	sendMessageFunc SendMessageFunc) (*Coordinator, error) {
 
 	result := &Coordinator{
-		storage:              storage,
-		networkID:            networkID,
-		signerProvider:       signerProvider,
-		stateFilePath:        stateFilePath,
-		milestoneIntervalSec: milestoneIntervalSec,
-		powWorkerCount:       powWorkerCount,
-		powHandler:           powHandler,
-		sendMesssageFunc:     sendMessageFunc,
-		migratorService:      migratorService,
-		utxoManager:          utxoManager,
+		storage:           storage,
+		networkID:         networkID,
+		signerProvider:    signerProvider,
+		stateFilePath:     stateFilePath,
+		milestoneInterval: milestoneInterval,
+		powWorkerCount:    powWorkerCount,
+		powHandler:        powHandler,
+		sendMesssageFunc:  sendMessageFunc,
+		migratorService:   migratorService,
+		utxoManager:       utxoManager,
 		Events: &Events{
 			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:         events.NewEvent(MilestoneCaller),
@@ -362,7 +362,7 @@ func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.Messag
 
 // GetInterval returns the interval milestones should be issued.
 func (coo *Coordinator) GetInterval() time.Duration {
-	return time.Second * time.Duration(coo.milestoneIntervalSec)
+	return coo.milestoneInterval
 }
 
 // State returns the current state of the coordinator.

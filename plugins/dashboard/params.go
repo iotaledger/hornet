@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"time"
+
 	"github.com/gohornet/hornet/pkg/node"
 	flag "github.com/spf13/pflag"
 )
@@ -12,8 +14,8 @@ const (
 	CfgDashboardBindAddress = "dashboard.bindAddress"
 	// whether to run the dashboard in dev mode
 	CfgDashboardDevMode = "dashboard.dev"
-	// how many minutes the auth session should last before expiring
-	CfgDashboardAuthSessionTimeout = "dashboard.auth.sessionTimeoutInMinutes"
+	// how long the auth session should last before expiring
+	CfgDashboardAuthSessionTimeout = "dashboard.auth.sessionTimeout"
 	// the auth username
 	CfgDashboardAuthUsername = "dashboard.auth.username"
 	// the auth password+salt as a scrypt hash
@@ -29,7 +31,7 @@ var params = &node.PluginParams{
 			fs.String(CfgNodeAlias, "", "set an alias to identify a node")
 			fs.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be access from")
 			fs.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
-			fs.Int(CfgDashboardAuthSessionTimeout, 4320, "how many minutes the auth session should last before expiring")
+			fs.Duration(CfgDashboardAuthSessionTimeout, 72*time.Hour, "how long the auth session should last before expiring")
 			fs.String(CfgDashboardAuthUsername, "admin", "the auth username")
 			fs.String(CfgDashboardAuthPasswordHash, "0000000000000000000000000000000000000000000000000000000000000000", "the auth username")
 			fs.String(CfgDashboardAuthPasswordSalt, "0000000000000000000000000000000000000000000000000000000000000000", "the auth password+salt as a scrypt hash")

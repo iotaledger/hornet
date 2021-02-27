@@ -40,10 +40,13 @@ func (s *Storage) GetChildrenStorageSize() int {
 
 func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
+	cacheTime, _ := time.ParseDuration(opts.CacheTime)
+	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+
 	s.childrenStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixChildren}),
 		childrenFactory,
-		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
+		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(iotago.MessageIDLength, iotago.MessageIDLength),
 		objectstorage.KeysOnly(true),
@@ -52,7 +55,7 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
-				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
 }

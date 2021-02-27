@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"time"
+
 	"github.com/gohornet/hornet/pkg/node"
 	flag "github.com/spf13/pflag"
 )
@@ -22,8 +24,8 @@ const (
 	CfgP2PPeers = "p2p.peers"
 	// Defines the aliases of the static peers (must be the same length like CfgP2PPeers) (CLI).
 	CfgP2PPeerAliases = "p2p.peerAliases"
-	// Defines the number of seconds to wait before trying to reconnect to a disconnected peer.
-	CfgP2PReconnectIntervalSeconds = "p2p.reconnectIntervalSeconds"
+	// Defines the time to wait before trying to reconnect to a disconnected peer.
+	CfgP2PReconnectInterval = "p2p.reconnectInterval"
 )
 
 var params = &node.PluginParams{
@@ -35,7 +37,7 @@ var params = &node.PluginParams{
 			fs.String(CfgP2PPeerStorePath, "./p2pstore", "the path to the peer store")
 			fs.Int(CfgP2PConnMngHighWatermark, 10, "defines the threshold up on which connections count truncates to the lower watermark")
 			fs.Int(CfgP2PConnMngLowWatermark, 5, "defines the minimum connections count to hold after the high watermark was reached")
-			fs.Int(CfgP2PReconnectIntervalSeconds, 30, "the number of seconds to wait before trying to reconnect to a disconnected peer")
+			fs.Duration(CfgP2PReconnectInterval, 30*time.Second, "the time to wait before trying to reconnect to a disconnected peer")
 			return fs
 		}(),
 		"peeringConfig": func() *flag.FlagSet {

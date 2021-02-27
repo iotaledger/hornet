@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -185,7 +186,7 @@ func (netConfig *NetworkConfig) CLIFlags() []string {
 		fmt.Sprintf("--%s=%d", p2p.CfgP2PConnMngLowWatermark, netConfig.ConnMngLowWatermark),
 		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeers, strings.Join(netConfig.Peers, ",")),
 		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeerAliases, strings.Join(netConfig.PeerAliases, ",")),
-		fmt.Sprintf("--%s=%d", p2p.CfgP2PReconnectIntervalSeconds, netConfig.ReconnectIntervalSeconds),
+		fmt.Sprintf("--%s=%ds", p2p.CfgP2PReconnectInterval, netConfig.ReconnectIntervalSeconds),
 		fmt.Sprintf("--%s=%d", gossip.CfgP2PGossipUnknownPeersLimit, netConfig.GossipUnknownPeersLimit),
 	}
 }
@@ -318,7 +319,7 @@ type CoordinatorConfig struct {
 func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
-		fmt.Sprintf("--%s=%d", coordinator.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
+		fmt.Sprintf("--%s=%ds", coordinator.CfgCoordinatorInterval, cooConfig.IssuanceIntervalSeconds),
 	}
 }
 
@@ -420,15 +421,15 @@ type ProtocolConfig struct {
 
 // CLIFlags returns the config as CLI flags.
 func (protoConfig *ProtocolConfig) CLIFlags() []string {
-	keyRanges := []string{}
 
-	for _, keyRange := range protoConfig.PublicKeyRanges {
-		keyRanges = append(keyRanges, fmt.Sprintf("{\"key\":\"%v\",\"start\":%d,\"end\":%d}", keyRange.Key, keyRange.StartIndex, keyRange.EndIndex))
+	keyRangesJSON, err := json.Marshal(protoConfig.PublicKeyRanges)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal COO public key ranges: %s", err))
 	}
 
 	return []string{
 		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, protoConfig.MinPoWScore),
-		fmt.Sprintf("--%s=[%v]", protocfg.CfgProtocolPublicKeyRangesJSON, strings.Join(keyRanges, ",")),
+		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolPublicKeyRangesJSON, string(keyRangesJSON)),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolNetworkIDName, protoConfig.NetworkIDName),
 	}
 }
