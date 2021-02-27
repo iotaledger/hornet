@@ -2,47 +2,48 @@ module github.com/gohornet/hornet
 
 go 1.16
 
-replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210222004711-d924b9529a49
+replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210227231520-c1451f9a1d79
 
 require (
 	github.com/DataDog/zstd v1.4.8 // indirect
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/Shopify/sarama v1.28.0 // indirect
-	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
+	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/blang/vfs v1.0.0
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
-	github.com/cockroachdb/pebble v0.0.0-20210205133808-a516e691fb72
+	github.com/cockroachdb/pebble v0.0.0-20210226180910-7ea0bd9842fa
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v20.10.3+incompatible
+	github.com/docker/docker v20.10.4+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/eclipse/paho.mqtt.golang v1.3.2
-	github.com/fhmq/hmq v0.0.0-20210223023713-b4baac9c8150
+	github.com/fhmq/hmq v0.0.0-20210226074401-7cc3949bbe89
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.1
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20210209220536-c4c55778aaf7
+	github.com/iotaledger/hive.go v0.0.0-20210227133437-68f051e64b99
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7
 	github.com/iotaledger/iota.go/v2 v2.0.0-20210218145050-36683a2a177c
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
-	github.com/labstack/echo/v4 v4.1.17
+	github.com/labstack/echo/v4 v4.2.0
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libp2p/go-libp2p v0.13.0
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
-	github.com/libp2p/go-libp2p-core v0.8.0
+	github.com/libp2p/go-libp2p-core v0.8.5
 	github.com/libp2p/go-libp2p-discovery v0.5.0
 	github.com/libp2p/go-libp2p-kad-dht v0.11.1
 	github.com/libp2p/go-libp2p-noise v0.1.2 // indirect
@@ -68,15 +69,16 @@ require (
 	github.com/tidwall/pretty v1.1.0 // indirect
 	github.com/ugorji/go v1.2.4 // indirect
 	github.com/willf/bitset v1.1.11
-	github.com/wollac/iota-crypto-demo v0.0.0-20210202205411-86c34c2d89f3
+	github.com/wollac/iota-crypto-demo v0.0.0-20210219113856-3491d2389538
 	gitlab.com/powsrv.io/go/client v0.0.0-20210203192329-84583796cd46
 	go.etcd.io/bbolt v1.3.5
+	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.7.0
 	go.uber.org/dig v1.10.0
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
-	golang.org/x/net v0.0.0-20210222171744-9060382bd457
-	golang.org/x/sys v0.0.0-20210223212115-eede4237b368 // indirect
+	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+	golang.org/x/sys v0.0.0-20210227040730-b0d1d43c014d // indirect
 	golang.org/x/tools v0.1.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect

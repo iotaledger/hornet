@@ -102,7 +102,7 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 	}
 
 	proxySkipper := func(context echo.Context) bool {
-		// Check which for which route we will skip JWT authentication
+		// Check for which route we will skip JWT authentication
 		routesForMethod, exists := allowedRoutes[context.Request().Method]
 		if !exists {
 			return true
