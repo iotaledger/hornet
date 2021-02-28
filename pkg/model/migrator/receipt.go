@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	// Returned when the state of the ReceiptService is invalid.
+	// ErrInvalidReceiptServiceState is returned when the state of the ReceiptService is invalid.
 	ErrInvalidReceiptServiceState = errors.New("invalid receipt service state")
 )
 

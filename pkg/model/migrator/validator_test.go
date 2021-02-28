@@ -22,10 +22,10 @@ func TestValidator_QueryMigratedFunds(t *testing.T) {
 	require.True(t, errors.Is(err, errInvalidIndex))
 
 	// valid milestone indices
-	for msIndex := 1; msIndex < len(testData.confirmations); msIndex++ {
+	for msIndex := 1; msIndex < len(validatorTests.confirmations); msIndex++ {
 		entries, err := v.QueryMigratedFunds(uint32(msIndex))
 		require.NoError(t, err)
-		requireEntriesEqual(t, testData.confirmations[msIndex].IncludedBundles, entries)
+		requireEntriesEqual(t, validatorTests.confirmations[msIndex].IncludedBundles, entries)
 	}
 }
 
@@ -36,16 +36,16 @@ func TestValidator_QueryNextMigratedFunds(t *testing.T) {
 	msIndex, entries, err := v.QueryNextMigratedFunds(2)
 	require.NoError(t, err)
 	require.EqualValues(t, 3, msIndex)
-	requireEntriesEqual(t, testData.confirmations[msIndex].IncludedBundles, entries)
+	requireEntriesEqual(t, validatorTests.confirmations[msIndex].IncludedBundles, entries)
 
 	// the latest milestone index should be returned
 	msIndex, _, err = v.QueryNextMigratedFunds(1000)
 	require.NoError(t, err)
-	require.EqualValues(t, testData.latestMilestoneIndex, msIndex)
+	require.EqualValues(t, validatorTests.latestMilestoneIndex, msIndex)
 }
 
 func newTestValidator() *migrator.Validator {
-	return migrator.NewValidator(&mockAPI{}, testData.coordinatorAddress, testData.coordinatorMerkleTreeDepth)
+	return migrator.NewValidator(&mockAPI{}, validatorTests.coordinatorAddress, validatorTests.coordinatorMerkleTreeDepth)
 }
 
 func requireEntriesEqual(t *testing.T, rawTrytes [][]trinary.Trytes, entries []*iota.MigratedFundsEntry) {
@@ -67,21 +67,21 @@ type mockAPI struct{}
 
 func (mockAPI) GetNodeInfo() (*api.GetNodeInfoResponse, error) {
 	return &api.GetNodeInfoResponse{
-		LatestMilestone:                    testData.latestMilestoneHash,
-		LatestMilestoneIndex:               int64(testData.latestMilestoneIndex),
-		LatestSolidSubtangleMilestone:      testData.latestMilestoneHash,
-		LatestSolidSubtangleMilestoneIndex: int64(testData.latestMilestoneIndex),
+		LatestMilestone:                    validatorTests.latestMilestoneHash,
+		LatestMilestoneIndex:               int64(validatorTests.latestMilestoneIndex),
+		LatestSolidSubtangleMilestone:      validatorTests.latestMilestoneHash,
+		LatestSolidSubtangleMilestoneIndex: int64(validatorTests.latestMilestoneIndex),
 	}, nil
 }
 
 func (mockAPI) GetWhiteFlagConfirmation(milestoneIndex uint32) (*api.WhiteFlagConfirmation, error) {
-	if milestoneIndex >= uint32(len(testData.confirmations)) {
+	if milestoneIndex >= uint32(len(validatorTests.confirmations)) {
 		return nil, errInvalidIndex
 	}
-	return &testData.confirmations[milestoneIndex], nil
+	return &validatorTests.confirmations[milestoneIndex], nil
 }
 
-var testData = struct {
+var validatorTests = struct {
 	latestMilestoneHash        trinary.Hash
 	latestMilestoneIndex       uint32
 	coordinatorAddress         trinary.Hash
