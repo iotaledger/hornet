@@ -25,16 +25,6 @@ var (
 	ErrInvalidState = errors.New("invalid migrator state")
 )
 
-// State stores the latest state of the MigratorService.
-type State struct {
-	/*
-	   4 bytes uint32 			LatestMigratedAtIndex
-	   4 bytes uint32 			LatestIncludedIndex
-	*/
-	LatestMigratedAtIndex uint32
-	LatestIncludedIndex   uint32
-}
-
 // MigratorServiceEvents are events happening around a MigratorService.
 type MigratorServiceEvents struct {
 	// SoftError is triggered when a soft error is encountered.
@@ -59,6 +49,16 @@ type MigratorService struct {
 	migrations chan *migrationResult
 
 	stateFilePath string
+}
+
+// State stores the latest state of the MigratorService.
+type State struct {
+	/*
+	   4 bytes uint32 			LatestMigratedAtIndex
+	   4 bytes uint32 			LatestIncludedIndex
+	*/
+	LatestMigratedAtIndex uint32
+	LatestIncludedIndex   uint32
 }
 
 type migrationResult struct {
@@ -208,13 +208,14 @@ func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntr
 	if l >= s.state.LatestIncludedIndex {
 		return s.state.LatestMigratedAtIndex, migratedFunds[s.state.LatestIncludedIndex:], nil
 	}
-	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", &CriticalError{Err: ErrInvalidState}, s.state.LatestIncludedIndex, l)
+	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", &CriticalError{err: ErrInvalidState}, s.state.LatestIncludedIndex, l)
 }
 
 // nextMigrations queries the next existing migrations starting from milestone index startIndex.
 // If startIndex is 0 the indices from state are used.
 func (s *MigratorService) nextMigrations(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
 	if startIndex == 0 {
+		// for bootstrapping query the migrations corresponding to the state
 		msIndex, migratedFunds, err := s.stateMigrations()
 		if err != nil {
 			return 0, nil, fmt.Errorf("failed to query migrations corresponding to initial state: %w", err)
@@ -226,7 +227,7 @@ func (s *MigratorService) nextMigrations(startIndex uint32) (uint32, []*iotago.M
 		// otherwise query the next available migrations
 		startIndex = msIndex + 1
 	}
-	return s.validator.nextMigrations(startIndex)
+	return s.validator.QueryNextMigratedFunds(startIndex)
 }
 
 func (s *MigratorService) updateState(result *migrationResult) {
