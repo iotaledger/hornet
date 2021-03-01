@@ -365,19 +365,48 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
-	conf, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID, func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
-		t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
-	}, func(confirmation *whiteflag.Confirmation) {
-		t.storage.SetSolidMilestoneIndex(milestoneIndexToSolidify)
-		t.Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
-		t.Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
-		t.milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
-		t.Events.MilestoneConfirmed.Trigger(confirmation)
-	}, func(output *utxo.Output) {
-		t.Events.NewUTXOOutput.Trigger(output)
-	}, func(spent *utxo.Spent) {
-		t.Events.NewUTXOSpent.Trigger(spent)
-	})
+	conf, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID,
+		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
+			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
+		},
+		func(confirmation *whiteflag.Confirmation) {
+			t.storage.SetSolidMilestoneIndex(milestoneIndexToSolidify)
+			t.Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
+			t.Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
+			t.milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
+			t.Events.MilestoneConfirmed.Trigger(confirmation)
+		},
+		func(output *utxo.Output) {
+			t.Events.NewUTXOOutput.Trigger(output)
+		},
+		func(spent *utxo.Spent) {
+			t.Events.NewUTXOSpent.Trigger(spent)
+		},
+		func(rt *utxo.ReceiptTuple) error {
+			if t.receiptService != nil {
+				if t.receiptService.ValidationEnabled {
+					if err := t.receiptService.Validate(rt.Receipt); err != nil {
+						var softErr *common.SoftError
+						switch {
+						case errors.As(err, &softErr):
+							if !t.receiptService.IgnoreSoftErrors {
+								return err
+							}
+							t.log.Warnf("soft error encountered during receipt validation: %s", err.Error())
+						default:
+							return err
+						}
+					}
+				}
+				if t.receiptService.BackupEnabled {
+					if err := t.receiptService.Backup(rt); err != nil {
+						return fmt.Errorf("unable to confirm milestone due to receipt backup failure: %w", err)
+					}
+				}
+			}
+			t.Events.NewReceipt.Trigger(rt.Receipt)
+			return nil
+		})
 
 	if err != nil {
 		t.log.Panic(err)

@@ -24,9 +24,18 @@ func init() {
 }
 
 var (
-	CorePlugin *node.CorePlugin
-	log        *logger.Logger
+	CorePlugin       *node.CorePlugin
+	log              *logger.Logger
+	nodeSelfShutdown = make(chan string)
 )
+
+// SelfShutdown can be called in order to instruct the node to shutdown cleanly without receiving any interrupt signals.
+func SelfShutdown(msg string) {
+	select {
+	case nodeSelfShutdown <- msg:
+	default:
+	}
+}
 
 func configure() {
 	log = logger.NewLogger(CorePlugin.Name)
@@ -37,9 +46,12 @@ func configure() {
 	signal.Notify(gracefulStop, syscall.SIGINT)
 
 	go func() {
-		<-gracefulStop
-
-		log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing ...", waitToKillTimeInSeconds)
+		select {
+		case <-gracefulStop:
+			log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing ...", waitToKillTimeInSeconds)
+		case msg := <-nodeSelfShutdown:
+			log.Warnf("Node self-shutdown: %s ;waiting (max %d seconds) to finish processing ...", msg, waitToKillTimeInSeconds)
+		}
 
 		go func() {
 			start := time.Now()

@@ -19,6 +19,8 @@ const (
 	OutputIDLength = iotago.TransactionIDLength + iotago.UInt16ByteSize
 )
 
+var FakeTreasuryAddress = iotago.Ed25519Address{}
+
 type Output struct {
 	kvStorable
 
@@ -115,7 +117,7 @@ func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, inde
 		case *iotago.SigLockedDustAllowanceOutput:
 			output = out
 		default:
-			return nil, errors.New("unsuported output type")
+			return nil, errors.New("unsupported output type")
 		}
 	default:
 		return nil, errors.New("unsupported transaction type")

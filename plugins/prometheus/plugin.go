@@ -17,11 +17,13 @@ import (
 
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 )
 
 func init() {
@@ -49,13 +51,16 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo       *app.AppInfo
-	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-	Storage       *storage.Storage
-	ServerMetrics *metrics.ServerMetrics
-	Service       *gossip.Service
-	Manager       *p2p.Manager
-	RequestQueue  gossip.RequestQueue
+	AppInfo         *app.AppInfo
+	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
+	Storage         *storage.Storage
+	ServerMetrics   *metrics.ServerMetrics
+	Service         *gossip.Service
+	ReceiptService  *migrator.ReceiptService `optional:"true"`
+	Tangle          *tangle.Tangle
+	MigratorService *migrator.MigratorService `optional:"true"`
+	Manager         *p2p.Manager
+	RequestQueue    gossip.RequestQueue
 }
 
 func configure() {
@@ -65,6 +70,12 @@ func configure() {
 	configureInfo()
 	configurePeers()
 	configureServer()
+	if deps.ReceiptService != nil {
+		configureReceipts()
+	}
+	if deps.MigratorService != nil {
+		configureMigrator()
+	}
 
 	if deps.NodeConfig.Bool(CfgPrometheusGoMetrics) {
 		registry.MustRegister(prometheus.NewGoCollector())

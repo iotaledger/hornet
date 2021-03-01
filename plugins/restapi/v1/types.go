@@ -6,6 +6,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // infoResponse defines the response of a GET info REST API call.
@@ -36,6 +37,11 @@ type infoResponse struct {
 type tipsResponse struct {
 	// The hex encoded message IDs of the tips.
 	Tips []string `json:"tipMessageIds"`
+}
+
+// receiptsResponse defines the response of a receipts REST API call.
+type receiptsResponse struct {
+	Receipts []*iotago.Receipt `json:"receipts"`
 }
 
 // messageMetadataResponse defines the response of a GET message metadata REST API call.
@@ -148,6 +154,12 @@ type addressOutputsResponse struct {
 	Count uint32 `json:"count"`
 	// The output IDs (transaction hash + output index) of the outputs on this address.
 	OutputIDs []string `json:"outputIds"`
+}
+
+// treasuryResponse defines the response of a GET treasury REST API call.
+type treasuryResponse struct {
+	MilestoneID string `json:"milestoneId"`
+	Amount      uint64 `json:"amount"`
 }
 
 // addPeerRequest defines the request for a POST peer REST API call.

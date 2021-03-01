@@ -17,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
+	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
@@ -88,11 +89,12 @@ func provide(c *dig.Container) {
 		Requester        *gossippkg.Requester
 		MessageProcessor *gossippkg.MessageProcessor
 		ServerMetrics    *metrics.ServerMetrics
+		ReceiptService   *migrator.ReceiptService `optional:"true"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
 		return tangle.New(logger.NewLogger("Tangle"), deps.Storage, deps.RequestQueue, deps.Service, deps.MessageProcessor,
-			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), deps.Requester, CorePlugin.Daemon(), *syncedAtStartup)
+			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), deps.Requester, CorePlugin.Daemon(), deps.ReceiptService, *syncedAtStartup)
 	}); err != nil {
 		panic(err)
 	}

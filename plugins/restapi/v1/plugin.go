@@ -112,6 +112,15 @@ const (
 	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
 	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + ParameterAddress + "/outputs"
 
+	// RouteTreasury is the route for getting the current treasury output.
+	RouteTreasury = "/treasury"
+
+	// RouteReceipts is the route for getting all stored receipts.
+	RouteReceipts = "/receipts"
+
+	// RouteReceipts is the route for getting all receipts for a given migrated at index.
+	RouteReceiptsMigratedAtIndex = "/receipts/:" + ParameterMilestoneIndex
+
 	// RoutePeer is the route for getting peers by their peerID.
 	// GET returns the peer
 	// DELETE deletes the peer.
@@ -156,21 +165,21 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage              *storage.Storage
-	Tangle               *tangle.Tangle
-	Manager              *p2p.Manager
-	Service              *gossip.Service
-	UTXO                 *utxo.Manager
-	PoWHandler           *pow.Handler
-	MessageProcessor     *gossip.MessageProcessor
-	Snapshot             *snapshot.Snapshot
-	AppInfo              *app.AppInfo
-	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	Storage          *storage.Storage
+	Tangle           *tangle.Tangle
+	Manager          *p2p.Manager
+	Service          *gossip.Service
+	UTXO             *utxo.Manager
+	PoWHandler       *pow.Handler
+	MessageProcessor *gossip.MessageProcessor
+	Snapshot         *snapshot.Snapshot
+	AppInfo          *app.AppInfo
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager *p2ppkg.ConfigManager
-	NetworkID            uint64               `name:"networkId"`
-	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
-	TipSelector          *tipselect.TipSelector
-	Echo                 *echo.Echo
+	NetworkID        uint64                       `name:"networkId"`
+	Bech32HRP        iotago.NetworkPrefix         `name:"bech32HRP"`
+	TipSelector      *tipselect.TipSelector
+	Echo             *echo.Echo
 }
 
 func configure() {
@@ -312,6 +321,33 @@ func configure() {
 
 	routeGroup.GET(RouteAddressEd25519Outputs, func(c echo.Context) error {
 		resp, err := outputsIDsByEd25519Address(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteTreasury, func(c echo.Context) error {
+		resp, err := treasury(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteReceipts, func(c echo.Context) error {
+		resp, err := receipts(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteReceiptsMigratedAtIndex, func(c echo.Context) error {
+		resp, err := receiptsByMigratedAtIndex(c)
 		if err != nil {
 			return err
 		}

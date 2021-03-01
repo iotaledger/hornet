@@ -56,6 +56,7 @@ var (
 	messagesWorkerPool        *workerpool.WorkerPool
 	messageMetadataWorkerPool *workerpool.WorkerPool
 	utxoOutputWorkerPool      *workerpool.WorkerPool
+	receiptWorkerPool         *workerpool.WorkerPool
 
 	topicSubscriptionWorkerPool *workerpool.WorkerPool
 
@@ -98,6 +99,11 @@ func configure() {
 
 	utxoOutputWorkerPool = workerpool.New(func(task workerpool.Task) {
 		publishOutput(task.Param(0).(*utxo.Output), task.Param(1).(bool))
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
+	receiptWorkerPool = workerpool.New(func(task workerpool.Task) {
+		publishReceipt(task.Param(0).(*iotago.Receipt))
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -256,6 +262,10 @@ func run() {
 		utxoOutputWorkerPool.TrySubmit(spent.Output(), true)
 	})
 
+	onReceipt := events.NewClosure(func(receipt *iotago.Receipt) {
+		receiptWorkerPool.TrySubmit(receipt)
+	})
+
 	Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
 		go func() {
 			mqttBroker.Start()
@@ -288,12 +298,15 @@ func run() {
 		deps.Tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
 		deps.Tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
 
+		deps.Tangle.Events.NewReceipt.Attach(onReceipt)
+
 		messagesWorkerPool.Start()
 		newLatestMilestoneWorkerPool.Start()
 		newSolidMilestoneWorkerPool.Start()
 		messageMetadataWorkerPool.Start()
 		topicSubscriptionWorkerPool.Start()
 		utxoOutputWorkerPool.Start()
+		receiptWorkerPool.Start()
 
 		<-shutdownSignal
 
@@ -307,12 +320,15 @@ func run() {
 		deps.Tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
 		deps.Tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
 
+		deps.Tangle.Events.NewReceipt.Detach(onReceipt)
+
 		messagesWorkerPool.StopAndWait()
 		newLatestMilestoneWorkerPool.StopAndWait()
 		newSolidMilestoneWorkerPool.StopAndWait()
 		messageMetadataWorkerPool.StopAndWait()
 		topicSubscriptionWorkerPool.StopAndWait()
 		utxoOutputWorkerPool.StopAndWait()
+		receiptWorkerPool.StopAndWait()
 
 		log.Info("Stopping MQTT Events ... done")
 	}, shutdown.PriorityMetricsPublishers)

@@ -50,7 +50,7 @@ func bytesFromBalance(balance uint64, dustAllowanceBalance uint64, outputCount i
 	return marshalUtil.Bytes()
 }
 
-func (u *Manager) checkBalancesLedger() error {
+func (u *Manager) checkBalancesLedger(treasury uint64) error {
 
 	var balanceSum uint64
 	var innerErr error
@@ -81,6 +81,8 @@ func (u *Manager) checkBalancesLedger() error {
 	if innerErr != nil {
 		return innerErr
 	}
+
+	balanceSum += treasury
 
 	if balanceSum != iotago.TokenSupply {
 		return ErrInvalidBalancesTotalSupply

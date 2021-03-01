@@ -425,7 +425,7 @@ func newMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, 
 
 // returns a milestone diff producer which first reads out milestone diffs from an existing delta
 // snapshot file and then the remaining diffs from the database up to the target index.
-func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index) (MilestoneDiffProducerFunc, error) {
+func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, storage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index) (MilestoneDiffProducerFunc, error) {
 	prevDeltaFileMsDiffsProducer, err := newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath, ledgerIndex)
 	if err != nil {
 		return nil, err
@@ -434,6 +434,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, utxoManage
 	var prevDeltaMsDiffProducerFinished bool
 	var prevDeltaUpToIndex milestone.Index
 	var dbMsDiffProducer MilestoneDiffProducerFunc
+	mrf := MilestoneRetrieverFromStorage(storage)
 	return func() (*MilestoneDiff, error) {
 		if prevDeltaMsDiffProducerFinished {
 			return dbMsDiffProducer()
@@ -446,14 +447,14 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, utxoManage
 		}
 
 		if msDiff != nil {
-			prevDeltaUpToIndex = msDiff.MilestoneIndex
+			prevDeltaUpToIndex = milestone.Index(msDiff.Milestone.Index)
 			return msDiff, nil
 		}
 
 		// TODO: check whether previous snapshot already hit the target index?
 
 		prevDeltaMsDiffProducerFinished = true
-		dbMsDiffProducer = newMsDiffsProducer(utxoManager, MsDiffDirectionOnwards, prevDeltaUpToIndex, targetIndex)
+		dbMsDiffProducer = newMsDiffsProducer(mrf, utxoManager, MsDiffDirectionOnwards, prevDeltaUpToIndex, targetIndex)
 		return dbMsDiffProducer()
 	}, nil
 }
@@ -483,7 +484,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 			func(id hornet.MessageID) error {
 				// we don't care about solid entry points
 				return nil
-			}, nil,
+			}, nil, nil,
 			func(milestoneDiff *MilestoneDiff) error {
 				prodChan <- milestoneDiff
 				return nil
@@ -506,8 +507,24 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 	}, nil
 }
 
+// MilestoneRetrieverFunc is a function which returns the milestone for the given index.
+type MilestoneRetrieverFunc func(index milestone.Index) *iotago.Milestone
+
+// MilestoneRetrieverFromStorage creates a MilestoneRetrieverFunc which access the storage.
+// If it can not retrieve a wanted milestone it panics.
+func MilestoneRetrieverFromStorage(storage *storage.Storage) MilestoneRetrieverFunc {
+	return func(index milestone.Index) *iotago.Milestone {
+		cachedMsMsg := storage.GetMilestoneCachedMessageOrNil(index)
+		if cachedMsMsg == nil {
+			panic(fmt.Sprintf("message for milestone with index %d is not stored in the database", index))
+		}
+		defer cachedMsMsg.Release()
+		return cachedMsMsg.GetMessage().GetMilestone()
+	}
+}
+
 // returns a producer which produces milestone diffs from/to with the given direction.
-func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex milestone.Index, targetIndex milestone.Index) MilestoneDiffProducerFunc {
+func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex milestone.Index, targetIndex milestone.Index) MilestoneDiffProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
@@ -552,9 +569,16 @@ func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, le
 				}
 			}
 
+			ms := mrf(msIndex)
+			if ms == nil {
+				panic(fmt.Sprintf("message for milestone with index %d could not be retrieved", msIndex))
+			}
+
 			prodChan <- &MilestoneDiff{
-				MilestoneIndex: msIndex, Created: createdOutputs,
-				Consumed: consumedOutputs,
+				Milestone:           ms,
+				Created:             createdOutputs,
+				Consumed:            consumedOutputs,
+				SpentTreasuryOutput: diff.SpentTreasuryOutput,
 			}
 		}
 
@@ -700,10 +724,16 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 			return err
 		}
 
+		// read out treasury tx
+		header.TreasuryOutput, err = s.utxo.UnspentTreasuryOutputWithoutLocking()
+		if err != nil {
+			return err
+		}
+
 		// a full snapshot contains the ledger UTXOs as of the LSMI
 		// and the milestone diffs from the LSMI back to the target index (excluding the target index)
 		utxoProducer = newLSMIUTXOProducer(s.utxo)
-		milestoneDiffProducer = newMsDiffsProducer(s.utxo, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
+		milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxo, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
 
 	case Delta:
 		// ledger index corresponds to the origin snapshot snapshot ledger.
@@ -723,11 +753,11 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 			fallthrough
 		case snapshotInfo.PruningIndex < header.LedgerMilestoneIndex:
 			// we have the needed milestone diffs in the database
-			milestoneDiffProducer = newMsDiffsProducer(s.utxo, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
+			milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxo, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
 		default:
 			// as the needed milestone diffs are pruned from the database, we need to use
 			// the previous delta snapshot file to extract those in conjunction with what the database has available
-			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.utxo, header.LedgerMilestoneIndex, targetIndex)
+			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxo, header.LedgerMilestoneIndex, targetIndex)
 			if err != nil {
 				return err
 			}
@@ -772,6 +802,12 @@ func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 	}
 }
 
+// returns a treasury output consumer which overrides an existing unspent treasury output with the new one.
+func newUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasuryOutputConsumerFunc {
+	// leave like this for now in case we need to do more in the future
+	return utxoManager.StoreUnspentTreasuryOutput
+}
+
 // returns a function which calls the corresponding address type callback function with
 // the origin argument and type casted address.
 func callbackPerAddress(
@@ -810,11 +846,13 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 			}
 		}
 
+		msIndex := milestone.Index(msDiff.Milestone.Index)
 		spentOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
+
 			spent := obj.(*Spent)
 			outputID := iotago.UTXOInputID(spent.OutputID)
 			messageID := hornet.MessageIDFromArray(spent.MessageID)
-			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msDiff.MilestoneIndex))
+			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msIndex))
 			return nil
 		})
 
@@ -829,11 +867,24 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 			return err
 		}
 
+		var treasuryMut *utxo.TreasuryMutationTuple
+		var rt *utxo.ReceiptTuple
+		if treasuryOutput := msDiff.TreasuryOutput(); treasuryOutput != nil {
+			treasuryMut = &utxo.TreasuryMutationTuple{
+				NewOutput:   treasuryOutput,
+				SpentOutput: msDiff.SpentTreasuryOutput,
+			}
+			rt = &utxo.ReceiptTuple{
+				Receipt:        msDiff.Milestone.Receipt.(*iotago.Receipt),
+				MilestoneIndex: msIndex,
+			}
+		}
+
 		switch {
-		case ledgerIndex == msDiff.MilestoneIndex:
-			return utxoManager.RollbackConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
-		case ledgerIndex+1 == msDiff.MilestoneIndex:
-			return utxoManager.ApplyConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+		case ledgerIndex == msIndex:
+			return utxoManager.RollbackConfirmation(msIndex, newOutputs, newSpents, treasuryMut, rt)
+		case ledgerIndex+1 == msIndex:
+			return utxoManager.ApplyConfirmation(msIndex, newOutputs, newSpents, treasuryMut, rt)
 		default:
 			return ErrWrongMilestoneDiffIndex
 		}
@@ -901,15 +952,18 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 	headerConsumer := newFileHeaderConsumer(s.log, s.utxo, networkID, snapshotType, header)
 	sepConsumer := newSEPsConsumer(s.storage, header)
 	var outputConsumer OutputConsumerFunc
+	var treasuryOutputConsumer UnspentTreasuryOutputConsumerFunc
 	if snapshotType == Full {
 		outputConsumer = newOutputConsumer(s.utxo)
+		treasuryOutputConsumer = newUnspentTreasuryOutputConsumer(s.utxo)
 	}
 	msDiffConsumer := newMsDiffConsumer(s.utxo)
-	if err := StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
+	if err := StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
 		return fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
 
 	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts))
+
 	if err := s.utxo.CheckLedgerState(); err != nil {
 		return err
 	}

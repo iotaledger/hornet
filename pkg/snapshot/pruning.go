@@ -3,6 +3,7 @@ package snapshot
 import (
 	"time"
 
+	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/core/database"
@@ -53,9 +54,9 @@ func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCo
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
-func (s *Snapshot) pruneMilestone(milestoneIndex milestone.Index) error {
+func (s *Snapshot) pruneMilestone(milestoneIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
 
-	if err := s.utxo.PruneMilestoneIndex(milestoneIndex); err != nil {
+	if err := s.utxo.PruneMilestoneIndex(milestoneIndex, receiptMigratedAtIndex...); err != nil {
 		return err
 	}
 
@@ -205,10 +206,24 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 			continue
 		}
 
-		err = s.pruneMilestone(milestoneIndex)
-		if err != nil {
-			s.log.Warnf("Pruning milestone (%d) failed! %s", err)
+		// check whether milestone contained receipt and delete it accordingly
+		cachedMsMsg := s.storage.GetMilestoneCachedMessageOrNil(milestoneIndex) // milestone msg +1
+		if cachedMsMsg == nil {
+			// no message for milestone persisted
+			s.log.Warnf("Pruning milestone (%d) failed! Milestone message not found!", milestoneIndex)
+			continue
 		}
+
+		var migratedAtIndex []uint32
+		if r, ok := cachedMsMsg.GetMessage().GetMilestone().Receipt.(*iotago.Receipt); ok {
+			migratedAtIndex = append(migratedAtIndex, r.MigratedAt)
+		}
+
+		if err := s.pruneMilestone(milestoneIndex, migratedAtIndex...); err != nil {
+			s.log.Warnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
+		}
+
+		cachedMsMsg.Release(true) // milestone msg -1
 
 		msgCountChecked += len(messageIDsToDeleteMap)
 		txCountDeleted += s.pruneMessages(messageIDsToDeleteMap)

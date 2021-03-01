@@ -20,9 +20,11 @@ import (
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/mselection"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -94,6 +96,8 @@ type dependencies struct {
 	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
 	PoWHandler       *powpackage.Handler
+	MigratorService  *migrator.MigratorService `optional:"true"`
+	UTXOManager      *utxo.Manager
 	MessageProcessor *gossip.MessageProcessor
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
@@ -174,6 +178,10 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		powWorkerCount = 1
 	}
 
+	if deps.MigratorService == nil {
+		log.Info("running Coordinator without migration enabled")
+	}
+
 	coo, err := coordinator.New(
 		deps.Storage,
 		deps.NetworkID,
@@ -182,6 +190,8 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		deps.NodeConfig.Int(CfgCoordinatorIntervalSeconds),
 		powWorkerCount,
 		powHandler,
+		deps.MigratorService,
+		deps.UTXOManager,
 		sendMessage,
 	)
 	if err != nil {

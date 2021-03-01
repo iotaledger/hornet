@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"github.com/iotaledger/hive.go/events"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -33,6 +34,10 @@ func UTXOSpentCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*utxo.Spent))(params[0].(*utxo.Spent))
 }
 
+func ReceiptCaller(handler interface{}, params ...interface{}) {
+	handler.(func(*iotago.Receipt))(params[0].(*iotago.Receipt))
+}
+
 type pluginEvents struct {
 	MPSMetricsUpdated             *events.Event
 	ReceivedNewMessage            *events.Event
@@ -52,4 +57,5 @@ type pluginEvents struct {
 	MilestoneSolidificationFailed *events.Event
 	NewUTXOOutput                 *events.Event
 	NewUTXOSpent                  *events.Event
+	NewReceipt                    *events.Event
 }

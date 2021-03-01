@@ -9,12 +9,19 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
+// MilestoneDiff represents the generated and spent outputs by a milestone's confirmation.
 type MilestoneDiff struct {
 	kvStorable
-
-	Index   milestone.Index
+	// The index of the milestone.
+	Index milestone.Index
+	// The outputs newly generated with this diff.
 	Outputs Outputs
-	Spents  Spents
+	// The outputs spent with this diff.
+	Spents Spents
+	// The treasury output this diff generated.
+	TreasuryOutput *TreasuryOutput
+	// The treasury output this diff consumed.
+	SpentTreasuryOutput *TreasuryOutput
 }
 
 func milestoneDiffKeyForIndex(msIndex milestone.Index) []byte {
@@ -30,7 +37,7 @@ func (ms *MilestoneDiff) kvStorableKey() []byte {
 
 func (ms *MilestoneDiff) kvStorableValue() []byte {
 
-	m := marshalutil.New(4 + len(ms.Outputs)*34 + 4 + len(ms.Spents)*67)
+	m := marshalutil.New()
 
 	m.WriteUint32(uint32(len(ms.Outputs)))
 	for _, output := range ms.Outputs {
@@ -43,9 +50,19 @@ func (ms *MilestoneDiff) kvStorableValue() []byte {
 		m.WriteBytes(spent.output.outputID[:])
 	}
 
+	if ms.TreasuryOutput != nil {
+		m.WriteBool(true)
+		m.WriteBytes(ms.TreasuryOutput.MilestoneID[:])
+		m.WriteBytes(ms.SpentTreasuryOutput.MilestoneID[:])
+		return m.Bytes()
+	}
+
+	m.WriteBool(false)
+
 	return m.Bytes()
 }
 
+// note that this method relies on the data being available within other "tables".
 func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value []byte) error {
 	marshalUtil := marshalutil.New(value)
 
@@ -76,6 +93,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 
 	spents := make(Spents, spentCount)
 	for i := 0; i < int(spentCount); i++ {
+		// TODO: why are we storing the address with the diff but then don't use it when reading it?
 		if _, err := parseAddress(marshalUtil); err != nil {
 			return err
 		}
@@ -93,6 +111,41 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 		spents[i] = spent
 	}
 
+	hasTreasury, err := marshalUtil.ReadBool()
+	if err != nil {
+		return err
+	}
+
+	if hasTreasury {
+		treasuryOutputMilestoneID, err := marshalUtil.ReadBytes(iotago.MilestoneIDLength)
+		if err != nil {
+			return err
+		}
+
+		// try to read from unspent and spent
+		treasuryOutput, err := utxoManager.readUnspentTreasuryOutputWithoutLocking(treasuryOutputMilestoneID)
+		if err != nil {
+			treasuryOutput, err = utxoManager.readSpentTreasuryOutputWithoutLocking(treasuryOutputMilestoneID)
+			if err != nil {
+				return err
+			}
+		}
+
+		ms.TreasuryOutput = treasuryOutput
+
+		spentTreasuryOutputMilestoneID, err := marshalUtil.ReadBytes(iotago.MilestoneIDLength)
+		if err != nil {
+			return err
+		}
+
+		spentTreasuryOutput, err := utxoManager.readSpentTreasuryOutputWithoutLocking(spentTreasuryOutputMilestoneID)
+		if err != nil {
+			return err
+		}
+
+		ms.SpentTreasuryOutput = spentTreasuryOutput
+	}
+
 	ms.Index = milestone.Index(binary.LittleEndian.Uint32(key[1:]))
 	ms.Outputs = outputs
 	ms.Spents = spents
@@ -103,12 +156,10 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 //- DB helpers
 
 func storeDiff(diff *MilestoneDiff, mutations kvstore.BatchedMutations) error {
-
 	return mutations.Set(diff.kvStorableKey(), diff.kvStorableValue())
 }
 
 func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) error {
-
 	return mutations.Delete(milestoneDiffKeyForIndex(msIndex))
 }
 

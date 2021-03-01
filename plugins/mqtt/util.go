@@ -45,6 +45,12 @@ func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
 	}
 }
 
+func publishReceipt(r *iotago.Receipt) {
+	if mqttBroker.HasSubscribers(topicReceipts) {
+		publishOnTopic(topicReceipts, r)
+	}
+}
+
 func publishMessage(cachedMessage *storage.CachedMessage) {
 	defer cachedMessage.Release(true)
 
