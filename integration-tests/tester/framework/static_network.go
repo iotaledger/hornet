@@ -84,7 +84,7 @@ func (n *StaticNetwork) ConnectNodes() error {
 			multiAddress := fmt.Sprintf("/ip4/%s/tcp/15600/p2p/%s", peer.IP, peer.ID.String())
 			n.layout[i][peerIndex] = true
 			n.layout[peerIndex][i] = true
-			if _, err := node.NodeAPIClient.AddPeer(multiAddress); err != nil {
+			if _, err := node.DebugNodeAPIClient.AddPeer(multiAddress); err != nil {
 				return fmt.Errorf("%w: couldn't add peer %v", err, multiAddress)
 			}
 			log.Printf("connected %s (%s) with %s (%s)", node.IP, node.ID.String(), peer.IP, peer.ID.String())
@@ -114,7 +114,7 @@ func (n *StaticNetwork) AwaitPeering(ctx context.Context) error {
 				return fmt.Errorf("not enough nodes: %d", len(n.Nodes))
 			}
 
-			peers, err := node.NodeAPIClient.Peers()
+			peers, err := node.DebugNodeAPIClient.Peers()
 			if err != nil {
 				log.Println(fmt.Sprintf("node %s, peering: %s", node.ID.String(), err))
 				continue

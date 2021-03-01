@@ -387,8 +387,6 @@ github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210120184258-7eac7c1cc80b/go.mo
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7 h1:DIVriS1iEEOPrYwQ/vpHLsnVtmUpj4S+2UI4Jl+48ZQ=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go/v2 v2.0.0-20210131170834-4209e58f134b/go.mod h1:eW6gagdKBm9cNMEUbLz9I+rIdsJdGWV3M26Ihdm47v0=
-github.com/iotaledger/iota.go/v2 v2.0.0-20210218145050-36683a2a177c h1:A4NUt8BeOhOay24xXlLZS6fjK8Hv4WHZEtt+GrXXgbE=
-github.com/iotaledger/iota.go/v2 v2.0.0-20210218145050-36683a2a177c/go.mod h1:W6ma7/TCwGO9s3+OX9c0AES4vc4/3PhoDuROXFUBqRE=
 github.com/iotaledger/iota.go/v2 v2.0.0-20210301150403-555f6dae0fe0 h1:tniwjetmqmmUelWWmszq0Fr68GMpXVaOQdY3365pppk=
 github.com/iotaledger/iota.go/v2 v2.0.0-20210301150403-555f6dae0fe0/go.mod h1:W6ma7/TCwGO9s3+OX9c0AES4vc4/3PhoDuROXFUBqRE=
 github.com/ipfs/go-cid v0.0.1/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=

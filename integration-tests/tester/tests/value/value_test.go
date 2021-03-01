@@ -61,7 +61,7 @@ func TestValue(t *testing.T) {
 
 	// broadcast to a node
 	log.Println("submitting transaction...")
-	submittedMsg, err := n.Nodes[0].NodeAPIClient.SubmitMessage(msg)
+	submittedMsg, err := n.Nodes[0].DebugNodeAPIClient.SubmitMessage(msg)
 	require.NoError(t, err)
 
 	// eventually the message should be confirmed
@@ -70,7 +70,7 @@ func TestValue(t *testing.T) {
 
 	log.Println("checking that the transaction gets confirmed...")
 	require.Eventually(t, func() bool {
-		msgMeta, err := n.Coordinator().NodeAPIClient.MessageMetadataByMessageID(*submittedMsgID)
+		msgMeta, err := n.Coordinator().DebugNodeAPIClient.MessageMetadataByMessageID(*submittedMsgID)
 		if err != nil {
 			return false
 		}
@@ -81,20 +81,20 @@ func TestValue(t *testing.T) {
 	}, 30*time.Second, 100*time.Millisecond)
 
 	// check that indeed the balances are available
-	res, err := n.Coordinator().NodeAPIClient.BalanceByEd25519Address(framework.GenesisAddress.String())
+	res, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(framework.GenesisAddress.String())
 	require.NoError(t, err)
 	require.Zero(t, res.Balance)
 
-	res, err = n.Coordinator().NodeAPIClient.BalanceByEd25519Address(target1Addr.String())
+	res, err = n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(target1Addr.String())
 	require.NoError(t, err)
 	require.EqualValues(t, target1Deposit, res.Balance)
 
-	res, err = n.Coordinator().NodeAPIClient.BalanceByEd25519Address(target2Addr.String())
+	res, err = n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(target2Addr.String())
 	require.NoError(t, err)
 	require.EqualValues(t, target2Deposit, res.Balance)
 
 	// the genesis output should be spent
-	outputRes, err := n.Coordinator().NodeAPIClient.OutputByID(genesisInputID.ID())
+	outputRes, err := n.Coordinator().DebugNodeAPIClient.OutputByID(genesisInputID.ID())
 	require.NoError(t, err)
 	require.True(t, outputRes.Spent)
 }
