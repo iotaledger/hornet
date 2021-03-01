@@ -13,7 +13,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-const (
+var (
 	// MaxReceipts defines the maximum size of a receipt returned by MigratorService.Receipt.
 	MaxReceipts = 100
 )
@@ -24,16 +24,6 @@ var (
 	// ErrInvalidState is returned when the content of the state file is invalid.
 	ErrInvalidState = errors.New("invalid migrator state")
 )
-
-// State stores the latest state of the MigratorService.
-type State struct {
-	/*
-	   4 bytes uint32 			LatestMigratedAtIndex
-	   4 bytes uint32 			LatestIncludedIndex
-	*/
-	LatestMigratedAtIndex uint32
-	LatestIncludedIndex   uint32
-}
 
 // MigratorServiceEvents are events happening around a MigratorService.
 type MigratorServiceEvents struct {
@@ -48,17 +38,33 @@ func MigratedFundsCaller(handler interface{}, params ...interface{}) {
 	handler.(func([]*iotago.MigratedFundsEntry))(params[0].([]*iotago.MigratedFundsEntry))
 }
 
+// Queryer defines the interface used to query the migrated funds.
+type Queryer interface {
+	QueryMigratedFunds(uint32) ([]*iotago.MigratedFundsEntry, error)
+	QueryNextMigratedFunds(uint32) (uint32, []*iotago.MigratedFundsEntry, error)
+}
+
 // MigratorService is a service querying and validating batches of migrated funds.
 type MigratorService struct {
 	Events *MigratorServiceEvents
 
-	validator *Validator
-	state     State
+	queryer Queryer
+	state   State
 
 	mutex      syncutils.Mutex
 	migrations chan *migrationResult
 
 	stateFilePath string
+}
+
+// State stores the latest state of the MigratorService.
+type State struct {
+	/*
+	   4 bytes uint32 			LatestMigratedAtIndex
+	   4 bytes uint32 			LatestIncludedIndex
+	*/
+	LatestMigratedAtIndex uint32
+	LatestIncludedIndex   uint32
 }
 
 type migrationResult struct {
@@ -68,13 +74,13 @@ type migrationResult struct {
 }
 
 // NewService creates a new MigratorService.
-func NewService(validator *Validator, stateFilePath string) *MigratorService {
+func NewService(queryer Queryer, stateFilePath string) *MigratorService {
 	return &MigratorService{
 		Events: &MigratorServiceEvents{
 			SoftError:            events.NewEvent(events.ErrorCaller),
 			MigratedFundsFetched: events.NewEvent(MigratedFundsCaller),
 		},
-		validator:     validator,
+		queryer:       queryer,
 		migrations:    make(chan *migrationResult),
 		stateFilePath: stateFilePath,
 	}
@@ -108,6 +114,7 @@ func (s *MigratorService) PersistState() error {
 // InitState initializes the state of s.
 // If msIndex is not nil, s is bootstrapped using that index as its initial state,
 // otherwise the state is loaded from file.
+// The optional utxoManager is used to validate the initialized state against the DB.
 // InitState must be called before Start.
 func (s *MigratorService) InitState(msIndex *uint32, utxoManager *utxo.Manager) error {
 	s.mutex.Lock()
@@ -135,14 +142,16 @@ func (s *MigratorService) InitState(msIndex *uint32, utxoManager *utxo.Manager) 
 		return fmt.Errorf("%w: latest migrated at index must not be zero", ErrInvalidState)
 	}
 
-	highestMigratedAtIndex, err := utxoManager.SearchHighestReceiptMigratedAtIndex()
-	if err != nil {
-		return fmt.Errorf("unable to determine highest migrated at index: %w", err)
-	}
-	// if highestMigratedAtIndex is zero no receipt in the DB, so we cannot do sanity checks
-	if highestMigratedAtIndex > 0 && highestMigratedAtIndex != state.LatestMigratedAtIndex {
-		return fmt.Errorf("state receipt does not match highest receipt in database: state: %d, database: %d",
-			state.LatestMigratedAtIndex, highestMigratedAtIndex)
+	if utxoManager != nil {
+		highestMigratedAtIndex, err := utxoManager.SearchHighestReceiptMigratedAtIndex()
+		if err != nil {
+			return fmt.Errorf("unable to determine highest migrated at index: %w", err)
+		}
+		// if highestMigratedAtIndex is zero no receipt in the DB, so we cannot do sanity checks
+		if highestMigratedAtIndex > 0 && highestMigratedAtIndex != state.LatestMigratedAtIndex {
+			return fmt.Errorf("state receipt does not match highest receipt in database: state: %d, database: %d",
+				state.LatestMigratedAtIndex, highestMigratedAtIndex)
+		}
 	}
 
 	s.state = state
@@ -200,7 +209,7 @@ func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntr
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	migratedFunds, err := s.validator.QueryMigratedFunds(s.state.LatestMigratedAtIndex)
+	migratedFunds, err := s.queryer.QueryMigratedFunds(s.state.LatestMigratedAtIndex)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -208,13 +217,14 @@ func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntr
 	if l >= s.state.LatestIncludedIndex {
 		return s.state.LatestMigratedAtIndex, migratedFunds[s.state.LatestIncludedIndex:], nil
 	}
-	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", &CriticalError{Err: ErrInvalidState}, s.state.LatestIncludedIndex, l)
+	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", &CriticalError{err: ErrInvalidState}, s.state.LatestIncludedIndex, l)
 }
 
 // nextMigrations queries the next existing migrations starting from milestone index startIndex.
 // If startIndex is 0 the indices from state are used.
 func (s *MigratorService) nextMigrations(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
 	if startIndex == 0 {
+		// for bootstrapping query the migrations corresponding to the state
 		msIndex, migratedFunds, err := s.stateMigrations()
 		if err != nil {
 			return 0, nil, fmt.Errorf("failed to query migrations corresponding to initial state: %w", err)
@@ -226,7 +236,7 @@ func (s *MigratorService) nextMigrations(startIndex uint32) (uint32, []*iotago.M
 		// otherwise query the next available migrations
 		startIndex = msIndex + 1
 	}
-	return s.validator.nextMigrations(startIndex)
+	return s.queryer.QueryNextMigratedFunds(startIndex)
 }
 
 func (s *MigratorService) updateState(result *migrationResult) {

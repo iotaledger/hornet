@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	// Returned when the state of the ReceiptService is invalid.
+	// ErrInvalidReceiptServiceState is returned when the state of the ReceiptService is invalid.
 	ErrInvalidReceiptServiceState = errors.New("invalid receipt service state")
 )
 
@@ -78,7 +78,7 @@ func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
 		return err
 	}
 	if err := ioutil.WriteFile(receiptFileName, receiptJSON, os.ModePerm); err != nil {
-		return fmt.Errorf("unable to persist receipt onto disk: %w", &CriticalError{Err: err})
+		return fmt.Errorf("unable to persist receipt onto disk: %w", &CriticalError{err: err})
 	}
 	return nil
 }

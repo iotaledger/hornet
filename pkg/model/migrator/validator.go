@@ -29,17 +29,23 @@ var ErrEmptyBundle = errors.New("empty bundle")
 
 var hasher = whiteflag.NewHasher(crypto.BLAKE2b_512)
 
+// LegacyAPI defines the calls of the legacy API that are used.
+type LegacyAPI interface {
+	GetNodeInfo() (*api.GetNodeInfoResponse, error)
+	GetWhiteFlagConfirmation(milestoneIndex uint32) (*api.WhiteFlagConfirmation, error)
+}
+
 // Validator takes care of fetching and validating white-flag confirmation data from legacy nodes
 // and wrapping them into receipts.
 type Validator struct {
-	api *api.API
+	api LegacyAPI
 
 	coordinatorAddress         trinary.Hash
 	coordinatorMerkleTreeDepth int
 }
 
 // NewValidator creates a new Validator.
-func NewValidator(api *api.API, coordinatorAddress trinary.Hash, coordinatorMerkleTreeDepth int) *Validator {
+func NewValidator(api LegacyAPI, coordinatorAddress trinary.Hash, coordinatorMerkleTreeDepth int) *Validator {
 	return &Validator{
 		api:                        api,
 		coordinatorAddress:         coordinatorAddress,
@@ -52,12 +58,12 @@ func NewValidator(api *api.API, coordinatorAddress trinary.Hash, coordinatorMerk
 func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedFundsEntry, error) {
 	confirmation, err := m.api.GetWhiteFlagConfirmation(milestoneIndex)
 	if err != nil {
-		return nil, fmt.Errorf("API call failed: %w", &SoftError{Err: err})
+		return nil, fmt.Errorf("API call failed: %w", &SoftError{err: err})
 	}
 
 	included, err := m.validateConfirmation(confirmation, milestoneIndex)
 	if err != nil {
-		return nil, fmt.Errorf("invalid confirmation data: %w", &CriticalError{Err: err})
+		return nil, fmt.Errorf("invalid confirmation data: %w", &CriticalError{err: err})
 	}
 
 	migrated := make([]*iota.MigratedFundsEntry, 0, len(included))
@@ -76,6 +82,28 @@ func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedF
 	}
 
 	return migrated, nil
+}
+
+// QueryNextMigratedFunds queries the next existing migrations starting from milestone index startIndex.
+// It returns the migrations as well as milestone index that confirmed those migrations.
+// If there are currently no more migrations, it returns the latest milestone index that was checked.
+func (m *Validator) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iota.MigratedFundsEntry, error) {
+	info, err := m.api.GetNodeInfo()
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to get node info: %w", &SoftError{err: err})
+	}
+
+	latestIndex := uint32(info.LatestMilestoneIndex)
+	for index := startIndex; index <= latestIndex; index++ {
+		migrated, err := m.QueryMigratedFunds(index)
+		if err != nil {
+			return 0, nil, fmt.Errorf("failed to query migration funds: %w", err)
+		}
+		if len(migrated) > 0 {
+			return index, migrated, nil
+		}
+	}
+	return latestIndex, nil, nil
 }
 
 // validateMilestoneBundle performs syntactic validation of the milestone and checks whether it has the correct index.
@@ -201,26 +229,4 @@ func (m *Validator) validateConfirmation(confirmation *api.WhiteFlagConfirmation
 		return nil, fmt.Errorf("invalid MerkleTreeHash %s", merkleHash)
 	}
 	return includedBundles, nil
-}
-
-// nextMigrations queries the next existing migrations starting from milestone index startIndex.
-// It returns the migrations as well as milestone index that confirmed those migrations.
-// If there are currently no more migrations, it returns the latest milestone index that was checked.
-func (m *Validator) nextMigrations(startIndex uint32) (uint32, []*iota.MigratedFundsEntry, error) {
-	info, err := m.api.GetNodeInfo()
-	if err != nil {
-		return 0, nil, fmt.Errorf("failed to get node info: %w", &SoftError{Err: err})
-	}
-
-	latestIndex := uint32(info.LatestMilestoneIndex)
-	for index := startIndex; index <= latestIndex; index++ {
-		migrated, err := m.QueryMigratedFunds(index)
-		if err != nil {
-			return 0, nil, fmt.Errorf("failed to query migration funds: %w", err)
-		}
-		if len(migrated) > 0 {
-			return index, migrated, nil
-		}
-	}
-	return latestIndex, nil, nil
 }
