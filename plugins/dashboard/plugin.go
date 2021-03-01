@@ -120,7 +120,7 @@ func run() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
 	})
 
-	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
@@ -139,13 +139,13 @@ func run() {
 	Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
 		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
-		deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
 		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
-		deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
@@ -188,8 +188,8 @@ type LivefeedMilestone struct {
 
 // SyncStatus represents the node sync status.
 type SyncStatus struct {
-	LSMI milestone.Index `json:"lsmi"`
-	LMI  milestone.Index `json:"lmi"`
+	CMI milestone.Index `json:"cmi"`
+	LMI milestone.Index `json:"lmi"`
 }
 
 // PublicNodeStatus represents the public node status.
@@ -276,7 +276,7 @@ func peerMetrics() []*restapiv1.PeerResponse {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{LSMI: deps.Storage.GetSolidMilestoneIndex(), LMI: deps.Storage.GetLatestMilestoneIndex()}
+	return &SyncStatus{CMI: deps.Storage.GetConfirmedMilestoneIndex(), LMI: deps.Storage.GetLatestMilestoneIndex()}
 }
 
 func currentPublicNodeStatus() *PublicNodeStatus {

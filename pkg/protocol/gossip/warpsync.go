@@ -57,24 +57,24 @@ type Events struct {
 }
 
 // AdvanceCheckpointCriteria is a function which determines whether the checkpoint should be advanced.
-type AdvanceCheckpointCriteria func(currentSolid, previousCheckpoint, currentCheckpoint milestone.Index) bool
+type AdvanceCheckpointCriteria func(currentConfirmed, previousCheckpoint, currentCheckpoint milestone.Index) bool
 
 // DefaultAdvancementThreshold is the default threshold at which a checkpoint advancement is done.
-// Per default an advancement is always done as soon the solid milestone enters the range between
+// Per default an advancement is always done as soon the confirmed milestone enters the range between
 // the previous and current checkpoint.
 const DefaultAdvancementThreshold = 0.0
 
 // AdvanceAtPercentageReached is an AdvanceCheckpointCriteria which advances the checkpoint
-// when the current one was reached by >=X% by the current solid milestone in relation to the previous checkpoint.
+// when the current one was reached by >=X% by the current confirmed milestone in relation to the previous checkpoint.
 func AdvanceAtPercentageReached(threshold float64) AdvanceCheckpointCriteria {
-	return func(currentSolid, previousCheckpoint, currentCheckpoint milestone.Index) bool {
-		// the previous checkpoint can be over the current solid milestone,
-		// as advancements move the checkpoint window above the solid milestone
-		if currentSolid < previousCheckpoint {
+	return func(currentConfirmed, previousCheckpoint, currentCheckpoint milestone.Index) bool {
+		// the previous checkpoint can be over the current confirmed milestone,
+		// as advancements move the checkpoint window above the confirmed milestone
+		if currentConfirmed < previousCheckpoint {
 			return false
 		}
 		checkpointDelta := currentCheckpoint - previousCheckpoint
-		progress := currentSolid - previousCheckpoint
+		progress := currentConfirmed - previousCheckpoint
 		return float64(progress)/float64(checkpointDelta) >= threshold
 	}
 }
@@ -87,8 +87,8 @@ type WarpSync struct {
 	Events                Events
 	// The starting point of the synchronization.
 	Init milestone.Index
-	// The current solid milestone of the node.
-	CurrentSolidMs milestone.Index
+	// The current confirmed milestone of the node.
+	CurrentConfirmedMs milestone.Index
 	// The target milestone to which to synchronize to.
 	TargetMs milestone.Index
 	// The previous checkpoint of the synchronization.
@@ -99,14 +99,14 @@ type WarpSync struct {
 	AdvancementRange int
 }
 
-// UpdateCurrent updates the current solid milestone index state.
+// UpdateCurrent updates the current confirmed milestone index state.
 func (ws *WarpSync) UpdateCurrent(current milestone.Index) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
-	if current <= ws.CurrentSolidMs {
+	if current <= ws.CurrentConfirmedMs {
 		return
 	}
-	ws.CurrentSolidMs = current
+	ws.CurrentConfirmedMs = current
 
 	// synchronization not started
 	if ws.CurrentCheckpoint == 0 {
@@ -114,14 +114,14 @@ func (ws *WarpSync) UpdateCurrent(current milestone.Index) {
 	}
 
 	// finished
-	if ws.TargetMs != 0 && ws.CurrentSolidMs >= ws.TargetMs {
+	if ws.TargetMs != 0 && ws.CurrentConfirmedMs >= ws.TargetMs {
 		ws.Events.Done.Trigger(int(ws.TargetMs-ws.Init), time.Since(ws.start))
 		ws.reset()
 		return
 	}
 
 	// check whether advancement criteria is fulfilled
-	if !ws.advCheckpointCriteria(ws.CurrentSolidMs, ws.PreviousCheckpoint, ws.CurrentCheckpoint) {
+	if !ws.advCheckpointCriteria(ws.CurrentConfirmedMs, ws.PreviousCheckpoint, ws.CurrentCheckpoint) {
 		return
 	}
 
@@ -160,13 +160,13 @@ func (ws *WarpSync) UpdateTarget(target milestone.Index) {
 		return
 	}
 
-	if ws.CurrentSolidMs >= ws.TargetMs || target-ws.CurrentSolidMs <= 1 {
+	if ws.CurrentConfirmedMs >= ws.TargetMs || target-ws.CurrentConfirmedMs <= 1 {
 		return
 	}
 
 	ws.start = time.Now()
-	ws.Init = ws.CurrentSolidMs
-	ws.PreviousCheckpoint = ws.CurrentSolidMs
+	ws.Init = ws.CurrentConfirmedMs
+	ws.PreviousCheckpoint = ws.CurrentConfirmedMs
 	advancementRange := ws.advanceCheckpoint()
 	ws.Events.Start.Trigger(ws.TargetMs, ws.CurrentCheckpoint, advancementRange)
 }
@@ -182,15 +182,15 @@ func (ws *WarpSync) advanceCheckpoint() int32 {
 	advRange := milestone.Index(ws.AdvancementRange)
 
 	// make sure we advance max to the target milestone
-	if ws.CurrentSolidMs+advRange >= ws.TargetMs || ws.CurrentCheckpoint+advRange >= ws.TargetMs {
+	if ws.CurrentConfirmedMs+advRange >= ws.TargetMs || ws.CurrentCheckpoint+advRange >= ws.TargetMs {
 		deltaRange := ws.TargetMs - ws.CurrentCheckpoint
 		ws.CurrentCheckpoint = ws.TargetMs
 		return int32(deltaRange)
 	}
 
-	// at start simply advance from the current solid
+	// at start simply advance from the current confirmed
 	if ws.CurrentCheckpoint == 0 {
-		ws.CurrentCheckpoint = ws.CurrentSolidMs + advRange
+		ws.CurrentCheckpoint = ws.CurrentConfirmedMs + advRange
 		return int32(ws.AdvancementRange)
 	}
 
@@ -200,7 +200,7 @@ func (ws *WarpSync) advanceCheckpoint() int32 {
 
 // resets the warp sync.
 func (ws *WarpSync) reset() {
-	ws.CurrentSolidMs = 0
+	ws.CurrentConfirmedMs = 0
 	ws.CurrentCheckpoint = 0
 	ws.TargetMs = 0
 	ws.Init = 0

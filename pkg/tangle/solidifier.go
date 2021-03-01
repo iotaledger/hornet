@@ -272,7 +272,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 		t.solidifierMilestoneIndexLock.RLock()
 		triggerSignal := (newMilestoneIndex == 0) && (t.solidifierMilestoneIndex == 0)
-		nextMilestoneSignal := newMilestoneIndex == t.storage.GetSolidMilestoneIndex()+1
+		nextMilestoneSignal := newMilestoneIndex == t.storage.GetConfirmedMilestoneIndex()+1
 		olderMilestoneDetected := (newMilestoneIndex != 0) && ((t.solidifierMilestoneIndex != 0) && (newMilestoneIndex < t.solidifierMilestoneIndex))
 		newMilestoneReqQueueEmptySignal := (t.solidifierMilestoneIndex == 0) && (newMilestoneIndex != 0) && t.requestQueue.Empty()
 		if !(triggerSignal || nextMilestoneSignal || olderMilestoneDetected || newMilestoneReqQueueEmptySignal) {
@@ -289,16 +289,16 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	t.solidifierLock.Lock()
 	defer t.solidifierLock.Unlock()
 
-	currentSolidIndex := t.storage.GetSolidMilestoneIndex()
+	currentConfirmedIndex := t.storage.GetConfirmedMilestoneIndex()
 	latestIndex := t.storage.GetLatestMilestoneIndex()
 
-	if currentSolidIndex == latestIndex && latestIndex != 0 {
+	if currentConfirmedIndex == latestIndex && latestIndex != 0 {
 		// Latest milestone already solid
 		return
 	}
 
 	// Always traverse the oldest non-solid milestone, either it gets solid, or something is missing that should be requested.
-	cachedMsToSolidify := t.storage.FindClosestNextMilestoneOrNil(currentSolidIndex) // message +1
+	cachedMsToSolidify := t.storage.FindClosestNextMilestoneOrNil(currentConfirmedIndex) // message +1
 	if cachedMsToSolidify == nil {
 		// No newer milestone available
 		return
@@ -338,22 +338,22 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
-	if (currentSolidIndex + 1) < milestoneIndexToSolidify {
+	if (currentConfirmedIndex + 1) < milestoneIndexToSolidify {
 
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
-		cachedClosestNextMs := t.storage.FindClosestNextMilestoneOrNil(currentSolidIndex) // message +1
+		cachedClosestNextMs := t.storage.FindClosestNextMilestoneOrNil(currentConfirmedIndex) // message +1
 		cachedClosestNextMsIndex := cachedClosestNextMs.GetMilestone().Index
 		if cachedClosestNextMsIndex == milestoneIndexToSolidify {
-			t.log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentSolidIndex, cachedClosestNextMsIndex)
+			t.log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentConfirmedIndex, cachedClosestNextMsIndex)
 
 			// no Milestones found in between => search an older milestone in the solid cone
-			if found, err := t.searchMissingMilestone(currentSolidIndex, cachedClosestNextMsIndex, cachedMsToSolidify.GetMilestone().MessageID, t.signalChanMilestoneStopSolidification); !found {
+			if found, err := t.searchMissingMilestone(currentConfirmedIndex, cachedClosestNextMsIndex, cachedMsToSolidify.GetMilestone().MessageID, t.signalChanMilestoneStopSolidification); !found {
 				if err != nil {
 					// no milestones found => this should not happen!
-					t.log.Panicf("Milestones missing between (%d) and (%d).", currentSolidIndex, cachedClosestNextMsIndex)
+					t.log.Panicf("Milestones missing between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
 				}
-				t.log.Infof("Aborted search for missing milestones between (%d) and (%d).", currentSolidIndex, cachedClosestNextMsIndex)
+				t.log.Infof("Aborted search for missing milestones between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
 			}
 		}
 		cachedClosestNextMs.Release() // message -1
@@ -370,9 +370,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 		},
 		func(confirmation *whiteflag.Confirmation) {
-			t.storage.SetSolidMilestoneIndex(milestoneIndexToSolidify)
-			t.Events.SolidMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
-			t.Events.SolidMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
+			t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify)
+			t.Events.ConfirmedMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
+			t.Events.ConfirmedMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
 			t.milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
 			t.Events.MilestoneConfirmed.Trigger(confirmation)
 		},
@@ -443,7 +443,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		}
 	}
 
-	t.log.Infof("New solid milestone: %d%s", conf.Index, cmpsMessage)
+	t.log.Infof("New confirmed milestone: %d%s", conf.Index, cmpsMessage)
 
 	// Run check for next milestone
 	t.setSolidifierMilestoneIndex(0)
@@ -501,7 +501,7 @@ func (t *Tangle) setSolidifierMilestoneIndex(index milestone.Index) {
 }
 
 // searchMissingMilestone searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
-func (t *Tangle) searchMissingMilestone(solidMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneMessageID hornet.MessageID, abortSignal chan struct{}) (found bool, err error) {
+func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneMessageID hornet.MessageID, abortSignal chan struct{}) (found bool, err error) {
 
 	var milestoneFound bool
 
@@ -514,7 +514,7 @@ func (t *Tangle) searchMissingMilestone(solidMilestoneIndex milestone.Index, sta
 			defer cachedMsgMeta.Release(true) // meta -1
 
 			// if the message is referenced by an older milestone, there is no need to traverse its parents
-			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced && (at <= solidMilestoneIndex) {
+			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced && (at <= confirmedMilestoneIndex) {
 				return false, nil
 			}
 
@@ -536,7 +536,7 @@ func (t *Tangle) searchMissingMilestone(solidMilestoneIndex milestone.Index, sta
 			}
 
 			msIndex := milestone.Index(ms.Index)
-			if (msIndex <= solidMilestoneIndex) || (msIndex >= startMilestoneIndex) {
+			if (msIndex <= confirmedMilestoneIndex) || (msIndex >= startMilestoneIndex) {
 				return nil
 			}
 

@@ -25,13 +25,13 @@ func info() (*infoResponse, error) {
 		cachedLatestMilestone.Release(true)
 	}
 
-	// solid milestone index
-	solidMilestoneIndex := deps.Storage.GetSolidMilestoneIndex()
+	// confirmed milestone index
+	confirmedMilestoneIndex := deps.Storage.GetConfirmedMilestoneIndex()
 
-	// solid milestone message ID
-	cachedSolidMilestone := deps.Storage.GetCachedMilestoneOrNil(solidMilestoneIndex)
-	if cachedSolidMilestone != nil {
-		cachedSolidMilestone.Release(true)
+	// confirmed milestone message ID
+	cachedConfirmedMilestone := deps.Storage.GetCachedMilestoneOrNil(confirmedMilestoneIndex)
+	if cachedConfirmedMilestone != nil {
+		cachedConfirmedMilestone.Release(true)
 	}
 
 	// pruning index
@@ -42,16 +42,16 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                 deps.AppInfo.Name,
-		Version:              deps.AppInfo.Version,
-		IsHealthy:            deps.Tangle.IsNodeHealthy(),
-		NetworkID:            deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
-		Bech32HRP:            deps.Bech32HRP.String(),
-		MinPowScore:          deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
-		LatestMilestoneIndex: latestMilestoneIndex,
-		SolidMilestoneIndex:  solidMilestoneIndex,
-		PruningIndex:         pruningIndex,
-		Features:             features,
+		Name:                    deps.AppInfo.Name,
+		Version:                 deps.AppInfo.Version,
+		IsHealthy:               deps.Tangle.IsNodeHealthy(),
+		NetworkID:               deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
+		Bech32HRP:               deps.Bech32HRP.String(),
+		MinPowScore:             deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
+		LatestMilestoneIndex:    latestMilestoneIndex,
+		ConfirmedMilestoneIndex: confirmedMilestoneIndex,
+		PruningIndex:            pruningIndex,
+		Features:                features,
 	}, nil
 }
 

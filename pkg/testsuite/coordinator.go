@@ -77,7 +77,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	conf, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, cachedMsgMetas, ms.GetMilestone().MessageID,
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
-			te.storage.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
+			te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 		},
 		func(output *utxo.Output) {},
 		func(spent *utxo.Spent) {},
@@ -90,7 +90,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
 func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
 
-	currentIndex := te.storage.GetSolidMilestoneIndex()
+	currentIndex := te.storage.GetConfirmedMilestoneIndex()
 	te.VerifyLMI(currentIndex)
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
@@ -122,7 +122,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
 			wfConf = confirmation
-			te.storage.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
+			te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 		},
 		func(output *utxo.Output) {},
 		func(spent *utxo.Spent) {},
@@ -131,7 +131,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 	require.NoError(te.TestState, err)
 
 	require.Equal(te.TestState, currentIndex+1, confStats.Index)
-	te.VerifyLSMI(confStats.Index)
+	te.VerifyCMI(confStats.Index)
 
 	te.AssertTotalSupplyStillValid()
 

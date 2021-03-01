@@ -151,7 +151,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 	snapshotInfo.EntryPointIndex = targetIndex
 	s.storage.SetSnapshotInfo(snapshotInfo)
 
-	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be LSI at startup of the node
+	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be CMI at startup of the node
 	s.pruneUnreferencedMessages(snapshotInfo.PruningIndex)
 
 	// Iterate through all milestones that have to be pruned
@@ -245,14 +245,14 @@ func (s *Snapshot) PruneDatabaseByDepth(depth milestone.Index) (milestone.Index,
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	solidMilestoneIndex := s.storage.GetSolidMilestoneIndex()
+	confirmedMilestoneIndex := s.storage.GetConfirmedMilestoneIndex()
 
-	if solidMilestoneIndex <= depth {
+	if confirmedMilestoneIndex <= depth {
 		// Not enough history
 		return 0, ErrNotEnoughHistory
 	}
 
-	return s.pruneDatabase(solidMilestoneIndex-depth, nil)
+	return s.pruneDatabase(confirmedMilestoneIndex-depth, nil)
 }
 
 func (s *Snapshot) PruneDatabaseByTargetIndex(targetIndex milestone.Index) (milestone.Index, error) {

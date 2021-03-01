@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	// LMI is set to LSMI at startup
+	// LMI is set to CMI at startup
 	CfgTangleSyncedAtStartup = "syncedAtStartup"
 )
 
@@ -54,14 +54,14 @@ var (
 	log        *logger.Logger
 	deps       dependencies
 
-	syncedAtStartup = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to LSMI at startup")
+	syncedAtStartup = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new snapshot.")
 
-	onSolidMilestoneIndexChanged   *events.Closure
-	onPruningMilestoneIndexChanged *events.Closure
-	onLatestMilestoneIndexChanged  *events.Closure
-	onReceivedNewTx                *events.Closure
+	onConfirmedMilestoneIndexChanged *events.Closure
+	onPruningMilestoneIndexChanged   *events.Closure
+	onLatestMilestoneIndexChanged    *events.Closure
+	onReceivedNewTx                  *events.Closure
 )
 
 type dependencies struct {
@@ -176,8 +176,9 @@ func run() {
 }
 
 func configureEvents() {
-	onSolidMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
 		// notify peers about our new solid milestone index
+		// bee differentiates between solid and confirmed milestone, for hornet it is the same.
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
@@ -202,7 +203,7 @@ func configureEvents() {
 }
 
 func attachHeartbeatEvents() {
-	deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 	deps.Tangle.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
@@ -212,7 +213,7 @@ func attachSolidifierGossipEvents() {
 }
 
 func detachHeartbeatEvents() {
-	deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 	deps.Tangle.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 }

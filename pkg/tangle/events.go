@@ -39,23 +39,23 @@ func ReceiptCaller(handler interface{}, params ...interface{}) {
 }
 
 type pluginEvents struct {
-	MPSMetricsUpdated             *events.Event
-	ReceivedNewMessage            *events.Event
-	ReceivedKnownMessage          *events.Event
-	ProcessedMessage              *events.Event
-	MessageSolid                  *events.Event
-	MessageReferenced             *events.Event
-	ReceivedNewMilestone          *events.Event
-	LatestMilestoneChanged        *events.Event
-	LatestMilestoneIndexChanged   *events.Event
-	MilestoneConfirmed            *events.Event
-	SolidMilestoneChanged         *events.Event
-	SolidMilestoneIndexChanged    *events.Event
-	SnapshotMilestoneIndexChanged *events.Event
-	PruningMilestoneIndexChanged  *events.Event
-	NewConfirmedMilestoneMetric   *events.Event
-	MilestoneSolidificationFailed *events.Event
-	NewUTXOOutput                 *events.Event
-	NewUTXOSpent                  *events.Event
-	NewReceipt                    *events.Event
+	MPSMetricsUpdated              *events.Event
+	ReceivedNewMessage             *events.Event
+	ReceivedKnownMessage           *events.Event
+	ProcessedMessage               *events.Event
+	MessageSolid                   *events.Event
+	MessageReferenced              *events.Event
+	ReceivedNewMilestone           *events.Event
+	LatestMilestoneChanged         *events.Event
+	LatestMilestoneIndexChanged    *events.Event
+	MilestoneConfirmed             *events.Event
+	ConfirmedMilestoneChanged      *events.Event
+	ConfirmedMilestoneIndexChanged *events.Event
+	SnapshotMilestoneIndexChanged  *events.Event
+	PruningMilestoneIndexChanged   *events.Event
+	NewConfirmedMilestoneMetric    *events.Event
+	MilestoneSolidificationFailed  *events.Event
+	NewUTXOOutput                  *events.Event
+	NewUTXOSpent                   *events.Event
+	NewReceipt                     *events.Event
 }

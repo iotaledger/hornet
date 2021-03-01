@@ -148,7 +148,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	require.Equal(t, count, allowanceCount)
 
 	// Pass all outputs from u1 to u2 over the snapshot serialization functions
-	producer := newLSMIUTXOProducer(u1)
+	producer := newCMIUTXOProducer(u1)
 	consumer := newOutputConsumer(u2)
 
 	for {

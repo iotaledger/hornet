@@ -368,12 +368,12 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) bool {
 	defer cachedMsgMeta.Release(true)
 
-	lsmi := deps.Storage.GetSolidMilestoneIndex()
+	cmi := deps.Storage.GetConfirmedMilestoneIndex()
 
-	_, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), lsmi) // meta +1
+	_, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
 
-	// if the OCRI to LSMI delta is over belowMaxDepth, then the tip is invalid.
-	return (lsmi - ocri) > belowMaxDepth
+	// if the OCRI to CMI delta is over belowMaxDepth, then the tip is invalid.
+	return (cmi - ocri) > belowMaxDepth
 }
 
 // GetEvents returns the events of the coordinator

@@ -88,14 +88,14 @@ type TipSelector struct {
 	storage *storage.Storage
 	// serverMetrics is the shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
-	// maxDeltaMsgYoungestConeRootIndexToLSMI is the maximum allowed delta
-	// value for the YCRI of a given message in relation to the current LSMI before it gets lazy.
-	maxDeltaMsgYoungestConeRootIndexToLSMI milestone.Index
-	// maxDeltaMsgOldestConeRootIndexToLSMI is the maximum allowed delta
-	// value between OCRI of a given message in relation to the current LSMI before it gets semi-lazy.
-	maxDeltaMsgOldestConeRootIndexToLSMI milestone.Index
+	// maxDeltaMsgYoungestConeRootIndexToCMI is the maximum allowed delta
+	// value for the YCRI of a given message in relation to the current CMI before it gets lazy.
+	maxDeltaMsgYoungestConeRootIndexToCMI milestone.Index
+	// maxDeltaMsgOldestConeRootIndexToCMI is the maximum allowed delta
+	// value between OCRI of a given message in relation to the current CMI before it gets semi-lazy.
+	maxDeltaMsgOldestConeRootIndexToCMI milestone.Index
 	// belowMaxDepth is the maximum allowed delta
-	// value between OCRI of a given message in relation to the current LSMI before it gets lazy.
+	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
 	belowMaxDepth milestone.Index
 	// retentionRulesTipsLimit is the maximum amount of current tips for which "maxReferencedTipAgeSeconds"
 	// and "maxChildren" are checked. if the amount of tips exceeds this limit,
@@ -140,8 +140,8 @@ type TipSelector struct {
 // New creates a new tip-selector.
 func New(storage *storage.Storage,
 	serverMetrics *metrics.ServerMetrics,
-	maxDeltaMsgYoungestConeRootIndexToLSMI int,
-	maxDeltaMsgOldestConeRootIndexToLSMI int,
+	maxDeltaMsgYoungestConeRootIndexToCMI int,
+	maxDeltaMsgOldestConeRootIndexToCMI int,
 	belowMaxDepth int,
 	retentionRulesTipsLimitNonLazy int,
 	maxReferencedTipAgeSecondsNonLazy time.Duration,
@@ -153,21 +153,21 @@ func New(storage *storage.Storage,
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
-		storage:                                storage,
-		serverMetrics:                          serverMetrics,
-		maxDeltaMsgYoungestConeRootIndexToLSMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToLSMI),
-		maxDeltaMsgOldestConeRootIndexToLSMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToLSMI),
-		belowMaxDepth:                          milestone.Index(belowMaxDepth),
-		retentionRulesTipsLimitNonLazy:         retentionRulesTipsLimitNonLazy,
-		maxReferencedTipAgeSecondsNonLazy:      maxReferencedTipAgeSecondsNonLazy,
-		maxChildrenNonLazy:                     maxChildrenNonLazy,
-		spammerTipsThresholdNonLazy:            spammerTipsThresholdNonLazy,
-		retentionRulesTipsLimitSemiLazy:        retentionRulesTipsLimitSemiLazy,
-		maxReferencedTipAgeSecondsSemiLazy:     maxReferencedTipAgeSecondsSemiLazy,
-		maxChildrenSemiLazy:                    maxChildrenSemiLazy,
-		spammerTipsThresholdSemiLazy:           spammerTipsThresholdSemiLazy,
-		nonLazyTipsMap:                         make(map[string]*Tip),
-		semiLazyTipsMap:                        make(map[string]*Tip),
+		storage:                               storage,
+		serverMetrics:                         serverMetrics,
+		maxDeltaMsgYoungestConeRootIndexToCMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToCMI),
+		maxDeltaMsgOldestConeRootIndexToCMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToCMI),
+		belowMaxDepth:                         milestone.Index(belowMaxDepth),
+		retentionRulesTipsLimitNonLazy:        retentionRulesTipsLimitNonLazy,
+		maxReferencedTipAgeSecondsNonLazy:     maxReferencedTipAgeSecondsNonLazy,
+		maxChildrenNonLazy:                    maxChildrenNonLazy,
+		spammerTipsThresholdNonLazy:           spammerTipsThresholdNonLazy,
+		retentionRulesTipsLimitSemiLazy:       retentionRulesTipsLimitSemiLazy,
+		maxReferencedTipAgeSecondsSemiLazy:    maxReferencedTipAgeSecondsSemiLazy,
+		maxChildrenSemiLazy:                   maxChildrenSemiLazy,
+		spammerTipsThresholdSemiLazy:          spammerTipsThresholdSemiLazy,
+		nonLazyTipsMap:                        make(map[string]*Tip),
+		semiLazyTipsMap:                       make(map[string]*Tip),
 		Events: Events{
 			TipAdded:        events.NewEvent(TipCaller),
 			TipRemoved:      events.NewEvent(TipCaller),
@@ -194,9 +194,9 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 		return
 	}
 
-	lsmi := ts.storage.GetSolidMilestoneIndex()
+	cmi := ts.storage.GetConfirmedMilestoneIndex()
 
-	score := ts.calculateScore(messageID, lsmi)
+	score := ts.calculateScore(messageID, cmi)
 	if score == ScoreLazy {
 		// do not add lazy tips.
 		// lazy tips should also not remove other tips from the pool, otherwise the tip pool will run empty.
@@ -465,12 +465,12 @@ func (ts *TipSelector) UpdateScores() int {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	lsmi := ts.storage.GetSolidMilestoneIndex()
+	cmi := ts.storage.GetConfirmedMilestoneIndex()
 
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
 		// check the score of the tip again to avoid old tips
-		tip.Score = ts.calculateScore(tip.MessageID, lsmi)
+		tip.Score = ts.calculateScore(tip.MessageID, cmi)
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.MessageID) {
@@ -496,7 +496,7 @@ func (ts *TipSelector) UpdateScores() int {
 
 	for _, tip := range ts.semiLazyTipsMap {
 		// check the score of the tip again to avoid old tips
-		tip.Score = ts.calculateScore(tip.MessageID, lsmi)
+		tip.Score = ts.calculateScore(tip.MessageID, cmi)
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.MessageID) {
@@ -524,7 +524,7 @@ func (ts *TipSelector) UpdateScores() int {
 }
 
 // calculateScore calculates the tip selection score of this message
-func (ts *TipSelector) calculateScore(messageID hornet.MessageID, lsmi milestone.Index) Score {
+func (ts *TipSelector) calculateScore(messageID hornet.MessageID, cmi milestone.Index) Score {
 	cachedMsgMeta := ts.storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedMsgMeta == nil {
 		// we need to return lazy instead of panic here, because the message could have been pruned already
@@ -533,20 +533,20 @@ func (ts *TipSelector) calculateScore(messageID hornet.MessageID, lsmi milestone
 	}
 	defer cachedMsgMeta.Release(true)
 
-	ycri, ocri := dag.GetConeRootIndexes(ts.storage, cachedMsgMeta.Retain(), lsmi) // meta +1
+	ycri, ocri := dag.GetConeRootIndexes(ts.storage, cachedMsgMeta.Retain(), cmi) // meta +1
 
-	// if the LSMI to YCRI delta is over maxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy
-	if (lsmi - ycri) > ts.maxDeltaMsgYoungestConeRootIndexToLSMI {
+	// if the CMI to YCRI delta is over maxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy
+	if (cmi - ycri) > ts.maxDeltaMsgYoungestConeRootIndexToCMI {
 		return ScoreLazy
 	}
 
-	// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
-	if (lsmi - ocri) > ts.belowMaxDepth {
+	// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
+	if (cmi - ocri) > ts.belowMaxDepth {
 		return ScoreLazy
 	}
 
-	// if the OCRI to LSMI delta is over maxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy
-	if (lsmi - ocri) > ts.maxDeltaMsgOldestConeRootIndexToLSMI {
+	// if the OCRI to CMI delta is over maxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy
+	if (cmi - ocri) > ts.maxDeltaMsgOldestConeRootIndexToCMI {
 		return ScoreSemiLazy
 	}
 

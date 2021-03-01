@@ -49,9 +49,9 @@ var (
 //
 // Database:
 // 		- LedgerState
-//			- Balances of latest solid milestone		=> will be removed and replaced with snapshot milestone
-//			- Balances of snapshot milestone			=> should be consistent (total iotas are checked)
-//			- Balance diffs of every solid milestone	=> will be removed and added again by confirmation
+//			- Balances of confirmed milestone				=> will be removed and replaced with snapshot milestone
+//			- Balances of snapshot milestone				=> should be consistent (total iotas are checked)
+//			- Balance diffs of every confirmed milestone	=> will be removed and added again by confirmation
 //
 func (t *Tangle) RevalidateDatabase() error {
 
@@ -618,8 +618,8 @@ func (t *Tangle) applySnapshotLedger(info *storage.SnapshotInfo) error {
 		}
 		t.log.Info("applying snapshot balances to the ledger state ... done!")
 	*/
-	// Set the valid solid milestone index
-	t.storage.OverwriteSolidMilestoneIndex(info.SnapshotIndex)
+	// Set the valid confirmed milestone index
+	t.storage.OverwriteConfirmedMilestoneIndex(info.SnapshotIndex)
 
 	return nil
 }

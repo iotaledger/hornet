@@ -156,8 +156,7 @@ func ConfirmMilestone(
 		newSpents = append(newSpents, spent)
 	}
 
-	if err = s.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt)
-		err != nil {
+	if err = s.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt); err != nil {
 		return nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
 	}
 

@@ -102,8 +102,8 @@
     }
   },
   "tipsel": {
-    "maxDeltaMsgYoungestConeRootIndexToLSMI": 8,
-    "maxDeltaMsgOldestConeRootIndexToLSMI": 13,
+    "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
+    "maxDeltaMsgOldestConeRootIndexToCMI": 13,
     "belowMaxDepth": 15,
     "nonLazy": {
       "retentionRulesTipsLimit": 100,

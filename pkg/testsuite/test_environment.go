@@ -134,7 +134,7 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 	te.configureCoordinator([]ed25519.PrivateKey{cooPrvKey1, cooPrvKey2})
 	require.NotNil(testState, te.coo)
 
-	te.VerifyLSMI(1)
+	te.VerifyCMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
 		_, confStats := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)

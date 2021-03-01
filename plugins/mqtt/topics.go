@@ -2,8 +2,8 @@ package mqtt
 
 // Topic names
 const (
-	topicMilestonesLatest = "milestones/latest"
-	topicMilestonesSolid  = "milestones/solid"
+	topicMilestonesLatest    = "milestones/latest"
+	topicMilestonesConfirmed = "milestones/confirmed"
 
 	topicMessages           = "messages"
 	topicMessagesReferenced = "messages/referenced"

@@ -18,17 +18,17 @@ import (
 )
 
 const (
-	MaxDeltaMsgYoungestConeRootIndexToLSMI = 8
-	MaxDeltaMsgOldestConeRootIndexToLSMI   = 13
-	BelowMaxDepth                          = 15
-	RetentionRulesTipsLimitNonLazy         = 100
-	MaxReferencedTipAgeSecondsNonLazy      = 3
-	MaxChildrenNonLazy                     = 100
-	SpammerTipsThresholdNonLazy            = 0
-	RetentionRulesTipsLimitSemiLazy        = 20
-	MaxReferencedTipAgeSecondsSemiLazy     = 3
-	MaxChildrenSemiLazy                    = 100
-	SpammerTipsThresholdSemiLazy           = 30
+	MaxDeltaMsgYoungestConeRootIndexToCMI = 8
+	MaxDeltaMsgOldestConeRootIndexToCMI   = 13
+	BelowMaxDepth                         = 15
+	RetentionRulesTipsLimitNonLazy        = 100
+	MaxReferencedTipAgeSecondsNonLazy     = 3
+	MaxChildrenNonLazy                    = 100
+	SpammerTipsThresholdNonLazy           = 0
+	RetentionRulesTipsLimitSemiLazy       = 20
+	MaxReferencedTipAgeSecondsSemiLazy    = 3
+	MaxChildrenSemiLazy                   = 100
+	SpammerTipsThresholdSemiLazy          = 30
 )
 
 func TestTipSelect(t *testing.T) {
@@ -41,8 +41,8 @@ func TestTipSelect(t *testing.T) {
 	ts := tipselect.New(
 		te.Storage(),
 		&serverMetrics,
-		MaxDeltaMsgYoungestConeRootIndexToLSMI,
-		MaxDeltaMsgOldestConeRootIndexToLSMI,
+		MaxDeltaMsgYoungestConeRootIndexToCMI,
+		MaxDeltaMsgOldestConeRootIndexToCMI,
 		BelowMaxDepth,
 		RetentionRulesTipsLimitNonLazy,
 		MaxReferencedTipAgeSecondsNonLazy,
@@ -71,7 +71,7 @@ func TestTipSelect(t *testing.T) {
 		require.GreaterOrEqual(te.TestState, len(tips), 1)
 		require.LessOrEqual(te.TestState, len(tips), 8)
 
-		lsmi := te.Storage().GetSolidMilestoneIndex()
+		cmi := te.Storage().GetConfirmedMilestoneIndex()
 
 		for _, tip := range tips {
 			// we walk the cone of every tip to check the youngest and oldest milestone index it references
@@ -118,20 +118,20 @@ func TestTipSelect(t *testing.T) {
 			require.NoError(te.TestState, err)
 
 			minOldestConeRootIndex := milestone.Index(1)
-			if lsmi > milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI) {
-				minOldestConeRootIndex = lsmi - milestone.Index(MaxDeltaMsgOldestConeRootIndexToLSMI)
+			if cmi > milestone.Index(MaxDeltaMsgOldestConeRootIndexToCMI) {
+				minOldestConeRootIndex = cmi - milestone.Index(MaxDeltaMsgOldestConeRootIndexToCMI)
 			}
 
 			minYoungestConeRootIndex := milestone.Index(1)
-			if lsmi > milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI) {
-				minYoungestConeRootIndex = lsmi - milestone.Index(MaxDeltaMsgYoungestConeRootIndexToLSMI)
+			if cmi > milestone.Index(MaxDeltaMsgYoungestConeRootIndexToCMI) {
+				minYoungestConeRootIndex = cmi - milestone.Index(MaxDeltaMsgYoungestConeRootIndexToCMI)
 			}
 
 			require.GreaterOrEqual(te.TestState, uint32(oldestConeRootIndex), uint32(minOldestConeRootIndex))
-			require.LessOrEqual(te.TestState, uint32(oldestConeRootIndex), uint32(lsmi))
+			require.LessOrEqual(te.TestState, uint32(oldestConeRootIndex), uint32(cmi))
 
 			require.GreaterOrEqual(te.TestState, uint32(youngestConeRootIndex), uint32(minYoungestConeRootIndex))
-			require.LessOrEqual(te.TestState, uint32(youngestConeRootIndex), uint32(lsmi))
+			require.LessOrEqual(te.TestState, uint32(youngestConeRootIndex), uint32(cmi))
 		}
 
 		msg := te.NewMessageBuilder(fmt.Sprintf("%d", msgCount)).Parents(tips).BuildIndexation().Store()

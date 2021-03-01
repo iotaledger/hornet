@@ -181,7 +181,7 @@ func (s *Snapshot) getMilestoneParentMessageIDs(milestoneIndex milestone.Index, 
 	return parentMessageIDs, nil
 }
 
-func (s *Snapshot) shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
+func (s *Snapshot) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
 	if snapshotInfo == nil {
@@ -195,12 +195,12 @@ func (s *Snapshot) shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool 
 		snapshotInterval = s.snapshotIntervalUnsynced
 	}
 
-	if (solidMilestoneIndex < s.snapshotDepth+snapshotInterval) || (solidMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
+	if (confirmedMilestoneIndex < s.snapshotDepth+snapshotInterval) || (confirmedMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
 		// Not enough history to calculate solid entry points
 		return false
 	}
 
-	return solidMilestoneIndex-(s.snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
+	return confirmedMilestoneIndex-(s.snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
 func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(sep *solidEntryPoint) bool) error {
@@ -271,14 +271,14 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 
 func (s *Snapshot) checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *storage.SnapshotInfo, checkSnapshotIndex bool) error {
 
-	solidMilestoneIndex := s.storage.GetSolidMilestoneIndex()
+	confirmedMilestoneIndex := s.storage.GetConfirmedMilestoneIndex()
 
-	if solidMilestoneIndex < s.solidEntryPointCheckThresholdFuture {
-		return errors.Wrapf(ErrNotEnoughHistory, "minimum solid index: %d, actual solid index: %d", s.solidEntryPointCheckThresholdFuture+1, solidMilestoneIndex)
+	if confirmedMilestoneIndex < s.solidEntryPointCheckThresholdFuture {
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum confirmed index: %d, actual confirmed index: %d", s.solidEntryPointCheckThresholdFuture+1, confirmedMilestoneIndex)
 	}
 
 	minimumIndex := s.solidEntryPointCheckThresholdPast + 1
-	maximumIndex := solidMilestoneIndex - s.solidEntryPointCheckThresholdFuture
+	maximumIndex := confirmedMilestoneIndex - s.solidEntryPointCheckThresholdFuture
 
 	if checkSnapshotIndex && minimumIndex < snapshotInfo.SnapshotIndex+1 {
 		minimumIndex = snapshotInfo.SnapshotIndex + 1
@@ -348,8 +348,8 @@ func newSEPsProducer(s *Snapshot, targetIndex milestone.Index, abortSignal <-cha
 	}
 }
 
-// returns a producer which produces unspent outputs which exist for the current solid milestone.
-func newLSMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
+// returns a producer which produces unspent outputs which exist for the current confirmed milestone.
+func newCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
@@ -615,7 +615,7 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 }
 
 // reads out the index of the milestone which currently represents the ledger state.
-func (s *Snapshot) readLSMLedgerIndex() (milestone.Index, error) {
+func (s *Snapshot) readLedgerIndex() (milestone.Index, error) {
 	ledgerMilestoneIndex, err := s.utxo.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
@@ -636,7 +636,7 @@ func (s *Snapshot) readSnapshotIndexFromFullSnapshotFile() (milestone.Index, err
 		return 0, fmt.Errorf("unable to read full snapshot header for origin snapshot milestone index: %w", err)
 	}
 
-	// note that a full snapshot contains the ledger to the lsmi of the node which generated it,
+	// note that a full snapshot contains the ledger to the CMI of the node which generated it,
 	// however, the state is rolled backed to the snapshot index, therefore, the snapshot index
 	// is the actual point from which on the delta snapshot should contain milestone diffs
 	return fullSnapshotHeader.SEPMilestoneIndex, nil
@@ -718,8 +718,8 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 	var milestoneDiffProducer MilestoneDiffProducerFunc
 	switch snapshotType {
 	case Full:
-		// ledger index corresponds to the latest lsmi
-		header.LedgerMilestoneIndex, err = s.readLSMLedgerIndex()
+		// ledger index corresponds to the CMI
+		header.LedgerMilestoneIndex, err = s.readLedgerIndex()
 		if err != nil {
 			return err
 		}
@@ -730,9 +730,9 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 			return err
 		}
 
-		// a full snapshot contains the ledger UTXOs as of the LSMI
-		// and the milestone diffs from the LSMI back to the target index (excluding the target index)
-		utxoProducer = newLSMIUTXOProducer(s.utxo)
+		// a full snapshot contains the ledger UTXOs as of the CMI
+		// and the milestone diffs from the CMI back to the target index (excluding the target index)
+		utxoProducer = newCMIUTXOProducer(s.utxo)
 		milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxo, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
 
 	case Delta:
@@ -978,18 +978,18 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 	}
 
 	s.storage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, time.Now())
-	s.storage.SetSolidMilestoneIndex(header.SEPMilestoneIndex, false)
+	s.storage.SetConfirmedMilestoneIndex(header.SEPMilestoneIndex, false)
 
 	return nil
 }
 
-// HandleNewSolidMilestoneEvent handles new solid milestone events which may trigger a delta snapshot creation and pruning.
-func (s *Snapshot) HandleNewSolidMilestoneEvent(solidMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
+// HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a delta snapshot creation and pruning.
+func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	if s.shouldTakeSnapshot(solidMilestoneIndex) {
-		if err := s.createSnapshotWithoutLocking(Delta, solidMilestoneIndex-s.snapshotDepth, s.snapshotDeltaPath, true, shutdownSignal); err != nil {
+	if s.shouldTakeSnapshot(confirmedMilestoneIndex) {
+		if err := s.createSnapshotWithoutLocking(Delta, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotDeltaPath, true, shutdownSignal); err != nil {
 			if errors.Is(err, ErrCritical) {
 				s.log.Panicf("%s %s", ErrSnapshotCreationFailed, err)
 			}
@@ -1001,12 +1001,12 @@ func (s *Snapshot) HandleNewSolidMilestoneEvent(solidMilestoneIndex milestone.In
 		return
 	}
 
-	if solidMilestoneIndex <= s.pruningDelay {
+	if confirmedMilestoneIndex <= s.pruningDelay {
 		// not enough history
 		return
 	}
 
-	if _, err := s.pruneDatabase(solidMilestoneIndex-s.pruningDelay, shutdownSignal); err != nil {
+	if _, err := s.pruneDatabase(confirmedMilestoneIndex-s.pruningDelay, shutdownSignal); err != nil {
 		s.log.Debugf("pruning aborted: %v", err)
 	}
 }

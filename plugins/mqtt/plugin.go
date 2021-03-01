@@ -50,8 +50,8 @@ var (
 	log    *logger.Logger
 	deps   dependencies
 
-	newLatestMilestoneWorkerPool *workerpool.WorkerPool
-	newSolidMilestoneWorkerPool  *workerpool.WorkerPool
+	newLatestMilestoneWorkerPool    *workerpool.WorkerPool
+	newConfirmedMilestoneWorkerPool *workerpool.WorkerPool
 
 	messagesWorkerPool        *workerpool.WorkerPool
 	messageMetadataWorkerPool *workerpool.WorkerPool
@@ -82,8 +82,8 @@ func configure() {
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	newSolidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishSolidMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
+	newConfirmedMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
+		publishConfirmedMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -145,10 +145,10 @@ func configure() {
 			return
 		}
 
-		if topicName == topicMilestonesSolid {
-			index := deps.Storage.GetSolidMilestoneIndex()
+		if topicName == topicMilestonesConfirmed {
+			index := deps.Storage.GetConfirmedMilestoneIndex()
 			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
-				publishSolidMilestone(milestone) // milestone pass +1
+				publishConfirmedMilestone(milestone) // milestone pass +1
 			}
 			return
 		}
@@ -212,7 +212,7 @@ func run() {
 		cachedMs.Release(true)
 	})
 
-	onSolidMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
+	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
 			if !deps.Storage.IsNodeSyncedWithThreshold() {
 				cachedMs.Release(true)
@@ -221,13 +221,13 @@ func run() {
 			wasSyncBefore = true
 		}
 
-		if _, added := newSolidMilestoneWorkerPool.TrySubmit(cachedMs); added {
+		if _, added := newConfirmedMilestoneWorkerPool.TrySubmit(cachedMs); added {
 			return // Avoid Release (done inside workerpool task)
 		}
 		cachedMs.Release(true)
 	})
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedMsg.Release(true)
@@ -289,7 +289,7 @@ func run() {
 		log.Info("Starting MQTT Events ... done")
 
 		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
-		deps.Tangle.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+		deps.Tangle.Events.ConfirmedMilestoneChanged.Attach(onConfirmedMilestoneChanged)
 
 		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
 		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
@@ -302,7 +302,7 @@ func run() {
 
 		messagesWorkerPool.Start()
 		newLatestMilestoneWorkerPool.Start()
-		newSolidMilestoneWorkerPool.Start()
+		newConfirmedMilestoneWorkerPool.Start()
 		messageMetadataWorkerPool.Start()
 		topicSubscriptionWorkerPool.Start()
 		utxoOutputWorkerPool.Start()
@@ -311,7 +311,7 @@ func run() {
 		<-shutdownSignal
 
 		deps.Tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
-		deps.Tangle.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+		deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(onConfirmedMilestoneChanged)
 
 		deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
@@ -324,7 +324,7 @@ func run() {
 
 		messagesWorkerPool.StopAndWait()
 		newLatestMilestoneWorkerPool.StopAndWait()
-		newSolidMilestoneWorkerPool.StopAndWait()
+		newConfirmedMilestoneWorkerPool.StopAndWait()
 		messageMetadataWorkerPool.StopAndWait()
 		topicSubscriptionWorkerPool.StopAndWait()
 		utxoOutputWorkerPool.StopAndWait()

@@ -63,7 +63,7 @@ var (
 		VariableLength: false,
 	}
 
-	// The heartbeat packet containing the current latest solid, pruned and latest milestone index,
+	// The heartbeat packet containing the current solid, pruned and latest milestone index,
 	// number of connected peers and number of synced peers.
 	HeartbeatMessageDefinition = &message.Definition{
 		ID:             MessageTypeHeartbeat,

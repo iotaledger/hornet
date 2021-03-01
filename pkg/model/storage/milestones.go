@@ -43,12 +43,12 @@ func (s *Storage) KeyManager() *keymanager.KeyManager {
 }
 
 func (s *Storage) ResetMilestoneIndexes() {
-	s.solidMilestoneLock.Lock()
+	s.confirmedMilestoneLock.Lock()
 	s.latestMilestoneLock.Lock()
-	defer s.solidMilestoneLock.Unlock()
+	defer s.confirmedMilestoneLock.Unlock()
 	defer s.latestMilestoneLock.Unlock()
 
-	s.solidMilestoneIndex = 0
+	s.confirmedMilestoneIndex = 0
 	s.latestMilestoneIndex = 0
 }
 
@@ -115,15 +115,15 @@ func (s *Storage) WaitForNodeSynced(timeout time.Duration) bool {
 	return s.isNodeSynced
 }
 
-// The node is synced if LMI != 0 and LSMI == LMI.
-func (s *Storage) updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
+// The node is synced if LMI != 0 and CMI == LMI.
+func (s *Storage) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) {
 	if latestIndex == 0 {
 		s.isNodeSynced = false
 		s.isNodeSyncedThreshold = false
 		return
 	}
 
-	s.isNodeSynced = latestSolidIndex == latestIndex
+	s.isNodeSynced = confirmedIndex == latestIndex
 	if s.isNodeSynced {
 		// if the node is sync, signal all waiting routines at the end
 		defer func() {
@@ -146,17 +146,17 @@ func (s *Storage) updateNodeSynced(latestSolidIndex, latestIndex milestone.Index
 		return
 	}
 
-	s.isNodeSyncedThreshold = latestSolidIndex >= (latestIndex - isNodeSyncedWithinThreshold)
+	s.isNodeSyncedThreshold = confirmedIndex >= (latestIndex - isNodeSyncedWithinThreshold)
 }
 
-// SetSolidMilestoneIndex sets the solid milestone index.
-func (s *Storage) SetSolidMilestoneIndex(index milestone.Index, updateSynced ...bool) {
-	s.solidMilestoneLock.Lock()
-	if s.solidMilestoneIndex > index {
-		panic(fmt.Sprintf("current solid milestone (%d) is newer than (%d)", s.solidMilestoneIndex, index))
+// SetConfirmedMilestoneIndex sets the confirmed milestone index.
+func (s *Storage) SetConfirmedMilestoneIndex(index milestone.Index, updateSynced ...bool) {
+	s.confirmedMilestoneLock.Lock()
+	if s.confirmedMilestoneIndex > index {
+		panic(fmt.Sprintf("current confirmed milestone (%d) is newer than (%d)", s.confirmedMilestoneIndex, index))
 	}
-	s.solidMilestoneIndex = index
-	s.solidMilestoneLock.Unlock()
+	s.confirmedMilestoneIndex = index
+	s.confirmedMilestoneLock.Unlock()
 
 	if len(updateSynced) > 0 && !updateSynced[0] {
 		// always call updateNodeSynced if parameter is not given.
@@ -166,23 +166,23 @@ func (s *Storage) SetSolidMilestoneIndex(index milestone.Index, updateSynced ...
 	s.updateNodeSynced(index, s.GetLatestMilestoneIndex())
 }
 
-// OverwriteSolidMilestoneIndex is used to set older solid milestones (revalidation).
-func (s *Storage) OverwriteSolidMilestoneIndex(index milestone.Index) {
-	s.solidMilestoneLock.Lock()
-	s.solidMilestoneIndex = index
-	s.solidMilestoneLock.Unlock()
+// OverwriteConfirmedMilestoneIndex is used to set older confirmed milestones (revalidation).
+func (s *Storage) OverwriteConfirmedMilestoneIndex(index milestone.Index) {
+	s.confirmedMilestoneLock.Lock()
+	s.confirmedMilestoneIndex = index
+	s.confirmedMilestoneLock.Unlock()
 
 	if s.isNodeSynced {
 		s.updateNodeSynced(index, s.GetLatestMilestoneIndex())
 	}
 }
 
-// GetSolidMilestoneIndex returns the latest solid milestone index.
-func (s *Storage) GetSolidMilestoneIndex() milestone.Index {
-	s.solidMilestoneLock.RLock()
-	defer s.solidMilestoneLock.RUnlock()
+// GetConfirmedMilestoneIndex returns the confirmed milestone index.
+func (s *Storage) GetConfirmedMilestoneIndex() milestone.Index {
+	s.confirmedMilestoneLock.RLock()
+	defer s.confirmedMilestoneLock.RUnlock()
 
-	return s.solidMilestoneIndex
+	return s.confirmedMilestoneIndex
 }
 
 // SetLatestMilestoneIndex sets the latest milestone index.
@@ -204,7 +204,7 @@ func (s *Storage) SetLatestMilestoneIndex(index milestone.Index, updateSynced ..
 		return true
 	}
 
-	s.updateNodeSynced(s.GetSolidMilestoneIndex(), index)
+	s.updateNodeSynced(s.GetConfirmedMilestoneIndex(), index)
 
 	return true
 }
@@ -222,7 +222,7 @@ func (s *Storage) FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMi
 	lmi := s.GetLatestMilestoneIndex()
 	if lmi == 0 {
 		// no milestone received yet, check the next 100 milestones as a workaround
-		lmi = s.GetSolidMilestoneIndex() + 100
+		lmi = s.GetConfirmedMilestoneIndex() + 100
 	}
 
 	if index == 4294967295 {
