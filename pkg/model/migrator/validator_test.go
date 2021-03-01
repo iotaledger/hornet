@@ -4,14 +4,16 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gohornet/hornet/pkg/model/migrator"
+	"github.com/stretchr/testify/require"
+
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/iotaledger/iota.go/v2"
-	"github.com/stretchr/testify/require"
+	iotago "github.com/iotaledger/iota.go/v2"
+
+	"github.com/gohornet/hornet/pkg/model/migrator"
 )
 
 func TestValidator_QueryMigratedFunds(t *testing.T) {
@@ -48,7 +50,7 @@ func newTestValidator() *migrator.Validator {
 	return migrator.NewValidator(&mockAPI{}, validatorTests.coordinatorAddress, validatorTests.coordinatorMerkleTreeDepth)
 }
 
-func requireEntriesEqual(t *testing.T, rawTrytes [][]trinary.Trytes, entries []*iota.MigratedFundsEntry) {
+func requireEntriesEqual(t *testing.T, rawTrytes [][]trinary.Trytes, entries []*iotago.MigratedFundsEntry) {
 	require.Len(t, entries, len(rawTrytes))
 	for i, entry := range entries {
 		bundle, _ := transaction.AsTransactionObjects(rawTrytes[i], nil)

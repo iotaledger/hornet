@@ -20,7 +20,7 @@ import (
 	"github.com/iotaledger/iota.go/merkle"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	"github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v2"
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
 )
@@ -56,7 +56,7 @@ func NewValidator(api LegacyAPI, coordinatorAddress trinary.Hash, coordinatorMer
 
 // QueryMigratedFunds queries the legacy network for the white-flag confirmation data for the given milestone
 // index, verifies the signatures of the milestone and included bundles and then compiles a slice of migrated fund entries.
-func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedFundsEntry, error) {
+func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iotago.MigratedFundsEntry, error) {
 	confirmation, err := m.api.GetWhiteFlagConfirmation(milestoneIndex)
 	if err != nil {
 		return nil, fmt.Errorf("API call failed: %w", &common.SoftError{Err: err})
@@ -67,14 +67,14 @@ func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedF
 		return nil, fmt.Errorf("invalid confirmation data: %w", &common.CriticalError{Err: err})
 	}
 
-	migrated := make([]*iota.MigratedFundsEntry, 0, len(included))
+	migrated := make([]*iotago.MigratedFundsEntry, 0, len(included))
 	for i := range included {
 		output := included[i][0]
 		// don't need to check the error here because if it wouldn't be a migration address,
 		// it wouldn't have passed 'validateConfirmation' in the first place
 		edAddr, _ := address.ParseMigrationAddress(output.Address)
-		entry := &iota.MigratedFundsEntry{
-			Address: (*iota.Ed25519Address)(&edAddr),
+		entry := &iotago.MigratedFundsEntry{
+			Address: (*iotago.Ed25519Address)(&edAddr),
 			Deposit: uint64(output.Value),
 		}
 		copy(entry.TailTransactionHash[:], t5b1.EncodeTrytes(bundle.TailTransactionHash(included[i])))
@@ -88,7 +88,7 @@ func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedF
 // QueryNextMigratedFunds queries the next existing migrations starting from milestone index startIndex.
 // It returns the migrations as well as milestone index that confirmed those migrations.
 // If there are currently no more migrations, it returns the latest milestone index that was checked.
-func (m *Validator) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iota.MigratedFundsEntry, error) {
+func (m *Validator) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
 	info, err := m.api.GetNodeInfo()
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to get node info: %w", &common.SoftError{Err: err})
