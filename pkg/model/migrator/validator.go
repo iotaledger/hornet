@@ -4,12 +4,9 @@ import (
 	"bytes"
 	"crypto"
 	"encoding"
+	"errors"
 	"fmt"
-
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/pkg/errors"
-
-	"github.com/gohornet/hornet/pkg/whiteflag"
+	"math"
 
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
@@ -21,6 +18,9 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 	iotago "github.com/iotaledger/iota.go/v2"
+
+	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
 )
@@ -89,12 +89,11 @@ func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iotago.Migrate
 // It returns the migrations as well as milestone index that confirmed those migrations.
 // If there are currently no more migrations, it returns the latest milestone index that was checked.
 func (m *Validator) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
-	info, err := m.api.GetNodeInfo()
+	latestIndex, err := m.queryLatestMilestoneIndex()
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to get node info: %w", &common.SoftError{Err: err})
 	}
 
-	latestIndex := uint32(info.LatestMilestoneIndex)
 	for index := startIndex; index <= latestIndex; index++ {
 		migrated, err := m.QueryMigratedFunds(index)
 		if err != nil {
@@ -105,6 +104,20 @@ func (m *Validator) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iotago
 		}
 	}
 	return latestIndex, nil, nil
+}
+
+// queryLatestMilestoneIndex uses getNodeInfo API call to query the index of the latest milestone.
+func (m *Validator) queryLatestMilestoneIndex() (uint32, error) {
+	info, err := m.api.GetNodeInfo()
+	if err != nil {
+		return 0, err
+	}
+	index := info.LatestSolidSubtangleMilestoneIndex
+	// do some sanity checks
+	if index < 0 || index >= math.MaxUint32 {
+		return 0, fmt.Errorf("invalid milestone index in response: %d", index)
+	}
+	return uint32(index), nil
 }
 
 // validateMilestoneBundle performs syntactic validation of the milestone and checks whether it has the correct index.
