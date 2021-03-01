@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 
@@ -78,7 +79,7 @@ func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
 		return err
 	}
 	if err := ioutil.WriteFile(receiptFileName, receiptJSON, os.ModePerm); err != nil {
-		return fmt.Errorf("unable to persist receipt onto disk: %w", &CriticalError{err: err})
+		return fmt.Errorf("unable to persist receipt onto disk: %w", &common.CriticalError{Err: err})
 	}
 	return nil
 }

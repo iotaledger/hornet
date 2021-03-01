@@ -6,6 +6,7 @@ import (
 	"encoding"
 	"fmt"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -58,12 +59,12 @@ func NewValidator(api LegacyAPI, coordinatorAddress trinary.Hash, coordinatorMer
 func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedFundsEntry, error) {
 	confirmation, err := m.api.GetWhiteFlagConfirmation(milestoneIndex)
 	if err != nil {
-		return nil, fmt.Errorf("API call failed: %w", &SoftError{err: err})
+		return nil, fmt.Errorf("API call failed: %w", &common.SoftError{Err: err})
 	}
 
 	included, err := m.validateConfirmation(confirmation, milestoneIndex)
 	if err != nil {
-		return nil, fmt.Errorf("invalid confirmation data: %w", &CriticalError{err: err})
+		return nil, fmt.Errorf("invalid confirmation data: %w", &common.CriticalError{Err: err})
 	}
 
 	migrated := make([]*iota.MigratedFundsEntry, 0, len(included))
@@ -90,7 +91,7 @@ func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iota.MigratedF
 func (m *Validator) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iota.MigratedFundsEntry, error) {
 	info, err := m.api.GetNodeInfo()
 	if err != nil {
-		return 0, nil, fmt.Errorf("failed to get node info: %w", &SoftError{err: err})
+		return 0, nil, fmt.Errorf("failed to get node info: %w", &common.SoftError{Err: err})
 	}
 
 	latestIndex := uint32(info.LatestMilestoneIndex)

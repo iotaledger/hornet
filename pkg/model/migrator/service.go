@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 
@@ -217,7 +218,7 @@ func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntr
 	if l >= s.state.LatestIncludedIndex {
 		return s.state.LatestMigratedAtIndex, migratedFunds[s.state.LatestIncludedIndex:], nil
 	}
-	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", &CriticalError{err: ErrInvalidState}, s.state.LatestIncludedIndex, l)
+	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", &common.CriticalError{Err: ErrInvalidState}, s.state.LatestIncludedIndex, l)
 }
 
 // nextMigrations queries the next existing migrations starting from milestone index startIndex.
