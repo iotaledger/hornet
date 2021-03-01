@@ -2,7 +2,7 @@ module github.com/gohornet/hornet
 
 go 1.16
 
-replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210227231520-c1451f9a1d79
+replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210301202551-36e94eb424fc
 
 require (
 	github.com/DataDog/zstd v1.4.8 // indirect
@@ -61,14 +61,15 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.9.0
 	github.com/segmentio/fasthash v1.0.3 // indirect
-	github.com/shirou/gopsutil v3.21.1+incompatible
+	github.com/shirou/gopsutil v3.21.2+incompatible
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/tidwall/pretty v1.1.0 // indirect
+	github.com/tklauser/go-sysconf v0.3.4 // indirect
 	github.com/ugorji/go v1.2.4 // indirect
 	github.com/willf/bitset v1.1.11
-	github.com/wollac/iota-crypto-demo v0.0.0-20210219113856-3491d2389538
+	github.com/wollac/iota-crypto-demo v0.0.0-20210301113242-d76f3e4d14cb
 	gitlab.com/powsrv.io/go/client v0.0.0-20210203192329-84583796cd46
 	go.etcd.io/bbolt v1.3.5
 	go.opencensus.io v0.23.0 // indirect
@@ -77,7 +78,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
-	golang.org/x/sys v0.0.0-20210227040730-b0d1d43c014d // indirect
+	golang.org/x/sys v0.0.0-20210301091718-77cc2087c03b // indirect
 	golang.org/x/tools v0.1.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
