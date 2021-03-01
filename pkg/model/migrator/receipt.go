@@ -2,16 +2,16 @@ package migrator
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 
+	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	iotago "github.com/iotaledger/iota.go/v2"
 )

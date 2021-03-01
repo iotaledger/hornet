@@ -4,16 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iotaledger/iota.go/v2/ed25519"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 	"golang.org/x/net/context"
-
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
@@ -33,6 +27,11 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 const (

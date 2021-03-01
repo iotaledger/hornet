@@ -7,10 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func randBytes(length int) []byte {

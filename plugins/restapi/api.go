@@ -4,8 +4,9 @@ import (
 	"net"
 	"strings"
 
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
+
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 func networkWhitelisted(c echo.Context, whitelistedNetworks []net.IPNet) bool {

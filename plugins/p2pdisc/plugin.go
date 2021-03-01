@@ -3,13 +3,14 @@ package p2pdisc
 import (
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/host"
+	"go.uber.org/dig"
+
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/libp2p/go-libp2p-core/host"
-	"go.uber.org/dig"
 )
 
 func init() {

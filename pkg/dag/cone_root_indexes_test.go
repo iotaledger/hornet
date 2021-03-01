@@ -5,13 +5,13 @@ import (
 	"math/rand"
 	"testing"
 
-	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/testsuite"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (

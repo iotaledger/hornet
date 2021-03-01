@@ -7,14 +7,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/configuration"
 )
 
 const (

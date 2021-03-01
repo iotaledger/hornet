@@ -9,15 +9,14 @@ import (
 	"time"
 
 	"github.com/blang/vfs/memfs"
-	"github.com/iotaledger/iota.go/v2/ed25519"
 	"github.com/stretchr/testify/require"
-
-	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 type test struct {

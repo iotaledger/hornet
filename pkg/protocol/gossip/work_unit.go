@@ -4,13 +4,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/syncutils"
-
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 // WorkUnitState defines the state which a WorkUnit is in.

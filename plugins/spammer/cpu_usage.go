@@ -5,9 +5,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/common"
 	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/cpu"
+
+	"github.com/gohornet/hornet/pkg/common"
 )
 
 const (

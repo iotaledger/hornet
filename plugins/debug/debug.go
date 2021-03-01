@@ -10,8 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -21,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsResponse, error) {

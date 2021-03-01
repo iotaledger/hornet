@@ -8,13 +8,6 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/workerpool"
-
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -22,6 +15,11 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/workerpool"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func init() {

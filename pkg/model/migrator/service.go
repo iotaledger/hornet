@@ -1,14 +1,14 @@
 package migrator
 
 import (
-	"errors"
 	"fmt"
 	"os"
+
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
-
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"

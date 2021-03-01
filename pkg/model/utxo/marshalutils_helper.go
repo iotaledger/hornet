@@ -1,11 +1,9 @@
 package utxo
 
 import (
-	"github.com/iotaledger/hive.go/marshalutil"
-
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hive.go/marshalutil"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func parseOutputID(ms *marshalutil.MarshalUtil) (*iotago.UTXOInputID, error) {

@@ -3,15 +3,13 @@ package storage
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/objectstorage"
-
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/objectstorage"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func MessageCaller(handler interface{}, params ...interface{}) {

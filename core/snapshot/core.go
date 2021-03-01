@@ -2,17 +2,13 @@ package snapshot
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
-
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -22,6 +18,9 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 const (

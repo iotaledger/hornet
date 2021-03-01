@@ -1,8 +1,6 @@
 package dashboard
 
 import (
-	"github.com/iotaledger/hive.go/events"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -11,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	coordinatorPlugin "github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/events"
 )
 
 const (

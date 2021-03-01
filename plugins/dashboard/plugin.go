@@ -5,18 +5,12 @@ import (
 	"runtime"
 	"time"
 
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"go.uber.org/dig"
-
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/websockethub"
 
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -29,6 +23,11 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/websockethub"
 )
 
 func init() {

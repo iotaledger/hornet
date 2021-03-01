@@ -7,12 +7,11 @@ import (
 	"github.com/tcnksm/go-latest"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/timeutil"
-
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/timeutil"
 )
 
 func init() {

@@ -3,8 +3,9 @@ package prometheus
 import (
 	"strconv"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
 var (

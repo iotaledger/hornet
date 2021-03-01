@@ -1,9 +1,8 @@
 package tangle
 
 import (
-	"github.com/iotaledger/hive.go/workerpool"
-
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hive.go/workerpool"
 )
 
 var (

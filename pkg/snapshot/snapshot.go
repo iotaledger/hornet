@@ -8,10 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -19,6 +15,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 var (

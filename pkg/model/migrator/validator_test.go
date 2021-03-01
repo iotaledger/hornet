@@ -1,19 +1,18 @@
 package migrator_test
 
 import (
-	"errors"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 	iotago "github.com/iotaledger/iota.go/v2"
-
-	"github.com/gohornet/hornet/pkg/model/migrator"
 )
 
 func TestValidator_QueryMigratedFunds(t *testing.T) {

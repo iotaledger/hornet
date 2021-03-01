@@ -3,10 +3,9 @@ package keymanager
 import (
 	"sort"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
-
-	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
 // KeyRange defines a public key of a milestone including the range it is valid.

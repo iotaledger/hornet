@@ -6,13 +6,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/protocol/message"
-	"github.com/iotaledger/hive.go/protocol/tlv"
-
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/protocol/message"
+	"github.com/iotaledger/hive.go/protocol/tlv"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 var (

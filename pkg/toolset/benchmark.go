@@ -12,13 +12,12 @@ import (
 
 	"github.com/dustin/go-humanize"
 
+	"github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/badger"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
-
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/utils"
 )
 
 const (

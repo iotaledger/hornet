@@ -5,9 +5,10 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
+	"go.uber.org/dig"
+
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
-	"go.uber.org/dig"
 )
 
 func init() {

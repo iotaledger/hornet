@@ -7,12 +7,13 @@ import (
 	"encoding/hex"
 	"testing"
 
-	_ "golang.org/x/crypto/blake2b" // import implementation
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+
+	// import implementation
+	_ "golang.org/x/crypto/blake2b"
 )
 
 func mustMessageIDFromHexString(h string) encoding.BinaryMarshaler {

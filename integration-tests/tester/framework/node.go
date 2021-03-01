@@ -7,8 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/libp2p/go-libp2p-core/peer"
+
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // Node represents a HORNET node inside the Docker network.

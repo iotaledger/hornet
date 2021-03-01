@@ -8,12 +8,11 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
-
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/toolset"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 var (

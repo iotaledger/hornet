@@ -4,10 +4,9 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/iotaledger/hive.go/objectstorage"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/objectstorage"
 )
 
 type UnreferencedMessage struct {

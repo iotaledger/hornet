@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gohornet/hornet/integration-tests/tester/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gohornet/hornet/integration-tests/tester/framework"
 )
 
 // TestNetworkSplit boots up an autopeered network with two partitions, then verifies that all nodes

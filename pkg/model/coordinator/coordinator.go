@@ -6,13 +6,7 @@ import (
 	"os"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/pkg/errors"
-
-	_ "golang.org/x/crypto/blake2b" // import implementation
-
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/syncutils"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -22,6 +16,12 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go/v2"
+
+	// import implementation
+	_ "golang.org/x/crypto/blake2b"
 )
 
 // BackPressureFunc is a function which tells the Coordinator

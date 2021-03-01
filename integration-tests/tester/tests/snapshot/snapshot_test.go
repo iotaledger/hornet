@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
 	"github.com/iotaledger/iota.go/consts"
 	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/stretchr/testify/require"
 )
 
 // TestSnapshot boots up a statically peered network where the nodes consume

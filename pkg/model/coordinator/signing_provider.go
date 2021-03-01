@@ -1,11 +1,10 @@
 package coordinator
 
 import (
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
-
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 // MilestoneSignerProvider provides milestone signers.

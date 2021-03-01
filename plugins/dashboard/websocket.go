@@ -1,9 +1,10 @@
 package dashboard
 
 import (
+	"github.com/labstack/echo/v4"
+
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/websockethub"
-	"github.com/labstack/echo/v4"
 )
 
 const (

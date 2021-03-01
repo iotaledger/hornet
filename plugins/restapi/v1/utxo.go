@@ -7,15 +7,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/restapi"
+	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v2"
-
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 )
 
 func NewOutputResponse(output *utxo.Output, spent bool) (*OutputResponse, error) {

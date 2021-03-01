@@ -5,14 +5,13 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
-
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/node"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {

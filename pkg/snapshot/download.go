@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/utils"
 )

@@ -5,11 +5,7 @@ import (
 	"encoding"
 	"fmt"
 
-	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/pkg/errors"
-
-	_ "golang.org/x/crypto/blake2b" // import implementation
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -17,6 +13,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go/v2"
+
+	// import implementation
+	_ "golang.org/x/crypto/blake2b"
 )
 
 var (

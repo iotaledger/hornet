@@ -6,21 +6,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
-
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
-
-	"github.com/gohornet/hornet/pkg/p2p"
 )
 
 func newNode(ctx context.Context, t require.TestingT) host.Host {

@@ -3,9 +3,8 @@ package storage
 import (
 	"fmt"
 
-	"github.com/iotaledger/hive.go/objectstorage"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hive.go/objectstorage"
 )
 
 type Child struct {

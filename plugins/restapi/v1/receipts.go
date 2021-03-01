@@ -1,10 +1,11 @@
 package v1
 
 import (
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 func receipts(_ echo.Context) (*receiptsResponse, error) {

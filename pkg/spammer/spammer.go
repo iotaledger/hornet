@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // SendMessageFunc is a function which sends a message to the network.

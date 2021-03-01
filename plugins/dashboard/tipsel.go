@@ -1,11 +1,10 @@
 package dashboard
 
 import (
-	"github.com/iotaledger/hive.go/events"
-
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/events"
 )
 
 func runTipSelMetricWorker() {
