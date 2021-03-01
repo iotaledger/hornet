@@ -3,9 +3,10 @@ package node
 import (
 	"strings"
 
+	flag "github.com/spf13/pflag"
+
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/daemon"
-	flag "github.com/spf13/pflag"
 )
 
 // PluginParams defines the parameters configuration of a plugin.

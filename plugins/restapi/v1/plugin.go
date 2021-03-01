@@ -4,14 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
-
-	"github.com/labstack/echo/v4"
-
-	"github.com/iotaledger/hive.go/configuration"
-
-	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -27,6 +22,8 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/configuration"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (

@@ -4,12 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-
-	"github.com/iotaledger/iota.go/api"
-	iotago "github.com/iotaledger/iota.go/v2"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -17,6 +11,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/iota.go/api"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func init() {

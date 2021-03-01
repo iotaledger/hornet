@@ -6,10 +6,8 @@ import (
 	"fmt"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-
-	"github.com/iotaledger/hive.go/syncutils"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 type SolidEntryPoints struct {

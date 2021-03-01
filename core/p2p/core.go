@@ -12,14 +12,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/iotaledger/hive.go/configuration"
 	badger "github.com/ipfs/go-ds-badger"
-	"github.com/multiformats/go-multiaddr"
-	"github.com/pkg/errors"
-	"go.uber.org/dig"
-
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -27,10 +20,16 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
+	"github.com/multiformats/go-multiaddr"
+	"github.com/pkg/errors"
+	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/node"
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {

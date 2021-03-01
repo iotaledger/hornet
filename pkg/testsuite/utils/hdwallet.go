@@ -7,10 +7,9 @@ import (
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
 
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
-
-	"github.com/gohornet/hornet/pkg/model/utxo"
 )
 
 const (

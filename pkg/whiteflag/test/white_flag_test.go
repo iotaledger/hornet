@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	_ "golang.org/x/crypto/blake2b"
-
 	"github.com/stretchr/testify/require"
+	_ "golang.org/x/crypto/blake2b"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"

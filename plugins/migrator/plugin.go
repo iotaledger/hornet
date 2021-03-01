@@ -1,20 +1,19 @@
 package migrator
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/common"
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/gracefulshutdown"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
-
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 )

@@ -1,15 +1,14 @@
 package v1
 
 import (
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/labstack/echo/v4"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 
-	"github.com/labstack/echo/v4"
-	"github.com/libp2p/go-libp2p-core/peer"
-
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 // Wraps the given peer info snapshot with additional metadata, such as gossip protocol information.

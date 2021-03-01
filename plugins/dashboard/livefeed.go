@@ -1,10 +1,9 @@
 package dashboard
 
 import (
-	"github.com/iotaledger/hive.go/events"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/events"
 )
 
 func runLiveFeed() {

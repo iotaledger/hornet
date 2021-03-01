@@ -4,10 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/iotaledger/hive.go/workerpool"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -15,6 +11,9 @@ import (
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/hive.go/workerpool"
 )
 
 func (t *Tangle) ConfigureTangleProcessor() {

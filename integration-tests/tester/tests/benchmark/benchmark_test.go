@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gohornet/hornet/integration-tests/tester/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gohornet/hornet/integration-tests/tester/framework"
 )
 
 // TestNetworkBenchmark boots up a statically peered network and then graphs MPS, CPU and memory profiles

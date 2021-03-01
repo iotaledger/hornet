@@ -3,8 +3,9 @@ package gossip_test
 import (
 	"testing"
 
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 )
 
 func TestAdvanceAtEightyPercentReached(t *testing.T) {

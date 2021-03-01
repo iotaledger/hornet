@@ -4,12 +4,11 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/iotaledger/iota.go/v2/ed25519"
 	"github.com/pkg/errors"
 
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/pkg/utils"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 func generateEd25519Key(args []string) error {

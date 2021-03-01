@@ -3,8 +3,9 @@ package utils
 import (
 	"encoding/hex"
 
-	"github.com/iotaledger/iota.go/v2/ed25519"
 	"github.com/pkg/errors"
+
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 var (

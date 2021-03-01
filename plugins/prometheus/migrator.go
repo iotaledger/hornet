@@ -1,9 +1,10 @@
 package prometheus
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (

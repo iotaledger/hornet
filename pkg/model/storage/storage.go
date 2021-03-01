@@ -7,15 +7,14 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/syncutils"
-
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 var (

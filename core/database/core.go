@@ -6,6 +6,12 @@ import (
 
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/badger"
@@ -13,13 +19,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/shutdown"
 )
 
 func init() {

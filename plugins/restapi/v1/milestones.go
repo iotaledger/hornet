@@ -4,11 +4,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {

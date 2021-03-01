@@ -7,19 +7,17 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/protocol/message"
-	"github.com/iotaledger/hive.go/workerpool"
-
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/pow"
-
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/protocol/message"
+	"github.com/iotaledger/hive.go/workerpool"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/pow"
 )
 
 const (

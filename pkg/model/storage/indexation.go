@@ -4,10 +4,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/objectstorage"
 	iotago "github.com/iotaledger/iota.go/v2"
-
-	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
 const (

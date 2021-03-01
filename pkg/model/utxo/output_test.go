@@ -7,12 +7,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-
 	iotago "github.com/iotaledger/iota.go/v2"
-
-	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
 // returns length amount random bytes

@@ -13,18 +13,16 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
-	"go.uber.org/dig"
-
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {

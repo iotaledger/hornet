@@ -1,8 +1,9 @@
 package profile
 
 import (
-	"github.com/gohornet/hornet/pkg/node"
 	flag "github.com/spf13/pflag"
+
+	"github.com/gohornet/hornet/pkg/node"
 )
 
 const (

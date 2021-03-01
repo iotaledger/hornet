@@ -9,11 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

@@ -5,17 +5,15 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
-
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/protocol"
+	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/protocol"
 )
 
 const (

@@ -3,10 +3,9 @@ package p2p
 import (
 	"sync"
 
-	"github.com/pkg/errors"
-
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/pkg/errors"
 )
 
 // ConfigManager handles the list of peers that are stored in the peering config.

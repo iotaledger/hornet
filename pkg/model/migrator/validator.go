@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"crypto"
 	"encoding"
-	"errors"
 	"fmt"
 	"math"
+
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -21,7 +22,8 @@ import (
 	"github.com/iotaledger/iota.go/trinary"
 	iotago "github.com/iotaledger/iota.go/v2"
 
-	_ "golang.org/x/crypto/blake2b" // import implementation
+	// import implementation
+	_ "golang.org/x/crypto/blake2b"
 )
 
 // ErrEmptyBundle is returned when a bundle contains no transaction.

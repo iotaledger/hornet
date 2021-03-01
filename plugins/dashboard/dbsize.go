@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/timeutil"
-
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/timeutil"
 )
 
 var (

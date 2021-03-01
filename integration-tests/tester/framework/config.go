@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+
 	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/p2p"
