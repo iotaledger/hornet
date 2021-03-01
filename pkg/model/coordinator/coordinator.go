@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/pkg/errors"
@@ -63,49 +64,118 @@ type PublicKeyRanges []*PublicKeyRange
 
 // Coordinator is used to issue signed messages, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
+	// used to issue only one milestone at a time.
 	milestoneLock syncutils.Mutex
-
-	storage         *storage.Storage
+	// used to access the node storage.
+	storage *storage.Storage
+	// id of the network the coordinator is running in.
+	networkID uint64
+	// used to get receipts for the WOTS migration.
 	migratorService *migrator.MigratorService
-	utxoManager     *utxo.Manager
-	signerProvider  MilestoneSignerProvider
+	// used to get the treasury output.
+	utxoManager *utxo.Manager
+	// used to sign the milestones.
+	signerProvider MilestoneSignerProvider
+	// used to do the PoW for the coordinator messages.
+	powHandler *pow.Handler
+	// the function used to send a message.
+	sendMesssageFunc SendMessageFunc
+	// holds the coordinator options.
+	opts *Options
 
-	// config options
-	stateFilePath            string
-	milestoneInterval        time.Duration
-	powWorkerCount           int
-	milestonePublicKeysCount int
-	networkID                uint64
-	powHandler               *pow.Handler
-	sendMesssageFunc         SendMessageFunc
-	backpressureFuncs        []BackPressureFunc
-
-	// internal state
-	state        *State
+	// back pressure functions that signal congestion.
+	backpressureFuncs []BackPressureFunc
+	// state of the coordinator holds information about the last issued milestones.
+	state *State
+	// whether the coordinator was bootstrapped.
 	bootstrapped bool
-
-	// events of the coordinator
+	// events of the coordinator.
 	Events *Events
 }
 
+const (
+	defaultStateFilePath     = "coordinator.state"
+	defaultMilestoneInterval = time.Duration(10) * time.Second
+	defaultPowWorkerCount    = 0
+)
+
+// the default options applied to the Coordinator.
+var defaultOptions = []Option{
+	WithStateFilePath(defaultStateFilePath),
+	WithMilestoneInterval(defaultMilestoneInterval),
+	WithPowWorkerCount(defaultPowWorkerCount),
+}
+
+// Options define options for the Coordinator.
+type Options struct {
+	// the path to the state file of the coordinator.
+	stateFilePath string
+	// the interval milestones are issued.
+	milestoneInterval time.Duration
+	// the amount of workers used for calculating PoW when issuing checkpoints and milestones.
+	powWorkerCount int
+}
+
+// applies the given Option.
+func (so *Options) apply(opts ...Option) {
+	for _, opt := range opts {
+		opt(so)
+	}
+}
+
+// WithStateFilePath defines the path to the state file of the coordinator.
+func WithStateFilePath(stateFilePath string) Option {
+	return func(opts *Options) {
+		opts.stateFilePath = stateFilePath
+	}
+}
+
+// WithMilestoneInterval defines interval milestones are issued.
+func WithMilestoneInterval(milestoneInterval time.Duration) Option {
+	return func(opts *Options) {
+		opts.milestoneInterval = milestoneInterval
+	}
+}
+
+// WithPowWorkerCount defines the amount of workers used for calculating PoW when issuing checkpoints and milestones.
+func WithPowWorkerCount(powWorkerCount int) Option {
+
+	if powWorkerCount == 0 {
+		powWorkerCount = runtime.NumCPU() - 1
+	}
+
+	if powWorkerCount < 1 {
+		powWorkerCount = 1
+	}
+
+	return func(opts *Options) {
+		opts.powWorkerCount = powWorkerCount
+	}
+}
+
+
+// Option is a function setting a coordinator option.
+type Option func(opts *Options)
+
 // New creates a new coordinator instance.
-func New(
-	storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider,
-	stateFilePath string, milestoneInterval time.Duration, powWorkerCount int,
-	powHandler *pow.Handler, migratorService *migrator.MigratorService, utxoManager *utxo.Manager,
-	sendMessageFunc SendMessageFunc) (*Coordinator, error) {
+func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider,
+	migratorService *migrator.MigratorService, utxoManager *utxo.Manager, powHandler *pow.Handler,
+	sendMessageFunc SendMessageFunc, opts ...Option) (*Coordinator, error) {
+
+	options := &Options{}
+	options.apply(defaultOptions...)
+	options.apply(opts...)
 
 	result := &Coordinator{
-		storage:           storage,
-		networkID:         networkID,
-		signerProvider:    signerProvider,
-		stateFilePath:     stateFilePath,
-		milestoneInterval: milestoneInterval,
-		powWorkerCount:    powWorkerCount,
-		powHandler:        powHandler,
-		sendMesssageFunc:  sendMessageFunc,
-		migratorService:   migratorService,
-		utxoManager:       utxoManager,
+		storage:          storage,
+		networkID:        networkID,
+		signerProvider:   signerProvider,
+		migratorService:  migratorService,
+		utxoManager:      utxoManager,
+		powHandler:       powHandler,
+		sendMesssageFunc: sendMessageFunc,
+		opts:             options,
+
 		Events: &Events{
 			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:         events.NewEvent(MilestoneCaller),
@@ -118,7 +188,7 @@ func New(
 // InitState loads an existing state file or bootstraps the network.
 func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) error {
 
-	_, err := os.Stat(coo.stateFilePath)
+	_, err := os.Stat(coo.opts.stateFilePath)
 	stateFileExists := !os.IsNotExist(err)
 
 	latestMilestoneFromDatabase := coo.storage.SearchLatestMilestoneIndexInStore()
@@ -160,10 +230,10 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 	}
 
 	if !stateFileExists {
-		return fmt.Errorf("state file not found: %v", coo.stateFilePath)
+		return fmt.Errorf("state file not found: %v", coo.opts.stateFilePath)
 	}
 
-	coo.state, err = loadStateFile(coo.stateFilePath)
+	coo.state, err = loadStateFile(coo.opts.stateFilePath)
 	if err != nil {
 		return err
 	}
@@ -230,7 +300,8 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		}
 	}
 
-	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, receipt, mutations.MerkleTreeHash, coo.powWorkerCount, coo.powHandler)
+	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, receipt, mutations.MerkleTreeHash, coo.opts.powWorkerCount, coo.powHandler)
+	
 	if err != nil {
 		return fmt.Errorf("failed to create milestone: %w", err)
 	}
@@ -252,8 +323,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
 	coo.state.LatestMilestoneTime = time.Now()
 
-	if err := coo.state.storeStateFile(coo.stateFilePath); err != nil {
-		return fmt.Errorf("failed to update state file: %w", err)
+	if err := coo.state.storeStateFile(coo.opts.stateFilePath); err != nil {
 	}
 
 	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneMessageID)
@@ -321,7 +391,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 		parents = append(parents, tips[tipStart:tipEnd]...)
 		parents = parents.RemoveDupsAndSortByLexicalOrder()
 
-		msg, err := createCheckpoint(coo.networkID, parents, coo.powWorkerCount, coo.powHandler)
+		msg, err := createCheckpoint(coo.networkID, parents, coo.opts.powWorkerCount, coo.powHandler)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create checkPoint: %w", err)
 		}
@@ -366,7 +436,7 @@ func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.Messag
 
 // GetInterval returns the interval milestones should be issued.
 func (coo *Coordinator) GetInterval() time.Duration {
-	return coo.milestoneInterval
+	return coo.opts.milestoneInterval
 }
 
 // State returns the current state of the coordinator.

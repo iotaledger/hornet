@@ -172,11 +172,6 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, fmt.Errorf("unknown milestone signing provider: %s", deps.NodeConfig.String(CfgCoordinatorSigningProvider))
 	}
 
-	powWorkerCount := deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)
-	if powWorkerCount < 1 {
-		powWorkerCount = 1
-	}
-
 	if deps.MigratorService == nil {
 		log.Info("running Coordinator without migration enabled")
 	}
@@ -185,13 +180,13 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		deps.Storage,
 		deps.NetworkID,
 		signingProvider,
-		deps.NodeConfig.String(CfgCoordinatorStateFilePath),
-		deps.NodeConfig.Duration(CfgCoordinatorInterval),
-		powWorkerCount,
-		powHandler,
 		deps.MigratorService,
 		deps.UTXOManager,
+		powHandler,
 		sendMessage,
+		coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
+		coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
+		coordinator.WithPowWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
 	)
 	if err != nil {
 		return nil, err

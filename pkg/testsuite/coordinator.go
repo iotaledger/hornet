@@ -39,7 +39,17 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(cooPrivateKeys, keyManager, len(cooPrivateKeys))
 
-	coo, err := coordinator.New(te.storage, te.networkID, inMemoryEd25519MilestoneSignerProvider, fmt.Sprintf("%s/coordinator.state", te.tempDir), 10*time.Second, 1, te.PowHandler, nil, nil, storeMessageFunc)
+	coo, err := coordinator.New(
+		te.storage,
+		te.networkID,
+		inMemoryEd25519MilestoneSignerProvider,
+		nil,
+		nil,
+		te.PowHandler,
+		storeMessageFunc,
+		coordinator.WithStateFilePath(fmt.Sprintf("%s/coordinator.state", te.tempDir)),
+		coordinator.WithMilestoneInterval(time.Duration(10)*time.Second),
+	)
 	require.NoError(te.TestState, err)
 	require.NotNil(te.TestState, coo)
 	te.coo = coo
