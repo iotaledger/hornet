@@ -42,7 +42,7 @@
     "bindAddress": "localhost:8081",
     "dev": false,
     "auth": {
-      "sessionTimeoutInMinutes": 4320,
+      "sessionTimeout": "72h",
       "username": "admin",
       "passwordHash": "a5c5c6949e5259b6f74b08019da0b54b056473d2ed4712d8590682e6bd46876b",
       "passwordSalt": "b5769c198c45b84bf502ed0dde3b698eb885a527dca5bd5b0cd015992157cc79"
@@ -83,7 +83,7 @@
   },
   "coordinator": {
     "stateFilePath": "coordinator.state",
-    "intervalSeconds": 10,
+    "interval": "10s",
     "checkpoints": {
       "maxTrackedMessages": 10000
     },
@@ -91,7 +91,7 @@
       "minHeaviestBranchUnreferencedMessagesThreshold": 20,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
-      "heaviestBranchSelectionTimeoutMilliseconds": 100
+      "heaviestBranchSelectionTimeout": "100ms"
     },
     "signing": {
       "provider": "local",
@@ -121,13 +121,13 @@
     "belowMaxDepth": 15,
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
-      "maxReferencedTipAgeSeconds": 3,
+      "maxReferencedTipAge": "3s",
       "maxChildren": 2,
       "spammerTipsThreshold": 0
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
-      "maxReferencedTipAgeSeconds": 3,
+      "maxReferencedTipAge": "3s",
       "maxChildren": 2,
       "spammerTipsThreshold": 30
     }
@@ -156,13 +156,13 @@
     "peerStore": {
       "path": "./p2pstore"
     },
-    "reconnectIntervalSeconds": 30
+    "reconnectInterval": "30s"
   },
   "p2pdisc": {
-    "advertiseIntervalSec": 30,
+    "advertiseInterval": "30s",
     "maxDiscoveredPeerConns": 4,
     "rendezvousPoint": "between-two-vertices",
-    "routingTableRefreshPeriodSec": 60
+    "routingTableRefreshPeriod": "60s"
   },
   "logger": {
     "level": "debug",

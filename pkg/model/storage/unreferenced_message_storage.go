@@ -37,10 +37,13 @@ func unreferencedMessageFactory(key []byte, data []byte) (objectstorage.Storable
 
 func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
+	cacheTime, _ := time.ParseDuration(opts.CacheTime)
+	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+
 	s.unreferencedMessagesStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixUnreferencedMessages}),
 		unreferencedMessageFactory,
-		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
+		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.PartitionKey(4, 32),
 		objectstorage.KeysOnly(true),
@@ -49,7 +52,7 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
-				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
 }

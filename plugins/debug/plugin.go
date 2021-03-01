@@ -99,7 +99,7 @@ type dependencies struct {
 
 func configure() {
 
-	whiteflagParentsSolidTimeout = time.Duration(deps.NodeConfig.Int(CfgDebugWhiteFlagParentsSolidTimeoutMilliseconds)) * time.Millisecond
+	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 
 	routeGroup := deps.Echo.Group("/api/plugins/debug")
 

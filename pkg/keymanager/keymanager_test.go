@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
@@ -57,13 +57,13 @@ func TestMilestoneKeyManager(t *testing.T) {
 	keysSet_8 := km.GetPublicKeysSetForMilestoneIndex(8)
 	assert.Len(t, keysSet_8, 3)
 
-	var msPubKey1 iota.MilestonePublicKey
+	var msPubKey1 iotago.MilestonePublicKey
 	copy(msPubKey1[:], pubKey1)
 
-	var msPubKey2 iota.MilestonePublicKey
+	var msPubKey2 iotago.MilestonePublicKey
 	copy(msPubKey2[:], pubKey2)
 
-	var msPubKey3 iota.MilestonePublicKey
+	var msPubKey3 iotago.MilestonePublicKey
 	copy(msPubKey3[:], pubKey3)
 
 	assert.Contains(t, keysSet_8, msPubKey1)

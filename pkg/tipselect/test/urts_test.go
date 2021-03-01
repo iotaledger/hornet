@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"time"
 
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/stretchr/testify/require"
@@ -22,11 +23,11 @@ const (
 	MaxDeltaMsgOldestConeRootIndexToCMI   = 13
 	BelowMaxDepth                         = 15
 	RetentionRulesTipsLimitNonLazy        = 100
-	MaxReferencedTipAgeSecondsNonLazy     = 3
+	MaxReferencedTipAgeNonLazy            = 3 * time.Second
 	MaxChildrenNonLazy                    = 100
 	SpammerTipsThresholdNonLazy           = 0
 	RetentionRulesTipsLimitSemiLazy       = 20
-	MaxReferencedTipAgeSecondsSemiLazy    = 3
+	MaxReferencedTipAgeSemiLazy           = 3 * time.Second
 	MaxChildrenSemiLazy                   = 100
 	SpammerTipsThresholdSemiLazy          = 30
 )
@@ -45,11 +46,11 @@ func TestTipSelect(t *testing.T) {
 		MaxDeltaMsgOldestConeRootIndexToCMI,
 		BelowMaxDepth,
 		RetentionRulesTipsLimitNonLazy,
-		MaxReferencedTipAgeSecondsNonLazy,
+		MaxReferencedTipAgeNonLazy,
 		uint32(MaxChildrenNonLazy),
 		SpammerTipsThresholdNonLazy,
 		RetentionRulesTipsLimitSemiLazy,
-		MaxReferencedTipAgeSecondsSemiLazy,
+		MaxReferencedTipAgeSemiLazy,
 		uint32(MaxChildrenSemiLazy),
 		SpammerTipsThresholdSemiLazy,
 	)

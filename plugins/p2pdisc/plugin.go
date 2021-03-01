@@ -46,17 +46,12 @@ func provide(c *dig.Container) {
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 	if err := c.Provide(func(deps discdeps) *p2p.DiscoveryService {
-		rendezvousPoint := deps.NodeConfig.String(CfgP2PDiscRendezvousPoint)
-		discoveryIntervalSec := deps.NodeConfig.Duration(CfgP2PDiscAdvertiseIntervalSec) * time.Second
-		routingTableRefreshPeriodSec := deps.NodeConfig.Duration(CfgP2PDiscRoutingTableRefreshPeriodSec) * time.Second
-		maxDiscoveredPeerCount := deps.NodeConfig.Int(CfgP2PDiscMaxDiscoveredPeerConns)
-
 		return p2p.NewDiscoveryService(deps.Host, deps.Manager,
-			p2p.WithDiscoveryServiceAdvertiseInterval(discoveryIntervalSec),
-			p2p.WithDiscoveryServiceRendezvousPoint(rendezvousPoint),
-			p2p.WithDiscoveryServiceMaxDiscoveredPeers(maxDiscoveredPeerCount),
+			p2p.WithDiscoveryServiceAdvertiseInterval(deps.NodeConfig.Duration(CfgP2PDiscAdvertiseInterval)),
+			p2p.WithDiscoveryServiceRendezvousPoint(deps.NodeConfig.String(CfgP2PDiscRendezvousPoint)),
+			p2p.WithDiscoveryServiceMaxDiscoveredPeers(deps.NodeConfig.Int(CfgP2PDiscMaxDiscoveredPeerConns)),
 			p2p.WithDiscoveryServiceLogger(logger.NewLogger("P2P-Discovery")),
-			p2p.WithDiscoveryServiceRoutingRefreshPeriod(routingTableRefreshPeriodSec),
+			p2p.WithDiscoveryServiceRoutingRefreshPeriod(deps.NodeConfig.Duration(CfgP2PDiscRoutingTableRefreshPeriod)),
 		)
 	}); err != nil {
 		panic(err)
@@ -70,8 +65,8 @@ func configure() {
 func run() {
 	_ = Plugin.Daemon().BackgroundWorker("P2PDiscovery", func(shutdownSignal <-chan struct{}) {
 		rendezvousPoint := deps.NodeConfig.String(CfgP2PDiscRendezvousPoint)
-		discoveryIntervalSec := deps.NodeConfig.Duration(CfgP2PDiscAdvertiseIntervalSec) * time.Second
-		log.Infof("started peer discovery task with %d secs interval using '%s' as rendezvous point", discoveryIntervalSec, rendezvousPoint)
+		discoveryInterval := deps.NodeConfig.Duration(CfgP2PDiscAdvertiseInterval)
+		log.Infof("started peer discovery task with %s interval using '%s' as rendezvous point", discoveryInterval.Truncate(time.Millisecond), rendezvousPoint)
 		deps.DiscoveryService.Start(shutdownSignal)
 	}, shutdown.PriorityPeerDiscovery)
 }

@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gohornet/hornet/pkg/model/migrator"
-	"github.com/iotaledger/iota.go/v2"
 	"github.com/stretchr/testify/require"
+
+	iotago "github.com/iotaledger/iota.go/v2"
+
+	"github.com/gohornet/hornet/pkg/model/migrator"
 )
 
 var stateFileName string
@@ -122,14 +124,14 @@ func newTestService(t *testing.T, msIndex uint32) (*migrator.MigratorService, fu
 
 type mockQueryer struct{}
 
-func (mockQueryer) QueryMigratedFunds(msIndex uint32) ([]*iota.MigratedFundsEntry, error) {
+func (mockQueryer) QueryMigratedFunds(msIndex uint32) ([]*iotago.MigratedFundsEntry, error) {
 	if msIndex == serviceTests.migratedAt {
 		return serviceTests.entries, nil
 	}
 	return nil, nil
 }
 
-func (mockQueryer) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iota.MigratedFundsEntry, error) {
+func (mockQueryer) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
 	if startIndex <= serviceTests.migratedAt {
 		return serviceTests.migratedAt, serviceTests.entries, nil
 	}
@@ -138,23 +140,23 @@ func (mockQueryer) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iota.Mi
 
 var serviceTests = struct {
 	migratedAt uint32
-	entries    []*iota.MigratedFundsEntry
+	entries    []*iotago.MigratedFundsEntry
 }{
 	migratedAt: 2,
-	entries: []*iota.MigratedFundsEntry{
+	entries: []*iotago.MigratedFundsEntry{
 		{
-			TailTransactionHash: iota.LegacyTailTransactionHash{0},
-			Address:             &iota.Ed25519Address{0},
+			TailTransactionHash: iotago.LegacyTailTransactionHash{0},
+			Address:             &iotago.Ed25519Address{0},
 			Deposit:             1_000_000,
 		},
 		{
-			TailTransactionHash: iota.LegacyTailTransactionHash{1},
-			Address:             &iota.Ed25519Address{1},
+			TailTransactionHash: iotago.LegacyTailTransactionHash{1},
+			Address:             &iotago.Ed25519Address{1},
 			Deposit:             1_000_000,
 		},
 		{
-			TailTransactionHash: iota.LegacyTailTransactionHash{2},
-			Address:             &iota.Ed25519Address{2},
+			TailTransactionHash: iotago.LegacyTailTransactionHash{2},
+			Address:             &iotago.Ed25519Address{2},
 			Deposit:             1_000_000,
 		},
 	},

@@ -68,12 +68,12 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgTipSelBelowMaxDepth),
 
 			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),
-			time.Second*time.Duration(deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds)),
+			deps.NodeConfig.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge),
 			uint32(deps.NodeConfig.Int64(CfgTipSelNonLazy+CfgTipSelMaxChildren)),
 			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold),
 
 			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit),
-			time.Second*time.Duration(deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds)),
+			deps.NodeConfig.Duration(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAge),
 			uint32(deps.NodeConfig.Int64(CfgTipSelSemiLazy+CfgTipSelMaxChildren)),
 			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
 		)

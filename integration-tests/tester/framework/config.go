@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -169,8 +170,8 @@ type NetworkConfig struct {
 	Peers []string
 	// aliases of the static peers.
 	PeerAliases []string
-	// number of seconds to wait before trying to reconnect to a disconnected peer.
-	ReconnectIntervalSeconds int
+	// time to wait before trying to reconnect to a disconnected peer.
+	ReconnectInterval time.Duration
 	// the maximum amount of unknown peers a gossip protocol connection is established to
 	GossipUnknownPeersLimit int
 }
@@ -185,7 +186,7 @@ func (netConfig *NetworkConfig) CLIFlags() []string {
 		fmt.Sprintf("--%s=%d", p2p.CfgP2PConnMngLowWatermark, netConfig.ConnMngLowWatermark),
 		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeers, strings.Join(netConfig.Peers, ",")),
 		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeerAliases, strings.Join(netConfig.PeerAliases, ",")),
-		fmt.Sprintf("--%s=%d", p2p.CfgP2PReconnectIntervalSeconds, netConfig.ReconnectIntervalSeconds),
+		fmt.Sprintf("--%s=%s", p2p.CfgP2PReconnectInterval, netConfig.ReconnectInterval),
 		fmt.Sprintf("--%s=%d", gossip.CfgP2PGossipUnknownPeersLimit, netConfig.GossipUnknownPeersLimit),
 	}
 }
@@ -193,15 +194,15 @@ func (netConfig *NetworkConfig) CLIFlags() []string {
 // DefaultNetworkConfig returns the default network config.
 func DefaultNetworkConfig() NetworkConfig {
 	return NetworkConfig{
-		IdentityPrivKey:          "",
-		BindMultiAddresses:       []string{"/ip4/0.0.0.0/tcp/15600"},
-		PeerStorePath:            "./p2pstore",
-		ConnMngHighWatermark:     8,
-		ConnMngLowWatermark:      4,
-		Peers:                    []string{},
-		PeerAliases:              []string{},
-		ReconnectIntervalSeconds: 1,
-		GossipUnknownPeersLimit:  4,
+		IdentityPrivKey:         "",
+		BindMultiAddresses:      []string{"/ip4/0.0.0.0/tcp/15600"},
+		PeerStorePath:           "./p2pstore",
+		ConnMngHighWatermark:    8,
+		ConnMngLowWatermark:     4,
+		Peers:                   []string{},
+		PeerAliases:             []string{},
+		ReconnectInterval:       1 * time.Second,
+		GossipUnknownPeersLimit: 4,
 	}
 }
 
@@ -311,14 +312,14 @@ type CoordinatorConfig struct {
 	// Whether to run the coordinator in bootstrap node.
 	Bootstrap bool
 	// The interval in which to issue new milestones.
-	IssuanceIntervalSeconds int
+	IssuanceInterval time.Duration
 }
 
 // CLIFlags returns the config as CLI flags.
 func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
-		fmt.Sprintf("--%s=%d", coordinator.CfgCoordinatorIntervalSeconds, cooConfig.IssuanceIntervalSeconds),
+		fmt.Sprintf("--%s=%s", coordinator.CfgCoordinatorInterval, cooConfig.IssuanceInterval),
 	}
 }
 
@@ -329,7 +330,7 @@ func DefaultCoordinatorConfig() CoordinatorConfig {
 		Bootstrap: false,
 		PrivateKeys: []string{"651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 			"0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"},
-		IssuanceIntervalSeconds: 10,
+		IssuanceInterval: 10 * time.Second,
 	}
 }
 
@@ -420,15 +421,15 @@ type ProtocolConfig struct {
 
 // CLIFlags returns the config as CLI flags.
 func (protoConfig *ProtocolConfig) CLIFlags() []string {
-	keyRanges := []string{}
 
-	for _, keyRange := range protoConfig.PublicKeyRanges {
-		keyRanges = append(keyRanges, fmt.Sprintf("{\"key\":\"%v\",\"start\":%d,\"end\":%d}", keyRange.Key, keyRange.StartIndex, keyRange.EndIndex))
+	keyRangesJSON, err := json.Marshal(protoConfig.PublicKeyRanges)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal COO public key ranges: %s", err))
 	}
 
 	return []string{
 		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, protoConfig.MinPoWScore),
-		fmt.Sprintf("--%s=[%v]", protocfg.CfgProtocolPublicKeyRangesJSON, strings.Join(keyRanges, ",")),
+		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolPublicKeyRangesJSON, string(keyRangesJSON)),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolNetworkIDName, protoConfig.NetworkIDName),
 	}
 }

@@ -1,6 +1,8 @@
 package urts
 
 import (
+	"time"
+
 	"github.com/gohornet/hornet/pkg/node"
 	flag "github.com/spf13/pflag"
 )
@@ -19,13 +21,13 @@ const (
 	CfgTipSelNonLazy = "tipsel.nonLazy."
 	// the config group used for the semi-lazy tip-pool
 	CfgTipSelSemiLazy = "tipsel.semiLazy."
-	// CfgTipSelRetentionRulesTipsLimit is the maximum amount of current tips for which "CfgTipSelMaxReferencedTipAgeSeconds"
+	// CfgTipSelRetentionRulesTipsLimit is the maximum amount of current tips for which "CfgTipSelMaxReferencedTipAge"
 	// and "CfgTipSelMaxChildren" are checked. if the amount of tips exceeds this limit,
 	// referenced tips get removed directly to reduce the amount of tips in the network.
 	CfgTipSelRetentionRulesTipsLimit = "retentionRulesTipsLimit"
-	// CfgTipSelMaxReferencedTipAgeSeconds is the maximum time a tip remains in the tip pool
+	// CfgTipSelMaxReferencedTipAge is the maximum time a tip remains in the tip pool
 	// after it was referenced by the first message.
-	CfgTipSelMaxReferencedTipAgeSeconds = "maxReferencedTipAgeSeconds"
+	CfgTipSelMaxReferencedTipAge = "maxReferencedTipAge"
 	// CfgTipSelMaxChildren is the maximum amount of references by other messages
 	// before the tip is removed from the tip pool.
 	CfgTipSelMaxChildren = "maxChildren"
@@ -45,14 +47,14 @@ var params = &node.PluginParams{
 			fs.Int(CfgTipSelBelowMaxDepth, 15, "the maximum allowed delta "+
 				"value for the OCRI of a given message in relation to the current CMI before it gets lazy")
 			fs.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
-			fs.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
+			fs.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge, 3*time.Second, "the maximum time a tip remains in the tip pool "+
 				"after it was referenced by the first message (non-lazy)")
 			fs.Int(CfgTipSelNonLazy+CfgTipSelMaxChildren, 2, "the maximum amount of references by other messages "+
 				"before the tip is removed from the tip pool (non-lazy)")
 			fs.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold, 0, "the maximum amount of tips in a tip-pool (non-lazy) before "+
 				"the spammer tries to reduce these (0 = always)")
 			fs.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
-			fs.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds, 3, "the maximum time a tip remains in the tip pool "+
+			fs.Duration(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAge, 3*time.Second, "the maximum time a tip remains in the tip pool "+
 				"after it was referenced by the first message (semi-lazy)")
 			fs.Int(CfgTipSelSemiLazy+CfgTipSelMaxChildren, 2, "the maximum amount of references by other messages "+
 				"before the tip is removed from the tip pool (semi-lazy)")
