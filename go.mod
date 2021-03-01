@@ -59,7 +59,6 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/projectcalico/libcalico-go v3.9.0-0.dev+incompatible
 	github.com/prometheus/client_golang v1.9.0
 	github.com/segmentio/fasthash v1.0.3 // indirect
 	github.com/shirou/gopsutil v3.21.1+incompatible

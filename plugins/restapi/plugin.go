@@ -13,7 +13,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
-	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
@@ -21,6 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 )
@@ -75,14 +75,14 @@ func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
 	// load whitelisted networks
-	var whitelistedNetworks []net.IPNet
+	var whitelistedNetworks []*net.IPNet
 	for _, entry := range deps.NodeConfig.Strings(CfgRestAPIWhitelistedAddresses) {
-		_, ipnet, err := cnet.ParseCIDROrIP(entry)
+		ipNet, err := utils.ParseIPNet(entry)
 		if err != nil {
 			log.Warnf("Invalid whitelist address: %s", entry)
 			continue
 		}
-		whitelistedNetworks = append(whitelistedNetworks, ipnet.IPNet)
+		whitelistedNetworks = append(whitelistedNetworks, ipNet)
 	}
 
 	permittedRoutes := make(map[string]struct{})
