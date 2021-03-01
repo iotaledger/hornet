@@ -9,7 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 )
 
-func networkWhitelisted(c echo.Context, whitelistedNetworks []net.IPNet) bool {
+func networkWhitelisted(c echo.Context, whitelistedNetworks []*net.IPNet) bool {
 	remoteHost, _, _ := net.SplitHostPort(c.Request().RemoteAddr)
 	remoteAddress := net.ParseIP(remoteHost)
 	for _, whitelistedNet := range whitelistedNetworks {
@@ -20,7 +20,7 @@ func networkWhitelisted(c echo.Context, whitelistedNetworks []net.IPNet) bool {
 	return false
 }
 
-func middlewareFilterRoutes(whitelistedNetworks []net.IPNet, permittedRoutes map[string]struct{}) echo.MiddlewareFunc {
+func middlewareFilterRoutes(whitelistedNetworks []*net.IPNet, permittedRoutes map[string]struct{}) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if !networkWhitelisted(c, whitelistedNetworks) {
