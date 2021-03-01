@@ -21,7 +21,7 @@ var (
 	// ErrServiceUnavailable defines the service unavailable error.
 	ErrServiceUnavailable = errors.New("service unavailable")
 
-	// ErrServiceUnavailable defines the service not implemented error.
+	// ErrServiceNotImplemented defines the service not implemented error.
 	ErrServiceNotImplemented = errors.New("service not implemented")
 )
 

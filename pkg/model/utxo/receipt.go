@@ -5,8 +5,10 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
+
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -64,16 +66,6 @@ func (rt *ReceiptTuple) kvStorableLoad(_ *Manager, key []byte, value []byte) err
 	return nil
 }
 
-// StoreReceipt stores the given receipt tuple.
-func (u *Manager) StoreReceipt(rt *ReceiptTuple) error {
-	return u.utxoStorage.Set(rt.kvStorableKey(), rt.kvStorableValue())
-}
-
-// DeleteReceipt deletes the given receipt tuple.
-func (u *Manager) DeleteReceipt(rt *ReceiptTuple) error {
-	return u.utxoStorage.Delete(rt.kvStorableKey())
-}
-
 // adds a receipt store instruction to the given mutations.
 func storeReceipt(rt *ReceiptTuple, mutations kvstore.BatchedMutations) error {
 	return mutations.Set(rt.kvStorableKey(), rt.kvStorableValue())
@@ -105,6 +97,11 @@ type ReceiptTupleConsumer func(rt *ReceiptTuple) bool
 func (u *Manager) ForEachReceiptTuple(consumer ReceiptTupleConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
 
+	if opt.readLockLedger {
+		u.ReadLockLedger()
+		defer u.ReadUnlockLedger()
+	}
+
 	var innerErr error
 	var i int
 	if err := u.utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixReceipts}, func(key kvstore.Key, value kvstore.Value) bool {
@@ -129,13 +126,13 @@ func (u *Manager) ForEachReceiptTuple(consumer ReceiptTupleConsumer, options ...
 	return innerErr
 }
 
-// ForEachMigratedAtReceiptTuple iterates over all stored receipt tuples for a given migrated at index.
-func (u *Manager) ForEachMigratedAtReceiptTuple(migratedAtIndex uint32, consumer ReceiptTupleConsumer, options ...UTXOIterateOption) error {
+// ForEachReceiptTupleMigratedAt iterates over all stored receipt tuples for a given migrated at index.
+func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex milestone.Index, consumer ReceiptTupleConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
 
 	prefix := make([]byte, 5)
 	prefix[0] = UTXOStoreKeyPrefixReceipts
-	binary.LittleEndian.PutUint32(prefix[1:], migratedAtIndex)
+	binary.LittleEndian.PutUint32(prefix[1:], uint32(migratedAtIndex))
 
 	var innerErr error
 	var i int
@@ -180,11 +177,6 @@ func OutputIDForMigratedFunds(milestoneHash iotago.MilestoneID, outputIndex uint
 	copy(utxoID[:], milestoneHash[:])
 	binary.LittleEndian.PutUint16(utxoID[len(utxoID)-2:], outputIndex)
 	return utxoID
-}
-
-// TreasuryTransactionOutputAmount returns the amount of the treasury output within the treasury transaction.
-func TreasuryTransactionOutputAmount(tx *iotago.TreasuryTransaction) uint64 {
-	return tx.Output.(*iotago.TreasuryOutput).Amount
 }
 
 // ReceiptToTreasuryMutation converts a receipt to a treasury mutation tuple.

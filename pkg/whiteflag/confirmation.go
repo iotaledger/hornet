@@ -10,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -129,7 +130,7 @@ func ConfirmMilestone(
 			}
 		}
 
-		unspentTreasuryOutput, err := s.UTXO().UnspentTreasuryOutput()
+		unspentTreasuryOutput, err := s.UTXO().UnspentTreasuryOutputWithoutLocking()
 		if err != nil {
 			return nil, fmt.Errorf("unable to fetch previous unspent treasury output: %w", err)
 		}

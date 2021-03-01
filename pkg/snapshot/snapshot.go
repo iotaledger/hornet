@@ -725,7 +725,7 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 		}
 
 		// read out treasury tx
-		header.TreasuryOutput, err = s.utxo.UnspentTreasuryOutput()
+		header.TreasuryOutput, err = s.utxo.UnspentTreasuryOutputWithoutLocking()
 		if err != nil {
 			return err
 		}
@@ -804,17 +804,8 @@ func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 
 // returns a treasury output consumer which overrides an existing unspent treasury output with the new one.
 func newUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasuryOutputConsumerFunc {
-	return func(output *utxo.TreasuryOutput) error {
-		// delete previous
-		existing, err := utxoManager.UnspentTreasuryOutput()
-		// we might not have any unspent treasury output when we're loading up a full snapshot
-		// which contains the initial treasury output in the header part, so if there is an error here,
-		// it simply means that no treasury output exists
-		if err == nil {
-			_ = utxoManager.DeleteTreasuryOutput(existing)
-		}
-		return utxoManager.StoreTreasuryOutput(output)
-	}
+	// leave like this for now in case we need to do more in the future
+	return utxoManager.StoreUnspentTreasuryOutput
 }
 
 // returns a function which calls the corresponding address type callback function with

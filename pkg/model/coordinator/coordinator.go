@@ -212,7 +212,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	if coo.migratorService != nil {
 		receipt = coo.migratorService.Receipt()
 		if receipt != nil {
-			currentTreasuryOutput, err := coo.utxoManager.UnspentTreasuryOutput()
+			currentTreasuryOutput, err := coo.utxoManager.UnspentTreasuryOutputWithoutLocking()
 			if err != nil {
 				return fmt.Errorf("unable to fetch unspent treasury output: %w", err)
 			}

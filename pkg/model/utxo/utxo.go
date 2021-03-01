@@ -303,7 +303,7 @@ func (u *Manager) CheckLedgerState() error {
 		return err
 	}
 
-	treasuryOutput, err := u.UnspentTreasuryOutput()
+	treasuryOutput, err := u.UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
 		return err
 	}

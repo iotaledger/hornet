@@ -115,7 +115,7 @@ func (u *Manager) readSpentTreasuryOutputWithoutLocking(msHash []byte) (*Treasur
 		return nil, err
 	}
 	to := &TreasuryOutput{}
-	if err := to.kvStorableLoad(nil, key, val); err != nil {
+	if err := to.kvStorableLoad(u, key, val); err != nil {
 		return nil, err
 	}
 	return to, nil
@@ -128,24 +128,39 @@ func (u *Manager) readUnspentTreasuryOutputWithoutLocking(msHash []byte) (*Treas
 		return nil, err
 	}
 	to := &TreasuryOutput{}
-	if err := to.kvStorableLoad(nil, key, val); err != nil {
+	if err := to.kvStorableLoad(u, key, val); err != nil {
 		return nil, err
 	}
 	return to, nil
 }
 
-// StoreTreasuryOutput adds the given treasury output to the database.
-func (u *Manager) StoreTreasuryOutput(to *TreasuryOutput) error {
-	return u.utxoStorage.Set(to.kvStorableKey(), to.kvStorableValue())
+// StoreUnspentTreasuryOutput stores the given unspent treasury output and also deletes
+// any existing unspent one in the same procedure.
+func (u *Manager) StoreUnspentTreasuryOutput(to *TreasuryOutput) error {
+	if to.Spent {
+		panic("provided spent output to persist as new unspent treasury output")
+	}
+
+	mutations := u.utxoStorage.Batched()
+
+	existing, err := u.UnspentTreasuryOutputWithoutLocking()
+	if err == nil {
+		if err := mutations.Delete(existing.kvStorableKey()); err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
+	if err := mutations.Set(to.kvStorableKey(), to.kvStorableValue()); err != nil {
+		mutations.Cancel()
+		return err
+	}
+
+	return mutations.Commit()
 }
 
-// DeleteTreasuryOutput deletes the given treasury output from the database.
-func (u *Manager) DeleteTreasuryOutput(to *TreasuryOutput) error {
-	return u.utxoStorage.Delete(to.kvStorableKey())
-}
-
-// Returns the unspent treasury output.
-func (u *Manager) UnspentTreasuryOutput() (*TreasuryOutput, error) {
+// UnspentTreasuryOutputWithoutLocking returns the unspent treasury output.
+func (u *Manager) UnspentTreasuryOutputWithoutLocking() (*TreasuryOutput, error) {
 	var i int
 	var innerErr error
 	var unspentTreasuryOutput *TreasuryOutput

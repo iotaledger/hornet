@@ -788,7 +788,7 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 		return output, err
 	}
 
-	unspentTreasuryOutput, err := mergeUTXOManager.UnspentTreasuryOutput()
+	unspentTreasuryOutput, err := mergeUTXOManager.UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get final unspent treasury output: %w", err)
 	}

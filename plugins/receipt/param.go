@@ -34,7 +34,7 @@ var params = &node.PluginParams{
 			fs.Bool(CfgReceiptsBackupEnabled, false, "whether to backup receipts in the backup folder")
 			fs.Bool(CfgReceiptsValidatorIgnoreSoftErrors, false, "whether to ignore soft errors and not panic if one is encountered")
 			fs.Bool(CfgReceiptsValidatorValidate, false, "whether to validate receipts")
-			fs.String(CfgReceiptsValidatorAPIAddress, "http://localhost:14265", "address of the legacy node API")
+			fs.String(CfgReceiptsValidatorAPIAddress, "http://localhost:14266", "address of the legacy node API")
 			fs.Duration(CfgReceiptsValidatorAPITimeout, 5*time.Second, "timeout of API calls")
 			fs.String(CfgReceiptsValidatorCoordinatorAddress, "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ", "address of the legacy coordinator")
 			fs.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth, 18, "depth of the Merkle tree of the coordinator")

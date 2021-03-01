@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 
 	"github.com/iotaledger/iota.go/encoding/t5b1"
@@ -168,7 +169,7 @@ func (rs *ReceiptService) validateCompleteReceiptBatch(finalReceipt *iotago.Rece
 
 	// collect migrated funds from previous receipt
 	receiptsWithSameIndex := make([]*iotago.Receipt, 0)
-	if err := rs.utxoManager.ForEachMigratedAtReceiptTuple(finalReceipt.MigratedAt, func(rt *utxo.ReceiptTuple) bool {
+	if err := rs.utxoManager.ForEachReceiptTupleMigratedAt(milestone.Index(finalReceipt.MigratedAt), func(rt *utxo.ReceiptTuple) bool {
 		receiptsWithSameIndex = append(receiptsWithSameIndex, rt.Receipt)
 		return true
 	}); err != nil {

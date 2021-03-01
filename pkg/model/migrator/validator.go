@@ -6,7 +6,10 @@ import (
 	"encoding"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/pkg/whiteflag"
+
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/bundle"
@@ -17,7 +20,6 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 	"github.com/iotaledger/iota.go/v2"
-	"github.com/pkg/errors"
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
 )

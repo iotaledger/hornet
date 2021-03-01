@@ -260,7 +260,7 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 }
 
 func treasury(c echo.Context) (*treasuryResponse, error) {
-	treasuryOutput, err := deps.UTXO.UnspentTreasuryOutput()
+	treasuryOutput, err := deps.UTXO.UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
 		return nil, err
 	}

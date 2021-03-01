@@ -27,7 +27,7 @@ func receiptsByMigratedAtIndex(c echo.Context) (*receiptsResponse, error) {
 	}
 
 	receipts := make([]*iotago.Receipt, 0)
-	if err := deps.UTXO.ForEachMigratedAtReceiptTuple(uint32(migratedAt), func(rt *utxo.ReceiptTuple) bool {
+	if err := deps.UTXO.ForEachReceiptTupleMigratedAt(migratedAt, func(rt *utxo.ReceiptTuple) bool {
 		receipts = append(receipts, rt.Receipt)
 		return true
 	}); err != nil {
