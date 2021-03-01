@@ -130,6 +130,11 @@ func (u *Manager) ForEachReceiptTuple(consumer ReceiptTupleConsumer, options ...
 func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex milestone.Index, consumer ReceiptTupleConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
 
+	if opt.readLockLedger {
+		u.ReadLockLedger()
+		defer u.ReadUnlockLedger()
+	}
+
 	prefix := make([]byte, 5)
 	prefix[0] = UTXOStoreKeyPrefixReceipts
 	binary.LittleEndian.PutUint32(prefix[1:], uint32(migratedAtIndex))
