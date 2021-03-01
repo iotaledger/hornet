@@ -16,9 +16,9 @@ import (
 // which contained the receipt.
 type ReceiptTuple struct {
 	// The actual receipt.
-	Receipt *iotago.Receipt
+	Receipt *iotago.Receipt `json:"receipt"`
 	// The index of the milestone which included the receipt.
-	MilestoneIndex milestone.Index
+	MilestoneIndex milestone.Index `json:"milestoneIndex"`
 }
 
 func (rt *ReceiptTuple) kvStorableKey() (key []byte) {
