@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
-	
+
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -27,11 +28,11 @@ var (
 // State stores the latest state of the MigratorService.
 type State struct {
 	/*
-	   4 bytes uint32 			LatestMilestoneIndex
+	   4 bytes uint32 			LatestMigratedAtIndex
 	   4 bytes uint32 			LatestIncludedIndex
 	*/
-	LatestMilestoneIndex uint32
-	LatestIncludedIndex  uint32
+	LatestMigratedAtIndex uint32
+	LatestIncludedIndex   uint32
 }
 
 // MigratorServiceEvents are events happening around a MigratorService.
@@ -79,11 +80,6 @@ func NewService(validator *Validator, stateFilePath string) *MigratorService {
 	}
 }
 
-// State returns a copy of the service's state.
-func (s *MigratorService) State() State {
-	return s.state
-}
-
 // Receipt returns the next receipt of migrated funds.
 // Each receipt can only consists of migrations confirmed by one milestone, it will never be larger than MaxReceipts.
 // Receipt returns nil, if there are currently no new migrations available. Although the actual API calls and
@@ -113,7 +109,7 @@ func (s *MigratorService) PersistState() error {
 // If msIndex is not nil, s is bootstrapped using that index as its initial state,
 // otherwise the state is loaded from file.
 // InitState must be called before Start.
-func (s *MigratorService) InitState(msIndex *uint32) error {
+func (s *MigratorService) InitState(msIndex *uint32, utxoManager *utxo.Manager) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -129,14 +125,24 @@ func (s *MigratorService) InitState(msIndex *uint32) error {
 			return ErrStateFileAlreadyExists
 		}
 		state = State{
-			LatestMilestoneIndex: *msIndex,
-			LatestIncludedIndex:  0,
+			LatestMigratedAtIndex: *msIndex,
+			LatestIncludedIndex:   0,
 		}
 	}
 
 	// validate the state
-	if state.LatestMilestoneIndex == 0 {
-		return fmt.Errorf("%w: latest milestone index must not be zero", ErrInvalidState)
+	if state.LatestMigratedAtIndex == 0 {
+		return fmt.Errorf("%w: latest migrated at index must not be zero", ErrInvalidState)
+	}
+
+	highestMigratedAtIndex, err := utxoManager.SearchHighestReceiptMigratedAtIndex()
+	if err != nil {
+		return fmt.Errorf("unable to determine highest migrated at index: %w", err)
+	}
+	// if highestMigratedAtIndex is zero no receipt in the DB, so we cannot do sanity checks
+	if highestMigratedAtIndex > 0 && highestMigratedAtIndex != state.LatestMigratedAtIndex {
+		return fmt.Errorf("state receipt does not match highest receipt in database: state: %d, database: %d",
+			state.LatestMigratedAtIndex, highestMigratedAtIndex)
 	}
 
 	s.state = state
@@ -191,13 +197,16 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 // It returns an empty slice, if the state corresponded to the last migration index of that milestone.
 // It returns an error if the current state contains an included migration index that is too large.
 func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntry, error) {
-	migratedFunds, err := s.validator.QueryMigratedFunds(s.state.LatestMilestoneIndex)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	migratedFunds, err := s.validator.QueryMigratedFunds(s.state.LatestMigratedAtIndex)
 	if err != nil {
 		return 0, nil, err
 	}
 	l := uint32(len(migratedFunds))
 	if l >= s.state.LatestIncludedIndex {
-		return s.state.LatestMilestoneIndex, migratedFunds[s.state.LatestIncludedIndex:], nil
+		return s.state.LatestMigratedAtIndex, migratedFunds[s.state.LatestIncludedIndex:], nil
 	}
 	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", &CriticalError{Err: ErrInvalidState}, s.state.LatestIncludedIndex, l)
 }
@@ -221,12 +230,12 @@ func (s *MigratorService) nextMigrations(startIndex uint32) (uint32, []*iotago.M
 }
 
 func (s *MigratorService) updateState(result *migrationResult) {
-	if result.stopIndex < s.state.LatestMilestoneIndex {
+	if result.stopIndex < s.state.LatestMigratedAtIndex {
 		panic("invalid stop index")
 	}
 	// the result increases the latest milestone index
-	if result.stopIndex != s.state.LatestMilestoneIndex {
-		s.state.LatestMilestoneIndex = result.stopIndex
+	if result.stopIndex != s.state.LatestMigratedAtIndex {
+		s.state.LatestMigratedAtIndex = result.stopIndex
 		s.state.LatestIncludedIndex = 0
 	}
 	s.state.LatestIncludedIndex += uint32(len(result.migratedFunds))

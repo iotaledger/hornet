@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/core/gracefulshutdown"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
@@ -52,6 +53,7 @@ var (
 
 type pluginDependencies struct {
 	dig.In
+	UTXOManager     *utxo.Manager
 	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
 	MigratorService *migrator.MigratorService
 }
@@ -77,8 +79,8 @@ func configure() {
 	if *bootstrap {
 		msIndex = startIndex
 	}
-	// TODO: perform sanity check, that the latest migration milestone has MigratedAt lower than the state
-	if err := deps.MigratorService.InitState(msIndex); err != nil {
+
+	if err := deps.MigratorService.InitState(msIndex, deps.UTXOManager); err != nil {
 		log.Fatalf("failed to initialize migrator: %s", err)
 	}
 }

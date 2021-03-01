@@ -90,14 +90,9 @@ func (rs *ReceiptService) Validate(r *iotago.Receipt) error {
 		panic("receipt service is not configured to validate receipts")
 	}
 
-	var highestMigratedAtIndex uint32
-	if err := rs.utxoManager.ForEachReceiptTuple(func(rt *utxo.ReceiptTuple) bool {
-		if rt.Receipt.MigratedAt > highestMigratedAtIndex {
-			highestMigratedAtIndex = rt.Receipt.MigratedAt
-		}
-		return true
-	}); err != nil {
-		return fmt.Errorf("unable to determine latest migrated at index: %w", err)
+	highestMigratedAtIndex, err := rs.utxoManager.SearchHighestReceiptMigratedAtIndex()
+	if err != nil {
+		return fmt.Errorf("unable to determine highest migrated at index: %w", err)
 	}
 
 	if r.MigratedAt < highestMigratedAtIndex {
