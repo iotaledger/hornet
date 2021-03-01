@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/iota.go/address"
 	"github.com/iotaledger/iota.go/api"
 	"github.com/iotaledger/iota.go/bundle"
@@ -18,9 +20,6 @@ import (
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
 	iotago "github.com/iotaledger/iota.go/v2"
-
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 
 	_ "golang.org/x/crypto/blake2b" // import implementation
 )
