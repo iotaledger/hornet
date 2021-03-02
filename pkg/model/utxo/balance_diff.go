@@ -1,7 +1,7 @@
 package utxo
 
 import (
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 )
 
 type singleBalanceDiff struct {

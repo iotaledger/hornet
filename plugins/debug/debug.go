@@ -19,7 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 )
 
 func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsResponse, error) {

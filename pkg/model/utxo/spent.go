@@ -6,7 +6,7 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 )
 
 type SpentConsumer func(spent *Spent) bool

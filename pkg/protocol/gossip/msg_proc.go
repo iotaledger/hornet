@@ -16,7 +16,7 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/workerpool"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/pow"
 )
 

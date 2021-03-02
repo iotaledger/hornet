@@ -10,7 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 )
 
 type MessageBuilder struct {

@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/utils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 

@@ -14,7 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 )
 
 func NewOutputResponse(output *utxo.Output, spent bool) (*OutputResponse, error) {

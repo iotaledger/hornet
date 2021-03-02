@@ -8,7 +8,7 @@ import (
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 )
 
 type CachedIndexation struct {

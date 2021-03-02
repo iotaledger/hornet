@@ -10,7 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/pow"
 )
 

@@ -17,7 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 )
 
 var (

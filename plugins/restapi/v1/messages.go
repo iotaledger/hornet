@@ -21,7 +21,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2"
 )
 
 var (
