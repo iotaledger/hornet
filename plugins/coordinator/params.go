@@ -20,10 +20,12 @@ const (
 	CfgCoordinatorSigningRemoteAddress = "coordinator.signing.remoteAddress"
 	// the amount of workers used for calculating PoW when issuing checkpoints and milestones
 	CfgCoordinatorPoWWorkerCount = "coordinator.powWorkerCount"
+	// whether the coordinator quorum is enabled
+	CfgCoordinatorQuorumEnabled = "coordinator.quorum.enabled"
 	// the quorum groups used to ask other nodes for correct ledger state of the coordinator
-	CfgCoordinatorQuorum = "coordinator.quorum"
+	CfgCoordinatorQuorumGroups = "coordinator.quorum.groups"
 	// the timeout until a node in the quorum must have answered
-	CfgCoordinatorQuorumTimeout = "coordinator.quorumTimeout"
+	CfgCoordinatorQuorumTimeout = "coordinator.quorum.timeout"
 	// the maximum amount of known messages for milestone tipselection
 	// if this limit is exceeded, a new checkpoint is issued
 	CfgCoordinatorCheckpointsMaxTrackedMessages = "coordinator.checkpoints.maxTrackedMessages"
@@ -49,6 +51,7 @@ var params = &node.PluginParams{
 			fs.String(CfgCoordinatorSigningProvider, "local", "the signing provider the coordinator uses to sign a milestone (local/remote)")
 			fs.String(CfgCoordinatorSigningRemoteAddress, "localhost:12345", "the address of the remote signing provider (insecure connection!)")
 			fs.Int(CfgCoordinatorPoWWorkerCount, runtime.NumCPU()-1, "the amount of workers used for calculating PoW when issuing checkpoints and milestones")
+			fs.Bool(CfgCoordinatorQuorumEnabled, false, "whether the coordinator quorum is enabled")
 			fs.Duration(CfgCoordinatorQuorumTimeout, 2*time.Second, "the timeout until a node in the quorum must have answered")
 			fs.Int(CfgCoordinatorCheckpointsMaxTrackedMessages, 10000, "maximum amount of known messages for milestone tipselection")
 			fs.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold, 20, "minimum threshold of unreferenced messages in the heaviest branch")

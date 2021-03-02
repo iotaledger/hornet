@@ -205,8 +205,8 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 
 	// parse quorum groups config
 	quorumGroups := make(map[string][]*coordinator.QuorumClientConfig)
-	for _, groupName := range deps.NodeConfig.MapKeys(CfgCoordinatorQuorum) {
-		configKey := CfgCoordinatorQuorum + "." + groupName
+	for _, groupName := range deps.NodeConfig.MapKeys(CfgCoordinatorQuorumGroups) {
+		configKey := CfgCoordinatorQuorumGroups + "." + groupName
 
 		groupConfig := []*coordinator.QuorumClientConfig{}
 		if err := deps.NodeConfig.Unmarshal(configKey, &groupConfig); err != nil {
@@ -237,7 +237,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
 		coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
 		coordinator.WithPowWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
-		coordinator.WithQuorum(quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
+		coordinator.WithQuorum(deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
 	)
 	if err != nil {
 		return nil, err

@@ -72,8 +72,7 @@ type quorum struct {
 // If no groups are given, nil is returned.
 func newQuorum(quorumGroups map[string][]*QuorumClientConfig, timeout time.Duration) *quorum {
 	if len(quorumGroups) == 0 {
-		// coordinator quorum is disabled
-		return nil
+		panic("coordinator quorum groups not found")
 	}
 
 	groups := make(map[string][]*quorumGroupEntry)

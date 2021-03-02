@@ -159,8 +159,12 @@ func WithPowWorkerCount(powWorkerCount int) Option {
 
 // WithQuorum defines a quorum, which is used to check the correct ledger state of the coordinator.
 // If no quorumGroups are given, the quorum is disabled.
-func WithQuorum(quorumGroups map[string][]*QuorumClientConfig, timeout time.Duration) Option {
+func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfig, timeout time.Duration) Option {
 	return func(opts *Options) {
+		if !quorumEnabled {
+			opts.quorum = nil
+			return
+		}
 		opts.quorum = newQuorum(quorumGroups, timeout)
 	}
 }

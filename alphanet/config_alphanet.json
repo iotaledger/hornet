@@ -97,8 +97,11 @@
       "provider": "local",
       "remoteAddress": "localhost:12345"
     },
-    "quorum": {},
-    "quorumTimeout": "2s"
+    "quorum": {
+      "enabled": false,
+      "groups": {},
+      "timeout": "2s"
+    }
   },
   "receipts": {
     "backup": {
