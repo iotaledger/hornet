@@ -47,11 +47,76 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, confirmationIndexBytes), diff.kvStorableKey())
 
 	value := diff.kvStorableValue()
-
+	require.Equal(t, len(value), 77)
 	require.Equal(t, uint32(1), binary.LittleEndian.Uint32(value[:4]))
 	require.Equal(t, outputID[:], value[4:38])
 	require.Equal(t, uint32(1), binary.LittleEndian.Uint32(value[38:42]))
-	require.Equal(t, byteutils.ConcatBytes([]byte{iotago.AddressEd25519}, address[:], outputID[:]), value[42:109])
+	require.Equal(t, outputID[:], value[42:76])
+	require.Equal(t, value[76], byte(0))
+}
+
+func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
+
+	outputID := &iotago.UTXOInputID{}
+	copy(outputID[:], randBytes(34))
+
+	messageID := randMessageID()
+
+	outputType := iotago.OutputSigLockedDustAllowanceOutput
+
+	address := randomAddress()
+
+	amount := uint64(235234)
+
+	output := CreateOutput(outputID, messageID, outputType, address, amount)
+
+	transactionID := &iotago.TransactionID{}
+	copy(transactionID[:], randBytes(iotago.TransactionIDLength))
+
+	confirmationIndex := milestone.Index(255975)
+
+	spent := NewSpent(output, transactionID, confirmationIndex)
+
+	spentMilestoneID := iotago.MilestoneID{}
+	copy(spentMilestoneID[:], randBytes(iotago.MilestoneIDLength))
+
+	spentTreasuryOutput := &TreasuryOutput{
+		MilestoneID: spentMilestoneID,
+		Amount:      1337,
+		Spent:       true,
+	}
+
+	milestoneID := iotago.MilestoneID{}
+	copy(milestoneID[:], randBytes(iotago.MilestoneIDLength))
+
+	treasuryOutput := &TreasuryOutput{
+		MilestoneID: milestoneID,
+		Amount:      0,
+		Spent:       false,
+	}
+
+	diff := &MilestoneDiff{
+		Index:               confirmationIndex,
+		Outputs:             Outputs{output},
+		Spents:              Spents{spent},
+		SpentTreasuryOutput: spentTreasuryOutput,
+		TreasuryOutput:      treasuryOutput,
+	}
+
+	confirmationIndexBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(confirmationIndexBytes, uint32(confirmationIndex))
+
+	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, confirmationIndexBytes), diff.kvStorableKey())
+
+	value := diff.kvStorableValue()
+	require.Equal(t, len(value), 141)
+	require.Equal(t, uint32(1), binary.LittleEndian.Uint32(value[:4]))
+	require.Equal(t, outputID[:], value[4:38])
+	require.Equal(t, uint32(1), binary.LittleEndian.Uint32(value[38:42]))
+	require.Equal(t, outputID[:], value[42:76])
+	require.Equal(t, value[76], byte(1))
+	require.Equal(t, value[77:109], milestoneID[:])
+	require.Equal(t, value[109:141], spentMilestoneID[:])
 }
 
 func randomAddress() *iotago.Ed25519Address {
@@ -121,9 +186,32 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 		randomSpent(outputs[2]),
 	}
 
+	spentMilestoneID := iotago.MilestoneID{}
+	copy(spentMilestoneID[:], randBytes(iotago.MilestoneIDLength))
+
+	spentTreasuryOutput := &TreasuryOutput{
+		MilestoneID: spentMilestoneID,
+		Amount:      1337,
+		Spent:       true,
+	}
+
+	milestoneID := iotago.MilestoneID{}
+	copy(milestoneID[:], randBytes(iotago.MilestoneIDLength))
+
+	treasuryOutput := &TreasuryOutput{
+		MilestoneID: milestoneID,
+		Amount:      0,
+		Spent:       false,
+	}
+
+	treasuryTuple := &TreasuryMutationTuple{
+		NewOutput:   treasuryOutput,
+		SpentOutput: spentTreasuryOutput,
+	}
+
 	msIndex := milestone.Index(756)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, treasuryTuple, nil))
 
 	readDiff, err := utxo.GetMilestoneDiffWithoutLocking(msIndex)
 	require.NoError(t, err)
@@ -131,4 +219,6 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	require.Equal(t, msIndex, readDiff.Index)
 	EqualOutputs(t, outputs, readDiff.Outputs)
 	EqualSpents(t, spents, readDiff.Spents)
+	require.Equal(t, treasuryOutput, readDiff.TreasuryOutput)
+	require.Equal(t, spentTreasuryOutput, readDiff.SpentTreasuryOutput)
 }

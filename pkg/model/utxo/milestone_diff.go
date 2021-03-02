@@ -46,7 +46,6 @@ func (ms *MilestoneDiff) kvStorableValue() []byte {
 
 	m.WriteUint32(uint32(len(ms.Spents)))
 	for _, spent := range ms.Spents {
-		m.WriteBytes(spent.output.addressBytes())
 		m.WriteBytes(spent.output.outputID[:])
 	}
 
@@ -93,11 +92,6 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 
 	spents := make(Spents, spentCount)
 	for i := 0; i < int(spentCount); i++ {
-		// TODO: why are we storing the address with the diff but then don't use it when reading it?
-		if _, err := parseAddress(marshalUtil); err != nil {
-			return err
-		}
-
 		var outputID *iotago.UTXOInputID
 		if outputID, err = parseOutputID(marshalUtil); err != nil {
 			return err
