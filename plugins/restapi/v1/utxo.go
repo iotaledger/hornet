@@ -69,7 +69,7 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 	output, err := deps.UTXO.ReadOutputByOutputIDWithoutLocking(&outputID)
 	if err != nil {
 		if err == kvstore.ErrKeyNotFound {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "output not found: %s", outputIDParam)
+			return nil, errors.WithMessagef(restapi.ErrNotFound, "output not found: %s", outputIDParam)
 		}
 
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading output failed: %s, error: %s", outputIDParam, err)

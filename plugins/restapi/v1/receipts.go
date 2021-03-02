@@ -23,7 +23,7 @@ func receipts(_ echo.Context) (*receiptsResponse, error) {
 func receiptsByMigratedAtIndex(c echo.Context) (*receiptsResponse, error) {
 	migratedAt, err := ParseMilestoneIndexParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid migrated at milestone index: %d, error: %s", migratedAt, err)
+		return nil, err
 	}
 
 	receipts := make([]*utxo.ReceiptTuple, 0)

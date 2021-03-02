@@ -34,7 +34,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 
 	cachedMilestone := deps.Storage.GetCachedMilestoneOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "milestone not found: %d", msIndex)
+		return nil, errors.WithMessagef(restapi.ErrNotFound, "milestone not found: %d", msIndex)
 	}
 	defer cachedMilestone.Release(true)
 

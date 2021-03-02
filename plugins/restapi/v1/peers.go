@@ -48,7 +48,7 @@ func getPeer(c echo.Context) (*PeerResponse, error) {
 
 	info := deps.Manager.PeerInfoSnapshot(peerID)
 	if info == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "peer not found, peerID: %s", peerID.String())
+		return nil, errors.WithMessagef(restapi.ErrNotFound, "peer not found, peerID: %s", peerID.String())
 	}
 
 	return WrapInfoSnapshot(info), nil
@@ -102,7 +102,7 @@ func addPeer(c echo.Context) (*PeerResponse, error) {
 
 	info := deps.Manager.PeerInfoSnapshot(addrInfo.ID)
 	if info == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "peer not found, peerID: %s", addrInfo.ID.String())
+		return nil, errors.WithMessagef(restapi.ErrNotFound, "peer not found, peerID: %s", addrInfo.ID.String())
 	}
 
 	deps.PeeringConfigManager.AddPeer(multiAddr, alias)

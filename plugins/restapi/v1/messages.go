@@ -43,7 +43,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
 	cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageID.ToHex())
+		return nil, errors.WithMessagef(restapi.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedMsgMeta.Release(true)
 
@@ -119,7 +119,7 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 
 	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(restapi.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
@@ -136,7 +136,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 
 	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(restapi.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
