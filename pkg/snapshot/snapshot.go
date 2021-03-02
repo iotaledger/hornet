@@ -742,13 +742,15 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 			return err
 		}
 
+		_, err := os.Stat(filePath)
+		deltaSnapshotFileExists := !os.IsNotExist(err)
+
 		// a delta snapshot contains the milestone diffs from a full snapshot's snapshot index onwards
 		switch {
-		case snapshotInfo.SnapshotIndex == snapshotInfo.PruningIndex:
+		case snapshotInfo.SnapshotIndex == snapshotInfo.PruningIndex && !deltaSnapshotFileExists:
 			// when booting up the first time on a full snapshot or in combination with a delta
-			// snapshot, this indices will be the same.
-			// while booting up with a delta snapshot would mean that the data is available in that file for the
-			// next snapshot, we still only take the ms diffs from the database for at most 1 delta snapshot.
+			// snapshot, this indices will be the same. however, if we have a delta snapshot, we use it
+			// since we might not have the actual milestone data.
 			fallthrough
 		case snapshotInfo.PruningIndex < header.LedgerMilestoneIndex:
 			// we have the needed milestone diffs in the database
