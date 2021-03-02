@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	iotago "github.com/iotaledger/iota.go/v2"
+
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
 )
 
@@ -66,17 +68,40 @@ func TestMigration(t *testing.T) {
 	// eventually all migrations should have happened
 	log.Println("waiting for treasury to be reduced to correct amount after migrations...")
 	require.Eventually(t, func() bool {
-		treasury, err := n.Coordinator().NodeAPI.Treasury()
+		treasury, err := n.Coordinator().NodeAPIClient.Treasury()
 		if err != nil {
 			return false
 		}
 		return treasury.Amount == initialTreasuryTokens-totalMigration
 	}, 2*time.Minute, 100*time.Millisecond)
 
+	// checking that funds were migrated in appropriate receipts
+	log.Println("checking receipts...")
+	receiptTuples, err := n.Coordinator().NodeAPIClient.Receipts()
+	require.NoError(t, err)
+
+	require.Len(t, receiptTuples, 3, "expected 3 receipts in total")
+
+	for _, tuple := range receiptTuples {
+		r := tuple.Receipt
+		var entriesFound int
+		for _, entry := range r.Funds {
+			migEntry := entry.(*iotago.MigratedFundsEntry)
+			for addr, balance := range migrations {
+				if addr == migEntry.Address.(*iotago.Ed25519Address).String() {
+					entriesFound++
+					require.EqualValues(t, migEntry.Deposit, balance.amount)
+					break
+				}
+			}
+		}
+		require.EqualValues(t, entriesFound, len(r.Funds))
+	}
+
 	// check that indeed the funds were correctly minted
-	log.Println("checking that migrated funds are available")
+	log.Println("checking that migrated funds are available...")
 	for addr, tuple := range migrations {
-		balance, err := n.Coordinator().NodeAPI.BalanceByEd25519Address(addr)
+		balance, err := n.Coordinator().NodeAPIClient.BalanceByEd25519Address(addr)
 		require.NoError(t, err)
 		require.EqualValues(t, tuple.amount, balance.Balance)
 	}
