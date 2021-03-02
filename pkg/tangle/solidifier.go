@@ -386,7 +386,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			if t.receiptService != nil {
 				if t.receiptService.ValidationEnabled {
 					if err := t.receiptService.Validate(rt.Receipt); err != nil {
-						var softErr *common.SoftError
+						var softErr common.SoftError
 						switch {
 						case errors.As(err, &softErr):
 							if !t.receiptService.IgnoreSoftErrors {
