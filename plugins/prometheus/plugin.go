@@ -14,6 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
@@ -60,6 +61,7 @@ type dependencies struct {
 	MigratorService *migrator.MigratorService `optional:"true"`
 	Manager         *p2p.Manager
 	RequestQueue    gossip.RequestQueue
+	Coordinator     *coordinator.Coordinator `optional:"true"`
 }
 
 func configure() {
@@ -74,6 +76,9 @@ func configure() {
 	}
 	if deps.MigratorService != nil {
 		configureMigrator()
+	}
+	if deps.Coordinator != nil {
+		configureCoordinator()
 	}
 
 	if deps.NodeConfig.Bool(CfgPrometheusGoMetrics) {

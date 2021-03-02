@@ -98,6 +98,11 @@
     "signing": {
       "provider": "local",
       "remoteAddress": "localhost:12345"
+    },
+    "quorum": {
+      "enabled": false,
+      "groups": {},
+      "timeout": "2s"
     }
   },
   "tipsel": {

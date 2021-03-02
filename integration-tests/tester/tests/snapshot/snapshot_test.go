@@ -43,7 +43,7 @@ func TestSnapshot(t *testing.T) {
 	// check that on each node, the total supply is on an output with ID 999..
 	for _, node := range n.Nodes {
 		require.Eventually(t, func() bool {
-			res, err := node.NodeAPIClient.OutputByID(targetOutputID)
+			res, err := node.DebugNodeAPIClient.OutputByID(targetOutputID)
 			if err != nil {
 				return false
 			}
@@ -58,7 +58,7 @@ func TestSnapshot(t *testing.T) {
 	// check that the treasury output contains total supply - 40'000'000
 	for _, node := range n.Nodes {
 		require.Eventually(t, func() bool {
-			res, err := node.NodeAPIClient.Treasury()
+			res, err := node.DebugNodeAPIClient.Treasury()
 			if err != nil {
 				log.Println(err)
 				return false

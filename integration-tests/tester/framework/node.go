@@ -22,10 +22,8 @@ type Node struct {
 	Config *NodeConfig
 	// The libp2p identifier of the peer.
 	ID peer.ID
-	// The iota.go web API instance used to communicate with the node.
-	NodeAPIClient *iotago.NodeAPIClient
-	// The more specific web API providing more information for debugging purposes.
-	DebugNodeAPI *DebugNodeAPI
+	// The iota.go web API instance with additional information used to communicate with the node.
+	DebugNodeAPIClient *DebugNodeAPIClient
 	// The profiler instance.
 	Profiler
 	// The DockerContainer that this peer is running in
@@ -43,8 +41,7 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 		return nil, err
 	}
 
-	nodeAPI := iotago.NewNodeAPIClient(getNodeAPIBaseURL(ip))
-	debugNodeAPI := NewDebugNodeAPI(getNodeAPIBaseURL(ip))
+	debugNodeAPI := NewDebugNodeAPIClient(getNodeAPIBaseURL(ip))
 
 	return &Node{
 		Name: name,
@@ -56,12 +53,11 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 				Timeout: 2 * time.Minute,
 			},
 		},
-		IP:              ip,
-		Config:          cfg,
-		ID:              id,
-		NodeAPIClient:   nodeAPI,
-		DebugNodeAPI:    debugNodeAPI,
-		DockerContainer: dockerContainer,
+		IP:                 ip,
+		Config:             cfg,
+		ID:                 id,
+		DebugNodeAPIClient: debugNodeAPI,
+		DockerContainer:    dockerContainer,
 	}, nil
 }
 
@@ -112,7 +108,7 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 					Data:  []byte(data)},
 				}
 
-				if _, err := p.NodeAPIClient.SubmitMessage(iotaMsg); err != nil {
+				if _, err := p.DebugNodeAPIClient.SubmitMessage(iotaMsg); err != nil {
 					spamErr = err
 					return
 				}

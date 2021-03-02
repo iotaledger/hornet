@@ -68,7 +68,7 @@ func TestMigration(t *testing.T) {
 	// eventually all migrations should have happened
 	log.Println("waiting for treasury to be reduced to correct amount after migrations...")
 	require.Eventually(t, func() bool {
-		treasury, err := n.Coordinator().NodeAPIClient.Treasury()
+		treasury, err := n.Coordinator().DebugNodeAPIClient.Treasury()
 		if err != nil {
 			return false
 		}
@@ -77,7 +77,7 @@ func TestMigration(t *testing.T) {
 
 	// checking that funds were migrated in appropriate receipts
 	log.Println("checking receipts...")
-	receiptTuples, err := n.Coordinator().NodeAPIClient.Receipts()
+	receiptTuples, err := n.Coordinator().DebugNodeAPIClient.Receipts()
 	require.NoError(t, err)
 
 	require.Len(t, receiptTuples, 3, "expected 3 receipts in total")
@@ -101,7 +101,7 @@ func TestMigration(t *testing.T) {
 	// check that indeed the funds were correctly minted
 	log.Println("checking that migrated funds are available...")
 	for addr, tuple := range migrations {
-		balance, err := n.Coordinator().NodeAPIClient.BalanceByEd25519Address(addr)
+		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(addr)
 		require.NoError(t, err)
 		require.EqualValues(t, tuple.amount, balance.Balance)
 	}
