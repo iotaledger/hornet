@@ -18,6 +18,7 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
 
@@ -110,6 +111,8 @@ var defaultOptions = []Option{
 
 // Options define options for the Coordinator.
 type Options struct {
+	// the logger used to log events.
+	logger *logger.Logger
 	// the path to the state file of the coordinator.
 	stateFilePath string
 	// the interval milestones are issued.
@@ -124,6 +127,13 @@ type Options struct {
 func (so *Options) apply(opts ...Option) {
 	for _, opt := range opts {
 		opt(so)
+	}
+}
+
+// WithLogger enables logging within the coordinator.
+func WithLogger(logger *logger.Logger) Option {
+	return func(opts *Options) {
+		opts.logger = logger
 	}
 }
 
@@ -300,9 +310,17 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 	// ask the quorum for correct ledger state if enabled
 	if coo.opts.quorum != nil {
+		ts := time.Now()
 		if err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents); err != nil {
 			// quorum failed => non-critical or critical error
+			if coo.opts.logger != nil {
+				coo.opts.logger.Infof("coordinator quorum failed after %v, err: %s", time.Since(ts).Truncate(time.Millisecond), err)
+			}
 			return err
+		}
+
+		if coo.opts.logger != nil {
+			coo.opts.logger.Infof("coordinator quorum took %v", time.Since(ts).Truncate(time.Millisecond))
 		}
 	}
 

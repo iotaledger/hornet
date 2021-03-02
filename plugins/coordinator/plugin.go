@@ -234,6 +234,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		deps.UTXOManager,
 		powHandler,
 		sendMessage,
+		coordinator.WithLogger(log),
 		coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
 		coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
 		coordinator.WithPowWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
@@ -241,6 +242,10 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled) {
+		log.Info("coordinator is running with enabled quorum")
 	}
 
 	if err := coo.InitState(bootstrap, milestone.Index(startIndex)); err != nil {
