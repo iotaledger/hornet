@@ -98,7 +98,9 @@
     "signing": {
       "provider": "local",
       "remoteAddress": "localhost:12345"
-    }
+    },
+    "quorum": {},
+    "quorumTimeout": "2s"
   },
   "tipsel": {
     "maxDeltaMsgYoungestConeRootIndexToCMI": 2,

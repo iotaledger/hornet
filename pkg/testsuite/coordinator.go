@@ -104,9 +104,8 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
 
-	milestoneMessageID, noncriticalErr, criticalErr := te.coo.IssueMilestone(hornet.MessageIDs{te.lastMilestoneMessageID, tip})
-	require.NoError(te.TestState, noncriticalErr)
-	require.NoError(te.TestState, criticalErr)
+	milestoneMessageID, err := te.coo.IssueMilestone(hornet.MessageIDs{te.lastMilestoneMessageID, tip})
+	require.NoError(te.TestState, err)
 	te.lastMilestoneMessageID = milestoneMessageID
 
 	te.VerifyLMI(currentIndex + 1)

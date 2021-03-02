@@ -9,6 +9,7 @@ import (
 	"go.uber.org/dig"
 	"golang.org/x/net/context"
 
+	"github.com/gohornet/hornet/core/gracefulshutdown"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -117,6 +118,32 @@ func configure() {
 	configureEvents()
 }
 
+// handleError checks for critical errors and returns true if the node should shutdown.
+func handleError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var critErr common.CriticalError
+	var softErr common.SoftError
+
+	switch {
+	case errors.As(err, &critErr):
+		gracefulshutdown.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err.Error()))
+		return true
+
+	case errors.As(err, &softErr):
+		log.Warn(err)
+		coo.Events.SoftError.Trigger(err)
+
+	default:
+		// this should not happen! Errors should be defined as SoftError or CriticalError explicitly
+		log.Panicf("coordinator plugin hit an unknown error type: %s", err)
+	}
+
+	return false
+}
+
 func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
 
 	if deps.Storage.IsDatabaseTainted() {
@@ -176,6 +203,29 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		log.Info("running Coordinator without migration enabled")
 	}
 
+	// parse quorum groups config
+	quorumGroups := make(map[string][]*coordinator.QuorumClientConfig)
+	for _, groupName := range deps.NodeConfig.MapKeys(CfgCoordinatorQuorum) {
+		configKey := CfgCoordinatorQuorum + "." + groupName
+
+		groupConfig := []*coordinator.QuorumClientConfig{}
+		if err := deps.NodeConfig.Unmarshal(configKey, &groupConfig); err != nil {
+			return nil, fmt.Errorf("failed to parse coordinator quorum group: %s, %s", configKey, err)
+		}
+
+		if len(groupConfig) == 0 {
+			return nil, fmt.Errorf("invalid coordinator quorum group: %s, no entries", configKey)
+		}
+
+		for _, entry := range groupConfig {
+			if entry.BaseURL == "" {
+				return nil, fmt.Errorf("invalid coordinator quorum group: %s, missing baseURL in entry", configKey)
+			}
+		}
+
+		quorumGroups[groupName] = groupConfig
+	}
+
 	coo, err := coordinator.New(
 		deps.Storage,
 		deps.NetworkID,
@@ -187,6 +237,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
 		coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
 		coordinator.WithPowWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
+		coordinator.WithQuorum(quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
 	)
 	if err != nil {
 		return nil, err
@@ -226,9 +277,11 @@ func run() {
 		attachEvents()
 
 		// bootstrap the network if not done yet
-		milestoneMessageID, criticalErr := coo.Bootstrap()
-		if criticalErr != nil {
-			log.Panic(criticalErr)
+		milestoneMessageID, err := coo.Bootstrap()
+		if handleError(err) {
+			// critical error => stop worker
+			detachEvents()
+			return
 		}
 
 		// init the last milestone message ID
@@ -298,16 +351,17 @@ func run() {
 
 				milestoneTips = append(milestoneTips, hornet.MessageIDs{lastMilestoneMessageID, lastCheckpointMessageID}...)
 
-				milestoneMessageID, err, criticalErr := coo.IssueMilestone(milestoneTips)
-				if criticalErr != nil {
-					log.Panic(criticalErr)
+				milestoneMessageID, err := coo.IssueMilestone(milestoneTips)
+				if handleError(err) {
+					// critical error => quit loop
+					break coordinatorLoop
 				}
 				if err != nil {
+					// non-critical errors
 					if err == common.ErrNodeNotSynced {
 						// Coordinator is not synchronized, trigger the solidifier manually
 						deps.Tangle.TriggerSolidifier()
 					}
-					log.Warn(err)
 					continue
 				}
 

@@ -96,7 +96,9 @@
     "signing": {
       "provider": "local",
       "remoteAddress": "localhost:12345"
-    }
+    },
+    "quorum": {},
+    "quorumTimeout": "2s"
   },
   "receipts": {
     "backup": {

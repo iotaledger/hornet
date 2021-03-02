@@ -50,6 +50,8 @@ type Events struct {
 	IssuedCheckpointMessage *events.Event
 	// Fired when a milestone is issued.
 	IssuedMilestone *events.Event
+	// SoftError is triggered when a soft error is encountered.
+	SoftError *events.Event
 }
 
 // PublicKeyRange is a public key of milestones with a valid range.
@@ -114,6 +116,8 @@ type Options struct {
 	milestoneInterval time.Duration
 	// the amount of workers used for calculating PoW when issuing checkpoints and milestones.
 	powWorkerCount int
+	// the optional quorum used by the coordinator to check for correct ledger state calculation.
+	quorum *quorum
 }
 
 // applies the given Option.
@@ -153,6 +157,13 @@ func WithPowWorkerCount(powWorkerCount int) Option {
 	}
 }
 
+// WithQuorum defines a quorum, which is used to check the correct ledger state of the coordinator.
+// If no quorumGroups are given, the quorum is disabled.
+func WithQuorum(quorumGroups map[string][]*QuorumClientConfig, timeout time.Duration) Option {
+	return func(opts *Options) {
+		opts.quorum = newQuorum(quorumGroups, timeout)
+	}
+}
 
 // Option is a function setting a coordinator option.
 type Option func(opts *Options)
@@ -179,6 +190,7 @@ func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSig
 		Events: &Events{
 			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:         events.NewEvent(MilestoneCaller),
+			SoftError:               events.NewEvent(events.ErrorCaller),
 		},
 	}
 
@@ -186,6 +198,7 @@ func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSig
 }
 
 // InitState loads an existing state file or bootstraps the network.
+// All errors are critical.
 func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) error {
 
 	_, err := os.Stat(coo.opts.stateFilePath)
@@ -253,6 +266,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 }
 
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
+// Returns non-critical and critical errors.
 func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMilestoneIndex milestone.Index) error {
 
 	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
@@ -277,7 +291,15 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// compute merkle tree root
 	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.storage, newMilestoneIndex, cachedMsgMetas, cachedMessages, parents)
 	if err != nil {
-		return fmt.Errorf("failed to compute white flag mutations: %w", err)
+		return common.CriticalError{Err: fmt.Errorf("failed to compute white flag mutations: %w", err)}
+	}
+
+	// ask the quorum for correct ledger state if enabled
+	if coo.opts.quorum != nil {
+		if err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents); err != nil {
+			// quorum failed => non-critical or critical error
+			return err
+		}
 	}
 
 	// get receipt data in case migrator is enabled
@@ -287,7 +309,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		if receipt != nil {
 			currentTreasuryOutput, err := coo.utxoManager.UnspentTreasuryOutputWithoutLocking()
 			if err != nil {
-				return fmt.Errorf("unable to fetch unspent treasury output: %w", err)
+				return common.CriticalError{Err: fmt.Errorf("unable to fetch unspent treasury output: %w", err)}
 			}
 
 			// embed treasury within the receipt
@@ -301,18 +323,17 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	}
 
 	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, receipt, mutations.MerkleTreeHash, coo.opts.powWorkerCount, coo.powHandler)
-	
 	if err != nil {
-		return fmt.Errorf("failed to create milestone: %w", err)
+		return common.CriticalError{Err: fmt.Errorf("failed to create milestone: %w", err)}
 	}
 
 	if err := coo.sendMesssageFunc(milestoneMsg, newMilestoneIndex); err != nil {
-		return err
+		return common.CriticalError{Err: fmt.Errorf("failed to send milestone: %w", err)}
 	}
 
 	if coo.migratorService != nil && receipt != nil {
 		if err := coo.migratorService.PersistState(); err != nil {
-			return fmt.Errorf("unable to persist migrator state: %w", err)
+			return common.CriticalError{Err: fmt.Errorf("unable to persist migrator state: %w", err)}
 		}
 	}
 
@@ -324,6 +345,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	coo.state.LatestMilestoneTime = time.Now()
 
 	if err := coo.state.storeStateFile(coo.opts.stateFilePath); err != nil {
+		return common.CriticalError{Err: fmt.Errorf("failed to update coordinator state file: %w", err)}
 	}
 
 	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneMessageID)
@@ -341,9 +363,10 @@ func (coo *Coordinator) Bootstrap() (hornet.MessageID, error) {
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
 		// only one parent references the last known milestone or NullMessageID if startIndex = 1 (see InitState)
-		if err := coo.createAndSendMilestone(hornet.MessageIDs{coo.state.LatestMilestoneMessageID}, coo.state.LatestMilestoneIndex+1); err != nil {
-			// creating milestone failed => critical error
-			return nil, err
+		err := coo.createAndSendMilestone(hornet.MessageIDs{coo.state.LatestMilestoneMessageID}, coo.state.LatestMilestoneIndex+1)
+		if err != nil {
+			// creating milestone failed => always a critical error at bootstrap
+			return nil, common.CriticalError{Err: err}
 		}
 
 		coo.bootstrapped = true
@@ -366,13 +389,13 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	defer coo.milestoneLock.Unlock()
 
 	if !coo.storage.IsNodeSynced() {
-		return nil, common.ErrNodeNotSynced
+		return nil, common.SoftError{Err: common.ErrNodeNotSynced}
 	}
 
 	// check whether we should hold issuing checkpoints
 	// if the node is currently under a lot of load
 	if coo.checkBackPressureFunctions() {
-		return nil, common.ErrNodeLoadTooHigh
+		return nil, common.SoftError{Err: common.ErrNodeLoadTooHigh}
 	}
 
 	// maximum 8 parents per message (7 tips + last checkpoint messageID)
@@ -393,11 +416,11 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 
 		msg, err := createCheckpoint(coo.networkID, parents, coo.opts.powWorkerCount, coo.powHandler)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create checkPoint: %w", err)
+			return nil, common.SoftError{Err: fmt.Errorf("failed to create checkPoint: %w", err)}
 		}
 
 		if err := coo.sendMesssageFunc(msg); err != nil {
-			return nil, err
+			return nil, common.SoftError{Err: fmt.Errorf("failed to send checkPoint: %w", err)}
 		}
 
 		lastCheckpointMessageID = msg.GetMessageID()
@@ -410,28 +433,28 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 
 // IssueMilestone creates the next milestone.
 // Returns non-critical and critical errors.
-func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.MessageID, error, error) {
+func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.MessageID, error) {
 
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
 	if !coo.storage.IsNodeSynced() {
 		// return a non-critical error to not kill the database
-		return nil, common.ErrNodeNotSynced, nil
+		return nil, common.SoftError{Err: common.ErrNodeNotSynced}
 	}
 
 	// check whether we should hold issuing miletones
 	// if the node is currently under a lot of load
 	if coo.checkBackPressureFunctions() {
-		return nil, common.ErrNodeLoadTooHigh, nil
+		return nil, common.SoftError{Err: common.ErrNodeLoadTooHigh}
 	}
 
 	if err := coo.createAndSendMilestone(parents, coo.state.LatestMilestoneIndex+1); err != nil {
-		// creating milestone failed => critical error
-		return nil, nil, err
+		// creating milestone failed => non-critical or critical error
+		return nil, err
 	}
 
-	return coo.state.LatestMilestoneMessageID, nil, nil
+	return coo.state.LatestMilestoneMessageID, nil
 }
 
 // GetInterval returns the interval milestones should be issued.
@@ -458,4 +481,13 @@ func (coo *Coordinator) checkBackPressureFunctions() bool {
 		}
 	}
 	return false
+}
+
+// QuorumStats returns statistics about the response time and errors of every node in the quorum.
+func (coo *Coordinator) QuorumStats() []QuorumClientStatistic {
+	if coo.opts.quorum == nil {
+		return nil
+	}
+
+	return coo.opts.quorum.quorumStatsSnapshot()
 }

@@ -50,7 +50,7 @@ func configure() {
 		case <-gracefulStop:
 			log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing ...", waitToKillTimeInSeconds)
 		case msg := <-nodeSelfShutdown:
-			log.Warnf("Node self-shutdown: %s ;waiting (max %d seconds) to finish processing ...", msg, waitToKillTimeInSeconds)
+			log.Warnf("Node self-shutdown: %s; waiting (max %d seconds) to finish processing ...", msg, waitToKillTimeInSeconds)
 		}
 
 		go func() {
