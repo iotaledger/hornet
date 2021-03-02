@@ -81,8 +81,8 @@ const (
                  1 byte                 +     4 bytes
 
    Value:
-       OutputCount  +  OutputCount * iotago.UTXOInputID + SpentCount + SpentCount * (iotago.Ed25519Address.Serialized() + iotago.UTXOInputID)   + has treasury + TreasuryOutputMilestoneHash + SpentTreasuryOutputMilestoneHash
-         4 bytes    +  OutputCount * (32 byte + 2 byte) +   4 bytes  + SpentCount * ( 	  1 byte type + 32 bytes	    +  32 bytes + 2 bytes)  +    1 byte    +          32 bytes           +          32 bytes
+       OutputCount  +  OutputCount * iotago.UTXOInputID + SpentCount + SpentCount *  iotago.UTXOInputID   + has treasury + TreasuryOutputMilestoneID + SpentTreasuryOutputMilestoneID
+         4 bytes    +  OutputCount * (32 byte + 2 byte) +   4 bytes  + SpentCount *  (32 bytes + 2 bytes) +    1 byte    +          32 bytes           +          32 bytes
 
 
    Balances:

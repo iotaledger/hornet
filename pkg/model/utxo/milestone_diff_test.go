@@ -51,7 +51,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	require.Equal(t, uint32(1), binary.LittleEndian.Uint32(value[:4]))
 	require.Equal(t, outputID[:], value[4:38])
 	require.Equal(t, uint32(1), binary.LittleEndian.Uint32(value[38:42]))
-	require.Equal(t, byteutils.ConcatBytes([]byte{iotago.AddressEd25519}, address[:], outputID[:]), value[42:109])
+	require.Equal(t, outputID[:], value[42:76])
 }
 
 func randomAddress() *iotago.Ed25519Address {
