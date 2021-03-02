@@ -23,7 +23,7 @@ type Node struct {
 	// The libp2p identifier of the peer.
 	ID peer.ID
 	// The iota.go web API instance used to communicate with the node.
-	NodeAPI *iotago.NodeAPI
+	NodeAPIClient *iotago.NodeAPIClient
 	// The more specific web API providing more information for debugging purposes.
 	DebugNodeAPI *DebugNodeAPI
 	// The profiler instance.
@@ -43,7 +43,7 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 		return nil, err
 	}
 
-	nodeAPI := iotago.NewNodeAPI(getNodeAPIBaseURL(ip))
+	nodeAPI := iotago.NewNodeAPIClient(getNodeAPIBaseURL(ip))
 	debugNodeAPI := NewDebugNodeAPI(getNodeAPIBaseURL(ip))
 
 	return &Node{
@@ -59,7 +59,7 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 		IP:              ip,
 		Config:          cfg,
 		ID:              id,
-		NodeAPI:         nodeAPI,
+		NodeAPIClient:   nodeAPI,
 		DebugNodeAPI:    debugNodeAPI,
 		DockerContainer: dockerContainer,
 	}, nil
@@ -112,7 +112,7 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 					Data:  []byte(data)},
 				}
 
-				if _, err := p.NodeAPI.SubmitMessage(iotaMsg); err != nil {
+				if _, err := p.NodeAPIClient.SubmitMessage(iotaMsg); err != nil {
 					spamErr = err
 					return
 				}
