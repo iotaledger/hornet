@@ -1,6 +1,7 @@
 package toolset
 
 import (
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -48,7 +49,8 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 	fmt.Printf(`> %s snapshot, file %s:
 	- Snapshot time %v
 	- Network ID %d
-	- Ledger index %d 
+	- Ledger index %d
+	- Treasury %s
 	- Snapshot index %d
 	- UTXOs count %d
 	- SEPs count %d
@@ -56,6 +58,12 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 		time.Unix(int64(header.Timestamp), 0),
 		header.NetworkID,
 		header.LedgerMilestoneIndex,
+		func() string {
+			if header.TreasuryOutput == nil {
+				return "no treasury output in header"
+			}
+			return fmt.Sprintf("milestone ID %s, tokens %d", hex.EncodeToString(header.TreasuryOutput.MilestoneID[:]), header.TreasuryOutput.Amount)
+		}(),
 		header.SEPMilestoneIndex,
 		header.OutputCount,
 		header.SEPCount,

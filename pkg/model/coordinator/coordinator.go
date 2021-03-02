@@ -223,6 +223,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 			output := &iotago.TreasuryOutput{Amount: currentTreasuryOutput.Amount - receipt.Sum()}
 			treasuryTx := &iotago.TreasuryTransaction{Input: input, Output: output}
 			receipt.Transaction = treasuryTx
+			receipt.SortFunds()
 		}
 	}
 

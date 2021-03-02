@@ -34,9 +34,10 @@ const (
 
 	autopeeringMaxTries = 50
 
-	containerNodeImage    = "hornet:dev"
-	containerPumbaImage   = "gaiaadm/pumba:0.7.4"
-	containerIPRouteImage = "gaiadocker/iproute2"
+	containerNodeImage           = "hornet:dev"
+	containerWhiteFlagMockServer = "lucamoser/wfmock:0.1.0"
+	containerPumbaImage          = "gaiaadm/pumba:0.7.4"
+	containerIPRouteImage        = "gaiadocker/iproute2"
 
 	containerNameTester      = "/tester"
 	containerNameReplica     = "replica_"
@@ -91,6 +92,27 @@ func DefaultConfig() *NodeConfig {
 		"8081/tcp": {},
 	}
 	return cfg
+}
+
+//  WhiteFlagMockServerConfig defines the config for a white-flag mock server instance.
+type WhiteFlagMockServerConfig struct {
+	// The name for this white-flag mock server.
+	Name string
+	// environment variables.
+	Envs []string
+	// Binds for the container.
+	Binds []string
+}
+
+// DefaultWhiteFlagMockServerConfig returns the default WhiteFlagMockServerConfig.
+func DefaultWhiteFlagMockServerConfig() *WhiteFlagMockServerConfig {
+	return &WhiteFlagMockServerConfig{
+		Name: "wfmock",
+		Envs: []string{"WHITE_FLAG_MOCK_CONFIG=/assets/wfmock_config.json"},
+		Binds: []string{
+			fmt.Sprintf("hornet-testing-assets:%s:rw", assetsDir),
+		},
+	}
 }
 
 // NodeConfig defines the config of a HORNET node.
@@ -246,6 +268,8 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/addresses/ed25519/:address",
 			"/api/v1/addresses/ed25519/:address/outputs",
 			"/api/v1/treasury",
+			"/api/v1/receipts",
+			"/api/v1/receipts/:migratedAt",
 			"/api/v1/peers/:peerID",
 			"/api/v1/peers",
 			"/api/plugins/*",

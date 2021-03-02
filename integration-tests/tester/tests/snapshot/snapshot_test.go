@@ -19,7 +19,7 @@ import (
 // The delta snapshot therefore contains the milestone diffs 2-5 and the final ms diff
 // outputs the 40'000'000 tokens to an output with all 9s as its ID (deducting 10'0000 from the treasury).
 func TestSnapshot(t *testing.T) {
-	n, err := f.CreateStaticNetwork("test_snapshot", framework.DefaultStaticPeeringLayout, func(index int, cfg *framework.NodeConfig) {
+	n, err := f.CreateStaticNetwork("test_snapshot", nil, framework.DefaultStaticPeeringLayout, func(index int, cfg *framework.NodeConfig) {
 		// run network without a coordinator
 		if index == 0 {
 			cfg.Coordinator.Bootstrap = false

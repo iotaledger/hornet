@@ -14,7 +14,7 @@ import (
 // TestCommon boots up a statically peered network and then checks that all
 // nodes are sync, meaning that they actually received milestones.
 func TestCommon(t *testing.T) {
-	n, err := f.CreateStaticNetwork("test_common", framework.DefaultStaticPeeringLayout)
+	n, err := f.CreateStaticNetwork("test_common", nil, framework.DefaultStaticPeeringLayout)
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
 

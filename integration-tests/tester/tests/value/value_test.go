@@ -18,7 +18,7 @@ import (
 // TestValue boots up a statically peered network and then checks that spending
 // the genesis output to create multiple new output works.
 func TestValue(t *testing.T) {
-	n, err := f.CreateStaticNetwork("test_value", framework.DefaultStaticPeeringLayout)
+	n, err := f.CreateStaticNetwork("test_value", nil, framework.DefaultStaticPeeringLayout)
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
 

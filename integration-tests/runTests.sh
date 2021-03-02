@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TEST_NAMES='common value benchmark snapshot'
+TEST_NAMES='common value benchmark snapshot migration'
 
 echo "Build HORNET image"
 docker build -f ../docker/Dockerfile.dev -t hornet:dev ../.
@@ -8,6 +8,7 @@ docker build -f ../docker/Dockerfile.dev -t hornet:dev ../.
 echo "Pull additional Docker images"
 docker pull gaiaadm/pumba:0.7.4
 docker pull gaiadocker/iproute2:latest
+docker pull lucamoser/wfmock:0.1.0
 
 echo "Run integration tests"
 
