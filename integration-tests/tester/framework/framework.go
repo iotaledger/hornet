@@ -67,9 +67,17 @@ func newFramework() (*Framework, error) {
 // CfgOverrideFunc is a function which overrides configuration values.
 type CfgOverrideFunc func(index int, cfg *NodeConfig)
 
+// IntegrationNetworkConfig holds configuration for a network.
+type IntegrationNetworkConfig struct {
+	// Whether the network should have a white-flag mock server running.
+	SpawnWhiteFlagMockServer bool
+	// The config to use for the white-flag mock server.
+	WhiteFlagMockServerConfig *WhiteFlagMockServerConfig
+}
+
 // CreateStaticNetwork creates a network made out of statically peered nodes by the given layout.
 // The first node is initialized with the Coordinator plugin enabled.
-func (f *Framework) CreateStaticNetwork(name string, layout StaticPeeringLayout, cfgOverrideF ...CfgOverrideFunc) (*StaticNetwork, error) {
+func (f *Framework) CreateStaticNetwork(name string, intNetCfg *IntegrationNetworkConfig, layout StaticPeeringLayout, cfgOverrideF ...CfgOverrideFunc) (*StaticNetwork, error) {
 	network, err := newNetwork(f.dockerClient, strings.ToLower(name), NetworkTypeStatic, f.tester)
 	if err != nil {
 		return nil, err
@@ -77,6 +85,14 @@ func (f *Framework) CreateStaticNetwork(name string, layout StaticPeeringLayout,
 
 	if err := layout.Validate(); err != nil {
 		return nil, err
+	}
+
+	if intNetCfg != nil {
+		if err := network.CreateWhiteFlagMockServer(intNetCfg.WhiteFlagMockServerConfig); err != nil {
+			return nil, err
+		}
+		// give the mock server some grace time to boot up
+		time.Sleep(3 * time.Second)
 	}
 
 	for i := 0; i < len(layout); i++ {

@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 )
 
 // newDockerClient creates a Docker client that communicates via the Docker socket.
@@ -64,6 +65,20 @@ func (d *DockerContainer) CreateNodeContainer(cfg *NodeConfig) error {
 	return d.CreateContainer(cfg.Name, containerConfig, &container.HostConfig{
 		Binds: cfg.Binds,
 	})
+}
+
+// CreateWhiteFlagMockContainer creates a new white-flag mock container.
+func (d *DockerContainer) CreateWhiteFlagMockContainer(cfg *WhiteFlagMockServerConfig) error {
+	containerConfig := &container.Config{
+		Image: containerWhiteFlagMockServer,
+		ExposedPorts: nat.PortSet{
+			"14265/tcp": {},
+		},
+		Env: cfg.Envs,
+	}
+
+	hostCfg := &container.HostConfig{Binds: cfg.Binds}
+	return d.CreateContainer(cfg.Name, containerConfig, hostCfg)
 }
 
 // CreatePumbaContainer creates a new container with Pumba configuration.
