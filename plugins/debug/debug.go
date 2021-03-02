@@ -376,12 +376,12 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 
 	cachedStartMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedStartMsgMeta == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(restapi.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedStartMsgMeta.Release(true)
 
 	if !cachedStartMsgMeta.GetMetadata().IsSolid() {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "start message is not solid: %s", messageIDHex)
+		return nil, errors.WithMessagef(restapi.ErrServiceUnavailable, "start message is not solid: %s", messageIDHex)
 	}
 
 	startMsgReferened, startMsgReferenedAt := cachedStartMsgMeta.GetMetadata().GetReferenced()
