@@ -18,10 +18,17 @@ import (
 func TestBatch(t *testing.T) {
 	const (
 		initialTreasuryTokens = 10_000_000_000
-		migratedFundsCount    = 128 + 127
+		migratedFundsCount    = 127 + 128 + 1
 		migrationTokens       = 1_000_000
 		totalMigrationTokens  = migratedFundsCount * migrationTokens
 	)
+
+	// receipts per migrated at index
+	receipts := map[uint32]int{1: 1, 2: 2, 3: 1}
+	var totalReceipts int
+	for _, n := range receipts {
+		totalReceipts += n
+	}
 
 	n, err := f.CreateStaticNetwork("test_migration_batch", &framework.IntegrationNetworkConfig{
 		SpawnWhiteFlagMockServer:  true,
@@ -66,7 +73,12 @@ func TestBatch(t *testing.T) {
 	log.Println("checking receipts...")
 	receiptTuples, err := n.Coordinator().DebugNodeAPIClient.Receipts()
 	require.NoError(t, err)
-	require.Lenf(t, receiptTuples, 3, "expected 3 receipts in total")
+	require.Lenf(t, receiptTuples, totalReceipts, "expected %d receipts in total", totalReceipts)
+	for migratedAt, numReceipts := range receipts {
+		receiptTuples, err := n.Coordinator().DebugNodeAPIClient.ReceiptsByMigratedAtIndex(migratedAt)
+		require.NoError(t, err)
+		require.Lenf(t, receiptTuples, numReceipts, "expected %d receipts for index %d", totalReceipts, migratedAt)
+	}
 
 	// check that indeed the funds were correctly minted
 	log.Println("checking that migrated funds are available...")
