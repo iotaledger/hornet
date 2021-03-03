@@ -271,7 +271,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/addresses/ed25519/:address/outputs",
 			"/api/v1/treasury",
 			"/api/v1/receipts",
-			"/api/v1/receipts/:migratedAt",
+			"/api/v1/receipts/:milestoneIndex",
 			"/api/v1/peers/:peerID",
 			"/api/v1/peers",
 			"/api/plugins/*",
