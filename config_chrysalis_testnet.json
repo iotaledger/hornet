@@ -22,7 +22,8 @@
       "/api/v1/addresses/:address",
       "/api/v1/addresses/:address/outputs",
       "/api/v1/addresses/ed25519/:address",
-      "/api/v1/addresses/ed25519/:address/outputs"
+      "/api/v1/addresses/ed25519/:address/outputs",
+      "/api/v1/treasury"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",
@@ -38,6 +39,7 @@
   },
   "dashboard": {
     "bindAddress": "localhost:8081",
+    "dev": false,
     "auth": {
       "sessionTimeout": "72h",
       "username": "admin",
@@ -67,7 +69,7 @@
     "delay": 60480
   },
   "protocol": {
-    "networkID": "testnet5",
+    "networkID": "testnet6",
     "bech32HRP": "atoi",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
