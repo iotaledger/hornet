@@ -93,11 +93,17 @@ func NewService(queryer Queryer, stateFilePath string) *MigratorService {
 // validations happen in the background, Receipt might block until the next receipt is ready.
 // When s is stopped, Receipt will always return nil.
 func (s *MigratorService) Receipt() *iotago.Receipt {
+	// make the channel receive and the state update atomic, so that the state always matches the result
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	// make the channel receive and the state update atomic, so that the state always matches the result
-	result, ok := <-s.migrations
-	if !ok {
+
+	// non-blocking receive; return nil if the channel is closed or value available
+	var result *migrationResult
+	select {
+	case result = <-s.migrations:
+	default:
+	}
+	if result == nil {
 		return nil
 	}
 	s.updateState(result)
