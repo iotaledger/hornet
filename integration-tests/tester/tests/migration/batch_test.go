@@ -10,11 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
+// TestBatch boots up a statically peered network which runs with a white-flag mock server in order
+// to validate that the migrated funds entry limit is respected correctly.
 func TestBatch(t *testing.T) {
 	const (
 		initialTreasuryTokens = 10_000_000_000
