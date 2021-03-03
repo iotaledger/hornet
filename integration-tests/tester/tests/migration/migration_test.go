@@ -39,8 +39,8 @@ func TestMigration(t *testing.T) {
 
 	n, err := f.CreateStaticNetwork("test_migration", &framework.IntegrationNetworkConfig{
 		SpawnWhiteFlagMockServer:  true,
-		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig(),
-	}, framework.DefaultStaticPeeringLayout, func(index int, cfg *framework.NodeConfig) {
+		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock_config.json"),
+	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.NodeConfig) {
 		switch {
 		case index == 0:
 			cfg.WithMigration()
@@ -70,10 +70,11 @@ func TestMigration(t *testing.T) {
 	require.Eventually(t, func() bool {
 		treasury, err := n.Coordinator().DebugNodeAPIClient.Treasury()
 		if err != nil {
+			log.Printf("failed to get current treasury: %s", err)
 			return false
 		}
 		return treasury.Amount == initialTreasuryTokens-totalMigration
-	}, 2*time.Minute, 100*time.Millisecond)
+	}, 2*time.Minute, time.Second)
 
 	// checking that funds were migrated in appropriate receipts
 	log.Println("checking receipts...")
