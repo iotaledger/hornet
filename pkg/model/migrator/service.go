@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	// MaxReceipts defines the maximum size of a receipt returned by MigratorService.Receipt.
-	MaxReceipts = 100
+	// MaxMigratedFundsEntryCount is the maximum amount of MigratedFundsEntry items returned by MigratorService.Receipt.
+	MaxMigratedFundsEntryCount = iotago.MaxMigratedFundsEntryCount
 )
 
 var (
@@ -88,7 +88,7 @@ func NewService(queryer Queryer, stateFilePath string) *MigratorService {
 }
 
 // Receipt returns the next receipt of migrated funds.
-// Each receipt can only consists of migrations confirmed by one milestone, it will never be larger than MaxReceipts.
+// Each receipt can only consists of migrations confirmed by one milestone, it will never be larger than MaxMigratedFundsEntryCount.
 // Receipt returns nil, if there are currently no new migrations available. Although the actual API calls and
 // validations happen in the background, Receipt might block until the next receipt is ready.
 // When s is stopped, Receipt will always return nil.
@@ -185,8 +185,8 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 		for {
 			batch := migratedFunds
 			lastBatch := true
-			if len(batch) > MaxReceipts {
-				batch = batch[:MaxReceipts]
+			if len(batch) > MaxMigratedFundsEntryCount {
+				batch = batch[:MaxMigratedFundsEntryCount]
 				lastBatch = false
 			}
 			select {

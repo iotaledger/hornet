@@ -24,7 +24,7 @@ func init() {
 }
 
 func TestReceiptFull(t *testing.T) {
-	migrator.MaxReceipts = len(serviceTests.entries)
+	migrator.MaxMigratedFundsEntryCount = len(serviceTests.entries)
 	s, teardown := newTestService(t, 1)
 	defer teardown()
 
@@ -38,7 +38,7 @@ func TestReceiptFull(t *testing.T) {
 }
 
 func TestReceiptAfterClose(t *testing.T) {
-	migrator.MaxReceipts = len(serviceTests.entries)
+	migrator.MaxMigratedFundsEntryCount = len(serviceTests.entries)
 	s, teardown := newTestService(t, 1)
 
 	receipt := s.Receipt()
@@ -49,7 +49,7 @@ func TestReceiptAfterClose(t *testing.T) {
 }
 
 func TestReceiptBatch(t *testing.T) {
-	migrator.MaxReceipts = 2
+	migrator.MaxMigratedFundsEntryCount = 2
 	s, teardown := newTestService(t, 1)
 	defer teardown()
 
@@ -70,7 +70,7 @@ func TestReceiptBatch(t *testing.T) {
 }
 
 func TestRestoreState(t *testing.T) {
-	migrator.MaxReceipts = 2
+	migrator.MaxMigratedFundsEntryCount = 2
 	s1, teardown1 := newTestService(t, 1)
 	defer teardown1()
 
