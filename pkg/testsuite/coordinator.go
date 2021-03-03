@@ -55,7 +55,7 @@ func (te *TestEnvironment) configureCoordinator() {
 	err := te.coo.InitMerkleTree(fmt.Sprintf("%s/pkg/testsuite/assets/coordinator.tree", searchProjectRootFolder()), cooAddress)
 	require.NoError(te.testState, err)
 
-	te.coo.InitState(true, 0)
+	te.coo.InitState(true, 0, false)
 
 	// save snapshot info
 	tangle.SetSnapshotMilestone(hornet.HashFromAddressTrytes(cooAddress), hornet.NullHashBytes, 0, 0, 0, time.Now().Unix(), false)

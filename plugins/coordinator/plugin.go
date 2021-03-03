@@ -41,8 +41,9 @@ var (
 	PLUGIN = node.NewPlugin("Coordinator", node.Disabled, configure, run)
 	log    *logger.Logger
 
-	bootstrap  = flag.Bool("cooBootstrap", false, "bootstrap the network")
-	startIndex = flag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
+	bootstrap            = flag.Bool("cooBootstrap", false, "bootstrap the network")
+	forceAttachOnGenesis = flag.Bool("cooForceAttachOnGenesis", false, "force the next milestone to be attached to genesis")
+	startIndex           = flag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
 	maxTrackedTails int
 	belowMaxDepth   milestone.Index
@@ -70,7 +71,7 @@ func configure(plugin *node.Plugin) {
 	tangleplugin.SetUpdateSyncedAtStartup(true)
 
 	var err error
-	coo, err = initCoordinator(*bootstrap, *startIndex, pow.Handler())
+	coo, err = initCoordinator(*bootstrap, *startIndex, *forceAttachOnGenesis, pow.Handler())
 	if err != nil {
 		log.Panic(err)
 	}
@@ -78,7 +79,7 @@ func configure(plugin *node.Plugin) {
 	configureEvents()
 }
 
-func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
+func initCoordinator(bootstrap bool, startIndex uint32, forceAttachOnGenesis bool, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
 
 	if tangle.IsDatabaseTainted() {
 		return nil, ErrDatabaseTainted
@@ -131,7 +132,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, err
 	}
 
-	if err := coo.InitState(bootstrap, milestone.Index(startIndex)); err != nil {
+	if err := coo.InitState(bootstrap, milestone.Index(startIndex), forceAttachOnGenesis); err != nil {
 		return nil, err
 	}
 
