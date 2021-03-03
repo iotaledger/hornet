@@ -22,7 +22,8 @@
       "/api/v1/addresses/:address",
       "/api/v1/addresses/:address/outputs",
       "/api/v1/addresses/ed25519/:address",
-      "/api/v1/addresses/ed25519/:address/outputs"
+      "/api/v1/addresses/ed25519/:address/outputs",
+      "/api/v1/treasury"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",
@@ -38,6 +39,7 @@
   },
   "dashboard": {
     "bindAddress": "localhost:8081",
+    "dev": false,
     "auth": {
       "sessionTimeout": "72h",
       "username": "admin",
@@ -104,6 +106,23 @@
       "enabled": false,
       "groups": {},
       "timeout": "2s"
+    }
+  },
+  "receipts": {
+    "backup": {
+      "enabled": false,
+      "folder": "receipts"
+    },
+    "validator": {
+      "validate": false,
+      "api": {
+        "address": "http://localhost:14265",
+        "timeout": "5s"
+      },
+      "coordinator": {
+        "address": "999999999999999999999999999999999999999999999999999999999999999999999999999999999",
+        "merkleTreeDepth": 18
+      }
     }
   },
   "tipsel": {
