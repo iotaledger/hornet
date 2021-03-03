@@ -167,7 +167,7 @@ func (s *MigratorService) InitState(msIndex *uint32, utxoManager *utxo.Manager) 
 
 // OnServiceErrorFunc is a function which is called when the service encounters an
 // error which prevents it from functioning properly.
-// Returning true from the error handler tells the service to terminate.
+// Returning false from the error handler tells the service to terminate.
 type OnServiceErrorFunc func(err error) (terminate bool)
 
 // Start stats the MigratorService s, it stops when shutdownSignal is closed.
@@ -176,7 +176,7 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 	for {
 		msIndex, migratedFunds, err := s.nextMigrations(startIndex)
 		if err != nil {
-			if onError != nil && onError(err) {
+			if onError != nil && !onError(err) {
 				close(s.migrations)
 				return
 			}
