@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -24,7 +25,7 @@ func init() {
 }
 
 func TestReceiptFull(t *testing.T) {
-	migrator.MaxReceipts = len(serviceTests.entries)
+	migrator.MaxMigratedFundsEntryCount = len(serviceTests.entries)
 	s, teardown := newTestService(t, 1)
 	defer teardown()
 
@@ -33,12 +34,14 @@ func TestReceiptFull(t *testing.T) {
 	require.True(t, receipt1.Final)
 	require.ElementsMatch(t, serviceTests.entries, receipt1.Funds)
 
+	time.Sleep(100 * time.Millisecond)
+
 	receipt2 := s.Receipt()
 	require.Nil(t, receipt2)
 }
 
 func TestReceiptAfterClose(t *testing.T) {
-	migrator.MaxReceipts = len(serviceTests.entries)
+	migrator.MaxMigratedFundsEntryCount = len(serviceTests.entries)
 	s, teardown := newTestService(t, 1)
 
 	receipt := s.Receipt()
@@ -49,7 +52,7 @@ func TestReceiptAfterClose(t *testing.T) {
 }
 
 func TestReceiptBatch(t *testing.T) {
-	migrator.MaxReceipts = 2
+	migrator.MaxMigratedFundsEntryCount = 2
 	s, teardown := newTestService(t, 1)
 	defer teardown()
 
@@ -58,6 +61,8 @@ func TestReceiptBatch(t *testing.T) {
 	require.False(t, receipt1.Final)
 	require.Len(t, receipt1.Funds, 2)
 	require.Subset(t, serviceTests.entries, receipt1.Funds)
+
+	time.Sleep(100 * time.Millisecond)
 
 	receipt2 := s.Receipt()
 	require.EqualValues(t, serviceTests.migratedAt, receipt2.MigratedAt)
@@ -70,7 +75,7 @@ func TestReceiptBatch(t *testing.T) {
 }
 
 func TestRestoreState(t *testing.T) {
-	migrator.MaxReceipts = 2
+	migrator.MaxMigratedFundsEntryCount = 2
 	s1, teardown1 := newTestService(t, 1)
 	defer teardown1()
 

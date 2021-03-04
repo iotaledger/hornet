@@ -92,7 +92,7 @@ func (f *Framework) CreateStaticNetwork(name string, intNetCfg *IntegrationNetwo
 			return nil, err
 		}
 		// give the mock server some grace time to boot up
-		time.Sleep(3 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 
 	for i := 0; i < len(layout); i++ {

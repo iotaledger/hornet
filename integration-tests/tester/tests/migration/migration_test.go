@@ -9,9 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	iotago "github.com/iotaledger/iota.go/v2"
-
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // TestMigration boots up a statically peered network which runs with a white-flag mock server
@@ -39,8 +38,8 @@ func TestMigration(t *testing.T) {
 
 	n, err := f.CreateStaticNetwork("test_migration", &framework.IntegrationNetworkConfig{
 		SpawnWhiteFlagMockServer:  true,
-		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig(),
-	}, framework.DefaultStaticPeeringLayout, func(index int, cfg *framework.NodeConfig) {
+		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock_config.json"),
+	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.NodeConfig) {
 		switch {
 		case index == 0:
 			cfg.WithMigration()
@@ -70,10 +69,11 @@ func TestMigration(t *testing.T) {
 	require.Eventually(t, func() bool {
 		treasury, err := n.Coordinator().DebugNodeAPIClient.Treasury()
 		if err != nil {
+			log.Printf("failed to get current treasury: %s", err)
 			return false
 		}
 		return treasury.Amount == initialTreasuryTokens-totalMigration
-	}, 2*time.Minute, 100*time.Millisecond)
+	}, 2*time.Minute, time.Second)
 
 	// checking that funds were migrated in appropriate receipts
 	log.Println("checking receipts...")
@@ -105,4 +105,35 @@ func TestMigration(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, tuple.amount, balance.Balance)
 	}
+}
+
+// TestAPIError boots up a statically peered network without a white-flag mock server in order
+// to validate that API errors are ignored.
+func TestAPIError(t *testing.T) {
+	// start a network without a mock
+	n, err := f.CreateStaticNetwork("test_migration_api_error", nil, framework.DefaultStaticPeeringLayout(),
+		func(index int, cfg *framework.NodeConfig) {
+			switch {
+			case index == 0:
+				cfg.WithMigration()
+				cfg.Migrator.StartIndex = 1
+			default:
+				cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
+			}
+
+			cfg.Receipts.IgnoreSoftErrors = true
+			cfg.Receipts.Validate = true
+			cfg.Receipts.APIAddress = "http://localhost:14265"
+			cfg.Receipts.APITimeout = 5 * time.Second
+			cfg.Receipts.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
+			cfg.Receipts.CoordinatorMerkleTreeDepth = 8
+			cfg.Snapshot.FullSnapshotFilePath = "/assets/migration_full_snapshot.bin"
+			cfg.Snapshot.DeltaSnapshotFilePath = "/assets/migration_delta_snapshot.bin" // doesn't exist so the node will only load the full one
+		})
+	require.NoError(t, err)
+	defer framework.ShutdownNetwork(t, n)
+
+	syncCtx, syncCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer syncCtxCancel()
+	assert.NoError(t, n.AwaitAllSync(syncCtx))
 }

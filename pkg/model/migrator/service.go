@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	// MaxReceipts defines the maximum size of a receipt returned by MigratorService.Receipt.
-	MaxReceipts = 100
+	// MaxMigratedFundsEntryCount is the maximum amount of MigratedFundsEntry items returned by MigratorService.Receipt.
+	MaxMigratedFundsEntryCount = iotago.MaxMigratedFundsEntryCount
 )
 
 var (
@@ -88,16 +88,22 @@ func NewService(queryer Queryer, stateFilePath string) *MigratorService {
 }
 
 // Receipt returns the next receipt of migrated funds.
-// Each receipt can only consists of migrations confirmed by one milestone, it will never be larger than MaxReceipts.
+// Each receipt can only consists of migrations confirmed by one milestone, it will never be larger than MaxMigratedFundsEntryCount.
 // Receipt returns nil, if there are currently no new migrations available. Although the actual API calls and
 // validations happen in the background, Receipt might block until the next receipt is ready.
 // When s is stopped, Receipt will always return nil.
 func (s *MigratorService) Receipt() *iotago.Receipt {
+	// make the channel receive and the state update atomic, so that the state always matches the result
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	// make the channel receive and the state update atomic, so that the state always matches the result
-	result, ok := <-s.migrations
-	if !ok {
+
+	// non-blocking receive; return nil if the channel is closed or value available
+	var result *migrationResult
+	select {
+	case result = <-s.migrations:
+	default:
+	}
+	if result == nil {
 		return nil
 	}
 	s.updateState(result)
@@ -161,7 +167,7 @@ func (s *MigratorService) InitState(msIndex *uint32, utxoManager *utxo.Manager) 
 
 // OnServiceErrorFunc is a function which is called when the service encounters an
 // error which prevents it from functioning properly.
-// Returning true from the error handler tells the service to terminate.
+// Returning false from the error handler tells the service to terminate.
 type OnServiceErrorFunc func(err error) (terminate bool)
 
 // Start stats the MigratorService s, it stops when shutdownSignal is closed.
@@ -170,7 +176,7 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 	for {
 		msIndex, migratedFunds, err := s.nextMigrations(startIndex)
 		if err != nil {
-			if onError != nil && onError(err) {
+			if onError != nil && !onError(err) {
 				close(s.migrations)
 				return
 			}
@@ -185,8 +191,8 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 		for {
 			batch := migratedFunds
 			lastBatch := true
-			if len(batch) > MaxReceipts {
-				batch = batch[:MaxReceipts]
+			if len(batch) > MaxMigratedFundsEntryCount {
+				batch = batch[:MaxMigratedFundsEntryCount]
 				lastBatch = false
 			}
 			select {

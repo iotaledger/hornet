@@ -46,13 +46,15 @@ func (spl StaticPeeringLayout) Validate() error {
 	return nil
 }
 
-// DefaultStaticPeeringLayout defines a static peering layout with 4 nodes
+// DefaultStaticPeeringLayout returns a new static peering layout with 4 nodes
 // which are all statically peered to each other.
-var DefaultStaticPeeringLayout StaticPeeringLayout = map[int]map[int]connected{
-	0: {1: false, 2: false, 3: false},
-	1: {0: false, 2: false, 3: false},
-	2: {0: false, 1: false, 3: false},
-	3: {0: false, 1: false, 2: false},
+func DefaultStaticPeeringLayout() map[int]map[int]connected {
+	return map[int]map[int]connected{
+		0: {1: false, 2: false, 3: false},
+		1: {0: false, 2: false, 3: false},
+		2: {0: false, 1: false, 3: false},
+		3: {0: false, 1: false, 2: false},
+	}
 }
 
 // StaticNetwork defines a network made out of statically peered nodes.

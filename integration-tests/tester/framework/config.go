@@ -105,10 +105,12 @@ type WhiteFlagMockServerConfig struct {
 }
 
 // DefaultWhiteFlagMockServerConfig returns the default WhiteFlagMockServerConfig.
-func DefaultWhiteFlagMockServerConfig() *WhiteFlagMockServerConfig {
+func DefaultWhiteFlagMockServerConfig(configFileName string) *WhiteFlagMockServerConfig {
 	return &WhiteFlagMockServerConfig{
 		Name: "wfmock",
-		Envs: []string{"WHITE_FLAG_MOCK_CONFIG=/assets/wfmock_config.json"},
+		Envs: []string{
+			fmt.Sprintf("WHITE_FLAG_MOCK_CONFIG=%s/%s", assetsDir, configFileName),
+		},
 		Binds: []string{
 			fmt.Sprintf("hornet-testing-assets:%s:rw", assetsDir),
 		},
@@ -269,7 +271,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/addresses/ed25519/:address/outputs",
 			"/api/v1/treasury",
 			"/api/v1/receipts",
-			"/api/v1/receipts/:migratedAt",
+			"/api/v1/receipts/:milestoneIndex",
 			"/api/v1/peers/:peerID",
 			"/api/v1/peers",
 			"/api/plugins/*",
