@@ -365,16 +365,24 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
+	var timeStart, timeSetConfirmedMilestoneIndex, timeConfirmedMilestoneChanged, timeConfirmedMilestoneIndexChanged, timeMilestoneConfirmedSyncEvent, timeMilestoneConfirmed time.Time
+
 	conf, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, cachedMsgMetas, cachedMsToSolidify.GetMilestone().MessageID,
 		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 		},
 		func(confirmation *whiteflag.Confirmation) {
+			timeStart = time.Now()
 			t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify)
+			timeSetConfirmedMilestoneIndex = time.Now()
 			t.Events.ConfirmedMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
+			timeConfirmedMilestoneChanged = time.Now()
 			t.Events.ConfirmedMilestoneIndexChanged.Trigger(milestoneIndexToSolidify)
+			timeConfirmedMilestoneIndexChanged = time.Now()
 			t.milestoneConfirmedSyncEvent.Trigger(milestoneIndexToSolidify)
+			timeMilestoneConfirmedSyncEvent = time.Now()
 			t.Events.MilestoneConfirmed.Trigger(confirmation)
+			timeMilestoneConfirmed = time.Now()
 		},
 		func(output *utxo.Output) {
 			t.Events.NewUTXOOutput.Trigger(output)
@@ -421,6 +429,13 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		conf.DurationWhiteflag.Truncate(time.Millisecond),
 		conf.DurationTotal.Truncate(time.Millisecond),
 	)
+
+	durationSetConfirmedMilestoneIndex := timeSetConfirmedMilestoneIndex.Sub(timeStart)
+	durationConfirmedMilestoneChanged := timeConfirmedMilestoneChanged.Sub(timeSetConfirmedMilestoneIndex)
+	durationConfirmedMilestoneIndexChanged := timeConfirmedMilestoneIndexChanged.Sub(timeConfirmedMilestoneChanged)
+	durationMilestoneConfirmedSyncEvent := timeMilestoneConfirmedSyncEvent.Sub(timeConfirmedMilestoneIndexChanged)
+	durationMilestoneConfirmed := timeMilestoneConfirmed.Sub(timeMilestoneConfirmedSyncEvent)
+
 	t.log.Debugf(`Additional confirmation stats:
 DurationWhiteflag: %v
 DurationReceipts: %v
@@ -430,6 +445,11 @@ DurationApplyExcludedWithoutTransactions: %v
 DurationApplyMilestone: %v
 DurationApplyExcludedWithConflictingTransactions: %v
 DurationOnMilestoneConfirmed: %v
+DurationSetConfirmedMilestoneIndex: %v
+DurationConfirmedMilestoneChanged: %v
+DurationConfirmedMilestoneIndexChanged: %v
+DurationMilestoneConfirmedSyncEvent: %v
+DurationMilestoneConfirmed: %v
 DurationForEachNewOutput: %v
 DurationForEachNewSpent: %v
 DurationTotal: %v`,
@@ -441,6 +461,11 @@ DurationTotal: %v`,
 		conf.DurationApplyMilestone.Truncate(time.Millisecond),
 		conf.DurationApplyExcludedWithConflictingTransactions.Truncate(time.Millisecond),
 		conf.DurationOnMilestoneConfirmed.Truncate(time.Millisecond),
+		durationSetConfirmedMilestoneIndex.Truncate(time.Millisecond),
+		durationConfirmedMilestoneChanged.Truncate(time.Millisecond),
+		durationConfirmedMilestoneIndexChanged.Truncate(time.Millisecond),
+		durationMilestoneConfirmedSyncEvent.Truncate(time.Millisecond),
+		durationMilestoneConfirmed.Truncate(time.Millisecond),
 		conf.DurationForEachNewOutput.Truncate(time.Millisecond),
 		conf.DurationForEachNewSpent.Truncate(time.Millisecond),
 		conf.DurationTotal.Truncate(time.Millisecond))
