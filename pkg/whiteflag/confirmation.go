@@ -14,14 +14,23 @@ import (
 )
 
 type ConfirmedMilestoneStats struct {
-	Index                                       milestone.Index
-	ConfirmationTime                            int64
-	MessagesReferenced                          int
-	MessagesExcludedWithConflictingTransactions int
-	MessagesIncludedWithTransactions            int
-	MessagesExcludedWithoutTransactions         int
-	Collecting                                  time.Duration
-	Total                                       time.Duration
+	Index                                            milestone.Index
+	ConfirmationTime                                 int64
+	MessagesReferenced                               int
+	MessagesExcludedWithConflictingTransactions      int
+	MessagesIncludedWithTransactions                 int
+	MessagesExcludedWithoutTransactions              int
+	DurationWhiteflag                                time.Duration
+	DurationReceipts                                 time.Duration
+	DurationConfirmation                             time.Duration
+	DurationApplyIncludedWithTransactions            time.Duration
+	DurationApplyExcludedWithoutTransactions         time.Duration
+	DurationApplyMilestone                           time.Duration
+	DurationApplyExcludedWithConflictingTransactions time.Duration
+	DurationOnMilestoneConfirmed                     time.Duration
+	DurationForEachNewOutput                         time.Duration
+	DurationForEachNewSpent                          time.Duration
+	DurationTotal                                    time.Duration
 }
 
 // ConfirmMilestone traverses a milestone and collects all unreferenced msg,
@@ -78,7 +87,7 @@ func ConfirmMilestone(
 
 	milestoneIndex := milestone.Index(ms.Index)
 
-	ts := time.Now()
+	timeStart := time.Now()
 
 	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, cachedMessageMetas, cachedMessages, message.GetParents())
 	if err != nil {
@@ -99,8 +108,7 @@ func ConfirmMilestone(
 		milestoneMerkleTreeHashSlice := merkleTreeHash[:]
 		return nil, fmt.Errorf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(mutationsMerkleTreeHashSlice), hex.EncodeToString(milestoneMerkleTreeHashSlice))
 	}
-
-	tc := time.Now()
+	timeWhiteflag := time.Now()
 
 	newOutputs := make(utxo.Outputs, 0, len(mutations.NewOutputs))
 	for _, output := range mutations.NewOutputs {
@@ -149,6 +157,7 @@ func ConfirmMilestone(
 
 		newOutputs = append(newOutputs, migratedOutputs...)
 	}
+	timeReceipts := time.Now()
 
 	newSpents := make(utxo.Spents, 0, len(mutations.NewSpents))
 	for _, spent := range mutations.NewSpents {
@@ -158,6 +167,7 @@ func ConfirmMilestone(
 	if err = s.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt); err != nil {
 		return nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
 	}
+	timeConfirmation := time.Now()
 
 	loadMessageMetadata := func(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
 		messageIDMapKey := messageID.ToMapKey()
@@ -185,7 +195,6 @@ func ConfirmMilestone(
 	conf := &ConfirmedMilestoneStats{
 		Index: milestoneIndex,
 	}
-
 	confirmationTime := ms.Timestamp
 
 	// confirm all included messages
@@ -204,6 +213,7 @@ func ConfirmMilestone(
 			return nil, err
 		}
 	}
+	timeApplyIncludedWithTransactions := time.Now()
 
 	// confirm all excluded messages not containing ledger transactions
 	for _, messageID := range mutations.MessagesExcludedWithoutTransactions {
@@ -222,6 +232,7 @@ func ConfirmMilestone(
 			return nil, err
 		}
 	}
+	timeApplyExcludedWithoutTransactions := time.Now()
 
 	// confirm the milestone itself
 	if err := forMessageMetadataWithMessageID(milestoneMessageID, func(meta *storage.CachedMetadata) {
@@ -239,6 +250,7 @@ func ConfirmMilestone(
 	}); err != nil {
 		return nil, err
 	}
+	timeApplyMilestone := time.Now()
 
 	// confirm all conflicting messages
 	for _, conflictedMessage := range mutations.MessagesExcludedWithConflictingTransactions {
@@ -257,19 +269,32 @@ func ConfirmMilestone(
 			return nil, err
 		}
 	}
+	timeApplyExcludedWithConflictingTransactions := time.Now()
 
 	onMilestoneConfirmed(confirmation)
+	timeOnMilestoneConfirmed := time.Now()
 
 	for _, output := range newOutputs {
 		forEachNewOutput(output)
 	}
+	timeForEachNewOutput := time.Now()
 
 	for _, spent := range newSpents {
 		forEachNewSpent(spent)
 	}
+	timeForEachNewSpent := time.Now()
 
-	conf.Collecting = tc.Sub(ts)
-	conf.Total = time.Since(ts)
+	conf.DurationWhiteflag = timeWhiteflag.Sub(timeStart)
+	conf.DurationReceipts = timeReceipts.Sub(timeWhiteflag)
+	conf.DurationConfirmation = timeConfirmation.Sub(timeReceipts)
+	conf.DurationApplyIncludedWithTransactions = timeApplyIncludedWithTransactions.Sub(timeConfirmation)
+	conf.DurationApplyExcludedWithoutTransactions = timeApplyExcludedWithoutTransactions.Sub(timeApplyIncludedWithTransactions)
+	conf.DurationApplyMilestone = timeApplyMilestone.Sub(timeApplyExcludedWithoutTransactions)
+	conf.DurationApplyExcludedWithConflictingTransactions = timeApplyExcludedWithConflictingTransactions.Sub(timeApplyMilestone)
+	conf.DurationOnMilestoneConfirmed = timeOnMilestoneConfirmed.Sub(timeApplyExcludedWithConflictingTransactions)
+	conf.DurationForEachNewOutput = timeForEachNewOutput.Sub(timeOnMilestoneConfirmed)
+	conf.DurationForEachNewSpent = timeForEachNewSpent.Sub(timeForEachNewOutput)
+	conf.DurationTotal = time.Since(timeStart)
 
 	return conf, nil
 }

@@ -418,9 +418,32 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		conf.MessagesIncludedWithTransactions,
 		conf.MessagesExcludedWithoutTransactions,
 		conf.MessagesExcludedWithConflictingTransactions,
-		conf.Collecting.Truncate(time.Millisecond),
-		conf.Total.Truncate(time.Millisecond),
+		conf.DurationWhiteflag.Truncate(time.Millisecond),
+		conf.DurationTotal.Truncate(time.Millisecond),
 	)
+	t.log.Debugf(`Additional confirmation stats:
+DurationWhiteflag: %v
+DurationReceipts: %v
+DurationConfirmation: %v
+DurationApplyIncludedWithTransactions: %v
+DurationApplyExcludedWithoutTransactions: %v
+DurationApplyMilestone: %v
+DurationApplyExcludedWithConflictingTransactions: %v
+DurationOnMilestoneConfirmed: %v
+DurationForEachNewOutput: %v
+DurationForEachNewSpent: %v
+DurationTotal: %v`,
+		conf.DurationWhiteflag.Truncate(time.Millisecond),
+		conf.DurationReceipts.Truncate(time.Millisecond),
+		conf.DurationConfirmation.Truncate(time.Millisecond),
+		conf.DurationApplyIncludedWithTransactions.Truncate(time.Millisecond),
+		conf.DurationApplyExcludedWithoutTransactions.Truncate(time.Millisecond),
+		conf.DurationApplyMilestone.Truncate(time.Millisecond),
+		conf.DurationApplyExcludedWithConflictingTransactions.Truncate(time.Millisecond),
+		conf.DurationOnMilestoneConfirmed.Truncate(time.Millisecond),
+		conf.DurationForEachNewOutput.Truncate(time.Millisecond),
+		conf.DurationForEachNewSpent.Truncate(time.Millisecond),
+		conf.DurationTotal.Truncate(time.Millisecond))
 
 	var cmpsMessage string
 	if metric, err := t.getConfirmedMilestoneMetric(cachedMsToSolidify.Retain(), conf.Index); err == nil {
