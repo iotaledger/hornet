@@ -8,10 +8,6 @@ import (
 	"github.com/fhmq/hmq/broker"
 )
 
-const (
-	workerNumber = 4096
-)
-
 // Broker is a simple mqtt publisher abstraction.
 type Broker struct {
 	broker       *broker.Broker
@@ -20,7 +16,7 @@ type Broker struct {
 }
 
 // NewBroker creates a new broker.
-func NewBroker(bindAddress string, wsPort int, wsPath string, onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler) (*Broker, error) {
+func NewBroker(bindAddress string, wsPort int, wsPath string, workerCount int, onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler) (*Broker, error) {
 
 	host, port, err := net.SplitHostPort(bindAddress)
 	if err != nil {
@@ -28,7 +24,7 @@ func NewBroker(bindAddress string, wsPort int, wsPath string, onSubscribe OnSubs
 	}
 
 	c, err := broker.ConfigureConfig([]string{
-		fmt.Sprintf("--worker=%d", workerNumber),
+		fmt.Sprintf("--worker=%d", workerCount),
 		fmt.Sprintf("--host=%s", host),
 		fmt.Sprintf("--port=%s", port),
 		fmt.Sprintf("--wsport=%d", wsPort),
