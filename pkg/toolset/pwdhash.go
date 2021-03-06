@@ -36,13 +36,13 @@ func hashPasswordAndSalt(args []string) error {
 	}()
 
 	fmt.Print("Enter a password: ")
-	password, err := terminal.ReadPassword(0)
+	password, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return err
 	}
 
 	fmt.Print("\nRe-enter your password: ")
-	passwordReenter, err := terminal.ReadPassword(0)
+	passwordReenter, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return err
 	}
