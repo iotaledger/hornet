@@ -27,7 +27,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -68,7 +67,6 @@ var (
 	startIndex = flag.Uint32(CfgCoordinatorStartIndex, 0, "index of the first milestone at bootstrap")
 
 	maxTrackedMessages int
-	belowMaxDepth      milestone.Index
 
 	nextCheckpointSignal chan struct{}
 	nextMilestoneSignal  chan struct{}
@@ -101,6 +99,7 @@ type dependencies struct {
 	MessageProcessor *gossip.MessageProcessor
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
+	BelowMaxDepth    int                          `name:"belowMaxDepth"`
 }
 
 func configure() {
@@ -165,8 +164,6 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 	nextMilestoneSignal = make(chan struct{}, 1)
 
 	maxTrackedMessages = deps.NodeConfig.Int(CfgCoordinatorCheckpointsMaxTrackedMessages)
-
-	belowMaxDepth = milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth))
 
 	var signingProvider coordinator.MilestoneSignerProvider
 	switch deps.NodeConfig.String(CfgCoordinatorSigningProvider) {
@@ -426,7 +423,7 @@ func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) bool {
 	_, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
 
 	// if the OCRI to CMI delta is over belowMaxDepth, then the tip is invalid.
-	return (cmi - ocri) > belowMaxDepth
+	return (cmi - ocri) > milestone.Index(deps.BelowMaxDepth)
 }
 
 // GetEvents returns the events of the coordinator

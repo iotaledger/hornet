@@ -65,11 +65,12 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage    *storage.Storage
-	Tangle     *tangle.Tangle
-	NodeConfig *configuration.Configuration `name:"nodeConfig"`
-	Bech32HRP  iotago.NetworkPrefix         `name:"bech32HRP"`
-	Echo       *echo.Echo
+	Storage       *storage.Storage
+	Tangle        *tangle.Tangle
+	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+	BelowMaxDepth int                          `name:"belowMaxDepth"`
+	Bech32HRP     iotago.NetworkPrefix         `name:"bech32HRP"`
+	Echo          *echo.Echo
 }
 
 func configure() {
