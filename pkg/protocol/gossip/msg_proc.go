@@ -7,8 +7,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
@@ -25,8 +27,10 @@ const (
 )
 
 var (
-	workerCount         = 64
-	ErrInvalidTimestamp = errors.New("invalid timestamp")
+	workerCount             = 64
+	ErrInvalidTimestamp     = errors.New("invalid timestamp")
+	ErrMessageNotSolid      = errors.New("msg is not solid")
+	ErrMessageBelowMaxDepth = errors.New("msg is below max depth")
 )
 
 // New creates a new processor which parses messages.
@@ -51,7 +55,7 @@ func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, pe
 		nil,
 		// defines the factory function for WorkUnits.
 		func(key []byte, data []byte) (objectstorage.StorableObject, error) {
-			return newWorkUnit(key, serverMetrics), nil
+			return newWorkUnit(key, proc), nil
 		},
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(false),
@@ -124,6 +128,7 @@ type MessageProcessor struct {
 type Options struct {
 	MinPoWScore       float64
 	NetworkID         uint64
+	BelowMaxDepth     milestone.Index
 	WorkUnitCacheOpts *profile.CacheOpts
 }
 
@@ -142,6 +147,8 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 
 // Emit triggers MessageProcessed and BroadcastMessage events for the given message.
 // All messages passed to this function must be checked with "DeSeriModePerformValidation" before.
+// We also check if the parents are solid and not BMD before we broadcast the message, otherwise
+// this message would be seen as invalid gossip by other peers.
 func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
 	if msg.GetNetworkID() != proc.opts.NetworkID {
@@ -155,6 +162,49 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
 	if score < proc.opts.MinPoWScore {
 		return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
+	}
+
+	cmi := proc.storage.GetConfirmedMilestoneIndex()
+
+	checkParentFunc := func(parentMsgID iotago.MessageID) error {
+		messageID := hornet.MessageIDFromArray(parentMsgID)
+		cachedMsgMeta := proc.storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
+		if cachedMsgMeta == nil {
+			// parent not found
+			entryPointIndex, exists := proc.storage.SolidEntryPointsIndex(messageID)
+			if !exists {
+				return ErrMessageNotSolid
+			}
+
+			if (cmi - entryPointIndex) > proc.opts.BelowMaxDepth {
+				// the parent is below max depth
+				return ErrMessageBelowMaxDepth
+			}
+
+			// message is a SEP and not below max depth
+			return nil
+		}
+		defer cachedMsgMeta.Release(true)
+
+		if !cachedMsgMeta.GetMetadata().IsSolid() {
+			// if the parent is not solid, the message itself can't be solid
+			return ErrMessageNotSolid
+		}
+
+		_, ocri := dag.GetConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), cmi) // meta +
+		if (cmi - ocri) > proc.opts.BelowMaxDepth {
+			// the parent is below max depth
+			return ErrMessageBelowMaxDepth
+		}
+
+		return nil
+	}
+
+	for _, parent := range msg.GetMessage().Parents {
+		err := checkParentFunc(parent)
+		if err != nil {
+			return err
+		}
 	}
 
 	proc.Events.MessageProcessed.Trigger(msg, (*Request)(nil), (*Protocol)(nil))
@@ -172,7 +222,7 @@ func (proc *MessageProcessor) WorkUnitsSize() int {
 func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(key []byte) objectstorage.StorableObject { // cachedWorkUnit +1
-			return newWorkUnit(receivedTxBytes, proc.serverMetrics)
+			return newWorkUnit(receivedTxBytes, proc)
 		}),
 	}
 }
@@ -277,6 +327,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 		// emit an event to say that a message was fully processed
 		if request := proc.requestQueue.Received(wu.msg.GetMessageID()); request != nil {
+			wu.requested = true
 			proc.Events.MessageProcessed.Trigger(wu.msg, request, p)
 			return
 		}
@@ -297,14 +348,14 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, iotago.DeSeriModePerformValidation)
 	if err != nil {
 		wu.UpdateState(Invalid)
-		wu.punish(proc.ps, errors.WithMessagef(err, "peer sent an invalid message"))
+		wu.punish(errors.WithMessagef(err, "peer sent an invalid message"))
 		return
 	}
 
 	// check the network ID of the message
 	if msg.GetNetworkID() != proc.opts.NetworkID {
 		wu.UpdateState(Invalid)
-		wu.punish(proc.ps, errors.New("peer sent a message with an invalid network ID"))
+		wu.punish(errors.New("peer sent a message with an invalid network ID"))
 		return
 	}
 
@@ -314,27 +365,77 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// validate PoW score
 	if request == nil && pow.Score(wu.receivedMsgBytes) < proc.opts.MinPoWScore {
 		wu.UpdateState(Invalid)
-		wu.punish(proc.ps, errors.New("peer sent a message with insufficient PoW score"))
+		wu.punish(errors.New("peer sent a message with insufficient PoW score"))
 		return
 	}
 
-	wu.dataLock.Lock()
+	// safe to set the msg here, because it is protected by the state "Hashing"
 	wu.msg = msg
-	wu.dataLock.Unlock()
+	wu.requested = request != nil
 
 	wu.UpdateState(Hashed)
-
-	// check the existence of the message before broadcasting it
-	containsTx := proc.storage.ContainsMessage(msg.GetMessageID())
 
 	proc.Events.MessageProcessed.Trigger(msg, request, p)
 
 	// increase the known message count for all other peers
 	wu.increaseKnownTxCount(p)
+}
 
-	// ToDo: broadcast on solidification
-	// broadcast the message if it wasn't requested and not known yet
-	if request == nil && !containsTx {
-		proc.Events.BroadcastMessage.Trigger(wu.broadcast())
+func (proc *MessageProcessor) BroadcastValidMilestone(cachedMessage *storage.CachedMessage) {
+	defer cachedMessage.Release(true)
+
+	cachedWorkUnit := proc.workUnitFor(cachedMessage.GetMessage().GetData()) // workUnit +1
+	defer cachedWorkUnit.Release()                                           // workUnit -1
+	wu := cachedWorkUnit.WorkUnit()
+
+	if wu.requested {
+		// no need to broadcast if the message was requested
+		return
 	}
+
+	// if the workunit was already evicted, it may happen that
+	// we send the message back to peers which already sent us the same message
+	// we should never access the "msg", because it may not be set in this context.
+
+	// broadcast the message to all peers that didn't sent it to us yet
+	proc.Events.BroadcastMessage.Trigger(wu.broadcast())
+}
+
+func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
+	defer cachedMsgMeta.Release(true)
+
+	if !proc.storage.IsNodeSyncedWithThreshold() {
+		// no need to broadcast messages if the node is not sync
+		return
+	}
+
+	cmi := proc.storage.GetConfirmedMilestoneIndex()
+	_, ocri := dag.GetConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), cmi)
+
+	if (cmi - ocri) >= proc.opts.BelowMaxDepth {
+		// the solid message was below max depth, do not broadcast
+		return
+	}
+
+	cachedMsg := proc.storage.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID())
+	if cachedMsg == nil {
+		return
+	}
+	defer cachedMsg.Release(true)
+
+	cachedWorkUnit := proc.workUnitFor(cachedMsg.GetMessage().GetData()) // workUnit +1
+	defer cachedWorkUnit.Release()                                       // workUnit -1
+	wu := cachedWorkUnit.WorkUnit()
+
+	if wu.requested {
+		// no need to broadcast if the message was requested
+		return
+	}
+
+	// if the workunit was already evicted, it may happen that
+	// we send the message back to peers which already sent us the same message.
+	// we should never access the "msg", because it may not be set in this context.
+
+	// broadcast the message to all peers that didn't sent it to us yet
+	proc.Events.BroadcastMessage.Trigger(wu.broadcast())
 }

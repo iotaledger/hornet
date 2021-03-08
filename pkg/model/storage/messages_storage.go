@@ -326,7 +326,7 @@ func (s *Storage) AddMessageToStorage(message *Message, latestMilestoneIndex mil
 	}
 
 	if ms := s.VerifyMilestone(message); ms != nil {
-		s.StoreMilestone(message.GetMessageID(), ms)
+		s.StoreMilestone(cachedMessage.Retain(), ms)
 	}
 
 	return cachedMessage, false

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
@@ -85,6 +86,7 @@ func provide(c *dig.Container) {
 		Manager       *p2p.Manager
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 		NetworkID     uint64                       `name:"networkId"`
+		BelowMaxDepth int                          `name:"belowMaxDepth"`
 		Profile       *profile.Profile
 	}
 
@@ -92,6 +94,7 @@ func provide(c *dig.Container) {
 		return gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
 			MinPoWScore:       deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
 			NetworkID:         deps.NetworkID,
+			BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 		})
 	}); err != nil {
@@ -245,7 +248,8 @@ func run() {
 	}, shutdown.PriorityMessageProcessor)
 
 	_ = CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
-		timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
+		ticker := timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
+		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityHeartbeats)
 }
 

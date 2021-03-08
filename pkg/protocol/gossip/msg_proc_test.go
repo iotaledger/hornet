@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	MinPowScore = 100.0
+	MinPowScore   = 100.0
+	BelowMaxDepth = 15
 )
 
 func TestMsgProcessorEmit(t *testing.T) {
@@ -30,7 +31,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	shutdownSignal := make(chan struct{})
 	defer close(shutdownSignal)
 
-	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, MinPowScore, false)
+	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
 	defer te.CleanupTestEnvironment(true)
 
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
@@ -55,6 +56,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	processor := gossip.NewMessageProcessor(te.Storage(), gossip.NewRequestQueue(), manager, serverMetrics, &gossip.Options{
 		MinPoWScore:       MinPowScore,
 		NetworkID:         networkID,
+		BelowMaxDepth:     BelowMaxDepth,
 		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingMessagesFilter,
 	})
 

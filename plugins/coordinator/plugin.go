@@ -260,7 +260,7 @@ func run() {
 	// create a background worker that signals to issue new milestones
 	Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
 
-		timeutil.NewTicker(func() {
+		ticker := timeutil.NewTicker(func() {
 			// issue next milestone
 			select {
 			case nextMilestoneSignal <- struct{}{}:
@@ -268,7 +268,7 @@ func run() {
 				// do not block if already another signal is waiting
 			}
 		}, coo.GetInterval(), shutdownSignal)
-
+		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityCoordinator)
 
 	// create a background worker that issues milestones

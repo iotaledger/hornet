@@ -92,7 +92,7 @@ func searchProjectRootFolder() string {
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
-func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, targetScore float64, showConfirmationGraphs bool) *TestEnvironment {
+func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, belowMaxDepth int, targetScore float64, showConfirmationGraphs bool) *TestEnvironment {
 
 	te := &TestEnvironment{
 		TestState:              testState,
@@ -117,7 +117,7 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 	testState.Logf("Testdir: %s", tempDir)
 
 	te.store = mapdb.NewMapDB()
-	te.storage = storage.New(te.tempDir, te.store, TestProfileCaches)
+	te.storage = storage.New(te.tempDir, te.store, TestProfileCaches, belowMaxDepth)
 
 	// Initialize SEP
 	te.storage.SolidEntryPointsAdd(hornet.GetNullMessageID(), 0)

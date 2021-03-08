@@ -54,6 +54,10 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	for _, parent := range parents {
 		cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(parent)
 		if cachedMsgMeta == nil {
+			if deps.Storage.SolidEntryPointsContain(parent) {
+				// deregister the event, because the parent is already solid (this also fires the event)
+				deps.Tangle.DeregisterMessageSolidEvent(parent)
+			}
 			continue
 		}
 

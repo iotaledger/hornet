@@ -2,7 +2,7 @@ module github.com/gohornet/hornet
 
 go 1.16
 
-replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210301202551-36e94eb424fc
+replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210303205732-c552e55501c0
 
 require (
 	github.com/DataDog/zstd v1.4.8 // indirect
@@ -11,7 +11,7 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/blang/vfs v1.0.0
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
-	github.com/cockroachdb/pebble v0.0.0-20210226180910-7ea0bd9842fa
+	github.com/cockroachdb/pebble v0.0.0-20210303200444-070a80fcca6f
 	github.com/containerd/containerd v1.4.3 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dgraph-io/badger/v3 v3.2011.1
@@ -72,7 +72,6 @@ require (
 	github.com/wollac/iota-crypto-demo v0.0.0-20210301113242-d76f3e4d14cb
 	gitlab.com/powsrv.io/go/client v0.0.0-20210203192329-84583796cd46
 	go.etcd.io/bbolt v1.3.5
-	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.7.0
 	go.uber.org/dig v1.10.0
 	go.uber.org/multierr v1.6.0 // indirect
@@ -80,6 +79,5 @@ require (
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
 	golang.org/x/sys v0.0.0-20210301091718-77cc2087c03b // indirect
 	golang.org/x/tools v0.1.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
 )
