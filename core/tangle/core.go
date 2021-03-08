@@ -23,6 +23,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -77,6 +78,17 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func() *metrics.ServerMetrics {
 		return &metrics.ServerMetrics{}
 	}); err != nil {
+		panic(err)
+	}
+
+	type belowmaxdepthdeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps belowmaxdepthdeps) int {
+		return deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)
+	}, dig.Name("belowMaxDepth")); err != nil {
 		panic(err)
 	}
 

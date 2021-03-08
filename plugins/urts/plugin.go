@@ -55,6 +55,7 @@ func provide(c *dig.Container) {
 		Storage       *storage.Storage
 		ServerMetrics *metrics.ServerMetrics
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		BelowMaxDepth int                          `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps tipseldeps) *tipselect.TipSelector {
@@ -64,7 +65,7 @@ func provide(c *dig.Container) {
 
 			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI),
 			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI),
-			deps.NodeConfig.Int(CfgTipSelBelowMaxDepth),
+			deps.BelowMaxDepth,
 
 			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),
 			deps.NodeConfig.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge),

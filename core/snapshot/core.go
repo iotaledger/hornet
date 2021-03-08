@@ -24,15 +24,15 @@ import (
 )
 
 const (
-	// SolidEntryPointCheckThresholdPast is the past cone that is walked to calculate the solid entry points
-	SolidEntryPointCheckThresholdPast = 50
+	// SolidEntryPointCheckAdditionalThresholdPast is the additional past cone (to BMD) that is walked to calculate the solid entry points
+	SolidEntryPointCheckAdditionalThresholdPast = 5
 
-	// SolidEntryPointCheckThresholdFuture is the future cone that is needed to calculate solid entry points correctly
-	SolidEntryPointCheckThresholdFuture = 50
+	// SolidEntryPointCheckAdditionalThresholdFuture is the additional future cone (to BMD) that is needed to calculate solid entry points correctly
+	SolidEntryPointCheckAdditionalThresholdFuture = 5
 
-	// AdditionalPruningThreshold is needed, because the messages in the getMilestoneParents call in getSolidEntryPoints
+	// AdditionalPruningThreshold is the additional threshold (to BMD), which is needed, because the messages in the getMilestoneParents call in getSolidEntryPoints
 	// can reference older messages as well
-	AdditionalPruningThreshold = 50
+	AdditionalPruningThreshold = 5
 )
 
 const (
@@ -78,22 +78,27 @@ func provide(c *dig.Container) {
 
 	type snapshotdeps struct {
 		dig.In
-		Storage    *storage.Storage
-		Tangle     *tangle.Tangle
-		UTXO       *utxo.Manager
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		Storage       *storage.Storage
+		Tangle        *tangle.Tangle
+		UTXO          *utxo.Manager
+		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		BelowMaxDepth int                          `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps snapshotdeps) *snapshot.Snapshot {
 
+		solidEntryPointCheckThresholdPast := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
+		solidEntryPointCheckThresholdFuture := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
+		pruningThreshold := milestone.Index(deps.BelowMaxDepth + AdditionalPruningThreshold)
+
 		snapshotDepth := milestone.Index(deps.NodeConfig.Int(CfgSnapshotsDepth))
-		if snapshotDepth < SolidEntryPointCheckThresholdFuture {
-			log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgSnapshotsDepth, snapshotDepth, SolidEntryPointCheckThresholdFuture)
-			snapshotDepth = SolidEntryPointCheckThresholdFuture
+		if snapshotDepth < solidEntryPointCheckThresholdFuture {
+			log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgSnapshotsDepth, snapshotDepth, solidEntryPointCheckThresholdFuture)
+			snapshotDepth = solidEntryPointCheckThresholdFuture
 		}
 
 		pruningDelay := milestone.Index(deps.NodeConfig.Int(CfgPruningDelay))
-		pruningDelayMin := snapshotDepth + SolidEntryPointCheckThresholdPast + AdditionalPruningThreshold + 1
+		pruningDelayMin := snapshotDepth + solidEntryPointCheckThresholdPast + pruningThreshold + 1
 		if pruningDelay < pruningDelayMin {
 			log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgPruningDelay, pruningDelay, pruningDelayMin)
 			pruningDelay = pruningDelayMin
@@ -110,9 +115,9 @@ func provide(c *dig.Container) {
 			deps.UTXO,
 			deps.NodeConfig.String(CfgSnapshotsFullPath),
 			deps.NodeConfig.String(CfgSnapshotsDeltaPath),
-			SolidEntryPointCheckThresholdPast,
-			SolidEntryPointCheckThresholdFuture,
-			AdditionalPruningThreshold,
+			solidEntryPointCheckThresholdPast,
+			solidEntryPointCheckThresholdFuture,
+			pruningThreshold,
 			snapshotDepth,
 			milestone.Index(deps.NodeConfig.Int(CfgSnapshotsIntervalSynced)),
 			milestone.Index(deps.NodeConfig.Int(CfgSnapshotsIntervalUnsynced)),

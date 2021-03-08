@@ -174,6 +174,7 @@ type dependencies struct {
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager *p2ppkg.ConfigManager
 	NetworkID            uint64               `name:"networkId"`
+	BelowMaxDepth        int                  `name:"belowMaxDepth"`
 	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
 	TipSelector          *tipselect.TipSelector
 	Echo                 *echo.Echo

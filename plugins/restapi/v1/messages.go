@@ -88,7 +88,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		shouldPromote := false
 		shouldReattach := false
 
-		if (cmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)) {
+		if (cmi - ocri) > milestone.Index(deps.BelowMaxDepth) {
 			// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 			shouldPromote = false
 			shouldReattach = true
