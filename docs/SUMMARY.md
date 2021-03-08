@@ -9,6 +9,7 @@
     - [Chrysalis IOTA 1.5](./tutorials/1.5/index.md)
         - [Build HORNET](./tutorials/1.5/build.md)
         - [Run HORNET](./tutorials/1.5/run.md)
+        - [Run a private tangle](./tutorials/1.5/private_tangle.md)
 - [API Reference](./api-reference.md)
 - [Troubleshooting](./troubleshooting.md)
 - [FAQ](./faq.md)

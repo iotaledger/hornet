@@ -7,6 +7,7 @@
 - [Chrysalis IOTA 1.5](./1.5/index.md)
     - [Build HORNET](./1.5/build.md)
     - [Run HORNET](./1.5/run.md)
+    - [Run a private tangle](./1.5/private_tangle.md)
 
 ## Community Tutorials
 
