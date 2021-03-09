@@ -23,8 +23,10 @@ type OnSolidEntryPoint func(messageID hornet.MessageID)
 // Caution: condition func is not in DFS order
 func TraverseParents(storage *storage.Storage, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
-	t := NewParentTraverser(storage, condition, consumer, onMissingParent, onSolidEntryPoint, abortSignal)
-	return t.Traverse(parents, traverseSolidEntryPoints)
+	t := NewParentTraverser(storage, abortSignal)
+	defer t.Cleanup(true)
+
+	return t.Traverse(parents, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints)
 }
 
 // TraverseParentsOfMessage starts to traverse the parents (past cone) of the given start message until
@@ -33,8 +35,10 @@ func TraverseParents(storage *storage.Storage, parents hornet.MessageIDs, condit
 // Caution: condition func is not in DFS order
 func TraverseParentsOfMessage(storage *storage.Storage, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
-	t := NewParentTraverser(storage, condition, consumer, onMissingParent, onSolidEntryPoint, abortSignal)
-	return t.Traverse(hornet.MessageIDs{startMessageID}, traverseSolidEntryPoints)
+	t := NewParentTraverser(storage, abortSignal)
+	defer t.Cleanup(true)
+
+	return t.Traverse(hornet.MessageIDs{startMessageID}, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints)
 }
 
 // TraverseChildren starts to traverse the children (future cone) of the given start message until
@@ -42,6 +46,8 @@ func TraverseParentsOfMessage(storage *storage.Storage, startMessageID hornet.Me
 // It is unsorted BFS because the children are not ordered in the database.
 func TraverseChildren(storage *storage.Storage, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) error {
 
-	t := NewChildrenTraverser(storage, condition, consumer, walkAlreadyDiscovered, abortSignal)
-	return t.Traverse(startMessageID)
+	t := NewChildrenTraverser(storage, abortSignal)
+	defer t.Cleanup(true)
+
+	return t.Traverse(startMessageID, condition, consumer, walkAlreadyDiscovered)
 }
