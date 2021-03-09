@@ -117,69 +117,6 @@ func (s *Snapshot) IsSnapshottingOrPruning() bool {
 	return s.isSnapshotting || s.isPruning
 }
 
-// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
-func (s *Snapshot) isSolidEntryPoint(messageID hornet.MessageID, targetIndex milestone.Index) bool {
-
-	for _, childMessageID := range s.storage.GetChildrenMessageIDs(messageID) {
-		cachedMsgMeta := s.storage.GetCachedMessageMetadataOrNil(childMessageID) // meta +1
-		if cachedMsgMeta == nil {
-			// Ignore this message since it doesn't exist anymore
-			s.log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
-			continue
-		}
-
-		referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
-		cachedMsgMeta.Release(true) // meta -1
-
-		if referenced && (at > targetIndex) {
-			// referenced by a later milestone than targetIndex => solidEntryPoint
-			return true
-		}
-	}
-
-	return false
-}
-
-// getMilestoneParents traverses a milestone and collects all messages that were referenced by that milestone or newer.
-func (s *Snapshot) getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessageID hornet.MessageID, abortSignal <-chan struct{}) (hornet.MessageIDs, error) {
-
-	var parentMessageIDs hornet.MessageIDs
-
-	ts := time.Now()
-
-	if err := dag.TraverseParentsOfMessage(s.storage, milestoneMessageID,
-		// traversal stops if no more messages pass the given condition
-		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
-			defer cachedMsgMeta.Release(true) // msg -1
-			// collect all msg that were referenced by that milestone or newer
-			referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
-			return referenced && at >= milestoneIndex, nil
-		},
-		// consumer
-		func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
-			defer cachedMsgMeta.Release(true) // msg -1
-			parentMessageIDs = append(parentMessageIDs, cachedMsgMeta.GetMetadata().GetMessageID())
-			return nil
-		},
-		// called on missing parents
-		// return error on missing parents
-		nil,
-		// called on solid entry points
-		// Ignore solid entry points (snapshot milestone included)
-		nil,
-		// the pruning target index is also a solid entry point => traverse it anyways
-		true,
-		abortSignal); err != nil {
-		if err == common.ErrOperationAborted {
-			return nil, ErrSnapshotCreationWasAborted
-		}
-	}
-
-	s.log.Debugf("milestone walked (%d): parents: %v, collect: %v", milestoneIndex, len(parentMessageIDs), time.Since(ts))
-	return parentMessageIDs, nil
-}
-
 func (s *Snapshot) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
@@ -206,9 +143,30 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
-	// HINT: Check if "old solid entry points are still valid" is skipped in HORNET,
-	//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
-	//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old msg as valid tips, which is not the case anymore.
+	metadataMemcache := storage.NewMetadataMemcache(s.storage)
+	defer metadataMemcache.Cleanup(true)
+
+	// we share the same traverser for all milestones, so we don't cleanup the cachedMessages in between.
+	// we don't need to call cleanup at the end, because we passed our own metadataMemcache.
+	parentsTraverser := dag.NewParentTraverser(s.storage, abortSignal, metadataMemcache)
+
+	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
+	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) bool {
+		for _, childMessageID := range s.storage.GetChildrenMessageIDs(messageID) {
+			cachedMsgMeta := metadataMemcache.GetCachedMetadataOrNil(childMessageID) // meta +1
+			if cachedMsgMeta == nil {
+				// Ignore this message since it doesn't exist anymore
+				s.log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
+				continue
+			}
+
+			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced && (at > targetIndex) {
+				// referenced by a later milestone than targetIndex => solidEntryPoint
+				return true
+			}
+		}
+		return false
+	}
 
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
 	for milestoneIndex := targetIndex - s.solidEntryPointCheckThresholdPast; milestoneIndex <= targetIndex; milestoneIndex++ {
@@ -227,40 +185,58 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 		milestoneMessageID := cachedMilestone.GetMilestone().MessageID
 		cachedMilestone.Release(true) // message -1
 
-		parentMessageIDs, err := s.getMilestoneParentMessageIDs(milestoneIndex, milestoneMessageID, abortSignal)
-		if err != nil {
-			return err
-		}
+		// traverse the milestone and collect all messages that were referenced by this milestone or newer
+		if err := parentsTraverser.Traverse(hornet.MessageIDs{milestoneMessageID},
+			// traversal stops if no more messages pass the given condition
+			// Caution: condition func is not in DFS order
+			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
+				defer cachedMsgMeta.Release(true) // msg -1
 
-		for _, parentMessageID := range parentMessageIDs {
-			select {
-			case <-abortSignal:
-				return ErrSnapshotCreationWasAborted
-			default:
-			}
+				// collect all msg that were referenced by that milestone or newer
+				referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+				return referenced && at >= milestoneIndex, nil
+			},
+			// consumer
+			func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
+				defer cachedMsgMeta.Release(true) // msg -1
 
-			if isEntryPoint := s.isSolidEntryPoint(parentMessageID, targetIndex); !isEntryPoint {
-				continue
-			}
-
-			cachedMsgMeta := s.storage.GetCachedMessageMetadataOrNil(parentMessageID)
-			if cachedMsgMeta == nil {
-				return errors.Wrapf(ErrCritical, "metadata (%v) not found!", parentMessageID.ToHex())
-			}
-
-			referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
-			if !referenced {
-				cachedMsgMeta.Release(true)
-				return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", parentMessageID.ToHex())
-			}
-			cachedMsgMeta.Release(true)
-
-			parentMessageIDMapKey := parentMessageID.ToMapKey()
-			if _, exists := solidEntryPoints[parentMessageIDMapKey]; !exists {
-				solidEntryPoints[parentMessageIDMapKey] = at
-				if !solidEntryPointConsumer(&solidEntryPoint{messageID: parentMessageID, index: at}) {
+				select {
+				case <-abortSignal:
 					return ErrSnapshotCreationWasAborted
+				default:
 				}
+
+				messageID := cachedMsgMeta.GetMetadata().GetMessageID()
+
+				if isEntryPoint := isSolidEntryPoint(messageID, targetIndex); !isEntryPoint {
+					return nil
+				}
+
+				referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+				if !referenced {
+					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", messageID.ToHex())
+				}
+
+				messageIDMapKey := messageID.ToMapKey()
+				if _, exists := solidEntryPoints[messageIDMapKey]; !exists {
+					solidEntryPoints[messageIDMapKey] = at
+					if !solidEntryPointConsumer(&solidEntryPoint{messageID: messageID, index: at}) {
+						return ErrSnapshotCreationWasAborted
+					}
+				}
+
+				return nil
+			},
+			// called on missing parents
+			// return error on missing parents
+			nil,
+			// called on solid entry points
+			// Ignore solid entry points (snapshot milestone included)
+			nil,
+			// the pruning target index is also a solid entry point => traverse it anyways
+			true); err != nil {
+			if err == common.ErrOperationAborted {
+				return ErrSnapshotCreationWasAborted
 			}
 		}
 	}
