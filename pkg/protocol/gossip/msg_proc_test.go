@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	MinPowScore = 100.0
+	MinPowScore   = 100.0
+	BelowMaxDepth = 15
 )
 
 func TestMsgProcessorEmit(t *testing.T) {
@@ -30,7 +31,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	shutdownSignal := make(chan struct{})
 	defer close(shutdownSignal)
 
-	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, MinPowScore, false)
+	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
 	defer te.CleanupTestEnvironment(true)
 
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
@@ -55,6 +56,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	processor := gossip.NewMessageProcessor(te.Storage(), gossip.NewRequestQueue(), manager, serverMetrics, &gossip.Options{
 		MinPoWScore:       MinPowScore,
 		NetworkID:         networkID,
+		BelowMaxDepth:     BelowMaxDepth,
 		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingMessagesFilter,
 	})
 
@@ -79,6 +81,21 @@ func TestMsgProcessorEmit(t *testing.T) {
 	assert.NoError(t, json.Unmarshal([]byte(msgData), msg))
 
 	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	assert.NoError(t, err)
+
+	// should fail because parents not solid
+	err = processor.Emit(message)
+	assert.Error(t, err)
+
+	// set valid parents
+	msg.Parents = iotago.MessageIDs{[32]byte{}}
+
+	// pow again, so we have a valid message
+	err = te.PowHandler.DoPoW(msg, nil, 1)
+	assert.NoError(t, err)
+
+	// need to create a new message, so the iotago message is serialized again
+	message, err = storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
 	assert.NoError(t, err)
 
 	// should not fail

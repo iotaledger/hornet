@@ -8,10 +8,14 @@ import (
 
 // NewPebbleDB creates a new pebble DB instance.
 func NewPebbleDB(directory string, verbose bool) *pebbleDB.DB {
-	opts := &pebbleDB.Options{
-		DisableWAL: true,
-	}
+	opts := &pebbleDB.Options{}
 	opts.EnsureDefaults()
+	opts.DisableWAL = true
+
+	for i := 0; i < len(opts.Levels); i++ {
+		l := &opts.Levels[i]
+		l.Compression = pebbleDB.NoCompression
+	}
 
 	if verbose {
 		opts.EventListener = pebbleDB.MakeLoggingEventListener(nil)

@@ -70,13 +70,14 @@ func provide(c *dig.Container) {
 
 	type storagedeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		Store      kvstore.KVStore
-		Profile    *profile.Profile
+		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		Store         kvstore.KVStore
+		Profile       *profile.Profile
+		BelowMaxDepth int `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps storagedeps) *storage.Storage {
-		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Store, deps.Profile.Caches)
+		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Store, deps.Profile.Caches, deps.BelowMaxDepth)
 	}); err != nil {
 		panic(err)
 	}

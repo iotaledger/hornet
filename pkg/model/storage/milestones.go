@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
@@ -266,12 +265,14 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 }
 
 // StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
-func (s *Storage) StoreMilestone(messageID hornet.MessageID, ms *iotago.Milestone) {
+func (s *Storage) StoreMilestone(cachedMessage *CachedMessage, ms *iotago.Milestone) {
+	defer cachedMessage.Release(true)
 
-	cachedMilestone := s.storeMilestone(milestone.Index(ms.Index), messageID, time.Unix(int64(ms.Timestamp), 0))
+	cachedMilestone := s.storeMilestone(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
 
 	// Force release to store milestones without caching
 	defer cachedMilestone.Release(true) // milestone +-0
 
-	s.Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
+	s.Events.ReceivedValidMilestoneMessage.Trigger(cachedMessage) // message pass +1
+	s.Events.ReceivedValidMilestone.Trigger(cachedMilestone)      // milestone pass +1
 }

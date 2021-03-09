@@ -155,7 +155,8 @@ func run() {
 
 	// create a background worker that "measures" the spammer averages values every second
 	Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
-		timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
+		ticker := timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
+		ticker.WaitForGracefulShutdown()
 	}, shutdown.PrioritySpammer)
 
 	// automatically start the spammer on node startup if the flag is set
@@ -237,7 +238,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 			done := make(chan struct{})
 			currentProcessID := processID.Load()
 
-			timeutil.NewTicker(func() {
+			ticker := timeutil.NewTicker(func() {
 
 				if currentProcessID != processID.Load() {
 					close(rateLimitAbortSignal)
@@ -254,7 +255,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 					// Channel full
 				}
 			}, time.Duration(int64(float64(time.Second)/mpsRateLimit)), done)
-
+			ticker.WaitForGracefulShutdown()
 			spammerWaitGroup.Done()
 		}, shutdown.PrioritySpammer)
 	}

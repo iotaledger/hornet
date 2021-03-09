@@ -69,51 +69,6 @@ type Tangle struct {
 	Events *pluginEvents
 }
 
-/*
-
-// the default options applied to the Manager.
-var defaultManagerOptions = []ManagerOption{
-	WithManagerReconnectInterval(30*time.Second, 1*time.Second),
-}
-
-// ManagerOptions define options for a Manager.
-type ManagerOptions struct {
-	// The logger to use to log events.
-	Logger *logger.Logger
-	// The static reconnect interval.
-	ReconnectInterval time.Duration
-	// The randomized jitter applied to the reconnect interval.
-	ReconnectIntervalJitter time.Duration
-}
-
-// ManagerOption is a function setting a ManagerOptions option.
-type ManagerOption func(opts *ManagerOptions)
-
-// WithManagerLogger enables logging within the Manager.
-func WithManagerLogger(logger *logger.Logger) ManagerOption {
-	return func(opts *ManagerOptions) {
-		opts.Logger = logger
-	}
-}
-
-// WithManagerReconnectInterval defines the re-connect interval for peers
-// to which the Manager wants to keep a connection open to.
-func WithManagerReconnectInterval(interval time.Duration, jitter time.Duration) ManagerOption {
-	return func(opts *ManagerOptions) {
-		opts.ReconnectInterval = interval
-		opts.ReconnectIntervalJitter = jitter
-	}
-}
-
-// applies the given ManagerOption.
-func (mo *ManagerOptions) apply(opts ...ManagerOption) {
-	for _, opt := range opts {
-		opt(mo)
-	}
-}
-
-*/
-
 func New(
 	log *logger.Logger, s *storage.Storage,
 	requestQueue gossip.RequestQueue,

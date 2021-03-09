@@ -55,7 +55,8 @@ func configure() {
 func run() {
 	// create a background worker that checks for latest version every hour
 	_ = Plugin.Node.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
-		timeutil.NewTicker(checkLatestVersion, 1*time.Hour, shutdownSignal)
+		ticker := timeutil.NewTicker(checkLatestVersion, 1*time.Hour, shutdownSignal)
+		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityUpdateCheck)
 }
 

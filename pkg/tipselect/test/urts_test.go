@@ -30,11 +30,12 @@ const (
 	MaxReferencedTipAgeSemiLazy           = 3 * time.Second
 	MaxChildrenSemiLazy                   = 100
 	SpammerTipsThresholdSemiLazy          = 30
+	MinPowScore                           = 1.0
 )
 
 func TestTipSelect(t *testing.T) {
 
-	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, 1.0, false)
+	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
 	defer te.CleanupTestEnvironment(true)
 
 	serverMetrics := metrics.ServerMetrics{}
