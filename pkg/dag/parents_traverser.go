@@ -11,7 +11,7 @@ import (
 )
 
 type ParentTraverser struct {
-	cachedMessageMetas map[string]*storage.CachedMetadata
+	cachedMsgMetas map[string]*storage.CachedMetadata
 
 	storage *storage.Storage
 
@@ -36,52 +36,68 @@ type ParentTraverser struct {
 }
 
 // NewParentTraverser create a new traverser to traverse the parents (past cone)
-func NewParentTraverser(storage *storage.Storage, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, abortSignal <-chan struct{}) *ParentTraverser {
+func NewParentTraverser(storage *storage.Storage, abortSignal <-chan struct{}, cachedMsgMetas ...map[string]*storage.CachedMetadata) *ParentTraverser {
 
-	return &ParentTraverser{
-		storage:           storage,
-		condition:         condition,
-		consumer:          consumer,
-		onMissingParent:   onMissingParent,
-		onSolidEntryPoint: onSolidEntryPoint,
-		abortSignal:       abortSignal,
+	t := &ParentTraverser{
+		storage:     storage,
+		abortSignal: abortSignal,
 	}
+	t.init()
+
+	if len(cachedMsgMetas) > 0 {
+		// use the map from outside to share the same cachedMsgMetas
+		t.cachedMsgMetas = cachedMsgMetas[0]
+	}
+
+	return t
 }
 
-func (t *ParentTraverser) cleanup(forceRelease bool) {
+func (t *ParentTraverser) init() {
 
-	// release all msg metadata at the end
-	for _, cachedMetadata := range t.cachedMessageMetas {
-		cachedMetadata.Release(forceRelease) // meta -1
-	}
-
-	// Release lock after cleanup so the traverser can be reused
-	t.traverserLock.Unlock()
+	t.cachedMsgMetas = make(map[string]*storage.CachedMetadata)
+	t.processed = make(map[string]struct{})
+	t.checked = make(map[string]bool)
+	t.stack = list.New()
 }
 
 func (t *ParentTraverser) reset() {
 
-	t.cachedMessageMetas = make(map[string]*storage.CachedMetadata)
 	t.processed = make(map[string]struct{})
 	t.checked = make(map[string]bool)
 	t.stack = list.New()
+}
+
+// Cleanup releases all the cached objects that have been traversed.
+// This MUST be called by the user at the end.
+func (t *ParentTraverser) Cleanup(forceRelease bool) {
+
+	// release all msg metadata at the end
+	for _, cachedMetadata := range t.cachedMsgMetas {
+		cachedMetadata.Release(forceRelease) // meta -1
+	}
+	t.cachedMsgMetas = make(map[string]*storage.CachedMetadata)
 }
 
 // Traverse starts to traverse the parents (past cone) in the given order until
 // the traversal stops due to no more messages passing the given condition.
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func (t *ParentTraverser) Traverse(parents hornet.MessageIDs, traverseSolidEntryPoints bool) error {
+func (t *ParentTraverser) Traverse(parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
 
-	// Prepare for a new traversal
-	t.reset()
+	// release lock so the traverser can be reused
+	defer t.traverserLock.Unlock()
 
+	t.condition = condition
+	t.consumer = consumer
+	t.onMissingParent = onMissingParent
+	t.onSolidEntryPoint = onSolidEntryPoint
 	t.traverseSolidEntryPoints = traverseSolidEntryPoints
 
-	defer t.cleanup(true)
+	// Prepare for a new traversal
+	t.reset()
 
 	// we feed the stack with the parents one after another,
 	// to make sure that we examine all paths.
@@ -138,7 +154,7 @@ func (t *ParentTraverser) processStackParents() error {
 		}
 	}
 
-	cachedMsgMeta, exists := t.cachedMessageMetas[currentMessageIDMapKey]
+	cachedMsgMeta, exists := t.cachedMsgMetas[currentMessageIDMapKey]
 	if !exists {
 		cachedMsgMeta = t.storage.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
 		if cachedMsgMeta == nil {
@@ -155,7 +171,7 @@ func (t *ParentTraverser) processStackParents() error {
 			// stop processing the stack if the caller returns an error
 			return t.onMissingParent(currentMessageID)
 		}
-		t.cachedMessageMetas[currentMessageIDMapKey] = cachedMsgMeta
+		t.cachedMsgMetas[currentMessageIDMapKey] = cachedMsgMeta
 	}
 
 	traverse, checkedBefore := t.checked[currentMessageIDMapKey]

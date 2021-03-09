@@ -31,47 +31,63 @@ type ChildrenTraverser struct {
 }
 
 // NewChildrenTraverser create a new traverser to traverse the children (future cone)
-func NewChildrenTraverser(storage *storage.Storage, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ChildrenTraverser {
+func NewChildrenTraverser(storage *storage.Storage, abortSignal <-chan struct{}, cachedMsgMetas ...map[string]*storage.CachedMetadata) *ChildrenTraverser {
 
-	return &ChildrenTraverser{
-		storage:               storage,
-		condition:             condition,
-		consumer:              consumer,
-		walkAlreadyDiscovered: walkAlreadyDiscovered,
-		abortSignal:           abortSignal,
+	t := &ChildrenTraverser{
+		storage:     storage,
+		abortSignal: abortSignal,
 	}
-}
+	t.init()
 
-func (t *ChildrenTraverser) cleanup(forceRelease bool) {
-
-	// release all msg metadata at the end
-	for _, cachedMsgMeta := range t.cachedMsgMetas {
-		cachedMsgMeta.Release(forceRelease) // meta -1
+	if len(cachedMsgMetas) > 0 {
+		// use the map from outside to share the same cachedMsgMetas
+		t.cachedMsgMetas = cachedMsgMetas[0]
 	}
 
-	// Release lock after cleanup so the traverser can be reused
-	t.traverserLock.Unlock()
+	return t
 }
 
-func (t *ChildrenTraverser) reset() {
+func (t *ChildrenTraverser) init() {
 
 	t.cachedMsgMetas = make(map[string]*storage.CachedMetadata)
 	t.discovered = make(map[string]struct{})
 	t.stack = list.New()
 }
 
+func (t *ChildrenTraverser) reset() {
+
+	t.discovered = make(map[string]struct{})
+	t.stack = list.New()
+}
+
+// Cleanup releases all the cached objects that have been traversed.
+// This MUST be called by the user at the end.
+func (t *ChildrenTraverser) Cleanup(forceRelease bool) {
+
+	// release all msg metadata at the end
+	for _, cachedMsgMeta := range t.cachedMsgMetas {
+		cachedMsgMeta.Release(forceRelease) // meta -1
+	}
+	t.cachedMsgMetas = make(map[string]*storage.CachedMetadata)
+}
+
 // Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID) error {
+func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
 
+	// release lock so the traverser can be reused
+	defer t.traverserLock.Unlock()
+
+	t.condition = condition
+	t.consumer = consumer
+	t.walkAlreadyDiscovered = walkAlreadyDiscovered
+
 	// Prepare for a new traversal
 	t.reset()
-
-	defer t.cleanup(true)
 
 	t.stack.PushFront(startMessageID)
 	if !t.walkAlreadyDiscovered {
