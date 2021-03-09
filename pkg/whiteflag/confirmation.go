@@ -37,10 +37,10 @@ type ConfirmedMilestoneStats struct {
 // then the ledger diffs are calculated, the ledger state is checked and all msg are marked as referenced.
 // Additionally, this function also examines the milestone for a receipt and generates new migrated outputs
 // if one is present. The treasury is mutated accordingly.
-// all cachedMsgMetas have to be released outside.
+// metadataMemcache has to be cleaned up outside.
 func ConfirmMilestone(
 	s *storage.Storage, serverMetrics *metrics.ServerMetrics,
-	cachedMessageMetas map[string]*storage.CachedMetadata,
+	metadataMemcache *storage.MetadataMemcache,
 	milestoneMessageID hornet.MessageID,
 	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64),
 	onMilestoneConfirmed func(confirmation *Confirmation),
@@ -48,27 +48,15 @@ func ConfirmMilestone(
 	forEachNewSpent func(spent *utxo.Spent),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, error) {
 
-	cachedMessages := make(map[string]*storage.CachedMessage)
+	messagesMemcache := storage.NewMessagesMemcache(s)
 
-	defer func() {
-		// All releases are forced since the cone is referenced and not needed anymore
+	// All releases are forced since the cone is referenced and not needed anymore
+	// release all messages at the end
+	defer messagesMemcache.Cleanup(true)
 
-		// release all messages at the end
-		for _, cachedMsg := range cachedMessages {
-			cachedMsg.Release(true) // message -1
-		}
-	}()
-
-	cachedMilestoneMessage := s.GetCachedMessageOrNil(milestoneMessageID)
+	cachedMilestoneMessage := messagesMemcache.GetCachedMessageOrNil(milestoneMessageID)
 	if cachedMilestoneMessage == nil {
 		return nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.ToHex())
-	}
-	defer cachedMilestoneMessage.Release(true)
-
-	cachedMilestoneMessageMapKey := cachedMilestoneMessage.GetMessage().GetMessageID().ToMapKey()
-	if _, exists := cachedMessages[cachedMilestoneMessageMapKey]; !exists {
-		// release the messages at the end to speed up calculation
-		cachedMessages[cachedMilestoneMessageMapKey] = cachedMilestoneMessage.Retain()
 	}
 
 	s.UTXO().WriteLockLedger()
@@ -80,7 +68,7 @@ func ConfirmMilestone(
 		return nil, fmt.Errorf("confirmMilestone: message does not contain a milestone payload: %v", message.GetMessageID().ToHex())
 	}
 
-	msId, err := ms.ID()
+	msID, err := ms.ID()
 	if err != nil {
 		return nil, fmt.Errorf("unable to compute milestone Id: %w", err)
 	}
@@ -89,7 +77,7 @@ func ConfirmMilestone(
 
 	timeStart := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, cachedMessageMetas, cachedMessages, message.GetParents())
+	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, metadataMemcache, messagesMemcache, message.GetParents())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
@@ -145,12 +133,12 @@ func ConfirmMilestone(
 			return nil, fmt.Errorf("invalid receipt contained within milestone: %w", err)
 		}
 
-		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, msId)
+		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, msID)
 		if err != nil {
 			return nil, fmt.Errorf("unable to extract migrated outputs from receipt: %w", err)
 		}
 
-		tm, err = utxo.ReceiptToTreasuryMutation(receipt, unspentTreasuryOutput, msId)
+		tm, err = utxo.ReceiptToTreasuryMutation(receipt, unspentTreasuryOutput, msID)
 		if err != nil {
 			return nil, fmt.Errorf("unable to convert receipt to treasury mutation tuple: %w", err)
 		}
@@ -169,26 +157,13 @@ func ConfirmMilestone(
 	}
 	timeConfirmation := time.Now()
 
-	loadMessageMetadata := func(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
-		messageIDMapKey := messageID.ToMapKey()
-		cachedMsgMeta, exists := cachedMessageMetas[messageIDMapKey]
-		if !exists {
-			cachedMsgMeta = s.GetCachedMessageMetadataOrNil(messageID) // meta +1
-			if cachedMsgMeta == nil {
-				return nil, fmt.Errorf("confirmMilestone: Message not found: %v", messageID.ToHex())
-			}
-			cachedMessageMetas[messageIDMapKey] = cachedMsgMeta
-		}
-		return cachedMsgMeta, nil
-	}
-
 	// load the message for the given id
 	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
-		meta, err := loadMessageMetadata(messageID)
-		if err != nil {
-			return err
+		cachedMsgMeta := metadataMemcache.GetCachedMetadataOrNil(messageID) // meta +1
+		if cachedMsgMeta == nil {
+			return fmt.Errorf("confirmMilestone: Message not found: %v", messageID.ToHex())
 		}
-		do(meta)
+		do(cachedMsgMeta)
 		return nil
 	}
 

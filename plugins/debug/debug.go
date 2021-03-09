@@ -71,8 +71,8 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 		})
 	}
 
-	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
-	cachedMessages := make(map[string]*storage.CachedMessage)
+	messagesMemcache := storage.NewMessagesMemcache(deps.Storage)
+	metadataMemcache := storage.NewMetadataMemcache(deps.Storage)
 
 	defer func() {
 		// deregister the events to free the memory
@@ -81,18 +81,14 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 		}
 
 		// release all messages at the end
-		for _, cachedMessage := range cachedMessages {
-			cachedMessage.Release(true) // message -1
-		}
+		messagesMemcache.Cleanup(true)
 
 		// Release all message metadata at the end
-		for _, cachedMsgMeta := range cachedMsgMetas {
-			cachedMsgMeta.Release(true) // meta -1
-		}
+		metadataMemcache.Cleanup(true)
 	}()
 
 	// check if all requested parents are solid
-	solid, _ := deps.Tangle.SolidQueueCheck(cachedMsgMetas, request.Index, parents, nil)
+	solid, _ := deps.Tangle.SolidQueueCheck(metadataMemcache, request.Index, parents, nil)
 
 	if !solid {
 		// wait for at most "whiteFlagParentsSolidTimeout" for the parents to become solid
@@ -109,7 +105,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 
 	// at this point all parents are solid
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(deps.Storage, request.Index, cachedMsgMetas, cachedMessages, parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(deps.Storage, request.Index, metadataMemcache, messagesMemcache, parents)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInternalError, "failed to compute white flag mutations: %s", err)
 	}

@@ -67,8 +67,8 @@ type WhiteFlagMutations struct {
 // It also computes the merkle tree root hash consisting out of the IDs of the messages which are part of the set
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-// all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cachedMessageMetas map[string]*storage.CachedMetadata, cachedMessages map[string]*storage.CachedMessage, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
+// metadataMemcache has to be cleaned up outside.
+func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
@@ -84,12 +84,6 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 	condition := func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
-		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().ToMapKey()
-		if _, exists := cachedMessageMetas[cachedMetadataMapKey]; !exists {
-			// release the msg metadata at the end to speed up calculation
-			cachedMessageMetas[cachedMetadataMapKey] = cachedMetadata.Retain()
-		}
-
 		// only traverse and process the message if it was not referenced yet
 		return !cachedMetadata.GetMetadata().IsReferenced(), nil
 	}
@@ -98,18 +92,10 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 	consumer := func(cachedMetadata *storage.CachedMetadata) error { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
-		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().ToMapKey()
-
 		// load up message
-		cachedMessage, exists := cachedMessages[cachedMetadataMapKey]
-		if !exists {
-			cachedMessage = s.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
-			if cachedMessage == nil {
-				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().ToHex(), cachedMetadata.GetMetadata().GetMessageID().ToHex())
-			}
-
-			// release the messages at the end to speed up calculation
-			cachedMessages[cachedMetadataMapKey] = cachedMessage
+		cachedMessage := messagesMemcache.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID())
+		if cachedMessage == nil {
+			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().ToHex(), cachedMetadata.GetMetadata().GetMessageID().ToHex())
 		}
 
 		message := cachedMessage.GetMessage()
@@ -259,11 +245,14 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		return wfConf.dustAllowanceDiff.Add(depositOutputs, newSpents)
 	}
 
+	// we don't need to call cleanup at the end, because we pass our own metadataMemcache.
+	parentsTraverser := dag.NewParentTraverser(s, nil, metadataMemcache)
+
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If the parents are SEPs, are already processed or already referenced,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
 	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncludedWithTransactions.
-	if err := dag.TraverseParents(s, parents,
+	if err := parentsTraverser.Traverse(parents,
 		condition,
 		consumer,
 		// called on missing parents
@@ -272,7 +261,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false, nil); err != nil {
+		false); err != nil {
 		return nil, err
 	}
 

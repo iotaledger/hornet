@@ -72,18 +72,16 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	te.Milestones = append(te.Milestones, ms)
 
-	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
+	metadataMemcache := storage.NewMetadataMemcache(te.storage)
 
 	defer func() {
 		// all releases are forced since the cone is referenced and not needed anymore
 
-		// release all msg metadata at the end
-		for _, cachedMsgMeta := range cachedMsgMetas {
-			cachedMsgMeta.Release(true) // meta -1
-		}
+		// Release all message metadata at the end
+		metadataMemcache.Cleanup(true)
 	}()
 
-	conf, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, cachedMsgMetas, ms.GetMilestone().MessageID,
+	conf, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, metadataMemcache, ms.GetMilestone().MessageID,
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
 			te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
@@ -114,19 +112,17 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 	ms := te.storage.GetCachedMilestoneOrNil(milestoneIndex)
 	require.NotNil(te.TestState, ms)
 
-	cachedMsgMetas := make(map[string]*storage.CachedMetadata)
+	metadataMemcache := storage.NewMetadataMemcache(te.storage)
 
 	defer func() {
-		// All releases are forced since the cone is referenced and not needed anymore
+		// all releases are forced since the cone is referenced and not needed anymore
 
-		// Release all msg metadata at the end
-		for _, cachedMsgMeta := range cachedMsgMetas {
-			cachedMsgMeta.Release(true) // meta -1
-		}
+		// Release all message metadata at the end
+		metadataMemcache.Cleanup(true)
 	}()
 
 	var wfConf *whiteflag.Confirmation
-	confStats, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, cachedMsgMetas, ms.GetMilestone().MessageID,
+	confStats, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, metadataMemcache, ms.GetMilestone().MessageID,
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
 			wfConf = confirmation
