@@ -137,7 +137,7 @@
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAge": "3s",
-      "maxChildren": 2,
+      "maxChildren": 30,
       "spammerTipsThreshold": 0
     },
     "semiLazy": {
