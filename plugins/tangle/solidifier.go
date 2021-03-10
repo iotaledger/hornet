@@ -543,10 +543,14 @@ func searchMissingMilestone(solidMilestoneIndex milestone.Index, startMilestoneI
 						// milestone found!
 						if cachedBndl.GetBundle().IsValid() && cachedBndl.GetBundle().ValidStrictSemantics() && cachedBndl.GetBundle().IsMilestone() {
 							// Force release to store milestones without caching
-							tangle.StoreMilestone(cachedBndl.GetBundle()).Release(true) // milestone +-0
+							cachedMilestone, newlyAdded := tangle.StoreMilestoneIfAbsent(cachedBndl.GetBundle()) // milestone +1
+							if newlyAdded {
+								cachedMilestone.Release(true)              // milestone -1
+								processValidMilestone(cachedBndl.Retain()) // bundle pass +1
+							}
 
-							processValidMilestone(cachedBndl.Retain()) // bundle pass +1
-							return ErrMissingMilestoneFound            // we return this as an error to stop the traverser
+							// we return this as an error to stop the traverser
+							return ErrMissingMilestoneFound
 						}
 					}
 				}
