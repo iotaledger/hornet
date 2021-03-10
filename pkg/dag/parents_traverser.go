@@ -11,7 +11,7 @@ import (
 )
 
 type ParentTraverser struct {
-	cachedMsgMetas map[string]*storage.CachedMetadata
+	metadataMemcache *storage.MetadataMemcache
 
 	storage *storage.Storage
 
@@ -24,40 +24,34 @@ type ParentTraverser struct {
 	// checked map with result of traverse condition
 	checked map[string]bool
 
-	condition         Predicate
-	consumer          Consumer
-	onMissingParent   OnMissingParent
-	onSolidEntryPoint OnSolidEntryPoint
-	abortSignal       <-chan struct{}
-
+	condition                Predicate
+	consumer                 Consumer
+	onMissingParent          OnMissingParent
+	onSolidEntryPoint        OnSolidEntryPoint
 	traverseSolidEntryPoints bool
+	abortSignal              <-chan struct{}
 
 	traverserLock sync.Mutex
 }
 
 // NewParentTraverser create a new traverser to traverse the parents (past cone)
-func NewParentTraverser(storage *storage.Storage, abortSignal <-chan struct{}, cachedMsgMetas ...map[string]*storage.CachedMetadata) *ParentTraverser {
+func NewParentTraverser(s *storage.Storage, abortSignal <-chan struct{}, metadataMemcache ...*storage.MetadataMemcache) *ParentTraverser {
 
 	t := &ParentTraverser{
-		storage:     storage,
-		abortSignal: abortSignal,
+		storage:          s,
+		abortSignal:      abortSignal,
+		metadataMemcache: storage.NewMetadataMemcache(s),
+		processed:        make(map[string]struct{}),
+		checked:          make(map[string]bool),
+		stack:            list.New(),
 	}
-	t.init()
 
-	if len(cachedMsgMetas) > 0 {
-		// use the map from outside to share the same cachedMsgMetas
-		t.cachedMsgMetas = cachedMsgMetas[0]
+	if len(metadataMemcache) > 0 {
+		// use the memcache from outside to share the same cached metadata
+		t.metadataMemcache = metadataMemcache[0]
 	}
 
 	return t
-}
-
-func (t *ParentTraverser) init() {
-
-	t.cachedMsgMetas = make(map[string]*storage.CachedMetadata)
-	t.processed = make(map[string]struct{})
-	t.checked = make(map[string]bool)
-	t.stack = list.New()
 }
 
 func (t *ParentTraverser) reset() {
@@ -70,12 +64,7 @@ func (t *ParentTraverser) reset() {
 // Cleanup releases all the cached objects that have been traversed.
 // This MUST be called by the user at the end.
 func (t *ParentTraverser) Cleanup(forceRelease bool) {
-
-	// release all msg metadata at the end
-	for _, cachedMetadata := range t.cachedMsgMetas {
-		cachedMetadata.Release(forceRelease) // meta -1
-	}
-	t.cachedMsgMetas = make(map[string]*storage.CachedMetadata)
+	t.metadataMemcache.Cleanup(forceRelease)
 }
 
 // Traverse starts to traverse the parents (past cone) in the given order until
@@ -154,24 +143,20 @@ func (t *ParentTraverser) processStackParents() error {
 		}
 	}
 
-	cachedMsgMeta, exists := t.cachedMsgMetas[currentMessageIDMapKey]
-	if !exists {
-		cachedMsgMeta = t.storage.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
-		if cachedMsgMeta == nil {
-			// remove the message from the stack, the parents are not traversed
-			t.processed[currentMessageIDMapKey] = struct{}{}
-			delete(t.checked, currentMessageIDMapKey)
-			t.stack.Remove(ele)
+	cachedMsgMeta := t.metadataMemcache.GetCachedMetadataOrNil(currentMessageID) // meta +1
+	if cachedMsgMeta == nil {
+		// remove the message from the stack, the parents are not traversed
+		t.processed[currentMessageIDMapKey] = struct{}{}
+		delete(t.checked, currentMessageIDMapKey)
+		t.stack.Remove(ele)
 
-			if t.onMissingParent == nil {
-				// stop processing the stack with an error
-				return fmt.Errorf("%w: message %s", common.ErrMessageNotFound, currentMessageID.ToHex())
-			}
-
-			// stop processing the stack if the caller returns an error
-			return t.onMissingParent(currentMessageID)
+		if t.onMissingParent == nil {
+			// stop processing the stack with an error
+			return fmt.Errorf("%w: message %s", common.ErrMessageNotFound, currentMessageID.ToHex())
 		}
-		t.cachedMsgMetas[currentMessageIDMapKey] = cachedMsgMeta
+
+		// stop processing the stack if the caller returns an error
+		return t.onMissingParent(currentMessageID)
 	}
 
 	traverse, checkedBefore := t.checked[currentMessageIDMapKey]
