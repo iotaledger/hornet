@@ -2,7 +2,7 @@ module github.com/gohornet/hornet
 
 go 1.16
 
-replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210303205732-c552e55501c0
+replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210310184511-8bd9d8bc32ac
 
 require (
 	github.com/DataDog/zstd v1.4.8 // indirect
@@ -11,13 +11,13 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
 	github.com/blang/vfs v1.0.0
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
-	github.com/cockroachdb/pebble v0.0.0-20210303200444-070a80fcca6f
-	github.com/containerd/containerd v1.4.3 // indirect
+	github.com/cockroachdb/pebble v0.0.0-20210309160423-2673cbf29137
+	github.com/containerd/containerd v1.4.4 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v20.10.4+incompatible
+	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
@@ -39,7 +39,7 @@ require (
 	github.com/iotaledger/iota.go/v2 v2.0.0-20210303080450-b3ab28991fc8
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
-	github.com/labstack/echo/v4 v4.2.0
+	github.com/labstack/echo/v4 v4.2.1
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libp2p/go-libp2p v0.13.0
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
@@ -77,7 +77,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
-	golang.org/x/sys v0.0.0-20210301091718-77cc2087c03b // indirect
+	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2 // indirect
 	golang.org/x/tools v0.1.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
 )
