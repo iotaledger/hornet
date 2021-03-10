@@ -162,15 +162,18 @@ func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCac
 }
 
 // milestone +1
-func (s *Storage) storeMilestone(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) *CachedMilestone {
-	milestone := &Milestone{
+func (s *Storage) storeMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (cachedMilestone *CachedMilestone, newlyAdded bool) {
+
+	cachedMs, newlyAdded := s.milestoneStorage.StoreIfAbsent(&Milestone{
 		Index:     index,
 		MessageID: messageID,
 		Timestamp: timestamp,
+	})
+	if !newlyAdded {
+		return nil, false
 	}
 
-	// milestones should never exist in the database already, even with an unclean database
-	return &CachedMilestone{CachedObject: s.milestoneStorage.Store(milestone)}
+	return &CachedMilestone{CachedObject: cachedMs}, newlyAdded
 }
 
 // +-0

@@ -268,7 +268,10 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 func (s *Storage) StoreMilestone(cachedMessage *CachedMessage, ms *iotago.Milestone) {
 	defer cachedMessage.Release(true)
 
-	cachedMilestone := s.storeMilestone(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
+	cachedMilestone, newlyAdded := s.storeMilestoneIfAbsent(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
+	if !newlyAdded {
+		return
+	}
 
 	// Force release to store milestones without caching
 	defer cachedMilestone.Release(true) // milestone +-0
