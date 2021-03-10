@@ -130,20 +130,21 @@ func ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
 }
 
 // milestone +1
-func StoreMilestone(bndl *Bundle) *CachedMilestone {
+func StoreMilestoneIfAbsent(bndl *Bundle) (cachedMilestone *CachedMilestone, newlyAdded bool) {
 
-	if bndl.IsMilestone() {
-
-		milestone := &Milestone{
-			Index: bndl.GetMilestoneIndex(),
-			Hash:  bndl.GetMilestoneHash(),
-		}
-
-		// milestones should never exist in the database already, even with an unclean database
-		return &CachedMilestone{CachedObject: milestoneStorage.Store(milestone)}
+	if !bndl.IsMilestone() {
+		panic("Bundle is not a milestone")
 	}
 
-	panic("Bundle is not a milestone")
+	cachedMs, newlyAdded := milestoneStorage.StoreIfAbsent(&Milestone{
+		Index: bndl.GetMilestoneIndex(),
+		Hash:  bndl.GetMilestoneHash(),
+	})
+	if !newlyAdded {
+		return nil, false
+	}
+
+	return &CachedMilestone{CachedObject: cachedMs}, newlyAdded
 }
 
 // +-0

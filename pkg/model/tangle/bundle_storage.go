@@ -425,9 +425,11 @@ func tryConstructBundle(cachedTx *CachedTransaction, isSolidTail bool) {
 			//
 			// Milestone has to be stored after the bundle itself, otherwise there would be a race condition
 			// between "ContainsMilestone" and "GetMilestoneOrNil"
-			StoreMilestone(bndl).Release(true) // milestone +-0
-
-			Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
+			cachedMilestone, newlyAdded := StoreMilestoneIfAbsent(bndl) // milestone +1
+			if newlyAdded {
+				cachedMilestone.Release(true)                     // milestone -1
+				Events.ReceivedValidMilestone.Trigger(cachedBndl) // bundle pass +1
+			}
 		}
 	}
 
