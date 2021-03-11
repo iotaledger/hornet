@@ -34,7 +34,8 @@ var (
 	log    *logger.Logger
 	deps   dependencies
 
-	warpSync *gossip.WarpSync
+	warpSync                   *gossip.WarpSync
+	warpSyncMilestoneRequester *gossip.WarpSyncMilestoneRequester
 
 	onGossipProtocolStreamCreated    *events.Closure
 	onConfirmedMilestoneIndexChanged *events.Closure
@@ -59,6 +60,7 @@ type dependencies struct {
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(CfgWarpSyncAdvancementRange))
+	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.Requester, true)
 	configureEvents()
 }
 
@@ -97,8 +99,7 @@ func configureEvents() {
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		requestMissingMilestoneParents := deps.Requester.MemoizedRequestMissingMilestoneParents()
-		deps.Broadcaster.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneParents, oldCheckpoint)
+		deps.Broadcaster.BroadcastMilestoneRequests(int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents, oldCheckpoint)
 	})
 
 	onTargetUpdated = events.NewClosure(func(checkpoint milestone.Index, newTarget milestone.Index) {
@@ -110,8 +111,8 @@ func configureEvents() {
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		requestMissingMilestoneParents := deps.Requester.MemoizedRequestMissingMilestoneParents()
-		msRequested := deps.Broadcaster.BroadcastMilestoneRequests(int(advRange), requestMissingMilestoneParents)
+
+		msRequested := deps.Broadcaster.BroadcastMilestoneRequests(int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents)
 		// if the amount of requested milestones doesn't correspond to the range,
 		// it means we already had the milestones in the database, which suggests
 		// that we should manually kick start the milestone solidifier.
@@ -122,6 +123,11 @@ func configureEvents() {
 	})
 
 	onDone = events.NewClosure(func(deltaSynced int, took time.Duration) {
+		// we need to cleanup all memoized things in the requester, so we have a clean state at next run and free the memory.
+		// we can only reset the "traversed" messages here, because otherwise it may happen that the requester always
+		// walks the whole cone if there are already paths between newer milestones in the database.
+		warpSyncMilestoneRequester.Cleanup()
+
 		log.Infof("Synchronized %d milestones in %v", deltaSynced, took)
 		deps.RequestQueue.Filter(nil)
 	})

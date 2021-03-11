@@ -1,10 +1,8 @@
 package gossip
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -250,46 +248,4 @@ func (r *Requester) RequestMilestoneParents(cachedMilestone *storage.CachedMiles
 	}
 
 	return enqueued
-}
-
-// MemoizedRequestMissingMilestoneParents returns a function which traverses the parents
-// of a given milestone and requests each missing parent. As a special property, invocations
-// of the yielded function share the same 'already traversed' set to circumvent requesting
-// the same parents multiple times.
-func (r *Requester) MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms milestone.Index) {
-	traversed := map[string]struct{}{}
-	return func(ms milestone.Index) {
-
-		cachedMs := r.storage.GetCachedMilestoneOrNil(ms) // milestone +1
-		if cachedMs == nil {
-			panic(fmt.Sprintf("milestone %d wasn't found", ms))
-		}
-
-		milestoneMessageID := cachedMs.GetMilestone().MessageID
-		cachedMs.Release(true) // message -1
-
-		_ = dag.TraverseParentsOfMessage(r.storage, milestoneMessageID,
-			// traversal stops if no more messages pass the given condition
-			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
-				_, previouslyTraversed := traversed[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()]
-				return !cachedMsgMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
-			},
-			// consumer
-			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
-				traversed[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()] = struct{}{}
-				return nil
-			},
-			// called on missing parents
-			func(parentMessageID hornet.MessageID) error {
-				r.Request(parentMessageID, ms, preventDiscard...)
-				return nil
-			},
-			// called on solid entry points
-			// Ignore solid entry points (snapshot milestone included)
-			nil,
-			false, nil)
-	}
 }

@@ -1,11 +1,16 @@
 package gossip
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 // NewWarpSync creates a new WarpSync instance with the given advancement range and criteria func.
@@ -204,4 +209,74 @@ func (ws *WarpSync) reset() {
 	ws.CurrentCheckpoint = 0
 	ws.TargetMs = 0
 	ws.Init = 0
+}
+
+// NewWarpSyncMilestoneRequester creates a new WarpSyncMilestoneRequester instance.
+func NewWarpSyncMilestoneRequester(storage *storage.Storage, requester *Requester, preventDiscard bool) *WarpSyncMilestoneRequester {
+	return &WarpSyncMilestoneRequester{
+		storage:        storage,
+		requester:      requester,
+		preventDiscard: preventDiscard,
+		traversed:      make(map[string]struct{}),
+	}
+}
+
+// WarpSyncMilestoneRequester walks the cones of existing but non-solid milestones and memoizes already walked messages and milestones.
+type WarpSyncMilestoneRequester struct {
+	syncutils.Mutex
+
+	storage        *storage.Storage
+	requester      *Requester
+	preventDiscard bool
+	traversed      map[string]struct{}
+}
+
+// RequestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
+// Already requested milestones or traversed messages will be ignored, to circumvent requesting
+// the same parents multiple times.
+func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(msIndex milestone.Index) {
+	w.Lock()
+	defer w.Unlock()
+
+	cachedMs := w.storage.GetCachedMilestoneOrNil(msIndex) // milestone +1
+	if cachedMs == nil {
+		panic(fmt.Sprintf("milestone %d wasn't found", msIndex))
+	}
+
+	milestoneMessageID := cachedMs.GetMilestone().MessageID
+	cachedMs.Release(true) // message -1
+
+	_ = dag.TraverseParentsOfMessage(w.storage, milestoneMessageID,
+		// traversal stops if no more messages pass the given condition
+		// Caution: condition func is not in DFS order
+		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedMsgMeta.Release(true) // meta -1
+
+			mapKey := cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()
+
+			_, previouslyTraversed := w.traversed[mapKey]
+			if !previouslyTraversed {
+				w.traversed[mapKey] = struct{}{}
+			}
+
+			return !cachedMsgMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
+		},
+		// consumer
+		nil,
+		// called on missing parents
+		func(parentMessageID hornet.MessageID) error {
+			w.requester.Request(parentMessageID, msIndex, w.preventDiscard)
+			return nil
+		},
+		// called on solid entry points
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
+		false, nil)
+}
+
+// Cleanup cleans up traversed messages to free memory.
+func (w *WarpSyncMilestoneRequester) Cleanup() {
+	w.Lock()
+	defer w.Unlock()
+	w.traversed = make(map[string]struct{})
 }
