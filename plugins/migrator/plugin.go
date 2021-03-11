@@ -91,8 +91,8 @@ func run() {
 	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		log.Infof("Starting %s ... done", Plugin.Name)
 		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
-			var critErr common.CriticalError
-			var softErr common.SoftError
+			var critErr *common.CriticalError
+			var softErr *common.SoftError
 			switch {
 			case errors.As(err, &critErr):
 				gracefulshutdown.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err.Error()))
