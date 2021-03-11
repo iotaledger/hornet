@@ -66,6 +66,7 @@ type State struct {
 	*/
 	LatestMigratedAtIndex uint32
 	LatestIncludedIndex   uint32
+	SendingReceipt        bool
 }
 
 type migrationResult struct {
@@ -112,9 +113,10 @@ func (s *MigratorService) Receipt() *iotago.Receipt {
 
 // PersistState persists the current state to a file.
 // PersistState must be called when the receipt returned by the last call of Receipt has been send to the network.
-func (s *MigratorService) PersistState() error {
+func (s *MigratorService) PersistState(sendingReceipt bool) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	s.state.SendingReceipt = sendingReceipt
 	return utils.WriteToFile(s.stateFilePath, &s.state, 0660)
 }
 
@@ -142,6 +144,10 @@ func (s *MigratorService) InitState(msIndex *uint32, utxoManager *utxo.Manager) 
 			LatestMigratedAtIndex: *msIndex,
 			LatestIncludedIndex:   0,
 		}
+	}
+
+	if state.SendingReceipt {
+		return fmt.Errorf("%w: 'sending receipt' flag is set which means the node didn't shutdown correctly", ErrInvalidState)
 	}
 
 	// validate the state
