@@ -325,6 +325,10 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	if coo.migratorService != nil {
 		receipt = coo.migratorService.Receipt()
 		if receipt != nil {
+			if err := coo.migratorService.PersistState(true); err != nil {
+				return common.CriticalError{Err: fmt.Errorf("unable to persist migrator state before send: %w", err)}
+			}
+
 			currentTreasuryOutput, err := coo.utxoManager.UnspentTreasuryOutputWithoutLocking()
 			if err != nil {
 				return common.CriticalError{Err: fmt.Errorf("unable to fetch unspent treasury output: %w", err)}
@@ -350,8 +354,8 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	}
 
 	if coo.migratorService != nil && receipt != nil {
-		if err := coo.migratorService.PersistState(); err != nil {
-			return common.CriticalError{Err: fmt.Errorf("unable to persist migrator state: %w", err)}
+		if err := coo.migratorService.PersistState(false); err != nil {
+			return common.CriticalError{Err: fmt.Errorf("unable to persist migrator state after send: %w", err)}
 		}
 	}
 
