@@ -85,7 +85,7 @@ func TestRestoreState(t *testing.T) {
 	require.Len(t, receipt1.Funds, 2)
 	require.Subset(t, serviceTests.entries, receipt1.Funds)
 
-	err := s1.PersistState()
+	err := s1.PersistState(false)
 	require.NoError(t, err)
 
 	// initialize state from file
