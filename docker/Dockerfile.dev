@@ -1,5 +1,5 @@
-# golang 1.16.1-buster amd64
-FROM golang@sha256:593729df86eb9b82affa1d4489dee3c933f75e9aae12769bda95a97a9ad470d4 AS build
+# golang 1.16.2-buster amd64
+FROM golang@sha256:5a6302e91acb152050d661c9a081a535978c629225225ed91a8b979ad24aafcd AS build
 
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates
