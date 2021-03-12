@@ -74,7 +74,7 @@ func provide(c *dig.Container) {
 		switch {
 		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
 			panic(fmt.Sprintf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount))
-		case maxReceiptEntries == 0:
+		case maxReceiptEntries <= 0:
 			panic(fmt.Sprintf("%s must be greather than 0", CfgMigratorReceiptMaxEntries))
 		}
 
