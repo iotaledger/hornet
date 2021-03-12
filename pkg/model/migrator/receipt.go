@@ -79,7 +79,7 @@ func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
 		return err
 	}
 	if err := ioutil.WriteFile(receiptFileName, receiptJSON, os.ModePerm); err != nil {
-		return fmt.Errorf("unable to persist receipt onto disk: %w", common.CriticalError{Err: err})
+		return common.CriticalError(fmt.Errorf("unable to persist receipt onto disk: %w", err))
 	}
 	return nil
 }

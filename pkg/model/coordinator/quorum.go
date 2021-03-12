@@ -161,7 +161,7 @@ QuorumLoop:
 		case nodeMerkleTreeHash := <-nodeResultChan:
 			if cooMerkleTreeHash != nodeMerkleTreeHash {
 				// mismatch of the merkle tree hash of the node => critical error
-				quorumErrChan <- common.CriticalError{Err: ErrQuorumMerkleTreeHashMismatch}
+				quorumErrChan <- common.CriticalError(ErrQuorumMerkleTreeHashMismatch)
 				return
 			}
 			validResults++
@@ -174,7 +174,7 @@ QuorumLoop:
 
 	if validResults == 0 {
 		// no node of the group answered, return a non-critical error.
-		quorumErrChan <- common.SoftError{Err: ErrQuorumGroupNoAnswer}
+		quorumErrChan <- common.SoftError(ErrQuorumGroupNoAnswer)
 	}
 }
 

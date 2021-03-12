@@ -301,7 +301,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// compute merkle tree root
 	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.storage, newMilestoneIndex, metadataMemcache, messagesMemcache, parents)
 	if err != nil {
-		return common.CriticalError{Err: fmt.Errorf("failed to compute white flag mutations: %w", err)}
+		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}
 
 	// ask the quorum for correct ledger state if enabled
@@ -326,12 +326,12 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		receipt = coo.migratorService.Receipt()
 		if receipt != nil {
 			if err := coo.migratorService.PersistState(true); err != nil {
-				return common.CriticalError{Err: fmt.Errorf("unable to persist migrator state before send: %w", err)}
+				return common.CriticalError(fmt.Errorf("unable to persist migrator state before send: %w", err))
 			}
 
 			currentTreasuryOutput, err := coo.utxoManager.UnspentTreasuryOutputWithoutLocking()
 			if err != nil {
-				return common.CriticalError{Err: fmt.Errorf("unable to fetch unspent treasury output: %w", err)}
+				return common.CriticalError(fmt.Errorf("unable to fetch unspent treasury output: %w", err))
 			}
 
 			// embed treasury within the receipt
@@ -346,16 +346,16 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, receipt, mutations.MerkleTreeHash, coo.opts.powWorkerCount, coo.powHandler)
 	if err != nil {
-		return common.CriticalError{Err: fmt.Errorf("failed to create milestone: %w", err)}
+		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
 	}
 
 	if err := coo.sendMesssageFunc(milestoneMsg, newMilestoneIndex); err != nil {
-		return common.CriticalError{Err: fmt.Errorf("failed to send milestone: %w", err)}
+		return common.CriticalError(fmt.Errorf("failed to send milestone: %w", err))
 	}
 
 	if coo.migratorService != nil && receipt != nil {
 		if err := coo.migratorService.PersistState(false); err != nil {
-			return common.CriticalError{Err: fmt.Errorf("unable to persist migrator state after send: %w", err)}
+			return common.CriticalError(fmt.Errorf("unable to persist migrator state after send: %w", err))
 		}
 	}
 
@@ -367,7 +367,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	coo.state.LatestMilestoneTime = time.Now()
 
 	if err := coo.state.storeStateFile(coo.opts.stateFilePath); err != nil {
-		return common.CriticalError{Err: fmt.Errorf("failed to update coordinator state file: %w", err)}
+		return common.CriticalError(fmt.Errorf("failed to update coordinator state file: %w", err))
 	}
 
 	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneMessageID)
@@ -388,7 +388,7 @@ func (coo *Coordinator) Bootstrap() (hornet.MessageID, error) {
 		err := coo.createAndSendMilestone(hornet.MessageIDs{coo.state.LatestMilestoneMessageID}, coo.state.LatestMilestoneIndex+1)
 		if err != nil {
 			// creating milestone failed => always a critical error at bootstrap
-			return nil, common.CriticalError{Err: err}
+			return nil, common.CriticalError(err)
 		}
 
 		coo.bootstrapped = true
@@ -411,13 +411,13 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	defer coo.milestoneLock.Unlock()
 
 	if !coo.storage.IsNodeSynced() {
-		return nil, common.SoftError{Err: common.ErrNodeNotSynced}
+		return nil, common.SoftError(common.ErrNodeNotSynced)
 	}
 
 	// check whether we should hold issuing checkpoints
 	// if the node is currently under a lot of load
 	if coo.checkBackPressureFunctions() {
-		return nil, common.SoftError{Err: common.ErrNodeLoadTooHigh}
+		return nil, common.SoftError(common.ErrNodeLoadTooHigh)
 	}
 
 	// maximum 8 parents per message (7 tips + last checkpoint messageID)
@@ -438,11 +438,11 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 
 		msg, err := createCheckpoint(coo.networkID, parents, coo.opts.powWorkerCount, coo.powHandler)
 		if err != nil {
-			return nil, common.SoftError{Err: fmt.Errorf("failed to create checkPoint: %w", err)}
+			return nil, common.SoftError(fmt.Errorf("failed to create checkPoint: %w", err))
 		}
 
 		if err := coo.sendMesssageFunc(msg); err != nil {
-			return nil, common.SoftError{Err: fmt.Errorf("failed to send checkPoint: %w", err)}
+			return nil, common.SoftError(fmt.Errorf("failed to send checkPoint: %w", err))
 		}
 
 		lastCheckpointMessageID = msg.GetMessageID()
@@ -462,13 +462,13 @@ func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.Messag
 
 	if !coo.storage.IsNodeSynced() {
 		// return a non-critical error to not kill the database
-		return nil, common.SoftError{Err: common.ErrNodeNotSynced}
+		return nil, common.SoftError(common.ErrNodeNotSynced)
 	}
 
 	// check whether we should hold issuing miletones
 	// if the node is currently under a lot of load
 	if coo.checkBackPressureFunctions() {
-		return nil, common.SoftError{Err: common.ErrNodeLoadTooHigh}
+		return nil, common.SoftError(common.ErrNodeLoadTooHigh)
 	}
 
 	if err := coo.createAndSendMilestone(parents, coo.state.LatestMilestoneIndex+1); err != nil {

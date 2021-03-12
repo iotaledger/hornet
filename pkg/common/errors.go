@@ -15,18 +15,48 @@ var (
 	ErrNodeLoadTooHigh = errors.New("node load is too high")
 )
 
-// CriticalError is an error which is critical, meaning that migration components no longer can run.
-type CriticalError struct {
-	Err error
+// CriticalError wraps the given error as a critical error.
+func CriticalError(err error) error {
+	return &criticalError{err: err}
 }
 
-func (ce CriticalError) Error() string { return ce.Err.Error() }
-func (ce CriticalError) Unwrap() error { return ce.Err }
-
-// SoftError is an error which is soft, meaning that migration components can still run.
-type SoftError struct {
-	Err error
+// IsCritical unwraps the inner error held by the critical error if the given error is a critical error.
+// If the given error is not a critical error, nil is returned.
+func IsCriticalError(err error) error {
+	var critErr *criticalError
+	if errors.As(err, &critErr) {
+		return critErr.Unwrap()
+	}
+	return nil
 }
 
-func (se SoftError) Error() string { return se.Err.Error() }
-func (se SoftError) Unwrap() error { return se.Err }
+// SoftError wraps the given error as a soft error.
+func SoftError(err error) error {
+	return &softError{err: err}
+}
+
+// IsSoftError unwraps the inner error held by the soft error if the given error is a soft error.
+// If the given error is not a soft error, nil is returned.
+func IsSoftError(err error) error {
+	var softErr *softError
+	if errors.As(err, &softErr) {
+		return softErr.Unwrap()
+	}
+	return nil
+}
+
+// criticalError is an error which is critical, meaning that the node must halt operation.
+type criticalError struct {
+	err error
+}
+
+func (ce criticalError) Error() string { return ce.err.Error() }
+func (ce criticalError) Unwrap() error { return ce.err }
+
+// softError is an error which is soft, meaning that the node should probably log it but continue operation.
+type softError struct {
+	err error
+}
+
+func (se softError) Error() string { return se.err.Error() }
+func (se softError) Unwrap() error { return se.err }

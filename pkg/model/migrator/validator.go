@@ -60,12 +60,12 @@ func NewValidator(api LegacyAPI, coordinatorAddress trinary.Hash, coordinatorMer
 func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iotago.MigratedFundsEntry, error) {
 	confirmation, err := m.api.GetWhiteFlagConfirmation(milestoneIndex)
 	if err != nil {
-		return nil, fmt.Errorf("API call failed: %w", common.SoftError{Err: err})
+		return nil, common.SoftError(fmt.Errorf("API call failed: %w", err))
 	}
 
 	included, err := m.validateConfirmation(confirmation, milestoneIndex)
 	if err != nil {
-		return nil, fmt.Errorf("invalid confirmation data: %w", common.CriticalError{Err: err})
+		return nil, common.CriticalError(fmt.Errorf("invalid confirmation data: %w", err))
 	}
 
 	migrated := make([]*iotago.MigratedFundsEntry, 0, len(included))
@@ -92,7 +92,7 @@ func (m *Validator) QueryMigratedFunds(milestoneIndex uint32) ([]*iotago.Migrate
 func (m *Validator) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
 	latestIndex, err := m.queryLatestMilestoneIndex()
 	if err != nil {
-		return 0, nil, fmt.Errorf("failed to get node info: %w", common.SoftError{Err: err})
+		return 0, nil, common.SoftError(fmt.Errorf("failed to get node info: %w", err))
 	}
 
 	for index := startIndex; index <= latestIndex; index++ {
