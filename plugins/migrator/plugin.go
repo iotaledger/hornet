@@ -3,7 +3,6 @@ package migrator
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
@@ -91,15 +90,16 @@ func run() {
 	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		log.Infof("Starting %s ... done", Plugin.Name)
 		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
-			var critErr common.CriticalError
-			var softErr common.SoftError
-			switch {
-			case errors.As(err, &critErr):
+
+			if err := common.IsCriticalError(err); err != nil {
 				gracefulshutdown.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err.Error()))
 				return false
-			case errors.As(err, &softErr):
+			}
+
+			if err := common.IsSoftError(err); err != nil {
 				deps.MigratorService.Events.SoftError.Trigger(err)
 			}
+
 			// lets just log the err and halt querying for a configured period
 			log.Warn(err)
 			return timeutil.Sleep(deps.NodeConfig.Duration(CfgMigratorQueryCooldownPeriod), shutdownSignal)

@@ -230,7 +230,7 @@ func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntr
 	if l >= s.state.LatestIncludedIndex {
 		return s.state.LatestMigratedAtIndex, migratedFunds[s.state.LatestIncludedIndex:], nil
 	}
-	return 0, nil, fmt.Errorf("%w: state at index %d but only %d migrations", common.CriticalError{Err: ErrInvalidState}, s.state.LatestIncludedIndex, l)
+	return 0, nil, common.CriticalError(fmt.Errorf("%w: state at index %d but only %d migrations", ErrInvalidState, s.state.LatestIncludedIndex, l))
 }
 
 // nextMigrations queries the next existing migrations starting from milestone index startIndex.

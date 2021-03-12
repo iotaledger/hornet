@@ -123,24 +123,20 @@ func handleError(err error) bool {
 		return false
 	}
 
-	var critErr common.CriticalError
-	var softErr common.SoftError
-
-	switch {
-	case errors.As(err, &critErr):
+	if err := common.IsCriticalError(err); err != nil {
 		gracefulshutdown.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err.Error()))
 		return true
-
-	case errors.As(err, &softErr):
-		log.Warn(err)
-		coo.Events.SoftError.Trigger(err)
-
-	default:
-		// this should not happen! Errors should be defined as SoftError or CriticalError explicitly
-		log.Panicf("coordinator plugin hit an unknown error type: %s", err)
 	}
 
-	return false
+	if err := common.IsSoftError(err); err != nil {
+		log.Warn(err)
+		coo.Events.SoftError.Trigger(err)
+		return false
+	}
+
+	// this should not happen! errors should be defined as a soft or critical error explicitly
+	log.Panicf("coordinator plugin hit an unknown error type: %s", err)
+	return true
 }
 
 func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
