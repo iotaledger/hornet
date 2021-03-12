@@ -6,6 +6,8 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
+	iotago "github.com/iotaledger/iota.go/v2"
+
 	"github.com/iotaledger/hive.go/timeutil"
 
 	"github.com/gohornet/hornet/core/gracefulshutdown"
@@ -67,7 +69,20 @@ func provide(c *dig.Container) {
 		Validator  *migrator.Validator
 	}
 	if err := c.Provide(func(deps serviceDependencies) (*migrator.MigratorService, error) {
-		return migrator.NewService(deps.Validator, deps.NodeConfig.String(CfgMigratorStateFilePath)), nil
+
+		maxReceiptEntries := deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries)
+		switch {
+		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
+			panic(fmt.Sprintf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount))
+		case maxReceiptEntries == 0:
+			panic(fmt.Sprintf("%s must be greather than 0", CfgMigratorReceiptMaxEntries))
+		}
+
+		return migrator.NewService(
+			deps.Validator,
+			deps.NodeConfig.String(CfgMigratorStateFilePath),
+			deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries),
+		), nil
 	}); err != nil {
 		panic(err)
 	}

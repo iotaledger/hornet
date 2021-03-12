@@ -410,6 +410,8 @@ func DefaultReceiptValidatorConfig() ReceiptsConfig {
 
 // MigratorConfig defines migrator plugin specific configuration.
 type MigratorConfig struct {
+	// The max amount of entries to include in a receipt.
+	MaxEntries int
 	// Whether to run the migrator plugin in bootstrap mode.
 	Bootstrap bool
 	// The index of the first legacy milestone to migrate.
@@ -422,6 +424,7 @@ type MigratorConfig struct {
 func (migConfig *MigratorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%v", migrator.CfgMigratorBootstrap, migConfig.Bootstrap),
+		fmt.Sprintf("--%s=%v", migrator.CfgMigratorReceiptMaxEntries, migConfig.MaxEntries),
 		fmt.Sprintf("--%s=%d", migrator.CfgMigratorStartIndex, migConfig.StartIndex),
 		fmt.Sprintf("--%s=%s", migrator.CfgMigratorStateFilePath, migConfig.StateFilePath),
 	}
@@ -431,6 +434,7 @@ func (migConfig *MigratorConfig) CLIFlags() []string {
 func DefaultMigratorConfig() MigratorConfig {
 	return MigratorConfig{
 		Bootstrap:     false,
+		MaxEntries:    iotago.MaxMigratedFundsEntryCount,
 		StartIndex:    1,
 		StateFilePath: "migrator.state",
 	}
