@@ -14,9 +14,10 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-var (
-	// MaxMigratedFundsEntryCount is the maximum amount of MigratedFundsEntry items returned by MigratorService.Receipt.
-	MaxMigratedFundsEntryCount = iotago.MaxMigratedFundsEntryCount
+const (
+	// SensibleMaxEntriesCount defines an amount of entries within receipts which allows a milestone with 8 parents and 2 sigs/pub keys
+	// to fly under the next pow requirement step.
+	SensibleMaxEntriesCount = 110
 )
 
 var (
@@ -55,7 +56,8 @@ type MigratorService struct {
 	mutex      syncutils.Mutex
 	migrations chan *migrationResult
 
-	stateFilePath string
+	stateFilePath     string
+	receiptMaxEntries int
 }
 
 // State stores the latest state of the MigratorService.
@@ -76,15 +78,16 @@ type migrationResult struct {
 }
 
 // NewService creates a new MigratorService.
-func NewService(queryer Queryer, stateFilePath string) *MigratorService {
+func NewService(queryer Queryer, stateFilePath string, receiptMaxEntries int) *MigratorService {
 	return &MigratorService{
 		Events: &MigratorServiceEvents{
 			SoftError:            events.NewEvent(events.ErrorCaller),
 			MigratedFundsFetched: events.NewEvent(MigratedFundsCaller),
 		},
-		queryer:       queryer,
-		migrations:    make(chan *migrationResult),
-		stateFilePath: stateFilePath,
+		queryer:           queryer,
+		migrations:        make(chan *migrationResult),
+		receiptMaxEntries: receiptMaxEntries,
+		stateFilePath:     stateFilePath,
 	}
 }
 
@@ -197,8 +200,8 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 		for {
 			batch := migratedFunds
 			lastBatch := true
-			if len(batch) > MaxMigratedFundsEntryCount {
-				batch = batch[:MaxMigratedFundsEntryCount]
+			if len(batch) > s.receiptMaxEntries {
+				batch = batch[:s.receiptMaxEntries]
 				lastBatch = false
 			}
 			select {

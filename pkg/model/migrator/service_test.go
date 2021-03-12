@@ -25,8 +25,7 @@ func init() {
 }
 
 func TestReceiptFull(t *testing.T) {
-	migrator.MaxMigratedFundsEntryCount = len(serviceTests.entries)
-	s, teardown := newTestService(t, 1)
+	s, teardown := newTestService(t, 1, len(serviceTests.entries))
 	defer teardown()
 
 	receipt1 := s.Receipt()
@@ -41,8 +40,7 @@ func TestReceiptFull(t *testing.T) {
 }
 
 func TestReceiptAfterClose(t *testing.T) {
-	migrator.MaxMigratedFundsEntryCount = len(serviceTests.entries)
-	s, teardown := newTestService(t, 1)
+	s, teardown := newTestService(t, 1, len(serviceTests.entries))
 
 	receipt := s.Receipt()
 	require.NotNil(t, receipt)
@@ -52,8 +50,7 @@ func TestReceiptAfterClose(t *testing.T) {
 }
 
 func TestReceiptBatch(t *testing.T) {
-	migrator.MaxMigratedFundsEntryCount = 2
-	s, teardown := newTestService(t, 1)
+	s, teardown := newTestService(t, 1, 2)
 	defer teardown()
 
 	receipt1 := s.Receipt()
@@ -75,8 +72,7 @@ func TestReceiptBatch(t *testing.T) {
 }
 
 func TestRestoreState(t *testing.T) {
-	migrator.MaxMigratedFundsEntryCount = 2
-	s1, teardown1 := newTestService(t, 1)
+	s1, teardown1 := newTestService(t, 1, 2)
 	defer teardown1()
 
 	receipt1 := s1.Receipt()
@@ -89,7 +85,7 @@ func TestRestoreState(t *testing.T) {
 	require.NoError(t, err)
 
 	// initialize state from file
-	s2, teardown2 := newTestService(t, 0)
+	s2, teardown2 := newTestService(t, 0, 2)
 	defer teardown2()
 
 	receipt2 := s2.Receipt()
@@ -99,8 +95,8 @@ func TestRestoreState(t *testing.T) {
 	require.Subset(t, serviceTests.entries, receipt2.Funds)
 }
 
-func newTestService(t *testing.T, msIndex uint32) (*migrator.MigratorService, func()) {
-	s := migrator.NewService(&mockQueryer{}, stateFileName)
+func newTestService(t *testing.T, msIndex uint32, maxEntries int) (*migrator.MigratorService, func()) {
+	s := migrator.NewService(&mockQueryer{}, stateFileName, maxEntries)
 
 	if msIndex > 0 {
 		// bootstrap
