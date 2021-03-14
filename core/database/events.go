@@ -33,14 +33,15 @@ func (c *DatabaseCleanup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(cleanup)
 }
 
-var Events = pluginEvents{
-	DatabaseCleanup: events.NewEvent(DatabaseCleanupCaller),
-}
-
-type pluginEvents struct {
-	DatabaseCleanup *events.Event
+type Events struct {
+	DatabaseCleanup    *events.Event
+	DatabaseCompaction *events.Event
 }
 
 func DatabaseCleanupCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*DatabaseCleanup))(params[0].(*DatabaseCleanup))
+}
+
+func DatabaseCompactionCaller(handler interface{}, params ...interface{}) {
+	handler.(func(running bool))(params[0].(bool))
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -79,6 +80,7 @@ type dependencies struct {
 	AppInfo          *app.AppInfo
 	Host             host.Host
 	NodePrivateKey   crypto.PrivKey
+	DatabaseEvents   *database.Events
 }
 
 func configure() {

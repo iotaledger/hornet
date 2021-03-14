@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -55,6 +56,7 @@ type dependencies struct {
 	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
 	Storage         *storage.Storage
 	ServerMetrics   *metrics.ServerMetrics
+	DatabaseMetrics *metrics.DatabaseMetrics
 	Service         *gossip.Service
 	ReceiptService  *migrator.ReceiptService `optional:"true"`
 	Tangle          *tangle.Tangle
@@ -62,12 +64,14 @@ type dependencies struct {
 	Manager         *p2p.Manager
 	RequestQueue    gossip.RequestQueue
 	Coordinator     *coordinator.Coordinator `optional:"true"`
+	DatabaseEvents  *database.Events
 }
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
 	configureData()
+	configureDatabase()
 	configureInfo()
 	configurePeers()
 	configureServer()
