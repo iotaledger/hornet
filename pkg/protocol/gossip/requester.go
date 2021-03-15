@@ -22,7 +22,7 @@ type RequestBackPressureFunc func() bool
 
 var defaultRequesterOpts = []RequesterOption{
 	WithRequesterDiscardRequestsOlderThan(10 * time.Second),
-	WithRequesterPendingRequestReEnqueueInterval(1500 * time.Millisecond),
+	WithRequesterPendingRequestReEnqueueInterval(5 * time.Second),
 }
 
 // RequesterOption is a function which sets an option on a RequesterOptions instance.

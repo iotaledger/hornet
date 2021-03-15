@@ -85,6 +85,10 @@
       }
     ]
   },
+  "requests": {
+    "discardOlderThan": "15s",
+    "pendingReEnqueueInterval": "5s"
+  },
   "coordinator": {
     "stateFilePath": "coordinator.state",
     "interval": "10s",
