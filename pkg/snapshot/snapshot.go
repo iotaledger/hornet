@@ -962,6 +962,11 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 
 // HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a delta snapshot creation and pruning.
 func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
+	if !s.storage.IsNodeSyncedWithThreshold() {
+		// do not prune or create snapshots while we are not synced
+		return
+	}
+
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
