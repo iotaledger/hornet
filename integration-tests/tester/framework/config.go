@@ -35,7 +35,7 @@ const (
 	autopeeringMaxTries = 50
 
 	containerNodeImage           = "hornet:dev"
-	containerWhiteFlagMockServer = "lucamoser/wfmock:0.1.0"
+	containerWhiteFlagMockServer = "wfmock:latest"
 	containerPumbaImage          = "gaiaadm/pumba:0.7.4"
 	containerIPRouteImage        = "gaiadocker/iproute2"
 

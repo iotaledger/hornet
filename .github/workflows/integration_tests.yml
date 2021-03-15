@@ -89,7 +89,7 @@ jobs:
         run: |
           docker pull gaiaadm/pumba:0.7.4
           docker pull gaiadocker/iproute2:latest
-          docker pull lucamoser/wfmock:0.1.0
+          docker build github.com/iotaledger/chrysalis-tools#:wfmock -t wfmock:latest
 
       - name: Run integration tests
         run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
