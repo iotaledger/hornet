@@ -19,16 +19,18 @@ import (
 )
 
 type Tangle struct {
-	log              *logger.Logger
-	storage          *storage.Storage
-	requestQueue     gossip.RequestQueue
-	service          *gossip.Service
-	messageProcessor *gossip.MessageProcessor
-	serverMetrics    *metrics.ServerMetrics
-	requester        *gossip.Requester
-	receiptService   *migrator.ReceiptService
-	shutdownCtx      context.Context
-	daemon           daemon.Daemon
+	log                   *logger.Logger
+	storage               *storage.Storage
+	requestQueue          gossip.RequestQueue
+	service               *gossip.Service
+	messageProcessor      *gossip.MessageProcessor
+	serverMetrics         *metrics.ServerMetrics
+	requester             *gossip.Requester
+	receiptService        *migrator.ReceiptService
+	daemon                daemon.Daemon
+	shutdownCtx           context.Context
+	belowMaxDepth         milestone.Index
+	updateSyncedAtStartup bool
 
 	receiveMsgWorkerCount int
 	receiveMsgQueueSize   int
@@ -41,8 +43,6 @@ type Tangle struct {
 	lastIncomingMPS uint32
 	lastNewMPS      uint32
 	lastOutgoingMPS uint32
-
-	updateSyncedAtStartup bool
 
 	startWaitGroup sync.WaitGroup
 
@@ -70,22 +70,32 @@ type Tangle struct {
 }
 
 func New(
-	log *logger.Logger, s *storage.Storage,
+	log *logger.Logger,
+	s *storage.Storage,
 	requestQueue gossip.RequestQueue,
-	service *gossip.Service, messageProcessor *gossip.MessageProcessor,
-	serverMetrics *metrics.ServerMetrics, shutdownCtx context.Context,
-	requester *gossip.Requester, daemon daemon.Daemon, receiptService *migrator.ReceiptService, updateSyncedAtStartup bool) *Tangle {
+	service *gossip.Service,
+	messageProcessor *gossip.MessageProcessor,
+	serverMetrics *metrics.ServerMetrics,
+	requester *gossip.Requester,
+	receiptService *migrator.ReceiptService,
+	daemon daemon.Daemon,
+	shutdownCtx context.Context,
+	belowMaxDepth int,
+	updateSyncedAtStartup bool) *Tangle {
 	return &Tangle{
-		log:                         log,
-		storage:                     s,
-		requestQueue:                requestQueue,
-		service:                     service,
-		messageProcessor:            messageProcessor,
-		serverMetrics:               serverMetrics,
-		receiptService:              receiptService,
-		shutdownCtx:                 shutdownCtx,
-		requester:                   requester,
-		daemon:                      daemon,
+		log:                   log,
+		storage:               s,
+		requestQueue:          requestQueue,
+		service:               service,
+		messageProcessor:      messageProcessor,
+		serverMetrics:         serverMetrics,
+		requester:             requester,
+		receiptService:        receiptService,
+		daemon:                daemon,
+		shutdownCtx:           shutdownCtx,
+		belowMaxDepth:         milestone.Index(belowMaxDepth),
+		updateSyncedAtStartup: updateSyncedAtStartup,
+
 		receiveMsgWorkerCount:       2 * runtime.NumCPU(),
 		receiveMsgQueueSize:         10000,
 		messageProcessedSyncEvent:   utils.NewSyncEvent(),

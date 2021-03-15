@@ -27,6 +27,10 @@ var (
 	ErrInvalidMilestone = errors.New("invalid milestone")
 )
 
+func MilestoneMessageCaller(handler interface{}, params ...interface{}) {
+	handler.(func(msIndex milestone.Index, cachedMsg *CachedMessage))(params[0].(milestone.Index), params[1].(*CachedMessage).Retain())
+}
+
 func MilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMs *CachedMilestone))(params[0].(*CachedMilestone).Retain())
 }
@@ -271,6 +275,6 @@ func (s *Storage) StoreMilestone(cachedMessage *CachedMessage, ms *iotago.Milest
 	// Force release to store milestones without caching
 	defer cachedMilestone.Release(true) // milestone +-0
 
-	s.Events.ReceivedValidMilestoneMessage.Trigger(cachedMessage) // message pass +1
-	s.Events.ReceivedValidMilestone.Trigger(cachedMilestone)      // milestone pass +1
+	s.Events.ReceivedValidMilestone.Trigger(cachedMilestone)                                 // milestone pass +1
+	s.Events.ReceivedValidMilestoneMessage.Trigger(milestone.Index(ms.Index), cachedMessage) // message pass +1
 }
