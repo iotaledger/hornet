@@ -375,10 +375,18 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 	wu.UpdateState(Hashed)
 
-	proc.Events.MessageProcessed.Trigger(msg, request, p)
-
 	// increase the known message count for all other peers
 	wu.increaseKnownTxCount(p)
+
+	// do not process gossip if we are not in sync.
+	// we ignore all received messages if we didn't request them and it's not a milestone.
+	// otherwise these messages would get evicted from the cache, and it's heavier to load them
+	// from the storage than to request them again.
+	if request == nil && !proc.storage.IsNodeSyncedWithThreshold() && !msg.IsMilestone() {
+		return
+	}
+
+	proc.Events.MessageProcessed.Trigger(msg, request, p)
 }
 
 func (proc *MessageProcessor) BroadcastValidMilestone(cachedMessage *storage.CachedMessage) {
