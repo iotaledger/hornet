@@ -71,7 +71,9 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 
 	for messageIDToDelete := range messageIDsToDeleteMap {
 
-		cachedMsg := s.storage.GetCachedMessageOrNil(hornet.MessageIDFromMapKey(messageIDToDelete)) // msg +1
+		msgID := hornet.MessageIDFromMapKey(messageIDToDelete)
+
+		cachedMsg := s.storage.GetCachedMessageOrNil(msgID) // msg +1
 		if cachedMsg == nil {
 			continue
 		}
@@ -79,20 +81,20 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 		cachedMsg.ConsumeMessage(func(msg *storage.Message) { // msg -1
 			// Delete the reference in the parents
 			for _, parent := range msg.GetParents() {
-				s.storage.DeleteChild(parent, msg.GetMessageID())
+				s.storage.DeleteChild(parent, msgID)
 			}
 
 			// delete all children of this message
-			s.storage.DeleteChildren(msg.GetMessageID())
+			s.storage.DeleteChildren(msgID)
 
 			indexationPayload := storage.CheckIfIndexation(msg)
 			if indexationPayload != nil {
 				// delete indexation if the message contains an indexation payload
-				s.storage.DeleteIndexation(indexationPayload.Index, msg.GetMessageID())
+				s.storage.DeleteIndexation(indexationPayload.Index, msgID)
 			}
-
-			s.storage.DeleteMessage(msg.GetMessageID())
 		})
+
+		s.storage.DeleteMessage(msgID)
 	}
 
 	return len(messageIDsToDeleteMap)
