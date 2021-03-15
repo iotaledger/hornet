@@ -44,7 +44,7 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 		if def == nil {
 			continue
 		}
-		sentEvents[i] = events.NewEvent(events.CallbackCaller)
+		sentEvents[i] = events.NewEvent(events.VoidCaller)
 	}
 
 	return &Protocol{
@@ -55,7 +55,7 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 			// we need this because protocol.Protocol doesn't emit
 			// events for sent messages anymore.
 			Sent:   sentEvents,
-			Closed: events.NewEvent(events.CallbackCaller),
+			Closed: events.NewEvent(events.VoidCaller),
 			Errors: events.NewEvent(events.ErrorCaller),
 		},
 		Stream:        stream,

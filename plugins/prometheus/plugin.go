@@ -57,6 +57,7 @@ type dependencies struct {
 	Storage         *storage.Storage
 	ServerMetrics   *metrics.ServerMetrics
 	DatabaseMetrics *metrics.DatabaseMetrics
+	StorageMetrics  *metrics.StorageMetrics
 	Service         *gossip.Service
 	ReceiptService  *migrator.ReceiptService `optional:"true"`
 	Tangle          *tangle.Tangle

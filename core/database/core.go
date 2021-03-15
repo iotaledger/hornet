@@ -31,6 +31,7 @@ func init() {
 			Params:    params,
 			Provide:   provide,
 			Configure: configure,
+			Run:       run,
 		},
 	}
 }
@@ -41,13 +42,17 @@ var (
 	deps       dependencies
 
 	garbageCollectionLock syncutils.Mutex
+
+	// Closures
+	onPruningStateChanged *events.Closure
 )
 
 type dependencies struct {
 	dig.In
-	Store   kvstore.KVStore
-	Storage *storage.Storage
-	Events  *Events
+	Store          kvstore.KVStore
+	Storage        *storage.Storage
+	Events         *Events
+	StorageMetrics *metrics.StorageMetrics
 }
 
 func provide(c *dig.Container) {
@@ -58,10 +63,16 @@ func provide(c *dig.Container) {
 		panic(err)
 	}
 
+	if err := c.Provide(func() *metrics.StorageMetrics {
+		return &metrics.StorageMetrics{}
+	}); err != nil {
+		panic(err)
+	}
+
 	if err := c.Provide(func() *Events {
 		return &Events{
 			DatabaseCleanup:    events.NewEvent(DatabaseCleanupCaller),
-			DatabaseCompaction: events.NewEvent(DatabaseCompactionCaller),
+			DatabaseCompaction: events.NewEvent(events.BoolCaller),
 		}
 	}); err != nil {
 		panic(err)
@@ -126,6 +137,16 @@ func configure() {
 		closeDatabases()
 		log.Info("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase)
+
+	configureEvents()
+}
+
+func run() {
+	CorePlugin.Daemon().BackgroundWorker("Database[Events]", func(shutdownSignal <-chan struct{}) {
+		attachEvents()
+		<-shutdownSignal
+		detachEvents()
+	}, shutdown.PriorityMetricsUpdater)
 }
 
 func RunGarbageCollection() {
@@ -174,4 +195,21 @@ func closeDatabases() error {
 	}
 
 	return nil
+}
+
+func configureEvents() {
+	onPruningStateChanged = events.NewClosure(func(running bool) {
+		deps.StorageMetrics.PruningRunning.Store(running)
+		if running {
+			deps.StorageMetrics.Prunings.Inc()
+		}
+	})
+}
+
+func attachEvents() {
+	deps.Storage.Events.PruningStateChanged.Attach(onPruningStateChanged)
+}
+
+func detachEvents() {
+	deps.Storage.Events.PruningStateChanged.Detach(onPruningStateChanged)
 }

@@ -41,7 +41,3 @@ type Events struct {
 func DatabaseCleanupCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*DatabaseCleanup))(params[0].(*DatabaseCleanup))
 }
-
-func DatabaseCompactionCaller(handler interface{}, params ...interface{}) {
-	handler.(func(running bool))(params[0].(bool))
-}

@@ -16,6 +16,7 @@ import (
 func (s *Snapshot) setIsPruning(value bool) {
 	s.statusLock.Lock()
 	s.isPruning = value
+	s.storage.Events.PruningStateChanged.Trigger(value)
 	s.statusLock.Unlock()
 }
 
