@@ -61,6 +61,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
+	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tidwall/pretty v1.1.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.4 // indirect
 	github.com/ugorji/go v1.2.4 // indirect
