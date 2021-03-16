@@ -29,7 +29,7 @@ func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
 
 	output, err := deps.UTXO.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrNotFound, "transaction not found: %s", transactionIDHex)
+		return nil, errors.WithMessagef(restapi.ErrNotFound, "output for transaction not found: %s", transactionIDHex)
 	}
 
 	cachedMsg := deps.Storage.GetCachedMessageOrNil(output.MessageID())

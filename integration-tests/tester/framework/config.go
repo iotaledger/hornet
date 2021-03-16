@@ -264,6 +264,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/messages/:messageID/raw",
 			"/api/v1/messages/:messageID/children",
 			"/api/v1/messages",
+			"/api/v1/transactions/:transactionID/included-message",
 			"/api/v1/milestones/:milestoneIndex",
 			"/api/v1/outputs/:outputID",
 			"/api/v1/addresses/:address",
