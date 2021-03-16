@@ -122,6 +122,20 @@ func configure() {
 			return
 		}
 
+		if transactionId := transactionIdFromTopic(topicName); transactionId != nil {
+			// Find the first output of the transaction
+			outputId := &iotago.UTXOInputID{}
+			copy(outputId[:], transactionId[:])
+
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
+			if err != nil {
+				return
+			}
+
+			publishTransactionIncludedMessage(transactionId, output.MessageID())
+			return
+		}
+
 		if outputId := outputIdFromTopic(topicName); outputId != nil {
 			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
 			if err != nil {
