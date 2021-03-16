@@ -40,7 +40,7 @@ func init() {
 						fs.Float64(CfgProtocolMinPoWScore, 4000, "the minimum PoW score required by the network.")
 						fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
 						fs.String(CfgProtocolNetworkIDName, "mainnet1", "the network ID on which this node operates on.")
-						fs.String(CfgProtocolBech32HRP, iotago.PrefixMainnet.String(), "the HRP which should be used for Bech32 addresses.")
+						fs.String(CfgProtocolBech32HRP, string(iotago.PrefixMainnet), "the HRP which should be used for Bech32 addresses.")
 						return fs
 					}(),
 				},
@@ -73,14 +73,9 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps tangledeps) protoresult {
 
-		prefix, err := iotago.ParsePrefix(deps.NodeConfig.String(CfgProtocolBech32HRP))
-		if err != nil {
-			panic(err)
-		}
-
 		res := protoresult{
 			NetworkID: iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
-			Bech32HRP: prefix,
+			Bech32HRP: iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
 		}
 
 		// ToDo: Change these defaults to mainnet values
