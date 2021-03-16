@@ -10,6 +10,8 @@ const (
 	topicMessagesIndexation = "messages/indexation/{index}"
 	topicMessagesMetadata   = "messages/{messageId}/metadata"
 
+	topicTransactionsIncludedMessage = "transactions/{transactionId}/included-message"
+
 	topicOutputs = "outputs/{outputId}"
 
 	topicReceipts = "receipts"

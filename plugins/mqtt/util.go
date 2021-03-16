@@ -64,7 +64,17 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 			mqttBroker.Send(indexationTopic, cachedMessage.GetMessage().GetData())
 		}
 	}
+}
 
+func publishTransactionIncludedMessage(transactionId *iotago.TransactionID, messageId hornet.MessageID) {
+	transactionTopic := strings.ReplaceAll(topicTransactionsIncludedMessage, "{transactionId}", hex.EncodeToString(transactionId[:]))
+	if mqttBroker.HasSubscribers(transactionTopic) {
+		cachedMessage := deps.Storage.GetCachedMessageOrNil(messageId)
+		if cachedMessage != nil {
+			mqttBroker.Send(transactionTopic, cachedMessage.GetMessage().GetData())
+			cachedMessage.Release(true)
+		}
+	}
 }
 
 func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
@@ -198,7 +208,6 @@ func publishOutput(output *utxo.Output, spent bool) {
 	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
 	outputsTopicHasSubscribers := mqttBroker.HasSubscribers(outputsTopic)
 
-	// Since we do not know on which network we are running (Mainnet vs Testnet), we have to check if anyone is subscribed to the bech32 address on both Mainnet and Testnet
 	addressBech32Topic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(deps.Bech32HRP))
 	addressBech32TopicHasSubscribers := mqttBroker.HasSubscribers(addressBech32Topic)
 
@@ -228,6 +237,15 @@ func publishOutput(output *utxo.Output, spent bool) {
 			}
 		}
 	}
+
+	if !spent {
+		// If this is the first output in a transaction (index 0), then check if someone is observing the transaction that generated this output
+		if binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength:]) == 0 {
+			transactionId := &iotago.TransactionID{}
+			copy(transactionId[:], output.OutputID()[:iotago.TransactionIDLength])
+			publishTransactionIncludedMessage(transactionId, output.MessageID())
+		}
+	}
 }
 
 func messageIdFromTopic(topicName string) hornet.MessageID {
@@ -240,6 +258,22 @@ func messageIdFromTopic(topicName string) hornet.MessageID {
 			return nil
 		}
 		return messageID
+	}
+	return nil
+}
+
+func transactionIdFromTopic(topicName string) *iotago.TransactionID {
+	if strings.HasPrefix(topicName, "transactions/") && strings.HasSuffix(topicName, "/included-message") {
+		transactionIDHex := strings.Replace(topicName, "transactions/", "", 1)
+		transactionIDHex = strings.Replace(transactionIDHex, "/included-message", "", 1)
+
+		decoded, err := hex.DecodeString(transactionIDHex)
+		if err != nil || len(decoded) != iotago.TransactionIDLength {
+			return nil
+		}
+		transactionID := &iotago.TransactionID{}
+		copy(transactionID[:], decoded)
+		return transactionID
 	}
 	return nil
 }

@@ -24,7 +24,7 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.Enabled,
 		Pluggable: node.Pluggable{
 			Name:      "MQTT",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -119,6 +119,20 @@ func configure() {
 				}
 				cachedMsgMeta.Release(true)
 			}
+			return
+		}
+
+		if transactionId := transactionIdFromTopic(topicName); transactionId != nil {
+			// Find the first output of the transaction
+			outputId := &iotago.UTXOInputID{}
+			copy(outputId[:], transactionId[:])
+
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
+			if err != nil {
+				return
+			}
+
+			publishTransactionIncludedMessage(transactionId, output.MessageID())
 			return
 		}
 
