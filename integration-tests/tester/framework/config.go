@@ -256,6 +256,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 		BindAddress: "0.0.0.0:14265",
 		PermittedRoutes: []string{
 			"/health",
+			"/mqtt",
 			"/api/v1/info",
 			"/api/v1/tips",
 			"/api/v1/messages/:messageID",

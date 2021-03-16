@@ -41,6 +41,7 @@ var params = &node.PluginParams{
 			fs.StringSlice(CfgRestAPIPermittedRoutes,
 				[]string{
 					"/health",
+					"/mqtt",
 					"/api/v1/info",
 					"/api/v1/tips",
 					"/api/v1/messages/:messageID",
