@@ -24,7 +24,7 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.Enabled,
 		Pluggable: node.Pluggable{
 			Name:      "MQTT",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
