@@ -34,6 +34,9 @@ const (
 	// ParameterMessageID is used to identify a message by it's ID.
 	ParameterMessageID = "messageID"
 
+	// ParameterTransactionID is used to identify a transaction by it's ID.
+	ParameterTransactionID = "transactionID"
+
 	// ParameterOutputID is used to identify an output by it's ID.
 	ParameterOutputID = "outputID"
 
@@ -76,6 +79,10 @@ const (
 	// GET with query parameter (mandatory) returns all message IDs that fit these filter criteria (query parameters: "index").
 	// POST creates a single new message and returns the new message ID.
 	RouteMessages = "/messages"
+
+	// RouteTransactionsIncludedMessage is the route for getting the message that was included in the ledger for a given transaction ID.
+	// GET returns message data (json).
+	RouteTransactionsIncludedMessage = "/transactions/:" + ParameterTransactionID + "/included-message"
 
 	// RouteMilestone is the route for getting a milestone by it's milestoneIndex.
 	// GET returns the milestone.
@@ -261,6 +268,15 @@ func configure() {
 		}
 		c.Response().Header().Set(echo.HeaderLocation, resp.MessageID)
 		return restapipkg.JSONResponse(c, http.StatusCreated, resp)
+	})
+
+	routeGroup.GET(RouteTransactionsIncludedMessage, func(c echo.Context) error {
+		resp, err := messageByTransactionID(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
