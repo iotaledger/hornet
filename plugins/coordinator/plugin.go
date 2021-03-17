@@ -94,21 +94,10 @@ type dependencies struct {
 	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
 	MessageProcessor *gossip.MessageProcessor
-	BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	Coordinator      *coordinator.Coordinator
 	Selector         *mselection.HeaviestSelector
-}
-
-type coordinatordeps struct {
-	dig.In
-	Storage         *storage.Storage
-	Tangle          *tangle.Tangle
-	PoWHandler      *powpackage.Handler
-	MigratorService *migrator.MigratorService `optional:"true"`
-	UTXOManager     *utxo.Manager
-	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
-	NetworkID       uint64                       `name:"networkId"`
 }
 
 func provide(c *dig.Container) {
@@ -129,6 +118,17 @@ func provide(c *dig.Container) {
 		)
 	}); err != nil {
 		panic(err)
+	}
+
+	type coordinatordeps struct {
+		dig.In
+		Storage         *storage.Storage
+		Tangle          *tangle.Tangle
+		PoWHandler      *powpackage.Handler
+		MigratorService *migrator.MigratorService `optional:"true"`
+		UTXOManager     *utxo.Manager
+		NodeConfig      *configuration.Configuration `name:"nodeConfig"`
+		NetworkID       uint64                       `name:"networkId"`
 	}
 
 	if err := c.Provide(func(deps coordinatordeps) *coordinator.Coordinator {
