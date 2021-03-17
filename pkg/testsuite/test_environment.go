@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -116,8 +117,15 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 
 	testState.Logf("Testdir: %s", tempDir)
 
+	cooPrivateKeys := []ed25519.PrivateKey{cooPrvKey1, cooPrvKey2}
+
+	keyManager := keymanager.New()
+	for _, key := range cooPrivateKeys {
+		keyManager.AddKeyRange(key.Public().(ed25519.PublicKey), 0, 0)
+	}
+
 	te.store = mapdb.NewMapDB()
-	te.storage = storage.New(te.tempDir, te.store, TestProfileCaches, belowMaxDepth)
+	te.storage = storage.New(te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
 
 	// Initialize SEP
 	te.storage.SolidEntryPointsAdd(hornet.GetNullMessageID(), 0)
@@ -130,7 +138,7 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 	te.AssertTotalSupplyStillValid()
 
 	// Start up the coordinator
-	te.configureCoordinator([]ed25519.PrivateKey{cooPrvKey1, cooPrvKey2})
+	te.configureCoordinator(cooPrivateKeys, keyManager)
 	require.NotNil(testState, te.coo)
 
 	te.VerifyCMI(1)

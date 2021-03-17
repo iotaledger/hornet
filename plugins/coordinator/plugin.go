@@ -43,6 +43,10 @@ const (
 	MilestoneMaxAdditionalTipsLimit = 6
 )
 
+var (
+	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a snapshot")
+)
+
 func init() {
 	flag.CommandLine.MarkHidden(CfgCoordinatorBootstrap)
 	flag.CommandLine.MarkHidden(CfgCoordinatorStartIndex)
@@ -53,6 +57,7 @@ func init() {
 			Name:      "Coordinator",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
+			Provide:   provide,
 			Configure: configure,
 			Run:       run,
 		},
@@ -71,9 +76,6 @@ var (
 	nextCheckpointSignal chan struct{}
 	nextMilestoneSignal  chan struct{}
 
-	coo      *coordinator.Coordinator
-	selector *mselection.HeaviestSelector
-
 	lastCheckpointIndex     int
 	lastCheckpointMessageID hornet.MessageID
 	lastMilestoneMessageID  hornet.MessageID
@@ -84,8 +86,6 @@ var (
 	onIssuedCheckpoint   *events.Closure
 	onIssuedMilestone    *events.Closure
 
-	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a snapshot")
-
 	deps dependencies
 )
 
@@ -93,26 +93,164 @@ type dependencies struct {
 	dig.In
 	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
-	PoWHandler       *powpackage.Handler
-	MigratorService  *migrator.MigratorService `optional:"true"`
-	UTXOManager      *utxo.Manager
 	MessageProcessor *gossip.MessageProcessor
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	NetworkID        uint64                       `name:"networkId"`
 	BelowMaxDepth    int                          `name:"belowMaxDepth"`
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	Coordinator      *coordinator.Coordinator
+	Selector         *mselection.HeaviestSelector
+}
+
+type coordinatordeps struct {
+	dig.In
+	Storage         *storage.Storage
+	Tangle          *tangle.Tangle
+	PoWHandler      *powpackage.Handler
+	MigratorService *migrator.MigratorService `optional:"true"`
+	UTXOManager     *utxo.Manager
+	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
+	NetworkID       uint64                       `name:"networkId"`
+}
+
+func provide(c *dig.Container) {
+	log = logger.NewLogger(Plugin.Name)
+
+	type selectordeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps selectordeps) *mselection.HeaviestSelector {
+		// use the heaviest branch tip selection for the milestones
+		return mselection.New(
+			deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
+			deps.NodeConfig.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
+			deps.NodeConfig.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint),
+			deps.NodeConfig.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout),
+		)
+	}); err != nil {
+		panic(err)
+	}
+
+	if err := c.Provide(func(deps coordinatordeps) *coordinator.Coordinator {
+
+		initCoordinator := func() (*coordinator.Coordinator, error) {
+
+			var signingProvider coordinator.MilestoneSignerProvider
+			switch deps.NodeConfig.String(CfgCoordinatorSigningProvider) {
+			case "local":
+				privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
+				if err != nil {
+					return nil, err
+				}
+
+				if len(privateKeys) == 0 {
+					return nil, errors.New("no private keys given")
+				}
+
+				for _, privateKey := range privateKeys {
+					if len(privateKey) != ed25519.PrivateKeySize {
+						return nil, errors.New("wrong private key length")
+					}
+				}
+
+				signingProvider = coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+
+			case "remote":
+				remoteEndpoint := deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress)
+				if remoteEndpoint == "" {
+					return nil, errors.New("no address given for remote signing provider")
+				}
+				signingProvider = coordinator.NewInsecureRemoteEd25519MilestoneSignerProvider(remoteEndpoint, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+
+			default:
+				return nil, fmt.Errorf("unknown milestone signing provider: %s", deps.NodeConfig.String(CfgCoordinatorSigningProvider))
+			}
+
+			if deps.MigratorService == nil {
+				log.Info("running Coordinator without migration enabled")
+			}
+
+			// parse quorum groups config
+			quorumGroups := make(map[string][]*coordinator.QuorumClientConfig)
+			for _, groupName := range deps.NodeConfig.MapKeys(CfgCoordinatorQuorumGroups) {
+				configKey := CfgCoordinatorQuorumGroups + "." + groupName
+
+				groupConfig := []*coordinator.QuorumClientConfig{}
+				if err := deps.NodeConfig.Unmarshal(configKey, &groupConfig); err != nil {
+					return nil, fmt.Errorf("failed to parse coordinator quorum group: %s, %s", configKey, err)
+				}
+
+				if len(groupConfig) == 0 {
+					return nil, fmt.Errorf("invalid coordinator quorum group: %s, no entries", configKey)
+				}
+
+				for _, entry := range groupConfig {
+					if entry.BaseURL == "" {
+						return nil, fmt.Errorf("invalid coordinator quorum group: %s, missing baseURL in entry", configKey)
+					}
+				}
+
+				quorumGroups[groupName] = groupConfig
+			}
+
+			coo, err := coordinator.New(
+				deps.Storage,
+				deps.NetworkID,
+				signingProvider,
+				deps.MigratorService,
+				deps.UTXOManager,
+				deps.PoWHandler,
+				sendMessage,
+				coordinator.WithLogger(log),
+				coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
+				coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
+				coordinator.WithPowWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
+				coordinator.WithQuorum(deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			if deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled) {
+				log.Info("coordinator is running with enabled quorum")
+			}
+
+			if err := coo.InitState(*bootstrap, milestone.Index(*startIndex)); err != nil {
+				return nil, err
+			}
+
+			// don't issue milestones or checkpoints in case the node is running hot
+			coo.AddBackPressureFunc(deps.Tangle.IsReceiveTxWorkerPoolBusy)
+
+			return coo, nil
+		}
+
+		coo, err := initCoordinator()
+		if err != nil {
+			log.Panic(err)
+		}
+		return coo
+	}); err != nil {
+		panic(err)
+	}
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
+
+	if deps.Storage.IsDatabaseTainted() {
+		panic(ErrDatabaseTainted)
+	}
+
+	nextCheckpointSignal = make(chan struct{})
+
+	// must be a buffered channel, otherwise signal gets
+	// lost if checkpoint is generated at the same time
+	nextMilestoneSignal = make(chan struct{}, 1)
+
+	maxTrackedMessages = deps.NodeConfig.Int(CfgCoordinatorCheckpointsMaxTrackedMessages)
 
 	// set the node as synced at startup, so the coo plugin can select tips
 	deps.Tangle.SetUpdateSyncedAtStartup(true)
-
-	var err error
-	coo, err = initCoordinator(*bootstrap, *startIndex, deps.PoWHandler)
-	if err != nil {
-		log.Panic(err)
-	}
 
 	configureEvents()
 }
@@ -130,125 +268,13 @@ func handleError(err error) bool {
 
 	if err := common.IsSoftError(err); err != nil {
 		log.Warn(err)
-		coo.Events.SoftError.Trigger(err)
+		deps.Coordinator.Events.SoftError.Trigger(err)
 		return false
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
 	log.Panicf("coordinator plugin hit an unknown error type: %s", err)
 	return true
-}
-
-func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
-
-	if deps.Storage.IsDatabaseTainted() {
-		return nil, ErrDatabaseTainted
-	}
-
-	// use the heaviest branch tip selection for the milestones
-	selector = mselection.New(
-		deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
-		deps.NodeConfig.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
-		deps.NodeConfig.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-		deps.NodeConfig.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout),
-	)
-
-	nextCheckpointSignal = make(chan struct{})
-
-	// must be a buffered channel, otherwise signal gets
-	// lost if checkpoint is generated at the same time
-	nextMilestoneSignal = make(chan struct{}, 1)
-
-	maxTrackedMessages = deps.NodeConfig.Int(CfgCoordinatorCheckpointsMaxTrackedMessages)
-
-	var signingProvider coordinator.MilestoneSignerProvider
-	switch deps.NodeConfig.String(CfgCoordinatorSigningProvider) {
-	case "local":
-		privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
-		if err != nil {
-			return nil, err
-		}
-
-		if len(privateKeys) == 0 {
-			return nil, errors.New("no private keys given")
-		}
-
-		for _, privateKey := range privateKeys {
-			if len(privateKey) != ed25519.PrivateKeySize {
-				return nil, errors.New("wrong private key length")
-			}
-		}
-
-		signingProvider = coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
-
-	case "remote":
-		remoteEndpoint := deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress)
-		if remoteEndpoint == "" {
-			return nil, errors.New("no address given for remote signing provider")
-		}
-		signingProvider = coordinator.NewInsecureRemoteEd25519MilestoneSignerProvider(remoteEndpoint, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
-
-	default:
-		return nil, fmt.Errorf("unknown milestone signing provider: %s", deps.NodeConfig.String(CfgCoordinatorSigningProvider))
-	}
-
-	if deps.MigratorService == nil {
-		log.Info("running Coordinator without migration enabled")
-	}
-
-	// parse quorum groups config
-	quorumGroups := make(map[string][]*coordinator.QuorumClientConfig)
-	for _, groupName := range deps.NodeConfig.MapKeys(CfgCoordinatorQuorumGroups) {
-		configKey := CfgCoordinatorQuorumGroups + "." + groupName
-
-		groupConfig := []*coordinator.QuorumClientConfig{}
-		if err := deps.NodeConfig.Unmarshal(configKey, &groupConfig); err != nil {
-			return nil, fmt.Errorf("failed to parse coordinator quorum group: %s, %s", configKey, err)
-		}
-
-		if len(groupConfig) == 0 {
-			return nil, fmt.Errorf("invalid coordinator quorum group: %s, no entries", configKey)
-		}
-
-		for _, entry := range groupConfig {
-			if entry.BaseURL == "" {
-				return nil, fmt.Errorf("invalid coordinator quorum group: %s, missing baseURL in entry", configKey)
-			}
-		}
-
-		quorumGroups[groupName] = groupConfig
-	}
-
-	coo, err := coordinator.New(
-		deps.Storage,
-		deps.NetworkID,
-		signingProvider,
-		deps.MigratorService,
-		deps.UTXOManager,
-		powHandler,
-		sendMessage,
-		coordinator.WithLogger(log),
-		coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
-		coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
-		coordinator.WithPowWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
-		coordinator.WithQuorum(deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled) {
-		log.Info("coordinator is running with enabled quorum")
-	}
-
-	if err := coo.InitState(bootstrap, milestone.Index(startIndex)); err != nil {
-		return nil, err
-	}
-
-	// don't issue milestones or checkpoints in case the node is running hot
-	coo.AddBackPressureFunc(deps.Tangle.IsReceiveTxWorkerPoolBusy)
-
-	return coo, nil
 }
 
 func run() {
@@ -263,7 +289,7 @@ func run() {
 			default:
 				// do not block if already another signal is waiting
 			}
-		}, coo.GetInterval(), shutdownSignal)
+		}, deps.Coordinator.GetInterval(), shutdownSignal)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityCoordinator)
 
@@ -275,7 +301,7 @@ func run() {
 		attachEvents()
 
 		// bootstrap the network if not done yet
-		milestoneMessageID, err := coo.Bootstrap()
+		milestoneMessageID, err := deps.Coordinator.Bootstrap()
 		if handleError(err) {
 			// critical error => stop worker
 			detachEvents()
@@ -294,11 +320,11 @@ func run() {
 			select {
 			case <-nextCheckpointSignal:
 				// check the thresholds again, because a new milestone could have been issued in the meantime
-				if trackedMessagesCount := selector.GetTrackedMessagesCount(); trackedMessagesCount < maxTrackedMessages {
+				if trackedMessagesCount := deps.Selector.GetTrackedMessagesCount(); trackedMessagesCount < maxTrackedMessages {
 					continue
 				}
 
-				tips, err := selector.SelectTips(0)
+				tips, err := deps.Selector.SelectTips(0)
 				if err != nil {
 					// issuing checkpoint failed => not critical
 					if err != mselection.ErrNoTipsAvailable {
@@ -308,7 +334,7 @@ func run() {
 				}
 
 				// issue a checkpoint
-				checkpointMessageID, err := coo.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, tips)
+				checkpointMessageID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, tips)
 				if err != nil {
 					// issuing checkpoint failed => not critical
 					log.Warn(err)
@@ -321,7 +347,7 @@ func run() {
 				var milestoneTips hornet.MessageIDs
 
 				// issue a new checkpoint right in front of the milestone
-				checkpointTips, err := selector.SelectTips(1)
+				checkpointTips, err := deps.Selector.SelectTips(1)
 				if err != nil {
 					// issuing checkpoint failed => not critical
 					if err != mselection.ErrNoTipsAvailable {
@@ -330,7 +356,7 @@ func run() {
 				} else {
 					if len(checkpointTips) > MilestoneMaxAdditionalTipsLimit {
 						// issue a checkpoint with all the tips that wouldn't fit into the milestone (more than MilestoneMaxAdditionalTipsLimit)
-						checkpointMessageID, err := coo.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, checkpointTips[MilestoneMaxAdditionalTipsLimit:])
+						checkpointMessageID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, checkpointTips[MilestoneMaxAdditionalTipsLimit:])
 						if err != nil {
 							// issuing checkpoint failed => not critical
 							log.Warn(err)
@@ -349,7 +375,7 @@ func run() {
 
 				milestoneTips = append(milestoneTips, hornet.MessageIDs{lastMilestoneMessageID, lastCheckpointMessageID}...)
 
-				milestoneMessageID, err := coo.IssueMilestone(milestoneTips)
+				milestoneMessageID, err := deps.Coordinator.IssueMilestone(milestoneTips)
 				if handleError(err) {
 					// critical error => quit loop
 					break coordinatorLoop
@@ -424,10 +450,10 @@ func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) bool {
 
 // GetEvents returns the events of the coordinator
 func GetEvents() *coordinator.Events {
-	if coo == nil {
+	if deps.Coordinator == nil {
 		return nil
 	}
-	return coo.Events
+	return deps.Coordinator.Events
 }
 
 func configureEvents() {
@@ -441,7 +467,7 @@ func configureEvents() {
 		}
 
 		// add tips to the heaviest branch selector
-		if trackedMessagesCount := selector.OnNewSolidMessage(cachedMsgMeta.GetMetadata()); trackedMessagesCount >= maxTrackedMessages {
+		if trackedMessagesCount := deps.Selector.OnNewSolidMessage(cachedMsgMeta.GetMetadata()); trackedMessagesCount >= maxTrackedMessages {
 			log.Debugf("Coordinator Tipselector: trackedMessagesCount: %d", trackedMessagesCount)
 
 			// issue next checkpoint
@@ -479,12 +505,12 @@ func configureEvents() {
 func attachEvents() {
 	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
 	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
-	coo.Events.IssuedCheckpointMessage.Attach(onIssuedCheckpoint)
-	coo.Events.IssuedMilestone.Attach(onIssuedMilestone)
+	deps.Coordinator.Events.IssuedCheckpointMessage.Attach(onIssuedCheckpoint)
+	deps.Coordinator.Events.IssuedMilestone.Attach(onIssuedMilestone)
 }
 
 func detachEvents() {
 	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
 	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
-	coo.Events.IssuedMilestone.Detach(onIssuedMilestone)
+	deps.Coordinator.Events.IssuedMilestone.Detach(onIssuedMilestone)
 }

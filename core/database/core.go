@@ -6,13 +6,17 @@ import (
 
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
@@ -102,14 +106,26 @@ func provide(c *dig.Container) {
 
 	type storagedeps struct {
 		dig.In
-		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-		Store         kvstore.KVStore
-		Profile       *profile.Profile
-		BelowMaxDepth int `name:"belowMaxDepth"`
+		NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
+		Store                      kvstore.KVStore
+		Profile                    *profile.Profile
+		BelowMaxDepth              int `name:"belowMaxDepth"`
+		CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
 	}
 
 	if err := c.Provide(func(deps storagedeps) *storage.Storage {
-		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Store, deps.Profile.Caches, deps.BelowMaxDepth)
+
+		keyManager := keymanager.New()
+		for _, keyRange := range deps.CoordinatorPublicKeyRanges {
+			pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
+			if err != nil {
+				panic(fmt.Sprintf("can't load public key ranges: %s", err))
+			}
+
+			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
+		}
+
+		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Store, deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
 	}); err != nil {
 		panic(err)
 	}

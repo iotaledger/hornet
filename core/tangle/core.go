@@ -9,11 +9,8 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -22,7 +19,6 @@ import (
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -66,12 +62,11 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage                    *storage.Storage
-	Tangle                     *tangle.Tangle
-	Requester                  *gossip.Requester
-	Broadcaster                *gossip.Broadcaster
-	NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
-	CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
+	Storage     *storage.Storage
+	Tangle      *tangle.Tangle
+	Requester   *gossip.Requester
+	Broadcaster *gossip.Broadcaster
+	NodeConfig  *configuration.Configuration `name:"nodeConfig"`
 }
 
 func provide(c *dig.Container) {
@@ -121,21 +116,6 @@ func configure() {
 	CorePlugin.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
 		deps.Storage.MarkDatabaseCorrupted()
 	})
-
-	keyManager := keymanager.New()
-	for _, keyRange := range deps.CoordinatorPublicKeyRanges {
-		pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
-		if err != nil {
-			log.Panicf("can't load public key ranges: %s", err)
-		}
-
-		keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
-	}
-
-	deps.Storage.ConfigureMilestones(
-		keyManager,
-		deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount),
-	)
 
 	configureEvents()
 	deps.Tangle.ConfigureTangleProcessor()
@@ -208,6 +188,7 @@ func configureEvents() {
 		// Force release possible here, since processIncomingTx still holds a reference
 		defer cachedMsg.Release(true) // msg -1
 
+		// todo: move into solid event
 		if deps.Storage.IsNodeSyncedWithThreshold() {
 			deps.Tangle.SolidifyFutureConeOfMsg(cachedMsg.GetCachedMetadata()) // meta pass +1
 		}

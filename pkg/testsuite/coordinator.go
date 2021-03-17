@@ -19,7 +19,7 @@ import (
 
 // configureCoordinator configures a new coordinator with clean state for the tests.
 // the node is initialized, the network is bootstrapped and the first milestone is confirmed.
-func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey) {
+func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager) {
 
 	storeMessageFunc := func(msg *storage.Message, msIndex ...milestone.Index) error {
 		cachedMessage := te.StoreMessage(msg) // no need to release, since we remember all the messages for later cleanup
@@ -30,11 +30,6 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		}
 
 		return nil
-	}
-
-	keyManager := keymanager.New()
-	for _, key := range cooPrivateKeys {
-		keyManager.AddKeyRange(key.Public().(ed25519.PublicKey), 0, 0)
 	}
 
 	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(cooPrivateKeys, keyManager, len(cooPrivateKeys))
@@ -58,9 +53,6 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	// save snapshot info
 	te.storage.SetSnapshotMilestone(te.networkID, 0, 0, 0, time.Now())
-
-	// configure Milestones
-	te.storage.ConfigureMilestones(keyManager, len(cooPrivateKeys))
 
 	milestoneMessageID, err := te.coo.Bootstrap()
 	require.NoError(te.TestState, err)

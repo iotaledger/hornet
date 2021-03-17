@@ -31,11 +31,6 @@ func MilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMs *CachedMilestone))(params[0].(*CachedMilestone).Retain())
 }
 
-func (s *Storage) ConfigureMilestones(cooKeyManager *keymanager.KeyManager, cooMilestonePublicKeyCount int) {
-	s.keyManager = cooKeyManager
-	s.milestonePublicKeyCount = cooMilestonePublicKeyCount
-}
-
 func (s *Storage) KeyManager() *keymanager.KeyManager {
 	return s.keyManager
 }
