@@ -12,10 +12,12 @@ import (
 )
 
 type RocksDB struct {
-	db *rocksdb.DB
-	ro *rocksdb.ReadOptions
-	wo *rocksdb.WriteOptions
-	fo *rocksdb.FlushOptions
+	name string
+	opts *rocksdb.Options
+	db   *rocksdb.DB
+	ro   *rocksdb.ReadOptions
+	wo   *rocksdb.WriteOptions
+	fo   *rocksdb.FlushOptions
 }
 
 // NewRocksDB creates a new RocksDB instance.
@@ -38,10 +40,12 @@ func NewRocksDB(path string) *RocksDB {
 	}
 
 	return &RocksDB{
-		db: db,
-		ro: ro,
-		wo: wo,
-		fo: fo,
+		name: path,
+		opts: opts,
+		db:   db,
+		ro:   ro,
+		wo:   wo,
+		fo:   fo,
 	}
 }
 
@@ -108,29 +112,6 @@ func (s *rocksDBStore) Shutdown() {
 	}
 }
 
-func (s *rocksDBStore) getIterBounds(prefix []byte) ([]byte, []byte) {
-	start := s.buildKeyPrefix(prefix)
-
-	if len(start) == 0 {
-		// no bounds
-		return nil, nil
-	}
-
-	return start, keyUpperBound(start)
-}
-
-func keyUpperBound(b []byte) []byte {
-	end := make([]byte, len(b))
-	copy(end, b)
-	for i := len(end) - 1; i >= 0; i-- {
-		end[i] = end[i] + 1
-		if end[i] != 0 {
-			return end[:i+1]
-		}
-	}
-	return nil // no upper-bound
-}
-
 func copyBytes(source []byte, size int) []byte {
 	cpy := make([]byte, size)
 	copy(cpy, source)
@@ -145,9 +126,10 @@ func (s *rocksDBStore) Iterate(prefix kvstore.KeyPrefix, consumerFunc kvstore.It
 	it := s.instance.db.NewIterator(s.instance.ro)
 	defer it.Close()
 
-	it.Seek(s.buildKeyPrefix(prefix))
+	keyPrefix := s.buildKeyPrefix(prefix)
+	it.Seek(keyPrefix)
 
-	for ; it.ValidForPrefix(prefix); it.Next() {
+	for ; it.ValidForPrefix(keyPrefix); it.Next() {
 		key := it.Key()
 		k := copyBytes(key.Data(), key.Size())[len(s.dbPrefix):]
 		key.Free()
@@ -172,9 +154,10 @@ func (s *rocksDBStore) IterateKeys(prefix kvstore.KeyPrefix, consumerFunc kvstor
 	it := s.instance.db.NewIterator(s.instance.ro)
 	defer it.Close()
 
-	it.Seek(s.buildKeyPrefix(prefix))
+	keyPrefix := s.buildKeyPrefix(prefix)
+	it.Seek(keyPrefix)
 
-	for ; it.ValidForPrefix(prefix); it.Next() {
+	for ; it.ValidForPrefix(keyPrefix); it.Next() {
 		key := it.Key()
 		k := copyBytes(key.Data(), key.Size())[len(s.dbPrefix):]
 		key.Free()
@@ -184,6 +167,19 @@ func (s *rocksDBStore) IterateKeys(prefix kvstore.KeyPrefix, consumerFunc kvstor
 		}
 	}
 
+	return nil
+}
+
+func (s *rocksDBStore) clearDB() error {
+	err := s.Close()
+	if err != nil {
+		return err
+	}
+	err = rocksdb.DestroyDb(s.instance.name, s.instance.opts)
+	if err != nil {
+		return err
+	}
+	s.instance = NewRocksDB(s.instance.name)
 	return nil
 }
 
@@ -200,12 +196,12 @@ func (s *rocksDBStore) Get(key kvstore.Key) (kvstore.Value, error) {
 		s.accessCallback(kvstore.GetCommand, key)
 	}
 
-	v, err := s.instance.db.GetBytes(s.instance.ro, key)
+	v, err := s.instance.db.GetBytes(s.instance.ro, byteutils.ConcatBytes(s.dbPrefix, key))
 	if err != nil {
-		if v == nil {
-			return nil, kvstore.ErrKeyNotFound
-		}
 		return nil, err
+	}
+	if v == nil {
+		return nil, kvstore.ErrKeyNotFound
 	}
 	return v, nil
 }
@@ -215,7 +211,7 @@ func (s *rocksDBStore) Set(key kvstore.Key, value kvstore.Value) error {
 		s.accessCallback(kvstore.SetCommand, key, value)
 	}
 
-	return s.instance.db.Put(s.instance.wo, key, value)
+	return s.instance.db.Put(s.instance.wo, byteutils.ConcatBytes(s.dbPrefix, key), value)
 }
 
 func (s *rocksDBStore) Has(key kvstore.Key) (bool, error) {
@@ -223,7 +219,7 @@ func (s *rocksDBStore) Has(key kvstore.Key) (bool, error) {
 		s.accessCallback(kvstore.HasCommand, key)
 	}
 
-	v, err := s.instance.db.Get(s.instance.ro, key)
+	v, err := s.instance.db.Get(s.instance.ro, byteutils.ConcatBytes(s.dbPrefix, key))
 	if err != nil {
 		return false, err
 	}
@@ -235,7 +231,7 @@ func (s *rocksDBStore) Delete(key kvstore.Key) error {
 		s.accessCallback(kvstore.DeleteCommand, key)
 	}
 
-	return s.instance.db.Delete(s.instance.wo, key)
+	return s.instance.db.Delete(s.instance.wo, byteutils.ConcatBytes(s.dbPrefix, key))
 }
 
 func (s *rocksDBStore) DeletePrefix(prefix kvstore.KeyPrefix) error {
@@ -243,9 +239,23 @@ func (s *rocksDBStore) DeletePrefix(prefix kvstore.KeyPrefix) error {
 		s.accessCallback(kvstore.DeletePrefixCommand, prefix)
 	}
 
+	keyPrefix := s.buildKeyPrefix(prefix)
+	if len(keyPrefix) == 0 {
+		return s.clearDB()
+	}
+
 	writeBatch := rocksdb.NewWriteBatch()
 	defer writeBatch.Destroy()
-	writeBatch.DeleteRange(s.getIterBounds(prefix))
+
+	it := s.instance.db.NewIterator(s.instance.ro)
+	defer it.Close()
+
+	it.Seek(keyPrefix)
+
+	for ; it.ValidForPrefix(keyPrefix); it.Next() {
+		key := it.Key()
+		writeBatch.Delete(key.Data())
+	}
 
 	return s.instance.db.Write(s.instance.wo, writeBatch)
 }
