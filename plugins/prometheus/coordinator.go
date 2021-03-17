@@ -7,32 +7,40 @@ import (
 )
 
 var (
-	coordinatorQuorumResponseTimes *prometheus.GaugeVec
+	coordinatorQuorumResponseTimes *prometheus.HistogramVec
 	coordinatorQuorumErrorCounters *prometheus.GaugeVec
 	coordinatorSoftErrEncountered  prometheus.Counter
 )
 
 func configureCoordinator() {
-	coordinatorQuorumResponseTimes = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "iota_coordinator_quorum_response_times",
-			Help: "Latest response time by quorum client.",
+
+	coordinatorQuorumResponseTimes = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: "iota",
+			Subsystem: "coordinator_quorum",
+			Name:      "response_times",
+			Help:      "Latest response time by quorum client.",
+			Buckets:   prometheus.DefBuckets,
 		},
 		[]string{"group", "alias", "baseURL"},
 	)
 
 	coordinatorQuorumErrorCounters = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "iota_coordinator_quorum_error_counters",
-			Help: "Number encountered errors by quorum client.",
+			Namespace: "iota",
+			Subsystem: "coordinator_quorum",
+			Name:      "error_counters",
+			Help:      "Number encountered errors by quorum client.",
 		},
-		[]string{"group", "alias", "baseURL", "error"},
+		[]string{"group", "alias", "baseURL"},
 	)
 
 	coordinatorSoftErrEncountered = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "iota_coordinator_soft_errors",
-			Help: "The coordinator's encountered soft error count.",
+			Namespace: "iota",
+			Subsystem: "coordinator_quorum",
+			Name:      "soft_error_count",
+			Help:      "The coordinator's encountered soft error count.",
 		},
 	)
 
@@ -57,13 +65,12 @@ func collectCoordinatorQuorumStats() {
 			"alias":   entry.Alias,
 			"baseURL": entry.BaseURL,
 		}
-		coordinatorQuorumResponseTimes.With(labelsResponseTime).Set(float64(entry.ResponseTimeMs))
+		coordinatorQuorumResponseTimes.With(labelsResponseTime).Observe(entry.ResponseTimeSeconds)
 
 		labelsErrorCounters := prometheus.Labels{
 			"group":   entry.Group,
 			"alias":   entry.Alias,
 			"baseURL": entry.BaseURL,
-			"error":   entry.Error.Error(),
 		}
 		coordinatorQuorumErrorCounters.With(labelsErrorCounters).Set(float64(entry.ErrorCounter))
 	}

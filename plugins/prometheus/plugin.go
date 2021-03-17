@@ -23,6 +23,7 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 )
@@ -64,6 +65,7 @@ type dependencies struct {
 	MigratorService *migrator.MigratorService `optional:"true"`
 	Manager         *p2p.Manager
 	RequestQueue    gossip.RequestQueue
+	TipSelector     *tipselect.TipSelector
 	Coordinator     *coordinator.Coordinator `optional:"true"`
 	DatabaseEvents  *database.Events
 }
@@ -71,11 +73,10 @@ type dependencies struct {
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
-	configureData()
 	configureDatabase()
-	configureInfo()
-	configurePeers()
-	configureServer()
+	configureNode()
+	configureGossipPeers()
+	configureGossipNode()
 	if deps.ReceiptService != nil {
 		configureReceipts()
 	}

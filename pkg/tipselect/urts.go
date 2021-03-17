@@ -380,6 +380,11 @@ func (ts *TipSelector) getOptimalTipCount() int {
 	return 4
 }
 
+// GetTipCount returns the current amount of available tips in the non-lazy and semi-lazy pool.
+func (ts *TipSelector) GetTipCount() (int, int) {
+	return len(ts.nonLazyTipsMap), len(ts.semiLazyTipsMap)
+}
+
 // SelectSemiLazyTips selects two semi-lazy tips.
 func (ts *TipSelector) SelectSemiLazyTips() (hornet.MessageIDs, error) {
 	return ts.selectTips(ts.semiLazyTipsMap)

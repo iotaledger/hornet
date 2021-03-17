@@ -71,10 +71,10 @@ func collectServer() {
 	gossipMessages.WithLabelValues("validated").Set(float64(deps.ServerMetrics.ValidatedMessages.Load()))
 
 	gossipRequests.WithLabelValues("invalid").Set(float64(deps.ServerMetrics.InvalidRequests.Load()))
-	gossipRequests.WithLabelValues("received_messages").Set(float64(deps.ServerMetrics.ReceivedMessageRequests.Load()))
-	gossipRequests.WithLabelValues("received_milestones").Set(float64(deps.ServerMetrics.ReceivedMilestoneRequests.Load()))
-	gossipRequests.WithLabelValues("sent_messages").Set(float64(deps.ServerMetrics.SentMessageRequests.Load()))
-	gossipRequests.WithLabelValues("sent_milestones").Set(float64(deps.ServerMetrics.SentMilestoneRequests.Load()))
+	gossipRequests.WithLabelValues("received_message").Set(float64(deps.ServerMetrics.ReceivedMessageRequests.Load()))
+	gossipRequests.WithLabelValues("received_milestone").Set(float64(deps.ServerMetrics.ReceivedMilestoneRequests.Load()))
+	gossipRequests.WithLabelValues("sent_message").Set(float64(deps.ServerMetrics.SentMessageRequests.Load()))
+	gossipRequests.WithLabelValues("sent_milestone").Set(float64(deps.ServerMetrics.SentMilestoneRequests.Load()))
 
 	gossipHeartbeats.WithLabelValues("received").Set(float64(deps.ServerMetrics.ReceivedHeartbeats.Load()))
 	gossipHeartbeats.WithLabelValues("sent").Set(float64(deps.ServerMetrics.SentHeartbeats.Load()))
