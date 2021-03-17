@@ -1,8 +1,6 @@
 package coordinator
 
 import (
-	"time"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
@@ -19,5 +17,5 @@ func MilestoneCaller(handler interface{}, params ...interface{}) {
 
 // QuorumFinishedCaller is used to signal a finished quorum call.
 func QuorumFinishedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(duration time.Duration, err error))(params[0].(time.Duration), params[1].(error))
+	handler.(func(result *QuorumFinishedResult))(params[0].(*QuorumFinishedResult))
 }

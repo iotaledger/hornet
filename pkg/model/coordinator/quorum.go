@@ -50,6 +50,12 @@ type QuorumClientStatistic struct {
 	Error error
 }
 
+// QuorumFinishedResult holds statistics of a finished quorum.
+type QuorumFinishedResult struct {
+	Duration time.Duration
+	Err      error
+}
+
 // quorumGroupEntry holds the api and statistics of a quorum client.
 type quorumGroupEntry struct {
 	api   *DebugNodeAPIClient
