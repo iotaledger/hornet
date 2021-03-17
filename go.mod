@@ -4,6 +4,8 @@ go 1.16
 
 replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210310184511-8bd9d8bc32ac
 
+replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210317142027-eb49dece6342
+
 require (
 	github.com/DataDog/zstd v1.4.8 // indirect
 	github.com/Microsoft/go-winio v0.4.16 // indirect
