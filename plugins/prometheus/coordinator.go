@@ -1,35 +1,56 @@
 package prometheus
 
 import (
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/iotaledger/hive.go/events"
 )
 
 var (
-	coordinatorQuorumResponseTimes *prometheus.HistogramVec
-	coordinatorQuorumErrorCounters *prometheus.GaugeVec
-	coordinatorSoftErrEncountered  prometheus.Counter
+	coordinatorQuorumResponseTime       prometheus.Histogram
+	coordinatorQuorumErrorCounter       prometheus.Counter
+	coordinatorQuorumNodesResponseTimes *prometheus.HistogramVec
+	coordinatorQuorumNodesErrorCounters *prometheus.CounterVec
+	coordinatorSoftErrEncountered       prometheus.Counter
 )
 
 func configureCoordinator() {
 
-	coordinatorQuorumResponseTimes = prometheus.NewHistogramVec(
+	coordinatorQuorumResponseTime = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Namespace: "iota",
-			Subsystem: "coordinator_quorum",
-			Name:      "response_times",
+			Subsystem: "coordinator",
+			Name:      "quorum_duration",
+			Help:      "Durations for complete quorum.",
+			Buckets:   prometheus.DefBuckets,
+		})
+
+	coordinatorQuorumErrorCounter = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "iota",
+			Subsystem: "coordinator",
+			Name:      "quorum_error_counter",
+			Help:      "Number encountered errors for complete quorum.",
+		})
+
+	coordinatorQuorumNodesResponseTimes = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: "iota",
+			Subsystem: "coordinator",
+			Name:      "quorum_nodes_response_times",
 			Help:      "Latest response time by quorum client.",
 			Buckets:   prometheus.DefBuckets,
 		},
 		[]string{"group", "alias", "baseURL"},
 	)
 
-	coordinatorQuorumErrorCounters = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
+	coordinatorQuorumNodesErrorCounters = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
 			Namespace: "iota",
-			Subsystem: "coordinator_quorum",
-			Name:      "error_counters",
+			Subsystem: "coordinator",
+			Name:      "quorum_nodes_error_counters",
 			Help:      "Number encountered errors by quorum client.",
 		},
 		[]string{"group", "alias", "baseURL"},
@@ -38,40 +59,47 @@ func configureCoordinator() {
 	coordinatorSoftErrEncountered = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Namespace: "iota",
-			Subsystem: "coordinator_quorum",
+			Subsystem: "coordinator",
 			Name:      "soft_error_count",
 			Help:      "The coordinator's encountered soft error count.",
 		},
 	)
 
-	registry.MustRegister(coordinatorQuorumResponseTimes)
-	registry.MustRegister(coordinatorQuorumErrorCounters)
+	registry.MustRegister(coordinatorQuorumResponseTime)
+	registry.MustRegister(coordinatorQuorumErrorCounter)
+	registry.MustRegister(coordinatorQuorumNodesResponseTimes)
+	registry.MustRegister(coordinatorQuorumNodesErrorCounters)
 	registry.MustRegister(coordinatorSoftErrEncountered)
+
+	deps.Coordinator.Events.QuorumFinished.Attach(events.NewClosure(func(duration time.Duration, err error) {
+
+		coordinatorQuorumResponseTime.Observe(duration.Seconds())
+		if err != nil {
+			coordinatorQuorumErrorCounter.Inc()
+		}
+
+		// get snapshot of last quorum stats
+		for _, entry := range deps.Coordinator.QuorumStats() {
+			labelsResponseTime := prometheus.Labels{
+				"group":   entry.Group,
+				"alias":   entry.Alias,
+				"baseURL": entry.BaseURL,
+			}
+			coordinatorQuorumNodesResponseTimes.With(labelsResponseTime).Observe(entry.ResponseTimeSeconds)
+
+			labelsErrorCounters := prometheus.Labels{
+				"group":   entry.Group,
+				"alias":   entry.Alias,
+				"baseURL": entry.BaseURL,
+			}
+
+			if entry.Error != nil {
+				coordinatorQuorumNodesErrorCounters.With(labelsErrorCounters).Inc()
+			}
+		}
+	}))
 
 	deps.Coordinator.Events.SoftError.Attach(events.NewClosure(func(_ error) {
 		coordinatorSoftErrEncountered.Inc()
 	}))
-
-	addCollect(collectCoordinatorQuorumStats)
-}
-
-func collectCoordinatorQuorumStats() {
-	coordinatorQuorumResponseTimes.Reset()
-	coordinatorQuorumErrorCounters.Reset()
-
-	for _, entry := range deps.Coordinator.QuorumStats() {
-		labelsResponseTime := prometheus.Labels{
-			"group":   entry.Group,
-			"alias":   entry.Alias,
-			"baseURL": entry.BaseURL,
-		}
-		coordinatorQuorumResponseTimes.With(labelsResponseTime).Observe(entry.ResponseTimeSeconds)
-
-		labelsErrorCounters := prometheus.Labels{
-			"group":   entry.Group,
-			"alias":   entry.Alias,
-			"baseURL": entry.BaseURL,
-		}
-		coordinatorQuorumErrorCounters.With(labelsErrorCounters).Set(float64(entry.ErrorCounter))
-	}
 }

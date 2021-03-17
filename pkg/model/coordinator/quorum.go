@@ -48,8 +48,6 @@ type QuorumClientStatistic struct {
 	ResponseTimeSeconds float64
 	// error of last whiteflag API call.
 	Error error
-	// number of all encountered errors of this quorum client.
-	ErrorCounter int64
 }
 
 // quorumGroupEntry holds the api and statistics of a quorum client.
@@ -137,7 +135,6 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash MerkleTreeHash
 			entry.stats.Error = err
 
 			if err != nil {
-				entry.stats.ErrorCounter++
 				nodeErrorChan <- err
 				return
 			}
