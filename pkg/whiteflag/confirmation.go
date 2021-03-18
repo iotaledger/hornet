@@ -40,6 +40,7 @@ type ConfirmedMilestoneStats struct {
 // metadataMemcache has to be cleaned up outside.
 func ConfirmMilestone(
 	s *storage.Storage, serverMetrics *metrics.ServerMetrics,
+	messagesMemcache *storage.MessagesMemcache,
 	metadataMemcache *storage.MetadataMemcache,
 	milestoneMessageID hornet.MessageID,
 	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64),
@@ -47,12 +48,6 @@ func ConfirmMilestone(
 	forEachNewOutput func(output *utxo.Output),
 	forEachNewSpent func(spent *utxo.Spent),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, error) {
-
-	messagesMemcache := storage.NewMessagesMemcache(s)
-
-	// All releases are forced since the cone is referenced and not needed anymore
-	// release all messages at the end
-	defer messagesMemcache.Cleanup(true)
 
 	cachedMilestoneMessage := messagesMemcache.GetCachedMessageOrNil(milestoneMessageID)
 	if cachedMilestoneMessage == nil {

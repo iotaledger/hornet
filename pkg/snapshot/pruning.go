@@ -26,7 +26,7 @@ func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCo
 	messageIDsToDeleteMap := make(map[string]struct{})
 
 	// Check if message is still unreferenced
-	for _, messageID := range s.storage.GetUnreferencedMessageIDs(targetIndex, true) {
+	for _, messageID := range s.storage.GetUnreferencedMessageIDs(targetIndex) {
 		messageIDMapKey := messageID.ToMapKey()
 		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
 			continue

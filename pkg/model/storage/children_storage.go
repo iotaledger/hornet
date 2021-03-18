@@ -17,10 +17,22 @@ type CachedChild struct {
 
 type CachedChildren []*CachedChild
 
+func (cachedChildren CachedChildren) Retain() CachedChildren {
+	cachedResult := make(CachedChildren, len(cachedChildren))
+	for i, cachedChild := range cachedChildren {
+		cachedResult[i] = cachedChild.Retain()
+	}
+	return cachedResult
+}
+
 func (cachedChildren CachedChildren) Release(force ...bool) {
 	for _, cachedChild := range cachedChildren {
 		cachedChild.Release(force...)
 	}
+}
+
+func (c *CachedChild) Retain() *CachedChild {
+	return &CachedChild{c.CachedObject.Retain()}
 }
 
 func (c *CachedChild) GetChild() *Child {
