@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -135,62 +136,27 @@ func provide(c *dig.Container) {
 
 		initCoordinator := func() (*coordinator.Coordinator, error) {
 
-			var signingProvider coordinator.MilestoneSignerProvider
-			switch deps.NodeConfig.String(CfgCoordinatorSigningProvider) {
-			case "local":
-				privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
-				if err != nil {
-					return nil, err
-				}
+			signingProvider, err := initSigningProvider(
+				deps.NodeConfig.String(CfgCoordinatorSigningProvider),
+				deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress),
+				deps.Storage.KeyManager(),
+				deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to initialize signing provider: %s", err)
+			}
 
-				if len(privateKeys) == 0 {
-					return nil, errors.New("no private keys given")
-				}
+			quorumGroups, err := initQuorumGroups(deps.NodeConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to initialize coordinator quorum: %s", err)
+			}
 
-				for _, privateKey := range privateKeys {
-					if len(privateKey) != ed25519.PrivateKeySize {
-						return nil, errors.New("wrong private key length")
-					}
-				}
-
-				signingProvider = coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
-
-			case "remote":
-				remoteEndpoint := deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress)
-				if remoteEndpoint == "" {
-					return nil, errors.New("no address given for remote signing provider")
-				}
-				signingProvider = coordinator.NewInsecureRemoteEd25519MilestoneSignerProvider(remoteEndpoint, deps.Storage.KeyManager(), deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
-
-			default:
-				return nil, fmt.Errorf("unknown milestone signing provider: %s", deps.NodeConfig.String(CfgCoordinatorSigningProvider))
+			if deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled) {
+				log.Info("running Coordinator with quorum enabled")
 			}
 
 			if deps.MigratorService == nil {
 				log.Info("running Coordinator without migration enabled")
-			}
-
-			// parse quorum groups config
-			quorumGroups := make(map[string][]*coordinator.QuorumClientConfig)
-			for _, groupName := range deps.NodeConfig.MapKeys(CfgCoordinatorQuorumGroups) {
-				configKey := CfgCoordinatorQuorumGroups + "." + groupName
-
-				groupConfig := []*coordinator.QuorumClientConfig{}
-				if err := deps.NodeConfig.Unmarshal(configKey, &groupConfig); err != nil {
-					return nil, fmt.Errorf("failed to parse coordinator quorum group: %s, %s", configKey, err)
-				}
-
-				if len(groupConfig) == 0 {
-					return nil, fmt.Errorf("invalid coordinator quorum group: %s, no entries", configKey)
-				}
-
-				for _, entry := range groupConfig {
-					if entry.BaseURL == "" {
-						return nil, fmt.Errorf("invalid coordinator quorum group: %s, missing baseURL in entry", configKey)
-					}
-				}
-
-				quorumGroups[groupName] = groupConfig
 			}
 
 			coo, err := coordinator.New(
@@ -209,10 +175,6 @@ func provide(c *dig.Container) {
 			)
 			if err != nil {
 				return nil, err
-			}
-
-			if deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled) {
-				log.Info("coordinator is running with enabled quorum")
 			}
 
 			if err := coo.InitState(*bootstrap, milestone.Index(*startIndex)); err != nil {
@@ -404,6 +366,66 @@ func run() {
 		detachEvents()
 	}, shutdown.PriorityCoordinator)
 
+}
+
+func initSigningProvider(signingProviderType string, remoteEndpoint string, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (coordinator.MilestoneSignerProvider, error) {
+
+	switch signingProviderType {
+	case "local":
+		privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
+		if err != nil {
+			return nil, err
+		}
+
+		if len(privateKeys) == 0 {
+			return nil, errors.New("no private keys given")
+		}
+
+		for _, privateKey := range privateKeys {
+			if len(privateKey) != ed25519.PrivateKeySize {
+				return nil, errors.New("wrong private key length")
+			}
+		}
+
+		return coordinator.NewInMemoryEd25519MilestoneSignerProvider(privateKeys, keyManager, milestonePublicKeyCount), nil
+
+	case "remote":
+		if remoteEndpoint == "" {
+			return nil, errors.New("no address given for remote signing provider")
+		}
+
+		return coordinator.NewInsecureRemoteEd25519MilestoneSignerProvider(remoteEndpoint, keyManager, milestonePublicKeyCount), nil
+
+	default:
+		return nil, fmt.Errorf("unknown milestone signing provider: %s", signingProviderType)
+	}
+}
+
+func initQuorumGroups(nodeConfig *configuration.Configuration) (map[string][]*coordinator.QuorumClientConfig, error) {
+	// parse quorum groups config
+	quorumGroups := make(map[string][]*coordinator.QuorumClientConfig)
+	for _, groupName := range nodeConfig.MapKeys(CfgCoordinatorQuorumGroups) {
+		configKey := CfgCoordinatorQuorumGroups + "." + groupName
+
+		groupConfig := []*coordinator.QuorumClientConfig{}
+		if err := nodeConfig.Unmarshal(configKey, &groupConfig); err != nil {
+			return nil, fmt.Errorf("failed to parse group: %s, %s", configKey, err)
+		}
+
+		if len(groupConfig) == 0 {
+			return nil, fmt.Errorf("invalid group: %s, no entries", configKey)
+		}
+
+		for _, entry := range groupConfig {
+			if entry.BaseURL == "" {
+				return nil, fmt.Errorf("invalid group: %s, missing baseURL in entry", configKey)
+			}
+		}
+
+		quorumGroups[groupName] = groupConfig
+	}
+
+	return quorumGroups, nil
 }
 
 func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
