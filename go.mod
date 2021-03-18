@@ -23,10 +23,8 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/eclipse/paho.mqtt.golang v1.3.2
 	github.com/fhmq/hmq v0.0.0-20210318020249-ccbe364f9fbe
-	github.com/gin-gonic/gin v1.6.3
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/go-ole/go-ole v1.2.5 // indirect
-	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
@@ -40,7 +38,6 @@ require (
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.2.1
-	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libp2p/go-libp2p v0.13.0
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
 	github.com/libp2p/go-libp2p-core v0.8.5
