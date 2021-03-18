@@ -8,4 +8,5 @@ Here we cover the following steps:
 
 - [Build HORNET](./build.md)
 - [Run HORNET](./run.md)
+- [Run HORNET in Docker](./run_docker.md)
 - [Run a private tangle](./private_tangle.md)
