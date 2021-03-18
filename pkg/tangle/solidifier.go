@@ -575,6 +575,6 @@ func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index,
 		}
 	}
 
-	t.log.Infof("searchMissingMilestone finished, found: %v, total: %v", milestoneFound, time.Since(ts))
+	t.log.Infof("searchMissingMilestone finished, found: %v, took: %v", milestoneFound, time.Since(ts).Truncate(time.Millisecond))
 	return milestoneFound, nil
 }

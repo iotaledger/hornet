@@ -128,7 +128,7 @@ func configureEvents() {
 		// walks the whole cone if there are already paths between newer milestones in the database.
 		warpSyncMilestoneRequester.Cleanup()
 
-		log.Infof("Synchronized %d milestones in %v", deltaSynced, took)
+		log.Infof("Synchronized %d milestones in %v", deltaSynced, took.Truncate(time.Millisecond))
 		deps.RequestQueue.Filter(nil)
 	})
 }

@@ -234,7 +234,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		snapshotInfo.PruningIndex = milestoneIndex
 		s.storage.SetSnapshotInfo(snapshotInfo)
 
-		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts), txCountDeleted, msgCountChecked)
+		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
 
 		s.tangle.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 	}
