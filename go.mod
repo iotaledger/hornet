@@ -4,8 +4,6 @@ go 1.16
 
 replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210310184511-8bd9d8bc32ac
 
-replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210317142027-eb49dece6342
-
 require (
 	github.com/DataDog/zstd v1.4.8 // indirect
 	github.com/Microsoft/go-winio v0.4.16 // indirect
@@ -24,7 +22,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/eclipse/paho.mqtt.golang v1.3.2
-	github.com/fhmq/hmq v0.0.0-20210226074401-7cc3949bbe89
+	github.com/fhmq/hmq v0.0.0-20210318020249-ccbe364f9fbe
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/go-ole/go-ole v1.2.5 // indirect
