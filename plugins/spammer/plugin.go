@@ -1,6 +1,7 @@
 package spammer
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -225,38 +226,60 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 	var rateLimitAbortSignal chan struct{} = nil
 
 	if mpsRateLimit != 0.0 {
-		rateLimitChannelSize := int64(mpsRateLimit) * 2
-		if rateLimitChannelSize < 2 {
-			rateLimitChannelSize = 2
-		}
-		rateLimitChannel = make(chan struct{}, rateLimitChannelSize)
+		rateLimitChannel = make(chan struct{}, spammerWorkerCount*2)
 		rateLimitAbortSignal = make(chan struct{})
 
 		// create a background worker that fills rateLimitChannel every second
 		Plugin.Daemon().BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
-			done := make(chan struct{})
-			currentProcessID := processID.Load()
+			defer spammerWaitGroup.Done()
 
-			ticker := timeutil.NewTicker(func() {
+			currentProcessID := processID.Load()
+			interval := time.Duration(int64(float64(time.Second) / mpsRateLimit))
+			timeout := interval * 2
+			if timeout < time.Second {
+				timeout = time.Second
+			}
+
+			var lastDuration time.Duration
+		rateLimitLoop:
+			for {
+				timeStart := time.Now()
+
+				ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 				if currentProcessID != processID.Load() {
 					close(rateLimitAbortSignal)
-					close(done)
-					return
+					cancel()
+					break rateLimitLoop
 				}
+
+				// measure the last interval error and multiply by two to compensate (to reach target MPS)
+				lastIntervalError := (lastDuration - interval) * 2.0
+				if lastIntervalError < 0 {
+					lastIntervalError = 0
+				}
+				time.Sleep(interval - lastIntervalError)
 
 				select {
 				case <-shutdownSignal:
+					// received shutdown signal
 					close(rateLimitAbortSignal)
-					close(done)
+					cancel()
+					break rateLimitLoop
+
 				case rateLimitChannel <- struct{}{}:
-				default:
-					// Channel full
+					// wait until a worker is free
+
+				case <-ctx.Done():
+					// timeout if the channel is not free in time
+					// maybe the consumer was shut down
 				}
-			}, time.Duration(int64(float64(time.Second)/mpsRateLimit)), done)
-			ticker.WaitForGracefulShutdown()
-			spammerWaitGroup.Done()
+
+				cancel()
+				lastDuration = time.Since(timeStart)
+			}
+
 		}, shutdown.PrioritySpammer)
 	}
 
@@ -264,6 +287,8 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 	for i := 0; i < spammerWorkerCount; i++ {
 		Plugin.Daemon().BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
+			defer spammerWaitGroup.Done()
+
 			spammerIndex := spammerCnt.Inc()
 			currentProcessID := processID.Load()
 
@@ -274,6 +299,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 				select {
 				case <-shutdownSignal:
 					break spammerLoop
+
 				default:
 					if currentProcessID != processID.Load() {
 						break spammerLoop
@@ -322,8 +348,6 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 
 			log.Infof("Stopping Spammer %d...", spammerIndex)
 			log.Infof("Stopping Spammer %d... done", spammerIndex)
-			spammerWaitGroup.Done()
-
 		}, shutdown.PrioritySpammer)
 	}
 }
