@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/dig"
@@ -26,6 +27,12 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
+)
+
+// RouteMetrics is the route for getting the prometheus metrics.
+// GET returns metrics.
+const (
+	RouteMetrics = "/metrics"
 )
 
 func init() {
@@ -134,9 +141,11 @@ func run() {
 	Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
 		log.Info("Starting Prometheus exporter ... done")
 
-		engine := gin.New()
-		engine.Use(gin.Recovery())
-		engine.GET("/metrics", func(c *gin.Context) {
+		e := echo.New()
+		e.HideBanner = true
+		e.Use(middleware.Recover())
+
+		e.GET(RouteMetrics, func(c echo.Context) error {
 			for _, collect := range collects {
 				collect()
 			}
@@ -149,11 +158,13 @@ func run() {
 			if deps.NodeConfig.Bool(CfgPrometheusPromhttpMetrics) {
 				handler = promhttp.InstrumentMetricHandler(registry, handler)
 			}
-			handler.ServeHTTP(c.Writer, c.Request)
+
+			handler.ServeHTTP(c.Response().Writer, c.Request())
+			return nil
 		})
 
 		bindAddr := deps.NodeConfig.String(CfgPrometheusBindAddress)
-		server = &http.Server{Addr: bindAddr, Handler: engine}
+		server = &http.Server{Addr: bindAddr, Handler: e}
 
 		go func() {
 			log.Infof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
