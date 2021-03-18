@@ -11,6 +11,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -65,12 +66,13 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage    *storage.Storage
-	Tangle     *tangle.Tangle
-	UTXO       *utxo.Manager
-	Snapshot   *snapshot.Snapshot
-	NodeConfig *configuration.Configuration `name:"nodeConfig"`
-	NetworkID  uint64                       `name:"networkId"`
+	Storage        *storage.Storage
+	Tangle         *tangle.Tangle
+	UTXO           *utxo.Manager
+	Snapshot       *snapshot.Snapshot
+	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+	NetworkID      uint64                       `name:"networkId"`
+	StorageMetrics *metrics.StorageMetrics
 }
 
 func provide(c *dig.Container) {

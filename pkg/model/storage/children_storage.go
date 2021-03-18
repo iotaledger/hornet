@@ -71,7 +71,7 @@ func (s *Storage) GetChildrenMessageIDs(messageID hornet.MessageID, maxFind ...i
 
 		childrenMessageIDs = append(childrenMessageIDs, hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 		return true
-	}, false, messageID)
+	}, objectstorage.WithPrefix(messageID))
 
 	return childrenMessageIDs
 }
@@ -84,11 +84,22 @@ func (s *Storage) ContainsChild(messageID hornet.MessageID, childMessageID horne
 // ChildConsumer consumes the given child during looping through all children in the persistence layer.
 type ChildConsumer func(messageID hornet.MessageID, childMessageID hornet.MessageID) bool
 
+// GetCachedChildrenOfMessageID returns the cached children of a message.
+// children +1
+func (s *Storage) GetCachedChildrenOfMessageID(messageID hornet.MessageID) CachedChildren {
+	cachedChildren := make(CachedChildren, 0)
+	s.childrenStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+		cachedChildren = append(cachedChildren, &CachedChild{CachedObject: cachedObject})
+		return true
+	}, objectstorage.WithPrefix(messageID))
+	return cachedChildren
+}
+
 // ForEachChild loops over all children.
-func (s *Storage) ForEachChild(consumer ChildConsumer, skipCache bool) {
+func (s *Storage) ForEachChild(consumer ChildConsumer, iteratorOptions ...objectstorage.IteratorOption) {
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]), hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
-	}, skipCache)
+	}, iteratorOptions...)
 }
 
 // child +1
@@ -111,7 +122,7 @@ func (s *Storage) DeleteChildren(messageID hornet.MessageID) {
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, false, messageID)
+	}, objectstorage.WithPrefix(messageID))
 
 	for _, key := range keysToDelete {
 		s.childrenStorage.Delete(key)

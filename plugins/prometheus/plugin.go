@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -22,6 +23,7 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 )
@@ -55,22 +57,26 @@ type dependencies struct {
 	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
 	Storage         *storage.Storage
 	ServerMetrics   *metrics.ServerMetrics
+	DatabaseMetrics *metrics.DatabaseMetrics
+	StorageMetrics  *metrics.StorageMetrics
 	Service         *gossip.Service
 	ReceiptService  *migrator.ReceiptService `optional:"true"`
 	Tangle          *tangle.Tangle
 	MigratorService *migrator.MigratorService `optional:"true"`
 	Manager         *p2p.Manager
 	RequestQueue    gossip.RequestQueue
+	TipSelector     *tipselect.TipSelector
 	Coordinator     *coordinator.Coordinator `optional:"true"`
+	DatabaseEvents  *database.Events
 }
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
-	configureData()
-	configureInfo()
-	configurePeers()
-	configureServer()
+	configureDatabase()
+	configureNode()
+	configureGossipPeers()
+	configureGossipNode()
 	if deps.ReceiptService != nil {
 		configureReceipts()
 	}

@@ -45,11 +45,15 @@ type QuorumClientStatistic struct {
 	// baseURL of the quorum client.
 	BaseURL string
 	// last response time of the whiteflag API call.
-	ResponseTimeMs int64
+	ResponseTimeSeconds float64
 	// error of last whiteflag API call.
 	Error error
-	// number of all encountered errors of this quorum client.
-	ErrorCounter int64
+}
+
+// QuorumFinishedResult holds statistics of a finished quorum.
+type QuorumFinishedResult struct {
+	Duration time.Duration
+	Err      error
 }
 
 // quorumGroupEntry holds the api and statistics of a quorum client.
@@ -133,11 +137,10 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash MerkleTreeHash
 			nodeMerkleTreeHash, err := entry.api.Whiteflag(index, parents)
 
 			// set the stats for the node
-			entry.stats.ResponseTimeMs = time.Since(ts).Milliseconds()
+			entry.stats.ResponseTimeSeconds = time.Since(ts).Seconds()
 			entry.stats.Error = err
 
 			if err != nil {
-				entry.stats.ErrorCounter++
 				nodeErrorChan <- err
 				return
 			}

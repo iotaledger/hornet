@@ -106,9 +106,8 @@ github.com/cockroachdb/errors v1.8.1 h1:A5+txlVZfOqFBDa4mGz2bUWSp0aHElvHX2bKkdbQ
 github.com/cockroachdb/errors v1.8.1/go.mod h1:qGwQn6JmZ+oMjuLwjWzUNqblqk0xl4CVV3SQbGwK7Ac=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f h1:o/kfcElHqOiXqcou5a3rIlMc7oJbMQkeLk0VQJ7zgqY=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/cockroachdb/pebble v0.0.0-20210303200444-070a80fcca6f/go.mod h1:1XpB4cLQcF189RAcWi4gUc110zJgtOfT7SVNGY8sOe0=
-github.com/cockroachdb/pebble v0.0.0-20210309160423-2673cbf29137 h1:aCyosYx2tLYj+macSDAWw3k8cLYATXVRAeT9kG8kwjw=
-github.com/cockroachdb/pebble v0.0.0-20210309160423-2673cbf29137/go.mod h1:1XpB4cLQcF189RAcWi4gUc110zJgtOfT7SVNGY8sOe0=
+github.com/cockroachdb/pebble v0.0.0-20210313162627-639dfcee1d23 h1:UvUEq6cU4jdzsPZ/w87PYF206koN26nx1rusWjDPCp8=
+github.com/cockroachdb/pebble v0.0.0-20210313162627-639dfcee1d23/go.mod h1:1XpB4cLQcF189RAcWi4gUc110zJgtOfT7SVNGY8sOe0=
 github.com/cockroachdb/redact v1.0.8 h1:8QG/764wK+vmEYoOlfobpe12EQcS81ukx/a4hdVMxNw=
 github.com/cockroachdb/redact v1.0.8/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZZ2lK+dpvRg=
 github.com/cockroachdb/sentry-go v0.6.1-cockroachdb.2 h1:IKgmqgMQlVJIZj19CdocBeSfSaiCbEBZGKODaixqtHM=
@@ -401,10 +400,6 @@ github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210120184258-7eac7c1cc80b/go.mo
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7 h1:DIVriS1iEEOPrYwQ/vpHLsnVtmUpj4S+2UI4Jl+48ZQ=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go/v2 v2.0.0-20210131170834-4209e58f134b/go.mod h1:eW6gagdKBm9cNMEUbLz9I+rIdsJdGWV3M26Ihdm47v0=
-github.com/iotaledger/iota.go/v2 v2.0.0-20210303080450-b3ab28991fc8 h1:6kWp6W/c7+MaYg5YUPudE05XNgRn1rjU68HiTzCusXs=
-github.com/iotaledger/iota.go/v2 v2.0.0-20210303080450-b3ab28991fc8/go.mod h1:W6ma7/TCwGO9s3+OX9c0AES4vc4/3PhoDuROXFUBqRE=
-github.com/iotaledger/iota.go/v2 v2.0.0-20210311103028-90a8ef66bb7b h1:P3eyzJax9gGY/grKh5tdyQxb23m92I9QZxwxuRbs2zk=
-github.com/iotaledger/iota.go/v2 v2.0.0-20210311103028-90a8ef66bb7b/go.mod h1:W6ma7/TCwGO9s3+OX9c0AES4vc4/3PhoDuROXFUBqRE=
 github.com/iotaledger/iota.go/v2 v2.0.0-20210312091857-068d33487f86 h1:XHvtxZP4fH+FwOJVVdxLR59jX9aiXJAGN4P5BIUg4po=
 github.com/iotaledger/iota.go/v2 v2.0.0-20210312091857-068d33487f86/go.mod h1:W6ma7/TCwGO9s3+OX9c0AES4vc4/3PhoDuROXFUBqRE=
 github.com/iotaledger/iota.go/v2 v2.0.0-20210316125548-8994b0fc100d h1:qsRMOHE5jKxXyz7MNSKqwAOTqGxxzAazrc0b0ms6sHk=
@@ -886,8 +881,8 @@ github.com/multiformats/go-varint v0.0.2/go.mod h1:3Ls8CIEsrijN6+B7PbrXRPxHRPuXS
 github.com/multiformats/go-varint v0.0.5/go.mod h1:3Ls8CIEsrijN6+B7PbrXRPxHRPuXSrVKRY101jdMZYE=
 github.com/multiformats/go-varint v0.0.6 h1:gk85QWKxh3TazbLxED/NlDVv8+q+ReFJk7Y2W/KhfNY=
 github.com/multiformats/go-varint v0.0.6/go.mod h1:3Ls8CIEsrijN6+B7PbrXRPxHRPuXSrVKRY101jdMZYE=
-github.com/muxxer/hive.go v0.0.0-20210310184511-8bd9d8bc32ac h1:DrAMkSa0hywtiK4JmcS5bfa6UeixdaJrt8sfNBwjZyk=
-github.com/muxxer/hive.go v0.0.0-20210310184511-8bd9d8bc32ac/go.mod h1:wa3f/gaA2rWywyWkgw4vbwmZicZ1n2+dlSp8ax1ziV8=
+github.com/muxxer/hive.go v0.0.0-20210315124228-1f9351ca6d94 h1:ZODb6FizMx/AZELq34SOieeOijB7j/sY9KiBnl7mn84=
+github.com/muxxer/hive.go v0.0.0-20210315124228-1f9351ca6d94/go.mod h1:zftzP2H4Ht5YnXhEo3IDHCC0KmwORPj/3nYtXpmilaE=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nats-io/jwt v0.3.0/go.mod h1:fRYCDE99xlTsqUzISS1Bi75UBJ6ljOJQOAAu5VglpSg=
@@ -1345,8 +1340,8 @@ golang.org/x/sys v0.0.0-20210112080510-489259a85091/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210217105451-b926d437f341/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20210309074719-68d13333faf2 h1:46ULzRKLh1CwgRq2dC5SlBzEqqNCi8rreOZnNrbqcIY=
-golang.org/x/sys v0.0.0-20210309074719-68d13333faf2/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20210313202042-bd2e13477e9c h1:coiPEfMv+ThsjULRDygLrJVlNE1gDdL2g65s0LhV2os=
+golang.org/x/sys v0.0.0-20210313202042-bd2e13477e9c/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/term v0.0.0-20201117132131-f5c789dd3221/go.mod h1:Nr5EML6q2oocZ2LXRh80K7BxOlk5/8JxuGnuhpl+muw=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 h1:v+OssWQX+hTHEmOBgwxdZxK4zHq3yOs8F9J7mk0PY8E=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=

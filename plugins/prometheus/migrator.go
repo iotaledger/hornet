@@ -16,8 +16,10 @@ var (
 func configureMigrator() {
 	migratorSoftErrEncountered = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "iota_migrator_soft_errors",
-			Help: "The migrator service's encountered soft error count.",
+			Namespace: "iota",
+			Subsystem: "migrator",
+			Name:      "soft_error_count",
+			Help:      "The migrator service's encountered soft error count.",
 		},
 	)
 
@@ -31,15 +33,19 @@ func configureMigrator() {
 func configureReceipts() {
 	receiptCount = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "iota_receipts_count",
-			Help: "The count of encountered receipts.",
+			Namespace: "iota",
+			Subsystem: "migrator",
+			Name:      "receipt_count",
+			Help:      "The count of encountered receipts.",
 		},
 	)
 
 	receiptMigrationEntriesApplied = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "iota_receipts_entries_applied_count",
-			Help: "The count of migration entries applied through receipts.",
+			Namespace: "iota",
+			Subsystem: "migrator",
+			Name:      "receipt_entries_applied_count",
+			Help:      "The count of migration entries applied through receipts.",
 		},
 	)
 

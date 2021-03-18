@@ -6,13 +6,19 @@ import (
 
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/keymanager"
+	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/badger"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
@@ -29,6 +35,7 @@ func init() {
 			Params:    params,
 			Provide:   provide,
 			Configure: configure,
+			Run:       run,
 		},
 	}
 }
@@ -39,18 +46,47 @@ var (
 	deps       dependencies
 
 	garbageCollectionLock syncutils.Mutex
+
+	// Closures
+	onPruningStateChanged *events.Closure
 )
 
 type dependencies struct {
 	dig.In
-	Store   kvstore.KVStore
-	Storage *storage.Storage
+	Store          kvstore.KVStore
+	Storage        *storage.Storage
+	Events         *Events
+	StorageMetrics *metrics.StorageMetrics
 }
 
 func provide(c *dig.Container) {
+
+	if err := c.Provide(func() *metrics.DatabaseMetrics {
+		return &metrics.DatabaseMetrics{}
+	}); err != nil {
+		panic(err)
+	}
+
+	if err := c.Provide(func() *metrics.StorageMetrics {
+		return &metrics.StorageMetrics{}
+	}); err != nil {
+		panic(err)
+	}
+
+	if err := c.Provide(func() *Events {
+		return &Events{
+			DatabaseCleanup:    events.NewEvent(DatabaseCleanupCaller),
+			DatabaseCompaction: events.NewEvent(events.BoolCaller),
+		}
+	}); err != nil {
+		panic(err)
+	}
+
 	type pebbledeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		Events     *Events
+		Metrics    *metrics.DatabaseMetrics
 	}
 
 	if err := c.Provide(func(deps pebbledeps) kvstore.KVStore {
@@ -70,14 +106,26 @@ func provide(c *dig.Container) {
 
 	type storagedeps struct {
 		dig.In
-		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-		Store         kvstore.KVStore
-		Profile       *profile.Profile
-		BelowMaxDepth int `name:"belowMaxDepth"`
+		NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
+		Store                      kvstore.KVStore
+		Profile                    *profile.Profile
+		BelowMaxDepth              int `name:"belowMaxDepth"`
+		CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
 	}
 
 	if err := c.Provide(func(deps storagedeps) *storage.Storage {
-		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Store, deps.Profile.Caches, deps.BelowMaxDepth)
+
+		keyManager := keymanager.New()
+		for _, keyRange := range deps.CoordinatorPublicKeyRanges {
+			pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
+			if err != nil {
+				panic(fmt.Sprintf("can't load public key ranges: %s", err))
+			}
+
+			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
+		}
+
+		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Store, deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
 	}); err != nil {
 		panic(err)
 	}
@@ -105,6 +153,16 @@ func configure() {
 		closeDatabases()
 		log.Info("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase)
+
+	configureEvents()
+}
+
+func run() {
+	CorePlugin.Daemon().BackgroundWorker("Database[Events]", func(shutdownSignal <-chan struct{}) {
+		attachEvents()
+		<-shutdownSignal
+		detachEvents()
+	}, shutdown.PriorityMetricsUpdater)
 }
 
 func RunGarbageCollection() {
@@ -119,7 +177,7 @@ func RunGarbageCollection() {
 
 	start := time.Now()
 
-	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
+	deps.Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
 		Start: start,
 	})
 
@@ -127,7 +185,7 @@ func RunGarbageCollection() {
 
 	end := time.Now()
 
-	Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
+	deps.Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
 		Start: start,
 		End:   end,
 	})
@@ -153,4 +211,21 @@ func closeDatabases() error {
 	}
 
 	return nil
+}
+
+func configureEvents() {
+	onPruningStateChanged = events.NewClosure(func(running bool) {
+		deps.StorageMetrics.PruningRunning.Store(running)
+		if running {
+			deps.StorageMetrics.Prunings.Inc()
+		}
+	})
+}
+
+func attachEvents() {
+	deps.Storage.Events.PruningStateChanged.Attach(onPruningStateChanged)
+}
+
+func detachEvents() {
+	deps.Storage.Events.PruningStateChanged.Detach(onPruningStateChanged)
 }

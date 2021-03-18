@@ -25,6 +25,7 @@ var (
 type packageEvents struct {
 	ReceivedValidMilestoneMessage *events.Event
 	ReceivedValidMilestone        *events.Event
+	PruningStateChanged           *events.Event
 }
 
 type Storage struct {
@@ -77,18 +78,21 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int) *Storage {
+func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) *Storage {
 
 	utxoManager := utxo.New(store)
 
 	s := &Storage{
-		databaseDir:   databaseDirectory,
-		store:         store,
-		utxoManager:   utxoManager,
-		belowMaxDepth: milestone.Index(belowMaxDepth),
+		databaseDir:             databaseDirectory,
+		store:                   store,
+		keyManager:              keyManager,
+		milestonePublicKeyCount: milestonePublicKeyCount,
+		utxoManager:             utxoManager,
+		belowMaxDepth:           milestone.Index(belowMaxDepth),
 		Events: &packageEvents{
 			ReceivedValidMilestoneMessage: events.NewEvent(MessageCaller),
 			ReceivedValidMilestone:        events.NewEvent(MilestoneCaller),
+			PruningStateChanged:           events.NewEvent(events.BoolCaller),
 		},
 	}
 

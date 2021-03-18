@@ -53,6 +53,8 @@ type Events struct {
 	IssuedMilestone *events.Event
 	// SoftError is triggered when a soft error is encountered.
 	SoftError *events.Event
+	// QuorumFinished is triggered after a coordinator quorum call was finished.
+	QuorumFinished *events.Event
 }
 
 // PublicKeyRange is a public key of milestones with a valid range.
@@ -205,6 +207,7 @@ func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSig
 			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:         events.NewEvent(MilestoneCaller),
 			SoftError:               events.NewEvent(events.ErrorCaller),
+			QuorumFinished:          events.NewEvent(QuorumFinishedCaller),
 		},
 	}
 
@@ -307,7 +310,12 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// ask the quorum for correct ledger state if enabled
 	if coo.opts.quorum != nil {
 		ts := time.Now()
-		if err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents); err != nil {
+		err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents)
+
+		duration := time.Since(ts)
+		coo.Events.QuorumFinished.Trigger(&QuorumFinishedResult{Duration: duration, Err: err})
+
+		if err != nil {
 			// quorum failed => non-critical or critical error
 			if coo.opts.logger != nil {
 				coo.opts.logger.Infof("coordinator quorum failed after %v, err: %s", time.Since(ts).Truncate(time.Millisecond), err)
@@ -316,7 +324,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		}
 
 		if coo.opts.logger != nil {
-			coo.opts.logger.Infof("coordinator quorum took %v", time.Since(ts).Truncate(time.Millisecond))
+			coo.opts.logger.Infof("coordinator quorum took %v", duration.Truncate(time.Millisecond))
 		}
 	}
 

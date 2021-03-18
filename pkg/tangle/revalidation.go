@@ -5,6 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/objectstorage"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -153,7 +155,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 		milestonesToDelete[msIndex] = struct{}{}
 
 		return true
-	}, true)
+	}, objectstorage.WithSkipCache(true))
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -299,7 +301,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 		}
 
 		return true
-	}, true)
+	}, objectstorage.WithSkipCache(true))
 	t.log.Infof("analyzed %d messages", txsCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -360,7 +362,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 		}
 
 		return true
-	}, true)
+	}, objectstorage.WithSkipCache(true))
 	t.log.Infof("analyzed %d message metadata", metadataCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -433,7 +435,7 @@ func (t *Tangle) cleanupChildren() error {
 		}
 
 		return true
-	}, true)
+	}, objectstorage.WithSkipCache(true))
 	t.log.Infof("analyzed %d children", childCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -562,7 +564,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 		unreferencedMilestoneIndexes[msIndex] = struct{}{}
 
 		return true
-	}, true)
+	}, objectstorage.WithSkipCache(true))
 	t.log.Infof("analyzed %d unreferenced msgs", unreferencedTxsCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {

@@ -146,7 +146,7 @@ func (s *Storage) SearchLatestMilestoneIndexInStore() milestone.Index {
 		}
 
 		return true
-	}, true)
+	}, objectstorage.WithSkipCache(true))
 
 	return latestMilestoneIndex
 }
@@ -155,10 +155,10 @@ func (s *Storage) SearchLatestMilestoneIndexInStore() milestone.Index {
 type MilestoneIndexConsumer func(index milestone.Index) bool
 
 // ForEachMilestoneIndex loops through all milestones in the persistence layer.
-func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
+func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, iteratorOptions ...objectstorage.IteratorOption) {
 	s.milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestoneIndexFromDatabaseKey(key))
-	}, skipCache)
+	}, iteratorOptions...)
 }
 
 // milestone +1

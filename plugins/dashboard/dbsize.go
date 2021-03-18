@@ -63,8 +63,8 @@ func runDatabaseSizeCollector() {
 	})
 
 	Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
-		database.Events.DatabaseCleanup.Attach(onDatabaseCleanup)
-		defer database.Events.DatabaseCleanup.Detach(onDatabaseCleanup)
+		deps.DatabaseEvents.DatabaseCleanup.Attach(onDatabaseCleanup)
+		defer deps.DatabaseEvents.DatabaseCleanup.Detach(onDatabaseCleanup)
 
 		ticker := timeutil.NewTicker(func() {
 			dbSizeMetric := currentDatabaseSize()
