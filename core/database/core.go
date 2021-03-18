@@ -89,9 +89,18 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps pebbledeps) kvstore.KVStore {
+
+		reportCompactionRunning := func(running bool) {
+			deps.Metrics.CompactionRunning.Store(running)
+			if running {
+				deps.Metrics.CompactionCount.Inc()
+			}
+			deps.Events.DatabaseCompaction.Trigger(running)
+		}
+
 		switch deps.NodeConfig.String(CfgDatabaseEngine) {
 		case "pebble":
-			return pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), false))
+			return pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true))
 		case "bolt":
 			return bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db"))
 		default:
