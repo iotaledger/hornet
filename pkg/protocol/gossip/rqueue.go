@@ -326,18 +326,29 @@ func (pq *priorityqueue) Push(x interface{}) {
 }
 
 func (pq *priorityqueue) Pop() interface{} {
-	old := pq.queue
-	n := len(pq.queue)
-	r := old[n-1]
-	old[n-1] = nil // avoid memory leak
-	pq.queue = old[0 : n-1]
+	for {
+		old := pq.queue
+		n := len(pq.queue)
+		if n == 0 {
+			// queue is empty
+			return nil
+		}
+		r := old[n-1]
+		old[n-1] = nil // avoid memory leak
+		pq.queue = old[0 : n-1]
 
-	messageIDMapKey := r.MessageID.ToMapKey()
+		messageIDMapKey := r.MessageID.ToMapKey()
+		if _, queued := pq.queued[messageIDMapKey]; !queued {
+			// the request is not queued anymore
+			// => remove it from the heap and jump to the next entry
+			continue
+		}
 
-	// mark as pending and remove from queued
-	delete(pq.queued, messageIDMapKey)
-	pq.pending[messageIDMapKey] = r
-	return r
+		// mark as pending and remove from queued
+		delete(pq.queued, messageIDMapKey)
+		pq.pending[messageIDMapKey] = r
+		return r
+	}
 }
 
 func (pq *priorityqueue) Peek() *Request {
