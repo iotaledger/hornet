@@ -6,7 +6,7 @@ go run ../main.go -c config_alphanet.json \
 --dashboard.bindAddress="localhost:8083" \
 --db.path="alphanetdb3" \
 --node.disablePlugins="Autopeering" \
---node.enablePlugins="Spammer,MQTT" \
+--node.enablePlugins="Spammer,MQTT,Debug,Prometheus" \
 --snapshots.fullPath="snapshots/alphanet3/full_export.bin" \
 --snapshots.deltaPath="snapshots/alphanet3/delta_export.bin" \
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15602" \
