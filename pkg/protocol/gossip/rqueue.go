@@ -257,7 +257,7 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request, proc
 	pq.RLock()
 	defer pq.RUnlock()
 
-	queued = make([]*Request, len(pq.queue))
+	queued = make([]*Request, len(pq.queued))
 	var i int
 	for _, v := range pq.queued {
 		queued[i] = v
@@ -281,9 +281,10 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request, proc
 func (pq *priorityqueue) Filter(f FilterFunc) {
 	pq.Lock()
 	defer pq.Unlock()
+
 	if f != nil {
 		filteredQueue := make([]*Request, 0)
-		for _, r := range pq.queue {
+		for _, r := range pq.queued {
 			if !f(r) {
 				delete(pq.queued, r.MessageID.ToMapKey())
 				continue
@@ -343,7 +344,7 @@ func (pq *priorityqueue) Peek() *Request {
 	pq.Lock()
 	defer pq.Unlock()
 
-	if len(pq.queue) == 0 {
+	if len(pq.queued) == 0 {
 		return nil
 	}
 	return pq.queue[len(pq.queue)-1]
