@@ -15,7 +15,6 @@ import (
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/badger"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 )
@@ -82,7 +81,7 @@ func benchmarkIO(args []string) error {
 		println()
 		println("	[COUNT] 	- objects count (optional)")
 		println("	[SIZE]  	- objects size  (optional)")
-		println("	[DB_ENGINE] - database engine (optional, values: bolt, pebble, badger)")
+		println("	[DB_ENGINE] - database engine (optional, values: bolt, pebble)")
 	}
 
 	objectCnt := 500000
@@ -125,13 +124,11 @@ func benchmarkIO(args []string) error {
 
 	switch dbEngine {
 	case "pebble":
-		store = pebble.New(database.NewPebbleDB(tempDir, false))
+		store = pebble.New(database.NewPebbleDB(tempDir, nil, true))
 	case "bolt":
 		store = bolt.New(database.NewBoltDB(tempDir, "bolt.db"))
-	case "badger":
-		store = badger.New(database.NewBadgerDB(tempDir))
 	default:
-		return fmt.Errorf("unknown database engine: %s, supported engines: pebble/bolt/badger", dbEngine)
+		return fmt.Errorf("unknown database engine: %s, supported engines: pebble/bolt", dbEngine)
 	}
 
 	batchWriter := kvstore.NewBatchedWriter(store)

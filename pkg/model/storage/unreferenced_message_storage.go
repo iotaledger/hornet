@@ -57,7 +57,7 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 }
 
 // GetUnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
-func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index, forceRelease bool) hornet.MessageIDs {
+func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index) hornet.MessageIDs {
 
 	var unreferencedMessageIDs hornet.MessageIDs
 
