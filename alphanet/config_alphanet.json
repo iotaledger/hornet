@@ -27,7 +27,17 @@
       "/api/v1/addresses/ed25519/:address/outputs",
       "/api/v1/treasury",
       "/api/v1/peers/:peerID",
-      "/api/v1/peers"
+      "/api/v1/peers",
+      "/api/plugins/debug/whiteflag",
+      "/api/plugins/debug/solidifier",
+      "/api/plugins/debug/outputs",
+      "/api/plugins/debug/outputs/unspent",
+      "/api/plugins/debug/outputs/spent",
+      "/api/plugins/debug/addresses",
+      "/api/plugins/debug/addresses/ed25519",
+      "/api/plugins/debug/ms-diff/*",
+      "/api/plugins/debug/requests",
+      "/api/plugins/debug/message-cones/*"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",
