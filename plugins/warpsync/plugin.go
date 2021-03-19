@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -37,13 +38,13 @@ var (
 	warpSync                   *gossip.WarpSync
 	warpSyncMilestoneRequester *gossip.WarpSyncMilestoneRequester
 
-	onGossipProtocolStreamCreated    *events.Closure
-	onConfirmedMilestoneIndexChanged *events.Closure
-	onMilestoneSolidificationFailed  *events.Closure
-	onCheckpointUpdated              *events.Closure
-	onTargetUpdated                  *events.Closure
-	onStart                          *events.Closure
-	onDone                           *events.Closure
+	onGossipProtocolStreamCreated   *events.Closure
+	onMilestoneConfirmed            *events.Closure
+	onMilestoneSolidificationFailed *events.Closure
+	onCheckpointUpdated             *events.Closure
+	onTargetUpdated                 *events.Closure
+	onStart                         *events.Closure
+	onDone                          *events.Closure
 )
 
 type dependencies struct {
@@ -81,8 +82,9 @@ func configureEvents() {
 		}))
 	})
 
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
-		warpSync.UpdateCurrent(msIndex)
+	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+		warpSync.AddReferencedMessagesCount(len(confirmation.Mutations.MessagesReferenced))
+		warpSync.UpdateCurrent(confirmation.MilestoneIndex)
 	})
 
 	onMilestoneSolidificationFailed = events.NewClosure(func(msIndex milestone.Index) {
@@ -122,20 +124,20 @@ func configureEvents() {
 		}
 	})
 
-	onDone = events.NewClosure(func(deltaSynced int, took time.Duration) {
+	onDone = events.NewClosure(func(deltaSynced int, referencedMessagesTotal int, took time.Duration) {
 		// we need to cleanup all memoized things in the requester, so we have a clean state at next run and free the memory.
 		// we can only reset the "traversed" messages here, because otherwise it may happen that the requester always
 		// walks the whole cone if there are already paths between newer milestones in the database.
 		warpSyncMilestoneRequester.Cleanup()
 
-		log.Infof("Synchronized %d milestones in %v", deltaSynced, took.Truncate(time.Millisecond))
+		log.Infof("Synchronized %d milestones in %v (%0.2f MPS)", deltaSynced, took.Truncate(time.Millisecond), float64(referencedMessagesTotal)/took.Seconds())
 		deps.RequestQueue.Filter(nil)
 	})
 }
 
 func attachEvents() {
 	deps.Service.Events.ProtocolStarted.Attach(onGossipProtocolStreamCreated)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
+	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 	deps.Tangle.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Attach(onTargetUpdated)
@@ -145,7 +147,7 @@ func attachEvents() {
 
 func detachEvents() {
 	deps.Service.Events.ProtocolStarted.Detach(onGossipProtocolStreamCreated)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
+	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 	deps.Tangle.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onCheckpointUpdated)
 	warpSync.Events.TargetUpdated.Detach(onTargetUpdated)
