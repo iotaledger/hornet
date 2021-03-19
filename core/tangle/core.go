@@ -96,11 +96,23 @@ func provide(c *dig.Container) {
 		MessageProcessor *gossippkg.MessageProcessor
 		ServerMetrics    *metrics.ServerMetrics
 		ReceiptService   *migrator.ReceiptService `optional:"true"`
+		BelowMaxDepth    int                      `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
-		return tangle.New(logger.NewLogger("Tangle"), deps.Storage, deps.RequestQueue, deps.Service, deps.MessageProcessor,
-			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), deps.Requester, CorePlugin.Daemon(), deps.ReceiptService, *syncedAtStartup)
+		return tangle.New(
+			logger.NewLogger("Tangle"),
+			deps.Storage,
+			deps.RequestQueue,
+			deps.Service,
+			deps.MessageProcessor,
+			deps.ServerMetrics,
+			deps.Requester,
+			deps.ReceiptService,
+			CorePlugin.Daemon(),
+			CorePlugin.Daemon().ContextStopped(),
+			deps.BelowMaxDepth,
+			*syncedAtStartup)
 	}); err != nil {
 		panic(err)
 	}

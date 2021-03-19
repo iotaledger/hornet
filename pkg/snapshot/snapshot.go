@@ -759,7 +759,7 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 		s.tangle.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 	}
 
-	s.log.Infof("created %s snapshot for target index %d, took %v", snapshotNames[snapshotType], targetIndex, time.Since(ts))
+	s.log.Infof("created %s snapshot for target index %d, took %v", snapshotNames[snapshotType], targetIndex, time.Since(ts).Truncate(time.Millisecond))
 	return nil
 }
 
@@ -939,7 +939,7 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 		return fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
 
-	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts))
+	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts).Truncate(time.Millisecond))
 
 	if err := s.utxo.CheckLedgerState(); err != nil {
 		return err
@@ -962,6 +962,11 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 
 // HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a delta snapshot creation and pruning.
 func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
+	if !s.storage.IsNodeSyncedWithThreshold() {
+		// do not prune or create snapshots while we are not synced
+		return
+	}
+
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 

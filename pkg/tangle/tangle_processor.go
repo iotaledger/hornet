@@ -66,11 +66,17 @@ func (t *Tangle) RunTangleProcessor() {
 	// always broadcast valid milestones, even if they are not solid.
 	// this is needed, because otherwise milestones wouldn't be propagated through the network if
 	// the node is unsync, which renders syncing for other nodes almost impossible.
-	onReceivedValidMilestoneMessage := events.NewClosure(func(cachedMessage *storage.CachedMessage) {
+	// we do not broadcast milestones that are older than below max depth.
+	onReceivedValidMilestoneMessage := events.NewClosure(func(msIndex milestone.Index, cachedMessage *storage.CachedMessage) {
 		defer cachedMessage.Release(true) // message -1
 
 		if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 			// do not broadcast the milestone if the node was shut down
+			return
+		}
+
+		if t.storage.GetLatestMilestoneIndex()-msIndex > t.belowMaxDepth {
+			// do not gossip milestones that are below max depth (node could be syncing)
 			return
 		}
 

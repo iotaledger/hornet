@@ -127,12 +127,17 @@ func provide(c *dig.Container) {
 	type requesterdeps struct {
 		dig.In
 		Service      *gossip.Service
+		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
 		RequestQueue gossip.RequestQueue
 		Storage      *storage.Storage
 	}
 
 	if err := c.Provide(func(deps requesterdeps) *gossip.Requester {
-		return gossip.NewRequester(deps.Service, deps.RequestQueue, deps.Storage)
+		return gossip.NewRequester(deps.Service,
+			deps.RequestQueue,
+			deps.Storage,
+			gossip.WithRequesterDiscardRequestsOlderThan(deps.NodeConfig.Duration(CfgRequestsDiscardOlderThan)),
+			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.NodeConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
 	}); err != nil {
 		panic(err)
 	}
