@@ -107,7 +107,16 @@
     },
     "quorum": {
       "enabled": false,
-      "groups": {},
+      "groups": {
+        "hornet": [
+          {
+            "alias": "test01",
+            "baseURL": "http://localhost:14265",
+            "userName": "",
+            "password": ""
+          }
+        ]
+      },
       "timeout": "2s"
     }
   },
