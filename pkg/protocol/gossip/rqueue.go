@@ -188,7 +188,17 @@ func (pq *priorityqueue) Received(messageID hornet.MessageID) *Request {
 	}
 
 	// check if the request is in the queue (was enqueued again after request)
-	return pq.queued[messageIDMapKey]
+	if req, wasQueued := pq.queued[messageIDMapKey]; wasQueued {
+		// delete it from queued, it will be cleaned up from the heap with pop
+		delete(pq.queued, messageIDMapKey)
+
+		// add the request to processing
+		pq.processing[messageIDMapKey] = req
+
+		return req
+	}
+
+	return nil
 }
 
 func (pq *priorityqueue) Processed(messageID hornet.MessageID) *Request {
