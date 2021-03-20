@@ -2,8 +2,6 @@ module github.com/gohornet/hornet
 
 go 1.16
 
-replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210315124228-1f9351ca6d94
-
 require (
 	github.com/DataDog/zstd v1.4.8 // indirect
 	github.com/Microsoft/go-winio v0.4.16 // indirect
@@ -15,6 +13,7 @@ require (
 	github.com/containerd/containerd v1.4.4 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0
@@ -26,12 +25,14 @@ require (
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/protobuf v1.5.1 // indirect
+	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20210227133437-68f051e64b99
+	github.com/iotaledger/hive.go v0.0.0-20210320124654-eda5df53ea87
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7
 	github.com/iotaledger/iota.go/v2 v2.0.0-20210316125548-8994b0fc100d
 	github.com/ipfs/go-ds-badger v0.2.6
@@ -61,7 +62,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
-	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tidwall/pretty v1.1.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.4 // indirect
 	github.com/ugorji/go v1.2.4 // indirect
@@ -73,7 +73,8 @@ require (
 	go.uber.org/dig v1.10.0
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
-	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+	golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4
+	golang.org/x/sys v0.0.0-20210317225723-c4fcb01b228e // indirect
 	golang.org/x/tools v0.1.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
 )

@@ -22,6 +22,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
+	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 )
@@ -103,10 +104,10 @@ func provide(c *dig.Container) {
 			return pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true))
 		case "bolt":
 			return bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db"))
-        case "rocksdb":
-			return database.NewRocksDBStore(database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath)))
+		case "rocksdb":
+			return rocksdb.New(database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath)))
 		default:
-			panic(fmt.Sprintf("unknown database engine: %s, supported engines: pebble/bolt", deps.NodeConfig.String(CfgDatabaseEngine)))
+			panic(fmt.Sprintf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", deps.NodeConfig.String(CfgDatabaseEngine)))
 		}
 	}); err != nil {
 		panic(err)
