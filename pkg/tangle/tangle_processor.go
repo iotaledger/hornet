@@ -214,7 +214,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 	// we check whether the request is nil, so we only trigger the solidifier when
 	// we actually handled a message stemming from a request (as otherwise the solidifier
 	// is triggered too often through messages received from normal gossip)
-	if !t.storage.IsNodeSynced() && request != nil && t.requestQueue.Empty() {
+	if request != nil && !t.storage.IsNodeSynced() && t.requestQueue.Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
 		t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
