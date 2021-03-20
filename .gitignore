@@ -33,9 +33,6 @@ p2pstore*/
 # snapshot dir
 snapshots/
 
-# other dirs
-scripts/
-
 # log files
 hornet.log
 integration-tests/logs/*.log
