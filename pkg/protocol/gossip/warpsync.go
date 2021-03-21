@@ -5,8 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
-
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -88,11 +86,10 @@ func AdvanceAtPercentageReached(threshold float64) AdvanceCheckpointCriteria {
 
 // WarpSync is metadata about doing a synchronization via STING messages.
 type WarpSync struct {
-	mu                      sync.Mutex
-	start                   time.Time
-	referencedMessagesTotal atomic.Int32
-	advCheckpointCriteria   AdvanceCheckpointCriteria
-	Events                  Events
+	mu                    sync.Mutex
+	start                 time.Time
+	advCheckpointCriteria AdvanceCheckpointCriteria
+	Events                Events
 	// The starting point of the synchronization.
 	Init milestone.Index
 	// The current confirmed milestone of the node.
@@ -105,6 +102,8 @@ type WarpSync struct {
 	CurrentCheckpoint milestone.Index
 	// The used advancement range per checkpoint.
 	AdvancementRange int
+	// The amount of referenced messages during this warpsync run.
+	referencedMessagesTotal int
 }
 
 // UpdateCurrent updates the current confirmed milestone index state.
@@ -123,7 +122,7 @@ func (ws *WarpSync) UpdateCurrent(current milestone.Index) {
 
 	// finished
 	if ws.TargetMs != 0 && ws.CurrentConfirmedMs >= ws.TargetMs {
-		ws.Events.Done.Trigger(int(ws.TargetMs-ws.Init), int(ws.referencedMessagesTotal.Load()), time.Since(ws.start))
+		ws.Events.Done.Trigger(int(ws.TargetMs-ws.Init), ws.referencedMessagesTotal, time.Since(ws.start))
 		ws.reset()
 		return
 	}
@@ -173,7 +172,6 @@ func (ws *WarpSync) UpdateTarget(target milestone.Index) {
 	}
 
 	ws.start = time.Now()
-	ws.referencedMessagesTotal.Store(0)
 	ws.Init = ws.CurrentConfirmedMs
 	ws.PreviousCheckpoint = ws.CurrentConfirmedMs
 	advancementRange := ws.advanceCheckpoint()
@@ -182,7 +180,10 @@ func (ws *WarpSync) UpdateTarget(target milestone.Index) {
 
 // AddReferencedMessagesCount adds the amount of referenced messages to collect stats.
 func (ws *WarpSync) AddReferencedMessagesCount(referencedMessagesCount int) {
-	ws.referencedMessagesTotal.Add(int32(referencedMessagesCount))
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	ws.referencedMessagesTotal += referencedMessagesCount
 }
 
 // advances the next checkpoint by either incrementing from the current
@@ -218,6 +219,7 @@ func (ws *WarpSync) reset() {
 	ws.CurrentCheckpoint = 0
 	ws.TargetMs = 0
 	ws.Init = 0
+	ws.referencedMessagesTotal = 0
 }
 
 // NewWarpSyncMilestoneRequester creates a new WarpSyncMilestoneRequester instance.
