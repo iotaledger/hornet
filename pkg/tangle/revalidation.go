@@ -155,7 +155,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 		milestonesToDelete[msIndex] = struct{}{}
 
 		return true
-	}, objectstorage.WithSkipCache(true))
+	}, objectstorage.WithIteratorSkipCache(true))
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -301,7 +301,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 		}
 
 		return true
-	}, objectstorage.WithSkipCache(true))
+	}, objectstorage.WithIteratorSkipCache(true))
 	t.log.Infof("analyzed %d messages", txsCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -362,7 +362,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 		}
 
 		return true
-	}, objectstorage.WithSkipCache(true))
+	}, objectstorage.WithIteratorSkipCache(true))
 	t.log.Infof("analyzed %d message metadata", metadataCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -435,7 +435,7 @@ func (t *Tangle) cleanupChildren() error {
 		}
 
 		return true
-	}, objectstorage.WithSkipCache(true))
+	}, objectstorage.WithIteratorSkipCache(true))
 	t.log.Infof("analyzed %d children", childCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -564,7 +564,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 		unreferencedMilestoneIndexes[msIndex] = struct{}{}
 
 		return true
-	}, objectstorage.WithSkipCache(true))
+	}, objectstorage.WithIteratorSkipCache(true))
 	t.log.Infof("analyzed %d unreferenced msgs", unreferencedTxsCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {

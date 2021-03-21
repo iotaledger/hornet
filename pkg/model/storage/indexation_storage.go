@@ -67,7 +67,7 @@ func (s *Storage) GetIndexMessageIDs(index []byte, maxFind ...int) hornet.Messag
 
 		messageIDs = append(messageIDs, hornet.MessageIDFromSlice(key[IndexationIndexLength:IndexationIndexLength+iotago.MessageIDLength]))
 		return true
-	}, objectstorage.WithPrefix(indexPadded[:]))
+	}, objectstorage.WithIteratorPrefix(indexPadded[:]))
 
 	return messageIDs
 }
@@ -81,7 +81,7 @@ func (s *Storage) ForEachMessageIDWithIndex(index []byte, consumer IndexConsumer
 
 	s.indexationStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(key[IndexationIndexLength : IndexationIndexLength+iotago.MessageIDLength]))
-	}, objectstorage.WithPrefix(indexPadded[:]))
+	}, objectstorage.WithIteratorPrefix(indexPadded[:]))
 }
 
 // indexation +1

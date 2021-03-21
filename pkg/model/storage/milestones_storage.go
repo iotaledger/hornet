@@ -146,7 +146,7 @@ func (s *Storage) SearchLatestMilestoneIndexInStore() milestone.Index {
 		}
 
 		return true
-	}, objectstorage.WithSkipCache(true))
+	}, objectstorage.WithIteratorSkipCache(true))
 
 	return latestMilestoneIndex
 }
