@@ -67,7 +67,7 @@ func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index) hornet.Mess
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.MessageIDFromSlice(key[4:36]))
 		return true
-	}, objectstorage.WithPrefix(key))
+	}, objectstorage.WithIteratorPrefix(key))
 
 	return unreferencedMessageIDs
 }
@@ -99,7 +99,7 @@ func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index) int {
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, objectstorage.WithPrefix(msIndexBytes))
+	}, objectstorage.WithIteratorPrefix(msIndexBytes))
 
 	for _, key := range keysToDelete {
 		s.unreferencedMessagesStorage.Delete(key)

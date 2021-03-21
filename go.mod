@@ -32,7 +32,7 @@ require (
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20210320124654-eda5df53ea87
+	github.com/iotaledger/hive.go v0.0.0-20210321211310-7bcaaea58486
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7
 	github.com/iotaledger/iota.go/v2 v2.0.0-20210316125548-8994b0fc100d
 	github.com/ipfs/go-ds-badger v0.2.6
