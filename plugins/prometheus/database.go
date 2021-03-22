@@ -90,7 +90,7 @@ func collectDatabase() {
 	}
 
 	compactionRunning.Set(0)
-	if deps.DatabaseMetrics.CompactionRunning.Load() {
+	if deps.Database.CompactionRunning() {
 		compactionRunning.Set(1)
 	}
 
