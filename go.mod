@@ -2,8 +2,6 @@ module github.com/gohornet/hornet
 
 go 1.16
 
-replace github.com/iotaledger/hive.go => github.com/muxxer/hive.go v0.0.0-20210315124228-1f9351ca6d94
-
 replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2
 
 require (
