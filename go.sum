@@ -731,6 +731,8 @@ github.com/libp2p/go-yamux/v2 v2.0.0 h1:vSGhAy5u6iHBq11ZDcyHH4Blcf9xlBhT4WQDoOE9
 github.com/libp2p/go-yamux/v2 v2.0.0/go.mod h1:NVWira5+sVUIU6tu1JWvaRn1dRnG+cawOJiflsAM+7U=
 github.com/lightstep/lightstep-tracer-common/golang/gogo v0.0.0-20190605223551-bc2310a04743/go.mod h1:qklhhLq1aX+mtWk9cPHPzaBjWImj5ULL6C7HFJtXQMM=
 github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0UBX0ZE6WURAspgAczcDHrL4=
+github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2 h1:qKD1ExZOhQSdfBrtNXO95TDu3XoLpXiC+MeBHvYj/Kk=
+github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2/go.mod h1:8LeVIPKskGx+23MAOy9fQ8HWSK7uFLjviwtfu2idxmo=
 github.com/linxGnu/grocksdb v1.6.32 h1:6rHtN6qbh4aVyVf5WpESoXAqZSU5WedoKSoMtyj8IWU=
 github.com/linxGnu/grocksdb v1.6.32/go.mod h1:/+iSQrn7Izt6kFhHBQvcE6FkklsKXa8hc35pFyFDrDw=
 github.com/lyft/protoc-gen-validate v0.0.13/go.mod h1:XbGvPuh87YZc5TdIa2/I4pLk0QoUACkjt2znoq26NVQ=
