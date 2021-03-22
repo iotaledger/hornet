@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	// the used database engine (pebble/bolt/badger)
+	// the used database engine (pebble/bolt)
 	CfgDatabaseEngine = "db.engine"
 	// the path to the database folder
 	CfgDatabasePath = "db.path"
@@ -19,7 +19,7 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgDatabaseEngine, "pebble", "the used database engine (pebble/bolt/badger)")
+			fs.String(CfgDatabaseEngine, "pebble", "the used database engine (pebble/bolt)")
 			fs.String(CfgDatabasePath, "mainnetdb", "the path to the database folder")
 			fs.Bool(CfgDatabaseDebug, false, "ignore the check for corrupted databases (should only be used for debug reasons)")
 			return fs

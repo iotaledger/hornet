@@ -20,9 +20,9 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/badger"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
+	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 )
@@ -90,15 +90,24 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps pebbledeps) kvstore.KVStore {
+
+		reportCompactionRunning := func(running bool) {
+			deps.Metrics.CompactionRunning.Store(running)
+			if running {
+				deps.Metrics.CompactionCount.Inc()
+			}
+			deps.Events.DatabaseCompaction.Trigger(running)
+		}
+
 		switch deps.NodeConfig.String(CfgDatabaseEngine) {
 		case "pebble":
-			return pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), false))
+			return pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true))
 		case "bolt":
 			return bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db"))
-		case "badger":
-			return badger.New(database.NewBadgerDB(deps.NodeConfig.String(CfgDatabasePath)))
+		case "rocksdb":
+			return rocksdb.New(database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath)))
 		default:
-			panic(fmt.Sprintf("unknown database engine: %s, supported engines: pebble/bolt/badger", deps.NodeConfig.String(CfgDatabaseEngine)))
+			panic(fmt.Sprintf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", deps.NodeConfig.String(CfgDatabaseEngine)))
 		}
 	}); err != nil {
 		panic(err)

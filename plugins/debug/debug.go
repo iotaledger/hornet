@@ -88,7 +88,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}()
 
 	// check if all requested parents are solid
-	solid, _ := deps.Tangle.SolidQueueCheck(metadataMemcache, request.Index, parents, nil)
+	solid, _ := deps.Tangle.SolidQueueCheck(messagesMemcache, metadataMemcache, request.Index, parents, nil)
 
 	if !solid {
 		// wait for at most "whiteFlagParentsSolidTimeout" for the parents to become solid

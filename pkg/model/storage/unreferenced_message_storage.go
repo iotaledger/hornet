@@ -57,7 +57,7 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 }
 
 // GetUnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
-func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index, forceRelease bool) hornet.MessageIDs {
+func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index) hornet.MessageIDs {
 
 	var unreferencedMessageIDs hornet.MessageIDs
 
@@ -67,7 +67,7 @@ func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index, forceReleas
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.MessageIDFromSlice(key[4:36]))
 		return true
-	}, objectstorage.WithPrefix(key))
+	}, objectstorage.WithIteratorPrefix(key))
 
 	return unreferencedMessageIDs
 }
@@ -99,7 +99,7 @@ func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index) int {
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, objectstorage.WithPrefix(msIndexBytes))
+	}, objectstorage.WithIteratorPrefix(msIndexBytes))
 
 	for _, key := range keysToDelete {
 		s.unreferencedMessagesStorage.Delete(key)

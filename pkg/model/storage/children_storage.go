@@ -17,10 +17,22 @@ type CachedChild struct {
 
 type CachedChildren []*CachedChild
 
+func (cachedChildren CachedChildren) Retain() CachedChildren {
+	cachedResult := make(CachedChildren, len(cachedChildren))
+	for i, cachedChild := range cachedChildren {
+		cachedResult[i] = cachedChild.Retain()
+	}
+	return cachedResult
+}
+
 func (cachedChildren CachedChildren) Release(force ...bool) {
 	for _, cachedChild := range cachedChildren {
 		cachedChild.Release(force...)
 	}
+}
+
+func (c *CachedChild) Retain() *CachedChild {
+	return &CachedChild{c.CachedObject.Retain()}
 }
 
 func (c *CachedChild) GetChild() *Child {
@@ -71,7 +83,7 @@ func (s *Storage) GetChildrenMessageIDs(messageID hornet.MessageID, maxFind ...i
 
 		childrenMessageIDs = append(childrenMessageIDs, hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 		return true
-	}, objectstorage.WithPrefix(messageID))
+	}, objectstorage.WithIteratorPrefix(messageID))
 
 	return childrenMessageIDs
 }
@@ -91,7 +103,7 @@ func (s *Storage) GetCachedChildrenOfMessageID(messageID hornet.MessageID) Cache
 	s.childrenStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		cachedChildren = append(cachedChildren, &CachedChild{CachedObject: cachedObject})
 		return true
-	}, objectstorage.WithPrefix(messageID))
+	}, objectstorage.WithIteratorPrefix(messageID))
 	return cachedChildren
 }
 
@@ -122,7 +134,7 @@ func (s *Storage) DeleteChildren(messageID hornet.MessageID) {
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, objectstorage.WithPrefix(messageID))
+	}, objectstorage.WithIteratorPrefix(messageID))
 
 	for _, key := range keysToDelete {
 		s.childrenStorage.Delete(key)
