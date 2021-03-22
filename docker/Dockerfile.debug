@@ -38,6 +38,7 @@ EXPOSE 8081/tcp
 EXPOSE 14265/tcp
 EXPOSE 15600/tcp
 EXPOSE 14626/udp
+EXPOSE 2345/tcp
 
 
 # Copy assets into distroless image
@@ -50,3 +51,4 @@ COPY ./peering.json /app/peering.json
 COPY ./profiles.json /app/profiles.json
 
 ENTRYPOINT ["/dlv"]
+CMD ["--listen=:2345", "--headless=true", "--log=true", "--log-output=debugger,debuglineerr,gdbwire,lldbout,rpc", "--accept-multiclient", "--api-version=2", "exec", "/app/hornet"]
