@@ -1,6 +1,8 @@
 # golang 1.16.2-buster amd64
 FROM golang@sha256:5a6302e91acb152050d661c9a081a535978c629225225ed91a8b979ad24aafcd AS build
 
+ARG BUILD_TAGS
+
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates
 
@@ -21,7 +23,7 @@ COPY . .
 
 # Build the binary
 RUN GOOS=linux GOARCH=amd64 go build \
-      -tags="builtin_static,rocksdb" \
+      -tags="$BUILD_TAGS" \
       -ldflags='-w -s' -a \
       -o /go/bin/hornet
 
