@@ -69,13 +69,15 @@ func provide(c *dig.Container) {
 		PublicKeyRanges coordinator.PublicKeyRanges
 		NetworkID       uint64               `name:"networkId"`
 		Bech32HRP       iotago.NetworkPrefix `name:"bech32HRP"`
+		MinPowScore     float64              `name:"minPowScore"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) protoresult {
 
 		res := protoresult{
-			NetworkID: iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
-			Bech32HRP: iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
+			NetworkID:   iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
+			Bech32HRP:   iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
+			MinPowScore: deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
 		}
 
 		// ToDo: Change these defaults to mainnet values

@@ -240,12 +240,19 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	if msg.Nonce == 0 {
-		if !powEnabled {
-			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
+		score, err := msg.POW()
+		if err != nil {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
-		if err := deps.PoWHandler.DoPoW(msg, nil, powWorkerCount); err != nil {
-			return nil, err
+		if score < deps.MinPowScore {
+			if !powEnabled {
+				return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
+			}
+
+			if err := deps.PoWHandler.DoPoW(msg, nil, powWorkerCount); err != nil {
+				return nil, err
+			}
 		}
 	}
 
