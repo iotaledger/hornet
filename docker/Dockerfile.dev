@@ -21,6 +21,7 @@ COPY . .
 
 # Build the binary
 RUN GOOS=linux GOARCH=amd64 go build \
+      -tags="builtin_static,rocksdb" \
       -ldflags='-w -s' -a \
       -o /go/bin/hornet
 
@@ -29,7 +30,7 @@ RUN GOOS=linux GOARCH=amd64 go build \
 ############################
 # https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md
 # using distroless base image, contains: glibc, libssl and openssl
-FROM gcr.io/distroless/base@sha256:5e0cc69445ed1d8a17198250a7249d56dd4b6966bb6b2118e60ae9194c310647
+FROM gcr.io/distroless/cc@sha256:e8a7af65cf92b834e35a7537f6be93e743b48886c83c1eac15ade437b90fc9ab
 
 EXPOSE 8081/tcp
 EXPOSE 14265/tcp
