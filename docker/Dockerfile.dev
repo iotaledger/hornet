@@ -28,8 +28,8 @@ RUN GOOS=linux GOARCH=amd64 go build \
 ############################
 # Image
 ############################
-# https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md
-# using distroless base image, contains: glibc, libssl and openssl
+# https://github.com/GoogleContainerTools/distroless/tree/master/cc
+# using distroless cc image, which includes everything in the base image (glibc, libssl and openssl)
 FROM gcr.io/distroless/cc@sha256:e8a7af65cf92b834e35a7537f6be93e743b48886c83c1eac15ade437b90fc9ab
 
 EXPOSE 8081/tcp
