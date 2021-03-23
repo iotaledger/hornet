@@ -313,6 +313,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	case wu.Is(Hashing):
 		wu.processingLock.Unlock()
 		return
+
 	case wu.Is(Invalid):
 		wu.processingLock.Unlock()
 
@@ -320,22 +321,21 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 		// drop the connection to the peer
 		_ = proc.ps.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid message"))
-
 		return
+
 	case wu.Is(Hashed):
 		wu.processingLock.Unlock()
 
-		// emit an event to say that a message was fully processed
+		// we need to check for requests here again because there is a race condition
+		// between processing received messages and enqueuing requests.
 		if request := proc.requestQueue.Received(wu.msg.GetMessageID()); request != nil {
 			wu.requested = true
 			proc.Events.MessageProcessed.Trigger(wu.msg, request, p)
-			return
 		}
 
 		if proc.storage.ContainsMessage(wu.msg.GetMessageID()) {
 			proc.serverMetrics.KnownMessages.Inc()
 			p.Metrics.KnownMessages.Inc()
-			return
 		}
 
 		return
@@ -389,26 +389,6 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	proc.Events.MessageProcessed.Trigger(msg, request, p)
 }
 
-func (proc *MessageProcessor) BroadcastValidMilestone(cachedMessage *storage.CachedMessage) {
-	defer cachedMessage.Release(true)
-
-	cachedWorkUnit := proc.workUnitFor(cachedMessage.GetMessage().GetData()) // workUnit +1
-	defer cachedWorkUnit.Release()                                           // workUnit -1
-	wu := cachedWorkUnit.WorkUnit()
-
-	if wu.requested {
-		// no need to broadcast if the message was requested
-		return
-	}
-
-	// if the workunit was already evicted, it may happen that
-	// we send the message back to peers which already sent us the same message
-	// we should never access the "msg", because it may not be set in this context.
-
-	// broadcast the message to all peers that didn't sent it to us yet
-	proc.Events.BroadcastMessage.Trigger(wu.broadcast())
-}
-
 func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 	defer cachedMsgMeta.Release(true)
 
@@ -417,11 +397,9 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 		return
 	}
 
-	cmi := proc.storage.GetConfirmedMilestoneIndex()
-	_, ocri := dag.GetConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), cmi)
-
-	if (cmi - ocri) >= proc.opts.BelowMaxDepth {
-		// the solid message was below max depth, do not broadcast
+	_, ocri := dag.GetConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), proc.storage.GetConfirmedMilestoneIndex())
+	if (proc.storage.GetLatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
+		// the solid message was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}
 

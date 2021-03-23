@@ -63,26 +63,6 @@ func (t *Tangle) RunTangleProcessor() {
 		t.messageProcessor.Broadcast(cachedMsgMeta) // meta pass +1
 	})
 
-	// always broadcast valid milestones, even if they are not solid.
-	// this is needed, because otherwise milestones wouldn't be propagated through the network if
-	// the node is unsync, which renders syncing for other nodes almost impossible.
-	// we do not broadcast milestones that are older than below max depth.
-	onReceivedValidMilestoneMessage := events.NewClosure(func(msIndex milestone.Index, cachedMessage *storage.CachedMessage) {
-		defer cachedMessage.Release(true) // message -1
-
-		if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
-			// do not broadcast the milestone if the node was shut down
-			return
-		}
-
-		if t.storage.GetLatestMilestoneIndex()-msIndex > t.belowMaxDepth {
-			// do not gossip milestones that are below max depth (node could be syncing)
-			return
-		}
-
-		t.messageProcessor.BroadcastValidMilestone(cachedMessage.Retain())
-	})
-
 	onReceivedValidMilestone := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
 
 		if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -128,13 +108,11 @@ func (t *Tangle) RunTangleProcessor() {
 	t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		processValidMilestoneWorkerPool.Start()
-		t.storage.Events.ReceivedValidMilestoneMessage.Attach(onReceivedValidMilestoneMessage)
 		t.storage.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
 		t.startWaitGroup.Done()
 		<-shutdownSignal
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
 		t.storage.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
-		t.storage.Events.ReceivedValidMilestoneMessage.Detach(onReceivedValidMilestoneMessage)
 		processValidMilestoneWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)
