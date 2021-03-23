@@ -84,11 +84,13 @@ func broadcastTransactions(i interface{}, c *gin.Context, _ <-chan struct{}) {
 		}
 	}
 
-	// we only allow the broadcasting of migration bundles
-	if err := isMigrationBundle(query.Trytes); err != nil {
-		e.Error = err.Error()
-		c.JSON(http.StatusBadRequest, e)
-		return
+	if !config.NodeConfig.GetBool(config.CfgWebAPIDisableMigrationBundleCheckOnBroadcast) {
+		// we only allow the broadcasting of migration bundles
+		if err := isMigrationBundle(query.Trytes); err != nil {
+			e.Error = err.Error()
+			c.JSON(http.StatusBadRequest, e)
+			return
+		}
 	}
 
 	for _, trytes := range query.Trytes {
