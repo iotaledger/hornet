@@ -284,7 +284,7 @@ func currentPublicNodeStatus() *PublicNodeStatus {
 	status := &PublicNodeStatus{}
 
 	status.IsHealthy = deps.Tangle.IsNodeHealthy()
-	status.IsSynced = deps.Storage.IsNodeSyncedWithThreshold()
+	status.IsSynced = deps.Storage.IsNodeAlmostSynced()
 
 	snapshotInfo := deps.Storage.GetSnapshotInfo()
 	if snapshotInfo != nil {

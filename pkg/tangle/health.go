@@ -12,7 +12,7 @@ const (
 
 // IsNodeHealthy returns whether the node is synced, has active neighbors and its latest milestone is not too old.
 func (t *Tangle) IsNodeHealthy() bool {
-	if !t.storage.IsNodeSyncedWithThreshold() {
+	if !t.storage.IsNodeAlmostSynced() {
 		return false
 	}
 

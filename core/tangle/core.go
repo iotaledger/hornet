@@ -200,8 +200,7 @@ func configureEvents() {
 		// Force release possible here, since processIncomingTx still holds a reference
 		defer cachedMsg.Release(true) // msg -1
 
-		// todo: move into solid event
-		if deps.Storage.IsNodeSyncedWithThreshold() {
+		if deps.Storage.IsNodeAlmostSynced() {
 			deps.Tangle.SolidifyFutureConeOfMsg(cachedMsg.GetCachedMetadata()) // meta pass +1
 		}
 	})

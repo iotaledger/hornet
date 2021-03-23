@@ -382,7 +382,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// we ignore all received messages if we didn't request them and it's not a milestone.
 	// otherwise these messages would get evicted from the cache, and it's heavier to load them
 	// from the storage than to request them again.
-	if request == nil && !proc.storage.IsNodeSyncedWithThreshold() && !msg.IsMilestone() {
+	if request == nil && !proc.storage.IsNodeAlmostSynced() && !msg.IsMilestone() {
 		return
 	}
 
@@ -412,8 +412,8 @@ func (proc *MessageProcessor) BroadcastValidMilestone(cachedMessage *storage.Cac
 func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 	defer cachedMsgMeta.Release(true)
 
-	if !proc.storage.IsNodeSyncedWithThreshold() {
-		// no need to broadcast messages if the node is not sync
+	if !proc.storage.IsNodeSyncedWithinBelowMaxDepth() {
+		// no need to broadcast messages if the node is not sync within "below max depth"
 		return
 	}
 

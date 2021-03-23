@@ -62,10 +62,11 @@ type Storage struct {
 	latestMilestoneLock     syncutils.RWMutex
 
 	// node synced
-	isNodeSynced                  bool
-	isNodeSyncedThreshold         bool
-	waitForNodeSyncedChannelsLock syncutils.Mutex
-	waitForNodeSyncedChannels     []chan struct{}
+	isNodeSynced                    bool
+	isNodeAlmostSynced              bool
+	isNodeSyncedWithinBelowMaxDepth bool
+	waitForNodeSyncedChannelsLock   syncutils.Mutex
+	waitForNodeSyncedChannels       []chan struct{}
 
 	// milestones
 	keyManager              *keymanager.KeyManager

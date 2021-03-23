@@ -310,7 +310,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 // selectTipWithoutLocking selects a tip.
 func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.MessageID, error) {
 
-	if !ts.storage.IsNodeSyncedWithThreshold() {
+	if !ts.storage.IsNodeAlmostSynced() {
 		return nil, common.ErrNodeNotSynced
 	}
 

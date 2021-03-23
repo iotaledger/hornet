@@ -316,7 +316,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						}
 					}
 
-					if !deps.Storage.IsNodeSyncedWithThreshold() {
+					if !deps.Storage.IsNodeAlmostSynced() {
 						time.Sleep(time.Second)
 						continue
 					}

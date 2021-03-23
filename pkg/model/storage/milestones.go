@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	isNodeSyncedWithinThreshold = 2
+	isNodeAlmostSyncedThreshold = 2
 )
 
 type CoordinatorPublicKey struct {
@@ -67,9 +67,25 @@ func (s *Storage) IsNodeSynced() bool {
 	return s.isNodeSynced
 }
 
-// IsNodeSyncedWithThreshold returns whether the node is synced within a certain threshold.
-func (s *Storage) IsNodeSyncedWithThreshold() bool {
-	return s.isNodeSyncedThreshold
+// IsNodeAlmostSynced returns whether the node is synced within "isNodeAlmostSyncedThreshold".
+func (s *Storage) IsNodeAlmostSynced() bool {
+	return s.isNodeAlmostSynced
+}
+
+// IsNodeSyncedWithinBelowMaxDepth returns whether the node is synced within "belowMaxDepth".
+func (s *Storage) IsNodeSyncedWithinBelowMaxDepth() bool {
+	return s.isNodeSyncedWithinBelowMaxDepth
+}
+
+// IsNodeSyncedWithThreshold returns whether the node is synced within a given threshold.
+func (s *Storage) IsNodeSyncedWithThreshold(threshold milestone.Index) bool {
+
+	// catch overflow
+	if s.latestMilestoneIndex < threshold {
+		return true
+	}
+
+	return s.confirmedMilestoneIndex >= (s.latestMilestoneIndex - threshold)
 }
 
 // WaitForNodeSynced waits at most "timeout" duration for the node to become fully sync.
@@ -78,7 +94,7 @@ func (s *Storage) IsNodeSyncedWithThreshold() bool {
 // but a new milestone came in lately.
 func (s *Storage) WaitForNodeSynced(timeout time.Duration) bool {
 
-	if !s.isNodeSyncedThreshold {
+	if !s.isNodeAlmostSynced {
 		// node is not even synced within threshold, and therefore it is unsync
 		return false
 	}
@@ -116,7 +132,8 @@ func (s *Storage) WaitForNodeSynced(timeout time.Duration) bool {
 func (s *Storage) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) {
 	if latestIndex == 0 {
 		s.isNodeSynced = false
-		s.isNodeSyncedThreshold = false
+		s.isNodeAlmostSynced = false
+		s.isNodeSyncedWithinBelowMaxDepth = false
 		return
 	}
 
@@ -138,12 +155,19 @@ func (s *Storage) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) 
 	}
 
 	// catch overflow
-	if latestIndex < isNodeSyncedWithinThreshold {
-		s.isNodeSyncedThreshold = true
+	if latestIndex < isNodeAlmostSyncedThreshold {
+		s.isNodeAlmostSynced = true
+		s.isNodeSyncedWithinBelowMaxDepth = false
 		return
 	}
+	s.isNodeAlmostSynced = confirmedIndex >= (latestIndex - isNodeAlmostSyncedThreshold)
 
-	s.isNodeSyncedThreshold = confirmedIndex >= (latestIndex - isNodeSyncedWithinThreshold)
+	// catch overflow
+	if latestIndex < s.belowMaxDepth {
+		s.isNodeSyncedWithinBelowMaxDepth = false
+		return
+	}
+	s.isNodeSyncedWithinBelowMaxDepth = confirmedIndex >= (latestIndex - s.belowMaxDepth)
 }
 
 // SetConfirmedMilestoneIndex sets the confirmed milestone index.
