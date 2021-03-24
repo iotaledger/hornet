@@ -84,8 +84,9 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 				s.storage.DeleteChild(parent, msgID)
 			}
 
-			// delete all children of this message
-			s.storage.DeleteChildren(msgID)
+			// We don't need to iterate through the children that reference this message,
+			// since we will never start the walk from this message anymore (we only walk the future cone)
+			// and the references will be deleted together with the children messages when they are pruned.
 
 			indexationPayload := storage.CheckIfIndexation(msg)
 			if indexationPayload != nil {
