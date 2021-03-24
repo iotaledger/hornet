@@ -68,6 +68,7 @@ type dependencies struct {
 	ServerMetrics   *metrics.ServerMetrics
 	DatabaseMetrics *metrics.DatabaseMetrics
 	StorageMetrics  *metrics.StorageMetrics
+	RestAPIMetrics  *metrics.RestAPIMetrics `optional:"true"`
 	Service         *gossip.Service
 	ReceiptService  *migrator.ReceiptService `optional:"true"`
 	Tangle          *tangle.Tangle
@@ -86,6 +87,10 @@ func configure() {
 	configureNode()
 	configureGossipPeers()
 	configureGossipNode()
+
+	if deps.RestAPIMetrics != nil {
+		configureRestAPI()
+	}
 	if deps.ReceiptService != nil {
 		configureReceipts()
 	}

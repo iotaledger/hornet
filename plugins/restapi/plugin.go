@@ -16,6 +16,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -48,12 +49,20 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig *configuration.Configuration `name:"nodeConfig"`
-	Tangle     *tangle.Tangle
-	Echo       *echo.Echo
+	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+	Tangle         *tangle.Tangle
+	Echo           *echo.Echo
+	RestAPIMetrics *metrics.RestAPIMetrics
 }
 
 func provide(c *dig.Container) {
+
+	if err := c.Provide(func() *metrics.RestAPIMetrics {
+		return &metrics.RestAPIMetrics{}
+	}); err != nil {
+		panic(err)
+	}
+
 	type echodeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
@@ -180,7 +189,8 @@ func run() {
 func setupRoutes() {
 
 	deps.Echo.HTTPErrorHandler = func(err error, c echo.Context) {
-		c.Logger().Error(err)
+		log.Debugf("HTTP request failed: %s", err)
+		deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
 
 		var statusCode int
 		var message string
