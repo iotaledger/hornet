@@ -1,6 +1,8 @@
 # golang 1.16.2-buster amd64
 FROM golang@sha256:5a6302e91acb152050d661c9a081a535978c629225225ed91a8b979ad24aafcd AS build
 
+ARG BUILD_TAGS
+
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates
 
@@ -24,15 +26,16 @@ COPY . .
 RUN CGO_ENABLED=0 go get -ldflags "-s -w -extldflags '-static'" github.com/go-delve/delve/cmd/dlv
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+      -tags="$BUILD_TAGS" \
       -gcflags "all=-N -l" \
       -o /go/bin/hornet
 
 ############################
 # Image
 ############################
-# https://github.com/GoogleContainerTools/distroless/blob/master/base/README.md
-# using distroless base image, contains: glibc, libssl and openssl
-FROM gcr.io/distroless/base@sha256:5e0cc69445ed1d8a17198250a7249d56dd4b6966bb6b2118e60ae9194c310647
+# https://github.com/GoogleContainerTools/distroless/tree/master/cc
+# using distroless cc image, which includes everything in the base image (glibc, libssl and openssl)
+FROM gcr.io/distroless/cc@sha256:e8a7af65cf92b834e35a7537f6be93e743b48886c83c1eac15ade437b90fc9ab
 
 EXPOSE 8081/tcp
 EXPOSE 14265/tcp
