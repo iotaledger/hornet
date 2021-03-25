@@ -100,12 +100,6 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 	return len(messageIDsToDeleteMap)
 }
 
-// PruningConfig holds configurations around pruning.
-type PruningConfig struct {
-	// Whether a receipt belonging to a given milestone should also be pruned.
-	PruneReceipts bool
-}
-
 func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (milestone.Index, error) {
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
