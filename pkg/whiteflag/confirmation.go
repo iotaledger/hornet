@@ -128,7 +128,7 @@ func ConfirmMilestone(
 			return nil, fmt.Errorf("invalid receipt contained within milestone: %w", err)
 		}
 
-		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, msID)
+		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, message.GetMessageID(), msID)
 		if err != nil {
 			return nil, fmt.Errorf("unable to extract migrated outputs from receipt: %w", err)
 		}
