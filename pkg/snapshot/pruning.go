@@ -57,7 +57,7 @@ func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCo
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
 func (s *Snapshot) pruneMilestone(milestoneIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
 
-	if err := s.utxo.PruneMilestoneIndex(milestoneIndex, receiptMigratedAtIndex...); err != nil {
+	if err := s.utxo.PruneMilestoneIndex(milestoneIndex, s.pruneReceipts, receiptMigratedAtIndex...); err != nil {
 		return err
 	}
 
@@ -98,6 +98,12 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 	}
 
 	return len(messageIDsToDeleteMap)
+}
+
+// PruningConfig holds configurations around pruning.
+type PruningConfig struct {
+	// Whether a receipt belonging to a given milestone should also be pruned.
+	PruneReceipts bool
 }
 
 func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (milestone.Index, error) {

@@ -11,7 +11,8 @@ const (
 	CfgPruningEnabled = "pruning.enabled"
 	// amount of milestone cones to keep in the database
 	CfgPruningDelay = "pruning.delay"
-
+	// whether to delete old receipts data from the database
+	CfgPruningPruneReceipts = "pruning.pruneReceipts"
 	// the depth, respectively the starting point, at which a snapshot of the ledger is generated
 	CfgSnapshotsDepth = "snapshots.depth"
 	// interval, in milestones, at which snapshot files are created if the ledger is fully synchronized
@@ -32,6 +33,7 @@ var params = &node.PluginParams{
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.Bool(CfgPruningEnabled, true, "whether to delete old message data from the database")
 			fs.Int(CfgPruningDelay, 60480, "amount of milestone cones to keep in the database")
+			fs.Bool(CfgPruningPruneReceipts, false, "whether to delete old receipts data from the database")
 			fs.Int(CfgSnapshotsDepth, 50, "the depth, respectively the starting point, at which a snapshot of the ledger is generated")
 			fs.Int(CfgSnapshotsIntervalSynced, 50, "interval, in milestones, at which snapshot files are created if the ledger is fully synchronized")
 			fs.Int(CfgSnapshotsIntervalUnsynced, 1000, "interval, in milestones, at which snapshot files are created if the ledger is not fully synchronized")

@@ -68,6 +68,7 @@ type Snapshot struct {
 	snapshotIntervalUnsynced            milestone.Index
 	pruningEnabled                      bool
 	pruningDelay                        milestone.Index
+	pruneReceipts                       bool
 
 	snapshotLock   syncutils.Mutex
 	statusLock     syncutils.RWMutex
@@ -90,7 +91,8 @@ func New(shutdownCtx context.Context,
 	snapshotIntervalSynced milestone.Index,
 	snapshotIntervalUnsynced milestone.Index,
 	pruningEnabled bool,
-	pruningDelay milestone.Index) *Snapshot {
+	pruningDelay milestone.Index,
+	pruneReceipts bool) *Snapshot {
 
 	return &Snapshot{
 		shutdownCtx:                         shutdownCtx,
@@ -108,6 +110,7 @@ func New(shutdownCtx context.Context,
 		snapshotIntervalUnsynced:            snapshotIntervalUnsynced,
 		pruningEnabled:                      pruningEnabled,
 		pruningDelay:                        pruningDelay,
+		pruneReceipts:                       pruneReceipts,
 	}
 }
 

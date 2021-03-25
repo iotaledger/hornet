@@ -68,7 +68,8 @@
   },
   "pruning": {
     "enabled": true,
-    "delay": 1000
+    "delay": 1000,
+    "pruneReceipts": false
   },
   "protocol": {
     "networkID": "comnet1",

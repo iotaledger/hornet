@@ -48,7 +48,7 @@ func (u *Manager) WriteUnlockLedger() {
 	u.utxoLock.Unlock()
 }
 
-func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
+func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index, pruneReceipts bool, receiptMigratedAtIndex ...uint32) error {
 
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
@@ -78,10 +78,12 @@ func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index, receiptMigratedAt
 	}
 
 	if len(receiptMigratedAtIndex) > 0 {
-		placeHolder := &ReceiptTuple{Receipt: &iotago.Receipt{MigratedAt: receiptMigratedAtIndex[0]}, MilestoneIndex: msIndex}
-		if err := deleteReceipt(placeHolder, mutations); err != nil {
-			mutations.Cancel()
-			return err
+		if pruneReceipts {
+			placeHolder := &ReceiptTuple{Receipt: &iotago.Receipt{MigratedAt: receiptMigratedAtIndex[0]}, MilestoneIndex: msIndex}
+			if err := deleteReceipt(placeHolder, mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
 		}
 
 		// only ever delete spent treasury outputs, since the unspent treasury output must exist

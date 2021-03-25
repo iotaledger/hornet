@@ -125,6 +125,7 @@ func provide(c *dig.Container) {
 			milestone.Index(deps.NodeConfig.Int(CfgSnapshotsIntervalUnsynced)),
 			deps.NodeConfig.Bool(CfgPruningEnabled),
 			pruningDelay,
+			deps.NodeConfig.Bool(CfgPruningPruneReceipts),
 		)
 	}); err != nil {
 		panic(err)
