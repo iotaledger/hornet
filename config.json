@@ -74,7 +74,8 @@
   },
   "pruning": {
     "enabled": true,
-    "delay": 60480
+    "delay": 60480,
+    "pruneReceipts": false
   },
   "node": {
     "alias": "Mainnet",

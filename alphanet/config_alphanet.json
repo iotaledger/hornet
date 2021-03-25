@@ -75,7 +75,8 @@
   },
   "pruning": {
     "enabled": true,
-    "delay": 500
+    "delay": 500,
+    "pruneReceipts": false
   },
   "protocol": {
     "networkID": "alphanet1",
