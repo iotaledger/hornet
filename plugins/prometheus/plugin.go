@@ -61,46 +61,56 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo         *app.AppInfo
-	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
-	Database        *databasepkg.Database
-	Storage         *storage.Storage
-	ServerMetrics   *metrics.ServerMetrics
-	DatabaseMetrics *metrics.DatabaseMetrics
-	StorageMetrics  *metrics.StorageMetrics
-	RestAPIMetrics  *metrics.RestAPIMetrics `optional:"true"`
-	Service         *gossip.Service
-	ReceiptService  *migrator.ReceiptService `optional:"true"`
-	Tangle          *tangle.Tangle
-	MigratorService *migrator.MigratorService `optional:"true"`
-	Manager         *p2p.Manager
-	RequestQueue    gossip.RequestQueue
-	TipSelector     *tipselect.TipSelector
-	Coordinator     *coordinator.Coordinator `optional:"true"`
-	DatabaseEvents  *database.Events
+	AppInfo          *app.AppInfo
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	Database         *databasepkg.Database
+	Storage          *storage.Storage
+	ServerMetrics    *metrics.ServerMetrics
+	DatabaseMetrics  *metrics.DatabaseMetrics
+	StorageMetrics   *metrics.StorageMetrics
+	RestAPIMetrics   *metrics.RestAPIMetrics `optional:"true"`
+	Service          *gossip.Service
+	ReceiptService   *migrator.ReceiptService `optional:"true"`
+	Tangle           *tangle.Tangle
+	MigratorService  *migrator.MigratorService `optional:"true"`
+	Manager          *p2p.Manager
+	RequestQueue     gossip.RequestQueue
+	MessageProcessor *gossip.MessageProcessor
+	TipSelector      *tipselect.TipSelector
+	Coordinator      *coordinator.Coordinator `optional:"true"`
+	DatabaseEvents   *database.Events
 }
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
-	configureDatabase()
-	configureNode()
-	configureGossipPeers()
-	configureGossipNode()
-
-	if deps.RestAPIMetrics != nil {
+	if deps.NodeConfig.Bool(CfgPrometheusDatabase) {
+		configureDatabase()
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusNode) {
+		configureNode()
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusGossip) {
+		configureGossipPeers()
+		configureGossipNode()
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusCaches) {
+		configureCaches()
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusRestAPI) && deps.RestAPIMetrics != nil {
 		configureRestAPI()
 	}
-	if deps.ReceiptService != nil {
-		configureReceipts()
+	if deps.NodeConfig.Bool(CfgPrometheusMigration) {
+		if deps.ReceiptService != nil {
+			configureReceipts()
+		}
+		if deps.MigratorService != nil {
+			configureMigrator()
+		}
 	}
-	if deps.MigratorService != nil {
-		configureMigrator()
-	}
-	if deps.Coordinator != nil {
+	if deps.NodeConfig.Bool(CfgPrometheusCoordinator) && deps.Coordinator != nil {
 		configureCoordinator()
 	}
-
 	if deps.NodeConfig.Bool(CfgPrometheusGoMetrics) {
 		registry.MustRegister(prometheus.NewGoCollector())
 	}

@@ -149,6 +149,10 @@ func (s *Storage) GetMessageStorageSize() int {
 	return s.messagesStorage.GetSize()
 }
 
+func (s *Storage) GetMessageMetadataStorageSize() int {
+	return s.metadataStorage.GetSize()
+}
+
 func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	cacheTime, _ := time.ParseDuration(opts.CacheTime)

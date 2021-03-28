@@ -9,6 +9,20 @@ import (
 const (
 	// the bind address on which the Prometheus exporter listens on
 	CfgPrometheusBindAddress = "prometheus.bindAddress"
+	// include database metrics
+	CfgPrometheusDatabase = "prometheus.databaseMetrics"
+	// include node metrics
+	CfgPrometheusNode = "prometheus.nodeMetrics"
+	// include gossip metrics
+	CfgPrometheusGossip = "prometheus.gossipMetrics"
+	// include caches metrics
+	CfgPrometheusCaches = "prometheus.cachesMetrics"
+	// include restAPI metrics
+	CfgPrometheusRestAPI = "prometheus.restAPIMetrics"
+	// include migration metrics
+	CfgPrometheusMigration = "prometheus.migrationMetrics"
+	// include coordinator metrics
+	CfgPrometheusCoordinator = "prometheus.coordinatorMetrics"
 	// include go metrics
 	CfgPrometheusGoMetrics = "prometheus.goMetrics"
 	// include process metrics
@@ -28,6 +42,13 @@ var params = &node.PluginParams{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.String(CfgPrometheusBindAddress, "localhost:9311", "the bind address on which the Prometheus exporter listens on")
+			fs.Bool(CfgPrometheusDatabase, true, "include database metrics")
+			fs.Bool(CfgPrometheusNode, true, "include node metrics")
+			fs.Bool(CfgPrometheusGossip, true, "include gossip metrics")
+			fs.Bool(CfgPrometheusCaches, true, "include caches metrics")
+			fs.Bool(CfgPrometheusRestAPI, true, "include restAPI metrics")
+			fs.Bool(CfgPrometheusMigration, true, "include migration metrics")
+			fs.Bool(CfgPrometheusCoordinator, true, "include coordinator metrics")
 			fs.Bool(CfgPrometheusGoMetrics, false, "include go metrics")
 			fs.Bool(CfgPrometheusProcessMetrics, false, "include process metrics")
 			fs.Bool(CfgPrometheusPromhttpMetrics, false, "include promhttp metrics")
