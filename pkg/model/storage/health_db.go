@@ -21,6 +21,7 @@ func (s *Storage) MarkDatabaseCorrupted() {
 	if err := s.healthStore.Set([]byte("dbCorrupted"), []byte{}); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
+	s.healthStore.Flush()
 }
 
 func (s *Storage) MarkDatabaseTainted() {
@@ -28,6 +29,7 @@ func (s *Storage) MarkDatabaseTainted() {
 	if err := s.healthStore.Set([]byte("dbTainted"), []byte{}); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
+	s.healthStore.Flush()
 }
 
 func (s *Storage) MarkDatabaseHealthy() {
