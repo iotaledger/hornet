@@ -29,6 +29,8 @@ import (
 const (
 	// LMI is set to CMI at startup
 	CfgTangleSyncedAtStartup = "syncedAtStartup"
+	// whether to revalidate the database on startup if corrupted
+	CfgTangleRevalidateDatabase = "revalidate"
 )
 
 func init() {
@@ -50,7 +52,8 @@ var (
 	log        *logger.Logger
 	deps       dependencies
 
-	syncedAtStartup = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
+	syncedAtStartup    = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
+	revalidateDatabase = flag.Bool(CfgTangleRevalidateDatabase, false, "revalidate the database on startup if corrupted")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new snapshot.")
 
@@ -136,6 +139,11 @@ func configure() {
 func run() {
 
 	if deps.Storage.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
+		revalidateDatabase := *revalidateDatabase || deps.NodeConfig.Bool(database.CfgDatabaseAutoRevalidation)
+		if !revalidateDatabase {
+			log.Panicf("HORNET was not shut down correctly, the database may be corrupted. \nPlease restart HORNET with flag \"--revalidate\" or enable \"database.autoRevalidation\" in the config.")
+
+		}
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := deps.Tangle.RevalidateDatabase(); err != nil {

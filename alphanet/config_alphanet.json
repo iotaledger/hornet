@@ -63,7 +63,8 @@
   },
   "db": {
     "engine": "pebble",
-    "path": "alphanetdb"
+    "path": "alphanetdb",
+    "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,

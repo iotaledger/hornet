@@ -50,7 +50,8 @@
   },
   "db": {
     "engine": "pebble",
-    "path": "mainnetdb"
+    "path": "mainnetdb",
+    "autoRevalidation": false
   },
   "snapshots": {
     "intervalSynced": 50,

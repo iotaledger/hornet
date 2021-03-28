@@ -51,7 +51,8 @@
   },
   "db": {
     "engine": "pebble",
-    "path": "testnetdb"
+    "path": "testnetdb",
+    "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
