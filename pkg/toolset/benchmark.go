@@ -1,13 +1,16 @@
 package toolset
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
+	"math"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -24,55 +27,6 @@ const (
 	// printStatusInterval is the interval for printing status messages
 	printStatusInterval = 2 * time.Second
 )
-
-type benchmarkObject struct {
-	store              kvstore.KVStore
-	writeDoneWaitGroup *sync.WaitGroup
-	key                []byte
-	value              []byte
-}
-
-func newBenchmarkObject(store kvstore.KVStore, writeDoneWaitGroup *sync.WaitGroup, key []byte, value []byte) *benchmarkObject {
-	return &benchmarkObject{
-		store:              store,
-		writeDoneWaitGroup: writeDoneWaitGroup,
-		key:                key,
-		value:              value,
-	}
-}
-
-func (bo *benchmarkObject) BatchWrite(batchedMuts kvstore.BatchedMutations) {
-	if err := batchedMuts.Set(bo.key, bo.value); err != nil {
-		panic(fmt.Errorf("write operation failed: %v", err))
-	}
-}
-
-func (bo *benchmarkObject) BatchWriteDone() {
-	// do a read operation after the batchwrite is done,
-	// so the write and read operations are equally distributed over the whole benchmark run.
-	if _, err := bo.store.Has(randBytes(32)); err != nil {
-		panic(fmt.Errorf("read operation failed: %v", err))
-	}
-
-	bo.writeDoneWaitGroup.Done()
-}
-
-func (bo *benchmarkObject) BatchWriteScheduled() bool {
-	return false
-}
-
-func (bo *benchmarkObject) ResetBatchWriteScheduled() {
-	// do nothing
-}
-
-// returns length amount random bytes
-func randBytes(length int) []byte {
-	var b []byte
-	for i := 0; i < length; i++ {
-		b = append(b, byte(rand.Intn(256)))
-	}
-	return b
-}
 
 func benchmarkIO(args []string) error {
 
@@ -154,7 +108,7 @@ func benchmarkIO(args []string) error {
 			bytesPerSecond := uint64(float64(bytes) / duration.Seconds())
 			objectsPerSecond := uint64(float64(i) / duration.Seconds())
 			percentage, remaining := utils.EstimateRemainingTime(ts, int64(i), int64(objectCnt))
-			fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, %0.2f%%. %v left...)", humanize.Bytes(bytesPerSecond), i, size, dbEngine, humanize.Bytes(bytes), humanize.Bytes(totalBytes), objectsPerSecond, percentage, remaining.Truncate(time.Second)))
+			fmt.Println(fmt.Sprintf("Average IO speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, %0.2f%%. %v left...)", humanize.Bytes(bytesPerSecond), i, size, dbEngine, humanize.Bytes(bytes), humanize.Bytes(totalBytes), objectsPerSecond, percentage, remaining.Truncate(time.Second)))
 		}
 	}
 
@@ -174,7 +128,100 @@ func benchmarkIO(args []string) error {
 	bytesPerSecond := uint64(float64(totalBytes) / duration.Seconds())
 	objectsPerSecond := uint64(float64(objectCnt) / duration.Seconds())
 
-	fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, took %v)", humanize.Bytes(bytesPerSecond), objectCnt, size, dbEngine, humanize.Bytes(totalBytes), humanize.Bytes(totalBytes), objectsPerSecond, duration.Truncate(time.Millisecond)))
+	fmt.Println(fmt.Sprintf("Average IO speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, took %v)", humanize.Bytes(bytesPerSecond), objectCnt, size, dbEngine, humanize.Bytes(totalBytes), humanize.Bytes(totalBytes), objectsPerSecond, duration.Truncate(time.Millisecond)))
+
+	return nil
+}
+
+func benchmarkCPU(args []string) error {
+	printUsage := func() {
+		println("Usage:")
+		println(fmt.Sprintf("	%s [THREADS]", ToolBenchmarkCPU))
+		println()
+		println("	[THREADS]  	- thread count (optional)")
+	}
+
+	threads := runtime.NumCPU()
+	duration := 1 * time.Minute
+
+	if len(args) > 1 {
+		printUsage()
+		return fmt.Errorf("too many arguments for '%s'", ToolBenchmarkCPU)
+	}
+
+	if len(args) == 1 {
+		var err error
+		threads, err = strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("can't parse THREADS: %v", err)
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), duration)
+	defer cancel()
+
+	ts := time.Now()
+
+	// doBenchmarkCPU mines with CURL until the context has been canceled.
+	// it returns the number of calculated hashes.
+	doBenchmarkCPU := func(ctx context.Context, numWorkers int) (uint64, error) {
+		var (
+			done    uint32
+			counter uint64
+			wg      sync.WaitGroup
+			closing = make(chan struct{})
+		)
+
+		// random digest
+		powDigest := randBytes(32)
+
+		// stop when the context has been canceled
+		go func() {
+			select {
+			case <-ctx.Done():
+				atomic.StoreUint32(&done, 1)
+			case <-closing:
+				return
+			}
+		}()
+
+		go func() {
+			for atomic.LoadUint32(&done) == 0 {
+				time.Sleep(printStatusInterval)
+
+				elapsed := time.Since(ts)
+				percentage, remaining := utils.EstimateRemainingTime(ts, int64(elapsed.Milliseconds()), int64(duration.Milliseconds()))
+				megahashesPerSecond := float64(counter) / (elapsed.Seconds() * 1000000)
+				fmt.Println(fmt.Sprintf("Average CPU speed: %0.2fMH/s (%d thread(s), %0.2f%%. %v left...)", megahashesPerSecond, threads, percentage, remaining.Truncate(time.Second)))
+			}
+		}()
+
+		workerWidth := math.MaxUint64 / uint64(numWorkers)
+		for i := 0; i < numWorkers; i++ {
+			startNonce := uint64(i) * workerWidth
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				if err := cpuBenchmarkWorker(powDigest, startNonce, &done, &counter); err != nil {
+					return
+				}
+				atomic.StoreUint32(&done, 1)
+			}()
+		}
+		wg.Wait()
+		close(closing)
+
+		return counter, nil
+	}
+
+	hashes, err := doBenchmarkCPU(ctx, threads)
+	if err != nil {
+		panic(err)
+	}
+
+	megahashesPerSecond := float64(hashes) / (duration.Seconds() * 1000000)
+	fmt.Println(fmt.Sprintf("Average CPU speed: %0.2fMH/s (%d thread(s), took %v)", megahashesPerSecond, threads, duration.Truncate(time.Millisecond)))
 
 	return nil
 }
