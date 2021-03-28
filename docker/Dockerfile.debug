@@ -1,0 +1,57 @@
+# golang 1.16.2-buster amd64
+FROM golang@sha256:5a6302e91acb152050d661c9a081a535978c629225225ed91a8b979ad24aafcd AS build
+
+ARG BUILD_TAGS
+
+# Ensure ca-certificates are up to date
+RUN update-ca-certificates
+
+# Set the current Working Directory inside the container
+RUN mkdir /app
+WORKDIR /app
+
+# Use Go Modules
+COPY go.mod .
+COPY go.sum .
+
+ENV GO111MODULE=on
+RUN go mod download
+RUN go mod verify
+
+# Copy everything from the current directory to the PWD(Present Working Directory) inside the container
+COPY . .
+
+
+# Get delve
+RUN CGO_ENABLED=0 go get -ldflags "-s -w -extldflags '-static'" github.com/go-delve/delve/cmd/dlv
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+      -tags="$BUILD_TAGS" \
+      -gcflags "all=-N -l" \
+      -o /go/bin/hornet
+
+############################
+# Image
+############################
+# https://github.com/GoogleContainerTools/distroless/tree/master/cc
+# using distroless cc image, which includes everything in the base image (glibc, libssl and openssl)
+FROM gcr.io/distroless/cc@sha256:e8a7af65cf92b834e35a7537f6be93e743b48886c83c1eac15ade437b90fc9ab
+
+EXPOSE 8081/tcp
+EXPOSE 14265/tcp
+EXPOSE 15600/tcp
+EXPOSE 14626/udp
+EXPOSE 2345/tcp
+
+
+# Copy assets into distroless image
+COPY --from=build /go/bin/dlv /dlv
+COPY --from=build /go/bin/hornet /app/hornet
+COPY ./config.json /app/config.json
+COPY ./config_comnet.json /app/config_comnet.json
+COPY ./config_devnet.json /app/config_devnet.json
+COPY ./peering.json /app/peering.json
+COPY ./profiles.json /app/profiles.json
+
+ENTRYPOINT ["/dlv"]
+CMD ["--listen=:2345", "--headless=true", "--log=true", "--log-output=debugger,debuglineerr,gdbwire,lldbout,rpc", "--accept-multiclient", "--api-version=2", "exec", "/app/hornet"]
