@@ -2,8 +2,10 @@ package database
 
 import (
 	"fmt"
+	"os"
 	"time"
 
+	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/protocfg"
@@ -26,6 +28,13 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
+const (
+	// whether to delete the database at startup
+	CfgTangleDeleteDatabase = "deleteDatabase"
+	// whether to delete the database and snapshots at startup
+	CfgTangleDeleteAll = "deleteAll"
+)
+
 func init() {
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
@@ -44,6 +53,9 @@ var (
 	log        *logger.Logger
 	deps       dependencies
 
+	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
+	deleteAll      = flag.Bool(CfgTangleDeleteAll, false, "whether to delete the database and snapshots at startup")
+
 	garbageCollectionLock syncutils.Mutex
 
 	// Closures
@@ -60,35 +72,48 @@ type dependencies struct {
 
 func provide(c *dig.Container) {
 
-	if err := c.Provide(func() *metrics.DatabaseMetrics {
-		return &metrics.DatabaseMetrics{}
-	}); err != nil {
-		panic(err)
+	type dbresult struct {
+		dig.Out
+
+		StorageMetrics     *metrics.StorageMetrics
+		DatabaseMetrics    *metrics.DatabaseMetrics
+		DatabaseEvents     *Events
+		DeleteDatabaseFlag bool `name:"deleteDatabase"`
+		DeleteAllFlag      bool `name:"deleteAll"`
 	}
 
-	if err := c.Provide(func() *metrics.StorageMetrics {
-		return &metrics.StorageMetrics{}
-	}); err != nil {
-		panic(err)
-	}
+	if err := c.Provide(func() dbresult {
 
-	if err := c.Provide(func() *Events {
-		return &Events{
-			DatabaseCleanup:    events.NewEvent(DatabaseCleanupCaller),
-			DatabaseCompaction: events.NewEvent(events.BoolCaller),
+		res := dbresult{
+			StorageMetrics:  &metrics.StorageMetrics{},
+			DatabaseMetrics: &metrics.DatabaseMetrics{},
+			DatabaseEvents: &Events{
+				DatabaseCleanup:    events.NewEvent(DatabaseCleanupCaller),
+				DatabaseCompaction: events.NewEvent(events.BoolCaller),
+			},
+			DeleteDatabaseFlag: *deleteDatabase,
+			DeleteAllFlag:      *deleteAll,
 		}
+		return res
 	}); err != nil {
 		panic(err)
 	}
 
-	type pebbledeps struct {
+	type dbdeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		Events     *Events
-		Metrics    *metrics.DatabaseMetrics
+		DeleteDatabaseFlag bool                         `name:"deleteDatabase"`
+		DeleteAllFlag      bool                         `name:"deleteAll"`
+		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		Events             *Events
+		Metrics            *metrics.DatabaseMetrics
 	}
 
-	if err := c.Provide(func(deps pebbledeps) *database.Database {
+	if err := c.Provide(func(deps dbdeps) *database.Database {
+
+		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
+			// delete old database folder
+			os.RemoveAll(deps.NodeConfig.String(CfgDatabasePath))
+		}
 
 		switch deps.NodeConfig.String(CfgDatabaseEngine) {
 		case "pebble":

@@ -139,10 +139,19 @@ func configure() {
 func run() {
 
 	if deps.Storage.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
+		// no need to check for the "deleteDatabase" and "deleteAll" flags,
+		// since the database should only be marked as corrupted,
+		// if it was not deleted before this check.
 		revalidateDatabase := *revalidateDatabase || deps.NodeConfig.Bool(database.CfgDatabaseAutoRevalidation)
 		if !revalidateDatabase {
-			log.Panicf("HORNET was not shut down correctly, the database may be corrupted. \nPlease restart HORNET with flag \"--revalidate\" or enable \"database.autoRevalidation\" in the config.")
+			log.Panic(`
+HORNET was not shut down properly, the database may be corrupted.
+Please restart HORNET with one of the following flags or enable "db.autoRevalidation" in the config.
 
+--revalidate:     starts the database revalidation (might take a long time)
+--deleteDatabase: deletes the database
+--deleteAll:      deletes the database and the snapshot files
+`)
 		}
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 

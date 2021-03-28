@@ -72,6 +72,7 @@ type dependencies struct {
 	Snapshot       *snapshot.Snapshot
 	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
 	NetworkID      uint64                       `name:"networkId"`
+	DeleteAllFlag  bool                         `name:"deleteAll"`
 	StorageMetrics *metrics.StorageMetrics
 }
 
@@ -133,6 +134,12 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+
+	if deps.DeleteAllFlag {
+		// delete old snapshot files
+		os.Remove(deps.NodeConfig.String(CfgSnapshotsFullPath))
+		os.Remove(deps.NodeConfig.String(CfgSnapshotsDeltaPath))
+	}
 
 	snapshotInfo := deps.Storage.GetSnapshotInfo()
 
