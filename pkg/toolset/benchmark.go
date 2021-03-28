@@ -192,7 +192,7 @@ func benchmarkCPU(args []string) error {
 				elapsed := time.Since(ts)
 				percentage, remaining := utils.EstimateRemainingTime(ts, int64(elapsed.Milliseconds()), int64(duration.Milliseconds()))
 				megahashesPerSecond := float64(counter) / (elapsed.Seconds() * 1000000)
-				fmt.Println(fmt.Sprintf("Average CPU speed: %0.2fMH/s (%d threads, %0.2f%%. %v left...)", megahashesPerSecond, threads, percentage, remaining.Truncate(time.Second)))
+				fmt.Println(fmt.Sprintf("Average CPU speed: %0.2fMH/s (%d thread(s), %0.2f%%. %v left...)", megahashesPerSecond, threads, percentage, remaining.Truncate(time.Second)))
 			}
 		}()
 
@@ -221,7 +221,7 @@ func benchmarkCPU(args []string) error {
 	}
 
 	megahashesPerSecond := float64(hashes) / (duration.Seconds() * 1000000)
-	fmt.Println(fmt.Sprintf("Average CPU speed: %0.2fMH/s (%d threads, took %v)", megahashesPerSecond, threads, duration.Truncate(time.Millisecond)))
+	fmt.Println(fmt.Sprintf("Average CPU speed: %0.2fMH/s (%d thread(s), took %v)", megahashesPerSecond, threads, duration.Truncate(time.Millisecond)))
 
 	return nil
 }
