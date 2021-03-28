@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"fmt"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/objectstorage"
 )
@@ -31,7 +29,7 @@ func (a *Child) GetChildMessageID() hornet.MessageID {
 // ObjectStorage interface
 
 func (a *Child) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("Child should never be updated: %v, MessageID: %v", a.childMessageID.ToHex(), a.parentMessageID.ToHex()))
+	// do nothing, since the object is identical (consists of key only)
 }
 
 func (a *Child) ObjectStorageKey() []byte {

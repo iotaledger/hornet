@@ -237,6 +237,11 @@ func (s *Storage) MessageExistsInStore(messageID hornet.MessageID) bool {
 	return s.messagesStorage.ObjectExistsInStore(messageID)
 }
 
+// MessageMetadataExistsInStore returns if the given message metadata exists in the persistence layer.
+func (s *Storage) MessageMetadataExistsInStore(messageID hornet.MessageID) bool {
+	return s.metadataStorage.ObjectExistsInStore(messageID)
+}
+
 // msg +1
 func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessage, newlyAdded bool) {
 
@@ -266,7 +271,7 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 	return &CachedMessage{msg: cachedMsgData, metadata: cachedMeta}, newlyAdded
 }
 
-// MessageIDConsumer consumes the given message ID during looping through all messages in the persistence layer.
+// MessageIDConsumer consumes the given message ID during looping through all messages.
 type MessageIDConsumer func(messageID hornet.MessageID) bool
 
 // ForEachMessageID loops over all message IDs.

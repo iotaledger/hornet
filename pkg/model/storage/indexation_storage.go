@@ -21,7 +21,7 @@ func (c *CachedIndexation) GetIndexation() *Indexation {
 
 func indexationFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Indexation{
-		index:     hornet.MessageIDFromSlice(key[:IndexationIndexLength]),
+		index:     key[:IndexationIndexLength],
 		messageID: hornet.MessageIDFromSlice(key[IndexationIndexLength : IndexationIndexLength+iotago.MessageIDLength]),
 	}, nil
 }
@@ -72,7 +72,7 @@ func (s *Storage) GetIndexMessageIDs(index []byte, maxFind ...int) hornet.Messag
 	return messageIDs
 }
 
-// IndexConsumer consumes the messageID during looping through all messages with given index in the persistence layer.
+// IndexConsumer consumes the messageID during looping through all messages with given index.
 type IndexConsumer func(messageID hornet.MessageID) bool
 
 // ForEachMessageIDWithIndex loops over all messages with the given index.
@@ -82,6 +82,17 @@ func (s *Storage) ForEachMessageIDWithIndex(index []byte, consumer IndexConsumer
 	s.indexationStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(key[IndexationIndexLength : IndexationIndexLength+iotago.MessageIDLength]))
 	}, objectstorage.WithIteratorPrefix(indexPadded[:]))
+}
+
+// CachedIndexationConsumer consumes the given indexation during looping through all indexations.
+type CachedIndexationConsumer func(indexation *CachedIndexation) bool
+
+// ForEachIndexation loops over all indexations.
+// indexation +1
+func (s *Storage) ForEachIndexation(consumer CachedIndexationConsumer, iteratorOptions ...objectstorage.IteratorOption) {
+	s.indexationStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+		return consumer(&CachedIndexation{CachedObject: cachedObject})
+	}, iteratorOptions...)
 }
 
 // indexation +1
@@ -94,6 +105,11 @@ func (s *Storage) StoreIndexation(index []byte, messageID hornet.MessageID) *Cac
 func (s *Storage) DeleteIndexation(index []byte, messageID hornet.MessageID) {
 	indexation := NewIndexation(index, messageID)
 	s.indexationStorage.Delete(indexation.ObjectStorageKey())
+}
+
+// indexation +-0
+func (s *Storage) DeleteIndexationByKey(key []byte) {
+	s.indexationStorage.Delete(key)
 }
 
 func (s *Storage) ShutdownIndexationStorage() {

@@ -66,7 +66,7 @@ type Tangle struct {
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone milestone.Index
 
-	Events *pluginEvents
+	Events *Events
 }
 
 func New(
@@ -101,7 +101,7 @@ func New(
 		messageProcessedSyncEvent:   utils.NewSyncEvent(),
 		messageSolidSyncEvent:       utils.NewSyncEvent(),
 		milestoneConfirmedSyncEvent: utils.NewSyncEvent(),
-		Events: &pluginEvents{
+		Events: &Events{
 			MPSMetricsUpdated:              events.NewEvent(MPSMetricsCaller),
 			ReceivedNewMessage:             events.NewEvent(storage.NewMessageCaller),
 			ReceivedKnownMessage:           events.NewEvent(storage.MessageCaller),
@@ -114,8 +114,6 @@ func New(
 			MilestoneConfirmed:             events.NewEvent(ConfirmedMilestoneCaller),
 			ConfirmedMilestoneChanged:      events.NewEvent(storage.MilestoneCaller),
 			ConfirmedMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
-			SnapshotMilestoneIndexChanged:  events.NewEvent(milestone.IndexCaller),
-			PruningMilestoneIndexChanged:   events.NewEvent(milestone.IndexCaller),
 			NewConfirmedMilestoneMetric:    events.NewEvent(NewConfirmedMilestoneMetricCaller),
 			MilestoneSolidificationFailed:  events.NewEvent(milestone.IndexCaller),
 			NewUTXOOutput:                  events.NewEvent(UTXOOutputCaller),

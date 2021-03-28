@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -33,7 +32,7 @@ func (t *UnreferencedMessage) GetMessageID() hornet.MessageID {
 // ObjectStorage interface
 
 func (t *UnreferencedMessage) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("UnreferencedMessage should never be updated: %v", t.messageID.ToHex()))
+	// do nothing, since the object is identical (consists of key only)
 }
 
 func (t *UnreferencedMessage) ObjectStorageKey() []byte {

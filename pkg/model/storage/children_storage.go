@@ -93,9 +93,6 @@ func (s *Storage) ContainsChild(messageID hornet.MessageID, childMessageID horne
 	return s.childrenStorage.Contains(append(messageID, childMessageID...))
 }
 
-// ChildConsumer consumes the given child during looping through all children in the persistence layer.
-type ChildConsumer func(messageID hornet.MessageID, childMessageID hornet.MessageID) bool
-
 // GetCachedChildrenOfMessageID returns the cached children of a message.
 // children +1
 func (s *Storage) GetCachedChildrenOfMessageID(messageID hornet.MessageID) CachedChildren {
@@ -106,6 +103,9 @@ func (s *Storage) GetCachedChildrenOfMessageID(messageID hornet.MessageID) Cache
 	}, objectstorage.WithIteratorPrefix(messageID))
 	return cachedChildren
 }
+
+// ChildConsumer consumes the given child during looping through all children.
+type ChildConsumer func(messageID hornet.MessageID, childMessageID hornet.MessageID) bool
 
 // ForEachChild loops over all children.
 func (s *Storage) ForEachChild(consumer ChildConsumer, iteratorOptions ...objectstorage.IteratorOption) {

@@ -32,6 +32,42 @@ func New(store kvstore.KVStore) *Manager {
 	}
 }
 
+// ClearLedger removes all entries from the UTXO ledger (spent, unspent, diff, balances, receipts, treasury)
+func (u *Manager) ClearLedger(pruneReceipts bool) error {
+	u.WriteLockLedger()
+	defer u.WriteUnlockLedger()
+
+	defer u.utxoStorage.Flush()
+
+	if pruneReceipts {
+		return u.utxoStorage.Clear()
+	}
+
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutput}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixUnspent}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSpent}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixMilestoneDiffs}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixBalances}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (u *Manager) ReadLockLedger() {
 	u.utxoLock.RLock()
 }
