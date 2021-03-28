@@ -53,3 +53,47 @@ For Example: `hornet -c config_example.json`
 | :--------: | :-----------------------------------------------------------------------: | :-----: |
 | bodyLength | the maximum number of characters that the body of an API call may contain |  string |
 | maxResults |     the maximum number of results that may be returned by an endpoint     | integer |
+
+Example:
+```json
+  "restAPI": {
+    "basicAuth": {
+      "enabled": false,
+      "userName": "admin",
+      "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "excludeHealthCheckFromAuth": false,
+    "permittedRoutes": [
+      "/health",
+      "/mqtt",
+      "/api/v1/info",
+      "/api/v1/tips",
+      "/api/v1/messages/:messageID",
+      "/api/v1/messages/:messageID/metadata",
+      "/api/v1/messages/:messageID/raw",
+      "/api/v1/messages/:messageID/children",
+      "/api/v1/messages",
+      "/api/v1/transactions/:transactionID/included-message",
+      "/api/v1/milestones/:milestoneIndex",
+      "/api/v1/milestones/:milestoneIndex/utxo-changes",
+      "/api/v1/outputs/:outputID",
+      "/api/v1/addresses/:address",
+      "/api/v1/addresses/:address/outputs",
+      "/api/v1/addresses/ed25519/:address",
+      "/api/v1/addresses/ed25519/:address/outputs",
+      "/api/v1/treasury"
+    ],
+    "whitelistedAddresses": [
+      "127.0.0.1",
+      "::1"
+    ],
+    "bindAddress": "0.0.0.0:14265",
+    "powEnabled": true,
+    "powWorkerCount": 1,
+    "limits": {
+      "bodyLength": "1M",
+      "maxResults": 1000
+    }
+  },
+```
