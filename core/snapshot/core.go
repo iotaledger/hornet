@@ -140,8 +140,13 @@ func configure() {
 
 	if deps.DeleteAllFlag {
 		// delete old snapshot files
-		os.Remove(deps.NodeConfig.String(CfgSnapshotsFullPath))
-		os.Remove(deps.NodeConfig.String(CfgSnapshotsDeltaPath))
+		if err := os.Remove(deps.NodeConfig.String(CfgSnapshotsFullPath)); err != nil && !os.IsNotExist(err) {
+			log.Panicf("deleting full snapshot file failed: %s", err)
+		}
+
+		if err := os.Remove(deps.NodeConfig.String(CfgSnapshotsDeltaPath)); err != nil && !os.IsNotExist(err) {
+			log.Panicf("deleting delta snapshot file failed: %s", err)
+		}
 	}
 
 	snapshotInfo := deps.Storage.GetSnapshotInfo()

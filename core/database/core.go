@@ -112,7 +112,9 @@ func provide(c *dig.Container) {
 
 		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 			// delete old database folder
-			os.RemoveAll(deps.NodeConfig.String(CfgDatabasePath))
+			if err := os.RemoveAll(deps.NodeConfig.String(CfgDatabasePath)); err != nil {
+				log.Panicf("deleting database folder failed: %s", err)
+			}
 		}
 
 		switch deps.NodeConfig.String(CfgDatabaseEngine) {
