@@ -1,10 +1,12 @@
 package toolset
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +20,8 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
+
+	"github.com/iotaledger/iota.go/v2/pow"
 )
 
 const (
@@ -67,9 +71,9 @@ func (bo *benchmarkObject) ResetBatchWriteScheduled() {
 
 // returns length amount random bytes
 func randBytes(length int) []byte {
-	var b []byte
+	b := make([]byte, length)
 	for i := 0; i < length; i++ {
-		b = append(b, byte(rand.Intn(256)))
+		b[i] = byte(rand.Intn(256))
 	}
 	return b
 }
@@ -175,6 +179,59 @@ func benchmarkIO(args []string) error {
 	objectsPerSecond := uint64(float64(objectCnt) / duration.Seconds())
 
 	fmt.Println(fmt.Sprintf("Average speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, took %v)", humanize.Bytes(bytesPerSecond), objectCnt, size, dbEngine, humanize.Bytes(totalBytes), humanize.Bytes(totalBytes), objectsPerSecond, duration.Truncate(time.Millisecond)))
+
+	return nil
+}
+
+func benchmarkCPU(args []string) error {
+	printUsage := func() {
+		println("Usage:")
+		println(fmt.Sprintf("	%s [COUNT]", ToolBenchmarkCPU))
+		println()
+		println("	[COUNT] 	- iteration count (optional)")
+	}
+
+	threads := runtime.NumCPU()
+	count := 1000
+	size := 347
+	score := 500.0
+
+	if len(args) > 1 {
+		printUsage()
+		return fmt.Errorf("too many arguments for '%s'", ToolBenchmarkCPU)
+	}
+
+	if len(args) == 1 {
+		var err error
+		count, err = strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("can't parse COUNT: %v", err)
+		}
+	}
+
+	ts := time.Now()
+
+	lastStatusTime := time.Now()
+	for i := 0; i < count; i++ {
+		data := randBytes(size)
+
+		pow.New(threads).Mine(context.Background(), data, score)
+
+		if time.Since(lastStatusTime) >= printStatusInterval {
+			lastStatusTime = time.Now()
+
+			duration := time.Since(ts)
+			powPerSecond := float64(i) / duration.Seconds()
+			percentage, remaining := utils.EstimateRemainingTime(ts, int64(i), int64(count))
+			fmt.Println(fmt.Sprintf("Average PoW/s: %0.2fPoW/s (%dx, %0.2f%%. %v left...)", powPerSecond, i, percentage, remaining.Truncate(time.Second)))
+		}
+	}
+
+	te := time.Now()
+	duration := te.Sub(ts)
+	powPerSecond := float64(count) / duration.Seconds()
+
+	fmt.Println(fmt.Sprintf("Average PoW/s: %0.2fPOW/s (%dx with a size of %s and a PoW score of %0.1f, took %v)", powPerSecond, count, humanize.Bytes(uint64(size)), score, duration.Truncate(time.Millisecond)))
 
 	return nil
 }
