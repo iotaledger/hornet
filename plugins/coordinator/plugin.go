@@ -505,7 +505,7 @@ func configureEvents() {
 		ts := time.Now()
 
 		// do not propagate during syncing, because it is not needed at all
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 

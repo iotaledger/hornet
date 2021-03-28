@@ -19,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
@@ -53,7 +52,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	Store          kvstore.KVStore
+	Database       *database.Database
 	Storage        *storage.Storage
 	Events         *Events
 	StorageMetrics *metrics.StorageMetrics
@@ -89,23 +88,49 @@ func provide(c *dig.Container) {
 		Metrics    *metrics.DatabaseMetrics
 	}
 
-	if err := c.Provide(func(deps pebbledeps) kvstore.KVStore {
-
-		reportCompactionRunning := func(running bool) {
-			deps.Metrics.CompactionRunning.Store(running)
-			if running {
-				deps.Metrics.CompactionCount.Inc()
-			}
-			deps.Events.DatabaseCompaction.Trigger(running)
-		}
+	if err := c.Provide(func(deps pebbledeps) *database.Database {
 
 		switch deps.NodeConfig.String(CfgDatabaseEngine) {
 		case "pebble":
-			return pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true))
+			reportCompactionRunning := func(running bool) {
+				deps.Metrics.CompactionRunning.Store(running)
+				if running {
+					deps.Metrics.CompactionCount.Inc()
+				}
+				deps.Events.DatabaseCompaction.Trigger(running)
+			}
+
+			return database.New(
+				pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true)),
+				func() bool { return deps.Metrics.CompactionRunning.Load() },
+			)
+
 		case "bolt":
-			return bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db"))
+			return database.New(
+				bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db")),
+				func() bool { return false },
+			)
+
 		case "rocksdb":
-			return rocksdb.New(database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath)))
+			rocksDB := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
+			return database.New(
+				rocksdb.New(rocksDB),
+				func() bool {
+					if numCompactions, success := rocksDB.GetIntProperty("rocksdb.num-running-compactions"); success {
+						runningBefore := deps.Metrics.CompactionRunning.Load()
+						running := numCompactions != 0
+
+						deps.Metrics.CompactionRunning.Store(running)
+						if running && !runningBefore {
+							// we may miss some compactions, since this is only calculated if polled.
+							deps.Metrics.CompactionCount.Inc()
+							deps.Events.DatabaseCompaction.Trigger(running)
+						}
+						return running
+					}
+					return false
+				},
+			)
 		default:
 			panic(fmt.Sprintf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", deps.NodeConfig.String(CfgDatabaseEngine)))
 		}
@@ -116,7 +141,7 @@ func provide(c *dig.Container) {
 	type storagedeps struct {
 		dig.In
 		NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
-		Store                      kvstore.KVStore
+		Database                   *database.Database
 		Profile                    *profile.Profile
 		BelowMaxDepth              int `name:"belowMaxDepth"`
 		CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
@@ -134,7 +159,7 @@ func provide(c *dig.Container) {
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 		}
 
-		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Store, deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
 	}); err != nil {
 		panic(err)
 	}
@@ -211,11 +236,11 @@ func RunGarbageCollection() {
 
 func closeDatabases() error {
 
-	if err := deps.Store.Flush(); err != nil {
+	if err := deps.Database.KVStore().Flush(); err != nil {
 		return err
 	}
 
-	if err := deps.Store.Close(); err != nil {
+	if err := deps.Database.KVStore().Close(); err != nil {
 		return err
 	}
 

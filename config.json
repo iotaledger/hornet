@@ -136,6 +136,13 @@
       "path": "target.json",
       "target": "localhost:9311"
     },
+    "databaseMetrics": true,
+    "nodeMetrics": true,
+    "gossipMetrics": true,
+    "cachesMetrics": true,
+    "restAPIMetrics": true,
+    "migrationMetrics": true,
+    "coordinatorMetrics": true,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

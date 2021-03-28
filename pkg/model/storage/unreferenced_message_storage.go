@@ -34,6 +34,10 @@ func unreferencedMessageFactory(key []byte, data []byte) (objectstorage.Storable
 	return unreferencedTx, nil
 }
 
+func (s *Storage) GetUnreferencedMessageStorageSize() int {
+	return s.unreferencedMessagesStorage.GetSize()
+}
+
 func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	cacheTime, _ := time.ParseDuration(opts.CacheTime)

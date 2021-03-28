@@ -136,7 +136,7 @@ func (t *Tangle) SolidQueueCheck(
 
 	tSolid := time.Now()
 
-	if t.storage.IsNodeSyncedWithThreshold() {
+	if t.storage.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
 		t.solidifyFutureCone(messagesMemcache, metadataMemcache, messageIDsToSolidify, abortSignal)
 	}

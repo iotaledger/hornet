@@ -30,7 +30,7 @@ var (
 
 func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
-	if !deps.Storage.IsNodeSyncedWithThreshold() {
+	if !deps.Storage.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -191,7 +191,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
-	if !deps.Storage.IsNodeSyncedWithThreshold() {
+	if !deps.Storage.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
 	}
 

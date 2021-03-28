@@ -163,13 +163,13 @@ func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
 func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
 
 	latestMilestoneIndex := t.storage.GetLatestMilestoneIndex()
-	isNodeSyncedWithThreshold := t.storage.IsNodeSyncedWithThreshold()
+	isNodeSyncedWithinBelowMaxDepth := t.storage.IsNodeSyncedWithinBelowMaxDepth()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
-	cachedMsg, alreadyAdded := t.storage.AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithThreshold, false) // msg +1
+	cachedMsg, alreadyAdded := t.storage.AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithinBelowMaxDepth, false) // msg +1
 
 	// Release shouldn't be forced, to cache the latest messages
-	defer cachedMsg.Release(!isNodeSyncedWithThreshold) // msg -1
+	defer cachedMsg.Release(!isNodeSyncedWithinBelowMaxDepth) // msg -1
 
 	if !alreadyAdded {
 		t.serverMetrics.NewMessages.Inc()

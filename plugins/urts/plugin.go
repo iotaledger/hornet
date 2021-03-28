@@ -112,7 +112,7 @@ func configureEvents() {
 	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
 		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 			// do not add tips during syncing, because it is not needed at all
-			if !deps.Storage.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeAlmostSynced() {
 				return
 			}
 
@@ -122,7 +122,7 @@ func configureEvents() {
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
 		// do not propagate during syncing, because it is not needed at all
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
