@@ -64,8 +64,7 @@ type Snapshot struct {
 	solidEntryPointCheckThresholdFuture milestone.Index
 	additionalPruningThreshold          milestone.Index
 	snapshotDepth                       milestone.Index
-	snapshotIntervalSynced              milestone.Index
-	snapshotIntervalUnsynced            milestone.Index
+	snapshotInterval                    milestone.Index
 	pruningEnabled                      bool
 	pruningDelay                        milestone.Index
 	pruneReceipts                       bool
@@ -88,8 +87,7 @@ func New(shutdownCtx context.Context,
 	solidEntryPointCheckThresholdFuture milestone.Index,
 	additionalPruningThreshold milestone.Index,
 	snapshotDepth milestone.Index,
-	snapshotIntervalSynced milestone.Index,
-	snapshotIntervalUnsynced milestone.Index,
+	snapshotInterval milestone.Index,
 	pruningEnabled bool,
 	pruningDelay milestone.Index,
 	pruneReceipts bool) *Snapshot {
@@ -106,8 +104,7 @@ func New(shutdownCtx context.Context,
 		solidEntryPointCheckThresholdFuture: solidEntryPointCheckThresholdFuture,
 		additionalPruningThreshold:          additionalPruningThreshold,
 		snapshotDepth:                       snapshotDepth,
-		snapshotIntervalSynced:              snapshotIntervalSynced,
-		snapshotIntervalUnsynced:            snapshotIntervalUnsynced,
+		snapshotInterval:                    snapshotInterval,
 		pruningEnabled:                      pruningEnabled,
 		pruningDelay:                        pruningDelay,
 		pruneReceipts:                       pruneReceipts,
@@ -127,19 +124,12 @@ func (s *Snapshot) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) b
 		s.log.Panic("No snapshotInfo found!")
 	}
 
-	var snapshotInterval milestone.Index
-	if s.storage.IsNodeSynced() {
-		snapshotInterval = s.snapshotIntervalSynced
-	} else {
-		snapshotInterval = s.snapshotIntervalUnsynced
-	}
-
-	if (confirmedMilestoneIndex < s.snapshotDepth+snapshotInterval) || (confirmedMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
+	if (confirmedMilestoneIndex < s.snapshotDepth+s.snapshotInterval) || (confirmedMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
 		// Not enough history to calculate solid entry points
 		return false
 	}
 
-	return confirmedMilestoneIndex-(s.snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
+	return confirmedMilestoneIndex-(s.snapshotDepth+s.snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
 func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(sep *solidEntryPoint) bool) error {

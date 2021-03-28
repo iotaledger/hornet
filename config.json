@@ -54,8 +54,7 @@
     "autoRevalidation": false
   },
   "snapshots": {
-    "intervalSynced": 50,
-    "intervalUnsynced": 1000,
+    "interval": 50,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",
     "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
     "downloadURLs": [

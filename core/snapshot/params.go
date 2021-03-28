@@ -15,10 +15,8 @@ const (
 	CfgPruningPruneReceipts = "pruning.pruneReceipts"
 	// the depth, respectively the starting point, at which a snapshot of the ledger is generated
 	CfgSnapshotsDepth = "snapshots.depth"
-	// interval, in milestones, at which snapshot files are created if the ledger is fully synchronized
-	CfgSnapshotsIntervalSynced = "snapshots.intervalSynced"
-	// interval, in milestones, at which snapshot files are created if the ledger is not fully synchronized
-	CfgSnapshotsIntervalUnsynced = "snapshots.intervalUnsynced"
+	// interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)
+	CfgSnapshotsInterval = "snapshots.interval"
 	// path to the full snapshot file
 	CfgSnapshotsFullPath = "snapshots.fullPath"
 	// path to the delta snapshot file
@@ -35,8 +33,7 @@ var params = &node.PluginParams{
 			fs.Int(CfgPruningDelay, 60480, "amount of milestone cones to keep in the database")
 			fs.Bool(CfgPruningPruneReceipts, false, "whether to delete old receipts data from the database")
 			fs.Int(CfgSnapshotsDepth, 50, "the depth, respectively the starting point, at which a snapshot of the ledger is generated")
-			fs.Int(CfgSnapshotsIntervalSynced, 50, "interval, in milestones, at which snapshot files are created if the ledger is fully synchronized")
-			fs.Int(CfgSnapshotsIntervalUnsynced, 1000, "interval, in milestones, at which snapshot files are created if the ledger is not fully synchronized")
+			fs.Int(CfgSnapshotsInterval, 50, "interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)")
 			fs.String(CfgSnapshotsFullPath, "snapshots/mainnet/full_export.bin", "path to the full snapshot file")
 			fs.String(CfgSnapshotsDeltaPath, "snapshots/mainnet/delta_export.bin", "path to the delta snapshot file")
 			return fs
