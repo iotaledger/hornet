@@ -12,13 +12,13 @@ func New(kvStore kvstore.KVStore, compactionRunningFunc func() bool) *Database {
 	}
 }
 
-// Database holds the underlaying KVStore and database specific functions.
+// Database holds the underlying KVStore and database specific functions.
 type Database struct {
 	store                 kvstore.KVStore
 	compactionRunningFunc func() bool
 }
 
-// KVStore returns the underlaying KVStore.
+// KVStore returns the underlying KVStore.
 func (db *Database) KVStore() kvstore.KVStore {
 	return db.store
 }
