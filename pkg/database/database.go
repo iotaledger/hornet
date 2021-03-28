@@ -18,7 +18,7 @@ type Database struct {
 	compactionRunningFunc func() bool
 }
 
-// CompactionRunning returns the underlaying KVStore.
+// KVStore returns the underlaying KVStore.
 func (db *Database) KVStore() kvstore.KVStore {
 	return db.store
 }

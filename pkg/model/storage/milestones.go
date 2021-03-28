@@ -157,14 +157,14 @@ func (s *Storage) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) 
 	// catch overflow
 	if latestIndex < isNodeAlmostSyncedThreshold {
 		s.isNodeAlmostSynced = true
-		s.isNodeSyncedWithinBelowMaxDepth = false
+		s.isNodeSyncedWithinBelowMaxDepth = true
 		return
 	}
 	s.isNodeAlmostSynced = confirmedIndex >= (latestIndex - isNodeAlmostSyncedThreshold)
 
 	// catch overflow
 	if latestIndex < s.belowMaxDepth {
-		s.isNodeSyncedWithinBelowMaxDepth = false
+		s.isNodeSyncedWithinBelowMaxDepth = true
 		return
 	}
 	s.isNodeSyncedWithinBelowMaxDepth = confirmedIndex >= (latestIndex - s.belowMaxDepth)
