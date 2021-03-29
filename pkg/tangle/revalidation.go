@@ -75,7 +75,7 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 	t.log.Infof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
 
 	// deletes all ledger entries (unspent, spent, diffs, balances, treasury, receipts).
-	if err := t.cleanupLedger(snapshotInfo, pruneReceipts); err != nil {
+	if err := t.cleanupLedger(pruneReceipts); err != nil {
 		return err
 	}
 
@@ -125,7 +125,7 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 }
 
 // deletes all ledger entries (unspent, spent, diffs, balances, treasury, receipts).
-func (t *Tangle) cleanupLedger(info *storage.SnapshotInfo, pruneReceipts bool) error {
+func (t *Tangle) cleanupLedger(pruneReceipts bool) error {
 
 	start := time.Now()
 
