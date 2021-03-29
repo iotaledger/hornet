@@ -127,14 +127,14 @@ func (s *Storage) DeleteChild(messageID hornet.MessageID, childMessageID hornet.
 }
 
 // child +-0
-func (s *Storage) DeleteChildren(messageID hornet.MessageID) {
+func (s *Storage) DeleteChildren(messageID hornet.MessageID, iteratorOptions ...objectstorage.IteratorOption) {
 
 	var keysToDelete [][]byte
 
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, objectstorage.WithIteratorPrefix(messageID))
+	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(messageID))...)
 
 	for _, key := range keysToDelete {
 		s.childrenStorage.Delete(key)
