@@ -9,6 +9,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -18,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	snapshotpkg "github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
@@ -29,6 +31,8 @@ import (
 const (
 	// LMI is set to CMI at startup
 	CfgTangleSyncedAtStartup = "syncedAtStartup"
+	// whether to revalidate the database on startup if corrupted
+	CfgTangleRevalidateDatabase = "revalidate"
 )
 
 func init() {
@@ -50,7 +54,8 @@ var (
 	log        *logger.Logger
 	deps       dependencies
 
-	syncedAtStartup = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
+	syncedAtStartup    = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
+	revalidateDatabase = flag.Bool(CfgTangleRevalidateDatabase, false, "revalidate the database on startup if corrupted")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new snapshot.")
 
@@ -66,6 +71,7 @@ type dependencies struct {
 	Tangle      *tangle.Tangle
 	Requester   *gossip.Requester
 	Broadcaster *gossip.Broadcaster
+	Snapshot    *snapshotpkg.Snapshot
 	NodeConfig  *configuration.Configuration `name:"nodeConfig"`
 }
 
@@ -129,16 +135,24 @@ func configure() {
 		deps.Storage.MarkDatabaseCorrupted()
 	})
 
-	configureEvents()
-	deps.Tangle.ConfigureTangleProcessor()
-}
-
-func run() {
-
 	if deps.Storage.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
+		// no need to check for the "deleteDatabase" and "deleteAll" flags,
+		// since the database should only be marked as corrupted,
+		// if it was not deleted before this check.
+		revalidateDatabase := *revalidateDatabase || deps.NodeConfig.Bool(database.CfgDatabaseAutoRevalidation)
+		if !revalidateDatabase {
+			log.Panic(`
+HORNET was not shut down properly, the database may be corrupted.
+Please restart HORNET with one of the following flags or enable "db.autoRevalidation" in the config.
+
+--revalidate:     starts the database revalidation (might take a long time)
+--deleteDatabase: deletes the database
+--deleteAll:      deletes the database and the snapshot files
+`)
+		}
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		if err := deps.Tangle.RevalidateDatabase(); err != nil {
+		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.NodeConfig.Bool(snapshot.CfgPruningPruneReceipts)); err != nil {
 			if err == common.ErrOperationAborted {
 				log.Info("database revalidation aborted")
 				os.Exit(0)
@@ -147,6 +161,12 @@ func run() {
 		}
 		log.Info("database revalidation successful")
 	}
+
+	configureEvents()
+	deps.Tangle.ConfigureTangleProcessor()
+}
+
+func run() {
 
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
@@ -208,7 +228,7 @@ func configureEvents() {
 
 func attachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-	deps.Tangle.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+	deps.Snapshot.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
 
@@ -218,7 +238,7 @@ func attachSolidifierGossipEvents() {
 
 func detachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
-	deps.Tangle.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	deps.Snapshot.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 }
 

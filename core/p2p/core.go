@@ -74,16 +74,16 @@ func provide(c *dig.Container) {
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	type protoresult struct {
+	type p2presult struct {
 		dig.Out
 
 		Host           host.Host
 		NodePrivateKey crypto.PrivKey
 	}
 
-	if err := c.Provide(func(deps hostdeps) (protoresult, error) {
+	if err := c.Provide(func(deps hostdeps) (p2presult, error) {
 
-		res := protoresult{}
+		res := p2presult{}
 
 		ctx := context.Background()
 

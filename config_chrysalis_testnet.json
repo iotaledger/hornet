@@ -51,12 +51,12 @@
   },
   "db": {
     "engine": "pebble",
-    "path": "testnetdb"
+    "path": "testnetdb",
+    "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
-    "intervalSynced": 200,
-    "intervalUnsynced": 1000,
+    "interval": 200,
     "fullPath": "snapshots/testnet/full_snapshot.bin",
     "deltaPath": "snapshots/testnet/delta_snapshot.bin",
     "downloadURLs": [

@@ -76,7 +76,7 @@ func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index) hornet.Mess
 	return unreferencedMessageIDs
 }
 
-// UnreferencedMessageConsumer consumes the given unreferenced message during looping through all unreferenced messages in the persistence layer.
+// UnreferencedMessageConsumer consumes the given unreferenced message during looping through all unreferenced messages.
 type UnreferencedMessageConsumer func(msIndex milestone.Index, messageID hornet.MessageID) bool
 
 // ForEachUnreferencedMessage loops over all unreferenced messages.

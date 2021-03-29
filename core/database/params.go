@@ -11,6 +11,8 @@ const (
 	CfgDatabaseEngine = "db.engine"
 	// the path to the database folder
 	CfgDatabasePath = "db.path"
+	// whether to automatically start revalidation on startup if the database is corrupted
+	CfgDatabaseAutoRevalidation = "db.autoRevalidation"
 	// ignore the check for corrupted databases (should only be used for debug reasons)
 	CfgDatabaseDebug = "db.debug"
 )
@@ -21,6 +23,7 @@ var params = &node.PluginParams{
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.String(CfgDatabaseEngine, "pebble", "the used database engine (pebble/bolt)")
 			fs.String(CfgDatabasePath, "mainnetdb", "the path to the database folder")
+			fs.Bool(CfgDatabaseAutoRevalidation, false, "whether to automatically start revalidation on startup if the database is corrupted")
 			fs.Bool(CfgDatabaseDebug, false, "ignore the check for corrupted databases (should only be used for debug reasons)")
 			return fs
 		}(),

@@ -1,9 +1,6 @@
 package storage
 
 import (
-	"encoding/hex"
-	"fmt"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/objectstorage"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -42,7 +39,7 @@ func (i *Indexation) GetMessageID() hornet.MessageID {
 // ObjectStorage interface
 
 func (i *Indexation) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("Indexation should never be updated: %v, MessageID: %v", hex.EncodeToString(i.index), i.messageID.ToHex()))
+	// do nothing, since the object is identical (consists of key only)
 }
 
 func (i *Indexation) ObjectStorageKey() []byte {

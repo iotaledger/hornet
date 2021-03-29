@@ -64,7 +64,7 @@ type WorkUnit struct {
 }
 
 func (wu *WorkUnit) Update(_ objectstorage.StorableObject) {
-	panic("WorkUnit should never be updated")
+	// do nothing, since the object is identical (consists of key only)
 }
 
 func (wu *WorkUnit) ObjectStorageKey() []byte {

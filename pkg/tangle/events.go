@@ -37,7 +37,7 @@ func ReceiptCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*iotago.Receipt))(params[0].(*iotago.Receipt))
 }
 
-type pluginEvents struct {
+type Events struct {
 	MPSMetricsUpdated              *events.Event
 	ReceivedNewMessage             *events.Event
 	ReceivedKnownMessage           *events.Event
@@ -50,8 +50,6 @@ type pluginEvents struct {
 	MilestoneConfirmed             *events.Event
 	ConfirmedMilestoneChanged      *events.Event
 	ConfirmedMilestoneIndexChanged *events.Event
-	SnapshotMilestoneIndexChanged  *events.Event
-	PruningMilestoneIndexChanged   *events.Event
 	NewConfirmedMilestoneMetric    *events.Event
 	MilestoneSolidificationFailed  *events.Event
 	NewUTXOOutput                  *events.Event
