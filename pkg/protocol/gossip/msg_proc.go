@@ -155,11 +155,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		return fmt.Errorf("msg has invalid network ID %d instead of %d", msg.GetNetworkID(), proc.opts.NetworkID)
 	}
 
-	score, err := msg.GetMessage().POW()
-	if err != nil {
-		return err
-	}
-
+	score := pow.Score(msg.GetData())
 	if score < proc.opts.MinPoWScore {
 		return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
 	}
@@ -267,7 +263,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 
 // processes the given message request by parsing it and then replying to the peer with it.
 func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
-	if len(data) != 32 {
+	if len(data) != iotago.MessageIDLength {
 		return
 	}
 

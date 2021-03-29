@@ -47,7 +47,7 @@ func info() (*infoResponse, error) {
 		IsHealthy:               deps.Tangle.IsNodeHealthy(),
 		NetworkID:               deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
 		Bech32HRP:               string(deps.Bech32HRP),
-		MinPowScore:             deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
+		MinPowScore:             deps.MinPowScore,
 		LatestMilestoneIndex:    latestMilestoneIndex,
 		ConfirmedMilestoneIndex: confirmedMilestoneIndex,
 		PruningIndex:            pruningIndex,

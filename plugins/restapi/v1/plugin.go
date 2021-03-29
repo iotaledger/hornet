@@ -182,6 +182,7 @@ type dependencies struct {
 	PeeringConfigManager *p2ppkg.ConfigManager
 	NetworkID            uint64               `name:"networkId"`
 	BelowMaxDepth        int                  `name:"belowMaxDepth"`
+	MinPowScore          float64              `name:"minPowScore"`
 	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
 	TipSelector          *tipselect.TipSelector
 	Echo                 *echo.Echo

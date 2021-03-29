@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -87,12 +86,13 @@ func provide(c *dig.Container) {
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 		NetworkID     uint64                       `name:"networkId"`
 		BelowMaxDepth int                          `name:"belowMaxDepth"`
+		MinPowScore   float64                      `name:"minPowScore"`
 		Profile       *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
 		return gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
-			MinPoWScore:       deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
+			MinPoWScore:       deps.MinPowScore,
 			NetworkID:         deps.NetworkID,
 			BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
