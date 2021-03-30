@@ -33,7 +33,7 @@ var (
 type ConfirmedMilestoneMetric struct {
 	MilestoneIndex         milestone.Index `json:"ms_index"`
 	MPS                    float64         `json:"mps"`
-	CMPS                   float64         `json:"cmps"`
+	RMPS                   float64         `json:"rmps"`
 	ReferencedRate         float64         `json:"referenced_rate"`
 	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }
@@ -417,7 +417,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	t.Events.ConfirmationMetricsUpdated.Trigger(confirmationMetrics)
 
-	var cmpsMessage string
+	var rmpsMessage string
 	if metric, err := t.getConfirmedMilestoneMetric(cachedMsToSolidify.Retain(), confirmedMilestoneStats.Index); err == nil {
 		if t.storage.IsNodeSynced() {
 			// Only trigger the metrics event if the node is sync (otherwise the MPS and conf.rate is wrong)
@@ -430,15 +430,19 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		}
 
 		if t.storage.IsNodeSynced() && (confirmedMilestoneStats.Index > t.firstSyncedMilestone+1) {
+			t.lastConfirmedMilestoneMetricLock.Lock()
+			t.lastConfirmedMilestoneMetric = metric
+			t.lastConfirmedMilestoneMetricLock.Unlock()
+
 			// Ignore the first two milestones after node was sync (otherwise the MPS and conf.rate is wrong)
-			cmpsMessage = fmt.Sprintf(", %0.2f MPS, %0.2f CMPS, %0.2f%% conf.rate", metric.MPS, metric.CMPS, metric.ReferencedRate)
+			rmpsMessage = fmt.Sprintf(", %0.2f MPS, %0.2f RMPS, %0.2f%% ref.rate", metric.MPS, metric.RMPS, metric.ReferencedRate)
 			t.Events.NewConfirmedMilestoneMetric.Trigger(metric)
 		} else {
-			cmpsMessage = fmt.Sprintf(", %0.2f CMPS", metric.CMPS)
+			rmpsMessage = fmt.Sprintf(", %0.2f RMPS", metric.RMPS)
 		}
 	}
 
-	t.log.Infof("New confirmed milestone: %d%s", confirmedMilestoneStats.Index, cmpsMessage)
+	t.log.Infof("New confirmed milestone: %d%s", confirmedMilestoneStats.Index, rmpsMessage)
 
 	// Run check for next milestone
 	t.setSolidifierMilestoneIndex(0)
@@ -481,7 +485,7 @@ func (t *Tangle) getConfirmedMilestoneMetric(cachedMilestone *storage.CachedMile
 	metric := &ConfirmedMilestoneMetric{
 		MilestoneIndex:         milestoneIndexToSolidify,
 		MPS:                    float64(newMsgDiff) / timeDiff,
-		CMPS:                   float64(referencedMsgDiff) / timeDiff,
+		RMPS:                   float64(referencedMsgDiff) / timeDiff,
 		ReferencedRate:         referencedRate,
 		TimeSinceLastMilestone: timeDiff,
 	}

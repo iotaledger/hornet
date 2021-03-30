@@ -23,6 +23,14 @@ type infoResponse struct {
 	Bech32HRP string `json:"bech32HRP"`
 	// The minimum pow score of the network.
 	MinPowScore float64 `json:"minPowScore"`
+	// The current rate of new messages per second.
+	MessagesPerSecond float64 `json:"messagesPerSecond"`
+	// The current rate of referenced messages per second.
+	ReferencedMessagesPerSecond float64 `json:"referencedMessagesPerSecond"`
+	// The ratio of referenced messages in relation to new messages of the last confirmed milestone.
+	ReferencedRate float64 `json:"referencedRate"`
+	// The timestamp of the latest known milestone.
+	LatestMilestoneTimestamp int64 `json:"latestMilestoneTimestamp"`
 	// The latest known milestone index.
 	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
 	// The current confirmed milestone's index.

@@ -206,7 +206,7 @@ type NodeStatus struct {
 	Version                string          `json:"version"`
 	LatestVersion          string          `json:"latest_version"`
 	Uptime                 int64           `json:"uptime"`
-	AutopeeringID          string          `json:"autopeering_id"`
+	NodeID                 string          `json:"node_id"`
 	NodeAlias              string          `json:"node_alias"`
 	ConnectedPeersCount    int             `json:"connected_peers_count"`
 	CurrentRequestedMs     milestone.Index `json:"current_requested_ms"`
@@ -312,7 +312,7 @@ func currentNodeStatus() *NodeStatus {
 	status.LatestVersion = deps.AppInfo.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
 	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
-	status.AutopeeringID = deps.Host.ID().String()
+	status.NodeID = deps.Host.ID().String()
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
 	status.CurrentRequestedMs = requestedMilestone

@@ -4,6 +4,13 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
+func (t *Tangle) LastConfirmedMilestoneMetric() *ConfirmedMilestoneMetric {
+	t.lastConfirmedMilestoneMetricLock.RLock()
+	defer t.lastConfirmedMilestoneMetricLock.RUnlock()
+
+	return t.lastConfirmedMilestoneMetric
+}
+
 // measures the MPS values
 func (t *Tangle) measureMPS() {
 	incomingMsgCnt := t.serverMetrics.Messages.Load()
