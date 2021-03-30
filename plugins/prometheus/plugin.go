@@ -24,6 +24,7 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
@@ -77,6 +78,7 @@ type dependencies struct {
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
 	TipSelector      *tipselect.TipSelector
+	Snapshot         *snapshot.Snapshot
 	Coordinator      *coordinator.Coordinator `optional:"true"`
 	DatabaseEvents   *database.Events
 }
@@ -110,6 +112,9 @@ func configure() {
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusCoordinator) && deps.Coordinator != nil {
 		configureCoordinator()
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusDebug) {
+		configureDebug()
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusGoMetrics) {
 		registry.MustRegister(prometheus.NewGoCollector())

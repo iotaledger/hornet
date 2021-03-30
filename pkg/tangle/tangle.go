@@ -115,6 +115,7 @@ func New(
 			ConfirmedMilestoneChanged:      events.NewEvent(storage.MilestoneCaller),
 			ConfirmedMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 			NewConfirmedMilestoneMetric:    events.NewEvent(NewConfirmedMilestoneMetricCaller),
+			ConfirmationMetricsUpdated:     events.NewEvent(ConfirmationMetricsCaller),
 			MilestoneSolidificationFailed:  events.NewEvent(milestone.IndexCaller),
 			NewUTXOOutput:                  events.NewEvent(UTXOOutputCaller),
 			NewUTXOSpent:                   events.NewEvent(UTXOSpentCaller),

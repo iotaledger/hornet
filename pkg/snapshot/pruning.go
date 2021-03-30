@@ -169,8 +169,9 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 		s.log.Infof("Pruning milestone (%d)...", milestoneIndex)
 
-		ts := time.Now()
+		timeStart := time.Now()
 		txCountDeleted, msgCountChecked := s.pruneUnreferencedMessages(milestoneIndex)
+		timePruneUnreferencedMessages := time.Now()
 
 		cachedMs := s.storage.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
@@ -203,6 +204,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 			// the pruning target index is also a solid entry point => traverse it anyways
 			true,
 			nil)
+		timeTraverseMilestoneCone := time.Now()
 
 		cachedMs.Release(true) // milestone -1
 		if err != nil {
@@ -226,18 +228,32 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		if err := s.pruneMilestone(milestoneIndex, migratedAtIndex...); err != nil {
 			s.log.Warnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 		}
+		timePruneMilestone := time.Now()
 
 		cachedMsMsg.Release(true) // milestone msg -1
 
 		msgCountChecked += len(messageIDsToDeleteMap)
 		txCountDeleted += s.pruneMessages(messageIDsToDeleteMap)
+		timePruneMessages := time.Now()
 
 		snapshotInfo.PruningIndex = milestoneIndex
 		s.storage.SetSnapshotInfo(snapshotInfo)
+		timeSetSnapshotInfo := time.Now()
 
-		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
+		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(timeStart).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
 
 		s.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
+		timePruningMilestoneIndexChanged := time.Now()
+
+		s.Events.PruningMetricsUpdated.Trigger(&PruningMetrics{
+			DurationPruneUnreferencedMessages:    timePruneUnreferencedMessages.Sub(timeStart),
+			DurationTraverseMilestoneCone:        timeTraverseMilestoneCone.Sub(timePruneUnreferencedMessages),
+			DurationPruneMilestone:               timePruneMilestone.Sub(timeTraverseMilestoneCone),
+			DurationPruneMessages:                timePruneMessages.Sub(timePruneMilestone),
+			DurationSetSnapshotInfo:              timeSetSnapshotInfo.Sub(timePruneMessages),
+			DurationPruningMilestoneIndexChanged: timePruningMilestoneIndexChanged.Sub(timeSetSnapshotInfo),
+			DurationTotal:                        time.Since(timeStart),
+		})
 	}
 
 	database.RunGarbageCollection()

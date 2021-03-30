@@ -190,7 +190,8 @@ func writeFullSnapshot() {
 		return msDiff, nil
 	}
 
-	must(snapshot.StreamSnapshotDataTo(full, uint64(time.Now().Unix()), fullSnapshotHeader, fullSnapSEPProd, fullSnapOutputProd, fullSnapMsDiffProd))
+	err, _ = snapshot.StreamSnapshotDataTo(full, uint64(time.Now().Unix()), fullSnapshotHeader, fullSnapSEPProd, fullSnapOutputProd, fullSnapMsDiffProd)
+	must(err)
 }
 
 var deltaSnapshotHeader = &snapshot.FileHeader{
@@ -332,7 +333,8 @@ func writeDeltaSnapshot() {
 		return msDiff, nil
 	}
 
-	must(snapshot.StreamSnapshotDataTo(delta, uint64(time.Now().Unix()), deltaSnapshotHeader, deltaSnapSEPProd, nil, deltaSnapMsDiffProd))
+	err, _ = snapshot.StreamSnapshotDataTo(delta, uint64(time.Now().Unix()), deltaSnapshotHeader, deltaSnapSEPProd, nil, deltaSnapMsDiffProd)
+	must(err)
 }
 
 func must(err error) {

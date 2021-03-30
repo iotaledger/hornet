@@ -347,14 +347,15 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
-	var timeStart, timeSetConfirmedMilestoneIndex, timeConfirmedMilestoneChanged, timeConfirmedMilestoneIndexChanged, timeMilestoneConfirmedSyncEvent, timeMilestoneConfirmed time.Time
+	var timeStartConfirmation, timeSetConfirmedMilestoneIndex, timeConfirmedMilestoneChanged, timeConfirmedMilestoneIndexChanged, timeMilestoneConfirmedSyncEvent, timeMilestoneConfirmed time.Time
 
-	conf, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, messagesMemcache, metadataMemcache, cachedMsToSolidify.GetMilestone().MessageID,
+	timeStart := time.Now()
+	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, messagesMemcache, metadataMemcache, cachedMsToSolidify.GetMilestone().MessageID,
 		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 		},
 		func(confirmation *whiteflag.Confirmation) {
-			timeStart = time.Now()
+			timeStartConfirmation = time.Now()
 			t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify)
 			timeSetConfirmedMilestoneIndex = time.Now()
 			t.Events.ConfirmedMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
@@ -398,68 +399,37 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	}
 
 	t.log.Infof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
-		conf.Index,
-		conf.MessagesReferenced,
-		conf.MessagesIncludedWithTransactions,
-		conf.MessagesExcludedWithoutTransactions,
-		conf.MessagesExcludedWithConflictingTransactions,
-		conf.DurationWhiteflag.Truncate(time.Millisecond),
-		conf.DurationTotal.Truncate(time.Millisecond),
+		confirmedMilestoneStats.Index,
+		confirmedMilestoneStats.MessagesReferenced,
+		confirmedMilestoneStats.MessagesIncludedWithTransactions,
+		confirmedMilestoneStats.MessagesExcludedWithoutTransactions,
+		confirmedMilestoneStats.MessagesExcludedWithConflictingTransactions,
+		confirmationMetrics.DurationWhiteflag.Truncate(time.Millisecond),
+		time.Since(timeStart).Truncate(time.Millisecond),
 	)
 
-	durationSetConfirmedMilestoneIndex := timeSetConfirmedMilestoneIndex.Sub(timeStart)
-	durationConfirmedMilestoneChanged := timeConfirmedMilestoneChanged.Sub(timeSetConfirmedMilestoneIndex)
-	durationConfirmedMilestoneIndexChanged := timeConfirmedMilestoneIndexChanged.Sub(timeConfirmedMilestoneChanged)
-	durationMilestoneConfirmedSyncEvent := timeMilestoneConfirmedSyncEvent.Sub(timeConfirmedMilestoneIndexChanged)
-	durationMilestoneConfirmed := timeMilestoneConfirmed.Sub(timeMilestoneConfirmedSyncEvent)
+	confirmationMetrics.DurationSetConfirmedMilestoneIndex = timeSetConfirmedMilestoneIndex.Sub(timeStartConfirmation)
+	confirmationMetrics.DurationConfirmedMilestoneChanged = timeConfirmedMilestoneChanged.Sub(timeSetConfirmedMilestoneIndex)
+	confirmationMetrics.DurationConfirmedMilestoneIndexChanged = timeConfirmedMilestoneIndexChanged.Sub(timeConfirmedMilestoneChanged)
+	confirmationMetrics.DurationMilestoneConfirmedSyncEvent = timeMilestoneConfirmedSyncEvent.Sub(timeConfirmedMilestoneIndexChanged)
+	confirmationMetrics.DurationMilestoneConfirmed = timeMilestoneConfirmed.Sub(timeMilestoneConfirmedSyncEvent)
+	confirmationMetrics.DurationTotal = time.Since(timeStart)
 
-	t.log.Debugf(`Additional confirmation stats:
-DurationWhiteflag: %v
-DurationReceipts: %v
-DurationConfirmation: %v
-DurationApplyIncludedWithTransactions: %v
-DurationApplyExcludedWithoutTransactions: %v
-DurationApplyMilestone: %v
-DurationApplyExcludedWithConflictingTransactions: %v
-DurationOnMilestoneConfirmed: %v
-DurationSetConfirmedMilestoneIndex: %v
-DurationConfirmedMilestoneChanged: %v
-DurationConfirmedMilestoneIndexChanged: %v
-DurationMilestoneConfirmedSyncEvent: %v
-DurationMilestoneConfirmed: %v
-DurationForEachNewOutput: %v
-DurationForEachNewSpent: %v
-DurationTotal: %v`,
-		conf.DurationWhiteflag.Truncate(time.Millisecond),
-		conf.DurationReceipts.Truncate(time.Millisecond),
-		conf.DurationConfirmation.Truncate(time.Millisecond),
-		conf.DurationApplyIncludedWithTransactions.Truncate(time.Millisecond),
-		conf.DurationApplyExcludedWithoutTransactions.Truncate(time.Millisecond),
-		conf.DurationApplyMilestone.Truncate(time.Millisecond),
-		conf.DurationApplyExcludedWithConflictingTransactions.Truncate(time.Millisecond),
-		conf.DurationOnMilestoneConfirmed.Truncate(time.Millisecond),
-		durationSetConfirmedMilestoneIndex.Truncate(time.Millisecond),
-		durationConfirmedMilestoneChanged.Truncate(time.Millisecond),
-		durationConfirmedMilestoneIndexChanged.Truncate(time.Millisecond),
-		durationMilestoneConfirmedSyncEvent.Truncate(time.Millisecond),
-		durationMilestoneConfirmed.Truncate(time.Millisecond),
-		conf.DurationForEachNewOutput.Truncate(time.Millisecond),
-		conf.DurationForEachNewSpent.Truncate(time.Millisecond),
-		conf.DurationTotal.Truncate(time.Millisecond))
+	t.Events.ConfirmationMetricsUpdated.Trigger(confirmationMetrics)
 
 	var cmpsMessage string
-	if metric, err := t.getConfirmedMilestoneMetric(cachedMsToSolidify.Retain(), conf.Index); err == nil {
+	if metric, err := t.getConfirmedMilestoneMetric(cachedMsToSolidify.Retain(), confirmedMilestoneStats.Index); err == nil {
 		if t.storage.IsNodeSynced() {
 			// Only trigger the metrics event if the node is sync (otherwise the MPS and conf.rate is wrong)
 			if t.firstSyncedMilestone == 0 {
-				t.firstSyncedMilestone = conf.Index
+				t.firstSyncedMilestone = confirmedMilestoneStats.Index
 			}
 		} else {
 			// reset the variable if unsynced
 			t.firstSyncedMilestone = 0
 		}
 
-		if t.storage.IsNodeSynced() && (conf.Index > t.firstSyncedMilestone+1) {
+		if t.storage.IsNodeSynced() && (confirmedMilestoneStats.Index > t.firstSyncedMilestone+1) {
 			// Ignore the first two milestones after node was sync (otherwise the MPS and conf.rate is wrong)
 			cmpsMessage = fmt.Sprintf(", %0.2f MPS, %0.2f CMPS, %0.2f%% conf.rate", metric.MPS, metric.CMPS, metric.ReferencedRate)
 			t.Events.NewConfirmedMilestoneMetric.Trigger(metric)
@@ -468,7 +438,7 @@ DurationTotal: %v`,
 		}
 	}
 
-	t.log.Infof("New confirmed milestone: %d%s", conf.Index, cmpsMessage)
+	t.log.Infof("New confirmed milestone: %d%s", confirmedMilestoneStats.Index, cmpsMessage)
 
 	// Run check for next milestone
 	t.setSolidifierMilestoneIndex(0)
