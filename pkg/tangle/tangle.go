@@ -66,6 +66,9 @@ type Tangle struct {
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone milestone.Index
 
+	lastConfirmedMilestoneMetricLock syncutils.RWMutex
+	lastConfirmedMilestoneMetric     *ConfirmedMilestoneMetric
+
 	Events *Events
 }
 

@@ -34,8 +34,8 @@ var params = &node.PluginParams{
 			fs.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
 			fs.Duration(CfgDashboardAuthSessionTimeout, 72*time.Hour, "how long the auth session should last before expiring")
 			fs.String(CfgDashboardAuthUsername, "admin", "the auth username")
-			fs.String(CfgDashboardAuthPasswordHash, "0000000000000000000000000000000000000000000000000000000000000000", "the auth username")
-			fs.String(CfgDashboardAuthPasswordSalt, "0000000000000000000000000000000000000000000000000000000000000000", "the auth password+salt as a scrypt hash")
+			fs.String(CfgDashboardAuthPasswordHash, "0000000000000000000000000000000000000000000000000000000000000000", "the auth password+salt as a scrypt hash")
+			fs.String(CfgDashboardAuthPasswordSalt, "0000000000000000000000000000000000000000000000000000000000000000", "the auth salt used for hashing the password")
 			return fs
 		}(),
 	},

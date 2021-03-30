@@ -16,23 +16,27 @@ import (
 
 func info() (*infoResponse, error) {
 
+	var messagesPerSecond, referencedMessagesPerSecond, referencedRate float64
+	lastConfirmedMilestoneMetric := deps.Tangle.LastConfirmedMilestoneMetric()
+	if lastConfirmedMilestoneMetric != nil {
+		messagesPerSecond = lastConfirmedMilestoneMetric.MPS
+		referencedMessagesPerSecond = lastConfirmedMilestoneMetric.RMPS
+		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
+	}
+
 	// latest milestone index
 	latestMilestoneIndex := deps.Storage.GetLatestMilestoneIndex()
 
-	// latest milestone message ID
+	// latest milestone timestamp
+	var latestMilestoneTimestamp int64 = 0
 	cachedLatestMilestone := deps.Storage.GetCachedMilestoneOrNil(latestMilestoneIndex)
 	if cachedLatestMilestone != nil {
+		latestMilestoneTimestamp = cachedLatestMilestone.GetMilestone().Timestamp.Unix()
 		cachedLatestMilestone.Release(true)
 	}
 
 	// confirmed milestone index
 	confirmedMilestoneIndex := deps.Storage.GetConfirmedMilestoneIndex()
-
-	// confirmed milestone message ID
-	cachedConfirmedMilestone := deps.Storage.GetCachedMilestoneOrNil(confirmedMilestoneIndex)
-	if cachedConfirmedMilestone != nil {
-		cachedConfirmedMilestone.Release(true)
-	}
 
 	// pruning index
 	var pruningIndex milestone.Index
@@ -42,16 +46,20 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                    deps.AppInfo.Name,
-		Version:                 deps.AppInfo.Version,
-		IsHealthy:               deps.Tangle.IsNodeHealthy(),
-		NetworkID:               deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
-		Bech32HRP:               string(deps.Bech32HRP),
-		MinPowScore:             deps.MinPowScore,
-		LatestMilestoneIndex:    latestMilestoneIndex,
-		ConfirmedMilestoneIndex: confirmedMilestoneIndex,
-		PruningIndex:            pruningIndex,
-		Features:                features,
+		Name:                        deps.AppInfo.Name,
+		Version:                     deps.AppInfo.Version,
+		IsHealthy:                   deps.Tangle.IsNodeHealthy(),
+		NetworkID:                   deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
+		Bech32HRP:                   string(deps.Bech32HRP),
+		MinPowScore:                 deps.MinPowScore,
+		MessagesPerSecond:           messagesPerSecond,
+		ReferencedMessagesPerSecond: referencedMessagesPerSecond,
+		ReferencedRate:              referencedRate,
+		LatestMilestoneTimestamp:    latestMilestoneTimestamp,
+		LatestMilestoneIndex:        latestMilestoneIndex,
+		ConfirmedMilestoneIndex:     confirmedMilestoneIndex,
+		PruningIndex:                pruningIndex,
+		Features:                    features,
 	}, nil
 }
 
