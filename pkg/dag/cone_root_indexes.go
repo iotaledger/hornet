@@ -132,7 +132,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 // we have to walk the future cone, and update the past cone of all messages that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same messages multiple times.
-func UpdateConeRootIndexes(s *storage.Storage, messageIDs hornet.MessageIDs, cmi milestone.Index) {
+func UpdateConeRootIndexes(s *storage.Storage, messageIDs hornet.MessageIDs, cmi milestone.Index, iteratorOptions ...storage.IteratorOption) {
 	traversed := map[string]struct{}{}
 
 	// we update all messages in order from oldest to latest
@@ -157,7 +157,7 @@ func UpdateConeRootIndexes(s *storage.Storage, messageIDs hornet.MessageIDs, cmi
 				GetConeRootIndexes(s, cachedMsgMeta.Retain(), cmi) // meta pass +1
 
 				return nil
-			}, false, nil); err != nil {
+			}, false, nil, iteratorOptions...); err != nil {
 			panic(err)
 		}
 	}

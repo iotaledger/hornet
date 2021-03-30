@@ -27,6 +27,9 @@ type packageEvents struct {
 	PruningStateChanged    *events.Event
 }
 
+type ReadOption = objectstorage.ReadOption
+type IteratorOption = objectstorage.IteratorOption
+
 type Storage struct {
 
 	// database

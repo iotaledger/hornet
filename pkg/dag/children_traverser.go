@@ -22,6 +22,7 @@ type ChildrenTraverser struct {
 	// discovers map with already found messages
 	discovered map[string]struct{}
 
+	iteratorOptions       []storage.IteratorOption
 	condition             Predicate
 	consumer              Consumer
 	walkAlreadyDiscovered bool
@@ -64,7 +65,7 @@ func (t *ChildrenTraverser) Cleanup(forceRelease bool) {
 // Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
+func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, iteratorOptions ...storage.IteratorOption) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -72,6 +73,7 @@ func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition 
 	// release lock so the traverser can be reused
 	defer t.traverserLock.Unlock()
 
+	t.iteratorOptions = iteratorOptions
 	t.condition = condition
 	t.consumer = consumer
 	t.walkAlreadyDiscovered = walkAlreadyDiscovered
@@ -136,7 +138,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 	}
 
-	for _, childMessageID := range t.storage.GetChildrenMessageIDs(currentMessageID) {
+	for _, childMessageID := range t.storage.GetChildrenMessageIDs(currentMessageID, t.iteratorOptions...) {
 		if !t.walkAlreadyDiscovered {
 			childMessageIDMapKey := childMessageID.ToMapKey()
 			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {

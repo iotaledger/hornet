@@ -193,8 +193,6 @@ github.com/fasthttp-contrib/websocket v0.0.0-20160511215533-1f3b11f56072/go.mod 
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/structs v1.1.0 h1:Q7juDM0QtcnhCpeyLGQKyg4TOIghuNXrkL32pHAUMxo=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
-github.com/fhmq/hmq v0.0.0-20210318020249-ccbe364f9fbe h1:bLEsIK6oQ95esJ3uusPCiUXYI8qd2QtbdaQjJeGvpI0=
-github.com/fhmq/hmq v0.0.0-20210318020249-ccbe364f9fbe/go.mod h1:8LeVIPKskGx+23MAOy9fQ8HWSK7uFLjviwtfu2idxmo=
 github.com/flosch/pongo2 v0.0.0-20190707114632-bbf5a6c351f4/go.mod h1:T9YF2M40nIgbVgp3rreNmTged+9HrbNTIQf1PsaIiTA=
 github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6 h1:u/UEqS66A5ckRmS4yNpjmVH56sVtS/RfclBAYocb4as=
 github.com/flynn/noise v0.0.0-20180327030543-2492fe189ae6/go.mod h1:1i71OnUq3iUe1ma7Lr6yG6/rjvM3emb6yoL7xLFzcVQ=
@@ -379,8 +377,8 @@ github.com/hydrogen18/memlistener v0.0.0-20141126152155-54553eb933fb/go.mod h1:q
 github.com/imkira/go-interpol v1.1.0/go.mod h1:z0h2/2T3XF8kyEPpRgJ3kmNv+C43p+I/CoI+jC3w2iA=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d/go.mod h1:qj24IKcXYK6Iy9ceXlo3Tc+vtHo9lIhSX5JddghvEPo=
-github.com/iotaledger/hive.go v0.0.0-20210322004532-031f0bd8c230 h1:vJ2uqkv8zMXYrDKDIbJK6Bcvc11gDt6vXCl+HCWg7XY=
-github.com/iotaledger/hive.go v0.0.0-20210322004532-031f0bd8c230/go.mod h1:NyBg/Ny7FFAdDs59zdwTVoysU2ZbJVQnRwyLIDFKJYA=
+github.com/iotaledger/hive.go v0.0.0-20210330231037-f9c6c5780afa h1:H/W5td7R3037tT6Zx4LdA4ONK7MJmvKRUN6Yry2GmVE=
+github.com/iotaledger/hive.go v0.0.0-20210330231037-f9c6c5780afa/go.mod h1:NyBg/Ny7FFAdDs59zdwTVoysU2ZbJVQnRwyLIDFKJYA=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210120184258-7eac7c1cc80b/go.mod h1:Rn6v5hLAn8YBaJlRu1ZQdPAgKlshJR1PTeLQaft2778=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7 h1:DIVriS1iEEOPrYwQ/vpHLsnVtmUpj4S+2UI4Jl+48ZQ=
 github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
@@ -731,10 +729,10 @@ github.com/libp2p/go-yamux/v2 v2.0.0 h1:vSGhAy5u6iHBq11ZDcyHH4Blcf9xlBhT4WQDoOE9
 github.com/libp2p/go-yamux/v2 v2.0.0/go.mod h1:NVWira5+sVUIU6tu1JWvaRn1dRnG+cawOJiflsAM+7U=
 github.com/lightstep/lightstep-tracer-common/golang/gogo v0.0.0-20190605223551-bc2310a04743/go.mod h1:qklhhLq1aX+mtWk9cPHPzaBjWImj5ULL6C7HFJtXQMM=
 github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0UBX0ZE6WURAspgAczcDHrL4=
-github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2 h1:qKD1ExZOhQSdfBrtNXO95TDu3XoLpXiC+MeBHvYj/Kk=
-github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2/go.mod h1:8LeVIPKskGx+23MAOy9fQ8HWSK7uFLjviwtfu2idxmo=
 github.com/linxGnu/grocksdb v1.6.32 h1:6rHtN6qbh4aVyVf5WpESoXAqZSU5WedoKSoMtyj8IWU=
 github.com/linxGnu/grocksdb v1.6.32/go.mod h1:/+iSQrn7Izt6kFhHBQvcE6FkklsKXa8hc35pFyFDrDw=
+github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2 h1:qKD1ExZOhQSdfBrtNXO95TDu3XoLpXiC+MeBHvYj/Kk=
+github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2/go.mod h1:8LeVIPKskGx+23MAOy9fQ8HWSK7uFLjviwtfu2idxmo=
 github.com/lyft/protoc-gen-validate v0.0.13/go.mod h1:XbGvPuh87YZc5TdIa2/I4pLk0QoUACkjt2znoq26NVQ=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/mailru/easyjson v0.0.0-20180823135443-60711f1a8329/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
