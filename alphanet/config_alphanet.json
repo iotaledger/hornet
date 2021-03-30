@@ -240,6 +240,7 @@
     "restAPIMetrics": true,
     "migrationMetrics": true,
     "coordinatorMetrics": true,
+    "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

@@ -132,7 +132,7 @@ type OutputResponse struct {
 
 // addressBalanceResponse defines the response of a GET addresses REST API call.
 type addressBalanceResponse struct {
-	// The type of the address (0=WOTS, 1=Ed25519).
+	// The type of the address (0=Ed25519).
 	AddressType byte `json:"addressType"`
 	// The hex encoded address.
 	Address string `json:"address"`
@@ -144,7 +144,7 @@ type addressBalanceResponse struct {
 
 // addressOutputsResponse defines the response of a GET outputs by address REST API call.
 type addressOutputsResponse struct {
-	// The type of the address (0=WOTS, 1=Ed25519).
+	// The type of the address (0=Ed25519).
 	AddressType byte `json:"addressType"`
 	// The hex encoded address.
 	Address string `json:"address"`

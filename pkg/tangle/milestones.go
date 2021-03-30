@@ -27,8 +27,6 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone)
 
 	if msIndex > confirmedMsIndex {
 		t.log.Infof("Valid milestone detected! Index: %d", msIndex)
-
-		// request parent1 and parent2
 		t.requester.RequestMilestoneParents(cachedMilestone.Retain()) // milestone pass +1
 	} else {
 		pruningIndex := t.storage.GetSnapshotInfo().PruningIndex

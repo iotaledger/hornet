@@ -130,7 +130,9 @@ func New(shutdownCtx context.Context,
 		pruneReceipts:                       pruneReceipts,
 		Events: &Events{
 			SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
+			SnapshotMetricsUpdated:        events.NewEvent(SnapshotMetricsCaller),
 			PruningMilestoneIndexChanged:  events.NewEvent(milestone.IndexCaller),
+			PruningMetricsUpdated:         events.NewEvent(PruningMetricsCaller),
 		},
 	}
 }
@@ -676,8 +678,12 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 	s.setIsSnapshotting(true)
 	defer s.setIsSnapshotting(false)
 
+	timeStart := time.Now()
+
 	s.utxo.ReadLockLedger()
 	defer s.utxo.ReadUnlockLedger()
+
+	timeReadLockLedger := time.Now()
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
 	if snapshotInfo == nil {
@@ -758,23 +764,40 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 		}
 	}
 
+	timeInit := time.Now()
+
 	// stream data into snapshot file
-	if err := StreamSnapshotDataTo(snapshotFile, uint64(ts.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer); err != nil {
+	err, snapshotMetrics := StreamSnapshotDataTo(snapshotFile, uint64(ts.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer)
+	if err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
+
+	timeStreamSnapshotData := time.Now()
 
 	// finalize file
 	if err := s.renameTempFile(snapshotFile, tempFilePath, filePath); err != nil {
 		return err
 	}
 
+	timeSetSnapshotInfo := timeStreamSnapshotData
+	timeSnapshotMilestoneIndexChanged := timeStreamSnapshotData
 	if writeToDatabase {
 		snapshotInfo.SnapshotIndex = targetIndex
 		snapshotInfo.Timestamp = targetMsTimestamp
 		s.storage.SetSnapshotInfo(snapshotInfo)
+		timeSetSnapshotInfo = time.Now()
 		s.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
+		timeSnapshotMilestoneIndexChanged = time.Now()
 	}
+
+	snapshotMetrics.DurationReadLockLedger = timeReadLockLedger.Sub(timeStart)
+	snapshotMetrics.DurationInit = timeInit.Sub(timeReadLockLedger)
+	snapshotMetrics.DurationSetSnapshotInfo = timeSetSnapshotInfo.Sub(timeStreamSnapshotData)
+	snapshotMetrics.DurationSnapshotMilestoneIndexChanged = timeSnapshotMilestoneIndexChanged.Sub(timeSetSnapshotInfo)
+	snapshotMetrics.DurationTotal = time.Since(timeStart)
+
+	s.Events.SnapshotMetricsUpdated.Trigger(snapshotMetrics)
 
 	s.log.Infof("created %s snapshot for target index %d, took %v", snapshotNames[snapshotType], targetIndex, time.Since(ts).Truncate(time.Millisecond))
 	return nil
