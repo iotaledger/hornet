@@ -1,14 +1,12 @@
 package prometheus
 
 import (
-	"sync/atomic"
-	"unsafe"
-
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 var (
@@ -23,9 +21,10 @@ var (
 	milestoneConfirmationTotalDuration prometheus.Histogram
 	milestoneConfirmationDurations     *prometheus.GaugeVec
 
-	lastSnapshotMetricsPointer        unsafe.Pointer
-	lastDatabasePruningMetricsPointer unsafe.Pointer
-	lastConfirmationMetricsPointer    unsafe.Pointer
+	metricsLock                syncutils.RWMutex
+	lastSnapshotMetrics        *snapshot.SnapshotMetrics
+	lastDatabasePruningMetrics *snapshot.PruningMetrics
+	lastConfirmationMetrics    *whiteflag.ConfirmationMetrics
 )
 
 func configureDebug() {
@@ -89,17 +88,23 @@ func configureDebug() {
 
 	deps.Snapshot.Events.SnapshotMetricsUpdated.Attach(events.NewClosure(func(metrics *snapshot.SnapshotMetrics) {
 		snapshotTotalDuration.Observe(float64(metrics.DurationTotal.Seconds()))
-		atomic.StorePointer(&lastSnapshotMetricsPointer, unsafe.Pointer(metrics))
+		metricsLock.Lock()
+		defer metricsLock.Unlock()
+		lastSnapshotMetrics = metrics
 	}))
 
 	deps.Snapshot.Events.PruningMetricsUpdated.Attach(events.NewClosure(func(metrics *snapshot.PruningMetrics) {
 		databasePruningTotalDuration.Observe(float64(metrics.DurationTotal.Seconds()))
-		atomic.StorePointer(&lastDatabasePruningMetricsPointer, unsafe.Pointer(metrics))
+		metricsLock.Lock()
+		defer metricsLock.Unlock()
+		lastDatabasePruningMetrics = metrics
 	}))
 
 	deps.Tangle.Events.ConfirmationMetricsUpdated.Attach(events.NewClosure(func(metrics *whiteflag.ConfirmationMetrics) {
 		milestoneConfirmationTotalDuration.Observe(float64(metrics.DurationTotal.Seconds()))
-		atomic.StorePointer(&lastConfirmationMetricsPointer, unsafe.Pointer(metrics))
+		metricsLock.Lock()
+		defer metricsLock.Unlock()
+		lastConfirmationMetrics = metrics
 	}))
 
 	registry.MustRegister(snapshotTotalDuration)
@@ -113,7 +118,10 @@ func configureDebug() {
 }
 
 func collectDebug() {
-	if lastSnapshotMetrics := (*snapshot.SnapshotMetrics)(atomic.LoadPointer(&lastSnapshotMetricsPointer)); lastSnapshotMetrics != nil {
+	metricsLock.RLock()
+	defer metricsLock.RUnlock()
+
+	if lastSnapshotMetrics != nil {
 		snapshotDurations.WithLabelValues("read_lock_ledger").Set(lastSnapshotMetrics.DurationReadLockLedger.Seconds())
 		snapshotDurations.WithLabelValues("init").Set(lastSnapshotMetrics.DurationInit.Seconds())
 		snapshotDurations.WithLabelValues("set_snapshot_info").Set(lastSnapshotMetrics.DurationSetSnapshotInfo.Seconds())
@@ -125,7 +133,7 @@ func collectDebug() {
 		snapshotDurations.WithLabelValues("total").Set(lastSnapshotMetrics.DurationTotal.Seconds())
 	}
 
-	if lastDatabasePruningMetrics := (*snapshot.PruningMetrics)(atomic.LoadPointer(&lastDatabasePruningMetricsPointer)); lastDatabasePruningMetrics != nil {
+	if lastDatabasePruningMetrics != nil {
 		databasePruningDurations.WithLabelValues("prune_unreferenced_messages").Set(lastDatabasePruningMetrics.DurationPruneUnreferencedMessages.Seconds())
 		databasePruningDurations.WithLabelValues("traverse_milestone_cone").Set(lastDatabasePruningMetrics.DurationTraverseMilestoneCone.Seconds())
 		databasePruningDurations.WithLabelValues("prune_milestone").Set(lastDatabasePruningMetrics.DurationPruneMilestone.Seconds())
@@ -135,7 +143,7 @@ func collectDebug() {
 		databasePruningDurations.WithLabelValues("total").Set(lastDatabasePruningMetrics.DurationTotal.Seconds())
 	}
 
-	if lastConfirmationMetrics := (*whiteflag.ConfirmationMetrics)(atomic.LoadPointer(&lastConfirmationMetricsPointer)); lastConfirmationMetrics != nil {
+	if lastConfirmationMetrics != nil {
 		milestoneConfirmationDurations.WithLabelValues("whiteflag").Set(lastConfirmationMetrics.DurationWhiteflag.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("receipts").Set(lastConfirmationMetrics.DurationReceipts.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("confirmation").Set(lastConfirmationMetrics.DurationConfirmation.Seconds())

@@ -27,7 +27,7 @@ type outputIDsResponse struct {
 
 // address defines the response of a GET debug addresses REST API call.
 type address struct {
-	// The type of the address (0=WOTS, 1=Ed25519).
+	// The type of the address (0=Ed25519).
 	AddressType byte `json:"addressType"`
 	// The hex encoded address.
 	Address string `json:"address"`
