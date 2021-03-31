@@ -131,8 +131,8 @@ func (s *Storage) GetCachedMilestoneOrNil(milestoneIndex milestone.Index) *Cache
 }
 
 // milestone +-0
-func (s *Storage) ContainsMilestone(milestoneIndex milestone.Index) bool {
-	return s.milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
+func (s *Storage) ContainsMilestone(milestoneIndex milestone.Index, readOptions ...ReadOption) bool {
+	return s.milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex), readOptions...)
 }
 
 // SearchLatestMilestoneIndexInStore searches the latest milestone without accessing the cache layer.
@@ -155,7 +155,7 @@ func (s *Storage) SearchLatestMilestoneIndexInStore() milestone.Index {
 type MilestoneIndexConsumer func(index milestone.Index) bool
 
 // ForEachMilestoneIndex loops through all milestones.
-func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, iteratorOptions ...objectstorage.IteratorOption) {
+func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, iteratorOptions ...IteratorOption) {
 	s.milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestoneIndexFromDatabaseKey(key))
 	}, iteratorOptions...)

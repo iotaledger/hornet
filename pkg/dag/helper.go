@@ -44,10 +44,10 @@ func TraverseParentsOfMessage(storage *storage.Storage, startMessageID hornet.Me
 // TraverseChildren starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func TraverseChildren(storage *storage.Storage, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) error {
+func TraverseChildren(storage *storage.Storage, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}, iteratorOptions ...storage.IteratorOption) error {
 
 	t := NewChildrenTraverser(storage, abortSignal)
 	defer t.Cleanup(true)
 
-	return t.Traverse(startMessageID, condition, consumer, walkAlreadyDiscovered)
+	return t.Traverse(startMessageID, condition, consumer, walkAlreadyDiscovered, iteratorOptions...)
 }

@@ -61,7 +61,7 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 }
 
 // GetUnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
-func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index) hornet.MessageIDs {
+func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index, iteratorOptions ...IteratorOption) hornet.MessageIDs {
 
 	var unreferencedMessageIDs hornet.MessageIDs
 
@@ -71,7 +71,7 @@ func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index) hornet.Mess
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.MessageIDFromSlice(key[4:36]))
 		return true
-	}, objectstorage.WithIteratorPrefix(key))
+	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(key))...)
 
 	return unreferencedMessageIDs
 }
@@ -80,7 +80,7 @@ func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index) hornet.Mess
 type UnreferencedMessageConsumer func(msIndex milestone.Index, messageID hornet.MessageID) bool
 
 // ForEachUnreferencedMessage loops over all unreferenced messages.
-func (s *Storage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, iteratorOptions ...objectstorage.IteratorOption) {
+func (s *Storage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, iteratorOptions ...IteratorOption) {
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromSlice(key[4:36]))
 	}, iteratorOptions...)
@@ -93,7 +93,7 @@ func (s *Storage) StoreUnreferencedMessage(msIndex milestone.Index, messageID ho
 }
 
 // DeleteUnreferencedMessages deletes unreferenced message entries.
-func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index) int {
+func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index, iteratorOptions ...IteratorOption) int {
 
 	msIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
@@ -103,7 +103,7 @@ func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index) int {
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, objectstorage.WithIteratorPrefix(msIndexBytes))
+	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(msIndexBytes))...)
 
 	for _, key := range keysToDelete {
 		s.unreferencedMessagesStorage.Delete(key)
