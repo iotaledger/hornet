@@ -3,9 +3,9 @@ Your 1. coordinator public key:    ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49
 Your 2. coordinator private key:   0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c
 Your 2. coordinator public key:    f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c
 
-Your token mnemonic:            social wolf hungry label salute hover sudden rain disease upgrade throw quick amazing clinic night
-Your token ed25519 address:     fb9de5f493239dff165e574ec3f5be0f1f5a4c9e4ff2568d6b137445ebe4ff40
-Your token bech32 address:      atoi1qraeme05jv3emlcktet5asl4hc837kjvne8ly45ddvfhg30tunl5q7097cy
+Your token mnemonic:            giant dynamic museum toddler six deny defense ostrich bomb access mercy blood explain muscle shoot shallow glad autumn author calm heavy hawk abuse rally
+Your token ed25519 address:     60200bad8137a704216e84f8f9acfe65b972d9f4155becb4815282b03cef99fe
+Your token bech32 address:      atoi1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vluehe53e
 
 Coordinator node:
 Your p2p private key:   1f46fad4f538a031d4f87f490f6bca4319dfd0307636a5759a22b5e8874bd608f9156ba976a12918c16a481c38c88a7b5351b769adc30390e93b6c0a63b09b79

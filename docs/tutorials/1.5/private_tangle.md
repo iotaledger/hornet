@@ -12,7 +12,7 @@ We will need to set up [a coordinator](https://docs.iota.org/docs/getting-starte
 The scripts in the *alphanet* folder of the HORNET repository, which we will use to run the coordinator and the nodes, are preconfigured. By default they will distribute the tokens to the following address:
 
 ```
-atoi1qraeme05jv3emlcktet5asl4hc837kjvne8ly45ddvfhg30tunl5q7097cy
+atoi1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vluehe53e
 ```
 
 If you want to use an existing address, search for your address in [the Chrysalis explorer](https://explorer.iota.org/chrysalis) and look for the corresponding ED25519 address. Find the *create_snapshot_alphanet* script in the *alphanet* directory and change the following line to use your ED25519 address:
@@ -40,7 +40,7 @@ Congratulations, you are now running a private network! To monitor your coordina
 To easily access the tokens on the network, we need to take one more step. If you used the default configuration, use the following mnemonic to set up a wallet:
 
 ```
-social wolf hungry label salute hover sudden rain disease upgrade throw quick amazing clinic night
+giant dynamic museum toddler six deny defense ostrich bomb access mercy blood explain muscle shoot shallow glad autumn author calm heavy hawk abuse rally
 ```
 
 Now connect your wallet to one of the nodes that are running and you should be able to find the tokens distributed to your wallet.
@@ -48,7 +48,7 @@ Now connect your wallet to one of the nodes that are running and you should be a
 Using [the cli-wallet](https://github.com/iotaledger/cli-wallet), the commands would be:
 
 ```bash
-> wallet mnemonic "social wolf hungry label salute hover sudden rain disease upgrade throw quick amazing clinic night"
+> wallet mnemonic "giant dynamic museum toddler six deny defense ostrich bomb access mercy blood explain muscle shoot shallow glad autumn author calm heavy hawk abuse rally"
 > wallet new --node "http://localhost:14266" --alias EXAMPLE
 ```
 

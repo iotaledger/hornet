@@ -11,7 +11,7 @@ mkdir -p snapshots/alphanet1/
 mkdir -p snapshots/alphanet2/
 mkdir -p snapshots/alphanet3/
 mkdir -p snapshots/alphanet4/
-go run ../main.go tool snapgen alphanet1 fb9de5f493239dff165e574ec3f5be0f1f5a4c9e4ff2568d6b137445ebe4ff40 1000000000 snapshots/alphanet1/full_export.bin
+go run ../main.go tool snapgen alphanet1 60200bad8137a704216e84f8f9acfe65b972d9f4155becb4815282b03cef99fe 1000000000 snapshots/alphanet1/full_export.bin
 cp snapshots/alphanet1/full_export.bin snapshots/alphanet2/
 cp snapshots/alphanet1/full_export.bin snapshots/alphanet3/
 cp snapshots/alphanet1/full_export.bin snapshots/alphanet4/
