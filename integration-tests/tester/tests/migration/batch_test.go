@@ -86,7 +86,7 @@ func TestBatch(t *testing.T) {
 	for i := 0; i < migratedFundsCount; i++ {
 		var addr iotago.Ed25519Address
 		binary.LittleEndian.PutUint32(addr[:], uint32(i))
-		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(addr.String())
+		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(&addr)
 		require.NoError(t, err)
 		require.EqualValues(t, migrationTokens, balance.Balance)
 	}

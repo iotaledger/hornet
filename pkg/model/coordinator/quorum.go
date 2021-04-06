@@ -94,8 +94,8 @@ func newQuorum(quorumGroups map[string][]*QuorumClientConfig, timeout time.Durat
 
 			groups[groupName][i] = &quorumGroupEntry{
 				api: NewDebugNodeAPIClient(client.BaseURL,
-					iotago.WithNodeAPIClientHTTPClient(&http.Client{Timeout: timeout}),
-					iotago.WithNodeAPIClientUserInfo(userInfo),
+					iotago.WithNodeHTTPAPIClientHTTPClient(&http.Client{Timeout: timeout}),
+					iotago.WithNodeHTTPAPIClientUserInfo(userInfo),
 				),
 				stats: &QuorumClientStatistic{
 					Group:   groupName,
