@@ -35,6 +35,7 @@ type ConfirmationMetrics struct {
 	DurationForEachNewOutput                         time.Duration
 	DurationForEachNewSpent                          time.Duration
 	DurationSetConfirmedMilestoneIndex               time.Duration
+	DurationUpdateConeRootIndexes                    time.Duration
 	DurationConfirmedMilestoneChanged                time.Duration
 	DurationConfirmedMilestoneIndexChanged           time.Duration
 	DurationMilestoneConfirmedSyncEvent              time.Duration

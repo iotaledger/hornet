@@ -5,7 +5,6 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
@@ -121,17 +120,12 @@ func configureEvents() {
 	})
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		// do not propagate during syncing, because it is not needed at all
+		// do not update tip scores during syncing, because it is not needed at all
 		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
-		// propagate new cone root indexes to the future cone for URTS
 		ts := time.Now()
-		dag.UpdateConeRootIndexes(deps.Storage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
-		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
-
-		ts = time.Now()
 		removedTipCount := deps.TipSelector.UpdateScores()
 		log.Debugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 	})
