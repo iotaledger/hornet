@@ -16,6 +16,13 @@ type RequesterOptions struct {
 	DiscardRequestsOlderThan time.Duration
 }
 
+// applies the given RequesterOption.
+func (ro *RequesterOptions) apply(opts ...RequesterOption) {
+	for _, opt := range opts {
+		opt(ro)
+	}
+}
+
 // RequestBackPressureFunc is a function which tells the Requester
 // to stop requesting more data.
 type RequestBackPressureFunc func() bool
@@ -44,13 +51,11 @@ func WithRequesterPendingRequestReEnqueueInterval(dur time.Duration) RequesterOp
 
 // NewRequester creates a new Requester.
 func NewRequester(service *Service, rQueue RequestQueue, storage *storage.Storage, opts ...RequesterOption) *Requester {
-	reqOpts := RequesterOptions{}
-	for _, opt := range defaultRequesterOpts {
-		opt(&reqOpts)
-	}
-	for _, opt := range opts {
-		opt(&reqOpts)
-	}
+
+	reqOpts := &RequesterOptions{}
+	reqOpts.apply(defaultRequesterOpts...)
+	reqOpts.apply(opts...)
+
 	return &Requester{
 		service:     service,
 		rQueue:      rQueue,
@@ -66,7 +71,7 @@ type Requester struct {
 	service     *Service
 	rQueue      RequestQueue
 	storage     *storage.Storage
-	opts        RequesterOptions
+	opts        *RequesterOptions
 	backPFuncs  []RequestBackPressureFunc
 	drainSignal chan struct{}
 }
