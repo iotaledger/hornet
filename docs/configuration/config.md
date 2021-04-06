@@ -20,7 +20,7 @@ You can always get the most up-to-date description of the config parameters by r
 - [5. Pruning](#5-pruning)
 - [6. Protocol](#6-protocol)
   * [PublicKeyRanges](#publickeyranges)
-- [7. Requsts](#7-requsts)
+- [7. Requests](#7-requests)
 - [8. Coordinator](#8-coordinator)
   * [Checkpoints](#checkpoints)
   * [Quorum](#quorum)
@@ -282,7 +282,7 @@ Example:
   },
 ```
 
-## 7. Requsts
+## 7. Requests
 
 | Name                     | Description                                           | Type   |
 | :----------------------- | :---------------------------------------------------- | :----- |
