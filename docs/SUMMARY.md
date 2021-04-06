@@ -13,7 +13,6 @@
 - [Configuration](./configuration/index.md)
   - [config.json](./configuration/config.md)
   - [peering.json](./configuration/peering.md)
-  - [profiles.json](./configuration/profiles.md)
 - [API Reference](./api-reference.md)
 - [Troubleshooting](./troubleshooting.md)
 - [FAQ](./faq.md)

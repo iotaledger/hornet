@@ -248,11 +248,11 @@ Example:
 
 ### PublicKeyRanges
 
-| Name  | Description | Type    |
-| :---- | :---------- | :------ |
-| key   | public key  | string  |
-| start | start       | integer |
-| end   | end         | integer |
+| Name  | Description           | Type    |
+| :---- | :-------------------- | :------ |
+| key   | public key            | string  |
+| start | Milestone start index | integer |
+| end   | Milestone end index   | integer |
 
 Example:
 
