@@ -21,13 +21,12 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
-	github.com/eclipse/paho.mqtt.golang v1.3.2
+	github.com/eclipse/paho.mqtt.golang v1.3.3
 	github.com/fhmq/hmq v0.0.0-20210318020249-ccbe364f9fbe
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/protobuf v1.5.1 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/gopacket v1.1.19 // indirect
@@ -35,8 +34,8 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20210330231037-f9c6c5780afa
-	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210212090247-51c40bcebea7
-	github.com/iotaledger/iota.go/v2 v2.0.0-20210316125548-8994b0fc100d
+	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210406071024-a52cf8c2c21e
+	github.com/iotaledger/iota.go/v2 v2.0.0-20210406071356-fe6f83a0f919
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.2.1
@@ -74,9 +73,11 @@ require (
 	go.uber.org/atomic v1.7.0
 	go.uber.org/dig v1.10.0
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
-	golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4
-	golang.org/x/sys v0.0.0-20210317225723-c4fcb01b228e // indirect
+	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57 // indirect
+	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/tools v0.1.0 // indirect
+	google.golang.org/genproto v0.0.0-20210405174219-a39eb2f71cb9 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
 )
