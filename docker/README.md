@@ -40,12 +40,12 @@ i. Edit the `config.json` for alternative ports if needed.
 
 ii. Edit `peering.json` to your neighbors addresses.
 
-iii. The docker image runs under user with uid 39999. To make sure no permission issues, create the directory for the database, e.g.:
+iii. The docker image runs under user with uid and gid 39999 unless it was built with a different uid:gid. To make sure no permission issues, create the directory for the database, e.g.:
 
 ```sh
 mkdir mainnetdb && chown 39999:39999 mainnetdb
 ```
-iv. The docker image runs under user with uid 39999. To make sure no permission issues, create the directory for the snapshots, e.g.:
+iv. The docker image runs by default under user with uid 39999. To make sure no permission issues, create the directory for the snapshots, e.g.:
 ```sh
 mkdir snapshots/mainnet && chown 39999:39999 snapshots -R
 ```
@@ -89,6 +89,13 @@ Note: for architectures other than amd64/x86_64 pass the corresponding Dockerfil
 ```sh
 docker build -f docker/Dockerfile.arm64 -t hornet:latest .
 ```
+
+It is possible to set a custom UID and/or GID for the user and group used to run Hornet. As an example, to set UID and GID to 1001, build the image using the arguments:
+
+```sh
+docker build -f docker/Dockerfile --build-arg SET_UID=1001 --build-arg SET_GID=1001 -t hornet:latest .
+```
+Note that mounted directories (e.g. `mainnetdb`) have to be owned (`chown`) by the same UID:GID on the host.
 
 ### Run
 
