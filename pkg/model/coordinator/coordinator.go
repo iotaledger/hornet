@@ -310,7 +310,11 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// ask the quorum for correct ledger state if enabled
 	if coo.opts.quorum != nil {
 		ts := time.Now()
-		err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents)
+		err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents, func(groupName string, entry *quorumGroupEntry, err error) {
+			if coo.opts.logger != nil {
+				coo.opts.logger.Infof("coordinator quorum group encountered an error, group: %s, baseURL: %s, err: %s", groupName, entry.stats.BaseURL, err)
+			}
+		})
 
 		duration := time.Since(ts)
 		coo.Events.QuorumFinished.Trigger(&QuorumFinishedResult{Duration: duration, Err: err})

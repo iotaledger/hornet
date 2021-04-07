@@ -116,7 +116,7 @@ func newQuorum(quorumGroups map[string][]*QuorumClientConfig, timeout time.Durat
 // Returns non-critical and critical errors.
 // If no node of the group answers, a non-critical error is returned.
 // If one of the nodes returns a different hash, a critical error is returned.
-func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash MerkleTreeHash, quorumGroup []*quorumGroupEntry, wg *sync.WaitGroup, quorumDoneChan chan struct{}, quorumErrChan chan error, index milestone.Index, parents hornet.MessageIDs) {
+func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash MerkleTreeHash, groupName string, quorumGroupEntries []*quorumGroupEntry, wg *sync.WaitGroup, quorumDoneChan chan struct{}, quorumErrChan chan error, index milestone.Index, parents hornet.MessageIDs, onGroupEntryError func(groupName string, entry *quorumGroupEntry, err error)) {
 	// mark the group as done at the end
 	defer wg.Done()
 
@@ -130,7 +130,7 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash MerkleTreeHash
 	nodeErrorChan := make(chan error)
 	defer close(nodeErrorChan)
 
-	for _, entry := range quorumGroup {
+	for _, entry := range quorumGroupEntries {
 		go func(entry *quorumGroupEntry, nodeResultChan chan MerkleTreeHash, nodeErrorChan chan error) {
 			ts := time.Now()
 
@@ -141,6 +141,9 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash MerkleTreeHash
 			entry.stats.Error = err
 
 			if err != nil {
+				if onGroupEntryError != nil {
+					onGroupEntryError(groupName, entry, err)
+				}
 				nodeErrorChan <- err
 				return
 			}
@@ -150,7 +153,7 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash MerkleTreeHash
 
 	validResults := 0
 QuorumLoop:
-	for i := 0; i < len(quorumGroup); i++ {
+	for i := 0; i < len(quorumGroupEntries); i++ {
 		// we wait either until the channel got closed or the context is done
 		select {
 		case <-quorumDoneChan:
@@ -185,7 +188,7 @@ QuorumLoop:
 // Returns non-critical and critical errors.
 // If no node of a certain group answers, a non-critical error is returned.
 // If one of the nodes returns a different hash, a critical error is returned.
-func (q *quorum) checkMerkleTreeHash(cooMerkleTreeHash MerkleTreeHash, index milestone.Index, parents hornet.MessageIDs) error {
+func (q *quorum) checkMerkleTreeHash(cooMerkleTreeHash MerkleTreeHash, index milestone.Index, parents hornet.MessageIDs, onGroupEntryError func(groupName string, entry *quorumGroupEntry, err error)) error {
 	q.quorumStatsLock.Lock()
 	defer q.quorumStatsLock.Unlock()
 
@@ -193,11 +196,11 @@ func (q *quorum) checkMerkleTreeHash(cooMerkleTreeHash MerkleTreeHash, index mil
 	quorumDoneChan := make(chan struct{})
 	quorumErrChan := make(chan error)
 
-	for _, quorumGroup := range q.Groups {
+	for groupName, quorumGroupEntries := range q.Groups {
 		wg.Add(1)
 
 		// ask all groups in parallel
-		go q.checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash, quorumGroup, wg, quorumDoneChan, quorumErrChan, index, parents)
+		go q.checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash, groupName, quorumGroupEntries, wg, quorumDoneChan, quorumErrChan, index, parents, onGroupEntryError)
 	}
 
 	go func(wg *sync.WaitGroup, doneChan chan struct{}) {
