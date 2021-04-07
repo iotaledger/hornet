@@ -8,6 +8,7 @@ import (
 	powsrvio "gitlab.com/powsrv.io/go/client"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -18,14 +19,18 @@ const (
 	nonceBytes = 8 // len(uint64)
 )
 
-type proofOfWorkFunc func(data []byte, parallelism ...int) (uint64, error)
+type proofOfWorkFunc func(ctx context.Context, data []byte, parallelism ...int) (uint64, error)
+
+// RefreshTipsFunc refreshes tips of the message if PoW takes longer than a configured duration.
+type RefreshTipsFunc = func() (tips hornet.MessageIDs, err error)
 
 // Handler handles PoW requests of the node and tunnels them to powsrv.io
 // or uses local PoW if no API key was specified or the connection failed.
 type Handler struct {
 	log *logger.Logger
 
-	targetScore float64
+	targetScore         float64
+	refreshTipsInterval time.Duration
 
 	powsrvClient       *powsrvio.PowClient
 	powsrvLock         syncutils.RWMutex
@@ -40,11 +45,11 @@ type Handler struct {
 
 // New creates a new PoW handler instance.
 // If the given powsrv.io API key is not empty, powsrv.io will be used to do proof-of-work.
-func New(log *logger.Logger, targetScore float64, powsrvAPIKey string, powsrvInitCooldown time.Duration) *Handler {
+func New(log *logger.Logger, targetScore float64, refreshTipsInterval time.Duration, powsrvAPIKey string, powsrvInitCooldown time.Duration) *Handler {
 
 	localPoWType := "local"
-	localPoWFunc := func(data []byte, parallelism ...int) (uint64, error) {
-		return pow.New(parallelism...).Mine(context.Background(), data, targetScore)
+	localPoWFunc := func(ctx context.Context, data []byte, parallelism ...int) (uint64, error) {
+		return pow.New(parallelism...).Mine(ctx, data, targetScore)
 	}
 
 	var powsrvClient *powsrvio.PowClient
@@ -59,15 +64,16 @@ func New(log *logger.Logger, targetScore float64, powsrvAPIKey string, powsrvIni
 	}
 
 	return &Handler{
-		log:                log,
-		targetScore:        targetScore,
-		powsrvClient:       powsrvClient,
-		powsrvInitCooldown: powsrvInitCooldown,
-		powsrvLastInit:     time.Time{},
-		powsrvConnected:    false,
-		powsrvErrorHandled: false,
-		localPoWFunc:       localPoWFunc,
-		localPowType:       localPoWType,
+		log:                 log,
+		targetScore:         targetScore,
+		refreshTipsInterval: refreshTipsInterval,
+		powsrvClient:        powsrvClient,
+		powsrvInitCooldown:  powsrvInitCooldown,
+		powsrvLastInit:      time.Time{},
+		powsrvConnected:     false,
+		powsrvErrorHandled:  false,
+		localPoWFunc:        localPoWFunc,
+		localPowType:        localPoWType,
 	}
 }
 
@@ -158,7 +164,7 @@ func (h *Handler) GetPoWType() string {
 // DoPoW does the proof-of-work required to hit the target score configured on this Handler.
 // The given iota.Message's nonce is automatically updated.
 // If a powsrv.io key was provided, then powsrv.io is used to commence the proof-of-work.
-func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, parallelism ...int) (err error) {
+func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (err error) {
 
 	select {
 	case <-shutdownSignal:
@@ -166,11 +172,19 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 	default:
 	}
 
-	msgData, err := msg.Serialize(iotago.DeSeriModeNoValidation)
-	if err != nil {
-		return fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
+	getPowData := func(msg *iotago.Message) (powData []byte, err error) {
+		msgData, err := msg.Serialize(iotago.DeSeriModeNoValidation)
+		if err != nil {
+			return nil, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
+		}
+
+		return msgData[:len(msgData)-nonceBytes], nil
 	}
-	powData := msgData[:len(msgData)-nonceBytes]
+
+	powData, err := getPowData(msg)
+	if err != nil {
+		return err
+	}
 
 	if h.connectPowsrv() {
 		// connected to powsrv.io
@@ -198,13 +212,41 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 		}
 	}
 
+	refreshTips := len(refreshTipsFunc) > 0 && refreshTipsFunc[0] != nil
+
 	// Fall back to local PoW
-	nonce, err := h.localPoWFunc(powData, parallelism...)
-	if err != nil {
-		return err
+	for {
+		powCtx, powCancel := context.WithCancel(context.Background())
+		if refreshTips {
+			powCtx, powCancel = context.WithTimeout(powCtx, h.refreshTipsInterval)
+		}
+
+		nonce, err := h.localPoWFunc(powCtx, powData, parallelism)
+		powCancel()
+
+		if err != nil {
+			if err == pow.ErrCancelled && refreshTips {
+				// context was canceled and tips can be refreshed
+				tips, err := refreshTipsFunc[0]()
+				if err != nil {
+					return err
+				}
+				msg.Parents = tips.ToSliceOfArrays()
+
+				powData, err = getPowData(msg)
+				if err != nil {
+					return err
+				}
+
+				// redo the PoW with new tips
+				continue
+			}
+			return err
+		}
+
+		msg.Nonce = nonce
+		return nil
 	}
-	msg.Nonce = nonce
-	return nil
 }
 
 // Close closes the PoW handler

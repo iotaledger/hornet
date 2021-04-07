@@ -96,6 +96,9 @@
       }
     ]
   },
+  "pow": {
+    "refreshTipsInterval": "5s"
+  },
   "requests": {
     "discardOlderThan": "15s",
     "pendingReEnqueueInterval": "5s"
