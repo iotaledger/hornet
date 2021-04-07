@@ -72,7 +72,7 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "testnet6",
+    "networkID": "testnet7",
     "bech32HRP": "atoi",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
