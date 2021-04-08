@@ -5,6 +5,11 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/restapi"
+
+	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/pkg/jwt"
+
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -62,25 +67,27 @@ var (
 	hub      *websockethub.Hub
 	upgrader *websocket.Upgrader
 
-	jwtAuth *JWTAuth
+	basicAuth *basicauth.BasicAuth
+	jwtAuth   *jwt.JWTAuth
 
 	cachedMilestoneMetrics []*tangle.ConfirmedMilestoneMetric
 )
 
 type dependencies struct {
 	dig.In
-	Storage          *storage.Storage
-	Tangle           *tangle.Tangle
-	ServerMetrics    *metrics.ServerMetrics
-	RequestQueue     gossip.RequestQueue
-	Manager          *p2p.Manager
-	MessageProcessor *gossip.MessageProcessor
-	TipSelector      *tipselect.TipSelector       `optional:"true"`
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	AppInfo          *app.AppInfo
-	Host             host.Host
-	NodePrivateKey   crypto.PrivKey
-	DatabaseEvents   *database.Events
+	Storage                  *storage.Storage
+	Tangle                   *tangle.Tangle
+	ServerMetrics            *metrics.ServerMetrics
+	RequestQueue             gossip.RequestQueue
+	Manager                  *p2p.Manager
+	MessageProcessor         *gossip.MessageProcessor
+	TipSelector              *tipselect.TipSelector       `optional:"true"`
+	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
+	AppInfo                  *app.AppInfo
+	Host                     host.Host
+	NodePrivateKey           crypto.PrivKey
+	DatabaseEvents           *database.Events
+	DashboardAllowedAPIRoute restapi.AllowedRoute
 }
 
 func configure() {
@@ -94,9 +101,12 @@ func configure() {
 
 	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
 
-	jwtAuth = NewJWTAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
+	basicAuth = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
-		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt),
+		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt))
+
+	jwtAuth = jwt.NewJWTAuth(
+		deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.Duration(CfgDashboardAuthSessionTimeout),
 		deps.Host.ID().String(),
 		deps.NodePrivateKey,

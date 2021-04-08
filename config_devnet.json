@@ -1,11 +1,6 @@
 {
   "restAPI": {
-    "basicAuth": {
-      "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
-    },
+    "authEnabled": false,
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
       "/health",

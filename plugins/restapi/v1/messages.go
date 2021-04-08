@@ -33,7 +33,7 @@ var (
 func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
 	if !deps.Storage.IsNodeAlmostSynced() {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
 	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
@@ -45,7 +45,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
 	cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
-		return nil, errors.WithMessagef(restapi.ErrNotFound, "message not found: %s", messageID.ToHex())
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedMsgMeta.Release(true)
 
@@ -121,7 +121,7 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 
 	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(restapi.ErrNotFound, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
@@ -138,7 +138,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 
 	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(restapi.ErrNotFound, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
@@ -194,7 +194,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	if !deps.Storage.IsNodeAlmostSynced() {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
 	msg := &iotago.Message{}
@@ -236,9 +236,9 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		tips, err := deps.TipSelector.SelectNonLazyTips()
 		if err != nil {
 			if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
-				return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
+				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 			}
-			return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 		msg.Parents = tips.ToSliceOfArrays()
 
