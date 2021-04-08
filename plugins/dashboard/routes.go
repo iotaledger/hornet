@@ -203,15 +203,27 @@ func setupRoutes(e *echo.Echo) {
 	e.Pre(enforceMaxOneDotPerURL)
 	e.Use(middleware.CSRF())
 
-	middleware := appBoxMiddleware()
+	mw := appBoxMiddleware()
 	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
-		middleware = devModeReverseProxyMiddleware()
+		mw = devModeReverseProxyMiddleware()
 	}
-	e.Group("/*").Use(middleware)
+	e.Group("/*").Use(mw)
 
 	// Pass all the explorer request through to the local rest API
 	e.Group("/api", apiMiddlewares()...)
 
 	e.GET("/ws", websocketRoute)
-	e.POST("/auth", authRoute)
+
+	// Rate-limit the auth endpoint
+	rateLimiterConfig := middleware.RateLimiterConfig{
+		Store: middleware.NewRateLimiterMemoryStoreWithConfig(
+			middleware.RateLimiterMemoryStoreConfig{
+				Rate:      rate.Limit(1 / 300.0), // 1 request every 5 minutes
+				Burst:     10,                    // additional burst of 10 requests
+				ExpiresIn: 5 * time.Minute,
+			},
+		),
+	}
+
+	e.POST("/auth", authRoute, middleware.RateLimiterWithConfig(rateLimiterConfig))
 }
