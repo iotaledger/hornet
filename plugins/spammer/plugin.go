@@ -3,7 +3,6 @@ package spammer
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"runtime"
 	"sync"
 	"time"
@@ -20,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/tipselect"
@@ -103,15 +101,7 @@ func configure() {
 		return
 	}
 
-	g := deps.Echo.Group(RouteSpammer)
-
-	g.GET("/", func(c echo.Context) error {
-		resp, err := handleSpammerCommand(c)
-		if err != nil {
-			return err
-		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
+	setupRoutes(deps.Echo.Group(RouteSpammer))
 
 	spammerAvgHeap = utils.NewTimeHeap()
 

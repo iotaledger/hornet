@@ -10,7 +10,6 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
@@ -83,9 +82,9 @@ func tips(c echo.Context) (*tipsResponse, error) {
 
 	if err != nil {
 		if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
-			return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
+			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 		}
-		return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
+		return nil, err
 	}
 
 	return &tipsResponse{Tips: tips.ToHex()}, nil

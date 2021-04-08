@@ -58,7 +58,7 @@ You can always get the most up-to-date description of the config parameters by r
 
 | Name                       | Description                                                                     | Type             |
 | :------------------------- | :------------------------------------------------------------------------------ | :--------------- |
-| [basicAuth](#basic-auth)   | config for basic auth                                                           | object           |
+| [jwtAuth](#jwt-auth)        | config for JWT auth                                                             | object           |
 | permittedRoutes            | the allowed HTTP REST routes which can be called from non whitelisted addresses | array of strings |
 | whitelistedAddresses       | the whitelist of addresses which are allowed to access the REST API             | array of strings |
 | bindAddress                | the bind address on which the REST API listens on                               | string           |
@@ -67,14 +67,13 @@ You can always get the most up-to-date description of the config parameters by r
 | [limits](#limits)          | config for api limits                                                           | object           |
 | excludeHealthCheckFromAuth | whether to allow the health check route anyways                                 | bool             |
 
-### Basic auth
+### JWT Auth
 
-| Name         | Description                                            | Type   |
-| :----------- | :----------------------------------------------------- | :----- |
-| enabled      | whether to use HTTP basic auth for the REST API        | bool   |
-| userName     | the username of the HTTP basic auth                    | string |
-| passwordHash | the HTTP basic auth password+salt as a scrypt hash     | string |
-| passwordSalt | the HTTP basic auth salt used for hashing the password | string |
+| Name         | Description                                                                                                                              | Type   |
+| :----------- | :--------------------------------------------------------------------------------------------------------------------------------------- | :----- |
+| enabled      | whether to use JWT auth for the REST API                                                                                                 | bool   |
+| salt         | salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value  | string |
+
 
 ### Limits
 
@@ -87,12 +86,7 @@ Example:
 
 ```json
   "restAPI": {
-    "basicAuth": {
-      "enabled": false,
-      "userName": "admin",
-      "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
-    },
+    "authEnabled": false,
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
       "/health",

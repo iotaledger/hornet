@@ -31,7 +31,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 
 	// check if the requested milestone index would be the next one
 	if request.Index > deps.Storage.GetConfirmedMilestoneIndex()+1 {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, common.ErrNodeNotSynced.Error())
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, common.ErrNodeNotSynced.Error())
 	}
 
 	if len(request.Parents) < 1 {
@@ -98,7 +98,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 		for _, msgSolidEventChan := range msgSolidEventChans {
 			// wait until the message is solid
 			if err := utils.WaitForChannelClosed(ctx, msgSolidEventChan); err != nil {
-				return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "parents not solid")
+				return nil, errors.WithMessage(echo.ErrServiceUnavailable, "parents not solid")
 			}
 		}
 	}
@@ -107,7 +107,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	// compute merkle tree root
 	mutations, err := whiteflag.ComputeWhiteFlagMutations(deps.Storage, request.Index, metadataMemcache, messagesMemcache, parents)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "failed to compute white flag mutations: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to compute white flag mutations: %s", err)
 	}
 
 	return &computeWhiteFlagMutationsResponse{
@@ -154,7 +154,7 @@ func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	err = deps.UTXO.ForEachOutput(outputConsumerFunc, opts...)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
@@ -182,7 +182,7 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	err = deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, opts...)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
@@ -211,7 +211,7 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	err = deps.UTXO.ForEachSpentOutput(spentConsumerFunc, opts...)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
@@ -241,7 +241,7 @@ func addresses(c echo.Context) (*addressesResponse, error) {
 
 	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading addresses failed, error: %s", err)
 	}
 
 	addresses := make([]*address, 0, len(addressMap))
@@ -278,7 +278,7 @@ func addressesEd25519(c echo.Context) (*addressesResponse, error) {
 
 	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading addresses failed, error: %s", err)
 	}
 
 	addresses := make([]*address, 0, len(addressMap))
@@ -376,12 +376,12 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 
 	cachedStartMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedStartMsgMeta == nil {
-		return nil, errors.WithMessagef(restapi.ErrNotFound, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedStartMsgMeta.Release(true)
 
 	if !cachedStartMsgMeta.GetMetadata().IsSolid() {
-		return nil, errors.WithMessagef(restapi.ErrServiceUnavailable, "start message is not solid: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start message is not solid: %s", messageIDHex)
 	}
 
 	startMsgReferened, startMsgReferenedAt := cachedStartMsgMeta.GetMetadata().GetReferenced()
@@ -426,11 +426,11 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 			entryPoints = append(entryPoints, &entryPoint{MessageID: messageID.ToHex(), ReferencedByMilestone: entryPointIndex})
 		},
 		false, nil); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "traverse parents failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "traverse parents failed, error: %s", err)
 	}
 
 	if len(entryPoints) == 0 {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "no referenced parents found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "no referenced parents found: %s", messageIDHex)
 	}
 
 	return &messageConeResponse{
