@@ -22,7 +22,7 @@ type infoResponse struct {
 	// The Bech32 HRP used.
 	Bech32HRP string `json:"bech32HRP"`
 	// The minimum pow score of the network.
-	MinPowScore float64 `json:"minPowScore"`
+	MinPoWScore float64 `json:"minPoWScore"`
 	// The current rate of new messages per second.
 	MessagesPerSecond float64 `json:"messagesPerSecond"`
 	// The current rate of referenced messages per second.

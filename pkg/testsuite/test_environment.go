@@ -45,8 +45,8 @@ type TestEnvironment struct {
 	// showConfirmationGraphs is set if pictures of the confirmation graph should be externally opened during the test.
 	showConfirmationGraphs bool
 
-	// PowHandler holds the PowHandler instance.
-	PowHandler *pow.Handler
+	// PoWHandler holds the PoWHandler instance.
+	PoWHandler *pow.Handler
 
 	// networkID is the network ID used for this test network
 	networkID uint64
@@ -100,7 +100,7 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 		Milestones:             make(storage.CachedMilestones, 0),
 		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
-		PowHandler:             pow.New(nil, targetScore, 5*time.Second, "", 30*time.Second),
+		PoWHandler:             pow.New(nil, targetScore, 5*time.Second, "", 30*time.Second),
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
 		lastMilestoneMessageID: hornet.GetNullMessageID(),
 		serverMetrics:          &metrics.ServerMetrics{},

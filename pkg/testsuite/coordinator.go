@@ -40,7 +40,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		inMemoryEd25519MilestoneSignerProvider,
 		nil,
 		nil,
-		te.PowHandler,
+		te.PoWHandler,
 		storeMessageFunc,
 		coordinator.WithStateFilePath(fmt.Sprintf("%s/coordinator.state", te.tempDir)),
 		coordinator.WithMilestoneInterval(time.Duration(10)*time.Second),

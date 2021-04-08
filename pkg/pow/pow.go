@@ -40,7 +40,7 @@ type Handler struct {
 	powsrvErrorHandled bool
 
 	localPoWFunc proofOfWorkFunc
-	localPowType string
+	localPoWType string
 }
 
 // New creates a new PoW handler instance.
@@ -73,7 +73,7 @@ func New(log *logger.Logger, targetScore float64, refreshTipsInterval time.Durat
 		powsrvConnected:     false,
 		powsrvErrorHandled:  false,
 		localPoWFunc:        localPoWFunc,
-		localPowType:        localPoWType,
+		localPoWType:        localPoWType,
 	}
 }
 
@@ -158,7 +158,7 @@ func (h *Handler) GetPoWType() string {
 		return "powsrv.io"
 	}
 
-	return h.localPowType
+	return h.localPoWType
 }
 
 // DoPoW does the proof-of-work required to hit the target score configured on this Handler.
@@ -172,7 +172,7 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 	default:
 	}
 
-	getPowData := func(msg *iotago.Message) (powData []byte, err error) {
+	getPoWData := func(msg *iotago.Message) (powData []byte, err error) {
 		msgData, err := msg.Serialize(iotago.DeSeriModeNoValidation)
 		if err != nil {
 			return nil, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
@@ -181,7 +181,7 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 		return msgData[:len(msgData)-nonceBytes], nil
 	}
 
-	powData, err := getPowData(msg)
+	powData, err := getPoWData(msg)
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 				}
 				msg.Parents = tips.ToSliceOfArrays()
 
-				powData, err = getPowData(msg)
+				powData, err = getPoWData(msg)
 				if err != nil {
 					return err
 				}

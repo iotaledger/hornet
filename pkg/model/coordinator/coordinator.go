@@ -101,14 +101,14 @@ type Coordinator struct {
 const (
 	defaultStateFilePath     = "coordinator.state"
 	defaultMilestoneInterval = time.Duration(10) * time.Second
-	defaultPowWorkerCount    = 0
+	defaultPoWWorkerCount    = 0
 )
 
 // the default options applied to the Coordinator.
 var defaultOptions = []Option{
 	WithStateFilePath(defaultStateFilePath),
 	WithMilestoneInterval(defaultMilestoneInterval),
-	WithPowWorkerCount(defaultPowWorkerCount),
+	WithPoWWorkerCount(defaultPoWWorkerCount),
 }
 
 // Options define options for the Coordinator.
@@ -153,8 +153,8 @@ func WithMilestoneInterval(milestoneInterval time.Duration) Option {
 	}
 }
 
-// WithPowWorkerCount defines the amount of workers used for calculating PoW when issuing checkpoints and milestones.
-func WithPowWorkerCount(powWorkerCount int) Option {
+// WithPoWWorkerCount defines the amount of workers used for calculating PoW when issuing checkpoints and milestones.
+func WithPoWWorkerCount(powWorkerCount int) Option {
 
 	if powWorkerCount == 0 {
 		powWorkerCount = runtime.NumCPU() - 1

@@ -16,12 +16,12 @@ import (
 
 const (
 	BelowMaxDepth = 5
-	MinPowScore   = 10.0
+	MinPoWScore   = 10.0
 )
 
 func TestConeRootIndexes(t *testing.T) {
 
-	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
+	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
 	messages := hornet.MessageIDs{hornet.GetNullMessageID()}

@@ -50,7 +50,7 @@ func info() (*infoResponse, error) {
 		IsHealthy:                   deps.Tangle.IsNodeHealthy(),
 		NetworkID:                   deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
 		Bech32HRP:                   string(deps.Bech32HRP),
-		MinPowScore:                 deps.MinPowScore,
+		MinPoWScore:                 deps.MinPoWScore,
 		MessagesPerSecond:           messagesPerSecond,
 		ReferencedMessagesPerSecond: referencedMessagesPerSecond,
 		ReferencedRate:              referencedRate,
