@@ -225,26 +225,27 @@ func setupRoutes() {
 	setupHealthRoute()
 }
 
+var allowedRoutes = map[string][]string{
+	http.MethodGet: {
+		"/api/v1/addresses",
+		"/api/v1/info",
+		"/api/v1/messages",
+		"/api/v1/milestones",
+		"/api/v1/outputs",
+		"/api/v1/peers",
+		"/api/v1/transactions",
+		"/api/plugins/spammer",
+	},
+	http.MethodPost: {
+		"/api/v1/peers",
+		"/api/plugins/spammer",
+	},
+	http.MethodDelete: {
+		"/api/v1/peers",
+	},
+}
+
 func dashboardAllowedAPIRoute(context echo.Context) bool {
-	allowedRoutes := map[string][]string{
-		http.MethodGet: {
-			"/api/v1/addresses",
-			"/api/v1/info",
-			"/api/v1/messages",
-			"/api/v1/milestones",
-			"/api/v1/outputs",
-			"/api/v1/peers",
-			"/api/v1/transactions",
-			"/api/plugins/spammer",
-		},
-		http.MethodPost: {
-			"/api/v1/peers",
-			"/api/plugins/spammer",
-		},
-		http.MethodDelete: {
-			"/api/v1/peers",
-		},
-	}
 
 	// Check for which route we will allow the dashboard to access the API
 	routesForMethod, exists := allowedRoutes[context.Request().Method]

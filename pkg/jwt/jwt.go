@@ -20,9 +20,9 @@ var (
 
 type JWTAuth struct {
 	subject        string
-	secret         []byte
-	nodeId         string
 	sessionTimeout time.Duration
+	nodeId         string
+	secret         []byte
 }
 
 func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeId string, secret crypto.PrivKey) *JWTAuth {
@@ -38,9 +38,9 @@ func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeId string, sec
 
 	return &JWTAuth{
 		subject:        subject,
-		secret:         secretBytes,
 		sessionTimeout: sessionTimeout,
 		nodeId:         nodeId,
+		secret:         secretBytes,
 	}
 }
 
@@ -81,37 +81,35 @@ func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Conte
 
 		return func(c echo.Context) error {
 
-			// Skip unprotected endpoints
+			// skip unprotected endpoints
 			if skipper(c) {
 				return next(c)
 			}
 
-			// Use the default JWT middleware to verify and extract the JWT
+			// use the default JWT middleware to verify and extract the JWT
 			handler := middleware.JWTWithConfig(config)(func(c echo.Context) error {
 				return nil
 			})
 
-			// Run the JWT middleware
-			err := handler(c)
-
-			if err != nil {
+			// run the JWT middleware
+			if err := handler(c); err != nil {
 				return err
 			}
 
-			// Read the claims set by the JWT middleware on the context
+			// read the claims set by the JWT middleware on the context
 			claims, ok := c.Get("jwt").(*jwt.Token).Claims.(*AuthClaims)
 
-			// Do extended claims validation
+			// do extended claims validation
 			if !ok || !claims.verifyAudience(j.nodeId) || !claims.verifySubject(j.subject) {
 				return ErrJWTInvalidClaims
 			}
 
-			// Validate claims
+			// validate claims
 			if !allow(c, claims) {
 				return ErrJWTInvalidClaims
 			}
 
-			//Go to the next handler
+			// go to the next handler
 			return next(c)
 		}
 	}
