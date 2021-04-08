@@ -37,7 +37,7 @@ func NewOutputResponse(output *utxo.Output, spent bool) (*OutputResponse, error)
 
 	rawOutputJSON, err := rawOutput.MarshalJSON()
 	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "marshalling output failed: %s, error: %s", output.OutputID().ToHex(), err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "marshaling output failed: %s, error: %s", output.OutputID().ToHex(), err)
 	}
 
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)

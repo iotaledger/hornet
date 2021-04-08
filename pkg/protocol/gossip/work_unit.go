@@ -19,7 +19,7 @@ const (
 	Hashed  WorkUnitState = 1 << 2
 )
 
-// newWorkUnit creates a new WorkUnit and initializes values by unmarshalling key.
+// newWorkUnit creates a new WorkUnit and initializes values by unmarshaling key.
 func newWorkUnit(key []byte, messageProcessor *MessageProcessor) *WorkUnit {
 	wu := &WorkUnit{
 		receivedMsgBytes: make([]byte, len(key)),
