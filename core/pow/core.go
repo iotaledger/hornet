@@ -45,7 +45,7 @@ func provide(c *dig.Container) {
 	type handlerdeps struct {
 		dig.In
 		NodeConfig  *configuration.Configuration `name:"nodeConfig"`
-		MinPowScore float64                      `name:"minPowScore"`
+		MinPoWScore float64                      `name:"minPoWScore"`
 	}
 
 	if err := c.Provide(func(deps handlerdeps) *powpackage.Handler {
@@ -54,7 +54,7 @@ func provide(c *dig.Container) {
 		if err != nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(log, deps.MinPowScore, deps.NodeConfig.Duration(CfgPowRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
+		return powpackage.New(log, deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
 		panic(err)
 	}

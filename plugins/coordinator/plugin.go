@@ -167,7 +167,7 @@ func provide(c *dig.Container) {
 				coordinator.WithLogger(log),
 				coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
 				coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
-				coordinator.WithPowWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
+				coordinator.WithPoWWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
 				coordinator.WithQuorum(deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
 			)
 			if err != nil {

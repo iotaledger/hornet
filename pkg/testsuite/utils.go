@@ -97,7 +97,7 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 	msg, err := iotago.NewMessageBuilder().Parents(parents).Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil}).Build()
 	require.NoError(b.te.TestState, err)
 
-	err = b.te.PowHandler.DoPoW(msg, nil, 1)
+	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
 	require.NoError(b.te.TestState, err)
 
 	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
@@ -178,7 +178,7 @@ func (b *MessageBuilder) Build() *Message {
 	msg, err := iotago.NewMessageBuilder().Parents(b.parents.ToSliceOfSlices()).Payload(transaction).Build()
 	require.NoError(b.te.TestState, err)
 
-	err = b.te.PowHandler.DoPoW(msg, nil, 1)
+	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
 	require.NoError(b.te.TestState, err)
 
 	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)

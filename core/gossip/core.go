@@ -86,13 +86,13 @@ func provide(c *dig.Container) {
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 		NetworkID     uint64                       `name:"networkId"`
 		BelowMaxDepth int                          `name:"belowMaxDepth"`
-		MinPowScore   float64                      `name:"minPowScore"`
+		MinPoWScore   float64                      `name:"minPoWScore"`
 		Profile       *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
 		return gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
-			MinPoWScore:       deps.MinPowScore,
+			MinPoWScore:       deps.MinPoWScore,
 			NetworkID:         deps.NetworkID,
 			BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,

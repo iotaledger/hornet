@@ -238,7 +238,7 @@ type RestAPIConfig struct {
 	// Explicit permitted REST API routes.
 	PermittedRoutes []string
 	// Whether the node does proof-of-work for submitted messages.
-	PowEnabled bool
+	PoWEnabled bool
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -246,7 +246,7 @@ func (restAPIConfig *RestAPIConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIBindAddress, restAPIConfig.BindAddress),
 		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIPermittedRoutes, strings.Join(restAPIConfig.PermittedRoutes, ",")),
-		fmt.Sprintf("--%s=%v", restapi.CfgRestAPIPoWEnabled, restAPIConfig.PowEnabled),
+		fmt.Sprintf("--%s=%v", restapi.CfgRestAPIPoWEnabled, restAPIConfig.PoWEnabled),
 	}
 }
 
@@ -278,7 +278,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 			"/api/v1/peers",
 			"/api/plugins/*",
 		},
-		PowEnabled: true,
+		PoWEnabled: true,
 	}
 }
 
