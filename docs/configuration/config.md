@@ -182,6 +182,7 @@ Example:
 | depth                         | the depth, respectively the starting point, at which a snapshot of the ledger is generated                      | integer          |
 | fullPath                      | path to the full snapshot file                                                                                  | string           |
 | deltaPath                     | path to the delta snapshot file                                                                                 | string           |
+| deltaSizeThresholdPercentage  | create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot        | float            |
 | [downloadURLs](#downloadurls) | URLs to load the snapshot files from.                                                                           | array of objects |
 
 ### DownloadURLs
@@ -199,6 +200,7 @@ Example:
     "depth": 50,
     "fullPath": "snapshots/mainnet/full_export.bin",
     "deltaPath": "snapshots/mainnet/delta_export.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
         "full": "https://source1.example.com/full_export.bin",
