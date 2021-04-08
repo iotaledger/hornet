@@ -16,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
@@ -229,6 +230,8 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		msg.NetworkID = deps.NetworkID
 	}
 
+	var refreshTipsFunc pow.RefreshTipsFunc
+
 	if len(msg.Parents) == 0 {
 		tips, err := deps.TipSelector.SelectNonLazyTips()
 		if err != nil {
@@ -238,6 +241,10 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
 		}
 		msg.Parents = tips.ToSliceOfArrays()
+
+		// this function pointer is used to refresh the tips of a message
+		// if no parents were given and the PoW takes longer than a configured duration.
+		refreshTipsFunc = deps.TipSelector.SelectNonLazyTips
 	}
 
 	if msg.Nonce == 0 {
@@ -251,7 +258,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 				return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
 			}
 
-			if err := deps.PoWHandler.DoPoW(msg, nil, powWorkerCount); err != nil {
+			if err := deps.PoWHandler.DoPoW(msg, nil, powWorkerCount, refreshTipsFunc); err != nil {
 				return nil, err
 			}
 		}

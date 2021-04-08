@@ -2,55 +2,55 @@
 
 Hornet uses the JSON standard as config file. If you are unsure about some syntax have a look at the official specs [here](https://www.json.org).
 The default config file is `config.json`. You can change the path or name of the config file by using the `-c` or `--config` flag.
-For Example: `hornet -c config_example.json`.  
+For Example: `hornet -c config_example.json`.
 You can always get the most up-to-date description of the config parameters by running `hornet -h --full`.
 
 ## Table of content
 
-[//]: # "Table of contents created with: http://ecotrust-canada.github.io/markdown-toc/"
-
+- [Table of content](#table-of-content)
 - [1. REST API](#1-rest-api)
-  * [Basic auth](#basic-auth)
-  * [Limits](#limits)
+  - [Basic auth](#basic-auth)
+  - [Limits](#limits)
 - [2. Dashboard](#2-dashboard)
-  * [Auth](#auth)
+  - [Auth](#auth)
 - [3. DB](#3-db)
 - [4. Snapshots](#4-snapshots)
-  * [DownloadURLs](#downloadurls)
+  - [DownloadURLs](#downloadurls)
 - [5. Pruning](#5-pruning)
 - [6. Protocol](#6-protocol)
-  * [PublicKeyRanges](#publickeyranges)
-- [7. Requests](#7-requests)
-- [8. Coordinator](#8-coordinator)
-  * [Checkpoints](#checkpoints)
-  * [Quorum](#quorum)
-    + [Groups](#groups)
-      - [{GROUP_NAME}](#-group-name-)
-  * [Signing](#signing)
-  * [Tipsel](#tipsel)
-- [9. Tipsel](#9-tipsel)
-  * [NonLazy](#nonlazy)
-  * [SemiLazy](#semilazy)
-- [10. Node](#10-node)
-- [11. P2P](#11-p2p)
-  * [ConnectionManager](#connectionmanager)
-  * [PeerStore](#peerstore)
+  - [PublicKeyRanges](#publickeyranges)
+- [7. Proof of Work](#7-proof-of-work)
+- [8. Requests](#8-requests)
+- [9. Coordinator](#9-coordinator)
+  - [Checkpoints](#checkpoints)
+  - [Quorum](#quorum)
+    - [Groups](#groups)
+      - [{GROUP_NAME}](#group_name)
+  - [Signing](#signing)
+  - [Tipsel](#tipsel)
+- [10. Tipsel](#10-tipsel)
+  - [NonLazy](#nonlazy)
+  - [SemiLazy](#semilazy)
+- [11. Node](#11-node)
+- [12. P2P](#12-p2p)
+  - [ConnectionManager](#connectionmanager)
+  - [PeerStore](#peerstore)
 - [13. Logger](#13-logger)
 - [14. Warpsync](#14-warpsync)
 - [15. Spammer](#15-spammer)
 - [16. MQTT](#16-mqtt)
 - [17. Profiling](#17-profiling)
 - [18. Prometheus](#18-prometheus)
-  * [FileServiceDiscovery](#fileservicediscovery)
+  - [FileServiceDiscovery](#fileservicediscovery)
 - [19. Gossip](#19-gossip)
 - [20. Debug](#20-debug)
 - [21. Legacy](#21-legacy)
 - [21.1 Migrator](#211-migrator)
 - [21.2 Receipts](#212-receipts)
-  * [Backup](#backup)
-  * [Validator](#validator)
-    + [Api](#api)
-    + [Coordinator](#coordinator)
+  - [Backup](#backup)
+  - [Validator](#validator)
+    - [Api](#api)
+    - [Coordinator](#coordinator)
 
 * * *
 
@@ -282,7 +282,21 @@ Example:
   },
 ```
 
-## 7. Requests
+## 7. Proof of Work
+
+| Name                | Description                                                                                              | Type   |
+| :------------------ | :------------------------------------------------------------------------------------------------------- | :----- |
+| refreshTipsInterval | interval for refreshing tips during PoW for spammer messages and messages passed without parents via API | string |
+
+Example:
+
+```json
+  "pow": {
+    "refreshTipsInterval": "5s"
+  },
+```
+
+## 8. Requests
 
 | Name                     | Description                                           | Type   |
 | :----------------------- | :---------------------------------------------------- | :----- |
@@ -298,7 +312,7 @@ Example:
   },
 ```
 
-## 8. Coordinator
+## 9. Coordinator
 
 | Name                        | Description                                                                            | Type    |
 | :-------------------------- | :------------------------------------------------------------------------------------- | :------ |
@@ -400,7 +414,7 @@ Example:
   },
 ```
 
-## 9. Tipsel
+## 10. Tipsel
 
 | Name                                  | Description                                                                                                             | Type    |
 | :------------------------------------ | :---------------------------------------------------------------------------------------------------------------------- | :------ |
@@ -450,12 +464,12 @@ Example:
   },
 ```
 
-## 10. Node
+## 11. Node
 
 | Name           | Description                               | Type             |
 | :------------- | :---------------------------------------- | :--------------- |
 | alias          | the alias to identify a node              | string           |
-| profile        | Sets the profile with which the node runs | string           |
+| profile        | the profile the node runs with            | string           |
 | disablePlugins | a list of plugins that shall be disabled  | array of strings |
 | enablePlugins  | a list of plugins that shall be enabled   | array of strings |
 
@@ -475,7 +489,7 @@ Example:
   },
 ```
 
-## 11. P2P
+## 12. P2P
 
 | Name                                    | Description                                                                    | Type             |
 | :-------------------------------------- | :----------------------------------------------------------------------------- | :--------------- |
@@ -569,7 +583,7 @@ Example:
 | :--------------- | :------------------------------------------------- | :------ |
 | advancementRange | the used advancement range per warpsync checkpoint | integer |
 
-Example: 
+Example:
 
 ```json
   "warpsync": {
@@ -589,7 +603,7 @@ Example:
 | workers       | the amount of parallel running spammers                                             | integer |
 | autostart     | automatically start the spammer on node startup                                     | bool    |
 
-Example: 
+Example:
 
 ```json
   "spammer": {
@@ -692,7 +706,7 @@ Example:
 | streamReadTimeout  | the read timeout for reads from the gossip stream | string |
 | streamWriteTimeout | the write timeout for writes to the gossip stream | string |
 
-Example: 
+Example:
 
 ```json
   "gossip": {
@@ -707,7 +721,7 @@ Example:
 | :--------------------------- | :------------------------------------------------------------------------------------------------------- | :----- |
 | whiteFlagParentsSolidTimeout | defines the the maximum duration for the parents to become solid during white flag confirmation API call | string |
 
-Example: 
+Example:
 
 ```json
   "debug": {

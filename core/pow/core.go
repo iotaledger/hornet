@@ -18,6 +18,7 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "PoW",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
 			Provide:   provide,
 			Configure: configure,
 			Run:       run,
@@ -53,7 +54,7 @@ func provide(c *dig.Container) {
 		if err != nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(log, deps.MinPowScore, powsrvAPIKey, powsrvInitCooldown)
+		return powpackage.New(log, deps.MinPowScore, deps.NodeConfig.Duration(CfgPowRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
 		panic(err)
 	}

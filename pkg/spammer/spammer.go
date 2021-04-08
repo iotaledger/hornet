@@ -78,7 +78,11 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 	}
 
 	timeStart = time.Now()
-	if err := s.powHandler.DoPoW(iotaMsg, shutdownSignal, 1); err != nil {
+	if err := s.powHandler.DoPoW(iotaMsg, shutdownSignal, 1, func() (tips hornet.MessageIDs, err error) {
+		// refresh tips of the spammer if PoW takes longer than a configured duration.
+		_, refreshedTips, err := s.tipselFunc()
+		return refreshedTips, err
+	}); err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}
 	durationPOW := time.Since(timeStart)
