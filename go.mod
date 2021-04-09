@@ -35,7 +35,7 @@ require (
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20210330231037-f9c6c5780afa
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210406071024-a52cf8c2c21e
-	github.com/iotaledger/iota.go/v2 v2.0.0-20210406071356-fe6f83a0f919
+	github.com/iotaledger/iota.go/v2 v2.0.0-20210409074803-07a6438d40cf
 	github.com/ipfs/go-ds-badger v0.2.6
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.2.1
