@@ -62,13 +62,9 @@ type MigratorService struct {
 
 // State stores the latest state of the MigratorService.
 type State struct {
-	/*
-	   4 bytes uint32 			LatestMigratedAtIndex
-	   4 bytes uint32 			LatestIncludedIndex
-	*/
-	LatestMigratedAtIndex uint32
-	LatestIncludedIndex   uint32
-	SendingReceipt        bool
+	LatestMigratedAtIndex uint32 `json:"latestMigratedAtIndex"`
+	LatestIncludedIndex   uint32 `json:"latestIncludedIndex"`
+	SendingReceipt        bool   `json:"sendingReceipt"`
 }
 
 type migrationResult struct {
@@ -120,7 +116,7 @@ func (s *MigratorService) PersistState(sendingReceipt bool) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.state.SendingReceipt = sendingReceipt
-	return utils.WriteToFile(s.stateFilePath, &s.state, 0660)
+	return utils.WriteJSONToFile(s.stateFilePath, &s.state, 0660)
 }
 
 // InitState initializes the state of s.
@@ -135,7 +131,7 @@ func (s *MigratorService) InitState(msIndex *uint32, utxoManager *utxo.Manager) 
 	var state State
 	if msIndex == nil {
 		// restore state from file
-		if err := utils.ReadFromFile(s.stateFilePath, &state); err != nil {
+		if err := utils.ReadJSONFromFile(s.stateFilePath, &state); err != nil {
 			return fmt.Errorf("failed to load state file: %w", err)
 		}
 	} else {

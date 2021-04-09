@@ -9,6 +9,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/utils"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -263,8 +265,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		return fmt.Errorf("state file not found: %v", coo.opts.stateFilePath)
 	}
 
-	coo.state, err = loadStateFile(coo.opts.stateFilePath)
-	if err != nil {
+	if err := utils.ReadJSONFromFile(coo.opts.stateFilePath, coo.state); err != nil {
 		return err
 	}
 
@@ -378,7 +379,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
 	coo.state.LatestMilestoneTime = time.Now()
 
-	if err := coo.state.storeStateFile(coo.opts.stateFilePath); err != nil {
+	if err := utils.WriteJSONToFile(coo.opts.stateFilePath, coo.state, 0660); err != nil {
 		return common.CriticalError(fmt.Errorf("failed to update coordinator state file: %w", err))
 	}
 
