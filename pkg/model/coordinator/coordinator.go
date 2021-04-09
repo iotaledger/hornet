@@ -265,6 +265,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		return fmt.Errorf("state file not found: %v", coo.opts.stateFilePath)
 	}
 
+	coo.state = &State{}
 	if err := utils.ReadJSONFromFile(coo.opts.stateFilePath, coo.state); err != nil {
 		return err
 	}
