@@ -1015,6 +1015,11 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 // optimalSnapshotType returns the optimal snapshot type
 // based on the file size of the last full and delta snapshot file.
 func (s *Snapshot) optimalSnapshotType() Type {
+	if s.deltaSnapshotSizeThresholdPercentage == 0.0 {
+		// special case => always create a delta snapshot to keep entire milestone diff history
+		return Delta
+	}
+
 	fullSnapshotFileInfo, err := os.Stat(s.snapshotFullPath)
 	fullSnapshotFileExists := !os.IsNotExist(err)
 
