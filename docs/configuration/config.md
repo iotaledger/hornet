@@ -28,25 +28,26 @@ You can always get the most up-to-date description of the config parameters by r
       - [{GROUP_NAME}](#group_name)
   - [Signing](#signing)
   - [Tipsel](#tipsel)
-- [10. Tipsel](#10-tipsel)
+- [10. Tangle](#10-tangle)
+- [11. Tipsel](#11-tipsel)
   - [NonLazy](#nonlazy)
   - [SemiLazy](#semilazy)
-- [11. Node](#11-node)
-- [12. P2P](#12-p2p)
+- [12. Node](#12-node)
+- [13. P2P](#13-p2p)
   - [ConnectionManager](#connectionmanager)
   - [PeerStore](#peerstore)
-- [13. Logger](#13-logger)
-- [14. Warpsync](#14-warpsync)
-- [15. Spammer](#15-spammer)
-- [16. MQTT](#16-mqtt)
-- [17. Profiling](#17-profiling)
-- [18. Prometheus](#18-prometheus)
+- [14. Logger](#14-logger)
+- [15. Warpsync](#15-warpsync)
+- [16. Spammer](#16-spammer)
+- [17. MQTT](#17-mqtt)
+- [18. Profiling](#18-profiling)
+- [19. Prometheus](#19-prometheus)
   - [FileServiceDiscovery](#fileservicediscovery)
-- [19. Gossip](#19-gossip)
-- [20. Debug](#20-debug)
-- [21. Legacy](#21-legacy)
-- [21.1 Migrator](#211-migrator)
-- [21.2 Receipts](#212-receipts)
+- [20. Gossip](#20-gossip)
+- [21. Debug](#21-debug)
+- [22. Legacy](#22-legacy)
+- [22.1 Migrator](#221-migrator)
+- [22.2 Receipts](#222-receipts)
   - [Backup](#backup)
   - [Validator](#validator)
     - [Api](#api)
@@ -410,7 +411,21 @@ Example:
   },
 ```
 
-## 10. Tipsel
+## 10. Tangle
+
+| Name             | Description                                                                       | Type   |
+| :--------------- | :-------------------------------------------------------------------------------- | :----- |
+| milestoneTimeout | the interval milestone timeout events are fired if no new milestones are received | string |
+
+Example:
+
+```json
+  "tangle": {
+    "milestoneTimeout": "30s"
+  },
+```
+
+## 11. Tipsel
 
 | Name                                  | Description                                                                                                             | Type    |
 | :------------------------------------ | :---------------------------------------------------------------------------------------------------------------------- | :------ |
@@ -460,7 +475,7 @@ Example:
   },
 ```
 
-## 11. Node
+## 12. Node
 
 | Name           | Description                              | Type             |
 | :------------- | :--------------------------------------- | :--------------- |
@@ -485,7 +500,7 @@ Example:
   },
 ```
 
-## 12. P2P
+## 13. P2P
 
 | Name                                    | Description                                                                    | Type             |
 | :-------------------------------------- | :----------------------------------------------------------------------------- | :--------------- |
@@ -550,7 +565,7 @@ Example:
 [//]: # "  },"
 [//]: # "```"
 
-## 13. Logger
+## 14. Logger
 
 | Name          | Description                                                                                                       | Type             |
 | :------------ | :---------------------------------------------------------------------------------------------------------------- | :--------------- |
@@ -573,7 +588,7 @@ Example:
   },
 ```
 
-## 14. Warpsync
+## 15. Warpsync
 
 | Name             | Description                                        | Type    |
 | :--------------- | :------------------------------------------------- | :------ |
@@ -587,7 +602,7 @@ Example:
   }
 ```
 
-## 15. Spammer
+## 16. Spammer
 
 | Name          | Description                                                                         | Type    |
 | :------------ | :---------------------------------------------------------------------------------- | :------ |
@@ -613,7 +628,7 @@ Example:
   },
 ```
 
-## 16. MQTT
+## 17. MQTT
 
 | Name        | Description                                                         | Type    |
 | :---------- | :------------------------------------------------------------------ | :------ |
@@ -631,7 +646,7 @@ Example:
   },
 ```
 
-## 17. Profiling
+## 18. Profiling
 
 | Name        | Description                                       | Type   |
 | :---------- | :------------------------------------------------ | :----- |
@@ -645,7 +660,7 @@ Example:
   },
 ```
 
-## 18. Prometheus
+## 19. Prometheus
 
 | Name                                          | Description                                                  | Type   |
 | :-------------------------------------------- | :----------------------------------------------------------- | :----- |
@@ -695,7 +710,7 @@ Example:
   }
 ```
 
-## 19. Gossip
+## 20. Gossip
 
 | Name               | Description                                       | Type   |
 | :----------------- | :------------------------------------------------ | :----- |
@@ -711,7 +726,7 @@ Example:
   }
 ```
 
-## 20. Debug
+## 21. Debug
 
 | Name                         | Description                                                                                              | Type   |
 | :--------------------------- | :------------------------------------------------------------------------------------------------------- | :----- |
@@ -725,11 +740,11 @@ Example:
   }
 ```
 
-## 21. Legacy
+## 22. Legacy
 
 This is part the config used in the migration from IOTA 1.0 to IOTA 1.5 (Chrysalis)
 
-## 21.1 Migrator
+## 22.1 Migrator
 
 | Name                | Description                                            | Type    |
 | :------------------ | :----------------------------------------------------- | :------ |
@@ -747,7 +762,7 @@ Example:
   }
 ```
 
-## 21.2 Receipts
+## 22.2 Receipts
 
 | Name                    | Description          | Type   |
 | :---------------------- | :------------------- | :----- |
