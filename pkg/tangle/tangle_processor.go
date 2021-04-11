@@ -51,6 +51,10 @@ func (t *Tangle) RunTangleProcessor() {
 		t.receiveMsgWorkerPool.Submit(message, request, proto)
 	})
 
+	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+		// reset the milestone timeout ticker
+		t.ResetMilestoneTimeoutTicker()
+	})
 	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *MPSMetrics) {
 		t.lastIncomingMPS = mpsMetrics.Incoming
 		t.lastNewMPS = mpsMetrics.New
@@ -109,10 +113,12 @@ func (t *Tangle) RunTangleProcessor() {
 		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
 		t.storage.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
+		t.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		t.startWaitGroup.Done()
 		<-shutdownSignal
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
 		t.storage.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
+		t.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		t.processValidMilestoneWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)

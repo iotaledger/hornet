@@ -58,6 +58,7 @@ type Events struct {
 	NewConfirmedMilestoneMetric    *events.Event
 	ConfirmationMetricsUpdated     *events.Event
 	MilestoneSolidificationFailed  *events.Event
+	MilestoneTimeout               *events.Event
 	NewUTXOOutput                  *events.Event
 	NewUTXOSpent                   *events.Event
 	NewReceipt                     *events.Event

@@ -42,6 +42,7 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "Tangle",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
 			Provide:   provide,
 			Configure: configure,
 			Run:       run,
@@ -101,8 +102,9 @@ func provide(c *dig.Container) {
 		Requester        *gossippkg.Requester
 		MessageProcessor *gossippkg.MessageProcessor
 		ServerMetrics    *metrics.ServerMetrics
-		ReceiptService   *migrator.ReceiptService `optional:"true"`
-		BelowMaxDepth    int                      `name:"belowMaxDepth"`
+		ReceiptService   *migrator.ReceiptService     `optional:"true"`
+		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+		BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
@@ -118,6 +120,7 @@ func provide(c *dig.Container) {
 			CorePlugin.Daemon(),
 			CorePlugin.Daemon().ContextStopped(),
 			deps.BelowMaxDepth,
+			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			*syncedAtStartup)
 	}); err != nil {
 		panic(err)
