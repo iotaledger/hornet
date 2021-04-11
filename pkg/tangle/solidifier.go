@@ -1,7 +1,6 @@
 package tangle
 
 import (
-	"bytes"
 	"fmt"
 	"time"
 
@@ -15,11 +14,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-)
-
-const (
-	milestoneSolidifierWorkerCount = 2 // must be two, so a new request can abort another, in case it is an older milestone
-	milestoneSolidifierQueueSize   = 2
 )
 
 var (
@@ -137,85 +131,11 @@ func (t *Tangle) SolidQueueCheck(
 
 	if t.storage.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
-		t.solidifyFutureCone(messagesMemcache, metadataMemcache, messageIDsToSolidify, abortSignal)
+		t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(messageIDsToSolidify, metadataMemcache, abortSignal)
 	}
 
 	t.log.Infof("Solidifier finished: msgs: %d, collect: %v, solidity %v, propagation: %v, total: %v", msgsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
 	return true, false
-}
-
-// SolidifyFutureConeOfMsg updates the solidity of the future cone (messages approving the given message).
-// we have to walk the future cone, if a message became newly solid during the walk.
-func (t *Tangle) SolidifyFutureConeOfMsg(cachedMsgMeta *storage.CachedMetadata) error {
-	// normal solidification could be part of a cone of old milestones while synching => no need to keep this in cache
-	defer cachedMsgMeta.Release(true)
-
-	messagesMemcache := storage.NewMessagesMemcache(t.storage)
-	metadataMemcache := storage.NewMetadataMemcache(t.storage)
-	defer messagesMemcache.Cleanup(true)
-	defer metadataMemcache.Cleanup(true)
-
-	return t.solidifyFutureCone(messagesMemcache, metadataMemcache, hornet.MessageIDs{cachedMsgMeta.GetMetadata().GetMessageID()}, nil)
-}
-
-// solidifyFutureCone updates the solidity of the future cone (messages approving the given messages).
-// we have to walk the future cone, if a message became newly solid during the walk.
-// metadataMemcache has to be cleaned up outside.
-func (t *Tangle) solidifyFutureCone(messageMemcache *storage.MessagesMemcache, metadataMemcache *storage.MetadataMemcache, messageIDs hornet.MessageIDs, abortSignal chan struct{}) error {
-
-	// we do not cleanup the traverser to not cleanup the MetadataMemcache
-	childrenTraverser := dag.NewChildrenTraverser(t.storage, metadataMemcache)
-
-	for _, messageID := range messageIDs {
-
-		startMessageID := messageID
-
-		if err := childrenTraverser.Traverse(messageID,
-			// traversal stops if no more messages pass the given condition
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
-
-				if cachedMsgMeta.GetMetadata().IsSolid() && !bytes.Equal(startMessageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
-					// do not walk the future cone if the current message is already solid, except it was the startTx
-					return false, nil
-				}
-
-				// check if current message is solid by checking the solidity of its parents
-				for _, parentMessageID := range cachedMsgMeta.GetMetadata().GetParents() {
-					if t.storage.SolidEntryPointsContain(parentMessageID) {
-						// Ignore solid entry points (snapshot milestone included)
-						continue
-					}
-
-					cachedParentMsgMeta := metadataMemcache.GetCachedMetadataOrNil(parentMessageID) // meta +1
-					if cachedParentMsgMeta == nil {
-						// parent is missing => message is not solid
-						// do not walk the future cone if the current message is not solid
-						return false, nil
-					}
-
-					if !cachedParentMsgMeta.GetMetadata().IsSolid() {
-						// parent is not solid => message is not solid
-						// do not walk the future cone if the current message is not solid
-						return false, nil
-					}
-				}
-
-				// mark current message as solid
-				t.markMessageAsSolid(cachedMsgMeta.Retain())
-
-				// walk the future cone since the message got newly solid
-				return true, nil
-			},
-			// consumer
-			// no need to consume here
-			nil,
-			true,
-			abortSignal); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (t *Tangle) AbortMilestoneSolidification() {

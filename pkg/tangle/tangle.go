@@ -37,9 +37,23 @@ type Tangle struct {
 
 	milestoneTimeoutTicker *timeutil.Ticker
 
+	futureConeSolidifier *FutureConeSolidifier
+
+	receiveMsgWorkerPool  *workerpool.WorkerPool
 	receiveMsgWorkerCount int
 	receiveMsgQueueSize   int
-	receiveMsgWorkerPool  *workerpool.WorkerPool
+
+	futureConeSolidifierWorkerPool  *workerpool.WorkerPool
+	futureConeSolidifierWorkerCount int
+	futureConeSolidifierQueueSize   int
+
+	processValidMilestoneWorkerPool  *workerpool.WorkerPool
+	processValidMilestoneWorkerCount int
+	processValidMilestoneQueueSize   int
+
+	milestoneSolidifierWorkerPool  *workerpool.WorkerPool
+	milestoneSolidifierWorkerCount int
+	milestoneSolidifierQueueSize   int
 
 	lastIncomingMsgCnt    uint32
 	lastIncomingNewMsgCnt uint32
@@ -54,9 +68,6 @@ type Tangle struct {
 	messageProcessedSyncEvent   *utils.SyncEvent
 	messageSolidSyncEvent       *utils.SyncEvent
 	milestoneConfirmedSyncEvent *utils.SyncEvent
-
-	processValidMilestoneWorkerPool *workerpool.WorkerPool
-	milestoneSolidifierWorkerPool   *workerpool.WorkerPool
 
 	signalChanMilestoneStopSolidification     chan struct{}
 	signalChanMilestoneStopSolidificationLock syncutils.Mutex
@@ -108,11 +119,19 @@ func New(
 		milestoneTimeout:      milestoneTimeout,
 		updateSyncedAtStartup: updateSyncedAtStartup,
 
-		receiveMsgWorkerCount:       2 * runtime.NumCPU(),
-		receiveMsgQueueSize:         10000,
-		messageProcessedSyncEvent:   utils.NewSyncEvent(),
-		messageSolidSyncEvent:       utils.NewSyncEvent(),
-		milestoneConfirmedSyncEvent: utils.NewSyncEvent(),
+		milestoneTimeoutTicker:           nil,
+		futureConeSolidifier:             nil,
+		receiveMsgWorkerCount:            2 * runtime.NumCPU(),
+		receiveMsgQueueSize:              10000,
+		futureConeSolidifierWorkerCount:  1, // must be one, so there are no parallel solidifications of the same cone
+		futureConeSolidifierQueueSize:    10000,
+		processValidMilestoneWorkerCount: 1, // must be one, so there are no parallel validations
+		processValidMilestoneQueueSize:   1000,
+		milestoneSolidifierWorkerCount:   2, // must be two, so a new request can abort another, in case it is an older milestone
+		milestoneSolidifierQueueSize:     2,
+		messageProcessedSyncEvent:        utils.NewSyncEvent(),
+		messageSolidSyncEvent:            utils.NewSyncEvent(),
+		milestoneConfirmedSyncEvent:      utils.NewSyncEvent(),
 		Events: &Events{
 			MPSMetricsUpdated:              events.NewEvent(MPSMetricsCaller),
 			ReceivedNewMessage:             events.NewEvent(storage.NewMessageCaller),
@@ -135,6 +154,7 @@ func New(
 			NewReceipt:                     events.NewEvent(ReceiptCaller),
 		},
 	}
+	t.futureConeSolidifier = NewFutureConeSolidifier(t.storage, t.markMessageAsSolid)
 	t.ResetMilestoneTimeoutTicker()
 	return t
 }
@@ -145,7 +165,7 @@ func (t *Tangle) SetUpdateSyncedAtStartup(updateSyncedAtStartup bool) {
 }
 
 // ResetMilestoneTimeoutTicker stops a running milestone timeout ticker and starts a new one.
-// MilestoneTimeout event is fired if ResetMilestoneTimeoutTicker is not called within milestoneTimeout.
+// MilestoneTimeout event is fired periodically if ResetMilestoneTimeoutTicker is not called within milestoneTimeout.
 func (t *Tangle) ResetMilestoneTimeoutTicker() {
 	if t.milestoneTimeoutTicker != nil {
 		t.milestoneTimeoutTicker.Shutdown()

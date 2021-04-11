@@ -4,11 +4,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
-var (
-	processValidMilestoneWorkerCount = 1 // This must not be done in parallel
-	processValidMilestoneQueueSize   = 10000
-)
-
 func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone) {
 	defer cachedMilestone.Release(true) // message -1
 
