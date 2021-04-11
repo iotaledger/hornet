@@ -9,7 +9,7 @@ You can always get the most up-to-date description of the config parameters by r
 
 - [Table of content](#table-of-content)
 - [1. REST API](#1-rest-api)
-  - [Basic auth](#basic-auth)
+  - [JWT Auth](#jwt-auth)
   - [Limits](#limits)
 - [2. Dashboard](#2-dashboard)
   - [Auth](#auth)
@@ -58,7 +58,7 @@ You can always get the most up-to-date description of the config parameters by r
 
 | Name                       | Description                                                                     | Type             |
 | :------------------------- | :------------------------------------------------------------------------------ | :--------------- |
-| [jwtAuth](#jwt-auth)        | config for JWT auth                                                             | object           |
+| [jwtAuth](#jwt-auth)       | config for JWT auth                                                             | object           |
 | permittedRoutes            | the allowed HTTP REST routes which can be called from non whitelisted addresses | array of strings |
 | whitelistedAddresses       | the whitelist of addresses which are allowed to access the REST API             | array of strings |
 | bindAddress                | the bind address on which the REST API listens on                               | string           |
@@ -69,10 +69,10 @@ You can always get the most up-to-date description of the config parameters by r
 
 ### JWT Auth
 
-| Name         | Description                                                                                                                              | Type   |
-| :----------- | :--------------------------------------------------------------------------------------------------------------------------------------- | :----- |
-| enabled      | whether to use JWT auth for the REST API                                                                                                 | bool   |
-| salt         | salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value  | string |
+| Name    | Description                                                                                                                             | Type   |
+| :------ | :-------------------------------------------------------------------------------------------------------------------------------------- | :----- |
+| enabled | whether to use JWT auth for the REST API                                                                                                | bool   |
+| salt    | salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value | string |
 
 
 ### Limits
@@ -176,13 +176,14 @@ Example:
 
 ## 4. Snapshots
 
-| Name                          | Description                                                                                                     | Type             |
-| :---------------------------- | :-------------------------------------------------------------------------------------------------------------- | :--------------- |
-| interval                      | interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced) | integer          |
-| depth                         | the depth, respectively the starting point, at which a snapshot of the ledger is generated                      | integer          |
-| fullPath                      | path to the full snapshot file                                                                                  | string           |
-| deltaPath                     | path to the delta snapshot file                                                                                 | string           |
-| [downloadURLs](#downloadurls) | URLs to load the snapshot files from.                                                                           | array of objects |
+| Name                          | Description                                                                                                                                                            | Type             |
+| :---------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+| interval                      | interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                        | integer          |
+| depth                         | the depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                             | integer          |
+| fullPath                      | path to the full snapshot file                                                                                                                                         | string           |
+| deltaPath                     | path to the delta snapshot file                                                                                                                                        | string           |
+| deltaSizeThresholdPercentage  | create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot  (0.0 = always create delta snapshot to keep ms diff history) | float            |
+| [downloadURLs](#downloadurls) | URLs to load the snapshot files from.                                                                                                                                  | array of objects |
 
 ### DownloadURLs
 
@@ -199,6 +200,7 @@ Example:
     "depth": 50,
     "fullPath": "snapshots/mainnet/full_export.bin",
     "deltaPath": "snapshots/mainnet/delta_export.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
         "full": "https://source1.example.com/full_export.bin",
@@ -460,12 +462,12 @@ Example:
 
 ## 11. Node
 
-| Name           | Description                               | Type             |
-| :------------- | :---------------------------------------- | :--------------- |
-| alias          | the alias to identify a node              | string           |
-| profile        | the profile the node runs with            | string           |
-| disablePlugins | a list of plugins that shall be disabled  | array of strings |
-| enablePlugins  | a list of plugins that shall be enabled   | array of strings |
+| Name           | Description                              | Type             |
+| :------------- | :--------------------------------------- | :--------------- |
+| alias          | the alias to identify a node             | string           |
+| profile        | the profile the node runs with           | string           |
+| disablePlugins | a list of plugins that shall be disabled | array of strings |
+| enablePlugins  | a list of plugins that shall be enabled  | array of strings |
 
 Example:
 

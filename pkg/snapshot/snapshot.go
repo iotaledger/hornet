@@ -65,23 +65,24 @@ type solidEntryPoint struct {
 
 // Snapshot handles reading and writing snapshot data.
 type Snapshot struct {
-	shutdownCtx                         context.Context
-	log                                 *logger.Logger
-	storage                             *storage.Storage
-	utxo                                *utxo.Manager
-	networkID                           uint64
-	networkIDSource                     string
-	snapshotFullPath                    string
-	snapshotDeltaPath                   string
-	downloadTargets                     []DownloadTarget
-	solidEntryPointCheckThresholdPast   milestone.Index
-	solidEntryPointCheckThresholdFuture milestone.Index
-	additionalPruningThreshold          milestone.Index
-	snapshotDepth                       milestone.Index
-	snapshotInterval                    milestone.Index
-	pruningEnabled                      bool
-	pruningDelay                        milestone.Index
-	pruneReceipts                       bool
+	shutdownCtx                          context.Context
+	log                                  *logger.Logger
+	storage                              *storage.Storage
+	utxo                                 *utxo.Manager
+	networkID                            uint64
+	networkIDSource                      string
+	snapshotFullPath                     string
+	snapshotDeltaPath                    string
+	deltaSnapshotSizeThresholdPercentage float64
+	downloadTargets                      []DownloadTarget
+	solidEntryPointCheckThresholdPast    milestone.Index
+	solidEntryPointCheckThresholdFuture  milestone.Index
+	additionalPruningThreshold           milestone.Index
+	snapshotDepth                        milestone.Index
+	snapshotInterval                     milestone.Index
+	pruningEnabled                       bool
+	pruningDelay                         milestone.Index
+	pruneReceipts                        bool
 
 	snapshotLock   syncutils.Mutex
 	statusLock     syncutils.RWMutex
@@ -100,6 +101,7 @@ func New(shutdownCtx context.Context,
 	networkIDSource string,
 	snapshotFullPath string,
 	snapshotDeltaPath string,
+	deltaSnapshotSizeThresholdPercentage float64,
 	downloadTargets []DownloadTarget,
 	solidEntryPointCheckThresholdPast milestone.Index,
 	solidEntryPointCheckThresholdFuture milestone.Index,
@@ -111,23 +113,24 @@ func New(shutdownCtx context.Context,
 	pruneReceipts bool) *Snapshot {
 
 	return &Snapshot{
-		shutdownCtx:                         shutdownCtx,
-		log:                                 log,
-		storage:                             storage,
-		utxo:                                utxo,
-		networkID:                           networkID,
-		networkIDSource:                     networkIDSource,
-		snapshotFullPath:                    snapshotFullPath,
-		snapshotDeltaPath:                   snapshotDeltaPath,
-		downloadTargets:                     downloadTargets,
-		solidEntryPointCheckThresholdPast:   solidEntryPointCheckThresholdPast,
-		solidEntryPointCheckThresholdFuture: solidEntryPointCheckThresholdFuture,
-		additionalPruningThreshold:          additionalPruningThreshold,
-		snapshotDepth:                       snapshotDepth,
-		snapshotInterval:                    snapshotInterval,
-		pruningEnabled:                      pruningEnabled,
-		pruningDelay:                        pruningDelay,
-		pruneReceipts:                       pruneReceipts,
+		shutdownCtx:                          shutdownCtx,
+		log:                                  log,
+		storage:                              storage,
+		utxo:                                 utxo,
+		networkID:                            networkID,
+		networkIDSource:                      networkIDSource,
+		snapshotFullPath:                     snapshotFullPath,
+		snapshotDeltaPath:                    snapshotDeltaPath,
+		deltaSnapshotSizeThresholdPercentage: deltaSnapshotSizeThresholdPercentage,
+		downloadTargets:                      downloadTargets,
+		solidEntryPointCheckThresholdPast:    solidEntryPointCheckThresholdPast,
+		solidEntryPointCheckThresholdFuture:  solidEntryPointCheckThresholdFuture,
+		additionalPruningThreshold:           additionalPruningThreshold,
+		snapshotDepth:                        snapshotDepth,
+		snapshotInterval:                     snapshotInterval,
+		pruningEnabled:                       pruningEnabled,
+		pruningDelay:                         pruningDelay,
+		pruneReceipts:                        pruneReceipts,
 		Events: &Events{
 			SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 			SnapshotMetricsUpdated:        events.NewEvent(SnapshotMetricsCaller),
@@ -780,6 +783,15 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 		return err
 	}
 
+	if (snapshotType == Full) && (filePath == s.snapshotFullPath) {
+		// if the old full snapshot file is overwritten
+		// we need to remove the old delta snapshot file since it
+		// isn't compatible to the full snapshot file anymore.
+		if err := os.Remove(s.snapshotDeltaPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("deleting delta snapshot file failed: %s", err)
+		}
+	}
+
 	timeSetSnapshotInfo := timeStreamSnapshotData
 	timeSnapshotMilestoneIndexChanged := timeStreamSnapshotData
 	if writeToDatabase {
@@ -1000,6 +1012,52 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 	return nil
 }
 
+// optimalSnapshotType returns the optimal snapshot type
+// based on the file size of the last full and delta snapshot file.
+func (s *Snapshot) optimalSnapshotType() Type {
+	if s.deltaSnapshotSizeThresholdPercentage == 0.0 {
+		// special case => always create a delta snapshot to keep entire milestone diff history
+		return Delta
+	}
+
+	fullSnapshotFileInfo, err := os.Stat(s.snapshotFullPath)
+	fullSnapshotFileExists := !os.IsNotExist(err)
+
+	if !fullSnapshotFileExists {
+		// full snapshot doesn't exist => create a full snapshot
+		return Full
+	}
+
+	deltaSnapshotFileInfo, err := os.Stat(s.snapshotDeltaPath)
+	deltaSnapshotFileExists := !os.IsNotExist(err)
+
+	if !deltaSnapshotFileExists {
+		// delta snapshot doesn't exist => create a delta snapshot
+		return Delta
+	}
+
+	// if the file size of the last delta snapshot is bigger than a certain percentage
+	// of the full snapshot file, it's more efficient to create a new full snapshot.
+	if int64(float64(fullSnapshotFileInfo.Size())*s.deltaSnapshotSizeThresholdPercentage/100.0) < deltaSnapshotFileInfo.Size() {
+		return Full
+	}
+
+	return Delta
+}
+
+// snapshotTypeFilePath returns the default file path
+// for the given snapshot type.
+func (s *Snapshot) snapshotTypeFilePath(snapshotType Type) string {
+	switch snapshotType {
+	case Full:
+		return s.snapshotFullPath
+	case Delta:
+		return s.snapshotDeltaPath
+	default:
+		panic("unknown snapshot type")
+	}
+}
+
 // HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a delta snapshot creation and pruning.
 func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
 	if !s.storage.IsNodeAlmostSynced() {
@@ -1011,7 +1069,8 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 	defer s.snapshotLock.Unlock()
 
 	if s.shouldTakeSnapshot(confirmedMilestoneIndex) {
-		if err := s.createSnapshotWithoutLocking(Delta, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotDeltaPath, true, shutdownSignal); err != nil {
+		snapshotType := s.optimalSnapshotType()
+		if err := s.createSnapshotWithoutLocking(snapshotType, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true, shutdownSignal); err != nil {
 			if errors.Is(err, ErrCritical) {
 				s.log.Panicf("%s %s", ErrSnapshotCreationFailed, err)
 			}

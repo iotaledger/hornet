@@ -69,6 +69,7 @@
     "interval": 200,
     "fullPath": "snapshots/alphanet/full_export.bin",
     "deltaPath": "snapshots/alphanet/delta_export.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": []
   },
   "pruning": {

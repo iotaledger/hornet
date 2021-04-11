@@ -121,6 +121,7 @@ func provide(c *dig.Container) {
 			networkIDSource,
 			deps.NodeConfig.String(CfgSnapshotsFullPath),
 			deps.NodeConfig.String(CfgSnapshotsDeltaPath),
+			deps.NodeConfig.Float64(CfgSnapshotsDeltaSizeThresholdPercentage),
 			downloadTargets,
 			solidEntryPointCheckThresholdPast,
 			solidEntryPointCheckThresholdFuture,

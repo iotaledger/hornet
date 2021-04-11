@@ -57,6 +57,7 @@
     "interval": 200,
     "fullPath": "snapshots/testnet/full_snapshot.bin",
     "deltaPath": "snapshots/testnet/delta_snapshot.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
         "full": "https://dbfiles.testnet.chrysalis2.com/full_snapshot.bin",

@@ -57,6 +57,7 @@
     "interval": 50,
     "fullPath": "snapshots/devnet/full_snapshot.bin",
     "deltaPath": "snapshots/devnet/delta_snapshot.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
         "full": "https://dbfiles.iota.org/devnet/hornet/full_snapshot.bin",

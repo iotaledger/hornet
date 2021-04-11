@@ -55,6 +55,7 @@
     "interval": 50,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",
     "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
         "full": "https://ls.manapotion.io/full_snapshot.bin",
