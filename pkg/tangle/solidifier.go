@@ -362,7 +362,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			timeSetConfirmedMilestoneIndex = time.Now()
 			if t.storage.IsNodeAlmostSynced() {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
-				dag.UpdateConeRootIndexes(t.storage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+				dag.UpdateConeRootIndexes(t.storage, metadataMemcache, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 			}
 			timeUpdateConeRootIndexes = time.Now()
 			t.Events.ConfirmedMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
