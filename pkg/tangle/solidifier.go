@@ -71,7 +71,7 @@ func (t *Tangle) SolidQueueCheck(
 	messageIDsToRequest := make(map[string]struct{})
 
 	// we don't need to call cleanup at the end, because we pass our own metadataMemcache.
-	parentsTraverser := dag.NewParentTraverser(t.storage, abortSignal, metadataMemcache)
+	parentsTraverser := dag.NewParentTraverser(t.storage, metadataMemcache)
 
 	// collect all msg to solidify by traversing the tangle
 	if err := parentsTraverser.Traverse(parents,
@@ -104,7 +104,8 @@ func (t *Tangle) SolidQueueCheck(
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false); err != nil {
+		false,
+		abortSignal); err != nil {
 		if err == common.ErrOperationAborted {
 			return false, true
 		}
@@ -165,7 +166,7 @@ func (t *Tangle) SolidifyFutureConeOfMsg(cachedMsgMeta *storage.CachedMetadata) 
 func (t *Tangle) solidifyFutureCone(messageMemcache *storage.MessagesMemcache, metadataMemcache *storage.MetadataMemcache, messageIDs hornet.MessageIDs, abortSignal chan struct{}) error {
 
 	// we do not cleanup the traverser to not cleanup the MetadataMemcache
-	childrenTraverser := dag.NewChildrenTraverser(t.storage, abortSignal, metadataMemcache)
+	childrenTraverser := dag.NewChildrenTraverser(t.storage, metadataMemcache)
 
 	for _, messageID := range messageIDs {
 
@@ -211,7 +212,8 @@ func (t *Tangle) solidifyFutureCone(messageMemcache *storage.MessagesMemcache, m
 			// consumer
 			// no need to consume here
 			nil,
-			true); err != nil {
+			true,
+			abortSignal); err != nil {
 			return err
 		}
 	}
