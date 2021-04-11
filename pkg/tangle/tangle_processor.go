@@ -23,7 +23,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
-	processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
+	t.processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		t.processValidMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
@@ -71,7 +71,7 @@ func (t *Tangle) RunTangleProcessor() {
 			return
 		}
 
-		_, added := processValidMilestoneWorkerPool.Submit(cachedMilestone) // milestone pass +1
+		_, added := t.processValidMilestoneWorkerPool.Submit(cachedMilestone) // milestone pass +1
 		if !added {
 			// Release shouldn't be forced, to cache the latest milestones
 			cachedMilestone.Release() // message -1
@@ -107,13 +107,13 @@ func (t *Tangle) RunTangleProcessor() {
 
 	t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
-		processValidMilestoneWorkerPool.Start()
+		t.processValidMilestoneWorkerPool.Start()
 		t.storage.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
 		t.startWaitGroup.Done()
 		<-shutdownSignal
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
 		t.storage.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
-		processValidMilestoneWorkerPool.StopAndWait()
+		t.processValidMilestoneWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)
 

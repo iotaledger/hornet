@@ -18,8 +18,6 @@ import (
 )
 
 const (
-	solidifierThreshold = 60 * time.Second
-
 	milestoneSolidifierWorkerCount = 2 // must be two, so a new request can abort another, in case it is an older milestone
 	milestoneSolidifierQueueSize   = 2
 )

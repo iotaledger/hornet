@@ -50,7 +50,8 @@ type Tangle struct {
 	messageSolidSyncEvent       *utils.SyncEvent
 	milestoneConfirmedSyncEvent *utils.SyncEvent
 
-	milestoneSolidifierWorkerPool *workerpool.WorkerPool
+	processValidMilestoneWorkerPool *workerpool.WorkerPool
+	milestoneSolidifierWorkerPool   *workerpool.WorkerPool
 
 	signalChanMilestoneStopSolidification     chan struct{}
 	signalChanMilestoneStopSolidificationLock syncutils.Mutex
