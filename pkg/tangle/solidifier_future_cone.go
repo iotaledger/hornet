@@ -9,7 +9,7 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
-// FutureConeSolidifier traverses the future cone of messages and updates their solidify.
+// FutureConeSolidifier traverses the future cone of messages and updates their solidity.
 // It holds a reference to a traverser and a memcache, so that these can be reused for "gossip solidifcation".
 type FutureConeSolidifier struct {
 	syncutils.Mutex
