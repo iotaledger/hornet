@@ -228,12 +228,13 @@ func (proc *MessageProcessor) WorkUnitsSize() int {
 }
 
 // gets a CachedWorkUnit or creates a new one if it not existent.
-func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
+func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(key []byte) objectstorage.StorableObject { // cachedWorkUnit +1
+			newlyAdded = true
 			return newWorkUnit(receivedTxBytes, proc)
 		}),
-	}
+	}, newlyAdded
 }
 
 // processes the given milestone request by parsing it and then replying to the peer with it.
@@ -304,8 +305,11 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 
 // gets or creates a new WorkUnit for the given message and then processes the WorkUnit.
 func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
-	cachedWorkUnit := proc.workUnitFor(data) // workUnit +1
-	defer cachedWorkUnit.Release()           // workUnit -1
+	cachedWorkUnit, newlyAdded := proc.workUnitFor(data) // workUnit +1
+
+	// force release if not newly added, so the cache time only is active at first receive of the message.
+	defer cachedWorkUnit.Release(!newlyAdded) // workUnit -1
+
 	workUnit := cachedWorkUnit.WorkUnit()
 	workUnit.addReceivedFrom(p, nil)
 	proc.processWorkUnit(workUnit, p)
@@ -425,8 +429,8 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 	}
 	defer cachedMsg.Release(true)
 
-	cachedWorkUnit := proc.workUnitFor(cachedMsg.GetMessage().GetData()) // workUnit +1
-	defer cachedWorkUnit.Release()                                       // workUnit -1
+	cachedWorkUnit, _ := proc.workUnitFor(cachedMsg.GetMessage().GetData()) // workUnit +1
+	defer cachedWorkUnit.Release(true)                                      // workUnit -1
 	wu := cachedWorkUnit.WorkUnit()
 
 	if wu.requested {
