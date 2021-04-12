@@ -10,7 +10,7 @@ import (
 )
 
 // FutureConeSolidifier traverses the future cone of messages and updates their solidify.
-// It holds a reference to a traverser and a memcache, so these can be reused for "gossip solidifcation".
+// It holds a reference to a traverser and a memcache, so that these can be reused for "gossip solidifcation".
 type FutureConeSolidifier struct {
 	syncutils.Mutex
 
