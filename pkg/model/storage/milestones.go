@@ -31,6 +31,10 @@ func MilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMs *CachedMilestone))(params[0].(*CachedMilestone).Retain())
 }
 
+func MilestoneWithRequestedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(cachedMs *CachedMilestone, requested bool))(params[0].(*CachedMilestone).Retain(), params[1].(bool))
+}
+
 func (s *Storage) KeyManager() *keymanager.KeyManager {
 	return s.keyManager
 }
@@ -284,7 +288,7 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 }
 
 // StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
-func (s *Storage) StoreMilestone(cachedMessage *CachedMessage, ms *iotago.Milestone) {
+func (s *Storage) StoreMilestone(cachedMessage *CachedMessage, ms *iotago.Milestone, requested bool) {
 	defer cachedMessage.Release(true)
 
 	cachedMilestone, newlyAdded := s.storeMilestoneIfAbsent(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
@@ -295,5 +299,5 @@ func (s *Storage) StoreMilestone(cachedMessage *CachedMessage, ms *iotago.Milest
 	// Force release to store milestones without caching
 	defer cachedMilestone.Release(true) // milestone +-0
 
-	s.Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
+	s.Events.ReceivedValidMilestone.Trigger(cachedMilestone, requested) // milestone pass +1
 }

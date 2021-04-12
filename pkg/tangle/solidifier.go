@@ -466,7 +466,7 @@ func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index,
 			}
 
 			// milestone found!
-			t.storage.StoreMilestone(cachedMessage.Retain(), ms)
+			t.storage.StoreMilestone(cachedMessage.Retain(), ms, false)
 
 			return ErrMissingMilestoneFound // we return this as an error to stop the traverser
 		},
