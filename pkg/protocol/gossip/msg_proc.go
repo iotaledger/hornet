@@ -17,6 +17,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
+	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/pow"
@@ -122,6 +123,8 @@ type MessageProcessor struct {
 	workUnits     *objectstorage.ObjectStorage
 	serverMetrics *metrics.ServerMetrics
 	opts          Options
+	shutdownMutex syncutils.RWMutex
+	shutdown      bool
 }
 
 // The Options for the MessageProcessor.
@@ -136,6 +139,16 @@ type Options struct {
 func (proc *MessageProcessor) Run(shutdownSignal <-chan struct{}) {
 	proc.wp.Start()
 	<-shutdownSignal
+	proc.Shutdown()
+}
+
+// Shutdown signals the internal worker pool and object storage
+// to shut down and sets the shutdown flag.
+func (proc *MessageProcessor) Shutdown() {
+	proc.shutdownMutex.Lock()
+	defer proc.shutdownMutex.Unlock()
+
+	proc.shutdown = true
 	proc.wp.StopAndWait()
 	proc.workUnits.Shutdown()
 }
@@ -386,7 +399,14 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 }
 
 func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
+	proc.shutdownMutex.RLock()
+	defer proc.shutdownMutex.RUnlock()
 	defer cachedMsgMeta.Release(true)
+
+	if proc.shutdown {
+		// do not broadcast if the message processor was shut down
+		return
+	}
 
 	if !proc.storage.IsNodeSyncedWithinBelowMaxDepth() {
 		// no need to broadcast messages if the node is not sync within "below max depth"
