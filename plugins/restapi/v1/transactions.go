@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -29,7 +30,10 @@ func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
 
 	output, err := deps.UTXO.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "output for transaction not found: %s", transactionIDHex)
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "output for transaction not found: %s", transactionIDHex)
+		}
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", transactionIDHex)
 	}
 
 	cachedMsg := deps.Storage.GetCachedMessageOrNil(output.MessageID())

@@ -1,8 +1,8 @@
 package common_test
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"

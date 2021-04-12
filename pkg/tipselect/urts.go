@@ -339,7 +339,7 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.MessageIDs, e
 	for i := 0; i < maxRetries; i++ {
 		tip, err := ts.selectTipWithoutLocking(tipsMap)
 		if err != nil {
-			if err == ErrNoTipsAvailable && i != 0 {
+			if errors.Is(err, ErrNoTipsAvailable) && i != 0 {
 				// do not search other tips if there are none
 				// in case the first tip selection failed => return the error
 				break

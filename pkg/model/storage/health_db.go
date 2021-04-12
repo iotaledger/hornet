@@ -59,7 +59,7 @@ func (s *Storage) IsDatabaseTainted() bool {
 
 func (s *Storage) setDatabaseVersion() {
 	_, err := s.healthStore.Get([]byte("dbVersion"))
-	if err == kvstore.ErrKeyNotFound {
+	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// Only create the entry, if it doesn't exist already (fresh database)
 		if err := s.healthStore.Set([]byte("dbVersion"), []byte{DbVersion}); err != nil {
 			panic(errors.Wrap(NewDatabaseError(err), "failed to set database version"))

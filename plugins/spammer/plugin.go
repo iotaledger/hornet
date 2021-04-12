@@ -317,7 +317,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 					}
 
 					if err := waitForLowerCPUUsage(cpuMaxUsage, shutdownSignal); err != nil {
-						if err != common.ErrOperationAborted {
+						if !errors.Is(err, common.ErrOperationAborted) {
 							log.Warn(err.Error())
 						}
 						continue

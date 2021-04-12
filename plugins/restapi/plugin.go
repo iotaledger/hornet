@@ -182,7 +182,7 @@ func run() {
 
 		go func() {
 			log.Infof("You can now access the API using: http://%s", bindAddr)
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				log.Warnf("Stopped REST-API server due to an error (%s)", err)
 			}
 		}()

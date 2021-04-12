@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+
 	powsrvio "gitlab.com/powsrv.io/go/client"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -225,7 +227,7 @@ func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, par
 		powCancel()
 
 		if err != nil {
-			if err == pow.ErrCancelled && refreshTips {
+			if errors.Is(err, pow.ErrCancelled) && refreshTips {
 				// context was canceled and tips can be refreshed
 				tips, err := refreshTipsFunc[0]()
 				if err != nil {

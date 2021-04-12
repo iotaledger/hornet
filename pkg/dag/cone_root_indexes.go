@@ -2,6 +2,7 @@ package dag
 
 import (
 	"bytes"
+	"github.com/pkg/errors"
 	"math"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -104,7 +105,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 			entryPointIndex, _ := s.SolidEntryPointsIndex(messageID)
 			updateIndexes(entryPointIndex, entryPointIndex)
 		}, false, nil); err != nil {
-		if err == common.ErrMessageNotFound {
+		if errors.Is(err, common.ErrMessageNotFound) {
 			indexesValid = false
 		} else {
 			panic(err)

@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"time"
 
@@ -252,7 +253,7 @@ func RunGarbageCollection() {
 	})
 
 	if err != nil {
-		if err != storage.ErrNothingToCleanUp {
+		if !errors.Is(err, storage.ErrNothingToCleanUp) {
 			log.Warnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
 			return
 		}
