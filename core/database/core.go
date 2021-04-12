@@ -2,9 +2,10 @@ package database
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"time"
+
+	"github.com/pkg/errors"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
