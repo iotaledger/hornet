@@ -249,6 +249,10 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(msIndex mile
 	w.Lock()
 	defer w.Unlock()
 
+	if msIndex <= w.storage.GetConfirmedMilestoneIndex() {
+		return
+	}
+
 	cachedMs := w.storage.GetCachedMilestoneOrNil(msIndex) // milestone +1
 	if cachedMs == nil {
 		panic(fmt.Sprintf("milestone %d wasn't found", msIndex))
@@ -264,13 +268,16 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(msIndex mile
 			defer cachedMsgMeta.Release(true) // meta -1
 
 			mapKey := cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()
+			if _, previouslyTraversed := w.traversed[mapKey]; previouslyTraversed {
+				return false, nil
+			}
+			w.traversed[mapKey] = struct{}{}
 
-			_, previouslyTraversed := w.traversed[mapKey]
-			if !previouslyTraversed {
-				w.traversed[mapKey] = struct{}{}
+			if cachedMsgMeta.GetMetadata().IsSolid() {
+				return false, nil
 			}
 
-			return !cachedMsgMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
+			return true, nil
 		},
 		// consumer
 		nil,

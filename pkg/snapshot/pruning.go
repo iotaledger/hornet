@@ -137,18 +137,17 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		solidEntryPoints = append(solidEntryPoints, sep)
 		return true
 	})
+	if err != nil {
+		return 0, err
+	}
 
+	// temporarily add the new solid entry points and keep the old ones
 	s.storage.WriteLockSolidEntryPoints()
-	s.storage.ResetSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
 		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
 	}
 	s.storage.StoreSolidEntryPoints()
 	s.storage.WriteUnlockSolidEntryPoints()
-
-	if err != nil {
-		return 0, err
-	}
 
 	// we have to set the new solid entry point index.
 	// this way we can cleanly prune even if the pruning was aborted last time
@@ -255,6 +254,15 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 			DurationTotal:                        time.Since(timeStart),
 		})
 	}
+
+	// finally set the new solid entry points and remove the old ones
+	s.storage.WriteLockSolidEntryPoints()
+	s.storage.ResetSolidEntryPoints()
+	for _, sep := range solidEntryPoints {
+		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
+	}
+	s.storage.StoreSolidEntryPoints()
+	s.storage.WriteUnlockSolidEntryPoints()
 
 	database.RunGarbageCollection()
 
