@@ -18,10 +18,10 @@ var (
 )
 
 // FeatureSet denotes the version bit for Chrysalis-Pt1 support.
-const FeatureSet = 1 << 2
+const FeatureSet = 1 << 3
 
 // FeatureSetName is the name of the feature set.
-const FeatureSetName = "Chrysalis-Pt1"
+const FeatureSetName = "Chrysalis-Pt1-Migration-Only"
 
 func init() {
 	if err := message.RegisterType(MessageTypeMilestoneRequest, MilestoneRequestMessageDefinition); err != nil {
