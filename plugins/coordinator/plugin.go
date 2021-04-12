@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/tipselect"
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -30,6 +31,7 @@ import (
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/pow"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
+	urtsplugin "github.com/gohornet/hornet/plugins/urts"
 )
 
 func init() {
@@ -183,10 +185,10 @@ func run(plugin *node.Plugin) {
 			case <-nextMilestoneSignal:
 
 				tip := lastMilestoneHash
-				tips, err := selector.SelectTips(1)
+				tips, err := urtsplugin.TipSelector.SelectNonLazyTips()
 				switch {
 				case err != nil:
-					if err != mselection.ErrNoTipsAvailable {
+					if err != tipselect.ErrNoTipsAvailable {
 						log.Warn(err)
 					}
 					// use previous milestone hash for trunk and branch
