@@ -139,6 +139,9 @@
       }
     }
   },
+  "tangle": {
+    "milestoneTimeout": "30s"
+  },
   "tipsel": {
     "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
     "maxDeltaMsgOldestConeRootIndexToCMI": 13,

@@ -42,6 +42,7 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "Tangle",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
 			Provide:   provide,
 			Configure: configure,
 			Run:       run,
@@ -62,7 +63,6 @@ var (
 	onConfirmedMilestoneIndexChanged *events.Closure
 	onPruningMilestoneIndexChanged   *events.Closure
 	onLatestMilestoneIndexChanged    *events.Closure
-	onReceivedNewTx                  *events.Closure
 )
 
 type dependencies struct {
@@ -101,8 +101,9 @@ func provide(c *dig.Container) {
 		Requester        *gossippkg.Requester
 		MessageProcessor *gossippkg.MessageProcessor
 		ServerMetrics    *metrics.ServerMetrics
-		ReceiptService   *migrator.ReceiptService `optional:"true"`
-		BelowMaxDepth    int                      `name:"belowMaxDepth"`
+		ReceiptService   *migrator.ReceiptService     `optional:"true"`
+		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+		BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
@@ -118,6 +119,7 @@ func provide(c *dig.Container) {
 			CorePlugin.Daemon(),
 			CorePlugin.Daemon().ContextStopped(),
 			deps.BelowMaxDepth,
+			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			*syncedAtStartup)
 	}); err != nil {
 		panic(err)
@@ -171,13 +173,11 @@ func run() {
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
 
-	_ = CorePlugin.Daemon().BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
-		attachSolidifierGossipEvents()
+	_ = CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
 		attachHeartbeatEvents()
 		<-shutdownSignal
-		detachSolidifierGossipEvents()
 		detachHeartbeatEvents()
-	}, shutdown.PrioritySolidifierGossip)
+	}, shutdown.PriorityHeartbeats)
 
 	_ = CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
@@ -215,15 +215,6 @@ func configureEvents() {
 		// notify peers about our new latest milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
-
-	onReceivedNewTx = events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		// Force release possible here, since processIncomingTx still holds a reference
-		defer cachedMsg.Release(true) // msg -1
-
-		if deps.Storage.IsNodeAlmostSynced() {
-			deps.Tangle.SolidifyFutureConeOfMsg(cachedMsg.GetCachedMetadata()) // meta pass +1
-		}
-	})
 }
 
 func attachHeartbeatEvents() {
@@ -232,16 +223,8 @@ func attachHeartbeatEvents() {
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
 
-func attachSolidifierGossipEvents() {
-	deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewTx)
-}
-
 func detachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 	deps.Snapshot.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
-}
-
-func detachSolidifierGossipEvents() {
-	deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewTx)
 }

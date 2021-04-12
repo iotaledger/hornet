@@ -170,7 +170,7 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 
 	// we share the same traverser for all milestones, so we don't cleanup the cachedMessages in between.
 	// we don't need to call cleanup at the end, because we passed our own metadataMemcache.
-	parentsTraverser := dag.NewParentTraverser(s.storage, abortSignal, metadataMemcache)
+	parentsTraverser := dag.NewParentTraverser(s.storage, metadataMemcache)
 
 	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
 	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) bool {
@@ -256,7 +256,8 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
 			// the pruning target index is also a solid entry point => traverse it anyways
-			true); err != nil {
+			true,
+			abortSignal); err != nil {
 			if err == common.ErrOperationAborted {
 				return ErrSnapshotCreationWasAborted
 			}

@@ -23,15 +23,20 @@ func (t *Tangle) ConfigureTangleProcessor() {
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
-	processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
+	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
+		t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil)
+		task.Return(nil)
+	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize))
+
+	t.processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		t.processValidMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
-	}, workerpool.WorkerCount(processValidMilestoneWorkerCount), workerpool.QueueSize(processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
+	}, workerpool.WorkerCount(t.processValidMilestoneWorkerCount), workerpool.QueueSize(t.processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	t.milestoneSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		t.solidifyMilestone(task.Param(0).(milestone.Index), task.Param(1).(bool))
 		task.Return(nil)
-	}, workerpool.WorkerCount(milestoneSolidifierWorkerCount), workerpool.QueueSize(milestoneSolidifierQueueSize))
+	}, workerpool.WorkerCount(t.milestoneSolidifierWorkerCount), workerpool.QueueSize(t.milestoneSolidifierQueueSize))
 }
 
 func (t *Tangle) RunTangleProcessor() {
@@ -45,10 +50,23 @@ func (t *Tangle) RunTangleProcessor() {
 
 	t.storage.SetLatestMilestoneIndex(latestMilestoneFromDatabase, t.updateSyncedAtStartup)
 
-	t.startWaitGroup.Add(4)
+	t.startWaitGroup.Add(5)
 
 	onMsgProcessed := events.NewClosure(func(message *storage.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
 		t.receiveMsgWorkerPool.Submit(message, request, proto)
+	})
+
+	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+		// cleanup the future cone solidifier to free the caches
+		t.futureConeSolidifier.Cleanup(true)
+
+		// reset the milestone timeout ticker
+		t.ResetMilestoneTimeoutTicker()
+	})
+
+	onMilestoneTimeout := events.NewClosure(func() {
+		// cleanup the future cone solidifier on milestone timeouts to free the caches
+		t.futureConeSolidifier.Cleanup(true)
 	})
 
 	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *MPSMetrics) {
@@ -71,7 +89,7 @@ func (t *Tangle) RunTangleProcessor() {
 			return
 		}
 
-		_, added := processValidMilestoneWorkerPool.Submit(cachedMilestone) // milestone pass +1
+		_, added := t.processValidMilestoneWorkerPool.Submit(cachedMilestone) // milestone pass +1
 		if !added {
 			// Release shouldn't be forced, to cache the latest milestones
 			cachedMilestone.Release() // message -1
@@ -105,15 +123,30 @@ func (t *Tangle) RunTangleProcessor() {
 		t.log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker)
 
+	t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(shutdownSignal <-chan struct{}) {
+		t.log.Info("Starting TangleProcessor[FutureConeSolidifier] ... done")
+		t.futureConeSolidifierWorkerPool.Start()
+		t.startWaitGroup.Done()
+		<-shutdownSignal
+		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ...")
+		t.futureConeSolidifierWorkerPool.StopAndWait()
+		t.futureConeSolidifier.Cleanup(true)
+		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ... done")
+	}, shutdown.PrioritySolidifierGossip)
+
 	t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
-		processValidMilestoneWorkerPool.Start()
+		t.processValidMilestoneWorkerPool.Start()
 		t.storage.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
+		t.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
+		t.Events.MilestoneTimeout.Attach(onMilestoneTimeout)
 		t.startWaitGroup.Done()
 		<-shutdownSignal
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
 		t.storage.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
-		processValidMilestoneWorkerPool.StopAndWait()
+		t.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
+		t.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
+		t.processValidMilestoneWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)
 
@@ -167,6 +200,12 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = confirmedMilestoneIndex
 		}
+
+		if t.storage.IsNodeAlmostSynced() {
+			// try to solidify the message and its future cone
+			t.futureConeSolidifierWorkerPool.Submit(cachedMsg.GetCachedMetadata()) // meta pass +1
+		}
+
 		t.Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, confirmedMilestoneIndex)
 
 	} else {

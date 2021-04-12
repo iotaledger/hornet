@@ -11,9 +11,8 @@ import (
 )
 
 type ParentTraverser struct {
+	storage          *storage.Storage
 	metadataMemcache *storage.MetadataMemcache
-
-	storage *storage.Storage
 
 	// stack holding the ordered msg to process
 	stack *list.List
@@ -35,18 +34,17 @@ type ParentTraverser struct {
 }
 
 // NewParentTraverser create a new traverser to traverse the parents (past cone)
-func NewParentTraverser(s *storage.Storage, abortSignal <-chan struct{}, metadataMemcache ...*storage.MetadataMemcache) *ParentTraverser {
+func NewParentTraverser(s *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ParentTraverser {
 
 	t := &ParentTraverser{
 		storage:          s,
-		abortSignal:      abortSignal,
 		metadataMemcache: storage.NewMetadataMemcache(s),
+		stack:            list.New(),
 		processed:        make(map[string]struct{}),
 		checked:          make(map[string]bool),
-		stack:            list.New(),
 	}
 
-	if len(metadataMemcache) > 0 {
+	if len(metadataMemcache) > 0 && metadataMemcache[0] != nil {
 		// use the memcache from outside to share the same cached metadata
 		t.metadataMemcache = metadataMemcache[0]
 	}
@@ -71,7 +69,7 @@ func (t *ParentTraverser) Cleanup(forceRelease bool) {
 // the traversal stops due to no more messages passing the given condition.
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func (t *ParentTraverser) Traverse(parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
+func (t *ParentTraverser) Traverse(parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -84,6 +82,7 @@ func (t *ParentTraverser) Traverse(parents hornet.MessageIDs, condition Predicat
 	t.onMissingParent = onMissingParent
 	t.onSolidEntryPoint = onSolidEntryPoint
 	t.traverseSolidEntryPoints = traverseSolidEntryPoints
+	t.abortSignal = abortSignal
 
 	// Prepare for a new traversal
 	t.reset()

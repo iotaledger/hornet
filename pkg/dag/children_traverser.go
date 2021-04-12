@@ -12,9 +12,8 @@ import (
 )
 
 type ChildrenTraverser struct {
+	storage          *storage.Storage
 	metadataMemcache *storage.MetadataMemcache
-
-	storage *storage.Storage
 
 	// stack holding the ordered msg to process
 	stack *list.List
@@ -32,17 +31,16 @@ type ChildrenTraverser struct {
 }
 
 // NewChildrenTraverser create a new traverser to traverse the children (future cone)
-func NewChildrenTraverser(s *storage.Storage, abortSignal <-chan struct{}, metadataMemcache ...*storage.MetadataMemcache) *ChildrenTraverser {
+func NewChildrenTraverser(s *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ChildrenTraverser {
 
 	t := &ChildrenTraverser{
 		storage:          s,
-		abortSignal:      abortSignal,
 		metadataMemcache: storage.NewMetadataMemcache(s),
-		discovered:       make(map[string]struct{}),
 		stack:            list.New(),
+		discovered:       make(map[string]struct{}),
 	}
 
-	if len(metadataMemcache) > 0 {
+	if len(metadataMemcache) > 0 && metadataMemcache[0] != nil {
 		// use the memcache from outside to share the same cached metadata
 		t.metadataMemcache = metadataMemcache[0]
 	}
@@ -65,7 +63,7 @@ func (t *ChildrenTraverser) Cleanup(forceRelease bool) {
 // Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, iteratorOptions ...storage.IteratorOption) error {
+func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}, iteratorOptions ...storage.IteratorOption) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -77,6 +75,7 @@ func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition 
 	t.condition = condition
 	t.consumer = consumer
 	t.walkAlreadyDiscovered = walkAlreadyDiscovered
+	t.abortSignal = abortSignal
 
 	// Prepare for a new traversal
 	t.reset()
