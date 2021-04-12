@@ -81,7 +81,7 @@ func tips(c echo.Context) (*tipsResponse, error) {
 	}
 
 	if err != nil {
-		if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
+		if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
 			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 		}
 		return nil, err

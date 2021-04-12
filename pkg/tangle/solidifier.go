@@ -98,7 +98,7 @@ func (t *Tangle) SolidQueueCheck(
 		nil,
 		false,
 		abortSignal); err != nil {
-		if err == common.ErrOperationAborted {
+		if errors.Is(err, common.ErrOperationAborted) {
 			return false, true
 		}
 		t.log.Panic(err)
@@ -477,9 +477,9 @@ func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index,
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
 		false, abortSignal); err != nil {
-		if err == common.ErrOperationAborted {
+		if errors.Is(err, common.ErrOperationAborted) {
 			return false, nil
-		} else if err == ErrMissingMilestoneFound {
+		} else if errors.Is(err, ErrMissingMilestoneFound) {
 			milestoneFound = true
 		} else {
 			return false, err

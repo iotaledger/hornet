@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -259,7 +260,6 @@ func addressesEd25519(c echo.Context) (*addressesResponse, error) {
 	addressMap := map[string]*address{}
 
 	outputConsumerFunc := func(output *utxo.Output) bool {
-		// ToDo: allow ed25519 address type only
 
 		if addr, exists := addressMap[output.Address().String()]; exists {
 			// add balance to total balance
@@ -299,6 +299,12 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}
 
 	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(msIndex)
+	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)
+		}
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
+	}
 
 	outputs := make([]*v1.OutputResponse, len(diff.Outputs))
 	spents := make([]*v1.OutputResponse, len(diff.Spents))

@@ -7,6 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/kvstore"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/restapi"
 )
@@ -54,6 +56,9 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 
 	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)
+		}
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 	}
 

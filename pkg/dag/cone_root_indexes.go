@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"math"
 
+	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -104,7 +106,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 			entryPointIndex, _ := s.SolidEntryPointsIndex(messageID)
 			updateIndexes(entryPointIndex, entryPointIndex)
 		}, false, nil); err != nil {
-		if err == common.ErrMessageNotFound {
+		if errors.Is(err, common.ErrMessageNotFound) {
 			indexesValid = false
 		} else {
 			panic(err)

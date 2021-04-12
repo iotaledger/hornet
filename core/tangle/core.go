@@ -155,7 +155,7 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.NodeConfig.Bool(snapshot.CfgPruningPruneReceipts)); err != nil {
-			if err == common.ErrOperationAborted {
+			if errors.Is(err, common.ErrOperationAborted) {
 				log.Info("database revalidation aborted")
 				os.Exit(0)
 			}

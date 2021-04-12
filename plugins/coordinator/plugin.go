@@ -286,7 +286,7 @@ func run() {
 				tips, err := deps.Selector.SelectTips(0)
 				if err != nil {
 					// issuing checkpoint failed => not critical
-					if err != mselection.ErrNoTipsAvailable {
+					if !errors.Is(err, mselection.ErrNoTipsAvailable) {
 						log.Warn(err)
 					}
 					continue
@@ -309,7 +309,7 @@ func run() {
 				checkpointTips, err := deps.Selector.SelectTips(1)
 				if err != nil {
 					// issuing checkpoint failed => not critical
-					if err != mselection.ErrNoTipsAvailable {
+					if !errors.Is(err, mselection.ErrNoTipsAvailable) {
 						log.Warn(err)
 					}
 				} else {
@@ -341,7 +341,7 @@ func run() {
 				}
 				if err != nil {
 					// non-critical errors
-					if err == common.ErrNodeNotSynced {
+					if errors.Is(err, common.ErrNodeNotSynced) {
 						// Coordinator is not synchronized, trigger the solidifier manually
 						deps.Tangle.TriggerSolidifier()
 					}

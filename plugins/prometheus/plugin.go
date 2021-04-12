@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus"
@@ -190,7 +192,7 @@ func run() {
 
 		go func() {
 			log.Infof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				log.Warn("Stopping Prometheus exporter due to an error ... done")
 			}
 		}()

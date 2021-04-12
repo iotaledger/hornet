@@ -296,7 +296,7 @@ func createIdentity(nodeConfig *configuration.Configuration, pubKeyFilePath stri
 
 	sk, err := loadIdentityFromConfig(nodeConfig)
 	if err != nil {
-		if err != ErrNoPrivKeyFound {
+		if !errors.Is(err, ErrNoPrivKeyFound) {
 			return nil, err
 		}
 
@@ -345,7 +345,7 @@ func loadExistingIdentity(nodeConfig *configuration.Configuration, pubKeyFilePat
 	// load an optional private key from the config and compare it to the stored private key
 	sk, err := loadIdentityFromConfig(nodeConfig)
 	if err != nil {
-		if err != ErrNoPrivKeyFound {
+		if !errors.Is(err, ErrNoPrivKeyFound) {
 			return nil, err
 		}
 

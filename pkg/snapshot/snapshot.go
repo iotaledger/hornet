@@ -258,7 +258,7 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 			// the pruning target index is also a solid entry point => traverse it anyways
 			true,
 			abortSignal); err != nil {
-			if err == common.ErrOperationAborted {
+			if errors.Is(err, common.ErrOperationAborted) {
 				return ErrSnapshotCreationWasAborted
 			}
 		}

@@ -235,7 +235,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	if len(msg.Parents) == 0 {
 		tips, err := deps.TipSelector.SelectNonLazyTips()
 		if err != nil {
-			if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
+			if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 			}
 			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
@@ -280,7 +280,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), messageProcessedTimeout)
 	defer cancel()
 
-	if err := utils.WaitForChannelClosed(ctx, msgProcessedChan); err == context.DeadlineExceeded {
+	if err := utils.WaitForChannelClosed(ctx, msgProcessedChan); errors.Is(err, context.DeadlineExceeded) {
 		deps.Tangle.DeregisterMessageProcessedEvent(message.GetMessageID())
 	}
 

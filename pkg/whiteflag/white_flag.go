@@ -146,7 +146,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, meta
 			// check current ledger for this input
 			output, err = s.UTXO().ReadOutputByOutputIDWithoutLocking(input)
 			if err != nil {
-				if err == kvstore.ErrKeyNotFound {
+				if errors.Is(err, kvstore.ErrKeyNotFound) {
 					// input not found, so mark as invalid tx
 					conflict = storage.ConflictInputUTXONotFound
 					break
