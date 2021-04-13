@@ -1107,6 +1107,15 @@ func (s *Snapshot) ImportSnapshots() error {
 		}
 	}
 
+	snapAvail, err = s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
+	if err != nil {
+		return err
+	}
+
+	if snapAvail == snapshotAvailNone {
+		return errors.New("no snapshot files available after snapshot download")
+	}
+
 	if err := s.LoadSnapshotFromFile(Full, s.networkID, s.snapshotFullPath); err != nil {
 		s.storage.MarkDatabaseCorrupted()
 		return err
