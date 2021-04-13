@@ -26,7 +26,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil)
 		task.Return(nil)
-	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize))
+	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	t.processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		t.processValidMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
@@ -130,7 +130,6 @@ func (t *Tangle) RunTangleProcessor() {
 		<-shutdownSignal
 		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ...")
 		t.futureConeSolidifierWorkerPool.StopAndWait()
-		t.futureConeSolidifier.Cleanup(true)
 		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ... done")
 	}, shutdown.PrioritySolidifierGossip)
 
@@ -143,6 +142,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.startWaitGroup.Done()
 		<-shutdownSignal
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
+		t.StopMilestoneTimeoutTicker()
 		t.storage.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
@@ -157,6 +157,7 @@ func (t *Tangle) RunTangleProcessor() {
 		<-shutdownSignal
 		t.log.Info("Stopping TangleProcessor[MilestoneSolidifier] ...")
 		t.milestoneSolidifierWorkerPool.StopAndWait()
+		t.futureConeSolidifier.Cleanup(true)
 		t.log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
 	}, shutdown.PriorityMilestoneSolidifier)
 

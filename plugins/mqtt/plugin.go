@@ -99,12 +99,12 @@ func configure() {
 	utxoOutputWorkerPool = workerpool.New(func(task workerpool.Task) {
 		publishOutput(task.Param(0).(*utxo.Output), task.Param(1).(bool))
 		task.Return(nil)
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize))
 
 	receiptWorkerPool = workerpool.New(func(task workerpool.Task) {
 		publishReceipt(task.Param(0).(*iotago.Receipt))
 		task.Return(nil)
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize))
 
 	topicSubscriptionWorkerPool = workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)

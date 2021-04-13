@@ -175,3 +175,10 @@ func (t *Tangle) ResetMilestoneTimeoutTicker() {
 		t.Events.MilestoneTimeout.Trigger()
 	}, t.milestoneTimeout)
 }
+
+// StopMilestoneTimeoutTicker stops the milestone timeout ticker.
+func (t *Tangle) StopMilestoneTimeoutTicker() {
+	if t.milestoneTimeoutTicker != nil {
+		t.milestoneTimeoutTicker.Shutdown()
+	}
+}
