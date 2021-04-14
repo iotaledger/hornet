@@ -307,7 +307,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
 	cachedWorkUnit, newlyAdded := proc.workUnitFor(data) // workUnit +1
 
-	// force release if not newly added, so the cache time only is active at first receive of the message.
+	// force release if not newly added, so the cache time is only active the first time the message is received.
 	defer cachedWorkUnit.Release(!newlyAdded) // workUnit -1
 
 	workUnit := cachedWorkUnit.WorkUnit()
