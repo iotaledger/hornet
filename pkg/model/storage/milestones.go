@@ -2,20 +2,19 @@ package storage
 
 import (
 	"context"
-	"crypto/ed25519"
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 const (
-	isNodeSyncedWithinThreshold = 2
+	isNodeAlmostSyncedThreshold = 2
 )
 
 type CoordinatorPublicKey struct {
@@ -32,9 +31,8 @@ func MilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(cachedMs *CachedMilestone))(params[0].(*CachedMilestone).Retain())
 }
 
-func (s *Storage) ConfigureMilestones(cooKeyManager *keymanager.KeyManager, cooMilestonePublicKeyCount int) {
-	s.keyManager = cooKeyManager
-	s.milestonePublicKeyCount = cooMilestonePublicKeyCount
+func MilestoneWithRequestedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(cachedMs *CachedMilestone, requested bool))(params[0].(*CachedMilestone).Retain(), params[1].(bool))
 }
 
 func (s *Storage) KeyManager() *keymanager.KeyManager {
@@ -42,12 +40,12 @@ func (s *Storage) KeyManager() *keymanager.KeyManager {
 }
 
 func (s *Storage) ResetMilestoneIndexes() {
-	s.solidMilestoneLock.Lock()
+	s.confirmedMilestoneLock.Lock()
 	s.latestMilestoneLock.Lock()
-	defer s.solidMilestoneLock.Unlock()
+	defer s.confirmedMilestoneLock.Unlock()
 	defer s.latestMilestoneLock.Unlock()
 
-	s.solidMilestoneIndex = 0
+	s.confirmedMilestoneIndex = 0
 	s.latestMilestoneIndex = 0
 }
 
@@ -69,9 +67,25 @@ func (s *Storage) IsNodeSynced() bool {
 	return s.isNodeSynced
 }
 
-// IsNodeSyncedWithThreshold returns whether the node is synced within a certain threshold.
-func (s *Storage) IsNodeSyncedWithThreshold() bool {
-	return s.isNodeSyncedThreshold
+// IsNodeAlmostSynced returns whether the node is synced within "isNodeAlmostSyncedThreshold".
+func (s *Storage) IsNodeAlmostSynced() bool {
+	return s.isNodeAlmostSynced
+}
+
+// IsNodeSyncedWithinBelowMaxDepth returns whether the node is synced within "belowMaxDepth".
+func (s *Storage) IsNodeSyncedWithinBelowMaxDepth() bool {
+	return s.isNodeSyncedWithinBelowMaxDepth
+}
+
+// IsNodeSyncedWithThreshold returns whether the node is synced within a given threshold.
+func (s *Storage) IsNodeSyncedWithThreshold(threshold milestone.Index) bool {
+
+	// catch overflow
+	if s.latestMilestoneIndex < threshold {
+		return true
+	}
+
+	return s.confirmedMilestoneIndex >= (s.latestMilestoneIndex - threshold)
 }
 
 // WaitForNodeSynced waits at most "timeout" duration for the node to become fully sync.
@@ -80,7 +94,7 @@ func (s *Storage) IsNodeSyncedWithThreshold() bool {
 // but a new milestone came in lately.
 func (s *Storage) WaitForNodeSynced(timeout time.Duration) bool {
 
-	if !s.isNodeSyncedThreshold {
+	if !s.isNodeAlmostSynced {
 		// node is not even synced within threshold, and therefore it is unsync
 		return false
 	}
@@ -102,7 +116,7 @@ func (s *Storage) WaitForNodeSynced(timeout time.Duration) bool {
 		return true
 	}
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout))
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	// we wait either until the node got synced or we reached the deadline
@@ -114,15 +128,16 @@ func (s *Storage) WaitForNodeSynced(timeout time.Duration) bool {
 	return s.isNodeSynced
 }
 
-// The node is synced if LMI != 0 and LSMI == LMI.
-func (s *Storage) updateNodeSynced(latestSolidIndex, latestIndex milestone.Index) {
+// The node is synced if LMI != 0 and CMI == LMI.
+func (s *Storage) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) {
 	if latestIndex == 0 {
 		s.isNodeSynced = false
-		s.isNodeSyncedThreshold = false
+		s.isNodeAlmostSynced = false
+		s.isNodeSyncedWithinBelowMaxDepth = false
 		return
 	}
 
-	s.isNodeSynced = latestSolidIndex == latestIndex
+	s.isNodeSynced = confirmedIndex == latestIndex
 	if s.isNodeSynced {
 		// if the node is sync, signal all waiting routines at the end
 		defer func() {
@@ -140,22 +155,29 @@ func (s *Storage) updateNodeSynced(latestSolidIndex, latestIndex milestone.Index
 	}
 
 	// catch overflow
-	if latestIndex < isNodeSyncedWithinThreshold {
-		s.isNodeSyncedThreshold = true
+	if latestIndex < isNodeAlmostSyncedThreshold {
+		s.isNodeAlmostSynced = true
+		s.isNodeSyncedWithinBelowMaxDepth = true
 		return
 	}
+	s.isNodeAlmostSynced = confirmedIndex >= (latestIndex - isNodeAlmostSyncedThreshold)
 
-	s.isNodeSyncedThreshold = latestSolidIndex >= (latestIndex - isNodeSyncedWithinThreshold)
+	// catch overflow
+	if latestIndex < s.belowMaxDepth {
+		s.isNodeSyncedWithinBelowMaxDepth = true
+		return
+	}
+	s.isNodeSyncedWithinBelowMaxDepth = confirmedIndex >= (latestIndex - s.belowMaxDepth)
 }
 
-// SetSolidMilestoneIndex sets the solid milestone index.
-func (s *Storage) SetSolidMilestoneIndex(index milestone.Index, updateSynced ...bool) {
-	s.solidMilestoneLock.Lock()
-	if s.solidMilestoneIndex > index {
-		panic(fmt.Sprintf("current solid milestone (%d) is newer than (%d)", s.solidMilestoneIndex, index))
+// SetConfirmedMilestoneIndex sets the confirmed milestone index.
+func (s *Storage) SetConfirmedMilestoneIndex(index milestone.Index, updateSynced ...bool) {
+	s.confirmedMilestoneLock.Lock()
+	if s.confirmedMilestoneIndex > index {
+		panic(fmt.Sprintf("current confirmed milestone (%d) is newer than (%d)", s.confirmedMilestoneIndex, index))
 	}
-	s.solidMilestoneIndex = index
-	s.solidMilestoneLock.Unlock()
+	s.confirmedMilestoneIndex = index
+	s.confirmedMilestoneLock.Unlock()
 
 	if len(updateSynced) > 0 && !updateSynced[0] {
 		// always call updateNodeSynced if parameter is not given.
@@ -165,23 +187,23 @@ func (s *Storage) SetSolidMilestoneIndex(index milestone.Index, updateSynced ...
 	s.updateNodeSynced(index, s.GetLatestMilestoneIndex())
 }
 
-// OverwriteSolidMilestoneIndex is used to set older solid milestones (revalidation).
-func (s *Storage) OverwriteSolidMilestoneIndex(index milestone.Index) {
-	s.solidMilestoneLock.Lock()
-	s.solidMilestoneIndex = index
-	s.solidMilestoneLock.Unlock()
+// OverwriteConfirmedMilestoneIndex is used to set older confirmed milestones (revalidation).
+func (s *Storage) OverwriteConfirmedMilestoneIndex(index milestone.Index) {
+	s.confirmedMilestoneLock.Lock()
+	s.confirmedMilestoneIndex = index
+	s.confirmedMilestoneLock.Unlock()
 
 	if s.isNodeSynced {
 		s.updateNodeSynced(index, s.GetLatestMilestoneIndex())
 	}
 }
 
-// GetSolidMilestoneIndex returns the latest solid milestone index.
-func (s *Storage) GetSolidMilestoneIndex() milestone.Index {
-	s.solidMilestoneLock.RLock()
-	defer s.solidMilestoneLock.RUnlock()
+// GetConfirmedMilestoneIndex returns the confirmed milestone index.
+func (s *Storage) GetConfirmedMilestoneIndex() milestone.Index {
+	s.confirmedMilestoneLock.RLock()
+	defer s.confirmedMilestoneLock.RUnlock()
 
-	return s.solidMilestoneIndex
+	return s.confirmedMilestoneIndex
 }
 
 // SetLatestMilestoneIndex sets the latest milestone index.
@@ -203,7 +225,7 @@ func (s *Storage) SetLatestMilestoneIndex(index milestone.Index, updateSynced ..
 		return true
 	}
 
-	s.updateNodeSynced(s.GetSolidMilestoneIndex(), index)
+	s.updateNodeSynced(s.GetConfirmedMilestoneIndex(), index)
 
 	return true
 }
@@ -221,7 +243,7 @@ func (s *Storage) FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMi
 	lmi := s.GetLatestMilestoneIndex()
 	if lmi == 0 {
 		// no milestone received yet, check the next 100 milestones as a workaround
-		lmi = s.GetSolidMilestoneIndex() + 100
+		lmi = s.GetConfirmedMilestoneIndex() + 100
 	}
 
 	if index == 4294967295 {
@@ -251,9 +273,11 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 		return nil
 	}
 
-	if message.message.Parent1 != ms.Parent1 || message.message.Parent2 != ms.Parent2 {
-		// parents in message and payload have to be equal
-		return nil
+	for idx, parent := range message.message.Parents {
+		if parent != ms.Parents[idx] {
+			// parents in message and payload have to be equal
+			return nil
+		}
 	}
 
 	if err := ms.VerifySignatures(s.milestonePublicKeyCount, s.keyManager.GetPublicKeysSetForMilestoneIndex(milestone.Index(ms.Index))); err != nil {
@@ -264,12 +288,16 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 }
 
 // StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
-func (s *Storage) StoreMilestone(messageID *hornet.MessageID, ms *iotago.Milestone) {
+func (s *Storage) StoreMilestone(cachedMessage *CachedMessage, ms *iotago.Milestone, requested bool) {
+	defer cachedMessage.Release(true)
 
-	cachedMilestone := s.storeMilestone(milestone.Index(ms.Index), messageID, time.Unix(int64(ms.Timestamp), 0))
+	cachedMilestone, newlyAdded := s.storeMilestoneIfAbsent(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
+	if !newlyAdded {
+		return
+	}
 
 	// Force release to store milestones without caching
 	defer cachedMilestone.Release(true) // milestone +-0
 
-	s.Events.ReceivedValidMilestone.Trigger(cachedMilestone) // milestone pass +1
+	s.Events.ReceivedValidMilestone.Trigger(cachedMilestone, requested) // milestone pass +1
 }

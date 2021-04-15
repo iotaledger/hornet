@@ -2,17 +2,17 @@ package app
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
-
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/toolset"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 var (
@@ -94,6 +94,17 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 		return nil, err
 	}
 
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `Usage of %s:
+%s %s
+
+Run '%s tools' to list all available tools.
+
+Command line flags:
+`, os.Args[0], Name, Version, os.Args[0])
+		flag.PrintDefaults()
+	}
+
 	parseFlags(flagSets)
 	printVersion(flagSets)
 
@@ -138,6 +149,11 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func() *configuration.Configuration {
 		return profileConfig
 	}, dig.Name("profilesConfig")); err != nil {
+		panic(err)
+	}
+	if err := c.Provide(func() string {
+		return *peeringCfgFilePath
+	}, dig.Name("peeringConfigFilePath")); err != nil {
 		panic(err)
 	}
 }

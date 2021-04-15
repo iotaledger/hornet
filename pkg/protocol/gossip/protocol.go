@@ -5,23 +5,21 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/atomic"
-
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/protocol"
+	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/protocol"
 )
 
 const (
-	// defines how far back a node's solid milestone index can be
+	// defines how far back a node's confirmed milestone index can be
 	// but still considered synchronized.
-	minLSMISynchronizationThreshold = 2
+	minCMISynchronizationThreshold = 2
 )
 
 // ProtocolEvents happening on a Protocol.
@@ -46,7 +44,7 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 		if def == nil {
 			continue
 		}
-		sentEvents[i] = events.NewEvent(events.CallbackCaller)
+		sentEvents[i] = events.NewEvent(events.VoidCaller)
 	}
 
 	return &Protocol{
@@ -57,7 +55,7 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 			// we need this because protocol.Protocol doesn't emit
 			// events for sent messages anymore.
 			Sent:   sentEvents,
-			Closed: events.NewEvent(events.CallbackCaller),
+			Closed: events.NewEvent(events.VoidCaller),
 			Errors: events.NewEvent(events.ErrorCaller),
 		},
 		Stream:        stream,
@@ -147,7 +145,7 @@ func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex mi
 }
 
 // SendMessageRequest sends a storage.Message request message to the given peer.
-func (p *Protocol) SendMessageRequest(requestedMessageID *hornet.MessageID) {
+func (p *Protocol) SendMessageRequest(requestedMessageID hornet.MessageID) {
 	txReqData, _ := NewMessageRequestMsg(requestedMessageID)
 	p.Enqueue(txReqData)
 }
@@ -182,21 +180,29 @@ func (p *Protocol) CouldHaveDataForMilestone(index milestone.Index) bool {
 }
 
 // IsSynced tells whether the underlying peer is synced.
-func (p *Protocol) IsSynced(lsi milestone.Index) bool {
+func (p *Protocol) IsSynced(cmi milestone.Index) bool {
 	if p.LatestHeartbeat == nil {
 		return false
 	}
 
 	latestIndex := p.LatestHeartbeat.LatestMilestoneIndex
-	if latestIndex < lsi {
-		latestIndex = lsi
+	if latestIndex < cmi {
+		latestIndex = cmi
 	}
 
-	if p.LatestHeartbeat.SolidMilestoneIndex < (latestIndex - minLSMISynchronizationThreshold) {
+	if p.LatestHeartbeat.SolidMilestoneIndex < (latestIndex - minCMISynchronizationThreshold) {
 		return false
 	}
 
 	return true
+}
+
+// Info returns
+func (p *Protocol) Info() *Info {
+	return &Info{
+		Heartbeat: p.LatestHeartbeat,
+		Metrics:   p.Metrics.Snapshot(),
+	}
 }
 
 // Metrics defines a set of metrics regarding a gossip protocol instance.
@@ -257,4 +263,10 @@ type MetricsSnapshot struct {
 	SentMilestoneReq     uint32 `json:"sentMilestoneRequests"`
 	SentHeartbeats       uint32 `json:"sentHeartbeats"`
 	DroppedPackets       uint32 `json:"droppedPackets"`
+}
+
+// Info represents information about an ongoing gossip protocol.
+type Info struct {
+	Heartbeat *Heartbeat      `json:"heartbeat"`
+	Metrics   MetricsSnapshot `json:"metrics"`
 }

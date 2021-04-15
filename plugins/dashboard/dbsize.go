@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/timeutil"
-
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/timeutil"
 )
 
 var (
@@ -64,12 +63,13 @@ func runDatabaseSizeCollector() {
 	})
 
 	Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
-		database.Events.DatabaseCleanup.Attach(onDatabaseCleanup)
-		defer database.Events.DatabaseCleanup.Detach(onDatabaseCleanup)
+		deps.DatabaseEvents.DatabaseCleanup.Attach(onDatabaseCleanup)
+		defer deps.DatabaseEvents.DatabaseCleanup.Detach(onDatabaseCleanup)
 
-		timeutil.NewTicker(func() {
+		ticker := timeutil.NewTicker(func() {
 			dbSizeMetric := currentDatabaseSize()
 			hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: []*DBSizeMetric{dbSizeMetric}})
 		}, 1*time.Minute, shutdownSignal)
+		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityDashboard)
 }

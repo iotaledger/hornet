@@ -34,6 +34,8 @@ type Network struct {
 	Name string
 	// The nodes within the network in the order in which they were spawned.
 	Nodes []*Node
+	// The white-flag mock server if one was started.
+	WhiteFlagMockServer *DockerContainer
 	// The tester docker container executing the tests.
 	tester *DockerContainer
 	// The docker client used to communicate with the docker daemon.
@@ -53,7 +55,7 @@ func (n *Network) AwaitOnline(ctx context.Context) error {
 			if err := returnErrIfCtxDone(ctx, ErrNodesNotOnlineInTime); err != nil {
 				return err
 			}
-			if _, err := node.NodeAPI.Info(); err != nil {
+			if _, err := node.DebugNodeAPIClient.Info(); err != nil {
 				continue
 			}
 			break
@@ -70,7 +72,7 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 			if err := returnErrIfCtxDone(ctx, ErrNodesDidNotSyncInTime); err != nil {
 				return err
 			}
-			info, err := node.NodeAPI.Info()
+			info, err := node.DebugNodeAPIClient.Info()
 			if err != nil {
 				continue
 			}
@@ -79,6 +81,26 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 			}
 		}
 	}
+	return nil
+}
+
+// CreateWhiteFlagMockServer creates a new white-flag moc kserver in the network.
+func (n *Network) CreateWhiteFlagMockServer(cfg *WhiteFlagMockServerConfig) error {
+	container := NewDockerContainer(n.dockerClient)
+	if err := container.CreateWhiteFlagMockContainer(cfg); err != nil {
+		return err
+	}
+
+	n.WhiteFlagMockServer = container
+
+	if err := container.ConnectToNetwork(n.ID); err != nil {
+		return err
+	}
+
+	if err := container.Start(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -179,6 +201,13 @@ func (n *Network) Shutdown() error {
 	// remove containers
 	for _, p := range n.Nodes {
 		if err := p.Remove(); err != nil {
+			return err
+		}
+	}
+
+	// shutdown mock server in case it runs
+	if n.WhiteFlagMockServer != nil {
+		if err := n.WhiteFlagMockServer.Remove(); err != nil {
 			return err
 		}
 	}

@@ -1,25 +1,32 @@
 package spammer
 
 import (
+	"net/http"
 	"runtime"
-	"strconv"
-	"strings"
+
+	"github.com/labstack/echo/v4"
 
 	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
 )
 
 const (
 	// RouteSpammer is the route for controlling the integrated spammer.
-	// GET returns the tips.
-	// query parameters: "cmd" (start, stop)
-	//					 "mpsRateLimit" (optional)
-	//					 "cpuMaxUsage" (optional)
-	RouteSpammer = "/spammer"
+	RouteSpammer = "/api/plugins/spammer"
+
+	// RouteSpammerStatus is the route to get the status of the spammer.
+	// GET the current status of the spammer.
+	RouteSpammerStatus = "/status"
+
+	// RouteSpammerStart is the route to start the spammer (with optional changing the settings).
+	// POST the settings to change and start the spammer.
+	RouteSpammerStart = "/start"
+
+	// RouteSpammerStop is the route to stop the spammer.
+	// POST to stop the spammer.
+	RouteSpammerStop = "/stop"
 )
 
-type spamSettings struct {
+type spammerStatus struct {
 	Running           bool    `json:"running"`
 	MpsRateLimit      float64 `json:"mpsRateLimit"`
 	CpuMaxUsage       float64 `json:"cpuMaxUsage"`
@@ -27,74 +34,40 @@ type spamSettings struct {
 	SpammerWorkersMax int     `json:"spammerWorkersMax"`
 }
 
-func handleSpammerCommand(c echo.Context) (*spamSettings, error) {
+type startCommand struct {
+	MpsRateLimit   *float64 `json:"mpsRateLimit,omitempty"`
+	CpuMaxUsage    *float64 `json:"cpuMaxUsage,omitempty"`
+	SpammerWorkers *int     `json:"spammerWorkers,omitempty"`
+}
 
-	command := strings.ToLower(c.QueryParam("cmd"))
+func setupRoutes(g *echo.Group) {
 
-	switch command {
+	g.GET(RouteSpammerStatus, func(c echo.Context) error {
+		return restapi.JSONResponse(c, http.StatusOK, &spammerStatus{
+			Running:           isRunning,
+			MpsRateLimit:      mpsRateLimitRunning,
+			CpuMaxUsage:       cpuMaxUsageRunning,
+			SpammerWorkers:    spammerWorkersRunning,
+			SpammerWorkersMax: runtime.NumCPU() - 1,
+		})
+	})
 
-	case "start":
-		var err error
-		var mpsRateLimit *float64 = nil
-		var cpuMaxUsage *float64 = nil
-		var spammerWorkers *int = nil
-
-		mpsRateLimitQuery := c.QueryParam("mpsRateLimit")
-		if mpsRateLimitQuery != "" {
-			mpsRateLimitParsed, err := strconv.ParseFloat(mpsRateLimitQuery, 64)
-			if err != nil || mpsRateLimitParsed < 0.0 {
-				return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing mpsRateLimit failed: %s", err)
-			}
-			mpsRateLimit = &mpsRateLimitParsed
+	g.POST(RouteSpammerStart, func(c echo.Context) error {
+		cmd := &startCommand{}
+		if err := c.Bind(&cmd); err != nil {
+			return err
 		}
 
-		cpuMaxUsageQuery := c.QueryParam("cpuMaxUsage")
-		if cpuMaxUsageQuery != "" {
-			cpuMaxUsageParsed, err := strconv.ParseFloat(cpuMaxUsageQuery, 64)
-			if err != nil || cpuMaxUsageParsed < 0.0 {
-				return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing cpuMaxUsage failed: %s", err)
-			}
-			cpuMaxUsage = &cpuMaxUsageParsed
+		if err := start(cmd.MpsRateLimit, cmd.CpuMaxUsage, cmd.SpammerWorkers); err != nil {
+			return err
 		}
+		return c.JSON(http.StatusAccepted, nil)
+	})
 
-		spammerWorkersQuery := c.QueryParam("spammerWorkers")
-		if spammerWorkersQuery != "" {
-			spammerWorkersParsed64, err := strconv.ParseInt(spammerWorkersQuery, 10, 32)
-			spammerWorkersParsed := int(spammerWorkersParsed64)
-			if err != nil {
-				return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing spammerWorkers failed: %s", err)
-			}
-			if spammerWorkersParsed < 1 || spammerWorkersParsed >= runtime.NumCPU() {
-				return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing spammerWorkers failed: out of range")
-			}
-			spammerWorkers = &spammerWorkersParsed
-		}
-
-		err = start(mpsRateLimit, cpuMaxUsage, spammerWorkers)
-		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInternalError, "starting spammer failed: %s", err)
-		}
-
-	case "stop":
+	g.POST(RouteSpammerStop, func(c echo.Context) error {
 		if err := stop(); err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInternalError, "stopping spammer failed: %s", err)
+			return err
 		}
-
-	case "settings":
-		// Nothing to do here, will fallthrough to returning settings
-
-	case "":
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "no cmd given")
-
-	default:
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "unknown cmd: %s", command)
-	}
-
-	return &spamSettings{
-		Running:           isRunning,
-		MpsRateLimit:      mpsRateLimitRunning,
-		CpuMaxUsage:       cpuMaxUsageRunning,
-		SpammerWorkers:    spammerWorkersRunning,
-		SpammerWorkersMax: runtime.NumCPU() - 1,
-	}, nil
+		return c.JSON(http.StatusAccepted, nil)
+	})
 }

@@ -1,8 +1,8 @@
 package spammer
 
 import (
+	"context"
 	"fmt"
-	"net/http"
 	"runtime"
 	"sync"
 	"time"
@@ -12,12 +12,6 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/timeutil"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -25,13 +19,17 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/timeutil"
 )
 
 func init() {
@@ -86,7 +84,7 @@ type dependencies struct {
 	MessageProcessor *gossip.MessageProcessor
 	Storage          *storage.Storage
 	ServerMetrics    *metrics.ServerMetrics
-	PowHandler       *pow.Handler
+	PoWHandler       *pow.Handler
 	Manager          *p2p.Manager
 	TipSelector      *tipselect.TipSelector
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
@@ -103,13 +101,7 @@ func configure() {
 		return
 	}
 
-	deps.Echo.GET(RouteSpammer, func(c echo.Context) error {
-		resp, err := handleSpammerCommand(c)
-		if err != nil {
-			return err
-		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
+	setupRoutes(deps.Echo.Group(RouteSpammer))
 
 	spammerAvgHeap = utils.NewTimeHeap()
 
@@ -140,7 +132,7 @@ func configure() {
 		deps.NodeConfig.String(CfgSpammerIndex),
 		deps.NodeConfig.String(CfgSpammerIndexSemiLazy),
 		deps.TipSelector.SelectSpammerTips,
-		deps.PowHandler,
+		deps.PoWHandler,
 		sendMessage,
 		deps.ServerMetrics,
 	)
@@ -154,7 +146,8 @@ func run() {
 
 	// create a background worker that "measures" the spammer averages values every second
 	Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
-		timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
+		ticker := timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
+		ticker.WaitForGracefulShutdown()
 	}, shutdown.PrioritySpammer)
 
 	// automatically start the spammer on node startup if the flag is set
@@ -223,38 +216,60 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 	var rateLimitAbortSignal chan struct{} = nil
 
 	if mpsRateLimit != 0.0 {
-		rateLimitChannelSize := int64(mpsRateLimit) * 2
-		if rateLimitChannelSize < 2 {
-			rateLimitChannelSize = 2
-		}
-		rateLimitChannel = make(chan struct{}, rateLimitChannelSize)
+		rateLimitChannel = make(chan struct{}, spammerWorkerCount*2)
 		rateLimitAbortSignal = make(chan struct{})
 
 		// create a background worker that fills rateLimitChannel every second
 		Plugin.Daemon().BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
-			done := make(chan struct{})
-			currentProcessID := processID.Load()
+			defer spammerWaitGroup.Done()
 
-			timeutil.NewTicker(func() {
+			currentProcessID := processID.Load()
+			interval := time.Duration(int64(float64(time.Second) / mpsRateLimit))
+			timeout := interval * 2
+			if timeout < time.Second {
+				timeout = time.Second
+			}
+
+			var lastDuration time.Duration
+		rateLimitLoop:
+			for {
+				timeStart := time.Now()
+
+				ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 				if currentProcessID != processID.Load() {
 					close(rateLimitAbortSignal)
-					close(done)
-					return
+					cancel()
+					break rateLimitLoop
 				}
+
+				// measure the last interval error and multiply by two to compensate (to reach target MPS)
+				lastIntervalError := (lastDuration - interval) * 2.0
+				if lastIntervalError < 0 {
+					lastIntervalError = 0
+				}
+				time.Sleep(interval - lastIntervalError)
 
 				select {
 				case <-shutdownSignal:
+					// received shutdown signal
 					close(rateLimitAbortSignal)
-					close(done)
-				case rateLimitChannel <- struct{}{}:
-				default:
-					// Channel full
-				}
-			}, time.Duration(int64(float64(time.Second)/mpsRateLimit)), done)
+					cancel()
+					break rateLimitLoop
 
-			spammerWaitGroup.Done()
+				case rateLimitChannel <- struct{}{}:
+					// wait until a worker is free
+
+				case <-ctx.Done():
+					// timeout if the channel is not free in time
+					// maybe the consumer was shut down
+				}
+
+				cancel()
+				lastDuration = time.Since(timeStart)
+			}
+
 		}, shutdown.PrioritySpammer)
 	}
 
@@ -262,6 +277,8 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 	for i := 0; i < spammerWorkerCount; i++ {
 		Plugin.Daemon().BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
+			defer spammerWaitGroup.Done()
+
 			spammerIndex := spammerCnt.Inc()
 			currentProcessID := processID.Load()
 
@@ -272,6 +289,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 				select {
 				case <-shutdownSignal:
 					break spammerLoop
+
 				default:
 					if currentProcessID != processID.Load() {
 						break spammerLoop
@@ -288,7 +306,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						}
 					}
 
-					if !deps.Storage.IsNodeSyncedWithThreshold() {
+					if !deps.Storage.IsNodeAlmostSynced() {
 						time.Sleep(time.Second)
 						continue
 					}
@@ -299,7 +317,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 					}
 
 					if err := waitForLowerCPUUsage(cpuMaxUsage, shutdownSignal); err != nil {
-						if err != common.ErrOperationAborted {
+						if !errors.Is(err, common.ErrOperationAborted) {
 							log.Warn(err.Error())
 						}
 						continue
@@ -320,8 +338,6 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 
 			log.Infof("Stopping Spammer %d...", spammerIndex)
 			log.Infof("Stopping Spammer %d... done", spammerIndex)
-			spammerWaitGroup.Done()
-
 		}, shutdown.PrioritySpammer)
 	}
 }

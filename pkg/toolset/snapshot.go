@@ -4,30 +4,34 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	iotago "github.com/iotaledger/iota.go"
-	"github.com/pkg/errors"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func snapshotGen(args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [NETWORK_ID_STR] [MINT_ADDRESS] [OUTPUT_FILE_PATH]", ToolSnapGen))
+		println(fmt.Sprintf("	%s [NETWORK_ID_STR] [MINT_ADDRESS] [TREASURY_ALLOCATION] [OUTPUT_FILE_PATH]", ToolSnapGen))
 		println()
-		println("	[NETWORK_ID_STR]	- the network ID for which this snapshot is meant for")
-		println("	[MINT_ADDRESS]		- the initial ed25519 address all the tokens will be minted to")
-		println("	[OUTPUT_FILE_PATH]	- the file path to the generated snapshot file")
+		println("	[NETWORK_ID_STR]		- the network ID for which this snapshot is meant for")
+		println("	[MINT_ADDRESS]			- the initial ed25519 address all the tokens will be minted to")
+		println("	[TREASURY_ALLOCATION]	- the amount of tokens to reside within the treasury, the delta from the supply will be allocated to MINT_ADDRESS")
+		println("	[OUTPUT_FILE_PATH]		- the file path to the generated snapshot file")
 		println()
-		println(fmt.Sprintf("example: %s %s %s %s", ToolSnapGen, "alphanet@1", "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92", "snapshots/alphanet/export.bin"))
+		println(fmt.Sprintf("example: %s %s %s %s %s", ToolSnapGen, "alphanet@1", "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92", "500000000", "snapshots/alphanet/export.bin"))
 	}
 
 	// check arguments
-	if len(args) != 3 {
+	if len(args) != 4 {
 		printUsage()
 		return fmt.Errorf("wrong argument count '%s'", ToolSnapGen)
 	}
@@ -48,8 +52,14 @@ func snapshotGen(args []string) error {
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
+	// check treasury
+	treasury, err := strconv.ParseUint(args[2], 10, 64)
+	if err != nil {
+		return fmt.Errorf("unable to decode TREASURY_ALLOCATION: %w", err)
+	}
+
 	// check filepath
-	outputFilePath := args[2]
+	outputFilePath := args[3]
 	if _, err := os.Stat(outputFilePath); err == nil || !os.IsNotExist(err) {
 		return errors.New("OUTPUT_FILE_PATH already exists")
 	}
@@ -71,12 +81,16 @@ func snapshotGen(args []string) error {
 		NetworkID:            networkID,
 		SEPMilestoneIndex:    milestone.Index(targetIndex),
 		LedgerMilestoneIndex: milestone.Index(targetIndex),
+		TreasuryOutput: &utxo.TreasuryOutput{
+			MilestoneID: iotago.MilestoneID{},
+			Amount:      treasury,
+		},
 	}
 
 	// solid entry points
 	// add "NullMessageID" as sole entry point
 	nullHashAdded := false
-	solidEntryPointProducerFunc := func() (*hornet.MessageID, error) {
+	solidEntryPointProducerFunc := func() (hornet.MessageID, error) {
 		if nullHashAdded {
 			return nil, nil
 		}
@@ -96,9 +110,15 @@ func snapshotGen(args []string) error {
 		outputAdded = true
 
 		var nullMessageID [iotago.MessageIDLength]byte
-		var nullOutputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
+		var nullOutputID [utxo.OutputIDLength]byte
 
-		return &snapshot.Output{MessageID: nullMessageID, OutputID: nullOutputID, Address: &address, Amount: iotago.TokenSupply}, nil
+		return &snapshot.Output{
+			MessageID:  nullMessageID,
+			OutputID:   nullOutputID,
+			OutputType: iotago.OutputSigLockedSingleOutput,
+			Address:    &address,
+			Amount:     iotago.TokenSupply - treasury,
+		}, nil
 	}
 
 	// milestone diffs
@@ -107,7 +127,7 @@ func snapshotGen(args []string) error {
 		return nil, nil
 	}
 
-	if err := snapshot.StreamSnapshotDataTo(snapshotFile, uint64(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
+	if err, _ := snapshot.StreamSnapshotDataTo(snapshotFile, uint64(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate snapshot file: %w", err)
 	}

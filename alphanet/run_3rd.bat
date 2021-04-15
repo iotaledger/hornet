@@ -1,11 +1,11 @@
 del /f /q /s alphanetdb3
-go run -tags "pow_avx" "..\main.go" -c config_alphanet.json ^
+go run "..\main.go" -c config_alphanet.json ^
 --protocol.networkID="alphanet1" ^
 --restAPI.bindAddress="0.0.0.0:14267" ^
 --dashboard.bindAddress="localhost:8083" ^
 --db.path="alphanetdb3" ^
 --node.disablePlugins="Autopeering" ^
---node.enablePlugins="Spammer,MQTT" ^
+--node.enablePlugins="Spammer,MQTT,Debug,Prometheus" ^
 --snapshots.fullPath="snapshots/alphanet3/full_export.bin" ^
 --snapshots.deltaPath="snapshots/alphanet3/delta_export.bin" ^
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15602" ^

@@ -4,13 +4,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/syncutils"
-
-	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 // WorkUnitState defines the state which a WorkUnit is in.
@@ -22,12 +19,12 @@ const (
 	Hashed  WorkUnitState = 1 << 2
 )
 
-// newWorkUnit creates a new WorkUnit and initializes values by unmarshalling key.
-func newWorkUnit(key []byte, serverMetrics *metrics.ServerMetrics) *WorkUnit {
+// newWorkUnit creates a new WorkUnit and initializes values by unmarshaling key.
+func newWorkUnit(key []byte, messageProcessor *MessageProcessor) *WorkUnit {
 	wu := &WorkUnit{
 		receivedMsgBytes: make([]byte, len(key)),
 		receivedFrom:     make([]*Protocol, 0),
-		serverMetrics:    serverMetrics,
+		messageProcessor: messageProcessor,
 	}
 	copy(wu.receivedMsgBytes, key)
 	return wu
@@ -50,12 +47,12 @@ type WorkUnit struct {
 	objectstorage.StorableObjectFlags
 	processingLock syncutils.Mutex
 
-	serverMetrics *metrics.ServerMetrics
+	messageProcessor *MessageProcessor
 
 	// data
-	dataLock         syncutils.RWMutex
 	receivedMsgBytes []byte
 	msg              *storage.Message
+	requested        bool
 
 	// status
 	stateLock syncutils.RWMutex
@@ -67,7 +64,7 @@ type WorkUnit struct {
 }
 
 func (wu *WorkUnit) Update(_ objectstorage.StorableObject) {
-	panic("WorkUnit should never be updated")
+	// do nothing, since the object is identical (consists of key only)
 }
 
 func (wu *WorkUnit) ObjectStorageKey() []byte {
@@ -96,7 +93,7 @@ func (wu *WorkUnit) Is(state WorkUnitState) bool {
 // adds a Request for the given peer to this WorkUnit.
 // requestedMessageID can be nil to flag that this request just reflects a receive from the given
 // peer and has no associated request.
-func (wu *WorkUnit) addReceivedFrom(p *Protocol, requestedMessageID *hornet.MessageID) {
+func (wu *WorkUnit) addReceivedFrom(p *Protocol, requestedMessageID hornet.MessageID) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	wu.receivedFrom = append(wu.receivedFrom, p)
@@ -105,14 +102,14 @@ func (wu *WorkUnit) addReceivedFrom(p *Protocol, requestedMessageID *hornet.Mess
 // punishes, respectively increases the invalid message metric of all peers
 // which sent the given underlying message of this WorkUnit.
 // it also closes the connection to these peers.
-func (wu *WorkUnit) punish(mng *p2p.Manager, reason error) {
+func (wu *WorkUnit) punish(reason error) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	for _, p := range wu.receivedFrom {
-		wu.serverMetrics.InvalidMessages.Inc()
+		wu.messageProcessor.serverMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		_ = mng.DisconnectPeer(p.PeerID, errors.WithMessagef(reason, "peer was punished"))
+		_ = wu.messageProcessor.ps.DisconnectPeer(p.PeerID, errors.WithMessagef(reason, "peer was punished"))
 	}
 }
 
@@ -140,7 +137,7 @@ func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *Protocol) {
 		if p.PeerID == excludedPeer.PeerID {
 			continue
 		}
-		wu.serverMetrics.KnownMessages.Inc()
+		wu.messageProcessor.serverMetrics.KnownMessages.Inc()
 		p.Metrics.KnownMessages.Inc()
 	}
 }

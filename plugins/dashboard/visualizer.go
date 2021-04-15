@@ -1,8 +1,6 @@
 package dashboard
 
 import (
-	"github.com/iotaledger/hive.go/events"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -11,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	coordinatorPlugin "github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/events"
 )
 
 const (
@@ -19,13 +18,12 @@ const (
 
 // vertex defines a vertex in a DAG.
 type vertex struct {
-	ID               string `json:"id"`
-	Parent1MessageID string `json:"parent1_id"`
-	Parent2MessageID string `json:"parent2_2"`
-	IsSolid          bool   `json:"is_solid"`
-	IsReferenced     bool   `json:"is_referenced"`
-	IsMilestone      bool   `json:"is_milestone"`
-	IsTip            bool   `json:"is_tip"`
+	ID           string   `json:"id"`
+	Parents      []string `json:"parents"`
+	IsSolid      bool     `json:"is_solid"`
+	IsReferenced bool     `json:"is_referenced"`
+	IsMilestone  bool     `json:"is_milestone"`
+	IsTip        bool     `json:"is_tip"`
 }
 
 // metainfo signals that metadata of a given message changed.
@@ -47,23 +45,27 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
 		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // msg -1
-			if !deps.Storage.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeAlmostSynced() {
 				return
+			}
+
+			parentsHex := make([]string, len(msg.GetParents()))
+			for i, parent := range msg.GetParents() {
+				parentsHex[i] = parent.ToHex()[:VisualizerIdLength]
 			}
 
 			hub.BroadcastMsg(
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:               msg.GetMessageID().Hex(),
-						Parent1MessageID: msg.GetParent1MessageID().Hex()[:VisualizerIdLength],
-						Parent2MessageID: msg.GetParent2MessageID().Hex()[:VisualizerIdLength],
-						IsSolid:          metadata.IsSolid(),
-						IsReferenced:     metadata.IsReferenced(),
-						IsMilestone:      false,
-						IsTip:            false,
+						ID:           msg.GetMessageID().ToHex(),
+						Parents:      parentsHex,
+						IsSolid:      metadata.IsSolid(),
+						IsReferenced: metadata.IsReferenced(),
+						IsMilestone:  false,
+						IsTip:        false,
 					},
 				},
 			)
@@ -73,7 +75,7 @@ func runVisualizer() {
 	onMessageSolid := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
 		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 
-			if !deps.Storage.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeAlmostSynced() {
 				return
 			}
 
@@ -81,7 +83,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: cachedMsgMeta.GetMetadata().GetMessageID().Hex()[:VisualizerIdLength],
+						ID: cachedMsgMeta.GetMetadata().GetMessageID().ToHex()[:VisualizerIdLength],
 					},
 				},
 			)
@@ -91,7 +93,7 @@ func runVisualizer() {
 	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
 		defer cachedMilestone.Release(true) // milestone -1
 
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -99,15 +101,15 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: cachedMilestone.GetMilestone().MessageID.Hex()[:VisualizerIdLength],
+					ID: cachedMilestone.GetMilestone().MessageID.ToHex()[:VisualizerIdLength],
 				},
 			},
 		)
 	})
 
 	// show checkpoints as milestones in the coordinator node
-	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID *hornet.MessageID) {
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.MessageID) {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -115,27 +117,27 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: messageID.Hex()[:VisualizerIdLength],
+					ID: messageID.ToHex()[:VisualizerIdLength],
 				},
 			},
 		)
 	})
 
 	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
-		var excludedIDs []string
-		for _, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
-			excludedIDs = append(excludedIDs, messageID.MessageID.Hex()[:VisualizerIdLength])
+		excludedIDs := make([]string, len(confirmation.Mutations.MessagesExcludedWithConflictingTransactions))
+		for i, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
+			excludedIDs[i] = messageID.MessageID.ToHex()[:VisualizerIdLength]
 		}
 
 		hub.BroadcastMsg(
 			&Msg{
 				Type: MsgTypeConfirmedInfo,
 				Data: &confirmationinfo{
-					ID:          confirmation.MilestoneMessageID.Hex()[:VisualizerIdLength],
+					ID:          confirmation.MilestoneMessageID.ToHex()[:VisualizerIdLength],
 					ExcludedIDs: excludedIDs,
 				},
 			},
@@ -143,7 +145,7 @@ func runVisualizer() {
 	})
 
 	onTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -151,7 +153,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.Hex()[:VisualizerIdLength],
+					ID:    tip.MessageID.ToHex()[:VisualizerIdLength],
 					IsTip: true,
 				},
 			},
@@ -159,7 +161,7 @@ func runVisualizer() {
 	})
 
 	onTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -167,7 +169,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.Hex()[:VisualizerIdLength],
+					ID:    tip.MessageID.ToHex()[:VisualizerIdLength],
 					IsTip: false,
 				},
 			},

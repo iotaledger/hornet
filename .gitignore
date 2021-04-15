@@ -26,14 +26,12 @@ dist/
 alphanetdb*/
 comnetdb*/
 devnetdb*/
+testnetdb*/
 mainnetdb*/
 p2pstore*/
 
 # snapshot dir
 snapshots/
-
-# other dirs
-scripts/
 
 # log files
 hornet.log
@@ -43,3 +41,6 @@ integration-tests/logs/*.profile
 
 # coordinator files
 coordinator.state
+
+# Docs
+book

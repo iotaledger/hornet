@@ -6,20 +6,26 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go"
-
-	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/iotaledger/hive.go/marshalutil"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
+
+const (
+	OutputIDLength = iotago.TransactionIDLength + iotago.UInt16ByteSize
+)
+
+var FakeTreasuryAddress = iotago.Ed25519Address{}
 
 type Output struct {
 	kvStorable
 
 	outputID   *iotago.UTXOInputID
-	messageID  *hornet.MessageID
+	messageID  hornet.MessageID
 	outputType iotago.OutputType
-	address    *iotago.Ed25519Address
+	address    iotago.Address
 	amount     uint64
 }
 
@@ -27,14 +33,7 @@ func (o *Output) OutputID() *iotago.UTXOInputID {
 	return o.outputID
 }
 
-func (o *Output) UTXOInput() *iotago.UTXOInput {
-	input := &iotago.UTXOInput{}
-	copy(input.TransactionID[:], o.outputID[:iotago.TransactionIDLength])
-	input.TransactionOutputIndex = binary.LittleEndian.Uint16(o.outputID[iotago.TransactionIDLength : iotago.TransactionIDLength+2])
-	return input
-}
-
-func (o *Output) MessageID() *hornet.MessageID {
+func (o *Output) MessageID() hornet.MessageID {
 	return o.messageID
 }
 
@@ -42,12 +41,25 @@ func (o *Output) OutputType() iotago.OutputType {
 	return o.outputType
 }
 
-func (o *Output) Address() *iotago.Ed25519Address {
+func (o *Output) Address() iotago.Address {
 	return o.address
 }
 
 func (o *Output) Amount() uint64 {
 	return o.amount
+}
+
+func (o *Output) addressBytes() []byte {
+	// This never throws an error for current Ed25519 addresses
+	bytes, _ := o.address.Serialize(iotago.DeSeriModeNoValidation)
+	return bytes
+}
+
+func (o *Output) UTXOInput() *iotago.UTXOInput {
+	input := &iotago.UTXOInput{}
+	copy(input.TransactionID[:], o.outputID[:iotago.TransactionIDLength])
+	input.TransactionOutputIndex = binary.LittleEndian.Uint16(o.outputID[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize])
+	return input
 }
 
 type Outputs []*Output
@@ -78,7 +90,7 @@ func (o Outputs) InputToOutputMapping() (iotago.InputToOutputMapping, error) {
 	return mapping, nil
 }
 
-func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, outputType iotago.OutputType, address *iotago.Ed25519Address, amount uint64) *Output {
+func CreateOutput(outputID *iotago.UTXOInputID, messageID hornet.MessageID, outputType iotago.OutputType, address iotago.Address, amount uint64) *Output {
 	return &Output{
 		outputID:   outputID,
 		messageID:  messageID,
@@ -88,7 +100,7 @@ func GetOutput(outputID *iotago.UTXOInputID, messageID *hornet.MessageID, output
 	}
 }
 
-func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	var output iotago.Output
 	switch unsignedTx := transaction.Essence.(type) {
@@ -103,7 +115,7 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, ind
 		case *iotago.SigLockedDustAllowanceOutput:
 			output = out
 		default:
-			return nil, errors.New("unsuported output type")
+			return nil, errors.New("unsupported output type")
 		}
 	default:
 		return nil, errors.New("unsupported transaction type")
@@ -138,90 +150,128 @@ func NewOutput(messageID *hornet.MessageID, transaction *iotago.Transaction, ind
 		return nil, err
 	}
 
-	return &Output{
-		outputID:   &outputID,
-		messageID:  messageID,
-		outputType: output.Type(),
-		address:    address,
-		amount:     amount,
-	}, nil
+	return CreateOutput(&outputID, messageID, output.Type(), address, amount), nil
 }
 
-func (o *Output) UTXOKey() (key []byte) {
-	return byteutils.ConcatBytes(o.address[:], o.outputID[:])
-}
+//- kvStorable
 
 func (o *Output) kvStorableKey() (key []byte) {
-	return o.outputID[:]
+	ms := marshalutil.New(35)
+	ms.WriteByte(UTXOStoreKeyPrefixOutput)
+	ms.WriteBytes(o.outputID[:])
+	return ms.Bytes()
 }
 
 func (o *Output) kvStorableValue() (value []byte) {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, o.amount)
-	return byteutils.ConcatBytes(o.messageID.Slice(), []byte{o.outputType}, o.address[:], bytes)
+	ms := marshalutil.New(74)
+	ms.WriteBytes(o.messageID)
+	ms.WriteByte(o.outputType)
+	ms.WriteBytes(o.addressBytes())
+	ms.WriteUint64(o.amount)
+	return ms.Bytes()
 }
 
-func (o *Output) kvStorableLoad(key []byte, value []byte) error {
+func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 
-	expectedKeyLength := iotago.TransactionIDLength + iotago.UInt16ByteSize
+	// Parse key
+	keyUtil := marshalutil.New(key)
 
-	if len(key) < expectedKeyLength {
-		return fmt.Errorf("not enough bytes in key to unmarshal object, expected: %d, got: %d", expectedKeyLength, len(key))
+	// Read prefix output
+	_, err := keyUtil.ReadByte()
+	if err != nil {
+		return err
 	}
 
-	expectedValueLength := iotago.MessageIDLength + iotago.OneByte + iotago.Ed25519AddressBytesLength + iotago.UInt64ByteSize
-
-	if len(value) < expectedValueLength {
-		return fmt.Errorf("not enough bytes in value to unmarshal object, expected: %d, got: %d", expectedValueLength, len(value))
+	// Read OutputID
+	if o.outputID, err = parseOutputID(keyUtil); err != nil {
+		return err
 	}
 
-	o.outputID = &iotago.UTXOInputID{}
-	copy(o.outputID[:], key[:iotago.TransactionIDLength+iotago.UInt16ByteSize])
-	o.messageID = hornet.MessageIDFromBytes(value[:iotago.MessageIDLength])
-	o.outputType = value[iotago.MessageIDLength]
+	// Parse value
+	valueUtil := marshalutil.New(value)
 
-	o.address = &iotago.Ed25519Address{}
-	copy(o.address[:], value[iotago.MessageIDLength+iotago.OneByte:iotago.MessageIDLength+iotago.OneByte+iotago.Ed25519AddressBytesLength])
-	o.amount = binary.LittleEndian.Uint64(value[iotago.MessageIDLength+iotago.OneByte+iotago.Ed25519AddressBytesLength : iotago.MessageIDLength+iotago.OneByte+iotago.Ed25519AddressBytesLength+iotago.UInt64ByteSize])
+	// Read MessageID
+	if o.messageID, err = parseMessageID(valueUtil); err != nil {
+		return err
+	}
+
+	// Read OutputType
+	o.outputType, err = valueUtil.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	// Read Address
+	if o.address, err = parseAddress(valueUtil); err != nil {
+		return err
+	}
+
+	// Read Amount
+	o.amount, err = valueUtil.ReadUint64()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
+//- Helper
+
 func storeOutput(output *Output, mutations kvstore.BatchedMutations) error {
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey())
-	return mutations.Set(key, output.kvStorableValue())
+	return mutations.Set(output.kvStorableKey(), output.kvStorableValue())
 }
 
 func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
-	return mutations.Delete(byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, output.kvStorableKey()))
+	return mutations.Delete(output.kvStorableKey())
 }
 
-func (u *Manager) ForEachOutputWithoutLocking(consumer OutputConsumer) error {
+//- Manager
+
+func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+
+	opt := iterateOptions(options)
+
+	if opt.readLockLedger {
+		u.ReadLockLedger()
+		defer u.ReadUnlockLedger()
+	}
+
+	consumerFunc := consumer
+
+	if opt.filterOutputType != nil {
+
+		filterType := *opt.filterOutputType
+
+		consumerFunc = func(output *Output) bool {
+			if output.OutputType() == filterType {
+				return consumer(output)
+			}
+			return true
+		}
+	}
 
 	var innerErr error
-
+	var i int
 	if err := u.utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixOutput}, func(key kvstore.Key, value kvstore.Value) bool {
 
+		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
+			return false
+		}
+
+		i++
+
 		output := &Output{}
-		if err := output.kvStorableLoad(key[1:], value); err != nil {
+		if err := output.kvStorableLoad(u, key, value); err != nil {
 			innerErr = err
 			return false
 		}
 
-		return consumer(output)
+		return consumerFunc(output)
 	}); err != nil {
 		return err
 	}
 
 	return innerErr
-}
-
-func (u *Manager) ForEachOutput(consumer OutputConsumer) error {
-
-	u.ReadLockLedger()
-	defer u.ReadUnlockLedger()
-
-	return u.ForEachOutputWithoutLocking(consumer)
 }
 
 func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Output, error) {
@@ -233,7 +283,7 @@ func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputI
 	}
 
 	output := &Output{}
-	if err := output.kvStorableLoad(key[1:], value); err != nil {
+	if err := output.kvStorableLoad(u, key, value); err != nil {
 		return nil, err
 	}
 	return output, nil

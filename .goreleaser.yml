@@ -12,12 +12,8 @@ builds:
   # Linux AMD64
   - id: hornet-linux-amd64
     binary: hornet
-    env:
-      - CGO_ENABLED=1
     ldflags:
       - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
-    flags:
-      - -tags=pow_avx
     main: main.go
     goos:
       - linux
@@ -32,8 +28,6 @@ builds:
     ldflags:
       - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
       - -w -extldflags "-static"
-    flags:
-      - -tags=pow_arm_c128
     main: main.go
     goos:
       - linux
@@ -48,8 +42,6 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
     ldflags:
       - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
-    flags:
-      - -tags=pow_avx
     main: main.go
     goos:
       - windows
@@ -76,7 +68,7 @@ dockers:
     image_templates:
       - "gohornet/hornet:latest"
       - "gohornet/hornet:{{ .Tag }}"
-    binaries:
+    ids:
       - hornet
     dockerfile: docker/Dockerfile.goreleaser
     skip_push: auto
@@ -118,15 +110,34 @@ nfpms:
       - deb
       - rpm
     bindir: /usr/bin
-    files:
-      "nfpm/shared_files/hornet.service": "/lib/systemd/system/hornet.service"
-    config_files:
-      "config.json": "/var/lib/hornet/config.json"
-      "config_comnet.json": "/var/lib/hornet/config_comnet.json"
-      "config_devnet.json": "/var/lib/hornet/config_devnet.json"
-      "peering.json": "/var/lib/hornet/peering.json"
-      "profiles.json": "/var/lib/hornet/profiles.json"
-      "nfpm/shared_files/hornet.env": "/etc/default/hornet"
+    contents:
+      - src: "nfpm/shared_files/hornet.service"
+        dst: "/lib/systemd/system/hornet.service"
+
+      - src: "config.json"
+        dst: "/var/lib/hornet/config.json"
+        type: config
+
+      - src: "config_comnet.json"
+        dst: "/var/lib/hornet/config_comnet.json"
+        type: config
+
+      - src: "config_devnet.json"
+        dst: "/var/lib/hornet/config_devnet.json"
+        type: config
+
+      - src: "peering.json"
+        dst: "/var/lib/hornet/peering.json"
+        type: config
+
+      - src: "profiles.json"
+        dst: "/var/lib/hornet/profiles.json"
+        type: config
+
+      - src: "nfpm/shared_files/hornet.env"
+        dst: "/etc/default/hornet"
+        type: config
+
     dependencies:
       - systemd
       - wget

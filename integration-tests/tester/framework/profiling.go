@@ -12,11 +12,10 @@ import (
 	"github.com/go-echarts/go-echarts/charts"
 	"github.com/gorilla/websocket"
 
-	"github.com/iotaledger/hive.go/websockethub"
-
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/iotaledger/hive.go/websockethub"
 )
 
 const (

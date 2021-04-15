@@ -1,47 +1,46 @@
 package v1
 
 import (
-	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/labstack/echo/v4"
+	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 
-	"github.com/labstack/echo/v4"
-	"github.com/libp2p/go-libp2p-core/peer"
-
 	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
-func wrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *peerResponse {
+// Wraps the given peer info snapshot with additional metadata, such as gossip protocol information.
+func WrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *PeerResponse {
 	var alias *string
 
 	if info.Alias != "" {
 		alias = &info.Alias
 	}
 
-	multiAddresses := []string{}
-
-	for _, multiAddress := range info.Addresses {
-		multiAddresses = append(multiAddresses, multiAddress.String())
+	multiAddresses := make([]string, len(info.Addresses))
+	for i, multiAddress := range info.Addresses {
+		multiAddresses[i] = multiAddress.String()
 	}
 
 	gossipProto := deps.Service.Protocol(info.Peer.ID)
-	var gossipMetrics gossip.MetricsSnapshot
+	var gossipInfo *gossip.Info
 	if gossipProto != nil {
-		gossipMetrics = gossipProto.Metrics.Snapshot()
+		gossipInfo = gossipProto.Info()
 	}
 
-	return &peerResponse{
+	return &PeerResponse{
 		ID:             info.ID,
 		MultiAddresses: multiAddresses,
 		Alias:          alias,
 		Relation:       info.Relation,
 		Connected:      info.Connected,
-		GossipMetrics:  gossipMetrics,
+		Gossip:         gossipInfo,
 	}
 }
 
-func getPeer(c echo.Context) (*peerResponse, error) {
+func getPeer(c echo.Context) (*PeerResponse, error) {
 	peerID, err := peer.Decode(c.Param(ParameterPeerID))
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
@@ -49,10 +48,10 @@ func getPeer(c echo.Context) (*peerResponse, error) {
 
 	info := deps.Manager.PeerInfoSnapshot(peerID)
 	if info == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "peer not found, peerID: %s", peerID.String())
+		return nil, errors.WithMessagef(echo.ErrNotFound, "peer not found, peerID: %s", peerID.String())
 	}
 
-	return wrapInfoSnapshot(info), nil
+	return WrapInfoSnapshot(info), nil
 }
 
 func removePeer(c echo.Context) error {
@@ -60,20 +59,22 @@ func removePeer(c echo.Context) error {
 	if err != nil {
 		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
+
+	deps.PeeringConfigManager.RemovePeer(peerID)
+
 	return deps.Manager.DisconnectPeer(peerID, errors.New("peer was removed via API"))
 }
 
-func listPeers(c echo.Context) ([]*peerResponse, error) {
-	var results []*peerResponse
-
-	for _, info := range deps.Manager.PeerInfoSnapshots() {
-		results = append(results, wrapInfoSnapshot(info))
+func listPeers(c echo.Context) ([]*PeerResponse, error) {
+	peerInfos := deps.Manager.PeerInfoSnapshots()
+	results := make([]*PeerResponse, len(peerInfos))
+	for i, info := range peerInfos {
+		results[i] = WrapInfoSnapshot(info)
 	}
-
 	return results, nil
 }
 
-func addPeer(c echo.Context) (*peerResponse, error) {
+func addPeer(c echo.Context) (*PeerResponse, error) {
 
 	request := &addPeerRequest{}
 
@@ -101,8 +102,10 @@ func addPeer(c echo.Context) (*peerResponse, error) {
 
 	info := deps.Manager.PeerInfoSnapshot(addrInfo.ID)
 	if info == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "peer not found, peerID: %s", addrInfo.ID.String())
+		return nil, errors.WithMessagef(echo.ErrNotFound, "peer not found, peerID: %s", addrInfo.ID.String())
 	}
 
-	return wrapInfoSnapshot(info), nil
+	deps.PeeringConfigManager.AddPeer(multiAddr, alias)
+
+	return WrapInfoSnapshot(info), nil
 }

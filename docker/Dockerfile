@@ -4,6 +4,8 @@ ARG REPO="gohornet/hornet"
 ARG TAG=latest
 ARG ARCH=x86_64
 ARG OS=Linux
+ARG SET_UID=39999
+ARG SET_GID=39999
 
 LABEL org.label-schema.description="HORNET - The IOTA community node"
 LABEL org.label-schema.name="gohornet/hornet"
@@ -31,8 +33,8 @@ RUN apk --no-cache add ca-certificates curl jq tini tar\
       apk add glibc-2.30-r0.apk;\
       rm glibc-2.30-r0.apk;\
     fi\
- && addgroup --gid 39999 hornet\
- && adduser -h /app -s /bin/sh -G hornet -u 39999 -D hornet\
+ && addgroup --gid $SET_GID hornet\
+ && adduser -h /app -s /bin/sh -G hornet -u $SET_UID -D hornet\
  && chmod +x /app/hornet\
  && chown hornet:hornet -R /app\
  && rm /tmp/hornet.tgz\

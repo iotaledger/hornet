@@ -1,10 +1,8 @@
 package gossip
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -18,19 +16,26 @@ type RequesterOptions struct {
 	DiscardRequestsOlderThan time.Duration
 }
 
+// applies the given RequesterOption.
+func (ro *RequesterOptions) apply(opts ...RequesterOption) {
+	for _, opt := range opts {
+		opt(ro)
+	}
+}
+
 // RequestBackPressureFunc is a function which tells the Requester
 // to stop requesting more data.
 type RequestBackPressureFunc func() bool
 
 var defaultRequesterOpts = []RequesterOption{
 	WithRequesterDiscardRequestsOlderThan(10 * time.Second),
-	WithRequesterPendingRequestReEnqueueInterval(1500 * time.Millisecond),
+	WithRequesterPendingRequestReEnqueueInterval(5 * time.Second),
 }
 
 // RequesterOption is a function which sets an option on a RequesterOptions instance.
 type RequesterOption func(options *RequesterOptions)
 
-// WithRequesterPendingRequestReEnqueueInterval sets the threshold for the max age of requests.
+// WithRequesterDiscardRequestsOlderThan sets the threshold for the max age of requests.
 func WithRequesterDiscardRequestsOlderThan(dur time.Duration) RequesterOption {
 	return func(options *RequesterOptions) {
 		options.DiscardRequestsOlderThan = dur
@@ -46,13 +51,11 @@ func WithRequesterPendingRequestReEnqueueInterval(dur time.Duration) RequesterOp
 
 // NewRequester creates a new Requester.
 func NewRequester(service *Service, rQueue RequestQueue, storage *storage.Storage, opts ...RequesterOption) *Requester {
-	reqOpts := RequesterOptions{}
-	for _, opt := range defaultRequesterOpts {
-		opt(&reqOpts)
-	}
-	for _, opt := range opts {
-		opt(&reqOpts)
-	}
+
+	reqOpts := &RequesterOptions{}
+	reqOpts.apply(defaultRequesterOpts...)
+	reqOpts.apply(opts...)
+
 	return &Requester{
 		service:     service,
 		rQueue:      rQueue,
@@ -68,7 +71,7 @@ type Requester struct {
 	service     *Service
 	rQueue      RequestQueue
 	storage     *storage.Storage
-	opts        RequesterOptions
+	opts        *RequesterOptions
 	backPFuncs  []RequestBackPressureFunc
 	drainSignal chan struct{}
 }
@@ -183,7 +186,7 @@ func (r *Requester) AddBackPressureFunc(pressureFunc RequestBackPressureFunc) {
 
 // Request enqueues a request to the request queue for the given message if it isn't a solid entry point
 // and is not contained in the database already.
-func (r *Requester) Request(messageID *hornet.MessageID, msIndex milestone.Index, preventDiscard ...bool) bool {
+func (r *Requester) Request(messageID hornet.MessageID, msIndex milestone.Index, preventDiscard ...bool) bool {
 	if r.storage.SolidEntryPointsContain(messageID) {
 		return false
 	}
@@ -221,9 +224,8 @@ func (r *Requester) RequestParents(cachedMsg *storage.CachedMessage, msIndex mil
 			return
 		}
 
-		r.Request(metadata.GetParent1MessageID(), msIndex, preventDiscard...)
-		if *metadata.GetParent1MessageID() != *metadata.GetParent2MessageID() {
-			r.Request(metadata.GetParent2MessageID(), msIndex, preventDiscard...)
+		for _, parent := range metadata.GetParents() {
+			r.Request(parent, msIndex, preventDiscard...)
 		}
 	})
 }
@@ -242,55 +244,13 @@ func (r *Requester) RequestMilestoneParents(cachedMilestone *storage.CachedMiles
 	defer cachedMilestoneMsgMeta.Release(true) // meta -1
 
 	txMeta := cachedMilestoneMsgMeta.GetMetadata()
-	enqueued := r.Request(txMeta.GetParent1MessageID(), msIndex, true)
-	if *txMeta.GetParent1MessageID() != *txMeta.GetParent2MessageID() {
-		enqueuedTwo := r.Request(txMeta.GetParent2MessageID(), msIndex, true)
-		if !enqueued && enqueuedTwo {
+
+	enqueued := false
+	for _, parent := range txMeta.GetParents() {
+		if r.Request(parent, msIndex, true) {
 			enqueued = true
 		}
 	}
 
 	return enqueued
-}
-
-// MemoizedRequestMissingMilestoneParents returns a function which traverses the parents
-// of a given milestone and requests each missing parent. As a special property, invocations
-// of the yielded function share the same 'already traversed' set to circumvent requesting
-// the same parents multiple times.
-func (r *Requester) MemoizedRequestMissingMilestoneParents(preventDiscard ...bool) func(ms milestone.Index) {
-	traversed := map[string]struct{}{}
-	return func(ms milestone.Index) {
-
-		cachedMs := r.storage.GetCachedMilestoneOrNil(ms) // milestone +1
-		if cachedMs == nil {
-			panic(fmt.Sprintf("milestone %d wasn't found", ms))
-		}
-
-		milestoneMessageID := cachedMs.GetMilestone().MessageID
-		cachedMs.Release(true) // message -1
-
-		_ = dag.TraverseParents(r.storage, milestoneMessageID,
-			// traversal stops if no more messages pass the given condition
-			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
-				_, previouslyTraversed := traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()]
-				return !cachedMsgMeta.GetMetadata().IsSolid() && !previouslyTraversed, nil
-			},
-			// consumer
-			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
-				traversed[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = struct{}{}
-				return nil
-			},
-			// called on missing parents
-			func(parentMessageID *hornet.MessageID) error {
-				r.Request(parentMessageID, ms, preventDiscard...)
-				return nil
-			},
-			// called on solid entry points
-			// Ignore solid entry points (snapshot milestone included)
-			nil,
-			false, nil)
-	}
 }

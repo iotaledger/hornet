@@ -3,9 +3,8 @@ package storage
 import (
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/kvstore"
-
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/iotaledger/hive.go/kvstore"
 )
 
 const (
@@ -22,6 +21,7 @@ func (s *Storage) MarkDatabaseCorrupted() {
 	if err := s.healthStore.Set([]byte("dbCorrupted"), []byte{}); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
+	s.healthStore.Flush()
 }
 
 func (s *Storage) MarkDatabaseTainted() {
@@ -29,6 +29,7 @@ func (s *Storage) MarkDatabaseTainted() {
 	if err := s.healthStore.Set([]byte("dbTainted"), []byte{}); err != nil {
 		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
 	}
+	s.healthStore.Flush()
 }
 
 func (s *Storage) MarkDatabaseHealthy() {
@@ -58,7 +59,7 @@ func (s *Storage) IsDatabaseTainted() bool {
 
 func (s *Storage) setDatabaseVersion() {
 	_, err := s.healthStore.Get([]byte("dbVersion"))
-	if err == kvstore.ErrKeyNotFound {
+	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// Only create the entry, if it doesn't exist already (fresh database)
 		if err := s.healthStore.Set([]byte("dbVersion"), []byte{DbVersion}); err != nil {
 			panic(errors.Wrap(NewDatabaseError(err), "failed to set database version"))

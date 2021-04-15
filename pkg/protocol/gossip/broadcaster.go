@@ -7,12 +7,12 @@ import (
 )
 
 // NewBroadcaster creates a new Broadcaster.
-func NewBroadcaster(service *Service, manager *p2p.Manager, storage *storage.Storage) *Broadcaster {
+func NewBroadcaster(service *Service, manager *p2p.Manager, storage *storage.Storage, broadcastQueueSize int) *Broadcaster {
 	return &Broadcaster{
 		service: service,
 		manager: manager,
 		storage: storage,
-		queue:   make(chan *Broadcast),
+		queue:   make(chan *Broadcast, broadcastQueueSize),
 	}
 }
 
@@ -56,11 +56,12 @@ func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
 		return
 	}
 
-	latestMilestoneIndex := b.storage.GetSolidMilestoneIndex()
+	confirmedMilestoneIndex := b.storage.GetConfirmedMilestoneIndex() // bee differentiates between solid and confirmed milestone, for hornet it is the same.
 	connectedCount := b.manager.ConnectedCount(p2p.PeerRelationKnown)
-	syncedCount := b.service.SynchronizedCount(latestMilestoneIndex)
+	syncedCount := b.service.SynchronizedCount(confirmedMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
-	heartbeatMsg, _ := NewHeartbeatMsg(latestMilestoneIndex, snapshotInfo.PruningIndex, b.storage.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+
+	heartbeatMsg, _ := NewHeartbeatMsg(confirmedMilestoneIndex, snapshotInfo.PruningIndex, b.storage.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
 
 	b.service.ForEach(func(proto *Protocol) bool {
 		if filter != nil && !filter(proto) {
@@ -71,13 +72,13 @@ func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
 	})
 }
 
-// BroadcastMilestoneRequests broadcasts up to N requests for milestones nearest to the current solid milestone index
+// BroadcastMilestoneRequests broadcasts up to N requests for milestones nearest to the current confirmed milestone index
 // to every connected peer. Returns the number of milestones requested.
 func (b *Broadcaster) BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange func(index milestone.Index), from ...milestone.Index) int {
 	var requested int
 
 	// make sure we only request what we don't have
-	startingPoint := b.storage.GetSolidMilestoneIndex()
+	startingPoint := b.storage.GetConfirmedMilestoneIndex()
 	if len(from) > 0 {
 		startingPoint = from[0]
 	}

@@ -5,16 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
-
-	"github.com/iotaledger/hive.go/byteutils"
-	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/objectstorage"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hive.go/byteutils"
+	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/objectstorage"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func databaseKeyForMilestoneIndex(milestoneIndex milestone.Index) []byte {
@@ -30,7 +28,7 @@ func milestoneIndexFromDatabaseKey(key []byte) milestone.Index {
 func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	return &Milestone{
 		Index:     milestoneIndexFromDatabaseKey(key),
-		MessageID: hornet.MessageIDFromBytes(data[:iotago.MessageIDLength]),
+		MessageID: hornet.MessageIDFromSlice(data[:iotago.MessageIDLength]),
 		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MessageIDLength:iotago.MessageIDLength+iotago.UInt64ByteSize])), 0),
 	}, nil
 }
@@ -41,16 +39,20 @@ func (s *Storage) GetMilestoneStorageSize() int {
 
 func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
+	cacheTime, _ := time.ParseDuration(opts.CacheTime)
+	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+
 	s.milestoneStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixMilestones}),
 		milestoneFactory,
-		objectstorage.CacheTime(time.Duration(opts.CacheTimeMs)*time.Millisecond),
+		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
+		objectstorage.ReleaseExecutorWorkerCount(opts.ReleaseExecutorWorkerCount),
 		objectstorage.StoreOnCreation(true),
 		objectstorage.LeakDetectionEnabled(opts.LeakDetectionOptions.Enabled,
 			objectstorage.LeakDetectionOptions{
 				MaxConsumersPerObject: opts.LeakDetectionOptions.MaxConsumersPerObject,
-				MaxConsumerHoldTime:   time.Duration(opts.LeakDetectionOptions.MaxConsumerHoldTimeSec) * time.Second,
+				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
 }
@@ -60,14 +62,14 @@ type Milestone struct {
 	objectstorage.StorableObjectFlags
 
 	Index     milestone.Index
-	MessageID *hornet.MessageID
+	MessageID hornet.MessageID
 	Timestamp time.Time
 }
 
 // ObjectStorage interface
 
 func (ms *Milestone) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("Milestone should never be updated: %v (%d)", ms.MessageID.Hex(), ms.Index))
+	panic(fmt.Sprintf("Milestone should never be updated: %v (%d)", ms.MessageID.ToHex(), ms.Index))
 }
 
 func (ms *Milestone) ObjectStorageKey() []byte {
@@ -83,7 +85,7 @@ func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	value := make([]byte, 8)
 	binary.LittleEndian.PutUint64(value, uint64(ms.Timestamp.Unix()))
 
-	return byteutils.ConcatBytes(ms.MessageID.Slice(), value)
+	return byteutils.ConcatBytes(ms.MessageID, value)
 }
 
 // Cached Object
@@ -93,16 +95,16 @@ type CachedMilestone struct {
 
 type CachedMilestones []*CachedMilestone
 
-// msg +1
+// milestone +1
 func (c CachedMilestones) Retain() CachedMilestones {
-	cachedResult := CachedMilestones{}
-	for _, cachedMs := range c {
-		cachedResult = append(cachedResult, cachedMs.Retain())
+	cachedResult := make(CachedMilestones, len(c))
+	for i, cachedMs := range c {
+		cachedResult[i] = cachedMs.Retain()
 	}
 	return cachedResult
 }
 
-// msg -1
+// milestone -1
 func (c CachedMilestones) Release(force ...bool) {
 	for _, cachedMs := range c {
 		cachedMs.Release(force...)
@@ -129,8 +131,8 @@ func (s *Storage) GetCachedMilestoneOrNil(milestoneIndex milestone.Index) *Cache
 }
 
 // milestone +-0
-func (s *Storage) ContainsMilestone(milestoneIndex milestone.Index) bool {
-	return s.milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex))
+func (s *Storage) ContainsMilestone(milestoneIndex milestone.Index, readOptions ...ReadOption) bool {
+	return s.milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex), readOptions...)
 }
 
 // SearchLatestMilestoneIndexInStore searches the latest milestone without accessing the cache layer.
@@ -144,31 +146,34 @@ func (s *Storage) SearchLatestMilestoneIndexInStore() milestone.Index {
 		}
 
 		return true
-	}, true)
+	}, objectstorage.WithIteratorSkipCache(true))
 
 	return latestMilestoneIndex
 }
 
-// MilestoneIndexConsumer consumes the given index during looping through all milestones in the persistence layer.
+// MilestoneIndexConsumer consumes the given index during looping through all milestones.
 type MilestoneIndexConsumer func(index milestone.Index) bool
 
-// ForEachMilestoneIndex loops through all milestones in the persistence layer.
-func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, skipCache bool) {
+// ForEachMilestoneIndex loops through all milestones.
+func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, iteratorOptions ...IteratorOption) {
 	s.milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestoneIndexFromDatabaseKey(key))
-	}, skipCache)
+	}, iteratorOptions...)
 }
 
 // milestone +1
-func (s *Storage) storeMilestone(index milestone.Index, messageID *hornet.MessageID, timestamp time.Time) *CachedMilestone {
-	milestone := &Milestone{
+func (s *Storage) storeMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (cachedMilestone *CachedMilestone, newlyAdded bool) {
+
+	cachedMs, newlyAdded := s.milestoneStorage.StoreIfAbsent(&Milestone{
 		Index:     index,
 		MessageID: messageID,
 		Timestamp: timestamp,
+	})
+	if !newlyAdded {
+		return nil, false
 	}
 
-	// milestones should never exist in the database already, even with an unclean database
-	return &CachedMilestone{CachedObject: s.milestoneStorage.Store(milestone)}
+	return &CachedMilestone{CachedObject: cachedMs}, newlyAdded
 }
 
 // +-0

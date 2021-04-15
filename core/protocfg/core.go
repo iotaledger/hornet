@@ -6,12 +6,10 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-
-	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/configuration"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
@@ -42,7 +40,7 @@ func init() {
 						fs.Float64(CfgProtocolMinPoWScore, 4000, "the minimum PoW score required by the network.")
 						fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
 						fs.String(CfgProtocolNetworkIDName, "mainnet1", "the network ID on which this node operates on.")
-						fs.String(CfgProtocolBech32HRP, iotago.PrefixMainnet.String(), "the HRP which should be used for Bech32 addresses.")
+						fs.String(CfgProtocolBech32HRP, string(iotago.PrefixMainnet), "the HRP which should be used for Bech32 addresses.")
 						return fs
 					}(),
 				},
@@ -71,20 +69,18 @@ func provide(c *dig.Container) {
 		PublicKeyRanges coordinator.PublicKeyRanges
 		NetworkID       uint64               `name:"networkId"`
 		Bech32HRP       iotago.NetworkPrefix `name:"bech32HRP"`
+		MinPoWScore     float64              `name:"minPoWScore"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) protoresult {
 
-		prefix, err := iotago.ParsePrefix(deps.NodeConfig.String(CfgProtocolBech32HRP))
-		if err != nil {
-			panic(err)
-		}
-
 		res := protoresult{
-			NetworkID: iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
-			Bech32HRP: prefix,
+			NetworkID:   iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
+			Bech32HRP:   iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
+			MinPoWScore: deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
 		}
 
+		// ToDo: Change these defaults to mainnet values
 		if err := deps.NodeConfig.SetDefault(CfgProtocolPublicKeyRanges, &coordinator.PublicKeyRanges{
 			&coordinator.PublicKeyRange{Key: "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c", StartIndex: 1, EndIndex: 1000},
 			&coordinator.PublicKeyRange{Key: "f1a319ff4e909c0ac9f2771d79feceed3c3bd9fd2ee49ea6c0885c9cb3b1248c", StartIndex: 1, EndIndex: 1000},

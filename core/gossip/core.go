@@ -9,13 +9,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/timeutil"
-
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
@@ -24,6 +19,10 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/timeutil"
 )
 
 const (
@@ -86,13 +85,16 @@ func provide(c *dig.Container) {
 		Manager       *p2p.Manager
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 		NetworkID     uint64                       `name:"networkId"`
+		BelowMaxDepth int                          `name:"belowMaxDepth"`
+		MinPoWScore   float64                      `name:"minPoWScore"`
 		Profile       *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
 		return gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
-			MinPoWScore:       deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
+			MinPoWScore:       deps.MinPoWScore,
 			NetworkID:         deps.NetworkID,
+			BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 		})
 	}); err != nil {
@@ -115,8 +117,8 @@ func provide(c *dig.Container) {
 			deps.Host, deps.Manager, deps.ServerMetrics,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
 			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(CfgP2PGossipUnknownPeersLimit)),
-			gossip.WithStreamReadTimeout(time.Duration(deps.NodeConfig.Int(CfgGossipStreamReadTimeoutSec))*time.Second),
-			gossip.WithStreamWriteTimeout(time.Duration(deps.NodeConfig.Int(CfgGossipStreamWriteTimeoutSec))*time.Second),
+			gossip.WithStreamReadTimeout(deps.NodeConfig.Duration(CfgGossipStreamReadTimeout)),
+			gossip.WithStreamWriteTimeout(deps.NodeConfig.Duration(CfgGossipStreamWriteTimeout)),
 		)
 	}); err != nil {
 		panic(err)
@@ -125,12 +127,17 @@ func provide(c *dig.Container) {
 	type requesterdeps struct {
 		dig.In
 		Service      *gossip.Service
+		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
 		RequestQueue gossip.RequestQueue
 		Storage      *storage.Storage
 	}
 
 	if err := c.Provide(func(deps requesterdeps) *gossip.Requester {
-		return gossip.NewRequester(deps.Service, deps.RequestQueue, deps.Storage)
+		return gossip.NewRequester(deps.Service,
+			deps.RequestQueue,
+			deps.Storage,
+			gossip.WithRequesterDiscardRequestsOlderThan(deps.NodeConfig.Duration(CfgRequestsDiscardOlderThan)),
+			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.NodeConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
 	}); err != nil {
 		panic(err)
 	}
@@ -143,7 +150,7 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps broadcasterdeps) *gossip.Broadcaster {
-		return gossip.NewBroadcaster(deps.Service, deps.Manager, deps.Storage)
+		return gossip.NewBroadcaster(deps.Service, deps.Manager, deps.Storage, 1000)
 	}); err != nil {
 		panic(err)
 	}
@@ -193,7 +200,7 @@ func configure() {
 				syncedCount := deps.Service.SynchronizedCount(latestMilestoneIndex)
 				connectedCount := deps.Manager.ConnectedCount(p2p.PeerRelationKnown)
 				// TODO: overflow not handled for synced/connected
-				proto.SendHeartbeat(deps.Storage.GetSolidMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
+				proto.SendHeartbeat(deps.Storage.GetConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 				proto.SendLatestMilestoneRequest()
 			}
 
@@ -246,7 +253,8 @@ func run() {
 	}, shutdown.PriorityMessageProcessor)
 
 	_ = CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
-		timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
+		ticker := timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
+		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityHeartbeats)
 }
 

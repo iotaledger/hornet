@@ -1,14 +1,13 @@
 {
   "restAPI": {
-    "basicAuth": {
+    "jwtAuth": {
       "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+      "salt": "HORNET"
     },
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
       "/health",
+      "/mqtt",
       "/api/v1/info",
       "/api/v1/tips",
       "/api/v1/messages/:messageID",
@@ -16,18 +15,23 @@
       "/api/v1/messages/:messageID/raw",
       "/api/v1/messages/:messageID/children",
       "/api/v1/messages",
+      "/api/v1/transactions/:transactionID/included-message",
       "/api/v1/milestones/:milestoneIndex",
+      "/api/v1/milestones/:milestoneIndex/utxo-changes",
       "/api/v1/outputs/:outputID",
       "/api/v1/addresses/:address",
       "/api/v1/addresses/:address/outputs",
       "/api/v1/addresses/ed25519/:address",
-      "/api/v1/addresses/ed25519/:address/outputs"
+      "/api/v1/addresses/ed25519/:address/outputs",
+      "/api/v1/treasury"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",
       "::1"
     ],
     "bindAddress": "0.0.0.0:14265",
+    "powEnabled": true,
+    "powWorkerCount": 1,
     "limits": {
       "bodyLength": "1M",
       "maxResults": 1000
@@ -36,22 +40,24 @@
   "dashboard": {
     "bindAddress": "localhost:8081",
     "dev": false,
-    "basicAuth": {
-      "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+    "auth": {
+      "sessionTimeout": "72h",
+      "username": "admin",
+      "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   },
   "db": {
-    "path": "testnetdb"
+    "engine": "pebble",
+    "path": "testnetdb",
+    "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
-    "intervalSynced": 200,
-    "intervalUnsynced": 1000,
+    "interval": 200,
     "fullPath": "snapshots/testnet/full_snapshot.bin",
     "deltaPath": "snapshots/testnet/delta_snapshot.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
         "full": "https://dbfiles.testnet.chrysalis2.com/full_snapshot.bin",
@@ -61,10 +67,11 @@
   },
   "pruning": {
     "enabled": true,
-    "delay": 60480
+    "delay": 60480,
+    "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "testnet2",
+    "networkID": "testnet7",
     "bech32HRP": "atoi",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
@@ -86,9 +93,16 @@
       }
     ]
   },
+  "pow": {
+    "refreshTipsInterval": "5s"
+  },
+  "requests": {
+    "discardOlderThan": "15s",
+    "pendingReEnqueueInterval": "5s"
+  },
   "coordinator": {
     "stateFilePath": "coordinator.state",
-    "intervalSeconds": 10,
+    "interval": "10s",
     "checkpoints": {
       "maxTrackedMessages": 10000
     },
@@ -96,22 +110,51 @@
       "minHeaviestBranchUnreferencedMessagesThreshold": 20,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 2,
-      "heaviestBranchSelectionDeadlineMilliseconds": 100
+      "heaviestBranchSelectionTimeout": "100ms"
+    },
+    "signing": {
+      "provider": "local",
+      "remoteAddress": "localhost:12345"
+    },
+    "quorum": {
+      "enabled": false,
+      "groups": {},
+      "timeout": "2s"
     }
   },
+  "receipts": {
+    "backup": {
+      "enabled": false,
+      "folder": "receipts"
+    },
+    "validator": {
+      "validate": false,
+      "api": {
+        "address": "http://localhost:14265",
+        "timeout": "5s"
+      },
+      "coordinator": {
+        "address": "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",
+        "merkleTreeDepth": 18
+      }
+    }
+  },
+  "tangle": {
+    "milestoneTimeout": "30s"
+  },
   "tipsel": {
-    "maxDeltaMsgYoungestConeRootIndexToLSMI": 8,
-    "maxDeltaMsgOldestConeRootIndexToLSMI": 13,
+    "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
+    "maxDeltaMsgOldestConeRootIndexToCMI": 13,
     "belowMaxDepth": 15,
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
-      "maxReferencedTipAgeSeconds": 3,
-      "maxChildren": 2,
+      "maxReferencedTipAge": "3s",
+      "maxChildren": 30,
       "spammerTipsThreshold": 0
     },
     "semiLazy": {
       "retentionRulesTipsLimit": 20,
-      "maxReferencedTipAgeSeconds": 3,
+      "maxReferencedTipAge": "3s",
       "maxChildren": 2,
       "spammerTipsThreshold": 30
     }
@@ -119,7 +162,6 @@
   "node": {
     "alias": "Chrysalis Testnet",
     "profile": "auto",
-    "enableProofOfWork": true,
     "disablePlugins": [],
     "enablePlugins": [
       "Spammer"
@@ -138,13 +180,13 @@
     "peerStore": {
       "path": "./p2pstore"
     },
-    "reconnectIntervalSeconds": 30
+    "reconnectInterval": "30s"
   },
   "p2pdisc": {
-    "advertiseIntervalSec": 30,
+    "advertiseInterval": "30s",
     "maxDiscoveredPeerConns": 4,
     "rendezvousPoint": "between-two-vertices",
-    "routingTableRefreshPeriodSec": 60
+    "routingTableRefreshPeriod": "60s"
   },
   "logger": {
     "level": "info",
@@ -155,7 +197,7 @@
     ]
   },
   "warpsync": {
-    "advancementRange": 50
+    "advancementRange": 150
   },
   "spammer": {
     "message": "Binary is the future.",
@@ -168,7 +210,8 @@
   },
   "mqtt": {
     "bindAddress": "localhost:1883",
-    "wsPort": 1888
+    "wsPort": 1888,
+    "workerCount": 100
   },
   "profiling": {
     "bindAddress": "localhost:6060"
@@ -180,6 +223,14 @@
       "path": "target.json",
       "target": "localhost:9311"
     },
+    "databaseMetrics": true,
+    "nodeMetrics": true,
+    "gossipMetrics": true,
+    "cachesMetrics": true,
+    "restAPIMetrics": true,
+    "migrationMetrics": true,
+    "coordinatorMetrics": true,
+    "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

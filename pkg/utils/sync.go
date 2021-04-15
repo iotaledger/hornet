@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"time"
 
 	"github.com/iotaledger/hive.go/syncutils"
 )
@@ -73,25 +72,14 @@ func (se *SyncEvent) Trigger(key interface{}) {
 	delete(se.syncMap, key)
 }
 
-// WaitForChannelClosed waits until the channel is closed or the deadline is reached.
-// If the deadline was reached, the event should be deregistered afterwards to clean up memory.
-func WaitForChannelClosed(ch chan struct{}, timeout ...time.Duration) error {
-
-	if len(timeout) > 0 {
-		// wait for at most "timeout" for the channel to be closed
-		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(timeout[0]))
-		defer cancel()
-
-		// we wait either until the channel got closed or we reached the deadline
-		select {
-		case <-ch:
-			return nil
-		case <-ctx.Done():
-			return context.DeadlineExceeded
-		}
+// WaitForChannelClosed waits until the channel is closed or the context is done.
+// If the context was done, the event should be manually deregistered afterwards to clean up memory.
+func WaitForChannelClosed(ctx context.Context, ch chan struct{}) error {
+	// we wait either until the channel got closed or the context is done
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return context.DeadlineExceeded
 	}
-
-	// wait until channel is closed
-	<-ch
-	return nil
 }

@@ -1,25 +1,24 @@
 package dashboard
 
 import (
-	"encoding/hex"
 	"net/http"
 	"runtime"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/restapi"
+
+	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/pkg/jwt"
+
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/websockethub"
-
+	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
-	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -30,6 +29,11 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/websockethub"
 )
 
 func init() {
@@ -46,43 +50,9 @@ func init() {
 }
 
 const (
-	// MsgTypeSyncStatus is the type of the SyncStatus message.
-	MsgTypeSyncStatus byte = iota
-	// MsgTypeNodeStatus is the type of the NodeStatus message.
-	MsgTypeNodeStatus
-	// MsgTypeMPSMetric is the type of the messages per second (MPS) metric message.
-	MsgTypeMPSMetric
-	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
-	MsgTypeTipSelMetric
-	// MsgTypeMs is the type of the Ms message.
-	MsgTypeMs
-	// MsgTypePeerMetric is the type of the PeerMetric message.
-	MsgTypePeerMetric
-	// MsgTypeConfirmedMsMetrics is the type of the ConfirmedMsMetrics message.
-	MsgTypeConfirmedMsMetrics
-	// MsgTypeVertex is the type of the Vertex message for the visualizer.
-	MsgTypeVertex
-	// MsgTypeSolidInfo is the type of the SolidInfo message for the visualizer.
-	MsgTypeSolidInfo
-	// MsgTypeConfirmedInfo is the type of the ConfirmedInfo message for the visualizer.
-	MsgTypeConfirmedInfo
-	// MsgTypeMilestoneInfo is the type of the MilestoneInfo message for the visualizer.
-	MsgTypeMilestoneInfo
-	// MsgTypeTipInfo is the type of the TipInfo message for the visualizer.
-	MsgTypeTipInfo
-	// MsgTypeDatabaseSizeMetric is the type of the database Size message for the metrics.
-	MsgTypeDatabaseSizeMetric
-	// MsgTypeDatabaseCleanupEvent is the type of the database cleanup message for the metrics.
-	MsgTypeDatabaseCleanupEvent
-	// MsgTypeSpamMetrics is the type of the SpamMetric message.
-	MsgTypeSpamMetrics
-	// MsgTypeAvgSpamMetrics is the type of the AvgSpamMetric message.
-	MsgTypeAvgSpamMetrics
-)
-
-const (
-	broadcastQueueSize    = 20000
-	clientSendChannelSize = 1000
+	broadcastQueueSize      = 20000
+	clientSendChannelSize   = 1000
+	maxWebsocketMessageSize = 400
 )
 
 var (
@@ -97,21 +67,27 @@ var (
 	hub      *websockethub.Hub
 	upgrader *websocket.Upgrader
 
+	basicAuth *basicauth.BasicAuth
+	jwtAuth   *jwt.JWTAuth
+
 	cachedMilestoneMetrics []*tangle.ConfirmedMilestoneMetric
 )
 
 type dependencies struct {
 	dig.In
-	Storage          *storage.Storage
-	Tangle           *tangle.Tangle
-	ServerMetrics    *metrics.ServerMetrics
-	RequestQueue     gossip.RequestQueue
-	Manager          *p2p.Manager
-	MessageProcessor *gossip.MessageProcessor
-	TipSelector      *tipselect.TipSelector       `optional:"true"`
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	AppInfo          *app.AppInfo
-	Host             host.Host
+	Storage                  *storage.Storage
+	Tangle                   *tangle.Tangle
+	ServerMetrics            *metrics.ServerMetrics
+	RequestQueue             gossip.RequestQueue
+	Manager                  *p2p.Manager
+	MessageProcessor         *gossip.MessageProcessor
+	TipSelector              *tipselect.TipSelector       `optional:"true"`
+	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
+	AppInfo                  *app.AppInfo
+	Host                     host.Host
+	NodePrivateKey           crypto.PrivKey
+	DatabaseEvents           *database.Events
+	DashboardAllowedAPIRoute restapi.AllowedRoute
 }
 
 func configure() {
@@ -123,7 +99,18 @@ func configure() {
 		EnableCompression: true,
 	}
 
-	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize)
+	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
+
+	basicAuth = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
+		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
+		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt))
+
+	jwtAuth = jwt.NewJWTAuth(
+		deps.NodeConfig.String(CfgDashboardAuthUsername),
+		deps.NodeConfig.Duration(CfgDashboardAuthSessionTimeout),
+		deps.Host.ID().String(),
+		deps.NodePrivateKey,
+	)
 }
 
 func run() {
@@ -132,42 +119,6 @@ func run() {
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 
-	if deps.NodeConfig.Bool(CfgDashboardBasicAuthEnabled) {
-		// grab auth info
-		expectedUsername := deps.NodeConfig.String(CfgDashboardBasicAuthUsername)
-		if len(expectedUsername) == 0 {
-			log.Fatalf("'%s' must not be empty if dashboard basic auth is enabled", CfgDashboardBasicAuthUsername)
-		}
-
-		expectedPasswordHashHex := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordHash)
-		if len(expectedPasswordHashHex) != 64 {
-			log.Fatalf("'%s' must be 64 (hex encoded scrypt hash) in length if dashboard basic auth is enabled", CfgDashboardBasicAuthPasswordHash)
-		}
-
-		expectedPasswordHash, err := hex.DecodeString(expectedPasswordHashHex)
-		if err != nil {
-			log.Fatalf("'%s' must be hex encoded", CfgDashboardBasicAuthPasswordHash)
-		}
-
-		passwordSaltHex := deps.NodeConfig.String(CfgDashboardBasicAuthPasswordSalt)
-		passwordSalt, err := hex.DecodeString(passwordSaltHex)
-		if err != nil {
-			log.Fatalf("'%s' must be hex encoded", CfgDashboardBasicAuthPasswordSalt)
-		}
-
-		e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-			if username != expectedUsername {
-				return false, nil
-			}
-
-			if valid, _ := basicauth.VerifyPassword([]byte(password), []byte(passwordSalt), []byte(expectedPasswordHash)); !valid {
-				return false, nil
-			}
-
-			return true, nil
-		}))
-	}
-
 	setupRoutes(e)
 	bindAddr := deps.NodeConfig.String(CfgDashboardBindAddress)
 	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
@@ -175,11 +126,12 @@ func run() {
 
 	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
+		hub.BroadcastMsg(&Msg{Type: MsgTypePublicNodeStatus, Data: currentPublicNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
 	})
 
-	onSolidMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
@@ -198,13 +150,13 @@ func run() {
 	Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
 		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
-		deps.Tangle.Events.SolidMilestoneIndexChanged.Attach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-shutdownSignal
 		log.Info("Stopping Dashboard[WSSend] ...")
 		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
-		deps.Tangle.Events.SolidMilestoneIndexChanged.Detach(onSolidMilestoneIndexChanged)
+		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
@@ -223,7 +175,7 @@ func run() {
 	runSpammerMetricWorker()
 }
 
-func getMilestoneMessageID(index milestone.Index) *hornet.MessageID {
+func getMilestoneMessageID(index milestone.Index) hornet.MessageID {
 	cachedMs := deps.Storage.GetMilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
@@ -247,20 +199,24 @@ type LivefeedMilestone struct {
 
 // SyncStatus represents the node sync status.
 type SyncStatus struct {
-	LSMI milestone.Index `json:"lsmi"`
-	LMI  milestone.Index `json:"lmi"`
+	CMI milestone.Index `json:"cmi"`
+	LMI milestone.Index `json:"lmi"`
+}
+
+// PublicNodeStatus represents the public node status.
+type PublicNodeStatus struct {
+	SnapshotIndex milestone.Index `json:"snapshot_index"`
+	PruningIndex  milestone.Index `json:"pruning_index"`
+	IsHealthy     bool            `json:"is_healthy"`
+	IsSynced      bool            `json:"is_synced"`
 }
 
 // NodeStatus represents the node status.
 type NodeStatus struct {
-	SnapshotIndex          milestone.Index `json:"snapshot_index"`
-	PruningIndex           milestone.Index `json:"pruning_index"`
-	IsHealthy              bool            `json:"is_healthy"`
-	IsSynced               bool            `json:"is_synced"`
 	Version                string          `json:"version"`
 	LatestVersion          string          `json:"latest_version"`
 	Uptime                 int64           `json:"uptime"`
-	AutopeeringID          string          `json:"autopeering_id"`
+	NodeID                 string          `json:"node_id"`
 	NodeAlias              string          `json:"node_alias"`
 	ConnectedPeersCount    int             `json:"connected_peers_count"`
 	CurrentRequestedMs     milestone.Index `json:"current_requested_ms"`
@@ -307,20 +263,6 @@ type MemMetrics struct {
 	LastPauseGC  uint64 `json:"last_pause_gc"`
 }
 
-// PeerMetric represents metrics of a peer.
-type PeerMetric struct {
-	Identity         string                `json:"identity"`
-	Alias            string                `json:"alias,omitempty"`
-	OriginAddr       string                `json:"origin_addr"`
-	ConnectionOrigin network.Direction     `json:"connection_origin"`
-	ProtocolVersion  uint16                `json:"protocol_version"`
-	BytesRead        uint64                `json:"bytes_read"`
-	BytesWritten     uint64                `json:"bytes_written"`
-	Heartbeat        *gossip.Heartbeat     `json:"heartbeat"`
-	Info             *p2p.PeerInfoSnapshot `json:"info"`
-	Connected        bool                  `json:"connected"`
-}
-
 // CachesMetric represents cache metrics.
 type CachesMetric struct {
 	RequestQueue             Cache `json:"request_queue"`
@@ -335,28 +277,32 @@ type Cache struct {
 	Size int `json:"size"`
 }
 
-func peerMetrics() []*PeerMetric {
-	var stats []*PeerMetric
-	for _, info := range deps.Manager.PeerInfoSnapshots() {
-		m := &PeerMetric{
-			OriginAddr: info.Addresses[0].String(),
-			Info:       info,
-		}
-		if info.Peer != nil {
-			m.Identity = info.Peer.ID.String()
-			m.Alias = info.Alias
-			m.Connected = info.Connected
-		} else {
-			m.Identity = info.ID
-		}
-		stats = append(stats, m)
+func peerMetrics() []*restapiv1.PeerResponse {
+	peerInfos := deps.Manager.PeerInfoSnapshots()
+	results := make([]*restapiv1.PeerResponse, len(peerInfos))
+	for i, info := range peerInfos {
+		results[i] = restapiv1.WrapInfoSnapshot(info)
 	}
-
-	return stats
+	return results
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{LSMI: deps.Storage.GetSolidMilestoneIndex(), LMI: deps.Storage.GetLatestMilestoneIndex()}
+	return &SyncStatus{CMI: deps.Storage.GetConfirmedMilestoneIndex(), LMI: deps.Storage.GetLatestMilestoneIndex()}
+}
+
+func currentPublicNodeStatus() *PublicNodeStatus {
+	status := &PublicNodeStatus{}
+
+	status.IsHealthy = deps.Tangle.IsNodeHealthy()
+	status.IsSynced = deps.Storage.IsNodeAlmostSynced()
+
+	snapshotInfo := deps.Storage.GetSnapshotInfo()
+	if snapshotInfo != nil {
+		status.SnapshotIndex = snapshotInfo.SnapshotIndex
+		status.PruningIndex = snapshotInfo.PruningIndex
+	}
+
+	return status
 }
 
 func currentNodeStatus() *NodeStatus {
@@ -375,18 +321,10 @@ func currentNodeStatus() *NodeStatus {
 	status.Version = deps.AppInfo.Version
 	status.LatestVersion = deps.AppInfo.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
-	status.IsHealthy = deps.Tangle.IsNodeHealthy()
-	status.IsSynced = deps.Storage.IsNodeSyncedWithThreshold()
 	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
-	status.AutopeeringID = deps.Host.ID().String()
+	status.NodeID = deps.Host.ID().String()
 
 	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
-
-	snapshotInfo := deps.Storage.GetSnapshotInfo()
-	if snapshotInfo != nil {
-		status.SnapshotIndex = snapshotInfo.SnapshotIndex
-		status.PruningIndex = snapshotInfo.PruningIndex
-	}
 	status.CurrentRequestedMs = requestedMilestone
 	status.RequestQueueQueued = queued
 	status.RequestQueuePending = pending

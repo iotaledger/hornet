@@ -16,12 +16,13 @@ type Caches struct {
 }
 
 type CacheOpts struct {
-	CacheTimeMs          uint64             `koanf:"cacheTimeMs"`
-	LeakDetectionOptions *LeakDetectionOpts `koanf:"leakDetection"`
+	CacheTime                  string             `koanf:"cacheTime"`
+	ReleaseExecutorWorkerCount int                `koanf:"releaseExecutorWorkerCount"`
+	LeakDetectionOptions       *LeakDetectionOpts `koanf:"leakDetection"`
 }
 
 type LeakDetectionOpts struct {
-	Enabled                bool   `koanf:"enabled"`
-	MaxConsumersPerObject  int    `koanf:"maxConsumersPerObject"`
-	MaxConsumerHoldTimeSec uint64 `koanf:"maxConsumerHoldTimeSec"`
+	Enabled               bool   `koanf:"enabled"`
+	MaxConsumersPerObject int    `koanf:"maxConsumersPerObject"`
+	MaxConsumerHoldTime   string `koanf:"maxConsumerHoldTime"`
 }

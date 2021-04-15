@@ -12,9 +12,8 @@ import (
 )
 
 type ChildrenTraverser struct {
-	cachedMsgMetas map[string]*storage.CachedMetadata
-
-	storage *storage.Storage
+	storage          *storage.Storage
+	metadataMemcache *storage.MetadataMemcache
 
 	// stack holding the ordered msg to process
 	stack *list.List
@@ -22,6 +21,7 @@ type ChildrenTraverser struct {
 	// discovers map with already found messages
 	discovered map[string]struct{}
 
+	iteratorOptions       []storage.IteratorOption
 	condition             Predicate
 	consumer              Consumer
 	walkAlreadyDiscovered bool
@@ -31,51 +31,58 @@ type ChildrenTraverser struct {
 }
 
 // NewChildrenTraverser create a new traverser to traverse the children (future cone)
-func NewChildrenTraverser(storage *storage.Storage, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}) *ChildrenTraverser {
+func NewChildrenTraverser(s *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ChildrenTraverser {
 
-	return &ChildrenTraverser{
-		storage:               storage,
-		condition:             condition,
-		consumer:              consumer,
-		walkAlreadyDiscovered: walkAlreadyDiscovered,
-		abortSignal:           abortSignal,
-	}
-}
-
-func (t *ChildrenTraverser) cleanup(forceRelease bool) {
-
-	// release all msg metadata at the end
-	for _, cachedMsgMeta := range t.cachedMsgMetas {
-		cachedMsgMeta.Release(forceRelease) // meta -1
+	t := &ChildrenTraverser{
+		storage:          s,
+		metadataMemcache: storage.NewMetadataMemcache(s),
+		stack:            list.New(),
+		discovered:       make(map[string]struct{}),
 	}
 
-	// Release lock after cleanup so the traverser can be reused
-	t.traverserLock.Unlock()
+	if len(metadataMemcache) > 0 && metadataMemcache[0] != nil {
+		// use the memcache from outside to share the same cached metadata
+		t.metadataMemcache = metadataMemcache[0]
+	}
+
+	return t
 }
 
 func (t *ChildrenTraverser) reset() {
 
-	t.cachedMsgMetas = make(map[string]*storage.CachedMetadata)
 	t.discovered = make(map[string]struct{})
 	t.stack = list.New()
+}
+
+// Cleanup releases all the cached objects that have been traversed.
+// This MUST be called by the user at the end.
+func (t *ChildrenTraverser) Cleanup(forceRelease bool) {
+	t.metadataMemcache.Cleanup(forceRelease)
 }
 
 // Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(startMessageID *hornet.MessageID) error {
+func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}, iteratorOptions ...storage.IteratorOption) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
 
+	// release lock so the traverser can be reused
+	defer t.traverserLock.Unlock()
+
+	t.iteratorOptions = iteratorOptions
+	t.condition = condition
+	t.consumer = consumer
+	t.walkAlreadyDiscovered = walkAlreadyDiscovered
+	t.abortSignal = abortSignal
+
 	// Prepare for a new traversal
 	t.reset()
 
-	defer t.cleanup(true)
-
 	t.stack.PushFront(startMessageID)
 	if !t.walkAlreadyDiscovered {
-		t.discovered[startMessageID.MapKey()] = struct{}{}
+		t.discovered[startMessageID.ToMapKey()] = struct{}{}
 	}
 
 	for t.stack.Len() > 0 {
@@ -99,20 +106,15 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	// load candidate msg
 	ele := t.stack.Front()
-	currentMessageID := ele.Value.(*hornet.MessageID)
-	currentMessageIDMapKey := currentMessageID.MapKey()
+	currentMessageID := ele.Value.(hornet.MessageID)
 
 	// remove the message from the stack
 	t.stack.Remove(ele)
 
-	cachedMsgMeta, exists := t.cachedMsgMetas[currentMessageIDMapKey]
-	if !exists {
-		cachedMsgMeta = t.storage.GetCachedMessageMetadataOrNil(currentMessageID) // meta +1
-		if cachedMsgMeta == nil {
-			// there was an error, stop processing the stack
-			return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.Hex())
-		}
-		t.cachedMsgMetas[currentMessageIDMapKey] = cachedMsgMeta
+	cachedMsgMeta := t.metadataMemcache.GetCachedMetadataOrNil(currentMessageID) // meta +1
+	if cachedMsgMeta == nil {
+		// there was an error, stop processing the stack
+		return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.ToHex())
 	}
 
 	// check condition to decide if msg should be consumed and traversed
@@ -135,9 +137,9 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 	}
 
-	for _, childMessageID := range t.storage.GetChildrenMessageIDs(currentMessageID) {
+	for _, childMessageID := range t.storage.GetChildrenMessageIDs(currentMessageID, t.iteratorOptions...) {
 		if !t.walkAlreadyDiscovered {
-			childMessageIDMapKey := childMessageID.MapKey()
+			childMessageIDMapKey := childMessageID.ToMapKey()
 			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {
 				// child was already discovered
 				continue

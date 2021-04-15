@@ -1,16 +1,16 @@
 package storage
 
 import (
-	"encoding/binary"
 	"fmt"
 	"time"
 
-	"github.com/iotaledger/hive.go/bitmask"
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/syncutils"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/bitmask"
+	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
@@ -29,38 +29,32 @@ const (
 	ConflictNone Conflict = iota
 
 	// ConflictInputUTXOAlreadySpent the referenced UTXO was already spent.
-	ConflictInputUTXOAlreadySpent
+	ConflictInputUTXOAlreadySpent = 1
 
 	// ConflictInputUTXOAlreadySpentInThisMilestone the referenced UTXO was already spent while confirming this milestone
-	ConflictInputUTXOAlreadySpentInThisMilestone
+	ConflictInputUTXOAlreadySpentInThisMilestone = 2
 
 	// ConflictInputUTXONotFound the referenced UTXO cannot be found.
-	ConflictInputUTXONotFound
+	ConflictInputUTXONotFound = 3
 
 	// ConflictInputOutputSumMismatch the sum of the inputs and output values does not match.
-	ConflictInputOutputSumMismatch
+	ConflictInputOutputSumMismatch = 4
 
 	// ConflictInvalidSignature the unlock block signature is invalid.
-	ConflictInvalidSignature
-
-	// ConflictUnsupportedInputOrOutputType the input or output type used is unsupported.
-	ConflictUnsupportedInputOrOutputType
-
-	// ConflictUnsupportedAddressType the used address type is unsupported.
-	ConflictUnsupportedAddressType
+	ConflictInvalidSignature = 5
 
 	// ConflictInvalidDustAllowance the dust allowance for the address is invalid.
-	ConflictInvalidDustAllowance
+	ConflictInvalidDustAllowance = 6
 
 	// ConflictSemanticValidationFailed the semantic validation failed.
-	ConflictSemanticValidationFailed
+	ConflictSemanticValidationFailed = 255
 )
 
 type MessageMetadata struct {
 	objectstorage.StorableObjectFlags
 	syncutils.RWMutex
 
-	messageID *hornet.MessageID
+	messageID hornet.MessageID
 
 	// Metadata
 	metadata bitmask.BitMask
@@ -79,34 +73,19 @@ type MessageMetadata struct {
 	// oldestConeRootIndex is the lowest referenced index of the past cone of this message
 	oldestConeRootIndex milestone.Index
 
-	// coneRootCalculationIndex is the solid index ycri and ocri were calculated at
+	// coneRootCalculationIndex is the confirmed milestone index ycri and ocri were calculated at
 	coneRootCalculationIndex milestone.Index
 
-	// parent1MessageID is the parent1 (trunk) of the message
-	parent1MessageID *hornet.MessageID
-
-	// parent2MessageID is the parent2 (branch) of the message
-	parent2MessageID *hornet.MessageID
+	// parents are the parents of the message
+	parents hornet.MessageIDs
 }
 
-func NewMessageMetadata(messageID *hornet.MessageID, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) *MessageMetadata {
-	return &MessageMetadata{
-		messageID:        messageID,
-		parent1MessageID: parent1MessageID,
-		parent2MessageID: parent2MessageID,
-	}
-}
-
-func (m *MessageMetadata) GetMessageID() *hornet.MessageID {
+func (m *MessageMetadata) GetMessageID() hornet.MessageID {
 	return m.messageID
 }
 
-func (m *MessageMetadata) GetParent1MessageID() *hornet.MessageID {
-	return m.parent1MessageID
-}
-
-func (m *MessageMetadata) GetParent2MessageID() *hornet.MessageID {
-	return m.parent2MessageID
+func (m *MessageMetadata) GetParents() hornet.MessageIDs {
+	return m.parents
 }
 
 func (m *MessageMetadata) GetSolidificationTimestamp() int32 {
@@ -263,11 +242,11 @@ func (m *MessageMetadata) GetMetadata() byte {
 // ObjectStorage interface
 
 func (m *MessageMetadata) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("MessageMetadata should never be updated: %v", m.messageID.Hex()))
+	panic(fmt.Sprintf("MessageMetadata should never be updated: %v", m.messageID.ToHex()))
 }
 
 func (m *MessageMetadata) ObjectStorageKey() []byte {
-	return m.messageID.Slice()
+	return m.messageID
 }
 
 func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
@@ -282,22 +261,25 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 		4 bytes uint32 youngestConeRootIndex
 		4 bytes uint32 oldestConeRootIndex
 		4 bytes uint32 coneRootCalculationIndex
-		32 bytes parent1 id
-		32 bytes parent2 id
+		1 byte  parents count
+		parents count * 32 bytes parent id
 	*/
 
-	value := make([]byte, 22)
-	value[0] = byte(m.metadata)
-	binary.LittleEndian.PutUint32(value[1:], uint32(m.solidificationTimestamp))
-	binary.LittleEndian.PutUint32(value[5:], uint32(m.referencedIndex))
-	value[9] = byte(m.conflict)
-	binary.LittleEndian.PutUint32(value[10:], uint32(m.youngestConeRootIndex))
-	binary.LittleEndian.PutUint32(value[14:], uint32(m.oldestConeRootIndex))
-	binary.LittleEndian.PutUint32(value[18:], uint32(m.coneRootCalculationIndex))
-	value = append(value, m.parent1MessageID.Slice()...)
-	value = append(value, m.parent2MessageID.Slice()...)
+	marshalUtil := marshalutil.New(23 + len(m.parents)*iotago.MessageIDLength)
 
-	return value
+	marshalUtil.WriteByte(byte(m.metadata))
+	marshalUtil.WriteUint32(uint32(m.solidificationTimestamp))
+	marshalUtil.WriteUint32(uint32(m.referencedIndex))
+	marshalUtil.WriteByte(byte(m.conflict))
+	marshalUtil.WriteUint32(uint32(m.youngestConeRootIndex))
+	marshalUtil.WriteUint32(uint32(m.oldestConeRootIndex))
+	marshalUtil.WriteUint32(uint32(m.coneRootCalculationIndex))
+	marshalUtil.WriteByte(byte(len(m.parents)))
+	for _, parent := range m.parents {
+		marshalUtil.WriteBytes(parent[:])
+	}
+
+	return marshalUtil.Bytes()
 }
 
 func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
@@ -310,19 +292,74 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		4 bytes uint32 youngestConeRootIndex
 		4 bytes uint32 oldestConeRootIndex
 		4 bytes uint32 coneRootCalculationIndex
-		32 bytes parent1 id
-		32 bytes parent2 id
+		1 byte  parents count
+		parents count * 32 bytes parent id
 	*/
 
-	m := NewMessageMetadata(hornet.MessageIDFromBytes(key[:32]), hornet.MessageIDFromBytes(data[22:22+32]), hornet.MessageIDFromBytes(data[22+32:22+32+32]))
+	marshalUtil := marshalutil.New(data)
 
-	m.metadata = bitmask.BitMask(data[0])
-	m.solidificationTimestamp = int32(binary.LittleEndian.Uint32(data[1:5]))
-	m.referencedIndex = milestone.Index(binary.LittleEndian.Uint32(data[5:9]))
-	m.conflict = Conflict(data[9])
-	m.youngestConeRootIndex = milestone.Index(binary.LittleEndian.Uint32(data[10:14]))
-	m.oldestConeRootIndex = milestone.Index(binary.LittleEndian.Uint32(data[14:18]))
-	m.coneRootCalculationIndex = milestone.Index(binary.LittleEndian.Uint32(data[18:22]))
+	metadataByte, err := marshalUtil.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+
+	solidificationTimestamp, err := marshalUtil.ReadUint32()
+	if err != nil {
+		return nil, err
+	}
+
+	referencedIndex, err := marshalUtil.ReadUint32()
+	if err != nil {
+		return nil, err
+	}
+
+	conflict, err := marshalUtil.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+
+	youngestConeRootIndex, err := marshalUtil.ReadUint32()
+	if err != nil {
+		return nil, err
+	}
+
+	oldestConeRootIndex, err := marshalUtil.ReadUint32()
+	if err != nil {
+		return nil, err
+	}
+
+	coneRootCalculationIndex, err := marshalUtil.ReadUint32()
+	if err != nil {
+		return nil, err
+	}
+
+	m := &MessageMetadata{
+		messageID: hornet.MessageIDFromSlice(key[:32]),
+	}
+
+	m.metadata = bitmask.BitMask(metadataByte)
+	m.solidificationTimestamp = int32(solidificationTimestamp)
+	m.referencedIndex = milestone.Index(referencedIndex)
+	m.conflict = Conflict(conflict)
+	m.youngestConeRootIndex = milestone.Index(youngestConeRootIndex)
+	m.oldestConeRootIndex = milestone.Index(oldestConeRootIndex)
+	m.coneRootCalculationIndex = milestone.Index(coneRootCalculationIndex)
+
+	parentsCount, err := marshalUtil.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+
+	m.parents = make(hornet.MessageIDs, parentsCount)
+	for i := 0; i < int(parentsCount); i++ {
+		parentBytes, err := marshalUtil.ReadBytes(iotago.MessageIDLength)
+		if err != nil {
+			return nil, err
+		}
+
+		parent := hornet.MessageIDFromSlice(parentBytes)
+		m.parents[i] = parent
+	}
 
 	return m, nil
 }

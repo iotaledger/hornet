@@ -1,14 +1,13 @@
 {
   "restAPI": {
-    "basicAuth": {
+    "jwtAuth": {
       "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+      "salt": "HORNET"
     },
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
       "/health",
+      "/mqtt",
       "/api/v1/info",
       "/api/v1/tips",
       "/api/v1/messages/:messageID",
@@ -16,18 +15,23 @@
       "/api/v1/messages/:messageID/raw",
       "/api/v1/messages/:messageID/children",
       "/api/v1/messages",
+      "/api/v1/transactions/:transactionID/included-message",
       "/api/v1/milestones/:milestoneIndex",
+      "/api/v1/milestones/:milestoneIndex/utxo-changes",
       "/api/v1/outputs/:outputID",
       "/api/v1/addresses/:address",
       "/api/v1/addresses/:address/outputs",
       "/api/v1/addresses/ed25519/:address",
-      "/api/v1/addresses/ed25519/:address/outputs"
+      "/api/v1/addresses/ed25519/:address/outputs",
+      "/api/v1/treasury"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",
       "::1"
     ],
     "bindAddress": "0.0.0.0:14265",
+    "powEnabled": true,
+    "powWorkerCount": 1,
     "limits": {
       "bodyLength": "1M",
       "maxResults": 1000
@@ -35,21 +39,23 @@
   },
   "dashboard": {
     "bindAddress": "localhost:8081",
-    "basicAuth": {
-      "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+    "auth": {
+      "sessionTimeout": "72h",
+      "username": "admin",
+      "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   },
   "db": {
-    "path": "mainnetdb"
+    "engine": "pebble",
+    "path": "mainnetdb",
+    "autoRevalidation": false
   },
   "snapshots": {
-    "intervalSynced": 50,
-    "intervalUnsynced": 1000,
+    "interval": 50,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",
     "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
         "full": "https://ls.manapotion.io/full_snapshot.bin",
@@ -67,12 +73,12 @@
   },
   "pruning": {
     "enabled": true,
-    "delay": 60480
+    "delay": 60480,
+    "pruneReceipts": false
   },
   "node": {
     "alias": "Mainnet",
     "profile": "auto",
-    "enableProofOfWork": true,
     "disablePlugins": [],
     "enablePlugins": []
   },
@@ -89,13 +95,13 @@
     "peerStore": {
       "path": "./p2pstore"
     },
-    "reconnectIntervalSeconds": 30
+    "reconnectInterval": "30s"
   },
   "p2pdisc": {
-    "advertiseIntervalSec": 30,
+    "advertiseInterval": "30s",
     "maxDiscoveredPeerConns": 4,
     "rendezvousPoint": "between-two-vertices",
-    "routingTableRefreshPeriodSec": 60
+    "routingTableRefreshPeriod": "60s"
   },
   "logger": {
     "level": "info",
@@ -116,7 +122,8 @@
   },
   "mqtt": {
     "bindAddress": "localhost:1883",
-    "wsPort": 1888
+    "wsPort": 1888,
+    "workerCount": 100
   },
   "profiling": {
     "bindAddress": "localhost:6060"
@@ -128,6 +135,14 @@
       "path": "target.json",
       "target": "localhost:9311"
     },
+    "databaseMetrics": true,
+    "nodeMetrics": true,
+    "gossipMetrics": true,
+    "cachesMetrics": true,
+    "restAPIMetrics": true,
+    "migrationMetrics": true,
+    "coordinatorMetrics": true,
+    "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

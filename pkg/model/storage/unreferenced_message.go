@@ -2,21 +2,19 @@ package storage
 
 import (
 	"encoding/binary"
-	"fmt"
-
-	"github.com/iotaledger/hive.go/objectstorage"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/objectstorage"
 )
 
 type UnreferencedMessage struct {
 	objectstorage.StorableObjectFlags
 	latestMilestoneIndex milestone.Index
-	messageID            *hornet.MessageID
+	messageID            hornet.MessageID
 }
 
-func NewUnreferencedMessage(msIndex milestone.Index, messageID *hornet.MessageID) *UnreferencedMessage {
+func NewUnreferencedMessage(msIndex milestone.Index, messageID hornet.MessageID) *UnreferencedMessage {
 	return &UnreferencedMessage{
 		latestMilestoneIndex: msIndex,
 		messageID:            messageID,
@@ -27,20 +25,20 @@ func (t *UnreferencedMessage) GetLatestMilestoneIndex() milestone.Index {
 	return t.latestMilestoneIndex
 }
 
-func (t *UnreferencedMessage) GetMessageID() *hornet.MessageID {
+func (t *UnreferencedMessage) GetMessageID() hornet.MessageID {
 	return t.messageID
 }
 
 // ObjectStorage interface
 
 func (t *UnreferencedMessage) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("UnreferencedMessage should never be updated: %v", t.messageID.Hex()))
+	// do nothing, since the object is identical (consists of key only)
 }
 
 func (t *UnreferencedMessage) ObjectStorageKey() []byte {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(t.latestMilestoneIndex))
-	return append(key, t.messageID.Slice()...)
+	return append(key, t.messageID...)
 }
 
 func (t *UnreferencedMessage) ObjectStorageValue() (_ []byte) {

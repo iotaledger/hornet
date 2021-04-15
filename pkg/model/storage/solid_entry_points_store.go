@@ -44,7 +44,7 @@ func (s *Storage) loadSolidEntryPoints() {
 	}
 }
 
-func (s *Storage) SolidEntryPointsContain(messageID *hornet.MessageID) bool {
+func (s *Storage) SolidEntryPointsContain(messageID hornet.MessageID) bool {
 	s.ReadLockSolidEntryPoints()
 	defer s.ReadUnlockSolidEntryPoints()
 
@@ -54,7 +54,7 @@ func (s *Storage) SolidEntryPointsContain(messageID *hornet.MessageID) bool {
 	return s.solidEntryPoints.Contains(messageID)
 }
 
-func (s *Storage) SolidEntryPointsIndex(messageID *hornet.MessageID) (milestone.Index, bool) {
+func (s *Storage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool) {
 	s.ReadLockSolidEntryPoints()
 	defer s.ReadUnlockSolidEntryPoints()
 
@@ -65,7 +65,7 @@ func (s *Storage) SolidEntryPointsIndex(messageID *hornet.MessageID) (milestone.
 }
 
 // WriteLockSolidEntryPoints must be held while entering this function
-func (s *Storage) SolidEntryPointsAdd(messageID *hornet.MessageID, milestoneIndex milestone.Index) {
+func (s *Storage) SolidEntryPointsAdd(messageID hornet.MessageID, milestoneIndex milestone.Index) {
 	if s.solidEntryPoints == nil {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}

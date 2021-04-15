@@ -1,7 +1,6 @@
 package testsuite
 
 import (
-	"crypto/ed25519"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,10 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	iotago "github.com/iotaledger/iota.go"
-
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -24,6 +20,10 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/kvstore/mapdb"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 var (
@@ -45,8 +45,8 @@ type TestEnvironment struct {
 	// showConfirmationGraphs is set if pictures of the confirmation graph should be externally opened during the test.
 	showConfirmationGraphs bool
 
-	// PowHandler holds the PowHandler instance.
-	PowHandler *pow.Handler
+	// PoWHandler holds the PoWHandler instance.
+	PoWHandler *pow.Handler
 
 	// networkID is the network ID used for this test network
 	networkID uint64
@@ -58,7 +58,7 @@ type TestEnvironment struct {
 	coo *coordinator.Coordinator
 
 	// lastMilestoneMessageID is the message ID of the last issued milestone.
-	lastMilestoneMessageID *hornet.MessageID
+	lastMilestoneMessageID hornet.MessageID
 
 	// tempDir is the directory that contains the temporary files for the test.
 	tempDir string
@@ -93,14 +93,14 @@ func searchProjectRootFolder() string {
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
-func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, showConfirmationGraphs bool) *TestEnvironment {
+func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, belowMaxDepth int, targetScore float64, showConfirmationGraphs bool) *TestEnvironment {
 
 	te := &TestEnvironment{
 		TestState:              testState,
 		Milestones:             make(storage.CachedMilestones, 0),
 		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
-		PowHandler:             pow.New(nil, 1, "", 30*time.Second),
+		PoWHandler:             pow.New(nil, targetScore, 5*time.Second, "", 30*time.Second),
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
 		lastMilestoneMessageID: hornet.GetNullMessageID(),
 		serverMetrics:          &metrics.ServerMetrics{},
@@ -117,33 +117,45 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 
 	testState.Logf("Testdir: %s", tempDir)
 
+	cooPrivateKeys := []ed25519.PrivateKey{cooPrvKey1, cooPrvKey2}
+
+	keyManager := keymanager.New()
+	for _, key := range cooPrivateKeys {
+		keyManager.AddKeyRange(key.Public().(ed25519.PublicKey), 0, 0)
+	}
+
 	te.store = mapdb.NewMapDB()
-	te.storage = storage.New(te.tempDir, te.store, TestProfileCaches)
+	te.storage = storage.New(te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
 
 	// Initialize SEP
 	te.storage.SolidEntryPointsAdd(hornet.GetNullMessageID(), 0)
 
 	// Initialize UTXO
-	te.GenesisOutput = utxo.GetOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
+	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
 	te.storage.UTXO().AddUnspentOutput(te.GenesisOutput)
+	te.storage.UTXO().StoreUnspentTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
 
 	te.AssertTotalSupplyStillValid()
 
 	// Start up the coordinator
-	te.configureCoordinator([]ed25519.PrivateKey{cooPrvKey1, cooPrvKey2})
+	te.configureCoordinator(cooPrivateKeys, keyManager)
 	require.NotNil(testState, te.coo)
 
-	te.VerifyLSMI(1)
+	te.VerifyCMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
-		conf := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)
-		require.Equal(testState, 1, conf.MessagesReferenced)                  // 1 for milestone
-		require.Equal(testState, 1, conf.MessagesExcludedWithoutTransactions) // 1 for milestone
-		require.Equal(testState, 0, conf.MessagesIncludedWithTransactions)
-		require.Equal(testState, 0, conf.MessagesExcludedWithConflictingTransactions)
+		_, confStats := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)
+		require.Equal(testState, 1, confStats.MessagesReferenced)                  // 1 for milestone
+		require.Equal(testState, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for milestone
+		require.Equal(testState, 0, confStats.MessagesIncludedWithTransactions)
+		require.Equal(testState, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	}
 
 	return te
+}
+
+func (te *TestEnvironment) Storage() *storage.Storage {
+	return te.storage
 }
 
 func (te *TestEnvironment) UTXO() *utxo.Manager {

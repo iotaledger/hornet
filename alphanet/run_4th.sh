@@ -1,12 +1,12 @@
 #!/bin/bash
 rm -rf alphanetdb4
-go run -tags "pow_avx" ../main.go -c config_alphanet.json \
+go run ../main.go -c config_alphanet.json \
 --protocol.networkID="alphanet1" \
 --restAPI.bindAddress="0.0.0.0:14268" \
 --dashboard.bindAddress="localhost:8084" \
 --db.path="alphanetdb4" \
 --node.disablePlugins="Autopeering" \
---node.enablePlugins="Spammer,MQTT" \
+--node.enablePlugins="Spammer,MQTT,Debug,Prometheus" \
 --snapshots.fullPath="snapshots/alphanet4/full_export.bin" \
 --snapshots.deltaPath="snapshots/alphanet4/delta_export.bin" \
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15603" \

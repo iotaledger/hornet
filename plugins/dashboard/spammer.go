@@ -1,11 +1,10 @@
 package dashboard
 
 import (
-	"github.com/iotaledger/hive.go/events"
-
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
 	spammerplugin "github.com/gohornet/hornet/plugins/spammer"
+	"github.com/iotaledger/hive.go/events"
 )
 
 func runSpammerMetricWorker() {

@@ -6,11 +6,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/protocol/message"
-	"github.com/iotaledger/hive.go/protocol/tlv"
-
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/protocol/message"
+	"github.com/iotaledger/hive.go/protocol/tlv"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 var (
@@ -49,7 +49,7 @@ var (
 	// MessageMessageDefinition defines a message message's format.
 	MessageMessageDefinition = &message.Definition{
 		ID:             MessageTypeMessage,
-		MaxBytesLength: 1024, // ToDo
+		MaxBytesLength: iotago.MessageBinSerializedMaxSize,
 		VariableLength: true,
 	}
 
@@ -61,7 +61,7 @@ var (
 		VariableLength: false,
 	}
 
-	// The heartbeat packet containing the current latest solid, pruned and latest milestone index,
+	// The heartbeat packet containing the current solid, pruned and latest milestone index,
 	// number of connected peers and number of synced peers.
 	HeartbeatMessageDefinition = &message.Definition{
 		ID:             MessageTypeHeartbeat,
@@ -94,7 +94,7 @@ func NewMessageMsg(msgData []byte) ([]byte, error) {
 }
 
 // NewMessageRequestMsg creates a message request message.
-func NewMessageRequestMsg(requestedMessageID *hornet.MessageID) ([]byte, error) {
+func NewMessageRequestMsg(requestedMessageID hornet.MessageID) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+MessageRequestMessageDefinition.MaxBytesLength))
 	if err := tlv.WriteHeader(buf, MessageTypeMessageRequest, MessageRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func NewMilestoneRequestMsg(requestedMilestoneIndex milestone.Index) ([]byte, er
 
 // ExtractRequestedMilestoneIndex extracts the requested milestone index from the given source.
 func ExtractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
-	if len(source) != 4 {
+	if len(source) != iotago.UInt32ByteSize {
 		return 0, ErrInvalidSourceLength
 	}
 
@@ -164,11 +164,11 @@ func ExtractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
 // Heartbeat contains information about a nodes current solid and pruned milestone index
 // and its connected and synced neighbors count.
 type Heartbeat struct {
-	SolidMilestoneIndex  milestone.Index `json:"solid_milestone_index"`
-	PrunedMilestoneIndex milestone.Index `json:"pruned_milestone_index"`
-	LatestMilestoneIndex milestone.Index `json:"latest_milestone_index"`
-	ConnectedNeighbors   int             `json:"connected_neighbors"`
-	SyncedNeighbors      int             `json:"synced_neighbors"`
+	SolidMilestoneIndex  milestone.Index `json:"solidMilestoneIndex"`
+	PrunedMilestoneIndex milestone.Index `json:"prunedMilestoneIndex"`
+	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
+	ConnectedNeighbors   int             `json:"connectedNeighbors"`
+	SyncedNeighbors      int             `json:"syncedNeighbors"`
 }
 
 /// ParseHeartbeat parses the given message into a heartbeat.

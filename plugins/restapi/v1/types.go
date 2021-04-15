@@ -5,6 +5,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 )
 
@@ -21,11 +22,19 @@ type infoResponse struct {
 	// The Bech32 HRP used.
 	Bech32HRP string `json:"bech32HRP"`
 	// The minimum pow score of the network.
-	MinPowScore float64 `json:"minPowScore"`
+	MinPoWScore float64 `json:"minPoWScore"`
+	// The current rate of new messages per second.
+	MessagesPerSecond float64 `json:"messagesPerSecond"`
+	// The current rate of referenced messages per second.
+	ReferencedMessagesPerSecond float64 `json:"referencedMessagesPerSecond"`
+	// The ratio of referenced messages in relation to new messages of the last confirmed milestone.
+	ReferencedRate float64 `json:"referencedRate"`
+	// The timestamp of the latest known milestone.
+	LatestMilestoneTimestamp int64 `json:"latestMilestoneTimestamp"`
 	// The latest known milestone index.
 	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
-	// The current solid milestone's index.
-	SolidMilestoneIndex milestone.Index `json:"solidMilestoneIndex"`
+	// The current confirmed milestone's index.
+	ConfirmedMilestoneIndex milestone.Index `json:"confirmedMilestoneIndex"`
 	// The milestone index at which the last pruning commenced.
 	PruningIndex milestone.Index `json:"pruningIndex"`
 	// The features this node exposes.
@@ -34,20 +43,21 @@ type infoResponse struct {
 
 // tipsResponse defines the response of a GET tips REST API call.
 type tipsResponse struct {
-	// The hex encoded message ID of the 1st tip.
-	Tip1 string `json:"tip1MessageId"`
-	// The hex encoded message ID of the 2nd tip.
-	Tip2 string `json:"tip2MessageId"`
+	// The hex encoded message IDs of the tips.
+	Tips []string `json:"tipMessageIds"`
+}
+
+// receiptsResponse defines the response of a receipts REST API call.
+type receiptsResponse struct {
+	Receipts []*utxo.ReceiptTuple `json:"receipts"`
 }
 
 // messageMetadataResponse defines the response of a GET message metadata REST API call.
 type messageMetadataResponse struct {
 	// The hex encoded message ID of the message.
 	MessageID string `json:"messageId"`
-	// The hex encoded message ID of the 1st parent the message references.
-	Parent1 string `json:"parent1MessageId"`
-	// The hex encoded message ID of the 2nd parent the message references.
-	Parent2 string `json:"parent2MessageId"`
+	// The hex encoded message IDs of the parents the message references.
+	Parents []string `json:"parentMessageIds"`
 	// Whether the message is solid.
 	Solid bool `json:"isSolid"`
 	// The milestone index that references this message.
@@ -104,8 +114,18 @@ type milestoneResponse struct {
 	Time int64 `json:"timestamp"`
 }
 
-// outputResponse defines the response of a GET outputs REST API call.
-type outputResponse struct {
+// milestoneUTXOChangesResponse defines the response of a GET milestone UTXO changes REST API call.
+type milestoneUTXOChangesResponse struct {
+	// The index of the milestone.
+	Index uint32 `json:"index"`
+	// The output IDs (transaction hash + output index) of the newly created outputs.
+	CreatedOutputs []string `json:"createdOutputs"`
+	// The output IDs (transaction hash + output index) of the consumed (spent) outputs.
+	ConsumedOutputs []string `json:"consumedOutputs"`
+}
+
+// OutputResponse defines the response of a GET outputs REST API call.
+type OutputResponse struct {
 	// The hex encoded message ID of the message.
 	MessageID string `json:"messageId"`
 	// The hex encoded transaction id from which this output originated.
@@ -120,17 +140,19 @@ type outputResponse struct {
 
 // addressBalanceResponse defines the response of a GET addresses REST API call.
 type addressBalanceResponse struct {
-	// The type of the address (0=WOTS, 1=Ed25519).
+	// The type of the address (0=Ed25519).
 	AddressType byte `json:"addressType"`
 	// The hex encoded address.
 	Address string `json:"address"`
 	// The balance of the address.
 	Balance uint64 `json:"balance"`
+	// Indicates if dust is allowed on this address.
+	DustAllowed bool `json:"dustAllowed"`
 }
 
 // addressOutputsResponse defines the response of a GET outputs by address REST API call.
 type addressOutputsResponse struct {
-	// The type of the address (0=WOTS, 1=Ed25519).
+	// The type of the address (0=Ed25519).
 	AddressType byte `json:"addressType"`
 	// The hex encoded address.
 	Address string `json:"address"`
@@ -142,85 +164,10 @@ type addressOutputsResponse struct {
 	OutputIDs []string `json:"outputIds"`
 }
 
-// outputIDsResponse defines the response of a GET debug outputs REST API call.
-type outputIDsResponse struct {
-	// The output IDs (transaction hash + output index) of the outputs.
-	OutputIDs []string `json:"outputIds"`
-}
-
-// address defines the response of a GET debug addresses REST API call.
-type address struct {
-	// The type of the address (0=WOTS, 1=Ed25519).
-	AddressType byte `json:"addressType"`
-	// The hex encoded address.
-	Address string `json:"address"`
-	// The balance of the address.
-	Balance uint64 `json:"balance"`
-}
-
-// addressesResponse defines the response of a GET debug addresses REST API call.
-type addressesResponse struct {
-	// The addresses (type + hex encoded address).
-	Addresses []*address `json:"addresses"`
-}
-
-// outputIDsResponse defines the response of a GET debug milestone diff REST API call.
-type milestoneDiffResponse struct {
-	// The index of the milestone.
-	MilestoneIndex milestone.Index `json:"index"`
-	// The newly created outputs by this milestone diff.
-	Outputs []*outputResponse `json:"outputs"`
-	// The used outputs (spents) by this milestone diff.
-	Spents []*outputResponse `json:"spents"`
-}
-
-// request defines an request response.
-type request struct {
-	// The hex encoded message ID of the message.
-	MessageID string `json:"messageId"`
-	// The type of the request.
-	Type string `json:"type"`
-	// Whether the message already exists in the storage layer.
-	MessageExists bool `json:"txExists"`
-	// The time the request was enqueued.
-	EnqueueTimestamp string `json:"enqueueTimestamp"`
-	// The index of the milestone this request belongs to.
-	MilestoneIndex milestone.Index `json:"milestoneIndex"`
-}
-
-// requestsResponse defines the response of a GET debug requests REST API call.
-type requestsResponse struct {
-	// The pending requests of the node.
-	Requests []*request `json:"requests"`
-}
-
-// entryPoint defines an entryPoint with information about the milestone index of the cone it references.
-type entryPoint struct {
-	// The hex encoded message ID of the message.
-	MessageID             string          `json:"messageId"`
-	ReferencedByMilestone milestone.Index `json:"referencedByMilestone"`
-}
-
-// messageWithParents defines a message with information about it's parents.
-type messageWithParents struct {
-	// The hex encoded message ID of the message.
-	MessageID string `json:"messageId"`
-	// The hex encoded message ID of the 1st parent the message references.
-	Parent1 string `json:"parent1MessageId"`
-	// The hex encoded message ID of the 2nd parent the message references.
-	Parent2 string `json:"parent2MessageId"`
-}
-
-// messageConeResponse defines the response of a GET debug message cone REST API call.
-type messageConeResponse struct {
-	// The count of elements in the cone.
-	ConeElementsCount int `json:"coneElementsCount"`
-	// The count of found entry points.
-	EntryPointsCount int `json:"entryPointsCount"`
-	// The cone of the message.
-	Cone []*messageWithParents `json:"cone"`
-	// The entry points of the cone of this message.
-	EntryPoints []*entryPoint `json:"entryPoints"`
+// treasuryResponse defines the response of a GET treasury REST API call.
+type treasuryResponse struct {
+	MilestoneID string `json:"milestoneId"`
+	Amount      uint64 `json:"amount"`
 }
 
 // addPeerRequest defines the request for a POST peer REST API call.
@@ -231,8 +178,8 @@ type addPeerRequest struct {
 	Alias *string `json:"alias,omitempty"`
 }
 
-// peerResponse defines the response of a GET peer REST API call.
-type peerResponse struct {
+// PeerResponse defines the response of a GET peer REST API call.
+type PeerResponse struct {
 	// The libp2p identifier of the peer.
 	ID string `json:"id"`
 	// The libp2p multi addresses of the peer.
@@ -243,26 +190,8 @@ type peerResponse struct {
 	Relation string `json:"relation"`
 	// Whether the peer is connected.
 	Connected bool `json:"connected"`
-	// The gossip metrics of the peer.
-	GossipMetrics gossip.MetricsSnapshot `json:"gossipMetrics,omitempty"`
-}
-
-// peerGossipMetrics defines the peer gossip metrics.
-type peerGossipMetrics struct {
-	// The total amount of sent packages.
-	SentPackets uint32 `json:"sentPackets"`
-	// The total amount of dropped sent packages.
-	DroppedSentPackets uint32 `json:"droppedSentPackets"`
-	// The total amount of received heartbeats.
-	ReceivedHeartbeats uint32 `json:"receivedHeartbeats"`
-	// The total amount of sent heartbeats.
-	SentHeartbeats uint32 `json:"sentHeartbeats"`
-	// The total amount of received messages.
-	ReceivedMessages uint32 `json:"receivedMessages"`
-	// The total amount of received new messages.
-	NewMessages uint32 `json:"newMessages"`
-	// The total amount of received known messages.
-	KnownMessages uint32 `json:"knownMessages"`
+	// The gossip protocol information of the peer.
+	Gossip *gossip.Info `json:"gossip,omitempty"`
 }
 
 // pruneDatabaseResponse defines the response of a prune database REST API call.

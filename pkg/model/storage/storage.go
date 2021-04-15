@@ -7,15 +7,14 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/syncutils"
-
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/syncutils"
 )
 
 var (
@@ -25,13 +24,18 @@ var (
 
 type packageEvents struct {
 	ReceivedValidMilestone *events.Event
+	PruningStateChanged    *events.Event
 }
+
+type ReadOption = objectstorage.ReadOption
+type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
 
 	// database
-	databaseDir string
-	store       kvstore.KVStore
+	databaseDir   string
+	store         kvstore.KVStore
+	belowMaxDepth milestone.Index
 
 	// kv storages
 	healthStore   kvstore.KVStore
@@ -54,16 +58,17 @@ type Storage struct {
 	snapshotMutex syncutils.RWMutex
 
 	// milestones
-	solidMilestoneIndex  milestone.Index
-	solidMilestoneLock   syncutils.RWMutex
-	latestMilestoneIndex milestone.Index
-	latestMilestoneLock  syncutils.RWMutex
+	confirmedMilestoneIndex milestone.Index
+	confirmedMilestoneLock  syncutils.RWMutex
+	latestMilestoneIndex    milestone.Index
+	latestMilestoneLock     syncutils.RWMutex
 
 	// node synced
-	isNodeSynced                  bool
-	isNodeSyncedThreshold         bool
-	waitForNodeSyncedChannelsLock syncutils.Mutex
-	waitForNodeSyncedChannels     []chan struct{}
+	isNodeSynced                    bool
+	isNodeAlmostSynced              bool
+	isNodeSyncedWithinBelowMaxDepth bool
+	waitForNodeSyncedChannelsLock   syncutils.Mutex
+	waitForNodeSyncedChannels       []chan struct{}
 
 	// milestones
 	keyManager              *keymanager.KeyManager
@@ -76,21 +81,25 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches) *Storage {
+func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) *Storage {
 
 	utxoManager := utxo.New(store)
 
 	s := &Storage{
-		databaseDir: databaseDirectory,
-		store:       store,
-		utxoManager: utxoManager,
+		databaseDir:             databaseDirectory,
+		store:                   store,
+		keyManager:              keyManager,
+		milestonePublicKeyCount: milestonePublicKeyCount,
+		utxoManager:             utxoManager,
+		belowMaxDepth:           milestone.Index(belowMaxDepth),
 		Events: &packageEvents{
-			ReceivedValidMilestone: events.NewEvent(MilestoneCaller),
+			ReceivedValidMilestone: events.NewEvent(MilestoneWithRequestedCaller),
+			PruningStateChanged:    events.NewEvent(events.BoolCaller),
 		},
 	}
 
 	s.configureStorages(s.store, cachesProfile)
-	s.loadSolidMilestoneFromDatabase()
+	s.loadConfirmedMilestoneFromDatabase()
 	s.loadSnapshotInfo()
 	s.loadSolidEntryPoints()
 
@@ -121,8 +130,8 @@ func (s *Storage) configureStorages(store kvstore.KVStore, caches *profile.Cache
 func (s *Storage) FlushStorages() {
 	s.FlushMilestoneStorage()
 	s.FlushMessagesStorage()
-	s.FlushMessagesStorage()
 	s.FlushChildrenStorage()
+	s.FlushIndexationStorage()
 	s.FlushUnreferencedMessagesStorage()
 }
 
@@ -130,20 +139,20 @@ func (s *Storage) ShutdownStorages() {
 
 	s.ShutdownMilestoneStorage()
 	s.ShutdownMessagesStorage()
-	s.ShutdownMessagesStorage()
 	s.ShutdownChildrenStorage()
+	s.ShutdownIndexationStorage()
 	s.ShutdownUnreferencedMessagesStorage()
 }
 
-func (s *Storage) loadSolidMilestoneFromDatabase() {
+func (s *Storage) loadConfirmedMilestoneFromDatabase() {
 
 	ledgerMilestoneIndex, err := s.UTXO().ReadLedgerIndex()
 	if err != nil {
 		panic(err)
 	}
 
-	// set the solid milestone index based on the ledger milestone
-	s.SetSolidMilestoneIndex(ledgerMilestoneIndex, false)
+	// set the confirmed milestone index based on the ledger milestone
+	s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
 }
 
 func (s *Storage) DatabaseSupportsCleanup() bool {

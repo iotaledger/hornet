@@ -1,13 +1,15 @@
 package gossip_test
 
 import (
+	"bytes"
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	iotago "github.com/iotaledger/iota.go"
-	"github.com/stretchr/testify/assert"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func randBytes(length int) []byte {
@@ -18,16 +20,8 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func rand32ByteHash() [iotago.TransactionIDLength]byte {
-	var h [iotago.TransactionIDLength]byte
-	b := randBytes(32)
-	copy(h[:], b)
-	return h
-}
-
-func randMessageID() *hornet.MessageID {
-	messageID := hornet.MessageID(rand32ByteHash())
-	return &messageID
+func randMessageID() hornet.MessageID {
+	return hornet.MessageID(randBytes(iotago.MessageIDLength))
 }
 
 func TestRequestQueue(t *testing.T) {
@@ -98,7 +92,10 @@ func TestRequestQueue(t *testing.T) {
 	assert.Zero(t, processing)
 
 	// mark last from test set as received
-	q.Received(requests[len(requests)-1].MessageID)
+	req := q.Received(requests[len(requests)-1].MessageID)
+
+	// check if the correct request was returned
+	assert.Equal(t, req, requests[len(requests)-1])
 
 	// check processing
 	queued, pending, processing = q.Size()
@@ -106,7 +103,11 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, pending)
 	assert.Equal(t, processing, 1)
 
-	q.Processed(requests[len(requests)-1].MessageID)
+	// mark last from test set as processed
+	req = q.Processed(requests[len(requests)-1].MessageID)
+
+	// check if the correct request was returned
+	assert.Equal(t, req, requests[len(requests)-1])
 
 	// check processed
 	queued, pending, processing = q.Size()
@@ -140,8 +141,40 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, len(queuedReqs))
 	for i := 0; i < len(requests)-1; i++ {
 		queuedReq := queuedReqs[i]
-		assert.False(t, *(queuedReq.MessageID) == *(requests[len(requests)-1].MessageID))
+		assert.False(t, bytes.Equal(queuedReq.MessageID, requests[len(requests)-1].MessageID))
 	}
 	assert.Zero(t, len(pendingReqs))
 	assert.Zero(t, len(processingReq))
+
+	// test edge case
+	// request was pending but marked as queued again, and is then marked as received
+
+	// start with a fresh queue
+	q = gossip.NewRequestQueue()
+
+	for _, r := range requests {
+		assert.True(t, q.Enqueue(r))
+		assert.True(t, q.IsQueued(r.MessageID))
+	}
+
+	for i := 0; i < len(requests); i++ {
+		q.Next()
+	}
+
+	// enqueue requests again
+	q.EnqueuePending(0)
+
+	for _, r := range requests {
+		req := q.Received(r.MessageID)
+
+		// check if the correct request was returned
+		assert.Equal(t, req, r)
+	}
+
+	for _, r := range requests {
+		req := q.Processed(r.MessageID)
+
+		// check if the correct request was returned
+		assert.Equal(t, req, r)
+	}
 }

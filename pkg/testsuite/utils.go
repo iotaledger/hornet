@@ -1,25 +1,23 @@
 package testsuite
 
 import (
-	"bytes"
 	"fmt"
+	"math/rand"
 
 	"github.com/stretchr/testify/require"
-
-	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 type MessageBuilder struct {
 	te         *TestEnvironment
 	indexation string
 
-	parent1 *hornet.MessageID
-	parent2 *hornet.MessageID
+	parents hornet.MessageIDs
 
 	fromWallet *utils.HDWallet
 	toWallet   *utils.HDWallet
@@ -40,7 +38,7 @@ type Message struct {
 	remainderOutput *utxo.Output
 
 	booked          bool
-	storedMessageID *hornet.MessageID
+	storedMessageID hornet.MessageID
 }
 
 func (te *TestEnvironment) NewMessageBuilder(indexation string) *MessageBuilder {
@@ -50,9 +48,8 @@ func (te *TestEnvironment) NewMessageBuilder(indexation string) *MessageBuilder 
 	}
 }
 
-func (b *MessageBuilder) Parents(parent1 *hornet.MessageID, parent2 *hornet.MessageID) *MessageBuilder {
-	b.parent1 = parent1
-	b.parent2 = parent2
+func (b *MessageBuilder) Parents(parents hornet.MessageIDs) *MessageBuilder {
+	b.parents = parents
 	return b
 }
 
@@ -89,13 +86,18 @@ func (b *MessageBuilder) UsingOutput(output *utxo.Output) *MessageBuilder {
 func (b *MessageBuilder) BuildIndexation() *Message {
 
 	require.NotEmpty(b.te.TestState, b.indexation)
-	require.NotNil(b.te.TestState, b.parent1)
-	require.NotNil(b.te.TestState, b.parent2)
 
-	msg, err := iotago.NewMessageBuilder().Parent1(b.parent1.Slice()).Parent2(b.parent2.Slice()).Payload(&iotago.Indexation{Index: b.indexation, Data: nil}).Build()
+	parents := [][]byte{}
+	require.NotNil(b.te.TestState, b.parents)
+	for _, parent := range b.parents {
+		require.NotNil(b.te.TestState, parent)
+		parents = append(parents, parent[:])
+	}
+
+	msg, err := iotago.NewMessageBuilder().Parents(parents).Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil}).Build()
 	require.NoError(b.te.TestState, err)
 
-	err = b.te.PowHandler.DoPoW(msg, nil, 1)
+	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
 	require.NoError(b.te.TestState, err)
 
 	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
@@ -127,7 +129,9 @@ func (b *MessageBuilder) Build() *Message {
 	} else {
 		if b.fakeInputs {
 			// Add a fake output with enough balance to create a valid transaction
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.GetOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
+			fakeInput := iotago.UTXOInputID{}
+			copy(fakeInput[:], randBytes(iotago.TransactionIDLength))
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInput, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -160,7 +164,7 @@ func (b *MessageBuilder) Build() *Message {
 	}
 
 	require.NotEmpty(b.te.TestState, b.indexation)
-	builder.AddIndexationPayload(&iotago.Indexation{Index: b.indexation, Data: nil})
+	builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil})
 
 	// Sign transaction
 	inputPrivateKey, _ := b.fromWallet.KeyPair()
@@ -169,12 +173,12 @@ func (b *MessageBuilder) Build() *Message {
 	transaction, err := builder.Build(inputAddrSigner)
 	require.NoError(b.te.TestState, err)
 
-	require.NotNil(b.te.TestState, b.parent1)
-	require.NotNil(b.te.TestState, b.parent2)
-	msg, err := iotago.NewMessageBuilder().Parent1(b.parent1.Slice()).Parent2(b.parent2.Slice()).Payload(transaction).Build()
+	require.NotNil(b.te.TestState, b.parents)
+
+	msg, err := iotago.NewMessageBuilder().Parents(b.parents.ToSliceOfSlices()).Payload(transaction).Build()
 	require.NoError(b.te.TestState, err)
 
-	err = b.te.PowHandler.DoPoW(msg, nil, 1)
+	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
 	require.NoError(b.te.TestState, err)
 
 	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
@@ -208,16 +212,16 @@ func (b *MessageBuilder) Build() *Message {
 	// Book the outputs in the wallets
 	messageTx := message.GetTransaction()
 	txEssence := messageTx.Essence.(*iotago.TransactionEssence)
-	for i, _ := range txEssence.Outputs {
+	for i := range txEssence.Outputs {
 		output, err := utxo.NewOutput(message.GetMessageID(), messageTx, uint16(i))
 		require.NoError(b.te.TestState, err)
 
-		if bytes.Equal(output.Address()[:], toAddr[:]) && output.Amount() == b.amount {
+		if output.Address().String() == toAddr.String() && output.Amount() == b.amount {
 			sentOutput = output
 			continue
 		}
 
-		if remainderAmount > 0 && bytes.Equal(output.Address()[:], fromAddr[:]) && output.Amount() == remainderAmount {
+		if remainderAmount > 0 && output.Address().String() == fromAddr.String() && output.Amount() == remainderAmount {
 			remainderOutput = output
 		}
 	}
@@ -253,7 +257,16 @@ func (m *Message) GeneratedUTXO() *utxo.Output {
 	return m.sentOutput
 }
 
-func (m *Message) StoredMessageID() *hornet.MessageID {
+func (m *Message) StoredMessageID() hornet.MessageID {
 	require.NotNil(m.builder.te.TestState, m.storedMessageID)
 	return m.storedMessageID
+}
+
+// returns length amount random bytes
+func randBytes(length int) []byte {
+	var b []byte
+	for i := 0; i < length; i++ {
+		b = append(b, byte(rand.Intn(256)))
+	}
+	return b
 }

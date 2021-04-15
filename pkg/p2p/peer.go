@@ -17,6 +17,12 @@ func NewPeer(peerID peer.ID, relation PeerRelation, addrs []multiaddr.Multiaddr,
 	}
 }
 
+// PeerConfig holds the initial information about peers.
+type PeerConfig struct {
+	MultiAddress string `json:"multiAddress" koanf:"multiAddress"`
+	Alias        string `json:"alias" koanf:"alias"`
+}
+
 // Peer is a remote peer in the network.
 type Peer struct {
 	// The ID of the peer.

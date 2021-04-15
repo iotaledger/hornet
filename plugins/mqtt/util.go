@@ -6,14 +6,13 @@ import (
 	"encoding/json"
 	"strings"
 
-	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/plugins/urts"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func publishOnTopic(topic string, payload interface{}) {
@@ -26,9 +25,9 @@ func publishOnTopic(topic string, payload interface{}) {
 	mqttBroker.Send(topic, jsonPayload)
 }
 
-func publishSolidMilestone(cachedMs *storage.CachedMilestone) {
+func publishConfirmedMilestone(cachedMs *storage.CachedMilestone) {
 	defer cachedMs.Release(true)
-	publishMilestoneOnTopic(topicMilestonesSolid, cachedMs.GetMilestone())
+	publishMilestoneOnTopic(topicMilestonesConfirmed, cachedMs.GetMilestone())
 }
 
 func publishLatestMilestone(cachedMs *storage.CachedMilestone) {
@@ -45,6 +44,12 @@ func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
 	}
 }
 
+func publishReceipt(r *iotago.Receipt) {
+	if mqttBroker.HasSubscribers(topicReceipts) {
+		publishOnTopic(topicReceipts, r)
+	}
+}
+
 func publishMessage(cachedMessage *storage.CachedMessage) {
 	defer cachedMessage.Release(true)
 
@@ -54,12 +59,22 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 
 	indexation := cachedMessage.GetMessage().GetIndexation()
 	if indexation != nil {
-		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", indexation.Index)
+		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", hex.EncodeToString(indexation.Index))
 		if mqttBroker.HasSubscribers(indexationTopic) {
 			mqttBroker.Send(indexationTopic, cachedMessage.GetMessage().GetData())
 		}
 	}
+}
 
+func publishTransactionIncludedMessage(transactionId *iotago.TransactionID, messageId hornet.MessageID) {
+	transactionTopic := strings.ReplaceAll(topicTransactionsIncludedMessage, "{transactionId}", hex.EncodeToString(transactionId[:]))
+	if mqttBroker.HasSubscribers(transactionTopic) {
+		cachedMessage := deps.Storage.GetCachedMessageOrNil(messageId)
+		if cachedMessage != nil {
+			mqttBroker.Send(transactionTopic, cachedMessage.GetMessage().GetData())
+			cachedMessage.Release(true)
+		}
+	}
 }
 
 func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
@@ -67,8 +82,8 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 
 	metadata := cachedMetadata.GetMetadata()
 
-	messageId := metadata.GetMessageID().Hex()
-	singleMessageTopic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageId)
+	messageID := metadata.GetMessageID().ToHex()
+	singleMessageTopic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageID)
 	hasSingleMessageTopicSubscriber := mqttBroker.HasSubscribers(singleMessageTopic)
 
 	hasAllMessagesTopicSubscriber := mqttBroker.HasSubscribers(topicMessagesReferenced)
@@ -88,9 +103,8 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		}
 
 		messageMetadataResponse := &messageMetadataPayload{
-			MessageID:                  metadata.GetMessageID().Hex(),
-			Parent1:                    metadata.GetParent1MessageID().Hex(),
-			Parent2:                    metadata.GetParent2MessageID().Hex(),
+			MessageID:                  metadata.GetMessageID().ToHex(),
+			Parents:                    metadata.GetParents().ToHex(),
 			Solid:                      metadata.IsSolid(),
 			ReferencedByMilestoneIndex: referencedByMilestone,
 		}
@@ -114,23 +128,23 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 			messageMetadataResponse.LedgerInclusionState = &inclusionState
 		} else if metadata.IsSolid() {
 			// determine info about the quality of the tip if not referenced
-			lsmi := deps.Storage.GetSolidMilestoneIndex()
-			ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMetadata.Retain(), lsmi)
+			cmi := deps.Storage.GetConfirmedMilestoneIndex()
+			ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMetadata.Retain(), cmi)
 
 			// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 			shouldPromote := false
 			shouldReattach := false
 
-			if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)) {
-				// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
+			if (cmi - ocri) > milestone.Index(deps.BelowMaxDepth) {
+				// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 				shouldPromote = false
 				shouldReattach = true
-			} else if (lsmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
-				// if the LSMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy and should be promoted
+			} else if (cmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI)) {
+				// if the CMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy and should be promoted
 				shouldPromote = true
 				shouldReattach = false
-			} else if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
-				// if the OCRI to LSMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy and should be promoted
+			} else if (cmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI)) {
+				// if the OCRI to CMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy and should be promoted
 				shouldPromote = true
 				shouldReattach = false
 			}
@@ -139,7 +153,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 			messageMetadataResponse.ShouldReattach = &shouldReattach
 		}
 
-		// Serialize here instead of using publishOnTopic to avoid double JSON marshalling
+		// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
 		jsonPayload, err := json.Marshal(messageMetadataResponse)
 		if err != nil {
 			log.Warn(err.Error())
@@ -181,7 +195,7 @@ func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
 
 	return &outputPayload{
-		MessageID:     output.MessageID().Hex(),
+		MessageID:     output.MessageID().ToHex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
@@ -194,7 +208,6 @@ func publishOutput(output *utxo.Output, spent bool) {
 	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
 	outputsTopicHasSubscribers := mqttBroker.HasSubscribers(outputsTopic)
 
-	// Since we do not know on which network we are running (Mainnet vs Testnet), we have to check if anyone is subscribed to the bech32 address on both Mainnet and Testnet
 	addressBech32Topic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(deps.Bech32HRP))
 	addressBech32TopicHasSubscribers := mqttBroker.HasSubscribers(addressBech32Topic)
 
@@ -204,7 +217,7 @@ func publishOutput(output *utxo.Output, spent bool) {
 	if outputsTopicHasSubscribers || addressEd25519TopicHasSubscribers || addressBech32TopicHasSubscribers {
 		if payload := payloadForOutput(output, spent); payload != nil {
 
-			// Serialize here instead of using publishOnTopic to avoid double JSON marshalling
+			// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
 			jsonPayload, err := json.Marshal(payload)
 			if err != nil {
 				log.Warn(err.Error())
@@ -224,35 +237,60 @@ func publishOutput(output *utxo.Output, spent bool) {
 			}
 		}
 	}
+
+	if !spent {
+		// If this is the first output in a transaction (index 0), then check if someone is observing the transaction that generated this output
+		if binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength:]) == 0 {
+			transactionId := &iotago.TransactionID{}
+			copy(transactionId[:], output.OutputID()[:iotago.TransactionIDLength])
+			publishTransactionIncludedMessage(transactionId, output.MessageID())
+		}
+	}
 }
 
-func messageIdFromTopic(topicName string) *hornet.MessageID {
+func messageIdFromTopic(topicName string) hornet.MessageID {
 	if strings.HasPrefix(topicName, "messages/") && strings.HasSuffix(topicName, "/metadata") {
-		messageIdHex := strings.Replace(topicName, "messages/", "", 1)
-		messageIdHex = strings.Replace(messageIdHex, "/metadata", "", 1)
+		messageIDHex := strings.Replace(topicName, "messages/", "", 1)
+		messageIDHex = strings.Replace(messageIDHex, "/metadata", "", 1)
 
-		messageId, err := hornet.MessageIDFromHex(messageIdHex)
+		messageID, err := hornet.MessageIDFromHex(messageIDHex)
 		if err != nil {
 			return nil
 		}
-		return messageId
+		return messageID
+	}
+	return nil
+}
+
+func transactionIdFromTopic(topicName string) *iotago.TransactionID {
+	if strings.HasPrefix(topicName, "transactions/") && strings.HasSuffix(topicName, "/included-message") {
+		transactionIDHex := strings.Replace(topicName, "transactions/", "", 1)
+		transactionIDHex = strings.Replace(transactionIDHex, "/included-message", "", 1)
+
+		decoded, err := hex.DecodeString(transactionIDHex)
+		if err != nil || len(decoded) != iotago.TransactionIDLength {
+			return nil
+		}
+		transactionID := &iotago.TransactionID{}
+		copy(transactionID[:], decoded)
+		return transactionID
 	}
 	return nil
 }
 
 func outputIdFromTopic(topicName string) *iotago.UTXOInputID {
 	if strings.HasPrefix(topicName, "outputs/") {
-		outputIdHex := strings.Replace(topicName, "outputs/", "", 1)
+		outputIDHex := strings.Replace(topicName, "outputs/", "", 1)
 
-		bytes, err := hex.DecodeString(outputIdHex)
+		bytes, err := hex.DecodeString(outputIDHex)
 		if err != nil {
 			return nil
 		}
 
 		if len(bytes) == iotago.TransactionIDLength+iotago.UInt16ByteSize {
-			outputId := &iotago.UTXOInputID{}
-			copy(outputId[:], bytes)
-			return outputId
+			outputID := &iotago.UTXOInputID{}
+			copy(outputID[:], bytes)
+			return outputID
 		}
 	}
 	return nil

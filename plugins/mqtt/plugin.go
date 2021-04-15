@@ -8,13 +8,6 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/workerpool"
-
-	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -22,11 +15,16 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/workerpool"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.Enabled,
 		Pluggable: node.Pluggable{
 			Name:      "MQTT",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -50,12 +48,13 @@ var (
 	log    *logger.Logger
 	deps   dependencies
 
-	newLatestMilestoneWorkerPool *workerpool.WorkerPool
-	newSolidMilestoneWorkerPool  *workerpool.WorkerPool
+	newLatestMilestoneWorkerPool    *workerpool.WorkerPool
+	newConfirmedMilestoneWorkerPool *workerpool.WorkerPool
 
 	messagesWorkerPool        *workerpool.WorkerPool
 	messageMetadataWorkerPool *workerpool.WorkerPool
 	utxoOutputWorkerPool      *workerpool.WorkerPool
+	receiptWorkerPool         *workerpool.WorkerPool
 
 	topicSubscriptionWorkerPool *workerpool.WorkerPool
 
@@ -66,11 +65,12 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage    *storage.Storage
-	Tangle     *tangle.Tangle
-	NodeConfig *configuration.Configuration `name:"nodeConfig"`
-	Bech32HRP  iotago.NetworkPrefix         `name:"bech32HRP"`
-	Echo       *echo.Echo
+	Storage       *storage.Storage
+	Tangle        *tangle.Tangle
+	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+	BelowMaxDepth int                          `name:"belowMaxDepth"`
+	Bech32HRP     iotago.NetworkPrefix         `name:"bech32HRP"`
+	Echo          *echo.Echo
 }
 
 func configure() {
@@ -81,8 +81,8 @@ func configure() {
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	newSolidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishSolidMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
+	newConfirmedMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
+		publishConfirmedMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -99,7 +99,12 @@ func configure() {
 	utxoOutputWorkerPool = workerpool.New(func(task workerpool.Task) {
 		publishOutput(task.Param(0).(*utxo.Output), task.Param(1).(bool))
 		task.Return(nil)
-	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize))
+
+	receiptWorkerPool = workerpool.New(func(task workerpool.Task) {
+		publishReceipt(task.Param(0).(*iotago.Receipt))
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize))
 
 	topicSubscriptionWorkerPool = workerpool.New(func(task workerpool.Task) {
 		defer task.Return(nil)
@@ -108,22 +113,36 @@ func configure() {
 		topicName := string(topic)
 
 		if messageId := messageIdFromTopic(topicName); messageId != nil {
-			if cachedMetadata := deps.Storage.GetCachedMessageMetadataOrNil(messageId); cachedMetadata != nil {
-				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
+			if cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageId); cachedMsgMeta != nil {
+				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMsgMeta); added {
 					return // Avoid Release (done inside workerpool task)
 				}
-				cachedMetadata.Release(true)
+				cachedMsgMeta.Release(true)
 			}
 			return
 		}
 
-		if outputId := outputIdFromTopic(topicName); outputId != nil {
-			output, err := deps.Storage.UTXO().ReadOutputByOutputID(outputId)
+		if transactionId := transactionIdFromTopic(topicName); transactionId != nil {
+			// Find the first output of the transaction
+			outputId := &iotago.UTXOInputID{}
+			copy(outputId[:], transactionId[:])
+
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
 			if err != nil {
 				return
 			}
 
-			unspent, err := deps.Storage.UTXO().IsOutputUnspent(outputId)
+			publishTransactionIncludedMessage(transactionId, output.MessageID())
+			return
+		}
+
+		if outputId := outputIdFromTopic(topicName); outputId != nil {
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
+			if err != nil {
+				return
+			}
+
+			unspent, err := deps.Storage.UTXO().IsOutputUnspentWithoutLocking(output)
 			if err != nil {
 				return
 			}
@@ -139,10 +158,10 @@ func configure() {
 			return
 		}
 
-		if topicName == topicMilestonesSolid {
-			index := deps.Storage.GetSolidMilestoneIndex()
+		if topicName == topicMilestonesConfirmed {
+			index := deps.Storage.GetConfirmedMilestoneIndex()
 			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
-				publishSolidMilestone(milestone) // milestone pass +1
+				publishConfirmedMilestone(milestone) // milestone pass +1
 			}
 			return
 		}
@@ -150,7 +169,7 @@ func configure() {
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	var err error
-	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", func(topic []byte) {
+	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", deps.NodeConfig.Int(CfgMQTTWorkerCount), func(topic []byte) {
 		log.Infof("Subscribe to topic: %s", string(topic))
 		topicSubscriptionWorkerPool.TrySubmit(topic)
 	}, func(topic []byte) {
@@ -206,22 +225,22 @@ func run() {
 		cachedMs.Release(true)
 	})
 
-	onSolidMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
+	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
-			if !deps.Storage.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeAlmostSynced() {
 				cachedMs.Release(true)
 				return
 			}
 			wasSyncBefore = true
 		}
 
-		if _, added := newSolidMilestoneWorkerPool.TrySubmit(cachedMs); added {
+		if _, added := newConfirmedMilestoneWorkerPool.TrySubmit(cachedMs); added {
 			return // Avoid Release (done inside workerpool task)
 		}
 		cachedMs.Release(true)
 	})
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedMsg.Release(true)
@@ -256,6 +275,10 @@ func run() {
 		utxoOutputWorkerPool.TrySubmit(spent.Output(), true)
 	})
 
+	onReceipt := events.NewClosure(func(receipt *iotago.Receipt) {
+		receiptWorkerPool.TrySubmit(receipt)
+	})
+
 	Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
 		go func() {
 			mqttBroker.Start()
@@ -279,7 +302,7 @@ func run() {
 		log.Info("Starting MQTT Events ... done")
 
 		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
-		deps.Tangle.Events.SolidMilestoneChanged.Attach(onSolidMilestoneChanged)
+		deps.Tangle.Events.ConfirmedMilestoneChanged.Attach(onConfirmedMilestoneChanged)
 
 		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
 		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
@@ -288,17 +311,20 @@ func run() {
 		deps.Tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
 		deps.Tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
 
+		deps.Tangle.Events.NewReceipt.Attach(onReceipt)
+
 		messagesWorkerPool.Start()
 		newLatestMilestoneWorkerPool.Start()
-		newSolidMilestoneWorkerPool.Start()
+		newConfirmedMilestoneWorkerPool.Start()
 		messageMetadataWorkerPool.Start()
 		topicSubscriptionWorkerPool.Start()
 		utxoOutputWorkerPool.Start()
+		receiptWorkerPool.Start()
 
 		<-shutdownSignal
 
 		deps.Tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
-		deps.Tangle.Events.SolidMilestoneChanged.Detach(onSolidMilestoneChanged)
+		deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(onConfirmedMilestoneChanged)
 
 		deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
@@ -307,12 +333,15 @@ func run() {
 		deps.Tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
 		deps.Tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
 
+		deps.Tangle.Events.NewReceipt.Detach(onReceipt)
+
 		messagesWorkerPool.StopAndWait()
 		newLatestMilestoneWorkerPool.StopAndWait()
-		newSolidMilestoneWorkerPool.StopAndWait()
+		newConfirmedMilestoneWorkerPool.StopAndWait()
 		messageMetadataWorkerPool.StopAndWait()
 		topicSubscriptionWorkerPool.StopAndWait()
 		utxoOutputWorkerPool.StopAndWait()
+		receiptWorkerPool.StopAndWait()
 
 		log.Info("Stopping MQTT Events ... done")
 	}, shutdown.PriorityMetricsPublishers)

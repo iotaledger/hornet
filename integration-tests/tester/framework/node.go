@@ -7,8 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
 	"github.com/libp2p/go-libp2p-core/peer"
+
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // Node represents a HORNET node inside the Docker network.
@@ -21,10 +22,8 @@ type Node struct {
 	Config *NodeConfig
 	// The libp2p identifier of the peer.
 	ID peer.ID
-	// The iota.go web API instance used to communicate with the node.
-	NodeAPI *iotago.NodeAPI
-	// The more specific web API providing more information for debugging purposes.
-	DebugNodeAPI *DebugNodeAPI
+	// The iota.go web API instance with additional information used to communicate with the node.
+	DebugNodeAPIClient *DebugNodeAPIClient
 	// The profiler instance.
 	Profiler
 	// The DockerContainer that this peer is running in
@@ -42,8 +41,7 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 		return nil, err
 	}
 
-	nodeAPI := iotago.NewNodeAPI(getNodeAPIBaseURL(ip))
-	debugNodeAPI := NewDebugNodeAPI(getNodeAPIBaseURL(ip))
+	debugNodeAPI := NewDebugNodeAPIClient(getNodeAPIBaseURL(ip))
 
 	return &Node{
 		Name: name,
@@ -55,12 +53,11 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 				Timeout: 2 * time.Minute,
 			},
 		},
-		IP:              ip,
-		Config:          cfg,
-		ID:              id,
-		NodeAPI:         nodeAPI,
-		DebugNodeAPI:    debugNodeAPI,
-		DockerContainer: dockerContainer,
+		IP:                 ip,
+		Config:             cfg,
+		ID:                 id,
+		DebugNodeAPIClient: debugNodeAPI,
+		DockerContainer:    dockerContainer,
 	}, nil
 }
 
@@ -107,11 +104,11 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 				txCount := atomic.AddInt32(&spammed, 1)
 				data := fmt.Sprintf("Count: %06d, Timestamp: %s", txCount, time.Now().Format(time.RFC3339))
 				iotaMsg := &iotago.Message{Payload: &iotago.Indexation{
-					Index: "SPAM",
+					Index: []byte("SPAM"),
 					Data:  []byte(data)},
 				}
 
-				if _, err := p.NodeAPI.SubmitMessage(iotaMsg); err != nil {
+				if _, err := p.DebugNodeAPIClient.SubmitMessage(iotaMsg); err != nil {
 					spamErr = err
 					return
 				}

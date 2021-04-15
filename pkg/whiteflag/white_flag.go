@@ -2,13 +2,10 @@ package whiteflag
 
 import (
 	"crypto"
+	"encoding"
 	"fmt"
 
-	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go"
 	"github.com/pkg/errors"
-
-	_ "golang.org/x/crypto/blake2b" // import implementation
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -16,6 +13,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go/v2"
+
+	// import implementation
+	_ "golang.org/x/crypto/blake2b"
 )
 
 var (
@@ -28,13 +30,13 @@ type Confirmation struct {
 	// The index of the milestone that got confirmed.
 	MilestoneIndex milestone.Index
 	// The message ID of the milestone that got confirmed.
-	MilestoneMessageID *hornet.MessageID
+	MilestoneMessageID hornet.MessageID
 	// The ledger mutations and referenced messages of this milestone.
 	Mutations *WhiteFlagMutations
 }
 
 type MessageWithConflict struct {
-	MessageID *hornet.MessageID
+	MessageID hornet.MessageID
 	Conflict  storage.Conflict
 }
 
@@ -58,15 +60,15 @@ type WhiteFlagMutations struct {
 	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 }
 
-// ComputeConfirmation computes the ledger changes in accordance to the white-flag rules for the cone referenced by parent1 and parent2.
+// ComputeWhiteFlagMutations computes the ledger changes in accordance to the white-flag rules for the cone referenced by the parents.
 // Via a post-order depth-first search the approved messages of the given cone are traversed and
 // in their corresponding order applied/mutated against the previous ledger state, respectively previous applied mutations.
 // Messages within the approving cone must be valid. Messages causing conflicts are ignored but do not create an error.
 // It also computes the merkle tree root hash consisting out of the IDs of the messages which are part of the set
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-// all cachedMsgMetas and cachedMessages have to be released outside.
-func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cachedMessageMetas map[string]*storage.CachedMetadata, cachedMessages map[string]*storage.CachedMessage, parent1MessageID *hornet.MessageID, parent2MessageID *hornet.MessageID) (*WhiteFlagMutations, error) {
+// metadataMemcache has to be cleaned up outside.
+func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
@@ -82,12 +84,6 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 	condition := func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
-		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().MapKey()
-		if _, exists := cachedMessageMetas[cachedMetadataMapKey]; !exists {
-			// release the msg metadata at the end to speed up calculation
-			cachedMessageMetas[cachedMetadataMapKey] = cachedMetadata.Retain()
-		}
-
 		// only traverse and process the message if it was not referenced yet
 		return !cachedMetadata.GetMetadata().IsReferenced(), nil
 	}
@@ -96,18 +92,10 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 	consumer := func(cachedMetadata *storage.CachedMetadata) error { // meta +1
 		defer cachedMetadata.Release(true) // meta -1
 
-		cachedMetadataMapKey := cachedMetadata.GetMetadata().GetMessageID().MapKey()
-
 		// load up message
-		cachedMessage, exists := cachedMessages[cachedMetadataMapKey]
-		if !exists {
-			cachedMessage = s.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID()) // message +1
-			if cachedMessage == nil {
-				return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().Hex(), cachedMetadata.GetMetadata().GetMessageID().Hex())
-			}
-
-			// release the messages at the end to speed up calculation
-			cachedMessages[cachedMetadataMapKey] = cachedMessage
+		cachedMessage := messagesMemcache.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID())
+		if cachedMessage == nil {
+			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().ToHex(), cachedMetadata.GetMetadata().GetMessageID().ToHex())
 		}
 
 		message := cachedMessage.GetMessage()
@@ -158,7 +146,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			// check current ledger for this input
 			output, err = s.UTXO().ReadOutputByOutputIDWithoutLocking(input)
 			if err != nil {
-				if err == kvstore.ErrKeyNotFound {
+				if errors.Is(err, kvstore.ErrKeyNotFound) {
 					// input not found, so mark as invalid tx
 					conflict = storage.ConflictInputUTXONotFound
 					break
@@ -181,32 +169,30 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 			inputOutputs = append(inputOutputs, output)
 		}
 
-		// Dust validation
-		dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, func(addr iotago.Address) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
-			return s.UTXO().ReadDustForAddress(addr, wfConf.dustAllowanceDiff)
-		})
+		if conflict == storage.ConflictNone {
+			// Dust validation
+			dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, iotago.MaxDustOutputsOnAddress, func(addr iotago.Address) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
+				return s.UTXO().ReadDustForAddress(addr, wfConf.dustAllowanceDiff)
+			})
 
-		// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
-		mapping, err := inputOutputs.InputToOutputMapping()
-		if err != nil {
-			return err
-		}
-		if err := transaction.SemanticallyValidate(mapping, dustValidation); err != nil {
+			// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
+			mapping, err := inputOutputs.InputToOutputMapping()
+			if err != nil {
+				return err
+			}
+			if err := transaction.SemanticallyValidate(mapping, dustValidation); err != nil {
 
-			if errors.Is(err, iotago.ErrMissingUTXO) {
-				conflict = storage.ConflictInputUTXONotFound
-			} else if errors.Is(err, iotago.ErrInputOutputSumMismatch) {
-				conflict = storage.ConflictInputOutputSumMismatch
-			} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
-				conflict = storage.ConflictInvalidSignature
-			} else if errors.Is(err, iotago.ErrUnknownInputType) || errors.Is(err, iotago.ErrUnknownOutputType) {
-				conflict = storage.ConflictUnsupportedInputOrOutputType
-			} else if errors.Is(err, iotago.ErrUnknownAddrType) {
-				conflict = storage.ConflictUnsupportedAddressType
-			} else if errors.Is(err, iotago.ErrInvalidDustAllowance) {
-				conflict = storage.ConflictInvalidDustAllowance
-			} else {
-				conflict = storage.ConflictSemanticValidationFailed
+				if errors.Is(err, iotago.ErrMissingUTXO) {
+					conflict = storage.ConflictInputUTXONotFound
+				} else if errors.Is(err, iotago.ErrInputOutputSumMismatch) {
+					conflict = storage.ConflictInputOutputSumMismatch
+				} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
+					conflict = storage.ConflictInvalidSignature
+				} else if errors.Is(err, iotago.ErrInvalidDustAllowance) {
+					conflict = storage.ConflictInvalidDustAllowance
+				} else {
+					conflict = storage.ConflictSemanticValidationFailed
+				}
 			}
 		}
 
@@ -241,13 +227,13 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		// mark the given message to be part of milestone ledger by changing message inclusion set
 		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.GetMetadata().GetMessageID())
 
-		var newSpents utxo.Spents
+		newSpents := make(utxo.Spents, len(inputOutputs))
 
 		// save the inputs as spent
-		for _, input := range inputOutputs {
+		for i, input := range inputOutputs {
 			spent := utxo.NewSpent(input, transactionID, msIndex)
 			wfConf.NewSpents[string(input.OutputID()[:])] = spent
-			newSpents = append(newSpents, spent)
+			newSpents[i] = spent
 		}
 
 		// add new outputs
@@ -259,11 +245,14 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		return wfConf.dustAllowanceDiff.Add(depositOutputs, newSpents)
 	}
 
+	// we don't need to call cleanup at the end, because we pass our own metadataMemcache.
+	parentsTraverser := dag.NewParentTraverser(s, metadataMemcache)
+
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
-	// If parent1 and parent2 of a message are both SEPs, are already processed or already referenced,
+	// If the parents are SEPs, are already processed or already referenced,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
 	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncludedWithTransactions.
-	if err := dag.TraverseParent1AndParent2(s, parent1MessageID, parent2MessageID,
+	if err := parentsTraverser.Traverse(parents,
 		condition,
 		consumer,
 		// called on missing parents
@@ -272,13 +261,21 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, cach
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false, nil); err != nil {
+		false,
+		nil); err != nil {
 		return nil, err
 	}
 
 	// compute merkle tree root hash
-	merkleTreeHash := NewHasher(crypto.BLAKE2b_256).TreeHash(wfConf.MessagesIncludedWithTransactions)
-	copy(wfConf.MerkleTreeHash[:], merkleTreeHash[:iotago.MilestoneInclusionMerkleProofLength])
+	marshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesIncludedWithTransactions))
+	for i := range wfConf.MessagesIncludedWithTransactions {
+		marshalers[i] = wfConf.MessagesIncludedWithTransactions[i]
+	}
+	merkleTreeHash, err := NewHasher(crypto.BLAKE2b_256).Hash(marshalers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute Merkle tree hash: %w", err)
+	}
+	copy(wfConf.MerkleTreeHash[:], merkleTreeHash)
 
 	if len(wfConf.MessagesIncludedWithTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
 		return nil, ErrIncludedMessagesSumDoesntMatch

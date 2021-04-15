@@ -8,15 +8,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/pkg/errors"
-
-	"github.com/iotaledger/hive.go/byteutils"
-	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hive.go/byteutils"
+	"github.com/iotaledger/hive.go/kvstore/pebble"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
@@ -36,6 +35,10 @@ var (
 	ErrOutputProducerNotProvided = errors.New("output producer is not provided")
 	// Returned when an output consumer has not been provided.
 	ErrOutputConsumerNotProvided = errors.New("output consumer is not provided")
+	// Returned when the treasury output for a full snapshot has not been provided.
+	ErrTreasuryOutputNotProvided = errors.New("treasury output is not provided")
+	// Returned when a treasury output consumer has not been provided.
+	ErrTreasuryOutputConsumerNotProvided = errors.New("treasury output consumer is not provided")
 	// Returned if specified snapshots are not mergeable.
 	ErrSnapshotsNotMergeable = errors.New("snapshot files not mergeable")
 )
@@ -112,47 +115,92 @@ func (s *Spent) MarshalBinary() ([]byte, error) {
 	return byteutils.ConcatBytes(bytes, s.TargetTransactionID[:]), nil
 }
 
-// MilestoneDiff represents the outputs which were created and consumed for the given milestone.
+// MilestoneDiff represents the outputs which were created and consumed for the given milestone
+// and the message itself which contains the milestone.
 type MilestoneDiff struct {
-	// The index of the milestone for which the diff applies.
-	MilestoneIndex milestone.Index `json:"milestone_index"`
+	// The milestone payload itself.
+	Milestone *iotago.Milestone `json:"milestone"`
 	// The created outputs with this milestone.
 	Created []*Output `json:"created"`
 	// The consumed spents with this milestone.
 	Consumed []*Spent `json:"consumed"`
+	// The consumed treasury output with this milestone.
+	SpentTreasuryOutput *utxo.TreasuryOutput
+}
+
+// TreasuryOutput extracts the new treasury output from within the milestone receipt.
+// Might return nil if there is no receipt within the milestone.
+func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
+	if md.Milestone.Receipt == nil {
+		return nil
+	}
+	to := md.Milestone.Receipt.(*iotago.Receipt).
+		Transaction.(*iotago.TreasuryTransaction).
+		Output.(*iotago.TreasuryOutput)
+	msID, err := md.Milestone.ID()
+	if err != nil {
+		panic(err)
+	}
+	utxoTo := &utxo.TreasuryOutput{Amount: to.Amount}
+	copy(utxoTo.MilestoneID[:], msID[:])
+	return utxoTo
 }
 
 func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
-	if err := binary.Write(&b, binary.LittleEndian, md.MilestoneIndex); err != nil {
-		return nil, fmt.Errorf("unable to write milestone index for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
+
+	msBytes, err := md.Milestone.Serialize(iotago.DeSeriModePerformValidation)
+	if err != nil {
+		return nil, fmt.Errorf("unable to serialize milestone for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+	}
+
+	if err := binary.Write(&b, binary.LittleEndian, uint32(len(msBytes))); err != nil {
+		return nil, fmt.Errorf("unable to write milestone payload length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+	}
+
+	if _, err := b.Write(msBytes); err != nil {
+		return nil, fmt.Errorf("unable to write milestone payload for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+	}
+
+	// write in spent treasury output
+	if md.Milestone.Receipt != nil {
+		if md.SpentTreasuryOutput == nil {
+			panic("milestone diff includes a receipt but no spent treasury output is set")
+		}
+		if _, err := b.Write(md.SpentTreasuryOutput.MilestoneID[:]); err != nil {
+			return nil, fmt.Errorf("unable to write treasury input milestone hash for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+		}
+
+		if err := binary.Write(&b, binary.LittleEndian, md.SpentTreasuryOutput.Amount); err != nil {
+			return nil, fmt.Errorf("unable to write treasury input amount for ls-milestone-diff %d: %w", md.Milestone.Index, err)
+		}
 	}
 
 	if err := binary.Write(&b, binary.LittleEndian, uint64(len(md.Created))); err != nil {
-		return nil, fmt.Errorf("unable to write created outputs array length for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
+		return nil, fmt.Errorf("unable to write created outputs array length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
 
 	for x, output := range md.Created {
 		outputBytes, err := output.MarshalBinary()
 		if err != nil {
-			return nil, fmt.Errorf("unable to serialize output %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+			return nil, fmt.Errorf("unable to serialize output %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
 		if _, err := b.Write(outputBytes); err != nil {
-			return nil, fmt.Errorf("unable to write output %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+			return nil, fmt.Errorf("unable to write output %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
 	}
 
 	if err := binary.Write(&b, binary.LittleEndian, uint64(len(md.Consumed))); err != nil {
-		return nil, fmt.Errorf("unable to write consumed outputs array length for ls-milestone-diff %d: %w", md.MilestoneIndex, err)
+		return nil, fmt.Errorf("unable to write consumed outputs array length for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
 
 	for x, spent := range md.Consumed {
 		spentBytes, err := spent.MarshalBinary()
 		if err != nil {
-			return nil, fmt.Errorf("unable to serialize spent %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+			return nil, fmt.Errorf("unable to serialize spent %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
 		if _, err := b.Write(spentBytes); err != nil {
-			return nil, fmt.Errorf("unable to write spent %d for ls-milestone-diff %d: %w", x, md.MilestoneIndex, err)
+			return nil, fmt.Errorf("unable to write spent %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
 	}
 
@@ -160,11 +208,11 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 }
 
 // SEPProducerFunc yields a solid entry point to be written to a snapshot or nil if no more is available.
-type SEPProducerFunc func() (*hornet.MessageID, error)
+type SEPProducerFunc func() (hornet.MessageID, error)
 
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
-type SEPConsumerFunc func(*hornet.MessageID) error
+type SEPConsumerFunc func(hornet.MessageID) error
 
 // HeaderConsumerFunc consumes the snapshot file header.
 // A returned error signals to cancel further reading.
@@ -176,6 +224,10 @@ type OutputProducerFunc func() (*Output, error)
 // OutputConsumerFunc consumes the given output.
 // A returned error signals to cancel further reading.
 type OutputConsumerFunc func(output *Output) error
+
+// UnspentTreasuryOutputConsumerFunc consumes the given treasury output.
+// A returned error signals to cancel further reading.
+type UnspentTreasuryOutputConsumerFunc func(output *utxo.TreasuryOutput) error
 
 // MilestoneDiffProducerFunc yields a milestone diff to be written to a snapshot or nil if no more is available.
 type MilestoneDiffProducerFunc func() (*MilestoneDiff, error)
@@ -196,6 +248,9 @@ type FileHeader struct {
 	SEPMilestoneIndex milestone.Index
 	// The milestone index of the ledger data within the snapshot.
 	LedgerMilestoneIndex milestone.Index
+	// The treasury output existing for the given ledger milestone index.
+	// This field must be populated if a Full snapshot is created/read.
+	TreasuryOutput *utxo.TreasuryOutput
 }
 
 // ReadFileHeader is a FileHeader but with additional content read from the snapshot.
@@ -215,33 +270,40 @@ type ReadFileHeader struct {
 // FileHeader.Type is used to determine whether to write a full or delta snapshot.
 // If the type of the snapshot is Full, then OutputProducerFunc must be provided.
 func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *FileHeader,
-	sepProd SEPProducerFunc, outputProd OutputProducerFunc, msDiffProd MilestoneDiffProducerFunc) error {
+	sepProd SEPProducerFunc, outputProd OutputProducerFunc, msDiffProd MilestoneDiffProducerFunc) (error, *SnapshotMetrics) {
 
-	if header.Type == Full && outputProd == nil {
-		return ErrOutputProducerNotProvided
+	if header.Type == Full {
+		switch {
+		case outputProd == nil:
+			return ErrOutputProducerNotProvided, nil
+		case header.TreasuryOutput == nil:
+			return ErrTreasuryOutputNotProvided, nil
+		}
 	}
 
 	var sepsCount, outputCount, msDiffCount uint64
 
+	timeStart := time.Now()
+
 	// write LS file version and type
 	if _, err := writeSeeker.Write([]byte{header.Version, byte(header.Type)}); err != nil {
-		return fmt.Errorf("unable to write LS version and type: %w", err)
+		return fmt.Errorf("unable to write LS version and type: %w", err), nil
 	}
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, timestamp); err != nil {
-		return fmt.Errorf("unable to write LS timestamp: %w", err)
+		return fmt.Errorf("unable to write LS timestamp: %w", err), nil
 	}
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, header.NetworkID); err != nil {
-		return fmt.Errorf("unable to write LS network ID: %w", err)
+		return fmt.Errorf("unable to write LS network ID: %w", err), nil
 	}
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, header.SEPMilestoneIndex); err != nil {
-		return fmt.Errorf("unable to write LS SEPs milestone index: %w", err)
+		return fmt.Errorf("unable to write LS SEPs milestone index: %w", err), nil
 	}
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, header.LedgerMilestoneIndex); err != nil {
-		return fmt.Errorf("unable to write LS ledger milestone index: %w", err)
+		return fmt.Errorf("unable to write LS ledger milestone index: %w", err), nil
 	}
 
 	// write count placeholders
@@ -250,13 +312,24 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *
 		placeholderSpace -= iotago.UInt64ByteSize
 	}
 	if _, err := writeSeeker.Write(make([]byte, placeholderSpace)); err != nil {
-		return fmt.Errorf("unable to write LS counter placeholders: %w", err)
+		return fmt.Errorf("unable to write LS counter placeholders: %w", err), nil
 	}
+
+	if header.Type == Full {
+		if _, err := writeSeeker.Write(header.TreasuryOutput.MilestoneID[:]); err != nil {
+			return fmt.Errorf("unable to write LS treasury output milestone hash: %w", err), nil
+		}
+		if err := binary.Write(writeSeeker, binary.LittleEndian, header.TreasuryOutput.Amount); err != nil {
+			return fmt.Errorf("unable to write LS treasury output amount: %w", err), nil
+		}
+	}
+
+	timeHeader := time.Now()
 
 	for {
 		sep, err := sepProd()
 		if err != nil {
-			return fmt.Errorf("unable to get next LS SEP #%d: %w", sepsCount+1, err)
+			return fmt.Errorf("unable to get next LS SEP #%d: %w", sepsCount+1, err), nil
 		}
 
 		if sep == nil {
@@ -265,15 +338,17 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *
 
 		sepsCount++
 		if _, err := writeSeeker.Write(sep[:]); err != nil {
-			return fmt.Errorf("unable to write LS SEP #%d: %w", sepsCount, err)
+			return fmt.Errorf("unable to write LS SEP #%d: %w", sepsCount, err), nil
 		}
 	}
+
+	timeSolidEntryPoints := time.Now()
 
 	if header.Type == Full {
 		for {
 			output, err := outputProd()
 			if err != nil {
-				return fmt.Errorf("unable to get next LS output #%d: %w", outputCount+1, err)
+				return fmt.Errorf("unable to get next LS output #%d: %w", outputCount+1, err), nil
 			}
 
 			if output == nil {
@@ -283,18 +358,20 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *
 			outputCount++
 			outputBytes, err := output.MarshalBinary()
 			if err != nil {
-				return fmt.Errorf("unable to serialize LS output #%d: %w", outputCount, err)
+				return fmt.Errorf("unable to serialize LS output #%d: %w", outputCount, err), nil
 			}
 			if _, err := writeSeeker.Write(outputBytes); err != nil {
-				return fmt.Errorf("unable to write LS output #%d: %w", outputCount, err)
+				return fmt.Errorf("unable to write LS output #%d: %w", outputCount, err), nil
 			}
 		}
 	}
 
+	timeOutputs := time.Now()
+
 	for {
 		msDiff, err := msDiffProd()
 		if err != nil {
-			return fmt.Errorf("unable to get next LS milestone diff #%d: %w", msDiffCount+1, err)
+			return fmt.Errorf("unable to get next LS milestone diff #%d: %w", msDiffCount+1, err), nil
 		}
 
 		if msDiff == nil {
@@ -304,38 +381,45 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *
 		msDiffCount++
 		msDiffBytes, err := msDiff.MarshalBinary()
 		if err != nil {
-			return fmt.Errorf("unable to serialize LS milestone diff #%d: %w", msDiffCount, err)
+			return fmt.Errorf("unable to serialize LS milestone diff #%d: %w", msDiffCount, err), nil
 		}
 		if _, err := writeSeeker.Write(msDiffBytes); err != nil {
-			return fmt.Errorf("unable to write LS milestone diff #%d: %w", msDiffCount, err)
+			return fmt.Errorf("unable to write LS milestone diff #%d: %w", msDiffCount, err), nil
 		}
 	}
 
+	timeMilestoneDiffs := time.Now()
+
 	if _, err := writeSeeker.Seek(countersOffset, io.SeekStart); err != nil {
-		return fmt.Errorf("unable to seek to LS counter placeholders: %w", err)
+		return fmt.Errorf("unable to seek to LS counter placeholders: %w", err), nil
 	}
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, sepsCount); err != nil {
-		return fmt.Errorf("unable to write to LS SEPs count: %w", err)
+		return fmt.Errorf("unable to write to LS SEPs count: %w", err), nil
 	}
 
 	if header.Type == Full {
 		if err := binary.Write(writeSeeker, binary.LittleEndian, outputCount); err != nil {
-			return fmt.Errorf("unable to write to LS outputs count: %w", err)
+			return fmt.Errorf("unable to write to LS outputs count: %w", err), nil
 		}
 	}
 
 	if err := binary.Write(writeSeeker, binary.LittleEndian, msDiffCount); err != nil {
-		return fmt.Errorf("unable to write to LS ms-diffs count: %w", err)
+		return fmt.Errorf("unable to write to LS ms-diffs count: %w", err), nil
 	}
 
-	return nil
+	return nil, &SnapshotMetrics{
+		DurationHeader:           timeHeader.Sub(timeStart),
+		DurationSolidEntryPoints: timeSolidEntryPoints.Sub(timeHeader),
+		DurationOutputs:          timeOutputs.Sub(timeSolidEntryPoints),
+		DurationMilestoneDiffs:   timeMilestoneDiffs.Sub(timeOutputs),
+	}
 }
 
 // StreamSnapshotDataFrom consumes a snapshot from the given reader.
 // OutputConsumerFunc must not be nil if the snapshot is not a delta snapshot.
 func StreamSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
-	sepConsumer SEPConsumerFunc, outputConsumer OutputConsumerFunc, msDiffConsumer MilestoneDiffConsumerFunc) error {
+	sepConsumer SEPConsumerFunc, outputConsumer OutputConsumerFunc, unspentTreasuryOutputConsumer UnspentTreasuryOutputConsumerFunc, msDiffConsumer MilestoneDiffConsumerFunc) error {
 	readHeader := &ReadFileHeader{}
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.Version); err != nil {
@@ -346,8 +430,13 @@ func StreamSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
 		return fmt.Errorf("unable to read LS type: %w", err)
 	}
 
-	if readHeader.Type == Full && outputConsumer == nil {
-		return ErrOutputConsumerNotProvided
+	if readHeader.Type == Full {
+		switch {
+		case outputConsumer == nil:
+			return ErrOutputConsumerNotProvided
+		case unspentTreasuryOutputConsumer == nil:
+			return ErrTreasuryOutputConsumerNotProvided
+		}
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.Timestamp); err != nil {
@@ -380,16 +469,31 @@ func StreamSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
 		return fmt.Errorf("unable to read LS ms-diff count: %w", err)
 	}
 
+	if readHeader.Type == Full {
+		to := &utxo.TreasuryOutput{Spent: false}
+		if _, err := io.ReadFull(reader, to.MilestoneID[:]); err != nil {
+			return fmt.Errorf("unable to read LS treasury output milestone hash: %w", err)
+		}
+		if err := binary.Read(reader, binary.LittleEndian, &to.Amount); err != nil {
+			return fmt.Errorf("unable to read LS treasury output amount: %w", err)
+		}
+		if err := unspentTreasuryOutputConsumer(to); err != nil {
+			return err
+		}
+
+		readHeader.TreasuryOutput = to
+	}
+
 	if err := headerConsumer(readHeader); err != nil {
 		return err
 	}
 
 	for i := uint64(0); i < readHeader.SEPCount; i++ {
-		var solidEntryPointMessageID hornet.MessageID
-		if _, err := io.ReadFull(reader, solidEntryPointMessageID[:]); err != nil {
+		solidEntryPointMessageID := make(hornet.MessageID, iotago.MessageIDLength)
+		if _, err := io.ReadFull(reader, solidEntryPointMessageID); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}
-		if err := sepConsumer(&solidEntryPointMessageID); err != nil {
+		if err := sepConsumer(solidEntryPointMessageID); err != nil {
 			return fmt.Errorf("SEP consumer error at pos %d: %w", i, err)
 		}
 	}
@@ -424,8 +528,34 @@ func StreamSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
 func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 	msDiff := &MilestoneDiff{}
 
-	if err := binary.Read(reader, binary.LittleEndian, &msDiff.MilestoneIndex); err != nil {
-		return nil, fmt.Errorf("unable to read LS ms-diff ms-index: %w", err)
+	var msLength uint32
+	if err := binary.Read(reader, binary.LittleEndian, &msLength); err != nil {
+		return nil, fmt.Errorf("unable to read LS ms-diff ms length: %w", err)
+	}
+
+	msBytes := make([]byte, msLength)
+	ms := &iotago.Milestone{}
+	if _, err := io.ReadFull(reader, msBytes); err != nil {
+		return nil, fmt.Errorf("unable to read LS ms-diff ms: %w", err)
+	}
+
+	if _, err := ms.Deserialize(msBytes, iotago.DeSeriModePerformValidation); err != nil {
+		return nil, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
+	}
+
+	msDiff.Milestone = ms
+
+	if ms.Receipt != nil {
+		spentTreasuryOutput := &utxo.TreasuryOutput{Spent: true}
+		if _, err := io.ReadFull(reader, spentTreasuryOutput.MilestoneID[:]); err != nil {
+			return nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone hash: %w", err)
+		}
+
+		if err := binary.Read(reader, binary.LittleEndian, &spentTreasuryOutput.Amount); err != nil {
+			return nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone amount: %w", err)
+		}
+
+		msDiff.SpentTreasuryOutput = spentTreasuryOutput
 	}
 
 	var createdCount, consumedCount uint64
@@ -489,8 +619,6 @@ func readOutput(reader io.Reader) (*Output, error) {
 
 	var addrDataWithoutType []byte
 	switch addr.(type) {
-	case *iotago.WOTSAddress:
-		addrDataWithoutType = make([]byte, iotago.WOTSAddressBytesLength)
 	case *iotago.Ed25519Address:
 		addrDataWithoutType = make([]byte, iotago.Ed25519AddressBytesLength)
 	default:
@@ -541,9 +669,11 @@ func ReadSnapshotHeader(filePath string) (*ReadFileHeader, error) {
 	if err := StreamSnapshotDataFrom(file, func(header *ReadFileHeader) error {
 		readHeader = header
 		return wantedAbort
-	}, func(id *hornet.MessageID) error {
+	}, func(id hornet.MessageID) error {
 		return nil
 	}, func(output *Output) error {
+		return nil
+	}, func(output *utxo.TreasuryOutput) error {
 		return nil
 	}, func(milestoneDiff *MilestoneDiff) error {
 		return nil
@@ -618,9 +748,9 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 		func(header *ReadFileHeader) error {
 			return mergeUTXOManager.StoreLedgerIndex(header.LedgerMilestoneIndex)
 		},
-		func(id *hornet.MessageID) error {
+		func(id hornet.MessageID) error {
 			return nil
-		}, newOutputConsumer(mergeUTXOManager), newMsDiffConsumer(mergeUTXOManager),
+		}, newOutputConsumer(mergeUTXOManager), newUnspentTreasuryOutputConsumer(mergeUTXOManager), newMsDiffConsumer(mergeUTXOManager),
 	); err != nil {
 		return nil, fmt.Errorf("unable to import full snapshot data into temp database: %w", err)
 	}
@@ -632,14 +762,14 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 	defer deltaSnapshotFile.Close()
 
 	// build up ledger state to delta snapshot index
-	deltaSnapSEPs := make([]*hornet.MessageID, 0)
+	deltaSnapSEPs := make(hornet.MessageIDs, 0)
 	if err := StreamSnapshotDataFrom(deltaSnapshotFile,
 		func(header *ReadFileHeader) error {
 			return mergeUTXOManager.StoreLedgerIndex(header.LedgerMilestoneIndex)
-		}, func(msgID *hornet.MessageID) error {
+		}, func(msgID hornet.MessageID) error {
 			deltaSnapSEPs = append(deltaSnapSEPs, msgID)
 			return nil
-		}, nil, newMsDiffConsumer(mergeUTXOManager),
+		}, nil, nil, newMsDiffConsumer(mergeUTXOManager),
 	); err != nil {
 		return nil, fmt.Errorf("unable to import delta snapshot data into temp database: %w", err)
 	}
@@ -652,7 +782,7 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 	defer targetSnapshotFile.Close()
 
 	var sepsIndex int
-	sepsIter := func() (*hornet.MessageID, error) {
+	sepsIter := func() (hornet.MessageID, error) {
 		if sepsIndex == len(deltaSnapSEPs) {
 			return nil, nil
 		}
@@ -663,13 +793,18 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 
 	// create a prepped output producer which counts how many went through
 	var unspentOutputsCount uint64
-	lsmiUTXOProducer := newLSMIUTXOProducer(mergeUTXOManager)
+	cmiUTXOProducer := newCMIUTXOProducer(mergeUTXOManager)
 	countingOutputProducer := func() (*Output, error) {
-		output, err := lsmiUTXOProducer()
+		output, err := cmiUTXOProducer()
 		if output != nil {
 			unspentOutputsCount++
 		}
 		return output, err
+	}
+
+	unspentTreasuryOutput, err := mergeUTXOManager.UnspentTreasuryOutputWithoutLocking()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get final unspent treasury output: %w", err)
 	}
 
 	mergedSnapshotFileHeader := &FileHeader{
@@ -680,9 +815,10 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 		// the SEP index on the delta snapshot is the built up state of applying
 		// all ms diffs to the origin state of the full snapshot
 		LedgerMilestoneIndex: deltaHeader.SEPMilestoneIndex,
+		TreasuryOutput:       unspentTreasuryOutput,
 	}
 
-	if err := StreamSnapshotDataTo(
+	if err, _ := StreamSnapshotDataTo(
 		targetSnapshotFile, uint64(time.Now().Unix()), mergedSnapshotFileHeader,
 		sepsIter, countingOutputProducer,
 		func() (*MilestoneDiff, error) {

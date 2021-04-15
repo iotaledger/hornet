@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
@@ -45,12 +45,12 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 	if depth != 0 {
 		targetIndex, err = deps.Snapshot.PruneDatabaseByDepth(milestone.Index(depth))
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInternalError, "pruning database failed: %s", err)
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
 	} else {
 		targetIndex, err = deps.Snapshot.PruneDatabaseByTargetIndex(milestone.Index(index))
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInternalError, "pruning database failed: %s", err)
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
 	}
 
@@ -75,7 +75,7 @@ func createSnapshot(c echo.Context) (*createSnapshotResponse, error) {
 
 	// ToDo: abort signal?
 	if err := deps.Snapshot.CreateFullSnapshot(milestone.Index(index), snapshotFilePath, false, nil); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "creating snapshot failed: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating snapshot failed: %s", err)
 	}
 
 	return &createSnapshotResponse{

@@ -2,22 +2,23 @@ package value
 
 import (
 	"context"
-	"crypto/ed25519"
 	"crypto/rand"
 	"log"
 	"testing"
 	"time"
 
-	"github.com/gohornet/hornet/integration-tests/tester/framework"
-	iotago "github.com/iotaledger/iota.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gohornet/hornet/integration-tests/tester/framework"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 // TestValue boots up a statically peered network and then checks that spending
 // the genesis output to create multiple new output works.
 func TestValue(t *testing.T) {
-	n, err := f.CreateStaticNetwork("test_value", framework.DefaultStaticPeeringLayout)
+	n, err := f.CreateStaticNetwork("test_value", nil, framework.DefaultStaticPeeringLayout())
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
 
@@ -60,7 +61,7 @@ func TestValue(t *testing.T) {
 
 	// broadcast to a node
 	log.Println("submitting transaction...")
-	submittedMsg, err := n.Nodes[0].NodeAPI.SubmitMessage(msg)
+	submittedMsg, err := n.Nodes[0].DebugNodeAPIClient.SubmitMessage(msg)
 	require.NoError(t, err)
 
 	// eventually the message should be confirmed
@@ -69,7 +70,7 @@ func TestValue(t *testing.T) {
 
 	log.Println("checking that the transaction gets confirmed...")
 	require.Eventually(t, func() bool {
-		msgMeta, err := n.Coordinator().NodeAPI.MessageMetadataByMessageID(*submittedMsgID)
+		msgMeta, err := n.Coordinator().DebugNodeAPIClient.MessageMetadataByMessageID(*submittedMsgID)
 		if err != nil {
 			return false
 		}
@@ -80,20 +81,20 @@ func TestValue(t *testing.T) {
 	}, 30*time.Second, 100*time.Millisecond)
 
 	// check that indeed the balances are available
-	res, err := n.Coordinator().NodeAPI.BalanceByEd25519Address(framework.GenesisAddress.String())
+	res, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(&framework.GenesisAddress)
 	require.NoError(t, err)
 	require.Zero(t, res.Balance)
 
-	res, err = n.Coordinator().NodeAPI.BalanceByEd25519Address(target1Addr.String())
+	res, err = n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(&target1Addr)
 	require.NoError(t, err)
 	require.EqualValues(t, target1Deposit, res.Balance)
 
-	res, err = n.Coordinator().NodeAPI.BalanceByEd25519Address(target2Addr.String())
+	res, err = n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(&target2Addr)
 	require.NoError(t, err)
 	require.EqualValues(t, target2Deposit, res.Balance)
 
 	// the genesis output should be spent
-	outputRes, err := n.Coordinator().NodeAPI.OutputByID(genesisInputID.ID())
+	outputRes, err := n.Coordinator().DebugNodeAPIClient.OutputByID(genesisInputID.ID())
 	require.NoError(t, err)
 	require.True(t, outputRes.Spent)
 }

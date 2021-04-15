@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	iotago "github.com/iotaledger/iota.go"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 type Vertex struct {
-	MessageID        string `json:"id"`
-	Parent1MessageID string `json:"parent1"`
-	Parent2MessageID string `json:"parent2"`
+	MessageID string   `json:"id"`
+	Parents   []string `json:"parents"`
 }
 
 // returns length amount random bytes
@@ -29,16 +29,8 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func rand32ByteHash() [iotago.TransactionIDLength]byte {
-	var h [iotago.TransactionIDLength]byte
-	b := randBytes(32)
-	copy(h[:], b)
-	return h
-}
-
-func randMessageID() *hornet.MessageID {
-	messageID := hornet.MessageID(rand32ByteHash())
-	return &messageID
+func randMessageID() hornet.MessageID {
+	return hornet.MessageID(randBytes(iotago.MessageIDLength))
 }
 
 func TestVisualizer(t *testing.T) {
@@ -51,17 +43,24 @@ func TestVisualizer(t *testing.T) {
 
 	var vertices []Vertex
 	const getFromLast = 30
-	for i := 0; i < 10000; i++ {
-		v := Vertex{MessageID: randMessageID().Hex()}
+	for i := 0; i < 1000; i++ {
+		v := Vertex{MessageID: randMessageID().ToHex()}
 		if i <= getFromLast {
-			v.Parent1MessageID = hornet.GetNullMessageID().Hex()
-			v.Parent2MessageID = hornet.GetNullMessageID().Hex()
+			// only one parent at the beginning
+			v.Parents = hornet.MessageIDs{hornet.GetNullMessageID()}.ToHex()
 			vertices = append(vertices, v)
 			continue
 		}
+
 		l := len(vertices)
-		v.Parent1MessageID = vertices[l-1-rand.Intn(getFromLast)].MessageID
-		v.Parent2MessageID = vertices[l-1-rand.Intn(getFromLast)].MessageID
+		parents := hornet.MessageIDs{}
+		for j := 2; j <= 2+rand.Intn(7); j++ {
+			msgID, err := hornet.MessageIDFromHex(vertices[l-1-rand.Intn(getFromLast)].MessageID)
+			assert.NoError(t, err)
+			parents = append(parents, msgID)
+		}
+		parents = parents.RemoveDupsAndSortByLexicalOrder()
+		v.Parents = parents.ToHex()
 		vertices = append(vertices, v)
 	}
 

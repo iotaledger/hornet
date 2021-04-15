@@ -5,11 +5,6 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
-
-	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
@@ -17,6 +12,9 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
@@ -56,6 +54,7 @@ func provide(c *dig.Container) {
 		Storage       *storage.Storage
 		ServerMetrics *metrics.ServerMetrics
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		BelowMaxDepth int                          `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps tipseldeps) *tipselect.TipSelector {
@@ -63,17 +62,17 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.ServerMetrics,
 
-			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI),
-			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI),
-			deps.NodeConfig.Int(CfgTipSelBelowMaxDepth),
+			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI),
+			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI),
+			deps.BelowMaxDepth,
 
 			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),
-			time.Second*time.Duration(deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAgeSeconds)),
+			deps.NodeConfig.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge),
 			uint32(deps.NodeConfig.Int64(CfgTipSelNonLazy+CfgTipSelMaxChildren)),
 			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold),
 
 			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit),
-			time.Second*time.Duration(deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAgeSeconds)),
+			deps.NodeConfig.Duration(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAge),
 			uint32(deps.NodeConfig.Int64(CfgTipSelSemiLazy+CfgTipSelMaxChildren)),
 			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
 		)
@@ -112,7 +111,7 @@ func configureEvents() {
 	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
 		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 			// do not add tips during syncing, because it is not needed at all
-			if !deps.Storage.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeAlmostSynced() {
 				return
 			}
 
@@ -121,17 +120,12 @@ func configureEvents() {
 	})
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		// do not propagate during syncing, because it is not needed at all
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		// do not update tip scores during syncing, because it is not needed at all
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
-		// propagate new cone root indexes to the future cone for URTS
 		ts := time.Now()
-		dag.UpdateConeRootIndexes(deps.Storage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
-		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
-
-		ts = time.Now()
 		removedTipCount := deps.TipSelector.UpdateScores()
 		log.Debugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 	})

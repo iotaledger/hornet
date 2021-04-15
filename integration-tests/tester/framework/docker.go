@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 )
 
 // newDockerClient creates a Docker client that communicates via the Docker socket.
@@ -66,6 +67,20 @@ func (d *DockerContainer) CreateNodeContainer(cfg *NodeConfig) error {
 	})
 }
 
+// CreateWhiteFlagMockContainer creates a new white-flag mock container.
+func (d *DockerContainer) CreateWhiteFlagMockContainer(cfg *WhiteFlagMockServerConfig) error {
+	containerConfig := &container.Config{
+		Image: containerWhiteFlagMockServer,
+		ExposedPorts: nat.PortSet{
+			"14265/tcp": {},
+		},
+		Env: cfg.Envs,
+	}
+
+	hostCfg := &container.HostConfig{Binds: cfg.Binds}
+	return d.CreateContainer(cfg.Name, containerConfig, hostCfg)
+}
+
 // CreatePumbaContainer creates a new container with Pumba configuration.
 func (d *DockerContainer) CreatePumbaContainer(name string, containerName string, targetIPs []string) error {
 	hostConfig := &container.HostConfig{
@@ -106,7 +121,7 @@ func (d *DockerContainer) CreateContainer(name string, containerConfig *containe
 		hostConfig = hostConfigs[0]
 	}
 
-	resp, err := d.client.ContainerCreate(context.Background(), containerConfig, hostConfig, nil, name)
+	resp, err := d.client.ContainerCreate(context.Background(), containerConfig, hostConfig, nil, nil, name)
 	if err != nil {
 		return err
 	}

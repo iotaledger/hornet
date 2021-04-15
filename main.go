@@ -14,10 +14,13 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/debug"
+	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/p2pdisc"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
+	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/gohornet/hornet/plugins/spammer"
@@ -52,7 +55,10 @@ func main() {
 			spammer.Plugin,
 			mqtt.Plugin,
 			coordinator.Plugin,
+			migrator.Plugin,
+			receipt.Plugin,
 			prometheus.Plugin,
+			debug.Plugin,
 		}...),
 	)
 }

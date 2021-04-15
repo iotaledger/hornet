@@ -8,33 +8,36 @@ import (
 	"testing"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/blang/vfs/memfs"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/stretchr/testify/require"
+	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 type test struct {
-	name               string
-	snapshotFileName   string
-	originHeader       *snapshot.FileHeader
-	originTimestamp    uint64
-	sepGenerator       snapshot.SEPProducerFunc
-	sepGenRetriever    sepRetrieverFunc
-	outputGenerator    snapshot.OutputProducerFunc
-	outputGenRetriever outputRetrieverFunc
-	msDiffGenerator    snapshot.MilestoneDiffProducerFunc
-	msDiffGenRetriever msDiffRetrieverFunc
-	headerConsumer     snapshot.HeaderConsumerFunc
-	sepConsumer        snapshot.SEPConsumerFunc
-	sepConRetriever    sepRetrieverFunc
-	outputConsumer     snapshot.OutputConsumerFunc
-	outputConRetriever outputRetrieverFunc
-	msDiffConsumer     snapshot.MilestoneDiffConsumerFunc
-	msDiffConRetriever msDiffRetrieverFunc
+	name                          string
+	snapshotFileName              string
+	originHeader                  *snapshot.FileHeader
+	originTimestamp               uint64
+	sepGenerator                  snapshot.SEPProducerFunc
+	sepGenRetriever               sepRetrieverFunc
+	outputGenerator               snapshot.OutputProducerFunc
+	outputGenRetriever            outputRetrieverFunc
+	msDiffGenerator               snapshot.MilestoneDiffProducerFunc
+	msDiffGenRetriever            msDiffRetrieverFunc
+	headerConsumer                snapshot.HeaderConsumerFunc
+	sepConsumer                   snapshot.SEPConsumerFunc
+	sepConRetriever               sepRetrieverFunc
+	outputConsumer                snapshot.OutputConsumerFunc
+	outputConRetriever            outputRetrieverFunc
+	unspentTreasuryOutputConsumer snapshot.UnspentTreasuryOutputConsumerFunc
+	msDiffConsumer                snapshot.MilestoneDiffConsumerFunc
+	msDiffConRetriever            msDiffRetrieverFunc
 }
 
 func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
@@ -51,6 +54,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				NetworkID:            1337133713371337,
 				SEPMilestoneIndex:    milestone.Index(rand.Intn(10000)),
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
+				TreasuryOutput:       &utxo.TreasuryOutput{MilestoneID: iotago.MilestoneID{}, Amount: 13337},
 			}
 
 			originTimestamp := uint64(time.Now().Unix())
@@ -66,23 +70,24 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			msDiffConsumerFunc, msDiffCollRetriever := newMsDiffCollector()
 
 			t := test{
-				name:               "full: 150 seps, 1 mil outputs, 50 ms diffs",
-				snapshotFileName:   "full_snapshot.bin",
-				originHeader:       originHeader,
-				originTimestamp:    originTimestamp,
-				sepGenerator:       sepIterFunc,
-				sepGenRetriever:    sepGenRetriever,
-				outputGenerator:    outputIterFunc,
-				outputGenRetriever: outputGenRetriever,
-				msDiffGenerator:    msDiffIterFunc,
-				msDiffGenRetriever: msDiffGenRetriever,
-				headerConsumer:     headerEqualFunc(t, originHeader),
-				sepConsumer:        sepConsumerFunc,
-				sepConRetriever:    sepsCollRetriever,
-				outputConsumer:     outputConsumerFunc,
-				outputConRetriever: outputCollRetriever,
-				msDiffConsumer:     msDiffConsumerFunc,
-				msDiffConRetriever: msDiffCollRetriever,
+				name:                          "full: 150 seps, 1 mil outputs, 50 ms diffs",
+				snapshotFileName:              "full_snapshot.bin",
+				originHeader:                  originHeader,
+				originTimestamp:               originTimestamp,
+				sepGenerator:                  sepIterFunc,
+				sepGenRetriever:               sepGenRetriever,
+				outputGenerator:               outputIterFunc,
+				outputGenRetriever:            outputGenRetriever,
+				msDiffGenerator:               msDiffIterFunc,
+				msDiffGenRetriever:            msDiffGenRetriever,
+				headerConsumer:                headerEqualFunc(t, originHeader),
+				sepConsumer:                   sepConsumerFunc,
+				sepConRetriever:               sepsCollRetriever,
+				outputConsumer:                outputConsumerFunc,
+				outputConRetriever:            outputCollRetriever,
+				unspentTreasuryOutputConsumer: unspentTreasuryOutputEqualFunc(t, originHeader.TreasuryOutput),
+				msDiffConsumer:                msDiffConsumerFunc,
+				msDiffConRetriever:            msDiffCollRetriever,
 			}
 			return t
 		}(),
@@ -130,7 +135,8 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator))
+			err, _ = snapshot.StreamSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator)
+			require.NoError(t, err)
 			require.NoError(t, snapshotFileWrite.Close())
 
 			fileInfo, err := fs.Stat(filePath)
@@ -141,7 +147,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamSnapshotDataFrom(snapshotFileRead, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.msDiffConsumer))
+			require.NoError(t, snapshot.StreamSnapshotDataFrom(snapshotFileRead, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.unspentTreasuryOutputConsumer, tt.msDiffConsumer))
 
 			// verify that what has been written also has been read again
 			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
@@ -158,15 +164,14 @@ type sepRetrieverFunc func() hornet.MessageIDs
 
 func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 	var generatedSEPs hornet.MessageIDs
-	return func() (*hornet.MessageID, error) {
+	return func() (hornet.MessageID, error) {
 			if count == 0 {
 				return nil, nil
 			}
 			count--
-			x := rand32ByteHash()
-			msgID := hornet.MessageID(x)
-			generatedSEPs = append(generatedSEPs, &msgID)
-			return &msgID, nil
+			msgID := randMessageID()
+			generatedSEPs = append(generatedSEPs, msgID)
+			return msgID, nil
 		}, func() hornet.MessageIDs {
 			return generatedSEPs
 		}
@@ -174,7 +179,7 @@ func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 
 func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
 	var generatedSEPs hornet.MessageIDs
-	return func(sep *hornet.MessageID) error {
+	return func(sep hornet.MessageID) error {
 			generatedSEPs = append(generatedSEPs, sep)
 			return nil
 		}, func() hornet.MessageIDs {
@@ -213,14 +218,54 @@ type msDiffRetrieverFunc func() []*snapshot.MilestoneDiff
 
 func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRetrieverFunc) {
 	var generateMsDiffs []*snapshot.MilestoneDiff
+	pub, prv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	var mappingPubKey iotago.MilestonePublicKey
+	copy(mappingPubKey[:], pub)
+	pubKeys := []iotago.MilestonePublicKey{mappingPubKey}
+
+	keyMapping := iotago.MilestonePublicKeyMapping{}
+	keyMapping[mappingPubKey] = prv
+
 	return func() (*snapshot.MilestoneDiff, error) {
 			if count == 0 {
 				return nil, nil
 			}
 			count--
 
+			parents := iotago.MilestoneParentMessageIDs{rand32ByteHash()}
+			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint64(), parents, rand32ByteHash(), pubKeys)
+			if err != nil {
+				panic(err)
+			}
+
+			treasuryInput := &iotago.TreasuryInput{}
+			copy(treasuryInput[:], randBytes(32))
+			ed25519Addr, _ := randEd25519Addr()
+			migratedFundsEntry := &iotago.MigratedFundsEntry{Address: ed25519Addr, Deposit: rand.Uint64()}
+			copy(migratedFundsEntry.TailTransactionHash[:], randBytes(49))
+			receipt, err := iotago.NewReceiptBuilder(ms.Index).
+				AddTreasuryTransaction(&iotago.TreasuryTransaction{
+					Input:  treasuryInput,
+					Output: &iotago.TreasuryOutput{Amount: rand.Uint64()},
+				}).
+				AddEntry(migratedFundsEntry).
+				Build()
+			if err != nil {
+				panic(err)
+			}
+
+			ms.Receipt = receipt
+
+			if err := ms.Sign(iotago.InMemoryEd25519MilestoneSigner(keyMapping)); err != nil {
+				panic(err)
+			}
+
 			msDiff := &snapshot.MilestoneDiff{
-				MilestoneIndex: milestone.Index(rand.Int63()),
+				Milestone: ms,
 			}
 
 			createdCount := rand.Intn(500) + 1
@@ -231,6 +276,12 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			consumedCount := rand.Intn(500) + 1
 			for i := 0; i < consumedCount; i++ {
 				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents())
+			}
+
+			msDiff.SpentTreasuryOutput = &utxo.TreasuryOutput{
+				MilestoneID: rand32ByteHash(),
+				Amount:      uint64(rand.Intn(1000)),
+				Spent:       true, // doesn't matter
 			}
 
 			generateMsDiffs = append(generateMsDiffs, msDiff)
@@ -257,12 +308,23 @@ func headerEqualFunc(t *testing.T, originHeader *snapshot.FileHeader) snapshot.H
 	}
 }
 
+func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *utxo.TreasuryOutput) snapshot.UnspentTreasuryOutputConsumerFunc {
+	return func(readUnspentTreasuryOutput *utxo.TreasuryOutput) error {
+		require.EqualValues(t, *originUnspentTreasuryOutput, *readUnspentTreasuryOutput)
+		return nil
+	}
+}
+
 func randBytes(length int) []byte {
 	var b []byte
 	for i := 0; i < length; i++ {
 		b = append(b, byte(rand.Intn(256)))
 	}
 	return b
+}
+
+func randMessageID() hornet.MessageID {
+	return hornet.MessageID(randBytes(iotago.MessageIDLength))
 }
 
 func rand32ByteHash() [iotago.TransactionIDLength]byte {
@@ -275,30 +337,34 @@ func rand32ByteHash() [iotago.TransactionIDLength]byte {
 func randLSTransactionUnspentOutputs() *snapshot.Output {
 	addr, _ := randEd25519Addr()
 
-	var outputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
+	var outputID [utxo.OutputIDLength]byte
 	transactionID := rand32ByteHash()
 	copy(outputID[:], transactionID[:])
 	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
 
 	return &snapshot.Output{
-		OutputID: outputID,
-		Address:  addr,
-		Amount:   uint64(rand.Intn(1000000) + 1),
+		MessageID:  randMessageID().ToArray(),
+		OutputID:   outputID,
+		OutputType: byte(rand.Intn(256)),
+		Address:    addr,
+		Amount:     uint64(rand.Intn(1000000) + 1),
 	}
 }
 
 func randLSTransactionSpents() *snapshot.Spent {
 	addr, _ := randEd25519Addr()
 
-	var outputID [iotago.TransactionIDLength + iotago.UInt16ByteSize]byte
+	var outputID [utxo.OutputIDLength]byte
 	transactionID := rand32ByteHash()
 	copy(outputID[:], transactionID[:])
 	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
 
 	output := &snapshot.Output{
-		OutputID: outputID,
-		Address:  addr,
-		Amount:   uint64(rand.Intn(1000000) + 1),
+		MessageID:  randMessageID().ToArray(),
+		OutputID:   outputID,
+		OutputType: byte(rand.Intn(256)),
+		Address:    addr,
+		Amount:     uint64(rand.Intn(1000000) + 1),
 	}
 
 	return &snapshot.Spent{Output: *output, TargetTransactionID: rand32ByteHash()}

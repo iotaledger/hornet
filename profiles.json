@@ -2,59 +2,66 @@
   "custom": {
     "caches": {
       "addresses": {
-        "cacheTimeMs": 100,
+        "cacheTime": "100ms",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "children": {
-        "cacheTimeMs": 1500,
+        "cacheTime": "1.5s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "indexations": {
-        "cacheTimeMs": 100,
+        "cacheTime": "100ms",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "milestones": {
-        "cacheTimeMs": 500,
+        "cacheTime": "500ms",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "messages": {
-        "cacheTimeMs": 1500,
+        "cacheTime": "1.5s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "unreferencedMessages": {
-        "cacheTimeMs": 100,
+        "cacheTime": "100ms",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "incomingMessagesFilter": {
-        "cacheTimeMs": 2000,
+        "cacheTime": "2s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": false,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       }
     }
@@ -62,59 +69,66 @@
   "debug": {
     "caches": {
       "addresses": {
-        "cacheTimeMs": 1500,
+        "cacheTime": "1.5s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "children": {
-        "cacheTimeMs": 1500,
+        "cacheTime": "1.5s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "indexations": {
-        "cacheTimeMs": 1500,
+        "cacheTime": "1.5s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "milestones": {
-        "cacheTimeMs": 1500,
+        "cacheTime": "1.5s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "messages": {
-        "cacheTimeMs": 1500,
+        "cacheTime": "1.5s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "unreferencedMessages": {
-        "cacheTimeMs": 1500,
+        "cacheTime": "1.5s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       },
       "incomingMessagesFilter": {
-        "cacheTimeMs": 1500,
+        "cacheTime": "1.5s",
+        "releaseExecutorWorkerCount": 10,
         "leakDetection": {
           "enabled": true,
           "maxConsumersPerObject": 50,
-          "maxConsumerHoldTimeSec": 30
+          "maxConsumerHoldTime": "30s"
         }
       }
     }

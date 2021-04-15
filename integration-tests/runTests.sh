@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TEST_NAMES='common value benchmark snapshot'
+TEST_NAMES='common value benchmark snapshot migration'
 
 echo "Build HORNET image"
 docker build -f ../docker/Dockerfile.dev -t hornet:dev ../.
@@ -8,13 +8,13 @@ docker build -f ../docker/Dockerfile.dev -t hornet:dev ../.
 echo "Pull additional Docker images"
 docker pull gaiaadm/pumba:0.7.4
 docker pull gaiadocker/iproute2:latest
+docker build github.com/iotaledger/chrysalis-tools#:wfmock -t wfmock:latest
 
 echo "Run integration tests"
 
-for name in $TEST_NAMES
-do
+for name in $TEST_NAMES; do
   TEST_NAME=$name docker-compose -f tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
-  docker logs tester &> logs/"$name"_tester.log
+  docker logs tester &>logs/"$name"_tester.log
 done
 
 echo "Clean up"

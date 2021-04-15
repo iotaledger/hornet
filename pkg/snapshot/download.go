@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/utils"
 )
@@ -17,8 +18,8 @@ import (
 // WriteCounter counts the number of bytes written to it. It implements to the io.Writer interface
 // and we can pass this into io.TeeReader() which will report progress on each write cycle.
 type WriteCounter struct {
-	Expected    uint64
 	shutdownCtx context.Context
+	Expected    uint64
 
 	total            uint64
 	last             uint64
@@ -26,10 +27,10 @@ type WriteCounter struct {
 }
 
 // NewWriteCounter creates a new WriteCounter.
-func NewWriteCounter(expected uint64, shutdownCtx context.Context) *WriteCounter {
+func NewWriteCounter(shutdownCtx context.Context, expected uint64) *WriteCounter {
 	return &WriteCounter{
-		Expected:    expected,
 		shutdownCtx: shutdownCtx,
+		Expected:    expected,
 	}
 }
 
@@ -107,12 +108,11 @@ func (s *Snapshot) downloadFile(path string, url string) error {
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)
 	}
-
-	defer resp.Body.Close()
 
 	tempFileName := path + ".tmp"
 	out, err := os.Create(tempFileName)
@@ -128,7 +128,7 @@ func (s *Snapshot) downloadFile(path string, url string) error {
 	}()
 
 	// create our progress reporter and pass it to be used alongside our writer
-	counter := NewWriteCounter(uint64(resp.ContentLength), s.shutdownCtx)
+	counter := NewWriteCounter(s.shutdownCtx, uint64(resp.ContentLength))
 	if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
 		_ = out.Close()
 		return fmt.Errorf("download failed: %w", err)

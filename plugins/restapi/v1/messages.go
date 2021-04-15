@@ -2,25 +2,28 @@ package v1
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	iotago "github.com/iotaledger/iota.go"
-
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/objectstorage"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 var (
@@ -29,8 +32,8 @@ var (
 
 func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
-	if !deps.Storage.IsNodeSyncedWithThreshold() {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
+	if !deps.Storage.IsNodeAlmostSynced() {
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
 	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
@@ -42,7 +45,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
 	cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageID.Hex())
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedMsgMeta.Release(true)
 
@@ -55,9 +58,8 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	}
 
 	messageMetadataResponse := &messageMetadataResponse{
-		MessageID:                  metadata.GetMessageID().Hex(),
-		Parent1:                    metadata.GetParent1MessageID().Hex(),
-		Parent2:                    metadata.GetParent2MessageID().Hex(),
+		MessageID:                  metadata.GetMessageID().ToHex(),
+		Parents:                    metadata.GetParents().ToHex(),
 		Solid:                      metadata.IsSolid(),
 		ReferencedByMilestoneIndex: referencedByMilestone,
 	}
@@ -81,23 +83,23 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		messageMetadataResponse.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
-		lsmi := deps.Storage.GetSolidMilestoneIndex()
-		ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), lsmi)
+		cmi := deps.Storage.GetConfirmedMilestoneIndex()
+		ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi)
 
 		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 		shouldPromote := false
 		shouldReattach := false
 
-		if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)) {
-			// if the OCRI to LSMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
+		if (cmi - ocri) > milestone.Index(deps.BelowMaxDepth) {
+			// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 			shouldPromote = false
 			shouldReattach = true
-		} else if (lsmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI)) {
-			// if the LSMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToLSMI, then the tip is lazy and should be promoted
+		} else if (cmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI)) {
+			// if the CMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
-		} else if (lsmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI)) {
-			// if the OCRI to LSMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToLSMI, the tip is semi-lazy and should be promoted
+		} else if (cmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI)) {
+			// if the OCRI to CMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
 		}
@@ -119,7 +121,7 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 
 	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
@@ -136,7 +138,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 
 	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
@@ -152,17 +154,13 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}
 
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
-
-	childrenMessageIDsHex := []string{}
-	for _, childrenMessageID := range deps.Storage.GetChildrenMessageIDs(messageID, maxResults) {
-		childrenMessageIDsHex = append(childrenMessageIDsHex, childrenMessageID.Hex())
-	}
+	childrenMessageIDs := deps.Storage.GetChildrenMessageIDs(messageID, objectstorage.WithIteratorMaxIterations(maxResults))
 
 	return &childrenResponse{
-		MessageID:  messageID.Hex(),
+		MessageID:  messageID.ToHex(),
 		MaxResults: uint32(maxResults),
-		Count:      uint32(len(childrenMessageIDsHex)),
-		Children:   childrenMessageIDsHex,
+		Count:      uint32(len(childrenMessageIDs)),
+		Children:   childrenMessageIDs.ToHex(),
 	}, nil
 }
 
@@ -173,25 +171,30 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index empty")
 	}
 
-	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
-
-	messageIDsHex := []string{}
-	for _, messageID := range deps.Storage.GetIndexMessageIDs(index, maxResults) {
-		messageIDsHex = append(messageIDsHex, messageID.Hex())
+	indexBytes, err := hex.DecodeString(index)
+	if err != nil {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index invalid hex")
 	}
+
+	if len(indexBytes) > storage.IndexationIndexLength {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter index too long, max. %d bytes but is %d", storage.IndexationIndexLength, len(indexBytes)))
+	}
+
+	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
+	indexMessageIDs := deps.Storage.GetIndexMessageIDs(indexBytes, objectstorage.WithIteratorMaxIterations(maxResults))
 
 	return &messageIDsByIndexResponse{
 		Index:      index,
 		MaxResults: uint32(maxResults),
-		Count:      uint32(len(messageIDsHex)),
-		MessageIDs: messageIDsHex,
+		Count:      uint32(len(indexMessageIDs)),
+		MessageIDs: indexMessageIDs.ToHex(),
 	}, nil
 }
 
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
-	if !deps.Storage.IsNodeSyncedWithThreshold() {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
+	if !deps.Storage.IsNodeAlmostSynced() {
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
 	msg := &iotago.Message{}
@@ -227,28 +230,37 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		msg.NetworkID = deps.NetworkID
 	}
 
-	var emptyMessageID = hornet.MessageID{}
-	if msg.Parent1 == emptyMessageID || msg.Parent2 == emptyMessageID {
+	var refreshTipsFunc pow.RefreshTipsFunc
 
+	if len(msg.Parents) == 0 {
 		tips, err := deps.TipSelector.SelectNonLazyTips()
-
 		if err != nil {
-			if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
-				return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
+			if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
+				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 			}
-			return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
-		msg.Parent1 = *tips[0]
-		msg.Parent2 = *tips[1]
+		msg.Parents = tips.ToSliceOfArrays()
+
+		// this function pointer is used to refresh the tips of a message
+		// if no parents were given and the PoW takes longer than a configured duration.
+		refreshTipsFunc = deps.TipSelector.SelectNonLazyTips
 	}
 
 	if msg.Nonce == 0 {
-		if !proofOfWorkEnabled {
-			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
+		score, err := msg.POW()
+		if err != nil {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
-		if err := deps.PoWHandler.DoPoW(msg, nil, 1); err != nil {
-			return nil, err
+		if score < deps.MinPoWScore {
+			if !powEnabled {
+				return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
+			}
+
+			if err := deps.PoWHandler.DoPoW(msg, nil, powWorkerCount, refreshTipsFunc); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -264,11 +276,15 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
-	if err := utils.WaitForChannelClosed(msgProcessedChan, messageProcessedTimeout); err == context.DeadlineExceeded {
+	// wait for at most "messageProcessedTimeout" for the message to be processed
+	ctx, cancel := context.WithTimeout(context.Background(), messageProcessedTimeout)
+	defer cancel()
+
+	if err := utils.WaitForChannelClosed(ctx, msgProcessedChan); errors.Is(err, context.DeadlineExceeded) {
 		deps.Tangle.DeregisterMessageProcessedEvent(message.GetMessageID())
 	}
 
 	return &messageCreatedResponse{
-		MessageID: message.GetMessageID().Hex(),
+		MessageID: message.GetMessageID().ToHex(),
 	}, nil
 }

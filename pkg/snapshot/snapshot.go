@@ -2,15 +2,13 @@ package snapshot
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
-
-	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -18,7 +16,10 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 var (
@@ -32,6 +33,8 @@ var (
 	ErrWrongMilestoneDiffIndex = errors.New("wrong milestone diff index")
 	// Returned when the final milestone after loading the snapshot is not equal to the solid entry point index.
 	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
+	// Returned when a delta snapshot is available, but no full snapshot is found.
+	ErrInvalidSnapshotAvailabilityState = errors.New("invalid snapshot files availability")
 
 	ErrNoSnapshotSpecified                   = errors.New("no snapshot file was specified in the config")
 	ErrNoSnapshotDownloadURL                 = errors.New("no download URL specified for snapshot files in config")
@@ -47,68 +50,93 @@ var (
 	ErrExistingDeltaSnapshotWrongLedgerIndex = errors.New("existing delta ledger snapshot has wrong ledger index")
 )
 
+type snapshotAvailability byte
+
+const (
+	snapshotAvailBoth snapshotAvailability = iota
+	snapshotAvailOnlyFull
+	snapshotAvailNone
+)
+
 type solidEntryPoint struct {
-	messageID *hornet.MessageID
+	messageID hornet.MessageID
 	index     milestone.Index
 }
 
 // Snapshot handles reading and writing snapshot data.
 type Snapshot struct {
-	shutdownCtx                         context.Context
-	log                                 *logger.Logger
-	storage                             *storage.Storage
-	tangle                              *tangle.Tangle
-	utxo                                *utxo.Manager
-	snapshotFullPath                    string
-	snapshotDeltaPath                   string
-	solidEntryPointCheckThresholdPast   milestone.Index
-	solidEntryPointCheckThresholdFuture milestone.Index
-	additionalPruningThreshold          milestone.Index
-	snapshotDepth                       milestone.Index
-	snapshotIntervalSynced              milestone.Index
-	snapshotIntervalUnsynced            milestone.Index
-	pruningEnabled                      bool
-	pruningDelay                        milestone.Index
+	shutdownCtx                          context.Context
+	log                                  *logger.Logger
+	storage                              *storage.Storage
+	utxo                                 *utxo.Manager
+	networkID                            uint64
+	networkIDSource                      string
+	snapshotFullPath                     string
+	snapshotDeltaPath                    string
+	deltaSnapshotSizeThresholdPercentage float64
+	downloadTargets                      []DownloadTarget
+	solidEntryPointCheckThresholdPast    milestone.Index
+	solidEntryPointCheckThresholdFuture  milestone.Index
+	additionalPruningThreshold           milestone.Index
+	snapshotDepth                        milestone.Index
+	snapshotInterval                     milestone.Index
+	pruningEnabled                       bool
+	pruningDelay                         milestone.Index
+	pruneReceipts                        bool
 
 	snapshotLock   syncutils.Mutex
 	statusLock     syncutils.RWMutex
 	isSnapshotting bool
 	isPruning      bool
+
+	Events *Events
 }
 
 // New creates a new snapshot instance.
 func New(shutdownCtx context.Context,
 	log *logger.Logger,
 	storage *storage.Storage,
-	tangle *tangle.Tangle,
 	utxo *utxo.Manager,
+	networkID uint64,
+	networkIDSource string,
 	snapshotFullPath string,
 	snapshotDeltaPath string,
+	deltaSnapshotSizeThresholdPercentage float64,
+	downloadTargets []DownloadTarget,
 	solidEntryPointCheckThresholdPast milestone.Index,
 	solidEntryPointCheckThresholdFuture milestone.Index,
 	additionalPruningThreshold milestone.Index,
 	snapshotDepth milestone.Index,
-	snapshotIntervalSynced milestone.Index,
-	snapshotIntervalUnsynced milestone.Index,
+	snapshotInterval milestone.Index,
 	pruningEnabled bool,
-	pruningDelay milestone.Index) *Snapshot {
+	pruningDelay milestone.Index,
+	pruneReceipts bool) *Snapshot {
 
 	return &Snapshot{
-		shutdownCtx:                         shutdownCtx,
-		log:                                 log,
-		storage:                             storage,
-		tangle:                              tangle,
-		utxo:                                utxo,
-		snapshotFullPath:                    snapshotFullPath,
-		snapshotDeltaPath:                   snapshotDeltaPath,
-		solidEntryPointCheckThresholdPast:   solidEntryPointCheckThresholdPast,
-		solidEntryPointCheckThresholdFuture: solidEntryPointCheckThresholdFuture,
-		additionalPruningThreshold:          additionalPruningThreshold,
-		snapshotDepth:                       snapshotDepth,
-		snapshotIntervalSynced:              snapshotIntervalSynced,
-		snapshotIntervalUnsynced:            snapshotIntervalUnsynced,
-		pruningEnabled:                      pruningEnabled,
-		pruningDelay:                        pruningDelay,
+		shutdownCtx:                          shutdownCtx,
+		log:                                  log,
+		storage:                              storage,
+		utxo:                                 utxo,
+		networkID:                            networkID,
+		networkIDSource:                      networkIDSource,
+		snapshotFullPath:                     snapshotFullPath,
+		snapshotDeltaPath:                    snapshotDeltaPath,
+		deltaSnapshotSizeThresholdPercentage: deltaSnapshotSizeThresholdPercentage,
+		downloadTargets:                      downloadTargets,
+		solidEntryPointCheckThresholdPast:    solidEntryPointCheckThresholdPast,
+		solidEntryPointCheckThresholdFuture:  solidEntryPointCheckThresholdFuture,
+		additionalPruningThreshold:           additionalPruningThreshold,
+		snapshotDepth:                        snapshotDepth,
+		snapshotInterval:                     snapshotInterval,
+		pruningEnabled:                       pruningEnabled,
+		pruningDelay:                         pruningDelay,
+		pruneReceipts:                        pruneReceipts,
+		Events: &Events{
+			SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
+			SnapshotMetricsUpdated:        events.NewEvent(SnapshotMetricsCaller),
+			PruningMilestoneIndexChanged:  events.NewEvent(milestone.IndexCaller),
+			PruningMetricsUpdated:         events.NewEvent(PruningMetricsCaller),
+		},
 	}
 }
 
@@ -118,98 +146,49 @@ func (s *Snapshot) IsSnapshottingOrPruning() bool {
 	return s.isSnapshotting || s.isPruning
 }
 
-// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
-func (s *Snapshot) isSolidEntryPoint(messageID *hornet.MessageID, targetIndex milestone.Index) bool {
-
-	for _, childMessageID := range s.storage.GetChildrenMessageIDs(messageID) {
-		cachedMsgMeta := s.storage.GetCachedMessageMetadataOrNil(childMessageID) // meta +1
-		if cachedMsgMeta == nil {
-			// Ignore this message since it doesn't exist anymore
-			s.log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.Hex(), childMessageID.Hex())
-			continue
-		}
-
-		referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
-		cachedMsgMeta.Release(true) // meta -1
-
-		if referenced && (at > targetIndex) {
-			// referenced by a later milestone than targetIndex => solidEntryPoint
-			return true
-		}
-	}
-
-	return false
-}
-
-// getMilestoneParents traverses a milestone and collects all messages that were referenced by that milestone or newer.
-func (s *Snapshot) getMilestoneParentMessageIDs(milestoneIndex milestone.Index, milestoneMessageID *hornet.MessageID, abortSignal <-chan struct{}) (hornet.MessageIDs, error) {
-
-	var parentMessageIDs hornet.MessageIDs
-
-	ts := time.Now()
-
-	if err := dag.TraverseParents(s.storage, milestoneMessageID,
-		// traversal stops if no more messages pass the given condition
-		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
-			defer cachedMsgMeta.Release(true) // msg -1
-			// collect all msg that were referenced by that milestone or newer
-			referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
-			return referenced && at >= milestoneIndex, nil
-		},
-		// consumer
-		func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
-			defer cachedMsgMeta.Release(true) // msg -1
-			parentMessageIDs = append(parentMessageIDs, cachedMsgMeta.GetMetadata().GetMessageID())
-			return nil
-		},
-		// called on missing parents
-		// return error on missing parents
-		nil,
-		// called on solid entry points
-		// Ignore solid entry points (snapshot milestone included)
-		nil,
-		// the pruning target index is also a solid entry point => traverse it anyways
-		true,
-		abortSignal); err != nil {
-		if err == common.ErrOperationAborted {
-			return nil, ErrSnapshotCreationWasAborted
-		}
-	}
-
-	s.log.Debugf("milestone walked (%d): parents: %v, collect: %v", milestoneIndex, len(parentMessageIDs), time.Since(ts))
-	return parentMessageIDs, nil
-}
-
-func (s *Snapshot) shouldTakeSnapshot(solidMilestoneIndex milestone.Index) bool {
+func (s *Snapshot) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
 	if snapshotInfo == nil {
 		s.log.Panic("No snapshotInfo found!")
 	}
 
-	var snapshotInterval milestone.Index
-	if s.storage.IsNodeSynced() {
-		snapshotInterval = s.snapshotIntervalSynced
-	} else {
-		snapshotInterval = s.snapshotIntervalUnsynced
-	}
-
-	if (solidMilestoneIndex < s.snapshotDepth+snapshotInterval) || (solidMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
+	if (confirmedMilestoneIndex < s.snapshotDepth+s.snapshotInterval) || (confirmedMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
 		// Not enough history to calculate solid entry points
 		return false
 	}
 
-	return solidMilestoneIndex-(s.snapshotDepth+snapshotInterval) >= snapshotInfo.SnapshotIndex
+	return confirmedMilestoneIndex-(s.snapshotDepth+s.snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
 func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(sep *solidEntryPoint) bool) error {
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
-	// HINT: Check if "old solid entry points are still valid" is skipped in HORNET,
-	//		 since they should all be found by iterating the milestones to a certain depth under targetIndex, because the tipselection for COO was changed.
-	//		 When local snapshots were introduced in IRI, there was the problem that COO approved really old msg as valid tips, which is not the case anymore.
+	metadataMemcache := storage.NewMetadataMemcache(s.storage)
+	defer metadataMemcache.Cleanup(true)
+
+	// we share the same traverser for all milestones, so we don't cleanup the cachedMessages in between.
+	// we don't need to call cleanup at the end, because we passed our own metadataMemcache.
+	parentsTraverser := dag.NewParentTraverser(s.storage, metadataMemcache)
+
+	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
+	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) bool {
+		for _, childMessageID := range s.storage.GetChildrenMessageIDs(messageID) {
+			cachedMsgMeta := metadataMemcache.GetCachedMetadataOrNil(childMessageID) // meta +1
+			if cachedMsgMeta == nil {
+				// Ignore this message since it doesn't exist anymore
+				s.log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
+				continue
+			}
+
+			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced && (at > targetIndex) {
+				// referenced by a later milestone than targetIndex => solidEntryPoint
+				return true
+			}
+		}
+		return false
+	}
 
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
 	for milestoneIndex := targetIndex - s.solidEntryPointCheckThresholdPast; milestoneIndex <= targetIndex; milestoneIndex++ {
@@ -228,40 +207,59 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 		milestoneMessageID := cachedMilestone.GetMilestone().MessageID
 		cachedMilestone.Release(true) // message -1
 
-		parentMessageIDs, err := s.getMilestoneParentMessageIDs(milestoneIndex, milestoneMessageID, abortSignal)
-		if err != nil {
-			return err
-		}
+		// traverse the milestone and collect all messages that were referenced by this milestone or newer
+		if err := parentsTraverser.Traverse(hornet.MessageIDs{milestoneMessageID},
+			// traversal stops if no more messages pass the given condition
+			// Caution: condition func is not in DFS order
+			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
+				defer cachedMsgMeta.Release(true) // msg -1
 
-		for _, parentMessageID := range parentMessageIDs {
-			select {
-			case <-abortSignal:
-				return ErrSnapshotCreationWasAborted
-			default:
-			}
+				// collect all msg that were referenced by that milestone or newer
+				referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+				return referenced && at >= milestoneIndex, nil
+			},
+			// consumer
+			func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
+				defer cachedMsgMeta.Release(true) // msg -1
 
-			if isEntryPoint := s.isSolidEntryPoint(parentMessageID, targetIndex); !isEntryPoint {
-				continue
-			}
-
-			cachedMsgMeta := s.storage.GetCachedMessageMetadataOrNil(parentMessageID)
-			if cachedMsgMeta == nil {
-				return errors.Wrapf(ErrCritical, "metadata (%v) not found!", parentMessageID.Hex())
-			}
-
-			referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
-			if !referenced {
-				cachedMsgMeta.Release(true)
-				return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", parentMessageID.Hex())
-			}
-			cachedMsgMeta.Release(true)
-
-			parentMessageIDMapKey := parentMessageID.MapKey()
-			if _, exists := solidEntryPoints[parentMessageIDMapKey]; !exists {
-				solidEntryPoints[parentMessageIDMapKey] = at
-				if !solidEntryPointConsumer(&solidEntryPoint{messageID: parentMessageID, index: at}) {
+				select {
+				case <-abortSignal:
 					return ErrSnapshotCreationWasAborted
+				default:
 				}
+
+				messageID := cachedMsgMeta.GetMetadata().GetMessageID()
+
+				if isEntryPoint := isSolidEntryPoint(messageID, targetIndex); !isEntryPoint {
+					return nil
+				}
+
+				referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+				if !referenced {
+					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", messageID.ToHex())
+				}
+
+				messageIDMapKey := messageID.ToMapKey()
+				if _, exists := solidEntryPoints[messageIDMapKey]; !exists {
+					solidEntryPoints[messageIDMapKey] = at
+					if !solidEntryPointConsumer(&solidEntryPoint{messageID: messageID, index: at}) {
+						return ErrSnapshotCreationWasAborted
+					}
+				}
+
+				return nil
+			},
+			// called on missing parents
+			// return error on missing parents
+			nil,
+			// called on solid entry points
+			// Ignore solid entry points (snapshot milestone included)
+			nil,
+			// the pruning target index is also a solid entry point => traverse it anyways
+			true,
+			abortSignal); err != nil {
+			if errors.Is(err, common.ErrOperationAborted) {
+				return ErrSnapshotCreationWasAborted
 			}
 		}
 	}
@@ -271,14 +269,14 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 
 func (s *Snapshot) checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *storage.SnapshotInfo, checkSnapshotIndex bool) error {
 
-	solidMilestoneIndex := s.storage.GetSolidMilestoneIndex()
+	confirmedMilestoneIndex := s.storage.GetConfirmedMilestoneIndex()
 
-	if solidMilestoneIndex < s.solidEntryPointCheckThresholdFuture {
-		return errors.Wrapf(ErrNotEnoughHistory, "minimum solid index: %d, actual solid index: %d", s.solidEntryPointCheckThresholdFuture+1, solidMilestoneIndex)
+	if confirmedMilestoneIndex < s.solidEntryPointCheckThresholdFuture {
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum confirmed index: %d, actual confirmed index: %d", s.solidEntryPointCheckThresholdFuture+1, confirmedMilestoneIndex)
 	}
 
 	minimumIndex := s.solidEntryPointCheckThresholdPast + 1
-	maximumIndex := solidMilestoneIndex - s.solidEntryPointCheckThresholdFuture
+	maximumIndex := confirmedMilestoneIndex - s.solidEntryPointCheckThresholdFuture
 
 	if checkSnapshotIndex && minimumIndex < snapshotInfo.SnapshotIndex+1 {
 		minimumIndex = snapshotInfo.SnapshotIndex + 1
@@ -339,25 +337,25 @@ func newSEPsProducer(s *Snapshot, targetIndex milestone.Index, abortSignal <-cha
 	}()
 
 	binder := producerFromChannels(prodChan, errChan)
-	return func() (*hornet.MessageID, error) {
+	return func() (hornet.MessageID, error) {
 		obj, err := binder()
 		if obj == nil || err != nil {
 			return nil, err
 		}
-		return obj.(*hornet.MessageID), nil
+		return obj.(hornet.MessageID), nil
 	}
 }
 
-// returns a producer which produces unspent outputs which exist for the current solid milestone.
-func newLSMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
+// returns a producer which produces unspent outputs which exist for the current confirmed milestone.
+func newCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
 	go func() {
-		if err := utxoManager.ForEachUnspentOutputWithoutLocking(func(output *utxo.Output) bool {
-			prodChan <- &Output{MessageID: *output.MessageID(), OutputID: *output.OutputID(), Address: output.Address(), Amount: output.Amount()}
+		if err := utxoManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
+			prodChan <- &Output{MessageID: output.MessageID().ToArray(), OutputID: *output.OutputID(), OutputType: output.OutputType(), Address: output.Address(), Amount: output.Amount()}
 			return true
-		}); err != nil {
+		}, utxo.ReadLockLedger(false)); err != nil {
 			errChan <- err
 		}
 
@@ -425,7 +423,7 @@ func newMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, 
 
 // returns a milestone diff producer which first reads out milestone diffs from an existing delta
 // snapshot file and then the remaining diffs from the database up to the target index.
-func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index) (MilestoneDiffProducerFunc, error) {
+func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, storage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index) (MilestoneDiffProducerFunc, error) {
 	prevDeltaFileMsDiffsProducer, err := newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath, ledgerIndex)
 	if err != nil {
 		return nil, err
@@ -434,6 +432,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, utxoManage
 	var prevDeltaMsDiffProducerFinished bool
 	var prevDeltaUpToIndex milestone.Index
 	var dbMsDiffProducer MilestoneDiffProducerFunc
+	mrf := MilestoneRetrieverFromStorage(storage)
 	return func() (*MilestoneDiff, error) {
 		if prevDeltaMsDiffProducerFinished {
 			return dbMsDiffProducer()
@@ -446,14 +445,14 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, utxoManage
 		}
 
 		if msDiff != nil {
-			prevDeltaUpToIndex = msDiff.MilestoneIndex
+			prevDeltaUpToIndex = milestone.Index(msDiff.Milestone.Index)
 			return msDiff, nil
 		}
 
 		// TODO: check whether previous snapshot already hit the target index?
 
 		prevDeltaMsDiffProducerFinished = true
-		dbMsDiffProducer = newMsDiffsProducer(utxoManager, MsDiffDirectionOnwards, prevDeltaUpToIndex, targetIndex)
+		dbMsDiffProducer = newMsDiffsProducer(mrf, utxoManager, MsDiffDirectionOnwards, prevDeltaUpToIndex, targetIndex)
 		return dbMsDiffProducer()
 	}, nil
 }
@@ -480,10 +479,10 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 				}
 				return nil
 			},
-			func(id *hornet.MessageID) error {
+			func(id hornet.MessageID) error {
 				// we don't care about solid entry points
 				return nil
-			}, nil,
+			}, nil, nil,
 			func(milestoneDiff *MilestoneDiff) error {
 				prodChan <- milestoneDiff
 				return nil
@@ -506,8 +505,24 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 	}, nil
 }
 
+// MilestoneRetrieverFunc is a function which returns the milestone for the given index.
+type MilestoneRetrieverFunc func(index milestone.Index) *iotago.Milestone
+
+// MilestoneRetrieverFromStorage creates a MilestoneRetrieverFunc which access the storage.
+// If it can not retrieve a wanted milestone it panics.
+func MilestoneRetrieverFromStorage(storage *storage.Storage) MilestoneRetrieverFunc {
+	return func(index milestone.Index) *iotago.Milestone {
+		cachedMsMsg := storage.GetMilestoneCachedMessageOrNil(index)
+		if cachedMsMsg == nil {
+			panic(fmt.Sprintf("message for milestone with index %d is not stored in the database", index))
+		}
+		defer cachedMsMsg.Release()
+		return cachedMsMsg.GetMessage().GetMilestone()
+	}
+}
+
 // returns a producer which produces milestone diffs from/to with the given direction.
-func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex milestone.Index, targetIndex milestone.Index) MilestoneDiffProducerFunc {
+func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, direction MsDiffDirection, ledgerMilestoneIndex milestone.Index, targetIndex milestone.Index) MilestoneDiffProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
@@ -518,7 +533,7 @@ func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, le
 		var msIndex milestone.Index
 
 		for msIndex, done = msIndexIterator(); !done; msIndex, done = msIndexIterator() {
-			newOutputs, newSpents, err := utxoManager.GetMilestoneDiffsWithoutLocking(msIndex)
+			diff, err := utxoManager.GetMilestoneDiffWithoutLocking(msIndex)
 			if err != nil {
 				errChan <- err
 				close(prodChan)
@@ -526,26 +541,42 @@ func newMsDiffsProducer(utxoManager *utxo.Manager, direction MsDiffDirection, le
 				return
 			}
 
-			var createdOutputs []*Output
-			var consumedOutputs []*Spent
+			createdOutputs := make([]*Output, len(diff.Outputs))
+			consumedOutputs := make([]*Spent, len(diff.Spents))
 
-			for _, output := range newOutputs {
-				createdOutputs = append(createdOutputs, &Output{
-					MessageID: *output.MessageID(), OutputID: *output.OutputID(),
-					Address: output.Address(), Amount: output.Amount()})
+			for i, output := range diff.Outputs {
+				createdOutputs[i] = &Output{
+					MessageID:  output.MessageID().ToArray(),
+					OutputID:   *output.OutputID(),
+					OutputType: output.OutputType(),
+					Address:    output.Address(),
+					Amount:     output.Amount(),
+				}
 			}
 
-			for _, spent := range newSpents {
-				consumedOutputs = append(consumedOutputs, &Spent{Output: Output{
-					MessageID: *spent.MessageID(), OutputID: *spent.OutputID(),
-					Address: spent.Address(), Amount: spent.Amount()},
-					TargetTransactionID: *spent.TargetTransactionID()},
-				)
+			for i, spent := range diff.Spents {
+				consumedOutputs[i] = &Spent{
+					Output: Output{
+						MessageID:  spent.MessageID().ToArray(),
+						OutputID:   *spent.OutputID(),
+						OutputType: spent.OutputType(),
+						Address:    spent.Address(),
+						Amount:     spent.Amount(),
+					},
+					TargetTransactionID: *spent.TargetTransactionID(),
+				}
+			}
+
+			ms := mrf(msIndex)
+			if ms == nil {
+				panic(fmt.Sprintf("message for milestone with index %d could not be retrieved", msIndex))
 			}
 
 			prodChan <- &MilestoneDiff{
-				MilestoneIndex: msIndex, Created: createdOutputs,
-				Consumed: consumedOutputs,
+				Milestone:           ms,
+				Created:             createdOutputs,
+				Consumed:            consumedOutputs,
+				SpentTreasuryOutput: diff.SpentTreasuryOutput,
 			}
 		}
 
@@ -582,7 +613,7 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 }
 
 // reads out the index of the milestone which currently represents the ledger state.
-func (s *Snapshot) readLSMLedgerIndex() (milestone.Index, error) {
+func (s *Snapshot) readLedgerIndex() (milestone.Index, error) {
 	ledgerMilestoneIndex, err := s.utxo.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
@@ -603,7 +634,7 @@ func (s *Snapshot) readSnapshotIndexFromFullSnapshotFile() (milestone.Index, err
 		return 0, fmt.Errorf("unable to read full snapshot header for origin snapshot milestone index: %w", err)
 	}
 
-	// note that a full snapshot contains the ledger to the lsmi of the node which generated it,
+	// note that a full snapshot contains the ledger to the CMI of the node which generated it,
 	// however, the state is rolled backed to the snapshot index, therefore, the snapshot index
 	// is the actual point from which on the delta snapshot should contain milestone diffs
 	return fullSnapshotHeader.SEPMilestoneIndex, nil
@@ -651,8 +682,12 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 	s.setIsSnapshotting(true)
 	defer s.setIsSnapshotting(false)
 
+	timeStart := time.Now()
+
 	s.utxo.ReadLockLedger()
 	defer s.utxo.ReadUnlockLedger()
+
+	timeReadLockLedger := time.Now()
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
 	if snapshotInfo == nil {
@@ -685,16 +720,22 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 	var milestoneDiffProducer MilestoneDiffProducerFunc
 	switch snapshotType {
 	case Full:
-		// ledger index corresponds to the latest lsmi
-		header.LedgerMilestoneIndex, err = s.readLSMLedgerIndex()
+		// ledger index corresponds to the CMI
+		header.LedgerMilestoneIndex, err = s.readLedgerIndex()
 		if err != nil {
 			return err
 		}
 
-		// a full snapshot contains the ledger UTXOs as of the LSMI
-		// and the milestone diffs from the LSMI back to the target index (excluding the target index)
-		utxoProducer = newLSMIUTXOProducer(s.utxo)
-		milestoneDiffProducer = newMsDiffsProducer(s.utxo, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
+		// read out treasury tx
+		header.TreasuryOutput, err = s.utxo.UnspentTreasuryOutputWithoutLocking()
+		if err != nil {
+			return err
+		}
+
+		// a full snapshot contains the ledger UTXOs as of the CMI
+		// and the milestone diffs from the CMI back to the target index (excluding the target index)
+		utxoProducer = newCMIUTXOProducer(s.utxo)
+		milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxo, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
 
 	case Delta:
 		// ledger index corresponds to the origin snapshot snapshot ledger.
@@ -704,46 +745,74 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 			return err
 		}
 
+		_, err := os.Stat(filePath)
+		deltaSnapshotFileExists := !os.IsNotExist(err)
+
 		// a delta snapshot contains the milestone diffs from a full snapshot's snapshot index onwards
 		switch {
-		case snapshotInfo.SnapshotIndex == snapshotInfo.PruningIndex:
+		case snapshotInfo.SnapshotIndex == snapshotInfo.PruningIndex && !deltaSnapshotFileExists:
 			// when booting up the first time on a full snapshot or in combination with a delta
-			// snapshot, this indices will be the same.
-			// while booting up with a delta snapshot would mean that the data is available in that file for the
-			// next snapshot, we still only take the ms diffs from the database for at most 1 delta snapshot.
+			// snapshot, this indices will be the same. however, if we have a delta snapshot, we use it
+			// since we might not have the actual milestone data.
 			fallthrough
 		case snapshotInfo.PruningIndex < header.LedgerMilestoneIndex:
 			// we have the needed milestone diffs in the database
-			milestoneDiffProducer = newMsDiffsProducer(s.utxo, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
+			milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxo, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
 		default:
 			// as the needed milestone diffs are pruned from the database, we need to use
 			// the previous delta snapshot file to extract those in conjunction with what the database has available
-			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.utxo, header.LedgerMilestoneIndex, targetIndex)
+			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxo, header.LedgerMilestoneIndex, targetIndex)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
+	timeInit := time.Now()
+
 	// stream data into snapshot file
-	if err := StreamSnapshotDataTo(snapshotFile, uint64(ts.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer); err != nil {
+	err, snapshotMetrics := StreamSnapshotDataTo(snapshotFile, uint64(ts.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer)
+	if err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
+
+	timeStreamSnapshotData := time.Now()
 
 	// finalize file
 	if err := s.renameTempFile(snapshotFile, tempFilePath, filePath); err != nil {
 		return err
 	}
 
+	if (snapshotType == Full) && (filePath == s.snapshotFullPath) {
+		// if the old full snapshot file is overwritten
+		// we need to remove the old delta snapshot file since it
+		// isn't compatible to the full snapshot file anymore.
+		if err := os.Remove(s.snapshotDeltaPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("deleting delta snapshot file failed: %s", err)
+		}
+	}
+
+	timeSetSnapshotInfo := timeStreamSnapshotData
+	timeSnapshotMilestoneIndexChanged := timeStreamSnapshotData
 	if writeToDatabase {
 		snapshotInfo.SnapshotIndex = targetIndex
 		snapshotInfo.Timestamp = targetMsTimestamp
 		s.storage.SetSnapshotInfo(snapshotInfo)
-		s.tangle.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
+		timeSetSnapshotInfo = time.Now()
+		s.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
+		timeSnapshotMilestoneIndexChanged = time.Now()
 	}
 
-	s.log.Infof("created %s snapshot for target index %d, took %v", snapshotNames[snapshotType], targetIndex, time.Since(ts))
+	snapshotMetrics.DurationReadLockLedger = timeReadLockLedger.Sub(timeStart)
+	snapshotMetrics.DurationInit = timeInit.Sub(timeReadLockLedger)
+	snapshotMetrics.DurationSetSnapshotInfo = timeSetSnapshotInfo.Sub(timeStreamSnapshotData)
+	snapshotMetrics.DurationSnapshotMilestoneIndexChanged = timeSnapshotMilestoneIndexChanged.Sub(timeSetSnapshotInfo)
+	snapshotMetrics.DurationTotal = time.Since(timeStart)
+
+	s.Events.SnapshotMetricsUpdated.Trigger(snapshotMetrics)
+
+	s.log.Infof("created %s snapshot for target index %d, took %v", snapshotNames[snapshotType], targetIndex, time.Since(ts).Truncate(time.Millisecond))
 	return nil
 }
 
@@ -751,40 +820,36 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 	return func(output *Output) error {
 		switch addr := output.Address.(type) {
-		case *iotago.WOTSAddress:
-			return iotago.ErrWOTSNotImplemented
 		case *iotago.Ed25519Address:
 
 			outputID := iotago.UTXOInputID(output.OutputID)
-			messageID := hornet.MessageID(output.MessageID)
+			messageID := hornet.MessageIDFromArray(output.MessageID)
 
-			return utxoManager.AddUnspentOutput(utxo.GetOutput(&outputID, &messageID, output.OutputType, addr, output.Amount))
+			return utxoManager.AddUnspentOutput(utxo.CreateOutput(&outputID, messageID, output.OutputType, addr, output.Amount))
 		default:
 			return iotago.ErrUnknownAddrType
 		}
 	}
 }
 
+// returns a treasury output consumer which overrides an existing unspent treasury output with the new one.
+func newUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasuryOutputConsumerFunc {
+	// leave like this for now in case we need to do more in the future
+	return utxoManager.StoreUnspentTreasuryOutput
+}
+
 // returns a function which calls the corresponding address type callback function with
 // the origin argument and type casted address.
 func callbackPerAddress(
-	wotsAddrF func(interface{}, *iotago.WOTSAddress) error,
 	edAddrF func(interface{}, *iotago.Ed25519Address) error) func(interface{}, iotago.Serializable) error {
 	return func(obj interface{}, addr iotago.Serializable) error {
 		switch a := addr.(type) {
-		case *iotago.WOTSAddress:
-			return wotsAddrF(obj, a)
 		case *iotago.Ed25519Address:
 			return edAddrF(obj, a)
 		default:
 			return iotago.ErrUnknownAddrType
 		}
 	}
-}
-
-// returns an iota.ErrWOTSNotImplemented error if called.
-func errorOnWOTSAddr(_ interface{}, _ *iotago.WOTSAddress) error {
-	return iotago.ErrWOTSNotImplemented
 }
 
 // creates a milestone diff consumer storing them into the database.
@@ -797,11 +862,11 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 		var newOutputs []*utxo.Output
 		var newSpents []*utxo.Spent
 
-		createdOutputAggr := callbackPerAddress(errorOnWOTSAddr, func(obj interface{}, addr *iotago.Ed25519Address) error {
+		createdOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
 			output := obj.(*Output)
 			outputID := iotago.UTXOInputID(output.OutputID)
-			messageID := hornet.MessageID(output.MessageID)
-			newOutputs = append(newOutputs, utxo.GetOutput(&outputID, &messageID, output.OutputType, addr, output.Amount))
+			messageID := hornet.MessageIDFromArray(output.MessageID)
+			newOutputs = append(newOutputs, utxo.CreateOutput(&outputID, messageID, output.OutputType, addr, output.Amount))
 			return nil
 		})
 
@@ -811,11 +876,13 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 			}
 		}
 
-		spentOutputAggr := callbackPerAddress(errorOnWOTSAddr, func(obj interface{}, addr *iotago.Ed25519Address) error {
+		msIndex := milestone.Index(msDiff.Milestone.Index)
+		spentOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
+
 			spent := obj.(*Spent)
 			outputID := iotago.UTXOInputID(spent.OutputID)
-			messageID := hornet.MessageID(spent.MessageID)
-			newSpents = append(newSpents, utxo.NewSpent(utxo.GetOutput(&outputID, &messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msDiff.MilestoneIndex))
+			messageID := hornet.MessageIDFromArray(spent.MessageID)
+			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msIndex))
 			return nil
 		})
 
@@ -830,11 +897,24 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 			return err
 		}
 
+		var treasuryMut *utxo.TreasuryMutationTuple
+		var rt *utxo.ReceiptTuple
+		if treasuryOutput := msDiff.TreasuryOutput(); treasuryOutput != nil {
+			treasuryMut = &utxo.TreasuryMutationTuple{
+				NewOutput:   treasuryOutput,
+				SpentOutput: msDiff.SpentTreasuryOutput,
+			}
+			rt = &utxo.ReceiptTuple{
+				Receipt:        msDiff.Milestone.Receipt.(*iotago.Receipt),
+				MilestoneIndex: msIndex,
+			}
+		}
+
 		switch {
-		case ledgerIndex == msDiff.MilestoneIndex:
-			return utxoManager.RollbackConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
-		case ledgerIndex+1 == msDiff.MilestoneIndex:
-			return utxoManager.ApplyConfirmation(msDiff.MilestoneIndex, newOutputs, newSpents)
+		case ledgerIndex == msIndex:
+			return utxoManager.RollbackConfirmation(msIndex, newOutputs, newSpents, treasuryMut, rt)
+		case ledgerIndex+1 == msIndex:
+			return utxoManager.ApplyConfirmation(msIndex, newOutputs, newSpents, treasuryMut, rt)
 		default:
 			return ErrWrongMilestoneDiffIndex
 		}
@@ -876,7 +956,7 @@ func newSEPsConsumer(storage *storage.Storage, header *ReadFileHeader) SEPConsum
 	// of the snapshot milestone will be below max depth anyway.
 	// this information was included in pre Chrysalis Phase 2 snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
-	return func(solidEntryPointMessageID *hornet.MessageID) error {
+	return func(solidEntryPointMessageID hornet.MessageID) error {
 		storage.SolidEntryPointsAdd(solidEntryPointMessageID, header.SEPMilestoneIndex)
 		return nil
 	}
@@ -902,15 +982,18 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 	headerConsumer := newFileHeaderConsumer(s.log, s.utxo, networkID, snapshotType, header)
 	sepConsumer := newSEPsConsumer(s.storage, header)
 	var outputConsumer OutputConsumerFunc
+	var treasuryOutputConsumer UnspentTreasuryOutputConsumerFunc
 	if snapshotType == Full {
 		outputConsumer = newOutputConsumer(s.utxo)
+		treasuryOutputConsumer = newUnspentTreasuryOutputConsumer(s.utxo)
 	}
 	msDiffConsumer := newMsDiffConsumer(s.utxo)
-	if err := StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, msDiffConsumer); err != nil {
+	if err := StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
 		return fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
 
-	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts))
+	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts).Truncate(time.Millisecond))
+
 	if err := s.utxo.CheckLedgerState(); err != nil {
 		return err
 	}
@@ -925,22 +1008,79 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 	}
 
 	s.storage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, time.Now())
-	s.storage.SetSolidMilestoneIndex(header.SEPMilestoneIndex, false)
+	s.storage.SetConfirmedMilestoneIndex(header.SEPMilestoneIndex, false)
 
 	return nil
 }
 
-// HandleNewSolidMilestoneEvent handles new solid milestone events which may trigger a delta snapshot creation and pruning.
-func (s *Snapshot) HandleNewSolidMilestoneEvent(solidMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
+// optimalSnapshotType returns the optimal snapshot type
+// based on the file size of the last full and delta snapshot file.
+func (s *Snapshot) optimalSnapshotType() Type {
+	if s.deltaSnapshotSizeThresholdPercentage == 0.0 {
+		// special case => always create a delta snapshot to keep entire milestone diff history
+		return Delta
+	}
+
+	fullSnapshotFileInfo, err := os.Stat(s.snapshotFullPath)
+	fullSnapshotFileExists := !os.IsNotExist(err)
+
+	if !fullSnapshotFileExists {
+		// full snapshot doesn't exist => create a full snapshot
+		return Full
+	}
+
+	deltaSnapshotFileInfo, err := os.Stat(s.snapshotDeltaPath)
+	deltaSnapshotFileExists := !os.IsNotExist(err)
+
+	if !deltaSnapshotFileExists {
+		// delta snapshot doesn't exist => create a delta snapshot
+		return Delta
+	}
+
+	// if the file size of the last delta snapshot is bigger than a certain percentage
+	// of the full snapshot file, it's more efficient to create a new full snapshot.
+	if int64(float64(fullSnapshotFileInfo.Size())*s.deltaSnapshotSizeThresholdPercentage/100.0) < deltaSnapshotFileInfo.Size() {
+		return Full
+	}
+
+	return Delta
+}
+
+// snapshotTypeFilePath returns the default file path
+// for the given snapshot type.
+func (s *Snapshot) snapshotTypeFilePath(snapshotType Type) string {
+	switch snapshotType {
+	case Full:
+		return s.snapshotFullPath
+	case Delta:
+		return s.snapshotDeltaPath
+	default:
+		panic("unknown snapshot type")
+	}
+}
+
+// HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a delta snapshot creation and pruning.
+func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
+	if !s.storage.IsNodeSynced() {
+		// do not prune or create snapshots while we are not synced
+		return
+	}
+
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	if s.shouldTakeSnapshot(solidMilestoneIndex) {
-		if err := s.createSnapshotWithoutLocking(Delta, solidMilestoneIndex-s.snapshotDepth, s.snapshotDeltaPath, true, shutdownSignal); err != nil {
+	if s.shouldTakeSnapshot(confirmedMilestoneIndex) {
+		snapshotType := s.optimalSnapshotType()
+		if err := s.createSnapshotWithoutLocking(snapshotType, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true, shutdownSignal); err != nil {
 			if errors.Is(err, ErrCritical) {
 				s.log.Panicf("%s %s", ErrSnapshotCreationFailed, err)
 			}
 			s.log.Warnf("%s %s", ErrSnapshotCreationFailed, err)
+		}
+
+		if !s.storage.IsNodeSynced() {
+			// do not prune while we are not synced
+			return
 		}
 	}
 
@@ -948,12 +1088,128 @@ func (s *Snapshot) HandleNewSolidMilestoneEvent(solidMilestoneIndex milestone.In
 		return
 	}
 
-	if solidMilestoneIndex <= s.pruningDelay {
+	if confirmedMilestoneIndex <= s.pruningDelay {
 		// not enough history
 		return
 	}
 
-	if _, err := s.pruneDatabase(solidMilestoneIndex-s.pruningDelay, shutdownSignal); err != nil {
+	if _, err := s.pruneDatabase(confirmedMilestoneIndex-s.pruningDelay, shutdownSignal); err != nil {
 		s.log.Debugf("pruning aborted: %v", err)
 	}
+}
+
+// ImportSnapshots imports snapshot data from the configured file paths.
+// automatically downloads snapshot data if no files are available.
+func (s *Snapshot) ImportSnapshots() error {
+	snapAvail, err := s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
+	if err != nil {
+		return err
+	}
+
+	if snapAvail == snapshotAvailNone {
+		if err := s.downloadSnapshotFiles(s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
+			return err
+		}
+	}
+
+	snapAvail, err = s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
+	if err != nil {
+		return err
+	}
+
+	if snapAvail == snapshotAvailNone {
+		return errors.New("no snapshot files available after snapshot download")
+	}
+
+	if err := s.LoadSnapshotFromFile(Full, s.networkID, s.snapshotFullPath); err != nil {
+		s.storage.MarkDatabaseCorrupted()
+		return err
+	}
+
+	if snapAvail == snapshotAvailOnlyFull {
+		return nil
+	}
+
+	if err := s.LoadSnapshotFromFile(Delta, s.networkID, s.snapshotDeltaPath); err != nil {
+		s.storage.MarkDatabaseCorrupted()
+		return err
+	}
+
+	return nil
+}
+
+// checks that either both snapshot files are available, only the full snapshot or none.
+func (s *Snapshot) checkSnapshotFilesAvailability(fullPath string, deltaPath string) (snapshotAvailability, error) {
+	switch {
+	case len(fullPath) == 0:
+		return 0, fmt.Errorf("%w: full snapshot file path not defined", ErrNoSnapshotSpecified)
+	case len(deltaPath) == 0:
+		return 0, fmt.Errorf("%w: delta snapshot file path not defined", ErrNoSnapshotSpecified)
+	}
+
+	_, fullSnapshotStatErr := os.Stat(fullPath)
+	_, deltaSnapshotStatErr := os.Stat(deltaPath)
+
+	switch {
+	case os.IsNotExist(fullSnapshotStatErr) && deltaSnapshotStatErr == nil:
+		// only having the delta snapshot file does not make sense,
+		// as it relies on a full snapshot file to be available.
+		// downloading the full snapshot would not help, as it will probably
+		// be incompatible with the delta snapshot index.
+		return 0, fmt.Errorf("%w: there exists a delta snapshot but not a full snapshot file, delete the delta snapshot file and restart", ErrInvalidSnapshotAvailabilityState)
+	case os.IsNotExist(fullSnapshotStatErr) && os.IsNotExist(deltaSnapshotStatErr):
+		return snapshotAvailNone, nil
+	case fullSnapshotStatErr == nil && os.IsNotExist(deltaSnapshotStatErr):
+		return snapshotAvailOnlyFull, nil
+	default:
+		return snapshotAvailBoth, nil
+	}
+}
+
+// ensures that the folders to both paths exists and then downloads the appropriate snapshot files.
+func (s *Snapshot) downloadSnapshotFiles(fullPath string, deltaPath string) error {
+	fullPathDir := filepath.Dir(fullPath)
+	deltaPathDir := filepath.Dir(deltaPath)
+
+	if err := os.MkdirAll(fullPathDir, 0700); err != nil {
+		return fmt.Errorf("could not create snapshot dir '%s': %w", fullPath, err)
+	}
+
+	if err := os.MkdirAll(deltaPathDir, 0700); err != nil {
+		return fmt.Errorf("could not create snapshot dir '%s': %w", fullPath, err)
+	}
+
+	if len(s.downloadTargets) == 0 {
+		return ErrNoSnapshotDownloadURL
+	}
+
+	targetsJson, err := json.MarshalIndent(s.downloadTargets, "", "   ")
+	if err != nil {
+		return fmt.Errorf("unable to marshal targets into formatted JSON: %w", err)
+	}
+	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJson))
+
+	if err := s.DownloadSnapshotFiles(fullPath, deltaPath, s.downloadTargets); err != nil {
+		return fmt.Errorf("unable to download snapshot files: %w", err)
+	}
+
+	s.log.Info("snapshot download finished")
+	return nil
+}
+
+// checks that the current snapshot info is valid regarding its network ID and the ledger state.
+func (s *Snapshot) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInfo) error {
+
+	// check that the stored snapshot corresponds to the wanted network ID
+	if snapshotInfo.NetworkID != s.networkID {
+		s.log.Panicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", s.networkID, s.networkIDSource, snapshotInfo.NetworkID)
+	}
+
+	// if we don't enforce loading of a snapshot,
+	// we can check the ledger state of the current database and start the node.
+	if err := s.utxo.CheckLedgerState(); err != nil {
+		s.log.Fatal(err.Error())
+	}
+
+	return nil
 }

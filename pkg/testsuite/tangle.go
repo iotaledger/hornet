@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
@@ -33,10 +35,10 @@ func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMes
 	return cachedMsg
 }
 
-// VerifyLSMI checks if the latest solid milestone index is equal to the given milestone index.
-func (te *TestEnvironment) VerifyLSMI(index milestone.Index) {
-	lsmi := te.storage.GetSolidMilestoneIndex()
-	require.Equal(te.TestState, index, lsmi)
+// VerifyCMI checks if the confirmed milestone index is equal to the given milestone index.
+func (te *TestEnvironment) VerifyCMI(index milestone.Index) {
+	cmi := te.storage.GetConfirmedMilestoneIndex()
+	require.Equal(te.TestState, index, cmi)
 }
 
 // VerifyLMI checks if the latest milestone index is equal to the given milestone index.
@@ -47,9 +49,9 @@ func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 
 // AssertAddressBalance generates an address for the given seed and index and checks correct balance.
 func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedBalance uint64) {
-	addrBalance, err := te.storage.UTXO().AddressBalance(wallet.Address())
+	addrBalance, _, err := te.storage.UTXO().AddressBalance(wallet.Address())
 	require.NoError(te.TestState, err)
-	computedAddrBalance, _, err := te.storage.UTXO().ComputeAddressBalance(wallet.Address(), true)
+	computedAddrBalance, _, err := te.storage.UTXO().ComputeBalance(utxo.FilterAddress(wallet.Address()))
 	require.NoError(te.TestState, err)
 
 	var balanceStatus string
@@ -71,23 +73,23 @@ func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 	require.NoError(te.TestState, err)
 }
 
-func (te *TestEnvironment) AssertMessageConflictReason(messageID *hornet.MessageID, conflict storage.Conflict) {
-	metadata := te.storage.GetCachedMessageMetadataOrNil(messageID)
-	require.NotNil(te.TestState, metadata)
-	defer metadata.Release(true)
-	require.Equal(te.TestState, metadata.GetMetadata().GetConflict(), conflict)
+func (te *TestEnvironment) AssertMessageConflictReason(messageID hornet.MessageID, conflict storage.Conflict) {
+	cachedMsgMeta := te.storage.GetCachedMessageMetadataOrNil(messageID)
+	require.NotNil(te.TestState, cachedMsgMeta)
+	defer cachedMsgMeta.Release(true)
+	require.Equal(te.TestState, cachedMsgMeta.GetMetadata().GetConflict(), conflict)
 }
 
 // generateDotFileFromConfirmation generates a dot file from a whiteflag confirmation cone.
 func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confirmation) string {
 
-	indexOf := func(hash *hornet.MessageID) int {
+	indexOf := func(hash hornet.MessageID) int {
 		if conf == nil {
 			return -1
 		}
 
 		for i := 0; i < len(conf.Mutations.MessagesReferenced)-1; i++ {
-			if conf.Mutations.MessagesReferenced[i] == hash {
+			if bytes.Equal(conf.Mutations.MessagesReferenced[i], hash) {
 				return i
 			}
 		}
@@ -97,8 +99,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 
 	visitedCachedMessages := make(map[string]*storage.CachedMessage)
 
-	err := dag.TraverseParents(te.storage,
-		conf.MilestoneMessageID,
+	err := dag.TraverseParentsOfMessage(te.storage, conf.MilestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -109,10 +110,10 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
-			if _, visited := visitedCachedMessages[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()]; !visited {
+			if _, visited := visitedCachedMessages[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()]; !visited {
 				cachedMsg := te.storage.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID())
 				require.NotNil(te.TestState, cachedMsg)
-				visitedCachedMessages[cachedMsgMeta.GetMetadata().GetMessageID().MapKey()] = cachedMsg
+				visitedCachedMessages[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()] = cachedMsg
 			}
 
 			return nil
@@ -141,22 +142,16 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortIndex, index, shortIndex)
 		}
 
-		if te.storage.SolidEntryPointsContain(message.GetParent1MessageID()) {
-			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent1\" ];\n", shortIndex, utils.ShortenedHash(message.GetParent1MessageID()))
-		} else {
-			cachedMessageParent1 := te.storage.GetCachedMessageOrNil(message.GetParent1MessageID())
-			require.NotNil(te.TestState, cachedMessageParent1)
-			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent1\" ];\n", shortIndex, utils.ShortenedIndex(cachedMessageParent1.Retain()))
-			cachedMessageParent1.Release(true)
-		}
+		for i, parent := range message.GetParents() {
+			if te.storage.SolidEntryPointsContain(parent) {
+				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedHash(parent), i+1)
+				continue
+			}
 
-		if te.storage.SolidEntryPointsContain(message.GetParent2MessageID()) {
-			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent2\" ];\n", shortIndex, utils.ShortenedHash(message.GetParent2MessageID()))
-		} else {
-			cachedMessageParent2 := te.storage.GetCachedMessageOrNil(message.GetParent2MessageID())
-			require.NotNil(te.TestState, cachedMessageParent2)
-			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent2\" ];\n", shortIndex, utils.ShortenedIndex(cachedMessageParent2.Retain()))
-			cachedMessageParent2.Release(true)
+			cachedMessageParent := te.storage.GetCachedMessageOrNil(parent)
+			require.NotNil(te.TestState, cachedMessageParent)
+			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedIndex(cachedMessageParent.Retain()), i+1)
+			cachedMessageParent.Release(true)
 		}
 
 		ms := message.GetMilestone()

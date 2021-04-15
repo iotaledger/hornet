@@ -3,39 +3,22 @@ package pow
 import (
 	"time"
 
-	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
-
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/node"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
-)
-
-const (
-	// defines whether the node does PoW (e.g. if messages are received via API)
-	CfgNodeEnableProofOfWork = "node.enableProofOfWork"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
-			Name:     "PoW",
-			DepsFunc: func(cDeps dependencies) { deps = cDeps },
-			Params: &node.PluginParams{
-				Params: map[string]*flag.FlagSet{
-					"nodeConfig": func() *flag.FlagSet {
-						fs := flag.NewFlagSet("", flag.ContinueOnError)
-						fs.Bool(CfgNodeEnableProofOfWork, false, "defines whether the node does PoW (e.g. if messages are received via API)")
-						return fs
-					}(),
-				},
-				Masked: nil,
-			},
+			Name:      "PoW",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
 			Provide:   provide,
 			Configure: configure,
 			Run:       run,
@@ -61,7 +44,8 @@ type dependencies struct {
 func provide(c *dig.Container) {
 	type handlerdeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		NodeConfig  *configuration.Configuration `name:"nodeConfig"`
+		MinPoWScore float64                      `name:"minPoWScore"`
 	}
 
 	if err := c.Provide(func(deps handlerdeps) *powpackage.Handler {
@@ -70,7 +54,7 @@ func provide(c *dig.Container) {
 		if err != nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(log, deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore), powsrvAPIKey, powsrvInitCooldown)
+		return powpackage.New(log, deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
 		panic(err)
 	}

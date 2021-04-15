@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go"
-
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // SendMessageFunc is a function which sends a message to the network.
@@ -59,6 +58,11 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 		indexation = s.indexSemiLazy
 	}
 
+	index := []byte(indexation)
+	if len(index) > storage.IndexationIndexLength {
+		index = index[:storage.IndexationIndexLength]
+	}
+
 	txCount := int(s.serverMetrics.SentSpamMessages.Load()) + 1
 
 	now := time.Now()
@@ -69,12 +73,16 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 
 	iotaMsg := &iotago.Message{
 		NetworkID: s.networkID,
-		Parent1:   *tips[0], Parent2: *tips[1],
-		Payload: &iotago.Indexation{Index: indexation, Data: []byte(messageString)},
+		Parents:   tips.ToSliceOfArrays(),
+		Payload:   &iotago.Indexation{Index: index, Data: []byte(messageString)},
 	}
 
 	timeStart = time.Now()
-	if err := s.powHandler.DoPoW(iotaMsg, shutdownSignal, 1); err != nil {
+	if err := s.powHandler.DoPoW(iotaMsg, shutdownSignal, 1, func() (tips hornet.MessageIDs, err error) {
+		// refresh tips of the spammer if PoW takes longer than a configured duration.
+		_, refreshedTips, err := s.tipselFunc()
+		return refreshedTips, err
+	}); err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}
 	durationPOW := time.Since(timeStart)

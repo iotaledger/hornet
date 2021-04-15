@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/iotaledger/hive.go/daemon"
-	"github.com/iotaledger/hive.go/logger"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
+
+	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 type Node struct {

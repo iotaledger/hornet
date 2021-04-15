@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -12,8 +13,8 @@ import (
 
 // ShortenedHash returns a shortened hex encoded hash for the given hash.
 // this is used for the dot file.
-func ShortenedHash(hash *hornet.MessageID) string {
-	hexHash := hash.Hex()
+func ShortenedHash(hash hornet.MessageID) string {
+	hexHash := hash.ToHex()
 	return hexHash[0:4] + "..." + hexHash[len(hexHash)-4:]
 }
 
@@ -33,13 +34,14 @@ func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
 	if len(index) > 4 {
 		index = index[:4]
 	}
+	indexHex := hex.EncodeToString(index)
 
 	if cachedMessage.GetMetadata().IsConflictingTx() {
 		conflict := cachedMessage.GetMetadata().GetConflict()
-		return fmt.Sprintf("%s (%d)", index, conflict)
+		return fmt.Sprintf("%s (%d)", indexHex, conflict)
 	}
 
-	return index
+	return indexHex
 }
 
 // ShowDotFile creates a png file with dot and shows it in an external application.

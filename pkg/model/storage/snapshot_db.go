@@ -5,10 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/kvstore"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/kvstore"
 )
 
 const (
@@ -31,7 +30,7 @@ func (s *Storage) storeSnapshotInfo(snapshot *SnapshotInfo) error {
 func (s *Storage) readSnapshotInfo() (*SnapshotInfo, error) {
 	value, err := s.snapshotStore.Get([]byte("snapshotInfo"))
 	if err != nil {
-		if err != kvstore.ErrKeyNotFound {
+		if !errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot info")
 		}
 		return nil, nil
@@ -60,7 +59,7 @@ func (s *Storage) storeSolidEntryPoints(points *SolidEntryPoints) error {
 func (s *Storage) readSolidEntryPoints() (*SolidEntryPoints, error) {
 	value, err := s.snapshotStore.Get([]byte("solidEntryPoints"))
 	if err != nil {
-		if err != kvstore.ErrKeyNotFound {
+		if !errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve solid entry points")
 		}
 		return nil, nil

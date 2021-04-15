@@ -22,7 +22,7 @@ type topicManager struct {
 	onUnsubscribe OnUnsubscribeHandler
 }
 
-func (t topicManager) Subscribe(topic []byte, qos byte, subscriber interface{}) (byte, error) {
+func (t *topicManager) Subscribe(topic []byte, qos byte, subscriber interface{}) (byte, error) {
 	t.subscribedTopicsLock.Lock()
 	defer t.subscribedTopicsLock.Unlock()
 
@@ -43,7 +43,7 @@ func (t topicManager) Subscribe(topic []byte, qos byte, subscriber interface{}) 
 	return b, err
 }
 
-func (t topicManager) Unsubscribe(topic []byte, subscriber interface{}) error {
+func (t *topicManager) Unsubscribe(topic []byte, subscriber interface{}) error {
 	t.subscribedTopicsLock.Lock()
 	defer t.subscribedTopicsLock.Unlock()
 
@@ -66,23 +66,23 @@ func (t topicManager) Unsubscribe(topic []byte, subscriber interface{}) error {
 	return err
 }
 
-func (t topicManager) Subscribers(topic []byte, qos byte, subs *[]interface{}, qoss *[]byte) error {
+func (t *topicManager) Subscribers(topic []byte, qos byte, subs *[]interface{}, qoss *[]byte) error {
 	return t.mem.Subscribers(topic, qos, subs, qoss)
 }
 
-func (t topicManager) Retain(msg *packets.PublishPacket) error {
+func (t *topicManager) Retain(msg *packets.PublishPacket) error {
 	return t.mem.Retain(msg)
 }
 
-func (t topicManager) Retained(topic []byte, msgs *[]*packets.PublishPacket) error {
+func (t *topicManager) Retained(topic []byte, msgs *[]*packets.PublishPacket) error {
 	return t.mem.Retained(topic, msgs)
 }
 
-func (t topicManager) Close() error {
+func (t *topicManager) Close() error {
 	return t.mem.Close()
 }
 
-func (t topicManager) hasSubscribers(topicName string) bool {
+func (t *topicManager) hasSubscribers(topicName string) bool {
 	t.subscribedTopicsLock.RLock()
 	defer t.subscribedTopicsLock.RUnlock()
 

@@ -1,0 +1,46 @@
+{
+  "http": {
+    "bind_address": ":14265"
+  },
+  "coordinator": {
+    "seed": "YJTQYEWGHGALXDL9MEVDUOFJFOXXFLTLLP9VDYSBOGZEQEGTPBEYQPB9GWHGKQAPFTADPJV99EVGAUGE9",
+    "security": 2,
+    "tree_depth": 8,
+    "mwm": 3
+  },
+  "white_flag": {
+    "seed": "XUCKWJVTYPUVFFBVGVMAPAGCCJSYFIBPWMWFYVZJCNMBWSVIG9WDEHIHQLCSNUZCCZWF99VIZPYKGKDRC",
+    "migrations": {
+      "1": [
+        {
+          "balance": 1000000,
+          "index": 0,
+          "security": 2,
+          "ed25519_address": "2c2bb061de51f09ce2ccee44a626762bbb766997e1c8098eaec2e3a089c65843"
+        }
+      ],
+      "3": [
+        {
+          "balance": 2000000,
+          "index": 1,
+          "security": 2,
+          "ed25519_address": "0be076ce68461235e6c43241160a62faeff1536f1a79d816e054f7c7e0c68661"
+        },
+        {
+          "balance": 4000000,
+          "index": 2,
+          "security": 2,
+          "ed25519_address": "583e0b3a19e15c1ad09f53cc152cafde9109cd56486107249feb77d1ff16ce61"
+        }
+      ],
+      "5": [
+        {
+          "balance": 10000000,
+          "index": 3,
+          "security": 2,
+          "ed25519_address": "0a9a5b39438f3fe9107facd9bf6df747573a8c5050c467f4dfcc32d82e3560f8"
+        }
+      ]
+    }
+  }
+}

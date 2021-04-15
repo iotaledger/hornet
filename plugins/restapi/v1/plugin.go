@@ -4,28 +4,26 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
-	"github.com/labstack/echo/v4"
-
-	"github.com/iotaledger/hive.go/configuration"
-
-	iotago "github.com/iotaledger/iota.go"
-
-	powcore "github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
+	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
+	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/configuration"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
@@ -35,6 +33,9 @@ const (
 const (
 	// ParameterMessageID is used to identify a message by it's ID.
 	ParameterMessageID = "messageID"
+
+	// ParameterTransactionID is used to identify a transaction by it's ID.
+	ParameterTransactionID = "transactionID"
 
 	// ParameterOutputID is used to identify an output by it's ID.
 	ParameterOutputID = "outputID"
@@ -54,7 +55,7 @@ const (
 	// GET returns the node info.
 	RouteInfo = "/info"
 
-	// RouteTips is the route for getting two tips.
+	// RouteTips is the route for getting tips.
 	// GET returns the tips.
 	RouteTips = "/tips"
 
@@ -79,9 +80,17 @@ const (
 	// POST creates a single new message and returns the new message ID.
 	RouteMessages = "/messages"
 
+	// RouteTransactionsIncludedMessage is the route for getting the message that was included in the ledger for a given transaction ID.
+	// GET returns message data (json).
+	RouteTransactionsIncludedMessage = "/transactions/:" + ParameterTransactionID + "/included-message"
+
 	// RouteMilestone is the route for getting a milestone by it's milestoneIndex.
 	// GET returns the milestone.
 	RouteMilestone = "/milestones/:" + ParameterMilestoneIndex
+
+	// RouteMilestoneUTXOChanges is the route for getting all UTXO changes of a milestone by it's milestoneIndex.
+	// GET returns the output IDs of all UTXO changes.
+	RouteMilestoneUTXOChanges = "/milestones/:" + ParameterMilestoneIndex + "/utxo-changes"
 
 	// RouteOutput is the route for getting outputs by their outputID (transactionHash + outputIndex).
 	// GET returns the output.
@@ -107,6 +116,15 @@ const (
 	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
 	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + ParameterAddress + "/outputs"
 
+	// RouteTreasury is the route for getting the current treasury output.
+	RouteTreasury = "/treasury"
+
+	// RouteReceipts is the route for getting all stored receipts.
+	RouteReceipts = "/receipts"
+
+	// RouteReceipts is the route for getting all receipts for a given migrated at index.
+	RouteReceiptsMigratedAtIndex = "/receipts/:" + ParameterMilestoneIndex
+
 	// RoutePeer is the route for getting peers by their peerID.
 	// GET returns the peer
 	// DELETE deletes the peer.
@@ -124,43 +142,6 @@ const (
 	// RouteControlSnapshotCreate is the control route to manually create a snapshot file.
 	// GET creates a snapshot. (query parameters: "index")
 	RouteControlSnapshotCreate = "/control/snapshots/create"
-
-	// RouteDebugSolidifier is the debug route to manually trigger the solidifier.
-	// GET triggers the solidifier.
-	RouteDebugSolidifier = "/debug/solidifier"
-
-	// RouteDebugOutputs is the debug route for getting all output IDs.
-	// GET returns the outputIDs for all outputs.
-	RouteDebugOutputs = "/debug/outputs"
-
-	// RouteDebugOutputsUnspent is the debug route for getting all unspent output IDs.
-	// GET returns the outputIDs for all unspent outputs.
-	RouteDebugOutputsUnspent = "/debug/outputs/unspent"
-
-	// RouteDebugOutputsSpent is the debug route for getting all spent output IDs.
-	// GET returns the outputIDs for all spent outputs.
-	RouteDebugOutputsSpent = "/debug/outputs/spent"
-
-	// RouteDebugAddresses is the debug route for getting all known addresses.
-	// GET returns all known addresses encoded in hex.
-	RouteDebugAddresses = "/debug/addresses"
-
-	// RouteDebugAddressesEd25519 is the debug route for getting all known ed25519 addresses.
-	// GET returns all known ed25519 addresses encoded in hex.
-	RouteDebugAddressesEd25519 = "/debug/addresses/ed25519"
-
-	// RouteDebugMilestoneDiffs is the debug route for getting a milestone diff by it's milestoneIndex.
-	// GET returns the utxo diff (new outputs & spents) for the milestone index.
-	RouteDebugMilestoneDiffs = "/debug/ms-diff/:" + ParameterMilestoneIndex
-
-	// RouteDebugRequests is the debug route for getting all pending requests.
-	// GET returns a list of all pending requests.
-	RouteDebugRequests = "/debug/requests"
-
-	// RouteDebugMessageCone is the debug route for traversing a cone of a message.
-	// it traverses the parents of a message until they reference an older milestone than the start message.
-	// GET returns the path of this traversal and the "entry points".
-	RouteDebugMessageCone = "/debug/message-cones/:" + ParameterMessageID
 )
 
 func init() {
@@ -175,9 +156,10 @@ func init() {
 }
 
 var (
-	Plugin             *node.Plugin
-	proofOfWorkEnabled bool
-	features           []string
+	Plugin         *node.Plugin
+	powEnabled     bool
+	powWorkerCount int
+	features       []string
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
@@ -187,31 +169,34 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage          *storage.Storage
-	Tangle           *tangle.Tangle
-	Manager          *p2p.Manager
-	Service          *gossip.Service
-	RequestQueue     gossip.RequestQueue
-	UTXO             *utxo.Manager
-	PoWHandler       *pow.Handler
-	MessageProcessor *gossip.MessageProcessor
-	Snapshot         *snapshot.Snapshot
-	AppInfo          *app.AppInfo
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	NetworkID        uint64                       `name:"networkId"`
-	Bech32HRP        iotago.NetworkPrefix         `name:"bech32HRP"`
-	TipSelector      *tipselect.TipSelector
-	Echo             *echo.Echo
+	Storage              *storage.Storage
+	Tangle               *tangle.Tangle
+	Manager              *p2p.Manager
+	Service              *gossip.Service
+	UTXO                 *utxo.Manager
+	PoWHandler           *pow.Handler
+	MessageProcessor     *gossip.MessageProcessor
+	Snapshot             *snapshot.Snapshot
+	AppInfo              *app.AppInfo
+	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	PeeringConfigManager *p2ppkg.ConfigManager
+	NetworkID            uint64               `name:"networkId"`
+	BelowMaxDepth        int                  `name:"belowMaxDepth"`
+	MinPoWScore          float64              `name:"minPoWScore"`
+	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
+	TipSelector          *tipselect.TipSelector
+	Echo                 *echo.Echo
 }
 
 func configure() {
 	routeGroup := deps.Echo.Group("/api/v1")
 
-	proofOfWorkEnabled = deps.NodeConfig.Bool(powcore.CfgNodeEnableProofOfWork)
+	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
+	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)
 
 	// Check for features
 	features = []string{}
-	if proofOfWorkEnabled {
+	if powEnabled {
 		features = append(features, "PoW")
 	}
 
@@ -220,7 +205,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
@@ -230,7 +215,7 @@ func configure() {
 			if err != nil {
 				return err
 			}
-			return restapi.JSONResponse(c, http.StatusOK, resp)
+			return restapipkg.JSONResponse(c, http.StatusOK, resp)
 		})
 	}
 
@@ -239,7 +224,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessageData, func(c echo.Context) error {
@@ -247,7 +232,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessageBytes, func(c echo.Context) error {
@@ -265,7 +250,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMessages, func(c echo.Context) error {
@@ -274,7 +259,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteMessages, func(c echo.Context) error {
@@ -283,7 +268,16 @@ func configure() {
 			return err
 		}
 		c.Response().Header().Set(echo.HeaderLocation, resp.MessageID)
-		return restapi.JSONResponse(c, http.StatusCreated, resp)
+		return restapipkg.JSONResponse(c, http.StatusCreated, resp)
+	})
+
+	routeGroup.GET(RouteTransactionsIncludedMessage, func(c echo.Context) error {
+		resp, err := messageByTransactionID(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
@@ -292,7 +286,16 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteMilestoneUTXOChanges, func(c echo.Context) error {
+		resp, err := milestoneUTXOChangesByIndex(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
@@ -301,7 +304,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressBech32Balance, func(c echo.Context) error {
@@ -310,7 +313,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressEd25519Balance, func(c echo.Context) error {
@@ -319,7 +322,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressBech32Outputs, func(c echo.Context) error {
@@ -328,7 +331,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressEd25519Outputs, func(c echo.Context) error {
@@ -337,7 +340,34 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteTreasury, func(c echo.Context) error {
+		resp, err := treasury(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteReceipts, func(c echo.Context) error {
+		resp, err := receipts(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteReceiptsMigratedAtIndex, func(c echo.Context) error {
+		resp, err := receiptsByMigratedAtIndex(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RoutePeer, func(c echo.Context) error {
@@ -346,7 +376,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.DELETE(RoutePeer, func(c echo.Context) error {
@@ -354,7 +384,7 @@ func configure() {
 			return err
 		}
 
-		return c.NoContent(http.StatusOK)
+		return c.NoContent(http.StatusNoContent)
 	})
 
 	routeGroup.GET(RoutePeers, func(c echo.Context) error {
@@ -363,7 +393,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
@@ -372,7 +402,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteControlDatabasePrune, func(c echo.Context) error {
@@ -381,7 +411,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteControlSnapshotCreate, func(c echo.Context) error {
@@ -390,84 +420,6 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugSolidifier, func(c echo.Context) error {
-		deps.Tangle.TriggerSolidifier()
-
-		return restapi.JSONResponse(c, http.StatusOK, "solidifier triggered")
-	})
-
-	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
-		resp, err := debugOutputsIDs(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugOutputsUnspent, func(c echo.Context) error {
-		resp, err := debugUnspentOutputsIDs(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
-		resp, err := debugSpentOutputsIDs(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugAddresses, func(c echo.Context) error {
-		resp, err := debugAddresses(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugAddressesEd25519, func(c echo.Context) error {
-		resp, err := debugAddressesEd25519(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
-		resp, err := debugMilestoneDiff(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugRequests, func(c echo.Context) error {
-		resp, err := debugRequests(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
-		resp, err := debugMessageCone(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 }
