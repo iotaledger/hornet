@@ -9,6 +9,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -18,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	snapshotpkg "github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
@@ -29,6 +31,8 @@ import (
 const (
 	// LMI is set to CMI at startup
 	CfgTangleSyncedAtStartup = "syncedAtStartup"
+	// whether to revalidate the database on startup if corrupted
+	CfgTangleRevalidateDatabase = "revalidate"
 )
 
 func init() {
@@ -38,6 +42,7 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "Tangle",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
 			Provide:   provide,
 			Configure: configure,
 			Run:       run,
@@ -50,14 +55,14 @@ var (
 	log        *logger.Logger
 	deps       dependencies
 
-	syncedAtStartup = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
+	syncedAtStartup    = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
+	revalidateDatabase = flag.Bool(CfgTangleRevalidateDatabase, false, "revalidate the database on startup if corrupted")
 
 	ErrDatabaseRevalidationFailed = errors.New("Database revalidation failed! Please delete the database folder and start with a new snapshot.")
 
 	onConfirmedMilestoneIndexChanged *events.Closure
 	onPruningMilestoneIndexChanged   *events.Closure
 	onLatestMilestoneIndexChanged    *events.Closure
-	onReceivedNewTx                  *events.Closure
 )
 
 type dependencies struct {
@@ -66,6 +71,7 @@ type dependencies struct {
 	Tangle      *tangle.Tangle
 	Requester   *gossip.Requester
 	Broadcaster *gossip.Broadcaster
+	Snapshot    *snapshotpkg.Snapshot
 	NodeConfig  *configuration.Configuration `name:"nodeConfig"`
 }
 
@@ -95,12 +101,26 @@ func provide(c *dig.Container) {
 		Requester        *gossippkg.Requester
 		MessageProcessor *gossippkg.MessageProcessor
 		ServerMetrics    *metrics.ServerMetrics
-		ReceiptService   *migrator.ReceiptService `optional:"true"`
+		ReceiptService   *migrator.ReceiptService     `optional:"true"`
+		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+		BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
-		return tangle.New(logger.NewLogger("Tangle"), deps.Storage, deps.RequestQueue, deps.Service, deps.MessageProcessor,
-			deps.ServerMetrics, CorePlugin.Daemon().ContextStopped(), deps.Requester, CorePlugin.Daemon(), deps.ReceiptService, *syncedAtStartup)
+		return tangle.New(
+			logger.NewLogger("Tangle"),
+			deps.Storage,
+			deps.RequestQueue,
+			deps.Service,
+			deps.MessageProcessor,
+			deps.ServerMetrics,
+			deps.Requester,
+			deps.ReceiptService,
+			CorePlugin.Daemon(),
+			CorePlugin.Daemon().ContextStopped(),
+			deps.BelowMaxDepth,
+			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
+			*syncedAtStartup)
 	}); err != nil {
 		panic(err)
 	}
@@ -117,17 +137,25 @@ func configure() {
 		deps.Storage.MarkDatabaseCorrupted()
 	})
 
-	configureEvents()
-	deps.Tangle.ConfigureTangleProcessor()
-}
-
-func run() {
-
 	if deps.Storage.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
+		// no need to check for the "deleteDatabase" and "deleteAll" flags,
+		// since the database should only be marked as corrupted,
+		// if it was not deleted before this check.
+		revalidateDatabase := *revalidateDatabase || deps.NodeConfig.Bool(database.CfgDatabaseAutoRevalidation)
+		if !revalidateDatabase {
+			log.Panic(`
+HORNET was not shut down properly, the database may be corrupted.
+Please restart HORNET with one of the following flags or enable "db.autoRevalidation" in the config.
+
+--revalidate:     starts the database revalidation (might take a long time)
+--deleteDatabase: deletes the database
+--deleteAll:      deletes the database and the snapshot files
+`)
+		}
 		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		if err := deps.Tangle.RevalidateDatabase(); err != nil {
-			if err == common.ErrOperationAborted {
+		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.NodeConfig.Bool(snapshot.CfgPruningPruneReceipts)); err != nil {
+			if errors.Is(err, common.ErrOperationAborted) {
 				log.Info("database revalidation aborted")
 				os.Exit(0)
 			}
@@ -136,16 +164,20 @@ func run() {
 		log.Info("database revalidation successful")
 	}
 
+	configureEvents()
+	deps.Tangle.ConfigureTangleProcessor()
+}
+
+func run() {
+
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
 
-	_ = CorePlugin.Daemon().BackgroundWorker("Tangle[SolidifierGossipEvents]", func(shutdownSignal <-chan struct{}) {
-		attachSolidifierGossipEvents()
+	_ = CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
 		attachHeartbeatEvents()
 		<-shutdownSignal
-		detachSolidifierGossipEvents()
 		detachHeartbeatEvents()
-	}, shutdown.PrioritySolidifierGossip)
+	}, shutdown.PriorityHeartbeats)
 
 	_ = CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
@@ -183,34 +215,16 @@ func configureEvents() {
 		// notify peers about our new latest milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
-
-	onReceivedNewTx = events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, latestSolidMilestoneIndex milestone.Index) {
-		// Force release possible here, since processIncomingTx still holds a reference
-		defer cachedMsg.Release(true) // msg -1
-
-		// todo: move into solid event
-		if deps.Storage.IsNodeSyncedWithThreshold() {
-			deps.Tangle.SolidifyFutureConeOfMsg(cachedMsg.GetCachedMetadata()) // meta pass +1
-		}
-	})
 }
 
 func attachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-	deps.Tangle.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+	deps.Snapshot.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
-}
-
-func attachSolidifierGossipEvents() {
-	deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewTx)
 }
 
 func detachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
-	deps.Tangle.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	deps.Snapshot.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
-}
-
-func detachSolidifierGossipEvents() {
-	deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewTx)
 }

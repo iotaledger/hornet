@@ -21,7 +21,7 @@ var (
 	seed4, _ = hex.DecodeString("bd6fe09d8a309ca309c5db7b63513240490109cd0ac6b123551e9da0d5c8916c4a5a4f817e4b4e9df89885ce1af0986da9f1e56b65153c2af1e87ab3b11dabb4")
 
 	showConfirmationGraphs = false
-	MinPowScore            = 100.0
+	MinPoWScore            = 100.0
 	BelowMaxDepth          = 15
 )
 
@@ -32,7 +32,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPowScore, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
@@ -86,7 +86,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPowScore, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
@@ -262,7 +262,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPowScore, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
@@ -424,7 +424,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 
 	genesisAddress := seed1Wallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPowScore, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet
@@ -605,7 +605,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	genesisWallet := utils.NewHDWallet("Seed1", seed1, 0)
 	genesisAddress := genesisWallet.Address()
 
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 3, BelowMaxDepth, MinPowScore, showConfirmationGraphs)
+	te := testsuite.SetupTestEnvironment(t, genesisAddress, 3, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
 	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
 
 	//Add token supply to our local HDWallet

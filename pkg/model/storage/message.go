@@ -94,6 +94,16 @@ func (msg *Message) GetParents() hornet.MessageIDs {
 	return hornet.MessageIDsFromSliceOfArrays(msg.GetMessage().Parents)
 }
 
+func (msg *Message) IsMilestone() bool {
+	switch msg.GetMessage().Payload.(type) {
+	case *iotago.Milestone:
+		return true
+	default:
+	}
+
+	return false
+}
+
 func (msg *Message) GetMilestone() (ms *iotago.Milestone) {
 	switch ms := msg.GetMessage().Payload.(type) {
 	case *iotago.Milestone:

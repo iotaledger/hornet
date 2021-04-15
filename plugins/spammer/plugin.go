@@ -3,7 +3,6 @@ package spammer
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"runtime"
 	"sync"
 	"time"
@@ -20,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/tipselect"
@@ -86,7 +84,7 @@ type dependencies struct {
 	MessageProcessor *gossip.MessageProcessor
 	Storage          *storage.Storage
 	ServerMetrics    *metrics.ServerMetrics
-	PowHandler       *pow.Handler
+	PoWHandler       *pow.Handler
 	Manager          *p2p.Manager
 	TipSelector      *tipselect.TipSelector
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
@@ -103,15 +101,7 @@ func configure() {
 		return
 	}
 
-	g := deps.Echo.Group(RouteSpammer)
-
-	g.GET("/", func(c echo.Context) error {
-		resp, err := handleSpammerCommand(c)
-		if err != nil {
-			return err
-		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
+	setupRoutes(deps.Echo.Group(RouteSpammer))
 
 	spammerAvgHeap = utils.NewTimeHeap()
 
@@ -142,7 +132,7 @@ func configure() {
 		deps.NodeConfig.String(CfgSpammerIndex),
 		deps.NodeConfig.String(CfgSpammerIndexSemiLazy),
 		deps.TipSelector.SelectSpammerTips,
-		deps.PowHandler,
+		deps.PoWHandler,
 		sendMessage,
 		deps.ServerMetrics,
 	)
@@ -316,7 +306,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						}
 					}
 
-					if !deps.Storage.IsNodeSyncedWithThreshold() {
+					if !deps.Storage.IsNodeAlmostSynced() {
 						time.Sleep(time.Second)
 						continue
 					}
@@ -327,7 +317,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 					}
 
 					if err := waitForLowerCPUUsage(cpuMaxUsage, shutdownSignal); err != nil {
-						if err != common.ErrOperationAborted {
+						if !errors.Is(err, common.ErrOperationAborted) {
 							log.Warn(err.Error())
 						}
 						continue

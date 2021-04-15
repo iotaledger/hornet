@@ -5,11 +5,14 @@ import (
 )
 
 var (
-	appInfo    *prometheus.GaugeVec
-	health     prometheus.Gauge
-	milestones *prometheus.GaugeVec
-	tips       *prometheus.GaugeVec
-	requests   *prometheus.GaugeVec
+	appInfo                     *prometheus.GaugeVec
+	health                      prometheus.Gauge
+	messagesPerSecond           prometheus.Gauge
+	referencedMessagesPerSecond prometheus.Gauge
+	referencedRate              prometheus.Gauge
+	milestones                  *prometheus.GaugeVec
+	tips                        *prometheus.GaugeVec
+	requests                    *prometheus.GaugeVec
 )
 
 func configureNode() {
@@ -30,6 +33,30 @@ func configureNode() {
 			Subsystem: "node",
 			Name:      "health",
 			Help:      "Health of the node.",
+		})
+
+	messagesPerSecond = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "iota",
+			Subsystem: "node",
+			Name:      "messages_per_second",
+			Help:      "Current rate of new messages per second.",
+		})
+
+	referencedMessagesPerSecond = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "iota",
+			Subsystem: "node",
+			Name:      "referenced_messages_per_second",
+			Help:      "Current rate of referenced messages per second.",
+		})
+
+	referencedRate = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "iota",
+			Subsystem: "node",
+			Name:      "referenced_rate",
+			Help:      "Ratio of referenced messages in relation to new messages of the last confirmed milestone.",
 		})
 
 	milestones = prometheus.NewGaugeVec(
@@ -64,6 +91,9 @@ func configureNode() {
 
 	registry.MustRegister(appInfo)
 	registry.MustRegister(health)
+	registry.MustRegister(messagesPerSecond)
+	registry.MustRegister(referencedMessagesPerSecond)
+	registry.MustRegister(referencedRate)
 	registry.MustRegister(milestones)
 	registry.MustRegister(tips)
 	registry.MustRegister(requests)
@@ -75,6 +105,17 @@ func collectInfo() {
 	health.Set(0)
 	if deps.Tangle.IsNodeHealthy() {
 		health.Set(1)
+	}
+
+	messagesPerSecond.Set(0)
+	referencedMessagesPerSecond.Set(0)
+	referencedRate.Set(0)
+
+	lastConfirmedMilestoneMetric := deps.Tangle.LastConfirmedMilestoneMetric()
+	if lastConfirmedMilestoneMetric != nil {
+		messagesPerSecond.Set(lastConfirmedMilestoneMetric.MPS)
+		referencedMessagesPerSecond.Set(lastConfirmedMilestoneMetric.RMPS)
+		referencedRate.Set(lastConfirmedMilestoneMetric.ReferencedRate)
 	}
 
 	milestones.WithLabelValues("latest").Set(float64(deps.Storage.GetLatestMilestoneIndex()))

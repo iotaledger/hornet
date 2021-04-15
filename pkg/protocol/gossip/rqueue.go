@@ -30,7 +30,7 @@ type RequestQueue interface {
 	// Returns the origin request which was pending or nil if the message ID was not requested.
 	Received(messageID hornet.MessageID) *Request
 	// Processed marks a request as fulfilled and thereby removes it from the processing set.
-	// Returns the origin request which was pending or nil if the message ID was not requested.
+	// Returns the origin request which was processing or nil if the message ID was not requested.
 	Processed(messageID hornet.MessageID) *Request
 	// EnqueuePending enqueues all pending requests back into the queue.
 	// It also discards requests in the pending set of which their enqueue time is over the given delta threshold.
@@ -106,6 +106,7 @@ type priorityqueue struct {
 func (pq *priorityqueue) Next() (r *Request) {
 	pq.Lock()
 	defer pq.Unlock()
+
 	// Pop() doesn't gracefully handle empty queues, so we check it ourselves
 	if len(pq.queued) == 0 {
 		return nil
@@ -138,22 +139,25 @@ func (pq *priorityqueue) Enqueue(r *Request) bool {
 
 func (pq *priorityqueue) IsQueued(messageID hornet.MessageID) bool {
 	pq.RLock()
+	defer pq.RUnlock()
+
 	_, k := pq.queued[messageID.ToMapKey()]
-	pq.RUnlock()
 	return k
 }
 
 func (pq *priorityqueue) IsPending(messageID hornet.MessageID) bool {
 	pq.RLock()
+	defer pq.RUnlock()
+
 	_, k := pq.pending[messageID.ToMapKey()]
-	pq.RUnlock()
 	return k
 }
 
 func (pq *priorityqueue) IsProcessing(messageID hornet.MessageID) bool {
 	pq.RLock()
+	defer pq.RUnlock()
+
 	_, k := pq.processing[messageID.ToMapKey()]
-	pq.RUnlock()
 	return k
 }
 
@@ -184,23 +188,35 @@ func (pq *priorityqueue) Received(messageID hornet.MessageID) *Request {
 	}
 
 	// check if the request is in the queue (was enqueued again after request)
-	return pq.queued[messageIDMapKey]
+	if req, wasQueued := pq.queued[messageIDMapKey]; wasQueued {
+		// delete it from queued, it will be cleaned up from the heap with pop
+		delete(pq.queued, messageIDMapKey)
+
+		// add the request to processing
+		pq.processing[messageIDMapKey] = req
+
+		return req
+	}
+
+	return nil
 }
 
 func (pq *priorityqueue) Processed(messageID hornet.MessageID) *Request {
 	pq.Lock()
+	defer pq.Unlock()
+
 	messageIDMapKey := messageID.ToMapKey()
 	req, wasProcessing := pq.processing[messageIDMapKey]
 	if wasProcessing {
 		delete(pq.processing, messageIDMapKey)
 	}
-	pq.Unlock()
 	return req
 }
 
 func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
 	pq.Lock()
 	defer pq.Unlock()
+
 	if len(pq.queued) != 0 {
 		return len(pq.queued)
 	}
@@ -227,17 +243,19 @@ func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
 
 func (pq *priorityqueue) Size() (int, int, int) {
 	pq.RLock()
+	defer pq.RUnlock()
+
 	x := len(pq.queued)
 	y := len(pq.pending)
 	z := len(pq.processing)
-	pq.RUnlock()
 	return x, y, z
 }
 
 func (pq *priorityqueue) Empty() bool {
 	pq.RLock()
+	defer pq.RUnlock()
+
 	empty := len(pq.queued) == 0 && len(pq.pending) == 0 && len(pq.processing) == 0
-	pq.RUnlock()
 	return empty
 }
 
@@ -246,9 +264,10 @@ func (pq *priorityqueue) AvgLatency() int64 {
 }
 
 func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request, processing []*Request) {
-	pq.Lock()
-	defer pq.Unlock()
-	queued = make([]*Request, len(pq.queue))
+	pq.RLock()
+	defer pq.RUnlock()
+
+	queued = make([]*Request, len(pq.queued))
 	var i int
 	for _, v := range pq.queued {
 		queued[i] = v
@@ -272,9 +291,10 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request, proc
 func (pq *priorityqueue) Filter(f FilterFunc) {
 	pq.Lock()
 	defer pq.Unlock()
+
 	if f != nil {
 		filteredQueue := make([]*Request, 0)
-		for _, r := range pq.queue {
+		for _, r := range pq.queued {
 			if !f(r) {
 				delete(pq.queued, r.MessageID.ToMapKey())
 				continue
@@ -316,24 +336,36 @@ func (pq *priorityqueue) Push(x interface{}) {
 }
 
 func (pq *priorityqueue) Pop() interface{} {
-	old := pq.queue
-	n := len(pq.queue)
-	r := old[n-1]
-	old[n-1] = nil // avoid memory leak
-	pq.queue = old[0 : n-1]
+	for {
+		old := pq.queue
+		n := len(pq.queue)
+		if n == 0 {
+			// queue is empty
+			return nil
+		}
+		r := old[n-1]
+		old[n-1] = nil // avoid memory leak
+		pq.queue = old[0 : n-1]
 
-	messageIDMapKey := r.MessageID.ToMapKey()
+		messageIDMapKey := r.MessageID.ToMapKey()
+		if _, queued := pq.queued[messageIDMapKey]; !queued {
+			// the request is not queued anymore
+			// => remove it from the heap and jump to the next entry
+			continue
+		}
 
-	// mark as pending and remove from queued
-	delete(pq.queued, messageIDMapKey)
-	pq.pending[messageIDMapKey] = r
-	return r
+		// mark as pending and remove from queued
+		delete(pq.queued, messageIDMapKey)
+		pq.pending[messageIDMapKey] = r
+		return r
+	}
 }
 
 func (pq *priorityqueue) Peek() *Request {
-	pq.RWMutex.Lock()
-	defer pq.RWMutex.Unlock()
-	if len(pq.queue) == 0 {
+	pq.Lock()
+	defer pq.Unlock()
+
+	if len(pq.queued) == 0 {
 		return nil
 	}
 	return pq.queue[len(pq.queue)-1]

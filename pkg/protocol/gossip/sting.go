@@ -153,7 +153,7 @@ func NewMilestoneRequestMsg(requestedMilestoneIndex milestone.Index) ([]byte, er
 
 // ExtractRequestedMilestoneIndex extracts the requested milestone index from the given source.
 func ExtractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
-	if len(source) != 4 {
+	if len(source) != iotago.UInt32ByteSize {
 		return 0, ErrInvalidSourceLength
 	}
 

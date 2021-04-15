@@ -22,7 +22,15 @@ type infoResponse struct {
 	// The Bech32 HRP used.
 	Bech32HRP string `json:"bech32HRP"`
 	// The minimum pow score of the network.
-	MinPowScore float64 `json:"minPowScore"`
+	MinPoWScore float64 `json:"minPoWScore"`
+	// The current rate of new messages per second.
+	MessagesPerSecond float64 `json:"messagesPerSecond"`
+	// The current rate of referenced messages per second.
+	ReferencedMessagesPerSecond float64 `json:"referencedMessagesPerSecond"`
+	// The ratio of referenced messages in relation to new messages of the last confirmed milestone.
+	ReferencedRate float64 `json:"referencedRate"`
+	// The timestamp of the latest known milestone.
+	LatestMilestoneTimestamp int64 `json:"latestMilestoneTimestamp"`
 	// The latest known milestone index.
 	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
 	// The current confirmed milestone's index.
@@ -132,7 +140,7 @@ type OutputResponse struct {
 
 // addressBalanceResponse defines the response of a GET addresses REST API call.
 type addressBalanceResponse struct {
-	// The type of the address (0=WOTS, 1=Ed25519).
+	// The type of the address (0=Ed25519).
 	AddressType byte `json:"addressType"`
 	// The hex encoded address.
 	Address string `json:"address"`
@@ -144,7 +152,7 @@ type addressBalanceResponse struct {
 
 // addressOutputsResponse defines the response of a GET outputs by address REST API call.
 type addressOutputsResponse struct {
-	// The type of the address (0=WOTS, 1=Ed25519).
+	// The type of the address (0=Ed25519).
 	AddressType byte `json:"addressType"`
 	// The hex encoded address.
 	Address string `json:"address"`

@@ -17,6 +17,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
+	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/pow"
@@ -122,6 +123,8 @@ type MessageProcessor struct {
 	workUnits     *objectstorage.ObjectStorage
 	serverMetrics *metrics.ServerMetrics
 	opts          Options
+	shutdownMutex syncutils.RWMutex
+	shutdown      bool
 }
 
 // The Options for the MessageProcessor.
@@ -136,6 +139,16 @@ type Options struct {
 func (proc *MessageProcessor) Run(shutdownSignal <-chan struct{}) {
 	proc.wp.Start()
 	<-shutdownSignal
+	proc.Shutdown()
+}
+
+// Shutdown signals the internal worker pool and object storage
+// to shut down and sets the shutdown flag.
+func (proc *MessageProcessor) Shutdown() {
+	proc.shutdownMutex.Lock()
+	defer proc.shutdownMutex.Unlock()
+
+	proc.shutdown = true
 	proc.wp.StopAndWait()
 	proc.workUnits.Shutdown()
 }
@@ -155,11 +168,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		return fmt.Errorf("msg has invalid network ID %d instead of %d", msg.GetNetworkID(), proc.opts.NetworkID)
 	}
 
-	score, err := msg.GetMessage().POW()
-	if err != nil {
-		return err
-	}
-
+	score := pow.Score(msg.GetData())
 	if score < proc.opts.MinPoWScore {
 		return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
 	}
@@ -219,12 +228,13 @@ func (proc *MessageProcessor) WorkUnitsSize() int {
 }
 
 // gets a CachedWorkUnit or creates a new one if it not existent.
-func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) *CachedWorkUnit {
+func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(key []byte) objectstorage.StorableObject { // cachedWorkUnit +1
+			newlyAdded = true
 			return newWorkUnit(receivedTxBytes, proc)
 		}),
-	}
+	}, newlyAdded
 }
 
 // processes the given milestone request by parsing it and then replying to the peer with it.
@@ -267,7 +277,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 
 // processes the given message request by parsing it and then replying to the peer with it.
 func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
-	if len(data) != 32 {
+	if len(data) != iotago.MessageIDLength {
 		return
 	}
 
@@ -295,8 +305,11 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 
 // gets or creates a new WorkUnit for the given message and then processes the WorkUnit.
 func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
-	cachedWorkUnit := proc.workUnitFor(data) // workUnit +1
-	defer cachedWorkUnit.Release()           // workUnit -1
+	cachedWorkUnit, newlyAdded := proc.workUnitFor(data) // workUnit +1
+
+	// force release if not newly added, so the cache time is only active the first time the message is received.
+	defer cachedWorkUnit.Release(!newlyAdded) // workUnit -1
+
 	workUnit := cachedWorkUnit.WorkUnit()
 	workUnit.addReceivedFrom(p, nil)
 	proc.processWorkUnit(workUnit, p)
@@ -313,6 +326,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	case wu.Is(Hashing):
 		wu.processingLock.Unlock()
 		return
+
 	case wu.Is(Invalid):
 		wu.processingLock.Unlock()
 
@@ -320,22 +334,21 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 		// drop the connection to the peer
 		_ = proc.ps.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid message"))
-
 		return
+
 	case wu.Is(Hashed):
 		wu.processingLock.Unlock()
 
-		// emit an event to say that a message was fully processed
+		// we need to check for requests here again because there is a race condition
+		// between processing received messages and enqueuing requests.
 		if request := proc.requestQueue.Received(wu.msg.GetMessageID()); request != nil {
 			wu.requested = true
 			proc.Events.MessageProcessed.Trigger(wu.msg, request, p)
-			return
 		}
 
 		if proc.storage.ContainsMessage(wu.msg.GetMessageID()) {
 			proc.serverMetrics.KnownMessages.Inc()
 			p.Metrics.KnownMessages.Inc()
-			return
 		}
 
 		return
@@ -375,45 +388,38 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 	wu.UpdateState(Hashed)
 
-	proc.Events.MessageProcessed.Trigger(msg, request, p)
-
 	// increase the known message count for all other peers
 	wu.increaseKnownTxCount(p)
-}
 
-func (proc *MessageProcessor) BroadcastValidMilestone(cachedMessage *storage.CachedMessage) {
-	defer cachedMessage.Release(true)
-
-	cachedWorkUnit := proc.workUnitFor(cachedMessage.GetMessage().GetData()) // workUnit +1
-	defer cachedWorkUnit.Release()                                           // workUnit -1
-	wu := cachedWorkUnit.WorkUnit()
-
-	if wu.requested {
-		// no need to broadcast if the message was requested
+	// do not process gossip if we are not in sync.
+	// we ignore all received messages if we didn't request them and it's not a milestone.
+	// otherwise these messages would get evicted from the cache, and it's heavier to load them
+	// from the storage than to request them again.
+	if request == nil && !proc.storage.IsNodeAlmostSynced() && !msg.IsMilestone() {
 		return
 	}
 
-	// if the workunit was already evicted, it may happen that
-	// we send the message back to peers which already sent us the same message
-	// we should never access the "msg", because it may not be set in this context.
-
-	// broadcast the message to all peers that didn't sent it to us yet
-	proc.Events.BroadcastMessage.Trigger(wu.broadcast())
+	proc.Events.MessageProcessed.Trigger(msg, request, p)
 }
 
 func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
+	proc.shutdownMutex.RLock()
+	defer proc.shutdownMutex.RUnlock()
 	defer cachedMsgMeta.Release(true)
 
-	if !proc.storage.IsNodeSyncedWithThreshold() {
-		// no need to broadcast messages if the node is not sync
+	if proc.shutdown {
+		// do not broadcast if the message processor was shut down
 		return
 	}
 
-	cmi := proc.storage.GetConfirmedMilestoneIndex()
-	_, ocri := dag.GetConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), cmi)
+	if !proc.storage.IsNodeSyncedWithinBelowMaxDepth() {
+		// no need to broadcast messages if the node is not sync within "below max depth"
+		return
+	}
 
-	if (cmi - ocri) >= proc.opts.BelowMaxDepth {
-		// the solid message was below max depth, do not broadcast
+	_, ocri := dag.GetConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), proc.storage.GetConfirmedMilestoneIndex())
+	if (proc.storage.GetLatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
+		// the solid message was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}
 
@@ -423,8 +429,8 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 	}
 	defer cachedMsg.Release(true)
 
-	cachedWorkUnit := proc.workUnitFor(cachedMsg.GetMessage().GetData()) // workUnit +1
-	defer cachedWorkUnit.Release()                                       // workUnit -1
+	cachedWorkUnit, _ := proc.workUnitFor(cachedMsg.GetMessage().GetData()) // workUnit +1
+	defer cachedWorkUnit.Release(true)                                      // workUnit -1
 	wu := cachedWorkUnit.WorkUnit()
 
 	if wu.requested {

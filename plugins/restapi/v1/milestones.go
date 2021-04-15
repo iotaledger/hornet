@@ -7,6 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/kvstore"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/restapi"
 )
@@ -34,7 +36,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 
 	cachedMilestone := deps.Storage.GetCachedMilestoneOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
-		return nil, errors.WithMessagef(restapi.ErrNotFound, "milestone not found: %d", msIndex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "milestone not found: %d", msIndex)
 	}
 	defer cachedMilestone.Release(true)
 
@@ -54,7 +56,10 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 
 	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)
+		}
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 	}
 
 	createdOutputs := make([]string, len(diff.Outputs))

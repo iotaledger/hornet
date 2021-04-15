@@ -5,7 +5,6 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/node"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -19,6 +18,7 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "PoW",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
 			Provide:   provide,
 			Configure: configure,
 			Run:       run,
@@ -44,7 +44,8 @@ type dependencies struct {
 func provide(c *dig.Container) {
 	type handlerdeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		NodeConfig  *configuration.Configuration `name:"nodeConfig"`
+		MinPoWScore float64                      `name:"minPoWScore"`
 	}
 
 	if err := c.Provide(func(deps handlerdeps) *powpackage.Handler {
@@ -53,7 +54,7 @@ func provide(c *dig.Container) {
 		if err != nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(log, deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore), powsrvAPIKey, powsrvInitCooldown)
+		return powpackage.New(log, deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
 		panic(err)
 	}

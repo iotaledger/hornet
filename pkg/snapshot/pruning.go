@@ -26,7 +26,7 @@ func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCo
 	messageIDsToDeleteMap := make(map[string]struct{})
 
 	// Check if message is still unreferenced
-	for _, messageID := range s.storage.GetUnreferencedMessageIDs(targetIndex, true) {
+	for _, messageID := range s.storage.GetUnreferencedMessageIDs(targetIndex) {
 		messageIDMapKey := messageID.ToMapKey()
 		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
 			continue
@@ -57,7 +57,7 @@ func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCo
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
 func (s *Snapshot) pruneMilestone(milestoneIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
 
-	if err := s.utxo.PruneMilestoneIndex(milestoneIndex, receiptMigratedAtIndex...); err != nil {
+	if err := s.utxo.PruneMilestoneIndexWithoutLocking(milestoneIndex, s.pruneReceipts, receiptMigratedAtIndex...); err != nil {
 		return err
 	}
 
@@ -71,7 +71,9 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 
 	for messageIDToDelete := range messageIDsToDeleteMap {
 
-		cachedMsg := s.storage.GetCachedMessageOrNil(hornet.MessageIDFromMapKey(messageIDToDelete)) // msg +1
+		msgID := hornet.MessageIDFromMapKey(messageIDToDelete)
+
+		cachedMsg := s.storage.GetCachedMessageOrNil(msgID) // msg +1
 		if cachedMsg == nil {
 			continue
 		}
@@ -79,20 +81,21 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 		cachedMsg.ConsumeMessage(func(msg *storage.Message) { // msg -1
 			// Delete the reference in the parents
 			for _, parent := range msg.GetParents() {
-				s.storage.DeleteChild(parent, msg.GetMessageID())
+				s.storage.DeleteChild(parent, msgID)
 			}
 
-			// delete all children of this message
-			s.storage.DeleteChildren(msg.GetMessageID())
+			// We don't need to iterate through the children that reference this message,
+			// since we will never start the walk from this message anymore (we only walk the future cone)
+			// and the references will be deleted together with the children messages when they are pruned.
 
 			indexationPayload := storage.CheckIfIndexation(msg)
 			if indexationPayload != nil {
 				// delete indexation if the message contains an indexation payload
-				s.storage.DeleteIndexation(indexationPayload.Index, msg.GetMessageID())
+				s.storage.DeleteIndexation(indexationPayload.Index, msgID)
 			}
-
-			s.storage.DeleteMessage(msg.GetMessageID())
 		})
+
+		s.storage.DeleteMessage(msgID)
 	}
 
 	return len(messageIDsToDeleteMap)
@@ -134,18 +137,17 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		solidEntryPoints = append(solidEntryPoints, sep)
 		return true
 	})
+	if err != nil {
+		return 0, err
+	}
 
+	// temporarily add the new solid entry points and keep the old ones
 	s.storage.WriteLockSolidEntryPoints()
-	s.storage.ResetSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
 		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
 	}
 	s.storage.StoreSolidEntryPoints()
 	s.storage.WriteUnlockSolidEntryPoints()
-
-	if err != nil {
-		return 0, err
-	}
 
 	// we have to set the new solid entry point index.
 	// this way we can cleanly prune even if the pruning was aborted last time
@@ -166,8 +168,9 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 		s.log.Infof("Pruning milestone (%d)...", milestoneIndex)
 
-		ts := time.Now()
+		timeStart := time.Now()
 		txCountDeleted, msgCountChecked := s.pruneUnreferencedMessages(milestoneIndex)
+		timePruneUnreferencedMessages := time.Now()
 
 		cachedMs := s.storage.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
@@ -200,6 +203,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 			// the pruning target index is also a solid entry point => traverse it anyways
 			true,
 			nil)
+		timeTraverseMilestoneCone := time.Now()
 
 		cachedMs.Release(true) // milestone -1
 		if err != nil {
@@ -223,19 +227,42 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		if err := s.pruneMilestone(milestoneIndex, migratedAtIndex...); err != nil {
 			s.log.Warnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 		}
+		timePruneMilestone := time.Now()
 
 		cachedMsMsg.Release(true) // milestone msg -1
 
 		msgCountChecked += len(messageIDsToDeleteMap)
 		txCountDeleted += s.pruneMessages(messageIDsToDeleteMap)
+		timePruneMessages := time.Now()
 
 		snapshotInfo.PruningIndex = milestoneIndex
 		s.storage.SetSnapshotInfo(snapshotInfo)
+		timeSetSnapshotInfo := time.Now()
 
-		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(ts), txCountDeleted, msgCountChecked)
+		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(timeStart).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
 
-		s.tangle.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
+		s.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
+		timePruningMilestoneIndexChanged := time.Now()
+
+		s.Events.PruningMetricsUpdated.Trigger(&PruningMetrics{
+			DurationPruneUnreferencedMessages:    timePruneUnreferencedMessages.Sub(timeStart),
+			DurationTraverseMilestoneCone:        timeTraverseMilestoneCone.Sub(timePruneUnreferencedMessages),
+			DurationPruneMilestone:               timePruneMilestone.Sub(timeTraverseMilestoneCone),
+			DurationPruneMessages:                timePruneMessages.Sub(timePruneMilestone),
+			DurationSetSnapshotInfo:              timeSetSnapshotInfo.Sub(timePruneMessages),
+			DurationPruningMilestoneIndexChanged: timePruningMilestoneIndexChanged.Sub(timeSetSnapshotInfo),
+			DurationTotal:                        time.Since(timeStart),
+		})
 	}
+
+	// finally set the new solid entry points and remove the old ones
+	s.storage.WriteLockSolidEntryPoints()
+	s.storage.ResetSolidEntryPoints()
+	for _, sep := range solidEntryPoints {
+		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
+	}
+	s.storage.StoreSolidEntryPoints()
+	s.storage.WriteUnlockSolidEntryPoints()
 
 	database.RunGarbageCollection()
 

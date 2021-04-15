@@ -21,9 +21,9 @@ This is a small tutorial on how to build HORNET.
   ```bash
   go version go1.16 linux/amd64
   ```
-- Install git (if not already done):
+- Install the git and build-essential packages (if not already done):
   ```bash
-  sudo apt install git
+  sudo apt install git build-essential
   ```
 
 ### Build HORNET

@@ -135,7 +135,8 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator))
+			err, _ = snapshot.StreamSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator)
+			require.NoError(t, err)
 			require.NoError(t, snapshotFileWrite.Close())
 
 			fileInfo, err := fs.Stat(filePath)

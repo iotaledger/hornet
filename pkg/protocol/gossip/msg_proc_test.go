@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	MinPowScore   = 100.0
+	MinPoWScore   = 100.0
 	BelowMaxDepth = 15
 )
 
@@ -31,7 +31,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	shutdownSignal := make(chan struct{})
 	defer close(shutdownSignal)
 
-	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
+	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
@@ -54,7 +54,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	networkID := iotago.NetworkIDFromString("testnet4")
 
 	processor := gossip.NewMessageProcessor(te.Storage(), gossip.NewRequestQueue(), manager, serverMetrics, &gossip.Options{
-		MinPoWScore:       MinPowScore,
+		MinPoWScore:       MinPoWScore,
 		NetworkID:         networkID,
 		BelowMaxDepth:     BelowMaxDepth,
 		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingMessagesFilter,
@@ -91,7 +91,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.Parents = iotago.MessageIDs{[32]byte{}}
 
 	// pow again, so we have a valid message
-	err = te.PowHandler.DoPoW(msg, nil, 1)
+	err = te.PoWHandler.DoPoW(msg, nil, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
@@ -106,7 +106,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.NetworkID = 1
 
 	// pow again, so we have a valid message
-	err = te.PowHandler.DoPoW(msg, nil, 1)
+	err = te.PoWHandler.DoPoW(msg, nil, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
@@ -121,7 +121,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.NetworkID = networkID
 
 	// pow again, so we have a valid message
-	err = te.PowHandler.DoPoW(msg, nil, 1)
+	err = te.PoWHandler.DoPoW(msg, nil, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again

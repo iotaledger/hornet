@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
+	databasepkg "github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -23,6 +26,7 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
@@ -60,40 +64,60 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo         *app.AppInfo
-	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
-	Storage         *storage.Storage
-	ServerMetrics   *metrics.ServerMetrics
-	DatabaseMetrics *metrics.DatabaseMetrics
-	StorageMetrics  *metrics.StorageMetrics
-	Service         *gossip.Service
-	ReceiptService  *migrator.ReceiptService `optional:"true"`
-	Tangle          *tangle.Tangle
-	MigratorService *migrator.MigratorService `optional:"true"`
-	Manager         *p2p.Manager
-	RequestQueue    gossip.RequestQueue
-	TipSelector     *tipselect.TipSelector
-	Coordinator     *coordinator.Coordinator `optional:"true"`
-	DatabaseEvents  *database.Events
+	AppInfo          *app.AppInfo
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	Database         *databasepkg.Database
+	Storage          *storage.Storage
+	ServerMetrics    *metrics.ServerMetrics
+	DatabaseMetrics  *metrics.DatabaseMetrics
+	StorageMetrics   *metrics.StorageMetrics
+	RestAPIMetrics   *metrics.RestAPIMetrics `optional:"true"`
+	Service          *gossip.Service
+	ReceiptService   *migrator.ReceiptService `optional:"true"`
+	Tangle           *tangle.Tangle
+	MigratorService  *migrator.MigratorService `optional:"true"`
+	Manager          *p2p.Manager
+	RequestQueue     gossip.RequestQueue
+	MessageProcessor *gossip.MessageProcessor
+	TipSelector      *tipselect.TipSelector
+	Snapshot         *snapshot.Snapshot
+	Coordinator      *coordinator.Coordinator `optional:"true"`
+	DatabaseEvents   *database.Events
 }
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
-	configureDatabase()
-	configureNode()
-	configureGossipPeers()
-	configureGossipNode()
-	if deps.ReceiptService != nil {
-		configureReceipts()
+	if deps.NodeConfig.Bool(CfgPrometheusDatabase) {
+		configureDatabase()
 	}
-	if deps.MigratorService != nil {
-		configureMigrator()
+	if deps.NodeConfig.Bool(CfgPrometheusNode) {
+		configureNode()
 	}
-	if deps.Coordinator != nil {
+	if deps.NodeConfig.Bool(CfgPrometheusGossip) {
+		configureGossipPeers()
+		configureGossipNode()
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusCaches) {
+		configureCaches()
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusRestAPI) && deps.RestAPIMetrics != nil {
+		configureRestAPI()
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusMigration) {
+		if deps.ReceiptService != nil {
+			configureReceipts()
+		}
+		if deps.MigratorService != nil {
+			configureMigrator()
+		}
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusCoordinator) && deps.Coordinator != nil {
 		configureCoordinator()
 	}
-
+	if deps.NodeConfig.Bool(CfgPrometheusDebug) {
+		configureDebug()
+	}
 	if deps.NodeConfig.Bool(CfgPrometheusGoMetrics) {
 		registry.MustRegister(prometheus.NewGoCollector())
 	}
@@ -168,7 +192,7 @@ func run() {
 
 		go func() {
 			log.Infof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				log.Warn("Stopping Prometheus exporter due to an error ... done")
 			}
 		}()

@@ -47,7 +47,7 @@ func runVisualizer() {
 
 	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
 		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // msg -1
-			if !deps.Storage.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeAlmostSynced() {
 				return
 			}
 
@@ -75,7 +75,7 @@ func runVisualizer() {
 	onMessageSolid := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
 		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 
-			if !deps.Storage.IsNodeSyncedWithThreshold() {
+			if !deps.Storage.IsNodeAlmostSynced() {
 				return
 			}
 
@@ -93,7 +93,7 @@ func runVisualizer() {
 	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
 		defer cachedMilestone.Release(true) // milestone -1
 
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -109,7 +109,7 @@ func runVisualizer() {
 
 	// show checkpoints as milestones in the coordinator node
 	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.MessageID) {
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -124,7 +124,7 @@ func runVisualizer() {
 	})
 
 	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -145,7 +145,7 @@ func runVisualizer() {
 	})
 
 	onTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -161,7 +161,7 @@ func runVisualizer() {
 	})
 
 	onTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
+		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
 

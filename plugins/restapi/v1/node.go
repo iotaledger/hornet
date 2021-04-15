@@ -10,29 +10,32 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
 func info() (*infoResponse, error) {
 
+	var messagesPerSecond, referencedMessagesPerSecond, referencedRate float64
+	lastConfirmedMilestoneMetric := deps.Tangle.LastConfirmedMilestoneMetric()
+	if lastConfirmedMilestoneMetric != nil {
+		messagesPerSecond = lastConfirmedMilestoneMetric.MPS
+		referencedMessagesPerSecond = lastConfirmedMilestoneMetric.RMPS
+		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
+	}
+
 	// latest milestone index
 	latestMilestoneIndex := deps.Storage.GetLatestMilestoneIndex()
 
-	// latest milestone message ID
+	// latest milestone timestamp
+	var latestMilestoneTimestamp int64 = 0
 	cachedLatestMilestone := deps.Storage.GetCachedMilestoneOrNil(latestMilestoneIndex)
 	if cachedLatestMilestone != nil {
+		latestMilestoneTimestamp = cachedLatestMilestone.GetMilestone().Timestamp.Unix()
 		cachedLatestMilestone.Release(true)
 	}
 
 	// confirmed milestone index
 	confirmedMilestoneIndex := deps.Storage.GetConfirmedMilestoneIndex()
-
-	// confirmed milestone message ID
-	cachedConfirmedMilestone := deps.Storage.GetCachedMilestoneOrNil(confirmedMilestoneIndex)
-	if cachedConfirmedMilestone != nil {
-		cachedConfirmedMilestone.Release(true)
-	}
 
 	// pruning index
 	var pruningIndex milestone.Index
@@ -42,16 +45,20 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                    deps.AppInfo.Name,
-		Version:                 deps.AppInfo.Version,
-		IsHealthy:               deps.Tangle.IsNodeHealthy(),
-		NetworkID:               deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
-		Bech32HRP:               string(deps.Bech32HRP),
-		MinPowScore:             deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
-		LatestMilestoneIndex:    latestMilestoneIndex,
-		ConfirmedMilestoneIndex: confirmedMilestoneIndex,
-		PruningIndex:            pruningIndex,
-		Features:                features,
+		Name:                        deps.AppInfo.Name,
+		Version:                     deps.AppInfo.Version,
+		IsHealthy:                   deps.Tangle.IsNodeHealthy(),
+		NetworkID:                   deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
+		Bech32HRP:                   string(deps.Bech32HRP),
+		MinPoWScore:                 deps.MinPoWScore,
+		MessagesPerSecond:           messagesPerSecond,
+		ReferencedMessagesPerSecond: referencedMessagesPerSecond,
+		ReferencedRate:              referencedRate,
+		LatestMilestoneTimestamp:    latestMilestoneTimestamp,
+		LatestMilestoneIndex:        latestMilestoneIndex,
+		ConfirmedMilestoneIndex:     confirmedMilestoneIndex,
+		PruningIndex:                pruningIndex,
+		Features:                    features,
 	}, nil
 }
 
@@ -74,10 +81,10 @@ func tips(c echo.Context) (*tipsResponse, error) {
 	}
 
 	if err != nil {
-		if err == common.ErrNodeNotSynced || err == tipselect.ErrNoTipsAvailable {
-			return nil, errors.WithMessage(restapi.ErrServiceUnavailable, err.Error())
+		if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
+			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 		}
-		return nil, errors.WithMessage(restapi.ErrInternalError, err.Error())
+		return nil, err
 	}
 
 	return &tipsResponse{Tips: tips.ToHex()}, nil

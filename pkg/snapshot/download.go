@@ -108,12 +108,11 @@ func (s *Snapshot) downloadFile(path string, url string) error {
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)
 	}
-
-	defer resp.Body.Close()
 
 	tempFileName := path + ".tmp"
 	out, err := os.Create(tempFileName)

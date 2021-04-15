@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -31,7 +32,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 
 	// check if the requested milestone index would be the next one
 	if request.Index > deps.Storage.GetConfirmedMilestoneIndex()+1 {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, common.ErrNodeNotSynced.Error())
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, common.ErrNodeNotSynced.Error())
 	}
 
 	if len(request.Parents) < 1 {
@@ -88,7 +89,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}()
 
 	// check if all requested parents are solid
-	solid, _ := deps.Tangle.SolidQueueCheck(metadataMemcache, request.Index, parents, nil)
+	solid, _ := deps.Tangle.SolidQueueCheck(messagesMemcache, metadataMemcache, request.Index, parents, nil)
 
 	if !solid {
 		// wait for at most "whiteFlagParentsSolidTimeout" for the parents to become solid
@@ -98,7 +99,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 		for _, msgSolidEventChan := range msgSolidEventChans {
 			// wait until the message is solid
 			if err := utils.WaitForChannelClosed(ctx, msgSolidEventChan); err != nil {
-				return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "parents not solid")
+				return nil, errors.WithMessage(echo.ErrServiceUnavailable, "parents not solid")
 			}
 		}
 	}
@@ -107,7 +108,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	// compute merkle tree root
 	mutations, err := whiteflag.ComputeWhiteFlagMutations(deps.Storage, request.Index, metadataMemcache, messagesMemcache, parents)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "failed to compute white flag mutations: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to compute white flag mutations: %s", err)
 	}
 
 	return &computeWhiteFlagMutationsResponse{
@@ -154,7 +155,7 @@ func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	err = deps.UTXO.ForEachOutput(outputConsumerFunc, opts...)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
@@ -182,7 +183,7 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	err = deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, opts...)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
@@ -211,7 +212,7 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 	err = deps.UTXO.ForEachSpentOutput(spentConsumerFunc, opts...)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
@@ -241,7 +242,7 @@ func addresses(c echo.Context) (*addressesResponse, error) {
 
 	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading addresses failed, error: %s", err)
 	}
 
 	addresses := make([]*address, 0, len(addressMap))
@@ -259,7 +260,6 @@ func addressesEd25519(c echo.Context) (*addressesResponse, error) {
 	addressMap := map[string]*address{}
 
 	outputConsumerFunc := func(output *utxo.Output) bool {
-		// ToDo: allow ed25519 address type only
 
 		if addr, exists := addressMap[output.Address().String()]; exists {
 			// add balance to total balance
@@ -278,7 +278,7 @@ func addressesEd25519(c echo.Context) (*addressesResponse, error) {
 
 	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading addresses failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading addresses failed, error: %s", err)
 	}
 
 	addresses := make([]*address, 0, len(addressMap))
@@ -299,6 +299,12 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}
 
 	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(msIndex)
+	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)
+		}
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
+	}
 
 	outputs := make([]*v1.OutputResponse, len(diff.Outputs))
 	spents := make([]*v1.OutputResponse, len(diff.Spents))
@@ -376,12 +382,12 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 
 	cachedStartMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedStartMsgMeta == nil {
-		return nil, errors.WithMessagef(restapi.ErrNotFound, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedStartMsgMeta.Release(true)
 
 	if !cachedStartMsgMeta.GetMetadata().IsSolid() {
-		return nil, errors.WithMessagef(restapi.ErrServiceUnavailable, "start message is not solid: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start message is not solid: %s", messageIDHex)
 	}
 
 	startMsgReferened, startMsgReferenedAt := cachedStartMsgMeta.GetMetadata().GetReferenced()
@@ -426,11 +432,11 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 			entryPoints = append(entryPoints, &entryPoint{MessageID: messageID.ToHex(), ReferencedByMilestone: entryPointIndex})
 		},
 		false, nil); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "traverse parents failed, error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "traverse parents failed, error: %s", err)
 	}
 
 	if len(entryPoints) == 0 {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "no referenced parents found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "no referenced parents found: %s", messageIDHex)
 	}
 
 	return &messageConeResponse{

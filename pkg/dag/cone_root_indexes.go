@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"math"
 
+	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -104,7 +106,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 			entryPointIndex, _ := s.SolidEntryPointsIndex(messageID)
 			updateIndexes(entryPointIndex, entryPointIndex)
 		}, false, nil); err != nil {
-		if err == common.ErrMessageNotFound {
+		if errors.Is(err, common.ErrMessageNotFound) {
 			indexesValid = false
 		} else {
 			panic(err)
@@ -132,13 +134,20 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 // we have to walk the future cone, and update the past cone of all messages that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same messages multiple times.
-func UpdateConeRootIndexes(s *storage.Storage, messageIDs hornet.MessageIDs, cmi milestone.Index) {
+func UpdateConeRootIndexes(s *storage.Storage, metadataMemcache *storage.MetadataMemcache, messageIDs hornet.MessageIDs, cmi milestone.Index, iteratorOptions ...storage.IteratorOption) {
 	traversed := map[string]struct{}{}
+
+	t := NewChildrenTraverser(s, metadataMemcache)
+
+	if metadataMemcache == nil {
+		// we only cleanup the traverser if no MetadataMemcache was given
+		defer t.Cleanup(true)
+	}
 
 	// we update all messages in order from oldest to latest
 	for _, messageID := range messageIDs {
 
-		if err := TraverseChildren(s, messageID,
+		if err := t.Traverse(messageID,
 			// traversal stops if no more messages pass the given condition
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
@@ -157,7 +166,7 @@ func UpdateConeRootIndexes(s *storage.Storage, messageIDs hornet.MessageIDs, cmi
 				GetConeRootIndexes(s, cachedMsgMeta.Retain(), cmi) // meta pass +1
 
 				return nil
-			}, false, nil); err != nil {
+			}, false, nil, iteratorOptions...); err != nil {
 			panic(err)
 		}
 	}

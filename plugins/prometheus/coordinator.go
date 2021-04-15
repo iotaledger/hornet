@@ -23,7 +23,7 @@ func configureCoordinator() {
 			Namespace: "iota",
 			Subsystem: "coordinator",
 			Name:      "quorum_duration",
-			Help:      "Durations for complete quorum.",
+			Help:      "Durations for complete quorum. [s]",
 			Buckets:   prometheus.DefBuckets,
 		})
 
@@ -40,7 +40,7 @@ func configureCoordinator() {
 			Namespace: "iota",
 			Subsystem: "coordinator",
 			Name:      "quorum_nodes_response_times",
-			Help:      "Latest response time by quorum client.",
+			Help:      "Latest response time by quorum client. [s]",
 			Buckets:   prometheus.DefBuckets,
 		},
 		[]string{"group", "alias", "baseURL"},

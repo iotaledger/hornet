@@ -40,7 +40,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		inMemoryEd25519MilestoneSignerProvider,
 		nil,
 		nil,
-		te.PowHandler,
+		te.PoWHandler,
 		storeMessageFunc,
 		coordinator.WithStateFilePath(fmt.Sprintf("%s/coordinator.state", te.tempDir)),
 		coordinator.WithMilestoneInterval(time.Duration(10)*time.Second),
@@ -64,16 +64,20 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	te.Milestones = append(te.Milestones, ms)
 
+	messagesMemcache := storage.NewMessagesMemcache(te.storage)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage)
 
 	defer func() {
 		// all releases are forced since the cone is referenced and not needed anymore
 
+		// release all messages at the end
+		messagesMemcache.Cleanup(true)
+
 		// Release all message metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
-	conf, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, metadataMemcache, ms.GetMilestone().MessageID,
+	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, messagesMemcache, metadataMemcache, ms.GetMilestone().MessageID,
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
 			te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
@@ -83,7 +87,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		nil,
 	)
 	require.NoError(te.TestState, err)
-	require.Equal(te.TestState, 1, conf.MessagesReferenced)
+	require.Equal(te.TestState, 1, confirmedMilestoneStats.MessagesReferenced)
 }
 
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
@@ -104,17 +108,21 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 	ms := te.storage.GetCachedMilestoneOrNil(milestoneIndex)
 	require.NotNil(te.TestState, ms)
 
+	messagesMemcache := storage.NewMessagesMemcache(te.storage)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage)
 
 	defer func() {
 		// all releases are forced since the cone is referenced and not needed anymore
+
+		// release all messages at the end
+		messagesMemcache.Cleanup(true)
 
 		// Release all message metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
 	var wfConf *whiteflag.Confirmation
-	confStats, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, metadataMemcache, ms.GetMilestone().MessageID,
+	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, messagesMemcache, metadataMemcache, ms.GetMilestone().MessageID,
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
 			wfConf = confirmation
@@ -126,15 +134,15 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 	)
 	require.NoError(te.TestState, err)
 
-	require.Equal(te.TestState, currentIndex+1, confStats.Index)
-	te.VerifyCMI(confStats.Index)
+	require.Equal(te.TestState, currentIndex+1, confirmedMilestoneStats.Index)
+	te.VerifyCMI(confirmedMilestoneStats.Index)
 
 	te.AssertTotalSupplyStillValid()
 
 	if createConfirmationGraph {
 		dotFileContent := te.generateDotFileFromConfirmation(wfConf)
 		if te.showConfirmationGraphs {
-			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.tempDir, te.TestState.Name(), confStats.Index)
+			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.tempDir, te.TestState.Name(), confirmedMilestoneStats.Index)
 			utils.ShowDotFile(te.TestState, dotFileContent, dotFilePath)
 		} else {
 			fmt.Println(dotFileContent)
@@ -143,5 +151,5 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 
 	te.Milestones = append(te.Milestones, ms)
 
-	return wfConf, confStats
+	return wfConf, confirmedMilestoneStats
 }

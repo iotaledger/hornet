@@ -149,6 +149,10 @@ func (s *Storage) GetMessageStorageSize() int {
 	return s.messagesStorage.GetSize()
 }
 
+func (s *Storage) GetMessageMetadataStorageSize() int {
+	return s.metadataStorage.GetSize()
+}
+
 func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
 
 	cacheTime, _ := time.ParseDuration(opts.CacheTime)
@@ -224,13 +228,18 @@ func (s *Storage) GetStoredMetadataOrNil(messageID hornet.MessageID) *MessageMet
 }
 
 // ContainsMessage returns if the given message exists in the cache/persistence layer.
-func (s *Storage) ContainsMessage(messageID hornet.MessageID) bool {
-	return s.messagesStorage.Contains(messageID)
+func (s *Storage) ContainsMessage(messageID hornet.MessageID, readOptions ...ReadOption) bool {
+	return s.messagesStorage.Contains(messageID, readOptions...)
 }
 
 // MessageExistsInStore returns if the given message exists in the persistence layer.
 func (s *Storage) MessageExistsInStore(messageID hornet.MessageID) bool {
 	return s.messagesStorage.ObjectExistsInStore(messageID)
+}
+
+// MessageMetadataExistsInStore returns if the given message metadata exists in the persistence layer.
+func (s *Storage) MessageMetadataExistsInStore(messageID hornet.MessageID) bool {
+	return s.metadataStorage.ObjectExistsInStore(messageID)
 }
 
 // msg +1
@@ -262,18 +271,18 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 	return &CachedMessage{msg: cachedMsgData, metadata: cachedMeta}, newlyAdded
 }
 
-// MessageIDConsumer consumes the given message ID during looping through all messages in the persistence layer.
+// MessageIDConsumer consumes the given message ID during looping through all messages.
 type MessageIDConsumer func(messageID hornet.MessageID) bool
 
 // ForEachMessageID loops over all message IDs.
-func (s *Storage) ForEachMessageID(consumer MessageIDConsumer, iteratorOptions ...objectstorage.IteratorOption) {
+func (s *Storage) ForEachMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
 	s.messagesStorage.ForEachKeyOnly(func(messageID []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(messageID))
 	}, iteratorOptions...)
 }
 
 // ForEachMessageMetadataMessageID loops over all message metadata message IDs.
-func (s *Storage) ForEachMessageMetadataMessageID(consumer MessageIDConsumer, iteratorOptions ...objectstorage.IteratorOption) {
+func (s *Storage) ForEachMessageMetadataMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
 	s.metadataStorage.ForEachKeyOnly(func(messageID []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(messageID))
 	}, iteratorOptions...)
@@ -326,7 +335,7 @@ func (s *Storage) AddMessageToStorage(message *Message, latestMilestoneIndex mil
 	}
 
 	if ms := s.VerifyMilestone(message); ms != nil {
-		s.StoreMilestone(cachedMessage.Retain(), ms)
+		s.StoreMilestone(cachedMessage.Retain(), ms, requested)
 	}
 
 	return cachedMessage, false

@@ -18,29 +18,29 @@ func TestAdvanceAtEightyPercentReached(t *testing.T) {
 func TestWarpSync_Update(t *testing.T) {
 	ws := gossip.NewWarpSync(50, gossip.AdvanceAtPercentageReached(0.8))
 
-	ws.UpdateCurrent(100)
-	ws.UpdateTarget(1000)
+	ws.UpdateCurrentConfirmedMilestone(100)
+	ws.UpdateTargetMilestone(1000)
 
-	assert.EqualValues(t, ws.CurrentConfirmedMs, 100)
+	assert.EqualValues(t, ws.CurrentConfirmedMilestone, 100)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 150)
 
 	// nothing should change besides current confirmed
-	ws.UpdateCurrent(120)
-	assert.EqualValues(t, ws.CurrentConfirmedMs, 120)
+	ws.UpdateCurrentConfirmedMilestone(120)
+	assert.EqualValues(t, ws.CurrentConfirmedMilestone, 120)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 150)
 
 	// nothing should change besides current confirmed
-	ws.UpdateCurrent(130)
-	assert.EqualValues(t, ws.CurrentConfirmedMs, 130)
+	ws.UpdateCurrentConfirmedMilestone(130)
+	assert.EqualValues(t, ws.CurrentConfirmedMilestone, 130)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 150)
 
 	// 80% reached
-	ws.UpdateCurrent(140)
-	assert.EqualValues(t, ws.CurrentConfirmedMs, 140)
+	ws.UpdateCurrentConfirmedMilestone(140)
+	assert.EqualValues(t, ws.CurrentConfirmedMilestone, 140)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 200)
 
 	// shouldn't update anything - simulates non synced peer sending heartbeat
-	ws.UpdateTarget(850)
-	assert.EqualValues(t, ws.CurrentConfirmedMs, 140)
+	ws.UpdateTargetMilestone(850)
+	assert.EqualValues(t, ws.CurrentConfirmedMilestone, 140)
 	assert.EqualValues(t, ws.CurrentCheckpoint, 200)
 }

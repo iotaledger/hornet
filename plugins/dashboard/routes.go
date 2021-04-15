@@ -6,12 +6,15 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gobuffalo/packr/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 
+	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/plugins/restapi"
 )
 
@@ -78,44 +81,9 @@ func devModeReverseProxyMiddleware() echo.MiddlewareFunc {
 
 func apiMiddlewares() []echo.MiddlewareFunc {
 
-	allowedRoutes := map[string][]string{
-		http.MethodGet: {
-			"/api/v1/info",
-			"/api/v1/messages",
-			"/api/v1/outputs",
-			"/api/v1/addresses",
-			"/api/v1/milestones",
-			"/api/v1/peers",
-			"/api/plugins/spammer",
-		},
-		http.MethodPost: {
-			"/api/v1/peers",
-		},
-		http.MethodDelete: {
-			"/api/v1/peers",
-		},
-	}
-
-	jwtAuthRoutes := []string{
-		"/api/v1/peers",
-		"/api/plugins",
-	}
-
 	proxySkipper := func(context echo.Context) bool {
-		// Check for which route we will skip JWT authentication
-		routesForMethod, exists := allowedRoutes[context.Request().Method]
-		if !exists {
-			return true
-		}
-
-		path := context.Request().URL.EscapedPath()
-		for _, prefix := range routesForMethod {
-			if strings.HasPrefix(path, prefix) {
-				return false
-			}
-		}
-
-		return true
+		// Only proxy allowed routes, skip all others
+		return !deps.DashboardAllowedAPIRoute(context)
 	}
 
 	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
@@ -140,6 +108,12 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 		Balancer: balancer,
 	}
 
+	// Protect this routes with JWT even if the API is not protected
+	jwtAuthRoutes := []string{
+		"/api/v1/peers",
+		"/api/plugins",
+	}
+
 	jwtAuthSkipper := func(context echo.Context) bool {
 		path := context.Request().URL.EscapedPath()
 		for _, prefix := range jwtAuthRoutes {
@@ -150,18 +124,15 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 		return true
 	}
 
-	notFoundMiddleware := func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) (err error) {
-			return ErrNotFound
-		}
+	// Only allow JWT created for the dashboard
+	jwtAuthAllow := func(c echo.Context, claims *jwt.AuthClaims) bool {
+		return claims.Dashboard
 	}
 
 	return []echo.MiddlewareFunc{
-		jwtAuth.Middleware(jwtAuthSkipper),
+		jwtAuth.Middleware(jwtAuthSkipper, jwtAuthAllow),
 		middleware.ProxyWithConfig(config),
-		notFoundMiddleware,
 	}
-
 }
 
 func calculateMimeType(e echo.Context) string {
@@ -213,11 +184,11 @@ func authRoute(c echo.Context) error {
 		if !jwtAuth.VerifyJWT(request.JWT) {
 			return echo.ErrUnauthorized
 		}
-	} else if !jwtAuth.VerifyUsernameAndPassword(request.User, request.Password) {
+	} else if !basicAuth.VerifyUsernameAndPassword(request.User, request.Password) {
 		return echo.ErrUnauthorized
 	}
 
-	t, err := jwtAuth.IssueJWT()
+	t, err := jwtAuth.IssueJWT(false, true)
 	if err != nil {
 		return err
 	}
@@ -232,15 +203,27 @@ func setupRoutes(e *echo.Echo) {
 	e.Pre(enforceMaxOneDotPerURL)
 	e.Use(middleware.CSRF())
 
-	middleware := appBoxMiddleware()
+	mw := appBoxMiddleware()
 	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
-		middleware = devModeReverseProxyMiddleware()
+		mw = devModeReverseProxyMiddleware()
 	}
-	e.Group("/*").Use(middleware)
+	e.Group("/*").Use(mw)
 
 	// Pass all the explorer request through to the local rest API
 	e.Group("/api", apiMiddlewares()...)
 
 	e.GET("/ws", websocketRoute)
-	e.POST("/auth", authRoute)
+
+	// Rate-limit the auth endpoint
+	rateLimiterConfig := middleware.RateLimiterConfig{
+		Store: middleware.NewRateLimiterMemoryStoreWithConfig(
+			middleware.RateLimiterMemoryStoreConfig{
+				Rate:      rate.Limit(1 / 300.0), // 1 request every 5 minutes
+				Burst:     10,                    // additional burst of 10 requests
+				ExpiresIn: 5 * time.Minute,
+			},
+		),
+	}
+
+	e.POST("/auth", authRoute, middleware.RateLimiterWithConfig(rateLimiterConfig))
 }

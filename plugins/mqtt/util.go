@@ -153,7 +153,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 			messageMetadataResponse.ShouldReattach = &shouldReattach
 		}
 
-		// Serialize here instead of using publishOnTopic to avoid double JSON marshalling
+		// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
 		jsonPayload, err := json.Marshal(messageMetadataResponse)
 		if err != nil {
 			log.Warn(err.Error())
@@ -217,7 +217,7 @@ func publishOutput(output *utxo.Output, spent bool) {
 	if outputsTopicHasSubscribers || addressEd25519TopicHasSubscribers || addressBech32TopicHasSubscribers {
 		if payload := payloadForOutput(output, spent); payload != nil {
 
-			// Serialize here instead of using publishOnTopic to avoid double JSON marshalling
+			// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
 			jsonPayload, err := json.Marshal(payload)
 			if err != nil {
 				log.Warn(err.Error())

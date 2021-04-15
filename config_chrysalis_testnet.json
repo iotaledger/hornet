@@ -1,10 +1,8 @@
 {
   "restAPI": {
-    "basicAuth": {
+    "jwtAuth": {
       "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+      "salt": "HORNET"
     },
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
@@ -51,14 +49,15 @@
   },
   "db": {
     "engine": "pebble",
-    "path": "testnetdb"
+    "path": "testnetdb",
+    "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
-    "intervalSynced": 200,
-    "intervalUnsynced": 1000,
+    "interval": 200,
     "fullPath": "snapshots/testnet/full_snapshot.bin",
     "deltaPath": "snapshots/testnet/delta_snapshot.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
         "full": "https://dbfiles.testnet.chrysalis2.com/full_snapshot.bin",
@@ -68,10 +67,11 @@
   },
   "pruning": {
     "enabled": true,
-    "delay": 60480
+    "delay": 60480,
+    "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "testnet6",
+    "networkID": "testnet7",
     "bech32HRP": "atoi",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
@@ -92,6 +92,13 @@
         "end": 0
       }
     ]
+  },
+  "pow": {
+    "refreshTipsInterval": "5s"
+  },
+  "requests": {
+    "discardOlderThan": "15s",
+    "pendingReEnqueueInterval": "5s"
   },
   "coordinator": {
     "stateFilePath": "coordinator.state",
@@ -131,6 +138,9 @@
         "merkleTreeDepth": 18
       }
     }
+  },
+  "tangle": {
+    "milestoneTimeout": "30s"
   },
   "tipsel": {
     "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
@@ -213,6 +223,14 @@
       "path": "target.json",
       "target": "localhost:9311"
     },
+    "databaseMetrics": true,
+    "nodeMetrics": true,
+    "gossipMetrics": true,
+    "cachesMetrics": true,
+    "restAPIMetrics": true,
+    "migrationMetrics": true,
+    "coordinatorMetrics": true,
+    "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

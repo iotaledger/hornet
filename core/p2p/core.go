@@ -74,16 +74,16 @@ func provide(c *dig.Container) {
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	type protoresult struct {
+	type p2presult struct {
 		dig.Out
 
 		Host           host.Host
 		NodePrivateKey crypto.PrivKey
 	}
 
-	if err := c.Provide(func(deps hostdeps) (protoresult, error) {
+	if err := c.Provide(func(deps hostdeps) (p2presult, error) {
 
-		res := protoresult{}
+		res := p2presult{}
 
 		ctx := context.Background()
 
@@ -296,7 +296,7 @@ func createIdentity(nodeConfig *configuration.Configuration, pubKeyFilePath stri
 
 	sk, err := loadIdentityFromConfig(nodeConfig)
 	if err != nil {
-		if err != ErrNoPrivKeyFound {
+		if !errors.Is(err, ErrNoPrivKeyFound) {
 			return nil, err
 		}
 
@@ -345,7 +345,7 @@ func loadExistingIdentity(nodeConfig *configuration.Configuration, pubKeyFilePat
 	// load an optional private key from the config and compare it to the stored private key
 	sk, err := loadIdentityFromConfig(nodeConfig)
 	if err != nil {
-		if err != ErrNoPrivKeyFound {
+		if !errors.Is(err, ErrNoPrivKeyFound) {
 			return nil, err
 		}
 

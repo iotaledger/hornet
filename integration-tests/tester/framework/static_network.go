@@ -98,7 +98,7 @@ func (n *StaticNetwork) ConnectNodes() error {
 	if err := n.AwaitPeering(peeringCtx); err != nil {
 		return err
 	}
-	log.Printf("static peering took %v", time.Since(s))
+	log.Printf("static peering took %v", time.Since(s).Truncate(time.Millisecond))
 	return nil
 }
 

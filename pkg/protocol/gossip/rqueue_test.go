@@ -92,7 +92,10 @@ func TestRequestQueue(t *testing.T) {
 	assert.Zero(t, processing)
 
 	// mark last from test set as received
-	q.Received(requests[len(requests)-1].MessageID)
+	req := q.Received(requests[len(requests)-1].MessageID)
+
+	// check if the correct request was returned
+	assert.Equal(t, req, requests[len(requests)-1])
 
 	// check processing
 	queued, pending, processing = q.Size()
@@ -100,7 +103,11 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, pending)
 	assert.Equal(t, processing, 1)
 
-	q.Processed(requests[len(requests)-1].MessageID)
+	// mark last from test set as processed
+	req = q.Processed(requests[len(requests)-1].MessageID)
+
+	// check if the correct request was returned
+	assert.Equal(t, req, requests[len(requests)-1])
 
 	// check processed
 	queued, pending, processing = q.Size()
@@ -138,4 +145,36 @@ func TestRequestQueue(t *testing.T) {
 	}
 	assert.Zero(t, len(pendingReqs))
 	assert.Zero(t, len(processingReq))
+
+	// test edge case
+	// request was pending but marked as queued again, and is then marked as received
+
+	// start with a fresh queue
+	q = gossip.NewRequestQueue()
+
+	for _, r := range requests {
+		assert.True(t, q.Enqueue(r))
+		assert.True(t, q.IsQueued(r.MessageID))
+	}
+
+	for i := 0; i < len(requests); i++ {
+		q.Next()
+	}
+
+	// enqueue requests again
+	q.EnqueuePending(0)
+
+	for _, r := range requests {
+		req := q.Received(r.MessageID)
+
+		// check if the correct request was returned
+		assert.Equal(t, req, r)
+	}
+
+	for _, r := range requests {
+		req := q.Processed(r.MessageID)
+
+		// check if the correct request was returned
+		assert.Equal(t, req, r)
+	}
 }

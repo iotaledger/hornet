@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -27,7 +26,6 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -82,10 +80,9 @@ var (
 	lastMilestoneMessageID  hornet.MessageID
 
 	// Closures
-	onMessageSolid       *events.Closure
-	onMilestoneConfirmed *events.Closure
-	onIssuedCheckpoint   *events.Closure
-	onIssuedMilestone    *events.Closure
+	onMessageSolid     *events.Closure
+	onIssuedCheckpoint *events.Closure
+	onIssuedMilestone  *events.Closure
 
 	deps dependencies
 )
@@ -170,7 +167,7 @@ func provide(c *dig.Container) {
 				coordinator.WithLogger(log),
 				coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
 				coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
-				coordinator.WithPowWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
+				coordinator.WithPoWWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
 				coordinator.WithQuorum(deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
 			)
 			if err != nil {
@@ -289,7 +286,7 @@ func run() {
 				tips, err := deps.Selector.SelectTips(0)
 				if err != nil {
 					// issuing checkpoint failed => not critical
-					if err != mselection.ErrNoTipsAvailable {
+					if !errors.Is(err, mselection.ErrNoTipsAvailable) {
 						log.Warn(err)
 					}
 					continue
@@ -312,7 +309,7 @@ func run() {
 				checkpointTips, err := deps.Selector.SelectTips(1)
 				if err != nil {
 					// issuing checkpoint failed => not critical
-					if err != mselection.ErrNoTipsAvailable {
+					if !errors.Is(err, mselection.ErrNoTipsAvailable) {
 						log.Warn(err)
 					}
 				} else {
@@ -344,7 +341,7 @@ func run() {
 				}
 				if err != nil {
 					// non-critical errors
-					if err == common.ErrNodeNotSynced {
+					if errors.Is(err, common.ErrNodeNotSynced) {
 						// Coordinator is not synchronized, trigger the solidifier manually
 						deps.Tangle.TriggerSolidifier()
 					}
@@ -501,20 +498,6 @@ func configureEvents() {
 		}
 	})
 
-	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		ts := time.Now()
-
-		// do not propagate during syncing, because it is not needed at all
-		if !deps.Storage.IsNodeSyncedWithThreshold() {
-			return
-		}
-
-		// propagate new cone root indexes to the future cone for heaviest branch tipselection
-		dag.UpdateConeRootIndexes(deps.Storage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
-
-		log.Debugf("UpdateConeRootIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
-	})
-
 	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.MessageID) {
 		log.Infof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.ToHex())
 	})
@@ -526,13 +509,11 @@ func configureEvents() {
 
 func attachEvents() {
 	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
-	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 	deps.Coordinator.Events.IssuedCheckpointMessage.Attach(onIssuedCheckpoint)
 	deps.Coordinator.Events.IssuedMilestone.Attach(onIssuedMilestone)
 }
 
 func detachEvents() {
 	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
-	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 	deps.Coordinator.Events.IssuedMilestone.Detach(onIssuedMilestone)
 }

@@ -32,12 +32,12 @@ func NewOutputResponse(output *utxo.Output, spent bool) (*OutputResponse, error)
 			Amount:  output.Amount(),
 		}
 	default:
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "unsupported output type: %d", output.OutputType())
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "unsupported output type: %d", output.OutputType())
 	}
 
 	rawOutputJSON, err := rawOutput.MarshalJSON()
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "marshalling output failed: %s, error: %s", output.OutputID().ToHex(), err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "marshaling output failed: %s, error: %s", output.OutputID().ToHex(), err)
 	}
 
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
@@ -68,16 +68,15 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 
 	output, err := deps.UTXO.ReadOutputByOutputIDWithoutLocking(&outputID)
 	if err != nil {
-		if err == kvstore.ErrKeyNotFound {
-			return nil, errors.WithMessagef(restapi.ErrNotFound, "output not found: %s", outputIDParam)
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputIDParam)
 		}
-
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading output failed: %s, error: %s", outputIDParam, err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputIDParam, err)
 	}
 
 	unspent, err := deps.UTXO.IsOutputUnspentWithoutLocking(output)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent status failed: %s, error: %s", outputIDParam, err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent status failed: %s, error: %s", outputIDParam, err)
 	}
 
 	return NewOutputResponse(output, !unspent)
@@ -87,7 +86,7 @@ func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, er
 
 	balance, dustAllowed, err := deps.UTXO.AddressBalanceWithoutLocking(address)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading address balance failed: %s, error: %s", address, err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading address balance failed: %s, error: %s", address, err)
 	}
 
 	return &addressBalanceResponse{
@@ -101,7 +100,7 @@ func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, er
 func balanceByBech32Address(c echo.Context) (*addressBalanceResponse, error) {
 
 	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
 	addressParam := strings.ToLower(c.Param(ParameterAddress))
@@ -122,7 +121,7 @@ func balanceByBech32Address(c echo.Context) (*addressBalanceResponse, error) {
 func balanceByEd25519Address(c echo.Context) (*addressBalanceResponse, error) {
 
 	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
 	addressParam := strings.ToLower(c.Param(ParameterAddress))
@@ -156,7 +155,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 
 	unspentOutputs, err := deps.UTXO.UnspentOutputs(append(opts, utxo.MaxResultCount(maxResults))...)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInternalError, "reading unspent outputs failed: %s, error: %s", address, err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
 
 	outputIDs := make([]string, len(unspentOutputs))
@@ -168,7 +167,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 
 		spents, err := deps.UTXO.SpentOutputs(append(opts, utxo.MaxResultCount(maxResults-len(outputIDs)))...)
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInternalError, "reading spent outputs failed: %s, error: %s", address, err)
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent outputs failed: %s, error: %s", address, err)
 		}
 
 		outputIDsSpent := make([]string, len(spents))
@@ -191,7 +190,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) {
 
 	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
 	includeSpent, _ := strconv.ParseBool(strings.ToLower(c.QueryParam("include-spent")))
@@ -223,7 +222,7 @@ func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) 
 func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error) {
 
 	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(restapi.ErrServiceUnavailable, "node is not synced")
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
 	includeSpent, _ := strconv.ParseBool(strings.ToLower(c.QueryParam("include-spent")))

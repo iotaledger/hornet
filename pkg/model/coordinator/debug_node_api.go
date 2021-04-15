@@ -18,13 +18,13 @@ const (
 )
 
 // NewDebugNodeAPIClient returns a new DebugNodeAPIClient with the given BaseURL.
-func NewDebugNodeAPIClient(baseURL string, opts ...iotago.NodeAPIClientOption) *DebugNodeAPIClient {
-	return &DebugNodeAPIClient{NodeAPIClient: iotago.NewNodeAPIClient(baseURL, opts...)}
+func NewDebugNodeAPIClient(baseURL string, opts ...iotago.NodeHTTPAPIClientOption) *DebugNodeAPIClient {
+	return &DebugNodeAPIClient{NodeHTTPAPIClient: iotago.NewNodeHTTPAPIClient(baseURL, opts...)}
 }
 
 // DebugNodeAPIClient is a client for node HTTP REST APIs.
 type DebugNodeAPIClient struct {
-	*iotago.NodeAPIClient
+	*iotago.NodeHTTPAPIClient
 }
 
 // computeWhiteFlagMutationsRequest defines the request for a POST debugComputeWhiteFlagMutations REST API call.

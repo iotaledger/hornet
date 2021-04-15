@@ -23,10 +23,12 @@ var (
 )
 
 type packageEvents struct {
-	ReceivedValidMilestoneMessage *events.Event
-	ReceivedValidMilestone        *events.Event
-	PruningStateChanged           *events.Event
+	ReceivedValidMilestone *events.Event
+	PruningStateChanged    *events.Event
 }
+
+type ReadOption = objectstorage.ReadOption
+type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
 
@@ -62,10 +64,11 @@ type Storage struct {
 	latestMilestoneLock     syncutils.RWMutex
 
 	// node synced
-	isNodeSynced                  bool
-	isNodeSyncedThreshold         bool
-	waitForNodeSyncedChannelsLock syncutils.Mutex
-	waitForNodeSyncedChannels     []chan struct{}
+	isNodeSynced                    bool
+	isNodeAlmostSynced              bool
+	isNodeSyncedWithinBelowMaxDepth bool
+	waitForNodeSyncedChannelsLock   syncutils.Mutex
+	waitForNodeSyncedChannels       []chan struct{}
 
 	// milestones
 	keyManager              *keymanager.KeyManager
@@ -90,9 +93,8 @@ func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile
 		utxoManager:             utxoManager,
 		belowMaxDepth:           milestone.Index(belowMaxDepth),
 		Events: &packageEvents{
-			ReceivedValidMilestoneMessage: events.NewEvent(MessageCaller),
-			ReceivedValidMilestone:        events.NewEvent(MilestoneCaller),
-			PruningStateChanged:           events.NewEvent(events.BoolCaller),
+			ReceivedValidMilestone: events.NewEvent(MilestoneWithRequestedCaller),
+			PruningStateChanged:    events.NewEvent(events.BoolCaller),
 		},
 	}
 

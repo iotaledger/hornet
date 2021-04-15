@@ -13,6 +13,11 @@ type MPSMetrics struct {
 	Outgoing uint32 `json:"outgoing"`
 }
 
+// ConfirmationMetricsCaller is used to signal updated confirmation metrics.
+func ConfirmationMetricsCaller(handler interface{}, params ...interface{}) {
+	handler.(func(metrics *whiteflag.ConfirmationMetrics))(params[0].(*whiteflag.ConfirmationMetrics))
+}
+
 func NewConfirmedMilestoneMetricCaller(handler interface{}, params ...interface{}) {
 	handler.(func(metric *ConfirmedMilestoneMetric))(params[0].(*ConfirmedMilestoneMetric))
 }
@@ -37,7 +42,7 @@ func ReceiptCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*iotago.Receipt))(params[0].(*iotago.Receipt))
 }
 
-type pluginEvents struct {
+type Events struct {
 	MPSMetricsUpdated              *events.Event
 	ReceivedNewMessage             *events.Event
 	ReceivedKnownMessage           *events.Event
@@ -50,10 +55,10 @@ type pluginEvents struct {
 	MilestoneConfirmed             *events.Event
 	ConfirmedMilestoneChanged      *events.Event
 	ConfirmedMilestoneIndexChanged *events.Event
-	SnapshotMilestoneIndexChanged  *events.Event
-	PruningMilestoneIndexChanged   *events.Event
 	NewConfirmedMilestoneMetric    *events.Event
+	ConfirmationMetricsUpdated     *events.Event
 	MilestoneSolidificationFailed  *events.Event
+	MilestoneTimeout               *events.Event
 	NewUTXOOutput                  *events.Event
 	NewUTXOSpent                   *events.Event
 	NewReceipt                     *events.Event

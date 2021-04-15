@@ -1,16 +1,16 @@
-# Tutorials
+# Chrysalis (IOTA 1.5)
 
-- [IOTA 1.0](./1.0/index.md)
-    - [Setup HORNET](./1.0/setup.md)
-    - [Run a private Tangle](./1.0/private_tangle.md)
-    - [Hosting An Entry Node](./1.0/entry_node.md)
-- [Chrysalis IOTA 1.5](./1.5/index.md)
-    - [Build HORNET](./1.5/build.md)
-    - [Run HORNET](./1.5/run.md)
-    - [Run a private tangle](./1.5/private_tangle.md)
+Chrysalis is currently in a test stage. The release is planned for Q1 2021.
+
+You can read more about Chrysalis, please visit the [Chrysalis Update Page](https://chrysalis.iota.org/) and the [Chrysalis Documentation](https://chrysalis.docs.iota.org/).
+
+Here we cover the following steps:
+
+- [Build HORNET](./build.md)
+- [Run HORNET](./run.md)
+- [Run a private tangle](./private_tangle.md)
 
 ## Community Tutorials
 
-- [Chrysalis IOTA 1.5](./1.5/index.md)
-    - [hornet-testnet-tutorial by svenger87](https://github.com/svenger87/hornet-alphanet-tutorial)
-    - [(DE) Hornet Node (Chrysalis) by Tanglebay.com](https://tanglebay.com/article/3-hornet-node-chrysalis/)
+- <a href="https://github.com/svenger87/hornet-alphanet-tutorial" target="_blank">hornet-testnet-tutorial by svenger87</a>
+- <a href="https://tanglebay.com/article/6-hornet-node-chrysalis/" target="_blank">(EN + DE) Hornet Node (Chrysalis) by Tanglebay.com</a>

@@ -32,6 +32,42 @@ func New(store kvstore.KVStore) *Manager {
 	}
 }
 
+// ClearLedger removes all entries from the UTXO ledger (spent, unspent, diff, balances, receipts, treasury)
+func (u *Manager) ClearLedger(pruneReceipts bool) error {
+	u.WriteLockLedger()
+	defer u.WriteUnlockLedger()
+
+	defer u.utxoStorage.Flush()
+
+	if pruneReceipts {
+		return u.utxoStorage.Clear()
+	}
+
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutput}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixUnspent}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSpent}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixMilestoneDiffs}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixBalances}); err != nil {
+		return err
+	}
+	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (u *Manager) ReadLockLedger() {
 	u.utxoLock.RLock()
 }
@@ -48,10 +84,7 @@ func (u *Manager) WriteUnlockLedger() {
 	u.utxoLock.Unlock()
 }
 
-func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
-
-	u.WriteLockLedger()
-	defer u.WriteUnlockLedger()
+func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex milestone.Index, pruneReceipts bool, receiptMigratedAtIndex ...uint32) error {
 
 	diff, err := u.GetMilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
@@ -78,10 +111,12 @@ func (u *Manager) PruneMilestoneIndex(msIndex milestone.Index, receiptMigratedAt
 	}
 
 	if len(receiptMigratedAtIndex) > 0 {
-		placeHolder := &ReceiptTuple{Receipt: &iotago.Receipt{MigratedAt: receiptMigratedAtIndex[0]}, MilestoneIndex: msIndex}
-		if err := deleteReceipt(placeHolder, mutations); err != nil {
-			mutations.Cancel()
-			return err
+		if pruneReceipts {
+			placeHolder := &ReceiptTuple{Receipt: &iotago.Receipt{MigratedAt: receiptMigratedAtIndex[0]}, MilestoneIndex: msIndex}
+			if err := deleteReceipt(placeHolder, mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
 		}
 
 		// only ever delete spent treasury outputs, since the unspent treasury output must exist
@@ -115,7 +150,7 @@ func (u *Manager) StoreLedgerIndex(msIndex milestone.Index) error {
 func (u *Manager) ReadLedgerIndexWithoutLocking() (milestone.Index, error) {
 	value, err := u.utxoStorage.Get([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex})
 	if err != nil {
-		if err == kvstore.ErrKeyNotFound {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			// there is no ledger milestone yet => return 0
 			return 0, nil
 		}

@@ -9,6 +9,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/utils"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -101,14 +103,14 @@ type Coordinator struct {
 const (
 	defaultStateFilePath     = "coordinator.state"
 	defaultMilestoneInterval = time.Duration(10) * time.Second
-	defaultPowWorkerCount    = 0
+	defaultPoWWorkerCount    = 0
 )
 
 // the default options applied to the Coordinator.
 var defaultOptions = []Option{
 	WithStateFilePath(defaultStateFilePath),
 	WithMilestoneInterval(defaultMilestoneInterval),
-	WithPowWorkerCount(defaultPowWorkerCount),
+	WithPoWWorkerCount(defaultPoWWorkerCount),
 }
 
 // Options define options for the Coordinator.
@@ -153,8 +155,8 @@ func WithMilestoneInterval(milestoneInterval time.Duration) Option {
 	}
 }
 
-// WithPowWorkerCount defines the amount of workers used for calculating PoW when issuing checkpoints and milestones.
-func WithPowWorkerCount(powWorkerCount int) Option {
+// WithPoWWorkerCount defines the amount of workers used for calculating PoW when issuing checkpoints and milestones.
+func WithPoWWorkerCount(powWorkerCount int) Option {
 
 	if powWorkerCount == 0 {
 		powWorkerCount = runtime.NumCPU() - 1
@@ -263,8 +265,8 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		return fmt.Errorf("state file not found: %v", coo.opts.stateFilePath)
 	}
 
-	coo.state, err = loadStateFile(coo.opts.stateFilePath)
-	if err != nil {
+	coo.state = &State{}
+	if err := utils.ReadJSONFromFile(coo.opts.stateFilePath, coo.state); err != nil {
 		return err
 	}
 
@@ -310,7 +312,11 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// ask the quorum for correct ledger state if enabled
 	if coo.opts.quorum != nil {
 		ts := time.Now()
-		err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents)
+		err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents, func(groupName string, entry *quorumGroupEntry, err error) {
+			if coo.opts.logger != nil {
+				coo.opts.logger.Infof("coordinator quorum group encountered an error, group: %s, baseURL: %s, err: %s", groupName, entry.stats.BaseURL, err)
+			}
+		})
 
 		duration := time.Since(ts)
 		coo.Events.QuorumFinished.Trigger(&QuorumFinishedResult{Duration: duration, Err: err})
@@ -374,7 +380,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
 	coo.state.LatestMilestoneTime = time.Now()
 
-	if err := coo.state.storeStateFile(coo.opts.stateFilePath); err != nil {
+	if err := utils.WriteJSONToFile(coo.opts.stateFilePath, coo.state, 0660); err != nil {
 		return common.CriticalError(fmt.Errorf("failed to update coordinator state file: %w", err))
 	}
 

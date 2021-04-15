@@ -1,10 +1,8 @@
 {
   "restAPI": {
-    "basicAuth": {
+    "jwtAuth": {
       "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+      "salt": "HORNET"
     },
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
@@ -27,7 +25,17 @@
       "/api/v1/addresses/ed25519/:address/outputs",
       "/api/v1/treasury",
       "/api/v1/peers/:peerID",
-      "/api/v1/peers"
+      "/api/v1/peers",
+      "/api/plugins/debug/whiteflag",
+      "/api/plugins/debug/solidifier",
+      "/api/plugins/debug/outputs",
+      "/api/plugins/debug/outputs/unspent",
+      "/api/plugins/debug/outputs/spent",
+      "/api/plugins/debug/addresses",
+      "/api/plugins/debug/addresses/ed25519",
+      "/api/plugins/debug/ms-diff/*",
+      "/api/plugins/debug/requests",
+      "/api/plugins/debug/message-cones/*"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",
@@ -53,19 +61,21 @@
   },
   "db": {
     "engine": "pebble",
-    "path": "alphanetdb"
+    "path": "alphanetdb",
+    "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
-    "intervalSynced": 200,
-    "intervalUnsynced": 1000,
+    "interval": 200,
     "fullPath": "snapshots/alphanet/full_export.bin",
     "deltaPath": "snapshots/alphanet/delta_export.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": []
   },
   "pruning": {
     "enabled": true,
-    "delay": 500
+    "delay": 500,
+    "pruneReceipts": false
   },
   "protocol": {
     "networkID": "alphanet1",
@@ -85,6 +95,13 @@
       }
     ]
   },
+  "pow": {
+    "refreshTipsInterval": "5s"
+  },
+  "requests": {
+    "discardOlderThan": "15s",
+    "pendingReEnqueueInterval": "5s"
+  },
   "coordinator": {
     "stateFilePath": "coordinator.state",
     "interval": "10s",
@@ -103,7 +120,16 @@
     },
     "quorum": {
       "enabled": false,
-      "groups": {},
+      "groups": {
+        "hornet": [
+          {
+            "alias": "test01",
+            "baseURL": "http://localhost:14265",
+            "userName": "",
+            "password": ""
+          }
+        ]
+      },
       "timeout": "2s"
     }
   },
@@ -123,6 +149,9 @@
         "merkleTreeDepth": 18
       }
     }
+  },
+  "tangle": {
+    "milestoneTimeout": "30s"
   },
   "tipsel": {
     "maxDeltaMsgYoungestConeRootIndexToCMI": 2,
@@ -149,7 +178,8 @@
     ],
     "enablePlugins": [
       "Spammer",
-      "Coordinator"
+      "Debug",
+      "Prometheus"
     ]
   },
   "p2p": {
@@ -208,6 +238,14 @@
       "path": "target.json",
       "target": "localhost:9311"
     },
+    "databaseMetrics": true,
+    "nodeMetrics": true,
+    "gossipMetrics": true,
+    "cachesMetrics": true,
+    "restAPIMetrics": true,
+    "migrationMetrics": true,
+    "coordinatorMetrics": true,
+    "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

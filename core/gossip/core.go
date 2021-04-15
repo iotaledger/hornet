@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -87,12 +86,13 @@ func provide(c *dig.Container) {
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 		NetworkID     uint64                       `name:"networkId"`
 		BelowMaxDepth int                          `name:"belowMaxDepth"`
+		MinPoWScore   float64                      `name:"minPoWScore"`
 		Profile       *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
 		return gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
-			MinPoWScore:       deps.NodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
+			MinPoWScore:       deps.MinPoWScore,
 			NetworkID:         deps.NetworkID,
 			BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
@@ -127,12 +127,17 @@ func provide(c *dig.Container) {
 	type requesterdeps struct {
 		dig.In
 		Service      *gossip.Service
+		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
 		RequestQueue gossip.RequestQueue
 		Storage      *storage.Storage
 	}
 
 	if err := c.Provide(func(deps requesterdeps) *gossip.Requester {
-		return gossip.NewRequester(deps.Service, deps.RequestQueue, deps.Storage)
+		return gossip.NewRequester(deps.Service,
+			deps.RequestQueue,
+			deps.Storage,
+			gossip.WithRequesterDiscardRequestsOlderThan(deps.NodeConfig.Duration(CfgRequestsDiscardOlderThan)),
+			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.NodeConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
 	}); err != nil {
 		panic(err)
 	}

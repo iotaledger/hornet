@@ -1,10 +1,8 @@
 {
   "restAPI": {
-    "basicAuth": {
+    "jwtAuth": {
       "enabled": false,
-      "userName": "",
-      "passwordHash": "",
-      "passwordSalt": ""
+      "salt": "HORNET"
     },
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
@@ -50,13 +48,14 @@
   },
   "db": {
     "engine": "pebble",
-    "path": "mainnetdb"
+    "path": "mainnetdb",
+    "autoRevalidation": false
   },
   "snapshots": {
-    "intervalSynced": 50,
-    "intervalUnsynced": 1000,
+    "interval": 50,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",
     "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
+    "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
         "full": "https://ls.manapotion.io/full_snapshot.bin",
@@ -74,7 +73,8 @@
   },
   "pruning": {
     "enabled": true,
-    "delay": 60480
+    "delay": 60480,
+    "pruneReceipts": false
   },
   "node": {
     "alias": "Mainnet",
@@ -135,6 +135,14 @@
       "path": "target.json",
       "target": "localhost:9311"
     },
+    "databaseMetrics": true,
+    "nodeMetrics": true,
+    "gossipMetrics": true,
+    "cachesMetrics": true,
+    "restAPIMetrics": true,
+    "migrationMetrics": true,
+    "coordinatorMetrics": true,
+    "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false

@@ -146,7 +146,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, meta
 			// check current ledger for this input
 			output, err = s.UTXO().ReadOutputByOutputIDWithoutLocking(input)
 			if err != nil {
-				if err == kvstore.ErrKeyNotFound {
+				if errors.Is(err, kvstore.ErrKeyNotFound) {
 					// input not found, so mark as invalid tx
 					conflict = storage.ConflictInputUTXONotFound
 					break
@@ -246,7 +246,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, meta
 	}
 
 	// we don't need to call cleanup at the end, because we pass our own metadataMemcache.
-	parentsTraverser := dag.NewParentTraverser(s, nil, metadataMemcache)
+	parentsTraverser := dag.NewParentTraverser(s, metadataMemcache)
 
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If the parents are SEPs, are already processed or already referenced,
@@ -261,7 +261,8 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, meta
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false); err != nil {
+		false,
+		nil); err != nil {
 		return nil, err
 	}
 
