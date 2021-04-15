@@ -33,7 +33,7 @@ In subsequent starts we can use the *run_coo* script, to skip the bootstrap step
 
 To start additional nodes we simply use the additional *run* scripts provided in the *alphanet* folder. We can run them on the same device, as they are preconfigured to listen on different ports.
 
-Congratulations, you are now running a private network! To monitor your coordinator, you can find the dashboard at [http://localhost:8081](http://localhost:8081).
+Congratulations, you are now running a private network! To monitor your coordinator, you can find the dashboard at [http://localhost:8081](http://localhost:8081). Login to the Dashboard with `admin` as username and password.
 
 ### Use a wallet to manage the tokens
 
