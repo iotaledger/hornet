@@ -1077,6 +1077,11 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 			}
 			s.log.Warnf("%s %s", ErrSnapshotCreationFailed, err)
 		}
+
+		if !s.storage.IsNodeSynced() {
+			// do not prune while we are not synced
+			return
+		}
 	}
 
 	if !s.pruningEnabled {
