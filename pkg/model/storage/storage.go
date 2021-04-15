@@ -93,7 +93,7 @@ func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile
 		utxoManager:             utxoManager,
 		belowMaxDepth:           milestone.Index(belowMaxDepth),
 		Events: &packageEvents{
-			ReceivedValidMilestone: events.NewEvent(MilestoneCaller),
+			ReceivedValidMilestone: events.NewEvent(MilestoneWithRequestedCaller),
 			PruningStateChanged:    events.NewEvent(events.BoolCaller),
 		},
 	}

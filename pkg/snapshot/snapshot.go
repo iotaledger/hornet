@@ -1061,7 +1061,7 @@ func (s *Snapshot) snapshotTypeFilePath(snapshotType Type) string {
 
 // HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a delta snapshot creation and pruning.
 func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
-	if !s.storage.IsNodeAlmostSynced() {
+	if !s.storage.IsNodeSynced() {
 		// do not prune or create snapshots while we are not synced
 		return
 	}
@@ -1076,6 +1076,11 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 				s.log.Panicf("%s %s", ErrSnapshotCreationFailed, err)
 			}
 			s.log.Warnf("%s %s", ErrSnapshotCreationFailed, err)
+		}
+
+		if !s.storage.IsNodeSynced() {
+			// do not prune while we are not synced
+			return
 		}
 	}
 
