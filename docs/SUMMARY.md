@@ -1,6 +1,9 @@
 # Summary
 
 - [Welcome](./welcome.md)
+- [Getting started](./getting_started.md)
+    - [Nodes 101](./nodes_101.md)
+    - [Prerequisites](./prerequisites.md)
 - [Tutorials](./tutorials/index.md)
     - [Build HORNET](./tutorials/build.md)
     - [Run HORNET](./tutorials/run.md)
