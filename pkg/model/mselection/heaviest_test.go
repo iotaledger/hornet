@@ -1,158 +1,131 @@
 package mselection
 
-/*
-
 import (
-	"context"
+	"fmt"
 	"math/rand"
-	"sync"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/gohornet/hornet/pkg/testsuite"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
-	numTestTxs      = 32 * 100
-	numBenchmarkTxs = 5000
+	CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold = 20
+	CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint             = 10
+	CfgCoordinatorTipselectRandomTipsPerCheckpoint                        = 3
+	CfgCoordinatorTipselectHeaviestBranchSelectionTimeoutMilliseconds     = 100
+
+	numTestMsgs      = 32 * 100
+	numBenchmarkMsgs = 5000
+	BelowMaxDepth    = 15
+	MinPowScore      = 1.0
 )
 
 func init() {
 	rand.Seed(0)
 }
 
+func initTest(testInterface testing.TB) (*testsuite.TestEnvironment, *HeaviestSelector) {
+
+	te := testsuite.SetupTestEnvironment(testInterface, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
+
+	hps := New(
+		CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold,
+		CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint,
+		CfgCoordinatorTipselectRandomTipsPerCheckpoint,
+		CfgCoordinatorTipselectHeaviestBranchSelectionTimeoutMilliseconds,
+	)
+
+	return te, hps
+}
+
+func newTestMessage(te *testsuite.TestEnvironment, index int, parents hornet.MessageIDs) *storage.MessageMetadata {
+	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildIndexation().Store()
+	cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
+	defer cachedMsgMeta.Release(true)
+	return cachedMsgMeta.GetMetadata()
+}
+
 func TestHeaviestSelector_SelectTipsChain(t *testing.T) {
-	hps := New()
+	te, hps := initTest(t)
+	defer te.CleanupTestEnvironment(true)
+
 	// create a chain
-	var lastHash = hornet.NullMessageID
-	for i := 1; i <= numTestTxs; i++ {
-		bndl := newTestBundle(i, lastHash, lastHash)
-		hps.OnNewSolidMessage(bndl)
-		lastHash = bndl.GetMessageID()
+	lastMsgID := hornet.GetNullMessageID()
+	for i := 1; i <= numTestMsgs; i++ {
+		msg := newTestMessage(te, i, hornet.MessageIDs{lastMsgID})
+		hps.OnNewSolidMessage(msg)
+		lastMsgID = msg.GetMessageID()
 	}
 
-	tip, err := hps.selectTip(context.Background())
+	tips, err := hps.SelectTips(1)
 	assert.NoError(t, err)
-	assert.ElementsMatch(t, lastHash, tip)
+	assert.Len(t, tips, 1)
+
+	// check if the tip on top was picked
+	assert.ElementsMatch(t, lastMsgID, tips[0])
+
+	// check if trackedMessages are resetted after tipselect
+	assert.Len(t, hps.trackedMessages, 0)
 }
 
 func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
-	hps := New()
+	te, hps := initTest(t)
+	defer te.CleanupTestEnvironment(true)
 
-	var lastHash = [2]hornet.Hash{}
-	for i := 0; i < 2; i++ {
-		lastHash[i] = hornet.NullMessageID
-		for j := 1; j <= numTestTxs; j++ {
-			bndl := newTestBundle(i*numTestTxs+j, lastHash[i], lastHash[i])
-			hps.OnNewSolidMessage(bndl)
-			lastHash[i] = bndl.GetMessageID()
+	numChains := 2
+	lastMsgIDs := make(hornet.MessageIDs, 2)
+	for i := 0; i < numChains; i++ {
+		lastMsgIDs[i] = hornet.GetNullMessageID()
+		for j := 1; j <= numTestMsgs; j++ {
+			msgMeta := newTestMessage(te, i*numTestMsgs+j, hornet.MessageIDs{lastMsgIDs[i]})
+			hps.OnNewSolidMessage(msgMeta)
+			lastMsgIDs[i] = msgMeta.GetMessageID()
 		}
 	}
 
-	tip, err := hps.selectTip(context.Background())
+	// check if all messages are tracked
+	assert.Equal(t, numChains*numTestMsgs, hps.GetTrackedMessagesCount())
+
+	tips, err := hps.SelectTips(2)
 	assert.NoError(t, err)
-	assert.ElementsMatch(t, lastHash, tip)
+	assert.Len(t, tips, 2)
+
+	// check if the tips on top of both branches were picked
+	assert.ElementsMatch(t, lastMsgIDs, tips)
+
+	// check if trackedMessages are resetted after tipselect
+	assert.Len(t, hps.trackedMessages, 0)
 }
 
-func TestHeaviestSelector_SelectTipsCancel(t *testing.T) {
-	hps := New()
-	// create a very large blow ball
-	for i := 1; i <= 10000; i++ {
-		bndl := newTestBundle(i, hornet.NullMessageID, hornet.NullMessageID)
-		hps.OnNewSolidMessage(bndl)
-	}
+func BenchmarkHeaviestSelector_OnNewSolidMessage(b *testing.B) {
+	te, hps := initTest(b)
+	defer te.CleanupTestEnvironment(true)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		_, err := hps.selectTip(ctx)
-		assert.Truef(t, errors.Is(err, context.Canceled), "unexpected error: %v", err)
-	}()
-
-	time.Sleep(10 * time.Millisecond)
-	cancel()
-	wg.Wait()
-}
-
-func TestHeaviestSelector_Concurrent(t *testing.T) {
-	hps := New()
-	hashes := []hornet.Hash{hornet.NullMessageID}
-	for i := 0; i < 1000; i++ {
-		bndl := newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
-		hps.OnNewSolidMessage(bndl)
-		hashes = append(hashes, bndl.GetMessageID())
-	}
-
-	var wg sync.WaitGroup
-	selector := func() {
-		defer wg.Done()
-		_, err := hps.selectTip(context.Background())
-		assert.NoError(t, err)
-	}
-
-	wg.Add(2)
-	go selector()
-	go selector()
-
-	for i := 1000; i < 2000; i++ {
-		bndl := newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
-		hps.OnNewSolidMessage(bndl)
-		hashes = append(hashes, bndl.GetMessageID())
-	}
-	wg.Wait()
-}
-
-func BenchmarkHeaviestSelector_OnNewSolidTransaction(b *testing.B) {
-	hps := New()
-	hashes := []hornet.Hash{hornet.NullMessageID}
-	data := make([]*storage.Message, numBenchmarkTxs)
-	for i := 0; i < numBenchmarkTxs; i++ {
-		data[i] = newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
-		hashes = append(hashes, data[i].GetMessageID())
-	}
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		hps.OnNewSolidTransaction(data[i%numBenchmarkTxs])
-		if i%numBenchmarkTxs == numBenchmarkTxs-1 {
-			hps.SetRoot(hornet.NullMessageID)
+	msgIDs := hornet.MessageIDs{hornet.GetNullMessageID()}
+	msgs := make([]*storage.MessageMetadata, numBenchmarkMsgs)
+	for i := 0; i < numBenchmarkMsgs; i++ {
+		tipCount := 1 + rand.Intn(7)
+		if tipCount > len(msgIDs) {
+			tipCount = len(msgIDs)
 		}
-	}
-}
+		tips := make(hornet.MessageIDs, tipCount)
+		for j := 0; j < tipCount; j++ {
+			tips[j] = msgIDs[rand.Intn(len(msgIDs))]
+		}
+		tips = tips.RemoveDupsAndSortByLexicalOrder()
 
-func BenchmarkHeaviestSelector_SelectTips(b *testing.B) {
-	hps := New()
-	hashes := []hornet.Hash{hornet.NullMessageID}
-	for i := 0; i < numBenchmarkTxs; i++ {
-		bndl := newTestBundle(i, hashes[rand.Intn(len(hashes))], hashes[rand.Intn(len(hashes))])
-		hps.OnNewSolidMessage(bndl)
-		hashes = append(hashes, bndl.GetMessageID())
+		msgs[i] = newTestMessage(te, i, tips)
+		msgIDs = append(msgIDs, msgs[i].GetMessageID())
 	}
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = hps.selectTip(context.Background())
+		hps.OnNewSolidMessage(msgs[i%numBenchmarkMsgs])
 	}
+	hps.reset()
 }
-
-func newTestBundle(idx int, trunk, parent2MessageID hornet.Hash) *storage.Message {
-	bndl := storage.Message{
-
-	}
-	msg := &transaction.Message{
-		Hash:              trinary.IntToTrytes(int64(idx), consts.HashTrytesSize),
-		Value:             0,
-		Timestamp:         uint64(idx),
-		TrunkTransaction:  trunk.Hex(),
-		parent2MessageIDTransaction: parent2MessageID.Hex(),
-	}
-	return hornet.NewTransactionFromTx(msg, nil)
-}
-*/
