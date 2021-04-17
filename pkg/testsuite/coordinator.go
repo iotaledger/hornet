@@ -45,8 +45,8 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		coordinator.WithStateFilePath(fmt.Sprintf("%s/coordinator.state", te.tempDir)),
 		coordinator.WithMilestoneInterval(time.Duration(10)*time.Second),
 	)
-	require.NoError(te.TestState, err)
-	require.NotNil(te.TestState, coo)
+	require.NoError(te.TestInterface, err)
+	require.NotNil(te.TestInterface, coo)
 	te.coo = coo
 
 	te.coo.InitState(true, 0)
@@ -55,12 +55,12 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	te.storage.SetSnapshotMilestone(te.networkID, 0, 0, 0, time.Now())
 
 	milestoneMessageID, err := te.coo.Bootstrap()
-	require.NoError(te.TestState, err)
+	require.NoError(te.TestInterface, err)
 
 	te.lastMilestoneMessageID = milestoneMessageID
 
 	ms := te.storage.GetCachedMilestoneOrNil(1)
-	require.NotNil(te.TestState, ms)
+	require.NotNil(te.TestInterface, ms)
 
 	te.Milestones = append(te.Milestones, ms)
 
@@ -86,8 +86,8 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		func(spent *utxo.Spent) {},
 		nil,
 	)
-	require.NoError(te.TestState, err)
-	require.Equal(te.TestState, 1, confirmedMilestoneStats.MessagesReferenced)
+	require.NoError(te.TestInterface, err)
+	require.Equal(te.TestInterface, 1, confirmedMilestoneStats.MessagesReferenced)
 }
 
 // IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
@@ -99,14 +99,14 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
 
 	milestoneMessageID, err := te.coo.IssueMilestone(hornet.MessageIDs{te.lastMilestoneMessageID, tip})
-	require.NoError(te.TestState, err)
+	require.NoError(te.TestInterface, err)
 	te.lastMilestoneMessageID = milestoneMessageID
 
 	te.VerifyLMI(currentIndex + 1)
 
 	milestoneIndex := currentIndex + 1
 	ms := te.storage.GetCachedMilestoneOrNil(milestoneIndex)
-	require.NotNil(te.TestState, ms)
+	require.NotNil(te.TestInterface, ms)
 
 	messagesMemcache := storage.NewMessagesMemcache(te.storage)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage)
@@ -132,9 +132,9 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 		func(spent *utxo.Spent) {},
 		nil,
 	)
-	require.NoError(te.TestState, err)
+	require.NoError(te.TestInterface, err)
 
-	require.Equal(te.TestState, currentIndex+1, confirmedMilestoneStats.Index)
+	require.Equal(te.TestInterface, currentIndex+1, confirmedMilestoneStats.Index)
 	te.VerifyCMI(confirmedMilestoneStats.Index)
 
 	te.AssertTotalSupplyStillValid()
@@ -142,8 +142,8 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, c
 	if createConfirmationGraph {
 		dotFileContent := te.generateDotFileFromConfirmation(wfConf)
 		if te.showConfirmationGraphs {
-			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.tempDir, te.TestState.Name(), confirmedMilestoneStats.Index)
-			utils.ShowDotFile(te.TestState, dotFileContent, dotFilePath)
+			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.tempDir, te.TestInterface.Name(), confirmedMilestoneStats.Index)
+			utils.ShowDotFile(te.TestInterface, dotFileContent, dotFilePath)
 		} else {
 			fmt.Println(dotFileContent)
 		}
