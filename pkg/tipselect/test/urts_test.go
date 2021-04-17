@@ -67,11 +67,11 @@ func TestTipSelect(t *testing.T) {
 
 	for i := 0; i < 1000; i++ {
 		tips, err := ts.SelectNonLazyTips()
-		require.NoError(te.TestState, err)
-		require.NotNil(te.TestState, tips)
+		require.NoError(te.TestInterface, err)
+		require.NotNil(te.TestInterface, tips)
 
-		require.GreaterOrEqual(te.TestState, len(tips), 1)
-		require.LessOrEqual(te.TestState, len(tips), 8)
+		require.GreaterOrEqual(te.TestInterface, len(tips), 1)
+		require.LessOrEqual(te.TestInterface, len(tips), 8)
 
 		cmi := te.Storage().GetConfirmedMilestoneIndex()
 
@@ -117,7 +117,7 @@ func TestTipSelect(t *testing.T) {
 					at, _ := te.Storage().SolidEntryPointsIndex(messageID)
 					updateIndexes(at, at)
 				}, false, nil)
-			require.NoError(te.TestState, err)
+			require.NoError(te.TestInterface, err)
 
 			minOldestConeRootIndex := milestone.Index(1)
 			if cmi > milestone.Index(MaxDeltaMsgOldestConeRootIndexToCMI) {
@@ -129,11 +129,11 @@ func TestTipSelect(t *testing.T) {
 				minYoungestConeRootIndex = cmi - milestone.Index(MaxDeltaMsgYoungestConeRootIndexToCMI)
 			}
 
-			require.GreaterOrEqual(te.TestState, uint32(oldestConeRootIndex), uint32(minOldestConeRootIndex))
-			require.LessOrEqual(te.TestState, uint32(oldestConeRootIndex), uint32(cmi))
+			require.GreaterOrEqual(te.TestInterface, uint32(oldestConeRootIndex), uint32(minOldestConeRootIndex))
+			require.LessOrEqual(te.TestInterface, uint32(oldestConeRootIndex), uint32(cmi))
 
-			require.GreaterOrEqual(te.TestState, uint32(youngestConeRootIndex), uint32(minYoungestConeRootIndex))
-			require.LessOrEqual(te.TestState, uint32(youngestConeRootIndex), uint32(cmi))
+			require.GreaterOrEqual(te.TestInterface, uint32(youngestConeRootIndex), uint32(minYoungestConeRootIndex))
+			require.LessOrEqual(te.TestInterface, uint32(youngestConeRootIndex), uint32(cmi))
 		}
 
 		msg := te.NewMessageBuilder(fmt.Sprintf("%d", msgCount)).Parents(tips).BuildIndexation().Store()
@@ -149,5 +149,5 @@ func TestTipSelect(t *testing.T) {
 		}
 	}
 
-	require.Equal(te.TestState, 1+100, len(te.Milestones)) // genesis + all created milestones
+	require.Equal(te.TestInterface, 1+100, len(te.Milestones)) // genesis + all created milestones
 }

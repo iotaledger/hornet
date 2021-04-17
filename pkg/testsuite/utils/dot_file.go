@@ -45,17 +45,17 @@ func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
 }
 
 // ShowDotFile creates a png file with dot and shows it in an external application.
-func ShowDotFile(t *testing.T, dotCommand string, outFilePath string) {
+func ShowDotFile(testInterface testing.TB, dotCommand string, outFilePath string) {
 
 	cmd := exec.Command("dot", "-Tpng", "-o"+outFilePath)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		t.Fatal(err)
+		testInterface.Fatal(err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		t.Fatal(err)
+		testInterface.Fatal(err)
 	}
 
 	stdin.Write([]byte(dotCommand))
@@ -66,14 +66,14 @@ func ShowDotFile(t *testing.T, dotCommand string, outFilePath string) {
 	switch os := runtime.GOOS; os {
 	case "darwin":
 		if err := exec.Command("open", outFilePath).Start(); err != nil {
-			t.Fatal(err)
+			testInterface.Fatal(err)
 		}
 	case "linux":
 		if err := exec.Command("xdg-open", outFilePath).Start(); err != nil {
-			t.Fatal(err)
+			testInterface.Fatal(err)
 		}
 	default:
 		// freebsd, openbsd, plan9, windows...
-		t.Fatalf("OS %s not supported", os)
+		testInterface.Fatalf("OS %s not supported", os)
 	}
 }

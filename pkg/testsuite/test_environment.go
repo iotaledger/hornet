@@ -33,8 +33,8 @@ var (
 
 // TestEnvironment holds the state of the test environment.
 type TestEnvironment struct {
-	// TestState is the state of the current test case.
-	TestState *testing.T
+	// TestInterface is the common interface for tests and benchmarks.
+	TestInterface testing.TB
 
 	// Milestones are the created milestones by the coordinator during the test.
 	Milestones storage.CachedMilestones
@@ -93,10 +93,10 @@ func searchProjectRootFolder() string {
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
-func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, belowMaxDepth int, targetScore float64, showConfirmationGraphs bool) *TestEnvironment {
+func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, belowMaxDepth int, targetScore float64, showConfirmationGraphs bool) *TestEnvironment {
 
 	te := &TestEnvironment{
-		TestState:              testState,
+		TestInterface:          testInterface,
 		Milestones:             make(storage.CachedMilestones, 0),
 		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
@@ -107,15 +107,15 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 	}
 
 	cooPrvKey1, err := utils.ParseEd25519PrivateKeyFromString("651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c")
-	require.NoError(testState, err)
+	require.NoError(testInterface, err)
 	cooPrvKey2, err := utils.ParseEd25519PrivateKeyFromString("0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c")
-	require.NoError(testState, err)
+	require.NoError(testInterface, err)
 
-	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", testState.Name()))
-	require.NoError(te.TestState, err)
+	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", testInterface.Name()))
+	require.NoError(te.TestInterface, err)
 	te.tempDir = tempDir
 
-	testState.Logf("Testdir: %s", tempDir)
+	testInterface.Logf("Testdir: %s", tempDir)
 
 	cooPrivateKeys := []ed25519.PrivateKey{cooPrvKey1, cooPrvKey2}
 
@@ -139,16 +139,16 @@ func SetupTestEnvironment(testState *testing.T, genesisAddress *iotago.Ed25519Ad
 
 	// Start up the coordinator
 	te.configureCoordinator(cooPrivateKeys, keyManager)
-	require.NotNil(testState, te.coo)
+	require.NotNil(testInterface, te.coo)
 
 	te.VerifyCMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
 		_, confStats := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)
-		require.Equal(testState, 1, confStats.MessagesReferenced)                  // 1 for milestone
-		require.Equal(testState, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for milestone
-		require.Equal(testState, 0, confStats.MessagesIncludedWithTransactions)
-		require.Equal(testState, 0, confStats.MessagesExcludedWithConflictingTransactions)
+		require.Equal(testInterface, 1, confStats.MessagesReferenced)                  // 1 for milestone
+		require.Equal(testInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for milestone
+		require.Equal(testInterface, 0, confStats.MessagesIncludedWithTransactions)
+		require.Equal(testInterface, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	}
 
 	return te

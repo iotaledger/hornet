@@ -85,23 +85,23 @@ func (b *MessageBuilder) UsingOutput(output *utxo.Output) *MessageBuilder {
 
 func (b *MessageBuilder) BuildIndexation() *Message {
 
-	require.NotEmpty(b.te.TestState, b.indexation)
+	require.NotEmpty(b.te.TestInterface, b.indexation)
 
 	parents := [][]byte{}
-	require.NotNil(b.te.TestState, b.parents)
+	require.NotNil(b.te.TestInterface, b.parents)
 	for _, parent := range b.parents {
-		require.NotNil(b.te.TestState, parent)
+		require.NotNil(b.te.TestInterface, parent)
 		parents = append(parents, parent[:])
 	}
 
 	msg, err := iotago.NewMessageBuilder().Parents(parents).Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil}).Build()
-	require.NoError(b.te.TestState, err)
+	require.NoError(b.te.TestInterface, err)
 
 	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
-	require.NoError(b.te.TestState, err)
+	require.NoError(b.te.TestInterface, err)
 
 	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
-	require.NoError(b.te.TestState, err)
+	require.NoError(b.te.TestInterface, err)
 
 	return &Message{
 		builder: b,
@@ -111,7 +111,7 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 
 func (b *MessageBuilder) Build() *Message {
 
-	require.True(b.te.TestState, b.amount > 0)
+	require.True(b.te.TestInterface, b.amount > 0)
 
 	builder := iotago.NewTransactionBuilder()
 
@@ -137,7 +137,7 @@ func (b *MessageBuilder) Build() *Message {
 		}
 	}
 
-	require.NotEmpty(b.te.TestState, outputsThatCanBeConsumed)
+	require.NotEmpty(b.te.TestInterface, outputsThatCanBeConsumed)
 
 	for _, utxo := range outputsThatCanBeConsumed {
 
@@ -163,7 +163,7 @@ func (b *MessageBuilder) Build() *Message {
 		builder.AddOutput(&iotago.SigLockedSingleOutput{Address: fromAddr, Amount: remainderAmount})
 	}
 
-	require.NotEmpty(b.te.TestState, b.indexation)
+	require.NotEmpty(b.te.TestInterface, b.indexation)
 	builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil})
 
 	// Sign transaction
@@ -171,18 +171,18 @@ func (b *MessageBuilder) Build() *Message {
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: fromAddr, Keys: inputPrivateKey})
 
 	transaction, err := builder.Build(inputAddrSigner)
-	require.NoError(b.te.TestState, err)
+	require.NoError(b.te.TestInterface, err)
 
-	require.NotNil(b.te.TestState, b.parents)
+	require.NotNil(b.te.TestInterface, b.parents)
 
 	msg, err := iotago.NewMessageBuilder().Parents(b.parents.ToSliceOfSlices()).Payload(transaction).Build()
-	require.NoError(b.te.TestState, err)
+	require.NoError(b.te.TestInterface, err)
 
 	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
-	require.NoError(b.te.TestState, err)
+	require.NoError(b.te.TestInterface, err)
 
 	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
-	require.NoError(b.te.TestState, err)
+	require.NoError(b.te.TestInterface, err)
 
 	var outputType string
 	if b.dustUnlock {
@@ -214,7 +214,7 @@ func (b *MessageBuilder) Build() *Message {
 	txEssence := messageTx.Essence.(*iotago.TransactionEssence)
 	for i := range txEssence.Outputs {
 		output, err := utxo.NewOutput(message.GetMessageID(), messageTx, uint16(i))
-		require.NoError(b.te.TestState, err)
+		require.NoError(b.te.TestInterface, err)
 
 		if output.Address().String() == toAddr.String() && output.Amount() == b.amount {
 			sentOutput = output
@@ -236,14 +236,14 @@ func (b *MessageBuilder) Build() *Message {
 }
 
 func (m *Message) Store() *Message {
-	require.Nil(m.builder.te.TestState, m.storedMessageID)
+	require.Nil(m.builder.te.TestInterface, m.storedMessageID)
 	m.storedMessageID = m.builder.te.StoreMessage(m.message).GetMessage().GetMessageID()
 	return m
 }
 
 func (m *Message) BookOnWallets() *Message {
 
-	require.False(m.builder.te.TestState, m.booked)
+	require.False(m.builder.te.TestInterface, m.booked)
 	m.builder.fromWallet.BookSpents(m.consumedOutputs)
 	m.builder.toWallet.BookOutput(m.sentOutput)
 	m.builder.fromWallet.BookOutput(m.remainderOutput)
@@ -253,12 +253,12 @@ func (m *Message) BookOnWallets() *Message {
 }
 
 func (m *Message) GeneratedUTXO() *utxo.Output {
-	require.NotNil(m.builder.te.TestState, m.sentOutput)
+	require.NotNil(m.builder.te.TestInterface, m.sentOutput)
 	return m.sentOutput
 }
 
 func (m *Message) StoredMessageID() hornet.MessageID {
-	require.NotNil(m.builder.te.TestState, m.storedMessageID)
+	require.NotNil(m.builder.te.TestInterface, m.storedMessageID)
 	return m.storedMessageID
 }
 

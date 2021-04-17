@@ -81,11 +81,11 @@ func TestConeRootIndexes(t *testing.T) {
 			minOldestConeRootIndex = cmi - milestone.Index(BelowMaxDepth)
 		}
 
-		require.GreaterOrEqual(te.TestState, uint32(ocri), uint32(minOldestConeRootIndex))
-		require.LessOrEqual(te.TestState, uint32(ocri), uint32(msIndex))
+		require.GreaterOrEqual(te.TestInterface, uint32(ocri), uint32(minOldestConeRootIndex))
+		require.LessOrEqual(te.TestInterface, uint32(ocri), uint32(msIndex))
 
-		require.GreaterOrEqual(te.TestState, uint32(ycri), uint32(minOldestConeRootIndex))
-		require.LessOrEqual(te.TestState, uint32(ycri), uint32(msIndex))
+		require.GreaterOrEqual(te.TestInterface, uint32(ycri), uint32(minOldestConeRootIndex))
+		require.LessOrEqual(te.TestInterface, uint32(ycri), uint32(msIndex))
 	}
 
 	latestMilestone := te.Milestones[len(te.Milestones)-1]
@@ -99,6 +99,6 @@ func TestConeRootIndexes(t *testing.T) {
 	ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
 
 	// NullHash is SEP for index 0
-	require.Equal(te.TestState, uint32(0), uint32(ocri))
-	require.LessOrEqual(te.TestState, uint32(ycri), uint32(cmi))
+	require.Equal(te.TestInterface, uint32(0), uint32(ocri))
+	require.LessOrEqual(te.TestInterface, uint32(ycri), uint32(cmi))
 }
