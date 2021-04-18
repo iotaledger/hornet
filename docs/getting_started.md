@@ -1,0 +1,44 @@
+# Getting started
+Running a node is the best way to use IOTA. By doing so, you have direct access to the Tangle instead of having to connect to and trust someone else node, and you help the IOTA network to become more distributed and resilient.
+
+A node software is a backbone of IOTA network. For a overview of tasks any node is responsible for, please see [Node 101](./nodes_101.md).
+
+To make sure that your device meets the minimum security requirements for running a node, please see [Security 101](./security_101.md).
+
+## Minimum requirements
+To handle a potential high rate of transactions per second, nodes need enough computational power to run reliably, including the following minimum requirements:
+* 4 cores or 4 vCPU
+* 8 GB RAM
+* SSD storage
+* A public IP address (nodes gossiping with other nodes)
+
+The amount of storage you need will depend on whether and how often do you plan on pruning messages from your local database.
+
+Used ports:
+* 14626 UDP - Autopeering port
+* 15600 TCP - Gossip (neighbors) port
+* 14265 TCP - Rest API port (optional)
+
+The mentioned ports are important for a flawless node operation. Please note that these ports can be customized in your `config.json`.
+Rest API port is optional if you want to provide access to your node's API calls from external parties.
+
+## Operating system
+Hornet is written in Go and can be deployed on all major platforms using a several installation methods.
+
+### Linux (and Raspberry PI)
+Recommended installation methods:
+* [hornet apt repository](./installation_steps.md#hornet-apt-repository)
+* [docker image](./installation_steps.md#docker-image)
+* [prebuilt binary files](./installation_steps.md#pre-built-binaries)
+* [build from the source code](./installation_steps.md#build-from-the-source-code)
+
+### MacOS
+Recommended installation methods:
+* [docker image](./installation_steps.md#docker-image)
+* [prebuilt binary files](./installation_steps.md#pre-built-binaries)
+
+### Windows
+Recommended installation methods:
+* [docker image](./installation_steps.md#docker-image)
+* [prebuilt binary files](./installation_steps.md#pre-built-binaries)
+

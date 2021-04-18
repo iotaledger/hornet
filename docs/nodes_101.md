@@ -41,10 +41,10 @@ All nodes keep a record of the [Unspent Transaction Outputs (UTXO)](https://chry
 
 ## Exposing APIs for clients
 Nodes come with two set of low-level APIs:
-* HTTP API
-* Events APIs
+* HTTP(rest) API
+* Event API
 
-> Developers are not needed to communicate with nodes using mentioned low-level API. Devs can leverage [iota client libraries](https://chrysalis.docs.iota.org/libraries/overview.html) that provide a high-level abstraction to all features IOTA nodes provide, either on HTTP API level or Event API level
+> Developers are not needed to communicate with nodes using mentioned low-level API. Developers can successfully leverage [iota client libraries](https://chrysalis.docs.iota.org/libraries/overview.html) that provide a high-level abstraction to all features IOTA nodes provide, either on HTTP API level or Event API level
 
 ### HTTP Rest API
 The HTTP API allows clients to interact with the Tangle and ask nodes to do the following:
@@ -53,5 +53,5 @@ The HTTP API allows clients to interact with the Tangle and ask nodes to do the 
 * Do proof of work
 * Get messages from the Tangle
 
-### Events API
+### Event API
 The Events API allows clients to poll nodes for new messages and other events that happen on nodes. This type of API is useful for building applications such as custodial wallets that need to monitor the Tangle for updates to the balances of certain addresses.
