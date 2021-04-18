@@ -1,4 +1,4 @@
-# peering.json
+# Peering configuration
 
 The easiest way to add peers in Hornet is via dashboard. Simply go to `Peers` and click on `Add Peer`.  
 But for the sake of completeness this document describes the structure of the `peering.json` file.
@@ -30,3 +30,15 @@ Example:
   ]
 }
 ```
+
+## Autopeering
+
+The autopeering plugin is still in an early state. We still recommend to add 1-2 static peers as well. If you want to disable autopeering, you can do so by adding it to the disablePlugins in your `config.json`:
+```json
+"node": {
+    "disablePlugins": ["Autopeering"],
+    "enablePlugins": []
+  }
+```
+
+> Please note: `autopeering` plugin will disclose your public IP address to possibly all nodes and entry points. Please disable the plugin if you do not want this to happen.

@@ -6,6 +6,7 @@
     - [Security 101](./getting_started/security_101.md)
     - [Installation steps](./getting_started/installation_steps.md)
 - [Post-installation](./post_installation/post_installation.md)
+    - [Managing node](./post_installation/managing.md)
     - [Configuration](./post_installation/config.md)
     - [Peering](./post_installation/peering.md)
 - [API Reference](./api-reference.md)
