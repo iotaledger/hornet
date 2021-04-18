@@ -14,13 +14,13 @@ To handle a potential high rate of transactions per second, nodes need enough co
 
 The amount of storage you need will depend on whether and how often do you plan on pruning messages from your local database.
 
-Used ports:
+Exposed ports:
 * 14626 UDP - Autopeering port
 * 15600 TCP - Gossip (neighbors) port
 * 14265 TCP - Rest API port (optional)
 
-The mentioned ports are important for a flawless node operation. Please note that these ports can be customized in your `config.json`.
-Rest API port is optional if you want to provide access to your node's API calls from external parties.
+The mentioned ports are important for a flawless node operation. Please note that these ports can be customized in a `config.json` file.
+Rest API port is optional one if you want to provide access to your node's API calls from external parties.
 
 ## Operating system
 Hornet is written in Go and can be deployed on all major platforms using a several installation methods.
@@ -41,4 +41,3 @@ Recommended installation methods:
 Recommended installation methods:
 * [docker image](./installation_steps.md#docker-image)
 * [prebuilt binary files](./installation_steps.md#pre-built-binaries)
-
