@@ -63,7 +63,7 @@ func (hs Handshake) SupportedVersion(ownSupportedMessagesBitset *bitset.BitSet) 
 	hsSupportedMessagesBitset := bitset.New(uint(len(hs.SupportedVersions) * 8))
 	hsSupportedMessagesBitset.UnmarshalBinary(hs.SupportedVersions)
 
-	bothSupportedMessagesBitset := hsSupportedMessagesBitset.Union(ownSupportedMessagesBitset)
+	bothSupportedMessagesBitset := hsSupportedMessagesBitset.Intersection(ownSupportedMessagesBitset)
 
 	if !bothSupportedMessagesBitset.Any() {
 		// we don't support any protocol version the peer supports
