@@ -34,20 +34,20 @@ Hornet is written in Go and can be deployed on all major platforms using a sever
 Technically speaking, once the Hornet is compiled then the whole app is included in a single binary executable called `hornet` (`hornet.exe` on Win) accompanied with a several configuration files in `json` format. No other extra dependencies are required.
 
 ### Linux (and Raspberry PI)
-Recommended installation methods:
-* [hornet apt repository](./installation_steps.md#hornet-apt-repository)
-* [docker image](./installation_steps.md#docker-image)
+Available installation methods:
+* [hornet apt repository](./installation_steps.md#hornet-apt-repository) (RECOMMENDED)
+* [docker image](./installation_steps.md#docker-image) (RECOMMENDED)
 * [prebuilt binary files](./installation_steps.md#pre-built-binaries)
 * [build from the source code](./installation_steps.md#build-from-the-source-code)
 
 ### MacOS
-Recommended installation methods:
-* [docker image](./installation_steps.md#docker-image)
+Available installation methods:
+* [docker image](./installation_steps.md#docker-image) (RECOMMENDED)
 * [prebuilt binary files](./installation_steps.md#pre-built-binaries)
 
 ### Windows
-Recommended installation methods:
-* [docker image](./installation_steps.md#docker-image)
+Available installation methods:
+* [docker image](./installation_steps.md#docker-image) (RECOMMENDED)
 * [prebuilt binary files](./installation_steps.md#pre-built-binaries)
 
 ## Configuration
