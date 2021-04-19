@@ -25,15 +25,10 @@ The mentioned ports are important for a minimum flawless node operation. Rest AP
 
 There may be also additional ports required in order to work with additional optional plugins, such as dashboard, etc.
 
-## Configuration
-Hornet uses a set of several `json` configuration files that can be customized based on your use cases:
-* `config.json`: a configuration file that includes all core configuration parameters
-* `peering.json`: a configuration file that includes connection details to node neighbors (peers)
-
-See more details regarding the configuration in [post installation](../post_installation/config.md) chapter.
-
 ## Operating system
 Hornet is written in Go and can be deployed on all major platforms using a several installation methods.
+
+Technically speaking, once the Hornet is compiled then the whole app is included in a single binary executable called `hornet` (`hornet.exe` on Win) accompanied with a several configuration files in `json` format. No other extra dependencies are required.
 
 ### Linux (and Raspberry PI)
 Recommended installation methods:
@@ -51,3 +46,10 @@ Recommended installation methods:
 Recommended installation methods:
 * [docker image](./installation_steps.md#docker-image)
 * [prebuilt binary files](./installation_steps.md#pre-built-binaries)
+
+## Configuration
+Hornet uses a set of several `json` configuration files that can be customized based on your use cases:
+* `config.json`: a configuration file that includes all core configuration parameters
+* `peering.json`: a configuration file that includes connection details to node neighbors (peers)
+
+See more details regarding the configuration in [post installation](../post_installation/config.md) chapter.
