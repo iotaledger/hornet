@@ -125,7 +125,7 @@ IOTA 1.0 provides legacy rest API endpoints:
 ```
 
 ## Dashboard
-There is an admin dashboard available in Hornet (on port 8081) and it is enabled by default.
+There is an admin dashboard available in Hornet (on port 8081) and it is enabled by default. It provides some useful information regarding the node, its internal activity and its resources, such as memory, peers, transactions per second rate, etc.
 
 However it is not listening to incoming requests from a public traffic to prevent access from a malicious actor. It is listening only to requests from `localhost` by default.
 
@@ -143,5 +143,24 @@ It can be configured via the following `config.json` file section:
   }
 ```
 * to enable Dashboard to be reachable from a public traffic, it can be changed to `"bindAddress": "0.0.0.0:8081"`
-* please make sure a strong password is chosen before opened to a public traffic
+
+Even if enabled to public traffic, a visitor still needs a valid combination of username and password to access a management part of the dashboard.
+
+It can be generated using integrated command-line Hornet tools, specifically `pwdhash`:
+```bash
+hornet tools pwdhash
+```
+
+Output example:
+```plaintext
+Enter a password:
+Re-enter your password:
+Success!
+Your hash: 24c832e35dc542901b90888321dbfc4b1d9617332cbc124709204e6edf7e49f9
+Your salt: 6c71f4753f6fb52d7a4bb5471281400c8fef760533f0589026a0e646bc03acd4
+```
+* `pwdhash` tool provides a combination of `passwordHash` and `passwordSalt` based on your input password
+* both values should be copied to the respective configuration values above
+
+Once Hornet is restarted then the Dashboard is accessible using the given credentials.
 
