@@ -2,6 +2,7 @@
 Hornet `apt` repository is maintained by the Hornet developers. It installs Hornet as a `systemd` service under a user called `hornet`.
 
 *Ubuntu/Debian*
+
 **Import the public key that is used to sign the software release:**
 ```bash
 wget -qO - https://ppa.hornet.zone/pubkey.txt | sudo apt-key add -
@@ -61,7 +62,7 @@ Please continue to [post-installation steps](../post_installation/post_installat
 # Docker image
 Prepared Hornet docker images (amd64/x86_64 architecture) are available at [gohornet/hornet](https://hub.docker.com/r/gohornet/hornet) docker hub.
 
-There has to be installed `docker engine` on a host in order to run docker images. Please, follow an [official installation guide](https://docs.docker.com/engine/install/).
+There has to be installed `docker engine` on a host in order to run docker images. Please, follow an [official installation guide](https://docs.docker.com/engine/install/) in order to install `docker engine`.
 
 **Hornet uses `json` configuration files and those can be downloaded from the source code repo:**
 ```bash
@@ -140,13 +141,14 @@ docker container rm hornet
 
 Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
 
+
 --------
 
 
 # Pre-built binaries
 Pre-built binaries are a great way how to get the latest single compiled executable in a single file including some default configuration `json` files.
 
-However this method is considered a bit advanced since you have to usually prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
+This method is considered a bit advanced for production use since you have to usually prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
 
 **Download the latest release compiled for your system from [GitHub release assets](https://github.com/gohornet/hornet/releases), for ex:**
 
@@ -187,14 +189,45 @@ Using this method, you have to make sure the executable runs in a daemon mode us
 
 Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
 
+### Example of systemd unit file
+Assuming Hornet binary is extracted to `/opt/hornet` together with configuration files, `systemd` unit file may look:
+
+```plaintext
+[Unit]
+Description=Hornet
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=hornet
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+
+User=hornet
+WorkingDirectory=/opt/hornet
+TimeoutSec=1200
+Restart=always
+ExecStart=/opt/hornet/hornet
+
+[Install]
+WantedBy=multi-user.target
+```
+
 
 ----------------
 
 
+
 # Build from the source code
-*There is usually quite old version of Go language in a standard `apt` repositories available, and so it is better to add `golang-backports` PPA to get the latest version.*
+This method is considered a bit advanced for production use since you have to usually prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
 
 *Ubuntu/Debian*
+
+*There is usually quite old version of Go language in a standard `apt` repositories available, and so it is better to add `golang-backports` PPA to get the latest version.*
 
 **Install dependencies: Go, git and build-essentials:**
 ```bash
@@ -248,3 +281,31 @@ Using this method, you have to make sure the executable runs in a daemon mode us
 > Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 secs) in order to save all data to an underlying persistent storage
 
 Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
+
+### Example of systemd unit file
+Assuming Hornet binary is extracted to `/opt/hornet` together with configuration files, `systemd` unit file may look:
+
+```plaintext
+[Unit]
+Description=Hornet
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=hornet
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+
+User=hornet
+WorkingDirectory=/opt/hornet
+TimeoutSec=1200
+Restart=always
+ExecStart=/opt/hornet/hornet
+
+[Install]
+WantedBy=multi-user.target
+```
