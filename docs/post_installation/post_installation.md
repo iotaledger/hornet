@@ -162,7 +162,7 @@ Your salt: 6c71f4753f6fb52d7a4bb5471281400c8fef760533f0589026a0e646bc03acd4
 * `pwdhash` tool provides a combination of `passwordHash` and `passwordSalt` based on your input password
 * both values should be copied to the respective configuration values above
 
-Once Hornet is restarted then the Dashboard is accessible using the given credentials.
+Once Hornet is restarted then the dashboard is accessible using the given credentials.
 
 ## Peer neighbors
 IOTA network is a distributed network in which data is distributed among IOTA nodes. IOTA nodes broadcast messages to other IOTA nodes using a gossip protocol. To be able to participate in a network communication, each node has to establish a secure connection to some other nodes in network - to its peer neighbors - and mutually exchange messages. This is the way how the data is spread within IOTA network.
