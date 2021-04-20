@@ -60,7 +60,7 @@ Please continue to [post-installation steps](../post_installation/post_installat
 
 
 # Docker image
-Prepared Hornet docker images (amd64/x86_64 architecture) are available at [gohornet/hornet](https://hub.docker.com/r/gohornet/hornet) docker hub.
+Prepared Hornet Docker images (amd64/x86_64 architecture) are available at [gohornet/hornet](https://hub.docker.com/r/gohornet/hornet) Docker hub.
 
 Make sure that you've installed Docker on your machine before trying to use the Docker images. (Follow this [link](https://docs.docker.com/engine/install/) for install instructions).
 
@@ -75,15 +75,15 @@ See more details regarding the configuration in [post installation](../post_inst
 ```bash
 mkdir mainnetdb && sudo chown 39999:39999 mainnetdb
 ```
-* the docker image runs under user with uid `39999`, and so it has a full permission to the given directory
+* the Docker image runs under user with uid `39999`, and so it has a full permission to the given directory
 
 **Create the directory for the snapshots and set user permission to it:**
 ```bash
 mkdir -p snapshots/mainnet && sudo chown 39999:39999 snapshots -R
 ```
-* the docker image runs under user with uid `39999`, and so it has a full permission to the given directory
+* the Docker image runs under user with uid `39999`, and so it has a full permission to the given directory
 
-**Pull the latest image from `gohornet/hornet` public docker hub registry:**
+**Pull the latest image from `gohornet/hornet` public Docker hub registry:**
 ```bash
 docker pull gohornet/hornet:latest
 ```
@@ -105,10 +105,10 @@ So basically there should be the following files and directories created in the 
 docker run --rm -d --restart always -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet -v $(pwd)/mainnetdb:/app/mainnetdb --name hornet --net=host gohornet/hornet:latest
 ```
 * `$(pwd)`: stands for the current directory
-* `-d`: instructs docker to run the container instance in a detached mode (daemon).
-* `--restart always`: instructs docker the given container is restarted after docker reboot
+* `-d`: instructs Docker to run the container instance in a detached mode (daemon).
+* `--restart always`: instructs Docker the given container is restarted after Docker reboot
 * `--name hornet`: a name of the running container instance. You can refer to the given container by this name
-* `--net=host`: instructs docker to use directly network on host (so the network is not isolated). The best is to run on host network for better performance. It also means it is not necessary to specify any ports. Ports that are opened by container are opened directly on the host
+* `--net=host`: instructs Docker to use directly network on host (so the network is not isolated). The best is to run on host network for better performance. It also means it is not necessary to specify any ports. Ports that are opened by container are opened directly on the host
 * `-v $(pwd)/config.json:/app/config.json:ro`: it maps the local `config.json` file into the container in `readonly` mode
 * `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet`: it maps the local `snapshots` directory into the container
 * `-v $(pwd)/mainnetdb:/app/mainnetdb`: it maps the local `mainnetdb` directory into the container
@@ -119,7 +119,7 @@ docker run --rm -d --restart always -v $(pwd)/config.json:/app/config.json:ro -v
 ```bash
 docker log -f hornet
 ```
-* `-f`: instructs docker to continue displaying the log to stdout until CTRL+C is pressed
+* `-f`: instructs Docker to continue displaying the log to stdout until CTRL+C is pressed
 
 **Restarting Hornet:**
 ```bash
@@ -130,7 +130,7 @@ docker restart hornet
 ```bash
 docker stop --time 200 hornet
 ```
-* `--time 200`: instructs docker to wait for a grace period before shutting down
+* `--time 200`: instructs Docker to wait for a grace period before shutting down
 
 > Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 secs) in order to save all data to an underlying persistent storage
 
