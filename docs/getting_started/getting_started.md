@@ -24,35 +24,34 @@ Hornet exposes different functionality on different ports:
 
 The mentioned ports are important for flawless node operation. The REST HTTP API port is optional and only needed if you want to offer access to your node's API. All ports can be customized in [config.json](../post_installation/config.md) file.
 
-Please note: a default admin dashboard on port 8081 does not accept connections from public traffic by default (only from localhost).
+Please note: the default dashboard/webinterface only listens on localhost:8081 per default. If you want to make it accessible from the Internet, you will need to change the default configuration.
 
-There may be also additional ports required in order to work with additional optional plugins, such as dashboard, etc.
 
 ## Operating system
-Hornet is written in Go and can be deployed on all major platforms using a several installation methods.
+Hornet is written in Go and can be deployed on all major platforms using several different installation methods.
 
-Technically speaking, once the Hornet is compiled then the whole app is included in a single binary executable called `hornet` (`hornet.exe` on Win) accompanied with a several configuration files in `json` format. No other extra dependencies are required.
+Hornet ships as a single executable binary (`hornet` or `hornet.exe`) and some JSON configuration files, no further dependencies are needed.
 
-### Linux (and Raspberry PI)
+### Linux (and Raspberry Pi)
 Available installation methods:
-* [hornet apt repository](./installation_steps.md#hornet-apt-repository) (RECOMMENDED)
-* [docker image](./installation_steps.md#docker-image) (RECOMMENDED)
-* [prebuilt binary files](./installation_steps.md#pre-built-binaries)
-* [build from the source code](./installation_steps.md#build-from-the-source-code)
+* [Hornet apt repository](./installation_steps.md#hornet-apt-repository) (RECOMMENDED)
+* [Docker image](./installation_steps.md#docker-image) (RECOMMENDED)
+* [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
+* [Build from source](./installation_steps.md#build-from-the-source-code)
 
 ### MacOS
 Available installation methods:
-* [docker image](./installation_steps.md#docker-image) (RECOMMENDED)
-* [prebuilt binary files](./installation_steps.md#pre-built-binaries)
+* [Docker image](./installation_steps.md#docker-image) (RECOMMENDED)
+* [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
 
 ### Windows
 Available installation methods:
-* [docker image](./installation_steps.md#docker-image) (RECOMMENDED)
-* [prebuilt binary files](./installation_steps.md#pre-built-binaries)
+* [Docker image](./installation_steps.md#docker-image) (RECOMMENDED)
+* [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
 
 ## Configuration
-Hornet uses a set of several `json` configuration files that can be customized based on your use cases:
-* `config.json`: a configuration file that includes all core configuration parameters
-* `peering.json`: a configuration file that includes connection details to node neighbors (peers)
+Hornet uses several JSON configuration files that can be adjusted based on your deployment and use cases:
+* `config.json`: includes all core configuration parameters
+* `peering.json`: includes connection details to node neighbors (peers)
 
 See more details regarding the configuration in [post installation](../post_installation/config.md) chapter.

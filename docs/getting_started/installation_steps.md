@@ -24,22 +24,22 @@ sudo apt install hornet
 sudo systemctl enable hornet.service
 ```
 
-In `/var/lib/hornet` directory, there all the configuration files. See more details regarding the configuration in [post installation](../post_installation/config.md) chapter.
+The Hornet configuration files are located under the `/var/lib/hornet` directory. See more details on how to configure Hornet under the [post installation](../post_installation/config.md) chapter.
 
-In `etc/default/hornet` file, there is environment file that can be used to customize default parameters.
+Environment files to configure multiple default parameters are located under the `/etc/default/hornet` directory.
 
 **Start the node;** use `systemd` service to start running Hornet on the Mainnet:
 ```bash
 sudo service hornet start
 ```
 
-### Managing node
+### Managing the node
 **Displaying log output:**
 ```bash
 journalctl -fu hornet
 ```
 * `-f`: instructs `journalctl` to continue displaying the log to stdout until CTRL+C is pressed
-* `-u hornet`: it filters log output by user name
+* `-u hornet`: filter log output by user name
 
 **Restarting Hornet:**
 ```bash
@@ -51,7 +51,7 @@ sudo systemctl restart hornet
 sudo systemctl stop hornet
 ```
 
-> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 secs) in order to save all data to an underlying persistent storage
+> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
 Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
 
@@ -62,16 +62,16 @@ Please continue to [post-installation steps](../post_installation/post_installat
 # Docker image
 Prepared Hornet docker images (amd64/x86_64 architecture) are available at [gohornet/hornet](https://hub.docker.com/r/gohornet/hornet) docker hub.
 
-There has to be installed `docker engine` on a host in order to run docker images. Please, follow an [official installation guide](https://docs.docker.com/engine/install/) in order to install `docker engine`.
+Make sure that you've installed Docker on your machine before trying to use the Docker images. (Follow this [link](https://docs.docker.com/engine/install/) for install instructions).
 
-**Hornet uses `json` configuration files and those can be downloaded from the source code repo:**
+**Hornet uses JSON configuration files which can be downloaded from the repository on GitHub:**
 ```bash
 curl -LO https://raw.githubusercontent.com/gohornet/hornet/master/config.json
 curl -LO https://raw.githubusercontent.com/gohornet/hornet/master/peering.json
 ```
 See more details regarding the configuration in [post installation](../post_installation/config.md) chapter.
 
-**Create the directory for the database and set user permission to it:**
+**Create the directory for the database and set user permission for it:**
 ```bash
 mkdir mainnetdb && sudo chown 39999:39999 mainnetdb
 ```
@@ -165,7 +165,7 @@ Some navigation hints:
 ```bash
 tar -xf HORNET-0.6.0_Linux_x86_64.tar.gz
 ```
-* Once extracted, you get a main executable file, for ex `hornet` for linux, or `hornet.exe` for Windows
+* Once extracted, you get a main executable file, for example `hornet` for linux, or `hornet.exe` for Windows
 * There are also sample [configuration](../post_installation/config.md) `json` files available in the archive
 
 **Run Hornet using `--help` to get all executable-related arguments:**
@@ -222,7 +222,7 @@ WantedBy=multi-user.target
 
 
 
-# Build from the source code
+# Build from source code
 This method is considered a bit advanced for production use since you have to usually prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
 
 *Ubuntu/Debian*
@@ -252,7 +252,7 @@ git clone https://github.com/gohornet/hornet.git && cd hornet
 ```bash
 ./scripts/build_hornet.sh
 ```
-* it builds the Hornet based on the latest commit from `master` branch
+* it builds Hornet based on the latest commit from `master` branch
 * it takes a couple of minutes
 
 Once it is compiled, then the executable file named `hornet` should be available in the current directory:

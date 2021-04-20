@@ -1,14 +1,14 @@
 # Post-installation steps
-Once the Hornet is deployed, all parameters are set via configuration files.
+Once Hornet is deployed, all parameters are set via configuration files.
 
 ## Configuration
 The most important ones are:
-* `config.json`: include all configuration flags and their values
-* `peering.json`: include all connection details to your static peers (neighbors)
+* `config.json`: includes all configuration flags and their values
+* `peering.json`: includes all connection details to your static peers (neighbors)
 
 Since the Hornet node software is able to power original IOTA 1.0 network as well as IOTA 1.5 (aka Chrysalis), it is important to use respective `config.json` file that targets the IOTA network that we want. All configuration files that targets respective networks are available in [source code repo](https://github.com/gohornet/hornet/tree/master) on GitHub.
 
-Depending on installation path you selected, default config files may be also a part of the installation experience and so you may see the following configuration files at your deployment directory:
+Depending on the installation path you selected, default config files may be also be part of the installation process and so you may see the following configuration files at your deployment directory:
 ```bash
 config.json
 config_chrysalis_testnet.json
@@ -25,7 +25,7 @@ This behavior can be changed by running Hornet with some altering arguments.
 
 Please see [config.json](./config.md) and [peering.json](./peering.md) chapters for more information regarding respective configuration files.
 
-Once Hornet is executed, it outputs all loaded configuration parameters to `stdout` to be sure what configuration was loaded.
+Once Hornet is executed, it outputs all loaded configuration parameters to `stdout` to show what configuration was loaded.
 
 All other altering command line parameters can be obtained by running `hornet --help` or more detailed `hornet --help --full`.
 

@@ -1,7 +1,7 @@
 # Security 101
 This topic provides a checklist of steps for running a reliable and secure node.
 
-> Please note that servers that are reachable from a public internet are a constant target from security challengers. Please, make sure you follow a minimum security essentials summarized in this article
+> Please note that servers that are reachable from the Internet are a constant target from security challengers. Please, make sure you follow minimum security essentials summarized in this article
 
 ## Securing your device
 The security of the device that's running your node is important to stop attackers from gaining access to it.
@@ -23,7 +23,7 @@ To do so, you can use a firewall. All operating systems include firewall options
 On a cloud platforms such as AWS, Azure or GCP, one can block ports on VPS networking settings.
 
 ## Deciding whether to enable remote proof of work
-When you're configuring your node, you may have the option to allow it to do proof of work. When this feature is enabled, clients can ask your node to do remote proof of work.
+When you're configuring your node, you have the option to allow it to do proof of work. When this feature is enabled, clients can ask your node to do remote proof of work.
 
 Proof of work takes time and uses your node's computational power. So, you should consider it according to your infrastructure.
 

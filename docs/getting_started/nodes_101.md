@@ -9,7 +9,7 @@ Nodes are responsible for the following:
 * Exposing APIs for clients
 
 ## Attaching new messages to the Tangle
-A `message` is a data structure that is actually being broadcasted in the IOTA network and represents a node (vertex) in the Tangle graph. When nodes receive a new message, they attach it to the Tangle by adding it to their local database.
+A `message` is a data structure that is actually being broadcasted in the IOTA network and represents a vertex in the Tangle graph. When nodes receive a new message, they attach it to the Tangle by adding it to their local database.
 
 As a result, at any point in time, all nodes may have different messages in their local databases. These messages make up a node's view of the Tangle.
 

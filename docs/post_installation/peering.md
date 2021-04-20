@@ -1,6 +1,6 @@
 # Peering configuration
 
-The easiest way to add peers in Hornet is via dashboard. Simply go to `Peers` and click on `Add Peer`.
+The easiest way to add peers in Hornet is via the dashboard. Simply go to `Peers` and click on `Add Peer`.
 
 But for the sake of completeness this document describes the structure of the `peering.json` file.
 
