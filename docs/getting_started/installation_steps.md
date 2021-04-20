@@ -24,9 +24,9 @@ sudo apt install hornet
 sudo systemctl enable hornet.service
 ```
 
-The Hornet configuration files are located under the `/var/lib/hornet` directory. See more details on how to configure Hornet under the [post installation](../post_installation/config.md) chapter.
+The Hornet configuration files are located under the `/var/lib/hornet` directory. See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
-Environment files to configure multiple default parameters are located under the `/etc/default/hornet` directory.
+Environment file to configure multiple default parameters are located under the `/etc/default/hornet` directory.
 
 **Start the node;** use `systemd` service to start running Hornet on the Mainnet:
 ```bash
@@ -53,7 +53,7 @@ sudo systemctl stop hornet
 
 > Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
-Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
+See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
 
 -------
@@ -69,9 +69,9 @@ Make sure that you've installed Docker on your machine before trying to use the 
 curl -LO https://raw.githubusercontent.com/gohornet/hornet/master/config.json
 curl -LO https://raw.githubusercontent.com/gohornet/hornet/master/peering.json
 ```
-See more details regarding the configuration in [post installation](../post_installation/config.md) chapter.
+See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
-**Create directories for the database, snapshots and set user permission to them:**
+**Create empty directories for the database, snapshots and set user permission to them:**
 ```bash
 mkdir mainnetdb && sudo chown 39999:39999 mainnetdb
 mkdir -p snapshots/mainnet && sudo chown 39999:39999 snapshots -R
@@ -134,14 +134,14 @@ docker stop -t 200 hornet
 docker container rm hornet
 ```
 
-Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
+See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
 
 --------
 
 
 # Pre-built binaries
-Pre-built binaries are a great way how to get the latest single compiled executable in a single file including some default configuration JSON files.
+There are several pre-built binaries of Hornet for major platforms available including some default configuration JSON files.
 
 This method is considered a bit advanced for production use since you have to usually prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
 
@@ -161,7 +161,7 @@ Some navigation hints:
 tar -xf HORNET-0.6.0_Linux_x86_64.tar.gz
 ```
 * Once extracted, you get a main executable file, for example `hornet` for linux, or `hornet.exe` for Windows
-* There are also sample [configuration](../post_installation/config.md) JSON files available in the archive
+* There are also sample [configuration](../post_installation/post_installation.md) JSON files available in the archive (tar or zip)
 
 **Run Hornet using `--help` to get all executable-related arguments:**
 ```bash
@@ -173,7 +173,7 @@ tar -xf HORNET-0.6.0_Linux_x86_64.tar.gz
 ./hornet --version
 ```
 
-**Run Hornet using a default settings:**
+**Run Hornet using default settings:**
 ```bash
 ./hornet
 ```
@@ -182,10 +182,10 @@ Using this method, you have to make sure the executable runs in a daemon mode us
 
 > Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
-Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
+See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
 ### Example of systemd unit file
-Assuming the Hornet binary is extracted to `/opt/hornet` together with configuration files, `systemd` unit file would be:
+Assuming the Hornet executable is extracted to `/opt/hornet` together with configuration files, please find the following example of a `systemd` unit file:
 
 ```plaintext
 [Unit]
@@ -217,7 +217,7 @@ WantedBy=multi-user.target
 
 
 
-# Build from source code
+# Build from source
 This method is considered a bit advanced for production use since you have to usually prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
 
 *Ubuntu/Debian*
@@ -257,7 +257,7 @@ Once it is compiled, then the executable file named `hornet` should be available
 
 Example of version:
 ```plaintext
-HORNET 0.5.6-31ad46bb
+HORNET 0.6.0-31ad46bb
 ```
 * there is also short commit `sha` added to be sure what commit the given version is compiled against
 
@@ -275,10 +275,10 @@ Using this method, you have to make sure the executable runs in a daemon mode us
 
 > Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
-Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
+See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
 ### Example of systemd unit file
-Assuming the Hornet binary is extracted to `/opt/hornet` together with configuration files, `systemd` unit file would be:
+Assuming the Hornet executable is extracted to `/opt/hornet` together with configuration files, please find the following example of a `systemd` unit file:
 
 ```plaintext
 [Unit]

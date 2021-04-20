@@ -5,7 +5,7 @@ Node software is the backbone of the IOTA network. For an overview of tasks any 
 
 To make sure that your device meets the minimum security requirements for running a node, please see [Security 101](./security_101.md).
 
-> Please note: make sure you install Hornet version 0.6.0+ since it is the minimum version that targets IOTA 1.5 (Chrysalis) network. Version below 0.6.0 targets the legacy IOTA network.
+> Please note: make sure you install Hornet version 0.6.0+ since it is the minimum version that targets IOTA 1.5 (Chrysalis) network. Version below 0.6.0 (such as 0.5.x) targets the legacy IOTA network which is not a focus of this documentation.
 
 ## Recommended requirements
 To handle a potential high rate of messages per second, nodes need enough computational power to run reliably, including the following requirements:
@@ -17,7 +17,6 @@ To handle a potential high rate of messages per second, nodes need enough comput
 The amount of storage you need will depend on whether and how often you plan on pruning messages from your local database.
 
 Hornet exposes different functionality on different ports:
-* 14626 UDP - Autopeering port (depends whether autopeering is enabled)
 * 15600 TCP - Gossip port
 * 14265 TCP - REST HTTP API port (optional)
 * 8081 TCP - Dashboard/WebInterface (optional)
@@ -37,7 +36,7 @@ Available installation methods:
 * [Hornet apt repository](./installation_steps.md#hornet-apt-repository) (RECOMMENDED)
 * [Docker image](./installation_steps.md#docker-image) (RECOMMENDED)
 * [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
-* [Build from source](./installation_steps.md#build-from-the-source-code)
+* [Build from source](./installation_steps.md#build-from-source)
 
 ### MacOS
 Available installation methods:
@@ -54,4 +53,4 @@ Hornet uses several JSON configuration files that can be adjusted based on your 
 * `config.json`: includes all core configuration parameters
 * `peering.json`: includes connection details to node neighbors (peers)
 
-See more details regarding the configuration in [post installation](../post_installation/config.md) chapter.
+See more details regarding the configuration in [post installation](../post_installation/post_installation.md) chapter.
