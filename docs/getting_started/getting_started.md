@@ -12,7 +12,7 @@ To handle a potential high rate of messages per second, nodes need enough comput
 * 4 cores or 4 vCPU
 * 8 GB RAM
 * SSD storage
-* A public IP address (nodes gossiping with other nodes)
+* A public IP address
 
 The amount of storage you need will depend on whether and how often do you plan on pruning messages from your local database.
 
