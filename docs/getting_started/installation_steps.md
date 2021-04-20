@@ -222,7 +222,7 @@ This method is considered a bit advanced for production use since you have to us
 
 *Ubuntu/Debian*
 
-*There is usually quite old version of Go language in a standard `apt` repositories available, and so it is better to add `golang-backports` PPA to get the latest version.*
+*There is usually quite old version of Go language in standard `apt` repositories available, and so it is better to add `golang-backports` PPA to get the latest version.*
 
 **Install dependencies: Go, git and build-essentials:**
 ```bash
