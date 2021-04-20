@@ -8,7 +8,7 @@ To make sure that your device meets the minimum security requirements for runnin
 > Please note: make sure you install Hornet version 0.6.0+ since it is the minimum version that targets IOTA 1.5 (Chrysalis) network. Version below 0.6.0 targets the legacy IOTA network.
 
 ## Recommended requirements
-To handle a potential high rate of transactions per second, nodes need enough computational power to run reliably, including the following requirements:
+To handle a potential high rate of messages per second, nodes need enough computational power to run reliably, including the following requirements:
 * 4 cores or 4 vCPU
 * 8 GB RAM
 * SSD storage
