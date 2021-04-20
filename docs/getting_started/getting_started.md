@@ -18,7 +18,7 @@ The amount of storage you need will depend on whether and how often you plan on 
 
 Exposed a minimum set of ports:
 * 14626 UDP - Autopeering port (depends whether autopeering is enabled)
-* 15600 TCP - Gossip (neighbors) port
+* 15600 TCP - Gossip port
 * 14265 TCP - Rest API port (optional)
 * 8081 TCP - Default admin dashboard (optional)
 
