@@ -1,7 +1,7 @@
 # Getting started
 Running a node is the best way to use IOTA. By doing so, you have direct access to the Tangle instead of having to connect to and trust someone else's node, and you help the IOTA network to become more distributed and resilient.
 
-A node software is a backbone of IOTA network. For a overview of tasks any node is responsible for, please see [Node 101](./nodes_101.md).
+Node software is the backbone of the IOTA network. For an overview of tasks any node is responsible for, please see [Node 101](./nodes_101.md).
 
 To make sure that your device meets the minimum security requirements for running a node, please see [Security 101](./security_101.md).
 
