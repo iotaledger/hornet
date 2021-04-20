@@ -22,7 +22,7 @@ Hornet exposes different functionality on different ports:
 * 14265 TCP - REST HTTP API port (optional)
 * 8081 TCP - Dashboard/WebInterface (optional)
 
-The mentioned ports are important for a minimum flawless node operation. Rest API port is optional one if you want to provide access to your node's API calls from external parties. All ports can be customized in a [config.json](../post_installation/config.md) file.
+The mentioned ports are important for flawless node operation. The REST HTTP API port is optional and only needed if you want to offer access to your node's API. All ports can be customized in [config.json](../post_installation/config.md) file.
 
 Please note: a default admin dashboard on port 8081 does not accept connections from public traffic by default (only from localhost).
 
