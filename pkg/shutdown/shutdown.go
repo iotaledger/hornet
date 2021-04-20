@@ -6,6 +6,7 @@ package shutdown
 const (
 	PriorityCloseDatabase       = iota // no dependencies
 	PriorityFlushToDatabase            // depends on PriorityCloseDatabase
+	PriorityTangleCache                // depends on PriorityFlushToDatabase
 	PriorityTipselection               // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker, PriorityMilestoneSolidifier
 	PriorityMilestoneSolidifier        // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker, PriorityMilestoneProcessor, PriorityMilestoneSolidifier, PriorityCoordinator, PriorityRestAPI, PriorityWarpSync
 	PriorityMilestoneProcessor         // depends on PriorityFlushToDatabase, PriorityMilestoneSolidifier, triggered by PriorityReceiveTxWorker, PriorityMilestoneSolidifier (searchMissingMilestone)

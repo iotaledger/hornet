@@ -346,7 +346,9 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 			proc.Events.MessageProcessed.Trigger(wu.msg, request, p)
 		}
 
-		if proc.storage.ContainsMessage(wu.msg.GetMessageID()) {
+		// the message should be in the cache already by high chance, because the state is hashed.
+		// there is no need to create disc pressure by doing a storage lookup just for these stats.
+		if proc.storage.ContainsMessage(wu.msg.GetMessageID(), objectstorage.WithReadSkipStorage(true)) {
 			proc.serverMetrics.KnownMessages.Inc()
 			p.Metrics.KnownMessages.Inc()
 		}

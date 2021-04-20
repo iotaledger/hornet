@@ -23,8 +23,10 @@ var (
 )
 
 type packageEvents struct {
-	ReceivedValidMilestone *events.Event
-	PruningStateChanged    *events.Event
+	ReceivedValidMilestone          *events.Event
+	CachedMessageRequestedAndStored *events.Event
+	CachedUnreferencedMessageStored *events.Event
+	PruningStateChanged             *events.Event
 }
 
 type ReadOption = objectstorage.ReadOption
@@ -93,8 +95,10 @@ func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile
 		utxoManager:             utxoManager,
 		belowMaxDepth:           milestone.Index(belowMaxDepth),
 		Events: &packageEvents{
-			ReceivedValidMilestone: events.NewEvent(MilestoneWithRequestedCaller),
-			PruningStateChanged:    events.NewEvent(events.BoolCaller),
+			ReceivedValidMilestone:          events.NewEvent(MilestoneWithRequestedCaller),
+			CachedMessageRequestedAndStored: events.NewEvent(CachedMessageCaller),
+			CachedUnreferencedMessageStored: events.NewEvent(CachedMessageCaller),
+			PruningStateChanged:             events.NewEvent(events.BoolCaller),
 		},
 	}
 

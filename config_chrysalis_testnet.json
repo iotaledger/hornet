@@ -197,7 +197,7 @@
     ]
   },
   "warpsync": {
-    "advancementRange": 150
+    "advancementRange": 15
   },
   "spammer": {
     "message": "Binary is the future.",

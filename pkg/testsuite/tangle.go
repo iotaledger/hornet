@@ -19,7 +19,7 @@ import (
 func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMessage {
 
 	// Store message in the database
-	cachedMsg, alreadyAdded := te.storage.AddMessageToStorage(msg, te.storage.GetLatestMilestoneIndex(), false, true, true)
+	cachedMsg, alreadyAdded := te.storage.AddMessageToStorage(msg, te.storage.GetLatestMilestoneIndex(), 0, false, true)
 	require.NotNil(te.TestInterface, cachedMsg)
 	require.False(te.TestInterface, alreadyAdded)
 

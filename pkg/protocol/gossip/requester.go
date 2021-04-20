@@ -6,6 +6,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hive.go/objectstorage"
 )
 
 // RequesterOptions are options around a Requester.
@@ -191,7 +192,15 @@ func (r *Requester) Request(messageID hornet.MessageID, msIndex milestone.Index,
 		return false
 	}
 
-	if r.storage.ContainsMessage(messageID) {
+	// it's ok to skip the storage here, because there are only the following situations that may happen:
+	//
+	// 1. we already walked the tangle and these messages were missing in the storage (RequestMultiple, RequestMissingMilestoneParents)
+	// 2. a new requested message came in, so either the message is already in the cache, or it shouldn't exist in the storage by high chance. (RequestParents)
+	// 3. a new milestone came in by natural gossip or it was requested. In both cases the messages are in the cache, or they doesn't exist in the storage by high change. (RequestMilestoneParents)
+	//
+	// If a message is not in the cache, but already in the storage, we would request it again and detect it as already stored.
+	// No further messages would be requested.
+	if r.storage.ContainsMessage(messageID, objectstorage.WithReadSkipStorage(true)) {
 		return false
 	}
 

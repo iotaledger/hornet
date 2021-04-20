@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hive.go/objectstorage"
 )
 
 var (
@@ -35,11 +36,19 @@ func (t *Tangle) TriggerSolidifier() {
 	t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
 }
 
-func (t *Tangle) markMessageAsSolid(cachedMetadata *storage.CachedMetadata) {
+func (t *Tangle) markMessageAsSolid(cachedMessage *storage.CachedMessage, cachedMetadata *storage.CachedMetadata) {
+	defer cachedMessage.Release(true)
 	defer cachedMetadata.Release(true)
 
 	// update the solidity flags of this message
 	cachedMetadata.GetMetadata().SetSolid(true)
+
+	if t.storage.IsNodeAlmostSynced() {
+		ycri, _ := dag.GetConeRootIndexes(t.storage, cachedMetadata.Retain(), t.storage.GetConfirmedMilestoneIndex()) // meta +1
+		cachedChildren := t.storage.GetCachedChildrenOfMessageID(cachedMessage.GetMessage().GetMessageID(), objectstorage.WithIteratorSkipStorage(true))
+		t.Events.CachedMessageSolid.Trigger(ycri, cachedMessage, cachedChildren)
+		cachedChildren.Release(true)
+	}
 
 	t.Events.MessageSolid.Trigger(cachedMetadata)
 	t.messageSolidSyncEvent.Trigger(cachedMetadata.GetMetadata().GetMessageID().ToMapKey())
@@ -119,19 +128,24 @@ func (t *Tangle) SolidQueueCheck(
 	// no messages to request => the whole cone is solid
 	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
 	for _, messageID := range messageIDsToSolidify {
+		cachedMessage := messagesMemcache.GetCachedMessageOrNil(messageID)
+		if cachedMessage == nil {
+			t.log.Panicf("solidQueueCheck: Message not found: %v", messageID.ToHex())
+		}
+
 		cachedMsgMeta := metadataMemcache.GetCachedMetadataOrNil(messageID)
 		if cachedMsgMeta == nil {
 			t.log.Panicf("solidQueueCheck: Message metadata not found: %v", messageID.ToHex())
 		}
 
-		t.markMessageAsSolid(cachedMsgMeta.Retain())
+		t.markMessageAsSolid(cachedMessage.Retain(), cachedMsgMeta.Retain())
 	}
 
 	tSolid := time.Now()
 
 	if t.storage.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
-		t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(messageIDsToSolidify, metadataMemcache, abortSignal)
+		t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(messageIDsToSolidify, messagesMemcache, metadataMemcache, abortSignal)
 	}
 
 	t.log.Infof("Solidifier finished: msgs: %d, collect: %v, solidity %v, propagation: %v, total: %v", msgsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
@@ -272,6 +286,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	timeStart := time.Now()
 	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, messagesMemcache, metadataMemcache, cachedMsToSolidify.GetMilestone().MessageID,
 		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
+			t.Events.CachedMetadataReferenced.Trigger(index, msgMeta)
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 		},
 		func(confirmation *whiteflag.Confirmation) {
@@ -280,7 +295,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			timeSetConfirmedMilestoneIndex = time.Now()
 			if t.storage.IsNodeAlmostSynced() {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
-				dag.UpdateConeRootIndexes(t.storage, metadataMemcache, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+				dag.UpdateConeRootIndexes(t.storage, metadataMemcache, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex, objectstorage.WithIteratorSkipStorage(true))
 			}
 			timeUpdateConeRootIndexes = time.Now()
 			t.Events.ConfirmedMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1

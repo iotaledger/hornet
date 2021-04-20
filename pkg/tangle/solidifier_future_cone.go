@@ -6,6 +6,7 @@ import (
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
@@ -15,20 +16,23 @@ type FutureConeSolidifier struct {
 	syncutils.Mutex
 
 	storage                *storage.Storage
-	markMessageAsSolidFunc func(*storage.CachedMetadata)
+	markMessageAsSolidFunc func(*storage.CachedMessage, *storage.CachedMetadata)
 
+	messagesMemcache  *storage.MessagesMemcache
 	metadataMemcache  *storage.MetadataMemcache
 	childrenTraverser *dag.ChildrenTraverser
 }
 
 // NewFutureConeSolidifier creates a new FutureConeSolidifier instance.
-func NewFutureConeSolidifier(s *storage.Storage, markMessageAsSolidFunc func(*storage.CachedMetadata)) *FutureConeSolidifier {
+func NewFutureConeSolidifier(s *storage.Storage, markMessageAsSolidFunc func(*storage.CachedMessage, *storage.CachedMetadata)) *FutureConeSolidifier {
 
+	messagesMemcache := storage.NewMessagesMemcache(s)
 	metadataMemcache := storage.NewMetadataMemcache(s)
 
 	return &FutureConeSolidifier{
 		storage:                s,
 		markMessageAsSolidFunc: markMessageAsSolidFunc,
+		messagesMemcache:       messagesMemcache,
 		metadataMemcache:       metadataMemcache,
 		childrenTraverser:      dag.NewChildrenTraverser(s, metadataMemcache),
 	}
@@ -40,6 +44,7 @@ func (s *FutureConeSolidifier) Cleanup(forceRelease bool) {
 	s.Lock()
 	defer s.Unlock()
 
+	s.messagesMemcache.Cleanup(forceRelease)
 	s.metadataMemcache.Cleanup(forceRelease)
 }
 
@@ -51,25 +56,25 @@ func (s *FutureConeSolidifier) SolidifyMessageAndFutureCone(cachedMsgMeta *stora
 
 	defer cachedMsgMeta.Release(true)
 
-	return s.solidifyFutureCone(s.childrenTraverser, s.metadataMemcache, hornet.MessageIDs{cachedMsgMeta.GetMetadata().GetMessageID()}, abortSignal)
+	return s.solidifyFutureCone(s.childrenTraverser, s.messagesMemcache, s.metadataMemcache, hornet.MessageIDs{cachedMsgMeta.GetMetadata().GetMessageID()}, abortSignal)
 }
 
 // SolidifyFutureConesWithMetadataMemcache updates the solidity of the given messages and their future cones (messages approving the given messages).
 // This function doesn't use the same memcache nor traverser like the FutureConeSolidifier, but it holds the lock, so no other solidifications are done in parallel.
-func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(messageIDs hornet.MessageIDs, metadataMemcache *storage.MetadataMemcache, abortSignal chan struct{}) error {
+func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(messageIDs hornet.MessageIDs, messagesMemcache *storage.MessagesMemcache, metadataMemcache *storage.MetadataMemcache, abortSignal chan struct{}) error {
 	s.Lock()
 	defer s.Unlock()
 
 	// we do not cleanup the traverser to not cleanup the MetadataMemcache
 	t := dag.NewChildrenTraverser(s.storage, metadataMemcache)
 
-	return s.solidifyFutureCone(t, metadataMemcache, messageIDs, abortSignal)
+	return s.solidifyFutureCone(t, messagesMemcache, metadataMemcache, messageIDs, abortSignal)
 }
 
 // solidifyFutureCone updates the solidity of the future cone (messages approving the given messages).
 // We keep on walking the future cone, if a message became newly solid during the walk.
 // metadataMemcache has to be cleaned up outside.
-func (s *FutureConeSolidifier) solidifyFutureCone(traverser *dag.ChildrenTraverser, metadataMemcache *storage.MetadataMemcache, messageIDs hornet.MessageIDs, abortSignal chan struct{}) error {
+func (s *FutureConeSolidifier) solidifyFutureCone(traverser *dag.ChildrenTraverser, messagesMemcache *storage.MessagesMemcache, metadataMemcache *storage.MetadataMemcache, messageIDs hornet.MessageIDs, abortSignal chan struct{}) error {
 
 	for _, messageID := range messageIDs {
 
@@ -106,8 +111,10 @@ func (s *FutureConeSolidifier) solidifyFutureCone(traverser *dag.ChildrenTravers
 					}
 				}
 
+				cachedMsg := messagesMemcache.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID())
+
 				// mark current message as solid
-				s.markMessageAsSolidFunc(cachedMsgMeta.Retain())
+				s.markMessageAsSolidFunc(cachedMsg.Retain(), cachedMsgMeta.Retain())
 
 				// walk the future cone since the message got newly solid
 				return true, nil
@@ -116,7 +123,8 @@ func (s *FutureConeSolidifier) solidifyFutureCone(traverser *dag.ChildrenTravers
 			// no need to consume here
 			nil,
 			true,
-			abortSignal); err != nil {
+			abortSignal,
+			objectstorage.WithIteratorSkipStorage(true)); err != nil {
 			return err
 		}
 	}
