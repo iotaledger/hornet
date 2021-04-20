@@ -19,7 +19,7 @@ The amount of storage you need will depend on whether and how often you plan on 
 Exposed a minimum set of ports:
 * 14626 UDP - Autopeering port (depends whether autopeering is enabled)
 * 15600 TCP - Gossip port
-* 14265 TCP - Rest API port (optional)
+* 14265 TCP - REST HTTP API port (optional)
 * 8081 TCP - Default admin dashboard (optional)
 
 The mentioned ports are important for a minimum flawless node operation. Rest API port is optional one if you want to provide access to your node's API calls from external parties. All ports can be customized in a [config.json](../post_installation/config.md) file.
