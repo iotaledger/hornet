@@ -71,14 +71,9 @@ curl -LO https://raw.githubusercontent.com/gohornet/hornet/master/peering.json
 ```
 See more details regarding the configuration in [post installation](../post_installation/config.md) chapter.
 
-**Create the directory for the database and set user permission for it:**
+**Create directories for the database, snapshots and set user permission to them:**
 ```bash
 mkdir mainnetdb && sudo chown 39999:39999 mainnetdb
-```
-* the Docker image runs under user with uid `39999`, and so it has a full permission to the given directory
-
-**Create the directory for the snapshots and set user permission to it:**
-```bash
 mkdir -p snapshots/mainnet && sudo chown 39999:39999 snapshots -R
 ```
 * the Docker image runs under user with uid `39999`, and so it has a full permission to the given directory
