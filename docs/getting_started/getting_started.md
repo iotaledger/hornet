@@ -16,7 +16,7 @@ To handle a potential high rate of messages per second, nodes need enough comput
 
 The amount of storage you need will depend on whether and how often you plan on pruning messages from your local database.
 
-Exposed a minimum set of ports:
+Hornet exposes different functionality on different ports:
 * 14626 UDP - Autopeering port (depends whether autopeering is enabled)
 * 15600 TCP - Gossip port
 * 14265 TCP - REST HTTP API port (optional)
