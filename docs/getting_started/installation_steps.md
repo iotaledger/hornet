@@ -128,11 +128,11 @@ docker restart hornet
 
 **Stopping Hornet:**
 ```bash
-docker stop --time 200 hornet
+docker stop -t 200 hornet
 ```
-* `--time 200`: instructs Docker to wait for a grace period before shutting down
+* `-t 200`: instructs Docker to wait for a grace period before shutting down
 
-> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 secs) in order to save all data to an underlying persistent storage
+> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
 **Removing container:**
 ```bash
@@ -146,7 +146,7 @@ Please continue to [post-installation steps](../post_installation/post_installat
 
 
 # Pre-built binaries
-Pre-built binaries are a great way how to get the latest single compiled executable in a single file including some default configuration `json` files.
+Pre-built binaries are a great way how to get the latest single compiled executable in a single file including some default configuration JSON files.
 
 This method is considered a bit advanced for production use since you have to usually prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
 
@@ -166,7 +166,7 @@ Some navigation hints:
 tar -xf HORNET-0.6.0_Linux_x86_64.tar.gz
 ```
 * Once extracted, you get a main executable file, for example `hornet` for linux, or `hornet.exe` for Windows
-* There are also sample [configuration](../post_installation/config.md) `json` files available in the archive
+* There are also sample [configuration](../post_installation/config.md) JSON files available in the archive
 
 **Run Hornet using `--help` to get all executable-related arguments:**
 ```bash
@@ -185,12 +185,12 @@ tar -xf HORNET-0.6.0_Linux_x86_64.tar.gz
 
 Using this method, you have to make sure the executable runs in a daemon mode using for example `systemd`.
 
-> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 secs) in order to save all data to an underlying persistent storage
+> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
 Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
 
 ### Example of systemd unit file
-Assuming Hornet binary is extracted to `/opt/hornet` together with configuration files, `systemd` unit file may look:
+Assuming the Hornet binary is extracted to `/opt/hornet` together with configuration files, `systemd` unit file would be:
 
 ```plaintext
 [Unit]
@@ -278,12 +278,12 @@ HORNET 0.5.6-31ad46bb
 
 Using this method, you have to make sure the executable runs in a daemon mode using for example `systemd`.
 
-> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 secs) in order to save all data to an underlying persistent storage
+> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
 Please continue to [post-installation steps](../post_installation/post_installation.md) to properly configure Hornet.
 
 ### Example of systemd unit file
-Assuming Hornet binary is extracted to `/opt/hornet` together with configuration files, `systemd` unit file may look:
+Assuming the Hornet binary is extracted to `/opt/hornet` together with configuration files, `systemd` unit file would be:
 
 ```plaintext
 [Unit]
