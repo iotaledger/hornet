@@ -14,7 +14,7 @@ To handle a potential high rate of messages per second, nodes need enough comput
 * SSD storage
 * A public IP address
 
-The amount of storage you need will depend on whether and how often do you plan on pruning messages from your local database.
+The amount of storage you need will depend on whether and how often you plan on pruning messages from your local database.
 
 Exposed a minimum set of ports:
 * 14626 UDP - Autopeering port (depends whether autopeering is enabled)
