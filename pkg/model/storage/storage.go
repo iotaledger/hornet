@@ -22,11 +22,12 @@ var (
 	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
 )
 
-type packageEvents struct {
+type Events struct {
 	ReceivedValidMilestone          *events.Event
 	CachedMessageRequestedAndStored *events.Event
 	CachedUnreferencedMessageStored *events.Event
 	PruningStateChanged             *events.Event
+	NodeBecameSync                  *events.Event
 }
 
 type ReadOption = objectstorage.ReadOption
@@ -69,6 +70,7 @@ type Storage struct {
 	isNodeSynced                    bool
 	isNodeAlmostSynced              bool
 	isNodeSyncedWithinBelowMaxDepth bool
+	wasNodeSyncedBefore             bool
 	waitForNodeSyncedChannelsLock   syncutils.Mutex
 	waitForNodeSyncedChannels       []chan struct{}
 
@@ -80,7 +82,7 @@ type Storage struct {
 	utxoManager *utxo.Manager
 
 	// events
-	Events *packageEvents
+	Events *Events
 }
 
 func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) *Storage {
@@ -94,11 +96,12 @@ func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile
 		milestonePublicKeyCount: milestonePublicKeyCount,
 		utxoManager:             utxoManager,
 		belowMaxDepth:           milestone.Index(belowMaxDepth),
-		Events: &packageEvents{
+		Events: &Events{
 			ReceivedValidMilestone:          events.NewEvent(MilestoneWithRequestedCaller),
 			CachedMessageRequestedAndStored: events.NewEvent(CachedMessageCaller),
 			CachedUnreferencedMessageStored: events.NewEvent(CachedMessageCaller),
 			PruningStateChanged:             events.NewEvent(events.BoolCaller),
+			NodeBecameSync:                  events.NewEvent(events.VoidCaller),
 		},
 	}
 

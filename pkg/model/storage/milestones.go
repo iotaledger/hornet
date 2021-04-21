@@ -137,10 +137,20 @@ func (s *Storage) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) 
 		return
 	}
 
+	triggerNodeBecameSync := false
+
 	s.isNodeSynced = confirmedIndex == latestIndex
 	if s.isNodeSynced {
+		// only trigger NodeBecameSync if the node was not synced before
+		triggerNodeBecameSync = !s.wasNodeSyncedBefore
+		s.wasNodeSyncedBefore = true
+
 		// if the node is sync, signal all waiting routines at the end
 		defer func() {
+			if triggerNodeBecameSync {
+				s.Events.NodeBecameSync.Trigger()
+			}
+
 			s.waitForNodeSyncedChannelsLock.Lock()
 			defer s.waitForNodeSyncedChannelsLock.Unlock()
 
@@ -161,6 +171,10 @@ func (s *Storage) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) 
 		return
 	}
 	s.isNodeAlmostSynced = confirmedIndex >= (latestIndex - isNodeAlmostSyncedThreshold)
+	if !s.isNodeAlmostSynced {
+		// reset the internal flag, so the NodeBecameSync can be triggered again if the node becomes sync
+		s.wasNodeSyncedBefore = false
+	}
 
 	// catch overflow
 	if latestIndex < s.belowMaxDepth {

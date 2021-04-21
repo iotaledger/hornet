@@ -48,6 +48,10 @@ type RequestQueue interface {
 	// Setting a filter automatically clears all queued and pending requests which do not fulfill
 	// the filter criteria.
 	Filter(f FilterFunc)
+	// FreeMemory copies the content of the internal maps to newly created maps.
+	// This is neccessary, otherwise the GC is not able to free the memory used by the old maps.
+	// "delete" doesn't shrink the maximum memory used by the map, since it only marks the entry as deleted.
+	FreeMemory()
 }
 
 // FilterFunc is a function which determines whether a request should be enqueued or not.
@@ -309,6 +313,36 @@ func (pq *priorityqueue) Filter(f FilterFunc) {
 		}
 	}
 	pq.filter = f
+}
+
+// FreeMemory copies the content of the internal maps to newly created maps.
+// This is neccessary, otherwise the GC is not able to free the memory used by the old maps.
+// "delete" doesn't shrink the maximum memory used by the map, since it only marks the entry as deleted.
+func (pq *priorityqueue) FreeMemory() {
+	pq.Lock()
+	defer pq.Unlock()
+
+	queueSlice := make([]*Request, len(pq.queue))
+	copy(queueSlice, pq.queue)
+	pq.queue = queueSlice
+
+	queuedMap := make(map[string]*Request)
+	for messageIDMapKey, request := range pq.queued {
+		queuedMap[messageIDMapKey] = request
+	}
+	pq.queued = queuedMap
+
+	pendingMap := make(map[string]*Request)
+	for messageIDMapKey, request := range pq.pending {
+		pendingMap[messageIDMapKey] = request
+	}
+	pq.pending = pendingMap
+
+	processingMap := make(map[string]*Request)
+	for messageIDMapKey, request := range pq.processing {
+		processingMap[messageIDMapKey] = request
+	}
+	pq.processing = processingMap
 }
 
 func (pq *priorityqueue) Len() int { return len(pq.queue) }
