@@ -121,8 +121,29 @@ Your node's ledger accumulates many messages, which uses a significant disk capa
   }
 ```
 
-### Enabling snapshot pruning
-During a local snapshot, messages may be deleted from the ledger if they were confirmed by an old milestone. This process is called pruning.
+### Snapshot pruning
+During a snapshot, messages may be deleted from the ledger if they were confirmed by an old milestone. In other words, the term `pruning` means the deletion of the old history from the node database:
+* To enable pruning, set the `pruning.enabled` key to enabled
+* The `pruning.delay` defines how far back from the current confirmed milestone should be pruned
 
-To enable pruning, set the `pruning.enabled` key to enabled.
+There are two types of snapshots:
 
+**Delta snapshot**
+A delta snapshot points to a specific full snapshot, ie. delta snapshot consists of the changes since the last full snapshot.
+
+**Full snapshot**
+The full snapshot includes the whole ledger state to a specific milestone and a solid entry point. 
+
+
+### How to work with snapshots
+If your run Hornet node for the first time, you need to start it with a full-snapshot. *The Hornet downloads it for you automatically from trusted sources.*
+
+Additionally, you can start it with an specific delta snapshot.
+
+You can use the Hornet tools for that:
+```bash
+hornet tool
+```
+* snapgen: generates an initial snapshot for a private network
+* snapmerge: merges a full and delta snapshot into an updated full snapshot
+* snapinfo: outputs information about a snapshot file
