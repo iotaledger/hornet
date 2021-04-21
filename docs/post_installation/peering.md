@@ -1,7 +1,10 @@
-# peering.json
+# Peering configuration
 
-The easiest way to add peers in Hornet is via dashboard. Simply go to `Peers` and click on `Add Peer`.  
+The easiest way to add peers in Hornet is via the Dashboard. Simply go to `Peers` and click on `Add Peer`.
+
 But for the sake of completeness this document describes the structure of the `peering.json` file.
+
+The default config file is named `peering.json`. You can change the path or name of the config file by using the `-n` or `--peeringConfig` argument while executing `hornet` executable.
 
 The `peering.json` file contains a list of peers. Peers have the following attributes:
 
