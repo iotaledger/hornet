@@ -81,6 +81,17 @@ mkdir -p snapshots/mainnet && sudo chown 39999:39999 snapshots -R
 **Pull the latest image from `gohornet/hornet` public Docker hub registry:**
 ```bash
 docker pull gohornet/hornet:latest
+```
+
+So basically there should be the following files and directories created in the current directory:
+
+```plaintext
+.
+├── config.json
+├── peering.json
+├── mainnetdb       <DIRECTORY>
+└── snapshots       <DIRECTORY>
+    └── mainnet     <DIRECTORY>
 
 3 directories, 2 files
 ```
@@ -88,13 +99,93 @@ docker pull gohornet/hornet:latest
 **Start the node;** using `docker run` command:
 ```bash
 docker run --rm -d --restart always -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet -v $(pwd)/mainnetdb:/app/mainnetdb --name hornet --net=host gohornet/hornet:latest
+```
+* `$(pwd)`: stands for the current directory
+* `-d`: instructs Docker to run the container instance in a detached mode (daemon).
+* `--restart always`: instructs Docker the given container is restarted after Docker reboot
+* `--name hornet`: a name of the running container instance. You can refer to the given container by this name
+* `--net=host`: instructs Docker to use directly network on host (so the network is not isolated). The best is to run on host network for better performance. It also means it is not necessary to specify any ports. Ports that are opened by container are opened directly on the host
+* `-v $(pwd)/config.json:/app/config.json:ro`: it maps the local `config.json` file into the container in `readonly` mode
+* `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet`: it maps the local `snapshots` directory into the container
+* `-v $(pwd)/mainnetdb:/app/mainnetdb`: it maps the local `mainnetdb` directory into the container
+* all mentioned directories are mapped to the given container and so the Hornet in container persists the data directly to those directories
+
+### Managing node
+**Displaying log output:**
+```bash
+docker log -f hornet
+```
+* `-f`: instructs Docker to continue displaying the log to stdout until CTRL+C is pressed
+
+**Restarting Hornet:**
+```bash
+docker restart -t 200 hornet
+```
+
+**Stopping Hornet:**
+```bash
+docker stop -t 200 hornet
+```
+* `-t 200`: instructs Docker to wait for a grace period before shutting down
+
+> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
 **Removing container:**
 ```bash
 docker container rm hornet
 ```
 
+### Using docker-compose
+Docker-compose is a tool on top of the Docker engine that enables you (among other features) to define Docker parameters in a structured way via `yaml` file. Then, with a single `docker-compose` command, you create and start containers based on your configuration.
+
+Create `docker-compose.yml` file among the other files created above:
+
+```plaintext
+.
+├── config.json
+├── peering.json
+├── docker-compose.yml      <NEWLY ADDED FILE>
+├── mainnetdb
+└── snapshots
+    └── mainnet
+```
+
+```plaintext
+version: '3'
+services:
+  hornet:
+    container_name: hornet
+    image: gohornet/hornet:latest
+    network_mode: host
+    restart: always
+    cap_drop:
+      - ALL
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./peering.json:/app/peering.json
+      - ./snapshots/mainnet:/app/snapshots/mainnet
+      - ./mainnetdb:/app/mainnetdb
+```
+
+Then run `docker-compose up` in the current directory:
+```bash
+docker-compose up
+```
+* it reads parameters from the given `docker-compose.yml` and fires up the container named `hornet` based on them
+* `docker-compose up` automatically runs containers in detached mode (as daemon)
+
+Restarting and managing containers that were created by `docker-compose` can be done in the same fashion as mentioned above (`docker log`, `docker restart`, etc.).
+
+
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
+
+### Building Hornet Docker image
+
+All files required to start and build Hornet container are also part of the Hornet repo, so you can alternatively clone the repo and starts from there.
+
+This approach is, for example, used in `hornet-testnet-boilerplate` by our friend Dave Fijter. Please see it [here](https://github.com/fijter/hornet-testnet-boilerplate).
+
+This boilerplate also builds a new container image from the source, so it can be used as an alternative to [Build from source](#build-from-source) approach.
 
 
 --------
