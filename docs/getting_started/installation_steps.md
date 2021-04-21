@@ -51,7 +51,7 @@ sudo systemctl restart hornet
 sudo systemctl stop hornet
 ```
 
-> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+> Please note: Hornet uses an in-memory cache, so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
@@ -76,21 +76,11 @@ See more details on how to configure Hornet under the [post installation](../pos
 mkdir mainnetdb && sudo chown 39999:39999 mainnetdb
 mkdir -p snapshots/mainnet && sudo chown 39999:39999 snapshots -R
 ```
-* the Docker image runs under user with uid `39999`, and so it has a full permission to the given directory
+* The Docker image runs under user with uid `39999`, so it has a full permission to the given directory
 
 **Pull the latest image from `gohornet/hornet` public Docker hub registry:**
 ```bash
 docker pull gohornet/hornet:latest
-```
-
-So basically there should be the following files and directories created in the current directory:
-```plaintext
-.
-├── config.json
-├── peering.json
-├── mainnetdb       <DIRECTORY>
-└── snapshots       <DIRECTORY>
-    └── mainnet     <DIRECTORY>
 
 3 directories, 2 files
 ```
@@ -98,36 +88,6 @@ So basically there should be the following files and directories created in the 
 **Start the node;** using `docker run` command:
 ```bash
 docker run --rm -d --restart always -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet -v $(pwd)/mainnetdb:/app/mainnetdb --name hornet --net=host gohornet/hornet:latest
-```
-* `$(pwd)`: stands for the current directory
-* `-d`: instructs Docker to run the container instance in a detached mode (daemon).
-* `--restart always`: instructs Docker the given container is restarted after Docker reboot
-* `--name hornet`: a name of the running container instance. You can refer to the given container by this name
-* `--net=host`: instructs Docker to use directly network on host (so the network is not isolated). The best is to run on host network for better performance. It also means it is not necessary to specify any ports. Ports that are opened by container are opened directly on the host
-* `-v $(pwd)/config.json:/app/config.json:ro`: it maps the local `config.json` file into the container in `readonly` mode
-* `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet`: it maps the local `snapshots` directory into the container
-* `-v $(pwd)/mainnetdb:/app/mainnetdb`: it maps the local `mainnetdb` directory into the container
-* all mentioned directories are mapped to the given container and so the Hornet in container persists the data directly to those directories
-
-### Managing node
-**Displaying log output:**
-```bash
-docker log -f hornet
-```
-* `-f`: instructs Docker to continue displaying the log to stdout until CTRL+C is pressed
-
-**Restarting Hornet:**
-```bash
-docker restart hornet
-```
-
-**Stopping Hornet:**
-```bash
-docker stop -t 200 hornet
-```
-* `-t 200`: instructs Docker to wait for a grace period before shutting down
-
-> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
 **Removing container:**
 ```bash
@@ -180,7 +140,7 @@ tar -xf HORNET-0.6.0_Linux_x86_64.tar.gz
 
 Using this method, you have to make sure the executable runs in a daemon mode using for example `systemd`.
 
-> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+> Please note: Hornet uses an in-memory cache, so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
@@ -218,11 +178,11 @@ WantedBy=multi-user.target
 
 
 # Build from source
-This method is considered a bit advanced for production use since you have to usually prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
+This method is considered a bit advanced for production use since you usually have to prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
 
 *Ubuntu/Debian*
 
-*There is usually quite old version of Go language in standard `apt` repositories available, and so it is better to add `golang-backports` PPA to get the latest version.*
+*There is usually quite old version of Go language in standard `apt` repositories available, so it is better to add `golang-backports` PPA to get the latest version.*
 
 **Install dependencies: Go, git and build-essentials:**
 ```bash
@@ -273,7 +233,7 @@ HORNET 0.6.0-31ad46bb
 
 Using this method, you have to make sure the executable runs in a daemon mode using for example `systemd`.
 
-> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+> Please note: Hornet uses an in-memory cache, so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 

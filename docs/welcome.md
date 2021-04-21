@@ -6,7 +6,7 @@ HORNET is a powerful, community driven IOTA node software written in Go. It is e
 
 More information about IOTA network protocol can be found on [IOTA website](https://www.iota.org/). Technical information for developers is part of [Chrysalis documentation](https://chrysalis.docs.iota.org/).
 
-> IOTA network was upgraded to version IOTA 1.5 also know as [Chrysalis](https://chrysalis.iota.org). This documentation is focused on a running node as a part of the Chrysalis network (Hornet version 0.6.0+). It is not valid for previous versions of Hornet, such as 0.5.x and below.
+> The IOTA network was upgraded to version IOTA 1.5 also know as [Chrysalis](https://chrysalis.iota.org). This documentation is focused on a running node as a part of the Chrysalis network (Hornet version 0.6.0+). It is not valid for previous versions of Hornet, such as 0.5.x and below.
 
 By running your own node you have the following benefits:
 * You have direct access to an IOTA network instead of having to connect to and trust someone else's node

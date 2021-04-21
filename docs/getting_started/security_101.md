@@ -1,7 +1,7 @@
 # Security 101
 This topic provides a checklist of steps for running a reliable and secure node.
 
-> Please note that servers that are reachable from the Internet are a constant target from security challengers. Please, make sure you follow minimum security essentials summarized in this article
+> Please note that servers that are reachable from the Internet are a constant target from security challengers. Please, make sure you follow minimum security essentials summarized in this article.
 
 ## Securing your device
 The security of the device that's running your node is important to stop attackers from gaining access to it.

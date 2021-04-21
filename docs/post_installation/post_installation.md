@@ -23,7 +23,7 @@ By default, Hornet searches for configuration files in the working directory and
 
 This behavior can be changed by running Hornet with some altering arguments.
 
-Please see [config.json](./config.md) and [peering.json](./peering.md) chapters for more information regarding respective configuration files.
+Please see the [config.json](./config.md) and [peering.json](./peering.md) chapters for more information regarding respective configuration files.
 
 Once Hornet is executed, it outputs all loaded configuration parameters to `stdout` to show what configuration was actually loaded.
 
@@ -70,7 +70,7 @@ Once Hornet is restarted, then the Dashboard is protected by the given credentia
 
 
 ## Peer neighbors
-IOTA network is a distributed network in which data is broadcasted among IOTA nodes. IOTA nodes broadcast messages to other IOTA nodes using a gossip protocol. To be able to participate in a network communication, each node has to establish a secure connection to some other nodes in the network - to its peer neighbors - and mutually exchange messages. This is the way how the data is spread within the IOTA network.
+The IOTA network is a distributed network in which data is broadcasted among IOTA nodes. IOTA nodes broadcast messages to other IOTA nodes using a gossip protocol. To be able to participate in a network communication, each node has to establish a secure connection to some other nodes in the network - to its peer neighbors - and mutually exchange messages. This is the way how the data is spread within the IOTA network.
 
 ### Node identity
 Each node is uniquely identified by a `peer identity`. `Peer identity` (also called `PeerId`) is represented by a public and private key pair. Then `PeerId` represents a verifiable link between the given peer and its public key, since `PeerId` is a cryptographic hash of peer's public key. It enables individual peers to establish a secure communication channel as the hash can be used to verify an identity of the peer.
@@ -156,7 +156,7 @@ Once your node has an unique `multiaddr`, then it can be exchanged with other no
 
 *Where to find your future neighbors?*
 
-Go to the official IOTA Discord server and `#fullnodes` channel, describe your node location (Europe / Germany / Asia, etc.) with your allocated HW resources and ask for some neighbors. Do not publicly disclose your node `multiaddr` to all readers but wait for an individual direct chat.
+Go to the official IOTA Discord server and `#fullnodes` channel and describe your node location (Europe / Germany / Asia, etc.) with your allocated HW resources and ask for some neighbors. Do not publicly disclose your node `multiaddr` to all readers but wait for an individual direct chat.
 
 Each peer can then be added using the Hornet [Dashboard](#dashboard) (admin section) or [peering.json](./peering.md) file.
 
@@ -166,7 +166,7 @@ A recommended number of peer neighbors is 4-6, since some of them can be offline
 
 
 ## Configuring HTTP REST API
-One of the [tasks that node is responsible for](../getting_started/nodes_101.md), is exposing HTTP REST API for clients that would like to interacts with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
+One of the [tasks that node is responsible for](../getting_started/nodes_101.md) is exposing HTTP REST API for clients that would like to interacts with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
 
 By default, HTTP REST API is publicly exposed on the port 14265 and ready to accept incoming connections from the Internet.
 

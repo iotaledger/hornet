@@ -45,7 +45,7 @@ iii. The Docker image runs under user with uid and gid 39999 unless it was built
 ```sh
 mkdir mainnetdb && chown 39999:39999 mainnetdb
 ```
-iv. The Docker image runs by default under user with uid 39999. To make sure no permission issues, create the directory for the snapshots, e.g.:
+iv. The Docker image runs by default under user with uid 39999. To make sure there are no permission issues, create the directory for the snapshots, e.g.:
 ```sh
 mkdir snapshots/mainnet && chown 39999:39999 snapshots -R
 ```
