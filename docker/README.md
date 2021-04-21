@@ -40,7 +40,7 @@ i. Edit the `config.json` for alternative ports if needed.
 
 ii. Edit `peering.json` to your neighbors addresses.
 
-iii. The Docker image runs under user with uid and gid 39999 unless it was built with a different uid:gid. To make sure no permission issues, create the directory for the database, e.g.:
+iii. The Docker image runs under user with uid and gid 39999 unless it was built with a different uid:gid. To make sure there are no permission issues, create the directory for the database, e.g.:
 
 ```sh
 mkdir mainnetdb && chown 39999:39999 mainnetdb
