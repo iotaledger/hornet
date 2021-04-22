@@ -181,7 +181,9 @@ func authRoute(c echo.Context) error {
 
 	if len(request.JWT) > 0 {
 		// Verify JWT is still valid
-		if !jwtAuth.VerifyJWT(request.JWT) {
+		if !jwtAuth.VerifyJWT(request.JWT, func(claims *jwt.AuthClaims) bool {
+			return claims.Dashboard
+		}) {
 			return echo.ErrUnauthorized
 		}
 	} else if !basicAuth.VerifyUsernameAndPassword(request.User, request.Password) {

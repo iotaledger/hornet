@@ -3,6 +3,7 @@ package dashboard
 import (
 	"github.com/labstack/echo/v4"
 
+	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/websockethub"
 )
@@ -161,7 +162,9 @@ func websocketRoute(ctx echo.Context) error {
 										continue
 									}
 									token := string(msg.Data[2:])
-									if !jwtAuth.VerifyJWT(token) {
+									if !jwtAuth.VerifyJWT(token, func(claims *jwt.AuthClaims) bool {
+										return claims.Dashboard
+									}) {
 										// Dot not allow unsecure subscriptions to protected topics
 										continue
 									}

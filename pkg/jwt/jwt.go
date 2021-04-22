@@ -146,17 +146,20 @@ func (j *JWTAuth) IssueJWT(api bool, dashboard bool) (string, error) {
 	return token.SignedString(j.secret)
 }
 
-func (j *JWTAuth) VerifyJWT(token string) bool {
+func (j *JWTAuth) VerifyJWT(token string, allow func(claims *AuthClaims) bool) bool {
 
 	t, err := jwt.ParseWithClaims(token, &AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return j.secret, nil
 	})
 	if err == nil && t.Valid {
 		claims, ok := t.Claims.(*AuthClaims)
-		if !ok {
+
+		if !ok || !claims.verifyAudience(j.nodeId) || !claims.verifySubject(j.subject) {
 			return false
 		}
-		if !claims.verifyAudience(j.nodeId) || !claims.verifySubject(j.subject) {
+
+		// validate claims
+		if !allow(claims) {
 			return false
 		}
 
