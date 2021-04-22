@@ -277,6 +277,8 @@ github.com/gogo/protobuf v1.3.1/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXP
 github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
 github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
 github.com/gogo/status v1.1.0/go.mod h1:BFv9nrluPLmrS0EmGVvLaPNmRosr9KapBYd5/hpY1WM=
+github.com/gohornet/grocksdb v1.6.34-0.20210422134914-4c4e8586f594 h1:1pWfBq+ibUeHvEeB0KTEH/WjJ6si0h6yXFvXcYVpacQ=
+github.com/gohornet/grocksdb v1.6.34-0.20210422134914-4c4e8586f594/go.mod h1:/+iSQrn7Izt6kFhHBQvcE6FkklsKXa8hc35pFyFDrDw=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
 github.com/golang/groupcache v0.0.0-20160516000752-02826c3e7903/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
 github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
@@ -794,9 +796,6 @@ github.com/libp2p/go-yamux/v2 v2.0.0 h1:vSGhAy5u6iHBq11ZDcyHH4Blcf9xlBhT4WQDoOE9
 github.com/libp2p/go-yamux/v2 v2.0.0/go.mod h1:NVWira5+sVUIU6tu1JWvaRn1dRnG+cawOJiflsAM+7U=
 github.com/lightstep/lightstep-tracer-common/golang/gogo v0.0.0-20190605223551-bc2310a04743/go.mod h1:qklhhLq1aX+mtWk9cPHPzaBjWImj5ULL6C7HFJtXQMM=
 github.com/lightstep/lightstep-tracer-go v0.18.1/go.mod h1:jlF1pusYV4pidLvZ+XD0UBX0ZE6WURAspgAczcDHrL4=
-github.com/linxGnu/grocksdb v1.6.32/go.mod h1:/+iSQrn7Izt6kFhHBQvcE6FkklsKXa8hc35pFyFDrDw=
-github.com/linxGnu/grocksdb v1.6.33 h1:Mmi7zQ1Vbv7f1Le0optVh4N/Xth7B2y33klelYDChIs=
-github.com/linxGnu/grocksdb v1.6.33/go.mod h1:/+iSQrn7Izt6kFhHBQvcE6FkklsKXa8hc35pFyFDrDw=
 github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2 h1:qKD1ExZOhQSdfBrtNXO95TDu3XoLpXiC+MeBHvYj/Kk=
 github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2/go.mod h1:8LeVIPKskGx+23MAOy9fQ8HWSK7uFLjviwtfu2idxmo=
 github.com/lucas-clemente/quic-go v0.19.3 h1:eCDQqvGBB+kCTkA0XrAFtNe81FMa0/fn4QSoeAbmiF4=
