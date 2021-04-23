@@ -3,6 +3,8 @@ package debug
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -10,9 +12,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
@@ -444,5 +448,47 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		EntryPointsCount:  len(entryPoints),
 		Cone:              tanglePath,
 		EntryPoints:       entryPoints,
+	}, nil
+}
+
+func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
+
+	fullIndexStr := strings.ToLower(c.QueryParam("full-index"))
+	if fullIndexStr == "" {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "no full-index given")
+	}
+
+	deltaIndexStr := strings.ToLower(c.QueryParam("delta-index"))
+	if deltaIndexStr == "" {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "no delta-index given")
+	}
+
+	fullIndex, err := strconv.Atoi(fullIndexStr)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing full-index failed: %s", err)
+	}
+
+	deltaIndex, err := strconv.Atoi(deltaIndexStr)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing delta-index failed: %s", err)
+	}
+
+	fullSnapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsFullPath)), fmt.Sprintf("full_export_%d.bin", fullIndex))
+	deltaSnapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsDeltaPath)), fmt.Sprintf("delta_export_%d.bin", deltaIndex))
+
+	// ToDo: abort signal?
+	if err := deps.Snapshot.CreateFullSnapshot(milestone.Index(fullIndex), fullSnapshotFilePath, false, nil); err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating full snapshot failed: %s", err)
+	}
+
+	if err := deps.Snapshot.CreateDeltaSnapshot(milestone.Index(deltaIndex), deltaSnapshotFilePath, false, nil, fullSnapshotFilePath); err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating delta snapshot failed: %s", err)
+	}
+
+	return &createSnapshotsResponse{
+		FullIndex:     milestone.Index(fullIndex),
+		FullFilePath:  fullSnapshotFilePath,
+		DeltaIndex:    milestone.Index(deltaIndex),
+		DeltaFilePath: deltaSnapshotFilePath,
 	}, nil
 }

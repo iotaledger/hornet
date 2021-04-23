@@ -97,3 +97,15 @@ type messageConeResponse struct {
 	// The entry points of the cone of this message.
 	EntryPoints []*entryPoint `json:"entryPoints"`
 }
+
+// createSnapshotsResponse defines the response of a create snapshots REST API call.
+type createSnapshotsResponse struct {
+	// The index of the snapshot.
+	FullIndex milestone.Index `json:"fullIndex"`
+	// The file path of the snapshot file.
+	FullFilePath string `json:"fullFilePath"`
+	// The index of the snapshot.
+	DeltaIndex milestone.Index `json:"deltaIndex"`
+	// The file path of the snapshot file.
+	DeltaFilePath string `json:"deltaFilePath"`
+}
