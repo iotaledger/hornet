@@ -204,7 +204,7 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteDebugSnapshotsCreate, func(c echo.Context) error {
+	routeGroup.POST(RouteDebugSnapshotsCreate, func(c echo.Context) error {
 		resp, err := createSnapshots(c)
 		if err != nil {
 			return err

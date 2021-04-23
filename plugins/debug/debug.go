@@ -453,42 +453,27 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 
 func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 
-	fullIndexStr := strings.ToLower(c.QueryParam("full-index"))
-	if fullIndexStr == "" {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "no full-index given")
+	request := &createSnapshotsRequest{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	deltaIndexStr := strings.ToLower(c.QueryParam("delta-index"))
-	if deltaIndexStr == "" {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "no delta-index given")
-	}
-
-	fullIndex, err := strconv.Atoi(fullIndexStr)
-	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing full-index failed: %s", err)
-	}
-
-	deltaIndex, err := strconv.Atoi(deltaIndexStr)
-	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing delta-index failed: %s", err)
-	}
-
-	fullSnapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsFullPath)), fmt.Sprintf("full_export_%d.bin", fullIndex))
-	deltaSnapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsDeltaPath)), fmt.Sprintf("delta_export_%d.bin", deltaIndex))
+	fullSnapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsFullPath)), fmt.Sprintf("full_export_%d.bin", request.FullIndex))
+	deltaSnapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsDeltaPath)), fmt.Sprintf("delta_export_%d.bin", request.DeltaIndex))
 
 	// ToDo: abort signal?
-	if err := deps.Snapshot.CreateFullSnapshot(milestone.Index(fullIndex), fullSnapshotFilePath, false, nil); err != nil {
+	if err := deps.Snapshot.CreateFullSnapshot(milestone.Index(request.FullIndex), fullSnapshotFilePath, false, nil); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating full snapshot failed: %s", err)
 	}
 
-	if err := deps.Snapshot.CreateDeltaSnapshot(milestone.Index(deltaIndex), deltaSnapshotFilePath, false, nil, fullSnapshotFilePath); err != nil {
+	if err := deps.Snapshot.CreateDeltaSnapshot(milestone.Index(request.DeltaIndex), deltaSnapshotFilePath, false, nil, fullSnapshotFilePath); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating delta snapshot failed: %s", err)
 	}
 
 	return &createSnapshotsResponse{
-		FullIndex:     milestone.Index(fullIndex),
+		FullIndex:     milestone.Index(request.FullIndex),
 		FullFilePath:  fullSnapshotFilePath,
-		DeltaIndex:    milestone.Index(deltaIndex),
+		DeltaIndex:    milestone.Index(request.DeltaIndex),
 		DeltaFilePath: deltaSnapshotFilePath,
 	}, nil
 }
