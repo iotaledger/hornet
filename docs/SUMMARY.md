@@ -10,6 +10,7 @@
     - [Managing node](./post_installation/managing.md)
     - [Configuration](./post_installation/config.md)
     - [Peering](./post_installation/peering.md)
+    - [Run as verifier](./post_installation/run_as_verifier.md)
 - [API Reference](./api-reference.md)
 - [Troubleshooting](./troubleshooting.md)
 - [FAQ](./faq.md)
