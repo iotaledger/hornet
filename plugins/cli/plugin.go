@@ -24,7 +24,7 @@ var (
 	LatestGithubVersion = AppVersion
 
 	// AppName app code name
-	AppName = "HORNET"
+	AppName = "HORNET-legacy"
 
 	githubTag *latest.GithubTag
 )

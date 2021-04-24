@@ -1,10 +1,9 @@
 /usr/bin/systemctl daemon-reload >/dev/null 2>&1 ||:
 if [ $1 -ge 1 ]; then
-    /bin/systemctl status  hornet.service >/dev/null 2>&1 || exit 0
-    /bin/systemctl try-restart hornet.service >/dev/null 2>&1 || echo \
+    /bin/systemctl status  hornet-legacy.service >/dev/null 2>&1 || exit 0
+    /bin/systemctl try-restart hornet-legacy.service >/dev/null 2>&1 || echo \
         "Binary upgrade failed, please check hornet's log"
 fi
-rm -rf /var/lib/hornet/snapshots/* \
-       /etc/default/hornet \
-       /var/lib/hornet/mainnetdb/* \
-       /var/lib/hornet/comnetdb/*
+rm -rf /var/lib/hornet-legacy/snapshots/* \
+       /etc/default/hornet-legacy \
+       /var/lib/hornet-legacy/mainnetdb/*

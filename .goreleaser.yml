@@ -1,7 +1,7 @@
 # Documentation at http://goreleaser.com
 
 # Project name
-project_name: HORNET
+project_name: HORNET-legacy
 
 # Environment variables
 env:
@@ -10,8 +10,8 @@ env:
 # Builds
 builds:
   # Linux AMD64
-  - id: hornet-linux-amd64
-    binary: hornet
+  - id: hornet-legacy-linux-amd64
+    binary: hornet-legacy
     ldflags:
       - -s -w -X github.com/gohornet/hornet/plugins/cli.AppVersion={{.Version}}
     flags:
@@ -22,8 +22,8 @@ builds:
     goarch:
       - amd64
   # Linux ARM64 statically linked
-  - id: hornet-linux-arm64
-    binary: hornet
+  - id: hornet-legacy-linux-arm64
+    binary: hornet-legacy
     env:
       - CGO_ENABLED=1
       - CC=aarch64-linux-musl-gcc
@@ -38,8 +38,8 @@ builds:
     goarch:
       - arm64
   # Windows AMD64
-  - id: hornet-windows-amd64
-    binary: hornet
+  - id: hornet-legacy-windows-amd64
+    binary: hornet-legacy
     env:
       - CGO_ENABLED=1
       - CC=x86_64-w64-mingw32-gcc
@@ -54,8 +54,8 @@ builds:
     goarch:
       - amd64
   # macOS AMD64
-  - id: hornet-macOS-amd64
-    binary: hornet
+  - id: hornet-legacy-macOS-amd64
+    binary: hornet-legacy
     env:
       - CGO_ENABLED=0
     ldflags:
@@ -72,10 +72,10 @@ dockers:
   - goos: linux
     goarch: amd64
     image_templates:
-      - "gohornet/hornet:latest"
-      - "gohornet/hornet:{{ .Tag }}"
+      - "gohornet/hornet:legacy-latest"
+      - "gohornet/hornet:legacy-{{ .Tag }}"
     binaries:
-      - hornet
+      - hornet-legacy
     dockerfile: docker/Dockerfile.goreleaser
     skip_push: auto
 
@@ -97,8 +97,6 @@ archives:
       - README.md
       - LICENSE
       - config.json
-      - config_comnet.json
-      - config_devnet.json
       - peering.json
       - profiles.json
       - mqtt_config.json
@@ -106,27 +104,25 @@ archives:
 # DEB and RPM packages
 nfpms:
   - id: nfpm
-    package_name: hornet
+    package_name: hornet-legacy
     file_name_template: '{{ tolower .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Arch }}'
     vendor: GoReleaser
     license: Apache 2.0
     maintainer: GoHORNET
     homepage: https://github.com/gohornet/hornet
-    description: HORNET is a powerful IOTA fullnode software.
+    description: HORNET is a powerful IOTA fullnode software. This is the legacy veriosn.
     formats:
       - deb
       - rpm
     bindir: /usr/bin
     files:
-      "nfpm/shared_files/hornet.service": "/lib/systemd/system/hornet.service"
+      "nfpm/shared_files/hornet-legacy.service": "/lib/systemd/system/hornet-legacy.service"
     config_files:
-      "config.json": "/var/lib/hornet/config.json"
-      "config_comnet.json": "/var/lib/hornet/config_comnet.json"
-      "config_devnet.json": "/var/lib/hornet/config_devnet.json"
-      "mqtt_config.json": "/var/lib/hornet/mqtt_config.json"
-      "peering.json": "/var/lib/hornet/peering.json"
-      "profiles.json": "/var/lib/hornet/profiles.json"
-      "nfpm/shared_files/hornet.env": "/etc/default/hornet"
+      "config.json": "/var/lib/hornet-legacy/config.json"
+      "mqtt_config.json": "/var/lib/hornet-legacy/mqtt_config.json"
+      "peering.json": "/var/lib/hornet-legacy/peering.json"
+      "profiles.json": "/var/lib/hornet-legacy/profiles.json"
+      "nfpm/shared_files/hornet-legacy.env": "/etc/default/hornet-legacy"
     dependencies:
       - systemd
       - wget
