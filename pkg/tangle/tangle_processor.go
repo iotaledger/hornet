@@ -69,6 +69,12 @@ func (t *Tangle) RunTangleProcessor() {
 		t.futureConeSolidifier.Cleanup(true)
 	})
 
+	onNodeBecameSync := events.NewClosure(func() {
+		t.requestQueue.FreeMemory()
+		t.storage.FreeMemory()
+		t.messageProcessor.FreeMemory()
+	})
+
 	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *MPSMetrics) {
 		t.lastIncomingMPS = mpsMetrics.Incoming
 		t.lastNewMPS = mpsMetrics.New
@@ -139,6 +145,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.storage.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Attach(onMilestoneTimeout)
+		t.storage.Events.NodeBecameSync.Attach(onNodeBecameSync)
 		t.startWaitGroup.Done()
 		<-shutdownSignal
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
@@ -146,6 +153,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.storage.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
+		t.storage.Events.NodeBecameSync.Detach(onNodeBecameSync)
 		t.processValidMilestoneWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor)

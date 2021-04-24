@@ -219,10 +219,6 @@ func configure() {
 			}
 		}, shutdown.PriorityPeerGossipProtocolWrite)
 	}))
-
-	deps.Storage.Events.NodeBecameSync.Attach(events.NewClosure(func() {
-		deps.RequestQueue.FreeMemory()
-	}))
 }
 
 func run() {

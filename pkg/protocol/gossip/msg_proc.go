@@ -153,6 +153,13 @@ func (proc *MessageProcessor) Shutdown() {
 	proc.workUnits.Shutdown()
 }
 
+// FreeMemory copies the content of the internal maps to newly created maps.
+// This is neccessary, otherwise the GC is not able to free the memory used by the old maps.
+// "delete" doesn't shrink the maximum memory used by the map, since it only marks the entry as deleted.
+func (proc *MessageProcessor) FreeMemory() {
+	proc.workUnits.FreeMemory()
+}
+
 // Process submits the given message to the processor for processing.
 func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []byte) {
 	proc.wp.Submit(p, msgType, data)
