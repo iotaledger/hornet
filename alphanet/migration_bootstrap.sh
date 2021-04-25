@@ -21,8 +21,8 @@ go run ../main.go -c config_alphanet.json \
 --receipts.validator.coordinator.address="GVODMYUGDSAJKWXMVDNTKVE99DCBKARJ9CTHCPYTHOPEMSITGOAZJLINYIZTOSIMBWXCIZJJNUQBXVXMW" \
 --receipts.validator.coordinator.merkleTreeDepth="18" \
 --migrator.stateFilePath="./migrator.state" \
---snapshots.fullPath="snapshots/alphanet1/full_export.bin" \
---snapshots.deltaPath="snapshots/alphanet1/delta_export.bin" \
+--snapshots.fullPath="snapshots/alphanet1/full_snapshot.bin" \
+--snapshots.deltaPath="snapshots/alphanet1/delta_snapshot.bin" \
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15601" \
 --profiling.bindAddress="127.0.0.1:6061" \
 --prometheus.bindAddress="localhost:9311" \
