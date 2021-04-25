@@ -291,5 +291,5 @@ func BenchmarkHeaviestSelector_OnNewSolidMessage(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		hps.OnNewSolidMessage(msgs[i%numBenchmarkMsgs])
 	}
-	hps.reset()
+	hps.Reset()
 }

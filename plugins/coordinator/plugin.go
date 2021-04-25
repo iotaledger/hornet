@@ -29,6 +29,7 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
@@ -75,14 +76,17 @@ var (
 	nextCheckpointSignal chan struct{}
 	nextMilestoneSignal  chan struct{}
 
+	heaviestSelectorLock syncutils.RWMutex
+
 	lastCheckpointIndex     int
 	lastCheckpointMessageID hornet.MessageID
 	lastMilestoneMessageID  hornet.MessageID
 
 	// Closures
-	onMessageSolid     *events.Closure
-	onIssuedCheckpoint *events.Closure
-	onIssuedMilestone  *events.Closure
+	onMessageSolid                   *events.Closure
+	onConfirmedMilestoneIndexChanged *events.Closure
+	onIssuedCheckpoint               *events.Closure
+	onIssuedMilestone                *events.Closure
 
 	deps dependencies
 )
@@ -283,24 +287,32 @@ func run() {
 					continue
 				}
 
-				tips, err := deps.Selector.SelectTips(0)
-				if err != nil {
-					// issuing checkpoint failed => not critical
-					if !errors.Is(err, mselection.ErrNoTipsAvailable) {
-						log.Warn(err)
-					}
-					continue
-				}
+				func() {
+					// this lock is necessary, otherwise a checkpoint could be issued
+					// while a milestone gets confirmed. In that case the checkpoint could
+					// contain messages that are already below max depth.
+					heaviestSelectorLock.RLock()
+					defer heaviestSelectorLock.RUnlock()
 
-				// issue a checkpoint
-				checkpointMessageID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, tips)
-				if err != nil {
-					// issuing checkpoint failed => not critical
-					log.Warn(err)
-					continue
-				}
-				lastCheckpointIndex++
-				lastCheckpointMessageID = checkpointMessageID
+					tips, err := deps.Selector.SelectTips(0)
+					if err != nil {
+						// issuing checkpoint failed => not critical
+						if !errors.Is(err, mselection.ErrNoTipsAvailable) {
+							log.Warn(err)
+						}
+						return
+					}
+
+					// issue a checkpoint
+					checkpointMessageID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, tips)
+					if err != nil {
+						// issuing checkpoint failed => not critical
+						log.Warn(err)
+						return
+					}
+					lastCheckpointIndex++
+					lastCheckpointMessageID = checkpointMessageID
+				}()
 
 			case <-nextMilestoneSignal:
 				var milestoneTips hornet.MessageIDs
@@ -345,6 +357,11 @@ func run() {
 						// Coordinator is not synchronized, trigger the solidifier manually
 						deps.Tangle.TriggerSolidifier()
 					}
+
+					// reset the checkpoints
+					lastCheckpointMessageID = lastMilestoneMessageID
+					lastCheckpointIndex = 0
+
 					continue
 				}
 
@@ -498,6 +515,21 @@ func configureEvents() {
 		}
 	})
 
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+		heaviestSelectorLock.Lock()
+		defer heaviestSelectorLock.Unlock()
+
+		// the selector needs to be reset after the milestone was confirmed, otherwise
+		// it could contain tips that are already below max depth.
+		deps.Selector.Reset()
+
+		// the checkpoint also needs to be reset, otherwise
+		// a checkpoint could have been issued in the meantime,
+		// which could contain messages that are already below max depth.
+		lastCheckpointMessageID = lastMilestoneMessageID
+		lastCheckpointIndex = 0
+	})
+
 	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.MessageID) {
 		log.Infof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.ToHex())
 	})
@@ -509,11 +541,13 @@ func configureEvents() {
 
 func attachEvents() {
 	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 	deps.Coordinator.Events.IssuedCheckpointMessage.Attach(onIssuedCheckpoint)
 	deps.Coordinator.Events.IssuedMilestone.Attach(onIssuedMilestone)
 }
 
 func detachEvents() {
 	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 	deps.Coordinator.Events.IssuedMilestone.Detach(onIssuedMilestone)
 }
