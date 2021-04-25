@@ -1,15 +1,19 @@
 package mselection
 
 import (
-	"fmt"
+	"math"
 	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -66,6 +70,52 @@ func TestHeaviestSelector_SelectTipsChain(t *testing.T) {
 	assert.Len(t, hps.trackedMessages, 0)
 }
 
+func TestHeaviestSelector_CheckTipsRemoved(t *testing.T) {
+	te, hps := initTest(t)
+	defer te.CleanupTestEnvironment(true)
+
+	count := 8
+
+	messages := make(hornet.MessageIDs, count)
+	for i := 0; i < count; i++ {
+		msg := te.NewTestMessage(i, hornet.MessageIDs{hornet.GetNullMessageID()})
+		hps.OnNewSolidMessage(msg)
+		messages[i] = msg.GetMessageID()
+	}
+
+	// check if trackedMessages match the current count
+	assert.Len(t, hps.trackedMessages, count)
+
+	// check if the current tips match the current count
+	list := hps.tipsToList()
+	assert.Len(t, list.msgs, count)
+
+	// issue a new message that references the old ones
+	msg := te.NewTestMessage(count, messages)
+	hps.OnNewSolidMessage(msg)
+
+	// old tracked messages should remain, plus the new one
+	assert.Len(t, hps.trackedMessages, count+1)
+
+	// all old tips should be removed, except the new one
+	list = hps.tipsToList()
+	assert.Len(t, list.msgs, 1)
+
+	// select a tip
+	tips, err := hps.SelectTips(1)
+	assert.NoError(t, err)
+	assert.Len(t, tips, 1)
+
+	// check if the tip on top was picked
+	assert.ElementsMatch(t, msg.GetMessageID(), tips[0])
+
+	// check if trackedMessages are resetted after tipselect
+	assert.Len(t, hps.trackedMessages, 0)
+
+	list = hps.tipsToList()
+	assert.Len(t, list.msgs, 0)
+}
+
 func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
 	te, hps := initTest(t)
 	defer te.CleanupTestEnvironment(true)
@@ -93,6 +143,130 @@ func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
 
 	// check if trackedMessages are resetted after tipselect
 	assert.Len(t, hps.trackedMessages, 0)
+}
+
+func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
+	te, hps := initTest(t)
+	defer te.CleanupTestEnvironment(true)
+
+	initMessagesCount := 10
+	milestonesCount := 30
+	minMessagesPerMilestone := 10
+	maxMessagesPerMilestone := 100
+
+	getConeRootIndexes := func(tip hornet.MessageID) (milestone.Index, milestone.Index) {
+		// we walk the cone of every tip to check the youngest and oldest milestone index it references
+		var youngestConeRootIndex milestone.Index = 0
+		var oldestConeRootIndex milestone.Index = 0
+
+		youngestConeRootIndex = 0
+		oldestConeRootIndex = math.MaxUint32
+
+		updateIndexes := func(ycri milestone.Index, ocri milestone.Index) {
+			if youngestConeRootIndex < ycri {
+				youngestConeRootIndex = ycri
+			}
+			if oldestConeRootIndex > ocri {
+				oldestConeRootIndex = ocri
+			}
+		}
+
+		err := dag.TraverseParentsOfMessage(te.Storage(), tip,
+			// traversal stops if no more messages pass the given condition
+			// Caution: condition func is not in DFS order
+			func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedMetadata.Release(true) // meta -1
+
+				// first check if the msg was referenced => update ycri and ocri with the confirmation index
+				if referenced, at := cachedMetadata.GetMetadata().GetReferenced(); referenced {
+					updateIndexes(at, at)
+					return false, nil
+				}
+
+				return true, nil
+			},
+			// consumer
+			nil,
+			// called on missing parents
+			// return error on missing parents
+			nil,
+			// called on solid entry points
+			func(messageID hornet.MessageID) {
+				// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
+				at, _ := te.Storage().SolidEntryPointsIndex(messageID)
+				updateIndexes(at, at)
+			}, false, nil)
+		require.NoError(te.TestInterface, err)
+
+		return youngestConeRootIndex, oldestConeRootIndex
+	}
+
+	// isBelowMaxDepth checks the below max depth criteria for the given message.
+	isBelowMaxDepth := func(msgMeta *storage.MessageMetadata) bool {
+
+		cmi := te.Storage().GetConfirmedMilestoneIndex()
+
+		_, ocri := getConeRootIndexes(msgMeta.GetMessageID())
+
+		// if the OCRI to CMI delta is over belowMaxDepth, then the tip is invalid.
+		return (cmi - ocri) > milestone.Index(BelowMaxDepth)
+	}
+
+	checkTips := func(tips hornet.MessageIDs) {
+
+		cmi := te.Storage().GetConfirmedMilestoneIndex()
+
+		for _, tip := range tips {
+			_, ocri := getConeRootIndexes(tip)
+			minOldestConeRootIndex := milestone.Index(0)
+			if cmi > milestone.Index(BelowMaxDepth) {
+				minOldestConeRootIndex = cmi - milestone.Index(BelowMaxDepth)
+			}
+
+			require.GreaterOrEqual(te.TestInterface, uint32(ocri), uint32(minOldestConeRootIndex))
+			require.LessOrEqual(te.TestInterface, uint32(ocri), uint32(cmi))
+		}
+	}
+
+	// build a tangle with 30 milestones and 10 - 100 messages between the milestones
+	_, _ = te.BuildTangle(initMessagesCount, BelowMaxDepth-1, milestonesCount, minMessagesPerMilestone, maxMessagesPerMilestone,
+		func(cmi milestone.Index, msgMeta *storage.MessageMetadata) {
+
+			if isBelowMaxDepth(msgMeta) {
+				// ignore tips that are below max depth
+				return
+			}
+
+			hps.OnNewSolidMessage(msgMeta)
+		},
+		func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs {
+			tips, err := hps.SelectTips(1)
+			if err == ErrNoTipsAvailable {
+				err = nil
+				latestMilestoneMessageID := te.Milestones[len(te.Milestones)-1].GetMilestone().MessageID
+				tips = hornet.MessageIDs{latestMilestoneMessageID}
+			}
+
+			// check if trackedMessages are resetted after tipselect
+			require.Len(t, hps.trackedMessages, 0)
+
+			require.NoError(te.TestInterface, err)
+			require.NotNil(te.TestInterface, tips)
+
+			require.GreaterOrEqual(te.TestInterface, len(tips), 1)
+			require.LessOrEqual(te.TestInterface, len(tips), CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint+CfgCoordinatorTipselectRandomTipsPerCheckpoint)
+
+			checkTips(tips)
+
+			return tips
+		},
+		func(msIndex milestone.Index, messages hornet.MessageIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats) {
+			dag.UpdateConeRootIndexes(te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
+		},
+	)
+
+	// check if trackedMessages are resetted after tipselect
+	require.Len(t, hps.trackedMessages, 0)
 }
 
 func BenchmarkHeaviestSelector_OnNewSolidMessage(b *testing.B) {
