@@ -3,6 +3,7 @@ package testsuite
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,10 +17,12 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -185,4 +188,73 @@ func (te *TestEnvironment) NewTestMessage(index int, parents hornet.MessageIDs) 
 	cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
 	defer cachedMsgMeta.Release(true)
 	return cachedMsgMeta.GetMetadata()
+}
+
+// BuildTangle builds a tangle structure without a tipselection algorithm, but random tips from the last
+// messages in the last belowMaxDepth milestones.
+func (te *TestEnvironment) BuildTangle(initMessagesCount int,
+	belowMaxDepth int,
+	milestonesCount int,
+	minMessagesPerMilestone int,
+	maxMessagesPerMilestone int,
+	onNewMessage func(cmi milestone.Index, msgMeta *storage.MessageMetadata),
+	milestoneTipSelectFunc func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs,
+	onNewMilestone func(msIndex milestone.Index, messages hornet.MessageIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats)) (messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) {
+
+	messageTotalCount := 0
+	messages = hornet.MessageIDs{}
+	messagesPerMilestones = make([]hornet.MessageIDs, 0)
+
+	getParents := func() hornet.MessageIDs {
+
+		if len(messages) < initMessagesCount {
+			// reference the first milestone at the beginning
+			return hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID}
+		}
+
+		parents := hornet.MessageIDs{}
+		for j := 2; j <= 2+rand.Intn(7); j++ {
+			msIndex := rand.Intn(belowMaxDepth)
+			if msIndex > len(messagesPerMilestones)-1 {
+				msIndex = rand.Intn(len(messagesPerMilestones))
+			}
+			milestoneMessages := messagesPerMilestones[len(messagesPerMilestones)-1-msIndex]
+			if len(milestoneMessages) == 0 {
+				// use the milestone hash
+				parents = append(parents, te.Milestones[len(te.Milestones)-1-msIndex].GetMilestone().MessageID)
+				continue
+			}
+			parents = append(parents, milestoneMessages[rand.Intn(len(milestoneMessages))])
+		}
+
+		return parents.RemoveDupsAndSortByLexicalOrder()
+	}
+
+	// build a tangle
+	for msIndex := 2; msIndex < milestonesCount; msIndex++ {
+		messagesPerMilestones = append(messagesPerMilestones, hornet.MessageIDs{})
+
+		cmi := te.Storage().GetConfirmedMilestoneIndex()
+
+		msgsCount := minMessagesPerMilestone + rand.Intn(maxMessagesPerMilestone-minMessagesPerMilestone)
+		for msgCount := 0; msgCount < msgsCount; msgCount++ {
+			messageTotalCount++
+			msgMeta := te.NewTestMessage(messageTotalCount, getParents())
+
+			messages = append(messages, msgMeta.GetMessageID())
+			messagesPerMilestones[len(messagesPerMilestones)-1] = append(messagesPerMilestones[len(messagesPerMilestones)-1], msgMeta.GetMessageID())
+
+			if onNewMessage != nil {
+				onNewMessage(cmi, msgMeta)
+			}
+		}
+
+		// confirm the new cone
+		conf, confStats := te.IssueAndConfirmMilestoneOnTips(milestoneTipSelectFunc(messages, messagesPerMilestones), false)
+		if onNewMilestone != nil {
+			onNewMilestone(conf.MilestoneIndex, messages, conf, confStats)
+		}
+	}
+
+	return messages, messagesPerMilestones
 }
