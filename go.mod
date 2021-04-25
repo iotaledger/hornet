@@ -36,7 +36,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.3.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20210414081750-6ea719a58c1d
+	github.com/iotaledger/hive.go v0.0.0-20210423125659-4446146a4c6b
 	github.com/iotaledger/iota.go v1.0.0-beta.15.0.20210406071024-a52cf8c2c21e
 	github.com/iotaledger/iota.go/v2 v2.0.0-20210409074803-07a6438d40cf
 	github.com/ipfs/go-ds-badger v0.2.6
