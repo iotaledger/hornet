@@ -179,3 +179,10 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 		os.RemoveAll(te.tempDir)
 	}
 }
+
+func (te *TestEnvironment) NewTestMessage(index int, parents hornet.MessageIDs) *storage.MessageMetadata {
+	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildIndexation().Store()
+	cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
+	defer cachedMsgMeta.Release(true)
+	return cachedMsgMeta.GetMetadata()
+}

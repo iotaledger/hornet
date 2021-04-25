@@ -43,13 +43,6 @@ func initTest(testInterface testing.TB) (*testsuite.TestEnvironment, *HeaviestSe
 	return te, hps
 }
 
-func newTestMessage(te *testsuite.TestEnvironment, index int, parents hornet.MessageIDs) *storage.MessageMetadata {
-	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildIndexation().Store()
-	cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
-	defer cachedMsgMeta.Release(true)
-	return cachedMsgMeta.GetMetadata()
-}
-
 func TestHeaviestSelector_SelectTipsChain(t *testing.T) {
 	te, hps := initTest(t)
 	defer te.CleanupTestEnvironment(true)
@@ -57,7 +50,7 @@ func TestHeaviestSelector_SelectTipsChain(t *testing.T) {
 	// create a chain
 	lastMsgID := hornet.GetNullMessageID()
 	for i := 1; i <= numTestMsgs; i++ {
-		msg := newTestMessage(te, i, hornet.MessageIDs{lastMsgID})
+		msg := te.NewTestMessage(i, hornet.MessageIDs{lastMsgID})
 		hps.OnNewSolidMessage(msg)
 		lastMsgID = msg.GetMessageID()
 	}
@@ -82,7 +75,7 @@ func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
 	for i := 0; i < numChains; i++ {
 		lastMsgIDs[i] = hornet.GetNullMessageID()
 		for j := 1; j <= numTestMsgs; j++ {
-			msgMeta := newTestMessage(te, i*numTestMsgs+j, hornet.MessageIDs{lastMsgIDs[i]})
+			msgMeta := te.NewTestMessage(i*numTestMsgs+j, hornet.MessageIDs{lastMsgIDs[i]})
 			hps.OnNewSolidMessage(msgMeta)
 			lastMsgIDs[i] = msgMeta.GetMessageID()
 		}
@@ -119,7 +112,7 @@ func BenchmarkHeaviestSelector_OnNewSolidMessage(b *testing.B) {
 		}
 		tips = tips.RemoveDupsAndSortByLexicalOrder()
 
-		msgs[i] = newTestMessage(te, i, tips)
+		msgs[i] = te.NewTestMessage(i, tips)
 		msgIDs = append(msgIDs, msgs[i].GetMessageID())
 	}
 	b.ResetTimer()
