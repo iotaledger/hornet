@@ -76,10 +76,7 @@ func TestTipSelect(t *testing.T) {
 		for _, tip := range tips {
 			// we walk the cone of every tip to check the youngest and oldest milestone index it references
 			var youngestConeRootIndex milestone.Index = 0
-			var oldestConeRootIndex milestone.Index = 0
-
-			youngestConeRootIndex = 0
-			oldestConeRootIndex = math.MaxUint32
+			var oldestConeRootIndex milestone.Index = math.MaxUint32
 
 			updateIndexes := func(ycri milestone.Index, ocri milestone.Index) {
 				if youngestConeRootIndex < ycri {
