@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -141,7 +140,7 @@ func TestTipSelect(t *testing.T) {
 
 		if i%10 == 0 {
 			// Issue a new milestone every 10 messages
-			conf, _ := te.IssueAndConfirmMilestoneOnTip(msgMeta.GetMessageID(), false)
+			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{msgMeta.GetMessageID()}, false)
 			dag.UpdateConeRootIndexes(te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
 			ts.UpdateScores()
 		}

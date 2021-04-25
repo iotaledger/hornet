@@ -90,15 +90,15 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	require.Equal(te.TestInterface, 1, confirmedMilestoneStats.MessagesReferenced)
 }
 
-// IssueAndConfirmMilestoneOnTip creates a milestone on top of a given tip.
-func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.MessageID, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
+// IssueAndConfirmMilestoneOnTips creates a milestone on top of the given tips.
+func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
 
 	currentIndex := te.storage.GetConfirmedMilestoneIndex()
 	te.VerifyLMI(currentIndex)
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
 
-	milestoneMessageID, err := te.coo.IssueMilestone(hornet.MessageIDs{te.lastMilestoneMessageID, tip})
+	milestoneMessageID, err := te.coo.IssueMilestone(append(tips, te.lastMilestoneMessageID))
 	require.NoError(te.TestInterface, err)
 	te.lastMilestoneMessageID = milestoneMessageID
 

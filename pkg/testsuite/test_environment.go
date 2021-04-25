@@ -144,7 +144,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.VerifyCMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
-		_, confStats := te.IssueAndConfirmMilestoneOnTip(hornet.GetNullMessageID(), false)
+		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{hornet.GetNullMessageID()}, false)
 		require.Equal(testInterface, 1, confStats.MessagesReferenced)                  // 1 for milestone
 		require.Equal(testInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for milestone
 		require.Equal(testInterface, 0, confStats.MessagesIncludedWithTransactions)
