@@ -31,9 +31,14 @@ const (
 	// POST computes the white flag confirmation.
 	RouteDebugComputeWhiteFlag = "/whiteflag"
 
-	// RouteDebugSolidifier is the debug route to manually trigger the solidifier.
-	// POST triggers the solidifier.
-	RouteDebugSolidifier = "/solidifier"
+	// PUT triggers the solidifier.
+	RouteDebugControlSolidifier = "/control/solidifier"
+
+	// RouteDebugControlFreeMemory is the debug route to manually trigger to free unused memory
+	// bound in object storage, requester, and message processor.
+	// If no flags are given, all memories are cleared.
+	// PUT frees the memory.
+	RouteDebugControlFreeMemory = "/control/free-memory"
 
 	// RouteDebugOutputs is the debug route for getting all output IDs.
 	// GET returns the outputIDs for all outputs.
@@ -91,12 +96,13 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage      *storage.Storage
-	Tangle       *tangle.Tangle
-	RequestQueue gossip.RequestQueue
-	UTXO         *utxo.Manager
-	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-	Echo         *echo.Echo                   `optional:"true"`
+	Storage          *storage.Storage
+	Tangle           *tangle.Tangle
+	RequestQueue     gossip.RequestQueue
+	MessageProcessor *gossip.MessageProcessor
+	UTXO             *utxo.Manager
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	Echo             *echo.Echo                   `optional:"true"`
 }
 
 func configure() {
@@ -120,8 +126,17 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.POST(RouteDebugSolidifier, func(c echo.Context) error {
+	routeGroup.PUT(RouteDebugControlSolidifier, func(c echo.Context) error {
 		deps.Tangle.TriggerSolidifier()
+
+		return c.NoContent(http.StatusNoContent)
+	})
+
+	routeGroup.PUT(RouteDebugControlFreeMemory, func(c echo.Context) error {
+		err := controlFreeMemory(c)
+		if err != nil {
+			return nil
+		}
 
 		return c.NoContent(http.StatusNoContent)
 	})

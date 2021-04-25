@@ -61,13 +61,15 @@ func setupRoutes(g *echo.Group) {
 		if err := start(cmd.MpsRateLimit, cmd.CpuMaxUsage, cmd.SpammerWorkers); err != nil {
 			return err
 		}
-		return c.JSON(http.StatusAccepted, nil)
+
+		return c.NoContent(http.StatusAccepted)
 	})
 
 	g.POST(RouteSpammerStop, func(c echo.Context) error {
 		if err := stop(); err != nil {
 			return err
 		}
-		return c.JSON(http.StatusAccepted, nil)
+
+		return c.NoContent(http.StatusAccepted)
 	})
 }

@@ -116,6 +116,36 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}, nil
 }
 
+func controlFreeMemory(c echo.Context) error {
+
+	request := &controlFreeMemoryRequest{}
+	if err := c.Bind(request); err != nil {
+		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
+	}
+
+	if request.RequestQueue == nil && request.MessageProcessor == nil && request.Storage == nil {
+		// No flags given, free all memories.
+		deps.RequestQueue.FreeMemory()
+		deps.MessageProcessor.FreeMemory()
+		deps.Storage.FreeMemory()
+		return nil
+	}
+
+	if request.RequestQueue != nil && *request.RequestQueue {
+		deps.RequestQueue.FreeMemory()
+	}
+
+	if request.MessageProcessor != nil && *request.MessageProcessor {
+		deps.MessageProcessor.FreeMemory()
+	}
+
+	if request.Storage != nil && *request.Storage {
+		deps.Storage.FreeMemory()
+	}
+
+	return nil
+}
+
 func typeFilterFromParams(c echo.Context) ([]utxo.UTXOIterateOption, error) {
 	var opts []utxo.UTXOIterateOption
 

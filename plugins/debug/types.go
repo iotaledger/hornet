@@ -19,6 +19,17 @@ type computeWhiteFlagMutationsResponse struct {
 	MerkleTreeHash string `json:"merkleTreeHash"`
 }
 
+// controlFreeMemoryRequest defines the request for a PUT controlFreeMemory REST API call.
+// If no flags are given, all memories are cleared.
+type controlFreeMemoryRequest struct {
+	// Free the unused memory of the request queue.
+	RequestQueue     *bool `json:"requestQueue,omitempty"`
+	// Free the unused memory of the message processor.
+	MessageProcessor *bool `json:"messageProcessor,omitempty"`
+	// Free the unused memory of the object storage.
+	Storage          *bool `json:"storage,omitempty"`
+}
+
 // outputIDsResponse defines the response of a GET debug outputs REST API call.
 type outputIDsResponse struct {
 	// The output IDs (transaction hash + output index) of the outputs.
