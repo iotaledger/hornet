@@ -1,10 +1,15 @@
-# golang 1.16.2-buster amd64
-FROM golang@sha256:5a6302e91acb152050d661c9a081a535978c629225225ed91a8b979ad24aafcd AS build
+# golang 1.16.3-buster amd64
+FROM golang@sha256:dfa3cef088454200d6b48e2a911138f7d5d9afff77f89243eea6342f16ddcfb0 AS build
 
 ARG BUILD_TAGS
 
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates
+
+# Install more up to date version of GCC as we need it to compile with our Go RocksDB lib fork
+RUN echo 'deb http://deb.debian.org/debian testing main' >> /etc/apt/sources.list
+RUN apt update -y
+RUN apt install -y gcc
 
 # Set the current Working Directory inside the container
 RUN mkdir /app
