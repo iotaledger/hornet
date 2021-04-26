@@ -201,17 +201,17 @@ Example:
 "snapshots": {
     "interval": 50,
     "depth": 50,
-    "fullPath": "snapshots/mainnet/full_export.bin",
-    "deltaPath": "snapshots/mainnet/delta_export.bin",
+    "fullPath": "snapshots/mainnet/full_snapshot.bin",
+    "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://source1.example.com/full_export.bin",
-        "delta": "https://source1.example.com/delta_export.bin"
+        "full": "https://source1.example.com/full_snapshot.bin",
+        "delta": "https://source1.example.com/delta_snapshot.bin"
       },
       {
-        "full": "https://source2.example.com/full_export.bin",
-        "delta": "https://source2.example.com/delta_export.bin"
+        "full": "https://source2.example.com/full_snapshot.bin",
+        "delta": "https://source2.example.com/delta_snapshot.bin"
       }
     ]
   },

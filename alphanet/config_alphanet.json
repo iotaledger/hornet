@@ -67,8 +67,8 @@
   "snapshots": {
     "depth": 50,
     "interval": 200,
-    "fullPath": "snapshots/alphanet/full_export.bin",
-    "deltaPath": "snapshots/alphanet/delta_export.bin",
+    "fullPath": "snapshots/alphanet/full_snapshot.bin",
+    "deltaPath": "snapshots/alphanet/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": []
   },

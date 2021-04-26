@@ -7,8 +7,8 @@ go run ../main.go -c config_alphanet.json \
 --db.path="alphanetdb3" \
 --node.disablePlugins="Autopeering" \
 --node.enablePlugins="Spammer,MQTT,Debug,Prometheus" \
---snapshots.fullPath="snapshots/alphanet3/full_export.bin" \
---snapshots.deltaPath="snapshots/alphanet3/delta_export.bin" \
+--snapshots.fullPath="snapshots/alphanet3/full_snapshot.bin" \
+--snapshots.deltaPath="snapshots/alphanet3/delta_snapshot.bin" \
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15602" \
 --profiling.bindAddress="127.0.0.1:6062" \
 --prometheus.bindAddress="localhost:9313" \
