@@ -49,18 +49,6 @@ builds:
       - windows
     goarch:
       - amd64
-  # macOS AMD64
-  - id: hornet-macOS-amd64
-    binary: hornet
-    env:
-      - CGO_ENABLED=0
-    ldflags:
-      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
-    main: main.go
-    goos:
-      - darwin
-    goarch:
-      - amd64
 
 # Docker
 dockers:
