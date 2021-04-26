@@ -1,8 +1,6 @@
 package dag_test
 
 import (
-	"fmt"
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/testsuite"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -24,69 +23,36 @@ func TestConeRootIndexes(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
-	messages := hornet.MessageIDs{hornet.GetNullMessageID()}
-	messagesPerMilestones := make([]hornet.MessageIDs, 0)
-
-	const initMessagesCount = 10
-
-	getParents := func() hornet.MessageIDs {
-
-		if len(messages) < initMessagesCount {
-			// reference the first milestone at the beginning
-			return hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID, hornet.GetNullMessageID()}
-		}
-
-		parents := hornet.MessageIDs{}
-		for j := 2; j <= 2+rand.Intn(7); j++ {
-			msIndex := rand.Intn(BelowMaxDepth)
-			if msIndex > len(messagesPerMilestones)-1 {
-				msIndex = rand.Intn(len(messagesPerMilestones))
-			}
-			milestoneMessages := messagesPerMilestones[len(messagesPerMilestones)-1-msIndex]
-			if len(milestoneMessages) == 0 {
-				// use the milestone hash
-				parents = append(parents, te.Milestones[len(te.Milestones)-1-msIndex].GetMilestone().MessageID)
-				continue
-			}
-			parents = append(parents, milestoneMessages[rand.Intn(len(milestoneMessages))])
-		}
-		parents = parents.RemoveDupsAndSortByLexicalOrder()
-
-		return parents
-	}
+	initMessagesCount := 10
+	milestonesCount := 30
+	minMessagesPerMilestone := 10
+	maxMessagesPerMilestone := 100
 
 	// build a tangle with 30 milestones and 10 - 100 messages between the milestones
-	for msIndex := 2; msIndex < 30; msIndex++ {
-		messagesPerMilestones = append(messagesPerMilestones, hornet.MessageIDs{})
+	_, _ = te.BuildTangle(initMessagesCount, BelowMaxDepth, milestonesCount, minMessagesPerMilestone, maxMessagesPerMilestone,
+		nil,
+		func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs {
+			return hornet.MessageIDs{messages[len(messages)-1]}
+		},
+		func(msIndex milestone.Index, messages hornet.MessageIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats) {
+			latestMilestone := te.Milestones[len(te.Milestones)-1]
+			cmi := latestMilestone.GetMilestone().Index
 
-		msgsCount := 10 + rand.Intn(90)
-		for msgCount := 0; msgCount < msgsCount; msgCount++ {
-			msg := te.NewMessageBuilder(fmt.Sprintf("%d_%d", msIndex, msgCount)).Parents(getParents()).BuildIndexation().Store()
+			cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(messages[len(messages)-1])
+			ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
 
-			messages = append(messages, msg.StoredMessageID())
-			messagesPerMilestones[len(messagesPerMilestones)-1] = append(messagesPerMilestones[len(messagesPerMilestones)-1], msg.StoredMessageID())
-		}
+			minOldestConeRootIndex := milestone.Index(1)
+			if cmi > milestone.Index(BelowMaxDepth) {
+				minOldestConeRootIndex = cmi - milestone.Index(BelowMaxDepth)
+			}
 
-		// confirm the new cone
-		te.IssueAndConfirmMilestoneOnTip(messages[len(messages)-1], false)
+			require.GreaterOrEqual(te.TestInterface, uint32(ocri), uint32(minOldestConeRootIndex))
+			require.LessOrEqual(te.TestInterface, uint32(ocri), uint32(msIndex))
 
-		latestMilestone := te.Milestones[len(te.Milestones)-1]
-		cmi := latestMilestone.GetMilestone().Index
-
-		cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(messages[len(messages)-1])
-		ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
-
-		minOldestConeRootIndex := milestone.Index(1)
-		if cmi > milestone.Index(BelowMaxDepth) {
-			minOldestConeRootIndex = cmi - milestone.Index(BelowMaxDepth)
-		}
-
-		require.GreaterOrEqual(te.TestInterface, uint32(ocri), uint32(minOldestConeRootIndex))
-		require.LessOrEqual(te.TestInterface, uint32(ocri), uint32(msIndex))
-
-		require.GreaterOrEqual(te.TestInterface, uint32(ycri), uint32(minOldestConeRootIndex))
-		require.LessOrEqual(te.TestInterface, uint32(ycri), uint32(msIndex))
-	}
+			require.GreaterOrEqual(te.TestInterface, uint32(ycri), uint32(minOldestConeRootIndex))
+			require.LessOrEqual(te.TestInterface, uint32(ycri), uint32(msIndex))
+		},
+	)
 
 	latestMilestone := te.Milestones[len(te.Milestones)-1]
 	cmi := latestMilestone.GetMilestone().Index

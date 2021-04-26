@@ -23,13 +23,21 @@ var (
 type HeaviestSelector struct {
 	sync.Mutex
 
+	// the minimum threshold of unreferenced messages in the heaviest branch for milestone tipselection
+	// if the value falls below that threshold, no more heaviest branch tips are picked
 	minHeaviestBranchUnreferencedMessagesThreshold int
-	maxHeaviestBranchTipsPerCheckpoint             int
-	randomTipsPerCheckpoint                        int
-	heaviestBranchSelectionTimeout                 time.Duration
-
-	trackedMessages map[string]*trackedMessage // map of all tracked messages
-	tips            *list.List                 // list of available tips
+	// the maximum amount of checkpoint messages with heaviest branch tips that are picked
+	// if the heaviest branch is not below "UnreferencedMessagesThreshold" before
+	maxHeaviestBranchTipsPerCheckpoint int
+	// the amount of checkpoint messages with random tips that are picked if a checkpoint is issued and at least
+	// one heaviest branch tip was found, otherwise no random tips will be picked
+	randomTipsPerCheckpoint int
+	// the maximum duration to select the heaviest branch tips
+	heaviestBranchSelectionTimeout time.Duration
+	// map of all tracked messages
+	trackedMessages map[string]*trackedMessage
+	// list of available tips
+	tips *list.List
 }
 
 type trackedMessage struct {

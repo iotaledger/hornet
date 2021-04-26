@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -59,9 +58,8 @@ func TestTipSelect(t *testing.T) {
 	// fill the storage with some messages to fill the tipselect pool
 	msgCount := 0
 	for i := 0; i < 100; i++ {
-		msg := te.NewMessageBuilder(fmt.Sprintf("%d", msgCount)).Parents(hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID}).BuildIndexation().Store()
-		cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
-		cachedMsgMeta.ConsumeMetadata(ts.AddTip)                                           // metadata -1
+		msgMeta := te.NewTestMessage(msgCount, hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID})
+		ts.AddTip(msgMeta)
 		msgCount++
 	}
 
@@ -78,10 +76,7 @@ func TestTipSelect(t *testing.T) {
 		for _, tip := range tips {
 			// we walk the cone of every tip to check the youngest and oldest milestone index it references
 			var youngestConeRootIndex milestone.Index = 0
-			var oldestConeRootIndex milestone.Index = 0
-
-			youngestConeRootIndex = 0
-			oldestConeRootIndex = math.MaxUint32
+			var oldestConeRootIndex milestone.Index = math.MaxUint32
 
 			updateIndexes := func(ycri milestone.Index, ocri milestone.Index) {
 				if youngestConeRootIndex < ycri {
@@ -136,14 +131,13 @@ func TestTipSelect(t *testing.T) {
 			require.LessOrEqual(te.TestInterface, uint32(youngestConeRootIndex), uint32(cmi))
 		}
 
-		msg := te.NewMessageBuilder(fmt.Sprintf("%d", msgCount)).Parents(tips).BuildIndexation().Store()
-		cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
-		cachedMsgMeta.ConsumeMetadata(ts.AddTip)                                           // metadata -1
+		msgMeta := te.NewTestMessage(msgCount, tips)
+		ts.AddTip(msgMeta)
 		msgCount++
 
 		if i%10 == 0 {
 			// Issue a new milestone every 10 messages
-			conf, _ := te.IssueAndConfirmMilestoneOnTip(msg.StoredMessageID(), false)
+			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{msgMeta.GetMessageID()}, false)
 			dag.UpdateConeRootIndexes(te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
 			ts.UpdateScores()
 		}
