@@ -130,9 +130,9 @@ func loadSnapshotFromTextfiles(filePathLedger string, filePathsSpent []string, s
 		}
 	}
 
-	spentAddrEnabled := (spentAddressesSum != 0) || ((snapshotIndex == 0) && config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled))
+	//spentAddrEnabled := (spentAddressesSum != 0) || ((snapshotIndex == 0) && config.NodeConfig.GetBool(config.CfgSpentAddressesEnabled))
 	coordinatorAddress := hornet.HashFromAddressTrytes(config.NodeConfig.GetString(config.CfgCoordinatorAddress))
-	tangle.SetSnapshotMilestone(coordinatorAddress, hornet.NullHashBytes, snapshotIndex, snapshotIndex, snapshotIndex, 0, spentAddrEnabled)
+	tangle.SetSnapshotMilestone(coordinatorAddress, hornet.NullHashBytes, snapshotIndex, snapshotIndex, snapshotIndex, 0, true)
 	tangle.SetLatestSeenMilestoneIndexFromSnapshot(snapshotIndex)
 
 	// set the solid milestone index based on the snapshot milestone
