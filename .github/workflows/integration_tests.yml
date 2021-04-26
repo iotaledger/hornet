@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build HORNET image
-        run: docker build -f docker/Dockerfile.dev -t hornet:dev .
+        run: docker build -f docker/Dockerfile -t hornet:dev .
 
       - name: Pull additional Docker images
         run: |
@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build HORNET image
-        run: docker build -f docker/Dockerfile.dev -t hornet:dev .
+        run: docker build -f docker/Dockerfile -t hornet:dev .
 
       - name: Pull additional Docker images
         run: |
@@ -83,7 +83,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build HORNET image
-        run: docker build -f docker/Dockerfile.dev -t hornet:dev .
+        run: docker build -f docker/Dockerfile -t hornet:dev .
 
       - name: Pull additional Docker images
         run: |
@@ -117,7 +117,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build HORNET image
-        run: docker build -f docker/Dockerfile.dev -t hornet:dev .
+        run: docker build -f docker/Dockerfile -t hornet:dev .
 
       - name: Pull additional Docker images
         run: |
@@ -150,7 +150,7 @@ jobs:
   #        uses: actions/checkout@v2
 
   #      - name: Build HORNET image
-  #        run: docker build -f docker/Dockerfile.dev -t hornet:dev .
+  #        run: docker build -f docker/Dockerfile -t hornet:dev .
 
   #      - name: Pull additional Docker images
   #        run: |
@@ -182,7 +182,7 @@ jobs:
 #        uses: actions/checkout@v2
 
 #      - name: Build HORNET image
-#        run: docker build -f docker/Dockerfile.dev -t hornet:dev .
+#        run: docker build -f docker/Dockerfile -t hornet:dev .
 
 #      - name: Pull additional Docker images
 #        run: |

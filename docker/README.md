@@ -84,13 +84,6 @@ Or pull it from dockerhub (only available for amd64/x86_64):
 docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:latest
 ```
 
-Note: for architectures other than amd64/x86_64 pass the corresponding Dockerfile, e.g.:
-
-```sh
-docker build -f docker/Dockerfile.arm64 -t hornet:latest .
-```
-
-
 ### Run
 
 Best is to run on host network for better performance (otherwise you are going to have to publish ports, that is done via iptables NAT and is slower)
