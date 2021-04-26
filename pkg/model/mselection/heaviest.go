@@ -102,12 +102,12 @@ func New(minHeaviestBranchUnreferencedMessagesThreshold int, maxHeaviestBranchTi
 		randomTipsPerCheckpoint:                        randomTipsPerCheckpoint,
 		heaviestBranchSelectionTimeout:                 heaviestBranchSelectionTimeout,
 	}
-	s.reset()
+	s.Reset()
 	return s
 }
 
-// reset resets the tracked messages map and tips list of s.
-func (s *HeaviestSelector) reset() {
+// Reset resets the tracked messages map and tips list of s.
+func (s *HeaviestSelector) Reset() {
 	s.Lock()
 	defer s.Unlock()
 
@@ -232,7 +232,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.MessageIDs, e
 	}
 
 	// reset the whole HeaviestSelector if valid tips were found
-	s.reset()
+	s.Reset()
 
 	return tips, nil
 }
