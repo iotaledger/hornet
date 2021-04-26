@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/tipselect"
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/daemon"
@@ -27,42 +28,39 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	powpackage "github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/gossip"
 	"github.com/gohornet/hornet/plugins/pow"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
+	urtsplugin "github.com/gohornet/hornet/plugins/urts"
 )
 
 func init() {
-	flag.CommandLine.MarkHidden("cooBootstrap")
-	flag.CommandLine.MarkHidden("cooStartIndex")
+	_ = flag.CommandLine.MarkHidden("cooBootstrap")
+	_ = flag.CommandLine.MarkHidden("cooStartIndex")
 }
 
 var (
 	PLUGIN = node.NewPlugin("Coordinator", node.Disabled, configure, run)
 	log    *logger.Logger
 
-	bootstrap  = flag.Bool("cooBootstrap", false, "bootstrap the network")
-	startIndex = flag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
+	bootstrap            = flag.Bool("cooBootstrap", false, "bootstrap the network")
+	forceAttachOnGenesis = flag.Bool("cooForceAttachOnGenesis", false, "force the next milestone to be attached to genesis")
+	startIndex           = flag.Uint32("cooStartIndex", 0, "index of the first milestone at bootstrap")
 
 	maxTrackedTails int
 	belowMaxDepth   milestone.Index
 
-	nextCheckpointSignal chan struct{}
-	nextMilestoneSignal  chan struct{}
+	nextMilestoneSignal chan struct{}
 
 	coo      *coordinator.Coordinator
 	selector *mselection.HeaviestSelector
 
-	lastCheckpointIndex int
-	lastCheckpointHash  hornet.Hash
-	lastMilestoneHash   hornet.Hash
+	lastMilestoneHash hornet.Hash
 
 	// Closures
-	onBundleSolid                 *events.Closure
-	onMilestoneConfirmed          *events.Closure
-	onIssuedCheckpointTransaction *events.Closure
-	onIssuedMilestone             *events.Closure
+	onBundleSolid        *events.Closure
+	onMilestoneConfirmed *events.Closure
+	onIssuedMilestone    *events.Closure
 
 	ErrDatabaseTainted = errors.New("database is tainted. delete the coordinator database and start again with a local snapshot")
 	ErrTailTxNotFound  = errors.New("tail transaction not found in bundle")
@@ -75,7 +73,7 @@ func configure(plugin *node.Plugin) {
 	tangleplugin.SetUpdateSyncedAtStartup(true)
 
 	var err error
-	coo, err = initCoordinator(*bootstrap, *startIndex, pow.Handler())
+	coo, err = initCoordinator(*bootstrap, *startIndex, *forceAttachOnGenesis, pow.Handler())
 	if err != nil {
 		log.Panic(err)
 	}
@@ -83,7 +81,7 @@ func configure(plugin *node.Plugin) {
 	configureEvents()
 }
 
-func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
+func initCoordinator(bootstrap bool, startIndex uint32, forceAttachOnGenesis bool, powHandler *powpackage.Handler) (*coordinator.Coordinator, error) {
 
 	if tangle.IsDatabaseTainted() {
 		return nil, ErrDatabaseTainted
@@ -112,8 +110,6 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		time.Duration(config.NodeConfig.GetInt(config.CfgCoordinatorTipselectHeaviestBranchSelectionDeadlineMilliseconds))*time.Millisecond,
 	)
 
-	nextCheckpointSignal = make(chan struct{})
-
 	// must be a buffered channel, otherwise signal gets
 	// lost if checkpoint is generated at the same time
 	nextMilestoneSignal = make(chan struct{}, 1)
@@ -138,7 +134,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 		return nil, err
 	}
 
-	if err := coo.InitState(bootstrap, milestone.Index(startIndex)); err != nil {
+	if err := coo.InitState(bootstrap, milestone.Index(startIndex), forceAttachOnGenesis); err != nil {
 		return nil, err
 	}
 
@@ -151,7 +147,7 @@ func initCoordinator(bootstrap bool, startIndex uint32, powHandler *powpackage.H
 func run(plugin *node.Plugin) {
 
 	// create a background worker that signals to issue new milestones
-	daemon.BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
+	_ = daemon.BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
 
 		timeutil.Ticker(func() {
 			// issue next milestone
@@ -165,11 +161,12 @@ func run(plugin *node.Plugin) {
 	}, shutdown.PriorityCoordinator)
 
 	// create a background worker that issues milestones
-	daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
+	_ = daemon.BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
 		// wait until all background workers of the tangle plugin are started
 		tangleplugin.WaitForTangleProcessorStartup()
 
 		attachEvents()
+		defer detachEvents()
 
 		// bootstrap the network if not done yet
 		milestoneHash, criticalErr := coo.Bootstrap()
@@ -180,59 +177,26 @@ func run(plugin *node.Plugin) {
 		// init the last milestone hash
 		lastMilestoneHash = milestoneHash
 
-		// init the checkpoints
-		lastCheckpointHash = milestoneHash
-		lastCheckpointIndex = 0
-
 	coordinatorLoop:
 		for {
 			select {
-			case <-nextCheckpointSignal:
-				// check the thresholds again, because a new milestone could have been issued in the meantime
-				if trackedTailsCount := selector.GetTrackedTailsCount(); trackedTailsCount < maxTrackedTails {
-					continue
-				}
-
-				tips, err := selector.SelectTips(0)
-				if err != nil {
-					// issuing checkpoint failed => not critical
-					if err != mselection.ErrNoTipsAvailable {
-						log.Warn(err)
-					}
-					continue
-				}
-
-				// issue a checkpoint
-				checkpointHash, err := coo.IssueCheckpoint(lastCheckpointIndex, lastCheckpointHash, tips)
-				if err != nil {
-					// issuing checkpoint failed => not critical
-					log.Warn(err)
-					continue
-				}
-				lastCheckpointIndex++
-				lastCheckpointHash = checkpointHash
-
+			case <-shutdownSignal:
+				break coordinatorLoop
 			case <-nextMilestoneSignal:
 
-				// issue a new checkpoint right in front of the milestone
-				tips, err := selector.SelectTips(1)
-				if err != nil {
-					// issuing checkpoint failed => not critical
-					if err != mselection.ErrNoTipsAvailable {
+				tip := lastMilestoneHash
+				tips, err := urtsplugin.TipSelector.SelectNonLazyTips()
+				switch {
+				case err != nil:
+					if err != tipselect.ErrNoTipsAvailable {
 						log.Warn(err)
 					}
-				} else {
-					checkpointHash, err := coo.IssueCheckpoint(lastCheckpointIndex, lastCheckpointHash, tips)
-					if err != nil {
-						// issuing checkpoint failed => not critical
-						log.Warn(err)
-					} else {
-						// use the new checkpoint hash
-						lastCheckpointHash = checkpointHash
-					}
+					// use previous milestone hash for trunk and branch
+				default:
+					tip = tips[0]
 				}
 
-				milestoneHash, err, criticalErr := coo.IssueMilestone(lastMilestoneHash, lastCheckpointHash)
+				milestoneHash, err, criticalErr := coo.IssueMilestone(lastMilestoneHash, tip)
 				if criticalErr != nil {
 					log.Panic(criticalErr)
 				}
@@ -245,19 +209,9 @@ func run(plugin *node.Plugin) {
 					continue
 				}
 
-				// remember the last milestone hash
 				lastMilestoneHash = milestoneHash
-
-				// reset the checkpoints
-				lastCheckpointHash = milestoneHash
-				lastCheckpointIndex = 0
-
-			case <-shutdownSignal:
-				break coordinatorLoop
 			}
 		}
-
-		detachEvents()
 	}, shutdown.PriorityCoordinator)
 
 }
@@ -364,18 +318,11 @@ func configureEvents() {
 			// add tips to the heaviest branch selector
 			if trackedTailsCount := selector.OnNewSolidBundle(bndl); trackedTailsCount >= maxTrackedTails {
 				log.Debugf("Coordinator Tipselector: trackedTailsCount: %d", trackedTailsCount)
-
-				// issue next checkpoint
-				select {
-				case nextCheckpointSignal <- struct{}{}:
-				default:
-					// do not block if already another signal is waiting
-				}
 			}
 		})
 	})
 
-	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+	onMilestoneConfirmed = events.NewClosure(func(confirmation *tangle.WhiteFlagConfirmation) {
 		ts := time.Now()
 
 		// do not propagate during syncing, because it is not needed at all
@@ -389,10 +336,6 @@ func configureEvents() {
 		log.Debugf("UpdateTransactionRootSnapshotIndexes finished, took: %v", time.Since(ts).Truncate(time.Millisecond))
 	})
 
-	onIssuedCheckpointTransaction = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, txHash hornet.Hash) {
-		log.Infof("checkpoint (%d) transaction issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, txHash.Trytes())
-	})
-
 	onIssuedMilestone = events.NewClosure(func(index milestone.Index, tailTxHash hornet.Hash) {
 		log.Infof("milestone issued (%d): %v", index, tailTxHash.Trytes())
 	})
@@ -401,7 +344,6 @@ func configureEvents() {
 func attachEvents() {
 	tangleplugin.Events.BundleSolid.Attach(onBundleSolid)
 	tangleplugin.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
-	coo.Events.IssuedCheckpointTransaction.Attach(onIssuedCheckpointTransaction)
 	coo.Events.IssuedMilestone.Attach(onIssuedMilestone)
 }
 

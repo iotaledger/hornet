@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/willf/bitset"
@@ -61,9 +62,10 @@ type Handshake struct {
 // SupportedVersion returns the highest supported protocol version.
 func (hs Handshake) SupportedVersion(ownSupportedMessagesBitset *bitset.BitSet) (version int, err error) {
 	hsSupportedMessagesBitset := bitset.New(uint(len(hs.SupportedVersions) * 8))
-	hsSupportedMessagesBitset.UnmarshalBinary(hs.SupportedVersions)
-
-	bothSupportedMessagesBitset := hsSupportedMessagesBitset.Union(ownSupportedMessagesBitset)
+	if err := hsSupportedMessagesBitset.UnmarshalBinary(hs.SupportedVersions); err != nil {
+		return 0, fmt.Errorf("unable to unmarshal handshake supported versions into bit set: %w", err)
+	}
+	bothSupportedMessagesBitset := hsSupportedMessagesBitset.Intersection(ownSupportedMessagesBitset)
 
 	if !bothSupportedMessagesBitset.Any() {
 		// we don't support any protocol version the peer supports
@@ -73,7 +75,6 @@ func (hs Handshake) SupportedVersion(ownSupportedMessagesBitset *bitset.BitSet) 
 				return 1 << i, ErrVersionNotSupported
 			}
 		}
-
 	}
 
 	for i := int(bothSupportedMessagesBitset.Len()) - 1; i >= 0; i-- {
@@ -131,7 +132,6 @@ func ParseHandshake(msg []byte) (*Handshake, error) {
 	var sentTimestamp uint64
 	byteEncodedCooAddress := make([]byte, ByteEncodedCooAddressBytesLength)
 	var mwm byte
-	supportedVersions := make([]byte, 8)
 
 	r := bytes.NewReader(msg)
 
@@ -151,6 +151,7 @@ func ParseHandshake(msg []byte) (*Handshake, error) {
 		return nil, err
 	}
 
+	supportedVersions := make([]byte, r.Len())
 	if _, err := r.Read(supportedVersions); err != nil {
 		return nil, err
 	}

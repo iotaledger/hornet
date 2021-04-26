@@ -10,7 +10,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/tangle"
 )
 
@@ -22,34 +21,6 @@ var (
 	ErrIncludedTailsSumDoesntMatch = errors.New("the sum of the included tails doesn't match the referenced tails minus the excluded tails")
 )
 
-// Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
-type Confirmation struct {
-	// The index of the milestone that got confirmed.
-	MilestoneIndex milestone.Index
-	// The transaction hash of the tail transaction of the milestone that got confirmed.
-	MilestoneHash hornet.Hash
-	// The ledger mutations and referenced transactions of this milestone.
-	Mutations *WhiteFlagMutations
-}
-
-// WhiteFlagMutations contains the ledger mutations and referenced transactions applied to a cone under the "white-flag" approach.
-type WhiteFlagMutations struct {
-	// The tails of bundles which mutate the ledger in the order in which they were applied.
-	TailsIncluded hornet.Hashes
-	// The tails of bundles which were excluded as they were conflicting with the mutations.
-	TailsExcludedConflicting hornet.Hashes
-	// The tails which were excluded because they were part of a zero or spam value transfer.
-	TailsExcludedZeroValue hornet.Hashes
-	// The tails which were referenced by the milestone (should be the sum of TailsIncluded + TailsExcludedConflicting + TailsExcludedZeroValue).
-	TailsReferenced hornet.Hashes
-	// Contains the updated state of the addresses which were mutated by the given confirmation.
-	NewAddressState map[string]int64
-	// Contains the mutations to the state of the addresses for the given confirmation.
-	AddressMutations map[string]int64
-	// The merkle tree root hash of all tails.
-	MerkleTreeHash []byte
-}
-
 // ComputeConfirmation computes the ledger changes in accordance to the white-flag rules for the cone referenced by trunk and branch.
 // Via a post-order depth-first search the approved bundles of the given cone are traversed and
 // in their corresponding order applied/mutated against the previous ledger state, respectively previous applied mutations.
@@ -59,8 +30,8 @@ type WhiteFlagMutations struct {
 // of the bundles which are part of the set which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // all cachedTxMetas and cachedBundles have to be released outside.
-func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, cachedBundles map[string]*tangle.CachedBundle, merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*WhiteFlagMutations, error) {
-	wfConf := &WhiteFlagMutations{
+func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, cachedBundles map[string]*tangle.CachedBundle, merkleTreeHashFunc crypto.Hash, trunkHash hornet.Hash, branchHash ...hornet.Hash) (*tangle.WhiteFlagMutations, error) {
+	wfConf := &tangle.WhiteFlagMutations{
 		TailsIncluded:            make(hornet.Hashes, 0),
 		TailsExcludedConflicting: make(hornet.Hashes, 0),
 		TailsExcludedZeroValue:   make(hornet.Hashes, 0),
@@ -185,8 +156,8 @@ func ComputeWhiteFlagMutations(cachedTxMetas map[string]*tangle.CachedMetadata, 
 
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If trunk and branch of a bundle head transaction are both SEPs, are already processed or already confirmed,
-	// then the mutations from the transaction retrieved from the stack are accumulated to the given Confirmation struct's mutations.
-	// If the popped transaction was used to mutate the Confirmation struct, it will also be appended to Confirmation.TailsIncluded.
+	// then the mutations from the transaction retrieved from the stack are accumulated to the given WhiteFlagConfirmation struct's mutations.
+	// If the popped transaction was used to mutate the WhiteFlagConfirmation struct, it will also be appended to WhiteFlagConfirmation.TailsIncluded.
 	if len(branchHash) == 0 {
 		// no branch hash given, only walk trunk
 		if err := dag.TraverseApprovees(trunkHash,

@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/tangle"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	tangleplugin "github.com/gohornet/hornet/plugins/tangle"
 )
 
@@ -88,7 +87,7 @@ func configureEvents() {
 		})
 	})
 
-	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+	onMilestoneConfirmed = events.NewClosure(func(confirmation *tangle.WhiteFlagConfirmation) {
 		// do not propagate during syncing, because it is not needed at all
 		if !tangle.IsNodeSyncedWithThreshold() {
 			return

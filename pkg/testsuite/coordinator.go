@@ -55,7 +55,7 @@ func (te *TestEnvironment) configureCoordinator() {
 	err := te.coo.InitMerkleTree(fmt.Sprintf("%s/pkg/testsuite/assets/coordinator.tree", searchProjectRootFolder()), cooAddress)
 	require.NoError(te.testState, err)
 
-	te.coo.InitState(true, 0)
+	te.coo.InitState(true, 0, false)
 
 	// save snapshot info
 	tangle.SetSnapshotMilestone(hornet.HashFromAddressTrytes(cooAddress), hornet.NullHashBytes, 0, 0, 0, time.Now().Unix(), false)
@@ -83,7 +83,7 @@ func (te *TestEnvironment) configureCoordinator() {
 		}
 	}()
 
-	conf, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+	conf, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *tangle.WhiteFlagConfirmation) {
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})
 	require.NoError(te.testState, err)
@@ -119,8 +119,8 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTip(tip hornet.Hash, create
 		}
 	}()
 
-	var wfConf *whiteflag.Confirmation
-	confStats, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *whiteflag.Confirmation) {
+	var wfConf *tangle.WhiteFlagConfirmation
+	confStats, err := whiteflag.ConfirmMilestone(cachedTxMetas, ms.Retain(), func(txMeta *tangle.CachedMetadata, index milestone.Index, confTime int64) {}, func(confirmation *tangle.WhiteFlagConfirmation) {
 		wfConf = confirmation
 		tangle.SetSolidMilestoneIndex(confirmation.MilestoneIndex, true)
 	})

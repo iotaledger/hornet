@@ -139,7 +139,7 @@ func (coo *Coordinator) InitMerkleTree(filePath string, cooAddress trinary.Hash)
 }
 
 // InitState loads an existing state file or bootstraps the network.
-func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) error {
+func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, forceAttachOnGenesis bool) error {
 
 	_, err := os.Stat(coo.stateFilePath)
 	stateFileExists := !os.IsNotExist(err)
@@ -156,17 +156,17 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 			startIndex = 1
 		}
 
-		if latestMilestoneFromDatabase != startIndex-1 {
+		if !forceAttachOnGenesis && latestMilestoneFromDatabase != startIndex-1 {
 			return fmt.Errorf("previous milestone does not match latest milestone in database! previous: %d, database: %d", startIndex-1, latestMilestoneFromDatabase)
 		}
 
-		if startIndex == 1 {
+		if startIndex == 1 || forceAttachOnGenesis {
 			// if we bootstrap a network, NullHash has to be set as a solid entry point
 			tangle.SolidEntryPointsAdd(hornet.NullHashBytes, startIndex)
 		}
 
 		latestMilestoneHash := hornet.NullHashBytes
-		if startIndex != 1 {
+		if startIndex != 1 && !forceAttachOnGenesis {
 			// If we don't start a new network, the last milestone has to be referenced
 			cachedBndl := tangle.GetMilestoneOrNil(latestMilestoneFromDatabase)
 			if cachedBndl == nil {

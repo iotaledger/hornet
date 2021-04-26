@@ -27,6 +27,8 @@ const (
 	CfgWebAPILimitsMaxGetTrytes = "httpAPI.limits.getTrytes"
 	// the maximum number of parameters in an API call
 	CfgWebAPILimitsMaxRequestsList = "httpAPI.limits.requestsList"
+	// whether to disable the check whether a to broadcast bundle is a migration bundle
+	CfgWebAPIDisableMigrationBundleCheckOnBroadcast = "httpAPI.debug.disableMigrationBundleCheckOnBroadcast"
 )
 
 func init() {
@@ -58,4 +60,5 @@ func init() {
 	configFlagSet.Int(CfgWebAPILimitsMaxFindTransactions, 1000, "the maximum number of transactions that may be returned by the findTransactions endpoint")
 	configFlagSet.Int(CfgWebAPILimitsMaxGetTrytes, 1000, "the maximum number of trytes that may be returned by the getTrytes endpoint")
 	configFlagSet.Int(CfgWebAPILimitsMaxRequestsList, 1000, "the maximum number of parameters in an API call")
+	configFlagSet.Bool(CfgWebAPIDisableMigrationBundleCheckOnBroadcast, false, "whether to disable migration bundle check on broadcast")
 }
