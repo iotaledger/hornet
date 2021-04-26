@@ -48,8 +48,6 @@ EXPOSE 14626/udp
 # Copy assets into distroless image
 COPY --from=build /go/bin/hornet /app/hornet
 COPY ./config.json /app/config.json
-COPY ./config_comnet.json /app/config_comnet.json
-COPY ./config_devnet.json /app/config_devnet.json
 COPY ./peering.json /app/peering.json
 COPY ./profiles.json /app/profiles.json
 
