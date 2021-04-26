@@ -6,11 +6,6 @@ ARG BUILD_TAGS
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates
 
-# Install more up to date version of GCC as we need it to compile with our Go RocksDB lib fork
-RUN echo 'deb http://deb.debian.org/debian testing main' >> /etc/apt/sources.list
-RUN apt update -y
-RUN apt install -y gcc
-
 # Set the current Working Directory inside the container
 RUN mkdir /app
 WORKDIR /app
