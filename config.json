@@ -47,27 +47,20 @@
     }
   },
   "db": {
-    "engine": "pebble",
+    "engine": "rocksdb",
     "path": "mainnetdb",
     "autoRevalidation": false
   },
   "snapshots": {
-    "interval": 50,
+    "depth": 50,
+    "interval": 200,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",
     "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://ls.manapotion.io/full_snapshot.bin",
-        "delta": "https://ls.manapotion.io/delta_snapshot.bin"
-      },
-      {
-        "full": "https://x-vps.com/full_snapshot.bin",
-        "delta": "https://x-vps.com/delta_snapshot.bin"
-      },
-      {
-        "full": "https://dbfiles.iota.org/mainnet/hornet/full_snapshot.bin",
-        "delta": "https://dbfiles.iota.org/mainnet/hornet/delta_snapshot.bin"
+        "full": "https://dbfiles.mainnet.chrysalis2.com/full_snapshot.bin",
+        "delta": "https://dbfiles.mainnet.chrysalis2.com/delta_snapshot.bin"
       }
     ]
   },
@@ -76,11 +69,97 @@
     "delay": 60480,
     "pruneReceipts": false
   },
+  "protocol": {
+    "networkID": "chrysalis2-mainnet",
+    "bech32HRP": "iota",
+    "minPoWScore": 4000,
+    "milestonePublicKeyCount": 2,
+    "publicKeyRanges": [
+      {
+        "key": "a9b46fe743df783dedd00c954612428b34241f5913cf249d75bed3aafd65e4cd",
+        "start": 0,
+        "end": 777600
+      },
+      {
+        "key": "365fb85e7568b9b32f7359d6cbafa9814472ad0ecbad32d77beaf5dd9e84c6ba",
+        "start": 0,
+        "end": 1555200
+      }
+    ]
+  },
+  "pow": {
+    "refreshTipsInterval": "5s"
+  },
+  "requests": {
+    "discardOlderThan": "15s",
+    "pendingReEnqueueInterval": "5s"
+  },
+  "coordinator": {
+    "stateFilePath": "coordinator.state",
+    "interval": "10s",
+    "checkpoints": {
+      "maxTrackedMessages": 10000
+    },
+    "tipsel": {
+      "minHeaviestBranchUnreferencedMessagesThreshold": 20,
+      "maxHeaviestBranchTipsPerCheckpoint": 10,
+      "randomTipsPerCheckpoint": 2,
+      "heaviestBranchSelectionTimeout": "100ms"
+    },
+    "signing": {
+      "provider": "local",
+      "remoteAddress": "localhost:12345"
+    },
+    "quorum": {
+      "enabled": false,
+      "groups": {},
+      "timeout": "2s"
+    }
+  },
+  "receipts": {
+    "backup": {
+      "enabled": false,
+      "folder": "receipts"
+    },
+    "validator": {
+      "validate": false,
+      "api": {
+        "address": "http://localhost:14265",
+        "timeout": "5s"
+      },
+      "coordinator": {
+        "address": "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ",
+        "merkleTreeDepth": 24
+      }
+    }
+  },
+  "tangle": {
+    "milestoneTimeout": "30s"
+  },
+  "tipsel": {
+    "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
+    "maxDeltaMsgOldestConeRootIndexToCMI": 13,
+    "belowMaxDepth": 15,
+    "nonLazy": {
+      "retentionRulesTipsLimit": 100,
+      "maxReferencedTipAge": "3s",
+      "maxChildren": 30,
+      "spammerTipsThreshold": 0
+    },
+    "semiLazy": {
+      "retentionRulesTipsLimit": 20,
+      "maxReferencedTipAge": "3s",
+      "maxChildren": 2,
+      "spammerTipsThreshold": 30
+    }
+  },
   "node": {
-    "alias": "Mainnet",
+    "alias": "HORNET node",
     "profile": "auto",
     "disablePlugins": [],
-    "enablePlugins": []
+    "enablePlugins": [
+      "Spammer"
+    ]
   },
   "p2p": {
     "bindMultiAddresses": [
@@ -111,12 +190,15 @@
       "stdout"
     ]
   },
+  "warpsync": {
+    "advancementRange": 150
+  },
   "spammer": {
-    "message": "Binary is the future.",
+    "message": "IOTA - A new dawn",
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
-    "mpsRateLimit": 0.0,
+    "mpsRateLimit": 5.0,
     "workers": 0,
     "autostart": false
   },

@@ -1,11 +1,7 @@
-FROM alpine:latest
+# golang 1.16.3-buster amd64
+FROM golang@sha256:dfa3cef088454200d6b48e2a911138f7d5d9afff77f89243eea6342f16ddcfb0 AS build
 
-ARG REPO="gohornet/hornet"
-ARG TAG=latest
-ARG ARCH=x86_64
-ARG OS=Linux
-ARG SET_UID=39999
-ARG SET_GID=39999
+ARG BUILD_TAGS
 
 LABEL org.label-schema.description="HORNET - The IOTA community node"
 LABEL org.label-schema.name="gohornet/hornet"
@@ -13,38 +9,48 @@ LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.vcs-url="https://github.com/gohornet/hornet"
 LABEL org.label-schema.usage="https://github.com/gohornet/hornet/blob/master/DOCKER.md"
 
+# Ensure ca-certificates are up to date
+RUN update-ca-certificates
+
+# Set the current Working Directory inside the container
+RUN mkdir /app
 WORKDIR /app
 
-RUN apk --no-cache add ca-certificates curl jq tini tar\
- && update-ca-certificates 2>/dev/null || true\
- && if [ "$TAG" = "latest" ];\
-    then\
-      HORNET_TAG=$(curl --retry 3 -f -s https://api.github.com/repos/${REPO}/releases/latest | jq -r .tag_name | tr -d 'v');\
-    else\
-      HORNET_TAG="${TAG//v}";\
-    fi\
- && echo "Downloading from https://github.com/${REPO}/releases/download/v${HORNET_TAG}/HORNET-${HORNET_TAG}_${OS}_${ARCH}.tar.gz ..."\
- && curl -f -L --retry 3 "https://github.com/${REPO}/releases/download/v${HORNET_TAG}/HORNET-${HORNET_TAG}_${OS}_${ARCH}.tar.gz" -o /tmp/hornet.tgz\
- && tar --wildcards --strip-components=1 -xf /tmp/hornet.tgz -C /app/ */hornet */config.json */config_comnet.json */config_devnet.json */peering.json\
- && if [ "$ARCH" = "x86_64" ];\
-    then\
-      curl -f -L --retry 3 -o /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub;\
-      curl -f -L --retry 3 -o glibc-2.30-r0.apk https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.30-r0/glibc-2.30-r0.apk;\
-      apk add glibc-2.30-r0.apk;\
-      rm glibc-2.30-r0.apk;\
-    fi\
- && addgroup --gid $SET_GID hornet\
- && adduser -h /app -s /bin/sh -G hornet -u $SET_UID -D hornet\
- && chmod +x /app/hornet\
- && chown hornet:hornet -R /app\
- && rm /tmp/hornet.tgz\
- && apk del jq curl
+# Use Go Modules
+COPY go.mod .
+COPY go.sum .
 
-# Not exposing ports, as it might be more efficient to run this on host network because of performance gain.
-# | Host mode networking can be useful to optimize performance, and in situations where a container needs
-# | to handle a large range of ports, as it does not require network address translation (NAT), and no
-# | “userland-proxy” is created for each port.
-# Source: https://docs.docker.com/network/host/
+ENV GO111MODULE=on
+RUN go mod download
+RUN go mod verify
 
-USER hornet
-ENTRYPOINT ["/sbin/tini", "--", "/app/hornet"]
+# Copy everything from the current directory to the PWD(Present Working Directory) inside the container
+COPY . .
+
+# Build the binary
+RUN GOOS=linux GOARCH=amd64 go build \
+      -tags="$BUILD_TAGS" \
+      -ldflags='-w -s' -a \
+      -o /go/bin/hornet
+
+############################
+# Image
+############################
+# https://github.com/GoogleContainerTools/distroless/tree/master/cc
+# using distroless cc image, which includes everything in the base image (glibc, libssl and openssl)
+FROM gcr.io/distroless/cc@sha256:e8a7af65cf92b834e35a7537f6be93e743b48886c83c1eac15ade437b90fc9ab
+
+EXPOSE 8081/tcp
+EXPOSE 14265/tcp
+EXPOSE 15600/tcp
+EXPOSE 14626/udp
+
+# Copy assets into distroless image
+COPY --from=build /go/bin/hornet /app/hornet
+COPY ./config.json /app/config.json
+COPY ./config_comnet.json /app/config_comnet.json
+COPY ./config_devnet.json /app/config_devnet.json
+COPY ./peering.json /app/peering.json
+COPY ./profiles.json /app/profiles.json
+
+ENTRYPOINT ["/app/hornet"]
