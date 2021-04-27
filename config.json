@@ -94,28 +94,6 @@
     "discardOlderThan": "15s",
     "pendingReEnqueueInterval": "5s"
   },
-  "coordinator": {
-    "stateFilePath": "coordinator.state",
-    "interval": "10s",
-    "checkpoints": {
-      "maxTrackedMessages": 10000
-    },
-    "tipsel": {
-      "minHeaviestBranchUnreferencedMessagesThreshold": 20,
-      "maxHeaviestBranchTipsPerCheckpoint": 10,
-      "randomTipsPerCheckpoint": 2,
-      "heaviestBranchSelectionTimeout": "100ms"
-    },
-    "signing": {
-      "provider": "local",
-      "remoteAddress": "localhost:12345"
-    },
-    "quorum": {
-      "enabled": false,
-      "groups": {},
-      "timeout": "2s"
-    }
-  },
   "receipts": {
     "backup": {
       "enabled": false,
@@ -124,7 +102,7 @@
     "validator": {
       "validate": false,
       "api": {
-        "address": "http://localhost:14265",
+        "address": "http://localhost:14266",
         "timeout": "5s"
       },
       "coordinator": {
