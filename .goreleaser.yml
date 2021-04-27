@@ -12,6 +12,8 @@ builds:
   # Linux AMD64
   - id: hornet-linux-amd64
     binary: hornet
+    flags:
+      - -tags=builtin_static,rocksdb
     ldflags:
       - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
     main: main.go
@@ -19,15 +21,17 @@ builds:
       - linux
     goarch:
       - amd64
-  # Linux ARM64 statically linked
+  # Linux ARM64
   - id: hornet-linux-arm64
     binary: hornet
+    flags:
+      - -tags=builtin_static,rocksdb
     env:
       - CGO_ENABLED=1
-      - CC=aarch64-linux-musl-gcc
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
     ldflags:
       - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
-      - -w -extldflags "-static"
     main: main.go
     goos:
       - linux
@@ -47,18 +51,6 @@ builds:
       - windows
     goarch:
       - amd64
-  # macOS AMD64
-  - id: hornet-macOS-amd64
-    binary: hornet
-    env:
-      - CGO_ENABLED=0
-    ldflags:
-      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
-    main: main.go
-    goos:
-      - darwin
-    goarch:
-      - amd64
 
 # Docker
 dockers:
@@ -70,7 +62,7 @@ dockers:
       - "gohornet/hornet:{{ .Tag }}"
     ids:
       - hornet
-    dockerfile: docker/Dockerfile.goreleaser
+    dockerfile: docker/Dockerfile
     skip_push: auto
 
 # Archives
@@ -91,8 +83,6 @@ archives:
       - README.md
       - LICENSE
       - config.json
-      - config_comnet.json
-      - config_devnet.json
       - peering.json
       - profiles.json
 
@@ -116,14 +106,6 @@ nfpms:
 
       - src: "config.json"
         dst: "/var/lib/hornet/config.json"
-        type: config
-
-      - src: "config_comnet.json"
-        dst: "/var/lib/hornet/config_comnet.json"
-        type: config
-
-      - src: "config_devnet.json"
-        dst: "/var/lib/hornet/config_devnet.json"
         type: config
 
       - src: "peering.json"

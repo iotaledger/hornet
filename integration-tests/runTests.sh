@@ -3,7 +3,7 @@
 TEST_NAMES='common value benchmark snapshot migration'
 
 echo "Build HORNET image"
-docker build -f ../docker/Dockerfile.dev -t hornet:dev ../.
+docker build -f ../docker/Dockerfile -t hornet:dev ../.
 
 echo "Pull additional Docker images"
 docker pull gaiaadm/pumba:0.7.4

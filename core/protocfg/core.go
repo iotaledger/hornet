@@ -39,7 +39,7 @@ func init() {
 						fs := flag.NewFlagSet("", flag.ContinueOnError)
 						fs.Float64(CfgProtocolMinPoWScore, 4000, "the minimum PoW score required by the network.")
 						fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
-						fs.String(CfgProtocolNetworkIDName, "mainnet1", "the network ID on which this node operates on.")
+						fs.String(CfgProtocolNetworkIDName, "c2-mainnet", "the network ID on which this node operates on.")
 						fs.String(CfgProtocolBech32HRP, string(iotago.PrefixMainnet), "the HRP which should be used for Bech32 addresses.")
 						return fs
 					}(),
@@ -80,11 +80,9 @@ func provide(c *dig.Container) {
 			MinPoWScore: deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
 		}
 
-		// ToDo: Change these defaults to mainnet values
 		if err := deps.NodeConfig.SetDefault(CfgProtocolPublicKeyRanges, &coordinator.PublicKeyRanges{
-			&coordinator.PublicKeyRange{Key: "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c", StartIndex: 1, EndIndex: 1000},
-			&coordinator.PublicKeyRange{Key: "f1a319ff4e909c0ac9f2771d79feceed3c3bd9fd2ee49ea6c0885c9cb3b1248c", StartIndex: 1, EndIndex: 1000},
-			&coordinator.PublicKeyRange{Key: "ced3c3f1a319ff4e909f2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c", StartIndex: 800, EndIndex: 1000},
+			&coordinator.PublicKeyRange{Key: "a9b46fe743df783dedd00c954612428b34241f5913cf249d75bed3aafd65e4cd", StartIndex: 0, EndIndex: 777600},
+			&coordinator.PublicKeyRange{Key: "365fb85e7568b9b32f7359d6cbafa9814472ad0ecbad32d77beaf5dd9e84c6ba", StartIndex: 0, EndIndex: 1555200},
 		}); err != nil {
 			panic(err)
 		}

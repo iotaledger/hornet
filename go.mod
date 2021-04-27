@@ -4,7 +4,7 @@ go 1.16
 
 replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2
 
-replace github.com/linxGnu/grocksdb => github.com/gohornet/grocksdb v1.6.34-0.20210426132002-dfdab83d17a6
+replace github.com/linxGnu/grocksdb => github.com/gohornet/grocksdb v1.6.34-0.20210426181723-39af4e8f80a6
 
 require (
 	github.com/DataDog/zstd v1.4.8 // indirect
