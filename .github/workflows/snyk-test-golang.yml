@@ -3,11 +3,11 @@ on:
   push:
     paths-ignore:
       - 'docs/**'
-    branches: [master, develop]
+    branches: [main, develop]
   pull_request:
     paths-ignore:
       - 'docs/**'
-    branches: [master, develop]
+    branches: [main, develop]
 
 jobs:
   security:
