@@ -2,8 +2,8 @@ name: Build HORNET
 on:
   push:
     branches:
-      - master
-      - develop
+      - legacy
+      - develop-legacy
   pull_request:
 
 jobs:

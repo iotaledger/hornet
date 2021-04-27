@@ -3,7 +3,7 @@ name: Test release
 on:
   push:
     branches:
-      - master
+      - legacy
 
 jobs:
   Release:

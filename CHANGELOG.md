@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.8-rc1] - 27.04.2021
+
+### Changed
+
+    - Migration only network
+
 ## [0.5.7-rc1] - 21.11.2020
 
 ### Changed

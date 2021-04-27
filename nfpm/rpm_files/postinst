@@ -1,21 +1,21 @@
 if [ $1 -eq 1 ]; then
-    /usr/bin/systemctl preset hornet.service >/dev/null 2>&1 ||:
+    /usr/bin/systemctl preset hornet-legacy.service >/dev/null 2>&1 ||:
     # print site info
     cat <<EOF
 ######################################
-HORNET installation finished
+HORNET-legacy installation finished
 ######################################
 WARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable the plugin prior to the first start if you do not want this to happen!
 
-Please edit the config files (/var/lib/hornet/config.json and /var/lib/hornet/peering.json) to fit your needs.
-To start HORNET the first time, please run:
+Please edit the config files (/var/lib/hornet-legacy/config.json and /var/lib/hornet-legacy/peering.json) to fit your needs.
+To start HORNET-legacy the first time, please run:
 
-sudo systemctl enable hornet && sudo service hornet start
+sudo systemctl enable hornet-legacy && sudo service hornet-legacy start
 
 EOF
 
-    mkdir -p /var/lib/hornet
-    chmod 700 /var/lib/hornet
-    chown hornet:hornet /var/lib/hornet
+    mkdir -p /var/lib/hornet-legacy
+    chmod 700 /var/lib/hornet-legacy
+    chown hornet-legacy:hornet-legacy /var/lib/hornet-legacy
 
 fi

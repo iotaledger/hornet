@@ -1,24 +1,24 @@
 [Unit]
-Description=Hornet
+Description=Hornet-legacy
 Wants=network-online.target
 After=network-online.target
 
 [Service]
-EnvironmentFile=-/etc/default/hornet
+EnvironmentFile=-/etc/default/hornet-legacy
 LimitNOFILE=4096
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=hornet
+SyslogIdentifier=hornet-legacy
 PrivateDevices=yes
 PrivateTmp=yes
 ProtectSystem=full
 ProtectHome=yes
 
-User=hornet
-WorkingDirectory=/var/lib/hornet
+User=hornet-legacy
+WorkingDirectory=/var/lib/hornet-legacy
 TimeoutSec=1200
 Restart=always
-ExecStart=/usr/bin/hornet $OPTIONS
+ExecStart=/usr/bin/hornet-legacy $OPTIONS
 
 [Install]
 WantedBy=multi-user.target

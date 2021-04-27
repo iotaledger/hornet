@@ -20,11 +20,11 @@ import (
 
 var (
 	// AppVersion version number
-	AppVersion          = "0.5.7-rc1"
+	AppVersion          = "0.5.8-rc1"
 	LatestGithubVersion = AppVersion
 
 	// AppName app code name
-	AppName = "HORNET"
+	AppName = "HORNET-legacy"
 
 	githubTag *latest.GithubTag
 )
@@ -73,6 +73,7 @@ func configure(plugin *node.Plugin) {
               ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
               ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
+                                                           legacy
                                    v%s
 `+"\n\n", AppVersion)
 

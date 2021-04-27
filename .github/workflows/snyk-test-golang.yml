@@ -1,9 +1,9 @@
 name: Test Golang dependencies with Snyk
 on:
   push:
-    branches: [master, develop]
+    branches: [legacy, develop-legacy]
   pull_request:
-    branches: [master, develop]
+    branches: [legacy, develop-legacy]
 jobs:
   security:
     # Only run on push events or PRs from gohornet/hornet, skip on PRs from forks
