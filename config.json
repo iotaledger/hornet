@@ -26,7 +26,7 @@
       "healthz"
     ],
     "whitelistedAddresses": [],
-    "bindAddress": "0.0.0.0:14265",
+    "bindAddress": "0.0.0.0:14266",
     "limits": {
       "bodyLengthBytes": 1000000,
       "findTransactions": 1000,
@@ -35,7 +35,7 @@
     }
   },
   "dashboard": {
-    "bindAddress": "localhost:8081",
+    "bindAddress": "localhost:8082",
     "theme": "default",
     "basicAuth": {
       "enabled": false,
@@ -75,7 +75,7 @@
   "network": {
     "preferIPv6": false,
     "gossip": {
-      "bindAddress": "0.0.0.0:15600",
+      "bindAddress": "0.0.0.0:15601",
       "reconnectAttemptIntervalSeconds": 60
     },
     "autopeering": {
@@ -122,10 +122,10 @@
     "bindAddress": "localhost:5556"
   },
   "profiling": {
-    "bindAddress": "localhost:6060"
+    "bindAddress": "localhost:6061"
   },
   "prometheus": {
-    "bindAddress": "localhost:9311",
+    "bindAddress": "localhost:9312",
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
