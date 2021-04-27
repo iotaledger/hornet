@@ -33,7 +33,7 @@ RUN apk --no-cache add ca-certificates curl jq tini tar\
   fi\
   && addgroup --gid 39999 hornet\
   && adduser -h /app -s /bin/sh -G hornet -u 39999 -D hornet\
-  && chmod +x /app/hornet\
+  && chmod +x /app/hornet-legacy\
   && chown hornet:hornet -R /app\
   && rm /tmp/hornet.tgz\
   && apk del jq curl
