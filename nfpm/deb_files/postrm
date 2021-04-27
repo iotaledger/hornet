@@ -5,13 +5,13 @@ set -e
 case "$1" in
 remove)
     # Remove directories (database)
-    rm -rf /var/lib/hornet/*/
+    rm -rf /var/lib/hornet-legacy/*/
     ;;
 purge)
     # Remove config files
-    rm -rf /var/lib/hornet
-    if id hornet >/dev/null 2>&1; then
-        deluser hornet >/dev/null
+    rm -rf /var/lib/hornet-legacy
+    if id hornet-legacy >/dev/null 2>&1; then
+        deluser hornet-legacy >/dev/null
     fi
     ;;
 upgrade | failed-upgrade | abort-install | abort-upgrade | disappear) ;;

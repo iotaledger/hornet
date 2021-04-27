@@ -5,9 +5,9 @@ set -e
 case "$1" in
 remove)
 	if type systemctl >/dev/null 2>/dev/null; then
-		systemctl stop hornet.service
-		if systemctl is-enabled -q hornet.service; then
-			systemctl disable hornet.service >/dev/null 2>/dev/null
+		systemctl stop hornet-legacy.service
+		if systemctl is-enabled -q hornet-legacy.service; then
+			systemctl disable hornet-legacy.service >/dev/null 2>/dev/null
 		fi
 	fi
 	;;

@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   hornet:
     build:
@@ -14,15 +14,11 @@ services:
     #  - "15600:15600"
     cap_drop:
       - ALL
-    
+
     volumes:
       - ./config.json:/app/config.json:ro
-      - ./config_comnet.json:/app/config_comnet.json:ro
-      - ./config_devnet.json:/app/config_devnet.json:ro
       - ./mqtt_config.json:/app/mqtt_config.json
       - ./profiles.json:/app/profiles.json
       - ./peering.json:/app/peering.json
       - ./snapshots/mainnet:/app/snapshots/mainnet
-      - ./snapshots/comnet:/app/snapshots/comnet
       - ./mainnetdb:/app/mainnetdb
-      - ./comnetdb:/app/comnetdb
