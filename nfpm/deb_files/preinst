@@ -23,8 +23,7 @@ upgrade)
     systemctl stop hornet.service
     echo "HORNET stopped, start update..."
 
-    # TODO: Fix regex
-    if [ "$2" =~ ^0\.[0-9]\.[0-9] ]; then
+    if echo "$2" | grep -qP '0\.[\d]+\.[\d]+' >/dev/null; then
         # legacy version installed, ask if user wants to backup old data
         echo "You are going to upgrade HORNET to the new Chrysalis version."
         echo "This is a breaking change. The old database files are incompatible."
