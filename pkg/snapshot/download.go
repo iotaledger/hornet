@@ -81,19 +81,15 @@ func (s *Snapshot) DownloadSnapshotFiles(fullPath string, deltaPath string, targ
 		s.log.Infof("downloading full snapshot file from %s", target.Full)
 		if err := s.downloadFile(fullPath, target.Full); err != nil {
 			s.log.Warn(err.Error())
+			// as the full snapshot URL failed to download, we commence further with our targets
 			continue
 		}
 
 		if len(target.Delta) > 0 {
 			s.log.Infof("downloading delta snapshot file from %s", target.Delta)
 			if err := s.downloadFile(deltaPath, target.Delta); err != nil {
+				// it is valid that no delta snapshot file is available on the target.
 				s.log.Warn(err.Error())
-				// as the delta snapshot URL was defined but it failed to download,
-				// we delete the downloaded full snapshot and commence further with our targets
-				if err := os.Remove(fullPath); err != nil {
-					return fmt.Errorf("unable to remove full snapshot file, after failed companion delta snapshot file download: %w", err)
-				}
-				continue
 			}
 		}
 		return nil
