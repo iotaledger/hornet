@@ -113,7 +113,7 @@ docker run --rm -d --restart always -v $(pwd)/config.json:/app/config.json:ro -v
 ### Managing node
 **Displaying log output:**
 ```bash
-docker log -f hornet
+docker logs -f hornet
 ```
 * `-f`: instructs Docker to continue displaying the log to stdout until CTRL+C is pressed
 
