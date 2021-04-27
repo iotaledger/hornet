@@ -59,8 +59,8 @@
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "http://dbfiles.c2-mainnet.iotaledger.net/snapshots/hornet/latest-full_snapshot.bin",
-        "delta": "http://dbfiles.c2-mainnet.iotaledger.net/snapshots/hornet/latest-delta_snapshot.bin"
+        "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
+        "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
       }
     ]
   },
