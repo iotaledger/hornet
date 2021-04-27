@@ -52,19 +52,6 @@ builds:
     goarch:
       - amd64
 
-# Docker
-dockers:
-  # Docker AMD64
-  - goos: linux
-    goarch: amd64
-    image_templates:
-      - "gohornet/hornet:latest"
-      - "gohornet/hornet:{{ .Tag }}"
-    ids:
-      - hornet
-    dockerfile: docker/Dockerfile
-    skip_push: auto
-
 # Archives
 archives:
   - format: tar.gz
