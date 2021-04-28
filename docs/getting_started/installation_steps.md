@@ -98,7 +98,7 @@ So basically there should be the following files and directories created in the 
 
 **Start the node;** using `docker run` command:
 ```bash
-docker run --rm -d --restart always -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet -v $(pwd)/mainnetdb:/app/mainnetdb --name hornet --net=host gohornet/hornet:latest
+docker run -d --restart always -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet -v $(pwd)/mainnetdb:/app/mainnetdb --name hornet --net=host gohornet/hornet:latest
 ```
 * `$(pwd)`: stands for the current directory
 * `-d`: instructs Docker to run the container instance in a detached mode (daemon).
