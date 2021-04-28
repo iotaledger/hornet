@@ -77,9 +77,9 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps serviceDependencies) (*migrator.ReceiptService, error) {
 		return migrator.NewReceiptService(
 			deps.Validator, deps.UTXO,
-			deps.NodeConfig.Bool(CfgReceiptsValidatorIgnoreSoftErrors),
 			deps.NodeConfig.Bool(CfgReceiptsValidatorValidate),
 			deps.NodeConfig.Bool(CfgReceiptsBackupEnabled),
+			deps.NodeConfig.Bool(CfgReceiptsValidatorIgnoreSoftErrors),
 			deps.NodeConfig.String(CfgReceiptsBackupFolder),
 		), nil
 	}); err != nil {
