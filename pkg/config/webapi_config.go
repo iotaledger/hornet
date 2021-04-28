@@ -37,6 +37,8 @@ func init() {
 		[]string{
 			"getNodeInfo",
 			"getBalances",
+			"checkConsistency",
+			"getTipInfo",
 			"getTransactionsToApprove",
 			"getInclusionStates",
 			"getNodeAPIConfiguration",
@@ -45,6 +47,7 @@ func init() {
 			"findTransactions",
 			"storeTransactions",
 			"getTrytes",
+			"getWhiteFlagConfirmation",
 		}, "the allowed HTTP API calls which can be called from non whitelisted addresses")
 	configFlagSet.StringSlice(CfgWebAPIPermittedRoutes,
 		[]string{
