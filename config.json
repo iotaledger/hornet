@@ -70,7 +70,7 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "c2-mainnet",
+    "networkID": "chrysalis-mainnet",
     "bech32HRP": "iota",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
