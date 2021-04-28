@@ -91,7 +91,7 @@ func configure() {
 	log = logger.NewLogger(Plugin.Name)
 	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.Receipt) {
 		if deps.ReceiptService.ValidationEnabled {
-			log.Info("receipt passed validation against %s", deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress))
+			log.Infof("receipt passed validation against %s", deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress))
 		}
 		log.Infof("new receipt processed (migrated_at %d, final %v, entries %d),", r.MigratedAt, r.Final, len(r.Funds))
 	}))
