@@ -52,7 +52,7 @@
       "intervalUnsynced": 1000,
       "path": "snapshots/mainnet/export.bin",
       "downloadURLs": [
-        "https://dbfiles.iota.org/mainnet/hornet/latest-export.bin"
+        "https://dbfiles.iota.org/legacy-mainnet/hornet/latest-export.bin"
       ]
     },
     "global": {
