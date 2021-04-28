@@ -12,7 +12,7 @@ func receipts(_ echo.Context) (*receiptsResponse, error) {
 	if err := deps.UTXO.ForEachReceiptTuple(func(rt *utxo.ReceiptTuple) bool {
 		receipts = append(receipts, rt)
 		return true
-	}); err != nil {
+	}, utxo.ReadLockLedger(false)); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "unable to retrieve receipts: %s", err)
 	}
 
@@ -29,7 +29,7 @@ func receiptsByMigratedAtIndex(c echo.Context) (*receiptsResponse, error) {
 	if err := deps.UTXO.ForEachReceiptTupleMigratedAt(migratedAt, func(rt *utxo.ReceiptTuple) bool {
 		receipts = append(receipts, rt)
 		return true
-	}); err != nil {
+	}, utxo.ReadLockLedger(false)); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "unable to retrieve receipts for migrated at index %d: %s", migratedAt, err)
 	}
 
