@@ -59,8 +59,8 @@
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
-        "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
+        "full": "https://s3.eu-central-1.amazonaws.com/dbfiles.as-network.iota-as.net/snapshots/hornet/latest-full_snapshot.bin",
+        "delta": "https://s3.eu-central-1.amazonaws.com/dbfiles.as-network.iota-as.net/snapshots/hornet/latest-delta_snapshot.bin"
       }
     ]
   },
@@ -70,20 +70,20 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "chrysalis-mainnet",
-    "bech32HRP": "iota",
+    "networkID": "as-chrysalis",
+    "bech32HRP": "asit",
     "minPoWScore": 4000,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
-        "key": "a9b46fe743df783dedd00c954612428b34241f5913cf249d75bed3aafd65e4cd",
+        "key": "3d98f288146c2dedd44daf97bebcb5ab38589ea2cb035ca77b96d94d618aeec8",
         "start": 0,
-        "end": 777600
+        "end": 3110400
       },
       {
-        "key": "365fb85e7568b9b32f7359d6cbafa9814472ad0ecbad32d77beaf5dd9e84c6ba",
+        "key": "0a8c945ad7712c1c31c0d5d33c5860ca62ff20fed4553b927f296a8b717ce433",
         "start": 0,
-        "end": 1555200
+        "end": 3110400
       }
     ]
   },
