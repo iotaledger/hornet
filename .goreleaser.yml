@@ -37,20 +37,6 @@ builds:
       - linux
     goarch:
       - arm64
-  # Windows AMD64
-  - id: hornet-windows-amd64
-    binary: hornet
-    env:
-      - CGO_ENABLED=1
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-    ldflags:
-      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
-    main: main.go
-    goos:
-      - windows
-    goarch:
-      - amd64
 
 # Archives
 archives:
