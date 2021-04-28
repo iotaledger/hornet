@@ -66,8 +66,8 @@ Make sure that you've installed Docker on your machine before trying to use the 
 
 **Hornet uses JSON configuration files which can be downloaded from the repository on GitHub:**
 ```bash
-curl -LO https://raw.githubusercontent.com/gohornet/hornet/master/config.json
-curl -LO https://raw.githubusercontent.com/gohornet/hornet/master/peering.json
+curl -LO https://raw.githubusercontent.com/gohornet/hornet/main/config.json
+curl -LO https://raw.githubusercontent.com/gohornet/hornet/main/peering.json
 ```
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
