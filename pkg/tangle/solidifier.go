@@ -301,7 +301,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		func(rt *utxo.ReceiptTuple) error {
 			if t.receiptService != nil {
 				if t.receiptService.ValidationEnabled {
-					if err := t.receiptService.Validate(rt.Receipt); err != nil {
+					if err := t.receiptService.ValidateWithoutLocking(rt.Receipt); err != nil {
 						if err := common.IsSoftError(err); err != nil && t.receiptService.IgnoreSoftErrors {
 							t.log.Warnf("soft error encountered during receipt validation: %s", err.Error())
 							return nil

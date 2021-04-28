@@ -84,15 +84,16 @@ func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
 	return nil
 }
 
-// Validate validates the given receipt against data fetched from a legacy node.
+// ValidateWithoutLocking validates the given receipt against data fetched from a legacy node.
+// The UTXO ledger should be locked outside of this function.
 // If the receipt has the final flag set to true, then the entire batch of receipts with the same migrated_at index
 // are collected and it is checked whether they migrated all the funds of the given white-flag confirmation.
-func (rs *ReceiptService) Validate(r *iotago.Receipt) error {
+func (rs *ReceiptService) ValidateWithoutLocking(r *iotago.Receipt) error {
 	if !rs.ValidationEnabled {
 		panic("receipt service is not configured to validate receipts")
 	}
 
-	highestMigratedAtIndex, err := rs.utxoManager.SearchHighestReceiptMigratedAtIndex()
+	highestMigratedAtIndex, err := rs.utxoManager.SearchHighestReceiptMigratedAtIndex(utxo.ReadLockLedger(false))
 	if err != nil {
 		return fmt.Errorf("unable to determine highest migrated at index: %w", err)
 	}
@@ -173,7 +174,7 @@ func (rs *ReceiptService) validateCompleteReceiptBatch(finalReceipt *iotago.Rece
 	if err := rs.utxoManager.ForEachReceiptTupleMigratedAt(milestone.Index(finalReceipt.MigratedAt), func(rt *utxo.ReceiptTuple) bool {
 		receiptsWithSameIndex = append(receiptsWithSameIndex, rt.Receipt)
 		return true
-	}); err != nil {
+	}, utxo.ReadLockLedger(false)); err != nil {
 		return err
 	}
 	receipts = append(receipts, receiptsWithSameIndex...)

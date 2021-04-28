@@ -48,4 +48,6 @@ jobs:
         with:
           file: ./docker/Dockerfile
           push: true
+          build-args: |
+            BUILD_TAGS="builtin_static,rocksdb"
           tags: ${{ steps.meta.outputs.tags }}

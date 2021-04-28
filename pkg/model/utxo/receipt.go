@@ -75,14 +75,14 @@ func deleteReceipt(rt *ReceiptTuple, mutations kvstore.BatchedMutations) error {
 }
 
 // SearchHighestReceiptMigratedAtIndex searches the highest migratedAt of all stored receipts.
-func (u *Manager) SearchHighestReceiptMigratedAtIndex() (uint32, error) {
+func (u *Manager) SearchHighestReceiptMigratedAtIndex(options ...UTXOIterateOption) (uint32, error) {
 	var highestMigratedAtIndex uint32
 	if err := u.ForEachReceiptTuple(func(rt *ReceiptTuple) bool {
 		if rt.Receipt.MigratedAt > highestMigratedAtIndex {
 			highestMigratedAtIndex = rt.Receipt.MigratedAt
 		}
 		return true
-	}); err != nil {
+	}, options...); err != nil {
 		return 0, err
 	}
 	return highestMigratedAtIndex, nil
