@@ -37,20 +37,6 @@ builds:
       - linux
     goarch:
       - arm64
-  # Windows AMD64
-  - id: hornet-windows-amd64
-    binary: hornet
-    env:
-      - CGO_ENABLED=1
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-    ldflags:
-      - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
-    main: main.go
-    goos:
-      - windows
-    goarch:
-      - amd64
 
 # Archives
 archives:
@@ -70,6 +56,7 @@ archives:
       - README.md
       - LICENSE
       - config.json
+      - config_as.json
       - peering.json
       - profiles.json
 
@@ -93,6 +80,10 @@ nfpms:
 
       - src: "config.json"
         dst: "/var/lib/hornet/config.json"
+        type: config
+
+      - src: "config_as.json"
+        dst: "/var/lib/hornet/config_as.json"
         type: config
 
       - src: "peering.json"

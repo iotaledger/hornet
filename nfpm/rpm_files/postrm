@@ -6,5 +6,4 @@ if [ $1 -ge 1 ]; then
 fi
 rm -rf /var/lib/hornet/snapshots/* \
        /etc/default/hornet \
-       /var/lib/hornet/mainnetdb/* \
-       /var/lib/hornet/comnetdb/*
+       /var/lib/hornet/mainnetdb/*

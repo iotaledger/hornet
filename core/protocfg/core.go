@@ -39,7 +39,7 @@ func init() {
 						fs := flag.NewFlagSet("", flag.ContinueOnError)
 						fs.Float64(CfgProtocolMinPoWScore, 4000, "the minimum PoW score required by the network.")
 						fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
-						fs.String(CfgProtocolNetworkIDName, "c2-mainnet", "the network ID on which this node operates on.")
+						fs.String(CfgProtocolNetworkIDName, "iota", "the network ID on which this node operates on.")
 						fs.String(CfgProtocolBech32HRP, string(iotago.PrefixMainnet), "the HRP which should be used for Bech32 addresses.")
 						return fs
 					}(),
@@ -80,13 +80,6 @@ func provide(c *dig.Container) {
 			MinPoWScore: deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
 		}
 
-		if err := deps.NodeConfig.SetDefault(CfgProtocolPublicKeyRanges, &coordinator.PublicKeyRanges{
-			&coordinator.PublicKeyRange{Key: "a9b46fe743df783dedd00c954612428b34241f5913cf249d75bed3aafd65e4cd", StartIndex: 0, EndIndex: 777600},
-			&coordinator.PublicKeyRange{Key: "365fb85e7568b9b32f7359d6cbafa9814472ad0ecbad32d77beaf5dd9e84c6ba", StartIndex: 0, EndIndex: 1555200},
-		}); err != nil {
-			panic(err)
-		}
-
 		if *cooPubKeyRangesFlag != "" {
 			// load from special CLI flag
 			if err := json.Unmarshal([]byte(*cooPubKeyRangesFlag), &res.PublicKeyRanges); err != nil {
@@ -95,7 +88,7 @@ func provide(c *dig.Container) {
 			return res
 		}
 
-		// load from config or default value
+		// load from config
 		if err := deps.NodeConfig.Unmarshal(CfgProtocolPublicKeyRanges, &res.PublicKeyRanges); err != nil {
 			panic(err)
 		}
