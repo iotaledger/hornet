@@ -2,11 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.5.8-rc1] - 27.04.2021
+## [0.5.8] - 28.04.2021
+
+:warning: **Breaking change:** :warning:
+This is the final version of legacy HORNET needed for the migration to the new chrysalis network.
+Please update to this version as soon as the legacy mainnet coordinator got upgraded.
+Instructions on how to update to this version will be posted in due time.
+The old HORNET versions won't be functional within the legacy mainnet anymore!
 
 ### Changed
 
-    - Migration only network
+    - Only transactions to migration addresses are accepted (breaking change)
 
 ## [0.5.7-rc1] - 21.11.2020
 
