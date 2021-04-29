@@ -45,8 +45,10 @@ EXPOSE 14265/tcp
 EXPOSE 15600/tcp
 EXPOSE 14626/udp
 
-# Copy assets into distroless image
+# Copy the binary into distroless image
 COPY --chown=nonroot:nonroot --from=build /go/bin/hornet /app/hornet
+
+# Copy the assets
 COPY ./config.json /app/config.json
 COPY ./config_as.json /app/config_as.json
 COPY ./peering.json /app/peering.json
