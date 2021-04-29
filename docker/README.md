@@ -1,8 +1,6 @@
 # HORNET in Docker
 
-_Table of contents_
-
-<!--ts-->
+## Table of contents
 
 - [Requirements](#requirements)
 - [Quick Start](#quick-start)
@@ -11,8 +9,6 @@ _Table of contents_
   - [Docker Compose](#docker-compose)
   - [Build Image](#build-image)
   - [Run](#run)
-- [Build Specific Version](#build-specific-version)
-<!--te-->
 
 ## Requirements
 
@@ -36,19 +32,21 @@ The rest of the document assumes you are executing commands from the root direct
 
 ### Prepare
 
-i. Edit the `config.json` for alternative ports if needed.
+1. Edit the `config.json` for alternative ports if needed.
 
-ii. Edit `peering.json` to your neighbors addresses.
+2. Edit `peering.json` to your neighbors addresses.
 
-iii. The Docker image runs under user with uid and gid 65532. To make sure there are no permission issues, create the directory for the database, e.g.:
+3. The Docker image runs under user with user id 65532 and group id 65532. To make sure there are no permission issues, create the directory for the database, e.g.:
 
-```sh
-mkdir mainnetdb && chown 65532:65532 mainnetdb
-```
-iv. The Docker image runs by default under user with uid 65532. To make sure there are no permission issues, create the directory for the snapshots, e.g.:
-```sh
-mkdir snapshots/mainnet && chown 65532:65532 snapshots -R
-```
+   ```sh
+   sudo mkdir mainnetdb && sudo chown 65532:65532 mainnetdb
+   ```
+
+4. The Docker image runs under user with user id 65532 and group id 65532. To make sure there are no permission issues, create the directory for the snapshots, e.g.:
+
+   ```sh
+   sudo mkdir -p snapshots/mainnet && sudo chown 65532:65532 snapshots -R
+   ```
 
 ### Docker Compose
 
@@ -78,7 +76,7 @@ If not running via docker-compose, build the image manually:
 docker build -f docker/Dockerfile -t hornet:latest .
 ```
 
-Or pull it from dockerhub (only available for amd64/x86_64):
+Or pull it from Docker hub (only available for amd64/x86_64):
 
 ```sh
 docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:latest
@@ -89,15 +87,15 @@ docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:l
 Best is to run on host network for better performance (otherwise you are going to have to publish ports, that is done via iptables NAT and is slower)
 
 ```sh
-docker run --rm -v $(pwd)/config.json:/app/config.json:ro -v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet -v $(pwd)/mainnetdb:/app/mainnetdb --name hornet --net=host hornet:latest
+docker run --rm \
+  -v $(pwd)/config.json:/app/config.json:ro \
+  -v $(pwd)/peering.json:/app/peering.json \
+  -v $(pwd)/profiles.json:/app/profiles.json \
+  -v $(pwd)/mainnetdb:/app/mainnetdb \
+  -v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet \
+  --name hornet\
+  --net=host \
+  hornet:latest
 ```
 
 Use CTRL-c to gracefully end the process.
-
-## Build Specific Version
-
-By default the Dockerfile builds the image using HORNET's latest version. To build an image with a specific version you can pass it via the build argument `TAG`, e.g.:
-
-```sh
-docker build -f docker/Dockerfile -t hornet:v0.3.0 --build-arg TAG=v0.3.0 .
-```

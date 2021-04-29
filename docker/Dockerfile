@@ -1,7 +1,7 @@
 # golang 1.16.3-buster amd64
 FROM golang@sha256:dfa3cef088454200d6b48e2a911138f7d5d9afff77f89243eea6342f16ddcfb0 AS build
 
-ARG BUILD_TAGS
+ARG BUILD_TAGS=rocksdb
 
 LABEL org.label-schema.description="HORNET - The IOTA community node"
 LABEL org.label-schema.name="gohornet/hornet"
@@ -46,10 +46,13 @@ EXPOSE 15600/tcp
 EXPOSE 14626/udp
 
 # Copy assets into distroless image
-COPY --from=build /go/bin/hornet /app/hornet
+COPY --chown=nonroot:nonroot --from=build /go/bin/hornet /app/hornet
 COPY ./config.json /app/config.json
 COPY ./config_as.json /app/config_as.json
 COPY ./peering.json /app/peering.json
 COPY ./profiles.json /app/profiles.json
+
+WORKDIR /app
+USER nonroot
 
 ENTRYPOINT ["/app/hornet"]
