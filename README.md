@@ -21,7 +21,6 @@ _Table of contents_
 <!--ts-->
 
 - [Documentation](#documentation)
-- [Autopeering](#autopeering)
 - [Contributing](#contributing)
 - [Installation](#installation)
 - [Plugins](#plugins)
@@ -30,21 +29,8 @@ _Table of contents_
 
 ## Documentation
 
-Please have a look into our [HORNET wiki](https://github.com/gohornet/hornet/wiki)
-
-## Autopeering
-
-**WARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable the plugin if you do not want this to happen!**
-
-The autopeering plugin is still in an early state. We recommend to add 1-2 static peers as well.
-If you want to disable autopeering, you can do so by adding it to the `disablePlugins` in your `config.json`:
-
-```json
-"node": {
-    "disablePlugins": ["Autopeering"],
-    "enablePlugins": []
-  },
-```
+Hornet documentation can be found here: https://hornet.docs.iota.org/
+Please have a look into our [HORNET wiki](https://github.com/gohornet/hornet/wiki) for additional resources
 
 ## Contributing
 
