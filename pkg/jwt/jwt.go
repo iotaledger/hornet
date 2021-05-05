@@ -61,7 +61,7 @@ func (c *AuthClaims) compare(field string, expected string) bool {
 	return false
 }
 
-func (c *AuthClaims) verifySubject(expected string) bool {
+func (c *AuthClaims) VerifySubject(expected string) bool {
 	return c.compare(c.Subject, expected)
 }
 
@@ -69,7 +69,7 @@ func (c *AuthClaims) verifyAudience(expected string) bool {
 	return c.compare(c.Audience, expected)
 }
 
-func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Context, claims *AuthClaims) bool) echo.MiddlewareFunc {
+func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Context, subject string, claims *AuthClaims) bool) echo.MiddlewareFunc {
 
 	config := middleware.JWTConfig{
 		ContextKey: "jwt",
@@ -100,12 +100,12 @@ func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Conte
 			claims, ok := c.Get("jwt").(*jwt.Token).Claims.(*AuthClaims)
 
 			// do extended claims validation
-			if !ok || !claims.verifyAudience(j.nodeId) || !claims.verifySubject(j.subject) {
+			if !ok || !claims.verifyAudience(j.nodeId) {
 				return ErrJWTInvalidClaims
 			}
 
 			// validate claims
-			if !allow(c, claims) {
+			if !allow(c, j.subject, claims) {
 				return ErrJWTInvalidClaims
 			}
 
@@ -154,7 +154,7 @@ func (j *JWTAuth) VerifyJWT(token string, allow func(claims *AuthClaims) bool) b
 	if err == nil && t.Valid {
 		claims, ok := t.Claims.(*AuthClaims)
 
-		if !ok || !claims.verifyAudience(j.nodeId) || !claims.verifySubject(j.subject) {
+		if !ok || !claims.verifyAudience(j.nodeId) {
 			return false
 		}
 
