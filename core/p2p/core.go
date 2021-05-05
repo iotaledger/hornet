@@ -6,6 +6,7 @@ import (
 	stded25519 "crypto/ed25519"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -87,8 +88,30 @@ func provide(c *dig.Container) {
 
 		ctx := context.Background()
 
+		identityExists := func(peerStorePath string) bool {
+			_, statPeerStorePathErr := os.Stat(peerStorePath)
+
+			if os.IsNotExist(statPeerStorePathErr) {
+				return false
+			}
+
+			// directory exists, check if it contains files (e.g. for docker setups)
+			dir, err := os.Open(peerStorePath)
+			if err != nil {
+				return false
+			}
+			defer dir.Close()
+
+			if _, err = dir.Readdirnames(1); err == io.EOF {
+				// directory doesn't contain files
+				return false
+			}
+
+			return true
+		}
+
 		peerStorePath := deps.NodeConfig.String(CfgP2PPeerStorePath)
-		_, statPeerStorePathErr := os.Stat(peerStorePath)
+		isPeerStoreNew := !identityExists(peerStorePath)
 
 		// TODO: switch out with impl. using KVStore
 		defaultOpts := badger.DefaultOptions
@@ -110,7 +133,6 @@ func provide(c *dig.Container) {
 		log.Infof("never share your %s folder as it contains your node's private key!", peerStorePath)
 
 		// load up the previously generated identity or create a new one
-		isPeerStoreNew := os.IsNotExist(statPeerStorePathErr)
 		prvKey, err := loadOrCreateIdentity(deps.NodeConfig, isPeerStoreNew, peerStorePath, peerStore)
 		if err != nil {
 			panic(fmt.Sprintf("unable to load/create peer identity: %s", err))
