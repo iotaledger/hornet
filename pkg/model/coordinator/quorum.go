@@ -124,11 +124,10 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash MerkleTreeHash
 	ctx, cancel := context.WithTimeout(context.Background(), q.Timeout)
 	defer cancel()
 
-	nodeResultChan := make(chan MerkleTreeHash)
-	defer close(nodeResultChan)
-
-	nodeErrorChan := make(chan error)
-	defer close(nodeErrorChan)
+	// create buffered channels, so the go routines will not be dangling if no receiver waits for the results anymore
+	// garbage collector will take care if the channels are not used anymore. no need to close manually
+	nodeResultChan := make(chan MerkleTreeHash, len(quorumGroupEntries))
+	nodeErrorChan := make(chan error, len(quorumGroupEntries))
 
 	for _, entry := range quorumGroupEntries {
 		go func(entry *quorumGroupEntry, nodeResultChan chan MerkleTreeHash, nodeErrorChan chan error) {
@@ -214,7 +213,6 @@ func (q *quorum) checkMerkleTreeHash(cooMerkleTreeHash MerkleTreeHash, index mil
 	select {
 	case <-quorumDoneChan:
 		// quorum finished successfully
-		close(quorumErrChan)
 		return nil
 
 	case err := <-quorumErrChan:
