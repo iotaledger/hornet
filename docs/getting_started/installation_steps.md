@@ -287,7 +287,7 @@ sudo apt install golang-go git build-essential
 go version
 git --version
 ```
-You should see Golang version at least `1.15.0`.
+Make sure you have the latest version from https://golang.org/dl/
 
 **Clone the Hornet source code from GitHub:**
 ```bash
@@ -296,7 +296,7 @@ git clone https://github.com/gohornet/hornet.git && cd hornet
 
 **Build the Hornet:**
 ```bash
-./scripts/build_hornet.sh
+./build_hornet_rocksdb_builtin.sh
 ```
 * it builds Hornet based on the latest commit from `main` branch
 * it takes a couple of minutes
