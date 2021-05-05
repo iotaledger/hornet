@@ -125,8 +125,11 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 	}
 
 	// Only allow JWT created for the dashboard
-	jwtAuthAllow := func(c echo.Context, claims *jwt.AuthClaims) bool {
-		return claims.Dashboard
+	jwtAuthAllow := func(c echo.Context, subject string, claims *jwt.AuthClaims) bool {
+		if claims.Dashboard {
+			return claims.VerifySubject(subject)
+		}
+		return false
 	}
 
 	return []echo.MiddlewareFunc{

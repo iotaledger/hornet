@@ -52,12 +52,13 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-	Tangle         *tangle.Tangle
-	Echo           *echo.Echo
-	RestAPIMetrics *metrics.RestAPIMetrics
-	Host           host.Host
-	NodePrivateKey crypto.PrivKey
+	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
+	Tangle                *tangle.Tangle
+	Echo                  *echo.Echo
+	RestAPIMetrics        *metrics.RestAPIMetrics
+	Host                  host.Host
+	NodePrivateKey        crypto.PrivKey
+	DashboardAuthUsername string `name:"dashboardAuthUsername"`
 }
 
 func provide(c *dig.Container) {
@@ -151,15 +152,15 @@ func configure() {
 			return false
 		}
 
-		allow := func(c echo.Context, claims *jwt.AuthClaims) bool {
+		allow := func(c echo.Context, subject string, claims *jwt.AuthClaims) bool {
 			// Allow all JWT created for the API
 			if claims.API {
-				return true
+				return claims.VerifySubject(subject)
 			}
 
 			// Only allow Dashboard JWT for certain routes
 			if claims.Dashboard {
-				return dashboardAllowedAPIRoute(c)
+				return claims.VerifySubject(deps.DashboardAuthUsername) && dashboardAllowedAPIRoute(c)
 			}
 
 			return false

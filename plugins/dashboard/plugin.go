@@ -43,6 +43,7 @@ func init() {
 			Name:      "Dashboard",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
+			Provide:   provide,
 			Configure: configure,
 			Run:       run,
 		},
@@ -88,6 +89,20 @@ type dependencies struct {
 	NodePrivateKey           crypto.PrivKey
 	DatabaseEvents           *database.Events
 	DashboardAllowedAPIRoute restapi.AllowedRoute
+}
+
+func provide(c *dig.Container) {
+
+	type configdeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps configdeps) string {
+		return deps.NodeConfig.String(CfgDashboardAuthUsername)
+	}, dig.Name("dashboardAuthUsername")); err != nil {
+		panic(err)
+	}
 }
 
 func configure() {
