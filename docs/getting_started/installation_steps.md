@@ -277,6 +277,7 @@ Install [Go](https://golang.org/doc/install)
 
 **Install dependencies: Git and build-essentials:**
 ```bash
+sudo apt update
 sudo apt install git build-essential
 ```
 
