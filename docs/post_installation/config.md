@@ -170,7 +170,7 @@ Example:
 
 ```json
   "db": {
-    "engine": "pebble",
+    "engine": "rocksdb",
     "path": "mainnetdb",
     "autoRevalidation": false,
     "debug": false,

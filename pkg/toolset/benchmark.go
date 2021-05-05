@@ -41,7 +41,7 @@ func benchmarkIO(args []string) error {
 
 	objectCnt := 500000
 	size := 1000
-	dbEngine := "pebble"
+	dbEngine := "rocksdb"
 
 	if len(args) > 3 {
 		printUsage()

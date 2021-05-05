@@ -61,14 +61,14 @@
   },
   "db": {
     "engine": "pebble",
-    "path": "alphanetdb",
+    "path": "privatedb",
     "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
     "interval": 200,
-    "fullPath": "snapshots/alphanet/full_snapshot.bin",
-    "deltaPath": "snapshots/alphanet/delta_snapshot.bin",
+    "fullPath": "snapshots/private_tangle/full_snapshot.bin",
+    "deltaPath": "snapshots/private_tangle/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": []
   },
@@ -78,7 +78,7 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "alphanet1",
+    "networkID": "private_tangle1",
     "bech32HRP": "atoi",
     "minPoWScore": 100,
     "milestonePublicKeyCount": 2,

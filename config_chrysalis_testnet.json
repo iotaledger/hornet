@@ -48,7 +48,7 @@
     }
   },
   "db": {
-    "engine": "pebble",
+    "engine": "rocksdb",
     "path": "testnetdb",
     "autoRevalidation": false
   },
