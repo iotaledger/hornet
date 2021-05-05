@@ -60,7 +60,7 @@
     }
   },
   "db": {
-    "engine": "pebble",
+    "engine": "rocksdb",
     "path": "alphanetdb",
     "autoRevalidation": false
   },

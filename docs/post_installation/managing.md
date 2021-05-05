@@ -6,7 +6,7 @@ Hornet uses embedded database engine that stores its data in a directory on file
 
 ```json
 "db": {
-    "engine": "pebble",
+    "engine": "rocksdb",
     "path": "mainnetdb",
     "autoRevalidation": false
   }
@@ -132,7 +132,7 @@ There are two types of snapshots:
 A delta snapshot points to a specific full snapshot, ie. delta snapshot consists of the changes since the last full snapshot.
 
 **Full snapshot**
-The full snapshot includes the whole ledger state to a specific milestone and a solid entry point. 
+The full snapshot includes the whole ledger state to a specific milestone and a solid entry point.
 
 
 ### How to work with snapshots
