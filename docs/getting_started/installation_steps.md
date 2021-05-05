@@ -211,7 +211,7 @@ Some navigation hints:
 ```bash
 tar -xf HORNET-0.6.0_Linux_x86_64.tar.gz
 ```
-* Once extracted, you get a main executable file, for example `hornet` for linux, or `hornet.exe` for Windows
+* Once extracted, you get a main executable file
 * There are also sample [configuration](../post_installation/post_installation.md) JSON files available in the archive (tar or zip)
 
 **Run Hornet using `--help` to get all executable-related arguments:**
@@ -271,11 +271,11 @@ WantedBy=multi-user.target
 # Build from source
 This method is considered a bit advanced for production use since you usually have to prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
 
-*Ubuntu/Debian*
+**Install Go:**
 
-*There is usually quite old version of Go language in standard `apt` repositories available, so it is better to add `golang-backports` PPA to get the latest version.*
+Install [Go](https://golang.org/doc/install)
 
-**Install dependencies: Go, git and build-essentials:**
+**Install dependencies: Git and build-essentials:**
 ```bash
 sudo add-apt-repository ppa:longsleep/golang-backports
 sudo apt update
@@ -298,7 +298,7 @@ git clone https://github.com/gohornet/hornet.git && cd hornet
 ```bash
 ./scripts/build_hornet.sh
 ```
-* it builds Hornet based on the latest commit from `master` branch
+* it builds Hornet based on the latest commit from `main` branch
 * it takes a couple of minutes
 
 Once it is compiled, then the executable file named `hornet` should be available in the current directory:
