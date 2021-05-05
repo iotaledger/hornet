@@ -277,9 +277,7 @@ Install [Go](https://golang.org/doc/install)
 
 **Install dependencies: Git and build-essentials:**
 ```bash
-sudo add-apt-repository ppa:longsleep/golang-backports
-sudo apt update
-sudo apt install golang-go git build-essential
+sudo apt install git build-essential
 ```
 
 **Check the golang/git version:**
