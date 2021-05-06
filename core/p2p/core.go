@@ -68,9 +68,7 @@ type dependencies struct {
 
 // identityExists checks if the identity already exists in the peer store
 func identityExists(peerStorePath string) bool {
-	_, statPeerStorePathErr := os.Stat(peerStorePath)
-
-	if os.IsNotExist(statPeerStorePathErr) {
+	if _, statPeerStorePathErr := os.Stat(peerStorePath); os.IsNotExist(statPeerStorePathErr) {
 		return false
 	}
 
