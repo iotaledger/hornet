@@ -51,7 +51,7 @@ dependencies are needed.
 Available installation methods:
 
 - [Hornet apt repository](./installation_steps.md#hornet-apt-repository) (RECOMMENDED)
-- [Docker image](./installation_steps.md#docker-image) (RECOMMENDED)
+- [Docker image](./using_docker.md) (RECOMMENDED)
 - [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
 - [Build from source](./installation_steps.md#build-from-source)
 
@@ -59,14 +59,14 @@ Available installation methods:
 
 Available installation methods:
 
-- [Docker image](./installation_steps.md#docker-image) (RECOMMENDED)
+- [Docker image](./using_docker.md) (RECOMMENDED)
 - [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
 
 ### Windows
 
 Available installation methods:
 
-- [Docker image](./installation_steps.md#docker-image) (RECOMMENDED)
+- [Docker image](./using_docker.md) (RECOMMENDED)
 - [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
 
 ## Configuration
