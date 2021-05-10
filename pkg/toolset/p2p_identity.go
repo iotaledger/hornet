@@ -39,6 +39,8 @@ func generateP2PIdentity(args []string) error {
 	fmt.Println("Your p2p private key: ", hex.EncodeToString(privateKeyBytes))
 	fmt.Println("Your p2p public key: ", hex.EncodeToString(publicKeyBytes))
 	fmt.Println("Your p2p PeerID: ", pid.String())
+	fmt.Println()
+	fmt.Println("Make sure to specify the private key within the 'p2p.identityPrivateKey' config option to use it for your node's identity")
 
 	return nil
 }
