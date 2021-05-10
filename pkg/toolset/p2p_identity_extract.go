@@ -52,6 +52,9 @@ func extractP2PIdentity(args []string) error {
 		log.Panicf("unable to unmarshal public key from public key identity file: %v", err)
 	}
 	peerID, err := peer.IDFromPublicKey(pubKey)
+	if err != nil {
+		log.Panicf("unable to convert read public key to peer ID: %v", err)
+	}
 
 	// retrieve this node's private key from the peer store
 	prvKey := peerStore.PrivKey(peerID)
