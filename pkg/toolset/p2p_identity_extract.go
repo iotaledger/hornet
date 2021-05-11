@@ -25,7 +25,7 @@ func extractP2PIdentity(args []string) error {
 
 	if len(args) != 1 {
 		printUsage()
-		return fmt.Errorf("wrong argument count '%s'", ToolSnapInfo)
+		return fmt.Errorf("wrong argument count '%s'", ToolP2PExtractIdentity)
 	}
 
 	dirPath := args[0]
