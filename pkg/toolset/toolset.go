@@ -7,15 +7,16 @@ import (
 )
 
 const (
-	ToolPwdHash      = "pwdhash"
-	ToolP2PIdentity  = "p2pidentity"
-	ToolEd25519Key   = "ed25519key"
-	ToolEd25519Addr  = "ed25519addr"
-	ToolSnapGen      = "snapgen"
-	ToolSnapMerge    = "snapmerge"
-	ToolSnapInfo     = "snapinfo"
-	ToolBenchmarkIO  = "bench-io"
-	ToolBenchmarkCPU = "bench-cpu"
+	ToolPwdHash            = "pwdhash"
+	ToolP2PIdentity        = "p2pidentity"
+	ToolP2PExtractIdentity = "p2pidentityextract"
+	ToolEd25519Key         = "ed25519key"
+	ToolEd25519Addr        = "ed25519addr"
+	ToolSnapGen            = "snapgen"
+	ToolSnapMerge          = "snapmerge"
+	ToolSnapInfo           = "snapinfo"
+	ToolBenchmarkIO        = "bench-io"
+	ToolBenchmarkCPU       = "bench-cpu"
 )
 
 // HandleTools handles available tools.
@@ -42,15 +43,16 @@ func HandleTools() {
 	}
 
 	tools := map[string]func([]string) error{
-		ToolPwdHash:      hashPasswordAndSalt,
-		ToolEd25519Key:   generateEd25519Key,
-		ToolEd25519Addr:  generateEd25519Address,
-		ToolSnapGen:      snapshotGen,
-		ToolSnapMerge:    snapshotMerge,
-		ToolSnapInfo:     snapshotInfo,
-		ToolP2PIdentity:  generateP2PIdentity,
-		ToolBenchmarkIO:  benchmarkIO,
-		ToolBenchmarkCPU: benchmarkCPU,
+		ToolPwdHash:            hashPasswordAndSalt,
+		ToolEd25519Key:         generateEd25519Key,
+		ToolEd25519Addr:        generateEd25519Address,
+		ToolSnapGen:            snapshotGen,
+		ToolSnapMerge:          snapshotMerge,
+		ToolSnapInfo:           snapshotInfo,
+		ToolP2PIdentity:        generateP2PIdentity,
+		ToolP2PExtractIdentity: extractP2PIdentity,
+		ToolBenchmarkIO:        benchmarkIO,
+		ToolBenchmarkCPU:       benchmarkCPU,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
