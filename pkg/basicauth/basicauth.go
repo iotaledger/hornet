@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
-	"log"
 
 	"golang.org/x/crypto/scrypt"
 )
@@ -50,26 +49,26 @@ type BasicAuth struct {
 
 func NewBasicAuth(username string, passwordHashHex string, passwordSaltHex string) *BasicAuth {
 	if len(username) == 0 {
-		log.Fatal("username must not be empty")
+		panic("username must not be empty")
 	}
 
 	if len(passwordHashHex) != 64 {
-		log.Fatal("password hash must be 64 (hex encoded scrypt hash) in length")
+		panic("password hash must be 64 (hex encoded scrypt hash) in length")
 	}
 
 	if len(passwordSaltHex) != 64 {
-		log.Fatal("password salt must be 64 (hex encoded) in length")
+		panic("password salt must be 64 (hex encoded) in length")
 	}
 
 	var err error
 	passwordHash, err := hex.DecodeString(passwordHashHex)
 	if err != nil {
-		log.Fatal("password hash must be hex encoded")
+		panic("password hash must be hex encoded")
 	}
 
 	passwordSalt, err := hex.DecodeString(passwordSaltHex)
 	if err != nil {
-		log.Fatal("password salt must be hex encoded")
+		panic("password salt must be hex encoded")
 	}
 
 	return &BasicAuth{
