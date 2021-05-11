@@ -7,11 +7,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
-func generateEd25519Key(args []string) error {
+func generateEd25519Key(nodeConfig *configuration.Configuration, args []string) error {
 
 	if len(args) > 0 {
 		return fmt.Errorf("too many arguments for '%s'", ToolEd25519Key)
@@ -27,7 +28,7 @@ func generateEd25519Key(args []string) error {
 	return nil
 }
 
-func generateEd25519Address(args []string) error {
+func generateEd25519Address(nodeConfig *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")

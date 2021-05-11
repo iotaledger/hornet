@@ -10,11 +10,13 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh/terminal"
 
+	"github.com/iotaledger/hive.go/configuration"
+
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
-func hashPasswordAndSalt(args []string) error {
+func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string) error {
 
 	if len(args) > 0 {
 		return fmt.Errorf("too many arguments for '%s'", ToolPwdHash)

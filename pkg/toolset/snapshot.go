@@ -13,10 +13,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func snapshotGen(args []string) error {
+func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")

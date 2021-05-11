@@ -8,6 +8,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 
+	"github.com/iotaledger/hive.go/configuration"
+
 	"github.com/gohornet/hornet/pkg/p2p"
 )
 
@@ -33,7 +35,7 @@ func loadP2PPrivKeyAndIdentityFromStore(peerStorePath string) (crypto.PrivKey, p
 	return prvKey, peerID, nil
 }
 
-func extractP2PIdentity(args []string) error {
+func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
 		println(fmt.Sprintf("	%s [P2P_STORE_PATH]", ToolP2PExtractIdentity))
