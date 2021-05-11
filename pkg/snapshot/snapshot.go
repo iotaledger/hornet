@@ -630,7 +630,7 @@ func (s *Snapshot) readLedgerIndex() (milestone.Index, error) {
 // reads out the snapshot milestone index from the full snapshot file.
 func (s *Snapshot) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...string) (milestone.Index, error) {
 	filePath := s.snapshotFullPath
-	if len(snapshotFullPath) > 0 {
+	if len(snapshotFullPath) > 0 && snapshotFullPath[0] != "" {
 		filePath = snapshotFullPath[0]
 	}
 
@@ -750,30 +750,25 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 			return err
 		}
 
-		if writeToDatabase {
-			_, err := os.Stat(filePath)
-			deltaSnapshotFileExists := !os.IsNotExist(err)
-			// a delta snapshot contains the milestone diffs from a full snapshot's snapshot index onwards
-			switch {
-			case snapshotInfo.SnapshotIndex == snapshotInfo.PruningIndex && !deltaSnapshotFileExists:
-				// when booting up the first time on a full snapshot or in combination with a delta
-				// snapshot, this indices will be the same. however, if we have a delta snapshot, we use it
-				// since we might not have the actual milestone data.
-				fallthrough
-			case snapshotInfo.PruningIndex < header.LedgerMilestoneIndex:
-				// we have the needed milestone diffs in the database
-				milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxo, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
-			default:
-				// as the needed milestone diffs are pruned from the database, we need to use
-				// the previous delta snapshot file to extract those in conjunction with what the database has available
-				milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxo, header.LedgerMilestoneIndex, targetIndex)
-				if err != nil {
-					return err
-				}
-			}
-		} else {
-			// the history exists in the database (checked by checkSnapshotLimits)
+		_, err := os.Stat(s.snapshotDeltaPath)
+		deltaSnapshotFileExists := !os.IsNotExist(err)
+		// a delta snapshot contains the milestone diffs from a full snapshot's snapshot index onwards
+		switch {
+		case snapshotInfo.SnapshotIndex == snapshotInfo.PruningIndex && !deltaSnapshotFileExists:
+			// when booting up the first time on a full snapshot or in combination with a delta
+			// snapshot, this indices will be the same. however, if we have a delta snapshot, we use it
+			// since we might not have the actual milestone data.
+			fallthrough
+		case snapshotInfo.PruningIndex < header.LedgerMilestoneIndex:
+			// we have the needed milestone diffs in the database
 			milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxo, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
+		default:
+			// as the needed milestone diffs are pruned from the database, we need to use
+			// the previous delta snapshot file to extract those in conjunction with what the database has available
+			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxo, header.LedgerMilestoneIndex, targetIndex)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

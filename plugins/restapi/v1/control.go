@@ -59,27 +59,45 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 	}, nil
 }
 
-func createSnapshot(c echo.Context) (*createSnapshotResponse, error) {
+func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 
-	indexStr := strings.ToLower(c.QueryParam("index"))
-	if indexStr == "" {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "no index given")
+	request := &createSnapshotsRequest{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	index, err := strconv.Atoi(indexStr)
-	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing index failed: %s", err)
+	if request.FullIndex == nil && request.DeltaIndex == nil {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "either fullIndex or deltaIndex has to be specified")
 	}
 
-	snapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsFullPath)), fmt.Sprintf("full_snapshot_%d.bin", index))
+	var fullIndex, deltaIndex milestone.Index
+	var fullSnapshotFilePath, deltaSnapshotFilePath string
 
-	// ToDo: abort signal?
-	if err := deps.Snapshot.CreateFullSnapshot(milestone.Index(index), snapshotFilePath, false, nil); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating snapshot failed: %s", err)
+	if request.FullIndex != nil {
+		fullIndex = milestone.Index(*request.FullIndex)
+		fullSnapshotFilePath = filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsFullPath)), fmt.Sprintf("full_snapshot_%d.bin", fullIndex))
+
+		// ToDo: abort signal?
+		if err := deps.Snapshot.CreateFullSnapshot(fullIndex, fullSnapshotFilePath, false, nil); err != nil {
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating full snapshot failed: %s", err)
+		}
 	}
 
-	return &createSnapshotResponse{
-		Index:    milestone.Index(index),
-		FilePath: snapshotFilePath,
+	if request.DeltaIndex != nil {
+		deltaIndex = milestone.Index(*request.DeltaIndex)
+		deltaSnapshotFilePath = filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsDeltaPath)), fmt.Sprintf("delta_snapshot_%d.bin", deltaIndex))
+
+		// ToDo: abort signal?
+		// if no full snapshot was created, the last existing full snapshot will be used
+		if err := deps.Snapshot.CreateDeltaSnapshot(deltaIndex, deltaSnapshotFilePath, false, nil, fullSnapshotFilePath); err != nil {
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating delta snapshot failed: %s", err)
+		}
+	}
+
+	return &createSnapshotsResponse{
+		FullIndex:     fullIndex,
+		FullFilePath:  fullSnapshotFilePath,
+		DeltaIndex:    deltaIndex,
+		DeltaFilePath: deltaSnapshotFilePath,
 	}, nil
 }

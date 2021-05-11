@@ -68,10 +68,6 @@ const (
 	// it traverses the parents of a message until they reference an older milestone than the start message.
 	// GET returns the path of this traversal and the "entry points".
 	RouteDebugMessageCone = "/message-cones/:" + ParameterMessageID
-
-	// RouteControlSnapshotsCreate is the debug route to manually create both snapshot files.
-	// GET creates two snapshots. (query parameters: "full-index" and "delta-index")
-	RouteDebugSnapshotsCreate = "/snapshots/create"
 )
 
 func init() {
@@ -197,15 +193,6 @@ func configure() {
 
 	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
 		resp, err := messageCone(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.POST(RouteDebugSnapshotsCreate, func(c echo.Context) error {
-		resp, err := createSnapshots(c)
 		if err != nil {
 			return err
 		}

@@ -3,8 +3,6 @@ package debug
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -12,11 +10,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
@@ -448,32 +444,5 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		EntryPointsCount:  len(entryPoints),
 		Cone:              tanglePath,
 		EntryPoints:       entryPoints,
-	}, nil
-}
-
-func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
-
-	request := &createSnapshotsRequest{}
-	if err := c.Bind(request); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
-	}
-
-	fullSnapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsFullPath)), fmt.Sprintf("full_export_%d.bin", request.FullIndex))
-	deltaSnapshotFilePath := filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsDeltaPath)), fmt.Sprintf("delta_export_%d.bin", request.DeltaIndex))
-
-	// ToDo: abort signal?
-	if err := deps.Snapshot.CreateFullSnapshot(milestone.Index(request.FullIndex), fullSnapshotFilePath, false, nil); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating full snapshot failed: %s", err)
-	}
-
-	if err := deps.Snapshot.CreateDeltaSnapshot(milestone.Index(request.DeltaIndex), deltaSnapshotFilePath, false, nil, fullSnapshotFilePath); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "creating delta snapshot failed: %s", err)
-	}
-
-	return &createSnapshotsResponse{
-		FullIndex:     milestone.Index(request.FullIndex),
-		FullFilePath:  fullSnapshotFilePath,
-		DeltaIndex:    milestone.Index(request.DeltaIndex),
-		DeltaFilePath: deltaSnapshotFilePath,
 	}, nil
 }
