@@ -12,7 +12,6 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
@@ -93,7 +92,6 @@ var (
 type dependencies struct {
 	dig.In
 	Storage      *storage.Storage
-	Snapshot     *snapshot.Snapshot
 	Tangle       *tangle.Tangle
 	RequestQueue gossip.RequestQueue
 	UTXO         *utxo.Manager

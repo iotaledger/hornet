@@ -16,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -692,6 +693,11 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 	s.utxo.ReadLockLedger()
 	defer s.utxo.ReadUnlockLedger()
 
+	if err := utils.ReturnErrIfCtxDone(s.shutdownCtx, common.ErrOperationAborted); err != nil {
+		// do not create the snapshot if the node was shut down
+		return common.ErrOperationAborted
+	}
+
 	timeReadLockLedger := time.Now()
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
@@ -752,6 +758,7 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 
 		_, err := os.Stat(s.snapshotDeltaPath)
 		deltaSnapshotFileExists := !os.IsNotExist(err)
+
 		// a delta snapshot contains the milestone diffs from a full snapshot's snapshot index onwards
 		switch {
 		case snapshotInfo.SnapshotIndex == snapshotInfo.PruningIndex && !deltaSnapshotFileExists:

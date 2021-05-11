@@ -206,14 +206,6 @@ type pruneDatabaseResponse struct {
 	Index milestone.Index `json:"index"`
 }
 
-// createSnapshotResponse defines the response of a create snapshot REST API call.
-type createSnapshotResponse struct {
-	// The index of the snapshot.
-	Index milestone.Index `json:"index"`
-	// The file path of the snapshot file.
-	FilePath string `json:"filePath"`
-}
-
 // createSnapshotsRequest defines the request of a create snapshots REST API call.
 type createSnapshotsRequest struct {
 	// The index of the full snapshot.

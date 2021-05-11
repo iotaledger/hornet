@@ -61,6 +61,10 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 
 func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 
+	if deps.Snapshot.IsSnapshottingOrPruning() {
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is already creating a snapshot or pruning is running")
+	}
+
 	request := &createSnapshotsRequest{}
 	if err := c.Bind(request); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
