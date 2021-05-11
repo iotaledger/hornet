@@ -116,7 +116,7 @@ Command line flags:
 		panic(err)
 	}
 
-	toolset.HandleTools()
+	toolset.HandleTools(nodeConfig)
 	printConfig(maskedKeys)
 
 	return &node.InitConfig{

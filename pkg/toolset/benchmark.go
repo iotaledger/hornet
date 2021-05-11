@@ -17,6 +17,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
@@ -28,7 +29,7 @@ const (
 	printStatusInterval = 2 * time.Second
 )
 
-func benchmarkIO(args []string) error {
+func benchmarkIO(nodeConfig *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
@@ -133,7 +134,7 @@ func benchmarkIO(args []string) error {
 	return nil
 }
 
-func benchmarkCPU(args []string) error {
+func benchmarkCPU(nodeConfig *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
 		println(fmt.Sprintf("	%s [THREADS]", ToolBenchmarkCPU))

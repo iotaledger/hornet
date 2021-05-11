@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hive.go/configuration"
 )
 
-func snapshotInfo(args []string) error {
+func snapshotInfo(nodeConfig *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
 		println(fmt.Sprintf("	%s [SNAPSHOT_PATH]", ToolSnapInfo))
