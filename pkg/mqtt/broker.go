@@ -24,11 +24,12 @@ func NewBroker(bindAddress string, wsPort int, wsPath string, workerCount int, o
 	}
 
 	c, err := broker.ConfigureConfig([]string{
-		fmt.Sprintf("--worker=%d", workerCount),
-		fmt.Sprintf("--host=%s", host),
-		fmt.Sprintf("--port=%s", port),
-		fmt.Sprintf("--wsport=%d", wsPort),
-		fmt.Sprintf("--wspath=%s", wsPath),
+		fmt.Sprintf("--worker=%d", workerCount), // worker num to process message, perfer (client num)/10.
+		fmt.Sprintf("--host=%s", host),          // network host to listen on
+		fmt.Sprintf("--httpport=%s", ""),        // disable http port to listen on
+		fmt.Sprintf("--port=%s", port),          // port to listen on
+		fmt.Sprintf("--wsport=%d", wsPort),      // port for ws to listen on
+		fmt.Sprintf("--wspath=%s", wsPath),      // path for ws to listen on
 	})
 
 	if err != nil {
