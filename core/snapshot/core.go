@@ -108,7 +108,7 @@ func provide(c *dig.Container) {
 
 		networkIDSource := deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName)
 
-		var downloadTargets []snapshot.DownloadTarget
+		var downloadTargets []*snapshot.DownloadTarget
 		if err := deps.NodeConfig.Unmarshal(CfgSnapshotsDownloadURLs, &downloadTargets); err != nil {
 			panic(err)
 		}
