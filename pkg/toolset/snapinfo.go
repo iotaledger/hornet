@@ -23,7 +23,7 @@ func snapshotInfo(nodeConfig *configuration.Configuration, args []string) error 
 	}
 
 	filePath := args[0]
-	readFileHeader, err := snapshot.ReadSnapshotHeader(filePath)
+	readFileHeader, err := snapshot.ReadSnapshotHeaderFromFile(filePath)
 	if err != nil {
 		return err
 	}
