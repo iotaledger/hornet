@@ -2,16 +2,19 @@ package snapshot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
@@ -73,10 +76,95 @@ type DownloadTarget struct {
 	Delta string `json:"delta"`
 }
 
-// DownloadSnapshotFiles tries to download snapshots file from the given targets.
-func (s *Snapshot) DownloadSnapshotFiles(fullPath string, deltaPath string, targets []DownloadTarget) error {
+func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
 
+	// check if the remote snapshot files fit the network ID and if delta fits the full snapshot.
+	checkTargetConsistency := func(wantedNetworkID uint64, fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) error {
+		if fullHeader == nil {
+			return errors.New("full snapshot header not found")
+		}
+
+		if fullHeader.NetworkID != wantedNetworkID {
+			return ErrInvalidSnapshotAvailabilityState
+		}
+
+		if deltaHeader == nil {
+			return nil
+		}
+
+		if deltaHeader.NetworkID != wantedNetworkID {
+			return ErrInvalidSnapshotAvailabilityState
+		}
+
+		if fullHeader.SEPMilestoneIndex > deltaHeader.SEPMilestoneIndex {
+			return ErrInvalidSnapshotAvailabilityState
+		}
+
+		if fullHeader.SEPMilestoneIndex != deltaHeader.LedgerMilestoneIndex {
+			// delta snapshot file doesn't fit the full snapshot file
+			return ErrInvalidSnapshotAvailabilityState
+		}
+
+		return nil
+	}
+
+	type downloadTargetWithIndex struct {
+		target *DownloadTarget
+		index  milestone.Index
+	}
+
+	filteredTargets := []*downloadTargetWithIndex{}
+
+	// search the latest snapshot by scanning all target headers
 	for _, target := range targets {
+		s.log.Debugf("downloading full snapshot header from %s", target.Full)
+
+		fullHeader, err := s.downloadHeader(target.Full)
+		if err != nil {
+			// as the full snapshot URL failed to download, we commence further with our targets
+			s.log.Debug(err.Error())
+			continue
+		}
+
+		var deltaHeader *ReadFileHeader
+		if len(target.Delta) > 0 {
+			s.log.Debugf("downloading delta snapshot header from %s", target.Delta)
+			deltaHeader, err = s.downloadHeader(target.Delta)
+			if err != nil {
+				// it is valid that no delta snapshot file is available on the target.
+				s.log.Debug(err.Error())
+			}
+		}
+
+		if err := checkTargetConsistency(wantedNetworkID, fullHeader, deltaHeader); err != nil {
+			// the snapshots on the target do not seem to be consistent
+			s.log.Debug(err.Error())
+			continue
+		}
+
+		filteredTargets = append(filteredTargets, &downloadTargetWithIndex{
+			target: target,
+			index:  getSnapshotTargetIndex(fullHeader, deltaHeader),
+		})
+	}
+
+	// sort by snapshot index, latest index first
+	sort.Slice(filteredTargets, func(i int, j int) bool {
+		return filteredTargets[i].index > filteredTargets[j].index
+	})
+
+	results := make([]*DownloadTarget, len(filteredTargets))
+	for i := 0; i < len(filteredTargets); i++ {
+		results[i] = filteredTargets[i].target
+	}
+
+	return results
+}
+
+// DownloadSnapshotFiles tries to download snapshots files from the given targets.
+func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
+
+	for _, target := range s.filterTargets(wantedNetworkID, targets) {
 
 		s.log.Infof("downloading full snapshot file from %s", target.Full)
 		if err := s.downloadFile(fullPath, target.Full); err != nil {
@@ -96,6 +184,21 @@ func (s *Snapshot) DownloadSnapshotFiles(fullPath string, deltaPath string, targ
 	}
 
 	return ErrSnapshotDownloadNoValidSource
+}
+
+// downloads a snapshot header from the given url.
+func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("download failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)
+	}
+
+	return ReadSnapshotHeader(resp.Body)
 }
 
 // downloads a snapshot file from the given url to the specified path.

@@ -74,7 +74,7 @@ type Snapshot struct {
 	snapshotFullPath                     string
 	snapshotDeltaPath                    string
 	deltaSnapshotSizeThresholdPercentage float64
-	downloadTargets                      []DownloadTarget
+	downloadTargets                      []*DownloadTarget
 	solidEntryPointCheckThresholdPast    milestone.Index
 	solidEntryPointCheckThresholdFuture  milestone.Index
 	additionalPruningThreshold           milestone.Index
@@ -102,7 +102,7 @@ func New(shutdownCtx context.Context,
 	snapshotFullPath string,
 	snapshotDeltaPath string,
 	deltaSnapshotSizeThresholdPercentage float64,
-	downloadTargets []DownloadTarget,
+	downloadTargets []*DownloadTarget,
 	solidEntryPointCheckThresholdPast milestone.Index,
 	solidEntryPointCheckThresholdFuture milestone.Index,
 	additionalPruningThreshold milestone.Index,
@@ -1135,7 +1135,7 @@ func (s *Snapshot) ImportSnapshots() error {
 	}
 
 	if snapAvail == snapshotAvailNone {
-		if err := s.downloadSnapshotFiles(s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
+		if err := s.downloadSnapshotFiles(s.networkID, s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
 			return err
 		}
 	}
@@ -1195,7 +1195,7 @@ func (s *Snapshot) checkSnapshotFilesAvailability(fullPath string, deltaPath str
 }
 
 // ensures that the folders to both paths exists and then downloads the appropriate snapshot files.
-func (s *Snapshot) downloadSnapshotFiles(fullPath string, deltaPath string) error {
+func (s *Snapshot) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string, deltaPath string) error {
 	fullPathDir := filepath.Dir(fullPath)
 	deltaPathDir := filepath.Dir(deltaPath)
 
@@ -1217,7 +1217,7 @@ func (s *Snapshot) downloadSnapshotFiles(fullPath string, deltaPath string) erro
 	}
 	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJson))
 
-	if err := s.DownloadSnapshotFiles(fullPath, deltaPath, s.downloadTargets); err != nil {
+	if err := s.DownloadSnapshotFiles(wantedNetworkID, fullPath, deltaPath, s.downloadTargets); err != nil {
 		return fmt.Errorf("unable to download snapshot files: %w", err)
 	}
 
