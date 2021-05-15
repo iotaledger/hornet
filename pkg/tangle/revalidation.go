@@ -555,6 +555,10 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 
 	t.log.Info("applying snapshot balances to the ledger state...")
 
+	// set the confirmed milestone index to 0.
+	// the correct milestone index will be applied during "ImportSnapshots"
+	t.storage.OverwriteConfirmedMilestoneIndex(0)
+
 	// Restore the ledger state of the last snapshot
 	if err := snapshot.ImportSnapshots(); err != nil {
 		t.log.Panic(err.Error())
@@ -572,9 +576,6 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 	if snapshotInfo.SnapshotIndex != ledgerIndex {
 		return ErrSnapshotIndexWrong
 	}
-
-	// Set the valid confirmed milestone index
-	t.storage.OverwriteConfirmedMilestoneIndex(snapshotInfo.SnapshotIndex)
 
 	t.log.Info("applying snapshot balances to the ledger state ... done!")
 
