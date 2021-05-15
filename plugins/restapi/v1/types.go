@@ -200,6 +200,14 @@ type PeerResponse struct {
 	Gossip *gossip.Info `json:"gossip,omitempty"`
 }
 
+// pruneDatabaseRequest defines the request of a prune database REST API call.
+type pruneDatabaseRequest struct {
+	// The pruning target index.
+	Index *milestone.Index `json:"index,omitempty"`
+	// The pruning depth.
+	Depth *milestone.Index `json:"depth,omitempty"`
+}
+
 // pruneDatabaseResponse defines the response of a prune database REST API call.
 type pruneDatabaseResponse struct {
 	// The index of the snapshot.

@@ -3,8 +3,6 @@ package v1
 import (
 	"fmt"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -16,39 +14,28 @@ import (
 
 func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 
-	var index int
-	var depth int
+	if deps.Snapshot.IsSnapshottingOrPruning() {
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is already creating a snapshot or pruning is running")
+	}
 
-	indexStr := strings.ToLower(c.QueryParam("index"))
-	depthStr := strings.ToLower(c.QueryParam("depth"))
+	request := &pruneDatabaseRequest{}
+	if err := c.Bind(request); err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
+	}
+
+	if (request.Index == nil && request.Depth == nil) || (request.Index != nil && request.Depth != nil) {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "either index or depth has to be specified")
+	}
 
 	var err error
-	if indexStr != "" {
-		index, err = strconv.Atoi(indexStr)
-		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing index failed: %s", err)
-		}
-	}
-
-	if depthStr != "" {
-		depth, err = strconv.Atoi(depthStr)
-		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "parsing depth failed: %s", err)
-		}
-	}
-
-	if (depth != 0 && index != 0) || (depth == 0 && index == 0) {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "either depth or index has to be specified")
-	}
-
 	var targetIndex milestone.Index
-	if depth != 0 {
-		targetIndex, err = deps.Snapshot.PruneDatabaseByDepth(milestone.Index(depth))
+	if request.Depth != nil {
+		targetIndex, err = deps.Snapshot.PruneDatabaseByDepth(*request.Depth)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
 	} else {
-		targetIndex, err = deps.Snapshot.PruneDatabaseByTargetIndex(milestone.Index(index))
+		targetIndex, err = deps.Snapshot.PruneDatabaseByTargetIndex(*request.Index)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
@@ -71,7 +58,7 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 	}
 
 	if request.FullIndex == nil && request.DeltaIndex == nil {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "either fullIndex or deltaIndex has to be specified")
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "at least fullIndex or deltaIndex has to be specified")
 	}
 
 	var fullIndex, deltaIndex milestone.Index
