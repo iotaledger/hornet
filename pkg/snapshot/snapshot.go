@@ -629,7 +629,7 @@ func (s *Snapshot) readLedgerIndex() (milestone.Index, error) {
 
 // reads out the snapshot milestone index from the full snapshot file.
 func (s *Snapshot) readSnapshotIndexFromFullSnapshotFile() (milestone.Index, error) {
-	fullSnapshotHeader, err := ReadSnapshotHeader(s.snapshotFullPath)
+	fullSnapshotHeader, err := ReadSnapshotHeaderFromFile(s.snapshotFullPath)
 	if err != nil {
 		return 0, fmt.Errorf("unable to read full snapshot header for origin snapshot milestone index: %w", err)
 	}
@@ -1096,6 +1096,34 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 	if _, err := s.pruneDatabase(confirmedMilestoneIndex-s.pruningDelay, shutdownSignal); err != nil {
 		s.log.Debugf("pruning aborted: %v", err)
 	}
+}
+
+// GetSnapshotTargetIndex returns the final ledger index if the snapshots from the configured file paths would be applied.
+func (s *Snapshot) GetSnapshotTargetIndex() (milestone.Index, error) {
+
+	snapAvail, err := s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
+	if err != nil {
+		return 0, err
+	}
+
+	if snapAvail == snapshotAvailNone {
+		return 0, errors.New("no snapshot files available")
+	}
+
+	fullHeader, err := ReadSnapshotHeaderFromFile(s.snapshotFullPath)
+	if err != nil {
+		return 0, err
+	}
+
+	var deltaHeader *ReadFileHeader
+	if snapAvail == snapshotAvailBoth {
+		deltaHeader, err = ReadSnapshotHeaderFromFile(s.snapshotDeltaPath)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return getSnapshotTargetIndex(fullHeader, deltaHeader), nil
 }
 
 // ImportSnapshots imports snapshot data from the configured file paths.

@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -70,6 +71,16 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 
 	if snapshotInfo.SnapshotIndex > latestMilestoneIndex && (latestMilestoneIndex != 0) {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
+	}
+
+	// check if the indexes of the snapshot files fit the revalidation target.
+	snapshotIndex, err := snapshot.GetSnapshotTargetIndex()
+	if err != nil {
+		return err
+	}
+
+	if snapshotIndex != snapshotInfo.SnapshotIndex {
+		return fmt.Errorf("snapshot files (index: %d) do not fit the revalidation target (index: %d)", snapshotIndex, snapshotInfo.SnapshotIndex)
 	}
 
 	t.log.Infof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)

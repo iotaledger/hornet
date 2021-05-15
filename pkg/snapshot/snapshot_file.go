@@ -266,6 +266,20 @@ type ReadFileHeader struct {
 	MilestoneDiffCount uint64
 }
 
+// getSnapshotTargetIndex returns the final ledger index if the given snapshot files would be applied.
+func getSnapshotTargetIndex(fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) milestone.Index {
+
+	if fullHeader == nil {
+		return 0
+	}
+
+	if deltaHeader == nil {
+		return fullHeader.SEPMilestoneIndex
+	}
+
+	return deltaHeader.SEPMilestoneIndex
+}
+
 // StreamSnapshotDataTo streams a snapshot data into the given io.WriteSeeker.
 // FileHeader.Type is used to determine whether to write a full or delta snapshot.
 // If the type of the snapshot is Full, then OutputProducerFunc must be provided.
@@ -416,18 +430,75 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *
 	}
 }
 
-// StreamSnapshotDataFrom consumes a snapshot from the given reader.
-// OutputConsumerFunc must not be nil if the snapshot is not a delta snapshot.
-func StreamSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
-	sepConsumer SEPConsumerFunc, outputConsumer OutputConsumerFunc, unspentTreasuryOutputConsumer UnspentTreasuryOutputConsumerFunc, msDiffConsumer MilestoneDiffConsumerFunc) error {
+// ReadSnapshotHeader reads the snapshot header from the given reader.
+func ReadSnapshotHeader(reader io.Reader) (*ReadFileHeader, error) {
 	readHeader := &ReadFileHeader{}
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.Version); err != nil {
-		return fmt.Errorf("unable to read LS version: %w", err)
+		return nil, fmt.Errorf("unable to read LS version: %w", err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &readHeader.Type); err != nil {
-		return fmt.Errorf("unable to read LS type: %w", err)
+		return nil, fmt.Errorf("unable to read LS type: %w", err)
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.Timestamp); err != nil {
+		return nil, fmt.Errorf("unable to read LS timestamp: %w", err)
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.NetworkID); err != nil {
+		return nil, fmt.Errorf("unable to read LS network ID: %w", err)
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPMilestoneIndex); err != nil {
+		return nil, fmt.Errorf("unable to read LS SEPs milestone index: %w", err)
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.LedgerMilestoneIndex); err != nil {
+		return nil, fmt.Errorf("unable to read LS ledger milestone index: %w", err)
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPCount); err != nil {
+		return nil, fmt.Errorf("unable to read LS SEPs count: %w", err)
+	}
+
+	if readHeader.Type == Full {
+		if err := binary.Read(reader, binary.LittleEndian, &readHeader.OutputCount); err != nil {
+			return nil, fmt.Errorf("unable to read LS outputs count: %w", err)
+		}
+	}
+
+	if err := binary.Read(reader, binary.LittleEndian, &readHeader.MilestoneDiffCount); err != nil {
+		return nil, fmt.Errorf("unable to read LS ms-diff count: %w", err)
+	}
+
+	if readHeader.Type == Full {
+		to := &utxo.TreasuryOutput{Spent: false}
+		if _, err := io.ReadFull(reader, to.MilestoneID[:]); err != nil {
+			return nil, fmt.Errorf("unable to read LS treasury output milestone hash: %w", err)
+		}
+		if err := binary.Read(reader, binary.LittleEndian, &to.Amount); err != nil {
+			return nil, fmt.Errorf("unable to read LS treasury output amount: %w", err)
+		}
+
+		readHeader.TreasuryOutput = to
+	}
+
+	return readHeader, nil
+}
+
+// StreamSnapshotDataFrom consumes a snapshot from the given reader.
+// OutputConsumerFunc must not be nil if the snapshot is not a delta snapshot.
+func StreamSnapshotDataFrom(reader io.Reader,
+	headerConsumer HeaderConsumerFunc,
+	sepConsumer SEPConsumerFunc,
+	outputConsumer OutputConsumerFunc,
+	unspentTreasuryOutputConsumer UnspentTreasuryOutputConsumerFunc,
+	msDiffConsumer MilestoneDiffConsumerFunc) error {
+
+	readHeader, err := ReadSnapshotHeader(reader)
+	if err != nil {
+		return err
 	}
 
 	if readHeader.Type == Full {
@@ -437,51 +508,10 @@ func StreamSnapshotDataFrom(reader io.Reader, headerConsumer HeaderConsumerFunc,
 		case unspentTreasuryOutputConsumer == nil:
 			return ErrTreasuryOutputConsumerNotProvided
 		}
-	}
 
-	if err := binary.Read(reader, binary.LittleEndian, &readHeader.Timestamp); err != nil {
-		return fmt.Errorf("unable to read LS timestamp: %w", err)
-	}
-
-	if err := binary.Read(reader, binary.LittleEndian, &readHeader.NetworkID); err != nil {
-		return fmt.Errorf("unable to read LS network ID: %w", err)
-	}
-
-	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPMilestoneIndex); err != nil {
-		return fmt.Errorf("unable to read LS SEPs milestone index: %w", err)
-	}
-
-	if err := binary.Read(reader, binary.LittleEndian, &readHeader.LedgerMilestoneIndex); err != nil {
-		return fmt.Errorf("unable to read LS ledger milestone index: %w", err)
-	}
-
-	if err := binary.Read(reader, binary.LittleEndian, &readHeader.SEPCount); err != nil {
-		return fmt.Errorf("unable to read LS SEPs count: %w", err)
-	}
-
-	if readHeader.Type == Full {
-		if err := binary.Read(reader, binary.LittleEndian, &readHeader.OutputCount); err != nil {
-			return fmt.Errorf("unable to read LS outputs count: %w", err)
-		}
-	}
-
-	if err := binary.Read(reader, binary.LittleEndian, &readHeader.MilestoneDiffCount); err != nil {
-		return fmt.Errorf("unable to read LS ms-diff count: %w", err)
-	}
-
-	if readHeader.Type == Full {
-		to := &utxo.TreasuryOutput{Spent: false}
-		if _, err := io.ReadFull(reader, to.MilestoneID[:]); err != nil {
-			return fmt.Errorf("unable to read LS treasury output milestone hash: %w", err)
-		}
-		if err := binary.Read(reader, binary.LittleEndian, &to.Amount); err != nil {
-			return fmt.Errorf("unable to read LS treasury output amount: %w", err)
-		}
-		if err := unspentTreasuryOutputConsumer(to); err != nil {
+		if err := unspentTreasuryOutputConsumer(readHeader.TreasuryOutput); err != nil {
 			return err
 		}
-
-		readHeader.TreasuryOutput = to
 	}
 
 	if err := headerConsumer(readHeader); err != nil {
@@ -656,32 +686,15 @@ func readSpent(reader io.Reader) (*Spent, error) {
 	return spent, nil
 }
 
-// ReadSnapshotHeader reads the header of the given snapshot.
-func ReadSnapshotHeader(filePath string) (*ReadFileHeader, error) {
+// ReadSnapshotHeaderFromFile reads the header of the given snapshot file.
+func ReadSnapshotHeaderFromFile(filePath string) (*ReadFileHeader, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to open snapshot file to read header: %w", err)
 	}
 	defer file.Close()
 
-	var readHeader *ReadFileHeader
-	var wantedAbort = errors.New("wanted abort")
-	if err := StreamSnapshotDataFrom(file, func(header *ReadFileHeader) error {
-		readHeader = header
-		return wantedAbort
-	}, func(id hornet.MessageID) error {
-		return nil
-	}, func(output *Output) error {
-		return nil
-	}, func(output *utxo.TreasuryOutput) error {
-		return nil
-	}, func(milestoneDiff *MilestoneDiff) error {
-		return nil
-	}); err != nil && !errors.Is(err, wantedAbort) {
-		return nil, err
-	}
-
-	return readHeader, nil
+	return ReadSnapshotHeader(file)
 }
 
 // MergeInfo holds information about a merge of a full and delta snapshot.
@@ -707,12 +720,12 @@ type MergeInfo struct {
 func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
 
 	// check that the delta snapshot file's ledger index equals the snapshot index of the full one
-	fullHeader, err := ReadSnapshotHeader(fullPath)
+	fullHeader, err := ReadSnapshotHeaderFromFile(fullPath)
 	if err != nil {
 		return nil, err
 	}
 
-	deltaHeader, err := ReadSnapshotHeader(deltaPath)
+	deltaHeader, err := ReadSnapshotHeaderFromFile(deltaPath)
 	if err != nil {
 		return nil, err
 	}
