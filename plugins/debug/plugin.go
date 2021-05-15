@@ -32,7 +32,7 @@ const (
 	RouteDebugComputeWhiteFlag = "/whiteflag"
 
 	// RouteDebugSolidifier is the debug route to manually trigger the solidifier.
-	// GET triggers the solidifier.
+	// POST triggers the solidifier.
 	RouteDebugSolidifier = "/solidifier"
 
 	// RouteDebugOutputs is the debug route for getting all output IDs.
@@ -120,10 +120,10 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteDebugSolidifier, func(c echo.Context) error {
+	routeGroup.POST(RouteDebugSolidifier, func(c echo.Context) error {
 		deps.Tangle.TriggerSolidifier()
 
-		return restapipkg.JSONResponse(c, http.StatusOK, "solidifier triggered")
+		return c.NoContent(http.StatusNoContent)
 	})
 
 	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
