@@ -48,5 +48,5 @@ var params = &node.PluginParams{
 			return fs
 		}(),
 	},
-	Masked: nil,
+	Masked: []string{CfgP2PIdentityPrivKey},
 }
