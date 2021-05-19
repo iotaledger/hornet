@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -51,7 +52,7 @@ func (api *DebugNodeAPIClient) Whiteflag(index milestone.Index, parents hornet.M
 	}
 	res := &computeWhiteFlagMutationsResponse{}
 
-	if _, err := api.Do(http.MethodPost, NodeAPIRouteDebugComputeWhiteFlag, req, res); err != nil {
+	if _, err := api.Do(context.Background(), http.MethodPost, NodeAPIRouteDebugComputeWhiteFlag, req, res); err != nil {
 		return nil, err
 	}
 

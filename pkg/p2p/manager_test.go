@@ -135,10 +135,10 @@ func TestManager(t *testing.T) {
 	require.False(t, node2.ConnManager().IsProtected(node4.ID(), p2p.KnownPeerConnectivityProtectionTag))
 
 	// lets check that we do have as many connections as we think we should actually have
-	require.Len(t, node1.Network().Conns(), 1) // to node 2
-	require.Len(t, node2.Network().Conns(), 3) // to node 1,3,4
-	require.Len(t, node3.Network().Conns(), 1) // to node 2
-	require.Len(t, node4.Network().Conns(), 1) // to node 2
+	connections(t, node1, peer.IDSlice{node2AddrInfo.ID})                                     // to node 2
+	connections(t, node2, peer.IDSlice{node1AddrInfo.ID, node3AddrInfo.ID, node4AddrInfo.ID}) // to node 1,3,4
+	connections(t, node3, peer.IDSlice{node2AddrInfo.ID})                                     // to node 2
+	connections(t, node4, peer.IDSlice{node2AddrInfo.ID})                                     // to node 2
 
 	// if we now trim connections on node 2 which currently is connected to node 1, 3 and 4,
 	// then the connection to node 3 or 4 should be closed, as they aren't protected and our "low watermark" is 1.
@@ -171,6 +171,27 @@ func connectivity(t *testing.T, source *p2p.Manager, target peer.ID, disconnecte
 	require.Eventually(t, func() bool {
 		return source.IsConnected(target) == !disconnected
 	}, dur, 100*time.Millisecond)
+}
+
+func connections(t *testing.T, node host.Host, targets peer.IDSlice) {
+	targetsMap := make(map[peer.ID]struct{})
+	unconnected := make(map[peer.ID]struct{})
+
+	for _, target := range targets {
+		targetsMap[target] = struct{}{}
+		unconnected[target] = struct{}{}
+	}
+
+	for _, conn := range node.Network().Conns() {
+		_, exists := targetsMap[conn.RemotePeer()]
+		require.True(t, exists)
+
+		if exists {
+			delete(unconnected, conn.RemotePeer())
+		}
+	}
+
+	require.Empty(t, unconnected)
 }
 
 func TestManagerEvents(t *testing.T) {
