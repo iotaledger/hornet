@@ -6,6 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
+
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
@@ -90,12 +92,22 @@ func (u *Manager) checkBalancesLedger(treasury uint64) error {
 	return nil
 }
 
-func (u *Manager) AddressBalance(address iotago.Address) (balance uint64, dustAllowed bool, err error) {
+func (u *Manager) AddressBalance(address iotago.Address) (balance uint64, dustAllowed bool, ledgerIndex milestone.Index, err error) {
 
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()
 
-	return u.AddressBalanceWithoutLocking(address)
+	ledgerIndex, err = u.ReadLedgerIndexWithoutLocking()
+	if err != nil {
+		return 0, false, 0, err
+	}
+
+	balance, dustAllowed, err = u.AddressBalanceWithoutLocking(address)
+	if err != nil {
+		return 0, false, 0, err
+	}
+
+	return balance, dustAllowed, ledgerIndex, err
 }
 
 func (u *Manager) AddressBalanceWithoutLocking(address iotago.Address) (balance uint64, dustAllowed bool, err error) {

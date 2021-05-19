@@ -148,6 +148,8 @@ type addressBalanceResponse struct {
 	Balance uint64 `json:"balance"`
 	// Indicates if dust is allowed on this address.
 	DustAllowed bool `json:"dustAllowed"`
+	// The ledger index at which this balance was queried at.
+	LedgerIndex milestone.Index `json:"ledgerIndex"`
 }
 
 // addressOutputsResponse defines the response of a GET outputs by address REST API call.
