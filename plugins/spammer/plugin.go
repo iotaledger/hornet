@@ -24,6 +24,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -86,19 +87,23 @@ type dependencies struct {
 	ServerMetrics    *metrics.ServerMetrics
 	PoWHandler       *pow.Handler
 	Manager          *p2p.Manager
-	TipSelector      *tipselect.TipSelector
+	TipSelector      *tipselect.TipSelector       `optional:"true"`
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
-	Echo             *echo.Echo
+	Echo             *echo.Echo                   `optional:"true"`
 }
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
 
-	// do not enable the spammer if URTS is disabled
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		log.Panic("RestAPI plugin needs to be enabled to use the Spammer plugin")
+	}
+
+	// check if URTS plugin is disabled
 	if Plugin.Node.IsSkipped(urts.Plugin) {
-		Plugin.Status = node.Disabled
-		return
+		log.Panic("URTS plugin needs to be enabled to use the Spammer plugin")
 	}
 
 	setupRoutes(deps.Echo.Group(RouteSpammer))

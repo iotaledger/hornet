@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -70,11 +71,16 @@ type dependencies struct {
 	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 	BelowMaxDepth int                          `name:"belowMaxDepth"`
 	Bech32HRP     iotago.NetworkPrefix         `name:"bech32HRP"`
-	Echo          *echo.Echo
+	Echo          *echo.Echo                   `optional:"true"`
 }
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
+
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		log.Panic("RestAPI plugin needs to be enabled to use the MQTT plugin")
+	}
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		publishLatestMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1

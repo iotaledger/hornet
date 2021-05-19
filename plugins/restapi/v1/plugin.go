@@ -21,8 +21,8 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
-	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -157,6 +157,7 @@ func init() {
 
 var (
 	Plugin         *node.Plugin
+	log            *logger.Logger
 	powEnabled     bool
 	powWorkerCount int
 	features       []string
@@ -180,15 +181,22 @@ type dependencies struct {
 	AppInfo              *app.AppInfo
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager *p2ppkg.ConfigManager
-	NetworkID            uint64               `name:"networkId"`
-	BelowMaxDepth        int                  `name:"belowMaxDepth"`
-	MinPoWScore          float64              `name:"minPoWScore"`
-	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
-	TipSelector          *tipselect.TipSelector
-	Echo                 *echo.Echo
+	NetworkID            uint64                 `name:"networkId"`
+	BelowMaxDepth        int                    `name:"belowMaxDepth"`
+	MinPoWScore          float64                `name:"minPoWScore"`
+	Bech32HRP            iotago.NetworkPrefix   `name:"bech32HRP"`
+	TipSelector          *tipselect.TipSelector `optional:"true"`
+	Echo                 *echo.Echo             `optional:"true"`
 }
 
 func configure() {
+	log = logger.NewLogger(Plugin.Name)
+
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		log.Panic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
+	}
+
 	routeGroup := deps.Echo.Group("/api/v1")
 
 	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
@@ -209,7 +217,7 @@ func configure() {
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
-	if !Plugin.Node.IsSkipped(urts.Plugin) {
+	if deps.TipSelector != nil {
 		routeGroup.GET(RouteTips, func(c echo.Context) error {
 			resp, err := tips(c)
 			if err != nil {
