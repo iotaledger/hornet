@@ -69,14 +69,16 @@ func configureNode() {
 		[]string{"type"},
 	)
 
-	tips = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "iota",
-			Subsystem: "node",
-			Name:      "tip_count",
-			Help:      "Number of tips.",
-		}, []string{"type"},
-	)
+	if deps.TipSelector != nil {
+		tips = prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: "iota",
+				Subsystem: "node",
+				Name:      "tip_count",
+				Help:      "Number of tips.",
+			}, []string{"type"},
+		)
+	}
 
 	requests = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -95,7 +97,11 @@ func configureNode() {
 	registry.MustRegister(referencedMessagesPerSecond)
 	registry.MustRegister(referencedRate)
 	registry.MustRegister(milestones)
-	registry.MustRegister(tips)
+
+	if deps.TipSelector != nil {
+		registry.MustRegister(tips)
+	}
+
 	registry.MustRegister(requests)
 
 	addCollect(collectInfo)
@@ -129,9 +135,11 @@ func collectInfo() {
 		milestones.WithLabelValues("pruning").Set(float64(snapshotInfo.PruningIndex))
 	}
 
-	nonLazyTipCount, semiLazyTipCount := deps.TipSelector.GetTipCount()
-	tips.WithLabelValues("nonlazy").Set(float64(nonLazyTipCount))
-	tips.WithLabelValues("semilazy").Set(float64(semiLazyTipCount))
+	if deps.TipSelector != nil {
+		nonLazyTipCount, semiLazyTipCount := deps.TipSelector.GetTipCount()
+		tips.WithLabelValues("nonlazy").Set(float64(nonLazyTipCount))
+		tips.WithLabelValues("semilazy").Set(float64(semiLazyTipCount))
+	}
 
 	queued, pending, processing := deps.RequestQueue.Size()
 	requests.WithLabelValues("queued").Set(float64(queued))

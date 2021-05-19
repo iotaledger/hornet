@@ -58,7 +58,7 @@ type dependencies struct {
 	RestAPIMetrics        *metrics.RestAPIMetrics
 	Host                  host.Host
 	NodePrivateKey        crypto.PrivKey
-	DashboardAuthUsername string `name:"dashboardAuthUsername"`
+	DashboardAuthUsername string `name:"dashboardAuthUsername" optional:"true"`
 }
 
 func provide(c *dig.Container) {
@@ -160,6 +160,9 @@ func configure() {
 
 			// Only allow Dashboard JWT for certain routes
 			if claims.Dashboard {
+				if deps.DashboardAuthUsername == "" {
+					return false
+				}
 				return claims.VerifySubject(deps.DashboardAuthUsername) && dashboardAllowedAPIRoute(c)
 			}
 

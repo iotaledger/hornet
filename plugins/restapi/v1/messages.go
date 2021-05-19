@@ -233,6 +233,10 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	var refreshTipsFunc pow.RefreshTipsFunc
 
 	if len(msg.Parents) == 0 {
+		if deps.TipSelector == nil {
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: no parents given and node tipselection disabled")
+		}
+
 		tips, err := deps.TipSelector.SelectNonLazyTips()
 		if err != nil {
 			if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
