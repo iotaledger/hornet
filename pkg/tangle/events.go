@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/events"
@@ -31,11 +32,11 @@ func MPSMetricsCaller(handler interface{}, params ...interface{}) {
 }
 
 func UTXOOutputCaller(handler interface{}, params ...interface{}) {
-	handler.(func(*utxo.Output))(params[0].(*utxo.Output))
+	handler.(func(milestone.Index, *utxo.Output))(params[0].(milestone.Index), params[1].(*utxo.Output))
 }
 
 func UTXOSpentCaller(handler interface{}, params ...interface{}) {
-	handler.(func(*utxo.Spent))(params[0].(*utxo.Spent))
+	handler.(func(milestone.Index, *utxo.Spent))(params[0].(milestone.Index), params[1].(*utxo.Spent))
 }
 
 func ReceiptCaller(handler interface{}, params ...interface{}) {

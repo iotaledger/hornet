@@ -134,6 +134,8 @@ type OutputResponse struct {
 	OutputIndex uint16 `json:"outputIndex"`
 	// Whether this output is spent.
 	Spent bool `json:"isSpent"`
+	// The ledger index at which this output was available at.
+	LedgerIndex milestone.Index `json:"ledgerIndex"`
 	// The output in its serialized form.
 	RawOutput *json.RawMessage `json:"output"`
 }
@@ -148,6 +150,8 @@ type addressBalanceResponse struct {
 	Balance uint64 `json:"balance"`
 	// Indicates if dust is allowed on this address.
 	DustAllowed bool `json:"dustAllowed"`
+	// The ledger index at which this balance was queried at.
+	LedgerIndex milestone.Index `json:"ledgerIndex"`
 }
 
 // addressOutputsResponse defines the response of a GET outputs by address REST API call.
@@ -162,6 +166,8 @@ type addressOutputsResponse struct {
 	Count uint32 `json:"count"`
 	// The output IDs (transaction hash + output index) of the outputs on this address.
 	OutputIDs []string `json:"outputIds"`
+	// The ledger index at which these outputs where available at.
+	LedgerIndex milestone.Index `json:"ledgerIndex"`
 }
 
 // treasuryResponse defines the response of a GET treasury REST API call.

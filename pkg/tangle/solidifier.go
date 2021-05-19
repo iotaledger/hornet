@@ -292,11 +292,11 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			t.Events.MilestoneConfirmed.Trigger(confirmation)
 			timeMilestoneConfirmed = time.Now()
 		},
-		func(output *utxo.Output) {
-			t.Events.NewUTXOOutput.Trigger(output)
+		func(index milestone.Index, output *utxo.Output) {
+			t.Events.NewUTXOOutput.Trigger(index, output)
 		},
-		func(spent *utxo.Spent) {
-			t.Events.NewUTXOSpent.Trigger(spent)
+		func(index milestone.Index, spent *utxo.Spent) {
+			t.Events.NewUTXOSpent.Trigger(index, spent)
 		},
 		func(rt *utxo.ReceiptTuple) error {
 			if t.receiptService != nil {

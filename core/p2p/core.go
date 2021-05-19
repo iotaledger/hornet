@@ -89,7 +89,8 @@ func provide(c *dig.Container) {
 		if !peerStoreExists {
 			prvKey, err = p2p.CreateIdentity(pubKeyFilePath, identityPrivKey)
 		} else {
-			peerID, err := p2p.LoadIdentityFromFile(pubKeyFilePath)
+			var peerID peer.ID
+			peerID, err = p2p.LoadIdentityFromFile(pubKeyFilePath)
 			if err == nil {
 				prvKey, err = p2p.LoadPrivateKeyFromStore(peerID, peerStore, identityPrivKey)
 			}

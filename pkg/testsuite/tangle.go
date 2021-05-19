@@ -49,7 +49,7 @@ func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 
 // AssertAddressBalance generates an address for the given seed and index and checks correct balance.
 func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedBalance uint64) {
-	addrBalance, _, err := te.storage.UTXO().AddressBalance(wallet.Address())
+	addrBalance, _, _, err := te.storage.UTXO().AddressBalance(wallet.Address())
 	require.NoError(te.TestInterface, err)
 	computedAddrBalance, _, err := te.storage.UTXO().ComputeBalance(utxo.FilterAddress(wallet.Address()))
 	require.NoError(te.TestInterface, err)

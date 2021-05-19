@@ -82,8 +82,8 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		func(confirmation *whiteflag.Confirmation) {
 			te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 		},
-		func(output *utxo.Output) {},
-		func(spent *utxo.Spent) {},
+		func(index milestone.Index, output *utxo.Output) {},
+		func(index milestone.Index, spent *utxo.Spent) {},
 		nil,
 	)
 	require.NoError(te.TestInterface, err)
@@ -128,8 +128,8 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 			wfConf = confirmation
 			te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 		},
-		func(output *utxo.Output) {},
-		func(spent *utxo.Spent) {},
+		func(index milestone.Index, output *utxo.Output) {},
+		func(index milestone.Index, spent *utxo.Spent) {},
 		nil,
 	)
 	require.NoError(te.TestInterface, err)
