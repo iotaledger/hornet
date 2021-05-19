@@ -43,7 +43,7 @@ FROM gcr.io/distroless/cc@sha256:e8a7af65cf92b834e35a7537f6be93e743b48886c83c1ea
 EXPOSE 8081/tcp
 EXPOSE 14265/tcp
 EXPOSE 15600/tcp
-EXPOSE 14626/udp
+EXPOSE 1883/tcp
 
 # Copy the binary into distroless image
 COPY --chown=nonroot:nonroot --from=build /go/bin/hornet /app/hornet
