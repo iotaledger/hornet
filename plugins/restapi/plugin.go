@@ -133,12 +133,6 @@ func configure() {
 			deps.NodePrivateKey,
 		)
 
-		t, err := jwtAuth.IssueJWT(true, false)
-		if err != nil {
-			panic(err)
-		}
-		log.Infof("You can use the following JWT to access the API: %s", t)
-
 		excludedRoutes := make(map[string]struct{})
 		if deps.NodeConfig.Bool(CfgRestAPIExcludeHealthCheckFromAuth) {
 			excludedRoutes[nodeAPIHealthRoute] = struct{}{}
