@@ -154,6 +154,15 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 		opts = append(opts, utxo.FilterOutputType(*filterType))
 	}
 
+	// we need to lock the ledger here to have the same index for unspent and spent outputs.
+	deps.UTXO.ReadLockLedger()
+	defer deps.UTXO.ReadUnlockLedger()
+
+	ledgerIndex, err := deps.UTXO.ReadLedgerIndexWithoutLocking()
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
+	}
+
 	unspentOutputs, err := deps.UTXO.UnspentOutputs(append(opts, utxo.MaxResultCount(maxResults))...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
@@ -185,6 +194,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 		MaxResults:  uint32(maxResults),
 		Count:       uint32(len(outputIDs)),
 		OutputIDs:   outputIDs,
+		LedgerIndex: ledgerIndex,
 	}, nil
 }
 
