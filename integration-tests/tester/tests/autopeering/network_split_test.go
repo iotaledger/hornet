@@ -22,7 +22,7 @@ func TestNetworkSplit(t *testing.T) {
 	// test that nodes only have peers from same partition
 	for _, partition := range n.Partitions() {
 		for _, peer := range partition.Peers() {
-			peers, err := peer.DebugNodeAPIClient.Peers()
+			peers, err := peer.DebugNodeAPIClient.Peers(context.Background())
 			require.NoError(t, err)
 			require.Len(t, peers, 2, "should only be connected to %d peers", 2)
 
