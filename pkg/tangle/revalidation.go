@@ -73,14 +73,14 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 		return ErrLatestMilestoneOlderThanSnapshotIndex
 	}
 
-	// check if the indexes of the snapshot files fit the revalidation target.
-	snapshotIndex, err := snapshot.GetSnapshotTargetIndex()
+	// check if the ledger index of the snapshot files fit the revalidation target.
+	snapshotLedgerIndex, err := snapshot.GetSnapshotsFilesLedgerIndex()
 	if err != nil {
 		return err
 	}
 
-	if snapshotIndex != snapshotInfo.SnapshotIndex {
-		return fmt.Errorf("snapshot files (index: %d) do not fit the revalidation target (index: %d)", snapshotIndex, snapshotInfo.SnapshotIndex)
+	if snapshotLedgerIndex != snapshotInfo.SnapshotIndex {
+		return fmt.Errorf("snapshot files (index: %d) do not fit the revalidation target (index: %d)", snapshotLedgerIndex, snapshotInfo.SnapshotIndex)
 	}
 
 	t.log.Infof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)

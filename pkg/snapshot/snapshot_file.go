@@ -266,8 +266,8 @@ type ReadFileHeader struct {
 	MilestoneDiffCount uint64
 }
 
-// getSnapshotTargetIndex returns the final ledger index if the given snapshot files would be applied.
-func getSnapshotTargetIndex(fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) milestone.Index {
+// getSnapshotFilesLedgerIndex returns the final ledger index if the given snapshot files would be applied.
+func getSnapshotFilesLedgerIndex(fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) milestone.Index {
 
 	if fullHeader == nil {
 		return 0
