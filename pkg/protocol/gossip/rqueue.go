@@ -49,7 +49,7 @@ type RequestQueue interface {
 	// the filter criteria.
 	Filter(f FilterFunc)
 	// FreeMemory copies the content of the internal maps to newly created maps.
-	// This is neccessary, otherwise the GC is not able to free the memory used by the old maps.
+	// This is necessary, otherwise the GC is not able to free the memory used by the old maps.
 	// "delete" doesn't shrink the maximum memory used by the map, since it only marks the entry as deleted.
 	FreeMemory()
 }
@@ -316,7 +316,7 @@ func (pq *priorityqueue) Filter(f FilterFunc) {
 }
 
 // FreeMemory copies the content of the internal maps to newly created maps.
-// This is neccessary, otherwise the GC is not able to free the memory used by the old maps.
+// This is necessary, otherwise the GC is not able to free the memory used by the old maps.
 // "delete" doesn't shrink the maximum memory used by the map, since it only marks the entry as deleted.
 func (pq *priorityqueue) FreeMemory() {
 	pq.Lock()

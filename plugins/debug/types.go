@@ -23,11 +23,11 @@ type computeWhiteFlagMutationsResponse struct {
 // If no flags are given, all memories are cleared.
 type controlFreeMemoryRequest struct {
 	// Free the unused memory of the request queue.
-	RequestQueue     *bool `json:"requestQueue,omitempty"`
+	RequestQueue *bool `json:"requestQueue,omitempty"`
 	// Free the unused memory of the message processor.
 	MessageProcessor *bool `json:"messageProcessor,omitempty"`
 	// Free the unused memory of the object storage.
-	Storage          *bool `json:"storage,omitempty"`
+	Storage *bool `json:"storage,omitempty"`
 }
 
 // outputIDsResponse defines the response of a GET debug outputs REST API call.

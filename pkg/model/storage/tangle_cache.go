@@ -147,7 +147,7 @@ func (c *TangleCache) ReleaseUnreferencedMessages(msIndex milestone.Index, force
 			continue
 		}
 
-		for _, msgID := range unreferencedMessageIDs {
+		for i, msgID := range unreferencedMessageIDs {
 			msgIDMapKey := msgID.ToMapKey()
 			unreferencedMsg, exists := c.unreferencedMessages[msgIDMapKey]
 			if !exists {
@@ -156,8 +156,10 @@ func (c *TangleCache) ReleaseUnreferencedMessages(msIndex milestone.Index, force
 			}
 
 			unreferencedMsg.Release(forceRelease...)
+			unreferencedMessageIDs[i] = nil
 			delete(c.unreferencedMessages, msgIDMapKey)
 		}
+		c.unreferencedMessagesPerMilestoneIndex[index] = nil
 		delete(c.unreferencedMessagesPerMilestoneIndex, index)
 	}
 }
@@ -171,8 +173,9 @@ func (c *TangleCache) ReleaseCachedMessages(msIndex milestone.Index, forceReleas
 			continue
 		}
 
-		for _, cachedMsg := range cachedMessages {
+		for i, cachedMsg := range cachedMessages {
 			cachedMsg.Release(forceRelease...)
+			cachedMessages[i] = nil
 		}
 		delete(c.cachedMsgs, index)
 	}
@@ -188,8 +191,9 @@ func (c *TangleCache) ReleaseCachedMetadata(msIndex milestone.Index, forceReleas
 			continue
 		}
 
-		for _, cachedMsgMeta := range cachedMsgMetas {
+		for i, cachedMsgMeta := range cachedMsgMetas {
 			cachedMsgMeta.Release(forceRelease...)
+			cachedMsgMetas[i] = nil
 		}
 		delete(c.cachedMsgMetas, index)
 	}
@@ -205,8 +209,9 @@ func (c *TangleCache) ReleaseCachedChildren(msIndex milestone.Index, forceReleas
 			continue
 		}
 
-		for _, cachedChild := range cachedChildren {
+		for i, cachedChild := range cachedChildren {
 			cachedChild.Release(forceRelease...)
+			cachedChildren[i] = nil
 		}
 		delete(c.cachedChildren, index)
 	}
@@ -251,7 +256,7 @@ func (c *TangleCache) Cleanup() {
 }
 
 // FreeMemory copies the content of the internal maps to newly created maps.
-// This is neccessary, otherwise the GC is not able to free the memory used by the old maps.
+// This is necessary, otherwise the GC is not able to free the memory used by the old maps.
 // "delete" doesn't shrink the maximum memory used by the map, since it only marks the entry as deleted.
 func (c *TangleCache) FreeMemory() {
 	c.Lock()
@@ -265,25 +270,29 @@ func (c *TangleCache) FreeMemory() {
 
 	unreferencedMessagesPerMilestoneIndexMap := make(map[milestone.Index]hornet.MessageIDs)
 	for index, unreferencedMessageIDs := range c.unreferencedMessagesPerMilestoneIndex {
-		unreferencedMessagesPerMilestoneIndexMap[index] = unreferencedMessageIDs
+		unreferencedMessagesPerMilestoneIndexMap[index] = make(hornet.MessageIDs, len(unreferencedMessageIDs))
+		copy(unreferencedMessagesPerMilestoneIndexMap[index], unreferencedMessageIDs)
 	}
 	c.unreferencedMessagesPerMilestoneIndex = unreferencedMessagesPerMilestoneIndexMap
 
 	cachedMsgsMap := make(map[milestone.Index][]*CachedMessage)
 	for index, cachedMessages := range c.cachedMsgs {
-		cachedMsgsMap[index] = cachedMessages
+		cachedMsgsMap[index] = make([]*CachedMessage, len(cachedMessages))
+		copy(cachedMsgsMap[index], cachedMessages)
 	}
 	c.cachedMsgs = cachedMsgsMap
 
 	cachedMsgMetasMap := make(map[milestone.Index][]*CachedMetadata)
 	for index, cachedMsgMeta := range c.cachedMsgMetas {
-		cachedMsgMetasMap[index] = cachedMsgMeta
+		cachedMsgMetasMap[index] = make([]*CachedMetadata, len(cachedMsgMeta))
+		copy(cachedMsgMetasMap[index], cachedMsgMeta)
 	}
 	c.cachedMsgMetas = cachedMsgMetasMap
 
 	cachedChildrenMap := make(map[milestone.Index][]*CachedChild)
 	for index, cachedChildren := range c.cachedChildren {
-		cachedChildrenMap[index] = cachedChildren
+		cachedChildrenMap[index] = make([]*CachedChild, len(cachedChildren))
+		copy(cachedChildrenMap[index], cachedChildren)
 	}
 	c.cachedChildren = cachedChildrenMap
 }
