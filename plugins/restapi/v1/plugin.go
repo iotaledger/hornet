@@ -136,12 +136,12 @@ const (
 	RoutePeers = "/peers"
 
 	// RouteControlDatabasePrune is the control route to manually prune the database.
-	// GET prunes the database. (query parameters: "index" || "depth")
+	// POST prunes the database.
 	RouteControlDatabasePrune = "/control/database/prune"
 
-	// RouteControlSnapshotCreate is the control route to manually create a snapshot file.
-	// GET creates a snapshot. (query parameters: "index")
-	RouteControlSnapshotCreate = "/control/snapshots/create"
+	// RouteControlSnapshotsCreate is the control route to manually create a snapshot files.
+	// POST creates a snapshot (full, delta or both).
+	RouteControlSnapshotsCreate = "/control/snapshots/create"
 )
 
 func init() {
@@ -413,7 +413,7 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteControlDatabasePrune, func(c echo.Context) error {
+	routeGroup.POST(RouteControlDatabasePrune, func(c echo.Context) error {
 		resp, err := pruneDatabase(c)
 		if err != nil {
 			return err
@@ -422,8 +422,8 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteControlSnapshotCreate, func(c echo.Context) error {
-		resp, err := createSnapshot(c)
+	routeGroup.POST(RouteControlSnapshotsCreate, func(c echo.Context) error {
+		resp, err := createSnapshots(c)
 		if err != nil {
 			return err
 		}

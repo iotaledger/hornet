@@ -6,10 +6,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/utils"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -102,6 +104,11 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 }
 
 func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (milestone.Index, error) {
+
+	if err := utils.ReturnErrIfCtxDone(s.shutdownCtx, common.ErrOperationAborted); err != nil {
+		// do not prune the database if the node was shut down
+		return 0, common.ErrOperationAborted
+	}
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
 	if snapshotInfo == nil {

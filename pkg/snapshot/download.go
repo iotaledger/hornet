@@ -144,7 +144,7 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 
 		filteredTargets = append(filteredTargets, &downloadTargetWithIndex{
 			target: target,
-			index:  getSnapshotTargetIndex(fullHeader, deltaHeader),
+			index:  getSnapshotFilesLedgerIndex(fullHeader, deltaHeader),
 		})
 	}
 

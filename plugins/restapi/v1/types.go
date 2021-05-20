@@ -200,16 +200,36 @@ type PeerResponse struct {
 	Gossip *gossip.Info `json:"gossip,omitempty"`
 }
 
+// pruneDatabaseRequest defines the request of a prune database REST API call.
+type pruneDatabaseRequest struct {
+	// The pruning target index.
+	Index *milestone.Index `json:"index,omitempty"`
+	// The pruning depth.
+	Depth *milestone.Index `json:"depth,omitempty"`
+}
+
 // pruneDatabaseResponse defines the response of a prune database REST API call.
 type pruneDatabaseResponse struct {
 	// The index of the snapshot.
 	Index milestone.Index `json:"index"`
 }
 
-// createSnapshotResponse defines the response of a create snapshot REST API call.
-type createSnapshotResponse struct {
-	// The index of the snapshot.
-	Index milestone.Index `json:"index"`
-	// The file path of the snapshot file.
-	FilePath string `json:"filePath"`
+// createSnapshotsRequest defines the request of a create snapshots REST API call.
+type createSnapshotsRequest struct {
+	// The index of the full snapshot.
+	FullIndex *milestone.Index `json:"fullIndex,omitempty"`
+	// The index of the delta snapshot.
+	DeltaIndex *milestone.Index `json:"deltaIndex,omitempty"`
+}
+
+// createSnapshotsResponse defines the response of a create snapshots REST API call.
+type createSnapshotsResponse struct {
+	// The index of the full snapshot.
+	FullIndex milestone.Index `json:"fullIndex,omitempty"`
+	// The index of the delta snapshot.
+	DeltaIndex milestone.Index `json:"deltaIndex,omitempty"`
+	// The file path of the full snapshot file.
+	FullFilePath string `json:"fullFilePath,omitempty"`
+	// The file path of the delta snapshot file.
+	DeltaFilePath string `json:"deltaFilePath,omitempty"`
 }
