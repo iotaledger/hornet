@@ -108,6 +108,43 @@ Edit `config.json` and customize the "dashboard" section to your needs.
   },
 ```
 
+## Make your PeerID static
+
+It's a good practice to have a static PeerID, so don't need to resend it to your peers when docker is restarted. This will extract the private/public keys and PeerID from your p2pstore folder. Start your Hornet container and run the following command when the container is running:
+
+```sh
+docker exec -it hornet /app/hornet tools p2pidentityextract
+
+Your p2p private key:  [YOUR_PK_HERE]
+Your p2p public key:  [YOUR_PUBKEY_HERE]
+Your p2p PeerID:  [YOUR_PEERID_HERE]
+```
+
+ You can generate a new p2pidentity with:
+```sh
+docker exec -it hornet /app/hornet tools p2pidentity
+```
+
+Edit `config.json` and add your private key.
+
+```sh
+"p2p": {
+    "bindMultiAddresses": [
+      "/ip4/0.0.0.0/tcp/15600"
+    ],
+    "connectionManager": {
+      "highWatermark": 10,
+      "lowWatermark": 5
+    },
+    "gossipUnknownPeersLimit": 4,
+    "identityPrivateKey": "[YOUR_PK_HERE]",
+    "peerStore": {
+      "path": "./p2pstore"
+    },
+    "reconnectInterval": "30s"
+  },
+```
+
 ## Build your own hornet image
 
 You can build your own Docker image by running the following command:
