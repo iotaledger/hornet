@@ -8,6 +8,7 @@
     - [Using Docker](./getting_started/using_docker.md)
     - [Using Docker compose](./getting_started/using_docker_compose.md)
     - [Bootstrapping from genesis snapshot](./getting_started/bootstrap_from_genesis_snapshot.md)
+    - [Private Tangle](./getting_started/private_tangle.md)
 - [Post-installation](./post_installation/post_installation.md)
     - [Managing node](./post_installation/managing.md)
     - [Configuration](./post_installation/config.md)
