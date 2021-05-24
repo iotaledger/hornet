@@ -11,6 +11,10 @@ const (
 	CfgPruningEnabled = "pruning.enabled"
 	// amount of milestone cones to keep in the database
 	CfgPruningDelay = "pruning.delay"
+	// target size of the database
+	CfgPruningTargetDatabaseSize = "pruning.targetDatabaseSize"
+	// the percentage the database size gets reduced if the target size is reached
+	CfgPruningTargetDatabaseSizeThresholdPercentage = "pruning.targetDatabaseSizeThresholdPercentage"
 	// whether to delete old receipts data from the database
 	CfgPruningPruneReceipts = "pruning.pruneReceipts"
 	// the depth, respectively the starting point, at which a snapshot of the ledger is generated
@@ -33,6 +37,8 @@ var params = &node.PluginParams{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.Bool(CfgPruningEnabled, true, "whether to delete old message data from the database")
+			fs.String(CfgPruningTargetDatabaseSize, "35GB", "target size of the database (0 = disable pruning by database size)")
+			fs.Float64(CfgPruningTargetDatabaseSizeThresholdPercentage, 5.0, "the percentage the database size gets reduced if the target size is reached")
 			fs.Int(CfgPruningDelay, 60480, "amount of milestone cones to keep in the database")
 			fs.Bool(CfgPruningPruneReceipts, false, "whether to delete old receipts data from the database")
 			fs.Int(CfgSnapshotsDepth, 50, "the depth, respectively the starting point, at which a snapshot of the ledger is generated")

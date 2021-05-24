@@ -12,6 +12,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -48,6 +49,8 @@ var (
 	ErrNotEnoughHistory                      = errors.New("not enough history")
 	ErrNoPruningNeeded                       = errors.New("no pruning needed")
 	ErrPruningAborted                        = errors.New("pruning was aborted")
+	ErrDatabaseCompactionNotSupported        = errors.New("database compaction not supported")
+	ErrDatabaseCompactionRunning             = errors.New("database compaction is running")
 	ErrExistingDeltaSnapshotWrongLedgerIndex = errors.New("existing delta ledger snapshot has wrong ledger index")
 )
 
@@ -66,24 +69,27 @@ type solidEntryPoint struct {
 
 // Snapshot handles reading and writing snapshot data.
 type Snapshot struct {
-	shutdownCtx                          context.Context
-	log                                  *logger.Logger
-	storage                              *storage.Storage
-	utxo                                 *utxo.Manager
-	networkID                            uint64
-	networkIDSource                      string
-	snapshotFullPath                     string
-	snapshotDeltaPath                    string
-	deltaSnapshotSizeThresholdPercentage float64
-	downloadTargets                      []*DownloadTarget
-	solidEntryPointCheckThresholdPast    milestone.Index
-	solidEntryPointCheckThresholdFuture  milestone.Index
-	additionalPruningThreshold           milestone.Index
-	snapshotDepth                        milestone.Index
-	snapshotInterval                     milestone.Index
-	pruningEnabled                       bool
-	pruningDelay                         milestone.Index
-	pruneReceipts                        bool
+	shutdownCtx                                  context.Context
+	log                                          *logger.Logger
+	database                                     *database.Database
+	storage                                      *storage.Storage
+	utxo                                         *utxo.Manager
+	networkID                                    uint64
+	networkIDSource                              string
+	snapshotFullPath                             string
+	snapshotDeltaPath                            string
+	deltaSnapshotSizeThresholdPercentage         float64
+	downloadTargets                              []*DownloadTarget
+	solidEntryPointCheckThresholdPast            milestone.Index
+	solidEntryPointCheckThresholdFuture          milestone.Index
+	additionalPruningThreshold                   milestone.Index
+	snapshotDepth                                milestone.Index
+	snapshotInterval                             milestone.Index
+	pruningEnabled                               bool
+	pruningDelay                                 milestone.Index
+	pruningTargetDatabaseSizeBytes               int64
+	pruningTargetDatabaseSizeThresholdPercentage float64
+	pruneReceipts                                bool
 
 	snapshotLock   syncutils.Mutex
 	statusLock     syncutils.RWMutex
@@ -96,6 +102,7 @@ type Snapshot struct {
 // New creates a new snapshot instance.
 func New(shutdownCtx context.Context,
 	log *logger.Logger,
+	database *database.Database,
 	storage *storage.Storage,
 	utxo *utxo.Manager,
 	networkID uint64,
@@ -111,11 +118,14 @@ func New(shutdownCtx context.Context,
 	snapshotInterval milestone.Index,
 	pruningEnabled bool,
 	pruningDelay milestone.Index,
+	pruningTargetDatabaseSizeBytes int64,
+	pruningTargetDatabaseSizeThresholdPercentage float64,
 	pruneReceipts bool) *Snapshot {
 
 	return &Snapshot{
 		shutdownCtx:                          shutdownCtx,
 		log:                                  log,
+		database:                             database,
 		storage:                              storage,
 		utxo:                                 utxo,
 		networkID:                            networkID,
@@ -131,7 +141,9 @@ func New(shutdownCtx context.Context,
 		snapshotInterval:                     snapshotInterval,
 		pruningEnabled:                       pruningEnabled,
 		pruningDelay:                         pruningDelay,
-		pruneReceipts:                        pruneReceipts,
+		pruningTargetDatabaseSizeBytes:       pruningTargetDatabaseSizeBytes,
+		pruningTargetDatabaseSizeThresholdPercentage: pruningTargetDatabaseSizeThresholdPercentage,
+		pruneReceipts: pruneReceipts,
 		Events: &Events{
 			SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 			SnapshotMetricsUpdated:        events.NewEvent(SnapshotMetricsCaller),
@@ -1107,12 +1119,25 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 		return
 	}
 
-	if confirmedMilestoneIndex <= s.pruningDelay {
-		// not enough history
+	var targetIndex milestone.Index = 0
+	targetIndexSize, err := s.getTargetIndexBySize()
+	if err == nil {
+		targetIndex = targetIndexSize
+	}
+
+	if confirmedMilestoneIndex > s.pruningDelay {
+		targetIndexDelay := confirmedMilestoneIndex - s.pruningDelay
+		if (targetIndex == 0) || (targetIndex < targetIndexDelay) {
+			targetIndex = targetIndexDelay
+		}
+	}
+
+	if targetIndex == 0 {
+		// no pruning needed
 		return
 	}
 
-	if _, err := s.pruneDatabase(confirmedMilestoneIndex-s.pruningDelay, shutdownSignal); err != nil {
+	if _, err := s.pruneDatabase(targetIndex, shutdownSignal); err != nil {
 		s.log.Debugf("pruning aborted: %v", err)
 	}
 }

@@ -1,12 +1,15 @@
 package snapshot
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/labstack/gommon/bytes"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -76,6 +79,7 @@ func provide(c *dig.Container) {
 
 	type snapshotdeps struct {
 		dig.In
+		Database      *database.Database
 		Storage       *storage.Storage
 		UTXO          *utxo.Manager
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
@@ -113,8 +117,14 @@ func provide(c *dig.Container) {
 			panic(err)
 		}
 
+		pruningTargetDatabaseSizeBytes, err := bytes.Parse(deps.NodeConfig.String(CfgPruningTargetDatabaseSize))
+		if err != nil {
+			panic(fmt.Errorf("invalid config value %s", CfgPruningTargetDatabaseSize))
+		}
+
 		return snapshot.New(CorePlugin.Daemon().ContextStopped(),
 			log,
+			deps.Database,
 			deps.Storage,
 			deps.UTXO,
 			deps.NetworkID,
@@ -130,6 +140,8 @@ func provide(c *dig.Container) {
 			milestone.Index(deps.NodeConfig.Int(CfgSnapshotsInterval)),
 			deps.NodeConfig.Bool(CfgPruningEnabled),
 			pruningDelay,
+			pruningTargetDatabaseSizeBytes,
+			deps.NodeConfig.Float64(CfgPruningTargetDatabaseSizeThresholdPercentage),
 			deps.NodeConfig.Bool(CfgPruningPruneReceipts),
 		)
 	}); err != nil {

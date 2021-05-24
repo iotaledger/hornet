@@ -131,12 +131,14 @@ func provide(c *dig.Container) {
 
 			return database.New(
 				pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true)),
+				true,
 				func() bool { return deps.Metrics.CompactionRunning.Load() },
 			)
 
 		case "bolt":
 			return database.New(
 				bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db")),
+				false,
 				func() bool { return false },
 			)
 
@@ -144,6 +146,7 @@ func provide(c *dig.Container) {
 			rocksDB := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
 			return database.New(
 				rocksdb.New(rocksDB),
+				true,
 				func() bool {
 					if numCompactions, success := rocksDB.GetIntProperty("rocksdb.num-running-compactions"); success {
 						runningBefore := deps.Metrics.CompactionRunning.Load()

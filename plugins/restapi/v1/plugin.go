@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
-	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
@@ -180,7 +179,7 @@ type dependencies struct {
 	Snapshot             *snapshot.Snapshot
 	AppInfo              *app.AppInfo
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
-	PeeringConfigManager *p2ppkg.ConfigManager
+	PeeringConfigManager *p2p.ConfigManager
 	NetworkID            uint64                 `name:"networkId"`
 	BelowMaxDepth        int                    `name:"belowMaxDepth"`
 	MinPoWScore          float64                `name:"minPoWScore"`

@@ -206,6 +206,8 @@ type pruneDatabaseRequest struct {
 	Index *milestone.Index `json:"index,omitempty"`
 	// The pruning depth.
 	Depth *milestone.Index `json:"depth,omitempty"`
+	// The target size of the database.
+	TargetDatabaseSize *string `json:"targetDatabaseSize,omitempty"`
 }
 
 // pruneDatabaseResponse defines the response of a prune database REST API call.
