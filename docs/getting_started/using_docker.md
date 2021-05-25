@@ -151,7 +151,7 @@ docker stop -t 200 hornet
 ### Displaying log output
 
 ```bash
-docker log -f hornet
+docker logs -f hornet
 ```
 
 * `-f` \
