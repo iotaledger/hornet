@@ -20,6 +20,7 @@ const (
 	PriorityKademliaDHT
 	PriorityPeerDiscovery
 	PriorityP2PManager
+	PriorityAutopeering
 	PriorityHeartbeats // depends on PriorityGossipService
 	PriorityWarpSync
 	PrioritySnapshots

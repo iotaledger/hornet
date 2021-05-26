@@ -5,13 +5,15 @@ package framework
 
 import (
 	"context"
-	"log"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/pkg/p2p/autopeering"
 )
 
 var (
@@ -130,7 +132,20 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumP
 		return nil, err
 	}
 
+	entryNodePrvKey, err := generatePrivateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	hivePrvKey, err := autopeering.ConvertLibP2PPrivateKeyToHive(entryNodePrvKey.(*crypto.Ed25519PrivateKey))
+	if err != nil {
+		return nil, err
+	}
+
 	autoNetwork := &AutopeeredNetwork{Network: network}
+	if err := autoNetwork.createEntryNode(*hivePrvKey); err != nil {
+		return nil, err
+	}
 
 	for i := 0; i < peerCount; i++ {
 		cfg := DefaultConfig()
@@ -152,62 +167,6 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumP
 	}
 
 	// await minimum auto. peers
-	if err := autoNetwork.AwaitPeering(minimumPeers); err != nil {
-		return nil, err
-	}
-
-	return autoNetwork, nil
-}
-
-// CreateNetworkWithPartitions creates a network consisting out of partitions that contain peerCount nodes per partition.
-// It waits for the peers to autopeer until the minimum peers criteria is met for every peer.
-// The entry node is reachable by all nodes at all times.
-func (f *Framework) CreateNetworkWithPartitions(name string, peerCount, partitions, minimumPeers int, cfgOverrideF ...CfgOverrideFunc) (*AutopeeredNetwork, error) {
-	network, err := newNetwork(f.dockerClient, strings.ToLower(name), NetworkTypeAutopeered, f.tester)
-	if err != nil {
-		return nil, err
-	}
-
-	autoNetwork := &AutopeeredNetwork{Network: network}
-
-	// create peers
-	for i := 0; i < peerCount; i++ {
-		cfg := DefaultConfig()
-		if i == 0 {
-			cfg.AsCoo()
-		}
-		if len(cfgOverrideF) > 0 && cfgOverrideF[0] != nil {
-			cfgOverrideF[0](i, cfg)
-		}
-		if _, err = autoNetwork.CreatePeer(cfg); err != nil {
-			return nil, err
-		}
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	if err := network.AwaitOnline(ctx); err != nil {
-		return nil, err
-	}
-
-	// create partitions
-	chunkSize := peerCount / partitions
-	var end int
-	log.Printf("partitioning nodes from each other (%d partitions, %d nodes per partition)...", partitions, chunkSize)
-	for i := 0; end < peerCount; i += chunkSize {
-		end = i + chunkSize
-		// last partitions takes the rest
-		if i/chunkSize == partitions-1 {
-			end = peerCount
-		}
-		if _, err = autoNetwork.createPartition(network.Nodes[i:end]); err != nil {
-			return nil, err
-		}
-	}
-
-	// wait until pumba containers are started and block traffic between partitions
-	time.Sleep(5 * time.Second)
-
 	if err := autoNetwork.AwaitPeering(minimumPeers); err != nil {
 		return nil, err
 	}

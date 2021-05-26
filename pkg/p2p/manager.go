@@ -18,21 +18,21 @@ import (
 )
 
 const (
-	// KnownPeerConnectivityProtectionTag is the tag used by Manager to
+	// PeerConnectivityProtectionTag is the tag used by Manager to
 	// protect known peer connectivity from getting trimmed via the
 	// connmgr.ConnManager.
-	KnownPeerConnectivityProtectionTag = "peering-manager"
+	PeerConnectivityProtectionTag = "peering-manager"
 
-	connTimeout = 2 * time.Second
+	connTimeout = 5 * time.Second
 )
 
 var (
-	// Returned if the manager is supposed to create a connection
+	// ErrCantConnectToItself gets returned if the manager is supposed to create a connection
 	// to itself (host wise).
 	ErrCantConnectToItself = errors.New("the host can't connect to itself")
-	// Returned if a peer is tried to be added to the manager which is already added.
+	// ErrPeerInManagerAlready gets returned if a peer is tried to be added to the manager which is already added.
 	ErrPeerInManagerAlready = errors.New("peer is already in manager")
-	// Returned if the manager is shutting down.
+	// ErrManagerShutdown gets returned if the manager is shutting down.
 	ErrManagerShutdown = errors.New("manager is shutting down")
 )
 
@@ -47,9 +47,9 @@ const (
 	// PeerRelationUnknown is a relation to an unknown peer.
 	// Connections to such peers do not have to be retained.
 	PeerRelationUnknown PeerRelation = "unknown"
-	// PeerRelationDiscovered is a relation to a discovered peer.
+	// PeerRelationAutopeered is a relation to an autopeered peer.
 	// Connections to such peers do not have to be retained.
-	PeerRelationDiscovered PeerRelation = "discovered"
+	PeerRelationAutopeered PeerRelation = "autopeered"
 )
 
 // ManagerState represents the state in which the Manager is in.
@@ -294,7 +294,7 @@ drainLoop:
 }
 
 // ConnectPeer connects to the given peer.
-// If the peer is considered "known", then its connection is protected from trimming.
+// If the peer is considered "known" or "autopeered", then its connection is protected from trimming.
 // Optionally an alias for the peer can be defined to better identify it afterwards.
 func (m *Manager) ConnectPeer(addrInfo *peer.AddrInfo, peerRelation PeerRelation, alias ...string) error {
 	if m.stopped.IsSet() {
@@ -518,7 +518,7 @@ func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
 				continue
 			}
 
-			m.cleanupPeerIfUnknown(id)
+			m.cleanupPeerIfNotKnown(id)
 			m.scheduleReconnectIfKnown(id)
 			if p != nil {
 				m.Events.Disconnected.Trigger(&PeerOptError{Peer: p, Error: disconnectedMsg.reason})
@@ -547,8 +547,8 @@ func (m *Manager) connectPeer(addrInfo *peer.AddrInfo, relation PeerRelation, al
 	}
 
 	p := NewPeer(addrInfo.ID, relation, addrInfo.Addrs, alias)
-	if p.Relation == PeerRelationKnown {
-		m.host.ConnManager().Protect(addrInfo.ID, KnownPeerConnectivityProtectionTag)
+	if p.Relation == PeerRelationKnown || p.Relation == PeerRelationAutopeered {
+		m.host.ConnManager().Protect(addrInfo.ID, PeerConnectivityProtectionTag)
 	}
 
 	m.peers[addrInfo.ID] = p
@@ -564,7 +564,7 @@ func (m *Manager) disconnectPeer(peerID peer.ID) (bool, error) {
 	if !has {
 		return false, nil
 	}
-	m.host.ConnManager().Unprotect(peerID, KnownPeerConnectivityProtectionTag)
+	m.host.ConnManager().Unprotect(peerID, PeerConnectivityProtectionTag)
 	delete(m.peers, peerID)
 	m.Events.Disconnect.Trigger(p)
 	return true, m.host.Network().ClosePeer(peerID)
@@ -583,8 +583,10 @@ func (m *Manager) updateRelation(peerID peer.ID, newRelation PeerRelation) {
 	case PeerRelationUnknown:
 		p.reconnectTimer.Stop()
 		p.reconnectTimer = nil
+	case PeerRelationAutopeered:
+		fallthrough
 	case PeerRelationKnown:
-		m.host.ConnManager().Protect(peerID, KnownPeerConnectivityProtectionTag)
+		m.host.ConnManager().Protect(peerID, PeerConnectivityProtectionTag)
 	}
 	m.Events.RelationUpdated.Trigger(p, oldRelation)
 }
@@ -671,7 +673,7 @@ func (m *Manager) connect(addrInfo peer.AddrInfo) error {
 		// unsuccessful connect:
 		// get rid of the peer instance if the relation is unknown
 		// or initiate a reconnect timer
-		m.cleanupPeerIfUnknown(addrInfo.ID)
+		m.cleanupPeerIfNotKnown(addrInfo.ID)
 		m.scheduleReconnectIfKnown(addrInfo.ID)
 	}
 	return err
@@ -691,11 +693,11 @@ func (m *Manager) addPeerAsUnknownIfAbsent(conn network.Conn) {
 	}
 }
 
-// removes an unknown peer if it has no more connections.
-func (m *Manager) cleanupPeerIfUnknown(peerID peer.ID) {
+// removes a not known peer if it has no more connections.
+func (m *Manager) cleanupPeerIfNotKnown(peerID peer.ID) {
 	p, has := m.peers[peerID]
-	if has && p.Relation == PeerRelationUnknown &&
-		len(m.host.Network().ConnsToPeer(peerID)) == 0 {
+	if has && p.Relation != PeerRelationKnown && len(m.host.Network().ConnsToPeer(peerID)) == 0 {
+		m.host.ConnManager().Unprotect(peerID, PeerConnectivityProtectionTag)
 		delete(m.peers, peerID)
 	}
 }

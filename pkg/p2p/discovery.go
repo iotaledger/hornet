@@ -180,7 +180,7 @@ func (ds *DiscoveryService) Start(shutdownSignal <-chan struct{}) {
 // in the libp2p repository and they refer to https://github.com/libp2p/specs/pull/56.
 // however, it seems they just merged the spec without any actual implementation yet.
 func (ds *DiscoveryService) discover() {
-	discoveredPeersCount := ds.mng.ConnectedCount(PeerRelationDiscovered)
+	discoveredPeersCount := ds.mng.ConnectedCount(PeerRelationAutopeered)
 	delta := ds.opts.MaxDiscoveredPeers - discoveredPeersCount
 	if delta <= 0 {
 		return
