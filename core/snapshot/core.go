@@ -89,6 +89,17 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps snapshotdeps) *snapshot.Snapshot {
 
+		networkIDSource := deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName)
+
+		if err := deps.NodeConfig.SetDefault(CfgSnapshotsDownloadURLs, []snapshot.DownloadTarget{}); err != nil {
+			panic(err)
+		}
+
+		var downloadTargets []*snapshot.DownloadTarget
+		if err := deps.NodeConfig.Unmarshal(CfgSnapshotsDownloadURLs, &downloadTargets); err != nil {
+			panic(err)
+		}
+
 		solidEntryPointCheckThresholdPast := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
 		solidEntryPointCheckThresholdFuture := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
 		pruningThreshold := milestone.Index(deps.BelowMaxDepth + AdditionalPruningThreshold)
@@ -99,27 +110,22 @@ func provide(c *dig.Container) {
 			snapshotDepth = solidEntryPointCheckThresholdFuture
 		}
 
+		pruningEnabled := deps.NodeConfig.Bool(CfgPruningEnabled)
+
 		pruningDelay := milestone.Index(deps.NodeConfig.Int(CfgPruningDelay))
 		pruningDelayMin := snapshotDepth + solidEntryPointCheckThresholdPast + pruningThreshold + 1
-		if pruningDelay < pruningDelayMin {
+		if pruningDelay != 0 && pruningDelay < pruningDelayMin {
 			log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgPruningDelay, pruningDelay, pruningDelayMin)
 			pruningDelay = pruningDelayMin
-		}
-
-		if err := deps.NodeConfig.SetDefault(CfgSnapshotsDownloadURLs, []snapshot.DownloadTarget{}); err != nil {
-			panic(err)
-		}
-
-		networkIDSource := deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName)
-
-		var downloadTargets []*snapshot.DownloadTarget
-		if err := deps.NodeConfig.Unmarshal(CfgSnapshotsDownloadURLs, &downloadTargets); err != nil {
-			panic(err)
 		}
 
 		pruningTargetDatabaseSizeBytes, err := bytes.Parse(deps.NodeConfig.String(CfgPruningTargetDatabaseSize))
 		if err != nil {
 			panic(fmt.Errorf("invalid config value %s", CfgPruningTargetDatabaseSize))
+		}
+
+		if pruningEnabled && pruningDelay == 0 && pruningTargetDatabaseSizeBytes == 0 {
+			panic(fmt.Errorf("either %s or %s has to be specified if %s is enabled", CfgPruningDelay, CfgPruningTargetDatabaseSize, CfgPruningDelay))
 		}
 
 		return snapshot.New(CorePlugin.Daemon().ContextStopped(),
@@ -138,7 +144,7 @@ func provide(c *dig.Container) {
 			pruningThreshold,
 			snapshotDepth,
 			milestone.Index(deps.NodeConfig.Int(CfgSnapshotsInterval)),
-			deps.NodeConfig.Bool(CfgPruningEnabled),
+			pruningEnabled,
 			pruningDelay,
 			pruningTargetDatabaseSizeBytes,
 			deps.NodeConfig.Float64(CfgPruningTargetDatabaseSizeThresholdPercentage),

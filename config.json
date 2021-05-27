@@ -67,8 +67,8 @@
   "pruning": {
     "enabled": true,
     "delay": 60480,
-    "targetDatabaseSize": "35GB",
-    "targetDatabaseSizeThresholdPercentage": 5.0,
+    "targetDatabaseSize": "30GB",
+    "targetDatabaseSizeThresholdPercentage": 10.0,
     "pruneReceipts": false
   },
   "protocol": {

@@ -1125,7 +1125,7 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 		targetIndex = targetIndexSize
 	}
 
-	if confirmedMilestoneIndex > s.pruningDelay {
+	if s.pruningDelay != 0 && confirmedMilestoneIndex > s.pruningDelay {
 		targetIndexDelay := confirmedMilestoneIndex - s.pruningDelay
 		if (targetIndex == 0) || (targetIndex < targetIndexDelay) {
 			targetIndex = targetIndexDelay
