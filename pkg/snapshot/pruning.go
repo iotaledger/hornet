@@ -25,6 +25,11 @@ func (s *Snapshot) setIsPruning(value bool) {
 
 func (s *Snapshot) getTargetIndexBySize(targetSizeBytes ...int64) (milestone.Index, error) {
 
+	if !s.pruningSizeEnabled && len(targetSizeBytes) == 0 {
+		// pruning by size deactivated
+		return 0, ErrNoPruningNeeded
+	}
+
 	if !s.database.CompactionSupported() {
 		return 0, ErrDatabaseCompactionNotSupported
 	}
@@ -38,12 +43,12 @@ func (s *Snapshot) getTargetIndexBySize(targetSizeBytes ...int64) (milestone.Ind
 		return 0, err
 	}
 
-	targetDatabaseSizeBytes := s.pruningTargetDatabaseSizeBytes
+	targetDatabaseSizeBytes := s.pruningSizeTargetSizeBytes
 	if len(targetSizeBytes) > 0 {
 		targetDatabaseSizeBytes = targetSizeBytes[0]
 	}
 
-	if targetDatabaseSizeBytes == 0 {
+	if targetDatabaseSizeBytes <= 0 {
 		// pruning by size deactivated
 		return 0, ErrNoPruningNeeded
 	}
@@ -53,7 +58,7 @@ func (s *Snapshot) getTargetIndexBySize(targetSizeBytes ...int64) (milestone.Ind
 	}
 
 	milestoneRange := s.storage.GetConfirmedMilestoneIndex() - s.storage.GetSnapshotInfo().PruningIndex
-	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - s.pruningTargetDatabaseSizeThresholdPercentage) / 100.0)
+	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - s.pruningSizeThresholdPercentage) / 100.0)
 	diffPercentage := (prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes))
 	milestoneDiff := milestone.Index(math.Ceil(float64(milestoneRange) * diffPercentage))
 

@@ -69,32 +69,35 @@ type solidEntryPoint struct {
 
 // Snapshot handles reading and writing snapshot data.
 type Snapshot struct {
-	shutdownCtx                                  context.Context
-	log                                          *logger.Logger
-	database                                     *database.Database
-	storage                                      *storage.Storage
-	utxo                                         *utxo.Manager
-	networkID                                    uint64
-	networkIDSource                              string
-	snapshotFullPath                             string
-	snapshotDeltaPath                            string
-	deltaSnapshotSizeThresholdPercentage         float64
-	downloadTargets                              []*DownloadTarget
-	solidEntryPointCheckThresholdPast            milestone.Index
-	solidEntryPointCheckThresholdFuture          milestone.Index
-	additionalPruningThreshold                   milestone.Index
-	snapshotDepth                                milestone.Index
-	snapshotInterval                             milestone.Index
-	pruningEnabled                               bool
-	pruningDelay                                 milestone.Index
-	pruningTargetDatabaseSizeBytes               int64
-	pruningTargetDatabaseSizeThresholdPercentage float64
-	pruneReceipts                                bool
+	shutdownCtx                          context.Context
+	log                                  *logger.Logger
+	database                             *database.Database
+	storage                              *storage.Storage
+	utxo                                 *utxo.Manager
+	networkID                            uint64
+	networkIDSource                      string
+	snapshotFullPath                     string
+	snapshotDeltaPath                    string
+	deltaSnapshotSizeThresholdPercentage float64
+	downloadTargets                      []*DownloadTarget
+	solidEntryPointCheckThresholdPast    milestone.Index
+	solidEntryPointCheckThresholdFuture  milestone.Index
+	additionalPruningThreshold           milestone.Index
+	snapshotDepth                        milestone.Index
+	snapshotInterval                     milestone.Index
+	pruningMilestonesEnabled             bool
+	pruningMilestonesMaxMilestonesToKeep milestone.Index
+	pruningSizeEnabled                   bool
+	pruningSizeTargetSizeBytes           int64
+	pruningSizeThresholdPercentage       float64
+	pruningSizeCooldownTime              time.Duration
+	pruneReceipts                        bool
 
-	snapshotLock   syncutils.Mutex
-	statusLock     syncutils.RWMutex
-	isSnapshotting bool
-	isPruning      bool
+	snapshotLock          syncutils.Mutex
+	statusLock            syncutils.RWMutex
+	isSnapshotting        bool
+	isPruning             bool
+	lastPruningBySizeTime time.Time
 
 	Events *Events
 }
@@ -116,10 +119,12 @@ func New(shutdownCtx context.Context,
 	additionalPruningThreshold milestone.Index,
 	snapshotDepth milestone.Index,
 	snapshotInterval milestone.Index,
-	pruningEnabled bool,
-	pruningDelay milestone.Index,
-	pruningTargetDatabaseSizeBytes int64,
-	pruningTargetDatabaseSizeThresholdPercentage float64,
+	pruningMilestonesEnabled bool,
+	pruningMilestonesMaxMilestonesToKeep milestone.Index,
+	pruningSizeEnabled bool,
+	pruningSizeTargetSizeBytes int64,
+	pruningSizeThresholdPercentage float64,
+	pruningSizeCooldownTime time.Duration,
 	pruneReceipts bool) *Snapshot {
 
 	return &Snapshot{
@@ -139,11 +144,13 @@ func New(shutdownCtx context.Context,
 		additionalPruningThreshold:           additionalPruningThreshold,
 		snapshotDepth:                        snapshotDepth,
 		snapshotInterval:                     snapshotInterval,
-		pruningEnabled:                       pruningEnabled,
-		pruningDelay:                         pruningDelay,
-		pruningTargetDatabaseSizeBytes:       pruningTargetDatabaseSizeBytes,
-		pruningTargetDatabaseSizeThresholdPercentage: pruningTargetDatabaseSizeThresholdPercentage,
-		pruneReceipts: pruneReceipts,
+		pruningMilestonesEnabled:             pruningMilestonesEnabled,
+		pruningMilestonesMaxMilestonesToKeep: pruningMilestonesMaxMilestonesToKeep,
+		pruningSizeEnabled:                   pruningSizeEnabled,
+		pruningSizeTargetSizeBytes:           pruningSizeTargetSizeBytes,
+		pruningSizeThresholdPercentage:       pruningSizeThresholdPercentage,
+		pruningSizeCooldownTime:              pruningSizeCooldownTime,
+		pruneReceipts:                        pruneReceipts,
 		Events: &Events{
 			SnapshotMilestoneIndexChanged: events.NewEvent(milestone.IndexCaller),
 			SnapshotMetricsUpdated:        events.NewEvent(SnapshotMetricsCaller),
@@ -1115,20 +1122,17 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 		}
 	}
 
-	if !s.pruningEnabled {
-		return
-	}
-
 	var targetIndex milestone.Index = 0
-	targetIndexSize, err := s.getTargetIndexBySize()
-	if err == nil {
-		targetIndex = targetIndexSize
+	if s.pruningMilestonesEnabled && confirmedMilestoneIndex > s.pruningMilestonesMaxMilestonesToKeep {
+		targetIndex = confirmedMilestoneIndex - s.pruningMilestonesMaxMilestonesToKeep
 	}
 
-	if s.pruningDelay != 0 && confirmedMilestoneIndex > s.pruningDelay {
-		targetIndexDelay := confirmedMilestoneIndex - s.pruningDelay
-		if (targetIndex == 0) || (targetIndex < targetIndexDelay) {
-			targetIndex = targetIndexDelay
+	pruningBySize := false
+	if s.pruningSizeEnabled && (s.lastPruningBySizeTime.IsZero() || time.Since(s.lastPruningBySizeTime) > s.pruningSizeCooldownTime) {
+		targetIndexSize, err := s.getTargetIndexBySize()
+		if err == nil && ((targetIndex == 0) || (targetIndex < targetIndexSize)) {
+			targetIndex = targetIndexSize
+			pruningBySize = true
 		}
 	}
 
@@ -1139,6 +1143,10 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 
 	if _, err := s.pruneDatabase(targetIndex, shutdownSignal); err != nil {
 		s.log.Debugf("pruning aborted: %v", err)
+	}
+
+	if pruningBySize {
+		s.lastPruningBySizeTime = time.Now()
 	}
 }
 

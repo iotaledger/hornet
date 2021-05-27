@@ -106,26 +106,30 @@ func provide(c *dig.Container) {
 
 		snapshotDepth := milestone.Index(deps.NodeConfig.Int(CfgSnapshotsDepth))
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {
-			log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgSnapshotsDepth, snapshotDepth, solidEntryPointCheckThresholdFuture)
+			log.Warnf("parameter '%s' is too small (%d). value was changed to %d", CfgSnapshotsDepth, snapshotDepth, solidEntryPointCheckThresholdFuture)
 			snapshotDepth = solidEntryPointCheckThresholdFuture
 		}
 
-		pruningEnabled := deps.NodeConfig.Bool(CfgPruningEnabled)
-
-		pruningDelay := milestone.Index(deps.NodeConfig.Int(CfgPruningDelay))
-		pruningDelayMin := snapshotDepth + solidEntryPointCheckThresholdPast + pruningThreshold + 1
-		if pruningDelay != 0 && pruningDelay < pruningDelayMin {
-			log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgPruningDelay, pruningDelay, pruningDelayMin)
-			pruningDelay = pruningDelayMin
+		pruningMilestonesEnabled := deps.NodeConfig.Bool(CfgPruningMilestonesEnabled)
+		pruningMilestonesMaxMilestonesToKeep := milestone.Index(deps.NodeConfig.Int(CfgPruningMilestonesMaxMilestonesToKeep))
+		pruningMilestonesMaxMilestonesToKeepMin := snapshotDepth + solidEntryPointCheckThresholdPast + pruningThreshold + 1
+		if pruningMilestonesMaxMilestonesToKeep != 0 && pruningMilestonesMaxMilestonesToKeep < pruningMilestonesMaxMilestonesToKeepMin {
+			log.Warnf("parameter '%s' is too small (%d). value was changed to %d", CfgPruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeepMin)
+			pruningMilestonesMaxMilestonesToKeep = pruningMilestonesMaxMilestonesToKeepMin
 		}
 
-		pruningTargetDatabaseSizeBytes, err := bytes.Parse(deps.NodeConfig.String(CfgPruningTargetDatabaseSize))
+		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
+			panic(fmt.Errorf("%s has to be specified if %s is enabled", CfgPruningMilestonesMaxMilestonesToKeep, CfgPruningMilestonesEnabled))
+		}
+
+		pruningSizeEnabled := deps.NodeConfig.Bool(CfgPruningSizeEnabled)
+		pruningTargetDatabaseSizeBytes, err := bytes.Parse(deps.NodeConfig.String(CfgPruningSizeTargetSize))
 		if err != nil {
-			panic(fmt.Errorf("invalid config value %s", CfgPruningTargetDatabaseSize))
+			panic(fmt.Errorf("parameter %s invalid", CfgPruningSizeTargetSize))
 		}
 
-		if pruningEnabled && pruningDelay == 0 && pruningTargetDatabaseSizeBytes == 0 {
-			panic(fmt.Errorf("either %s or %s has to be specified if %s is enabled", CfgPruningDelay, CfgPruningTargetDatabaseSize, CfgPruningDelay))
+		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
+			panic(fmt.Errorf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled))
 		}
 
 		return snapshot.New(CorePlugin.Daemon().ContextStopped(),
@@ -144,10 +148,12 @@ func provide(c *dig.Container) {
 			pruningThreshold,
 			snapshotDepth,
 			milestone.Index(deps.NodeConfig.Int(CfgSnapshotsInterval)),
-			pruningEnabled,
-			pruningDelay,
+			pruningMilestonesEnabled,
+			pruningMilestonesMaxMilestonesToKeep,
+			pruningSizeEnabled,
 			pruningTargetDatabaseSizeBytes,
-			deps.NodeConfig.Float64(CfgPruningTargetDatabaseSizeThresholdPercentage),
+			deps.NodeConfig.Float64(CfgPruningSizeThresholdPercentage),
+			deps.NodeConfig.Duration(CfgPruningSizeCooldownTime),
 			deps.NodeConfig.Bool(CfgPruningPruneReceipts),
 		)
 	}); err != nil {
