@@ -2,11 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.2-rc1] - 20.05.2021
+## [1.0.2] - 28.05.2021
 
 ### Added
     - p2pidentityextract tool (#1090)
     - tool to generate JWT token for REST API (#1085)
+    - Add database pruning based on database size (#1115)
 
 ### Changed
     - Improved documentation (#1060 + #1083 + #1087 + #1090)
@@ -21,6 +22,8 @@ All notable changes to this project will be documented in this file.
     - Adds "ledgerIndex" field to some REST HTTP and MQTT API responses (#1106)
     - Add delta snapshots to control endpoint (#1039)
     - Changed node control endpoints to use POST (#1039)
+    - Expose MQTT port. Remove no longer needed ports (#1105)
+    - Re-add private Tangle doc (#1113)
 
 ### Fixed
     - Added workdir to docker/Dockerfile. (#1068)
