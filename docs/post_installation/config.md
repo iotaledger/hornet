@@ -221,11 +221,11 @@ Example:
 
 ## 5. Pruning
 
-| Name                      | Description                                           | Type             |
-| :------------------------ | :---------------------------------------------------- | :--------------- |
-| [milestones](#Milestones) | milestones based pruning                              | array of objects |
-| [size](#Size)             | database size based pruning                           | array of objects |
-| pruneReceipts             | whether to delete old receipts data from the database | bool             |
+| Name                      | Description                                           | Type   |
+| :------------------------ | :---------------------------------------------------- | :----- |
+| [milestones](#Milestones) | milestones based pruning                              | object |
+| [size](#Size)             | database size based pruning                           | object |
+| pruneReceipts             | whether to delete old receipts data from the database | bool   |
 
 ### Milestones
 
@@ -359,14 +359,14 @@ Example:
 | Name              | Description                                                                           | Type                   |
 | :---------------- | :------------------------------------------------------------------------------------ | :--------------------- |
 | enabled           | whether the coordinator quorum is enabled                                             | bool                   |
-| [groups](#groups) | the quorum groups used to ask other nodes for correct ledger state of the coordinator | Array of object arrays |
+| [groups](#groups) | the quorum groups used to ask other nodes for correct ledger state of the coordinator | array of object arrays |
 | timeout           | the timeout until a node in the quorum must have answered                             | string                 |
 
 #### Groups
 
 | Name                        | Description                                                                          | Type             |
 | :-------------------------- | :----------------------------------------------------------------------------------- | :--------------- |
-| [{GROUP_NAME}](#group_name) | the qourum group used to ask other nodes for correct ledger state of the coordinator | Array of objects |
+| [{GROUP_NAME}](#group_name) | the qourum group used to ask other nodes for correct ledger state of the coordinator | array of objects |
 
 ##### {GROUP_NAME}
 
