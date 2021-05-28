@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/bytes"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/core/snapshot"
@@ -23,19 +24,37 @@ func pruneDatabase(c echo.Context) (*pruneDatabaseResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if (request.Index == nil && request.Depth == nil) || (request.Index != nil && request.Depth != nil) {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "either index or depth has to be specified")
+	if (request.Index == nil && request.Depth == nil && request.TargetDatabaseSize == nil) ||
+		(request.Index != nil && request.Depth != nil) ||
+		(request.Index != nil && request.TargetDatabaseSize != nil) ||
+		(request.Depth != nil && request.TargetDatabaseSize != nil) {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "either index, depth or size has to be specified")
 	}
 
 	var err error
 	var targetIndex milestone.Index
+
+	if request.Index != nil {
+		targetIndex, err = deps.Snapshot.PruneDatabaseByTargetIndex(*request.Index)
+		if err != nil {
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
+		}
+	}
+
 	if request.Depth != nil {
 		targetIndex, err = deps.Snapshot.PruneDatabaseByDepth(*request.Depth)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}
-	} else {
-		targetIndex, err = deps.Snapshot.PruneDatabaseByTargetIndex(*request.Index)
+	}
+
+	if request.TargetDatabaseSize != nil {
+		pruningTargetDatabaseSizeBytes, err := bytes.Parse(*request.TargetDatabaseSize)
+		if err != nil {
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
+		}
+
+		targetIndex, err = deps.Snapshot.PruneDatabaseBySize(pruningTargetDatabaseSizeBytes)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "pruning database failed: %s", err)
 		}

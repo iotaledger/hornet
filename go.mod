@@ -48,6 +48,7 @@ require (
 	github.com/knadh/koanf v1.0.0 // indirect
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.3.0
+	github.com/labstack/gommon v0.3.0
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libp2p/go-libp2p v0.13.1-0.20210319000852-ffd67fd3dcf6
 	github.com/libp2p/go-libp2p-asn-util v0.0.0-20210422100720-09a655867a6c // indirect

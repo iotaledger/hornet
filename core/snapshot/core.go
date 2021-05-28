@@ -1,12 +1,15 @@
 package snapshot
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/labstack/gommon/bytes"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -76,6 +79,7 @@ func provide(c *dig.Container) {
 
 	type snapshotdeps struct {
 		dig.In
+		Database      *database.Database
 		Storage       *storage.Storage
 		UTXO          *utxo.Manager
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
@@ -85,36 +89,52 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps snapshotdeps) *snapshot.Snapshot {
 
-		solidEntryPointCheckThresholdPast := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
-		solidEntryPointCheckThresholdFuture := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
-		pruningThreshold := milestone.Index(deps.BelowMaxDepth + AdditionalPruningThreshold)
-
-		snapshotDepth := milestone.Index(deps.NodeConfig.Int(CfgSnapshotsDepth))
-		if snapshotDepth < solidEntryPointCheckThresholdFuture {
-			log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgSnapshotsDepth, snapshotDepth, solidEntryPointCheckThresholdFuture)
-			snapshotDepth = solidEntryPointCheckThresholdFuture
-		}
-
-		pruningDelay := milestone.Index(deps.NodeConfig.Int(CfgPruningDelay))
-		pruningDelayMin := snapshotDepth + solidEntryPointCheckThresholdPast + pruningThreshold + 1
-		if pruningDelay < pruningDelayMin {
-			log.Warnf("Parameter '%s' is too small (%d). Value was changed to %d", CfgPruningDelay, pruningDelay, pruningDelayMin)
-			pruningDelay = pruningDelayMin
-		}
+		networkIDSource := deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName)
 
 		if err := deps.NodeConfig.SetDefault(CfgSnapshotsDownloadURLs, []snapshot.DownloadTarget{}); err != nil {
 			panic(err)
 		}
-
-		networkIDSource := deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName)
 
 		var downloadTargets []*snapshot.DownloadTarget
 		if err := deps.NodeConfig.Unmarshal(CfgSnapshotsDownloadURLs, &downloadTargets); err != nil {
 			panic(err)
 		}
 
+		solidEntryPointCheckThresholdPast := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
+		solidEntryPointCheckThresholdFuture := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
+		pruningThreshold := milestone.Index(deps.BelowMaxDepth + AdditionalPruningThreshold)
+
+		snapshotDepth := milestone.Index(deps.NodeConfig.Int(CfgSnapshotsDepth))
+		if snapshotDepth < solidEntryPointCheckThresholdFuture {
+			log.Warnf("parameter '%s' is too small (%d). value was changed to %d", CfgSnapshotsDepth, snapshotDepth, solidEntryPointCheckThresholdFuture)
+			snapshotDepth = solidEntryPointCheckThresholdFuture
+		}
+
+		pruningMilestonesEnabled := deps.NodeConfig.Bool(CfgPruningMilestonesEnabled)
+		pruningMilestonesMaxMilestonesToKeep := milestone.Index(deps.NodeConfig.Int(CfgPruningMilestonesMaxMilestonesToKeep))
+		pruningMilestonesMaxMilestonesToKeepMin := snapshotDepth + solidEntryPointCheckThresholdPast + pruningThreshold + 1
+		if pruningMilestonesMaxMilestonesToKeep != 0 && pruningMilestonesMaxMilestonesToKeep < pruningMilestonesMaxMilestonesToKeepMin {
+			log.Warnf("parameter '%s' is too small (%d). value was changed to %d", CfgPruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeepMin)
+			pruningMilestonesMaxMilestonesToKeep = pruningMilestonesMaxMilestonesToKeepMin
+		}
+
+		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
+			panic(fmt.Errorf("%s has to be specified if %s is enabled", CfgPruningMilestonesMaxMilestonesToKeep, CfgPruningMilestonesEnabled))
+		}
+
+		pruningSizeEnabled := deps.NodeConfig.Bool(CfgPruningSizeEnabled)
+		pruningTargetDatabaseSizeBytes, err := bytes.Parse(deps.NodeConfig.String(CfgPruningSizeTargetSize))
+		if err != nil {
+			panic(fmt.Errorf("parameter %s invalid", CfgPruningSizeTargetSize))
+		}
+
+		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
+			panic(fmt.Errorf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled))
+		}
+
 		return snapshot.New(CorePlugin.Daemon().ContextStopped(),
 			log,
+			deps.Database,
 			deps.Storage,
 			deps.UTXO,
 			deps.NetworkID,
@@ -128,8 +148,12 @@ func provide(c *dig.Container) {
 			pruningThreshold,
 			snapshotDepth,
 			milestone.Index(deps.NodeConfig.Int(CfgSnapshotsInterval)),
-			deps.NodeConfig.Bool(CfgPruningEnabled),
-			pruningDelay,
+			pruningMilestonesEnabled,
+			pruningMilestonesMaxMilestonesToKeep,
+			pruningSizeEnabled,
+			pruningTargetDatabaseSizeBytes,
+			deps.NodeConfig.Float64(CfgPruningSizeThresholdPercentage),
+			deps.NodeConfig.Duration(CfgPruningSizeCooldownTime),
 			deps.NodeConfig.Bool(CfgPruningPruneReceipts),
 		)
 	}); err != nil {

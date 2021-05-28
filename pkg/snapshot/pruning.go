@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"math"
 	"time"
 
 	"github.com/pkg/errors"
@@ -20,6 +21,48 @@ func (s *Snapshot) setIsPruning(value bool) {
 	s.isPruning = value
 	s.storage.Events.PruningStateChanged.Trigger(value)
 	s.statusLock.Unlock()
+}
+
+func (s *Snapshot) getTargetIndexBySize(targetSizeBytes ...int64) (milestone.Index, error) {
+
+	if !s.pruningSizeEnabled && len(targetSizeBytes) == 0 {
+		// pruning by size deactivated
+		return 0, ErrNoPruningNeeded
+	}
+
+	if !s.database.CompactionSupported() {
+		return 0, ErrDatabaseCompactionNotSupported
+	}
+
+	if s.database.CompactionRunning() {
+		return 0, ErrDatabaseCompactionRunning
+	}
+
+	currentDatabaseSizeBytes, err := s.storage.GetDatabaseSize()
+	if err != nil {
+		return 0, err
+	}
+
+	targetDatabaseSizeBytes := s.pruningSizeTargetSizeBytes
+	if len(targetSizeBytes) > 0 {
+		targetDatabaseSizeBytes = targetSizeBytes[0]
+	}
+
+	if targetDatabaseSizeBytes <= 0 {
+		// pruning by size deactivated
+		return 0, ErrNoPruningNeeded
+	}
+
+	if currentDatabaseSizeBytes < targetDatabaseSizeBytes {
+		return 0, ErrNoPruningNeeded
+	}
+
+	milestoneRange := s.storage.GetConfirmedMilestoneIndex() - s.storage.GetSnapshotInfo().PruningIndex
+	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - s.pruningSizeThresholdPercentage) / 100.0)
+	diffPercentage := (prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes))
+	milestoneDiff := milestone.Index(math.Ceil(float64(milestoneRange) * diffPercentage))
+
+	return s.storage.GetConfirmedMilestoneIndex() - milestoneDiff, nil
 }
 
 // pruneUnreferencedMessages prunes all unreferenced messages from the database for the given milestone
@@ -108,6 +151,10 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 	if err := utils.ReturnErrIfCtxDone(s.shutdownCtx, common.ErrOperationAborted); err != nil {
 		// do not prune the database if the node was shut down
 		return 0, common.ErrOperationAborted
+	}
+
+	if s.database.CompactionRunning() {
+		return 0, ErrDatabaseCompactionRunning
 	}
 
 	snapshotInfo := s.storage.GetSnapshotInfo()
@@ -293,6 +340,18 @@ func (s *Snapshot) PruneDatabaseByDepth(depth milestone.Index) (milestone.Index,
 func (s *Snapshot) PruneDatabaseByTargetIndex(targetIndex milestone.Index) (milestone.Index, error) {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
+
+	return s.pruneDatabase(targetIndex, nil)
+}
+
+func (s *Snapshot) PruneDatabaseBySize(targetSizeBytes int64) (milestone.Index, error) {
+	s.snapshotLock.Lock()
+	defer s.snapshotLock.Unlock()
+
+	targetIndex, err := s.getTargetIndexBySize(targetSizeBytes)
+	if err != nil {
+		return 0, err
+	}
 
 	return s.pruneDatabase(targetIndex, nil)
 }
