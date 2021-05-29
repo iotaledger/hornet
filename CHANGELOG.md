@@ -35,6 +35,26 @@ All notable changes to this project will be documented in this file.
     - Do not print API JWT auth tokens to the log (unsafe) (#1039)
     - Check if node is busy before accepting snapshot commands via API (#1039)
 
+### Config file changes
+
+`config.json`
+```diff
+  "pruning": {
+-    "enabled": true,
+-    "delay": 60480,
++    "milestones": {
++      "enabled": false,
++      "maxMilestonesToKeep": 60480
++    },
++    "size": {
++      "enabled": true,
++      "targetSize": "30GB",
++      "thresholdPercentage": 10.0,
++      "cooldownTime": "5m"
++    },
+    "pruneReceipts": false
+  },
+```
 
 ## [1.0.1] - 28.04.2021
 
