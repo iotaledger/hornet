@@ -13,10 +13,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func snapshotGen(args []string) error {
+func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
@@ -27,7 +28,7 @@ func snapshotGen(args []string) error {
 		println("	[TREASURY_ALLOCATION]	- the amount of tokens to reside within the treasury, the delta from the supply will be allocated to MINT_ADDRESS")
 		println("	[OUTPUT_FILE_PATH]		- the file path to the generated snapshot file")
 		println()
-		println(fmt.Sprintf("example: %s %s %s %s %s", ToolSnapGen, "alphanet@1", "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92", "500000000", "snapshots/alphanet/full_snapshot.bin"))
+		println(fmt.Sprintf("example: %s %s %s %s %s", ToolSnapGen, "private_tangle@1", "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92", "500000000", "snapshots/private_tangle/full_snapshot.bin"))
 	}
 
 	// check arguments

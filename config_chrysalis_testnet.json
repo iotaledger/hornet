@@ -48,7 +48,7 @@
     }
   },
   "db": {
-    "engine": "pebble",
+    "engine": "rocksdb",
     "path": "testnetdb",
     "autoRevalidation": false
   },
@@ -66,8 +66,16 @@
     ]
   },
   "pruning": {
-    "enabled": true,
-    "delay": 60480,
+    "milestones": {
+      "enabled": false,
+      "maxMilestonesToKeep": 60480
+    },
+    "size": {
+      "enabled": true,
+      "targetSize": "30GB",
+      "thresholdPercentage": 10.0,
+      "cooldownTime": "5m"
+    },
     "pruneReceipts": false
   },
   "protocol": {

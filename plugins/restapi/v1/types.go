@@ -134,6 +134,8 @@ type OutputResponse struct {
 	OutputIndex uint16 `json:"outputIndex"`
 	// Whether this output is spent.
 	Spent bool `json:"isSpent"`
+	// The ledger index at which this output was available at.
+	LedgerIndex milestone.Index `json:"ledgerIndex"`
 	// The output in its serialized form.
 	RawOutput *json.RawMessage `json:"output"`
 }
@@ -148,6 +150,8 @@ type addressBalanceResponse struct {
 	Balance uint64 `json:"balance"`
 	// Indicates if dust is allowed on this address.
 	DustAllowed bool `json:"dustAllowed"`
+	// The ledger index at which this balance was queried at.
+	LedgerIndex milestone.Index `json:"ledgerIndex"`
 }
 
 // addressOutputsResponse defines the response of a GET outputs by address REST API call.
@@ -162,6 +166,8 @@ type addressOutputsResponse struct {
 	Count uint32 `json:"count"`
 	// The output IDs (transaction hash + output index) of the outputs on this address.
 	OutputIDs []string `json:"outputIds"`
+	// The ledger index at which these outputs where available at.
+	LedgerIndex milestone.Index `json:"ledgerIndex"`
 }
 
 // treasuryResponse defines the response of a GET treasury REST API call.
@@ -194,16 +200,38 @@ type PeerResponse struct {
 	Gossip *gossip.Info `json:"gossip,omitempty"`
 }
 
+// pruneDatabaseRequest defines the request of a prune database REST API call.
+type pruneDatabaseRequest struct {
+	// The pruning target index.
+	Index *milestone.Index `json:"index,omitempty"`
+	// The pruning depth.
+	Depth *milestone.Index `json:"depth,omitempty"`
+	// The target size of the database.
+	TargetDatabaseSize *string `json:"targetDatabaseSize,omitempty"`
+}
+
 // pruneDatabaseResponse defines the response of a prune database REST API call.
 type pruneDatabaseResponse struct {
 	// The index of the snapshot.
 	Index milestone.Index `json:"index"`
 }
 
-// createSnapshotResponse defines the response of a create snapshot REST API call.
-type createSnapshotResponse struct {
-	// The index of the snapshot.
-	Index milestone.Index `json:"index"`
-	// The file path of the snapshot file.
-	FilePath string `json:"filePath"`
+// createSnapshotsRequest defines the request of a create snapshots REST API call.
+type createSnapshotsRequest struct {
+	// The index of the full snapshot.
+	FullIndex *milestone.Index `json:"fullIndex,omitempty"`
+	// The index of the delta snapshot.
+	DeltaIndex *milestone.Index `json:"deltaIndex,omitempty"`
+}
+
+// createSnapshotsResponse defines the response of a create snapshots REST API call.
+type createSnapshotsResponse struct {
+	// The index of the full snapshot.
+	FullIndex milestone.Index `json:"fullIndex,omitempty"`
+	// The index of the delta snapshot.
+	DeltaIndex milestone.Index `json:"deltaIndex,omitempty"`
+	// The file path of the full snapshot file.
+	FullFilePath string `json:"fullFilePath,omitempty"`
+	// The file path of the delta snapshot file.
+	DeltaFilePath string `json:"deltaFilePath,omitempty"`
 }

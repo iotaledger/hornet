@@ -9,7 +9,7 @@ jobs:
     name: Release Binaries
     runs-on: ubuntu-latest
     container:
-      image: gohornet/goreleaser-cgo-cross-compiler:1.16.3
+      image: gohornet/goreleaser-cgo-cross-compiler:1.16.4
       volumes: [/repo]
     steps:
       - name: Check out code into the Go module directory
@@ -48,6 +48,4 @@ jobs:
         with:
           file: ./docker/Dockerfile
           push: true
-          build-args: |
-            BUILD_TAGS=builtin_static,rocksdb
           tags: ${{ steps.meta.outputs.tags }}

@@ -10,6 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
@@ -17,7 +18,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func NewOutputResponse(output *utxo.Output, spent bool) (*OutputResponse, error) {
+func NewOutputResponse(output *utxo.Output, spent bool, ledgerIndex milestone.Index) (*OutputResponse, error) {
 
 	var rawOutput iotago.Output
 	switch output.OutputType() {
@@ -48,6 +49,7 @@ func NewOutputResponse(output *utxo.Output, spent bool) (*OutputResponse, error)
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
 		RawOutput:     &rawRawOutputJSON,
+		LedgerIndex:   ledgerIndex,
 	}, nil
 }
 
@@ -66,6 +68,15 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 	var outputID iotago.UTXOInputID
 	copy(outputID[:], outputIDBytes)
 
+	// we need to lock the ledger here to have the correct index for unspent info of the output.
+	deps.UTXO.ReadLockLedger()
+	defer deps.UTXO.ReadUnlockLedger()
+
+	ledgerIndex, err := deps.UTXO.ReadLedgerIndexWithoutLocking()
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputIDParam, err)
+	}
+
 	output, err := deps.UTXO.ReadOutputByOutputIDWithoutLocking(&outputID)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -79,12 +90,12 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent status failed: %s, error: %s", outputIDParam, err)
 	}
 
-	return NewOutputResponse(output, !unspent)
+	return NewOutputResponse(output, !unspent, ledgerIndex)
 }
 
 func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, error) {
 
-	balance, dustAllowed, err := deps.UTXO.AddressBalanceWithoutLocking(address)
+	balance, dustAllowed, ledgerIndex, err := deps.UTXO.AddressBalance(address)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading address balance failed: %s, error: %s", address, err)
 	}
@@ -94,6 +105,7 @@ func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, er
 		Address:     address.String(),
 		Balance:     balance,
 		DustAllowed: dustAllowed,
+		LedgerIndex: ledgerIndex,
 	}, nil
 }
 
@@ -153,6 +165,15 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 		opts = append(opts, utxo.FilterOutputType(*filterType))
 	}
 
+	// we need to lock the ledger here to have the same index for unspent and spent outputs.
+	deps.UTXO.ReadLockLedger()
+	defer deps.UTXO.ReadUnlockLedger()
+
+	ledgerIndex, err := deps.UTXO.ReadLedgerIndexWithoutLocking()
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
+	}
+
 	unspentOutputs, err := deps.UTXO.UnspentOutputs(append(opts, utxo.MaxResultCount(maxResults))...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
@@ -184,6 +205,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 		MaxResults:  uint32(maxResults),
 		Count:       uint32(len(outputIDs)),
 		OutputIDs:   outputIDs,
+		LedgerIndex: ledgerIndex,
 	}, nil
 }
 

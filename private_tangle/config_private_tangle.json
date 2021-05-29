@@ -61,24 +61,32 @@
   },
   "db": {
     "engine": "pebble",
-    "path": "alphanetdb",
+    "path": "privatedb",
     "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
     "interval": 200,
-    "fullPath": "snapshots/alphanet/full_snapshot.bin",
-    "deltaPath": "snapshots/alphanet/delta_snapshot.bin",
+    "fullPath": "snapshots/private_tangle/full_snapshot.bin",
+    "deltaPath": "snapshots/private_tangle/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": []
   },
   "pruning": {
-    "enabled": true,
-    "delay": 500,
+    "milestones": {
+      "enabled": false,
+      "maxMilestonesToKeep": 60480
+    },
+    "size": {
+      "enabled": true,
+      "targetSize": "30GB",
+      "thresholdPercentage": 10.0,
+      "cooldownTime": "5m"
+    },
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "alphanet1",
+    "networkID": "private_tangle1",
     "bech32HRP": "atoi",
     "minPoWScore": 100,
     "milestonePublicKeyCount": 2,

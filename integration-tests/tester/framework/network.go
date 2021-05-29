@@ -55,7 +55,7 @@ func (n *Network) AwaitOnline(ctx context.Context) error {
 			if err := returnErrIfCtxDone(ctx, ErrNodesNotOnlineInTime); err != nil {
 				return err
 			}
-			if _, err := node.DebugNodeAPIClient.Info(); err != nil {
+			if _, err := node.DebugNodeAPIClient.Info(context.Background()); err != nil {
 				continue
 			}
 			break
@@ -72,7 +72,7 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 			if err := returnErrIfCtxDone(ctx, ErrNodesDidNotSyncInTime); err != nil {
 				return err
 			}
-			info, err := node.DebugNodeAPIClient.Info()
+			info, err := node.DebugNodeAPIClient.Info(context.Background())
 			if err != nil {
 				continue
 			}

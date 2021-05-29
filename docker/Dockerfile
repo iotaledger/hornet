@@ -1,7 +1,8 @@
-# golang 1.16.3-buster amd64
-FROM golang@sha256:dfa3cef088454200d6b48e2a911138f7d5d9afff77f89243eea6342f16ddcfb0 AS build
+# https://hub.docker.com/_/golang
+# golang 1.16.4-buster amd64
+FROM golang@sha256:f7a5c5872d4bb68e152be72e4a4bf9a142a47ec2dcbb4074798d4feb6197abd7 AS build
 
-ARG BUILD_TAGS
+ARG BUILD_TAGS=builtin_static,rocksdb
 
 LABEL org.label-schema.description="HORNET - The IOTA community node"
 LABEL org.label-schema.name="gohornet/hornet"
@@ -38,18 +39,23 @@ RUN GOOS=linux GOARCH=amd64 go build \
 ############################
 # https://github.com/GoogleContainerTools/distroless/tree/master/cc
 # using distroless cc image, which includes everything in the base image (glibc, libssl and openssl)
-FROM gcr.io/distroless/cc@sha256:e8a7af65cf92b834e35a7537f6be93e743b48886c83c1eac15ade437b90fc9ab
+FROM gcr.io/distroless/cc@sha256:4cad7484b00d98ecb300916b1ab71d6c71babd6860c6c5dd6313be41a8c55adb
 
 EXPOSE 8081/tcp
 EXPOSE 14265/tcp
 EXPOSE 15600/tcp
-EXPOSE 14626/udp
+EXPOSE 1883/tcp
 
-# Copy assets into distroless image
-COPY --from=build /go/bin/hornet /app/hornet
+# Copy the binary into distroless image
+COPY --chown=nonroot:nonroot --from=build /go/bin/hornet /app/hornet
+
+# Copy the assets
 COPY ./config.json /app/config.json
 COPY ./config_as.json /app/config_as.json
 COPY ./peering.json /app/peering.json
 COPY ./profiles.json /app/profiles.json
+
+WORKDIR /app
+USER nonroot
 
 ENTRYPOINT ["/app/hornet"]

@@ -6,7 +6,7 @@ Hornet uses embedded database engine that stores its data in a directory on file
 
 ```json
 "db": {
-    "engine": "pebble",
+    "engine": "rocksdb",
     "path": "mainnetdb",
     "autoRevalidation": false
   }
@@ -115,16 +115,25 @@ Your node's ledger accumulates many messages, which uses a significant disk capa
     ]
   },
   "pruning": {
-    "enabled": true,
-    "delay": 60480,
+    "milestones": {
+      "enabled": false,
+      "maxMilestonesToKeep": 60480
+    },
+    "size": {
+      "enabled": true,
+      "targetSize": "30GB",
+      "thresholdPercentage": 10.0,
+      "cooldownTime": "5m"
+    },
     "pruneReceipts": false
-  }
+  },
 ```
 
 ### Snapshot pruning
 During a snapshot, messages may be deleted from the ledger if they were confirmed by an old milestone. In other words, the term `pruning` means the deletion of the old history from the node database:
-* To enable pruning, set the `pruning.enabled` key to enabled
-* The `pruning.delay` defines how far back from the current confirmed milestone should be pruned
+* To enable pruning, set the `pruning.milestones.enabled` or `pruning.size.enabled` key to enabled
+* The `pruning.milestones.maxMilestonesToKeep` defines how far back from the current confirmed milestone should be pruned
+* The `pruning.size.targetSize` defines the maximum database size, old data will be pruned.
 
 There are two types of snapshots:
 
@@ -132,7 +141,7 @@ There are two types of snapshots:
 A delta snapshot points to a specific full snapshot, ie. delta snapshot consists of the changes since the last full snapshot.
 
 **Full snapshot**
-The full snapshot includes the whole ledger state to a specific milestone and a solid entry point. 
+The full snapshot includes the whole ledger state to a specific milestone and a solid entry point.
 
 
 ### How to work with snapshots

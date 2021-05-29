@@ -5,11 +5,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/restapi"
-
-	"github.com/gohornet/hornet/pkg/basicauth"
-	"github.com/gohornet/hornet/pkg/jwt"
-
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -19,6 +14,8 @@ import (
 
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
+	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -26,9 +23,11 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/plugins/restapi"
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -43,6 +42,7 @@ func init() {
 			Name:      "Dashboard",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
+			Provide:   provide,
 			Configure: configure,
 			Run:       run,
 		},
@@ -87,11 +87,35 @@ type dependencies struct {
 	Host                     host.Host
 	NodePrivateKey           crypto.PrivKey
 	DatabaseEvents           *database.Events
-	DashboardAllowedAPIRoute restapi.AllowedRoute
+	DashboardAllowedAPIRoute restapipkg.AllowedRoute `optional:"true"`
+}
+
+func provide(c *dig.Container) {
+
+	type configdeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps configdeps) string {
+		return deps.NodeConfig.String(CfgDashboardAuthUsername)
+	}, dig.Name("dashboardAuthUsername")); err != nil {
+		panic(err)
+	}
 }
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
+
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		log.Panic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
+	}
+
+	// check if RestAPIV1 plugin is disabled
+	if Plugin.Node.IsSkipped(restapiv1.Plugin) {
+		log.Panic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
+	}
 
 	upgrader = &websocket.Upgrader{
 		HandshakeTimeout:  webSocketWriteTimeout,
@@ -167,8 +191,12 @@ func run() {
 	runLiveFeed()
 	// run the visualizer message feed
 	runVisualizer()
-	// run the tipselection feed
-	runTipSelMetricWorker()
+
+	if deps.TipSelector != nil {
+		// run the tipselection feed
+		runTipSelMetricWorker()
+	}
+
 	// run the database size collector
 	runDatabaseSizeCollector()
 	// run the spammer feed

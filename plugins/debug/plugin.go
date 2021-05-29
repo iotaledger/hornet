@@ -11,9 +11,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
+	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 const (
@@ -30,7 +32,7 @@ const (
 	RouteDebugComputeWhiteFlag = "/whiteflag"
 
 	// RouteDebugSolidifier is the debug route to manually trigger the solidifier.
-	// GET triggers the solidifier.
+	// POST triggers the solidifier.
 	RouteDebugSolidifier = "/solidifier"
 
 	// RouteDebugOutputs is the debug route for getting all output IDs.
@@ -81,6 +83,7 @@ func init() {
 
 var (
 	Plugin *node.Plugin
+	log    *logger.Logger
 	deps   dependencies
 
 	whiteflagParentsSolidTimeout time.Duration
@@ -93,10 +96,16 @@ type dependencies struct {
 	RequestQueue gossip.RequestQueue
 	UTXO         *utxo.Manager
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-	Echo         *echo.Echo
+	Echo         *echo.Echo                   `optional:"true"`
 }
 
 func configure() {
+	log = logger.NewLogger(Plugin.Name)
+
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		log.Panic("RestAPI plugin needs to be enabled to use the Debug plugin")
+	}
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 
@@ -108,13 +117,13 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteDebugSolidifier, func(c echo.Context) error {
+	routeGroup.POST(RouteDebugSolidifier, func(c echo.Context) error {
 		deps.Tangle.TriggerSolidifier()
 
-		return restapi.JSONResponse(c, http.StatusOK, "solidifier triggered")
+		return c.NoContent(http.StatusNoContent)
 	})
 
 	routeGroup.GET(RouteDebugOutputs, func(c echo.Context) error {
@@ -123,7 +132,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsUnspent, func(c echo.Context) error {
@@ -132,7 +141,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
@@ -141,7 +150,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugAddresses, func(c echo.Context) error {
@@ -150,7 +159,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugAddressesEd25519, func(c echo.Context) error {
@@ -159,7 +168,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
@@ -168,7 +177,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugRequests, func(c echo.Context) error {
@@ -177,7 +186,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
@@ -186,6 +195,6 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 }

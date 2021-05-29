@@ -23,7 +23,7 @@ func init() {
 		Status: node.Enabled,
 		Pluggable: node.Pluggable{
 			Name:      "Receipts",
-			DepsFunc:  func(cDeps pluginDependencies) { deps = cDeps },
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
 			Provide:   provide,
 			Configure: configure,
@@ -35,10 +35,10 @@ var (
 	Plugin *node.Plugin
 
 	log  *logger.Logger
-	deps pluginDependencies
+	deps dependencies
 )
 
-type pluginDependencies struct {
+type dependencies struct {
 	dig.In
 	ReceiptService *migrator.ReceiptService
 	Tangle         *tangle.Tangle

@@ -51,7 +51,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps handlerdeps) *powpackage.Handler {
 		// init the pow handler with all possible settings
 		powsrvAPIKey, err := utils.LoadStringFromEnvironment("POWSRV_API_KEY")
-		if err != nil && len(powsrvAPIKey) > 12 {
+		if err == nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
 		return powpackage.New(log, deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)

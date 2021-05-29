@@ -169,7 +169,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 	}
 }
 
-func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
+func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool) *outputPayload {
 
 	var rawOutput iotago.Output
 	switch output.OutputType() {
@@ -199,11 +199,12 @@ func payloadForOutput(output *utxo.Output, spent bool) *outputPayload {
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
+		LedgerIndex:   ledgerIndex,
 		RawOutput:     &rawRawOutputJSON,
 	}
 }
 
-func publishOutput(output *utxo.Output, spent bool) {
+func publishOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool) {
 
 	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
 	outputsTopicHasSubscribers := mqttBroker.HasSubscribers(outputsTopic)
@@ -215,7 +216,7 @@ func publishOutput(output *utxo.Output, spent bool) {
 	addressEd25519TopicHasSubscribers := mqttBroker.HasSubscribers(addressEd25519Topic)
 
 	if outputsTopicHasSubscribers || addressEd25519TopicHasSubscribers || addressBech32TopicHasSubscribers {
-		if payload := payloadForOutput(output, spent); payload != nil {
+		if payload := payloadForOutput(ledgerIndex, output, spent); payload != nil {
 
 			// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
 			jsonPayload, err := json.Marshal(payload)

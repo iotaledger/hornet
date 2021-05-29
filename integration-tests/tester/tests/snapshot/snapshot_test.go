@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"context"
 	"log"
 	"testing"
 	"time"
@@ -43,7 +44,7 @@ func TestSnapshot(t *testing.T) {
 	// check that on each node, the total supply is on an output with ID 999..
 	for _, node := range n.Nodes {
 		require.Eventually(t, func() bool {
-			res, err := node.DebugNodeAPIClient.OutputByID(targetOutputID)
+			res, err := node.DebugNodeAPIClient.OutputByID(context.Background(), targetOutputID)
 			if err != nil {
 				return false
 			}
@@ -58,7 +59,7 @@ func TestSnapshot(t *testing.T) {
 	// check that the treasury output contains total supply - 40'000'000
 	for _, node := range n.Nodes {
 		require.Eventually(t, func() bool {
-			res, err := node.DebugNodeAPIClient.Treasury()
+			res, err := node.DebugNodeAPIClient.Treasury(context.Background())
 			if err != nil {
 				log.Println(err)
 				return false

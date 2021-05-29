@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hive.go/configuration"
 )
 
 const defaultTempDBForMerge = "./temp_snapshot_merge"
 
-func snapshotMerge(args []string) error {
+func snapshotMerge(nodeConfig *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
@@ -75,7 +76,7 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 func printMergedSnapshotHeaderInfo(name string, path string, header *snapshot.FileHeader, mergeInfo *snapshot.MergeInfo) {
 	fmt.Printf(`> %s snapshot, file %s:
 	- Network ID %d
-	- Ledger index %d 
+	- Ledger index %d
 	- Snapshot index %d
 	- UTXOs count %d
 	- SEPs count %d`+"\n", name, path,

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -108,7 +109,7 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 					Data:  []byte(data)},
 				}
 
-				if _, err := p.DebugNodeAPIClient.SubmitMessage(iotaMsg); err != nil {
+				if _, err := p.DebugNodeAPIClient.SubmitMessage(context.Background(), iotaMsg); err != nil {
 					spamErr = err
 					return
 				}

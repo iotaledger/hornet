@@ -310,7 +310,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	spents := make([]*v1.OutputResponse, len(diff.Spents))
 
 	for i, output := range diff.Outputs {
-		o, err := v1.NewOutputResponse(output, false)
+		o, err := v1.NewOutputResponse(output, false, diff.Index)
 		if err != nil {
 			return nil, err
 		}
@@ -318,7 +318,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}
 
 	for i, spent := range diff.Spents {
-		o, err := v1.NewOutputResponse(spent.Output(), true)
+		o, err := v1.NewOutputResponse(spent.Output(), true, diff.Index)
 		if err != nil {
 			return nil, err
 		}

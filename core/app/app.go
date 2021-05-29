@@ -20,7 +20,7 @@ var (
 	Name = "HORNET"
 
 	// Version of the app.
-	Version = "1.0.1"
+	Version = "1.0.2"
 )
 
 var (
@@ -116,7 +116,7 @@ Command line flags:
 		panic(err)
 	}
 
-	toolset.HandleTools()
+	toolset.HandleTools(nodeConfig)
 	printConfig(maskedKeys)
 
 	return &node.InitConfig{

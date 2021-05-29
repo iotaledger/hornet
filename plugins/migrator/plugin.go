@@ -35,7 +35,7 @@ func init() {
 		Status: node.Disabled,
 		Pluggable: node.Pluggable{
 			Name:      "Migrator",
-			DepsFunc:  func(cDeps pluginDependencies) { deps = cDeps },
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
 			Provide:   provide,
 			Configure: configure,
@@ -48,13 +48,13 @@ var (
 	Plugin *node.Plugin
 
 	log  *logger.Logger
-	deps pluginDependencies
+	deps dependencies
 
 	bootstrap  = flag.Bool(CfgMigratorBootstrap, false, "bootstrap the migration process")
 	startIndex = flag.Uint32(CfgMigratorStartIndex, 1, "index of the first milestone to migrate")
 )
 
-type pluginDependencies struct {
+type dependencies struct {
 	dig.In
 	UTXOManager     *utxo.Manager
 	NodeConfig      *configuration.Configuration `name:"nodeConfig"`

@@ -2,6 +2,60 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2] - 28.05.2021
+
+### Added
+    - p2pidentityextract tool (#1090)
+    - tool to generate JWT token for REST API (#1085)
+    - Add database pruning based on database size (#1115)
+
+### Changed
+    - Improved documentation (#1060 + #1083 + #1087 + #1090)
+    - Build Dockerfile with rocksdb (#1077)
+    - Default DB engine changed to rocksdb (#1078)
+    - Renamed alphanet scripts to private_tangle (#1078)
+    - Updated rocksdb (#1080)
+    - Updated go modules, containers and dashboard (#1103)
+    - Check if files exist in the p2pstore directory (needed for docker) (#1084)
+    - Disabled MQTT http port (#1094)
+    - Download the latest snapshots from the given targets (#1097)
+    - Adds "ledgerIndex" field to some REST HTTP and MQTT API responses (#1106)
+    - Add delta snapshots to control endpoint (#1039)
+    - Changed node control endpoints to use POST (#1039)
+    - Expose MQTT port. Remove no longer needed ports (#1105)
+    - Re-add private Tangle doc (#1113)
+
+### Fixed
+    - Added workdir to docker/Dockerfile. (#1068)
+    - JWT subject verification (#1076)
+    - Send on closed channel in coo quorum (#1082)
+    - Database revalidation (#1096)
+    - Mask sensitive config parameters in log (#1100)
+    - Fix ulimits and dependencies at node startup (#1107)
+    - Do not print API JWT auth tokens to the log (unsafe) (#1039)
+    - Check if node is busy before accepting snapshot commands via API (#1039)
+
+### Config file changes
+
+`config.json`
+```diff
+  "pruning": {
+-    "enabled": true,
+-    "delay": 60480,
++    "milestones": {
++      "enabled": false,
++      "maxMilestonesToKeep": 60480
++    },
++    "size": {
++      "enabled": true,
++      "targetSize": "30GB",
++      "thresholdPercentage": 10.0,
++      "cooldownTime": "5m"
++    },
+    "pruneReceipts": false
+  },
+```
+
 ## [1.0.1] - 28.04.2021
 
 ### Fixed

@@ -55,8 +55,8 @@ func ConfirmMilestone(
 	milestoneMessageID hornet.MessageID,
 	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64),
 	onMilestoneConfirmed func(confirmation *Confirmation),
-	forEachNewOutput func(output *utxo.Output),
-	forEachNewSpent func(spent *utxo.Spent),
+	forEachNewOutput func(index milestone.Index, output *utxo.Output),
+	forEachNewSpent func(index milestone.Index, spent *utxo.Spent),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, *ConfirmationMetrics, error) {
 
 	cachedMilestoneMessage := messagesMemcache.GetCachedMessageOrNil(milestoneMessageID)
@@ -255,12 +255,12 @@ func ConfirmMilestone(
 	timeOnMilestoneConfirmed := time.Now()
 
 	for _, output := range newOutputs {
-		forEachNewOutput(output)
+		forEachNewOutput(milestoneIndex, output)
 	}
 	timeForEachNewOutput := time.Now()
 
 	for _, spent := range newSpents {
-		forEachNewSpent(spent)
+		forEachNewSpent(milestoneIndex, spent)
 	}
 	timeForEachNewSpent := time.Now()
 

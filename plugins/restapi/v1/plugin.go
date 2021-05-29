@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
-	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
@@ -21,8 +20,8 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
-	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/logger"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -136,12 +135,12 @@ const (
 	RoutePeers = "/peers"
 
 	// RouteControlDatabasePrune is the control route to manually prune the database.
-	// GET prunes the database. (query parameters: "index" || "depth")
+	// POST prunes the database.
 	RouteControlDatabasePrune = "/control/database/prune"
 
-	// RouteControlSnapshotCreate is the control route to manually create a snapshot file.
-	// GET creates a snapshot. (query parameters: "index")
-	RouteControlSnapshotCreate = "/control/snapshots/create"
+	// RouteControlSnapshotsCreate is the control route to manually create a snapshot files.
+	// POST creates a snapshot (full, delta or both).
+	RouteControlSnapshotsCreate = "/control/snapshots/create"
 )
 
 func init() {
@@ -157,6 +156,7 @@ func init() {
 
 var (
 	Plugin         *node.Plugin
+	log            *logger.Logger
 	powEnabled     bool
 	powWorkerCount int
 	features       []string
@@ -179,16 +179,23 @@ type dependencies struct {
 	Snapshot             *snapshot.Snapshot
 	AppInfo              *app.AppInfo
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
-	PeeringConfigManager *p2ppkg.ConfigManager
-	NetworkID            uint64               `name:"networkId"`
-	BelowMaxDepth        int                  `name:"belowMaxDepth"`
-	MinPoWScore          float64              `name:"minPoWScore"`
-	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
-	TipSelector          *tipselect.TipSelector
-	Echo                 *echo.Echo
+	PeeringConfigManager *p2p.ConfigManager
+	NetworkID            uint64                 `name:"networkId"`
+	BelowMaxDepth        int                    `name:"belowMaxDepth"`
+	MinPoWScore          float64                `name:"minPoWScore"`
+	Bech32HRP            iotago.NetworkPrefix   `name:"bech32HRP"`
+	TipSelector          *tipselect.TipSelector `optional:"true"`
+	Echo                 *echo.Echo             `optional:"true"`
 }
 
 func configure() {
+	log = logger.NewLogger(Plugin.Name)
+
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		log.Panic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
+	}
+
 	routeGroup := deps.Echo.Group("/api/v1")
 
 	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
@@ -209,7 +216,7 @@ func configure() {
 	})
 
 	// only handle tips api calls if the URTS plugin is enabled
-	if !Plugin.Node.IsSkipped(urts.Plugin) {
+	if deps.TipSelector != nil {
 		routeGroup.GET(RouteTips, func(c echo.Context) error {
 			resp, err := tips(c)
 			if err != nil {
@@ -405,7 +412,7 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteControlDatabasePrune, func(c echo.Context) error {
+	routeGroup.POST(RouteControlDatabasePrune, func(c echo.Context) error {
 		resp, err := pruneDatabase(c)
 		if err != nil {
 			return err
@@ -414,8 +421,8 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteControlSnapshotCreate, func(c echo.Context) error {
-		resp, err := createSnapshot(c)
+	routeGroup.POST(RouteControlSnapshotsCreate, func(c echo.Context) error {
+		resp, err := createSnapshots(c)
 		if err != nil {
 			return err
 		}

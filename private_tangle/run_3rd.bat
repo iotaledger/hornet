@@ -1,13 +1,13 @@
-del /f /q /s alphanetdb3
-go run "..\main.go" -c config_alphanet.json ^
---protocol.networkID="alphanet1" ^
+del /f /q /s privatedb3
+go run "..\main.go" -c config_private_tangle.json ^
+--protocol.networkID="private_tangle1" ^
 --restAPI.bindAddress="0.0.0.0:14267" ^
 --dashboard.bindAddress="localhost:8083" ^
---db.path="alphanetdb3" ^
+--db.path="privatedb3" ^
 --node.disablePlugins="Autopeering" ^
 --node.enablePlugins="Spammer,MQTT,Debug,Prometheus" ^
---snapshots.fullPath="snapshots/alphanet3/full_snapshot.bin" ^
---snapshots.deltaPath="snapshots/alphanet3/delta_snapshot.bin" ^
+--snapshots.fullPath="snapshots/private_tangle3/full_snapshot.bin" ^
+--snapshots.deltaPath="snapshots/private_tangle3/delta_snapshot.bin" ^
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15602" ^
 --profiling.bindAddress="127.0.0.1:6062" ^
 --prometheus.bindAddress="localhost:9313" ^

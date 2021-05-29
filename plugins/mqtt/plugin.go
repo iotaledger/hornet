@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -70,11 +71,16 @@ type dependencies struct {
 	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 	BelowMaxDepth int                          `name:"belowMaxDepth"`
 	Bech32HRP     iotago.NetworkPrefix         `name:"bech32HRP"`
-	Echo          *echo.Echo
+	Echo          *echo.Echo                   `optional:"true"`
 }
 
 func configure() {
 	log = logger.NewLogger(Plugin.Name)
+
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		log.Panic("RestAPI plugin needs to be enabled to use the MQTT plugin")
+	}
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
 		publishLatestMilestone(task.Param(0).(*storage.CachedMilestone)) // milestone pass +1
@@ -97,7 +103,7 @@ func configure() {
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	utxoOutputWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishOutput(task.Param(0).(*utxo.Output), task.Param(1).(bool))
+		publishOutput(task.Param(0).(milestone.Index), task.Param(1).(*utxo.Output), task.Param(2).(bool))
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize))
 
@@ -137,6 +143,16 @@ func configure() {
 		}
 
 		if outputId := outputIdFromTopic(topicName); outputId != nil {
+
+			// we need to lock the ledger here to have the correct index for unspent info of the output.
+			deps.Storage.UTXO().ReadLockLedger()
+			defer deps.Storage.UTXO().ReadUnlockLedger()
+
+			ledgerIndex, err := deps.Storage.UTXO().ReadLedgerIndexWithoutLocking()
+			if err != nil {
+				return
+			}
+
 			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
 			if err != nil {
 				return
@@ -146,7 +162,7 @@ func configure() {
 			if err != nil {
 				return
 			}
-			utxoOutputWorkerPool.TrySubmit(output, !unspent)
+			utxoOutputWorkerPool.TrySubmit(ledgerIndex, output, !unspent)
 			return
 		}
 
@@ -267,12 +283,12 @@ func run() {
 		cachedMetadata.Release(true)
 	})
 
-	onUTXOOutput := events.NewClosure(func(output *utxo.Output) {
-		utxoOutputWorkerPool.TrySubmit(output, false)
+	onUTXOOutput := events.NewClosure(func(index milestone.Index, output *utxo.Output) {
+		utxoOutputWorkerPool.TrySubmit(index, output, false)
 	})
 
-	onUTXOSpent := events.NewClosure(func(spent *utxo.Spent) {
-		utxoOutputWorkerPool.TrySubmit(spent.Output(), true)
+	onUTXOSpent := events.NewClosure(func(index milestone.Index, spent *utxo.Spent) {
+		utxoOutputWorkerPool.TrySubmit(index, spent.Output(), true)
 	})
 
 	onReceipt := events.NewClosure(func(receipt *iotago.Receipt) {

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -26,7 +27,7 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumPeers int) error {
 	for i := autopeeringMaxTries; i > 0; i-- {
 
 		for _, p := range n.Nodes {
-			peersResponse, err := p.DebugNodeAPIClient.Peers()
+			peersResponse, err := p.DebugNodeAPIClient.Peers(context.Background())
 			if err != nil {
 				log.Printf("request error: %v\n", err)
 				continue

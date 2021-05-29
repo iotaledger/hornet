@@ -19,6 +19,8 @@ You can always get the most up-to-date description of the config parameters by r
 - [4. Snapshots](#4-snapshots)
   - [DownloadURLs](#downloadurls)
 - [5. Pruning](#5-pruning)
+  - [Milestones](#milestones)
+  - [Size](#size)
 - [6. Protocol](#6-protocol)
   - [PublicKeyRanges](#publickeyranges)
 - [7. Proof of Work](#7-proof-of-work)
@@ -170,7 +172,7 @@ Example:
 
 ```json
   "db": {
-    "engine": "pebble",
+    "engine": "rocksdb",
     "path": "mainnetdb",
     "autoRevalidation": false,
     "debug": false,
@@ -219,18 +221,41 @@ Example:
 
 ## 5. Pruning
 
-| Name          | Description                                           | Type    |
-| :------------ | :---------------------------------------------------- | :------ |
-| enabled       | whether to delete old message data from the database  | bool    |
-| delay         | amount of milestone cones to keep in the database     | integer |
-| pruneReceipts | whether to delete old receipts data from the database | bool    |
+| Name                      | Description                                           | Type   |
+| :------------------------ | :---------------------------------------------------- | :----- |
+| [milestones](#Milestones) | milestones based pruning                              | object |
+| [size](#Size)             | database size based pruning                           | object |
+| pruneReceipts             | whether to delete old receipts data from the database | bool   |
+
+### Milestones
+
+| Name                | Description                                                                              | Type    |
+| :------------------ | :--------------------------------------------------------------------------------------- | :------ |
+| enabled             | whether to delete old message data from the database based on maximum milestones to keep | bool    |
+| maxMilestonesToKeep | maximum amount of milestone cones to keep in the database                                | integer |
+
+### Size
+| Name                | Description                                                                         | Type   |
+| :------------------ | :---------------------------------------------------------------------------------- | :----- |
+| enabled             | whether to delete old message data from the database based on maximum database size | bool   |
+| targetSize          | target size of the database                                                         | string |
+| thresholdPercentage | the percentage the database size gets reduced if the target size is reached         | float  |
+| cooldownTime        | cooldown time between two pruning by database size events                           | string |
 
 Example:
 
 ```json
   "pruning": {
-    "enabled": true,
-    "delay": 60480,
+    "milestones": {
+      "enabled": false,
+      "maxMilestonesToKeep": 60480
+    },
+    "size": {
+      "enabled": true,
+      "targetSize": "30GB",
+      "thresholdPercentage": 10.0,
+      "cooldownTime": "5m"
+    },
     "pruneReceipts": false
   },
 ```
@@ -334,14 +359,14 @@ Example:
 | Name              | Description                                                                           | Type                   |
 | :---------------- | :------------------------------------------------------------------------------------ | :--------------------- |
 | enabled           | whether the coordinator quorum is enabled                                             | bool                   |
-| [groups](#groups) | the quorum groups used to ask other nodes for correct ledger state of the coordinator | Array of object arrays |
+| [groups](#groups) | the quorum groups used to ask other nodes for correct ledger state of the coordinator | array of object arrays |
 | timeout           | the timeout until a node in the quorum must have answered                             | string                 |
 
 #### Groups
 
 | Name                        | Description                                                                          | Type             |
 | :-------------------------- | :----------------------------------------------------------------------------------- | :--------------- |
-| [{GROUP_NAME}](#group_name) | the qourum group used to ask other nodes for correct ledger state of the coordinator | Array of objects |
+| [{GROUP_NAME}](#group_name) | the qourum group used to ask other nodes for correct ledger state of the coordinator | array of objects |
 
 ##### {GROUP_NAME}
 

@@ -31,7 +31,7 @@ dist/
 /hornet
 
 # Database directory
-alphanetdb*/
+privatedb*/
 comnetdb*/
 devnetdb*/
 mainnetdb*/

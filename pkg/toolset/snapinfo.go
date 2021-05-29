@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hive.go/configuration"
 )
 
-func snapshotInfo(args []string) error {
+func snapshotInfo(nodeConfig *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
 		println(fmt.Sprintf("	%s [SNAPSHOT_PATH]", ToolSnapInfo))
@@ -22,7 +23,7 @@ func snapshotInfo(args []string) error {
 	}
 
 	filePath := args[0]
-	readFileHeader, err := snapshot.ReadSnapshotHeader(filePath)
+	readFileHeader, err := snapshot.ReadSnapshotHeaderFromFile(filePath)
 	if err != nil {
 		return err
 	}

@@ -62,7 +62,7 @@ func TestBatch(t *testing.T) {
 	// eventually all migrations should have happened
 	log.Println("waiting for treasury to be reduced to correct amount after migrations...")
 	require.Eventually(t, func() bool {
-		treasury, err := n.Coordinator().DebugNodeAPIClient.Treasury()
+		treasury, err := n.Coordinator().DebugNodeAPIClient.Treasury(context.Background())
 		if err != nil {
 			log.Printf("failed to get current treasury: %s", err)
 			return false
@@ -72,11 +72,11 @@ func TestBatch(t *testing.T) {
 
 	// checking that funds were migrated in appropriate receipts
 	log.Println("checking receipts...")
-	receiptTuples, err := n.Coordinator().DebugNodeAPIClient.Receipts()
+	receiptTuples, err := n.Coordinator().DebugNodeAPIClient.Receipts(context.Background())
 	require.NoError(t, err)
 	require.Lenf(t, receiptTuples, totalReceipts, "expected %d receipts in total", totalReceipts)
 	for migratedAt, numReceipts := range receipts {
-		receiptTuples, err := n.Coordinator().DebugNodeAPIClient.ReceiptsByMigratedAtIndex(migratedAt)
+		receiptTuples, err := n.Coordinator().DebugNodeAPIClient.ReceiptsByMigratedAtIndex(context.Background(), migratedAt)
 		require.NoError(t, err)
 		require.Lenf(t, receiptTuples, numReceipts, "expected %d receipts for index %d", totalReceipts, migratedAt)
 	}
@@ -86,7 +86,7 @@ func TestBatch(t *testing.T) {
 	for i := 0; i < migratedFundsCount; i++ {
 		var addr iotago.Ed25519Address
 		binary.LittleEndian.PutUint32(addr[:], uint32(i))
-		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(&addr)
+		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(context.Background(), &addr)
 		require.NoError(t, err)
 		require.EqualValues(t, migrationTokens, balance.Balance)
 	}

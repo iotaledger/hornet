@@ -8,7 +8,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	coordinatorPlugin "github.com/gohornet/hornet/plugins/coordinator"
-	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/events"
 )
 
@@ -190,8 +189,7 @@ func runVisualizer() {
 		deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 		defer deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 
-		// check if URTS plugin is enabled
-		if !Plugin.Node.IsSkipped(urts.Plugin) {
+		if deps.TipSelector != nil {
 			deps.TipSelector.Events.TipAdded.Attach(onTipAdded)
 			defer deps.TipSelector.Events.TipAdded.Detach(onTipAdded)
 			deps.TipSelector.Events.TipRemoved.Attach(onTipRemoved)

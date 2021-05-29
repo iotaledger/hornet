@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -70,6 +71,16 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 
 	if snapshotInfo.SnapshotIndex > latestMilestoneIndex && (latestMilestoneIndex != 0) {
 		return ErrLatestMilestoneOlderThanSnapshotIndex
+	}
+
+	// check if the ledger index of the snapshot files fit the revalidation target.
+	snapshotLedgerIndex, err := snapshot.GetSnapshotsFilesLedgerIndex()
+	if err != nil {
+		return err
+	}
+
+	if snapshotLedgerIndex != snapshotInfo.SnapshotIndex {
+		return fmt.Errorf("snapshot files (index: %d) do not fit the revalidation target (index: %d)", snapshotLedgerIndex, snapshotInfo.SnapshotIndex)
 	}
 
 	t.log.Infof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
@@ -544,6 +555,10 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 
 	t.log.Info("applying snapshot balances to the ledger state...")
 
+	// set the confirmed milestone index to 0.
+	// the correct milestone index will be applied during "ImportSnapshots"
+	t.storage.OverwriteConfirmedMilestoneIndex(0)
+
 	// Restore the ledger state of the last snapshot
 	if err := snapshot.ImportSnapshots(); err != nil {
 		t.log.Panic(err.Error())
@@ -561,9 +576,6 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 	if snapshotInfo.SnapshotIndex != ledgerIndex {
 		return ErrSnapshotIndexWrong
 	}
-
-	// Set the valid confirmed milestone index
-	t.storage.OverwriteConfirmedMilestoneIndex(snapshotInfo.SnapshotIndex)
 
 	t.log.Info("applying snapshot balances to the ledger state ... done!")
 
