@@ -1,7 +1,6 @@
 package autopeering
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 
@@ -51,14 +50,13 @@ func newLocal(seed []byte) *Local {
 
 	peeringPort, err := strconv.Atoi(peeringPortStr)
 	if err != nil {
-		log.Fatalf("Invalid autopeering port number: %s, Error: %s", peeringPortStr, err)
+		log.Fatalf("invalid autopeering port number: %s, Error: %s", peeringPortStr, err)
 	}
 
 	// announce the autopeering service
 	ownServices := service.New()
 	ownServices.Update(service.PeeringKey, "udp", peeringPort)
 
-	fmt.Println("###C")
 	if !deps.NodeConfig.Bool(CfgNetAutopeeringRunAsEntryNode) {
 		libp2pBindPortStr, err := multiAddrBindAddr.ValueForProtocol(multiaddr.P_TCP)
 		if err != nil {
@@ -79,7 +77,7 @@ func newLocal(seed []byte) *Local {
 	}
 
 	// realm doesn't matter
-	peerDB, err := peer.NewDB(bolt.New(boltDb).WithRealm([]byte{0}))
+	peerDB, err := peer.NewDB(bolt.New(boltDb))
 	if err != nil {
 		log.Fatalf("unable to create autopeering database: %s", err)
 	}

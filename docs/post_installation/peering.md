@@ -98,7 +98,7 @@ connection. A recommended number of peer neighbors is 4-6 to get some degree of 
 
 #### Finding neighbors
 
-Join the official IOTA Discord server and join the `#fullnodes` channel and describe your node location (Europe /
+Join the official IOTA Discord server and join the `#nodesharing` channel and describe your node location (Europe /
 Germany / Asia, etc.) with your allocated HW resources and ask for neighbors. Do not publicly disclose your
 node `multiaddr`
 to all readers but wait for an individual direct chat.

@@ -11,7 +11,7 @@ import (
 const (
 	// CfgNetAutopeeringEntryNodes list of autopeering entry nodes to use.
 	CfgNetAutopeeringEntryNodes = "p2p.autopeering.entryNodes"
-	// CfgNetAutopeeringBindAddr bind address for global services such as autopeering and gossip.
+	// CfgNetAutopeeringBindAddr is bind address for autopeering.
 	CfgNetAutopeeringBindAddr = "p2p.autopeering.bindAddress"
 	// CfgNetAutopeeringRunAsEntryNode whether the node should act as an autopeering entry node.
 	CfgNetAutopeeringRunAsEntryNode = "p2p.autopeering.runAsEntryNode"
@@ -23,6 +23,8 @@ const (
 	CfgNetAutopeeringSaltLifetime = "p2p.autopeering.saltLifetime"
 	// CfgNetAutopeeringDatabaseDirPath is the path to the autopeering database.
 	CfgNetAutopeeringDatabaseDirPath = "p2p.autopeering.db.dirPath"
+	// CfgNetAutopeeringEntryNodesPreferIPv6 defines if connecting over IPv6 is preferred for entry nodes.
+	CfgNetAutopeeringEntryNodesPreferIPv6 = "p2p.autopeering.entryNodesPreferIPv6"
 )
 
 var params = &node.PluginParams{
@@ -32,6 +34,7 @@ var params = &node.PluginParams{
 			fs.StringSlice(CfgNetAutopeeringEntryNodes, []string{}, "list of autopeering entry nodes to use")
 			fs.String(CfgNetAutopeeringBindAddr, "0.0.0.0:14626", "bind address for autopeering")
 			fs.Bool(CfgNetAutopeeringRunAsEntryNode, false, "whether the node should act as an autopeering entry node")
+			fs.Bool(CfgNetAutopeeringEntryNodesPreferIPv6, false, "defines if connecting over IPv6 is preferred for entry nodes")
 			fs.Int(CfgNetAutopeeringInboundPeers, 2, "the number of inbound autopeers")
 			fs.Int(CfgNetAutopeeringOutboundPeers, 2, "the number of outbound autopeers")
 			fs.Duration(CfgNetAutopeeringSaltLifetime, 2*time.Hour, "lifetime of the private and public local salt")

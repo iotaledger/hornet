@@ -38,7 +38,7 @@ var (
 func RegisterAutopeeringProtocolInMultiAddresses() error {
 	autopeeringProto := multiaddr.Protocol{
 		Name:       "autopeering",
-		Code:       1337,
+		Code:       ProtocolCode,
 		VCode:      multiaddr.CodeToVarint(ProtocolCode),
 		Size:       multiaddr.LengthPrefixedVarSize,
 		Path:       false,

@@ -243,7 +243,7 @@ func DefaultNetworkConfig() NetworkConfig {
 type AutopeeringConfig struct {
 	// The ist of autopeering entry nodes to use.
 	EntryNodes []string
-	// BindAddr bind address for global services such as autopeering and gossip.
+	// BindAddr bind address for autopeering.
 	BindAddr string
 	// Whether the node should act as an autopeering entry node.
 	RunAsEntryNode bool

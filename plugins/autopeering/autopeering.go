@@ -147,7 +147,7 @@ func parseEntryNode(entryNodeMultiAddrStr string) (entryNode *peer.Peer, err err
 	services := service.New()
 	services.Update(service.PeeringKey, "udp", port)
 
-	ip := ipAddresses.GetPreferredAddress(false)
+	ip := ipAddresses.GetPreferredAddress(deps.NodeConfig.Bool(CfgNetAutopeeringEntryNodesPreferIPv6))
 	return peer.NewPeer(identity.New(*pubKey), ip, services), nil
 }
 
