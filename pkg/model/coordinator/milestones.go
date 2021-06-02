@@ -52,6 +52,9 @@ func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.Me
 
 	signingFunc := milestoneIndexSigner.SigningFunc()
 	if err := msPayload.Sign(func(pubKeys []iotago.MilestonePublicKey, msEssence []byte) (sigs []iotago.MilestoneSignature, err error) {
+		if coo.opts.signingRetryAmount <= 0 {
+			return signingFunc(pubKeys, msEssence)
+		}
 		for i := 0; i < coo.opts.signingRetryAmount; i++ {
 			sigs, err = signingFunc(pubKeys, msEssence)
 			if err == nil {
@@ -60,7 +63,6 @@ func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.Me
 			if i+1 != coo.opts.signingRetryAmount {
 				coo.opts.logger.Warnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
 				time.Sleep(coo.opts.signingRetryTimeout)
-				continue
 			}
 		}
 		coo.opts.logger.Warnf("signing failed after %d attempts: %s ", coo.opts.signingRetryAmount, err)
