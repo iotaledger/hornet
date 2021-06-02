@@ -31,8 +31,8 @@ func createCheckpoint(networkID uint64, parents hornet.MessageIDs, powWorkerCoun
 }
 
 // createMilestone creates a signed milestone message.
-func createMilestone(index milestone.Index, networkID uint64, parents hornet.MessageIDs, signerProvider MilestoneSignerProvider, receipt *iotago.Receipt, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte, powWorkerCount int, powHandler *pow.Handler) (*storage.Message, error) {
-	milestoneIndexSigner := signerProvider.MilestoneIndexSigner(index)
+func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.MessageIDs, receipt *iotago.Receipt, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte) (*storage.Message, error) {
+	milestoneIndexSigner := coo.signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
 	parentsSliceOfArray := parents.ToSliceOfArrays()
@@ -45,20 +45,35 @@ func createMilestone(index milestone.Index, networkID uint64, parents hornet.Mes
 	}
 
 	iotaMsg := &iotago.Message{
-		NetworkID: networkID,
+		NetworkID: coo.networkID,
 		Parents:   parentsSliceOfArray,
 		Payload:   msPayload,
 	}
 
-	if err := msPayload.Sign(milestoneIndexSigner.SigningFunc()); err != nil {
+	signingFunc := milestoneIndexSigner.SigningFunc()
+	if err := msPayload.Sign(func(pubKeys []iotago.MilestonePublicKey, msEssence []byte) (sigs []iotago.MilestoneSignature, err error) {
+		for i := 0; i < coo.opts.signingRetryAmount; i++ {
+			sigs, err = signingFunc(pubKeys, msEssence)
+			if err == nil {
+				return
+			}
+			if i+1 != coo.opts.signingRetryAmount {
+				coo.opts.logger.Warnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
+				time.Sleep(coo.opts.signingRetryTimeout)
+				continue
+			}
+		}
+		coo.opts.logger.Warnf("signing failed after %d attempts: %s ", coo.opts.signingRetryAmount, err)
+		return
+	}); err != nil {
 		return nil, err
 	}
 
-	if err = msPayload.VerifySignatures(signerProvider.PublicKeysCount(), milestoneIndexSigner.PublicKeysSet()); err != nil {
+	if err = msPayload.VerifySignatures(coo.signerProvider.PublicKeysCount(), milestoneIndexSigner.PublicKeysSet()); err != nil {
 		return nil, err
 	}
 
-	if err := powHandler.DoPoW(iotaMsg, nil, powWorkerCount); err != nil {
+	if err := coo.powHandler.DoPoW(iotaMsg, nil, coo.opts.powWorkerCount); err != nil {
 		return nil, err
 	}
 

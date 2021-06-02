@@ -111,6 +111,8 @@ var defaultOptions = []Option{
 	WithStateFilePath(defaultStateFilePath),
 	WithMilestoneInterval(defaultMilestoneInterval),
 	WithPoWWorkerCount(defaultPoWWorkerCount),
+	WithSigningRetryAmount(10),
+	WithSigningRetryTimeout(2 * time.Second),
 }
 
 // Options define options for the Coordinator.
@@ -121,6 +123,10 @@ type Options struct {
 	stateFilePath string
 	// the interval milestones are issued.
 	milestoneInterval time.Duration
+	// the timeout between signing retries.
+	signingRetryTimeout time.Duration
+	// the amount of times to retry signing before bailing and shutting down the Coordinator.
+	signingRetryAmount int
 	// the amount of workers used for calculating PoW when issuing checkpoints and milestones.
 	powWorkerCount int
 	// the optional quorum used by the coordinator to check for correct ledger state calculation.
@@ -152,6 +158,20 @@ func WithStateFilePath(stateFilePath string) Option {
 func WithMilestoneInterval(milestoneInterval time.Duration) Option {
 	return func(opts *Options) {
 		opts.milestoneInterval = milestoneInterval
+	}
+}
+
+// WithSigningRetryTimeout defines signing retry timeout.
+func WithSigningRetryTimeout(timeout time.Duration) Option {
+	return func(opts *Options) {
+		opts.signingRetryTimeout = timeout
+	}
+}
+
+// WithSigningRetryAmount defines signing retry amount.
+func WithSigningRetryAmount(amount int) Option {
+	return func(opts *Options) {
+		opts.signingRetryAmount = amount
 	}
 }
 
@@ -358,7 +378,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		}
 	}
 
-	milestoneMsg, err := createMilestone(newMilestoneIndex, coo.networkID, parents, coo.signerProvider, receipt, mutations.MerkleTreeHash, coo.opts.powWorkerCount, coo.powHandler)
+	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, parents, receipt, mutations.MerkleTreeHash)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
 	}

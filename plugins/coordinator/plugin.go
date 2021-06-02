@@ -173,6 +173,8 @@ func provide(c *dig.Container) {
 				coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
 				coordinator.WithPoWWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
 				coordinator.WithQuorum(deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
+				coordinator.WithSigningRetryAmount(deps.NodeConfig.Int(CfgCoordinatorSigningRetryAmount)),
+				coordinator.WithSigningRetryTimeout(deps.NodeConfig.Duration(CfgCoordinatorSigningRetryTimeout)),
 			)
 			if err != nil {
 				return nil, err
