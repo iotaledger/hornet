@@ -6,19 +6,18 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/pow"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // createCheckpoint creates a checkpoint message.
-func createCheckpoint(networkID uint64, parents hornet.MessageIDs, powWorkerCount int, powHandler *pow.Handler) (*storage.Message, error) {
+func (coo *Coordinator) createCheckpoint(networkID uint64, parents hornet.MessageIDs) (*storage.Message, error) {
 	iotaMsg := &iotago.Message{
 		NetworkID: networkID,
 		Parents:   parents.ToSliceOfArrays(),
 		Payload:   nil,
 	}
 
-	if err := powHandler.DoPoW(iotaMsg, nil, powWorkerCount); err != nil {
+	if err := coo.powHandler.DoPoW(iotaMsg, nil, coo.opts.powWorkerCount); err != nil {
 		return nil, err
 	}
 
@@ -50,24 +49,7 @@ func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.Me
 		Payload:   msPayload,
 	}
 
-	signingFunc := milestoneIndexSigner.SigningFunc()
-	if err := msPayload.Sign(func(pubKeys []iotago.MilestonePublicKey, msEssence []byte) (sigs []iotago.MilestoneSignature, err error) {
-		if coo.opts.signingRetryAmount <= 0 {
-			return signingFunc(pubKeys, msEssence)
-		}
-		for i := 0; i < coo.opts.signingRetryAmount; i++ {
-			sigs, err = signingFunc(pubKeys, msEssence)
-			if err == nil {
-				return
-			}
-			if i+1 != coo.opts.signingRetryAmount {
-				coo.opts.logger.Warnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
-				time.Sleep(coo.opts.signingRetryTimeout)
-			}
-		}
-		coo.opts.logger.Warnf("signing failed after %d attempts: %s ", coo.opts.signingRetryAmount, err)
-		return
-	}); err != nil {
+	if err := msPayload.Sign(coo.createSigningFuncWithRetries(milestoneIndexSigner.SigningFunc())); err != nil {
 		return nil, err
 	}
 
@@ -85,4 +67,25 @@ func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.Me
 	}
 
 	return msg, nil
+}
+
+// wraps the given MilestoneSigningFunc into a with retries enhanced version.
+func (coo *Coordinator) createSigningFuncWithRetries(signingFunc iotago.MilestoneSigningFunc) iotago.MilestoneSigningFunc {
+	return func(pubKeys []iotago.MilestonePublicKey, msEssence []byte) (sigs []iotago.MilestoneSignature, err error) {
+		if coo.opts.signingRetryAmount <= 0 {
+			return signingFunc(pubKeys, msEssence)
+		}
+		for i := 0; i < coo.opts.signingRetryAmount; i++ {
+			sigs, err = signingFunc(pubKeys, msEssence)
+			if err == nil {
+				return
+			}
+			if i+1 != coo.opts.signingRetryAmount {
+				coo.opts.logger.Warnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
+				time.Sleep(coo.opts.signingRetryTimeout)
+			}
+		}
+		coo.opts.logger.Warnf("signing failed after %d attempts: %s ", coo.opts.signingRetryAmount, err)
+		return
+	}
 }
