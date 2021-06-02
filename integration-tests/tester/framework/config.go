@@ -8,6 +8,8 @@ import (
 
 	"github.com/docker/go-connections/nat"
 
+	"github.com/gohornet/hornet/plugins/autopeering"
+
 	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/p2p"
@@ -47,12 +49,14 @@ const (
 
 	assetsDir = "/assets"
 
-	dockerLogsPrefixLen  = 8
-	exitStatusSuccessful = 0
+	dockerLogsPrefixLen    = 8
+	exitStatusSuccessful   = 0
+	containerNameEntryNode = "entry_node"
 )
 
 var (
-	disabledPluginsPeer = []string{}
+	disabledPluginsPeer      = []string{}
+	disabledPluginsEntryNode = []string{"dashboard", "profiling", "gossip", "snapshot", "metrics", "tangle", "warpsync", "webapi"}
 	// The seed on which the total supply resides on per default.
 	GenesisSeed    ed25519.PrivateKey
 	GenesisAddress iotago.Ed25519Address
@@ -85,6 +89,7 @@ func DefaultConfig() *NodeConfig {
 		Dashboard:   DefaultDashboardConfig(),
 		Receipts:    DefaultReceiptValidatorConfig(),
 		Migrator:    DefaultMigratorConfig(),
+		Autopeering: DefaultAutopeeringConfig(),
 	}
 	cfg.ExposedPorts = nat.PortSet{
 		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.RestAPI.BindAddress, ":")[1])): {},
@@ -147,6 +152,8 @@ type NodeConfig struct {
 	Receipts ReceiptsConfig
 	// Migrator config.
 	Migrator MigratorConfig
+	// Autopeering config.
+	Autopeering AutopeeringConfig
 }
 
 // AsCoo adjusts the config to make it usable as the Coordinator's config.
@@ -157,7 +164,7 @@ func (cfg *NodeConfig) AsCoo() {
 	cfg.Envs = append(cfg.Envs, fmt.Sprintf("COO_PRV_KEYS=%s", strings.Join(cfg.Coordinator.PrivateKeys, ",")))
 }
 
-// WithMigrator adjusts the config to activate the migrator plugin.
+// WithMigration adjusts the config to activate the migrator plugin.
 func (cfg *NodeConfig) WithMigration() {
 	cfg.Migrator.Bootstrap = true
 	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Migrator", "Receipts")
@@ -176,6 +183,7 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Dashboard.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Receipts.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Migrator.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.Autopeering.CLIFlags()...)
 	return cliFlags
 }
 
@@ -228,6 +236,50 @@ func DefaultNetworkConfig() NetworkConfig {
 		PeerAliases:             []string{},
 		ReconnectInterval:       1 * time.Second,
 		GossipUnknownPeersLimit: 4,
+	}
+}
+
+// AutopeeringConfig defines the autopeering specific configuration.
+type AutopeeringConfig struct {
+	// The ist of autopeering entry nodes to use.
+	EntryNodes []string
+	// BindAddr bind address for autopeering.
+	BindAddr string
+	// Whether the node should act as an autopeering entry node.
+	RunAsEntryNode bool
+	// The max number of inbound autopeers.
+	InboundPeers int
+	// The max the number of outbound autopeers.
+	OutboundPeers int
+	// The lifetime of the private and public local salt.
+	SaltLifetime time.Duration
+	// The path to the autopeering database.
+	DatabaseDirPath string
+}
+
+// CLIFlags returns the config as CLI flags.
+func (autoConfig *AutopeeringConfig) CLIFlags() []string {
+	return []string{
+		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringEntryNodes, strings.Join(autoConfig.EntryNodes, ",")),
+		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringBindAddr, autoConfig.BindAddr),
+		fmt.Sprintf("--%s=%v", autopeering.CfgNetAutopeeringRunAsEntryNode, autoConfig.RunAsEntryNode),
+		fmt.Sprintf("--%s=%d", autopeering.CfgNetAutopeeringInboundPeers, autoConfig.InboundPeers),
+		fmt.Sprintf("--%s=%d", autopeering.CfgNetAutopeeringOutboundPeers, autoConfig.OutboundPeers),
+		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringSaltLifetime, autoConfig.SaltLifetime),
+		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringDatabaseDirPath, autoConfig.DatabaseDirPath),
+	}
+}
+
+// DefaultAutopeeringConfig returns the default autopeering config.
+func DefaultAutopeeringConfig() AutopeeringConfig {
+	return AutopeeringConfig{
+		EntryNodes:      nil,
+		BindAddr:        "0.0.0.0:14626",
+		RunAsEntryNode:  false,
+		InboundPeers:    2,
+		OutboundPeers:   2,
+		SaltLifetime:    30 * time.Minute,
+		DatabaseDirPath: "./p2pstore",
 	}
 }
 

@@ -37,7 +37,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-version v1.3.0 // indirect
-	github.com/iotaledger/hive.go v0.0.0-20210512134444-92ba84ee16f9
+	github.com/iotaledger/hive.go v0.0.0-20210527103851-70e96f4e355a
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v2 v2.0.0
 	github.com/ipfs/go-ds-badger v0.2.6
@@ -50,18 +50,21 @@ require (
 	github.com/labstack/echo/v4 v4.3.0
 	github.com/labstack/gommon v0.3.0
 	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/libp2p/go-libp2p v0.13.1-0.20210319000852-ffd67fd3dcf6
+	github.com/libp2p/go-libp2p v0.14.0
 	github.com/libp2p/go-libp2p-asn-util v0.0.0-20210422100720-09a655867a6c // indirect
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
 	github.com/libp2p/go-libp2p-core v0.8.5
 	github.com/libp2p/go-libp2p-discovery v0.5.0
 	github.com/libp2p/go-libp2p-kad-dht v0.12.0
 	github.com/libp2p/go-libp2p-peerstore v0.2.7
+	github.com/libp2p/go-libp2p-yamux v0.5.4 // indirect
 	github.com/libp2p/go-tcp-transport v0.2.2 // indirect
 	github.com/linxGnu/grocksdb v1.6.33 // indirect
+	github.com/miekg/dns v1.1.42 // indirect
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
-	github.com/multiformats/go-multiaddr v0.3.1
+	github.com/mr-tron/base58 v1.2.0 // indirect
+	github.com/multiformats/go-multiaddr v0.3.2
 	github.com/onsi/ginkgo v1.15.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
@@ -84,10 +87,11 @@ require (
 	go.uber.org/atomic v1.7.0
 	go.uber.org/dig v1.10.0
 	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/zap v1.17.0 // indirect
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/exp v0.0.0-20210514180818-737f94c0881e // indirect
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed
-	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015 // indirect
+	golang.org/x/net v0.0.0-20210525063256-abc453219eb5
+	golang.org/x/sys v0.0.0-20210531080801-fdfd190a6549 // indirect
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56 // indirect
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	google.golang.org/genproto v0.0.0-20210518161634-ec7691c0a37d // indirect

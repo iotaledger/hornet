@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TEST_NAMES='common value benchmark snapshot migration'
+TEST_NAMES='autopeering common value benchmark snapshot migration'
 
 echo "Build HORNET image"
 docker build -f ../docker/Dockerfile -t hornet:dev ../.

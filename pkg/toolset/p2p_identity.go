@@ -6,6 +6,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/mr-tron/base58"
 
 	"github.com/iotaledger/hive.go/configuration"
 )
@@ -38,8 +39,9 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 		panic(err)
 	}
 
-	fmt.Println("Your p2p private key: ", hex.EncodeToString(privateKeyBytes))
-	fmt.Println("Your p2p public key: ", hex.EncodeToString(publicKeyBytes))
+	fmt.Println("Your p2p private key (hex): ", hex.EncodeToString(privateKeyBytes))
+	fmt.Println("Your p2p public key (hex): ", hex.EncodeToString(publicKeyBytes))
+	fmt.Println("Your p2p public key (base58): ", base58.Encode(publicKeyBytes))
 	fmt.Println("Your p2p PeerID: ", pid.String())
 	fmt.Println()
 	fmt.Println("Make sure to specify the private key within the 'p2p.identityPrivateKey' config option to use it for your node's identity")

@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/mr-tron/base58"
 
 	"github.com/iotaledger/hive.go/configuration"
 
@@ -65,8 +66,9 @@ func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) 
 		log.Panicf("unable to convert public key to bytes: %v", err)
 	}
 
-	fmt.Println("Your p2p private key: ", hex.EncodeToString(prvKeyBytes))
-	fmt.Println("Your p2p public key: ", hex.EncodeToString(pubKeyBytes))
+	fmt.Println("Your p2p private key (hex): ", hex.EncodeToString(prvKeyBytes))
+	fmt.Println("Your p2p public key (hex): ", hex.EncodeToString(pubKeyBytes))
+	fmt.Println("Your p2p public key (base58): ", base58.Encode(pubKeyBytes))
 	fmt.Println("Your p2p PeerID: ", pid.String())
 	return nil
 }
