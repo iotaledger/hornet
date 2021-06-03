@@ -203,13 +203,13 @@
     "peerStore": {
       "path": "./p2pstore"
     },
-    "reconnectInterval": "30s"
-  },
-  "p2pdisc": {
-    "advertiseInterval": "30s",
-    "maxDiscoveredPeerConns": 4,
-    "rendezvousPoint": "between-two-vertices",
-    "routingTableRefreshPeriod": "60s"
+    "reconnectInterval": "30s",
+    "autopeering": {
+      "entryNodes": [],
+      "bindAddress": "0.0.0.0:14626",
+      "runAsEntryNode": false,
+      "dirPath": "./p2pstore"
+    }
   },
   "logger": {
     "level": "debug",
