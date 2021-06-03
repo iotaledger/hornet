@@ -168,12 +168,6 @@
       "dirPath": "./p2pstore"
     }
   },
-  "p2pdisc": {
-    "advertiseInterval": "30s",
-    "maxDiscoveredPeerConns": 4,
-    "rendezvousPoint": "between-two-vertices",
-    "routingTableRefreshPeriod": "60s"
-  },
   "logger": {
     "level": "info",
     "disableCaller": true,
