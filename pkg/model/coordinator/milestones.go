@@ -10,9 +10,9 @@ import (
 )
 
 // createCheckpoint creates a checkpoint message.
-func (coo *Coordinator) createCheckpoint(networkID uint64, parents hornet.MessageIDs) (*storage.Message, error) {
+func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*storage.Message, error) {
 	iotaMsg := &iotago.Message{
-		NetworkID: networkID,
+		NetworkID: coo.networkID,
 		Parents:   parents.ToSliceOfArrays(),
 		Payload:   nil,
 	}

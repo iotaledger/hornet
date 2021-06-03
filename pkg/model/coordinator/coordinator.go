@@ -470,7 +470,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 		parents = append(parents, tips[tipStart:tipEnd]...)
 		parents = parents.RemoveDupsAndSortByLexicalOrder()
 
-		msg, err := coo.createCheckpoint(coo.networkID, parents)
+		msg, err := coo.createCheckpoint(parents)
 		if err != nil {
 			return nil, common.SoftError(fmt.Errorf("failed to create checkPoint: %w", err))
 		}
