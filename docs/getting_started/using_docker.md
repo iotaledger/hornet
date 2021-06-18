@@ -124,7 +124,9 @@ docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:l
 
 ## Managing a Node
 
-> Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+:::info
+Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+:::
 
 ### Starting an Existing Hornet
 

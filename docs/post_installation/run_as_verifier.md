@@ -1,8 +1,7 @@
 ## How to Run Hornet as a Verifier Node
-
-> A verifier node is a node which validates receipts. Receipts are an integral component of the
-> migration mechanism used to migrate funds from the legacy into the new Chrysalis Phase 2 network.
-> See [here](https://chrysalis.docs.iota.org/guides/migration-in-depth.html) for a more detailed explanation on how the migration mechanism works.
+:::info
+ A verifier node is a node which validates receipts. Receipts are an integral component of the migration mechanism used to migrate funds from the legacy into the new Chrysalis Phase 2 network. See [here](https://chrysalis.docs.iota.org/guides/migration-in-depth.html) for a more detailed explanation on how the migration mechanism works.
+:::
 
 This guide explains how to configure a Hornet node as a verifier node:
 
@@ -20,8 +19,9 @@ This guide explains how to configure a Hornet node as a verifier node:
     - `receipts.validator.coordinator.merkleTreeDepth` to the correct used Merkle tree depth in the legacy network.
 1. Run your Hornet verifier node and let it validate receipts.
 
-> Note, it is suggested that you use a loadbalanced endpoint to multiple legacy nodes for `receipts.validator.api.address`
-> in order to obtain high availability.
+:::info
+It is suggested that you use a loadbalanced endpoint to multiple legacy nodes for `receipts.validator.api.address` in order to obtain high availability.
+:::
 
 If now your verifier node panics because of an invalid receipt, it is clear that a receipt was produced which is not
 valid, in which case as a verifier node operator, you are invited to inform the community and the IOTA Foundation of

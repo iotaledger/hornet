@@ -63,7 +63,9 @@ Nodes come with two set of low-level APIs:
 * HTTP(rest) API
 * Event API
 
-> Developers are not needed to communicate with nodes using mentioned low-level API. Developers can successfully leverage [iota client libraries](https://chrysalis.docs.iota.org/libraries/overview.html) that provide a high-level abstraction to all features IOTA nodes provide, either on HTTP API level or Event API level
+:::info
+Developers are not needed to communicate with nodes using mentioned low-level API. Developers can successfully leverage [iota client libraries](https://chrysalis.docs.iota.org/libraries/overview.html) that provide a high-level abstraction to all features IOTA nodes provide, either on HTTP API level or Event API level
+:::
 
 ### HTTP Rest API
 

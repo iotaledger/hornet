@@ -50,8 +50,9 @@ sudo systemctl restart hornet
 ```bash
 sudo systemctl stop hornet
 ```
-
-> Please note: Hornet uses an in-memory cache, so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+:::info
+Hornet uses an in-memory cache, so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+::: 
 
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
@@ -97,7 +98,9 @@ tar -xf HORNET-0.6.0_Linux_x86_64.tar.gz
 
 Using this method, you have to make sure the executable runs in a daemon mode using for example `systemd`.
 
-> Please note: Hornet uses an in-memory cache, so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+::: 
+Hornet uses an in-memory cache, so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+:::
 
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
@@ -189,7 +192,9 @@ HORNET 0.6.0-31ad46bb
 
 Using this method, you have to make sure the executable runs in a daemon mode using for example `systemd`.
 
-> Please note: Hornet uses an in-memory cache, so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+:::info
+Hornet uses an in-memory cache, so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
+:::
 
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 

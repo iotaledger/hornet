@@ -9,12 +9,13 @@ see [Node 101](./nodes_101.md).
 To make sure that your device meets the minimum security requirements for running a node, please
 see [Security 101](./security_101.md).
 
-> Please note: make sure you install Hornet version 0.6.0+ since it is the minimum version that targets IOTA 1.5 (Chrysalis) network.
-> Versions below 0.6.0 (such as 0.5.x) target the legacy IOTA network which is not the focus of this documentation.
+:::info
+Make sure you install Hornet version 0.6.0+ since it is the minimum version that targets IOTA 1.5 (Chrysalis) network.
+Versions below 0.6.0 (such as 0.5.x) target the legacy IOTA network which is not the focus of this documentation.
 
  Versions below 0.6.0 (such as 0.5.x) target the legacy IOTA network, which is not the focus of this documentation.
 :::
-> 
+ 
 ## Recommended Requirements
 
 To handle a potential high rate of messages per second, nodes need enough computational power to run reliably, and

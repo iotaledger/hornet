@@ -9,7 +9,9 @@ The most important ones are:
 * `config.json`: includes all configuration flags and their values
 * `peering.json`: includes all connection details to your static peers (neighbors)
 
-> Hornet version 0.5.x targets legacy IOTA 1.0 network. Hornet version 1.x.x targets IOTA 1.5 network aka Chrysalis which is the focus of this documentation.
+:::info
+Hornet version 0.5.x targets legacy IOTA 1.0 network. Hornet version 1.x.x targets IOTA 1.5 network aka Chrysalis which is the focus of this documentation.
+:::
 
 Depending on the installation path you selected, default configuration files may be also part of the installation
 process and so you may see the following configuration files at your deployment directory:
@@ -79,7 +81,9 @@ Your hash: 24c832e35dc542901b90888321dbfc4b1d9617332cbc124709204e6edf7e49f9
 Your salt: 6c71f4753f6fb52d7a4bb5471281400c8fef760533f0589026a0e646bc03acd4
 ```
 
-> `pwdhash` tool outputs the `passwordHash` and `passwordSalt` based on your input password
+:::info
+`pwdhash` tool outputs the `passwordHash` and `passwordSalt` based on your input password
+:::
 
 Copy both values to their corresponding configuration options: `dashboard.auth.passwordHash` and
 `dashboard.auth.passwordSalt` respectively.

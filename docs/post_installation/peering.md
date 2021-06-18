@@ -52,8 +52,10 @@ Now simply copy the value of `Your p2p private key` to the `p2p.identityPrivateK
 Your Hornet node will now use the specified private key in `p2p.identityPrivateKey` to generate the `PeerId` (which will
 ultimately be stored in `./p2pstore`).
 
-> In case there already is a `./p2pstore` with another identity, Hornet will panic and tell you that you have a previous identity which does not match with what is defined via `p2p.identityPrivateKey` (
+:::info
+In case there already is a `./p2pstore` with another identity, Hornet will panic and tell you that you have a previous identity which does not match with what is defined via `p2p.identityPrivateKey` (
 in that case either delete the `./p2pstore` or reset the `p2p.identityPrivateKey`).
+:::
 
 More information regarding the `PeerId` is available on the [libp2p docs page](https://docs.libp2p.io/concepts/peer-id/)
 .
@@ -75,8 +77,9 @@ A `multiaddr` encoding such information would look like this:
 ```plaintext
 /ip4/100.1.1.1/tcp/15600/p2p/12D3KooWHjcCgWPnUEP8wNdbL2fx63Cmosk16xyZ25iUZagxmHb4
 ```
-
-> Note how `ip4` is used. A common mistake is to use `ipv4`.
+:::info
+Note how `ip4` is used. A common mistake is to use `ipv4`.
+:::
 
 If a node is reachable using a DNS name (for example `node01.iota.org`), then the given `multiaddr` would be:
 
