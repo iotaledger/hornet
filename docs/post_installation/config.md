@@ -459,8 +459,8 @@ Example:
 | maxDeltaMsgYoungestConeRootIndexToCMI | the maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | integer |
 | maxDeltaMsgOldestConeRootIndexToCMI   | the maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | integer |
 | belowMaxDepth                         | the maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy      | integer |
-| [nonLazy](nonlazy)                    | config for tips from the non-lazy pool                                                                                  | object  |
-| [semiLazy](semilazy)                  | config for tips from the semi-lazy pool                                                                                 | object  |
+| [nonLazy](#nonlazy)                    | config for tips from the non-lazy pool                                                                                  | object  |
+| [semiLazy](#semilazy)                  | config for tips from the semi-lazy pool                                                                                 | object  |
 
 ### NonLazy
 

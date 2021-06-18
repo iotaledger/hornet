@@ -53,7 +53,7 @@ dependencies are needed.
 
 Available installation methods:
 
-- [Hornet apt repository](./installation_steps.md#hornet-apt-repository) (RECOMMENDED)
+- [Hornet apt repository](./installation_steps.md#hornet-apt-repository-linux-distro-specific) (RECOMMENDED)
 - [Docker image](./using_docker.md) (RECOMMENDED)
 - [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
 - [Build from source](./installation_steps.md#build-from-source)

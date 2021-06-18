@@ -18,4 +18,4 @@
 - [Troubleshooting](./troubleshooting.md)
 - [FAQ](./faq.md)
 - [Contribution](./Contribution.md)
-- [Code of Conduct](./code_of_conduct.md)
+- [Code of Conduct](./CODE_OF_CONDUCT.md)

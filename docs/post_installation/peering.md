@@ -106,7 +106,7 @@ Germany / Asia, etc.) with your allocated HW resources and ask for neighbors. Do
 node `multiaddr`
 to all readers but wait for an individual direct chat.
 
-Peers can be added using the Hornet [dashboard](#dashboard) (simply go to `Peers` and click on `Add Peer`)
+Peers can be added using the Hornet [dashboard](../post_installation/post_installation.md#dashboard) (simply go to `Peers` and click on `Add Peer`)
 or the [peering.json](./peering.md) file.
 
 You can change the path or name of the `peering.json` file by using the `-n` or `--peeringConfig` argument while
