@@ -1,4 +1,4 @@
-## Bootstrapping the Chrysalis Phase 2 Hornet node from the genesis snapshot
+## Bootstrapping the Chrysalis Phase 2 Hornet Node From the Genesis Snapshot
 
 1. Rename the `genesis_snapshot.bin` to `full_snapshot.bin`.
 1. Make sure your C2 (Chrysalis Phase 2) Hornet node has no database and no prior snapshot files.

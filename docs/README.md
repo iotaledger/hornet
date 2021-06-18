@@ -2,7 +2,7 @@
 
 Everything related to HORNET.
 
-## Run locally
+## Run Locally
 
 You can run a local server to run the documentation page.
 
@@ -14,7 +14,7 @@ You can run a local server to run the documentation page.
 cargo install mdbook
 ```
 
-### Run it
+### Run It
 
 ```bash
 mdbook serve

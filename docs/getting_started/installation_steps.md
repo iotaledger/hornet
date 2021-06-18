@@ -1,4 +1,4 @@
-# Hornet `apt` repository (Linux-distro specific)
+# Hornet `apt` Repository (Linux-distro specific)
 Hornet `apt` repository is maintained by the Hornet developers. It installs Hornet as a `systemd` service under a user called `hornet`.
 
 *Ubuntu/Debian*
@@ -33,7 +33,7 @@ Environment file to configure multiple default parameters are located under the 
 sudo service hornet start
 ```
 
-### Managing the node
+### Managing the Node
 **Displaying log output:**
 ```bash
 journalctl -fu hornet
@@ -57,7 +57,7 @@ See more details on how to configure Hornet under the [post installation](../pos
 
 -------
 
-# Pre-built binaries
+# Pre-built Binaries
 There are several pre-built binaries of Hornet for major platforms available including some default configuration JSON files.
 
 This method is considered a bit advanced for production use since you have to usually prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
@@ -101,7 +101,7 @@ Using this method, you have to make sure the executable runs in a daemon mode us
 
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
-### Example of systemd unit file
+### Example of Systemd Unit File
 Assuming the Hornet executable is extracted to `/opt/hornet` together with configuration files, please find the following example of a `systemd` unit file:
 
 ```plaintext
@@ -134,7 +134,7 @@ WantedBy=multi-user.target
 
 
 
-# Build from source
+# Build From Source
 This method is considered a bit advanced for production use since you usually have to prepare a system environment in order to run the given executable as a service (in a daemon mode) via `systemd` or `supervisord`.
 
 **Install Go:**
@@ -193,7 +193,7 @@ Using this method, you have to make sure the executable runs in a daemon mode us
 
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
-### Example of systemd unit file
+### Example of Systemd Unit File
 Assuming the Hornet executable is extracted to `/opt/hornet` together with configuration files, please find the following example of a `systemd` unit file:
 
 ```plaintext

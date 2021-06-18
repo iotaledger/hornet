@@ -1,10 +1,10 @@
-# Peering configuration
+# Peering Configuration
 
 The IOTA network is a distributed network in which data is broadcasted among IOTA nodes through a gossip protocol. To be
 able to participate in a network, each node has to establish a secure connection to other nodes in the network - to its
 peer neighbors - and mutually exchange messages.
 
-### Node identity
+### Node Identity
 
 Each node is uniquely identified by a `peer identity`. `Peer identity` (also called `PeerId`) is represented by a public
 and private key pair. The `PeerId` represents a verifiable link between the given peer and its public key,
@@ -58,7 +58,7 @@ in that case either delete the `./p2pstore` or reset the `p2p.identityPrivateKey
 More information regarding the `PeerId` is available on the [libp2p docs page](https://docs.libp2p.io/concepts/peer-id/)
 .
 
-### Addressing peer neighbors
+### Addressing Peer Neighbors
 
 In order to communicate to your peer neighbors, you also need an address to reach them. Hornet uses the `MultiAddresses`
 format (also known as `multiaddr`) to achieve that.
@@ -91,7 +91,7 @@ information.
 
 More information about `multiaddr` is available at the [libp2p docs page](https://docs.libp2p.io/concepts/addressing/).
 
-### Adding node peers
+### Adding Node Peers
 
 Once you know your node's own `multiaddr`, it can be exchanged with other node owners to establish a mutual peer
 connection. A recommended number of peer neighbors is 4-6 to get some degree of redundancy.
@@ -146,7 +146,7 @@ where the `/autopeering` portion defines the base58 encoded Ed25519 public key.
 Per default, Hornet will peer up to 4 autopeered peers and initiate a gossip protocol with them.
 Autopeered peers are not subject to connection trimming, the same way as mutually tethered peers aren't either.
 
-#### Entry Node
+#### Entry node
 If you want to run your own node as an autopeering entry node, configure `p2p.autopeering.runAsEntryNode` respectively.
 The base58 encoded public key is in the output of the `p2pidentity` Hornet tool; alternatively, if you
 already have an identity in a `./p2pstore`, use the `p2pidentityextract` to extract it.

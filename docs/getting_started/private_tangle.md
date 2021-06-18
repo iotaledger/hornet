@@ -23,19 +23,19 @@ go run "..\main.go" tool snapgen private_tangle1 [ADDRESS] 1000000000 "snapshots
 ...
 ```
 
-### Start the coordinator
+### Start the Coordinator
 
 In the HORNET repository, change to the *private_tangle* directory and run the *run_coo_bootstrap* script. This will create all files needed to run the network and distribute the tokens to the address we configured. It will also start the coordinator.
 
 In subsequent starts we can use the *run_coo* script, to skip the bootstrap step.
 
-### Start additional nodes
+### Start Additional Nodes
 
 To start additional nodes we simply use the additional *run* scripts provided in the *private_tangle* folder. We can run them on the same device, as they are preconfigured to listen on different ports.
 
 Congratulations, you are now running a private network! To monitor your coordinator, you can find the dashboard at [http://localhost:8081](http://localhost:8081). Login to the Dashboard with `admin` as username and password.
 
-### Use a wallet to manage the tokens
+### Use a Wallet to Manage the Tokens
 
 To easily access the tokens on the network, we need to take one more step. If you used the default configuration, use the following mnemonic to set up a wallet:
 

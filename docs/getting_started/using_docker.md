@@ -81,7 +81,7 @@ Instructs Docker to use directly network on host (so the network is not isolated
 * `-d` \
 Instructs Docker to run the container instance in a detached mode (daemon).
 
-## Create username and password for the Hornet dashboard
+## Create Username and Password for the Hornet Dashboard
 
 If you use the Hornet dashboard you need to create a secure password. Start your Hornet container and run the following command when the container is running:
 
@@ -108,7 +108,7 @@ Edit `config.json` and customize the "dashboard" section to your needs.
   },
 ```
 
-## Build your own hornet image
+## Build Your Own Hornet Image
 
 You can build your own Docker image by running the following command:
 
@@ -122,11 +122,11 @@ Or pull it from Docker hub (only available for amd64/x86_64):
 docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:latest
 ```
 
-## Managing node
+## Managing a Node
 
 > Please note: Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
 
-### Starting an existing Hornet
+### Starting an Existing Hornet
 
 ```bash
 docker start hornet
@@ -148,7 +148,7 @@ docker stop -t 200 hornet
 
 * `-t 200`: instructs Docker to wait for a grace period before shutting down
 
-### Displaying log output
+### Displaying Log Output
 
 ```bash
 docker logs -f hornet
@@ -157,7 +157,7 @@ docker logs -f hornet
 * `-f` \
 Instructs Docker to continue displaying the log to `stdout` until CTRL+C is pressed
 
-## Removing container
+## Removing a Container
 
 ```bash
 docker container rm hornet

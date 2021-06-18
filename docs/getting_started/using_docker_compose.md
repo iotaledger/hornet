@@ -2,7 +2,7 @@
 
 Make sure that you have read [Using Docker](using_docker.md) before continue reading. This chapter is for more advanced users. The following link provides more information about [Docker Compose]( https://docs.docker.com/compose/).
 
-## Using your own Docker Compose file for running Hornet
+## Using Your Own Docker Compose File For Running Hornet
 
 Docker Compose is a tool on top of the Docker engine that enables you to define Docker parameters in a structured way via `docker-compose.yaml` file. You can create and start the container with a single `docker-compose` command based on your configuration.
 
@@ -43,7 +43,7 @@ Run the following command in the current directory to create and start an new Ho
 
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
-## Build your own image using Docker Compose
+## Build Your Own Image Using Docker Compose
 
 Note: Follow this step only if you want to run Hornet via Docker Compose.
 

@@ -1,1 +1,1 @@
-# Asset Direcotry for HORNET Docs
+# Asset Directory for HORNET Docs

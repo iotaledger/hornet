@@ -9,9 +9,9 @@ Nodes are responsible for the following:
 - Validating [messages]((https://chrysalis.docs.iota.org/guides/dev_guide.html#messages-payloads-and-transactions)) and ledger mutations for consistency.
 - Provide data for other nodes to synchronize to the latest state of the network.
 
-## Attaching new messages to the Tangle
+## Attaching New Messages to the Tangle
 
-A `message` is a data structure that is actually being broadcasted in the IOTA network and represents a vertex in the
+A `message` is a data structure that is actually being broadcast in the IOTA network and represents a vertex in the
 Tangle graph. When nodes receive a new message, they attach it to the Tangle by adding it to their local database.
 
 As a result, at any point in time, all nodes may have different messages in their local databases. These messages make
@@ -19,7 +19,7 @@ up a node's view of the Tangle.
 
 To distribute the messages across the rest of the network, nodes synchronize their local databases with their neighbors.
 
-## Synchronizing with the rest of the network
+## Synchronizing With the Rest of the Network
 
 Like any distributed system, nodes in an IOTA network synchronize their databases with others called neighbors to form a
 single source of truth.
@@ -35,9 +35,9 @@ it has received.
 
 When a node is synchronized, it then has enough information to decide which transactions it considers confirmed.
 
-## Deciding which messages are confirmed
+## Deciding Which Messages Are Confirmed
 
-All messages remain in a pending state until the node is sure of its validity. For a definition of a message,
+All messages remain in a pending state until the node is sure of their validity. For a definition of a message,
 see [Messages, payloads, and transactions](https://chrysalis.docs.iota.org/guides/dev_guide.html#messages-payloads-and-transactions)
 .
 
@@ -46,7 +46,7 @@ However, even when a message is valid, nodes may not be able to make a decision 
 When nodes detect double spends they must decide which message to consider confirmed and which one to ignore. Nodes do
 this by using consensus rules that are built into their node software using a network protocol.
 
-## Keeping a record of the balances on addresses via `UTXO`
+## Keeping a Record of the Balances on Addresses Via `UTXO`
 
 All nodes keep a record of
 the [Unspent Transaction Outputs (UTXO)](https://chrysalis.docs.iota.org/guides/dev_guide.html#unspent-transaction-output-utxo)
@@ -56,7 +56,7 @@ so they can do the following:
 * Respond to clients' requests for their balance
 * Only when a transaction is confirmed, can nodes update their record of balances
 
-## Exposing APIs for clients
+## Exposing APIs for Clients
 
 Nodes come with two set of low-level APIs:
 

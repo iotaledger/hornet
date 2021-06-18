@@ -21,7 +21,7 @@ peering.json
 profiles.json
 ```
 
-### Default configuration
+### Default Configuration
 
 By default, Hornet searches for configuration files in the working directory and expects default names, such
 as `config.json` and `peering.json`.

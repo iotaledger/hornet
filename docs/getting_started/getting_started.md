@@ -1,8 +1,7 @@
-# Getting started
+# Getting Started
 
 Running a node is the best way to use IOTA. By doing so, you have direct access to the Tangle instead of having to
-connect to and trust someone else's node. Additionally, you help the IOTA network to become more distributed and
-resilient.
+connect to and trust someone else's node. Additionally, you help the IOTA network to become more distributed and resilient.
 
 The node software is the backbone of the IOTA network. For an overview of tasks a node is responsible for, please
 see [Node 101](./nodes_101.md).
@@ -13,7 +12,10 @@ see [Security 101](./security_101.md).
 > Please note: make sure you install Hornet version 0.6.0+ since it is the minimum version that targets IOTA 1.5 (Chrysalis) network.
 > Versions below 0.6.0 (such as 0.5.x) target the legacy IOTA network which is not the focus of this documentation.
 
-## Recommended requirements
+ Versions below 0.6.0 (such as 0.5.x) target the legacy IOTA network, which is not the focus of this documentation.
+:::
+> 
+## Recommended Requirements
 
 To handle a potential high rate of messages per second, nodes need enough computational power to run reliably, and
 should have following minimum specs:
@@ -39,7 +41,7 @@ the [config.json](../post_installation/config.md) file.
 Please note: the default dashboard only listens on localhost:8081 per default. If you want to make it accessible from
 the Internet, you will need to change the default configuration (though we recommend using a reverse proxy).
 
-## Operating system
+## Operating System
 
 Hornet is written in Go and can be deployed on all major platforms using several installation methods.
 

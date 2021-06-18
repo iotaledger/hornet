@@ -1,4 +1,4 @@
-# Core configuration
+# Core Configuration
 Hornet uses a JSON standard format as a config file. If you are unsure about JSON syntax, have a look at the official specs [here](https://www.json.org).
 
 The default config file is named `config.json`. You can change the path or name of the config file by using the `-c` or `--config` argument while executing `hornet` executable.
@@ -7,7 +7,7 @@ For Example: `hornet -c config_example.json`.
 
 You can always get the most up-to-date description of the config parameters by running `hornet -h --full`.
 
-## Table of content
+## Table of Content
 
 - [Table of content](#table-of-content)
 - [1. REST API](#1-rest-api)
