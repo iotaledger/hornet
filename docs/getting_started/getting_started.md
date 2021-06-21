@@ -12,8 +12,6 @@ see [Security 101](./security_101.md).
 :::info
 Make sure you install Hornet version 0.6.0+ since it is the minimum version that targets IOTA 1.5 (Chrysalis) network.
 Versions below 0.6.0 (such as 0.5.x) target the legacy IOTA network which is not the focus of this documentation.
-
- Versions below 0.6.0 (such as 0.5.x) target the legacy IOTA network, which is not the focus of this documentation.
 :::
  
 ## Recommended Requirements
@@ -39,37 +37,45 @@ The mentioned ports are important for flawless node operation. The REST HTTP API
 you want to offer access to your node's API. All ports can be customized inside
 the [config.json](../post_installation/config.md) file.
 
-Please note: the default dashboard only listens on localhost:8081 per default. If you want to make it accessible from
+The default dashboard only listens on localhost:8081 per default. If you want to make it accessible from
 the Internet, you will need to change the default configuration (though we recommend using a reverse proxy).
 
 ## Operating System
 
 Hornet is written in Go and can be deployed on all major platforms using several installation methods.
 
-Hornet ships as a single executable binary (`hornet` or `hornet.exe`) and some JSON configuration files; no further
-dependencies are needed.
+Hornet ships as a single executable binary (`hornet` or `hornet.exe`) and some JSON configuration files; no further dependencies are needed.
 
 ### Linux (and Raspberry Pi)
 
-Available installation methods:
+Recommended installation methods:
 
-- [Hornet apt repository](./installation_steps.md#hornet-apt-repository-linux-distro-specific) (RECOMMENDED)
-- [Docker image](./using_docker.md) (RECOMMENDED)
+- [Hornet apt repository](./installation_steps.md#hornet-apt-repository-linux-distro-specific)
+- [Docker image](./using_docker.md)
+  
+Other installation methods:
+
 - [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
 - [Build from source](./installation_steps.md#build-from-source)
 
 ### MacOS
 
-Available installation methods:
+Recommended installation methods:
 
-- [Docker image](./using_docker.md) (RECOMMENDED)
+- [Docker image](./using_docker.md) 
+  
+Other installation methods:
+
 - [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
 
 ### Windows
 
-Available installation methods:
+Recommended installation methods:
 
-- [Docker image](./using_docker.md) (RECOMMENDED)
+- [Docker image](./using_docker.md) 
+  
+Other installation methods:
+
 - [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
 
 ## Configuration

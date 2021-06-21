@@ -1,9 +1,9 @@
 # Nodes 101
 
-The IOTA network is a distributed type of network called Tangle, and the network is distributed among plenty of servers
+The IOTA network is a distributed type of network called Tangle.  The network is distributed among plenty of servers
 called nodes. Nodes are the backbone of an IOTA network. This section covers what nodes do in an IOTA network.
 
-Nodes are responsible for the following:
+Nodes are responsible for:
 
 - Providing an API to interact with the Tangle/IOTA network.
 - Validating [messages]((https://chrysalis.docs.iota.org/guides/dev_guide.html#messages-payloads-and-transactions)) and ledger mutations for consistency.
@@ -11,8 +11,8 @@ Nodes are responsible for the following:
 
 ## Attaching New Messages to the Tangle
 
-A `message` is a data structure that is actually being broadcast in the IOTA network and represents a vertex in the
-Tangle graph. When nodes receive a new message, they attach it to the Tangle by adding it to their local database.
+A _message_ is a data structure that is actually being broadcast in the IOTA network and represents a vertex in the
+Tangle graph. When nodes receive a new message, they attach it to the Tangle by adding the message to their local database.
 
 As a result, at any point in time, all nodes may have different messages in their local databases. These messages make
 up a node's view of the Tangle.
@@ -21,40 +21,30 @@ To distribute the messages across the rest of the network, nodes synchronize the
 
 ## Synchronizing With the Rest of the Network
 
-Like any distributed system, nodes in an IOTA network synchronize their databases with others called neighbors to form a
+Like any distributed system, nodes in an IOTA network synchronize their databases with other nodes called neighbors to form a
 single source of truth.
 
-When one node, no matter where it is in the world, receives a message, it will try to gossip it to all its neighbors.
-This way, all nodes eventually see all messages and store them in their local databases.
+When one node, no matter where it is in the world, receives a message, it will try to _gossip_ it to all its neighbors. This way, all nodes will eventually see all the messages, and store them in their local databases.
 
-To synchronize, nodes in IOTA networks use milestones.
-
-If the node has the history of messages that a milestone references, that milestone is solid. Therefore, nodes know if
-they are synchronized if the index of their latest solid milestone is the same as the index of the latest milestone that
-it has received.
+To synchronize, nodes in IOTA networks use milestones.  If the node has the history of messages that a milestone references, that milestone is solid. Therefore, nodes know if they are synchronized if the index of their latest solid milestone is the same as the index of the latest milestone that it has received.
 
 When a node is synchronized, it then has enough information to decide which transactions it considers confirmed.
 
 ## Deciding Which Messages Are Confirmed
 
-All messages remain in a pending state until the node is sure of their validity. For a definition of a message,
-see [Messages, payloads, and transactions](https://chrysalis.docs.iota.org/guides/dev_guide.html#messages-payloads-and-transactions)
-.
+All messages remain in a pending state until the node is sure of their validity. For a definition of a message, see [Messages, payloads, and transactions](https://chrysalis.docs.iota.org/guides/dev_guide.html#messages-payloads-and-transactions).
 
-However, even when a message is valid, nodes may not be able to make a decision like in the case of a double spend.
+Even when a message is valid, there are situations in which nodes may not be able to make a decision, like in the case of a double spend.
 
-When nodes detect double spends they must decide which message to consider confirmed and which one to ignore. Nodes do
-this by using consensus rules that are built into their node software using a network protocol.
+When nodes detect double spends they must decide which message to consider confirmed and which one to ignore. Nodes do this by using consensus rules that are built into their node software using a network protocol.
 
 ## Keeping a Record of the Balances on Addresses Via `UTXO`
 
-All nodes keep a record of
-the [Unspent Transaction Outputs (UTXO)](https://chrysalis.docs.iota.org/guides/dev_guide.html#unspent-transaction-output-utxo)
-so they can do the following:
+All nodes keep a record of the [Unspent Transaction Outputs (UTXO)](https://chrysalis.docs.iota.org/guides/dev_guide.html#unspent-transaction-output-utxo) so they can do the following:
 
-* Check that a transaction is not transferring more IOTA tokens than are available on the address
-* Respond to clients' requests for their balance
-* Only when a transaction is confirmed, can nodes update their record of balances
+* Check that a transaction is not transferring more IOTA tokens than are available on the address.
+* Respond to clients' requests for their balance.
+* Once the node has confirmed a transaction with the Tangle, update the nodes record of balances . 
 
 ## Exposing APIs for Clients
 
@@ -64,20 +54,18 @@ Nodes come with two set of low-level APIs:
 * Event API
 
 :::info
-Developers are not needed to communicate with nodes using mentioned low-level API. Developers can successfully leverage [iota client libraries](https://chrysalis.docs.iota.org/libraries/overview.html) that provide a high-level abstraction to all features IOTA nodes provide, either on HTTP API level or Event API level
+Developers do not need to communicate with nodes using mentioned low-level API. Developers can leverage the [iota client libraries](https://chrysalis.docs.iota.org/libraries/overview.html) that provide a high-level abstraction to all features IOTA nodes provide, either on HTTP API level or Event API level
 :::
 
 ### HTTP Rest API
 
 The HTTP API allows clients to interact with the Tangle and ask nodes to do the following:
 
-* Get tip messages
-* Attach new messages to the Tangle
-* Do proof of work
-* Get messages from the Tangle
+* Get tip messages.
+* Attach new messages to the Tangle.
+* Do proof of work.
+* Get messages from the Tangle.
 
 ### Event API
 
-The Events API allows clients to poll nodes for new messages and other events that happen on nodes. This type of API is
-useful for building applications such as custodial wallets that need to monitor the Tangle for updates to the balances
-of certain addresses.
+The Event API allows clients to poll nodes for new messages and other events that happen on nodes. This type of API is useful for building applications such as custodial wallets that need to monitor the Tangle for updates to the balances of certain addresses.

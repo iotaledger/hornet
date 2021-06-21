@@ -4,33 +4,38 @@ Hornet Docker images (amd64/x86_64 architecture) are available at [gohornet/horn
 
 ## Requirements
 
-1. A recent release of Docker enterprise or community edition. (Follow this [link](https://docs.docker.com/engine/install/) for install instructions).
-2. git and curl
-3. At least 1GB available RAM
+1. A recent release of Docker enterprise or community edition. You can finde installation instructions in the [official Docker documentation](https://docs.docker.com/engine/install/).
+2. [GIT](https://git-scm.com/)
+3. [CURL](https://curl.se/)
+4. At least 1GB available RAM
 
-## Clone Repository
+## Clone the Repository
 
-Clone the repository
+Once you have completed all the installation [requirements](#requirements), you can clone the repository br by running:
 
 ```sh
 git clone https://github.com/gohornet/hornet && cd hornet
 ```
 
-The rest of the document assumes you are executing commands from the root directory of the repository.
+:::info
+The next portion of the guide assumes you are executing commands from the root directory of the repository.
+:::
 
 ## Prepare
 
-1. Edit the `config.json` for alternative ports if needed.
+1. If you want to use alternative ports, edit the `config.json` file.
 
-2. Edit `peering.json` to your neighbors addresses.
+2. Add your neighbors addressed to the `peering.json` file.
 
-3. The Docker image runs under user with user id 65532 and group id 65532. To make sure there are no permission issues, create the directory for the database, e.g.:
+The Docker image runs under user with user id 65532 and group id 65532. To make sure there are no permission issues you will need to:
+
+1. Create the directory for the database by running the following command:
 
    ```sh
    sudo mkdir mainnetdb && sudo chown 65532:65532 mainnetdb
    ```
 
-4. The Docker image runs under user with user id 65532 and group id 65532. To make sure there are no permission issues, create the directory for the snapshots, e.g.:
+2. Create the directory for the snapshots by running the following command:
 
    ```sh
    sudo mkdir -p snapshots/mainnet && sudo chown 65532:65532 snapshots -R
@@ -38,13 +43,13 @@ The rest of the document assumes you are executing commands from the root direct
 
 ## Run
 
-Pull the latest image from `gohornet/hornet` public Docker hub registry:
+You can pull the latest image from `gohornet/hornet` public Docker hub registry by running:
 
 ```bash
 docker pull gohornet/hornet:latest
 ```
 
-Best is to run on host network for better performance (otherwise you are going to have to publish ports, that is done via iptables NAT and is slower)
+We recommend that you run on host network to improve performance.  Otherwise, you are going to have to publish ports using iptables NAT which is slower.
 
 ```sh
 docker run \
@@ -59,42 +64,47 @@ docker run \
   -d \
   hornet:latest
 ```
-
-Use `docker stop -t 200 hornet` to gracefully end the process.
-
 * `$(pwd)` \
-Is for the current directory. All mentioned directories are mapped to container and so the Hornet in container persists the data directly to those directories.
-* `-v $(pwd)/config.json:/app/config.json:ro` \
+Stands for the present working directory. All mentioned directories are mapped to the container and so the Hornet in the container persists the data directly to those directories.
+* `-v $(pwd)/config.json:/app/config.json:ro` 
 Maps the local `config.json` file into the container in `readonly` mode.
-* `-v $(pwd)/peering.json:/app/peering.json` \
+* `-v $(pwd)/peering.json:/app/peering.json` 
 Maps the local `peering.json` file into the container.
-* `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet` \
+* `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet` 
 Maps the local `snapshots` directory into the container.
-* `-v $(pwd)/mainnetdb:/app/mainnetdb` \
+* `-v $(pwd)/mainnetdb:/app/mainnetdb` 
 Maps the local `mainnetdb` directory into the container.
-* `--restart always` \
-Instructs Docker the given container is restarted after Docker reboot
-* `--name hornet` \
+* `--restart always` 
+Instructs Docker to restart the container after Docker reboots.
+* `--name hornet` 
 Name of the running container instance. You can refer to the given container by this name.
-* `--net=host` \
-Instructs Docker to use directly network on host (so the network is not isolated). The best is to run on host network for better performance. It also means it is not necessary to specify any ports. Ports that are opened by container are opened directly on the host.
+* `--net=host` 
+Instructs Docker to use the host's network, so the network is not isolated. We recommend that you run on host network for better performance.  This way, the container will also open any ports it needs on the host network, so you will not need to specify any ports.
 * `-d` \
 Instructs Docker to run the container instance in a detached mode (daemon).
 
+You can run `docker stop -t 200 hornet` to gracefully end the process.
+
 ## Create Username and Password for the Hornet Dashboard
 
-If you use the Hornet dashboard you need to create a secure password. Start your Hornet container and run the following command when the container is running:
+If you use the Hornet dashboard, you need to create a secure password. Start your Hornet container and execute the following command when the container is running:
 
 ```sh
 docker exec -it hornet /app/hornet tool pwdhash
 
+```
+
+Expected output:
+
+```plaintext
+Enter a password:
 Re-enter your password:
 Success!
 Your hash: [YOUR_HASH_HERE]
 Your salt: [YOUR_SALT_HERE]
 ```
 
-Edit `config.json` and customize the "dashboard" section to your needs.
+You can edit `config.json` and customize the _dashboard_ section to your needs.
 
 ```sh
   "dashboard": {
@@ -125,10 +135,11 @@ docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:l
 ## Managing a Node
 
 :::info
-Hornet uses an in-memory cache and so it is necessary to provide a grace period while shutting it down (at least 200 seconds) in order to save all data to the underlying persistent storage.
-:::
+Hornet uses an in-memory cache.  In order to save all data to the underlying persistent storage, it is necessary to provide a grace period of at least 200 seconds while shutting it down.:::
 
 ### Starting an Existing Hornet
+
+You can start an existing hornet container by running:
 
 ```bash
 docker start hornet
@@ -136,30 +147,38 @@ docker start hornet
 
 ### Restarting Hornet
 
+You can restart an existing hornet container by running:
+
 ```bash
 docker restart -t 200 hornet
 ```
 
-* `-t 200`: instructs Docker to wait for a grace period before shutting down
+* `-t 200` Instructs Docker to wait for a grace period before shutting down.
 
 ### Stopping Hornet
+
+You can stop an existing hornet container by running:
 
 ```bash
 docker stop -t 200 hornet
 ```
 
-* `-t 200`: instructs Docker to wait for a grace period before shutting down
+* `-t 200` Instructs Docker to wait for a grace period before shutting down.
 
 ### Displaying Log Output
+
+You can display an existing hornet containers logs by running:
 
 ```bash
 docker logs -f hornet
 ```
 
-* `-f` \
-Instructs Docker to continue displaying the log to `stdout` until CTRL+C is pressed
+* `-f`
+Instructs Docker to continue displaying the log to `stdout` until CTRL+C is pressed.
 
 ## Removing a Container
+
+You can remove an existing hornet container by running:
 
 ```bash
 docker container rm hornet

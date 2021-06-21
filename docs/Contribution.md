@@ -1,8 +1,8 @@
 # Contributing
 
-**By participating to this project, you agree to abide our [code of conduct](/CODE_OF_CONDUCT.md).**
-
----
+:::info
+By participating in this project, you agree to abide our [code of conduct](/CODE_OF_CONDUCT.md).
+:::
 
 ## How to contribute
 
@@ -30,5 +30,4 @@ You can use this as a guide:
 
 ## Submit a pull request
 
-Push your branch to your `HORNET` fork and open a pull request to the
-**develop** branch.
+Push your branch to your `HORNET` fork and open a pull request to the **develop** branch.

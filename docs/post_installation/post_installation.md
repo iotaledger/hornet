@@ -1,20 +1,19 @@
 # Post-installation
 
-Once Hornet is deployed, all parameters are set via configuration files.
+Once Hornet you have deployed Hornet, you can set all the parameters using configuration files.
 
-## Configuration
+## Configuration Files
 
-The most important ones are:
+The most important configuration files are:
 
-* `config.json`: includes all configuration flags and their values
-* `peering.json`: includes all connection details to your static peers (neighbors)
+* `config.json`: includes all configuration flags and their values.
+* `peering.json`: includes all connection details to your static peers (neighbors).
 
 :::info
-Hornet version 0.5.x targets legacy IOTA 1.0 network. Hornet version 1.x.x targets IOTA 1.5 network aka Chrysalis which is the focus of this documentation.
+Hornet version 0.5.x targets legacy IOTA 1.0 network. Hornet version 1.x.x targets IOTA 1.5 network, also known as [Chrysalis](https://chrysalis.docs.iota.org/), which is the focus of this documentation.
 :::
 
-Depending on the installation path you selected, default configuration files may be also part of the installation
-process and so you may see the following configuration files at your deployment directory:
+Depending on the installation path you selected, default configuration files may also be part of the installation process. Therefore, you may see the following configuration files in your deployment directory:
 
 ```bash
 config.json
@@ -23,31 +22,35 @@ peering.json
 profiles.json
 ```
 
-### Default Configuration
+## Default Configuration
 
-By default, Hornet searches for configuration files in the working directory and expects default names, such
-as `config.json` and `peering.json`.
+By default, Hornet searches for configuration files in the working directory and expects default names, such as `config.json` and `peering.json`.
 
-This behavior can be changed by running Hornet with some altering arguments.
+You can change this behavior by running Hornet with some altering arguments.
 
-Please see the [config.json](./config.md) and [peering.json](./peering.md) chapters for more information regarding
-the respective configuration files.
+Please see the [config.json](./config.md) and [peering.json](./peering.md) sections for more information regarding their respective configuration files.
 
-Once Hornet is executed, it outputs all loaded configuration parameters to `stdout` to show what configuration was
-actually loaded (omitting values for things like passwords etc.).
+Once you have executed Hornet, it will output all loaded configuration parameters to `stdout` to show what configuration Hornet actually loaded (omitting sensitive values for things like passwords).
 
-All other altering command line parameters can be obtained by running `hornet --help` or with a more granular
-output `hornet --help --full`.
+You can see a list of all the other altering command line parameters by running:
+
+```bash
+hornet --help
+``` 
+
+If you want a more detailed output you can run:
+
+```bash
+hornet --help --full
+```
 
 ## Dashboard
 
-Per default an admin dashboard/web interface plugin is available on port 8081. It provides some useful information
-regarding the node's health, peering/neighbors, overall network health and consumed system resources.
+By default, an admin dashboard (web interface) plugin is available on port 8081. It provides some useful information regarding the node's health, peering/neighbors, overall network health and consumed system resources.
 
-The dashboard plugin only listens on localhost:8081 per default. If you want to make it accessible from the Internet,
-you will need to change the default configuration. It can be changed via the following `config.json` file section:
+The dashboard plugin only listens on localhost:8081 by default. If you want to make it accessible from the Internet, you will need to change the default configuration. It can be changed using the following `config.json` file section:
 
-```json
+```json{2}
 "dashboard": {
   "bindAddress": "localhost:8081",
   "auth": {
@@ -59,13 +62,11 @@ you will need to change the default configuration. It can be changed via the fol
 }
 ```
 
-Change `dashboard.bindAddress` to either `0.0.0.0:8081` to listen on all available interfaces, or the
-specific interface address accordingly.
+Change `dashboard.bindAddress` to either `0.0.0.0:8081` to listen on all available interfaces, or the specific interface address accordingly.
 
-Even if accessible from the Internet, any visitor still needs a valid combination of the username and password to access
-the management section of the dashboard.
+Even if accessible from the Internet, any visitor will still need a valid username and password combination to access the management section of the dashboard.
 
-The password hash and salt can be generated using the integrated `pwdhash` CLI tool:
+The password, hash, and salt can be generated using the integrated `pwdhash` CLI tool:
 
 ```bash
 ./hornet tools pwdhash
@@ -82,26 +83,23 @@ Your salt: 6c71f4753f6fb52d7a4bb5471281400c8fef760533f0589026a0e646bc03acd4
 ```
 
 :::info
-`pwdhash` tool outputs the `passwordHash` and `passwordSalt` based on your input password
+The `pwdhash` tool outputs the `passwordHash` and `passwordSalt` based on your input password.
 :::
 
 Copy both values to their corresponding configuration options: `dashboard.auth.passwordHash` and
 `dashboard.auth.passwordSalt` respectively.
 
-In order for the new pasword to take effect, you must restart Hornet.
+In order for the new password to take effect, you must restart Hornet.
 
 ## Configuring HTTP REST API
 
-One of the [tasks that the node is responsible for](../getting_started/nodes_101.md) is exposing a HTTP REST API for
-clients that would like to interacts with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
+The node is responsible, amongst other tasks, of exposing the [HTTP REST ](../getting_started/nodes_101.html#http-rest-api) to clients that would like to interact with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
 
-By default, the HTTP REST API is publicly exposed on port 14265 and ready to accept incoming connections from the
-Internet.
+By default, Hornet will publicly expose the [HTTP REST ](../getting_started/nodes_101.html#http-rest-api) on port 14265, ready to accept incoming connections from the Internet.
 
-Since offering the HTTP REST API to the public can consume resources of your node, there are options to restrict which
-routes can be called and other request limitations.
+Since offering the HTTP REST API to the public can consume your nodes resources, there are options to restrict which routes can be called and other request limitations.
 
-HTTP REST API related options exists under the section `restAPI` within the `config.json` file:
+You can find the HTTP REST API related options in the  `restAPI` section within the `config.json` file:
 
 ```json
   "restAPI": {
@@ -144,19 +142,14 @@ HTTP REST API related options exists under the section `restAPI` within the `con
   }
 ```
 
-If you want to make the HTTP REST API only accessible from localhost, change the `restAPI.bindAddress` config option
-accordingly.
+If you want to make the HTTP REST API only accessible from localhost, you change the `restAPI.bindAddress` config option accordingly.
 
-`restAPI.permittedRoutes` defines which routes can be called from foreign addresses which are not defined under
-`restAPI.whitelistedAddresses`.
+`restAPI.permittedRoutes` defines which routes can be called from foreign addresses which are not defined under `restAPI.whitelistedAddresses`.
 
-If you are concerned with resource consumption, consider turning off `restAPI.powEnabled`, which makes it so that
-clients must perform Proof-of-Work locally, before submitting a message for broadcast. In case you'd like to offer
-Proof-of-Work for clients, consider upping `restAPI.powWorkerCount` to provide a faster message submission experience.
+If you are concerned with resource consumption, consider turning off `restAPI.powEnabled`.  This way, the clients must perform Proof-of-Work locally, before submitting a message for broadcast. In case you'd like to offer Proof-of-Work to clients, consider increasing the `restAPI.powWorkerCount` to provide a faster message submission experience.
 
-We suggest that you provide your HTTP REST API behind a reverse proxy, such as nginx or Traefik configured with TLS.
+We suggest that you provide your HTTP REST API behind a reverse proxy, such as [HAProxy](http://www.haproxy.org/), [Traefik](https://traefik.io/), [Nginx](https://www.nginx.com/), [Apache](https://www.apache.org/) configured with TLS.
 
-Please see some of our additional security recommendations [here](../getting_started/security_101.md).
+Please see some of our additional security recommendations in the [Security 101 section](../getting_started/security_101.md).
 
-Feel free to explore more details regarding different API calls
-at the [IOTA client library documentation](https://chrysalis.docs.iota.org/libraries/client.html).
+Feel free to explore more details regarding different API calls at the [IOTA client library documentation](https://chrysalis.docs.iota.org/libraries/client.html).
