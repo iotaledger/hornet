@@ -65,7 +65,7 @@ docker run \
   hornet:latest
 ```
 * `$(pwd)` \
-Stands for the present working directory. All mentioned directories are mapped to the container and so the Hornet in the container persists the data directly to those directories.
+Stands for the present working directory. All mentioned directories are mapped to the container, so the Hornet in the container persists the data directly to those directories.
 * `-v $(pwd)/config.json:/app/config.json:ro` 
 Maps the local `config.json` file into the container in `readonly` mode.
 * `-v $(pwd)/peering.json:/app/peering.json` 

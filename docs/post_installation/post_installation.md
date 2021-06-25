@@ -93,9 +93,9 @@ In order for the new password to take effect, you must restart Hornet.
 
 ## Configuring HTTP REST API
 
-The node is responsible, amongst other tasks, of exposing the [HTTP REST ](../getting_started/nodes_101.html#http-rest-api) to clients that would like to interact with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
+The node is responsible, amongst other tasks, of exposing the [HTTP REST ](../getting_started/nodes_101.md#http-rest-api) to clients that would like to interact with the IOTA network, such as crypto wallets, exchanges, IoT devices, etc.
 
-By default, Hornet will publicly expose the [HTTP REST ](../getting_started/nodes_101.html#http-rest-api) on port 14265, ready to accept incoming connections from the Internet.
+By default, Hornet will publicly expose the [HTTP REST ](../getting_started/nodes_101.md#http-rest-api) on port 14265, ready to accept incoming connections from the Internet.
 
 Since offering the HTTP REST API to the public can consume your nodes resources, there are options to restrict which routes can be called and other request limitations.
 

@@ -4,7 +4,7 @@ The IOTA network is a distributed network. It uses a gossip protocol to broadcas
 
 ## Node Identity
 
-Each node is uniquely identified by a `peer identity`. `Peer identity` (also called `PeerId`) is represented by a public
+Each node can be uniquely identified by a `peer identity`. `Peer identity` (also called `PeerId`) is represented by a public
 and private key pair. Since `PeerId` is a cryptographic hash of peer's public key, the `PeerId` represents a verifiable link between the given peer and its public key. It enables individual peers to establish a secure communication channel as the hash can be used to verify an identity of the peer.
 
 When it is started for the first time, Hornet will automatically generate a `PeerId`, and save the identity's public key in the `./p2pstore/key.pub` file. The private key will be stored in a BadgerDB within `./p2pstore`. Hornet will keep the generated identity between subsequent restarts.
@@ -136,4 +136,4 @@ If you want to run your own node as an autopeering entry node, you should enable
 
 ### Low/High Watermark
 
-The `p2p.connectionManager.highWatermark` and `p2p.connectionManager.lowWatermark` configuration options define "watermark" points.  Watermark points can be thought of as a filling basin where if the `highWatermark` is reached, water is drained until it reaches the `lowWatermark` again. Similarly, the connection manager within Hornet will start trimming away connections to peers if `highWatermark` peers are connected until it reaches `lowWatermark` count of peers. These watermarks exist for a certain buffer number of peers to be connected, which will not necessarily  be targeted by the gossip protocol.
+The `p2p.connectionManager.highWatermark` and `p2p.connectionManager.lowWatermark` configuration options define "watermark" points.  Watermark points can be thought of as a filling basin where if the `highWatermark` is reached, water will be drained until it reaches the `lowWatermark` again. Similarly, the connection manager within Hornet will start trimming away connections to peers if `highWatermark` peers are connected until it reaches `lowWatermark` count of peers. These watermarks exist for a certain buffer number of peers to be connected, which will not necessarily  be targeted by the gossip protocol.

@@ -200,7 +200,7 @@ You can find installation instructions in the  [official Go documentation](https
    ```plaintext
    HORNET 0.6.0-31ad46bb
    ```
-   You can also find a short commit `sha` which you can use to be check which commit the given version is compiled against
+   You can also find a short commit `sha`, which you can use to check which commit the given version is compiled against
 
 
 You can run Hornet using `--help` to get all executable-related arguments by running:
