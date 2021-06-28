@@ -1,6 +1,6 @@
 # Post-installation
 
-Once Hornet you have deployed Hornet, you can set all the parameters using configuration files.
+Once you have deployed Hornet, you can set all the parameters using configuration files.
 
 ## Configuration Files
 
@@ -146,7 +146,7 @@ If you want to make the HTTP REST API only accessible from localhost, you change
 
 `restAPI.permittedRoutes` defines which routes can be called from foreign addresses which are not defined under `restAPI.whitelistedAddresses`.
 
-If you are concerned with resource consumption, consider turning off `restAPI.powEnabled`.  This way, the clients must perform Proof-of-Work locally, before submitting a message for broadcast. In case you'd like to offer Proof-of-Work to clients, consider increasing the `restAPI.powWorkerCount` to provide a faster message submission experience.
+If you are concerned with resource consumption, consider turning off `restAPI.powEnabled`.  This way, the clients must perform proof of work locally, before submitting a message for broadcast. In case you'd like to offer proof of work to clients, consider increasing the `restAPI.powWorkerCount` to provide a faster message submission experience.
 
 We suggest that you provide your HTTP REST API behind a reverse proxy, such as [HAProxy](http://www.haproxy.org/), [Traefik](https://traefik.io/), [Nginx](https://www.nginx.com/), [Apache](https://www.apache.org/) configured with TLS.
 

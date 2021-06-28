@@ -24,7 +24,7 @@ Hornet developers maintain the Hornet `apt` repository. It installs Hornet as a 
    sudo systemctl enable hornet.service
    ```
 
-You can find the Hornet configuration files under the `/var/lib/hornet` directory. See more details on how to configure Hornet in the [post installation](../post_installation/post_installation.md) chapter.
+You can find the Hornet configuration files under the `/var/lib/hornet` directory. You can find more details on how to configure Hornet in the [post installation](../post_installation/post_installation.md) chapter.
 
 You can find the Environment file to configure multiple default parameters under the `/etc/default/hornet` directory.
 
@@ -230,7 +230,7 @@ Hornet uses an in-memory cache.  In order to save all data to the underlying per
 See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
 
 ### Example of Systemd Unit File
-The following is an example of a `systemd` unit file. If you have extracted the Hornet executable to `/opt/hornet` together with configuration files, this file should work as is.  If you have extracted the Hornet executable in another location, please review the configuration and update it accordingly
+The following is an example of a `systemd` unit file. If you have extracted the Hornet executable to `/opt/hornet` together with configuration files, this file should work as is.  If you have extracted the Hornet executable in another location, please review the configuration and update it accordingly.
 
 ```plaintext
 [Unit]

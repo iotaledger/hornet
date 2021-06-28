@@ -16,7 +16,7 @@ In the interest of fostering an open and welcoming environment, we as contributo
   - Personal appearance
   - Race
   - Religion
-  - Sexual identity and orientation.
+  - Sexual identity and orientation
 
 ## Our Standards
 
@@ -46,8 +46,8 @@ Project maintainers have the right and responsibility to remove, edit, or reject
 ## Scope
 
 This Code of Conduct applies within all project spaces.  It also applies when an individual is representing the project or its community in public spaces. Examples of representing a project or community include:
-  - Using an official project e-mail address
-  - Posting via an official social media account
+  - Using an official project e-mail address.
+  - Posting via an official social media account.
   - Acting as an appointed representative at an online or offline event.
 
 Project maintainers may further define and clarify what is meant by representation of a project. 
@@ -56,7 +56,7 @@ Project maintainers may further define and clarify what is meant by representati
 
 You may report instances of abusive, harassing, or otherwise unacceptable behavior by contacting the project team at [hornet@iotmod.de](mailto:hornet@iotmod.de). 
 
-All complaints will be reviewed and investigated and will result in a response that  is deemed necessary and appropriate to the circumstances. The project team is obligated to maintain confidentiality with regard to the reporter of an incident.  Project maintainers may post details of specific enforcement policies may separately.
+All complaints will be reviewed, investigated, and will result in a response that  is deemed necessary and appropriate to the circumstances. The project team is obligated to maintain confidentiality with regards to the reporter of an incident.  Project maintainers may post details of specific enforcement policies may separately.
 
 Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the project's leadership.
 

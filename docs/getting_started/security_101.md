@@ -3,7 +3,7 @@
 This section provides a checklist of steps for running a reliable and secure node.
 
 :::info
-Please note that servers that are reachable from the Internet are a constant target from security challengers.  Please, make sure you follow minimum security essentials summarized in this article.
+Please note that servers that are reachable from the Internet are a constant target from security challengers.  Please, make sure you the follow minimum security essentials summarized in this article.
 :::
 
 ## Securing Your Device
@@ -14,12 +14,12 @@ You should consider doing the following before running a node on your device:
 * [Blocking unnecessary ports](#blocking-unnecessary-ports).
 
 ### Securing SSH logins
-If you log into your device through SSH, you should take measures to protect it from unauthorized access. Many guides have been written about this subject. For more information, see [10 Steps to Secure Open SSH](https://blog.devolutions.net/2017/4/10-steps-to-secure-open-ssh). In addition to that, one can also leverage tools such as [Fail2ban](https://www.fail2ban.org/wiki/index.php/Main_Page) to further tighten your nodes security.
+If you log into your device through SSH, you should take measures to protect it from unauthorized access. Many guides have been written about this subject. For more information, see [10 Steps to Secure Open SSH](https://blog.devolutions.net/2017/4/10-steps-to-secure-open-ssh). In addition to that, you can also leverage tools such as [Fail2ban](https://www.fail2ban.org/wiki/index.php/Main_Page) to further tighten your nodes security.
 
 ### Blocking Unnecessary Ports
 Attackers can abuse any open ports on your device. To secure your device against attacks on unused open ports, you should close all ports except those that are in use.
 
-You can use a firewall to do so. All operating systems include firewall options. By having a firewall in place you can completely block unused and unnecessary ports.
+You can use a firewall to accomplish this. All operating systems include firewall options. By having a firewall in place, you can completely block unused and unnecessary ports.
 
 On a cloud platforms such as AWS, Azure or GCP, one can block ports on VPS networking settings.
 

@@ -5,7 +5,7 @@
 HORNET is a community driven IOTA full node. It is written in Go which makes it lightweight and fast.
 
 
-## Does HORNET run on the Mainnet?
+## Does HORNET Run on the Mainnet?
 
 Yes, HORNET [was released in mid 2020](https://blog.iota.org/hornet-0-4-0-release-summary-2163ca444196/) and replaced the Java implementation called IRI.
 

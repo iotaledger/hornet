@@ -11,7 +11,7 @@ Hornet Docker images (amd64/x86_64 architecture) are available at [gohornet/horn
 
 ## Clone the Repository
 
-Once you have completed all the installation [requirements](#requirements), you can clone the repository br by running:
+Once you have completed all the installation [requirements](#requirements), you can clone the repository or by running:
 
 ```sh
 git clone https://github.com/gohornet/hornet && cd hornet
@@ -135,11 +135,12 @@ docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:l
 ## Managing a Node
 
 :::info
-Hornet uses an in-memory cache.  In order to save all data to the underlying persistent storage, it is necessary to provide a grace period of at least 200 seconds while shutting it down.:::
+Hornet uses an in-memory cache.  In order to save all data to the underlying persistent storage, it is necessary to provide a grace period of at least 200 seconds while shutting it down.
+:::
 
 ### Starting an Existing Hornet
 
-You can start an existing hornet container by running:
+You can start an existing Hornet container by running:
 
 ```bash
 docker start hornet
@@ -147,7 +148,7 @@ docker start hornet
 
 ### Restarting Hornet
 
-You can restart an existing hornet container by running:
+You can restart an existing Hornet container by running:
 
 ```bash
 docker restart -t 200 hornet
@@ -157,7 +158,7 @@ docker restart -t 200 hornet
 
 ### Stopping Hornet
 
-You can stop an existing hornet container by running:
+You can stop an existing Hornet container by running:
 
 ```bash
 docker stop -t 200 hornet
@@ -167,7 +168,7 @@ docker stop -t 200 hornet
 
 ### Displaying Log Output
 
-You can display an existing hornet containers logs by running:
+You can display an existing Hornet containers logs by running:
 
 ```bash
 docker logs -f hornet
@@ -178,7 +179,7 @@ Instructs Docker to continue displaying the log to `stdout` until CTRL+C is pres
 
 ## Removing a Container
 
-You can remove an existing hornet container by running:
+You can remove an existing Hornet container by running:
 
 ```bash
 docker container rm hornet

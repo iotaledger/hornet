@@ -36,7 +36,7 @@ All messages remain in a pending state until the node is sure of their validity.
 
 Even when a message is valid, there are situations in which nodes may not be able to make a decision, like in the case of a double spend.
 
-When nodes detect double spends they must decide which message to consider confirmed and which one to ignore. Nodes do this by using consensus rules that are built into their node software using a network protocol.
+When nodes detect double spends, they must decide which message to consider confirmed and which one to ignore. Nodes do this by using consensus rules that are built into their node software using a network protocol.
 
 ## Keeping a Record of the Balances on Addresses Via `UTXO`
 
@@ -44,7 +44,7 @@ All nodes keep a record of the [Unspent Transaction Outputs (UTXO)](https://chry
 
 * Check that a transaction is not transferring more IOTA tokens than are available on the address.
 * Respond to clients' requests for their balance.
-* Once the node has confirmed a transaction with the Tangle, update the nodes record of balances . 
+* Once the node has confirmed a transaction with the Tangle, update the node's record of balances . 
 
 ## Exposing APIs for Clients
 
@@ -54,7 +54,7 @@ Nodes come with two set of low-level APIs:
 * Event API
 
 :::info
-Developers do not need to communicate with nodes using mentioned low-level API. Developers can leverage the [iota client libraries](https://chrysalis.docs.iota.org/libraries/overview.html) that provide a high-level abstraction to all features IOTA nodes provide, either on HTTP API level or Event API level
+Developers do not need to communicate with nodes using a mentioned low-level API. Developers can leverage the [iota client libraries](https://chrysalis.docs.iota.org/libraries/overview.html) that provide a high-level abstraction to all features IOTA nodes provide, either on HTTP API level or Event API level.
 :::
 
 ### HTTP Rest API
@@ -63,7 +63,7 @@ The HTTP API allows clients to interact with the Tangle and ask nodes to do the 
 
 * Get tip messages.
 * Attach new messages to the Tangle.
-* Do proof of work.
+* Do proof of work (POW).
 * Get messages from the Tangle.
 
 ### Event API

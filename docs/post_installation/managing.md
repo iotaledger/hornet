@@ -66,11 +66,11 @@ Hornet can be extended by plugins. You can control plugins using the `node` sect
   },
 ```
 
-You can also control plugins can be controlled using the [Dashboard/web interface](./post_installation.md#Dashboard).
+You can also control plugins using the [Dashboard/web interface](./post_installation.md#Dashboard).
 
 
 ## Spammer
-Hornet integrates a lightweight spamming plugin that spams the network with messages. The IOTA network is based on Directed Acyclic Graph.  Therefore, new incoming messages are connected to previous messages (tips). It is healthy for the network to maintain some level of message rate.
+Hornet integrates a lightweight spamming plugin that spams the network with messages. The IOTA network is based on Directed Acyclic Graph. Therefore, new incoming messages are connected to previous messages (tips). It is healthy for the network to maintain some level of message rate.
 
 The Spammer plugin allows your node to send a number of data messages at regular interval. You can set the interval with the `mpsRateLimit` key, which is the number of messages per second (TPS) that the plugin should try to send.
 
@@ -143,7 +143,7 @@ During a snapshot, Hornet may delete messages from the ledger if they were confi
 There are two types of snapshots:
 
 #### Delta snapshots
-A delta snapshot points to a specific full snapshot, this means a delta snapshot consists of the changes since the last full snapshot.
+A delta snapshot points to a specific full snapshot, meaning a delta snapshot consists of the changes since the last full snapshot.
 
 #### Full snapshots
 The full snapshot includes the whole ledger state to a specific milestone, and a solid entry point.
