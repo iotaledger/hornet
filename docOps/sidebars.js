@@ -43,7 +43,7 @@ module.exports = {
         label: 'Using Docker Compose',
       }, {
         type: 'doc',
-        id: 'getting_started/bootstrap_from_genesis_snapshot',
+        id: 'getting_started/bootstrap_from_a_genesis_snapshot',
         label: 'Bootstrapping From a Genesis Snapshot',
       }, {
         type: 'doc',
@@ -60,11 +60,11 @@ module.exports = {
         label: 'Post Installation',
       }, {
         type: 'doc',
-        id: 'post_installation/managing',
+        id: 'post_installation/managing_a_node',
         label: 'Managing a Node',
       }, {
         type: 'doc',
-        id: 'post_installation/config',
+        id: 'post_installation/configuration',
         label: 'Configuration',
       }, {
         type: 'doc',
@@ -72,7 +72,7 @@ module.exports = {
         label: 'Peering',
       }, {
         type: 'doc',
-        id: 'post_installation/run_as_verifier',
+        id: 'post_installation/run_as_a_verifier',
         label: 'Run as a Verifier',
       },]
     },
@@ -93,7 +93,7 @@ module.exports = {
     },
     {
       type: 'doc',
-      id: 'Contribution',
+      id: 'contribute',
       label: 'Contribute',
     },
     {

@@ -70,7 +70,7 @@ module.exports = {
             },
             {
               label: 'Contribute',
-              to: '/contribution',
+              to: '/contribute',
             },
             {
               label: 'Code of Conduct',

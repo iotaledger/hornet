@@ -35,7 +35,7 @@ Hornet exposes different functionality on different ports:
 
 The mentioned ports are important for flawless node operation. The REST HTTP API port is optional and is only needed if
 you want to offer access to your node's API. All ports can be customized inside
-the [config.json](../post_installation/config.md) file.
+the [config.json](../post_installation/configuration.md) file.
 
 The default dashboard only listens on localhost:8081 per default. If you want to make it accessible from
 the Internet, you will need to change the default configuration (though we recommend using a reverse proxy).

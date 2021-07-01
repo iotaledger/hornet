@@ -28,7 +28,7 @@ By default, Hornet searches for configuration files in the working directory and
 
 You can change this behavior by running Hornet with some altering arguments.
 
-Please see the [config.json](config.md) and [peering.json](peering.md) sections for more information regarding their respective configuration files.
+Please see the [config.json](configuration.md) and [peering.json](peering.md) sections for more information regarding their respective configuration files.
 
 Once you have executed Hornet, it will output all loaded configuration parameters to `stdout` to show what configuration Hornet actually loaded (omitting sensitive values for things like passwords).
 
