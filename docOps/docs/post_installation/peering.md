@@ -90,7 +90,7 @@ Germany / Asia, etc.), with your allocated high watermark resources and ask for 
 Do not publicly disclose your node `multiaddr` to all readers but wait for an individual direct chat.
 ::: 
 
-You can add peers using the Hornet [dashboard](../post_installation/post_installation.md#dashboard).  To do so, go to *Peers* and click on *Add Peer*.  You can also add peers on the [peering.json](./peering.md) file.
+You can add peers using the Hornet [dashboard](post_installation.md#dashboard).  To do so, go to *Peers* and click on *Add Peer*.  You can also add peers on the [peering.json](peering.md) file.
 
 You can change the path or name of the `peering.json` file by using the `-n` or `--peeringConfig` argument while
 executing the `hornet` executable.

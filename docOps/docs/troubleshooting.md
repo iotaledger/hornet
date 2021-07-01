@@ -1,7 +1,7 @@
 # Troubleshooting
 
 
-Check our [Frequently asked questions](./faq.md).
+Check our [Frequently asked questions](faq.md).
 
 If you can't find your question in the FAQ, feel free to ask in the `#hornet` channel in the ([official iota discord server](https://discord.iota.org/)).
 

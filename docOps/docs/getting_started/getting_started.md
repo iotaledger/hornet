@@ -4,10 +4,10 @@ Running a node is the best way to use IOTA. By doing so, you have direct access 
 connect to and trust someone else's node. Additionally, you help the IOTA network to become more distributed and resilient.
 
 The node software is the backbone of the IOTA network. For an overview of tasks a node is responsible for, please
-see [Node 101](./nodes_101.md).
+see [Node 101](nodes_101.md).
 
 To make sure that your device meets the minimum security requirements for running a node, please
-see [Security 101](./security_101.md).
+see [Security 101](security_101.md).
 
 :::info
 Make sure you install Hornet version 0.6.0+ since it is the minimum version that targets IOTA 1.5 (Chrysalis) network.
@@ -50,33 +50,33 @@ Hornet ships as a single executable binary (`hornet` or `hornet.exe`) and some J
 
 Recommended installation methods:
 
-- [Hornet apt repository](./installation_steps.md#hornet-apt-repository-linux-distro-specific)
-- [Docker image](./using_docker.md)
+- [Hornet apt repository](installation_steps.md#hornet-apt-repository-linux-distro-specific)
+- [Docker image](using_docker.md)
   
 Other installation methods:
 
-- [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
-- [Build from source](./installation_steps.md#build-from-source)
+- [Prebuilt binary files](installation_steps.md#pre-built-binaries)
+- [Build from source](installation_steps.md#build-from-source)
 
 ### MacOS
 
 Recommended installation methods:
 
-- [Docker image](./using_docker.md) 
+- [Docker image](using_docker.md) 
   
 Other installation methods:
 
-- [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
+- [Prebuilt binary files](installation_steps.md#pre-built-binaries)
 
 ### Windows
 
 Recommended installation methods:
 
-- [Docker image](./using_docker.md) 
+- [Docker image](using_docker.md) 
   
 Other installation methods:
 
-- [Prebuilt binary files](./installation_steps.md#pre-built-binaries)
+- [Prebuilt binary files](installation_steps.md#pre-built-binaries)
 
 ## Configuration
 

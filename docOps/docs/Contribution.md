@@ -1,7 +1,7 @@
 # Contributing
 
 :::info
-By participating in this project, you agree to abide our [code of conduct](/CODE_OF_CONDUCT.md).
+By participating in this project, you agree to abide our [code of conduct](/code_of_conduct.md).
 :::
 
 ## How to Contribute

@@ -66,7 +66,7 @@ Hornet can be extended by plugins. You can control plugins using the `node` sect
   },
 ```
 
-You can also control plugins using the [Dashboard/web interface](./post_installation.md#Dashboard).
+You can also control plugins using the [Dashboard/web interface](post_installation.md#Dashboard).
 
 
 ## Spammer
