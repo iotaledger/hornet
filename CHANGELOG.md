@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.3] - 02.06.2021
+
+### Added
+    - A new public key applicable for milestone ranges between 552960-2108160
+
+### Changed
+    - Increases the WarpSync advancement range to 10k which allows nodes to resync even if 
+      they already stored the milestone for which they lacked the applicable public key beforehand.
+
 ## [1.0.2] - 28.05.2021
 
 ### Added
