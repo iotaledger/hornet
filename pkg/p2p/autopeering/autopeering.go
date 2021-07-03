@@ -22,8 +22,6 @@ import (
 const (
 	// ProtocolCode is the protocol code for autopeering within a multi address.
 	ProtocolCode = 1337
-	// the size of a base58 encoded public key.
-	autopeeringPubKeyBase58Size = 44
 )
 
 var (
@@ -49,8 +47,8 @@ func RegisterAutopeeringProtocolInMultiAddresses() error {
 }
 
 func protoStringToBytes(s string) ([]byte, error) {
-	if len(s) != autopeeringPubKeyBase58Size {
-		return nil, fmt.Errorf("%w: wrong length (str to bytes), is %d (wanted %d)", ErrInvalidMultiAddrPubKeyAutopeering, len(s), autopeeringPubKeyBase58Size)
+	if len(s) != 43 && len(s) != 44 {
+		return nil, fmt.Errorf("%w: wrong length (str to bytes), is %d (wanted 43 or 44)", ErrInvalidMultiAddrPubKeyAutopeering, len(s))
 	}
 	base58PubKey, err := base58.Decode(s)
 	if err != nil {
