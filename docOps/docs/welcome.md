@@ -1,6 +1,3 @@
----
-slug: /
----
 # Welcome to HORNET
 
 ![](assets/HORNET_logo.svg)

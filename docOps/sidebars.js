@@ -78,7 +78,7 @@ module.exports = {
     },
     {
       type: 'doc',
-      id: 'api-reference',
+      id: 'api_reference',
       label: 'API Reference',
     },
     {
