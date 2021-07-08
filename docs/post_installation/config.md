@@ -91,7 +91,10 @@ Example:
 
 ```json
   "restAPI": {
-    "authEnabled": false,
+    "jwtAuth": {
+      "enabled": false,
+      "salt": "HORNET"
+    },
     "excludeHealthCheckFromAuth": false,
     "permittedRoutes": [
       "/health",
