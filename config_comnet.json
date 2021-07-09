@@ -210,7 +210,7 @@
       "message": "Binary is the future.",
       "index": "HORNET Spammer",
       "indexSemiLazy": "HORNET Spammer Semi-Lazy",
-      "cpuMaxUsage": 0.8,
+      "cpuMaxUsage": 0.5,
       "mpsRateLimit": 5,
       "workers": 0,
       "autostart": true
