@@ -71,10 +71,10 @@
         "maxMilestonesToKeep": 60480
       },
       "size": {
-        "enabled": false,
-        "targetSize": "15GB",
-        "thresholdPercentage": 10,
-        "cooldownTime": "2m"
+        "enabled": true,
+        "targetSize": "30GB",
+        "thresholdPercentage": 10.0,
+        "cooldownTime": "5m"
       },
       "pruneReceipts": false
     },
@@ -207,9 +207,9 @@
       "advancementRange": 150
     },
     "spammer": {
-      "message": "Binary is the future.",
-      "index": "HORNET Spammer",
-      "indexSemiLazy": "HORNET Spammer Semi-Lazy",
+      "message": "NO8ODY talks about spamclub",
+      "index": "Vote BUIDL",
+      "indexSemiLazy": "Vote BUIDL Semi-Lazy",
       "cpuMaxUsage": 0.5,
       "mpsRateLimit": 5,
       "workers": 0,
