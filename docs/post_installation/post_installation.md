@@ -16,6 +16,7 @@ process and so you may see the following configuration files at your deployment 
 
 ```bash
 config.json
+config_comnet.json
 config_chrysalis_testnet.json
 peering.json
 profiles.json

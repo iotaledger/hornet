@@ -72,6 +72,7 @@ archives:
       - README.md
       - LICENSE
       - config.json
+      - config_comnet.json
       - peering.json
       - profiles.json
 
@@ -95,6 +96,10 @@ nfpms:
 
       - src: "config.json"
         dst: "/var/lib/hornet/config.json"
+        type: config
+
+      - src: "config_comnet.json"
+        dst: "/var/lib/hornet/config_comnet.json"
         type: config
 
       - src: "peering.json"
