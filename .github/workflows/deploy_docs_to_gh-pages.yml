@@ -2,9 +2,9 @@ name: deploy
 
 on:
   pull_request:
-    branches: [updateWithStyleGuide, dev, develop, main, master]
+    branches: [dev, develop, main, master]
   push:
-    branches: [updateWithStyleGuide, dev, develop, main, master]
+    branches: [dev, develop, main, master]
 
 jobs:
   checks:

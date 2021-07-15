@@ -6,7 +6,7 @@ module.exports = {
   title: 'Hornet',
   tagline:  'Official IOTA Hornet Software',
   url: 'https://hornet.docs.iota.org/',
-  baseUrl: '/hornet/',
+  baseUrl: '/',
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'throw',
   favicon: '/img/logo/favicon.ico',
