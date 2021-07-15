@@ -11,11 +11,14 @@ module.exports = {
   onBrokenMarkdownLinks: 'throw',
   favicon: '/img/logo/favicon.ico',
   organizationName: 'iotaledger', // Usually your GitHub org/user name.
-  projectName: 'hornet', // Usually your repo name.
+  projectName: 'Hornet', // Usually your repo name.
   stylesheets: [
     'https://fonts.googleapis.com/css?family=Material+Icons',
   ],
   themeConfig: {
+    colorMode: {
+          defaultMode: "dark",
+          },
     navbar: {
       title: 'Hornet',
       logo: {
