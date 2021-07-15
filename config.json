@@ -61,6 +61,10 @@
       {
         "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
         "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
+      },
+      {
+        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin",
+        "delta": "https://mainnet.tanglebay.com/ls/delta_snapshot.bin"
       }
     ]
   },
