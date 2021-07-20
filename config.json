@@ -166,7 +166,9 @@
     },
     "reconnectInterval": "30s",
     "autopeering": {
-      "entryNodes": [],
+      "entryNodes": [
+        "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"
+      ],
       "bindAddress": "0.0.0.0:14626",
       "runAsEntryNode": false,
       "dirPath": "./p2pstore"
