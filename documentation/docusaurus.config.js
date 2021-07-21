@@ -116,7 +116,7 @@ module.exports = {
           routeBasePath:'/',
           // Please change this to your repo.
           editUrl:
-            'https://github.com/iotaledger/hornet/tree/main/docs',
+            'https://github.com/iotaledger/hornet/tree/main/documentation/',
         },
         theme: {
           customCss: require.resolve('./src/css/iota.css'),
