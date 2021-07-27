@@ -152,4 +152,4 @@ We suggest that you provide your HTTP REST API behind a reverse proxy, such as [
 
 Please see some of our additional security recommendations in the [Security 101 section](../getting_started/security_101.md).
 
-Feel free to explore more details regarding different API calls at the [IOTA client library documentation](https://chrysalis.docs.iota.org/libraries/client.html).
+Feel free to explore more details regarding different API calls at the [IOTA client library documentation](https://chrysalis.docs.iota.org/libraries/client).

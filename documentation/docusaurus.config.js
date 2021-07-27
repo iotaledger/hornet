@@ -5,7 +5,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 module.exports = {
   title: 'Hornet',
   tagline:  'Official IOTA Hornet Software',
-  url: 'https://hornet.docs.iota.org/',
+  url: 'https://hornet.docs.iota.org',
   baseUrl: '/',
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'throw',
