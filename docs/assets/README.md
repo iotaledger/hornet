@@ -1,1 +1,0 @@
-# Asset Direcotry for HORNET Docs
