@@ -188,7 +188,7 @@
     ]
   },
   "warpsync": {
-    "advancementRange": 10000
+    "advancementRange": 150
   },
   "spammer": {
     "message": "IOTA - A new dawn",
