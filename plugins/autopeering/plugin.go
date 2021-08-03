@@ -27,7 +27,7 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.Disabled,
 		Pluggable: node.Pluggable{
 			Name:      "Autopeering",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
