@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4] - 02.08.2021
+
+### Added
+    - Autopeering with two default entry nodes
+    - Default config for community network
+
+### Changed
+    - Reduces the default WarpSync advancement range back to 150 as the previous value was only a workaround.
+
 ## [1.0.3] - 02.06.2021
 
 ### Added
