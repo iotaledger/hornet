@@ -37,6 +37,7 @@ func (n *AutopeeredNetwork) createEntryNode(prvKey ed25519.PrivateKey) error {
 	cfg.Name = n.PrefixName(containerNameEntryNode)
 	cfg.Autopeering.RunAsEntryNode = true
 	cfg.Plugins.Disabled = disabledPluginsEntryNode
+	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Autopeering")
 
 	if err := n.entryNode.CreateNodeContainer(cfg); err != nil {
 		return err
