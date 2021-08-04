@@ -49,25 +49,25 @@ func TestManager(t *testing.T) {
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
 	node1Manager := p2p.NewManager(node1, p2p.WithManagerLogger(node1Logger), reconnectOpt)
 	go node1Manager.Start(shutdownSignal)
-	node1AddrInfo := &peer.AddrInfo{ID: node1.ID(), Addrs: node1.Addrs()}
+	node1AddrInfo := &peer.AddrInfo{ID: node1.ID(), Addrs: node1.Addrs()[:1]}
 
 	node2 := newNode(ctx, t)
 	node2Logger := logger.NewLogger(fmt.Sprintf("node2/%s", node2.ID().ShortString()))
 	node2Manager := p2p.NewManager(node2, p2p.WithManagerLogger(node2Logger), reconnectOpt)
 	go node2Manager.Start(shutdownSignal)
-	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()}
+	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()[:1]}
 
 	node3 := newNode(ctx, t)
 	node3Logger := logger.NewLogger(fmt.Sprintf("node3/%s", node3.ID().ShortString()))
 	node3Manager := p2p.NewManager(node3, p2p.WithManagerLogger(node3Logger), reconnectOpt)
 	go node3Manager.Start(shutdownSignal)
-	node3AddrInfo := &peer.AddrInfo{ID: node3.ID(), Addrs: node3.Addrs()}
+	node3AddrInfo := &peer.AddrInfo{ID: node3.ID(), Addrs: node3.Addrs()[:1]}
 
 	node4 := newNode(ctx, t)
 	node4Logger := logger.NewLogger(fmt.Sprintf("node4/%s", node4.ID().ShortString()))
 	node4Manager := p2p.NewManager(node4, p2p.WithManagerLogger(node4Logger), reconnectOpt)
 	go node4Manager.Start(shutdownSignal)
-	node4AddrInfo := &peer.AddrInfo{ID: node4.ID(), Addrs: node4.Addrs()}
+	node4AddrInfo := &peer.AddrInfo{ID: node4.ID(), Addrs: node4.Addrs()[:1]}
 
 	//fmt.Println("node 1", node1.ID())
 	//fmt.Println("node 2", node2.ID())
@@ -93,11 +93,11 @@ func TestManager(t *testing.T) {
 	connectivity(t, node3Manager, node2.ID(), false)
 
 	// connectivity should be protected from getting trimmed
-	require.True(t, node1.ConnManager().IsProtected(node2.ID(), p2p.KnownPeerConnectivityProtectionTag))
-	require.True(t, node2.ConnManager().IsProtected(node1.ID(), p2p.KnownPeerConnectivityProtectionTag))
+	require.True(t, node1.ConnManager().IsProtected(node2.ID(), p2p.PeerConnectivityProtectionTag))
+	require.True(t, node2.ConnManager().IsProtected(node1.ID(), p2p.PeerConnectivityProtectionTag))
 	// but not for node 2<->3
-	require.False(t, node2.ConnManager().IsProtected(node3.ID(), p2p.KnownPeerConnectivityProtectionTag))
-	require.False(t, node3.ConnManager().IsProtected(node2.ID(), p2p.KnownPeerConnectivityProtectionTag))
+	require.False(t, node2.ConnManager().IsProtected(node3.ID(), p2p.PeerConnectivityProtectionTag))
+	require.False(t, node3.ConnManager().IsProtected(node2.ID(), p2p.PeerConnectivityProtectionTag))
 
 	// check alias
 	node1Manager.Call(node2.ID(), func(peer *p2p.Peer) {
@@ -111,28 +111,28 @@ func TestManager(t *testing.T) {
 
 	// we instructed node 1 explicitly to disconnect from node 2, therefore
 	// node 2 is no longer "protected" from trimming on node 1 onwards
-	require.False(t, node1.ConnManager().IsProtected(node2.ID(), p2p.KnownPeerConnectivityProtectionTag))
+	require.False(t, node1.ConnManager().IsProtected(node2.ID(), p2p.PeerConnectivityProtectionTag))
 	// however, for node 2, node 1 is simply disconnected, so it is still considered protected
-	require.True(t, node2.ConnManager().IsProtected(node1.ID(), p2p.KnownPeerConnectivityProtectionTag))
+	require.True(t, node2.ConnManager().IsProtected(node1.ID(), p2p.PeerConnectivityProtectionTag))
 
 	// so eventually, node 2 does a reconnect to node 1
 	connectivity(t, node1Manager, node2.ID(), false, 10*time.Second)
 	connectivity(t, node2Manager, node1.ID(), false, 10*time.Second)
 
 	// and just for sanity's sake, the protected state should still be the same between the nodes as before:
-	require.False(t, node1.ConnManager().IsProtected(node2.ID(), p2p.KnownPeerConnectivityProtectionTag))
-	require.True(t, node2.ConnManager().IsProtected(node1.ID(), p2p.KnownPeerConnectivityProtectionTag))
+	require.False(t, node1.ConnManager().IsProtected(node2.ID(), p2p.PeerConnectivityProtectionTag))
+	require.True(t, node2.ConnManager().IsProtected(node1.ID(), p2p.PeerConnectivityProtectionTag))
 
 	// if we then tell node 1 to connect to node 2 again explicitly (even if they're already connected),
 	// but with a different relation than what node 2 currently is for node 1, it will be updated:
 	_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
-	require.True(t, node1.ConnManager().IsProtected(node2.ID(), p2p.KnownPeerConnectivityProtectionTag))
+	require.True(t, node1.ConnManager().IsProtected(node2.ID(), p2p.PeerConnectivityProtectionTag))
 
 	// connect node 4 to node 2 too
 	go node2Manager.ConnectPeer(node4AddrInfo, p2p.PeerRelationUnknown)
 	connectivity(t, node2Manager, node4.ID(), false)
 	connectivity(t, node4Manager, node2.ID(), false)
-	require.False(t, node2.ConnManager().IsProtected(node4.ID(), p2p.KnownPeerConnectivityProtectionTag))
+	require.False(t, node2.ConnManager().IsProtected(node4.ID(), p2p.PeerConnectivityProtectionTag))
 
 	// lets check that we do have as many connections as we think we should actually have
 	connections(t, node1, peer.IDSlice{node2AddrInfo.ID})                                     // to node 2
@@ -143,7 +143,6 @@ func TestManager(t *testing.T) {
 	// if we now trim connections on node 2 which currently is connected to node 1, 3 and 4,
 	// then the connection to node 3 or 4 should be closed, as they aren't protected and our "low watermark" is 1.
 	node2.ConnManager().TrimOpenConns(context.Background())
-	require.Len(t, node2.Network().Conns(), 2) // to node 1, 3||4
 	require.Eventually(t, func() bool {
 		return (!node2Manager.IsConnected(node3.ID()) && node2Manager.IsConnected(node4.ID())) ||
 			(node2Manager.IsConnected(node3.ID()) && !node2Manager.IsConnected(node4.ID()))

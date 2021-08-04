@@ -117,8 +117,8 @@ func provide(c *dig.Container) {
 			deps.Host, deps.Manager, deps.ServerMetrics,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
 			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(CfgP2PGossipUnknownPeersLimit)),
-			gossip.WithStreamReadTimeout(deps.NodeConfig.Duration(CfgGossipStreamReadTimeout)),
-			gossip.WithStreamWriteTimeout(deps.NodeConfig.Duration(CfgGossipStreamWriteTimeout)),
+			gossip.WithStreamReadTimeout(deps.NodeConfig.Duration(CfgP2PGossipStreamReadTimeout)),
+			gossip.WithStreamWriteTimeout(deps.NodeConfig.Duration(CfgP2PGossipStreamWriteTimeout)),
 		)
 	}); err != nil {
 		panic(err)

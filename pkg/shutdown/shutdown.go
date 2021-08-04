@@ -17,9 +17,8 @@ const (
 	PriorityGossipService
 	PriorityRequestsProcessor // depends on PriorityGossipService
 	PriorityBroadcastQueue    // depends on PriorityGossipService
-	PriorityKademliaDHT
-	PriorityPeerDiscovery
 	PriorityP2PManager
+	PriorityAutopeering
 	PriorityHeartbeats // depends on PriorityGossipService
 	PriorityWarpSync
 	PrioritySnapshots

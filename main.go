@@ -12,12 +12,12 @@ import (
 	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/mqtt"
-	"github.com/gohornet/hornet/plugins/p2pdisc"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
@@ -48,7 +48,7 @@ func main() {
 			versioncheck.Plugin,
 			restapi.Plugin,
 			restapiv1.Plugin,
-			p2pdisc.Plugin,
+			autopeering.Plugin,
 			warpsync.Plugin,
 			urts.Plugin,
 			dashboard.Plugin,

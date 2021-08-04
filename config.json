@@ -1,5 +1,6 @@
 {
   "restAPI": {
+    "bindAddress": "0.0.0.0:14265",
     "jwtAuth": {
       "enabled": false,
       "salt": "HORNET"
@@ -29,7 +30,6 @@
       "127.0.0.1",
       "::1"
     ],
-    "bindAddress": "0.0.0.0:14265",
     "powEnabled": true,
     "powWorkerCount": 1,
     "limits": {
@@ -39,6 +39,7 @@
   },
   "dashboard": {
     "bindAddress": "localhost:8081",
+    "dev": false,
     "auth": {
       "sessionTimeout": "72h",
       "username": "admin",
@@ -61,6 +62,10 @@
       {
         "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
         "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
+      },
+      {
+        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin",
+        "delta": "https://mainnet.tanglebay.com/ls/delta_snapshot.bin"
       }
     ]
   },
@@ -80,7 +85,7 @@
   "protocol": {
     "networkID": "chrysalis-mainnet",
     "bech32HRP": "iota",
-    "minPoWScore": 4000,
+    "minPoWScore": 4000.0,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
@@ -110,10 +115,11 @@
   "receipts": {
     "backup": {
       "enabled": false,
-      "folder": "receipts"
+      "path": "receipts"
     },
     "validator": {
       "validate": false,
+      "ignoreSoftErrors": false,
       "api": {
         "address": "http://localhost:14266",
         "timeout": "5s"
@@ -145,7 +151,7 @@
     }
   },
   "node": {
-    "alias": "HORNET node",
+    "alias": "HORNET mainnet node",
     "profile": "auto",
     "disablePlugins": [],
     "enablePlugins": [
@@ -154,24 +160,35 @@
   },
   "p2p": {
     "bindMultiAddresses": [
-      "/ip4/0.0.0.0/tcp/15600"
+      "/ip4/0.0.0.0/tcp/15600",
+      "/ip6/::/tcp/15600"
     ],
     "connectionManager": {
       "highWatermark": 10,
       "lowWatermark": 5
     },
-    "gossipUnknownPeersLimit": 4,
+    "gossip": {
+      "unknownPeersLimit": 4,
+      "streamReadTimeout": "1m0s",
+      "streamWriteTimeout": "10s"
+    },
     "identityPrivateKey": "",
     "peerStore": {
       "path": "./p2pstore"
     },
-    "reconnectInterval": "30s"
-  },
-  "p2pdisc": {
-    "advertiseInterval": "30s",
-    "maxDiscoveredPeerConns": 4,
-    "rendezvousPoint": "between-two-vertices",
-    "routingTableRefreshPeriod": "60s"
+    "reconnectInterval": "30s",
+    "autopeering": {
+      "bindAddress": "0.0.0.0:14626",
+      "db": {
+        "path": "./p2pstore"
+      },
+      "entryNodes": [
+        "/dns/lucamoser.ch/udp/14926/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
+        "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"
+      ],
+      "entryNodesPreferIPv6": false,
+      "runAsEntryNode": false
+    }
   },
   "logger": {
     "level": "info",
@@ -182,14 +199,14 @@
     ]
   },
   "warpsync": {
-    "advancementRange": 10000
+    "advancementRange": 150
   },
   "spammer": {
     "message": "IOTA - A new dawn",
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
-    "mpsRateLimit": 5.0,
+    "mpsRateLimit": 0.0,
     "workers": 0,
     "autostart": false
   },
@@ -219,5 +236,8 @@
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
+  },
+  "debug": {
+    "whiteFlagParentsSolidTimeout": "2s"
   }
 }

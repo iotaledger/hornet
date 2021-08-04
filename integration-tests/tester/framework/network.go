@@ -104,12 +104,23 @@ func (n *Network) CreateWhiteFlagMockServer(cfg *WhiteFlagMockServerConfig) erro
 	return nil
 }
 
+// generates a new private key or returns the one from the opt parameter.
+func generatePrivateKey(optPrvKey ...crypto.PrivKey) (crypto.PrivKey, error) {
+	if len(optPrvKey) > 0 && optPrvKey[0] != nil {
+		return optPrvKey[0], nil
+	}
+	privateKey, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
+	if err != nil {
+		return nil, err
+	}
+	return privateKey, nil
+}
+
 // CreateNode creates a new HORNET node in the network and returns it.
-func (n *Network) CreateNode(cfg *NodeConfig) (*Node, error) {
+func (n *Network) CreateNode(cfg *NodeConfig, optPrvKey ...crypto.PrivKey) (*Node, error) {
 	name := n.PrefixName(fmt.Sprintf("%s%d", containerNameReplica, len(n.Nodes)))
 
-	// create identity
-	privateKey, publicKey, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
+	privateKey, err := generatePrivateKey(optPrvKey...)
 	if err != nil {
 		return nil, err
 	}
@@ -119,8 +130,8 @@ func (n *Network) CreateNode(cfg *NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
-	cfg.Name = name
 	cfg.Network.IdentityPrivKey = hex.EncodeToString(privateKeyBytes)
+	cfg.Name = name
 
 	// create Docker container
 	container := NewDockerContainer(n.dockerClient)
@@ -135,7 +146,7 @@ func (n *Network) CreateNode(cfg *NodeConfig) (*Node, error) {
 	}
 
 	// Obtain Peer ID from public key
-	pid, err := peer.IDFromPublicKey(publicKey)
+	pid, err := peer.IDFromPublicKey(privateKey.GetPublic())
 	if err != nil {
 		return nil, err
 	}

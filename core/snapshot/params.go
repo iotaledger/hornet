@@ -43,7 +43,7 @@ var params = &node.PluginParams{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.Int(CfgSnapshotsDepth, 50, "the depth, respectively the starting point, at which a snapshot of the ledger is generated")
-			fs.Int(CfgSnapshotsInterval, 50, "interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)")
+			fs.Int(CfgSnapshotsInterval, 200, "interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)")
 			fs.String(CfgSnapshotsFullPath, "snapshots/mainnet/full_snapshot.bin", "path to the full snapshot file")
 			fs.String(CfgSnapshotsDeltaPath, "snapshots/mainnet/delta_snapshot.bin", "path to the delta snapshot file")
 			fs.Float64(CfgSnapshotsDeltaSizeThresholdPercentage, 50.0, "create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history)")

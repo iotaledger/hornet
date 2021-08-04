@@ -1,0 +1,1 @@
+# Asset Directory for HORNET Docs

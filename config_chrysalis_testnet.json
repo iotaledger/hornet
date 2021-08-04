@@ -1,5 +1,6 @@
 {
   "restAPI": {
+    "bindAddress": "0.0.0.0:14265",
     "jwtAuth": {
       "enabled": false,
       "salt": "HORNET"
@@ -29,7 +30,6 @@
       "127.0.0.1",
       "::1"
     ],
-    "bindAddress": "0.0.0.0:14265",
     "powEnabled": true,
     "powWorkerCount": 1,
     "limits": {
@@ -81,7 +81,7 @@
   "protocol": {
     "networkID": "testnet7",
     "bech32HRP": "atoi",
-    "minPoWScore": 4000,
+    "minPoWScore": 4000.0,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
@@ -111,18 +111,21 @@
   "coordinator": {
     "stateFilePath": "coordinator.state",
     "interval": "10s",
+    "powWorkerCount": 0,
     "checkpoints": {
       "maxTrackedMessages": 10000
     },
     "tipsel": {
       "minHeaviestBranchUnreferencedMessagesThreshold": 20,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
-      "randomTipsPerCheckpoint": 2,
+      "randomTipsPerCheckpoint": 3,
       "heaviestBranchSelectionTimeout": "100ms"
     },
     "signing": {
       "provider": "local",
-      "remoteAddress": "localhost:12345"
+      "remoteAddress": "localhost:12345",
+      "retryAmount": 10,
+      "retryTimeout": "2s"
     },
     "quorum": {
       "enabled": false,
@@ -130,20 +133,26 @@
       "timeout": "2s"
     }
   },
+  "migrator": {
+    "stateFilePath": "migrator.state",
+    "receiptMaxEntries": 110,
+    "queryCooldownPeriod": "5s"
+  },
   "receipts": {
     "backup": {
       "enabled": false,
-      "folder": "receipts"
+      "path": "receipts"
     },
     "validator": {
       "validate": false,
+      "ignoreSoftErrors": false,
       "api": {
-        "address": "http://localhost:14265",
+        "address": "http://localhost:14266",
         "timeout": "5s"
       },
       "coordinator": {
-        "address": "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",
-        "merkleTreeDepth": 18
+        "address": "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ",
+        "merkleTreeDepth": 24
       }
     }
   },
@@ -168,33 +177,42 @@
     }
   },
   "node": {
-    "alias": "Chrysalis Testnet",
+    "alias": "HORNET chrysalis-testnet node",
     "profile": "auto",
     "disablePlugins": [],
     "enablePlugins": [
-      "Spammer"
+      "Spammer",
+      "Autopeering"
     ]
   },
   "p2p": {
     "bindMultiAddresses": [
-      "/ip4/0.0.0.0/tcp/15600"
+      "/ip4/0.0.0.0/tcp/15600",
+      "/ip6/::/tcp/15600"
     ],
     "connectionManager": {
       "highWatermark": 10,
       "lowWatermark": 5
     },
-    "gossipUnknownPeersLimit": 4,
+    "gossip": {
+      "unknownPeersLimit": 4,
+      "streamReadTimeout": "1m0s",
+      "streamWriteTimeout": "10s"
+    },
     "identityPrivateKey": "",
     "peerStore": {
       "path": "./p2pstore"
     },
-    "reconnectInterval": "30s"
-  },
-  "p2pdisc": {
-    "advertiseInterval": "30s",
-    "maxDiscoveredPeerConns": 4,
-    "rendezvousPoint": "between-two-vertices",
-    "routingTableRefreshPeriod": "60s"
+    "reconnectInterval": "30s",
+    "autopeering": {
+      "bindAddress": "0.0.0.0:14626",
+      "db": {
+        "path": "./p2pstore"
+      },
+      "entryNodes": [],
+      "entryNodesPreferIPv6": false,
+      "runAsEntryNode": false
+    }
   },
   "logger": {
     "level": "info",
@@ -208,11 +226,11 @@
     "advancementRange": 150
   },
   "spammer": {
-    "message": "Binary is the future.",
+    "message": "IOTA - A new dawn",
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
-    "mpsRateLimit": 5.0,
+    "mpsRateLimit": 0.0,
     "workers": 0,
     "autostart": true
   },
@@ -242,5 +260,8 @@
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
+  },
+  "debug": {
+    "whiteFlagParentsSolidTimeout": "2s"
   }
 }
