@@ -71,7 +71,7 @@ func newLocal(seed []byte) *Local {
 		ownServices.Update(p2pServiceKey(), "tcp", libp2pBindPort)
 	}
 
-	boltDb, err := bolt.CreateDB(deps.NodeConfig.String(CfgNetAutopeeringDatabaseDirPath), "autopeering.db")
+	boltDb, err := bolt.CreateDB(deps.NodeConfig.String(CfgNetAutopeeringDatabasePath), "autopeering.db")
 	if err != nil {
 		log.Fatalf("unable to create autopeering database: %s", err)
 	}

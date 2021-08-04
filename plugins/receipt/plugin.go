@@ -80,7 +80,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Bool(CfgReceiptsValidatorValidate),
 			deps.NodeConfig.Bool(CfgReceiptsBackupEnabled),
 			deps.NodeConfig.Bool(CfgReceiptsValidatorIgnoreSoftErrors),
-			deps.NodeConfig.String(CfgReceiptsBackupFolder),
+			deps.NodeConfig.String(CfgReceiptsBackupPath),
 		), nil
 	}); err != nil {
 		panic(err)
@@ -95,7 +95,7 @@ func configure() {
 		}
 		log.Infof("new receipt processed (migrated_at %d, final %v, entries %d),", r.MigratedAt, r.Final, len(r.Funds))
 	}))
-	log.Infof("storing receipt backups in %s", deps.NodeConfig.String(CfgReceiptsBackupFolder))
+	log.Infof("storing receipt backups in %s", deps.NodeConfig.String(CfgReceiptsBackupPath))
 	if err := deps.ReceiptService.Init(); err != nil {
 		panic(err)
 	}

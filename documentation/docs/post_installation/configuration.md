@@ -18,14 +18,14 @@ hornet -h --full
 
 | Name                       | Description                                                                     | Type             |
 | :------------------------- | :------------------------------------------------------------------------------ | :--------------- |
+| bindAddress                | The bind address on which the REST API listens on                               | string           |
 | [jwtAuth](#jwt-auth)       | Config for JWT auth                                                             | object           |
+| excludeHealthCheckFromAuth | Whether to allow the health check route anyways                                 | bool             |
 | permittedRoutes            | The allowed HTTP REST routes which can be called from non whitelisted addresses | array of strings |
 | whitelistedAddresses       | The whitelist of addresses which are allowed to access the REST API             | array of strings |
-| bindAddress                | The bind address on which the REST API listens on                               | string           |
 | powEnabled                 | Whether the node does PoW if messages are received via API                      | bool             |
 | powWorkerCount             | The amount of workers used for calculating PoW when issuing messages via API    | integer          |
 | [limits](#limits)          | Configuration for api limits                                                    | object           |
-| excludeHealthCheckFromAuth | Whether to allow the health check route anyways                                 | bool             |
 
 ### JWT Auth
 
@@ -46,6 +46,7 @@ Example:
 
 ```json
   "restAPI": {
+    "bindAddress": "0.0.0.0:14265",
     "jwtAuth": {
       "enabled": false,
       "salt": "HORNET"
@@ -75,8 +76,7 @@ Example:
       "127.0.0.1",
       "::1"
     ],
-    "bindAddress": "0.0.0.0:14265",
-    "powEnabled": false,
+    "powEnabled": true,
     "powWorkerCount": 1,
     "limits": {
       "bodyLength": "1M",
@@ -124,7 +124,6 @@ Example:
 | engine           | The used database engine (pebble/bolt/rocksdb)                                      | string |
 | path             | The path to the database folder                                                     | string |
 | autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | bool   |
-| debug            | Ignore the check for corrupted databases (should only be used for debug reasons)    | bool   |
 
 Example:
 
@@ -132,8 +131,7 @@ Example:
   "db": {
     "engine": "rocksdb",
     "path": "mainnetdb",
-    "autoRevalidation": false,
-    "debug": false,
+    "autoRevalidation": false
   },
 ```
 
@@ -141,8 +139,8 @@ Example:
 
 | Name                          | Description                                                                                                                                                            | Type             |
 | :---------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
-| interval                      | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                        | integer          |
 | depth                         | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                             | integer          |
+| interval                      | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                        | integer          |
 | fullPath                      | Path to the full snapshot file                                                                                                                                         | string           |
 | deltaPath                     | Path to the delta snapshot file                                                                                                                                        | string           |
 | deltaSizeThresholdPercentage  | Create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot  (0.0 = always create delta snapshot to keep ms diff history) | float            |
@@ -158,9 +156,9 @@ Example:
 Example:
 
 ```json
-"snapshots": {
-    "interval": 50,
+  "snapshots": {
     "depth": 50,
+    "interval": 200,
     "fullPath": "snapshots/mainnet/full_snapshot.bin",
     "deltaPath": "snapshots/mainnet/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
@@ -198,7 +196,7 @@ Example:
 | enabled             | Whether to delete old message data from the database based on maximum database size | bool   |
 | targetSize          | Target size of the database                                                         | string |
 | thresholdPercentage | The percentage the database size gets reduced if the target size is reached         | float  |
-| cooldownTime        | Cool down time between two pruning by database size events                           | string |
+| cooldownTime        | Cool down time between two pruning by database size events                          | string |
 
 Example:
 
@@ -240,25 +238,25 @@ Example:
 
 ```json
   "protocol": {
-    "networkID": "mainnet1",
+    "networkID": "chrysalis-mainnet",
     "bech32HRP": "iota",
-    "minPoWScore": 4000,
+    "minPoWScore": 4000.0,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
-        "key": "7205c145525cee64f1c9363696811d239919d830ad964b4e29359e6475848f5a",
+        "key": "a9b46fe743df783dedd00c954612428b34241f5913cf249d75bed3aafd65e4cd",
         "start": 0,
-        "end": 0
+        "end": 777600
       },
       {
-        "key": "e468e82df33d10dea3bd0eadcd7867946a674d207c39f5af4cc44365d268a7e6",
+        "key": "365fb85e7568b9b32f7359d6cbafa9814472ad0ecbad32d77beaf5dd9e84c6ba",
         "start": 0,
-        "end": 0
+        "end": 1555200
       },
       {
-        "key": "0758028d34508079ba1f223907ac3bb5ce8f6bdccc6b961c7c85a2f460b30c1d",
-        "start": 0,
-        "end": 0
+        "key": "ba6d07d1a1aea969e7e435f9f7d1b736ea9e0fcb8de400bf855dba7f2a57e947",
+        "start": 552960,
+        "end": 2108160
       }
     ]
   },
@@ -298,19 +296,37 @@ Example:
 
 | Name                        | Description                                                                            | Type    |
 | :-------------------------- | :------------------------------------------------------------------------------------- | :------ |
-| [checkpoints](#checkpoints) | Configuration for checkpoints                                                          | object  |
+| stateFilePath               | The path to the state file of the coordinator                                          | string  |
 | interval                    | The interval milestones are issued                                                     | string  |
 | powWorkerCount              | The amount of workers used for calculating PoW when issuing checkpoints and milestones | integer |
-| [quorum](#quorum)           | Configuration for quorum                                                                      | object  |
-| [signing](#signing)         | Configuration for signing                                                                     | object  |
-| stateFilePath               | The path to the state file of the coordinator                                          | string  |
-| [tipsel](#tipsel)           | Configuration for tip selection                                                               | object  |
+| [checkpoints](#checkpoints) | Configuration for checkpoints                                                          | object  |
+| [tipsel](#tipsel)           | Configuration for tip selection                                                        | object  |
+| [signing](#signing)         | Configuration for signing                                                              | object  |
+| [quorum](#quorum)           | Configuration for quorum                                                               | object  |
 
 ### Checkpoints
 
-| Name               | Description                                                 | Type    |
-| :----------------- | :---------------------------------------------------------- | :------ |
+| Name               | Description                                                  | Type    |
+| :----------------- | :----------------------------------------------------------- | :------ |
 | maxTrackedMessages | Maximum amount of known messages for milestone tip selection | integer |
+
+### Tipsel
+
+| Name                                           | Description                                                       | Type    |
+| :--------------------------------------------- | :---------------------------------------------------------------- | :------ |
+| minHeaviestBranchUnreferencedMessagesThreshold | Minimum threshold of unreferenced messages in the heaviest branch | integer |
+| maxHeaviestBranchTipsPerCheckpoint             | Maximum amount of checkpoint messages with heaviest branch tips   | integer |
+| randomTipsPerCheckpoint                        | Amount of checkpoint messages with random tips                    | integer |
+| heaviestBranchSelectionTimeout                 | The maximum duration to select the heaviest branch tips           | string  |
+
+### Signing
+
+| Name          | Description                                                                  | Type    |
+| :------------ | :--------------------------------------------------------------------------- | :------ |
+| provider      | The signing provider the coordinator uses to sign a milestone (local/remote) | string  |
+| remoteAddress | The address of the remote signing provider (insecure connection!)            | string  |
+| retryAmount   | Number of signing retries to perform before shutting down the node           | integer |
+| retryTimeout  | The timeout between signing retries                                          | string  |
 
 ### Quorum
 
@@ -324,7 +340,7 @@ Example:
 
 | Name                        | Description                                                                          | Type             |
 | :-------------------------- | :----------------------------------------------------------------------------------- | :--------------- |
-| [{GROUP_NAME}](#group_name) | The qourum group used to ask other nodes for correct ledger state of the coordinator | array of objects |
+| [{GROUP_NAME}](#group_name) | The quorum group used to ask other nodes for correct ledger state of the coordinator | array of objects |
 
 ##### {GROUP_NAME}
 
@@ -335,29 +351,13 @@ Example:
 | userName | Username for basic auth (optional)    | string |
 | password | Password for basic auth (optional)    | string |
 
-### Signing
-
-| Name          | Description                                                                  | Type   |
-| :------------ | :--------------------------------------------------------------------------- | :----- |
-| provider      | The signing provider the coordinator uses to sign a milestone (local/remote) | string |
-| remoteAddress | The address of the remote signing provider (insecure connection!)            | string |
-
-### Tipsel
-
-| Name                                           | Description                                                       | Type    |
-| :--------------------------------------------- | :---------------------------------------------------------------- | :------ |
-| heaviestBranchSelectionTimeout                 | The maximum duration to select the heaviest branch tips           | string  |
-| maxHeaviestBranchTipsPerCheckpoint             | Maximum amount of checkpoint messages with heaviest branch tips   | integer |
-| minHeaviestBranchUnreferencedMessagesThreshold | Minimum threshold of unreferenced messages in the heaviest branch | integer |
-| randomTipsPerCheckpoint                        | Amount of checkpoint messages with random tips                    | integer |
-
 Example:
 
 ```json
   "coordinator": {
     "stateFilePath": "coordinator.state",
     "interval": "10s",
-    "powWorkerCount": 15,
+    "powWorkerCount": 0,
     "checkpoints": {
       "maxTrackedMessages": 10000
     },
@@ -369,7 +369,9 @@ Example:
     },
     "signing": {
       "provider": "local",
-      "remoteAddress": "localhost:12345"
+      "remoteAddress": "localhost:12345",
+      "retryAmount": 10,
+      "retryTimeout": "2s"
     },
     "quorum": {
       "enabled": false,
@@ -396,7 +398,89 @@ Example:
   },
 ```
 
-## 10. Tangle
+## 10. Migrator
+
+This part is used in the migration from IOTA 1.0 to IOTA 1.5 (Chrysalis)
+
+| Name                | Description                                             | Type    |
+| :------------------ | :------------------------------------------------------ | :------ |
+| stateFilePath       | Path to the state file of the migrator                  | string  |
+| receiptMaxEntries   | The max amount of entries to embed within a receipt     | integer |
+| queryCooldownPeriod | The cool down period of the service to ask for new data | string  |
+
+Example:
+
+```json
+  "migrator": {
+    "stateFilePath": "migrator.state",
+    "receiptMaxEntries": 110,
+    "queryCooldownPeriod": "5s"
+  },
+```
+
+## 11. Receipts
+
+This part is used in the migration from IOTA 1.0 to IOTA 1.5 (Chrysalis)
+
+| Name                    | Description                 | Type   |
+| :---------------------- | :-------------------------- | :----- |
+| [backup](#backup)       | Configuration for backup    | object |
+| [validator](#validator) | Configuration for validator | object |
+
+### Backup
+
+| Name    | Description                                     | Type   |
+| :------ | :---------------------------------------------- | :----- |
+| enabled | Whether to backup receipts in the backup folder | bool   |
+| path    | Path to the receipts backup folder              | string |
+
+### Validator
+
+| Name                        | Description                                                       | Type   |
+| :-------------------------- | :---------------------------------------------------------------- | :----- |
+| validate                    | Whether to validate receipts                                      | bool   |
+| ignoreSoftErrors            | Whether to ignore soft errors and not panic if one is encountered | bool   |
+| [api](#api)                 | Configuration for legacy API                                      | object |
+| [coordinator](#coordinator) | Configuration for legacy Coordinator                              | object |
+
+#### Api
+
+| Name    | Description                    | Type   |
+| :------ | :----------------------------- | :----- |
+| address | Address of the legacy node API | string |
+| timeout | Timeout of API calls           | string |
+
+#### Coordinator
+
+| Name            | Description                                 | Type    |
+| :-------------- | :------------------------------------------ | :------ |
+| address         | Address of the legacy coordinator           | string  |
+| merkleTreeDepth | Depth of the Merkle tree of the coordinator | integer |
+
+Example:
+
+```json
+  "receipts": {
+    "backup": {
+      "enabled": false,
+      "path": "receipts"
+    },
+    "validator": {
+      "validate": false,
+      "ignoreSoftErrors": false,
+      "api": {
+        "address": "http://localhost:14266",
+        "timeout": "5s"
+      },
+      "coordinator": {
+        "address": "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ",
+        "merkleTreeDepth": 24
+      }
+    }
+  },
+```
+
+## 12. Tangle
 
 | Name             | Description                                                                       | Type   |
 | :--------------- | :-------------------------------------------------------------------------------- | :----- |
@@ -410,15 +494,15 @@ Example:
   },
 ```
 
-## 11. Tipsel
+## 13. Tipsel
 
 | Name                                  | Description                                                                                                             | Type    |
 | :------------------------------------ | :---------------------------------------------------------------------------------------------------------------------- | :------ |
 | maxDeltaMsgYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | integer |
 | maxDeltaMsgOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | integer |
 | belowMaxDepth                         | The maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy      | integer |
-| [nonLazy](#nonlazy)                   | Configuration for tips from the non-lazy pool                                                                                  | object  |
-| [semiLazy](#semilazy)                 | Configuration for tips from the semi-lazy pool                                                                                 | object  |
+| [nonLazy](#nonlazy)                   | Configuration for tips from the non-lazy pool                                                                           | object  |
+| [semiLazy](#semilazy)                 | Configuration for tips from the semi-lazy pool                                                                          | object  |
 
 ### NonLazy
 
@@ -460,7 +544,7 @@ Example:
   },
 ```
 
-## 12. Node
+## 14. Node
 
 | Name           | Description                              | Type             |
 | :------------- | :--------------------------------------- | :--------------- |
@@ -485,16 +569,17 @@ Example:
   },
 ```
 
-## 13. P2P
+## 15. P2P
 
-| Name                                    | Description                                                                    | Type             |
-| :-------------------------------------- | :----------------------------------------------------------------------------- | :--------------- |
-| bindMultiAddresses                      | The bind addresses for this node                                               | array of strings |
-| [connectionManager](#connectionmanager) | Configuration for connection manager                                                  | object           |
-| gossipUnknownPeersLimit                 | maximum amount of unknown peers a gossip protocol connection is established to | integer          |
-| identityPrivateKey                      | private key used to derive the node identity (optional)                        | string           |
-| [peerStore](#peerstore)                 | Configuration for peer store                                                          | object           |
-| reconnectInterval                       | The time to wait before trying to reconnect to a disconnected peer             | string           |
+| Name                                    | Description                                                        | Type             |
+| :-------------------------------------- | :----------------------------------------------------------------- | :--------------- |
+| bindMultiAddresses                      | The bind addresses for this node                                   | array of strings |
+| [connectionManager](#connectionmanager) | Configuration for connection manager                               | object           |
+| [gossip](#gossip)                       | Configuration for gossip protocol                                  | object           |
+| identityPrivateKey                      | private key used to derive the node identity (optional)            | string           |
+| [peerStore](#peerstore)                 | Configuration for peer store                                       | object           |
+| reconnectInterval                       | The time to wait before trying to reconnect to a disconnected peer | string           |
+| [autopeering](#autopeering)             | Configuration for autopeering                                      | object           |
 
 ### ConnectionManager
 
@@ -503,54 +588,74 @@ Example:
 | highWatermark | The threshold up on which connections count truncates to the lower watermark | integer |
 | lowWatermark  | The minimum connections count to hold after the high watermark was reached   | integer |
 
+### Gossip
+
+| Name               | Description                                                                    | Type    |
+| :----------------- | :----------------------------------------------------------------------------- | :------ |
+| unknownPeersLimit  | maximum amount of unknown peers a gossip protocol connection is established to | integer |
+| streamReadTimeout  | The read timeout for subsequent reads from the gossip stream                   | string  |
+| streamWriteTimeout | The write timeout for writes to the gossip stream                              | string  |
+
 ### PeerStore
 
 | Name | Description                | Type   |
 | :--- | :------------------------- | :----- |
 | path | The path to the peer store | string |
 
+### Autopeering
+
+| Name                        | Description                                                      | Type             |
+| :-------------------------- | :--------------------------------------------------------------- | :--------------- |
+| bindAddress                 | The bind address on which the autopeering module listens on      | string           |
+| [db](#autopeering-database) | Configuration for the autopeering database                       | object           |
+| entryNodes                  | The list of autopeering entry nodes to use                       | array of strings |
+| entryNodesPreferIPv6        | Defines if connecting over IPv6 is preferred for entry nodes     | bool             |
+| runAsEntryNode              | Defines whether the node should act as an autopeering entry node | bool             |
+
+#### Autopeering database
+
+| Name | Description                          | Type   |
+| :--- | :----------------------------------- | :----- |
+| path | The path to the autopeering database | string |
+
 Example:
 
 ```json
   "p2p": {
     "bindMultiAddresses": [
-      "/ip4/127.0.0.1/tcp/15600"
+      "/ip4/0.0.0.0/tcp/15600",
+      "/ip6/::/tcp/15600"
     ],
     "connectionManager": {
       "highWatermark": 10,
       "lowWatermark": 5
     },
-    "gossipUnknownPeersLimit": 4,
+    "gossip": {
+      "unknownPeersLimit": 4,
+      "streamReadTimeout": "1m0s",
+      "streamWriteTimeout": "10s"
+    },
     "identityPrivateKey": "",
     "peerStore": {
       "path": "./p2pstore"
     },
-    "reconnectInterval": "30s"
+    "reconnectInterval": "30s",
+    "autopeering": {
+      "bindAddress": "0.0.0.0:14626",
+      "db": {
+        "path": "./p2pstore"
+      },
+      "entryNodes": [
+        "/dns/lucamoser.ch/udp/14926/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
+        "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"
+      ],
+      "entryNodesPreferIPv6": false,
+      "runAsEntryNode": false
+    }
   },
 ```
 
-[//]: # "Not implemented yet. Don't forget to add entry number 8 in TOC if this gets implemented"
-[//]: # "## 12. P2Pdisc"
-
-[//]: # "| Name                      | Description                                                                              | Type    |"
-[//]: # "| :------------------------ | :--------------------------------------------------------------------------------------- | :------ |"
-[//]: # "| advertiseInterval         | The interval at which the node advertises itself on the DHT for peer discovery           | string  |"
-[//]: # "| maxDiscoveredPeerConns    | The max. amount of peers to be connected to which were discovered via the DHT rendezvous | integer |"
-[//]: # "| rendezvousPoint           | The rendezvous string for advertising on the DHT that the node wants to peer with others | string  |"
-[//]: # "| routingTableRefreshPeriod | The routing table refresh period                                                         | string  |"
-
-[//]: # "Example:"
-
-[//]: # "```json"
-[//]: # '  "p2pdisc": {'
-[//]: # '    "advertiseInterval": "30s",'
-[//]: # '    "maxDiscoveredPeerConns": 4,'
-[//]: # '    "rendezvousPoint": "between-two-vertices",'
-[//]: # '    "routingTableRefreshPeriod": "1m",'
-[//]: # "  },"
-[//]: # "```"
-
-## 14. Logger
+## 16. Logger
 
 | Name          | Description                                                                                                       | Type             |
 | :------------ | :---------------------------------------------------------------------------------------------------------------- | :--------------- |
@@ -573,7 +678,7 @@ Example:
   },
 ```
 
-## 15. Warpsync
+## 17. Warpsync
 
 | Name             | Description                                        | Type    |
 | :--------------- | :------------------------------------------------- | :------ |
@@ -583,11 +688,11 @@ Example:
 
 ```json
   "warpsync": {
-    "advancementRange": 150,
-  }
+    "advancementRange": 150
+  },
 ```
 
-## 16. Spammer
+## 18. Spammer
 
 | Name          | Description                                                                         | Type    |
 | :------------ | :---------------------------------------------------------------------------------- | :------ |
@@ -603,17 +708,17 @@ Example:
 
 ```json
   "spammer": {
-    "message": "Binary is the future.",
+    "message": "IOTA - A new dawn",
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
-    "cpuMaxUsage": 0.5,
-    "mpsRateLimit": 0,
-    "workers": 1,
+    "cpuMaxUsage": 0.8,
+    "mpsRateLimit": 0.0,
+    "workers": 0,
     "autostart": false
   },
 ```
 
-## 17. MQTT
+## 19. MQTT
 
 | Name        | Description                                                         | Type    |
 | :---------- | :------------------------------------------------------------------ | :------ |
@@ -631,7 +736,7 @@ Example:
   },
 ```
 
-## 18. Profiling
+## 20. Profiling
 
 | Name        | Description                                       | Type   |
 | :---------- | :------------------------------------------------ | :----- |
@@ -645,12 +750,12 @@ Example:
   },
 ```
 
-## 19. Prometheus
+## 21. Prometheus
 
 | Name                                          | Description                                                  | Type   |
 | :-------------------------------------------- | :----------------------------------------------------------- | :----- |
 | bindAddress                                   | The bind address on which the Prometheus exporter listens on | string |
-| [fileServiceDiscovery](#fileservicediscovery) | Configuration for file service discovery                            | object |
+| [fileServiceDiscovery](#fileservicediscovery) | Configuration for file service discovery                     | object |
 | databaseMetrics                               | Include database metrics                                     | bool   |
 | nodeMetrics                                   | Include node metrics                                         | bool   |
 | gossipMetrics                                 | Include gossip metrics                                       | bool   |
@@ -692,26 +797,10 @@ Example:
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
-  }
+  },
 ```
 
-## 20. Gossip
-
-| Name               | Description                                       | Type   |
-| :----------------- | :------------------------------------------------ | :----- |
-| streamReadTimeout  | The read timeout for reads from the gossip stream | string |
-| streamWriteTimeout | The write timeout for writes to the gossip stream | string |
-
-Example:
-
-```json
-  "gossip": {
-    "streamReadTimeout": "1m",
-    "streamWriteTimeout": "10s",
-  }
-```
-
-## 21. Debug
+## 22. Debug
 
 | Name                         | Description                                                                                              | Type   |
 | :--------------------------- | :------------------------------------------------------------------------------------------------------- | :----- |
@@ -721,88 +810,6 @@ Example:
 
 ```json
   "debug": {
-    "whiteFlagParentsSolidTimeout": "2s",
-  }
-```
-
-## 22. Legacy
-
-This is part the config used in the migration from IOTA 1.0 to IOTA 1.5 (Chrysalis)
-
-## 22.1 Migrator
-
-| Name                | Description                                            | Type    |
-| :------------------ | :----------------------------------------------------- | :------ |
-| queryCooldownPeriod | The cool down period of the service to ask for new data | string  |
-| receiptMaxEntries   | The max amount of entries to embed within a receipt    | integer |
-| stateFilePath       | Path to the state file of the migrator                 | string  |
-
-Example:
-
-```json
-  "migrator": {
-    "queryCooldownPeriod": "5s",
-    "receiptMaxEntries": 110,
-    "stateFilePath": "migrator.state",
-  }
-```
-
-## 22.2 Receipts
-
-| Name                    | Description          | Type   |
-| :---------------------- | :------------------- | :----- |
-| [backup](#backup)       | Configuration for backup    | object |
-| [validator](#validator) | Configuration for validator | object |
-
-### Backup
-
-| Name    | Description                                     | Type   |
-| :------ | :---------------------------------------------- | :----- |
-| enabled | Whether to backup receipts in the backup folder | bool   |
-| folder  | Path to the receipts backup folder              | string |
-
-### Validator
-
-| Name                        | Description                                                       | Type   |
-| :-------------------------- | :---------------------------------------------------------------- | :----- |
-| [api](#api)                 | Configuration for legacy API                                             | object |
-| [coordinator](#coordinator) | Configuration for legacy Coordinator                                     | object |
-| ignoreSoftErrors            | Whether to ignore soft errors and not panic if one is encountered | bool   |
-| validate                    | Whether to validate receipts                                      | bool   |
-
-#### Api
-
-| Name    | Description                    | Type   |
-| :------ | :----------------------------- | :----- |
-| address | Address of the legacy node API | string |
-| timeout | Timeout of API calls           | string |
-
-#### Coordinator
-
-| Name            | Description                                 | Type    |
-| :-------------- | :------------------------------------------ | :------ |
-| address         | Address of the legacy coordinator           | string  |
-| merkleTreeDepth | Depth of the Merkle tree of the coordinator | integer |
-
-Example:
-
-```json
-  "receipts": {
-    "backup": {
-      "enabled": false,
-      "folder": "receipts",
-    },
-    "validator": {
-      "api": {
-        "address": "http://localhost:14266",
-        "timeout": "5s",
-      },
-      "coordinator": {
-        "address": "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",
-        "merkleTreeDepth": 18,
-      },
-      "ignoreSoftErrors": false,
-      "validate": false,
-    },
-  }
+    "whiteFlagParentsSolidTimeout": "2s"
+  },
 ```

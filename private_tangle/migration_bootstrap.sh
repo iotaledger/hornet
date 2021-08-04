@@ -11,10 +11,10 @@ go run ../main.go -c config_private_tangle.json \
 --restAPI.bindAddress="0.0.0.0:14265" \
 --dashboard.bindAddress="localhost:8081" \
 --db.path="privatedb" \
---node.disablePlugins="Autopeering" \
+--node.disablePlugins="" \
 --node.enablePlugins="Spammer,Coordinator,MQTT,Receipts,Migrator" \
 --receipts.backup.enabled="true" \
---receipts.backup.folder="receipts" \
+--receipts.backup.path="receipts" \
 --receipts.validator.validate="true" \
 --receipts.validator.api.address="http://127.0.0.1:14266" \
 --receipts.validator.api.timeout="10s" \

@@ -53,6 +53,7 @@ var params = &node.PluginParams{
 					"/api/v1/addresses/:address/outputs",
 					"/api/v1/addresses/ed25519/:address",
 					"/api/v1/addresses/ed25519/:address/outputs",
+					"/api/v1/treasury",
 				}, "the allowed HTTP REST routes which can be called from non whitelisted addresses")
 			fs.StringSlice(CfgRestAPIWhitelistedAddresses, []string{"127.0.0.1", "::1"}, "the whitelist of addresses which are allowed to access the REST API")
 			fs.Bool(CfgRestAPIExcludeHealthCheckFromAuth, false, "whether to allow the health check route anyways")

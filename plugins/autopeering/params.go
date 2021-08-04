@@ -21,8 +21,8 @@ const (
 	CfgNetAutopeeringOutboundPeers = "p2p.autopeering.outboundPeers"
 	// CfgNetAutopeeringSaltLifetime lifetime of the private and public local salt.
 	CfgNetAutopeeringSaltLifetime = "p2p.autopeering.saltLifetime"
-	// CfgNetAutopeeringDatabaseDirPath is the path to the autopeering database.
-	CfgNetAutopeeringDatabaseDirPath = "p2p.autopeering.db.dirPath"
+	// CfgNetAutopeeringDatabasePath is the path to the autopeering database.
+	CfgNetAutopeeringDatabasePath = "p2p.autopeering.db.path"
 	// CfgNetAutopeeringEntryNodesPreferIPv6 defines if connecting over IPv6 is preferred for entry nodes.
 	CfgNetAutopeeringEntryNodesPreferIPv6 = "p2p.autopeering.entryNodesPreferIPv6"
 )
@@ -38,7 +38,7 @@ var params = &node.PluginParams{
 			fs.Int(CfgNetAutopeeringInboundPeers, 2, "the number of inbound autopeers")
 			fs.Int(CfgNetAutopeeringOutboundPeers, 2, "the number of outbound autopeers")
 			fs.Duration(CfgNetAutopeeringSaltLifetime, 2*time.Hour, "lifetime of the private and public local salt")
-			fs.String(CfgNetAutopeeringDatabaseDirPath, "./p2pstore", "the directory path (excluding the name) to the autopeering database")
+			fs.String(CfgNetAutopeeringDatabasePath, "./p2pstore", "the directory path (excluding the name) to the autopeering database")
 			return fs
 		}(),
 	},

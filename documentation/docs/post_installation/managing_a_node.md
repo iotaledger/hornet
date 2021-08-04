@@ -80,7 +80,7 @@ To enable this plugin, you will need to change the default configuration, as it 
 
 ```json
  "spammer": {
-    "message": "Binary is the future.",
+    "message": "IOTA - A new dawn",
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
@@ -134,7 +134,7 @@ Your node's ledger accumulates many messages, which uses a significant disk capa
 ```
 
 ### Snapshot Pruning
-During a snapshot, Hornet may delete messages from the ledger if they were confirmed by an old milestone. In other words, the term _pruning_ means the deletion of the old history from the node database.  
+During a snapshot, Hornet may delete messages from the ledger if they were confirmed by an old milestone. In other words, the term _pruning_ means the deletion of the old history from the node database.
 
 * If you want to enable pruning, you should set the `pruning.milestones.enabled` or `pruning.size.enabled` keys to _enabled_.
 * The `pruning.milestones.maxMilestonesToKeep` defines how far back from the current confirmed milestone should be pruned.

@@ -84,11 +84,11 @@ Once you know your node's own `multiaddr`, it can be exchanged with other node o
 ## Finding Neighbors
 
 You can join the official IOTA Discord server and the `#nodesharing` channel.  There you will be able to describe your node location (Europe /
-Germany / Asia, etc.), with your allocated high watermark resources and ask for neighbors. 
+Germany / Asia, etc.), with your allocated high watermark resources and ask for neighbors.
 
 :::warning
 Do not publicly disclose your node `multiaddr` to all readers but wait for an individual direct chat.
-::: 
+:::
 
 You can add peers using the Hornet [dashboard](post_installation.md#dashboard). To do so, go to *Peers* and click on *Add Peer*.  You can also add peers on the [peering.json](peering.md) file.
 
@@ -120,7 +120,12 @@ This is `peering.json` example, with `ip4`, `ip6` and `dns` peers:
 
 Hornet also supports automatically finding peers through the _autopeering_ module. To minimize service distribution in case your autopeered peers are flaky, we recommend to only use autopeering if you have at least 4 static peers.
 
-Autopeering is enabled by default,  and your node will use the specified entry nodes under `p2p.autopeering.entryNodes` to find new peers. `entryNodes` are also encoded as `multiaddr`:
+Autopeering is disabled by default. If you want to enable it, add `"Autopeering"` to `node.enablePlugins`.
+
+WARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points.
+Do not enable this plugin if you do not want this to happen!
+
+Your node will use the specified entry nodes under `p2p.autopeering.entryNodes` to find new peers. `entryNodes` are also encoded as `multiaddr`:
 
 ```
 /ip4/45.12.34.43/udp/14626/autopeering/8CZELJwB3aBzxJgnLMvvt1FirAwNN6jif9LavYTNHCty

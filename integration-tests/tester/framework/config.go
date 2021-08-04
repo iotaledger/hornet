@@ -254,7 +254,7 @@ type AutopeeringConfig struct {
 	// The lifetime of the private and public local salt.
 	SaltLifetime time.Duration
 	// The path to the autopeering database.
-	DatabaseDirPath string
+	DatabasePath string
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -266,20 +266,20 @@ func (autoConfig *AutopeeringConfig) CLIFlags() []string {
 		fmt.Sprintf("--%s=%d", autopeering.CfgNetAutopeeringInboundPeers, autoConfig.InboundPeers),
 		fmt.Sprintf("--%s=%d", autopeering.CfgNetAutopeeringOutboundPeers, autoConfig.OutboundPeers),
 		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringSaltLifetime, autoConfig.SaltLifetime),
-		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringDatabaseDirPath, autoConfig.DatabaseDirPath),
+		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringDatabasePath, autoConfig.DatabasePath),
 	}
 }
 
 // DefaultAutopeeringConfig returns the default autopeering config.
 func DefaultAutopeeringConfig() AutopeeringConfig {
 	return AutopeeringConfig{
-		EntryNodes:      nil,
-		BindAddr:        "0.0.0.0:14626",
-		RunAsEntryNode:  false,
-		InboundPeers:    2,
-		OutboundPeers:   2,
-		SaltLifetime:    30 * time.Minute,
-		DatabaseDirPath: "./p2pstore",
+		EntryNodes:     nil,
+		BindAddr:       "0.0.0.0:14626",
+		RunAsEntryNode: false,
+		InboundPeers:   2,
+		OutboundPeers:  2,
+		SaltLifetime:   30 * time.Minute,
+		DatabasePath:   "./p2pstore",
 	}
 }
 
@@ -438,7 +438,7 @@ type ReceiptsConfig struct {
 func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsBackupEnabled, receiptsConfig.BackupEnabled),
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsBackupFolder, receiptsConfig.BackupFolder),
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsBackupPath, receiptsConfig.BackupFolder),
 		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorValidate, receiptsConfig.Validate),
 		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorIgnoreSoftErrors, receiptsConfig.IgnoreSoftErrors),
 		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPIAddress, receiptsConfig.APIAddress),

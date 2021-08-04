@@ -2,14 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.4] - 02.08.2021
+## [1.0.4] - 04.08.2021
 
 ### Added
-    - Autopeering with two default entry nodes
+    - Autopeering with two default entry nodes (disabled by default)
     - Default config for community network
 
 ### Changed
     - Reduces the default WarpSync advancement range back to 150 as the previous value was only a workaround.
+    - Cleaned up parameter names and values in all config files
+    - Rate limit for dashboard login changed from 1 request every 5 minutes to 5 requests every minute
+
+### Config file changes
+
+`config.json`
+```diff
+  "receipts": {
+    "backup": {
+-      "folder": "receipts"
++      "path": "receipts"
+    },
+  }
+  "p2p": {
+    "bindMultiAddresses": [
+      "/ip4/0.0.0.0/tcp/15600",
++      "/ip6/::/tcp/15600"
+    ],
+-    "gossipUnknownPeersLimit": 4,
++    "gossip": {
++      "unknownPeersLimit": 4,
++      "streamReadTimeout": "1m0s",
++      "streamWriteTimeout": "10s"
++    },
+  "autopeering": {
+-    "dirPath": "./p2pstore"
++    "db": {
++      "path": "./p2pstore"
++    },
+  }
+  "warpsync": {
+-    "advancementRange": 10000
++    "advancementRange": 150
+  },
+  "spammer": {
+-    "mpsRateLimit": 5.0,
++    "mpsRateLimit": 0.0,
+  },
+```
 
 ## [1.0.3] - 02.06.2021
 
@@ -17,7 +56,7 @@ All notable changes to this project will be documented in this file.
     - A new public key applicable for milestone ranges between 552960-2108160
 
 ### Changed
-    - Increases the WarpSync advancement range to 10k which allows nodes to resync even if 
+    - Increases the WarpSync advancement range to 10k which allows nodes to resync even if
       they already stored the milestone for which they lacked the applicable public key beforehand.
 
 ## [1.0.2] - 28.05.2021
