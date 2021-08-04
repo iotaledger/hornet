@@ -17,9 +17,9 @@ const (
 	// CfgCoordinatorSigningProvider the signing provider the coordinator uses to sign a milestone (local/remote).
 	CfgCoordinatorSigningProvider = "coordinator.signing.provider"
 	// CfgCoordinatorSigningRetryAmount defines the number of signing retries to perform before shutting down the node.
-	CfgCoordinatorSigningRetryAmount = "coordiantor.signing.retryAmount"
+	CfgCoordinatorSigningRetryAmount = "coordinator.signing.retryAmount"
 	// CfgCoordinatorSigningRetryTimeout defines the timeout between signing retries.
-	CfgCoordinatorSigningRetryTimeout = "coordiantor.signing.retryTimeout"
+	CfgCoordinatorSigningRetryTimeout = "coordinator.signing.retryTimeout"
 	// CfgCoordinatorSigningRemoteAddress the address of the remote signing provider (insecure connection!).
 	CfgCoordinatorSigningRemoteAddress = "coordinator.signing.remoteAddress"
 	// CfgCoordinatorPoWWorkerCount the amount of workers used for calculating PoW when issuing checkpoints and milestones.
