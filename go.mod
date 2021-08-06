@@ -4,6 +4,8 @@ go 1.16
 
 replace github.com/fhmq/hmq => github.com/luca-moser/hmq v0.0.0-20210322100045-d93c5b165ed2
 
+replace github.com/labstack/gommon => github.com/muXxer/gommon v0.3.1-0.20210805133353-359faea1baf6
+
 replace github.com/linxGnu/grocksdb => github.com/gohornet/grocksdb v1.6.34-0.20210518222204-d6ea5eedcfb9
 
 require (
@@ -34,14 +36,14 @@ require (
 	github.com/go-playground/validator/v10 v10.6.1 // indirect
 	github.com/gobuffalo/packr/v2 v2.8.1
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/uuid v1.2.0 // indirect
 	github.com/gorilla/websocket v1.4.2
-	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20210527103851-70e96f4e355a
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v2 v2.0.0
 	github.com/ipfs/go-ds-badger v0.2.6
-	github.com/ipfs/go-ipns v0.1.0 // indirect
+	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.6 // indirect
@@ -51,11 +53,8 @@ require (
 	github.com/labstack/gommon v0.3.0
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/libp2p/go-libp2p v0.14.0
-	github.com/libp2p/go-libp2p-asn-util v0.0.0-20210422100720-09a655867a6c // indirect
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
 	github.com/libp2p/go-libp2p-core v0.8.5
-	github.com/libp2p/go-libp2p-discovery v0.5.0
-	github.com/libp2p/go-libp2p-kad-dht v0.12.0
 	github.com/libp2p/go-libp2p-peerstore v0.2.7
 	github.com/libp2p/go-libp2p-yamux v0.5.4 // indirect
 	github.com/libp2p/go-tcp-transport v0.2.2 // indirect
@@ -63,14 +62,13 @@ require (
 	github.com/miekg/dns v1.1.42 // indirect
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
-	github.com/mr-tron/base58 v1.2.0 // indirect
+	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multiaddr v0.3.2
 	github.com/onsi/ginkgo v1.15.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/polydawn/refmt v0.0.0-20201211092308-30ac6d18308e // indirect
 	github.com/prometheus/client_golang v1.10.0
 	github.com/prometheus/common v0.25.0 // indirect
 	github.com/segmentio/fasthash v1.0.3 // indirect
