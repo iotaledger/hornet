@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -64,10 +64,6 @@ func (c *AuthClaims) VerifySubject(expected string) bool {
 	return c.compare(c.Subject, expected)
 }
 
-func (c *AuthClaims) verifyAudience(expected string) bool {
-	return c.compare(c.Audience, expected)
-}
-
 func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Context, subject string, claims *AuthClaims) bool) echo.MiddlewareFunc {
 
 	config := middleware.JWTConfig{
@@ -95,11 +91,18 @@ func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Conte
 				return err
 			}
 
+			token := c.Get("jwt").(*jwt.Token)
+
+			// validate the signing method we expect
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+
 			// read the claims set by the JWT middleware on the context
-			claims, ok := c.Get("jwt").(*jwt.Token).Claims.(*AuthClaims)
+			claims, ok := token.Claims.(*AuthClaims)
 
 			// do extended claims validation
-			if !ok || !claims.verifyAudience(j.nodeId) {
+			if !ok || !claims.VerifyAudience(j.nodeId, true) {
 				return ErrJWTInvalidClaims
 			}
 
@@ -148,12 +151,17 @@ func (j *JWTAuth) IssueJWT(api bool, dashboard bool) (string, error) {
 func (j *JWTAuth) VerifyJWT(token string, allow func(claims *AuthClaims) bool) bool {
 
 	t, err := jwt.ParseWithClaims(token, &AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// validate the signing method we expect
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
 		return j.secret, nil
 	})
 	if err == nil && t.Valid {
 		claims, ok := t.Claims.(*AuthClaims)
 
-		if !ok || !claims.verifyAudience(j.nodeId) {
+		if !ok || !claims.VerifyAudience(j.nodeId, true) {
 			return false
 		}
 
