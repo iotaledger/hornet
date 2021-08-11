@@ -58,7 +58,7 @@ func TestTipSelect(t *testing.T) {
 	// fill the storage with some messages to fill the tipselect pool
 	msgCount := 0
 	for i := 0; i < 100; i++ {
-		msgMeta := te.NewTestMessage(msgCount, hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID})
+		msgMeta := te.NewTestMessage(msgCount, hornet.MessageIDs{te.Milestones[0].Milestone().MessageID})
 		ts.AddTip(msgMeta)
 		msgCount++
 	}
@@ -71,7 +71,7 @@ func TestTipSelect(t *testing.T) {
 		require.GreaterOrEqual(te.TestInterface, len(tips), 1)
 		require.LessOrEqual(te.TestInterface, len(tips), 8)
 
-		cmi := te.Storage().GetConfirmedMilestoneIndex()
+		cmi := te.Storage().ConfirmedMilestoneIndex()
 
 		for _, tip := range tips {
 			// we walk the cone of every tip to check the youngest and oldest milestone index it references
@@ -94,7 +94,7 @@ func TestTipSelect(t *testing.T) {
 					defer cachedMetadata.Release(true) // meta -1
 
 					// first check if the msg was referenced => update ycri and ocri with the confirmation index
-					if referenced, at := cachedMetadata.GetMetadata().GetReferenced(); referenced {
+					if referenced, at := cachedMetadata.Metadata().ReferencedWithIndex(); referenced {
 						updateIndexes(at, at)
 						return false, nil
 					}
@@ -137,7 +137,7 @@ func TestTipSelect(t *testing.T) {
 
 		if i%10 == 0 {
 			// Issue a new milestone every 10 messages
-			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{msgMeta.GetMessageID()}, false)
+			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{msgMeta.MessageID()}, false)
 			dag.UpdateConeRootIndexes(te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
 			ts.UpdateScores()
 		}

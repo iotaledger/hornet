@@ -76,7 +76,7 @@ func configureEvents() {
 
 	onGossipProtocolStreamCreated = events.NewClosure(func(p *gossip.Protocol) {
 		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *gossip.Heartbeat) {
-			warpSync.UpdateCurrentConfirmedMilestone(deps.Storage.GetConfirmedMilestoneIndex())
+			warpSync.UpdateCurrentConfirmedMilestone(deps.Storage.ConfirmedMilestoneIndex())
 			warpSync.UpdateTargetMilestone(hb.SolidMilestoneIndex)
 		}))
 	})

@@ -45,9 +45,9 @@ func NewInMemoryEd25519MilestoneSignerProvider(privateKeys []ed25519.PrivateKey,
 // MilestoneIndexSigner returns a new signer for the milestone index.
 func (p *InMemoryEd25519MilestoneSignerProvider) MilestoneIndexSigner(index milestone.Index) MilestoneIndexSigner {
 
-	pubKeySet := p.keyManger.GetPublicKeysSetForMilestoneIndex(index)
+	pubKeySet := p.keyManger.PublicKeysSetForMilestoneIndex(index)
 
-	keyPairs := p.keyManger.GetMilestonePublicKeyMappingForMilestoneIndex(index, p.privateKeys, p.PublicKeysCount())
+	keyPairs := p.keyManger.MilestonePublicKeyMappingForMilestoneIndex(index, p.privateKeys, p.PublicKeysCount())
 	pubKeys := make([]iotago.MilestonePublicKey, 0, len(keyPairs))
 	for pubKey := range keyPairs {
 		pubKeys = append(pubKeys, pubKey)
@@ -110,8 +110,8 @@ func NewInsecureRemoteEd25519MilestoneSignerProvider(remoteEndpoint string, keyM
 func (p *InsecureRemoteEd25519MilestoneSignerProvider) MilestoneIndexSigner(index milestone.Index) MilestoneIndexSigner {
 
 	return &InsecureRemoteEd25519MilestoneIndexSigner{
-		pubKeys:     p.keyManger.GetPublicKeysForMilestoneIndex(index),
-		pubKeySet:   p.keyManger.GetPublicKeysSetForMilestoneIndex(index),
+		pubKeys:     p.keyManger.PublicKeysForMilestoneIndex(index),
+		pubKeySet:   p.keyManger.PublicKeysSetForMilestoneIndex(index),
 		signingFunc: p.signingFunc,
 	}
 }

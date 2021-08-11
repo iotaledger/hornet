@@ -88,7 +88,7 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 	}, nil
 }
 
-func (i *SnapshotInfo) GetBytes() []byte {
+func (i *SnapshotInfo) Bytes() []byte {
 	marshalUtil := marshalutil.New()
 
 	marshalUtil.WriteUint64(i.NetworkID)
@@ -133,7 +133,7 @@ func (s *Storage) SetSnapshotInfo(sn *SnapshotInfo) {
 	s.snapshot = sn
 }
 
-func (s *Storage) GetSnapshotInfo() *SnapshotInfo {
+func (s *Storage) SnapshotInfo() *SnapshotInfo {
 	s.snapshotMutex.RLock()
 	defer s.snapshotMutex.RUnlock()
 

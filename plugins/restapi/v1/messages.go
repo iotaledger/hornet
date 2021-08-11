@@ -43,23 +43,23 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
-	cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID)
+	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID)
 	if cachedMsgMeta == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedMsgMeta.Release(true)
 
-	metadata := cachedMsgMeta.GetMetadata()
+	metadata := cachedMsgMeta.Metadata()
 
 	var referencedByMilestone *milestone.Index = nil
-	referenced, referencedIndex := metadata.GetReferenced()
+	referenced, referencedIndex := metadata.ReferencedWithIndex()
 	if referenced {
 		referencedByMilestone = &referencedIndex
 	}
 
 	messageMetadataResponse := &messageMetadataResponse{
-		MessageID:                  metadata.GetMessageID().ToHex(),
-		Parents:                    metadata.GetParents().ToHex(),
+		MessageID:                  metadata.MessageID().ToHex(),
+		Parents:                    metadata.Parents().ToHex(),
 		Solid:                      metadata.IsSolid(),
 		ReferencedByMilestoneIndex: referencedByMilestone,
 	}
@@ -71,7 +71,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	if referenced {
 		inclusionState := "noTransaction"
 
-		conflict := metadata.GetConflict()
+		conflict := metadata.Conflict()
 
 		if conflict != storage.ConflictNone {
 			inclusionState = "conflicting"
@@ -83,8 +83,8 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		messageMetadataResponse.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
-		cmi := deps.Storage.GetConfirmedMilestoneIndex()
-		ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi)
+		cmi := deps.Storage.ConfirmedMilestoneIndex()
+		ycri, ocri := dag.ConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi)
 
 		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 		shouldPromote := false
@@ -119,13 +119,13 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
-	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
+	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
-	return cachedMsg.GetMessage().GetMessage(), nil
+	return cachedMsg.Message().Message(), nil
 }
 
 func messageBytesByID(c echo.Context) ([]byte, error) {
@@ -136,13 +136,13 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
-	cachedMsg := deps.Storage.GetCachedMessageOrNil(messageID)
+	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedMsg.Release(true)
 
-	return cachedMsg.GetMessage().GetData(), nil
+	return cachedMsg.Message().Data(), nil
 }
 
 func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
@@ -154,7 +154,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}
 
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
-	childrenMessageIDs := deps.Storage.GetChildrenMessageIDs(messageID, objectstorage.WithIteratorMaxIterations(maxResults))
+	childrenMessageIDs := deps.Storage.ChildrenMessageIDs(messageID, objectstorage.WithIteratorMaxIterations(maxResults))
 
 	return &childrenResponse{
 		MessageID:  messageID.ToHex(),
@@ -181,7 +181,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 	}
 
 	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
-	indexMessageIDs := deps.Storage.GetIndexMessageIDs(indexBytes, objectstorage.WithIteratorMaxIterations(maxResults))
+	indexMessageIDs := deps.Storage.IndexMessageIDs(indexBytes, objectstorage.WithIteratorMaxIterations(maxResults))
 
 	return &messageIDsByIndexResponse{
 		Index:      index,
@@ -273,10 +273,10 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
-	msgProcessedChan := deps.Tangle.RegisterMessageProcessedEvent(message.GetMessageID())
+	msgProcessedChan := deps.Tangle.RegisterMessageProcessedEvent(message.MessageID())
 
 	if err := deps.MessageProcessor.Emit(message); err != nil {
-		deps.Tangle.DeregisterMessageProcessedEvent(message.GetMessageID())
+		deps.Tangle.DeregisterMessageProcessedEvent(message.MessageID())
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
@@ -285,10 +285,10 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	defer cancel()
 
 	if err := utils.WaitForChannelClosed(ctx, msgProcessedChan); errors.Is(err, context.DeadlineExceeded) {
-		deps.Tangle.DeregisterMessageProcessedEvent(message.GetMessageID())
+		deps.Tangle.DeregisterMessageProcessedEvent(message.MessageID())
 	}
 
 	return &messageCreatedResponse{
-		MessageID: message.GetMessageID().ToHex(),
+		MessageID: message.MessageID().ToHex(),
 	}, nil
 }

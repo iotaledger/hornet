@@ -158,17 +158,18 @@ func (s *Storage) loadConfirmedMilestoneFromDatabase() {
 }
 
 func (s *Storage) DatabaseSupportsCleanup() bool {
+	// ToDo: add this to the KVStore interface
 	// Bolt does not support cleaning up anything
 	return false
 }
 
 func (s *Storage) CleanupDatabases() error {
-	// Bolt does not support cleaning up anything
+	// ToDo: add this to the KVStore interface
 	return ErrNothingToCleanUp
 }
 
-// GetDatabaseSize returns the size of the database.
-func (s *Storage) GetDatabaseSize() (int64, error) {
+// DatabaseSize returns the size of the database.
+func (s *Storage) DatabaseSize() (int64, error) {
 
 	var size int64
 

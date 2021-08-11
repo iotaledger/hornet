@@ -63,24 +63,24 @@ func (cachedMsgs CachedMessages) Release(force ...bool) {
 	}
 }
 
-// GetMessage retrieves the message, that is cached in this container.
-func (c *CachedMessage) GetMessage() *Message {
+// Message retrieves the message, that is cached in this container.
+func (c *CachedMessage) Message() *Message {
 	return c.msg.Get().(*Message)
 }
 
-// GetCachedMetadata returns the underlying cached metadata.
+// CachedMetadata returns the underlying cached metadata.
 // meta +1
-func (c *CachedMessage) GetCachedMetadata() *CachedMetadata {
+func (c *CachedMessage) CachedMetadata() *CachedMetadata {
 	return &CachedMetadata{c.metadata.Retain()}
 }
 
-// GetMetadata retrieves the metadata, that is cached in this container.
-func (c *CachedMessage) GetMetadata() *MessageMetadata {
+// Metadata retrieves the metadata, that is cached in this container.
+func (c *CachedMessage) Metadata() *MessageMetadata {
 	return c.metadata.Get().(*MessageMetadata)
 }
 
-// GetMetadata retrieves the metadata, that is cached in this container.
-func (c *CachedMetadata) GetMetadata() *MessageMetadata {
+// Metadata retrieves the metadata, that is cached in this container.
+func (c *CachedMetadata) Metadata() *MessageMetadata {
 	return c.Get().(*MessageMetadata)
 }
 
@@ -160,11 +160,11 @@ func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, erro
 	return msg, nil
 }
 
-func (s *Storage) GetMessageStorageSize() int {
+func (s *Storage) MessageStorageSize() int {
 	return s.messagesStorage.GetSize()
 }
 
-func (s *Storage) GetMessageMetadataStorageSize() int {
+func (s *Storage) MessageMetadataStorageSize() int {
 	return s.metadataStorage.GetSize()
 }
 
@@ -202,9 +202,9 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 	)
 }
 
-// GetCachedMessageOrNil returns a cached message object.
+// CachedMessageOrNil returns a cached message object.
 // msg +1
-func (s *Storage) GetCachedMessageOrNil(messageID hornet.MessageID) *CachedMessage {
+func (s *Storage) CachedMessageOrNil(messageID hornet.MessageID) *CachedMessage {
 	cachedMsg := s.messagesStorage.Load(messageID) // msg +1
 	if !cachedMsg.Exists() {
 		cachedMsg.Release(true) // msg -1
@@ -224,9 +224,9 @@ func (s *Storage) GetCachedMessageOrNil(messageID hornet.MessageID) *CachedMessa
 	}
 }
 
-// GetCachedMessageMetadataOrNil returns a cached metadata object.
+// CachedMessageMetadataOrNil returns a cached metadata object.
 // metadata +1
-func (s *Storage) GetCachedMessageMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
+func (s *Storage) CachedMessageMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
 	cachedMeta := s.metadataStorage.Load(messageID) // meta +1
 	if !cachedMeta.Exists() {
 		cachedMeta.Release(true) // metadata -1
@@ -235,8 +235,8 @@ func (s *Storage) GetCachedMessageMetadataOrNil(messageID hornet.MessageID) *Cac
 	return &CachedMetadata{CachedObject: cachedMeta}
 }
 
-// GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
-func (s *Storage) GetStoredMetadataOrNil(messageID hornet.MessageID) *MessageMetadata {
+// StoredMetadataOrNil returns a metadata object without accessing the cache layer.
+func (s *Storage) StoredMetadataOrNil(messageID hornet.MessageID) *MessageMetadata {
 	storedMeta := s.metadataStorage.LoadObjectFromStore(messageID)
 	if storedMeta == nil {
 		return nil
@@ -270,7 +270,7 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 		newlyAdded = true
 
 		metadata := &MessageMetadata{
-			messageID: message.GetMessageID(),
+			messageID: message.MessageID(),
 			parents:   hornet.MessageIDsFromSliceOfArrays(message.message.Parents),
 		}
 
@@ -283,7 +283,7 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 
 	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
 	if !newlyAdded {
-		cachedMeta = s.metadataStorage.Load(message.GetMessageID()) // meta +1
+		cachedMeta = s.metadataStorage.Load(message.MessageID()) // meta +1
 	}
 
 	return &CachedMessage{msg: cachedMsgData, metadata: cachedMeta}, newlyAdded
@@ -341,20 +341,20 @@ func (s *Storage) AddMessageToStorage(message *Message, latestMilestoneIndex mil
 		return cachedMessage, true
 	}
 
-	for _, parent := range message.GetParents() {
-		s.StoreChild(parent, cachedMessage.GetMessage().GetMessageID()).Release(forceRelease)
+	for _, parent := range message.Parents() {
+		s.StoreChild(parent, cachedMessage.Message().MessageID()).Release(forceRelease)
 	}
 
-	indexationPayload := CheckIfIndexation(cachedMessage.GetMessage())
+	indexationPayload := CheckIfIndexation(cachedMessage.Message())
 	if indexationPayload != nil {
 		// store indexation if the message contains an indexation payload
-		s.StoreIndexation(indexationPayload.Index, cachedMessage.GetMessage().GetMessageID()).Release(true)
+		s.StoreIndexation(indexationPayload.Index, cachedMessage.Message().MessageID()).Release(true)
 	}
 
 	// Store only non-requested messages, since all requested messages are referenced by a milestone anyway
 	// This is only used to delete unreferenced messages from the database at pruning
 	if !requested {
-		s.StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.GetMessage().GetMessageID()).Release(true)
+		s.StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.Message().MessageID()).Release(true)
 	}
 
 	if ms := s.VerifyMilestone(message); ms != nil {

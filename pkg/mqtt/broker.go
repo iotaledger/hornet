@@ -55,8 +55,8 @@ func (b *Broker) Start() {
 	b.broker.Start()
 }
 
-// GetConfig returns the broker config instance.
-func (b *Broker) GetConfig() *broker.Config {
+// Config returns the broker config instance.
+func (b *Broker) Config() *broker.Config {
 	return b.config
 }
 

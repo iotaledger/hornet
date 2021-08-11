@@ -213,7 +213,7 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, treasuryTuple, nil))
 
-	readDiff, err := utxo.GetMilestoneDiffWithoutLocking(msIndex)
+	readDiff, err := utxo.MilestoneDiffWithoutLocking(msIndex)
 	require.NoError(t, err)
 
 	require.Equal(t, msIndex, readDiff.Index)

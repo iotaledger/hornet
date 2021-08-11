@@ -27,12 +27,12 @@ func publishOnTopic(topic string, payload interface{}) {
 
 func publishConfirmedMilestone(cachedMs *storage.CachedMilestone) {
 	defer cachedMs.Release(true)
-	publishMilestoneOnTopic(topicMilestonesConfirmed, cachedMs.GetMilestone())
+	publishMilestoneOnTopic(topicMilestonesConfirmed, cachedMs.Milestone())
 }
 
 func publishLatestMilestone(cachedMs *storage.CachedMilestone) {
 	defer cachedMs.Release(true)
-	publishMilestoneOnTopic(topicMilestonesLatest, cachedMs.GetMilestone())
+	publishMilestoneOnTopic(topicMilestonesLatest, cachedMs.Milestone())
 }
 
 func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
@@ -54,14 +54,14 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 	defer cachedMessage.Release(true)
 
 	if mqttBroker.HasSubscribers(topicMessages) {
-		mqttBroker.Send(topicMessages, cachedMessage.GetMessage().GetData())
+		mqttBroker.Send(topicMessages, cachedMessage.Message().Data())
 	}
 
-	indexation := cachedMessage.GetMessage().GetIndexation()
+	indexation := cachedMessage.Message().Indexation()
 	if indexation != nil {
 		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", hex.EncodeToString(indexation.Index))
 		if mqttBroker.HasSubscribers(indexationTopic) {
-			mqttBroker.Send(indexationTopic, cachedMessage.GetMessage().GetData())
+			mqttBroker.Send(indexationTopic, cachedMessage.Message().Data())
 		}
 	}
 }
@@ -69,9 +69,9 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 func publishTransactionIncludedMessage(transactionID *iotago.TransactionID, messageID hornet.MessageID) {
 	transactionTopic := strings.ReplaceAll(topicTransactionsIncludedMessage, "{transactionId}", hex.EncodeToString(transactionID[:]))
 	if mqttBroker.HasSubscribers(transactionTopic) {
-		cachedMessage := deps.Storage.GetCachedMessageOrNil(messageID)
+		cachedMessage := deps.Storage.CachedMessageOrNil(messageID)
 		if cachedMessage != nil {
-			mqttBroker.Send(transactionTopic, cachedMessage.GetMessage().GetData())
+			mqttBroker.Send(transactionTopic, cachedMessage.Message().Data())
 			cachedMessage.Release(true)
 		}
 	}
@@ -80,9 +80,9 @@ func publishTransactionIncludedMessage(transactionID *iotago.TransactionID, mess
 func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 	defer cachedMetadata.Release(true)
 
-	metadata := cachedMetadata.GetMetadata()
+	metadata := cachedMetadata.Metadata()
 
-	messageID := metadata.GetMessageID().ToHex()
+	messageID := metadata.MessageID().ToHex()
 	singleMessageTopic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageID)
 	hasSingleMessageTopicSubscriber := mqttBroker.HasSubscribers(singleMessageTopic)
 
@@ -91,7 +91,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 	if hasSingleMessageTopicSubscriber || hasAllMessagesTopicSubscriber {
 
 		var referencedByMilestone *milestone.Index = nil
-		referenced, referencedIndex := metadata.GetReferenced()
+		referenced, referencedIndex := metadata.ReferencedWithIndex()
 		if referenced {
 			referencedByMilestone = &referencedIndex
 		}
@@ -103,8 +103,8 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		}
 
 		messageMetadataResponse := &messageMetadataPayload{
-			MessageID:                  metadata.GetMessageID().ToHex(),
-			Parents:                    metadata.GetParents().ToHex(),
+			MessageID:                  metadata.MessageID().ToHex(),
+			Parents:                    metadata.Parents().ToHex(),
 			Solid:                      metadata.IsSolid(),
 			ReferencedByMilestoneIndex: referencedByMilestone,
 		}
@@ -116,7 +116,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		if referenced {
 			inclusionState := "noTransaction"
 
-			conflict := metadata.GetConflict()
+			conflict := metadata.Conflict()
 
 			if conflict != storage.ConflictNone {
 				inclusionState = "conflicting"
@@ -128,8 +128,8 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 			messageMetadataResponse.LedgerInclusionState = &inclusionState
 		} else if metadata.IsSolid() {
 			// determine info about the quality of the tip if not referenced
-			cmi := deps.Storage.GetConfirmedMilestoneIndex()
-			ycri, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMetadata.Retain(), cmi)
+			cmi := deps.Storage.ConfirmedMilestoneIndex()
+			ycri, ocri := dag.ConeRootIndexes(deps.Storage, cachedMetadata.Retain(), cmi)
 
 			// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 			shouldPromote := false
