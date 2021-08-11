@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/iotaledger/hive.go/configuration"
 
@@ -27,7 +27,7 @@ func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string)
 	passwordEnv, err := utils.LoadStringFromEnvironment("HORNET_TOOL_PASSWORD")
 	if err != nil {
 		// get terminal state to be able to restore it in case of an interrupt
-		originalTerminalState, err := terminal.GetState(int(syscall.Stdin))
+		originalTerminalState, err := term.GetState(int(syscall.Stdin))
 		if err != nil {
 			return errors.New("failed to get terminal state")
 		}
@@ -37,19 +37,19 @@ func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string)
 		go func() {
 			<-signalChan
 			// reset the terminal to the original state if we receive an interrupt
-			terminal.Restore(int(syscall.Stdin), originalTerminalState)
+			term.Restore(int(syscall.Stdin), originalTerminalState)
 			fmt.Println("\naborted... Bye!")
 			os.Exit(1)
 		}()
 
 		fmt.Print("Enter a password: ")
-		password, err = terminal.ReadPassword(int(syscall.Stdin))
+		password, err = term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			return err
 		}
 
 		fmt.Print("\nRe-enter your password: ")
-		passwordReenter, err := terminal.ReadPassword(int(syscall.Stdin))
+		passwordReenter, err := term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			return err
 		}
