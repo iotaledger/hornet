@@ -63,23 +63,23 @@ func (cachedMsgs CachedMessages) Release(force ...bool) {
 	}
 }
 
-// GetMessage retrieves the GetMessage, that is cached in this container.
+// GetMessage retrieves the message, that is cached in this container.
 func (c *CachedMessage) GetMessage() *Message {
 	return c.msg.Get().(*Message)
 }
 
-// GetCachedMetadata returns the underlying GetCachedMetadata.
+// GetCachedMetadata returns the underlying cached metadata.
 // meta +1
 func (c *CachedMessage) GetCachedMetadata() *CachedMetadata {
 	return &CachedMetadata{c.metadata.Retain()}
 }
 
-// GetMetadata retrieves the MessageMetadata, that is cached in this container.
+// GetMetadata retrieves the metadata, that is cached in this container.
 func (c *CachedMessage) GetMetadata() *MessageMetadata {
 	return c.metadata.Get().(*MessageMetadata)
 }
 
-// GetMetadata retrieves the MessageMetadata, that is cached in this container.
+// GetMetadata retrieves the metadata, that is cached in this container.
 func (c *CachedMetadata) GetMetadata() *MessageMetadata {
 	return c.Get().(*MessageMetadata)
 }

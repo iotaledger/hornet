@@ -49,7 +49,7 @@ func (s *Storage) ResetMilestoneIndexes() {
 	s.latestMilestoneIndex = 0
 }
 
-// GetMilestoneCachedMessageOrNil returns the CachedMessage of a milestone index or nil if it doesn't exist.
+// GetMilestoneCachedMessageOrNil returns the cached message of a milestone index or nil if it doesn't exist.
 // message +1
 func (s *Storage) GetMilestoneCachedMessageOrNil(milestoneIndex milestone.Index) *CachedMessage {
 

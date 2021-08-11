@@ -39,7 +39,7 @@ func (c *CachedChild) Retain() *CachedChild {
 	return &CachedChild{c.CachedObject.Retain()}
 }
 
-// GetChild retrieves the GetChild, that is cached in this container.
+// GetChild retrieves the child, that is cached in this container.
 func (c *CachedChild) GetChild() *Child {
 	return c.Get().(*Child)
 }
