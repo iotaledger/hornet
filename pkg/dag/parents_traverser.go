@@ -142,7 +142,7 @@ func (t *ParentTraverser) processStackParents() error {
 		}
 	}
 
-	cachedMsgMeta := t.metadataMemcache.GetCachedMetadataOrNil(currentMessageID) // meta +1
+	cachedMsgMeta := t.metadataMemcache.CachedMetadataOrNil(currentMessageID) // meta +1
 	if cachedMsgMeta == nil {
 		// remove the message from the stack, the parents are not traversed
 		t.processed[currentMessageIDMapKey] = struct{}{}
@@ -182,7 +182,7 @@ func (t *ParentTraverser) processStackParents() error {
 		return nil
 	}
 
-	for _, parentMessageID := range cachedMsgMeta.GetMetadata().GetParents() {
+	for _, parentMessageID := range cachedMsgMeta.Metadata().Parents() {
 		if _, parentProcessed := t.processed[parentMessageID.ToMapKey()]; !parentProcessed {
 			// parent was not processed yet
 			// traverse this message

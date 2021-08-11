@@ -132,12 +132,12 @@ func (n *Node) IsSkipped(plugin *Plugin) bool {
 }
 
 func (n *Node) isDisabled(plugin *Plugin) bool {
-	_, exists := n.disabledPlugins[plugin.GetIdentifier()]
+	_, exists := n.disabledPlugins[plugin.Identifier()]
 	return exists
 }
 
 func (n *Node) isEnabled(plugin *Plugin) bool {
-	_, exists := n.enabledPlugins[plugin.GetIdentifier()]
+	_, exists := n.enabledPlugins[plugin.Identifier()]
 	return exists
 }
 

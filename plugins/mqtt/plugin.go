@@ -115,7 +115,7 @@ func configure() {
 		topicName := string(topic)
 
 		if messageID := messageIDFromTopic(topicName); messageID != nil {
-			if cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID); cachedMsgMeta != nil {
+			if cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID); cachedMsgMeta != nil {
 				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMsgMeta); added {
 					return // Avoid Release (done inside workerpool task)
 				}
@@ -163,16 +163,16 @@ func configure() {
 		}
 
 		if topicName == topicMilestonesLatest {
-			index := deps.Storage.GetLatestMilestoneIndex()
-			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
+			index := deps.Storage.LatestMilestoneIndex()
+			if milestone := deps.Storage.CachedMilestoneOrNil(index); milestone != nil {
 				publishLatestMilestone(milestone) // milestone pass +1
 			}
 			return
 		}
 
 		if topicName == topicMilestonesConfirmed {
-			index := deps.Storage.GetConfirmedMilestoneIndex()
-			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
+			index := deps.Storage.ConfirmedMilestoneIndex()
+			if milestone := deps.Storage.CachedMilestoneOrNil(index); milestone != nil {
 				publishConfirmedMilestone(milestone) // milestone pass +1
 			}
 			return
@@ -198,7 +198,7 @@ func configure() {
 func setupWebSocketRoute() {
 
 	// Configure MQTT WebSocket route
-	mqttWSUrl, err := url.Parse(fmt.Sprintf("http://%s:%s", mqttBroker.GetConfig().Host, mqttBroker.GetConfig().WsPort))
+	mqttWSUrl, err := url.Parse(fmt.Sprintf("http://%s:%s", mqttBroker.Config().Host, mqttBroker.Config().WsPort))
 	if err != nil {
 		Plugin.LogFatalf("MQTT WebSocket init failed! %s", err)
 	}
@@ -213,7 +213,7 @@ func setupWebSocketRoute() {
 		}),
 		// We need to forward any calls to the MQTT route to the ws endpoint of our broker
 		Rewrite: map[string]string{
-			RouteMQTT: mqttBroker.GetConfig().WsPath,
+			RouteMQTT: mqttBroker.Config().WsPath,
 		},
 	}
 
@@ -222,7 +222,7 @@ func setupWebSocketRoute() {
 
 func run() {
 
-	Plugin.LogInfof("Starting MQTT Broker (port %s) ...", mqttBroker.GetConfig().Port)
+	Plugin.LogInfof("Starting MQTT Broker (port %s) ...", mqttBroker.Config().Port)
 
 	onLatestMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
@@ -294,15 +294,15 @@ func run() {
 	if err := Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
 		go func() {
 			mqttBroker.Start()
-			Plugin.LogInfof("Starting MQTT Broker (port %s) ... done", mqttBroker.GetConfig().Port)
+			Plugin.LogInfof("Starting MQTT Broker (port %s) ... done", mqttBroker.Config().Port)
 		}()
 
-		if mqttBroker.GetConfig().Port != "" {
-			Plugin.LogInfof("You can now listen to MQTT via: http://%s:%s", mqttBroker.GetConfig().Host, mqttBroker.GetConfig().Port)
+		if mqttBroker.Config().Port != "" {
+			Plugin.LogInfof("You can now listen to MQTT via: http://%s:%s", mqttBroker.Config().Host, mqttBroker.Config().Port)
 		}
 
-		if mqttBroker.GetConfig().TlsPort != "" {
-			Plugin.LogInfof("You can now listen to MQTT via: https://%s:%s", mqttBroker.GetConfig().TlsHost, mqttBroker.GetConfig().TlsPort)
+		if mqttBroker.Config().TlsPort != "" {
+			Plugin.LogInfof("You can now listen to MQTT via: https://%s:%s", mqttBroker.Config().TlsHost, mqttBroker.Config().TlsPort)
 		}
 
 		<-shutdownSignal

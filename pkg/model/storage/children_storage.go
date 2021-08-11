@@ -39,8 +39,8 @@ func (c *CachedChild) Retain() *CachedChild {
 	return &CachedChild{c.CachedObject.Retain()}
 }
 
-// GetChild retrieves the child, that is cached in this container.
-func (c *CachedChild) GetChild() *Child {
+// Child retrieves the child, that is cached in this container.
+func (c *CachedChild) Child() *Child {
 	return c.Get().(*Child)
 }
 
@@ -49,7 +49,7 @@ func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	return child, nil
 }
 
-func (s *Storage) GetChildrenStorageSize() int {
+func (s *Storage) ChildrenStorageSize() int {
 	return s.childrenStorage.GetSize()
 }
 
@@ -75,9 +75,9 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 	)
 }
 
-// GetChildrenMessageIDs returns the message IDs of the children of the given message.
+// ChildrenMessageIDs returns the message IDs of the children of the given message.
 // children +-0
-func (s *Storage) GetChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...IteratorOption) hornet.MessageIDs {
+func (s *Storage) ChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...IteratorOption) hornet.MessageIDs {
 	var childrenMessageIDs hornet.MessageIDs
 
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
@@ -93,9 +93,9 @@ func (s *Storage) ContainsChild(messageID hornet.MessageID, childMessageID horne
 	return s.childrenStorage.Contains(append(messageID, childMessageID...), readOptions...)
 }
 
-// GetCachedChildrenOfMessageID returns the cached children of a message.
+// CachedChildrenOfMessageID returns the cached children of a message.
 // children +1
-func (s *Storage) GetCachedChildrenOfMessageID(messageID hornet.MessageID, iteratorOptions ...IteratorOption) CachedChildren {
+func (s *Storage) CachedChildrenOfMessageID(messageID hornet.MessageID, iteratorOptions ...IteratorOption) CachedChildren {
 	cachedChildren := make(CachedChildren, 0)
 	s.childrenStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
 		cachedChildren = append(cachedChildren, &CachedChild{CachedObject: cachedObject})

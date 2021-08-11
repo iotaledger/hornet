@@ -66,7 +66,7 @@ func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string)
 		return err
 	}
 
-	passwordKey, err := basicauth.GetPasswordKey(password, passwordSalt)
+	passwordKey, err := basicauth.DerivePasswordKey(password, passwordSalt)
 
 	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %x\n", passwordKey, passwordSalt)
 

@@ -16,8 +16,8 @@ type CachedIndexation struct {
 	objectstorage.CachedObject
 }
 
-// GetIndexation retrieves the indexation, that is cached in this container.
-func (c *CachedIndexation) GetIndexation() *Indexation {
+// Indexation retrieves the indexation, that is cached in this container.
+func (c *CachedIndexation) Indexation() *Indexation {
 	return c.Get().(*Indexation)
 }
 
@@ -28,7 +28,7 @@ func indexationFactory(key []byte, data []byte) (objectstorage.StorableObject, e
 	}, nil
 }
 
-func (s *Storage) GetIndexationStorageSize() int {
+func (s *Storage) IndexationStorageSize() int {
 	return s.indexationStorage.GetSize()
 }
 
@@ -54,9 +54,9 @@ func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profil
 	)
 }
 
-// GetIndexMessageIDs returns all known message IDs for the given index.
+// IndexMessageIDs returns all known message IDs for the given index.
 // indexation +-0
-func (s *Storage) GetIndexMessageIDs(index []byte, iteratorOptions ...IteratorOption) hornet.MessageIDs {
+func (s *Storage) IndexMessageIDs(index []byte, iteratorOptions ...IteratorOption) hornet.MessageIDs {
 	var messageIDs hornet.MessageIDs
 
 	indexPadded := PadIndexationIndex(index)

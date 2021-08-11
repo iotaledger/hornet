@@ -13,7 +13,7 @@ func (s *Storage) configureSnapshotStore(store kvstore.KVStore) {
 
 func (s *Storage) storeSnapshotInfo(snapshot *SnapshotInfo) error {
 
-	if err := s.snapshotStore.Set([]byte("snapshotInfo"), snapshot.GetBytes()); err != nil {
+	if err := s.snapshotStore.Set([]byte("snapshotInfo"), snapshot.Bytes()); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store snapshot info")
 	}
 
@@ -39,7 +39,7 @@ func (s *Storage) readSnapshotInfo() (*SnapshotInfo, error) {
 func (s *Storage) storeSolidEntryPoints(points *SolidEntryPoints) error {
 	if points.IsModified() {
 
-		if err := s.snapshotStore.Set([]byte("solidEntryPoints"), points.GetBytes()); err != nil {
+		if err := s.snapshotStore.Set([]byte("solidEntryPoints"), points.Bytes()); err != nil {
 			return errors.Wrap(NewDatabaseError(err), "failed to store solid entry points")
 		}
 

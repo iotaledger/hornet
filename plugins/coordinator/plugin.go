@@ -249,7 +249,7 @@ func run() {
 			default:
 				// do not block if already another signal is waiting
 			}
-		}, deps.Coordinator.GetInterval(), shutdownSignal)
+		}, deps.Coordinator.Interval(), shutdownSignal)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityCoordinator); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
@@ -282,7 +282,7 @@ func run() {
 			select {
 			case <-nextCheckpointSignal:
 				// check the thresholds again, because a new milestone could have been issued in the meantime
-				if trackedMessagesCount := deps.Selector.GetTrackedMessagesCount(); trackedMessagesCount < maxTrackedMessages {
+				if trackedMessagesCount := deps.Selector.TrackedMessagesCount(); trackedMessagesCount < maxTrackedMessages {
 					continue
 				}
 
@@ -445,7 +445,7 @@ func initQuorumGroups(nodeConfig *configuration.Configuration) (map[string][]*co
 
 func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 
-	msgSolidEventChan := deps.Tangle.RegisterMessageSolidEvent(msg.GetMessageID())
+	msgSolidEventChan := deps.Tangle.RegisterMessageSolidEvent(msg.MessageID())
 
 	var milestoneConfirmedEventChan chan struct{}
 
@@ -454,7 +454,7 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 	}
 
 	if err := deps.MessageProcessor.Emit(msg); err != nil {
-		deps.Tangle.DeregisterMessageSolidEvent(msg.GetMessageID())
+		deps.Tangle.DeregisterMessageSolidEvent(msg.MessageID())
 		if len(msIndex) > 0 {
 			deps.Tangle.DeregisterMilestoneConfirmedEvent(msIndex[0])
 		}
@@ -477,16 +477,16 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) bool {
 	defer cachedMsgMeta.Release(true)
 
-	cmi := deps.Storage.GetConfirmedMilestoneIndex()
+	cmi := deps.Storage.ConfirmedMilestoneIndex()
 
-	_, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	_, ocri := dag.ConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
 
 	// if the OCRI to CMI delta is over belowMaxDepth, then the tip is invalid.
 	return (cmi - ocri) > milestone.Index(deps.BelowMaxDepth)
 }
 
-// GetEvents returns the events of the coordinator
-func GetEvents() *coordinator.Events {
+// Events returns the events of the coordinator
+func Events() *coordinator.Events {
 	if deps.Coordinator == nil {
 		return nil
 	}
@@ -504,7 +504,7 @@ func configureEvents() {
 		}
 
 		// add tips to the heaviest branch selector
-		if trackedMessagesCount := deps.Selector.OnNewSolidMessage(cachedMsgMeta.GetMetadata()); trackedMessagesCount >= maxTrackedMessages {
+		if trackedMessagesCount := deps.Selector.OnNewSolidMessage(cachedMsgMeta.Metadata()); trackedMessagesCount >= maxTrackedMessages {
 			Plugin.LogDebugf("Coordinator Tipselector: trackedMessagesCount: %d", trackedMessagesCount)
 
 			// issue next checkpoint

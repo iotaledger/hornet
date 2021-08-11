@@ -101,7 +101,7 @@ func websocketRoute(ctx echo.Context) error {
 			client.Send(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: lastDBCleanup})
 
 		case MsgTypeMs:
-			start := deps.Storage.GetLatestMilestoneIndex()
+			start := deps.Storage.LatestMilestoneIndex()
 			for i := start - 10; i <= start; i++ {
 				if milestoneMessageID := getMilestoneMessageID(i); milestoneMessageID != nil {
 					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.ToHex(), Index: i}})

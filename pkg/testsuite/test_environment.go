@@ -79,7 +79,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(nil, targetScore, 5*time.Second, "", 30*time.Second),
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
-		lastMilestoneMessageID: hornet.GetNullMessageID(),
+		lastMilestoneMessageID: hornet.NullMessageID(),
 		serverMetrics:          &metrics.ServerMetrics{},
 	}
 
@@ -105,10 +105,10 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.storage = storage.New(te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
 
 	// Initialize SEP
-	te.storage.SolidEntryPointsAdd(hornet.GetNullMessageID(), 0)
+	te.storage.SolidEntryPointsAdd(hornet.NullMessageID(), 0)
 
 	// Initialize UTXO
-	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
+	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
 	te.storage.UTXO().AddUnspentOutput(te.GenesisOutput)
 	te.storage.UTXO().StoreUnspentTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
 
@@ -121,7 +121,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.VerifyCMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
-		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{hornet.GetNullMessageID()}, false)
+		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{hornet.NullMessageID()}, false)
 		require.Equal(testInterface, 1, confStats.MessagesReferenced)                  // 1 for milestone
 		require.Equal(testInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for milestone
 		require.Equal(testInterface, 0, confStats.MessagesIncludedWithTransactions)
@@ -159,9 +159,9 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 
 func (te *TestEnvironment) NewTestMessage(index int, parents hornet.MessageIDs) *storage.MessageMetadata {
 	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildIndexation().Store()
-	cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
+	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
 	defer cachedMsgMeta.Release(true)
-	return cachedMsgMeta.GetMetadata()
+	return cachedMsgMeta.Metadata()
 }
 
 // BuildTangle builds a tangle structure without a tipselection algorithm, but random tips from the last
@@ -183,7 +183,7 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 
 		if len(messages) < initMessagesCount {
 			// reference the first milestone at the beginning
-			return hornet.MessageIDs{te.Milestones[0].GetMilestone().MessageID}
+			return hornet.MessageIDs{te.Milestones[0].Milestone().MessageID}
 		}
 
 		parents := hornet.MessageIDs{}
@@ -195,7 +195,7 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 			milestoneMessages := messagesPerMilestones[len(messagesPerMilestones)-1-msIndex]
 			if len(milestoneMessages) == 0 {
 				// use the milestone hash
-				parents = append(parents, te.Milestones[len(te.Milestones)-1-msIndex].GetMilestone().MessageID)
+				parents = append(parents, te.Milestones[len(te.Milestones)-1-msIndex].Milestone().MessageID)
 				continue
 			}
 			parents = append(parents, milestoneMessages[rand.Intn(len(milestoneMessages))])
@@ -208,15 +208,15 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 	for msIndex := 2; msIndex < milestonesCount; msIndex++ {
 		messagesPerMilestones = append(messagesPerMilestones, hornet.MessageIDs{})
 
-		cmi := te.Storage().GetConfirmedMilestoneIndex()
+		cmi := te.Storage().ConfirmedMilestoneIndex()
 
 		msgsCount := minMessagesPerMilestone + rand.Intn(maxMessagesPerMilestone-minMessagesPerMilestone)
 		for msgCount := 0; msgCount < msgsCount; msgCount++ {
 			messageTotalCount++
 			msgMeta := te.NewTestMessage(messageTotalCount, getParents())
 
-			messages = append(messages, msgMeta.GetMessageID())
-			messagesPerMilestones[len(messagesPerMilestones)-1] = append(messagesPerMilestones[len(messagesPerMilestones)-1], msgMeta.GetMessageID())
+			messages = append(messages, msgMeta.MessageID())
+			messagesPerMilestones[len(messagesPerMilestones)-1] = append(messagesPerMilestones[len(messagesPerMilestones)-1], msgMeta.MessageID())
 
 			if onNewMessage != nil {
 				onNewMessage(cmi, msgMeta)

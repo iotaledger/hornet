@@ -124,10 +124,10 @@ func collectInfo() {
 		referencedRate.Set(lastConfirmedMilestoneMetric.ReferencedRate)
 	}
 
-	milestones.WithLabelValues("latest").Set(float64(deps.Storage.GetLatestMilestoneIndex()))
-	milestones.WithLabelValues("confirmed").Set(float64(deps.Storage.GetConfirmedMilestoneIndex()))
+	milestones.WithLabelValues("latest").Set(float64(deps.Storage.LatestMilestoneIndex()))
+	milestones.WithLabelValues("confirmed").Set(float64(deps.Storage.ConfirmedMilestoneIndex()))
 
-	snapshotInfo := deps.Storage.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.SnapshotInfo()
 	milestones.WithLabelValues("snapshot").Set(0)
 	milestones.WithLabelValues("pruning").Set(0)
 	if snapshotInfo != nil {
@@ -136,7 +136,7 @@ func collectInfo() {
 	}
 
 	if deps.TipSelector != nil {
-		nonLazyTipCount, semiLazyTipCount := deps.TipSelector.GetTipCount()
+		nonLazyTipCount, semiLazyTipCount := deps.TipSelector.TipCount()
 		tips.WithLabelValues("nonlazy").Set(float64(nonLazyTipCount))
 		tips.WithLabelValues("semilazy").Set(float64(semiLazyTipCount))
 	}

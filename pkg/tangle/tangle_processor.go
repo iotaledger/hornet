@@ -44,8 +44,8 @@ func (t *Tangle) RunTangleProcessor() {
 
 	// set latest known milestone from database
 	latestMilestoneFromDatabase := t.storage.SearchLatestMilestoneIndexInStore()
-	if latestMilestoneFromDatabase < t.storage.GetConfirmedMilestoneIndex() {
-		latestMilestoneFromDatabase = t.storage.GetConfirmedMilestoneIndex()
+	if latestMilestoneFromDatabase < t.storage.ConfirmedMilestoneIndex() {
+		latestMilestoneFromDatabase = t.storage.ConfirmedMilestoneIndex()
 	}
 
 	t.storage.SetLatestMilestoneIndex(latestMilestoneFromDatabase, t.updateSyncedAtStartup)
@@ -186,7 +186,7 @@ func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
 
 func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
 
-	latestMilestoneIndex := t.storage.GetLatestMilestoneIndex()
+	latestMilestoneIndex := t.storage.LatestMilestoneIndex()
 	isNodeSyncedWithinBelowMaxDepth := t.storage.IsNodeSyncedWithinBelowMaxDepth()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
@@ -209,14 +209,14 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 			t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
 		}
 
-		confirmedMilestoneIndex := t.storage.GetConfirmedMilestoneIndex()
+		confirmedMilestoneIndex := t.storage.ConfirmedMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = confirmedMilestoneIndex
 		}
 
 		if t.storage.IsNodeAlmostSynced() {
 			// try to solidify the message and its future cone
-			t.futureConeSolidifierWorkerPool.Submit(cachedMsg.GetCachedMetadata()) // meta pass +1
+			t.futureConeSolidifierWorkerPool.Submit(cachedMsg.CachedMetadata()) // meta pass +1
 		}
 
 		t.Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, confirmedMilestoneIndex)
@@ -233,12 +233,12 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
 	// with the message it issued itself because the message may be not solid yet and therefore their database entries
 	// are not created yet.
-	t.Events.ProcessedMessage.Trigger(incomingMsg.GetMessageID())
-	t.messageProcessedSyncEvent.Trigger(incomingMsg.GetMessageID().ToMapKey())
+	t.Events.ProcessedMessage.Trigger(incomingMsg.MessageID())
+	t.messageProcessedSyncEvent.Trigger(incomingMsg.MessageID().ToMapKey())
 
 	if request != nil {
 		// mark the received request as processed
-		t.requestQueue.Processed(incomingMsg.GetMessageID())
+		t.requestQueue.Processed(incomingMsg.MessageID())
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when
@@ -301,8 +301,8 @@ func (t *Tangle) PrintStatus() {
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			t.receiveMsgWorkerPool.GetPendingQueueSize(),
-			t.storage.GetConfirmedMilestoneIndex(),
-			t.storage.GetLatestMilestoneIndex(),
+			t.storage.ConfirmedMilestoneIndex(),
+			t.storage.LatestMilestoneIndex(),
 			t.lastIncomingMPS,
 			t.lastNewMPS,
 			t.lastOutgoingMPS,

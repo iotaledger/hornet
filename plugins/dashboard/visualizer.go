@@ -50,8 +50,8 @@ func runVisualizer() {
 				return
 			}
 
-			parentsHex := make([]string, len(msg.GetParents()))
-			for i, parent := range msg.GetParents() {
+			parentsHex := make([]string, len(msg.Parents()))
+			for i, parent := range msg.Parents() {
 				parentsHex[i] = parent.ToHex()[:VisualizerIDLength]
 			}
 
@@ -59,7 +59,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:           msg.GetMessageID().ToHex(),
+						ID:           msg.MessageID().ToHex(),
 						Parents:      parentsHex,
 						IsSolid:      metadata.IsSolid(),
 						IsReferenced: metadata.IsReferenced(),
@@ -82,7 +82,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: cachedMsgMeta.GetMetadata().GetMessageID().ToHex()[:VisualizerIDLength],
+						ID: cachedMsgMeta.Metadata().MessageID().ToHex()[:VisualizerIDLength],
 					},
 				},
 			)
@@ -100,7 +100,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: cachedMilestone.GetMilestone().MessageID.ToHex()[:VisualizerIDLength],
+					ID: cachedMilestone.Milestone().MessageID.ToHex()[:VisualizerIDLength],
 				},
 			},
 		)
@@ -182,7 +182,7 @@ func runVisualizer() {
 		defer deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
 		deps.Tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
 		defer deps.Tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
-		if cooEvents := coordinatorPlugin.GetEvents(); cooEvents != nil {
+		if cooEvents := coordinatorPlugin.Events(); cooEvents != nil {
 			cooEvents.IssuedCheckpointMessage.Attach(onIssuedCheckpointMessage)
 			defer cooEvents.IssuedCheckpointMessage.Detach(onIssuedCheckpointMessage)
 		}

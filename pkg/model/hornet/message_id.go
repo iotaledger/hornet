@@ -37,8 +37,8 @@ func (m MessageID) MarshalBinary() ([]byte, error) {
 	return m, nil
 }
 
-// GetNullMessageID returns the ID of the genesis message.
-func GetNullMessageID() MessageID {
+// NullMessageID returns the ID of the genesis message.
+func NullMessageID() MessageID {
 	nullMessageID := make(MessageID, 32)
 	return nullMessageID
 }

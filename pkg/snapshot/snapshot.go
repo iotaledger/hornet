@@ -168,7 +168,7 @@ func (s *Snapshot) IsSnapshottingOrPruning() bool {
 
 func (s *Snapshot) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
 
-	snapshotInfo := s.storage.GetSnapshotInfo()
+	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		s.log.Panic("No snapshotInfo found!")
 	}
@@ -194,15 +194,15 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 
 	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
 	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) bool {
-		for _, childMessageID := range s.storage.GetChildrenMessageIDs(messageID) {
-			cachedMsgMeta := metadataMemcache.GetCachedMetadataOrNil(childMessageID) // meta +1
+		for _, childMessageID := range s.storage.ChildrenMessageIDs(messageID) {
+			cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(childMessageID) // meta +1
 			if cachedMsgMeta == nil {
 				// Ignore this message since it doesn't exist anymore
 				s.log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
 				continue
 			}
 
-			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced && (at > targetIndex) {
+			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
 				// referenced by a later milestone than targetIndex => solidEntryPoint
 				return true
 			}
@@ -218,13 +218,13 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 		default:
 		}
 
-		cachedMilestone := s.storage.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+		cachedMilestone := s.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMilestone == nil {
 			return errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
 
 		// Get all parents of that milestone
-		milestoneMessageID := cachedMilestone.GetMilestone().MessageID
+		milestoneMessageID := cachedMilestone.Milestone().MessageID
 		cachedMilestone.Release(true) // message -1
 
 		// traverse the milestone and collect all messages that were referenced by this milestone or newer
@@ -235,7 +235,7 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 				defer cachedMsgMeta.Release(true) // msg -1
 
 				// collect all msg that were referenced by that milestone or newer
-				referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
 				return referenced && at >= milestoneIndex, nil
 			},
 			// consumer
@@ -248,13 +248,13 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 				default:
 				}
 
-				messageID := cachedMsgMeta.GetMetadata().GetMessageID()
+				messageID := cachedMsgMeta.Metadata().MessageID()
 
 				if isEntryPoint := isSolidEntryPoint(messageID, targetIndex); !isEntryPoint {
 					return nil
 				}
 
-				referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
 				if !referenced {
 					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", messageID.ToHex())
 				}
@@ -289,7 +289,7 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 
 func (s *Snapshot) checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *storage.SnapshotInfo, writeToDatabase bool) error {
 
-	confirmedMilestoneIndex := s.storage.GetConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := s.storage.ConfirmedMilestoneIndex()
 
 	if confirmedMilestoneIndex < s.solidEntryPointCheckThresholdFuture {
 		return errors.Wrapf(ErrNotEnoughHistory, "minimum confirmed index: %d, actual confirmed index: %d", s.solidEntryPointCheckThresholdFuture+1, confirmedMilestoneIndex)
@@ -534,12 +534,12 @@ type MilestoneRetrieverFunc func(index milestone.Index) *iotago.Milestone
 // If it can not retrieve a wanted milestone it panics.
 func MilestoneRetrieverFromStorage(storage *storage.Storage) MilestoneRetrieverFunc {
 	return func(index milestone.Index) *iotago.Milestone {
-		cachedMsMsg := storage.GetMilestoneCachedMessageOrNil(index)
+		cachedMsMsg := storage.MilestoneCachedMessageOrNil(index)
 		if cachedMsMsg == nil {
 			panic(fmt.Sprintf("message for milestone with index %d is not stored in the database", index))
 		}
 		defer cachedMsMsg.Release()
-		return cachedMsMsg.GetMessage().GetMilestone()
+		return cachedMsMsg.Message().Milestone()
 	}
 }
 
@@ -555,7 +555,7 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 		var msIndex milestone.Index
 
 		for msIndex, done = msIndexIterator(); !done; msIndex, done = msIndexIterator() {
-			diff, err := utxoManager.GetMilestoneDiffWithoutLocking(msIndex)
+			diff, err := utxoManager.MilestoneDiffWithoutLocking(msIndex)
 			if err != nil {
 				errChan <- err
 				close(prodChan)
@@ -641,7 +641,7 @@ func (s *Snapshot) readLedgerIndex() (milestone.Index, error) {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
 	}
 
-	cachedMilestone := s.storage.GetCachedMilestoneOrNil(ledgerMilestoneIndex)
+	cachedMilestone := s.storage.CachedMilestoneOrNil(ledgerMilestoneIndex)
 	if cachedMilestone == nil {
 		return 0, errors.Wrapf(ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
 	}
@@ -692,13 +692,13 @@ func (s *Snapshot) renameTempFile(tempFile *os.File, tempFilePath string, filePa
 
 // returns the timestamp of the target milestone.
 func (s *Snapshot) readTargetMilestoneTimestamp(targetIndex milestone.Index) (time.Time, error) {
-	cachedTargetMilestone := s.storage.GetCachedMilestoneOrNil(targetIndex) // milestone +1
+	cachedTargetMilestone := s.storage.CachedMilestoneOrNil(targetIndex) // milestone +1
 	if cachedTargetMilestone == nil {
 		return time.Time{}, errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
 	}
 	defer cachedTargetMilestone.Release(true) // milestone -1
 
-	ts := cachedTargetMilestone.GetMilestone().Timestamp
+	ts := cachedTargetMilestone.Milestone().Timestamp
 	return ts, nil
 }
 
@@ -722,7 +722,7 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 
 	timeReadLockLedger := time.Now()
 
-	snapshotInfo := s.storage.GetSnapshotInfo()
+	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return errors.Wrap(ErrCritical, "no snapshot info found")
 	}
@@ -1129,7 +1129,7 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 
 	pruningBySize := false
 	if s.pruningSizeEnabled && (s.lastPruningBySizeTime.IsZero() || time.Since(s.lastPruningBySizeTime) > s.pruningSizeCooldownTime) {
-		targetIndexSize, err := s.getTargetIndexBySize()
+		targetIndexSize, err := s.calcTargetIndexBySize()
 		if err == nil && ((targetIndex == 0) || (targetIndex < targetIndexSize)) {
 			targetIndex = targetIndexSize
 			pruningBySize = true
@@ -1150,8 +1150,8 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 	}
 }
 
-// GetSnapshotsFilesLedgerIndex returns the final ledger index if the snapshots from the configured file paths would be applied.
-func (s *Snapshot) GetSnapshotsFilesLedgerIndex() (milestone.Index, error) {
+// SnapshotsFilesLedgerIndex returns the final ledger index if the snapshots from the configured file paths would be applied.
+func (s *Snapshot) SnapshotsFilesLedgerIndex() (milestone.Index, error) {
 
 	snapAvail, err := s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
 	if err != nil {

@@ -47,7 +47,7 @@ func TestVisualizer(t *testing.T) {
 		v := Vertex{MessageID: randMessageID().ToHex()}
 		if i <= getFromLast {
 			// only one parent at the beginning
-			v.Parents = hornet.MessageIDs{hornet.GetNullMessageID()}.ToHex()
+			v.Parents = hornet.MessageIDs{hornet.NullMessageID()}.ToHex()
 			vertices = append(vertices, v)
 			continue
 		}

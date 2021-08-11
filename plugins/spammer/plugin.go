@@ -389,7 +389,7 @@ func measureSpammerMetrics() {
 	}
 
 	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamMessages.Load()
-	new := utils.GetUint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
+	new := utils.Uint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
 	lastSentSpamMsgsCnt = sentSpamMsgsCnt
 
 	spammerAvgHeap.Add(uint64(new))
@@ -403,6 +403,6 @@ func measureSpammerMetrics() {
 	// trigger events for outside listeners
 	Events.AvgSpamMetricsUpdated.Trigger(&spammer.AvgSpamMetrics{
 		NewMessages:              new,
-		AverageMessagesPerSecond: spammerAvgHeap.GetAveragePerSecond(timeDiff),
+		AverageMessagesPerSecond: spammerAvgHeap.AveragePerSecond(timeDiff),
 	})
 }

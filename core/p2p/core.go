@@ -241,7 +241,7 @@ func run() {
 
 // connects to the peers defined in the config.
 func connectConfigKnownPeers() {
-	for _, p := range deps.PeeringConfigManager.GetPeers() {
+	for _, p := range deps.PeeringConfigManager.Peers() {
 		multiAddr, err := multiaddr.NewMultiaddr(p.MultiAddress)
 		if err != nil {
 			CorePlugin.Panicf("invalid peer address: %s", err)

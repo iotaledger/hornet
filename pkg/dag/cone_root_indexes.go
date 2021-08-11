@@ -16,22 +16,22 @@ import (
 // the "outdatedMessageIDs" should be ordered from oldest to latest to avoid recursion.
 func updateOutdatedConeRootIndexes(s *storage.Storage, outdatedMessageIDs hornet.MessageIDs, cmi milestone.Index) {
 	for _, outdatedMessageID := range outdatedMessageIDs {
-		cachedMsgMeta := s.GetCachedMessageMetadataOrNil(outdatedMessageID)
+		cachedMsgMeta := s.CachedMessageMetadataOrNil(outdatedMessageID)
 		if cachedMsgMeta == nil {
 			panic(common.ErrMessageNotFound)
 		}
-		GetConeRootIndexes(s, cachedMsgMeta, cmi)
+		ConeRootIndexes(s, cachedMsgMeta, cmi)
 	}
 }
 
-// GetConeRootIndexes searches the cone root indexes for a given message.
+// ConeRootIndexes searches the cone root indexes for a given message.
 // cachedMsgMeta has to be solid, otherwise youngestConeRootIndex and oldestConeRootIndex will be 0 if a message is missing in the cone.
-func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadata, cmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index) {
+func ConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadata, cmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index) {
 	defer cachedMsgMeta.Release(true) // meta -1
 
 	// if the msg already contains recent (calculation index matches CMI)
 	// information about ycri and ocri, return that info
-	ycri, ocri, ci := cachedMsgMeta.GetMetadata().GetConeRootIndexes()
+	ycri, ocri, ci := cachedMsgMeta.Metadata().ConeRootIndexes()
 	if ci == cmi {
 		return ycri, ocri
 	}
@@ -52,32 +52,32 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 	// are no solid entry points and have no recent calculation index
 	var outdatedMessageIDs hornet.MessageIDs
 
-	startMessageID := cachedMsgMeta.GetMetadata().GetMessageID()
+	startMessageID := cachedMsgMeta.Metadata().MessageID()
 
 	indexesValid := true
 
 	// traverse the parents of this message to calculate the cone root indexes for this message.
 	// this walk will also collect all outdated messages in the same cone, to update them afterwards.
-	if err := TraverseParentsOfMessage(s, cachedMsgMeta.GetMetadata().GetMessageID(),
+	if err := TraverseParentsOfMessage(s, cachedMsgMeta.Metadata().MessageID(),
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMetadata.Release(true) // meta -1
 
 			// first check if the msg was referenced => update ycri and ocri with the confirmation index
-			if referenced, at := cachedMetadata.GetMetadata().GetReferenced(); referenced {
+			if referenced, at := cachedMetadata.Metadata().ReferencedWithIndex(); referenced {
 				updateIndexes(at, at)
 				return false, nil
 			}
 
-			if bytes.Equal(startMessageID, cachedMetadata.GetMetadata().GetMessageID()) {
+			if bytes.Equal(startMessageID, cachedMetadata.Metadata().MessageID()) {
 				// do not update indexes for the start message
 				return true, nil
 			}
 
 			// if the msg was not referenced yet, but already contains recent (calculation index matches CMI) information
 			// about ycri and ocri, propagate that info
-			ycri, ocri, ci := cachedMetadata.GetMetadata().GetConeRootIndexes()
+			ycri, ocri, ci := cachedMetadata.Metadata().ConeRootIndexes()
 			if ci == cmi {
 				updateIndexes(ycri, ocri)
 				return false, nil
@@ -89,12 +89,12 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 		func(cachedMetadata *storage.CachedMetadata) error { // meta +1
 			defer cachedMetadata.Release(true) // meta -1
 
-			if bytes.Equal(startMessageID, cachedMetadata.GetMetadata().GetMessageID()) {
+			if bytes.Equal(startMessageID, cachedMetadata.Metadata().MessageID()) {
 				// skip the start message, so it doesn't get added to the outdatedMessageIDs
 				return nil
 			}
 
-			outdatedMessageIDs = append(outdatedMessageIDs, cachedMetadata.GetMetadata().GetMessageID())
+			outdatedMessageIDs = append(outdatedMessageIDs, cachedMetadata.Metadata().MessageID())
 			return nil
 		},
 		// called on missing parents
@@ -124,7 +124,7 @@ func GetConeRootIndexes(s *storage.Storage, cachedMsgMeta *storage.CachedMetadat
 	}
 
 	// set the new cone root indexes in the metadata of the message
-	cachedMsgMeta.GetMetadata().SetConeRootIndexes(youngestConeRootIndex, oldestConeRootIndex, cmi)
+	cachedMsgMeta.Metadata().SetConeRootIndexes(youngestConeRootIndex, oldestConeRootIndex, cmi)
 
 	return youngestConeRootIndex, oldestConeRootIndex
 }
@@ -152,18 +152,18 @@ func UpdateConeRootIndexes(s *storage.Storage, metadataMemcache *storage.Metadat
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 
-				_, previouslyTraversed := traversed[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()]
+				_, previouslyTraversed := traversed[cachedMsgMeta.Metadata().MessageID().ToMapKey()]
 
 				// only traverse this message if it was not traversed before and is solid
-				return !previouslyTraversed && cachedMsgMeta.GetMetadata().IsSolid(), nil
+				return !previouslyTraversed && cachedMsgMeta.Metadata().IsSolid(), nil
 			},
 			// consumer
 			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
-				traversed[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()] = struct{}{}
+				traversed[cachedMsgMeta.Metadata().MessageID().ToMapKey()] = struct{}{}
 
 				// updates the cone root indexes of the outdated past cone for this message
-				GetConeRootIndexes(s, cachedMsgMeta.Retain(), cmi) // meta pass +1
+				ConeRootIndexes(s, cachedMsgMeta.Retain(), cmi) // meta pass +1
 
 				return nil
 			}, false, nil, iteratorOptions...); err != nil {
