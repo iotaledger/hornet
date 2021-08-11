@@ -162,6 +162,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		s.log.Panic("No snapshotInfo found!")
 	}
 
+	//lint:ignore SA5011 panics before if nil pointer
 	if snapshotInfo.SnapshotIndex < s.solidEntryPointCheckThresholdPast+s.additionalPruningThreshold+1 {
 		// Not enough history
 		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", s.solidEntryPointCheckThresholdPast+s.additionalPruningThreshold+1, targetIndex)

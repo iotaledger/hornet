@@ -74,6 +74,8 @@ func addMessageEventHandlers(proto *gossip.Protocol) {
 	}))
 }
 
+// ToDo: re-add this function and check why it deadlocks
+//lint:ignore U1000 should be added again
 // removeMessageEventHandlers removes all the event handlers for sent and received messages.
 func removeMessageEventHandlers(proto *gossip.Protocol) {
 	if proto == nil {
