@@ -49,7 +49,7 @@ func (s *Storage) ResetMilestoneIndexes() {
 	s.latestMilestoneIndex = 0
 }
 
-// GetMilestoneOrNil returns the CachedMessage of a milestone index or nil if it doesn't exist.
+// GetMilestoneCachedMessageOrNil returns the CachedMessage of a milestone index or nil if it doesn't exist.
 // message +1
 func (s *Storage) GetMilestoneCachedMessageOrNil(milestoneIndex milestone.Index) *CachedMessage {
 
@@ -238,6 +238,7 @@ func (s *Storage) GetLatestMilestoneIndex() milestone.Index {
 	return s.latestMilestoneIndex
 }
 
+// FindClosestNextMilestoneOrNil searches for the next known cached milestone in the persistence layer.
 // message +1
 func (s *Storage) FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMilestone {
 	lmi := s.GetLatestMilestoneIndex()

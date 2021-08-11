@@ -54,6 +54,7 @@ func (s *Storage) SolidEntryPointsContain(messageID hornet.MessageID) bool {
 	return s.solidEntryPoints.Contains(messageID)
 }
 
+// SolidEntryPointsIndex returns the index of a solid entry point and whether the message is a solid entry point or not.
 func (s *Storage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool) {
 	s.ReadLockSolidEntryPoints()
 	defer s.ReadUnlockSolidEntryPoints()
@@ -64,6 +65,7 @@ func (s *Storage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.I
 	return s.solidEntryPoints.Index(messageID)
 }
 
+// SolidEntryPointsAdd adds a message to the solid entry points.
 // WriteLockSolidEntryPoints must be held while entering this function
 func (s *Storage) SolidEntryPointsAdd(messageID hornet.MessageID, milestoneIndex milestone.Index) {
 	if s.solidEntryPoints == nil {
@@ -72,6 +74,7 @@ func (s *Storage) SolidEntryPointsAdd(messageID hornet.MessageID, milestoneIndex
 	s.solidEntryPoints.Add(messageID, milestoneIndex)
 }
 
+// ResetSolidEntryPoints resets the solid entry points.
 // WriteLockSolidEntryPoints must be held while entering this function
 func (s *Storage) ResetSolidEntryPoints() {
 	if s.solidEntryPoints == nil {
@@ -80,6 +83,7 @@ func (s *Storage) ResetSolidEntryPoints() {
 	s.solidEntryPoints.Clear()
 }
 
+// StoreSolidEntryPoints stores the solid entry points in the persistence layer.
 // WriteLockSolidEntryPoints must be held while entering this function
 func (s *Storage) StoreSolidEntryPoints() {
 	if s.solidEntryPoints == nil {

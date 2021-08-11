@@ -1277,7 +1277,7 @@ func (s *Snapshot) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 	return nil
 }
 
-// checks that the current snapshot info is valid regarding its network ID and the ledger state.
+// CheckCurrentSnapshot checks that the current snapshot info is valid regarding its network ID and the ledger state.
 func (s *Snapshot) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInfo) error {
 
 	// check that the stored snapshot corresponds to the wanted network ID

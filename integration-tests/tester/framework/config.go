@@ -99,7 +99,7 @@ func DefaultConfig() *NodeConfig {
 	return cfg
 }
 
-//  WhiteFlagMockServerConfig defines the config for a white-flag mock server instance.
+// WhiteFlagMockServerConfig defines the config for a white-flag mock server instance.
 type WhiteFlagMockServerConfig struct {
 	// The name for this white-flag mock server.
 	Name string

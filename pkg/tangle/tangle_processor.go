@@ -24,7 +24,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
 	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil)
+		_ = t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil)
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -256,7 +256,7 @@ func (t *Tangle) RegisterMessageProcessedEvent(messageID hornet.MessageID) chan 
 	return t.messageProcessedSyncEvent.RegisterEvent(messageID.ToMapKey())
 }
 
-// DeregisterMessageProcessedEvent removes a registed event to free the memory if not used.
+// DeregisterMessageProcessedEvent removes a registered event to free the memory if not used.
 func (t *Tangle) DeregisterMessageProcessedEvent(messageID hornet.MessageID) {
 	t.messageProcessedSyncEvent.DeregisterEvent(messageID.ToMapKey())
 }
@@ -266,7 +266,7 @@ func (t *Tangle) RegisterMessageSolidEvent(messageID hornet.MessageID) chan stru
 	return t.messageSolidSyncEvent.RegisterEvent(messageID.ToMapKey())
 }
 
-// DeregisterMessageSolidEvent removes a registed event to free the memory if not used.
+// DeregisterMessageSolidEvent removes a registered event to free the memory if not used.
 func (t *Tangle) DeregisterMessageSolidEvent(messageID hornet.MessageID) {
 	t.messageSolidSyncEvent.DeregisterEvent(messageID.ToMapKey())
 }
@@ -276,7 +276,7 @@ func (t *Tangle) RegisterMilestoneConfirmedEvent(msIndex milestone.Index) chan s
 	return t.milestoneConfirmedSyncEvent.RegisterEvent(msIndex)
 }
 
-// DeregisterMilestoneConfirmedEvent removes a registed event to free the memory if not used.
+// DeregisterMilestoneConfirmedEvent removes a registered event to free the memory if not used.
 func (t *Tangle) DeregisterMilestoneConfirmedEvent(msIndex milestone.Index) {
 	t.milestoneConfirmedSyncEvent.DeregisterEvent(msIndex)
 }

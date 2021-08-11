@@ -20,7 +20,7 @@ func CriticalError(err error) error {
 	return &criticalError{err: err}
 }
 
-// IsCritical unwraps the inner error held by the critical error if the given error is a critical error.
+// IsCriticalError unwraps the inner error held by the critical error if the given error is a critical error.
 // If the given error is not a critical error, nil is returned.
 func IsCriticalError(err error) error {
 	var critErr *criticalError

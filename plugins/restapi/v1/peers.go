@@ -11,7 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 )
 
-// Wraps the given peer info snapshot with additional metadata, such as gossip protocol information.
+// WrapInfoSnapshot wraps the given peer info snapshot with additional metadata, such as gossip protocol information.
 func WrapInfoSnapshot(info *p2p.PeerInfoSnapshot) *PeerResponse {
 	var alias *string
 
