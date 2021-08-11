@@ -63,11 +63,13 @@ func configure() {
 }
 
 func run() {
-	Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
-	}, shutdown.PriorityWarpSync)
+	}, shutdown.PriorityWarpSync); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 func configureEvents() {

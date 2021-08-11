@@ -130,9 +130,11 @@ func configure() {
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
-	CorePlugin.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
 		deps.Storage.MarkDatabaseCorrupted()
-	})
+	}, shutdown.PriorityDatabaseHealth); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
 	if deps.Storage.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
 		// no need to check for the "deleteDatabase" and "deleteAll" flags,
@@ -170,13 +172,15 @@ func run() {
 	// run a full database garbage collection at startup
 	database.RunGarbageCollection()
 
-	_ = CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
 		attachHeartbeatEvents()
 		<-shutdownSignal
 		detachHeartbeatEvents()
-	}, shutdown.PriorityHeartbeats)
+	}, shutdown.PriorityHeartbeats); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
-	_ = CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		deps.Tangle.AbortMilestoneSolidification()
 
@@ -184,15 +188,19 @@ func run() {
 		deps.Storage.ShutdownStorages()
 		CorePlugin.LogInfo("Flushing caches to database... done")
 
-	}, shutdown.PriorityFlushToDatabase)
+	}, shutdown.PriorityFlushToDatabase); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
 	deps.Tangle.RunTangleProcessor()
 
 	// create a background worker that prints a status message every second
-	_ = CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
 		ticker := timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityStatusReport)
+	}, shutdown.PriorityStatusReport); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
 }
 

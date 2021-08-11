@@ -227,7 +227,7 @@ func configure() {
 func run() {
 
 	// register a daemon to disconnect all peers up on shutdown
-	_ = CorePlugin.Daemon().BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
 		CorePlugin.LogInfof("listening on: %s", deps.Host.Addrs())
 		go deps.Manager.Start(shutdownSignal)
 		connectConfigKnownPeers()
@@ -235,7 +235,9 @@ func run() {
 		if err := deps.Host.Peerstore().Close(); err != nil {
 			CorePlugin.LogError("unable to cleanly closing peer store: %s", err)
 		}
-	}, shutdown.PriorityP2PManager)
+	}, shutdown.PriorityP2PManager); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 // connects to the peers defined in the config.

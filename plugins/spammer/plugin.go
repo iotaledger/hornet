@@ -146,10 +146,12 @@ func run() {
 	}
 
 	// create a background worker that "measures" the spammer averages values every second
-	Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
 		ticker := timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PrioritySpammer)
+	}, shutdown.PrioritySpammer); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
 	// automatically start the spammer on node startup if the flag is set
 	if deps.NodeConfig.Bool(CfgSpammerAutostart) {
@@ -221,7 +223,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 		rateLimitAbortSignal = make(chan struct{})
 
 		// create a background worker that fills rateLimitChannel every second
-		Plugin.Daemon().BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
+		if err := Plugin.Daemon().BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
 			defer spammerWaitGroup.Done()
 
@@ -271,12 +273,14 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 				lastDuration = time.Since(timeStart)
 			}
 
-		}, shutdown.PrioritySpammer)
+		}, shutdown.PrioritySpammer); err != nil {
+			Plugin.LogWarnf("failed to start worker: %s", err)
+		}
 	}
 
 	spammerCnt := atomic.NewInt32(0)
 	for i := 0; i < spammerWorkerCount; i++ {
-		Plugin.Daemon().BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
+		if err := Plugin.Daemon().BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
 			defer spammerWaitGroup.Done()
 
@@ -339,7 +343,9 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 
 			Plugin.LogInfof("Stopping Spammer %d...", spammerIndex)
 			Plugin.LogInfof("Stopping Spammer %d... done", spammerIndex)
-		}, shutdown.PrioritySpammer)
+		}, shutdown.PrioritySpammer); err != nil {
+			Plugin.LogWarnf("failed to start worker: %s", err)
+		}
 	}
 }
 
