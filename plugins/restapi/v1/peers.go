@@ -6,13 +6,13 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 
-	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 // Wraps the given peer info snapshot with additional metadata, such as gossip protocol information.
-func WrapInfoSnapshot(info *p2ppkg.PeerInfoSnapshot) *PeerResponse {
+func WrapInfoSnapshot(info *p2p.PeerInfoSnapshot) *PeerResponse {
 	var alias *string
 
 	if info.Alias != "" {
@@ -98,7 +98,7 @@ func addPeer(c echo.Context) (*PeerResponse, error) {
 	}
 
 	// error is ignored, because the peer is added to the known peers and protected from trimming
-	_ = deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, alias)
+	_ = deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, alias)
 
 	info := deps.Manager.PeerInfoSnapshot(addrInfo.ID)
 	if info == nil {

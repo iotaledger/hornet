@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
-	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/p2p/autopeering"
 	"github.com/gohornet/hornet/pkg/shutdown"
 
@@ -57,7 +56,7 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-	Manager        *p2ppkg.Manager              `optional:"true"`
+	Manager        *p2p.Manager                 `optional:"true"`
 	NodePrivateKey crypto.PrivKey
 }
 
@@ -150,7 +149,7 @@ func configureEvents() {
 
 		handleSelection(ev, addrInfo, func() {
 			Plugin.LogInfof("connecting to %s", addrInfo)
-			if err := deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationAutopeered); err != nil {
+			if err := deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
 				Plugin.LogWarnf("couldn't add autopeering peer %s", err)
 			}
 		})
@@ -171,7 +170,7 @@ func configureEvents() {
 		handleSelection(ev, addrInfo, func() {
 			// TODO: maybe do whitelisting instead?
 			//Plugin.LogInfof("connecting to %s", addrInfo)
-			//if err := deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationAutopeered); err != nil {
+			//if err := deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
 			//	Plugin.LogWarnf("couldn't add autopeering peer %s", err)
 			//}
 		})
@@ -184,8 +183,8 @@ func configureEvents() {
 		}
 
 		Plugin.LogInfof("[dropped event] disconnecting %s", peerID)
-		var peerRelation p2ppkg.PeerRelation
-		deps.Manager.Call(*peerID, func(p *p2ppkg.Peer) {
+		var peerRelation p2p.PeerRelation
+		deps.Manager.Call(*peerID, func(p *p2p.Peer) {
 			peerRelation = p.Relation
 		})
 
@@ -194,7 +193,7 @@ func configureEvents() {
 			return
 		}
 
-		if peerRelation != p2ppkg.PeerRelationAutopeered {
+		if peerRelation != p2p.PeerRelationAutopeered {
 			Plugin.LogWarnf("won't disconnect %s as it its relation is not 'discovered' but '%s'", peerID, peerRelation)
 			return
 		}
@@ -209,19 +208,19 @@ func configureEvents() {
 // if the peer is not yet part of the peering manager, the given noRelationFunc is called.
 func handleSelection(ev *selection.PeeringEvent, addrInfo *libp2p.AddrInfo, noRelationFunc func()) {
 	// extract peer relation
-	var peerRelation p2ppkg.PeerRelation
-	deps.Manager.Call(addrInfo.ID, func(p *p2ppkg.Peer) {
+	var peerRelation p2p.PeerRelation
+	deps.Manager.Call(addrInfo.ID, func(p *p2p.Peer) {
 		peerRelation = p.Relation
 	})
 
 	switch peerRelation {
-	case p2ppkg.PeerRelationKnown:
+	case p2p.PeerRelationKnown:
 		clearFromAutopeeringSelector(ev)
 
-	case p2ppkg.PeerRelationUnknown:
+	case p2p.PeerRelationUnknown:
 		updatePeerRelationToDiscovered(addrInfo)
 
-	case p2ppkg.PeerRelationAutopeered:
+	case p2p.PeerRelationAutopeered:
 		handleAlreadyAutopeered(addrInfo)
 
 	default:
@@ -236,7 +235,7 @@ func handleAlreadyAutopeered(addrInfo *libp2p.AddrInfo) {
 
 // updates the given peers relation to discovered.
 func updatePeerRelationToDiscovered(addrInfo *libp2p.AddrInfo) {
-	if err := deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationAutopeered); err != nil {
+	if err := deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
 		Plugin.LogWarnf("couldn't update unknown peer to 'discovered' %s", err)
 	}
 }

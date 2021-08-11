@@ -8,7 +8,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
@@ -19,7 +19,7 @@ import (
 func (t *Tangle) ConfigureTangleProcessor() {
 
 	t.receiveMsgWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.processIncomingTx(task.Param(0).(*storage.Message), task.Param(1).(*gossippkg.Request), task.Param(2).(*gossippkg.Protocol))
+		t.processIncomingTx(task.Param(0).(*storage.Message), task.Param(1).(*gossip.Request), task.Param(2).(*gossip.Protocol))
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
@@ -52,7 +52,7 @@ func (t *Tangle) RunTangleProcessor() {
 
 	t.startWaitGroup.Add(5)
 
-	onMsgProcessed := events.NewClosure(func(message *storage.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
+	onMsgProcessed := events.NewClosure(func(message *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
 		t.receiveMsgWorkerPool.Submit(message, request, proto)
 	})
 
@@ -184,7 +184,7 @@ func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
 	return t.receiveMsgWorkerPool.GetPendingQueueSize() > (t.receiveMsgQueueSize / 2)
 }
 
-func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
+func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
 
 	latestMilestoneIndex := t.storage.GetLatestMilestoneIndex()
 	isNodeSyncedWithinBelowMaxDepth := t.storage.IsNodeSyncedWithinBelowMaxDepth()

@@ -17,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	snapshotpkg "github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -95,10 +94,10 @@ func provide(c *dig.Container) {
 	type tangledeps struct {
 		dig.In
 		Storage          *storage.Storage
-		RequestQueue     gossippkg.RequestQueue
-		Service          *gossippkg.Service
-		Requester        *gossippkg.Requester
-		MessageProcessor *gossippkg.MessageProcessor
+		RequestQueue     gossip.RequestQueue
+		Service          *gossip.Service
+		Requester        *gossip.Requester
+		MessageProcessor *gossip.MessageProcessor
 		ServerMetrics    *metrics.ServerMetrics
 		ReceiptService   *migrator.ReceiptService     `optional:"true"`
 		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
