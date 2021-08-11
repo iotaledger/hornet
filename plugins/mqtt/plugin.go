@@ -114,8 +114,8 @@ func configure() {
 		topic := task.Param(0).([]byte)
 		topicName := string(topic)
 
-		if messageId := messageIdFromTopic(topicName); messageId != nil {
-			if cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageId); cachedMsgMeta != nil {
+		if messageID := messageIDFromTopic(topicName); messageID != nil {
+			if cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID); cachedMsgMeta != nil {
 				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMsgMeta); added {
 					return // Avoid Release (done inside workerpool task)
 				}
@@ -124,21 +124,21 @@ func configure() {
 			return
 		}
 
-		if transactionId := transactionIdFromTopic(topicName); transactionId != nil {
+		if transactionID := transactionIDFromTopic(topicName); transactionID != nil {
 			// Find the first output of the transaction
-			outputId := &iotago.UTXOInputID{}
-			copy(outputId[:], transactionId[:])
+			outputID := &iotago.UTXOInputID{}
+			copy(outputID[:], transactionID[:])
 
-			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputID)
 			if err != nil {
 				return
 			}
 
-			publishTransactionIncludedMessage(transactionId, output.MessageID())
+			publishTransactionIncludedMessage(transactionID, output.MessageID())
 			return
 		}
 
-		if outputId := outputIdFromTopic(topicName); outputId != nil {
+		if outputID := outputIDFromTopic(topicName); outputID != nil {
 
 			// we need to lock the ledger here to have the correct index for unspent info of the output.
 			deps.Storage.UTXO().ReadLockLedger()
@@ -149,7 +149,7 @@ func configure() {
 				return
 			}
 
-			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputID)
 			if err != nil {
 				return
 			}

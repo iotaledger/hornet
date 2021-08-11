@@ -20,11 +20,11 @@ var (
 type JWTAuth struct {
 	subject        string
 	sessionTimeout time.Duration
-	nodeId         string
+	nodeID         string
 	secret         []byte
 }
 
-func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeId string, secret crypto.PrivKey) *JWTAuth {
+func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeID string, secret crypto.PrivKey) *JWTAuth {
 
 	if len(subject) == 0 {
 		panic("subject must not be empty")
@@ -38,7 +38,7 @@ func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeId string, sec
 	return &JWTAuth{
 		subject:        subject,
 		sessionTimeout: sessionTimeout,
-		nodeId:         nodeId,
+		nodeID:         nodeID,
 		secret:         secretBytes,
 	}
 }
@@ -102,7 +102,7 @@ func (j *JWTAuth) Middleware(skipper middleware.Skipper, allow func(c echo.Conte
 			claims, ok := token.Claims.(*AuthClaims)
 
 			// do extended claims validation
-			if !ok || !claims.VerifyAudience(j.nodeId, true) {
+			if !ok || !claims.VerifyAudience(j.nodeID, true) {
 				return ErrJWTInvalidClaims
 			}
 
@@ -124,8 +124,8 @@ func (j *JWTAuth) IssueJWT(api bool, dashboard bool) (string, error) {
 	// Set claims
 	stdClaims := jwt.StandardClaims{
 		Subject:   j.subject,
-		Issuer:    j.nodeId,
-		Audience:  j.nodeId,
+		Issuer:    j.nodeID,
+		Audience:  j.nodeID,
 		Id:        fmt.Sprintf("%d", now.Unix()),
 		IssuedAt:  now.Unix(),
 		NotBefore: now.Unix(),
@@ -161,7 +161,7 @@ func (j *JWTAuth) VerifyJWT(token string, allow func(claims *AuthClaims) bool) b
 	if err == nil && t.Valid {
 		claims, ok := t.Claims.(*AuthClaims)
 
-		if !ok || !claims.VerifyAudience(j.nodeId, true) {
+		if !ok || !claims.VerifyAudience(j.nodeID, true) {
 			return false
 		}
 

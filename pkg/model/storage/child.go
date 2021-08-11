@@ -11,10 +11,10 @@ type Child struct {
 	childMessageID  hornet.MessageID
 }
 
-func NewChild(parentMessageID hornet.MessageID, childMessageId hornet.MessageID) *Child {
+func NewChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *Child {
 	return &Child{
 		parentMessageID: parentMessageID,
-		childMessageID:  childMessageId,
+		childMessageID:  childMessageID,
 	}
 }
 

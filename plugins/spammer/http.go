@@ -29,14 +29,14 @@ const (
 type spammerStatus struct {
 	Running           bool    `json:"running"`
 	MpsRateLimit      float64 `json:"mpsRateLimit"`
-	CpuMaxUsage       float64 `json:"cpuMaxUsage"`
+	CPUMaxUsage       float64 `json:"cpuMaxUsage"`
 	SpammerWorkers    int     `json:"spammerWorkers"`
 	SpammerWorkersMax int     `json:"spammerWorkersMax"`
 }
 
 type startCommand struct {
 	MpsRateLimit   *float64 `json:"mpsRateLimit,omitempty"`
-	CpuMaxUsage    *float64 `json:"cpuMaxUsage,omitempty"`
+	CPUMaxUsage    *float64 `json:"cpuMaxUsage,omitempty"`
 	SpammerWorkers *int     `json:"spammerWorkers,omitempty"`
 }
 
@@ -46,7 +46,7 @@ func setupRoutes(g *echo.Group) {
 		return restapi.JSONResponse(c, http.StatusOK, &spammerStatus{
 			Running:           isRunning,
 			MpsRateLimit:      mpsRateLimitRunning,
-			CpuMaxUsage:       cpuMaxUsageRunning,
+			CPUMaxUsage:       cpuMaxUsageRunning,
 			SpammerWorkers:    spammerWorkersRunning,
 			SpammerWorkersMax: runtime.NumCPU() - 1,
 		})
@@ -58,7 +58,7 @@ func setupRoutes(g *echo.Group) {
 			return err
 		}
 
-		if err := start(cmd.MpsRateLimit, cmd.CpuMaxUsage, cmd.SpammerWorkers); err != nil {
+		if err := start(cmd.MpsRateLimit, cmd.CPUMaxUsage, cmd.SpammerWorkers); err != nil {
 			return err
 		}
 		return c.JSON(http.StatusAccepted, nil)

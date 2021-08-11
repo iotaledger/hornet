@@ -18,8 +18,8 @@ import (
 // Local defines the local autopeering peer.
 type Local struct {
 	PeerLocal *peer.Local
-	boltDb    *bbolt.DB
-	peerDb    *peer.DB
+	boltDB    *bbolt.DB
+	peerDB    *peer.DB
 }
 
 func newLocal(seed []byte) *Local {
@@ -71,13 +71,13 @@ func newLocal(seed []byte) *Local {
 		ownServices.Update(p2pServiceKey(), "tcp", libp2pBindPort)
 	}
 
-	boltDb, err := bolt.CreateDB(deps.NodeConfig.String(CfgNetAutopeeringDatabasePath), "autopeering.db")
+	boltDB, err := bolt.CreateDB(deps.NodeConfig.String(CfgNetAutopeeringDatabasePath), "autopeering.db")
 	if err != nil {
 		log.Fatalf("unable to create autopeering database: %s", err)
 	}
 
 	// realm doesn't matter
-	peerDB, err := peer.NewDB(bolt.New(boltDb))
+	peerDB, err := peer.NewDB(bolt.New(boltDB))
 	if err != nil {
 		log.Fatalf("unable to create autopeering database: %s", err)
 	}
@@ -89,10 +89,10 @@ func newLocal(seed []byte) *Local {
 
 	log.Infof("Initialized local autopeering: %s@%s", local.PublicKey(), local.Address())
 
-	return &Local{PeerLocal: local, boltDb: boltDb, peerDb: peerDB}
+	return &Local{PeerLocal: local, boltDB: boltDB, peerDB: peerDB}
 }
 
 func (l *Local) close() error {
-	l.peerDb.Close()
-	return l.boltDb.Close()
+	l.peerDB.Close()
+	return l.boltDB.Close()
 }
