@@ -168,7 +168,7 @@ func configure() {
 func run() {
 	Plugin.LogInfo("Starting REST-API server ...")
 
-	Plugin.Daemon().BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
 		Plugin.LogInfo("Starting REST-API server ... done")
 
 		bindAddr := deps.NodeConfig.String(CfgRestAPIBindAddress)
@@ -192,7 +192,9 @@ func run() {
 			cancel()
 		}
 		Plugin.LogInfo("Stopping REST-API server ... done")
-	}, shutdown.PriorityRestAPI)
+	}, shutdown.PriorityRestAPI); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 func setupRoutes() {

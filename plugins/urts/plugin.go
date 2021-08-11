@@ -84,13 +84,15 @@ func configure() {
 }
 
 func run() {
-	Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
-	}, shutdown.PriorityTipselection)
+	}, shutdown.PriorityTipselection); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
-	Plugin.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
 		for {
 			select {
 			case <-shutdownSignal:
@@ -101,7 +103,9 @@ func run() {
 				Plugin.LogDebugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 			}
 		}
-	}, shutdown.PriorityTipselection)
+	}, shutdown.PriorityTipselection); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 func configureEvents() {

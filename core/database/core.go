@@ -209,23 +209,27 @@ func configure() {
 		}
 	}
 
-	CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		deps.Storage.MarkDatabaseHealthy()
 		CorePlugin.LogInfo("Syncing databases to disk...")
 		closeDatabases()
 		CorePlugin.LogInfo("Syncing databases to disk... done")
-	}, shutdown.PriorityCloseDatabase)
+	}, shutdown.PriorityCloseDatabase); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
 	configureEvents()
 }
 
 func run() {
-	CorePlugin.Daemon().BackgroundWorker("Database[Events]", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Database[Events]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
-	}, shutdown.PriorityMetricsUpdater)
+	}, shutdown.PriorityMetricsUpdater); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 func RunGarbageCollection() {

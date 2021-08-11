@@ -158,7 +158,7 @@ func run() {
 		writeFileServiceDiscoveryFile()
 	}
 
-	Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
 		Plugin.LogInfo("Starting Prometheus exporter ... done")
 
 		e := echo.New()
@@ -205,5 +205,7 @@ func run() {
 			cancel()
 		}
 		Plugin.LogInfo("Stopping Prometheus exporter ... done")
-	}, shutdown.PriorityPrometheus)
+	}, shutdown.PriorityPrometheus); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }

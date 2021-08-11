@@ -50,10 +50,12 @@ func configure() {
 
 func run() {
 	// create a background worker that checks for latest version every hour
-	_ = Plugin.Node.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Node.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
 		ticker := timeutil.NewTicker(checkLatestVersion, 1*time.Hour, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityUpdateCheck)
+	}, shutdown.PriorityUpdateCheck); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 func fixVersion(version string) string {

@@ -62,7 +62,7 @@ func runDatabaseSizeCollector() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: cleanup})
 	})
 
-	Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
 		deps.DatabaseEvents.DatabaseCleanup.Attach(onDatabaseCleanup)
 		defer deps.DatabaseEvents.DatabaseCleanup.Detach(onDatabaseCleanup)
 
@@ -71,5 +71,7 @@ func runDatabaseSizeCollector() {
 			hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: []*DBSizeMetric{dbSizeMetric}})
 		}, 1*time.Minute, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityDashboard)
+	}, shutdown.PriorityDashboard); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
