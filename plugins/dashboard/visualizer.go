@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	VisualizerIdLength = 7
+	VisualizerIDLength = 7
 )
 
 // vertex defines a vertex in a DAG.
@@ -52,7 +52,7 @@ func runVisualizer() {
 
 			parentsHex := make([]string, len(msg.GetParents()))
 			for i, parent := range msg.GetParents() {
-				parentsHex[i] = parent.ToHex()[:VisualizerIdLength]
+				parentsHex[i] = parent.ToHex()[:VisualizerIDLength]
 			}
 
 			hub.BroadcastMsg(
@@ -82,7 +82,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: cachedMsgMeta.GetMetadata().GetMessageID().ToHex()[:VisualizerIdLength],
+						ID: cachedMsgMeta.GetMetadata().GetMessageID().ToHex()[:VisualizerIDLength],
 					},
 				},
 			)
@@ -100,7 +100,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: cachedMilestone.GetMilestone().MessageID.ToHex()[:VisualizerIdLength],
+					ID: cachedMilestone.GetMilestone().MessageID.ToHex()[:VisualizerIDLength],
 				},
 			},
 		)
@@ -116,7 +116,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: messageID.ToHex()[:VisualizerIdLength],
+					ID: messageID.ToHex()[:VisualizerIDLength],
 				},
 			},
 		)
@@ -129,14 +129,14 @@ func runVisualizer() {
 
 		excludedIDs := make([]string, len(confirmation.Mutations.MessagesExcludedWithConflictingTransactions))
 		for i, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
-			excludedIDs[i] = messageID.MessageID.ToHex()[:VisualizerIdLength]
+			excludedIDs[i] = messageID.MessageID.ToHex()[:VisualizerIDLength]
 		}
 
 		hub.BroadcastMsg(
 			&Msg{
 				Type: MsgTypeConfirmedInfo,
 				Data: &confirmationinfo{
-					ID:          confirmation.MilestoneMessageID.ToHex()[:VisualizerIdLength],
+					ID:          confirmation.MilestoneMessageID.ToHex()[:VisualizerIDLength],
 					ExcludedIDs: excludedIDs,
 				},
 			},
@@ -152,7 +152,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.ToHex()[:VisualizerIdLength],
+					ID:    tip.MessageID.ToHex()[:VisualizerIDLength],
 					IsTip: true,
 				},
 			},
@@ -168,7 +168,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.ToHex()[:VisualizerIdLength],
+					ID:    tip.MessageID.ToHex()[:VisualizerIDLength],
 					IsTip: false,
 				},
 			},

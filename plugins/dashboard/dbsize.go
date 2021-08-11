@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	lastDbCleanup       = &database.DatabaseCleanup{}
-	cachedDbSizeMetrics []*DBSizeMetric
+	lastDBCleanup       = &database.DatabaseCleanup{}
+	cachedDBSizeMetrics []*DBSizeMetric
 )
 
 // DBSizeMetric represents database size metrics.
@@ -45,9 +45,9 @@ func currentDatabaseSize() *DBSizeMetric {
 		Total: dbSize,
 		Time:  time.Now(),
 	}
-	cachedDbSizeMetrics = append(cachedDbSizeMetrics, newValue)
-	if len(cachedDbSizeMetrics) > 600 {
-		cachedDbSizeMetrics = cachedDbSizeMetrics[len(cachedDbSizeMetrics)-600:]
+	cachedDBSizeMetrics = append(cachedDBSizeMetrics, newValue)
+	if len(cachedDBSizeMetrics) > 600 {
+		cachedDBSizeMetrics = cachedDBSizeMetrics[len(cachedDBSizeMetrics)-600:]
 	}
 	return newValue
 }
@@ -58,7 +58,7 @@ func runDatabaseSizeCollector() {
 	currentDatabaseSize()
 
 	onDatabaseCleanup := events.NewClosure(func(cleanup *database.DatabaseCleanup) {
-		lastDbCleanup = cleanup
+		lastDBCleanup = cleanup
 		hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: cleanup})
 	})
 

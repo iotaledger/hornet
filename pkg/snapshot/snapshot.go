@@ -1263,11 +1263,11 @@ func (s *Snapshot) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 		return ErrNoSnapshotDownloadURL
 	}
 
-	targetsJson, err := json.MarshalIndent(s.downloadTargets, "", "   ")
+	targetsJSON, err := json.MarshalIndent(s.downloadTargets, "", "   ")
 	if err != nil {
 		return fmt.Errorf("unable to marshal targets into formatted JSON: %w", err)
 	}
-	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJson))
+	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJSON))
 
 	if err := s.DownloadSnapshotFiles(wantedNetworkID, fullPath, deltaPath, s.downloadTargets); err != nil {
 		return fmt.Errorf("unable to download snapshot files: %w", err)

@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	DbVersion = 1
+	DBVersion = 1
 )
 
 func (s *Storage) configureHealthStore(store kvstore.KVStore) {
@@ -61,7 +61,7 @@ func (s *Storage) setDatabaseVersion() {
 	_, err := s.healthStore.Get([]byte("dbVersion"))
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// Only create the entry, if it doesn't exist already (fresh database)
-		if err := s.healthStore.Set([]byte("dbVersion"), []byte{DbVersion}); err != nil {
+		if err := s.healthStore.Set([]byte("dbVersion"), []byte{DBVersion}); err != nil {
 			panic(errors.Wrap(NewDatabaseError(err), "failed to set database version"))
 		}
 	}
@@ -75,7 +75,7 @@ func (s *Storage) IsCorrectDatabaseVersion() bool {
 	}
 
 	if len(value) > 0 {
-		return value[0] == DbVersion
+		return value[0] == DBVersion
 	}
 
 	return false
