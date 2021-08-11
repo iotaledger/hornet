@@ -195,7 +195,7 @@ func run() {
 		}
 	})
 
-	_ = CorePlugin.Daemon().BackgroundWorker("Snapshots", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Snapshots", func(shutdownSignal <-chan struct{}) {
 		CorePlugin.LogInfo("Starting Snapshots ... done")
 
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
@@ -212,5 +212,7 @@ func run() {
 				deps.Snapshot.HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex, shutdownSignal)
 			}
 		}
-	}, shutdown.PrioritySnapshots)
+	}, shutdown.PrioritySnapshots); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 }

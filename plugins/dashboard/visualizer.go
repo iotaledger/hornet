@@ -175,7 +175,7 @@ func runVisualizer() {
 		)
 	})
 
-	Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
 		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
 		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
@@ -200,5 +200,7 @@ func runVisualizer() {
 
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ...")
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ... done")
-	}, shutdown.PriorityDashboard)
+	}, shutdown.PriorityDashboard); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }

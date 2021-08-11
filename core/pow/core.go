@@ -60,11 +60,13 @@ func provide(c *dig.Container) {
 func run() {
 
 	// close the PoW handler on shutdown
-	CorePlugin.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
 		CorePlugin.LogInfo("Starting PoW Handler ... done")
 		<-shutdownSignal
 		CorePlugin.LogInfo("Stopping PoW Handler ...")
 		deps.Handler.Close()
 		CorePlugin.LogInfo("Stopping PoW Handler ... done")
-	}, shutdown.PriorityPoWHandler)
+	}, shutdown.PriorityPoWHandler); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 }

@@ -240,7 +240,7 @@ func handleError(err error) bool {
 func run() {
 
 	// create a background worker that signals to issue new milestones
-	Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
 
 		ticker := timeutil.NewTicker(func() {
 			// issue next milestone
@@ -251,10 +251,12 @@ func run() {
 			}
 		}, deps.Coordinator.GetInterval(), shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityCoordinator)
+	}, shutdown.PriorityCoordinator); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
 	// create a background worker that issues milestones
-	Plugin.Daemon().BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
 		// wait until all background workers of the tangle plugin are started
 		deps.Tangle.WaitForTangleProcessorStartup()
 
@@ -375,7 +377,9 @@ func run() {
 		}
 
 		detachEvents()
-	}, shutdown.PriorityCoordinator)
+	}, shutdown.PriorityCoordinator); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
 }
 

@@ -97,19 +97,23 @@ func (t *Tangle) RunTangleProcessor() {
 	})
 
 	// create a background worker that "measures" the MPS value every second
-	t.daemon.BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
 		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityMetricsUpdater)
+	}, shutdown.PriorityMetricsUpdater); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
 		t.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		t.startWaitGroup.Done()
 		<-shutdownSignal
 		t.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
-	}, shutdown.PriorityMetricsUpdater)
+	}, shutdown.PriorityMetricsUpdater); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[ReceiveTx] ... done")
 		t.messageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
 		t.Events.MessageSolid.Attach(onMessageSolid)
@@ -121,9 +125,11 @@ func (t *Tangle) RunTangleProcessor() {
 		t.Events.MessageSolid.Detach(onMessageSolid)
 		t.receiveMsgWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
-	}, shutdown.PriorityReceiveTxWorker)
+	}, shutdown.PriorityReceiveTxWorker); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[FutureConeSolidifier] ... done")
 		t.futureConeSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
@@ -131,9 +137,11 @@ func (t *Tangle) RunTangleProcessor() {
 		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ...")
 		t.futureConeSolidifierWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ... done")
-	}, shutdown.PrioritySolidifierGossip)
+	}, shutdown.PrioritySolidifierGossip); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
 		t.storage.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
@@ -148,9 +156,11 @@ func (t *Tangle) RunTangleProcessor() {
 		t.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
 		t.processValidMilestoneWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
-	}, shutdown.PriorityMilestoneProcessor)
+	}, shutdown.PriorityMilestoneProcessor); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
 		t.milestoneSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
@@ -159,7 +169,9 @@ func (t *Tangle) RunTangleProcessor() {
 		t.milestoneSolidifierWorkerPool.StopAndWait()
 		t.futureConeSolidifier.Cleanup(true)
 		t.log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
-	}, shutdown.PriorityMilestoneSolidifier)
+	}, shutdown.PriorityMilestoneSolidifier); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
 }
 

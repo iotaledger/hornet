@@ -83,11 +83,13 @@ func configure() {
 }
 
 func run() {
-	_ = Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		start(local, shutdownSignal)
 		detachEvents()
-	}, shutdown.PriorityAutopeering)
+	}, shutdown.PriorityAutopeering); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 // gets the peering service key from the config.

@@ -291,7 +291,7 @@ func run() {
 		receiptWorkerPool.TrySubmit(receipt)
 	})
 
-	Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
 		go func() {
 			mqttBroker.Start()
 			Plugin.LogInfof("Starting MQTT Broker (port %s) ... done", mqttBroker.GetConfig().Port)
@@ -308,9 +308,11 @@ func run() {
 		<-shutdownSignal
 		Plugin.LogInfo("Stopping MQTT Broker ...")
 		Plugin.LogInfo("Stopping MQTT Broker ... done")
-	}, shutdown.PriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
-	Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
 		Plugin.LogInfo("Starting MQTT Events ... done")
 
 		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
@@ -356,5 +358,7 @@ func run() {
 		receiptWorkerPool.StopAndWait()
 
 		Plugin.LogInfo("Stopping MQTT Events ... done")
-	}, shutdown.PriorityMetricsPublishers)
+	}, shutdown.PriorityMetricsPublishers); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
