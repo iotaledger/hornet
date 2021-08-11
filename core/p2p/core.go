@@ -19,7 +19,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
-	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
@@ -47,11 +46,11 @@ var (
 
 type dependencies struct {
 	dig.In
-	Manager              *p2ppkg.Manager
+	Manager              *p2p.Manager
 	Host                 host.Host
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfig        *configuration.Configuration `name:"peeringConfig"`
-	PeeringConfigManager *p2ppkg.ConfigManager
+	PeeringConfigManager *p2p.ConfigManager
 }
 
 func provide(c *dig.Container) {
@@ -134,10 +133,10 @@ func provide(c *dig.Container) {
 		Config *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps mngdeps) *p2ppkg.Manager {
-		return p2ppkg.NewManager(deps.Host,
-			p2ppkg.WithManagerLogger(logger.NewLogger("P2P-Manager")),
-			p2ppkg.WithManagerReconnectInterval(deps.Config.Duration(CfgP2PReconnectInterval), 1*time.Second),
+	if err := c.Provide(func(deps mngdeps) *p2p.Manager {
+		return p2p.NewManager(deps.Host,
+			p2p.WithManagerLogger(logger.NewLogger("P2P-Manager")),
+			p2p.WithManagerReconnectInterval(deps.Config.Duration(CfgP2PReconnectInterval), 1*time.Second),
 		)
 	}); err != nil {
 		CorePlugin.Panic(err)
@@ -150,9 +149,9 @@ func provide(c *dig.Container) {
 		PeeringConfigFilePath string                       `name:"peeringConfigFilePath"`
 	}
 
-	if err := c.Provide(func(deps configManagerDeps) *p2ppkg.ConfigManager {
+	if err := c.Provide(func(deps configManagerDeps) *p2p.ConfigManager {
 
-		p2pConfigManager := p2ppkg.NewConfigManager(func(peers []*p2ppkg.PeerConfig) error {
+		p2pConfigManager := p2p.NewConfigManager(func(peers []*p2p.PeerConfig) error {
 			if err := deps.PeeringConfig.Set(CfgPeers, peers); err != nil {
 				return err
 			}
@@ -161,7 +160,7 @@ func provide(c *dig.Container) {
 		})
 
 		// peers from peering config
-		var peers []*p2ppkg.PeerConfig
+		var peers []*p2p.PeerConfig
 		if err := deps.PeeringConfig.Unmarshal(CfgPeers, &peers); err != nil {
 			CorePlugin.Panicf("invalid peer config: %s", err)
 		}
@@ -253,6 +252,6 @@ func connectConfigKnownPeers() {
 			CorePlugin.Panicf("invalid peer address info: %s", err)
 		}
 
-		_ = deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationKnown, p.Alias)
+		_ = deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, p.Alias)
 	}
 }
