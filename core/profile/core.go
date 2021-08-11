@@ -1,7 +1,6 @@
 package profile
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -11,7 +10,6 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 var (
@@ -32,7 +30,6 @@ func init() {
 
 var (
 	CorePlugin *node.CorePlugin
-	log        *logger.Logger
 	deps       dependencies
 )
 
@@ -43,8 +40,6 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
-	log = logger.NewLogger(CorePlugin.Name)
-
 	type deps struct {
 		dig.In
 		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
@@ -53,15 +48,15 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(d deps) *profile.Profile {
 		return loadProfile(d.NodeConfig, d.ProfilesConfig)
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 }
 
 func configure() {
 	if deps.NodeConfig.String(CfgNodeProfile) == AutoProfileName {
-		log.Infof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
+		CorePlugin.LogInfof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
 	} else {
-		log.Infof("Using profile '%s'", deps.Profile.Name)
+		CorePlugin.LogInfof("Using profile '%s'", deps.Profile.Name)
 	}
 }
 
@@ -72,7 +67,7 @@ func loadProfile(nodeConfig *configuration.Configuration, profilesConfig *config
 	if profileName == AutoProfileName {
 		v, err := mem.VirtualMemory()
 		if err != nil {
-			panic(err)
+			CorePlugin.Panic(err)
 		}
 
 		if v.Total >= 8000000000*0.95 {
@@ -84,7 +79,7 @@ func loadProfile(nodeConfig *configuration.Configuration, profilesConfig *config
 		} else if v.Total >= 1000000000*0.95 {
 			profileName = "1gb"
 		} else {
-			panic(ErrNotEnoughMemory)
+			CorePlugin.Panic(ErrNotEnoughMemory)
 		}
 	}
 
@@ -105,10 +100,10 @@ func loadProfile(nodeConfig *configuration.Configuration, profilesConfig *config
 	default:
 		p = &profile.Profile{}
 		if !profilesConfig.Exists(profileName) {
-			panic(fmt.Sprintf("profile '%s' is not defined in the config", profileName))
+			CorePlugin.Panicf("profile '%s' is not defined in the config", profileName)
 		}
 		if err := profilesConfig.Unmarshal(profileName, p); err != nil {
-			panic(err)
+			CorePlugin.Panic(err)
 		}
 		p.Name = profileName
 	}
