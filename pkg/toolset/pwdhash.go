@@ -32,7 +32,7 @@ func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string)
 			return errors.New("failed to get terminal state")
 		}
 
-		signalChan := make(chan os.Signal)
+		signalChan := make(chan os.Signal, 1)
 		signal.Notify(signalChan, os.Interrupt)
 		go func() {
 			<-signalChan

@@ -11,10 +11,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
+// CachedIndexation represents a cached indexation.
 type CachedIndexation struct {
 	objectstorage.CachedObject
 }
 
+// GetIndexation retrieves the indexation, that is cached in this container.
 func (c *CachedIndexation) GetIndexation() *Indexation {
 	return c.Get().(*Indexation)
 }
@@ -52,6 +54,7 @@ func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profil
 	)
 }
 
+// GetIndexMessageIDs returns all known message IDs for the given index.
 // indexation +-0
 func (s *Storage) GetIndexMessageIDs(index []byte, iteratorOptions ...IteratorOption) hornet.MessageIDs {
 	var messageIDs hornet.MessageIDs
@@ -89,27 +92,32 @@ func (s *Storage) ForEachIndexation(consumer CachedIndexationConsumer, iteratorO
 	}, iteratorOptions...)
 }
 
+// StoreIndexation stores the indexation in the persistence layer and returns a cached object.
 // indexation +1
 func (s *Storage) StoreIndexation(index []byte, messageID hornet.MessageID) *CachedIndexation {
 	indexation := NewIndexation(index, messageID)
 	return &CachedIndexation{CachedObject: s.indexationStorage.Store(indexation)}
 }
 
+// DeleteIndexation deletes the indexation in the cache/persistence layer.
 // indexation +-0
 func (s *Storage) DeleteIndexation(index []byte, messageID hornet.MessageID) {
 	indexation := NewIndexation(index, messageID)
 	s.indexationStorage.Delete(indexation.ObjectStorageKey())
 }
 
+// DeleteIndexationByKey deletes the indexation by key in the cache/persistence layer.
 // indexation +-0
 func (s *Storage) DeleteIndexationByKey(key []byte) {
 	s.indexationStorage.Delete(key)
 }
 
+// ShutdownIndexationStorage shuts down the indexation storage.
 func (s *Storage) ShutdownIndexationStorage() {
 	s.indexationStorage.Shutdown()
 }
 
+// FlushIndexationStorage flushes the indexation storage.
 func (s *Storage) FlushIndexationStorage() {
 	s.indexationStorage.Flush()
 }

@@ -67,14 +67,14 @@ func appBoxMiddleware() echo.MiddlewareFunc {
 
 func devModeReverseProxyMiddleware() echo.MiddlewareFunc {
 
-	apiUrl, err := url.Parse("http://127.0.0.1:9090")
+	apiURL, err := url.Parse("http://127.0.0.1:9090")
 	if err != nil {
 		Plugin.LogFatalf("wrong devmode url: %s", err)
 	}
 
 	return middleware.Proxy(middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{
 		{
-			URL: apiUrl,
+			URL: apiURL,
 		},
 	}))
 }

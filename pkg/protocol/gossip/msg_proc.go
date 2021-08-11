@@ -34,7 +34,7 @@ var (
 	ErrMessageBelowMaxDepth = errors.New("msg is below max depth")
 )
 
-// New creates a new processor which parses messages.
+// NewMessageProcessor creates a new processor which parses messages.
 func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, peeringService *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts *Options) *MessageProcessor {
 	proc := &MessageProcessor{
 		storage: storage,
@@ -105,7 +105,7 @@ func BroadcastCaller(handler interface{}, params ...interface{}) {
 	handler.(func(b *Broadcast))(params[0].(*Broadcast))
 }
 
-// MessageProcessorEventsEvents are the events fired by the MessageProcessor.
+// MessageProcessorEvents are the events fired by the MessageProcessor.
 type MessageProcessorEvents struct {
 	// Fired when a message was fully processed.
 	MessageProcessed *events.Event
@@ -222,7 +222,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 	return nil
 }
 
-// WorkUnitSize returns the size of WorkUnits currently cached.
+// WorkUnitsSize returns the size of WorkUnits currently cached.
 func (proc *MessageProcessor) WorkUnitsSize() int {
 	return proc.workUnits.GetSize()
 }

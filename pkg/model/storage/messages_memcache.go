@@ -28,6 +28,7 @@ func (c *MessagesMemcache) Cleanup(forceRelease bool) {
 	c.cachedMsgs = make(map[string]*CachedMessage)
 }
 
+// GetCachedMessageOrNil returns a cached message object.
 // msg +1
 func (c *MessagesMemcache) GetCachedMessageOrNil(messageID hornet.MessageID) *CachedMessage {
 	messageIDMapKey := messageID.ToMapKey()

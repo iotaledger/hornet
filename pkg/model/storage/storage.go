@@ -127,6 +127,7 @@ func (s *Storage) configureStorages(store kvstore.KVStore, caches *profile.Cache
 	s.UTXO()
 }
 
+// FlushStorages flushes all storages.
 func (s *Storage) FlushStorages() {
 	s.FlushMilestoneStorage()
 	s.FlushMessagesStorage()
@@ -135,6 +136,7 @@ func (s *Storage) FlushStorages() {
 	s.FlushUnreferencedMessagesStorage()
 }
 
+// ShutdownStorages shuts down all storages.
 func (s *Storage) ShutdownStorages() {
 
 	s.ShutdownMilestoneStorage()

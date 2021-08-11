@@ -28,6 +28,7 @@ func (c *MetadataMemcache) Cleanup(forceRelease bool) {
 	c.cachedMsgMetas = make(map[string]*CachedMetadata)
 }
 
+// GetCachedMetadataOrNil returns a cached metadata object.
 // metadata +1
 func (c *MetadataMemcache) GetCachedMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
 	messageIDMapKey := messageID.ToMapKey()

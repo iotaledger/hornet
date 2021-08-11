@@ -5,9 +5,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"path/filepath"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -27,11 +24,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
-)
-
-var (
-	// setupTangleOnce is used to avoid panics when running multiple tests.
-	setupTangleOnce sync.Once
 )
 
 // TestEnvironment holds the state of the test environment.
@@ -54,9 +46,6 @@ type TestEnvironment struct {
 	// networkID is the network ID used for this test network
 	networkID uint64
 
-	// cooPrivateKey holds the coo private key
-	cooPrivateKey ed25519.PrivateKey
-
 	// coo holds the coordinator instance.
 	coo *coordinator.Coordinator
 
@@ -77,21 +66,6 @@ type TestEnvironment struct {
 
 	// GenesisOutput marks the initial output created when bootstrapping the tangle
 	GenesisOutput *utxo.Output
-}
-
-// searchProjectRootFolder searches the hornet root directory.
-// this is used to always find the "assets" folder if executed from different test cases.
-func searchProjectRootFolder() string {
-	wd, _ := os.Getwd()
-
-	for !strings.HasSuffix(wd, "pkg") && !strings.HasSuffix(wd, "plugins") {
-		wd = filepath.Dir(wd)
-	}
-
-	// one more time to get to the root dir
-	wd = filepath.Dir(wd)
-
-	return wd
 }
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,

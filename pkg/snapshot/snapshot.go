@@ -803,7 +803,7 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 	}
 
 	// stream data into snapshot file
-	err, snapshotMetrics := StreamSnapshotDataTo(snapshotFile, uint64(ts.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer)
+	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint64(ts.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer)
 	if err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[snapshotType], err)
@@ -1263,11 +1263,11 @@ func (s *Snapshot) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 		return ErrNoSnapshotDownloadURL
 	}
 
-	targetsJson, err := json.MarshalIndent(s.downloadTargets, "", "   ")
+	targetsJSON, err := json.MarshalIndent(s.downloadTargets, "", "   ")
 	if err != nil {
 		return fmt.Errorf("unable to marshal targets into formatted JSON: %w", err)
 	}
-	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJson))
+	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJSON))
 
 	if err := s.DownloadSnapshotFiles(wantedNetworkID, fullPath, deltaPath, s.downloadTargets); err != nil {
 		return fmt.Errorf("unable to download snapshot files: %w", err)
@@ -1277,7 +1277,7 @@ func (s *Snapshot) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 	return nil
 }
 
-// checks that the current snapshot info is valid regarding its network ID and the ledger state.
+// CheckCurrentSnapshot checks that the current snapshot info is valid regarding its network ID and the ledger state.
 func (s *Snapshot) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInfo) error {
 
 	// check that the stored snapshot corresponds to the wanted network ID

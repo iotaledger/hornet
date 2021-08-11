@@ -95,10 +95,10 @@ func websocketRoute(ctx echo.Context) error {
 			client.Send(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: cachedMilestoneMetrics})
 
 		case MsgTypeDatabaseSizeMetric:
-			client.Send(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: cachedDbSizeMetrics})
+			client.Send(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: cachedDBSizeMetrics})
 
 		case MsgTypeDatabaseCleanupEvent:
-			client.Send(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: lastDbCleanup})
+			client.Send(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: lastDBCleanup})
 
 		case MsgTypeMs:
 			start := deps.Storage.GetLatestMilestoneIndex()
