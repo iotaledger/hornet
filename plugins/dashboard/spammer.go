@@ -21,9 +21,9 @@ func runSpammerMetricWorker() {
 		spammerplugin.Events.SpamPerformed.Attach(onSpamPerformed)
 		spammerplugin.Events.AvgSpamMetricsUpdated.Attach(onAvgSpamMetricsUpdated)
 		<-shutdownSignal
-		log.Info("Stopping Dashboard[SpammerMetricUpdater] ...")
+		Plugin.LogInfo("Stopping Dashboard[SpammerMetricUpdater] ...")
 		spammerplugin.Events.SpamPerformed.Detach(onSpamPerformed)
 		spammerplugin.Events.AvgSpamMetricsUpdated.Detach(onAvgSpamMetricsUpdated)
-		log.Info("Stopping Dashboard[SpammerMetricUpdater] ... done")
+		Plugin.LogInfo("Stopping Dashboard[SpammerMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard)
 }

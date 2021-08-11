@@ -10,25 +10,22 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
-			Name:      "PoW",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:     "PoW",
+			DepsFunc: func(cDeps dependencies) { deps = cDeps },
+			Params:   params,
+			Provide:  provide,
+			Run:      run,
 		},
 	}
 }
 
 var (
 	CorePlugin *node.CorePlugin
-	log        *logger.Logger
 	deps       dependencies
 )
 
@@ -54,24 +51,20 @@ func provide(c *dig.Container) {
 		if err == nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(log, deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
+		return powpackage.New(CorePlugin.Logger(), deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
-}
-
-func configure() {
-	log = logger.NewLogger(CorePlugin.Name)
 }
 
 func run() {
 
 	// close the PoW handler on shutdown
 	CorePlugin.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting PoW Handler ... done")
+		CorePlugin.LogInfo("Starting PoW Handler ... done")
 		<-shutdownSignal
-		log.Info("Stopping PoW Handler ...")
+		CorePlugin.LogInfo("Stopping PoW Handler ...")
 		deps.Handler.Close()
-		log.Info("Stopping PoW Handler ... done")
+		CorePlugin.LogInfo("Stopping PoW Handler ... done")
 	}, shutdown.PriorityPoWHandler)
 }

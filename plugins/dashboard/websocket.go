@@ -48,7 +48,7 @@ const (
 func websocketRoute(ctx echo.Context) error {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf("recovered from panic within WS handle func: %s", r)
+			Plugin.LogErrorf("recovered from panic within WS handle func: %s", r)
 		}
 	}()
 
@@ -191,7 +191,7 @@ func websocketRoute(ctx echo.Context) error {
 
 		// onConnect gets called when the client was registered
 		func(client *websockethub.Client) {
-			log.Info("WebSocket client connection established")
+			Plugin.LogInfo("WebSocket client connection established")
 		})
 
 	return nil

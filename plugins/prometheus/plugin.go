@@ -30,7 +30,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 // RouteMetrics is the route for getting the prometheus metrics.
@@ -41,7 +40,7 @@ const (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
 			Name:      "Prometheus",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -54,7 +53,6 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	server   *http.Server
@@ -86,8 +84,6 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	if deps.NodeConfig.Bool(CfgPrometheusDatabase) {
 		configureDatabase()
 	}
@@ -143,27 +139,27 @@ func writeFileServiceDiscoveryFile() {
 	}}
 	j, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
-		log.Panic("unable to marshal file service discovery JSON:", err)
+		Plugin.Panic("unable to marshal file service discovery JSON:", err)
 		return
 	}
 
 	// this truncates an existing file
 	if err := ioutil.WriteFile(path, j, 0666); err != nil {
-		log.Panic("unable to write file service discovery file:", err)
+		Plugin.Panic("unable to write file service discovery file:", err)
 	}
 
-	log.Infof("Wrote 'file service discovery' content to %s", path)
+	Plugin.LogInfof("Wrote 'file service discovery' content to %s", path)
 }
 
 func run() {
-	log.Info("Starting Prometheus exporter ...")
+	Plugin.LogInfo("Starting Prometheus exporter ...")
 
 	if deps.NodeConfig.Bool(CfgPrometheusFileServiceDiscoveryEnabled) {
 		writeFileServiceDiscoveryFile()
 	}
 
 	Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting Prometheus exporter ... done")
+		Plugin.LogInfo("Starting Prometheus exporter ... done")
 
 		e := echo.New()
 		e.HideBanner = true
@@ -191,23 +187,23 @@ func run() {
 		server = &http.Server{Addr: bindAddr, Handler: e}
 
 		go func() {
-			log.Infof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
+			Plugin.LogInfof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
 			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				log.Warn("Stopping Prometheus exporter due to an error ... done")
+				Plugin.LogWarnf("Stopped Prometheus exporter due to an error (%s)", err)
 			}
 		}()
 
 		<-shutdownSignal
-		log.Info("Stopping Prometheus exporter ...")
+		Plugin.LogInfo("Stopping Prometheus exporter ...")
 
 		if server != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			err := server.Shutdown(ctx)
 			if err != nil {
-				log.Warn(err.Error())
+				Plugin.LogWarn(err)
 			}
 			cancel()
 		}
-		log.Info("Stopping Prometheus exporter ... done")
+		Plugin.LogInfo("Stopping Prometheus exporter ... done")
 	}, shutdown.PriorityPrometheus)
 }

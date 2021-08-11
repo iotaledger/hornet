@@ -198,7 +198,7 @@ func runVisualizer() {
 
 		<-shutdownSignal
 
-		log.Info("Stopping Dashboard[Visualizer] ...")
-		log.Info("Stopping Dashboard[Visualizer] ... done")
+		Plugin.LogInfo("Stopping Dashboard[Visualizer] ...")
+		Plugin.LogInfo("Stopping Dashboard[Visualizer] ... done")
 	}, shutdown.PriorityDashboard)
 }

@@ -18,14 +18,13 @@ import (
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/workerpool"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:      "MQTT",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -46,7 +45,6 @@ const (
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	newLatestMilestoneWorkerPool    *workerpool.WorkerPool
@@ -75,11 +73,9 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		log.Panic("RestAPI plugin needs to be enabled to use the MQTT plugin")
+		Plugin.Panic("RestAPI plugin needs to be enabled to use the MQTT plugin")
 	}
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
@@ -186,14 +182,14 @@ func configure() {
 
 	var err error
 	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", deps.NodeConfig.Int(CfgMQTTWorkerCount), func(topic []byte) {
-		log.Infof("Subscribe to topic: %s", string(topic))
+		Plugin.LogInfof("Subscribe to topic: %s", string(topic))
 		topicSubscriptionWorkerPool.TrySubmit(topic)
 	}, func(topic []byte) {
-		log.Infof("Unsubscribe from topic: %s", string(topic))
+		Plugin.LogInfof("Unsubscribe from topic: %s", string(topic))
 	})
 
 	if err != nil {
-		log.Fatalf("MQTT broker init failed! %s", err)
+		Plugin.LogFatalf("MQTT broker init failed! %s", err)
 	}
 
 	setupWebSocketRoute()
@@ -204,7 +200,7 @@ func setupWebSocketRoute() {
 	// Configure MQTT WebSocket route
 	mqttWSUrl, err := url.Parse(fmt.Sprintf("http://%s:%s", mqttBroker.GetConfig().Host, mqttBroker.GetConfig().WsPort))
 	if err != nil {
-		log.Fatalf("MQTT WebSocket init failed! %s", err)
+		Plugin.LogFatalf("MQTT WebSocket init failed! %s", err)
 	}
 
 	wsGroup := deps.Echo.Group(RouteMQTT)
@@ -226,7 +222,7 @@ func setupWebSocketRoute() {
 
 func run() {
 
-	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.GetConfig().Port)
+	Plugin.LogInfof("Starting MQTT Broker (port %s) ...", mqttBroker.GetConfig().Port)
 
 	onLatestMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
@@ -298,24 +294,24 @@ func run() {
 	Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
 		go func() {
 			mqttBroker.Start()
-			log.Infof("Starting MQTT Broker (port %s) ... done", mqttBroker.GetConfig().Port)
+			Plugin.LogInfof("Starting MQTT Broker (port %s) ... done", mqttBroker.GetConfig().Port)
 		}()
 
 		if mqttBroker.GetConfig().Port != "" {
-			log.Infof("You can now listen to MQTT via: http://%s:%s", mqttBroker.GetConfig().Host, mqttBroker.GetConfig().Port)
+			Plugin.LogInfof("You can now listen to MQTT via: http://%s:%s", mqttBroker.GetConfig().Host, mqttBroker.GetConfig().Port)
 		}
 
 		if mqttBroker.GetConfig().TlsPort != "" {
-			log.Infof("You can now listen to MQTT via: https://%s:%s", mqttBroker.GetConfig().TlsHost, mqttBroker.GetConfig().TlsPort)
+			Plugin.LogInfof("You can now listen to MQTT via: https://%s:%s", mqttBroker.GetConfig().TlsHost, mqttBroker.GetConfig().TlsPort)
 		}
 
 		<-shutdownSignal
-		log.Info("Stopping MQTT Broker ...")
-		log.Info("Stopping MQTT Broker ... done")
+		Plugin.LogInfo("Stopping MQTT Broker ...")
+		Plugin.LogInfo("Stopping MQTT Broker ... done")
 	}, shutdown.PriorityMetricsPublishers)
 
 	Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting MQTT Events ... done")
+		Plugin.LogInfo("Starting MQTT Events ... done")
 
 		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
 		deps.Tangle.Events.ConfirmedMilestoneChanged.Attach(onConfirmedMilestoneChanged)
@@ -359,6 +355,6 @@ func run() {
 		utxoOutputWorkerPool.StopAndWait()
 		receiptWorkerPool.StopAndWait()
 
-		log.Info("Stopping MQTT Events ... done")
+		Plugin.LogInfo("Stopping MQTT Events ... done")
 	}, shutdown.PriorityMetricsPublishers)
 }

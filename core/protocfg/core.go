@@ -83,18 +83,18 @@ func provide(c *dig.Container) {
 		if *cooPubKeyRangesFlag != "" {
 			// load from special CLI flag
 			if err := json.Unmarshal([]byte(*cooPubKeyRangesFlag), &res.PublicKeyRanges); err != nil {
-				panic(err)
+				CorePlugin.Panic(err)
 			}
 			return res
 		}
 
 		// load from config
 		if err := deps.NodeConfig.Unmarshal(CfgProtocolPublicKeyRanges, &res.PublicKeyRanges); err != nil {
-			panic(err)
+			CorePlugin.Panic(err)
 		}
 
 		return res
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 }
