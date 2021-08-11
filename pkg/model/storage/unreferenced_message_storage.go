@@ -26,7 +26,7 @@ func (cachedUnreferencedMessages CachedUnreferencedMessages) Release(force ...bo
 	}
 }
 
-// GetUnreferencedMessage retrieves the GetUnreferencedMessage, that is cached in this container.
+// GetUnreferencedMessage retrieves the unreferenced message, that is cached in this container.
 func (c *CachedUnreferencedMessage) GetUnreferencedMessage() *UnreferencedMessage {
 	return c.Get().(*UnreferencedMessage)
 }

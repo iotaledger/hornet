@@ -35,7 +35,7 @@ type CachedWorkUnit struct {
 	objectstorage.CachedObject
 }
 
-// WorkUnit retrieves the WorkUnit, that is cached in this container.
+// WorkUnit retrieves the work unit, that is cached in this container.
 func (c *CachedWorkUnit) WorkUnit() *WorkUnit {
 	return c.Get().(*WorkUnit)
 }

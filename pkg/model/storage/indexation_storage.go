@@ -16,7 +16,7 @@ type CachedIndexation struct {
 	objectstorage.CachedObject
 }
 
-// GetIndexation retrieves the GetIndexation, that is cached in this container.
+// GetIndexation retrieves the indexation, that is cached in this container.
 func (c *CachedIndexation) GetIndexation() *Indexation {
 	return c.Get().(*Indexation)
 }

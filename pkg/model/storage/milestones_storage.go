@@ -118,7 +118,7 @@ func (c *CachedMilestone) Retain() *CachedMilestone {
 	return &CachedMilestone{c.CachedObject.Retain()}
 }
 
-// GetMilestone retrieves the GetMilestone, that is cached in this container.
+// GetMilestone retrieves the milestone, that is cached in this container.
 func (c *CachedMilestone) GetMilestone() *Milestone {
 	return c.Get().(*Milestone)
 }
