@@ -41,9 +41,9 @@ func (se *SyncEvent) RegisterEvent(key interface{}) chan struct{} {
 	return msgProcessedChan
 }
 
-// DeregisterEvent removes a registed event to free the memory if not used.
+// DeregisterEvent removes a registered event to free the memory if not used.
 func (se *SyncEvent) DeregisterEvent(key interface{}) {
-	// the event is deregisted by triggering it
+	// the event is deregistered by triggering it
 	se.Trigger(key)
 }
 

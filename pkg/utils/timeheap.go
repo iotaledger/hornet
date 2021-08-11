@@ -56,6 +56,7 @@ func (h *TimeHeap) GetAveragePerSecond(timeBefore time.Duration) float32 {
 }
 
 ///////////////// heap interface /////////////////
+
 func (h TimeHeap) Len() int           { return len(h.list) }
 func (h TimeHeap) Less(i, j int) bool { return h.list[i].timestamp.Before(h.list[j].timestamp) }
 func (h TimeHeap) Swap(i, j int)      { h.list[i], h.list[j] = h.list[j], h.list[i] }

@@ -11,12 +11,14 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
+// CachedChild represents a cached Child.
 type CachedChild struct {
 	objectstorage.CachedObject
 }
 
 type CachedChildren []*CachedChild
 
+// Retain registers a new consumer for the cached children.
 func (cachedChildren CachedChildren) Retain() CachedChildren {
 	cachedResult := make(CachedChildren, len(cachedChildren))
 	for i, cachedChild := range cachedChildren {
@@ -25,16 +27,19 @@ func (cachedChildren CachedChildren) Retain() CachedChildren {
 	return cachedResult
 }
 
+// Release releases the cached children, to be picked up by the persistence layer (as soon as all consumers are done).
 func (cachedChildren CachedChildren) Release(force ...bool) {
 	for _, cachedChild := range cachedChildren {
 		cachedChild.Release(force...)
 	}
 }
 
+// Retain registers a new consumer for the cached child.
 func (c *CachedChild) Retain() *CachedChild {
 	return &CachedChild{c.CachedObject.Retain()}
 }
 
+// GetChild retrieves the GetChild, that is cached in this container.
 func (c *CachedChild) GetChild() *Child {
 	return c.Get().(*Child)
 }
@@ -70,6 +75,7 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 	)
 }
 
+// GetChildrenMessageIDs returns the message IDs of the children of the given message.
 // children +-0
 func (s *Storage) GetChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...IteratorOption) hornet.MessageIDs {
 	var childrenMessageIDs hornet.MessageIDs
@@ -108,18 +114,21 @@ func (s *Storage) ForEachChild(consumer ChildConsumer, iteratorOptions ...Iterat
 	}, iteratorOptions...)
 }
 
+// StoreChild stores the child in the persistence layer and returns a cached object.
 // child +1
 func (s *Storage) StoreChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *CachedChild {
 	child := NewChild(parentMessageID, childMessageID)
 	return &CachedChild{CachedObject: s.childrenStorage.Store(child)}
 }
 
+// DeleteChild deletes the child in the cache/persistence layer.
 // child +-0
 func (s *Storage) DeleteChild(messageID hornet.MessageID, childMessageID hornet.MessageID) {
 	child := NewChild(messageID, childMessageID)
 	s.childrenStorage.Delete(child.ObjectStorageKey())
 }
 
+// DeleteChildren deletes the children of the given message in the cache/persistence layer.
 // child +-0
 func (s *Storage) DeleteChildren(messageID hornet.MessageID, iteratorOptions ...IteratorOption) {
 
@@ -135,10 +144,12 @@ func (s *Storage) DeleteChildren(messageID hornet.MessageID, iteratorOptions ...
 	}
 }
 
+// ShutdownChildrenStorage shuts down the children storage.
 func (s *Storage) ShutdownChildrenStorage() {
 	s.childrenStorage.Shutdown()
 }
 
+// FlushChildrenStorage flushes the children storage.
 func (s *Storage) FlushChildrenStorage() {
 	s.childrenStorage.Flush()
 }

@@ -57,7 +57,6 @@ func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile
 	)
 }
 
-// Storable Object
 type Milestone struct {
 	objectstorage.StorableObjectFlags
 
@@ -88,13 +87,14 @@ func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	return byteutils.ConcatBytes(ms.MessageID, value)
 }
 
-// Cached Object
+// CachedMilestone represents a cached milestone.
 type CachedMilestone struct {
 	objectstorage.CachedObject
 }
 
 type CachedMilestones []*CachedMilestone
 
+// Retain registers a new consumer for the cached milestones.
 // milestone +1
 func (c CachedMilestones) Retain() CachedMilestones {
 	cachedResult := make(CachedMilestones, len(c))
@@ -104,6 +104,7 @@ func (c CachedMilestones) Retain() CachedMilestones {
 	return cachedResult
 }
 
+// Release releases the cached milestones, to be picked up by the persistence layer (as soon as all consumers are done).
 // milestone -1
 func (c CachedMilestones) Release(force ...bool) {
 	for _, cachedMs := range c {
@@ -111,15 +112,18 @@ func (c CachedMilestones) Release(force ...bool) {
 	}
 }
 
+// Retain registers a new consumer for the cached milestone.
 // milestone +1
 func (c *CachedMilestone) Retain() *CachedMilestone {
 	return &CachedMilestone{c.CachedObject.Retain()}
 }
 
+// GetMilestone retrieves the GetMilestone, that is cached in this container.
 func (c *CachedMilestone) GetMilestone() *Milestone {
 	return c.Get().(*Milestone)
 }
 
+// GetCachedMilestoneOrNil returns a cached milestone object.
 // milestone +1
 func (s *Storage) GetCachedMilestoneOrNil(milestoneIndex milestone.Index) *CachedMilestone {
 	cachedMilestone := s.milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex)) // milestone +1
@@ -130,7 +134,7 @@ func (s *Storage) GetCachedMilestoneOrNil(milestoneIndex milestone.Index) *Cache
 	return &CachedMilestone{CachedObject: cachedMilestone}
 }
 
-// milestone +-0
+// ContainsMilestone returns if the given milestone exists in the cache/persistence layer.
 func (s *Storage) ContainsMilestone(milestoneIndex milestone.Index, readOptions ...ReadOption) bool {
 	return s.milestoneStorage.Contains(databaseKeyForMilestoneIndex(milestoneIndex), readOptions...)
 }
@@ -176,15 +180,18 @@ func (s *Storage) storeMilestoneIfAbsent(index milestone.Index, messageID hornet
 	return &CachedMilestone{CachedObject: cachedMs}, newlyAdded
 }
 
+// DeleteMilestone deletes the milestone in the cache/persistence layer.
 // +-0
 func (s *Storage) DeleteMilestone(milestoneIndex milestone.Index) {
 	s.milestoneStorage.Delete(databaseKeyForMilestoneIndex(milestoneIndex))
 }
 
+// ShutdownMilestoneStorage shuts down milestones storage.
 func (s *Storage) ShutdownMilestoneStorage() {
 	s.milestoneStorage.Shutdown()
 }
 
+// FlushMilestoneStorage flushes the milestones storage.
 func (s *Storage) FlushMilestoneStorage() {
 	s.milestoneStorage.Flush()
 }

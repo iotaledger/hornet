@@ -44,7 +44,7 @@ var (
 	ErrInvalidSiblingsTrytesLength = errors.New("siblings trytes too long")
 )
 
-// The merkle tree root hash of all messages.
+// MerkleTreeHash is the merkle tree root hash of all messages.
 type MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 
 // Events are the events issued by the coordinator.

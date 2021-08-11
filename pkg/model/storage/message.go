@@ -9,7 +9,6 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-// Storable Object
 type Message struct {
 	objectstorage.StorableObjectFlags
 

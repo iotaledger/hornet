@@ -12,18 +12,21 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 )
 
+// CachedUnreferencedMessage represents a cached unreferenced message.
 type CachedUnreferencedMessage struct {
 	objectstorage.CachedObject
 }
 
 type CachedUnreferencedMessages []*CachedUnreferencedMessage
 
+// Release releases the cached unreferenced messages, to be picked up by the persistence layer (as soon as all consumers are done).
 func (cachedUnreferencedMessages CachedUnreferencedMessages) Release(force ...bool) {
 	for _, cachedUnreferencedMessage := range cachedUnreferencedMessages {
 		cachedUnreferencedMessage.Release(force...)
 	}
 }
 
+// GetUnreferencedMessage retrieves the GetUnreferencedMessage, that is cached in this container.
 func (c *CachedUnreferencedMessage) GetUnreferencedMessage() *UnreferencedMessage {
 	return c.Get().(*UnreferencedMessage)
 }
@@ -86,13 +89,14 @@ func (s *Storage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsume
 	}, iteratorOptions...)
 }
 
+// StoreUnreferencedMessage stores the unreferenced message in the persistence layer and returns a cached object.
 // unreferencedTx +1
 func (s *Storage) StoreUnreferencedMessage(msIndex milestone.Index, messageID hornet.MessageID) *CachedUnreferencedMessage {
 	unreferencedTx := NewUnreferencedMessage(msIndex, messageID)
 	return &CachedUnreferencedMessage{CachedObject: s.unreferencedMessagesStorage.Store(unreferencedTx)}
 }
 
-// DeleteUnreferencedMessages deletes unreferenced message entries.
+// DeleteUnreferencedMessages deletes unreferenced message entries in the cache/persistence layer.
 func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index, iteratorOptions ...IteratorOption) int {
 
 	msIndexBytes := make([]byte, 4)
@@ -112,10 +116,12 @@ func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index, iteratorOp
 	return len(keysToDelete)
 }
 
+// ShutdownUnreferencedMessagesStorage shuts down the unreferenced messages storage.
 func (s *Storage) ShutdownUnreferencedMessagesStorage() {
 	s.unreferencedMessagesStorage.Shutdown()
 }
 
+// FlushUnreferencedMessagesStorage flushes the unreferenced messages storage.
 func (s *Storage) FlushUnreferencedMessagesStorage() {
 	s.unreferencedMessagesStorage.Flush()
 }
