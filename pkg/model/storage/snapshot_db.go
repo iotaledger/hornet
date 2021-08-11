@@ -1,17 +1,10 @@
 package storage
 
 import (
-	"encoding/binary"
-
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
-)
-
-const (
-	snapshotMilestoneIndexKey = "snapshotMilestoneIndex"
 )
 
 func (s *Storage) configureSnapshotStore(store kvstore.KVStore) {
@@ -70,14 +63,4 @@ func (s *Storage) readSolidEntryPoints() (*SolidEntryPoints, error) {
 		return nil, errors.Wrap(NewDatabaseError(err), "failed to convert solid entry points")
 	}
 	return points, nil
-}
-
-func bytesFromMilestoneIndex(milestoneIndex milestone.Index) []byte {
-	bytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, uint32(milestoneIndex))
-	return bytes
-}
-
-func milestoneIndexFromBytes(bytes []byte) milestone.Index {
-	return milestone.Index(binary.LittleEndian.Uint32(bytes))
 }
