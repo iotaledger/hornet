@@ -19,7 +19,7 @@ type Node struct {
 	pluginsMap      map[string]*Plugin
 	plugins         []*Plugin
 	container       *dig.Container
-	Logger          *logger.Logger
+	log             *logger.Logger
 	options         *NodeOptions
 }
 
@@ -43,12 +43,72 @@ func New(optionalOptions ...NodeOption) *Node {
 	node.init()
 
 	// initialize logger after init phase because plugins could modify it
-	node.Logger = logger.NewLogger("Node")
+	node.log = logger.NewLogger("Node")
 
 	// configure the core plugins and enabled plugins
 	node.configure()
 
 	return node
+}
+
+// LogDebug uses fmt.Sprint to construct and log a message.
+func (n *Node) LogDebug(args ...interface{}) {
+	n.log.Debug(args...)
+}
+
+// LogDebugf uses fmt.Sprintf to log a templated message.
+func (n *Node) LogDebugf(template string, args ...interface{}) {
+	n.log.Debugf(template, args...)
+}
+
+// LogError uses fmt.Sprint to construct and log a message.
+func (n *Node) LogError(args ...interface{}) {
+	n.log.Error(args...)
+}
+
+// LogErrorf uses fmt.Sprintf to log a templated message.
+func (n *Node) LogErrorf(template string, args ...interface{}) {
+	n.log.Errorf(template, args...)
+}
+
+// LogFatal uses fmt.Sprint to construct and log a message, then calls os.Exit.
+func (n *Node) LogFatal(args ...interface{}) {
+	n.log.Fatal(args...)
+}
+
+// LogFatalf uses fmt.Sprintf to log a templated message, then calls os.Exit.
+func (n *Node) LogFatalf(template string, args ...interface{}) {
+	n.log.Fatalf(template, args...)
+}
+
+// LogInfo uses fmt.Sprint to construct and log a message.
+func (n *Node) LogInfo(args ...interface{}) {
+	n.log.Info(args...)
+}
+
+// LogInfof uses fmt.Sprintf to log a templated message.
+func (n *Node) LogInfof(template string, args ...interface{}) {
+	n.log.Infof(template, args...)
+}
+
+// LogWarn uses fmt.Sprint to construct and log a message.
+func (n *Node) LogWarn(args ...interface{}) {
+	n.log.Warn(args...)
+}
+
+// LogWarnf uses fmt.Sprintf to log a templated message.
+func (n *Node) LogWarnf(template string, args ...interface{}) {
+	n.log.Warnf(template, args...)
+}
+
+// Panic uses fmt.Sprint to construct and log a message, then panics.
+func (n *Node) Panic(args ...interface{}) {
+	n.log.Panic(args...)
+}
+
+// Panicf uses fmt.Sprintf to log a templated message, then panics.
+func (n *Node) Panicf(template string, args ...interface{}) {
+	n.log.Panicf(template, args...)
 }
 
 func Start(optionalOptions ...NodeOption) *Node {
@@ -67,8 +127,8 @@ func Run(optionalOptions ...NodeOption) *Node {
 
 // IsSkipped returns whether the plugin is loaded or skipped.
 func (n *Node) IsSkipped(plugin *Plugin) bool {
-	return (plugin.Status == Disabled || n.isDisabled(plugin)) &&
-		(plugin.Status == Enabled || !n.isEnabled(plugin))
+	return (plugin.Status == StatusDisabled || n.isDisabled(plugin)) &&
+		(plugin.Status == StatusEnabled || !n.isEnabled(plugin))
 }
 
 func (n *Node) isDisabled(plugin *Plugin) bool {
@@ -130,6 +190,7 @@ func (n *Node) init() {
 		return true
 	})
 
+	// the init plugin parses the config files and initializes the global logger
 	initCfg, err := n.options.initPlugin.Init(params, masked)
 	if err != nil {
 		panic(fmt.Errorf("unable to initialize node: %w", err))
@@ -211,7 +272,7 @@ func (n *Node) configure() {
 		if corePlugin.Configure != nil {
 			corePlugin.Configure()
 		}
-		n.Logger.Infof("Loading core plugin: %s ... done", corePlugin.Name)
+		n.LogInfof("Loading core plugin: %s ... done", corePlugin.Name)
 		return true
 	})
 
@@ -219,13 +280,13 @@ func (n *Node) configure() {
 		if plugin.Configure != nil {
 			plugin.Configure()
 		}
-		n.Logger.Infof("Loading plugin: %s ... done", plugin.Name)
+		n.LogInfof("Loading plugin: %s ... done", plugin.Name)
 		return true
 	})
 }
 
 func (n *Node) execute() {
-	n.Logger.Info("Executing core plugin ...")
+	n.LogInfo("Executing core plugin ...")
 
 	if n.options.initPlugin.Run != nil {
 		n.options.initPlugin.Run()
@@ -235,17 +296,17 @@ func (n *Node) execute() {
 		if corePlugin.Run != nil {
 			corePlugin.Run()
 		}
-		n.Logger.Infof("Starting core plugin: %s ... done", corePlugin.Name)
+		n.LogInfof("Starting core plugin: %s ... done", corePlugin.Name)
 		return true
 	})
 
-	n.Logger.Info("Executing plugins ...")
+	n.LogInfo("Executing plugins ...")
 
 	n.ForEachPlugin(func(plugin *Plugin) bool {
 		if plugin.Run != nil {
 			plugin.Run()
 		}
-		n.Logger.Infof("Starting plugin: %s ... done", plugin.Name)
+		n.LogInfof("Starting plugin: %s ... done", plugin.Name)
 		return true
 	})
 }
@@ -253,17 +314,17 @@ func (n *Node) execute() {
 func (n *Node) Start() {
 	n.execute()
 
-	n.Logger.Info("Starting background workers ...")
+	n.LogInfo("Starting background workers ...")
 	n.Daemon().Start()
 }
 
 func (n *Node) Run() {
 	n.execute()
 
-	n.Logger.Info("Starting background workers ...")
+	n.LogInfo("Starting background workers ...")
 	n.Daemon().Run()
 
-	n.Logger.Info("Shutdown complete!")
+	n.LogInfo("Shutdown complete!")
 }
 
 func (n *Node) Shutdown() {

@@ -21,7 +21,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -145,7 +144,7 @@ const (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:      "RestAPIV1",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -156,7 +155,6 @@ func init() {
 
 var (
 	Plugin         *node.Plugin
-	log            *logger.Logger
 	powEnabled     bool
 	powWorkerCount int
 	features       []string
@@ -189,11 +187,9 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		log.Panic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
+		Plugin.Panic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
 	}
 
 	routeGroup := deps.Echo.Group("/api/v1")

@@ -21,8 +21,8 @@ func runTipSelMetricWorker() {
 	Plugin.Daemon().BackgroundWorker("Dashboard[TipSelMetricUpdater]", func(shutdownSignal <-chan struct{}) {
 		deps.TipSelector.Events.TipSelPerformed.Attach(onTipSelPerformed)
 		<-shutdownSignal
-		log.Info("Stopping Dashboard[TipSelMetricUpdater] ...")
+		Plugin.LogInfo("Stopping Dashboard[TipSelMetricUpdater] ...")
 		deps.TipSelector.Events.TipSelPerformed.Detach(onTipSelPerformed)
-		log.Info("Stopping Dashboard[TipSelMetricUpdater] ... done")
+		Plugin.LogInfo("Stopping Dashboard[TipSelMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard)
 }

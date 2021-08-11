@@ -52,7 +52,6 @@ func init() {
 
 var (
 	CorePlugin *node.CorePlugin
-	log        *logger.Logger
 	deps       dependencies
 
 	syncedAtStartup    = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
@@ -79,7 +78,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func() *metrics.ServerMetrics {
 		return &metrics.ServerMetrics{}
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	type belowmaxdepthdeps struct {
@@ -90,7 +89,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps belowmaxdepthdeps) int {
 		return deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)
 	}, dig.Name("belowMaxDepth")); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	type tangledeps struct {
@@ -122,13 +121,11 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			*syncedAtStartup)
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(CorePlugin.Name)
-
 	// Create a background worker that marks the database as corrupted at clean startup.
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
@@ -143,7 +140,7 @@ func configure() {
 		// if it was not deleted before this check.
 		revalidateDatabase := *revalidateDatabase || deps.NodeConfig.Bool(database.CfgDatabaseAutoRevalidation)
 		if !revalidateDatabase {
-			log.Panic(`
+			CorePlugin.Panic(`
 HORNET was not shut down properly, the database may be corrupted.
 Please restart HORNET with one of the following flags or enable "db.autoRevalidation" in the config.
 
@@ -152,16 +149,16 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 --deleteAll:      deletes the database and the snapshot files
 `)
 		}
-		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
+		CorePlugin.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
 		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.NodeConfig.Bool(snapshot.CfgPruningPruneReceipts)); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
-				log.Info("database revalidation aborted")
+				CorePlugin.LogInfo("database revalidation aborted")
 				os.Exit(0)
 			}
-			log.Panicf("%s %s", ErrDatabaseRevalidationFailed, err)
+			CorePlugin.Panicf("%s %s", ErrDatabaseRevalidationFailed, err)
 		}
-		log.Info("database revalidation successful")
+		CorePlugin.LogInfo("database revalidation successful")
 	}
 
 	configureEvents()
@@ -183,9 +180,9 @@ func run() {
 		<-shutdownSignal
 		deps.Tangle.AbortMilestoneSolidification()
 
-		log.Info("Flushing caches to database...")
+		CorePlugin.LogInfo("Flushing caches to database...")
 		deps.Storage.ShutdownStorages()
-		log.Info("Flushing caches to database... done")
+		CorePlugin.LogInfo("Flushing caches to database... done")
 
 	}, shutdown.PriorityFlushToDatabase)
 

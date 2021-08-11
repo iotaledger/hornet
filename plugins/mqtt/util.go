@@ -18,7 +18,7 @@ import (
 func publishOnTopic(topic string, payload interface{}) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		log.Warn(err.Error())
+		Plugin.LogWarn(err)
 		return
 	}
 
@@ -156,7 +156,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
 		jsonPayload, err := json.Marshal(messageMetadataResponse)
 		if err != nil {
-			log.Warn(err.Error())
+			Plugin.LogWarn(err)
 			return
 		}
 
@@ -221,7 +221,7 @@ func publishOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool)
 			// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
 			jsonPayload, err := json.Marshal(payload)
 			if err != nil {
-				log.Warn(err.Error())
+				Plugin.LogWarn(err)
 				return
 			}
 
