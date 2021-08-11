@@ -131,7 +131,7 @@ func (b *MessageBuilder) Build() *Message {
 			// Add a fake output with enough balance to create a valid transaction
 			fakeInput := iotago.UTXOInputID{}
 			copy(fakeInput[:], randBytes(iotago.TransactionIDLength))
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInput, hornet.GetNullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInput, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -210,10 +210,10 @@ func (b *MessageBuilder) Build() *Message {
 	var remainderOutput *utxo.Output
 
 	// Book the outputs in the wallets
-	messageTx := message.GetTransaction()
+	messageTx := message.Transaction()
 	txEssence := messageTx.Essence.(*iotago.TransactionEssence)
 	for i := range txEssence.Outputs {
-		output, err := utxo.NewOutput(message.GetMessageID(), messageTx, uint16(i))
+		output, err := utxo.NewOutput(message.MessageID(), messageTx, uint16(i))
 		require.NoError(b.te.TestInterface, err)
 
 		if output.Address().String() == toAddr.String() && output.Amount() == b.amount {
@@ -237,7 +237,7 @@ func (b *MessageBuilder) Build() *Message {
 
 func (m *Message) Store() *Message {
 	require.Nil(m.builder.te.TestInterface, m.storedMessageID)
-	m.storedMessageID = m.builder.te.StoreMessage(m.message).GetMessage().GetMessageID()
+	m.storedMessageID = m.builder.te.StoreMessage(m.message).Message().MessageID()
 	return m
 }
 

@@ -98,7 +98,7 @@ func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 
 		nullHashAdded = true
 
-		return hornet.GetNullMessageID(), nil
+		return hornet.NullMessageID(), nil
 	}
 
 	// unspent transaction outputs

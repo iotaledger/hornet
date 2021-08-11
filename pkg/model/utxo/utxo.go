@@ -86,7 +86,7 @@ func (u *Manager) WriteUnlockLedger() {
 
 func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex milestone.Index, pruneReceipts bool, receiptMigratedAtIndex ...uint32) error {
 
-	diff, err := u.GetMilestoneDiffWithoutLocking(msIndex)
+	diff, err := u.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		return err
 	}

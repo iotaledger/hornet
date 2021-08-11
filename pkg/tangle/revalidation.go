@@ -62,7 +62,7 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 
 	start := time.Now()
 
-	snapshotInfo := t.storage.GetSnapshotInfo()
+	snapshotInfo := t.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return ErrSnapshotInfoMissing
 	}
@@ -74,7 +74,7 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 	}
 
 	// check if the ledger index of the snapshot files fit the revalidation target.
-	snapshotLedgerIndex, err := snapshot.GetSnapshotsFilesLedgerIndex()
+	snapshotLedgerIndex, err := snapshot.SnapshotsFilesLedgerIndex()
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 			t.log.Infof("analyzed %d messages", txsCounter)
 		}
 
-		storedTxMeta := t.storage.GetStoredMetadataOrNil(messageID)
+		storedTxMeta := t.storage.StoredMetadataOrNil(messageID)
 
 		// delete message if metadata doesn't exist
 		if storedTxMeta == nil {
@@ -251,7 +251,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 		}
 
 		// not referenced or above snapshot index
-		if referenced, by := storedTxMeta.GetReferenced(); !referenced || by > info.SnapshotIndex {
+		if referenced, by := storedTxMeta.ReferencedWithIndex(); !referenced || by > info.SnapshotIndex {
 			messagesToDelete[messageID.ToMapKey()] = struct{}{}
 			return true
 		}
@@ -454,7 +454,7 @@ func (t *Tangle) cleanupIndexations() error {
 		}
 
 		// delete indexation if message metadata doesn't exist
-		if !t.storage.MessageMetadataExistsInStore(indexation.GetIndexation().GetMessageID()) {
+		if !t.storage.MessageMetadataExistsInStore(indexation.Indexation().MessageID()) {
 			indexationsToDelete[string(indexation.Key())] = struct{}{}
 		}
 

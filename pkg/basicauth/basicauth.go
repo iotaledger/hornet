@@ -19,8 +19,8 @@ func SaltGenerator(length int) ([]byte, error) {
 	return salt, nil
 }
 
-// GetPasswordKey calculates the key based on password and salt.
-func GetPasswordKey(password []byte, salt []byte) ([]byte, error) {
+// DerivePasswordKey calculates the key based on password and salt.
+func DerivePasswordKey(password []byte, salt []byte) ([]byte, error) {
 
 	dk, err := scrypt.Key(password, salt, 1<<15, 8, 1, 32)
 	if err != nil {
@@ -33,7 +33,7 @@ func GetPasswordKey(password []byte, salt []byte) ([]byte, error) {
 // VerifyPassword verifies if the password is correct.
 func VerifyPassword(password []byte, salt []byte, storedPasswordKey []byte) (bool, error) {
 
-	dk, err := GetPasswordKey(password, salt)
+	dk, err := DerivePasswordKey(password, salt)
 	if err != nil {
 		return false, err
 	}

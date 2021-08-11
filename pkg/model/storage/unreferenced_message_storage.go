@@ -26,8 +26,8 @@ func (cachedUnreferencedMessages CachedUnreferencedMessages) Release(force ...bo
 	}
 }
 
-// GetUnreferencedMessage retrieves the unreferenced message, that is cached in this container.
-func (c *CachedUnreferencedMessage) GetUnreferencedMessage() *UnreferencedMessage {
+// UnreferencedMessage retrieves the unreferenced message, that is cached in this container.
+func (c *CachedUnreferencedMessage) UnreferencedMessage() *UnreferencedMessage {
 	return c.Get().(*UnreferencedMessage)
 }
 
@@ -37,7 +37,7 @@ func unreferencedMessageFactory(key []byte, data []byte) (objectstorage.Storable
 	return unreferencedTx, nil
 }
 
-func (s *Storage) GetUnreferencedMessageStorageSize() int {
+func (s *Storage) UnreferencedMessageStorageSize() int {
 	return s.unreferencedMessagesStorage.GetSize()
 }
 
@@ -63,8 +63,8 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 	)
 }
 
-// GetUnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
-func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index, iteratorOptions ...IteratorOption) hornet.MessageIDs {
+// UnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
+func (s *Storage) UnreferencedMessageIDs(msIndex milestone.Index, iteratorOptions ...IteratorOption) hornet.MessageIDs {
 
 	var unreferencedMessageIDs hornet.MessageIDs
 

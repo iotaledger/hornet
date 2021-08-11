@@ -61,7 +61,7 @@ func (p *Pluggable) Daemon() daemon.Daemon {
 	return p.Node.Daemon()
 }
 
-func (p *Pluggable) GetIdentifier() string {
+func (p *Pluggable) Identifier() string {
 	return strings.ToLower(strings.Replace(p.Name, " ", "", -1))
 }
 

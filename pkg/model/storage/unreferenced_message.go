@@ -21,11 +21,11 @@ func NewUnreferencedMessage(msIndex milestone.Index, messageID hornet.MessageID)
 	}
 }
 
-func (t *UnreferencedMessage) GetLatestMilestoneIndex() milestone.Index {
+func (t *UnreferencedMessage) LatestMilestoneIndex() milestone.Index {
 	return t.latestMilestoneIndex
 }
 
-func (t *UnreferencedMessage) GetMessageID() hornet.MessageID {
+func (t *UnreferencedMessage) MessageID() hornet.MessageID {
 	return t.messageID
 }
 

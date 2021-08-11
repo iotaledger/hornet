@@ -111,7 +111,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 	// remove the message from the stack
 	t.stack.Remove(ele)
 
-	cachedMsgMeta := t.metadataMemcache.GetCachedMetadataOrNil(currentMessageID) // meta +1
+	cachedMsgMeta := t.metadataMemcache.CachedMetadataOrNil(currentMessageID) // meta +1
 	if cachedMsgMeta == nil {
 		// there was an error, stop processing the stack
 		return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.ToHex())
@@ -137,7 +137,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 	}
 
-	for _, childMessageID := range t.storage.GetChildrenMessageIDs(currentMessageID, t.iteratorOptions...) {
+	for _, childMessageID := range t.storage.ChildrenMessageIDs(currentMessageID, t.iteratorOptions...) {
 		if !t.walkAlreadyDiscovered {
 			childMessageIDMapKey := childMessageID.ToMapKey()
 			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {

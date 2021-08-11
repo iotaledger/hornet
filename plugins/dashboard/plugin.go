@@ -202,13 +202,13 @@ func run() {
 }
 
 func getMilestoneMessageID(index milestone.Index) hornet.MessageID {
-	cachedMs := deps.Storage.GetMilestoneCachedMessageOrNil(index) // message +1
+	cachedMs := deps.Storage.MilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
 	}
 	defer cachedMs.Release(true) // message -1
 
-	return cachedMs.GetMessage().GetMessageID()
+	return cachedMs.Message().MessageID()
 }
 
 // Msg represents a websocket message.
@@ -313,7 +313,7 @@ func peerMetrics() []*restapiv1.PeerResponse {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{CMI: deps.Storage.GetConfirmedMilestoneIndex(), LMI: deps.Storage.GetLatestMilestoneIndex()}
+	return &SyncStatus{CMI: deps.Storage.ConfirmedMilestoneIndex(), LMI: deps.Storage.LatestMilestoneIndex()}
 }
 
 func currentPublicNodeStatus() *PublicNodeStatus {
@@ -322,7 +322,7 @@ func currentPublicNodeStatus() *PublicNodeStatus {
 	status.IsHealthy = deps.Tangle.IsNodeHealthy()
 	status.IsSynced = deps.Storage.IsNodeAlmostSynced()
 
-	snapshotInfo := deps.Storage.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo != nil {
 		status.SnapshotIndex = snapshotInfo.SnapshotIndex
 		status.PruningIndex = snapshotInfo.PruningIndex
@@ -360,16 +360,16 @@ func currentNodeStatus() *NodeStatus {
 	// cache metrics
 	status.Caches = &CachesMetric{
 		Children: Cache{
-			Size: deps.Storage.GetChildrenStorageSize(),
+			Size: deps.Storage.ChildrenStorageSize(),
 		},
 		RequestQueue: Cache{
 			Size: queued + pending,
 		},
 		Milestones: Cache{
-			Size: deps.Storage.GetMilestoneStorageSize(),
+			Size: deps.Storage.MilestoneStorageSize(),
 		},
 		Messages: Cache{
-			Size: deps.Storage.GetMessageStorageSize(),
+			Size: deps.Storage.MessageStorageSize(),
 		},
 		IncomingMessageWorkUnits: Cache{
 			Size: deps.MessageProcessor.WorkUnitsSize(),

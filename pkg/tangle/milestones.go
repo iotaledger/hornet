@@ -9,8 +9,8 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone,
 
 	t.Events.ReceivedNewMilestone.Trigger(cachedMilestone) // milestone pass +1
 
-	confirmedMsIndex := t.storage.GetConfirmedMilestoneIndex()
-	msIndex := cachedMilestone.GetMilestone().Index
+	confirmedMsIndex := t.storage.ConfirmedMilestoneIndex()
+	msIndex := cachedMilestone.Milestone().Index
 
 	if t.storage.SetLatestMilestoneIndex(msIndex) {
 		t.Events.LatestMilestoneChanged.Trigger(cachedMilestone) // milestone pass +1
@@ -22,7 +22,7 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone,
 		t.log.Infof("Valid milestone detected! Index: %d", msIndex)
 		t.requester.RequestMilestoneParents(cachedMilestone.Retain()) // milestone pass +1
 	} else if requested {
-		pruningIndex := t.storage.GetSnapshotInfo().PruningIndex
+		pruningIndex := t.storage.SnapshotInfo().PruningIndex
 		if msIndex < pruningIndex {
 			// this should not happen. we requested a milestone that is below pruning index
 			t.log.Panicf("Synced too far back! Index: %d, PruningIndex: %d", msIndex, pruningIndex)

@@ -28,7 +28,7 @@ const (
 	// SolidEntryPointCheckAdditionalThresholdFuture is the additional future cone (to BMD) that is needed to calculate solid entry points correctly
 	SolidEntryPointCheckAdditionalThresholdFuture = 5
 
-	// AdditionalPruningThreshold is the additional threshold (to BMD), which is needed, because the messages in the getMilestoneParents call in getSolidEntryPoints
+	// AdditionalPruningThreshold is the additional threshold (to BMD), which is needed, because the messages in the getMilestoneParents call in solidEntryPoints
 	// can reference older messages as well
 	AdditionalPruningThreshold = 5
 )
@@ -170,7 +170,7 @@ func configure() {
 		}
 	}
 
-	snapshotInfo := deps.Storage.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.SnapshotInfo()
 
 	switch {
 	case snapshotInfo != nil && !*forceLoadingSnapshot:

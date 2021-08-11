@@ -159,7 +159,7 @@ func deleteDiff(msIndex milestone.Index, mutations kvstore.BatchedMutations) err
 
 //- Manager
 
-func (u *Manager) GetMilestoneDiffWithoutLocking(msIndex milestone.Index) (*MilestoneDiff, error) {
+func (u *Manager) MilestoneDiffWithoutLocking(msIndex milestone.Index) (*MilestoneDiff, error) {
 
 	key := milestoneDiffKeyForIndex(msIndex)
 
@@ -176,9 +176,9 @@ func (u *Manager) GetMilestoneDiffWithoutLocking(msIndex milestone.Index) (*Mile
 	return diff, nil
 }
 
-func (u *Manager) GetMilestoneDiff(msIndex milestone.Index) (*MilestoneDiff, error) {
+func (u *Manager) MilestoneDiff(msIndex milestone.Index) (*MilestoneDiff, error) {
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()
 
-	return u.GetMilestoneDiffWithoutLocking(msIndex)
+	return u.MilestoneDiffWithoutLocking(msIndex)
 }

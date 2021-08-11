@@ -18,11 +18,11 @@ func NewChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID)
 	}
 }
 
-func (a *Child) GetParentMessageID() hornet.MessageID {
+func (a *Child) ParentMessageID() hornet.MessageID {
 	return a.parentMessageID
 }
 
-func (a *Child) GetChildMessageID() hornet.MessageID {
+func (a *Child) ChildMessageID() hornet.MessageID {
 	return a.childMessageID
 }
 

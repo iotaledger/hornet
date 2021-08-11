@@ -33,7 +33,7 @@ func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, er
 	}, nil
 }
 
-func (s *Storage) GetMilestoneStorageSize() int {
+func (s *Storage) MilestoneStorageSize() int {
 	return s.milestoneStorage.GetSize()
 }
 
@@ -118,14 +118,14 @@ func (c *CachedMilestone) Retain() *CachedMilestone {
 	return &CachedMilestone{c.CachedObject.Retain()}
 }
 
-// GetMilestone retrieves the milestone, that is cached in this container.
-func (c *CachedMilestone) GetMilestone() *Milestone {
+// Milestone retrieves the milestone, that is cached in this container.
+func (c *CachedMilestone) Milestone() *Milestone {
 	return c.Get().(*Milestone)
 }
 
-// GetCachedMilestoneOrNil returns a cached milestone object.
+// CachedMilestoneOrNil returns a cached milestone object.
 // milestone +1
-func (s *Storage) GetCachedMilestoneOrNil(milestoneIndex milestone.Index) *CachedMilestone {
+func (s *Storage) CachedMilestoneOrNil(milestoneIndex milestone.Index) *CachedMilestone {
 	cachedMilestone := s.milestoneStorage.Load(databaseKeyForMilestoneIndex(milestoneIndex)) // milestone +1
 	if !cachedMilestone.Exists() {
 		cachedMilestone.Release(true) // milestone -1

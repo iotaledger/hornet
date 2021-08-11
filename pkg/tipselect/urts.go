@@ -179,7 +179,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	messageID := messageMeta.GetMessageID()
+	messageID := messageMeta.MessageID()
 	messageIDMapKey := messageID.ToMapKey()
 
 	if _, exists := ts.nonLazyTipsMap[messageIDMapKey]; exists {
@@ -192,7 +192,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 		return
 	}
 
-	cmi := ts.storage.GetConfirmedMilestoneIndex()
+	cmi := ts.storage.ConfirmedMilestoneIndex()
 
 	score := ts.calculateScore(messageID, cmi)
 	if score == ScoreLazy {
@@ -222,7 +222,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 	// the parents are the messages this tip approves
 	// remove them from the tip pool
 	parentMessageIDs := map[string]struct{}{}
-	for _, parent := range messageMeta.GetParents() {
+	for _, parent := range messageMeta.Parents() {
 		parentMessageIDs[parent.ToMapKey()] = struct{}{}
 	}
 
@@ -328,7 +328,7 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.MessageIDs, e
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	tipCount := ts.getOptimalTipCount()
+	tipCount := ts.optimalTipCount()
 	maxRetries := (tipCount - 1) * 10
 
 	seen := make(map[string]struct{})
@@ -374,14 +374,14 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.MessageIDs, e
 	return result, nil
 }
 
-// getOptimalTipCount returns the optimal number of tips.
-func (ts *TipSelector) getOptimalTipCount() int {
+// optimalTipCount returns the optimal number of tips.
+func (ts *TipSelector) optimalTipCount() int {
 	// hardcoded until next PR
 	return 4
 }
 
-// GetTipCount returns the current amount of available tips in the non-lazy and semi-lazy pool.
-func (ts *TipSelector) GetTipCount() (int, int) {
+// TipCount returns the current amount of available tips in the non-lazy and semi-lazy pool.
+func (ts *TipSelector) TipCount() (int, int) {
 	return len(ts.nonLazyTipsMap), len(ts.semiLazyTipsMap)
 }
 
@@ -468,7 +468,7 @@ func (ts *TipSelector) UpdateScores() int {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	cmi := ts.storage.GetConfirmedMilestoneIndex()
+	cmi := ts.storage.ConfirmedMilestoneIndex()
 
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
@@ -528,7 +528,7 @@ func (ts *TipSelector) UpdateScores() int {
 
 // calculateScore calculates the tip selection score of this message
 func (ts *TipSelector) calculateScore(messageID hornet.MessageID, cmi milestone.Index) Score {
-	cachedMsgMeta := ts.storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
+	cachedMsgMeta := ts.storage.CachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedMsgMeta == nil {
 		// we need to return lazy instead of panic here, because the message could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
@@ -536,7 +536,7 @@ func (ts *TipSelector) calculateScore(messageID hornet.MessageID, cmi milestone.
 	}
 	defer cachedMsgMeta.Release(true)
 
-	ycri, ocri := dag.GetConeRootIndexes(ts.storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	ycri, ocri := dag.ConeRootIndexes(ts.storage, cachedMsgMeta.Retain(), cmi) // meta +1
 
 	// if the CMI to YCRI delta is over maxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy
 	if (cmi - ycri) > ts.maxDeltaMsgYoungestConeRootIndexToCMI {
