@@ -13,7 +13,7 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:     "Profiling",
 			DepsFunc: func(cDeps dependencies) { deps = cDeps },

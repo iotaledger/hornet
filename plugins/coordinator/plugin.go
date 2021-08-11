@@ -28,7 +28,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/iota.go/v2/ed25519"
@@ -52,7 +51,7 @@ func init() {
 	flag.CommandLine.MarkHidden(CfgCoordinatorStartIndex)
 
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
 			Name:      "Coordinator",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -66,7 +65,7 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
+	deps   dependencies
 
 	bootstrap  = flag.Bool(CfgCoordinatorBootstrap, false, "bootstrap the network")
 	startIndex = flag.Uint32(CfgCoordinatorStartIndex, 0, "index of the first milestone at bootstrap")
@@ -87,8 +86,6 @@ var (
 	onConfirmedMilestoneIndexChanged *events.Closure
 	onIssuedCheckpoint               *events.Closure
 	onIssuedMilestone                *events.Closure
-
-	deps dependencies
 )
 
 type dependencies struct {
@@ -103,8 +100,6 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
-	log = logger.NewLogger(Plugin.Name)
-
 	type selectordeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
@@ -119,7 +114,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout),
 		)
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 
 	type coordinatordeps struct {
@@ -153,11 +148,11 @@ func provide(c *dig.Container) {
 			}
 
 			if deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled) {
-				log.Info("running Coordinator with quorum enabled")
+				Plugin.LogInfo("running Coordinator with quorum enabled")
 			}
 
 			if deps.MigratorService == nil {
-				log.Info("running Coordinator without migration enabled")
+				Plugin.LogInfo("running Coordinator without migration enabled")
 			}
 
 			coo, err := coordinator.New(
@@ -168,7 +163,7 @@ func provide(c *dig.Container) {
 				deps.UTXOManager,
 				deps.PoWHandler,
 				sendMessage,
-				coordinator.WithLogger(log),
+				coordinator.WithLogger(Plugin.Logger()),
 				coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
 				coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
 				coordinator.WithPoWWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
@@ -192,11 +187,11 @@ func provide(c *dig.Container) {
 
 		coo, err := initCoordinator()
 		if err != nil {
-			log.Panic(err)
+			Plugin.Panic(err)
 		}
 		return coo
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 }
 
@@ -232,13 +227,13 @@ func handleError(err error) bool {
 	}
 
 	if err := common.IsSoftError(err); err != nil {
-		log.Warn(err)
+		Plugin.LogWarn(err)
 		deps.Coordinator.Events.SoftError.Trigger(err)
 		return false
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
-	log.Panicf("coordinator plugin hit an unknown error type: %s", err)
+	Plugin.Panicf("coordinator plugin hit an unknown error type: %s", err)
 	return true
 }
 
@@ -300,7 +295,7 @@ func run() {
 					if err != nil {
 						// issuing checkpoint failed => not critical
 						if !errors.Is(err, mselection.ErrNoTipsAvailable) {
-							log.Warn(err)
+							Plugin.LogWarn(err)
 						}
 						return
 					}
@@ -309,7 +304,7 @@ func run() {
 					checkpointMessageID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, tips)
 					if err != nil {
 						// issuing checkpoint failed => not critical
-						log.Warn(err)
+						Plugin.LogWarn(err)
 						return
 					}
 					lastCheckpointIndex++
@@ -324,7 +319,7 @@ func run() {
 				if err != nil {
 					// issuing checkpoint failed => not critical
 					if !errors.Is(err, mselection.ErrNoTipsAvailable) {
-						log.Warn(err)
+						Plugin.LogWarn(err)
 					}
 				} else {
 					if len(checkpointTips) > MilestoneMaxAdditionalTipsLimit {
@@ -332,7 +327,7 @@ func run() {
 						checkpointMessageID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, checkpointTips[MilestoneMaxAdditionalTipsLimit:])
 						if err != nil {
 							// issuing checkpoint failed => not critical
-							log.Warn(err)
+							Plugin.LogWarn(err)
 						} else {
 							// use the new checkpoint message ID
 							lastCheckpointMessageID = checkpointMessageID
@@ -506,7 +501,7 @@ func configureEvents() {
 
 		// add tips to the heaviest branch selector
 		if trackedMessagesCount := deps.Selector.OnNewSolidMessage(cachedMsgMeta.GetMetadata()); trackedMessagesCount >= maxTrackedMessages {
-			log.Debugf("Coordinator Tipselector: trackedMessagesCount: %d", trackedMessagesCount)
+			Plugin.LogDebugf("Coordinator Tipselector: trackedMessagesCount: %d", trackedMessagesCount)
 
 			// issue next checkpoint
 			select {
@@ -533,11 +528,11 @@ func configureEvents() {
 	})
 
 	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.MessageID) {
-		log.Infof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.ToHex())
+		Plugin.LogInfof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.ToHex())
 	})
 
 	onIssuedMilestone = events.NewClosure(func(index milestone.Index, messageID hornet.MessageID) {
-		log.Infof("milestone issued (%d): %v", index, messageID.ToHex())
+		Plugin.LogInfof("milestone issued (%d): %v", index, messageID.ToHex())
 	})
 }
 

@@ -24,12 +24,11 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:      "RestAPI",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -43,7 +42,6 @@ func init() {
 
 var (
 	Plugin             *node.Plugin
-	log                *logger.Logger
 	deps               dependencies
 	nodeAPIHealthRoute = "/health"
 
@@ -66,7 +64,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func() *metrics.RestAPIMetrics {
 		return &metrics.RestAPIMetrics{}
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 
 	type echodeps struct {
@@ -92,19 +90,17 @@ func provide(c *dig.Container) {
 			DashboardAllowedAPIRoute: dashboardAllowedAPIRoute,
 		}
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	// load whitelisted networks
 	var whitelistedNetworks []*net.IPNet
 	for _, entry := range deps.NodeConfig.Strings(CfgRestAPIWhitelistedAddresses) {
 		ipNet, err := utils.ParseIPNet(entry)
 		if err != nil {
-			log.Warnf("Invalid whitelist address: %s", entry)
+			Plugin.LogWarnf("Invalid whitelist address: %s", entry)
 			continue
 		}
 		whitelistedNetworks = append(whitelistedNetworks, ipNet)
@@ -123,7 +119,7 @@ func configure() {
 
 		salt := deps.NodeConfig.String(CfgRestAPIAuthSalt)
 		if len(salt) == 0 {
-			log.Fatalf("'%s' should not be empty", CfgRestAPIAuthSalt)
+			Plugin.LogFatalf("'%s' should not be empty", CfgRestAPIAuthSalt)
 		}
 
 		// API tokens do not expire.
@@ -170,39 +166,39 @@ func configure() {
 }
 
 func run() {
-	log.Info("Starting REST-API server ...")
+	Plugin.LogInfo("Starting REST-API server ...")
 
 	Plugin.Daemon().BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting REST-API server ... done")
+		Plugin.LogInfo("Starting REST-API server ... done")
 
 		bindAddr := deps.NodeConfig.String(CfgRestAPIBindAddress)
 		server := &http.Server{Addr: bindAddr, Handler: deps.Echo}
 
 		go func() {
-			log.Infof("You can now access the API using: http://%s", bindAddr)
+			Plugin.LogInfof("You can now access the API using: http://%s", bindAddr)
 			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				log.Warnf("Stopped REST-API server due to an error (%s)", err)
+				Plugin.LogWarnf("Stopped REST-API server due to an error (%s)", err)
 			}
 		}()
 
 		<-shutdownSignal
-		log.Info("Stopping REST-API server ...")
+		Plugin.LogInfo("Stopping REST-API server ...")
 
 		if server != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			if err := server.Shutdown(ctx); err != nil {
-				log.Warn(err.Error())
+				Plugin.LogWarn(err)
 			}
 			cancel()
 		}
-		log.Info("Stopping REST-API server ... done")
+		Plugin.LogInfo("Stopping REST-API server ... done")
 	}, shutdown.PriorityRestAPI)
 }
 
 func setupRoutes() {
 
 	deps.Echo.HTTPErrorHandler = func(err error, c echo.Context) {
-		log.Debugf("HTTP request failed: %s", err)
+		Plugin.LogDebugf("HTTP request failed: %s", err)
 		deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
 
 		var statusCode int

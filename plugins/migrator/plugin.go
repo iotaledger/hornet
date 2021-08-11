@@ -17,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 const (
@@ -32,7 +31,7 @@ func init() {
 	flag.CommandLine.MarkHidden(CfgMigratorStartIndex)
 
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
 			Name:      "Migrator",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -46,9 +45,7 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-
-	log  *logger.Logger
-	deps dependencies
+	deps   dependencies
 
 	bootstrap  = flag.Bool(CfgMigratorBootstrap, false, "bootstrap the migration process")
 	startIndex = flag.Uint32(CfgMigratorStartIndex, 1, "index of the first milestone to migrate")
@@ -73,9 +70,9 @@ func provide(c *dig.Container) {
 		maxReceiptEntries := deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries)
 		switch {
 		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
-			panic(fmt.Sprintf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount))
+			Plugin.Panicf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
 		case maxReceiptEntries <= 0:
-			panic(fmt.Sprintf("%s must be greather than 0", CfgMigratorReceiptMaxEntries))
+			Plugin.Panicf("%s must be greather than 0", CfgMigratorReceiptMaxEntries)
 		}
 
 		return migrator.NewService(
@@ -84,26 +81,24 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries),
 		), nil
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	var msIndex *uint32
 	if *bootstrap {
 		msIndex = startIndex
 	}
 
 	if err := deps.MigratorService.InitState(msIndex, deps.UTXOManager); err != nil {
-		log.Fatalf("failed to initialize migrator: %s", err)
+		Plugin.LogFatalf("failed to initialize migrator: %s", err)
 	}
 }
 
 func run() {
 	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
-		log.Infof("Starting %s ... done", Plugin.Name)
+		Plugin.LogInfof("Starting %s ... done", Plugin.Name)
 		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
 
 			if err := common.IsCriticalError(err); err != nil {
@@ -116,11 +111,11 @@ func run() {
 			}
 
 			// lets just log the err and halt querying for a configured period
-			log.Warn(err)
+			Plugin.LogWarn(err)
 			return timeutil.Sleep(deps.NodeConfig.Duration(CfgMigratorQueryCooldownPeriod), shutdownSignal)
 		})
-		log.Infof("Stopping %s ... done", Plugin.Name)
+		Plugin.LogInfof("Stopping %s ... done", Plugin.Name)
 	}, shutdown.PriorityMigrator); err != nil {
-		log.Panicf("failed to start worker: %s", err)
+		Plugin.Panicf("failed to start worker: %s", err)
 	}
 }

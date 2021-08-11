@@ -19,7 +19,7 @@ func runLiveFeed() {
 		defer deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 
 		<-shutdownSignal
-		log.Info("Stopping Dashboard[TxUpdater] ...")
-		log.Info("Stopping Dashboard[TxUpdater] ... done")
+		Plugin.LogInfo("Stopping Dashboard[TxUpdater] ...")
+		Plugin.LogInfo("Stopping Dashboard[TxUpdater] ... done")
 	}, shutdown.PriorityDashboard)
 }

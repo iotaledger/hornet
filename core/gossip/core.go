@@ -51,7 +51,6 @@ func init() {
 
 var (
 	CorePlugin *node.CorePlugin
-	log        *logger.Logger
 	deps       dependencies
 )
 
@@ -74,7 +73,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func() gossip.RequestQueue {
 		return gossip.NewRequestQueue()
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	type msgprocdependencies struct {
@@ -98,7 +97,7 @@ func provide(c *dig.Container) {
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 		})
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	type servicedeps struct {
@@ -121,7 +120,7 @@ func provide(c *dig.Container) {
 			gossip.WithStreamWriteTimeout(deps.NodeConfig.Duration(CfgP2PGossipStreamWriteTimeout)),
 		)
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	type requesterdeps struct {
@@ -139,7 +138,7 @@ func provide(c *dig.Container) {
 			gossip.WithRequesterDiscardRequestsOlderThan(deps.NodeConfig.Duration(CfgRequestsDiscardOlderThan)),
 			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.NodeConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	type broadcasterdeps struct {
@@ -152,13 +151,11 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps broadcasterdeps) *gossip.Broadcaster {
 		return gossip.NewBroadcaster(deps.Service, deps.Manager, deps.Storage, 1000)
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(CorePlugin.Name)
-
 	// don't re-enqueue pending requests in case the node is running hot
 	deps.Requester.AddBackPressureFunc(func() bool {
 		return deps.Snapshot.IsSnapshottingOrPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
@@ -224,9 +221,9 @@ func configure() {
 func run() {
 
 	_ = CorePlugin.Daemon().BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
-		log.Info("Running GossipService")
+		CorePlugin.LogInfo("Running GossipService")
 		deps.Service.Start(shutdownSignal)
-		log.Info("Stopped GossipService")
+		CorePlugin.LogInfo("Stopped GossipService")
 	}, shutdown.PriorityGossipService)
 
 	_ = CorePlugin.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
@@ -238,18 +235,18 @@ func run() {
 	}, shutdown.PriorityRequestsProcessor)
 
 	_ = CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
-		log.Info("Running BroadcastQueue")
+		CorePlugin.LogInfo("Running BroadcastQueue")
 		onBroadcastMessage := events.NewClosure(deps.Broadcaster.Broadcast)
 		deps.MessageProcessor.Events.BroadcastMessage.Attach(onBroadcastMessage)
 		defer deps.MessageProcessor.Events.BroadcastMessage.Detach(onBroadcastMessage)
 		deps.Broadcaster.RunBroadcastQueueDrainer(shutdownSignal)
-		log.Info("Stopped BroadcastQueue")
+		CorePlugin.LogInfo("Stopped BroadcastQueue")
 	}, shutdown.PriorityBroadcastQueue)
 
 	_ = CorePlugin.Daemon().BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
-		log.Info("Running MessageProcessor")
+		CorePlugin.LogInfo("Running MessageProcessor")
 		deps.MessageProcessor.Run(shutdownSignal)
-		log.Info("Stopped MessageProcessor")
+		CorePlugin.LogInfo("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor)
 
 	_ = CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
@@ -286,13 +283,13 @@ func checkHeartbeats() {
 			if p.Autopeering != nil {
 				// it's better to drop the connection to autopeered peers and free the slots for other peers
 				peerIDsToRemove[p.ID] = struct{}{}
-				log.Infof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
+				CorePlugin.LogInfof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
 				return true
 			}
 		*/
 
 		// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
-		log.Infof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
+		CorePlugin.LogInfof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
 		peersToReconnect[proto.PeerID] = struct{}{}
 		return true
 	})

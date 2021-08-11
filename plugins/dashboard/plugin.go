@@ -31,13 +31,12 @@ import (
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/websockethub"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:      "Dashboard",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -57,7 +56,6 @@ const (
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	nodeStartAt = time.Now()
@@ -100,21 +98,19 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps configdeps) string {
 		return deps.NodeConfig.String(CfgDashboardAuthUsername)
 	}, dig.Name("dashboardAuthUsername")); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		log.Panic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
+		Plugin.Panic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	// check if RestAPIV1 plugin is disabled
 	if Plugin.Node.IsSkipped(restapiv1.Plugin) {
-		log.Panic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
+		Plugin.Panic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	upgrader = &websocket.Upgrader{
@@ -123,7 +119,7 @@ func configure() {
 		EnableCompression: true,
 	}
 
-	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
+	hub = websockethub.NewHub(Plugin.Logger(), upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
 
 	basicAuth = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
@@ -145,7 +141,7 @@ func run() {
 
 	setupRoutes(e)
 	bindAddr := deps.NodeConfig.String(CfgDashboardBindAddress)
-	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
+	Plugin.LogInfof("You can now access the dashboard using: http://%s", bindAddr)
 	go e.Start(bindAddr)
 
 	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
@@ -178,13 +174,13 @@ func run() {
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-shutdownSignal
-		log.Info("Stopping Dashboard[WSSend] ...")
+		Plugin.LogInfo("Stopping Dashboard[WSSend] ...")
 		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
-		log.Info("Stopping Dashboard[WSSend] ... done")
+		Plugin.LogInfo("Stopping Dashboard[WSSend] ... done")
 	}, shutdown.PriorityDashboard)
 
 	// run the message live feed

@@ -79,7 +79,6 @@ func init() {
 
 var (
 	InitPlugin *node.InitPlugin
-	log        *logger.Logger
 	deps       dependencies
 )
 
@@ -134,33 +133,31 @@ func provide(c *dig.Container) {
 			LatestGitHubVersion: "",
 		}
 	}); err != nil {
-		panic(err)
+		InitPlugin.Panic(err)
 	}
 	if err := c.Provide(func() *configuration.Configuration {
 		return nodeConfig
 	}, dig.Name("nodeConfig")); err != nil {
-		panic(err)
+		InitPlugin.Panic(err)
 	}
 	if err := c.Provide(func() *configuration.Configuration {
 		return peeringConfig
 	}, dig.Name("peeringConfig")); err != nil {
-		panic(err)
+		InitPlugin.Panic(err)
 	}
 	if err := c.Provide(func() *configuration.Configuration {
 		return profileConfig
 	}, dig.Name("profilesConfig")); err != nil {
-		panic(err)
+		InitPlugin.Panic(err)
 	}
 	if err := c.Provide(func() string {
 		return *peeringCfgFilePath
 	}, dig.Name("peeringConfigFilePath")); err != nil {
-		panic(err)
+		InitPlugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(InitPlugin.Name)
-
 	fmt.Printf("\n\n"+`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
               ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
@@ -171,5 +168,5 @@ func configure() {
                                    v%s
 `+"\n\n", deps.AppInfo.Version)
 
-	log.Info("Loading plugins ...")
+	InitPlugin.LogInfo("Loading plugins ...")
 }

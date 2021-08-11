@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/node"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 // the maximum amount of time to wait for background processes to terminate. After that the process is killed.
@@ -24,8 +23,8 @@ func init() {
 }
 
 var (
-	CorePlugin       *node.CorePlugin
-	log              *logger.Logger
+	CorePlugin *node.CorePlugin
+
 	nodeSelfShutdown = make(chan string)
 )
 
@@ -38,7 +37,6 @@ func SelfShutdown(msg string) {
 }
 
 func configure() {
-	log = logger.NewLogger(CorePlugin.Name)
 
 	gracefulStop := make(chan os.Signal)
 
@@ -48,9 +46,9 @@ func configure() {
 	go func() {
 		select {
 		case <-gracefulStop:
-			log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing ...", waitToKillTimeInSeconds)
+			CorePlugin.LogWarnf("Received shutdown request - waiting (max %d seconds) to finish processing ...", waitToKillTimeInSeconds)
 		case msg := <-nodeSelfShutdown:
-			log.Warnf("Node self-shutdown: %s; waiting (max %d seconds) to finish processing ...", msg, waitToKillTimeInSeconds)
+			CorePlugin.LogWarnf("Node self-shutdown: %s; waiting (max %d seconds) to finish processing ...", msg, waitToKillTimeInSeconds)
 		}
 
 		go func() {
@@ -65,9 +63,9 @@ func configure() {
 						processList = "(" + strings.Join(runningBackgroundWorkers, ", ") + ") "
 					}
 
-					log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing %s...", waitToKillTimeInSeconds-int(secondsSinceStart), processList)
+					CorePlugin.LogWarnf("Received shutdown request - waiting (max %d seconds) to finish processing %s...", waitToKillTimeInSeconds-int(secondsSinceStart), processList)
 				} else {
-					log.Fatal("Background processes did not terminate in time! Forcing shutdown ...")
+					CorePlugin.LogFatal("Background processes did not terminate in time! Forcing shutdown ...")
 				}
 			}
 		}()

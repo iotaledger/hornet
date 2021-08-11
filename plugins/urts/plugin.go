@@ -14,12 +14,11 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:      "URTS",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -33,7 +32,6 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	// Closures
@@ -77,12 +75,11 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
 		)
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
 	configureEvents()
 }
 
@@ -101,7 +98,7 @@ func run() {
 			case <-time.After(time.Second):
 				ts := time.Now()
 				removedTipCount := deps.TipSelector.CleanUpReferencedTips()
-				log.Debugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+				Plugin.LogDebugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 			}
 		}
 	}, shutdown.PriorityTipselection)
@@ -127,7 +124,7 @@ func configureEvents() {
 
 		ts := time.Now()
 		removedTipCount := deps.TipSelector.UpdateScores()
-		log.Debugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+		Plugin.LogDebugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 	})
 }
 

@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -26,7 +25,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
@@ -52,7 +50,6 @@ func init() {
 
 var (
 	CorePlugin *node.CorePlugin
-	log        *logger.Logger
 	deps       dependencies
 
 	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
@@ -98,7 +95,7 @@ func provide(c *dig.Container) {
 		}
 		return res
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	type dbdeps struct {
@@ -115,7 +112,7 @@ func provide(c *dig.Container) {
 		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 			// delete old database folder
 			if err := os.RemoveAll(deps.NodeConfig.String(CfgDatabasePath)); err != nil {
-				log.Panicf("deleting database folder failed: %s", err)
+				CorePlugin.Panicf("deleting database folder failed: %s", err)
 			}
 		}
 
@@ -164,10 +161,11 @@ func provide(c *dig.Container) {
 				},
 			)
 		default:
-			panic(fmt.Sprintf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", deps.NodeConfig.String(CfgDatabaseEngine)))
+			CorePlugin.Panicf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", deps.NodeConfig.String(CfgDatabaseEngine))
+			return nil
 		}
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	type storagedeps struct {
@@ -185,7 +183,7 @@ func provide(c *dig.Container) {
 		for _, keyRange := range deps.CoordinatorPublicKeyRanges {
 			pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
 			if err != nil {
-				panic(fmt.Sprintf("can't load public key ranges: %s", err))
+				CorePlugin.Panicf("can't load public key ranges: %s", err)
 			}
 
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
@@ -193,31 +191,30 @@ func provide(c *dig.Container) {
 
 		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	if err := c.Provide(func(storage *storage.Storage) *utxo.Manager {
 		return storage.UTXO()
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(CorePlugin.Name)
 
 	if !deps.Storage.IsCorrectDatabaseVersion() {
 		if !deps.Storage.UpdateDatabaseVersion() {
-			log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
+			CorePlugin.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 
 	CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		deps.Storage.MarkDatabaseHealthy()
-		log.Info("Syncing databases to disk...")
+		CorePlugin.LogInfo("Syncing databases to disk...")
 		closeDatabases()
-		log.Info("Syncing databases to disk... done")
+		CorePlugin.LogInfo("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase)
 
 	configureEvents()
@@ -239,7 +236,7 @@ func RunGarbageCollection() {
 	garbageCollectionLock.Lock()
 	defer garbageCollectionLock.Unlock()
 
-	log.Info("running full database garbage collection. This can take a while...")
+	CorePlugin.LogInfo("running full database garbage collection. This can take a while...")
 
 	start := time.Now()
 
@@ -258,12 +255,12 @@ func RunGarbageCollection() {
 
 	if err != nil {
 		if !errors.Is(err, storage.ErrNothingToCleanUp) {
-			log.Warnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
+			CorePlugin.LogWarnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
 			return
 		}
 	}
 
-	log.Infof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
+	CorePlugin.LogInfof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
 }
 
 func closeDatabases() error {

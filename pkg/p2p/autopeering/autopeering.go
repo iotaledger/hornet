@@ -23,9 +23,9 @@ const (
 	// ProtocolCode is the protocol code for autopeering within a multi address.
 	ProtocolCode = 1337
 	// the min size of a base58 encoded public key.
- 	autopeeringMinPubKeyBase58Size = 42
+	autopeeringMinPubKeyBase58Size = 42
 	// the max size of a base58 encoded public key.
- 	autopeeringMaxPubKeyBase58Size = 44
+	autopeeringMaxPubKeyBase58Size = 44
 )
 
 var (
