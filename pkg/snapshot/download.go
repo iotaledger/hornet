@@ -19,6 +19,11 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
+const (
+	timeoutDownloadSnapshotHeader = 5 * time.Second
+	timeoutDownloadSnapshotFile   = 10 * time.Minute
+)
+
 // WriteCounter counts the number of bytes written to it. It implements to the io.Writer interface
 // and we can pass this into io.TeeReader() which will report progress on each write cycle.
 type WriteCounter struct {
@@ -189,7 +194,15 @@ func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 
 // downloads a snapshot header from the given url.
 func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
-	resp, err := http.Get(url)
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotHeader)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("download failed: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("download failed: %w", err)
 	}
@@ -204,7 +217,15 @@ func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
 
 // downloads a snapshot file from the given url to the specified path.
 func (s *Snapshot) downloadFile(path string, url string) error {
-	resp, err := http.Get(url)
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("download failed: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
