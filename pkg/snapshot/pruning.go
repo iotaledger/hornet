@@ -199,9 +199,9 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 	// temporarily add the new solid entry points and keep the old ones
 	s.storage.WriteLockSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
 	}
-	s.storage.StoreSolidEntryPoints()
+	s.storage.StoreSolidEntryPointsWithoutLocking()
 	s.storage.WriteUnlockSolidEntryPoints()
 
 	// we have to set the new solid entry point index.
@@ -312,11 +312,11 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 	// finally set the new solid entry points and remove the old ones
 	s.storage.WriteLockSolidEntryPoints()
-	s.storage.ResetSolidEntryPoints()
+	s.storage.ResetSolidEntryPointsWithoutLocking()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
 	}
-	s.storage.StoreSolidEntryPoints()
+	s.storage.StoreSolidEntryPointsWithoutLocking()
 	s.storage.WriteUnlockSolidEntryPoints()
 
 	database.RunGarbageCollection()

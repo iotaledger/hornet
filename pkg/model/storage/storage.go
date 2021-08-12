@@ -110,7 +110,9 @@ func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile
 		return nil, err
 	}
 
-	s.loadSolidEntryPoints()
+	if err := s.loadSolidEntryPoints(); err != nil {
+		return nil, err
+	}
 
 	return s, nil
 }

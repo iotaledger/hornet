@@ -28,20 +28,26 @@ func (s *Storage) WriteUnlockSolidEntryPoints() {
 	s.solidEntryPointsLock.Unlock()
 }
 
-func (s *Storage) loadSolidEntryPoints() {
+func (s *Storage) loadSolidEntryPoints() error {
 	s.WriteLockSolidEntryPoints()
 	defer s.WriteUnlockSolidEntryPoints()
 
 	if s.solidEntryPoints != nil {
-		panic(ErrSolidEntryPointsAlreadyInitialized)
+		return ErrSolidEntryPointsAlreadyInitialized
 	}
 
 	points, err := s.readSolidEntryPoints()
-	if points != nil && err == nil {
-		s.solidEntryPoints = points
-	} else {
-		s.solidEntryPoints = NewSolidEntryPoints()
+	if err != nil {
+		return err
 	}
+
+	if points == nil {
+		s.solidEntryPoints = NewSolidEntryPoints()
+		return nil
+	}
+
+	s.solidEntryPoints = points
+	return nil
 }
 
 func (s *Storage) SolidEntryPointsContain(messageID hornet.MessageID) bool {
@@ -49,6 +55,7 @@ func (s *Storage) SolidEntryPointsContain(messageID hornet.MessageID) bool {
 	defer s.ReadUnlockSolidEntryPoints()
 
 	if s.solidEntryPoints == nil {
+		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
 	return s.solidEntryPoints.Contains(messageID)
@@ -60,34 +67,38 @@ func (s *Storage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.I
 	defer s.ReadUnlockSolidEntryPoints()
 
 	if s.solidEntryPoints == nil {
+		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
 	return s.solidEntryPoints.Index(messageID)
 }
 
-// SolidEntryPointsAdd adds a message to the solid entry points.
-// WriteLockSolidEntryPoints must be held while entering this function
-func (s *Storage) SolidEntryPointsAdd(messageID hornet.MessageID, milestoneIndex milestone.Index) {
+// SolidEntryPointsAddWithoutLocking adds a message to the solid entry points.
+// WriteLockSolidEntryPoints must be held while entering this function.
+func (s *Storage) SolidEntryPointsAddWithoutLocking(messageID hornet.MessageID, milestoneIndex milestone.Index) {
 	if s.solidEntryPoints == nil {
+		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
 	s.solidEntryPoints.Add(messageID, milestoneIndex)
 }
 
-// ResetSolidEntryPoints resets the solid entry points.
-// WriteLockSolidEntryPoints must be held while entering this function
-func (s *Storage) ResetSolidEntryPoints() {
+// ResetSolidEntryPointsWithoutLocking resets the solid entry points.
+// WriteLockSolidEntryPoints must be held while entering this function.
+func (s *Storage) ResetSolidEntryPointsWithoutLocking() {
 	if s.solidEntryPoints == nil {
+		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
 	s.solidEntryPoints.Clear()
 }
 
-// StoreSolidEntryPoints stores the solid entry points in the persistence layer.
-// WriteLockSolidEntryPoints must be held while entering this function
-func (s *Storage) StoreSolidEntryPoints() {
+// StoreSolidEntryPointsWithoutLocking stores the solid entry points in the persistence layer.
+// WriteLockSolidEntryPoints must be held while entering this function.
+func (s *Storage) StoreSolidEntryPointsWithoutLocking() error {
 	if s.solidEntryPoints == nil {
+		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	s.storeSolidEntryPoints(s.solidEntryPoints)
+	return s.storeSolidEntryPoints(s.solidEntryPoints)
 }

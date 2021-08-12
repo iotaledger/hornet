@@ -1006,7 +1006,7 @@ func newSEPsConsumer(storage *storage.Storage, header *ReadFileHeader) SEPConsum
 	// this information was included in pre Chrysalis Phase 2 snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
 	return func(solidEntryPointMessageID hornet.MessageID) error {
-		storage.SolidEntryPointsAdd(solidEntryPointMessageID, header.SEPMilestoneIndex)
+		storage.SolidEntryPointsAddWithoutLocking(solidEntryPointMessageID, header.SEPMilestoneIndex)
 		return nil
 	}
 }
@@ -1017,9 +1017,9 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 	ts := time.Now()
 
 	s.storage.WriteLockSolidEntryPoints()
-	s.storage.ResetSolidEntryPoints()
+	s.storage.ResetSolidEntryPointsWithoutLocking()
+	defer s.storage.StoreSolidEntryPointsWithoutLocking()
 	defer s.storage.WriteUnlockSolidEntryPoints()
-	defer s.storage.StoreSolidEntryPoints()
 
 	lsFile, err := os.Open(filePath)
 	if err != nil {
