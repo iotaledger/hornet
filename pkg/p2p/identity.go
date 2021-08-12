@@ -164,8 +164,15 @@ func LoadPrivateKeyFromStore(peerID peer.ID, peerStore peerstore.Peerstore, iden
 		}
 
 		if !storedPrivKey.Equals(prvKey) {
-			storedPrivKeyBytes, _ := storedPrivKey.Bytes()
-			configPrivKeyBytes, _ := prvKey.Bytes()
+			storedPrivKeyBytes, err := crypto.MarshalPrivateKey(storedPrivKey)
+			if err != nil {
+				return nil, fmt.Errorf("stored Ed25519 private key for peer identity can't be marshaled: %w", err)
+			}
+			configPrivKeyBytes, err := crypto.MarshalPrivateKey(prvKey)
+			if err != nil {
+				return nil, fmt.Errorf("configured Ed25519 private key for peer identity can't be marshaled: %w", err)
+			}
+
 			return nil, fmt.Errorf("stored Ed25519 private key (%s) for peer identity doesn't match private key in config (%s)", hex.EncodeToString(storedPrivKeyBytes[:]), hex.EncodeToString(configPrivKeyBytes[:]))
 		}
 	}
