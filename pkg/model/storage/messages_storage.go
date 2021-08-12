@@ -168,10 +168,17 @@ func (s *Storage) MessageMetadataStorageSize() int {
 	return s.metadataStorage.GetSize()
 }
 
-func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
-	cacheTime, _ := time.ParseDuration(opts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	cacheTime, err := time.ParseDuration(opts.CacheTime)
+	if err != nil {
+		return err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return err
+	}
 
 	s.messagesStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixMessages}),
@@ -200,6 +207,8 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
+
+	return nil
 }
 
 // CachedMessageOrNil returns a cached message object.
@@ -266,7 +275,7 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 	// Store msg + metadata atomically in the same callback
 	var cachedMeta objectstorage.CachedObject
 
-	cachedMsgData := s.messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // msg +1
+	cachedMsgData := s.messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(_ []byte) objectstorage.StorableObject { // msg +1
 		newlyAdded = true
 
 		metadata := &MessageMetadata{

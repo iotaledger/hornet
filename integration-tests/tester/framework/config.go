@@ -43,7 +43,7 @@ const (
 
 	containerNameTester      = "/tester"
 	containerNameReplica     = "replica_"
-	containerNameSuffixPumba = "_pumba"
+	containerNameSuffixPumba = "_pumba" //nolint:deadcode,varcheck
 
 	logsDir = "/tmp/logs/"
 

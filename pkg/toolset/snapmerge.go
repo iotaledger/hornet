@@ -11,7 +11,7 @@ import (
 
 const defaultTempDBForMerge = "./temp_snapshot_merge"
 
-func snapshotMerge(nodeConfig *configuration.Configuration, args []string) error {
+func snapshotMerge(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")

@@ -16,7 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
-func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string) error {
+func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 
 	if len(args) > 0 {
 		return fmt.Errorf("too many arguments for '%s'", ToolPwdHash)
@@ -37,7 +37,7 @@ func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string)
 		go func() {
 			<-signalChan
 			// reset the terminal to the original state if we receive an interrupt
-			term.Restore(int(syscall.Stdin), originalTerminalState)
+			_ = term.Restore(int(syscall.Stdin), originalTerminalState)
 			fmt.Println("\naborted... Bye!")
 			os.Exit(1)
 		}()
@@ -45,13 +45,13 @@ func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string)
 		fmt.Print("Enter a password: ")
 		password, err = term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
-			return err
+			return fmt.Errorf("read password failed: %w", err)
 		}
 
 		fmt.Print("\nRe-enter your password: ")
 		passwordReenter, err := term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
-			return err
+			return fmt.Errorf("read password failed: %w", err)
 		}
 
 		if !bytes.Equal(password, passwordReenter) {
@@ -63,10 +63,13 @@ func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string)
 
 	passwordSalt, err := basicauth.SaltGenerator(32)
 	if err != nil {
-		return err
+		return fmt.Errorf("generating random salt failed: %w", err)
 	}
 
 	passwordKey, err := basicauth.DerivePasswordKey(password, passwordSalt)
+	if err != nil {
+		return fmt.Errorf("deriving password key failed: %w", err)
+	}
 
 	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %x\n", passwordKey, passwordSalt)
 

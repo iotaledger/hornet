@@ -90,10 +90,10 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize address for ls-output: %w", err)
 	}
-	if _, err := b.Write(addrData); err != nil {
+	if _, err = b.Write(addrData); err != nil {
 		return nil, fmt.Errorf("unable to write address for ls-output: %w", err)
 	}
-	if err := binary.Write(&b, binary.LittleEndian, s.Amount); err != nil {
+	if err = binary.Write(&b, binary.LittleEndian, s.Amount); err != nil {
 		return nil, fmt.Errorf("unable to write value for ls-output: %w", err)
 	}
 	return b.Bytes(), nil
@@ -692,7 +692,7 @@ func ReadSnapshotHeaderFromFile(filePath string) (*ReadFileHeader, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to open snapshot file to read header: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return ReadSnapshotHeader(file)
 }
@@ -753,7 +753,7 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 	if err != nil {
 		return nil, fmt.Errorf("unable to open full snapshot file: %w", err)
 	}
-	defer fullSnapshotFile.Close()
+	defer func() { _ = fullSnapshotFile.Close() }()
 
 	// build up retracted ledger state
 	mergeUTXOManager := utxo.New(kvStore)
@@ -772,7 +772,7 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 	if err != nil {
 		return nil, fmt.Errorf("unable to open delta snapshot file: %w", err)
 	}
-	defer deltaSnapshotFile.Close()
+	defer func() { _ = deltaSnapshotFile.Close() }()
 
 	// build up ledger state to delta snapshot index
 	deltaSnapSEPs := make(hornet.MessageIDs, 0)
@@ -792,7 +792,7 @@ func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, t
 	if err != nil {
 		return nil, fmt.Errorf("unable to open target snapshot file: %w", err)
 	}
-	defer targetSnapshotFile.Close()
+	defer func() { _ = targetSnapshotFile.Close() }()
 
 	var sepsIndex int
 	sepsIter := func() (hornet.MessageID, error) {

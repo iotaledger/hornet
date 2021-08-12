@@ -131,7 +131,9 @@ func (t *Tangle) SolidQueueCheck(
 
 	if t.storage.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
-		t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(messageIDsToSolidify, metadataMemcache, abortSignal)
+		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(messageIDsToSolidify, metadataMemcache, abortSignal); err != nil {
+			t.log.Debugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)
+		}
 	}
 
 	t.log.Infof("Solidifier finished: msgs: %d, collect: %v, solidity %v, propagation: %v, total: %v", msgsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
@@ -276,7 +278,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		},
 		func(confirmation *whiteflag.Confirmation) {
 			timeStartConfirmation = time.Now()
-			t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify)
+			if err := t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify); err != nil {
+				t.log.Panicf("SetConfirmedMilestoneIndex failed: %s", err)
+			}
 			timeSetConfirmedMilestoneIndex = time.Now()
 			if t.storage.IsNodeAlmostSynced() {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
@@ -303,7 +307,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 				if t.receiptService.ValidationEnabled {
 					if err := t.receiptService.ValidateWithoutLocking(rt.Receipt); err != nil {
 						if err := common.IsSoftError(err); err != nil && t.receiptService.IgnoreSoftErrors {
-							t.log.Warnf("soft error encountered during receipt validation: %s", err.Error())
+							t.log.Warnf("soft error encountered during receipt validation: %s", err)
 							return nil
 						}
 						return err

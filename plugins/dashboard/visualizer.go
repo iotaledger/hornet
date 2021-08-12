@@ -44,7 +44,7 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
 		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // msg -1
 			if !deps.Storage.IsNodeAlmostSynced() {
 				return
@@ -82,7 +82,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: cachedMsgMeta.Metadata().MessageID().ToHex()[:VisualizerIDLength],
+						ID: metadata.MessageID().ToHex()[:VisualizerIDLength],
 					},
 				},
 			)
@@ -107,7 +107,7 @@ func runVisualizer() {
 	})
 
 	// show checkpoints as milestones in the coordinator node
-	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.MessageID) {
+	onIssuedCheckpointMessage := events.NewClosure(func(_ int, _ int, _ int, messageID hornet.MessageID) {
 		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}

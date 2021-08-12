@@ -53,12 +53,13 @@ func TestMsgProcessorEmit(t *testing.T) {
 
 	networkID := iotago.NetworkIDFromString("testnet4")
 
-	processor := gossip.NewMessageProcessor(te.Storage(), gossip.NewRequestQueue(), manager, serverMetrics, &gossip.Options{
+	processor, err := gossip.NewMessageProcessor(te.Storage(), gossip.NewRequestQueue(), manager, serverMetrics, &gossip.Options{
 		MinPoWScore:       MinPoWScore,
 		NetworkID:         networkID,
 		BelowMaxDepth:     BelowMaxDepth,
 		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingMessagesFilter,
 	})
+	require.NoError(t, err)
 
 	msgData := `{
 		  "networkId": "9466822412763346725",

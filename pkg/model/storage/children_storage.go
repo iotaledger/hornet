@@ -44,7 +44,7 @@ func (c *CachedChild) Child() *Child {
 	return c.Get().(*Child)
 }
 
-func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
+func childrenFactory(key []byte, _ []byte) (objectstorage.StorableObject, error) {
 	child := NewChild(hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]), hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 	return child, nil
 }
@@ -53,10 +53,17 @@ func (s *Storage) ChildrenStorageSize() int {
 	return s.childrenStorage.GetSize()
 }
 
-func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
-	cacheTime, _ := time.ParseDuration(opts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	cacheTime, err := time.ParseDuration(opts.CacheTime)
+	if err != nil {
+		return err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return err
+	}
 
 	s.childrenStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixChildren}),
@@ -73,6 +80,8 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
+
+	return nil
 }
 
 // ChildrenMessageIDs returns the message IDs of the children of the given message.
@@ -97,7 +106,7 @@ func (s *Storage) ContainsChild(messageID hornet.MessageID, childMessageID horne
 // children +1
 func (s *Storage) CachedChildrenOfMessageID(messageID hornet.MessageID, iteratorOptions ...IteratorOption) CachedChildren {
 	cachedChildren := make(CachedChildren, 0)
-	s.childrenStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+	s.childrenStorage.ForEach(func(_ []byte, cachedObject objectstorage.CachedObject) bool {
 		cachedChildren = append(cachedChildren, &CachedChild{CachedObject: cachedObject})
 		return true
 	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(messageID))...)

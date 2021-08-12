@@ -36,6 +36,7 @@ func randomAddress() *iotago.Ed25519Address {
 	return address
 }
 
+//nolint:unparam // maybe address will be used in the future
 func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo.Output {
 	outputID := &iotago.UTXOInputID{}
 	copy(outputID[:], randBytes(34))
@@ -123,15 +124,19 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	count := 5000
 
 	// Fill up the UTXO
+	var err error
 	for i := 0; i < count; i++ {
-		u1.AddUnspentOutput(randomOutput(iotago.OutputSigLockedSingleOutput))
-		u1.AddUnspentOutput(randomOutput(iotago.OutputSigLockedDustAllowanceOutput))
+		err = u1.AddUnspentOutput(randomOutput(iotago.OutputSigLockedSingleOutput))
+		require.NoError(t, err)
+
+		err = u1.AddUnspentOutput(randomOutput(iotago.OutputSigLockedDustAllowanceOutput))
+		require.NoError(t, err)
 	}
 
 	// Count the outputs in the ledger
 	var singleCount int
 	var allowanceCount int
-	u1.ForEachOutput(func(output *utxo.Output) bool {
+	err = u1.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
 		case iotago.OutputSigLockedSingleOutput:
 			singleCount++
@@ -142,6 +147,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		}
 		return true
 	})
+	require.NoError(t, err)
 	require.Equal(t, count, singleCount)
 	require.Equal(t, count, allowanceCount)
 
@@ -170,7 +176,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	}
 
 	// Compare the raw keys values in the backing store
-	err := map1.Iterate(kvstore.EmptyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+	err = map1.Iterate(kvstore.EmptyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 
 		value2, err := map2.Get(key)
 		require.NoError(t, err)
@@ -183,7 +189,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	// Count the outputs in the new ledger
 	singleCount = 0
 	allowanceCount = 0
-	u2.ForEachOutput(func(output *utxo.Output) bool {
+	err = u2.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
 		case iotago.OutputSigLockedSingleOutput:
 			singleCount++
@@ -194,6 +200,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		}
 		return true
 	})
+	require.NoError(t, err)
 	require.Equal(t, count, singleCount)
 	require.Equal(t, count, allowanceCount)
 }
@@ -267,8 +274,8 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 		require.NoError(t, u1.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 	}
 
-	producerU1 := newMsDiffsProducer(func(index milestone.Index) *iotago.Milestone {
-		return &iotago.Milestone{Index: uint32(index)}
+	producerU1 := newMsDiffsProducer(func(index milestone.Index) (*iotago.Milestone, error) {
+		return &iotago.Milestone{Index: uint32(index)}, nil
 	}, u1, MsDiffDirectionOnwards, startIndex, targetIndex)
 	consumerU2 := newMsDiffConsumer(u2)
 

@@ -371,6 +371,7 @@ func randLSTransactionSpents() *snapshot.Spent {
 	return &snapshot.Spent{Output: *output, TargetTransactionID: rand32ByteHash()}
 }
 
+//nolint:unparam
 func randEd25519Addr() (*iotago.Ed25519Address, []byte) {
 	// type
 	edAddr := &iotago.Ed25519Address{}

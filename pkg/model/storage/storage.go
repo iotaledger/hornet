@@ -81,7 +81,7 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) *Storage {
+func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (*Storage, error) {
 
 	utxoManager := utxo.New(store)
 
@@ -98,12 +98,23 @@ func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile
 		},
 	}
 
-	s.configureStorages(s.store, cachesProfile)
-	s.loadConfirmedMilestoneFromDatabase()
-	s.loadSnapshotInfo()
-	s.loadSolidEntryPoints()
+	if err := s.configureStorages(s.store, cachesProfile); err != nil {
+		return nil, err
+	}
 
-	return s
+	if err := s.loadConfirmedMilestoneFromDatabase(); err != nil {
+		return nil, err
+	}
+
+	if err := s.loadSnapshotInfo(); err != nil {
+		return nil, err
+	}
+
+	if err := s.loadSolidEntryPoints(); err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }
 
 func (s *Storage) KVStore() kvstore.KVStore {
@@ -114,17 +125,35 @@ func (s *Storage) UTXO() *utxo.Manager {
 	return s.utxoManager
 }
 
-func (s *Storage) configureStorages(store kvstore.KVStore, caches *profile.Caches) {
+func (s *Storage) configureStorages(store kvstore.KVStore, caches *profile.Caches) error {
 
-	s.configureHealthStore(store)
-	s.configureMessageStorage(store, caches.Messages)
-	s.configureChildrenStorage(store, caches.Children)
-	s.configureMilestoneStorage(store, caches.Milestones)
-	s.configureUnreferencedMessageStorage(store, caches.UnreferencedMessages)
-	s.configureIndexationStorage(store, caches.Indexations)
+	if err := s.configureHealthStore(store); err != nil {
+		return err
+	}
+
+	if err := s.configureMessageStorage(store, caches.Messages); err != nil {
+		return err
+	}
+
+	if err := s.configureChildrenStorage(store, caches.Children); err != nil {
+		return err
+	}
+
+	if err := s.configureMilestoneStorage(store, caches.Milestones); err != nil {
+		return err
+	}
+
+	if err := s.configureUnreferencedMessageStorage(store, caches.UnreferencedMessages); err != nil {
+		return err
+	}
+
+	if err := s.configureIndexationStorage(store, caches.Indexations); err != nil {
+		return err
+	}
+
 	s.configureSnapshotStore(store)
 
-	s.UTXO()
+	return nil
 }
 
 // FlushStorages flushes all storages.
@@ -146,20 +175,19 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownUnreferencedMessagesStorage()
 }
 
-func (s *Storage) loadConfirmedMilestoneFromDatabase() {
+func (s *Storage) loadConfirmedMilestoneFromDatabase() error {
 
 	ledgerMilestoneIndex, err := s.UTXO().ReadLedgerIndex()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	// set the confirmed milestone index based on the ledger milestone
-	s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
+	return s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
 }
 
 func (s *Storage) DatabaseSupportsCleanup() bool {
 	// ToDo: add this to the KVStore interface
-	// Bolt does not support cleaning up anything
 	return false
 }
 

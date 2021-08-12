@@ -58,7 +58,9 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 
 	// mark the database as tainted forever.
 	// this is used to signal the coordinator plugin that it should never use a revalidated database.
-	t.storage.MarkDatabaseTainted()
+	if err := t.storage.MarkDatabaseTainted(); err != nil {
+		t.log.Panic(err)
+	}
 
 	start := time.Now()
 
@@ -501,7 +503,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 
 	lastStatusTime := time.Now()
 	var unreferencedTxsCounter int64
-	t.storage.ForEachUnreferencedMessage(func(msIndex milestone.Index, messageID hornet.MessageID) bool {
+	t.storage.ForEachUnreferencedMessage(func(msIndex milestone.Index, _ hornet.MessageID) bool {
 		unreferencedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -561,16 +563,16 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 
 	// Restore the ledger state of the last snapshot
 	if err := snapshot.ImportSnapshots(); err != nil {
-		t.log.Panic(err.Error())
+		t.log.Panic(err)
 	}
 
 	if err := snapshot.CheckCurrentSnapshot(snapshotInfo); err != nil {
-		t.log.Panic(err.Error())
+		t.log.Panic(err)
 	}
 
 	ledgerIndex, err := t.storage.UTXO().ReadLedgerIndex()
 	if err != nil {
-		t.log.Panic(err.Error())
+		t.log.Panic(err)
 	}
 
 	if snapshotInfo.SnapshotIndex != ledgerIndex {

@@ -20,6 +20,7 @@ func TestMigration(t *testing.T) {
 	const initialTreasuryTokens uint64 = 10_000_000_000
 
 	type tuple struct {
+		//nolint:structcheck // milestoneIndex not used in the tests yet
 		milestoneIndex int
 		amount         uint64
 	}

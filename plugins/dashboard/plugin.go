@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -121,16 +123,23 @@ func configure() {
 
 	hub = websockethub.NewHub(Plugin.Logger(), upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
 
-	basicAuth = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
+	var err error
+	basicAuth, err = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt))
+	if err != nil {
+		Plugin.Panicf("basic auth initialization failed: %w", err)
+	}
 
-	jwtAuth = jwt.NewJWTAuth(
+	jwtAuth, err = jwt.NewJWTAuth(
 		deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.Duration(CfgDashboardAuthSessionTimeout),
 		deps.Host.ID().String(),
 		deps.NodePrivateKey,
 	)
+	if err != nil {
+		Plugin.Panicf("JWT auth initialization failed: %w", err)
+	}
 }
 
 func run() {
@@ -141,8 +150,14 @@ func run() {
 
 	setupRoutes(e)
 	bindAddr := deps.NodeConfig.String(CfgDashboardBindAddress)
-	Plugin.LogInfof("You can now access the dashboard using: http://%s", bindAddr)
-	go e.Start(bindAddr)
+
+	go func() {
+		Plugin.LogInfof("You can now access the dashboard using: http://%s", bindAddr)
+
+		if err := e.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			Plugin.LogWarnf("Stopped dashboard server due to an error (%s)", err)
+		}
+	}()
 
 	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
@@ -151,11 +166,11 @@ func run() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
 	})
 
-	onConfirmedMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
-	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 

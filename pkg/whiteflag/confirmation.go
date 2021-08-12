@@ -85,7 +85,7 @@ func ConfirmMilestone(
 	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, metadataMemcache, messagesMemcache, message.Parents())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
-		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
+		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
 	}
 
 	confirmation := &Confirmation{
@@ -158,7 +158,7 @@ func ConfirmMilestone(
 	}
 
 	if err = s.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt); err != nil {
-		return nil, nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
+		return nil, nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed: %w", err)
 	}
 	timeConfirmation := time.Now()
 

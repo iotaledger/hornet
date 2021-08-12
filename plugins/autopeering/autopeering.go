@@ -74,12 +74,12 @@ func start(local *Local, shutdownSignal <-chan struct{}) {
 	// resolve the bind address
 	localAddr, err := net.ResolveUDPAddr(peering.Network(), deps.NodeConfig.String(CfgNetAutopeeringBindAddr))
 	if err != nil {
-		Plugin.LogFatalf("error resolving %s: %v", deps.NodeConfig.String(CfgNetAutopeeringBindAddr), err)
+		Plugin.LogFatalf("error resolving %s: %s", deps.NodeConfig.String(CfgNetAutopeeringBindAddr), err)
 	}
 
 	conn, err := net.ListenUDP(peering.Network(), localAddr)
 	if err != nil {
-		Plugin.LogFatalf("error listening: %v", err)
+		Plugin.LogFatalf("error listening: %s", err)
 	}
 
 	handlers := []server.Handler{discoveryProtocol}
@@ -156,7 +156,7 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 	for _, entryNodeDefinition := range deps.NodeConfig.Strings(CfgNetAutopeeringEntryNodes) {
 		entryNode, err := parseEntryNode(entryNodeDefinition)
 		if err != nil {
-			Plugin.LogWarnf("invalid entry node; ignoring: %s, error: %v", entryNodeDefinition, err)
+			Plugin.LogWarnf("invalid entry node; ignoring: %s, error: %s", entryNodeDefinition, err)
 			continue
 		}
 		result = append(result, entryNode)

@@ -12,7 +12,7 @@ import (
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
-func generateEd25519Key(nodeConfig *configuration.Configuration, args []string) error {
+func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 
 	if len(args) > 0 {
 		return fmt.Errorf("too many arguments for '%s'", ToolEd25519Key)
@@ -28,7 +28,7 @@ func generateEd25519Key(nodeConfig *configuration.Configuration, args []string) 
 	return nil
 }
 
-func generateEd25519Address(nodeConfig *configuration.Configuration, args []string) error {
+func generateEd25519Address(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
@@ -51,7 +51,7 @@ func generateEd25519Address(nodeConfig *configuration.Configuration, args []stri
 	// parse pubkey
 	pubKey, err := utils.ParseEd25519PublicKeyFromString(args[0])
 	if err != nil {
-		return fmt.Errorf("can't decode ED25519_PUB_KEY: %v", err)
+		return fmt.Errorf("can't decode ED25519_PUB_KEY: %w", err)
 	}
 
 	addr := iotago.AddressFromEd25519PubKey(pubKey)

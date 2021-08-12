@@ -220,7 +220,7 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}, nil
 }
 
-func addresses(c echo.Context) (*addressesResponse, error) {
+func addresses(_ echo.Context) (*addressesResponse, error) {
 
 	addressMap := map[string]*address{}
 
@@ -255,7 +255,7 @@ func addresses(c echo.Context) (*addressesResponse, error) {
 	}, nil
 }
 
-func addressesEd25519(c echo.Context) (*addressesResponse, error) {
+func addressesEd25519(_ echo.Context) (*addressesResponse, error) {
 
 	addressMap := map[string]*address{}
 
@@ -332,7 +332,8 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}, nil
 }
 
-func requests(c echo.Context) (*requestsResponse, error) {
+//nolint:unparam // even if the error is never used, the structure of all routes should be the same
+func requests(_ echo.Context) (*requestsResponse, error) {
 
 	queued, pending, processing := deps.RequestQueue.Requests()
 	debugReqs := make([]*request, 0, len(queued)+len(pending)+len(processing))

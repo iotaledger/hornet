@@ -27,8 +27,8 @@ const (
 )
 
 func init() {
-	flag.CommandLine.MarkHidden(CfgMigratorBootstrap)
-	flag.CommandLine.MarkHidden(CfgMigratorStartIndex)
+	_ = flag.CommandLine.MarkHidden(CfgMigratorBootstrap)
+	_ = flag.CommandLine.MarkHidden(CfgMigratorStartIndex)
 
 	Plugin = &node.Plugin{
 		Status: node.StatusDisabled,
@@ -102,7 +102,7 @@ func run() {
 		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
 
 			if err := common.IsCriticalError(err); err != nil {
-				gracefulshutdown.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err.Error()))
+				gracefulshutdown.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err))
 				return false
 			}
 

@@ -171,7 +171,9 @@ func provide(c *dig.Container) {
 				CorePlugin.Panicf("invalid config peer address at pos %d: %s", i, err)
 			}
 
-			p2pConfigManager.AddPeer(multiAddr, p.Alias)
+			if err = p2pConfigManager.AddPeer(multiAddr, p.Alias); err != nil {
+				CorePlugin.LogWarnf("unable to add peer to config manager %s: %s", p.MultiAddress, err)
+			}
 		}
 
 		// peers from CLI arguments
@@ -195,7 +197,9 @@ func provide(c *dig.Container) {
 				alias = peerAliases[i]
 			}
 
-			p2pConfigManager.AddPeer(multiAddr, alias)
+			if err = p2pConfigManager.AddPeer(multiAddr, alias); err != nil {
+				CorePlugin.LogWarnf("unable to add peer to config manager %s: %s", peerIDStr, err)
+			}
 		}
 
 		p2pConfigManager.StoreOnChange(true)
@@ -252,6 +256,8 @@ func connectConfigKnownPeers() {
 			CorePlugin.Panicf("invalid peer address info: %s", err)
 		}
 
-		_ = deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, p.Alias)
+		if err = deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, p.Alias); err != nil {
+			CorePlugin.LogInfof("can't connect to peer (%s): %s", multiAddr.String(), err)
+		}
 	}
 }

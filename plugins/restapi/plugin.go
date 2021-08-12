@@ -123,11 +123,15 @@ func configure() {
 		}
 
 		// API tokens do not expire.
-		jwtAuth = jwt.NewJWTAuth(salt,
+		var err error
+		jwtAuth, err = jwt.NewJWTAuth(salt,
 			0,
 			deps.Host.ID().String(),
 			deps.NodePrivateKey,
 		)
+		if err != nil {
+			Plugin.Panicf("JWT auth initialization failed: %w", err)
+		}
 
 		excludedRoutes := make(map[string]struct{})
 		if deps.NodeConfig.Bool(CfgRestAPIExcludeHealthCheckFromAuth) {
@@ -215,7 +219,7 @@ func setupRoutes() {
 			message = fmt.Sprintf("internal server error. error: %s", err)
 		}
 
-		c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
+		_ = c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
 	}
 
 	setupHealthRoute()

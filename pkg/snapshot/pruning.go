@@ -162,7 +162,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		s.log.Panic("No snapshotInfo found!")
 	}
 
-	//lint:ignore SA5011 panics before if nil pointer
+	//lint:ignore SA5011 nil pointer is already checked before with a panic
 	if snapshotInfo.SnapshotIndex < s.solidEntryPointCheckThresholdPast+s.additionalPruningThreshold+1 {
 		// Not enough history
 		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", s.solidEntryPointCheckThresholdPast+s.additionalPruningThreshold+1, targetIndex)
@@ -199,15 +199,19 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 	// temporarily add the new solid entry points and keep the old ones
 	s.storage.WriteLockSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
 	}
-	s.storage.StoreSolidEntryPoints()
+	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
+		s.log.Panic(err)
+	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
 	// we have to set the new solid entry point index.
 	// this way we can cleanly prune even if the pruning was aborted last time
 	snapshotInfo.EntryPointIndex = targetIndex
-	s.storage.SetSnapshotInfo(snapshotInfo)
+	if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+		s.log.Panic(err)
+	}
 
 	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be CMI at startup of the node
 	s.pruneUnreferencedMessages(snapshotInfo.PruningIndex)
@@ -262,7 +266,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 		cachedMs.Release(true) // milestone -1
 		if err != nil {
-			s.log.Warnf("Pruning milestone (%d) failed! Error: %v", milestoneIndex, err)
+			s.log.Warnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 			continue
 		}
 
@@ -291,7 +295,9 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		timePruneMessages := time.Now()
 
 		snapshotInfo.PruningIndex = milestoneIndex
-		s.storage.SetSnapshotInfo(snapshotInfo)
+		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+			s.log.Panic(err)
+		}
 		timeSetSnapshotInfo := time.Now()
 
 		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(timeStart).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
@@ -312,11 +318,13 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 	// finally set the new solid entry points and remove the old ones
 	s.storage.WriteLockSolidEntryPoints()
-	s.storage.ResetSolidEntryPoints()
+	s.storage.ResetSolidEntryPointsWithoutLocking()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
 	}
-	s.storage.StoreSolidEntryPoints()
+	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
+		s.log.Panic(err)
+	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
 	database.RunGarbageCollection()

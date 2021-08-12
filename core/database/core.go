@@ -126,26 +126,41 @@ func provide(c *dig.Container) {
 				deps.Events.DatabaseCompaction.Trigger(running)
 			}
 
+			db, err := database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true)
+			if err != nil {
+				CorePlugin.Panicf("database initialization failed: %s", err)
+			}
+
 			return database.New(
-				pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true)),
+				pebble.New(db),
 				true,
 				func() bool { return deps.Metrics.CompactionRunning.Load() },
 			)
 
 		case "bolt":
+
+			db, err := database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db")
+			if err != nil {
+				CorePlugin.Panicf("database initialization failed: %s", err)
+			}
+
 			return database.New(
-				bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db")),
+				bolt.New(db),
 				false,
 				func() bool { return false },
 			)
 
 		case "rocksdb":
-			rocksDB := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
+			db, err := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
+			if err != nil {
+				CorePlugin.Panicf("database initialization failed: %s", err)
+			}
+
 			return database.New(
-				rocksdb.New(rocksDB),
+				rocksdb.New(db),
 				true,
 				func() bool {
-					if numCompactions, success := rocksDB.GetIntProperty("rocksdb.num-running-compactions"); success {
+					if numCompactions, success := db.GetIntProperty("rocksdb.num-running-compactions"); success {
 						runningBefore := deps.Metrics.CompactionRunning.Load()
 						running := numCompactions != 0
 
@@ -189,7 +204,11 @@ func provide(c *dig.Container) {
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 		}
 
-		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+		store, err := storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+		if err != nil {
+			CorePlugin.Panicf("can't initialize storage: %s", err)
+		}
+		return store
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
@@ -203,17 +222,33 @@ func provide(c *dig.Container) {
 
 func configure() {
 
-	if !deps.Storage.IsCorrectDatabaseVersion() {
-		if !deps.Storage.UpdateDatabaseVersion() {
+	correctDatabaseVersion, err := deps.Storage.IsCorrectDatabaseVersion()
+	if err != nil {
+		CorePlugin.Panic(err)
+	}
+
+	if !correctDatabaseVersion {
+		databaseVersionUpdated, err := deps.Storage.UpdateDatabaseVersion()
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
+
+		if !databaseVersionUpdated {
 			CorePlugin.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
+	if err = CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
-		deps.Storage.MarkDatabaseHealthy()
+
+		if err = deps.Storage.MarkDatabaseHealthy(); err != nil {
+			CorePlugin.Panic(err)
+		}
+
 		CorePlugin.LogInfo("Syncing databases to disk...")
-		closeDatabases()
+		if err = closeDatabases(); err != nil {
+			CorePlugin.Panicf("Syncing databases to disk... failed: %s", err)
+		}
 		CorePlugin.LogInfo("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)

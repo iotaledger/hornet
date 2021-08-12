@@ -7,15 +7,10 @@ import (
 )
 
 // NewBoltDB creates a new bbolt DB instance.
-func NewBoltDB(directory string, filename string) *bbolt.DB {
+func NewBoltDB(directory string, filename string) (*bbolt.DB, error) {
 	opts := &bbolt.Options{
 		NoSync: true,
 	}
 
-	db, err := bolt.CreateDB(directory, filename, opts)
-	if err != nil {
-		panic(err)
-	}
-
-	return db
+	return bolt.CreateDB(directory, filename, opts)
 }

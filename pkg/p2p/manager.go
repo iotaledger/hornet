@@ -247,6 +247,8 @@ func (m *Manager) Start(shutdownSignal <-chan struct{}) {
 	m.eventLoop(shutdownSignal)
 
 	m.Events.StateChange.Trigger(ManagerStateStopping)
+
+	// close all connections
 	for _, conn := range m.host.Network().Conns() {
 		_ = conn.Close()
 	}
