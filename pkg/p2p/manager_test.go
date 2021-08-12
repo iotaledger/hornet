@@ -84,16 +84,13 @@ func TestManager(t *testing.T) {
 	// connect to each other
 	node2AliasOnNode1 := "Node 2"
 	go func() {
-		err := node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown, node2AliasOnNode1)
-		require.NoError(t, err)
+		_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown, node2AliasOnNode1)
 	}()
 	go func() {
-		err := node2Manager.ConnectPeer(node1AddrInfo, p2p.PeerRelationKnown)
-		require.NoError(t, err)
+		_ = node2Manager.ConnectPeer(node1AddrInfo, p2p.PeerRelationKnown)
 	}()
 	go func() {
-		err := node2Manager.ConnectPeer(node3AddrInfo, p2p.PeerRelationUnknown)
-		require.NoError(t, err)
+		_ = node2Manager.ConnectPeer(node3AddrInfo, p2p.PeerRelationUnknown)
 	}()
 
 	// note we do not explicitly let node 3 connect to node 2
@@ -138,14 +135,12 @@ func TestManager(t *testing.T) {
 
 	// if we then tell node 1 to connect to node 2 again explicitly (even if they're already connected),
 	// but with a different relation than what node 2 currently is for node 1, it will be updated:
-	err = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
-	require.NoError(t, err)
+	_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
 	require.True(t, node1.ConnManager().IsProtected(node2.ID(), p2p.PeerConnectivityProtectionTag))
 
 	// connect node 4 to node 2 too
 	go func() {
-		err := node2Manager.ConnectPeer(node4AddrInfo, p2p.PeerRelationUnknown)
-		require.NoError(t, err)
+		_ = node2Manager.ConnectPeer(node4AddrInfo, p2p.PeerRelationUnknown)
 	}()
 	connectivity(t, node2Manager, node4.ID(), false)
 	connectivity(t, node4Manager, node2.ID(), false)
@@ -247,8 +242,7 @@ func TestManagerEvents(t *testing.T) {
 	}))
 
 	go func() {
-		err := node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationUnknown)
-		require.NoError(t, err)
+		_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationUnknown)
 	}()
 	require.Eventually(t, func() bool {
 		return connectCalled
@@ -266,8 +260,7 @@ func TestManagerEvents(t *testing.T) {
 	}))
 
 	go func() {
-		err := node1Manager.DisconnectPeer(node2.ID())
-		require.NoError(t, err)
+		_ = node1Manager.DisconnectPeer(node2.ID())
 	}()
 	require.Eventually(t, func() bool {
 		return disconnectCalled
@@ -277,8 +270,7 @@ func TestManagerEvents(t *testing.T) {
 	}, 4*time.Second, 10*time.Millisecond)
 
 	go func() {
-		err := node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationUnknown)
-		require.NoError(t, err)
+		_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationUnknown)
 	}()
 	connectivity(t, node1Manager, node2.ID(), false)
 	connectivity(t, node2Manager, node1.ID(), false)
@@ -291,8 +283,7 @@ func TestManagerEvents(t *testing.T) {
 		oldRelation = oldRel
 	}))
 
-	err = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
-	require.NoError(t, err)
+	_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
 	require.True(t, relationUpdatedCalled)
 	require.Equal(t, p2p.PeerRelationKnown, updatedRelation)
 	require.Equal(t, p2p.PeerRelationUnknown, oldRelation)
@@ -306,8 +297,7 @@ func TestManagerEvents(t *testing.T) {
 	}))
 
 	go func() {
-		err := node2Manager.DisconnectPeer(node1.ID())
-		require.NoError(t, err)
+		_ = node2Manager.DisconnectPeer(node1.ID())
 	}()
 
 	// node 1 should reconnect to node 2

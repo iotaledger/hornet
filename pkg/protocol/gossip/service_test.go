@@ -82,13 +82,11 @@ func TestServiceEvents(t *testing.T) {
 
 	// connect node 1 and 2 to each other
 	go func() {
-		err := node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
-		require.NoError(t, err)
+		_ = node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
 	}()
 	time.Sleep(100 * time.Millisecond)
 	go func() {
-		err := node2Manager.ConnectPeer(&node1AddrInfo, p2p.PeerRelationKnown)
-		require.NoError(t, err)
+		_ = node2Manager.ConnectPeer(&node1AddrInfo, p2p.PeerRelationKnown)
 	}()
 
 	// should eventually both be connected to each other
@@ -118,12 +116,10 @@ func TestServiceEvents(t *testing.T) {
 	// disconnecting them should also clean up the gossip protocol streams.
 	// we also explicitly disconnect node 1 to remove the relation state
 	go func() {
-		err := node1Manager.DisconnectPeer(node2.ID())
-		require.NoError(t, err)
+		_ = node1Manager.DisconnectPeer(node2.ID())
 	}()
 	go func() {
-		err := node2Manager.DisconnectPeer(node1.ID())
-		require.NoError(t, err)
+		_ = node2Manager.DisconnectPeer(node1.ID())
 	}()
 
 	connectivity(t, node1Manager, node2.ID(), true)
@@ -155,8 +151,7 @@ func TestServiceEvents(t *testing.T) {
 	}))
 
 	go func() {
-		err := node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
-		require.NoError(t, err)
+		_ = node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationKnown)
 	}()
 
 	require.Eventually(t, func() bool { return protocolStartedCalled1 }, 10*time.Second, 10*time.Millisecond)
@@ -213,13 +208,11 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 
 	// connect node 1 and 2 to each other
 	go func() {
-		err := node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationUnknown)
-		require.NoError(t, err)
+		_ = node1Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationUnknown)
 	}()
 	time.Sleep(100 * time.Millisecond)
 	go func() {
-		err := node2Manager.ConnectPeer(&node1AddrInfo, p2p.PeerRelationUnknown)
-		require.NoError(t, err)
+		_ = node2Manager.ConnectPeer(&node1AddrInfo, p2p.PeerRelationUnknown)
 	}()
 
 	// should eventually both be connected to each other
@@ -249,12 +242,10 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 	protocolStartedCalled1, protocolStartedCalled2 = false, false
 
 	go func() {
-		err := node3Manager.ConnectPeer(&node1AddrInfo, p2p.PeerRelationUnknown)
-		require.NoError(t, err)
+		_ = node3Manager.ConnectPeer(&node1AddrInfo, p2p.PeerRelationUnknown)
 	}()
 	go func() {
-		err := node3Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationUnknown)
-		require.NoError(t, err)
+		_ = node3Manager.ConnectPeer(&node2AddrInfo, p2p.PeerRelationUnknown)
 	}()
 
 	// no protocols should have been started on node 1 and 2
