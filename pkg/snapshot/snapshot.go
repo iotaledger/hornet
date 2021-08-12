@@ -670,6 +670,8 @@ func (s *Snapshot) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...str
 // creates the temp file into which to write the snapshot data into.
 func (s *Snapshot) createTempFile(filePath string) (*os.File, string, error) {
 	filePathTmp := filePath + "_tmp"
+
+	// we don't need to check the error, maybe the file doesn't exist
 	_ = os.Remove(filePathTmp)
 
 	lsFile, err := os.OpenFile(filePathTmp, os.O_RDWR|os.O_CREATE, 0666)
@@ -820,7 +822,7 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 		// if the old full snapshot file is overwritten
 		// we need to remove the old delta snapshot file since it
 		// isn't compatible to the full snapshot file anymore.
-		if err := os.Remove(s.snapshotDeltaPath); err != nil && !os.IsNotExist(err) {
+		if err = os.Remove(s.snapshotDeltaPath); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("deleting delta snapshot file failed: %s", err)
 		}
 	}
@@ -1047,7 +1049,7 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 
 	snapshotTimestamp := time.Unix(int64(header.Timestamp), 0)
 	if err = s.storage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, snapshotTimestamp); err != nil {
-		return err
+		return fmt.Errorf("SetSnapshotMilestone failed: %w", err)
 	}
 
 	s.log.Infof(`

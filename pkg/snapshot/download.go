@@ -244,6 +244,7 @@ func (s *Snapshot) downloadFile(path string, url string) error {
 	var ok bool
 	defer func() {
 		if !ok {
+			// we don't need to check the error, maybe the file doesn't exist
 			_ = os.Remove(tempFileName)
 		}
 	}()

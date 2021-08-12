@@ -135,7 +135,12 @@ func configure() {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
 
-	if deps.Storage.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
+	databaseCorrupted, err := deps.Storage.IsDatabaseCorrupted()
+	if err != nil {
+		CorePlugin.Panic(err)
+	}
+
+	if databaseCorrupted && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
 		// no need to check for the "deleteDatabase" and "deleteAll" flags,
 		// since the database should only be marked as corrupted,
 		// if it was not deleted before this check.
