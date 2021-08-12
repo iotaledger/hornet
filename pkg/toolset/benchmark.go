@@ -80,11 +80,23 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 
 	switch dbEngine {
 	case "pebble":
-		store = pebble.New(database.NewPebbleDB(tempDir, nil, true))
+		db, err := database.NewPebbleDB(tempDir, nil, true)
+		if err != nil {
+			return fmt.Errorf("database initialization failed: %w", err)
+		}
+		store = pebble.New(db)
 	case "bolt":
-		store = bolt.New(database.NewBoltDB(tempDir, "bolt.db"))
+		db, err := database.NewBoltDB(tempDir, "bolt.db")
+		if err != nil {
+			return fmt.Errorf("database initialization failed: %w", err)
+		}
+		store = bolt.New(db)
 	case "rocksdb":
-		store = rocksdb.New(database.NewRocksDB(tempDir))
+		db, err := database.NewRocksDB(tempDir)
+		if err != nil {
+			return fmt.Errorf("database initialization failed: %w", err)
+		}
+		store = rocksdb.New(db)
 	default:
 		return fmt.Errorf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", dbEngine)
 	}

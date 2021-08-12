@@ -7,15 +7,11 @@ import (
 )
 
 // NewRocksDB creates a new RocksDB instance.
-func NewRocksDB(path string) *rocksdb.RocksDB {
+func NewRocksDB(path string) (*rocksdb.RocksDB, error) {
 
 	opts := []rocksdb.Option{
 		rocksdb.IncreaseParallelism(runtime.NumCPU() - 1),
 	}
 
-	db, err := rocksdb.CreateDB(path, opts...)
-	if err != nil {
-		panic(err)
-	}
-	return db
+	return rocksdb.CreateDB(path, opts...)
 }
