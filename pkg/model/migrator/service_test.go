@@ -118,8 +118,8 @@ func newTestService(t *testing.T, msIndex uint32, maxEntries int) (*migrator.Mig
 	<-started
 	return s, func() {
 		close(closing)
-		err := os.Remove(stateFileName)
-		require.NoError(t, err)
+		// we don't need to check the error, maybe the file doesn't exist
+		_ = os.Remove(stateFileName)
 	}
 }
 

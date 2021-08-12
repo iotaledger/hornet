@@ -197,8 +197,13 @@ func provide(c *dig.Container) {
 
 func configure() {
 
-	if deps.Storage.IsDatabaseTainted() {
-		panic(ErrDatabaseTainted)
+	databaseTainted, err := deps.Storage.IsDatabaseTainted()
+	if err != nil {
+		Plugin.Panic(err)
+	}
+
+	if databaseTainted {
+		Plugin.Panic(ErrDatabaseTainted)
 	}
 
 	nextCheckpointSignal = make(chan struct{})

@@ -122,7 +122,9 @@ func (s *Storage) UTXO() *utxo.Manager {
 
 func (s *Storage) configureStorages(store kvstore.KVStore, caches *profile.Caches) error {
 
-	s.configureHealthStore(store)
+	if err := s.configureHealthStore(store); err != nil {
+		return err
+	}
 
 	if err := s.configureMessageStorage(store, caches.Messages); err != nil {
 		return err

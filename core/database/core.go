@@ -222,17 +222,33 @@ func provide(c *dig.Container) {
 
 func configure() {
 
-	if !deps.Storage.IsCorrectDatabaseVersion() {
-		if !deps.Storage.UpdateDatabaseVersion() {
+	correctDatabaseVersion, err := deps.Storage.IsCorrectDatabaseVersion()
+	if err != nil {
+		CorePlugin.Panic(err)
+	}
+
+	if !correctDatabaseVersion {
+		databaseVersionUpdated, err := deps.Storage.UpdateDatabaseVersion()
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
+
+		if !databaseVersionUpdated {
 			CorePlugin.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
+	if err = CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
-		deps.Storage.MarkDatabaseHealthy()
+
+		if err = deps.Storage.MarkDatabaseHealthy(); err != nil {
+			CorePlugin.Panic(err)
+		}
+
 		CorePlugin.LogInfo("Syncing databases to disk...")
-		closeDatabases()
+		if err = closeDatabases(); err != nil {
+			CorePlugin.Panicf("Syncing databases to disk... failed: %s", err)
+		}
 		CorePlugin.LogInfo("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)

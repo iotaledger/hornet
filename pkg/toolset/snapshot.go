@@ -67,6 +67,8 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 
 	// build temp file path
 	outputFilePathTmp := outputFilePath + "_tmp"
+
+	// we don't need to check the error, maybe the file doesn't exist
 	_ = os.Remove(outputFilePathTmp)
 
 	snapshotFile, err := os.OpenFile(outputFilePathTmp, os.O_RDWR|os.O_CREATE, 0666)
