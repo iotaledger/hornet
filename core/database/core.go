@@ -126,26 +126,41 @@ func provide(c *dig.Container) {
 				deps.Events.DatabaseCompaction.Trigger(running)
 			}
 
+			db, err := database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true)
+			if err != nil {
+				CorePlugin.Panicf("database initialization failed: %s", err)
+			}
+
 			return database.New(
-				pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true)),
+				pebble.New(db),
 				true,
 				func() bool { return deps.Metrics.CompactionRunning.Load() },
 			)
 
 		case "bolt":
+
+			db, err := database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db")
+			if err != nil {
+				CorePlugin.Panicf("database initialization failed: %s", err)
+			}
+
 			return database.New(
-				bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db")),
+				bolt.New(db),
 				false,
 				func() bool { return false },
 			)
 
 		case "rocksdb":
-			rocksDB := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
+			db, err := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
+			if err != nil {
+				CorePlugin.Panicf("database initialization failed: %s", err)
+			}
+
 			return database.New(
-				rocksdb.New(rocksDB),
+				rocksdb.New(db),
 				true,
 				func() bool {
-					if numCompactions, success := rocksDB.GetIntProperty("rocksdb.num-running-compactions"); success {
+					if numCompactions, success := db.GetIntProperty("rocksdb.num-running-compactions"); success {
 						runningBefore := deps.Metrics.CompactionRunning.Load()
 						running := numCompactions != 0
 
