@@ -91,7 +91,7 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 		}
 
 		if fullHeader.NetworkID != wantedNetworkID {
-			return ErrInvalidSnapshotAvailabilityState
+			return fmt.Errorf("full snapshot networkID does not match (%d != %d): %w", fullHeader.NetworkID, wantedNetworkID, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		if deltaHeader == nil {
@@ -99,16 +99,16 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 		}
 
 		if deltaHeader.NetworkID != wantedNetworkID {
-			return ErrInvalidSnapshotAvailabilityState
+			return fmt.Errorf("delta snapshot networkID does not match (%d != %d): %w", deltaHeader.NetworkID, wantedNetworkID, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		if fullHeader.SEPMilestoneIndex > deltaHeader.SEPMilestoneIndex {
-			return ErrInvalidSnapshotAvailabilityState
+			return fmt.Errorf("full snapshot SEP index is bigger than delta snapshot SEP index (%d > %d): %w", fullHeader.SEPMilestoneIndex, deltaHeader.SEPMilestoneIndex, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		if fullHeader.SEPMilestoneIndex != deltaHeader.LedgerMilestoneIndex {
 			// delta snapshot file doesn't fit the full snapshot file
-			return ErrInvalidSnapshotAvailabilityState
+			return fmt.Errorf("full snapshot SEP index does not match the delta snapshot ledger index (%d != %d): %w", fullHeader.SEPMilestoneIndex, deltaHeader.LedgerMilestoneIndex, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		return nil
@@ -128,7 +128,7 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 		fullHeader, err := s.downloadHeader(target.Full)
 		if err != nil {
 			// as the full snapshot URL failed to download, we commence further with our targets
-			s.log.Debug(err.Error())
+			s.log.Debugf("downloading full snapshot header from %s failed: %s", target.Full, err)
 			continue
 		}
 
@@ -138,13 +138,13 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 			deltaHeader, err = s.downloadHeader(target.Delta)
 			if err != nil {
 				// it is valid that no delta snapshot file is available on the target.
-				s.log.Debug(err.Error())
+				s.log.Debugf("downloading delta snapshot header from %s failed: %s", target.Delta, err)
 			}
 		}
 
 		if err := checkTargetConsistency(wantedNetworkID, fullHeader, deltaHeader); err != nil {
 			// the snapshots on the target do not seem to be consistent
-			s.log.Debug(err.Error())
+			s.log.Infof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
 			continue
 		}
 
@@ -174,7 +174,7 @@ func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 
 		s.log.Infof("downloading full snapshot file from %s", target.Full)
 		if err := s.downloadFile(fullPath, target.Full); err != nil {
-			s.log.Warn(err.Error())
+			s.log.Warn(err)
 			// as the full snapshot URL failed to download, we commence further with our targets
 			continue
 		}
@@ -183,7 +183,7 @@ func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 			s.log.Infof("downloading delta snapshot file from %s", target.Delta)
 			if err := s.downloadFile(deltaPath, target.Delta); err != nil {
 				// it is valid that no delta snapshot file is available on the target.
-				s.log.Warn(err.Error())
+				s.log.Warn(err)
 			}
 		}
 		return nil
