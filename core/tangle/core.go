@@ -130,7 +130,9 @@ func configure() {
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
 	if err := CorePlugin.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
-		deps.Storage.MarkDatabaseCorrupted()
+		if err := deps.Storage.MarkDatabaseCorrupted(); err != nil {
+			CorePlugin.Panic(err)
+		}
 	}, shutdown.PriorityDatabaseHealth); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
