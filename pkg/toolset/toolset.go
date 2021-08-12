@@ -75,15 +75,15 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 }
 
 func listTools() {
-	fmt.Printf("%-15s generates a scrypt hash from your password and salt\n", fmt.Sprintf("%s:", ToolPwdHash))
-	fmt.Printf("%-15s generates an p2p identity\n", fmt.Sprintf("%s:", ToolP2PIdentity))
-	fmt.Printf("%-15s extracts the p2p identity from the given store\n", fmt.Sprintf("%s:", ToolP2PExtractIdentity))
-	fmt.Printf("%-15s generates an ed25519 key pair\n", fmt.Sprintf("%s:", ToolEd25519Key))
-	fmt.Printf("%-15s generates an ed25519 address from a public key\n", fmt.Sprintf("%s:", ToolEd25519Addr))
-	fmt.Printf("%-15s generates a JWT token for REST-API access\n", fmt.Sprintf("%s:", ToolJWTApi))
-	fmt.Printf("%-15s generates an initial snapshot for a private network\n", fmt.Sprintf("%s:", ToolSnapGen))
-	fmt.Printf("%-15s merges a full and delta snapshot into an updated full snapshot\n", fmt.Sprintf("%s:", ToolSnapMerge))
-	fmt.Printf("%-15s outputs information about a snapshot file\n", fmt.Sprintf("%s:", ToolSnapInfo))
-	fmt.Printf("%-15s benchmarks the IO throughput\n", fmt.Sprintf("%s:", ToolBenchmarkIO))
-	fmt.Printf("%-15s benchmarks the CPU performance\n", fmt.Sprintf("%s:", ToolBenchmarkCPU))
+	fmt.Printf("%-20s generates a scrypt hash from your password and salt\n", fmt.Sprintf("%s:", ToolPwdHash))
+	fmt.Printf("%-20s generates an p2p identity\n", fmt.Sprintf("%s:", ToolP2PIdentity))
+	fmt.Printf("%-20s extracts the p2p identity from the given store\n", fmt.Sprintf("%s:", ToolP2PExtractIdentity))
+	fmt.Printf("%-20s generates an ed25519 key pair\n", fmt.Sprintf("%s:", ToolEd25519Key))
+	fmt.Printf("%-20s generates an ed25519 address from a public key\n", fmt.Sprintf("%s:", ToolEd25519Addr))
+	fmt.Printf("%-20s generates a JWT token for REST-API access\n", fmt.Sprintf("%s:", ToolJWTApi))
+	fmt.Printf("%-20s generates an initial snapshot for a private network\n", fmt.Sprintf("%s:", ToolSnapGen))
+	fmt.Printf("%-20s merges a full and delta snapshot into an updated full snapshot\n", fmt.Sprintf("%s:", ToolSnapMerge))
+	fmt.Printf("%-20s outputs information about a snapshot file\n", fmt.Sprintf("%s:", ToolSnapInfo))
+	fmt.Printf("%-20s benchmarks the IO throughput\n", fmt.Sprintf("%s:", ToolBenchmarkIO))
+	fmt.Printf("%-20s benchmarks the CPU performance\n", fmt.Sprintf("%s:", ToolBenchmarkCPU))
 }
