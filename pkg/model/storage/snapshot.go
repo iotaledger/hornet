@@ -24,11 +24,12 @@ type SnapshotInfo struct {
 	Metadata        bitmask.BitMask
 }
 
-func (s *Storage) loadSnapshotInfo() {
+func (s *Storage) loadSnapshotInfo() error {
 	info, err := s.readSnapshotInfo()
 	if err != nil {
-		panic(err)
+		return err
 	}
+
 	s.snapshot = info
 	if info != nil {
 		println(fmt.Sprintf(`SnapshotInfo:
@@ -38,6 +39,8 @@ func (s *Storage) loadSnapshotInfo() {
 	PruningIndex: %d
 	Timestamp: %v`, info.NetworkID, info.SnapshotIndex, info.EntryPointIndex, info.PruningIndex, info.Timestamp.Truncate(time.Second)))
 	}
+
+	return nil
 }
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
