@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 
+	"github.com/pkg/errors"
+
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -47,35 +49,35 @@ type BasicAuth struct {
 	passwordSalt []byte
 }
 
-func NewBasicAuth(username string, passwordHashHex string, passwordSaltHex string) *BasicAuth {
+func NewBasicAuth(username string, passwordHashHex string, passwordSaltHex string) (*BasicAuth, error) {
 	if len(username) == 0 {
-		panic("username must not be empty")
+		return nil, errors.New("username must not be empty")
 	}
 
 	if len(passwordHashHex) != 64 {
-		panic("password hash must be 64 (hex encoded scrypt hash) in length")
+		return nil, errors.New("password hash must be 64 (hex encoded scrypt hash) in length")
 	}
 
 	if len(passwordSaltHex) != 64 {
-		panic("password salt must be 64 (hex encoded) in length")
+		return nil, errors.New("password salt must be 64 (hex encoded) in length")
 	}
 
 	var err error
 	passwordHash, err := hex.DecodeString(passwordHashHex)
 	if err != nil {
-		panic("password hash must be hex encoded")
+		return nil, errors.New("password hash must be hex encoded")
 	}
 
 	passwordSalt, err := hex.DecodeString(passwordSaltHex)
 	if err != nil {
-		panic("password salt must be hex encoded")
+		return nil, errors.New("password salt must be hex encoded")
 	}
 
 	return &BasicAuth{
 		username:     username,
 		passwordHash: passwordHash,
 		passwordSalt: passwordSalt,
-	}
+	}, nil
 }
 
 func (b *BasicAuth) VerifyUsernameAndPassword(username string, password string) bool {

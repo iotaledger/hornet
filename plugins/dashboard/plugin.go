@@ -123,16 +123,23 @@ func configure() {
 
 	hub = websockethub.NewHub(Plugin.Logger(), upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
 
-	basicAuth = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
+	var err error
+	basicAuth, err = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt))
+	if err != nil {
+		Plugin.Panicf("basic auth initialization failed: %w", err)
+	}
 
-	jwtAuth = jwt.NewJWTAuth(
+	jwtAuth, err = jwt.NewJWTAuth(
 		deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.Duration(CfgDashboardAuthSessionTimeout),
 		deps.Host.ID().String(),
 		deps.NodePrivateKey,
 	)
+	if err != nil {
+		Plugin.Panicf("JWT auth initialization failed: %w", err)
+	}
 }
 
 func run() {
