@@ -1046,7 +1046,9 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 	}
 
 	snapshotTimestamp := time.Unix(int64(header.Timestamp), 0)
-	s.storage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, snapshotTimestamp)
+	if err = s.storage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, snapshotTimestamp); err != nil {
+		return err
+	}
 
 	s.log.Infof(`
 SnapshotInfo:
