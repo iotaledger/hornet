@@ -106,7 +106,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SEP
-	te.storage.SolidEntryPointsAdd(hornet.NullMessageID(), 0)
+	te.storage.SolidEntryPointsAddWithoutLocking(hornet.NullMessageID(), 0)
 
 	// Initialize UTXO
 	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
