@@ -847,7 +847,9 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 
 		snapshotInfo.SnapshotIndex = targetIndex
 		snapshotInfo.Timestamp = targetMsTimestamp
-		s.storage.SetSnapshotInfo(snapshotInfo)
+		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+			s.log.Panic(err)
+		}
 		timeSetSnapshotInfo = time.Now()
 		s.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 		timeSnapshotMilestoneIndexChanged = time.Now()
@@ -1012,16 +1014,21 @@ func newSEPsConsumer(storage *storage.Storage, header *ReadFileHeader) SEPConsum
 }
 
 // LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
-func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, filePath string) error {
+func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, filePath string) (err error) {
 	s.log.Infof("importing %s snapshot file...", snapshotNames[snapshotType])
 	ts := time.Now()
 
 	s.storage.WriteLockSolidEntryPoints()
 	s.storage.ResetSolidEntryPointsWithoutLocking()
-	defer s.storage.StoreSolidEntryPointsWithoutLocking()
-	defer s.storage.WriteUnlockSolidEntryPoints()
+	defer func() {
+		if errStore := s.storage.StoreSolidEntryPointsWithoutLocking(); err == nil && errStore != nil {
+			err = errStore
+		}
+		s.storage.WriteUnlockSolidEntryPoints()
+	}()
 
-	lsFile, err := os.Open(filePath)
+	var lsFile *os.File
+	lsFile, err = os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("unable to open %s snapshot file for import: %w", snapshotNames[snapshotType], err)
 	}
@@ -1047,7 +1054,8 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 		return err
 	}
 
-	ledgerIndex, err := s.utxo.ReadLedgerIndex()
+	var ledgerIndex milestone.Index
+	ledgerIndex, err = s.utxo.ReadLedgerIndex()
 	if err != nil {
 		return err
 	}
@@ -1209,7 +1217,7 @@ func (s *Snapshot) ImportSnapshots() error {
 	}
 
 	if snapAvail == snapshotAvailNone {
-		if err := s.downloadSnapshotFiles(s.networkID, s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
+		if err = s.downloadSnapshotFiles(s.networkID, s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
 			return err
 		}
 	}
@@ -1223,8 +1231,8 @@ func (s *Snapshot) ImportSnapshots() error {
 		return errors.New("no snapshot files available after snapshot download")
 	}
 
-	if err := s.LoadSnapshotFromFile(Full, s.networkID, s.snapshotFullPath); err != nil {
-		s.storage.MarkDatabaseCorrupted()
+	if err = s.LoadSnapshotFromFile(Full, s.networkID, s.snapshotFullPath); err != nil {
+		_ = s.storage.MarkDatabaseCorrupted()
 		return err
 	}
 
@@ -1232,8 +1240,8 @@ func (s *Snapshot) ImportSnapshots() error {
 		return nil
 	}
 
-	if err := s.LoadSnapshotFromFile(Delta, s.networkID, s.snapshotDeltaPath); err != nil {
-		s.storage.MarkDatabaseCorrupted()
+	if err = s.LoadSnapshotFromFile(Delta, s.networkID, s.snapshotDeltaPath); err != nil {
+		_ = s.storage.MarkDatabaseCorrupted()
 		return err
 	}
 

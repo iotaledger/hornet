@@ -32,36 +32,41 @@ func New(store kvstore.KVStore) *Manager {
 	}
 }
 
-// ClearLedger removes all entries from the UTXO ledger (spent, unspent, diff, balances, receipts, treasury)
-func (u *Manager) ClearLedger(pruneReceipts bool) error {
+// ClearLedger removes all entries from the UTXO ledger (spent, unspent, diff, balances, receipts, treasury).
+func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
-	defer u.utxoStorage.Flush()
+	defer func() {
+		if errFlush := u.utxoStorage.Flush(); err == nil && errFlush != nil {
+			err = errFlush
+		}
+	}()
 
 	if pruneReceipts {
+		// if we also prune the receipts, we can just clear everything
 		return u.utxoStorage.Clear()
 	}
 
-	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLedgerMilestoneIndex}); err != nil {
 		return err
 	}
-	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutput}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutput}); err != nil {
 		return err
 	}
-	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixUnspent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixUnspent}); err != nil {
 		return err
 	}
-	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSpent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSpent}); err != nil {
 		return err
 	}
-	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixMilestoneDiffs}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixMilestoneDiffs}); err != nil {
 		return err
 	}
-	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixBalances}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixBalances}); err != nil {
 		return err
 	}
-	if err := u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {
 		return err
 	}
 

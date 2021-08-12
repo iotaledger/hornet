@@ -201,13 +201,17 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 	for _, sep := range solidEntryPoints {
 		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
 	}
-	s.storage.StoreSolidEntryPointsWithoutLocking()
+	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
+		s.log.Panic(err)
+	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
 	// we have to set the new solid entry point index.
 	// this way we can cleanly prune even if the pruning was aborted last time
 	snapshotInfo.EntryPointIndex = targetIndex
-	s.storage.SetSnapshotInfo(snapshotInfo)
+	if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+		s.log.Panic(err)
+	}
 
 	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be CMI at startup of the node
 	s.pruneUnreferencedMessages(snapshotInfo.PruningIndex)
@@ -291,7 +295,9 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		timePruneMessages := time.Now()
 
 		snapshotInfo.PruningIndex = milestoneIndex
-		s.storage.SetSnapshotInfo(snapshotInfo)
+		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+			s.log.Panic(err)
+		}
 		timeSetSnapshotInfo := time.Now()
 
 		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(timeStart).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
@@ -316,7 +322,9 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 	for _, sep := range solidEntryPoints {
 		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
 	}
-	s.storage.StoreSolidEntryPointsWithoutLocking()
+	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
+		s.log.Panic(err)
+	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
 	database.RunGarbageCollection()
