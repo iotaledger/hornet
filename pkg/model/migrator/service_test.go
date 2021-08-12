@@ -118,7 +118,8 @@ func newTestService(t *testing.T, msIndex uint32, maxEntries int) (*migrator.Mig
 	<-started
 	return s, func() {
 		close(closing)
-		os.Remove(stateFileName)
+		err := os.Remove(stateFileName)
+		require.NoError(t, err)
 	}
 }
 

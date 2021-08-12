@@ -52,11 +52,13 @@ func newTestValidator() *migrator.Validator {
 func requireEntriesEqual(t *testing.T, rawTrytes [][]trinary.Trytes, entries []*iotago.MigratedFundsEntry) {
 	require.Len(t, entries, len(rawTrytes))
 	for i, entry := range entries {
-		bundle, _ := transaction.AsTransactionObjects(rawTrytes[i], nil)
+		bundle, err := transaction.AsTransactionObjects(rawTrytes[i], nil)
+		require.NoError(t, err)
 		tail := &bundle[0]
 
 		require.Equal(t, t5b1.EncodeTrytes(tail.Hash), entry.TailTransactionHash[:])
-		migrationAddress, _ := address.ParseMigrationAddress(tail.Address)
+		migrationAddress, err := address.ParseMigrationAddress(tail.Address)
+		require.NoError(t, err)
 		require.EqualValues(t, &migrationAddress, entry.Address)
 		require.EqualValues(t, tail.Value, entry.Deposit)
 	}

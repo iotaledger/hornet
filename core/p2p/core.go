@@ -252,6 +252,8 @@ func connectConfigKnownPeers() {
 			CorePlugin.Panicf("invalid peer address info: %s", err)
 		}
 
-		_ = deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, p.Alias)
+		if err = deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, p.Alias); err != nil {
+			CorePlugin.LogInfof("can't connect to peer (%s): %s", multiAddr.String(), err)
+		}
 	}
 }

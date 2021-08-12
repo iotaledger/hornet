@@ -227,7 +227,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 
 	// build a tangle with 30 milestones and 10 - 100 messages between the milestones
 	_, _ = te.BuildTangle(initMessagesCount, BelowMaxDepth-1, milestonesCount, minMessagesPerMilestone, maxMessagesPerMilestone,
-		func(cmi milestone.Index, msgMeta *storage.MessageMetadata) {
+		func(_ milestone.Index, msgMeta *storage.MessageMetadata) {
 
 			if isBelowMaxDepth(msgMeta) {
 				// ignore tips that are below max depth
@@ -236,7 +236,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 
 			hps.OnNewSolidMessage(msgMeta)
 		},
-		func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs {
+		func(_ hornet.MessageIDs, _ []hornet.MessageIDs) hornet.MessageIDs {
 			tips, err := hps.SelectTips(1)
 			if err == ErrNoTipsAvailable {
 				err = nil
@@ -257,7 +257,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 
 			return tips
 		},
-		func(msIndex milestone.Index, messages hornet.MessageIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats) {
+		func(_ milestone.Index, _ hornet.MessageIDs, conf *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			dag.UpdateConeRootIndexes(te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
 		},
 	)

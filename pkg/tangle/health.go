@@ -17,7 +17,7 @@ func (t *Tangle) IsNodeHealthy() bool {
 	}
 
 	var gossipStreamsOngoing int
-	t.service.ForEach(func(proto *gossip.Protocol) bool {
+	t.service.ForEach(func(_ *gossip.Protocol) bool {
 		gossipStreamsOngoing++
 		return true
 	})

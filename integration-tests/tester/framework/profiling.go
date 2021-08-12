@@ -266,7 +266,8 @@ func (n *Profiler) query(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to take profile: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
+
 	profileBytes, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read profile from response: %w", err)

@@ -58,10 +58,17 @@ func ShowDotFile(testInterface testing.TB, dotCommand string, outFilePath string
 		testInterface.Fatal(err)
 	}
 
-	stdin.Write([]byte(dotCommand))
-	stdin.Close()
+	if _, err := stdin.Write([]byte(dotCommand)); err != nil {
+		testInterface.Fatal(err)
+	}
 
-	cmd.Wait()
+	if err := stdin.Close(); err != nil {
+		testInterface.Fatal(err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		testInterface.Fatal(err)
+	}
 
 	switch os := runtime.GOOS; os {
 	case "darwin":

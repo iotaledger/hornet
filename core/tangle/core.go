@@ -35,7 +35,7 @@ const (
 )
 
 func init() {
-	flag.CommandLine.MarkHidden(CfgTangleSyncedAtStartup)
+	_ = flag.CommandLine.MarkHidden(CfgTangleSyncedAtStartup)
 
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{

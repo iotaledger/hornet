@@ -28,7 +28,7 @@ const (
 )
 
 func init() {
-	flag.CommandLine.MarkHidden(CfgProtocolPublicKeyRangesJSON)
+	_ = flag.CommandLine.MarkHidden(CfgProtocolPublicKeyRangesJSON)
 
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{

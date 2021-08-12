@@ -32,10 +32,17 @@ func (s *Storage) IndexationStorageSize() int {
 	return s.indexationStorage.GetSize()
 }
 
-func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
-	cacheTime, _ := time.ParseDuration(opts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	cacheTime, err := time.ParseDuration(opts.CacheTime)
+	if err != nil {
+		return err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return err
+	}
 
 	s.indexationStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixIndexation}),
@@ -52,6 +59,8 @@ func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profil
 				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
+
+	return nil
 }
 
 // IndexMessageIDs returns all known message IDs for the given index.

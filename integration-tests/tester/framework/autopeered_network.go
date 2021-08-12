@@ -66,7 +66,7 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumPeers int) error {
 		for _, p := range n.Nodes {
 			peersResponse, err := p.DebugNodeAPIClient.Peers(context.Background())
 			if err != nil {
-				log.Printf("request error: %v\n", err)
+				log.Printf("request error: %s\n", err)
 				continue
 			}
 			p.SetPeers(peersResponse)

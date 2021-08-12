@@ -361,21 +361,21 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 
 	var outputCount int
-	require.NoError(t, utxo.ForEachOutput(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachOutput(func(_ *Output) bool {
 		outputCount++
 		return true
 	}))
 	require.Equal(t, 5, outputCount)
 
 	var unspentCount int
-	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutput(func(_ *Output) bool {
 		unspentCount++
 		return true
 	}))
 	require.Equal(t, 3, unspentCount)
 
 	var spentCount int
-	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
+	require.NoError(t, utxo.ForEachSpentOutput(func(_ *Spent) bool {
 		spentCount++
 		return true
 	}))
@@ -383,17 +383,17 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 
 	require.NoError(t, utxo.RollbackConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 
-	require.NoError(t, utxo.ForEachOutput(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachOutput(func(_ *Output) bool {
 		require.Fail(t, "should not be called")
 		return true
 	}))
 
-	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutput(func(_ *Output) bool {
 		require.Fail(t, "should not be called")
 		return true
 	}))
 
-	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
+	require.NoError(t, utxo.ForEachSpentOutput(func(_ *Spent) bool {
 		require.Fail(t, "should not be called")
 		return true
 	}))

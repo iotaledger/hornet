@@ -452,7 +452,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, storage *s
 	}
 
 	var prevDeltaMsDiffProducerFinished bool
-	var prevDeltaUpToIndex milestone.Index = ledgerIndex
+	var prevDeltaUpToIndex = ledgerIndex
 	var dbMsDiffProducer MilestoneDiffProducerFunc
 	mrf := MilestoneRetrieverFromStorage(storage)
 	return func() (*MilestoneDiff, error) {
@@ -491,7 +491,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 	errChan := make(chan error)
 
 	go func() {
-		defer existingDeltaFile.Close()
+		defer func() { _ = existingDeltaFile.Close() }()
 
 		if err := StreamSnapshotDataFrom(existingDeltaFile,
 			func(header *ReadFileHeader) error {
@@ -1014,7 +1014,7 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 	if err != nil {
 		return fmt.Errorf("unable to open %s snapshot file for import: %w", snapshotNames[snapshotType], err)
 	}
-	defer lsFile.Close()
+	defer func() { _ = lsFile.Close() }()
 
 	header := &ReadFileHeader{}
 	headerConsumer := newFileHeaderConsumer(s.log, s.utxo, networkID, snapshotType, header)
@@ -1026,13 +1026,13 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 		treasuryOutputConsumer = newUnspentTreasuryOutputConsumer(s.utxo)
 	}
 	msDiffConsumer := newMsDiffConsumer(s.utxo)
-	if err := StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
+	if err = StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
 		return fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
 
 	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts).Truncate(time.Millisecond))
 
-	if err := s.utxo.CheckLedgerState(); err != nil {
+	if err = s.utxo.CheckLedgerState(); err != nil {
 		return err
 	}
 
@@ -1045,7 +1045,18 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 		return errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchSEPIndex, "%d != %d", ledgerIndex, header.SEPMilestoneIndex)
 	}
 
-	s.storage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, time.Now())
+	snapshotTimestamp := time.Unix(int64(header.Timestamp), 0)
+	s.storage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, snapshotTimestamp)
+
+	s.log.Infof(`
+SnapshotInfo:
+	Type: %s
+	NetworkID: %d
+	SnapshotIndex: %d
+	EntryPointIndex: %d
+	PruningIndex: %d
+	Timestamp: %v`, snapshotNames[snapshotType], header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, snapshotTimestamp)
+
 	s.storage.SetConfirmedMilestoneIndex(header.SEPMilestoneIndex, false)
 
 	return nil
@@ -1288,7 +1299,7 @@ func (s *Snapshot) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInfo) erro
 	// if we don't enforce loading of a snapshot,
 	// we can check the ledger state of the current database and start the node.
 	if err := s.utxo.CheckLedgerState(); err != nil {
-		s.log.Fatal(err.Error())
+		s.log.Fatal(err)
 	}
 
 	return nil

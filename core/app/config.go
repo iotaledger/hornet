@@ -104,10 +104,10 @@ func printConfig(maskedKeys []string) {
 	disablePlugins := nodeConfig.Strings(CfgNodeDisablePlugins)
 
 	if len(enablePlugins) > 0 {
-		fmt.Printf("\nThe following plugins are enabled: %s", getList(enablePlugins))
+		fmt.Printf("\nThe following plugins are enabled: %s\n", getList(enablePlugins))
 	}
 	if len(disablePlugins) > 0 {
-		fmt.Printf("\nThe following plugins are disabled: %s", getList(disablePlugins))
+		fmt.Printf("\nThe following plugins are disabled: %s\n", getList(disablePlugins))
 	}
 }
 

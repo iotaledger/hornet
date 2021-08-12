@@ -146,7 +146,7 @@ func (u *Manager) StoreUnspentTreasuryOutput(to *TreasuryOutput) error {
 
 	existing, err := u.UnspentTreasuryOutputWithoutLocking()
 	if err == nil {
-		if err := mutations.Delete(existing.kvStorableKey()); err != nil {
+		if err = mutations.Delete(existing.kvStorableKey()); err != nil {
 			mutations.Cancel()
 			return err
 		}

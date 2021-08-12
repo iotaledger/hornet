@@ -252,7 +252,7 @@ func run() {
 		cachedMs.Release(true)
 	})
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedMsg.Release(true)
@@ -272,7 +272,7 @@ func run() {
 		cachedMetadata.Release(true)
 	})
 
-	onMessageReferenced := events.NewClosure(func(cachedMetadata *storage.CachedMetadata, msIndex milestone.Index, confTime uint64) {
+	onMessageReferenced := events.NewClosure(func(cachedMetadata *storage.CachedMetadata, _ milestone.Index, _ uint64) {
 		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 			return // Avoid Release (done inside workerpool task)
 		}

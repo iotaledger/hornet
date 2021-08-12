@@ -90,12 +90,17 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
-		return gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
+		msgProc, err := gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
 			MinPoWScore:       deps.MinPoWScore,
 			NetworkID:         deps.NetworkID,
 			BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 		})
+		if err != nil {
+			CorePlugin.Panicf("MessageProcessor initialization failed: %s", err)
+		}
+
+		return msgProc
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
@@ -175,7 +180,7 @@ func configure() {
 			close(protocolTerminated)
 		}))
 
-		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
+		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ <-chan struct{}) {
 			buf := make([]byte, readBufSize)
 			// only way to break out is to Reset() the stream
 			for {
@@ -281,7 +286,6 @@ func checkHeartbeats() {
 		return time.Since(proto.HeartbeatSentTime) > heartbeatSentInterval
 	})
 
-	//peerIDsToRemove := make(map[string]struct{})
 	peersToReconnect := make(map[peer.ID]struct{})
 
 	// check if peers are alive by checking whether we received heartbeats lately
@@ -317,6 +321,7 @@ func checkHeartbeats() {
 		}
 	*/
 
+	// close the connection to the peers to trigger a reconnect
 	for p := range peersToReconnect {
 		conns := deps.Host.Network().ConnsToPeer(p)
 		for _, conn := range conns {

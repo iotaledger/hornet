@@ -107,11 +107,11 @@ Command line flags:
 	parseFlags(flagSets)
 	printVersion(flagSets)
 
-	if err := loadCfg(flagSets); err != nil {
+	if err = loadCfg(flagSets); err != nil {
 		return nil, err
 	}
 
-	if err := logger.InitGlobalLogger(nodeConfig); err != nil {
+	if err = logger.InitGlobalLogger(nodeConfig); err != nil {
 		panic(err)
 	}
 
