@@ -528,18 +528,18 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 }
 
 // MilestoneRetrieverFunc is a function which returns the milestone for the given index.
-type MilestoneRetrieverFunc func(index milestone.Index) *iotago.Milestone
+type MilestoneRetrieverFunc func(index milestone.Index) (*iotago.Milestone, error)
 
 // MilestoneRetrieverFromStorage creates a MilestoneRetrieverFunc which access the storage.
 // If it can not retrieve a wanted milestone it panics.
 func MilestoneRetrieverFromStorage(storage *storage.Storage) MilestoneRetrieverFunc {
-	return func(index milestone.Index) *iotago.Milestone {
+	return func(index milestone.Index) (*iotago.Milestone, error) {
 		cachedMsMsg := storage.MilestoneCachedMessageOrNil(index)
 		if cachedMsMsg == nil {
-			panic(fmt.Sprintf("message for milestone with index %d is not stored in the database", index))
+			return nil, fmt.Errorf("message for milestone with index %d is not stored in the database", index)
 		}
 		defer cachedMsMsg.Release()
-		return cachedMsMsg.Message().Milestone()
+		return cachedMsMsg.Message().Milestone(), nil
 	}
 }
 
@@ -589,9 +589,18 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 				}
 			}
 
-			ms := mrf(msIndex)
+			ms, err := mrf(msIndex)
+			if err != nil {
+				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved: %w", msIndex, err)
+				close(prodChan)
+				close(errChan)
+				return
+			}
 			if ms == nil {
-				panic(fmt.Sprintf("message for milestone with index %d could not be retrieved", msIndex))
+				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved", msIndex)
+				close(prodChan)
+				close(errChan)
+				return
 			}
 
 			prodChan <- &MilestoneDiff{

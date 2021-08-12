@@ -274,8 +274,8 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 		require.NoError(t, u1.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 	}
 
-	producerU1 := newMsDiffsProducer(func(index milestone.Index) *iotago.Milestone {
-		return &iotago.Milestone{Index: uint32(index)}
+	producerU1 := newMsDiffsProducer(func(index milestone.Index) (*iotago.Milestone, error) {
+		return &iotago.Milestone{Index: uint32(index)}, nil
 	}, u1, MsDiffDirectionOnwards, startIndex, targetIndex)
 	consumerU2 := newMsDiffConsumer(u2)
 
