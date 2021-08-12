@@ -46,8 +46,8 @@ func TestManager(t *testing.T) {
 	err := cfg.Set("logger.disableStacktrace", true)
 	require.NoError(t, err)
 
-	err = logger.InitGlobalLogger(cfg)
-	require.NoError(t, err)
+	// no need to check the error, since the global logger could already be initialized
+	_ = logger.InitGlobalLogger(cfg)
 
 	node1 := newNode(ctx, t)
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
@@ -220,8 +220,8 @@ func TestManagerEvents(t *testing.T) {
 	err := cfg.Set("logger.disableStacktrace", true)
 	require.NoError(t, err)
 
-	err = logger.InitGlobalLogger(cfg)
-	require.NoError(t, err)
+	// no need to check the error, since the global logger could already be initialized
+	_ = logger.InitGlobalLogger(cfg)
 
 	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 
