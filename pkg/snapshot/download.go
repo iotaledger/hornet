@@ -142,7 +142,7 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 			}
 		}
 
-		if err := checkTargetConsistency(wantedNetworkID, fullHeader, deltaHeader); err != nil {
+		if err = checkTargetConsistency(wantedNetworkID, fullHeader, deltaHeader); err != nil {
 			// the snapshots on the target do not seem to be consistent
 			s.log.Infof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
 			continue
@@ -259,7 +259,7 @@ func (s *Snapshot) downloadFile(path string, url string) error {
 	fmt.Print("\n")
 
 	_ = out.Close()
-	if err := os.Rename(tempFileName, path); err != nil {
+	if err = os.Rename(tempFileName, path); err != nil {
 		return fmt.Errorf("unable to rename downloaded snapshot file: %w", err)
 	}
 

@@ -171,20 +171,21 @@ func (s *Storage) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) 
 }
 
 // SetConfirmedMilestoneIndex sets the confirmed milestone index.
-func (s *Storage) SetConfirmedMilestoneIndex(index milestone.Index, updateSynced ...bool) {
+func (s *Storage) SetConfirmedMilestoneIndex(index milestone.Index, updateSynced ...bool) error {
 	s.confirmedMilestoneLock.Lock()
 	if s.confirmedMilestoneIndex > index {
-		panic(fmt.Sprintf("current confirmed milestone (%d) is newer than (%d)", s.confirmedMilestoneIndex, index))
+		return fmt.Errorf("current confirmed milestone (%d) is newer than (%d)", s.confirmedMilestoneIndex, index)
 	}
 	s.confirmedMilestoneIndex = index
 	s.confirmedMilestoneLock.Unlock()
 
 	if len(updateSynced) > 0 && !updateSynced[0] {
 		// always call updateNodeSynced if parameter is not given.
-		return
+		return nil
 	}
 
 	s.updateNodeSynced(index, s.LatestMilestoneIndex())
+	return nil
 }
 
 // OverwriteConfirmedMilestoneIndex is used to set older confirmed milestones (revalidation).

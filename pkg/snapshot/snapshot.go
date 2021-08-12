@@ -1057,9 +1057,7 @@ SnapshotInfo:
 	PruningIndex: %d
 	Timestamp: %v`, snapshotNames[snapshotType], header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, snapshotTimestamp)
 
-	s.storage.SetConfirmedMilestoneIndex(header.SEPMilestoneIndex, false)
-
-	return nil
+	return s.storage.SetConfirmedMilestoneIndex(header.SEPMilestoneIndex, false)
 }
 
 // optimalSnapshotType returns the optimal snapshot type
