@@ -101,8 +101,11 @@ func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile
 	if err := s.configureStorages(s.store, cachesProfile); err != nil {
 		return nil, err
 	}
-	s.configureStorages(s.store, cachesProfile)
-	s.loadConfirmedMilestoneFromDatabase()
+
+	if err := s.loadConfirmedMilestoneFromDatabase(); err != nil {
+		return nil, err
+	}
+
 	s.loadSnapshotInfo()
 	s.loadSolidEntryPoints()
 
@@ -165,15 +168,15 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownUnreferencedMessagesStorage()
 }
 
-func (s *Storage) loadConfirmedMilestoneFromDatabase() {
+func (s *Storage) loadConfirmedMilestoneFromDatabase() error {
 
 	ledgerMilestoneIndex, err := s.UTXO().ReadLedgerIndex()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	// set the confirmed milestone index based on the ledger milestone
-	s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
+	return s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
 }
 
 func (s *Storage) DatabaseSupportsCleanup() bool {

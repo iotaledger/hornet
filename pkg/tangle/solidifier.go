@@ -278,7 +278,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		},
 		func(confirmation *whiteflag.Confirmation) {
 			timeStartConfirmation = time.Now()
-			t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify)
+			if err := t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify); err != nil {
+				t.log.Panicf("SetConfirmedMilestoneIndex failed: %s", err)
+			}
 			timeSetConfirmedMilestoneIndex = time.Now()
 			if t.storage.IsNodeAlmostSynced() {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)

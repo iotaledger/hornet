@@ -90,10 +90,10 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize address for ls-output: %w", err)
 	}
-	if _, err := b.Write(addrData); err != nil {
+	if _, err = b.Write(addrData); err != nil {
 		return nil, fmt.Errorf("unable to write address for ls-output: %w", err)
 	}
-	if err := binary.Write(&b, binary.LittleEndian, s.Amount); err != nil {
+	if err = binary.Write(&b, binary.LittleEndian, s.Amount); err != nil {
 		return nil, fmt.Errorf("unable to write value for ls-output: %w", err)
 	}
 	return b.Bytes(), nil
