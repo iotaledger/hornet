@@ -94,8 +94,7 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `Usage of %s:
-%s %s
+		fmt.Fprintf(os.Stderr, `Usage of %s (%s %s):
 
 Run '%s tools' to list all available tools.
 
@@ -116,6 +115,17 @@ Command line flags:
 	}
 
 	toolset.HandleTools(nodeConfig)
+
+	fmt.Printf(`
+              ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
+              ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
+              ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
+              ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
+              ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
+              ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
+                                   v%s
+`+"\n", Version)
+
 	printConfig(maskedKeys)
 
 	return &node.InitConfig{
@@ -158,15 +168,5 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	fmt.Printf("\n\n"+`
-              ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
-              ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
-              ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
-              ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
-              ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
-              ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
-                                   v%s
-`+"\n\n", deps.AppInfo.Version)
-
 	InitPlugin.LogInfo("Loading plugins ...")
 }
