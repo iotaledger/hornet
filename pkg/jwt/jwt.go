@@ -32,7 +32,7 @@ func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeID string, sec
 		return nil, errors.New("subject must not be empty")
 	}
 
-	secretBytes, err := secret.Bytes()
+	secretBytes, err := crypto.MarshalPrivateKey(secret)
 	if err != nil {
 		return nil, fmt.Errorf("unable to convert private key: %w", err)
 	}
