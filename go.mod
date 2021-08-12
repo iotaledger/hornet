@@ -4,6 +4,8 @@ go 1.16
 
 replace github.com/labstack/gommon => github.com/muXxer/gommon v0.3.1-0.20210805133353-359faea1baf6
 
+replace github.com/libp2p/go-libp2p-peerstore => github.com/muXxer/go-libp2p-peerstore v0.2.9-0.20210812140917-6139fde31119
+
 replace github.com/linxGnu/grocksdb => github.com/gohornet/grocksdb v1.6.34-0.20210518222204-d6ea5eedcfb9
 
 require (
@@ -15,7 +17,7 @@ require (
 	github.com/blang/vfs v1.0.0
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cockroachdb/errors v1.8.6 // indirect
-	github.com/cockroachdb/pebble v0.0.0-20210803150729-5c776d69d761
+	github.com/cockroachdb/pebble v0.0.0-20210811221941-5f535d71baa6
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/containerd/containerd v1.5.5 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
@@ -34,6 +36,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.3.0 // indirect
+	github.com/huin/goupnp v1.0.2 // indirect
 	github.com/iotaledger/hive.go v0.0.0-20210808094628-91e3bbe1eac1
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v2 v2.0.0
@@ -45,17 +48,18 @@ require (
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/labstack/echo/v4 v4.5.0
 	github.com/labstack/gommon v0.3.0
-	github.com/libp2p/go-libp2p v0.14.4
+	github.com/libp2p/go-libp2p v0.14.5-0.20210804000418-989fba5d3203
 	github.com/libp2p/go-libp2p-connmgr v0.2.4
-	github.com/libp2p/go-libp2p-core v0.8.6
+	github.com/libp2p/go-libp2p-core v0.9.0
+	github.com/libp2p/go-libp2p-discovery v0.5.1 // indirect
 	github.com/libp2p/go-libp2p-peerstore v0.2.8
+	github.com/libp2p/go-libp2p-tls v0.2.0 // indirect
 	github.com/linxGnu/grocksdb v1.6.33 // indirect
 	github.com/miekg/dns v1.1.43 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/mr-tron/base58 v1.2.0
-	github.com/multiformats/go-multiaddr v0.3.3
-	github.com/onsi/ginkgo v1.16.4 // indirect
+	github.com/multiformats/go-multiaddr v0.4.0
 	github.com/pelletier/go-toml v1.9.3 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
@@ -79,7 +83,9 @@ require (
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/exp v0.0.0-20210729172720-737cce5152fc // indirect
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d
+	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
+	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	google.golang.org/genproto v0.0.0-20210811021853-ddbe55d93216 // indirect
 )
