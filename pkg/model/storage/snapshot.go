@@ -101,7 +101,7 @@ func (i *SnapshotInfo) Bytes() []byte {
 	return marshalUtil.Bytes()
 }
 
-func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
+func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) error {
 
 	sn := &SnapshotInfo{
 		NetworkID:       networkID,
@@ -112,18 +112,19 @@ func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone
 		Metadata:        bitmask.BitMask(0),
 	}
 
-	s.SetSnapshotInfo(sn)
+	return s.SetSnapshotInfo(sn)
 }
 
-func (s *Storage) SetSnapshotInfo(sn *SnapshotInfo) {
+func (s *Storage) SetSnapshotInfo(sn *SnapshotInfo) error {
 	s.snapshotMutex.Lock()
 	defer s.snapshotMutex.Unlock()
 
 	err := s.storeSnapshotInfo(sn)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.snapshot = sn
+	return nil
 }
 
 func (s *Storage) SnapshotInfo() *SnapshotInfo {
