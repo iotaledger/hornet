@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 )
 
-func snapshotInfo(nodeConfig *configuration.Configuration, args []string) error {
+func snapshotInfo(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
 		println(fmt.Sprintf("	%s [SNAPSHOT_PATH]", ToolSnapInfo))

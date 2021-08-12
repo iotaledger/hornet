@@ -37,10 +37,17 @@ func (s *Storage) MilestoneStorageSize() int {
 	return s.milestoneStorage.GetSize()
 }
 
-func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
-	cacheTime, _ := time.ParseDuration(opts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	cacheTime, err := time.ParseDuration(opts.CacheTime)
+	if err != nil {
+		return err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return err
+	}
 
 	s.milestoneStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixMilestones}),
@@ -55,6 +62,8 @@ func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile
 				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
+
+	return nil
 }
 
 type Milestone struct {

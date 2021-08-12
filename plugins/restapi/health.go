@@ -11,11 +11,9 @@ func setupHealthRoute() {
 
 		// node mode
 		if !deps.Tangle.IsNodeHealthy() {
-			c.NoContent(http.StatusServiceUnavailable)
-			return nil
+			return c.NoContent(http.StatusServiceUnavailable)
 		}
 
-		c.NoContent(http.StatusOK)
-		return nil
+		return c.NoContent(http.StatusOK)
 	})
 }

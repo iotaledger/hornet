@@ -40,7 +40,7 @@ func PeerStoreExists(peerStorePath string) bool {
 	if err != nil {
 		return false
 	}
-	defer dir.Close()
+	defer func() { _ = dir.Close() }()
 
 	if _, err = dir.Readdirnames(1); err == io.EOF {
 		// directory doesn't contain files

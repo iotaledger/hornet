@@ -24,7 +24,9 @@ func (t *Tangle) ConfigureTangleProcessor() {
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
 	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		_ = t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil)
+		if err := t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil); err != nil {
+			t.log.Debugf("SolidifyMessageAndFutureCone failed: %s", err)
+		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -56,7 +58,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.receiveMsgWorkerPool.Submit(message, request, proto)
 	})
 
-	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
 		// cleanup the future cone solidifier to free the caches
 		t.futureConeSolidifier.Cleanup(true)
 

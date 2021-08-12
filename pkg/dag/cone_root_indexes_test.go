@@ -34,7 +34,7 @@ func TestConeRootIndexes(t *testing.T) {
 		func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs {
 			return hornet.MessageIDs{messages[len(messages)-1]}
 		},
-		func(msIndex milestone.Index, messages hornet.MessageIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats) {
+		func(msIndex milestone.Index, messages hornet.MessageIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
 			cmi := latestMilestone.Milestone().Index
 

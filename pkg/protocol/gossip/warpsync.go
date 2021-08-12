@@ -275,6 +275,7 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(msIndex mile
 	milestoneMessageID := cachedMs.Milestone().MessageID
 	cachedMs.Release(true) // message -1
 
+	// error is ignored because the next milestone will repeat the process anyway
 	_ = dag.TraverseParentsOfMessage(w.storage, milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order

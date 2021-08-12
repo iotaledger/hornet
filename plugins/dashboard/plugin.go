@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -141,8 +143,14 @@ func run() {
 
 	setupRoutes(e)
 	bindAddr := deps.NodeConfig.String(CfgDashboardBindAddress)
-	Plugin.LogInfof("You can now access the dashboard using: http://%s", bindAddr)
-	go e.Start(bindAddr)
+
+	go func() {
+		Plugin.LogInfof("You can now access the dashboard using: http://%s", bindAddr)
+
+		if err := e.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			Plugin.LogWarnf("Stopped dashboard server due to an error (%s)", err)
+		}
+	}()
 
 	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
@@ -151,11 +159,11 @@ func run() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
 	})
 
-	onConfirmedMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
-	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 

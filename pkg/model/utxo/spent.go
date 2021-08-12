@@ -138,7 +138,7 @@ func (u *Manager) loadOutputOfSpent(s *Spent) error {
 	}
 
 	output := &Output{}
-	if err := output.kvStorableLoad(u, key, value); err != nil {
+	if err = output.kvStorableLoad(u, key, value); err != nil {
 		return err
 	}
 
@@ -218,7 +218,9 @@ func storeSpentAndRemoveUnspent(spent *Spent, mutations kvstore.BatchedMutations
 	unspentKey := spent.Output().unspentDatabaseKey()
 	spentKey := spent.kvStorableKey()
 
-	mutations.Delete(unspentKey)
+	if err := mutations.Delete(unspentKey); err != nil {
+		return err
+	}
 
 	return mutations.Set(spentKey, spent.kvStorableValue())
 }

@@ -21,7 +21,7 @@ import (
 // the node is initialized, the network is bootstrapped and the first milestone is confirmed.
 func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager) {
 
-	storeMessageFunc := func(msg *storage.Message, msIndex ...milestone.Index) error {
+	storeMessageFunc := func(msg *storage.Message, _ ...milestone.Index) error {
 		cachedMessage := te.StoreMessage(msg) // no need to release, since we remember all the messages for later cleanup
 
 		ms := cachedMessage.Message().Milestone()
@@ -49,10 +49,12 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	require.NotNil(te.TestInterface, coo)
 	te.coo = coo
 
-	te.coo.InitState(true, 0)
+	err = te.coo.InitState(true, 0)
+	require.NoError(te.TestInterface, err)
 
 	// save snapshot info
-	te.storage.SetSnapshotMilestone(te.networkID, 0, 0, 0, time.Now())
+	err = te.storage.SetSnapshotMilestone(te.networkID, 0, 0, 0, time.Now())
+	require.NoError(te.TestInterface, err)
 
 	milestoneMessageID, err := te.coo.Bootstrap()
 	require.NoError(te.TestInterface, err)
@@ -80,7 +82,8 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, messagesMemcache, metadataMemcache, ms.Milestone().MessageID,
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
-			te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
+			err = te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
+			require.NoError(te.TestInterface, err)
 		},
 		func(index milestone.Index, output *utxo.Output) {},
 		func(index milestone.Index, spent *utxo.Spent) {},
@@ -126,7 +129,8 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
 			wfConf = confirmation
-			te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
+			err = te.storage.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
+			require.NoError(te.TestInterface, err)
 		},
 		func(index milestone.Index, output *utxo.Output) {},
 		func(index milestone.Index, spent *utxo.Spent) {},

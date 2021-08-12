@@ -102,15 +102,19 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	}
 
 	te.store = mapdb.NewMapDB()
-	te.storage = storage.New(te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
+	te.storage, err = storage.New(te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
+	require.NoError(te.TestInterface, err)
 
 	// Initialize SEP
 	te.storage.SolidEntryPointsAdd(hornet.NullMessageID(), 0)
 
 	// Initialize UTXO
 	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
-	te.storage.UTXO().AddUnspentOutput(te.GenesisOutput)
-	te.storage.UTXO().StoreUnspentTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
+	err = te.storage.UTXO().AddUnspentOutput(te.GenesisOutput)
+	require.NoError(te.TestInterface, err)
+
+	err = te.storage.UTXO().StoreUnspentTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
+	require.NoError(te.TestInterface, err)
 
 	te.AssertTotalSupplyStillValid()
 
@@ -150,10 +154,11 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	// this should not hang, i.e. all objects should be released
 	te.storage.ShutdownStorages()
 
-	te.store.Clear()
+	err := te.store.Clear()
+	require.NoError(te.TestInterface, err)
 
 	if removeTempDir && te.tempDir != "" {
-		os.RemoveAll(te.tempDir)
+		_ = os.RemoveAll(te.tempDir)
 	}
 }
 

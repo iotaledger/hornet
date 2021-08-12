@@ -119,7 +119,7 @@ func websocketRoute(ctx echo.Context) error {
 	hub.ServeWebsocket(ctx.Response(), ctx.Request(),
 		// onCreate gets called when the client is created
 		func(client *websockethub.Client) {
-			client.FilterCallback = func(c *websockethub.Client, data interface{}) bool {
+			client.FilterCallback = func(_ *websockethub.Client, data interface{}) bool {
 				msg, ok := data.(*Msg)
 				if !ok {
 					return false
@@ -190,7 +190,7 @@ func websocketRoute(ctx echo.Context) error {
 		},
 
 		// onConnect gets called when the client was registered
-		func(client *websockethub.Client) {
+		func(_ *websockethub.Client) {
 			Plugin.LogInfo("WebSocket client connection established")
 		})
 

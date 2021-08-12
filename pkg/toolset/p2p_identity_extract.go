@@ -20,23 +20,23 @@ func loadP2PPrivKeyAndIdentityFromStore(peerStorePath string) (crypto.PrivKey, p
 
 	peerID, err := p2p.LoadIdentityFromFile(pubKeyFilePath)
 	if err != nil {
-		panic(err)
+		return nil, "", err
 	}
 
 	peerStore, err := p2p.NewPeerstore(peerStorePath)
 	if err != nil {
-		panic(err)
+		return nil, "", err
 	}
 
 	prvKey, err := p2p.LoadPrivateKeyFromStore(peerID, peerStore)
 	if err != nil {
-		panic(err)
+		return nil, "", err
 	}
 
 	return prvKey, peerID, nil
 }
 
-func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
+func extractP2PIdentity(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
 		println(fmt.Sprintf("	%s [P2P_STORE_PATH]", ToolP2PExtractIdentity))
@@ -58,12 +58,12 @@ func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) 
 
 	prvKeyBytes, err := prvKey.Raw()
 	if err != nil {
-		log.Panicf("unable to convert private key to bytes: %v", err)
+		log.Panicf("unable to convert private key to bytes: %s", err)
 	}
 
 	pubKeyBytes, err := prvKey.GetPublic().Raw()
 	if err != nil {
-		log.Panicf("unable to convert public key to bytes: %v", err)
+		log.Panicf("unable to convert public key to bytes: %s", err)
 	}
 
 	fmt.Println("Your p2p private key (hex): ", hex.EncodeToString(prvKeyBytes))

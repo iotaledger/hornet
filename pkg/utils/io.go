@@ -17,7 +17,7 @@ func ReadFromFile(filename string, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return binary.Read(f, binary.LittleEndian, data)
 }
 

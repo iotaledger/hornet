@@ -162,7 +162,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		s.log.Panic("No snapshotInfo found!")
 	}
 
-	//lint:ignore SA5011 panics before if nil pointer
+	//lint:ignore SA5011 nil pointer is already checked before with a panic
 	if snapshotInfo.SnapshotIndex < s.solidEntryPointCheckThresholdPast+s.additionalPruningThreshold+1 {
 		// Not enough history
 		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", s.solidEntryPointCheckThresholdPast+s.additionalPruningThreshold+1, targetIndex)
@@ -262,7 +262,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 		cachedMs.Release(true) // milestone -1
 		if err != nil {
-			s.log.Warnf("Pruning milestone (%d) failed! Error: %v", milestoneIndex, err)
+			s.log.Warnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 			continue
 		}
 

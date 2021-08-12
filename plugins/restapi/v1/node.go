@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
+//nolint:unparam // even if the error is never used, the structure of all routes should be the same
 func info() (*infoResponse, error) {
 
 	var messagesPerSecond, referencedMessagesPerSecond, referencedRate float64

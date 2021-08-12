@@ -25,7 +25,7 @@ func newBenchmarkObject(store kvstore.KVStore, writeDoneWaitGroup *sync.WaitGrou
 
 func (bo *benchmarkObject) BatchWrite(batchedMuts kvstore.BatchedMutations) {
 	if err := batchedMuts.Set(bo.key, bo.value); err != nil {
-		panic(fmt.Errorf("write operation failed: %v", err))
+		panic(fmt.Errorf("write operation failed: %w", err))
 	}
 }
 
@@ -33,7 +33,7 @@ func (bo *benchmarkObject) BatchWriteDone() {
 	// do a read operation after the batchwrite is done,
 	// so the write and read operations are equally distributed over the whole benchmark run.
 	if _, err := bo.store.Has(randBytes(32)); err != nil {
-		panic(fmt.Errorf("read operation failed: %v", err))
+		panic(fmt.Errorf("read operation failed: %w", err))
 	}
 
 	bo.writeDoneWaitGroup.Done()

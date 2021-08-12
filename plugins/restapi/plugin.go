@@ -215,7 +215,7 @@ func setupRoutes() {
 			message = fmt.Sprintf("internal server error. error: %s", err)
 		}
 
-		c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
+		_ = c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
 	}
 
 	setupHealthRoute()

@@ -35,7 +35,7 @@ var (
 )
 
 // NewMessageProcessor creates a new processor which parses messages.
-func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, peeringService *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts *Options) *MessageProcessor {
+func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, peeringService *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts *Options) (*MessageProcessor, error) {
 	proc := &MessageProcessor{
 		storage: storage,
 		Events: MessageProcessorEvents{
@@ -49,8 +49,16 @@ func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, pe
 	}
 
 	wuCacheOpts := opts.WorkUnitCacheOpts
-	cacheTime, _ := time.ParseDuration(wuCacheOpts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(wuCacheOpts.LeakDetectionOptions.MaxConsumerHoldTime)
+
+	cacheTime, err := time.ParseDuration(wuCacheOpts.CacheTime)
+	if err != nil {
+		return nil, err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(wuCacheOpts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return nil, err
+	}
 
 	proc.workUnits = objectstorage.New(
 		nil,
@@ -86,7 +94,7 @@ func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, pe
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(WorkerQueueSize))
 
-	return proc
+	return proc, nil
 }
 
 func MessageProcessedCaller(handler interface{}, params ...interface{}) {
@@ -229,7 +237,7 @@ func (proc *MessageProcessor) WorkUnitsSize() int {
 // gets a CachedWorkUnit or creates a new one if it not existent.
 func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
 	return &CachedWorkUnit{
-		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(key []byte) objectstorage.StorableObject { // cachedWorkUnit +1
+		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(_ []byte) objectstorage.StorableObject { // cachedWorkUnit +1
 			newlyAdded = true
 			return newWorkUnit(receivedTxBytes, proc)
 		}),
@@ -310,7 +318,7 @@ func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
 	defer cachedWorkUnit.Release(!newlyAdded) // workUnit -1
 
 	workUnit := cachedWorkUnit.WorkUnit()
-	workUnit.addReceivedFrom(p, nil)
+	workUnit.addReceivedFrom(p)
 	proc.processWorkUnit(workUnit, p)
 }
 

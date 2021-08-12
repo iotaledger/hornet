@@ -47,8 +47,8 @@ var (
 )
 
 func init() {
-	flag.CommandLine.MarkHidden(CfgCoordinatorBootstrap)
-	flag.CommandLine.MarkHidden(CfgCoordinatorStartIndex)
+	_ = flag.CommandLine.MarkHidden(CfgCoordinatorBootstrap)
+	_ = flag.CommandLine.MarkHidden(CfgCoordinatorStartIndex)
 
 	Plugin = &node.Plugin{
 		Status: node.StatusDisabled,
@@ -222,7 +222,7 @@ func handleError(err error) bool {
 	}
 
 	if err := common.IsCriticalError(err); err != nil {
-		gracefulshutdown.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err.Error()))
+		gracefulshutdown.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err))
 		return true
 	}
 
@@ -445,6 +445,8 @@ func initQuorumGroups(nodeConfig *configuration.Configuration) (map[string][]*co
 
 func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 
+	var err error
+
 	msgSolidEventChan := deps.Tangle.RegisterMessageSolidEvent(msg.MessageID())
 
 	var milestoneConfirmedEventChan chan struct{}
@@ -453,21 +455,29 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 		milestoneConfirmedEventChan = deps.Tangle.RegisterMilestoneConfirmedEvent(msIndex[0])
 	}
 
-	if err := deps.MessageProcessor.Emit(msg); err != nil {
-		deps.Tangle.DeregisterMessageSolidEvent(msg.MessageID())
-		if len(msIndex) > 0 {
-			deps.Tangle.DeregisterMilestoneConfirmedEvent(msIndex[0])
+	defer func() {
+		if err != nil {
+			deps.Tangle.DeregisterMessageSolidEvent(msg.MessageID())
+			if len(msIndex) > 0 {
+				deps.Tangle.DeregisterMilestoneConfirmedEvent(msIndex[0])
+			}
 		}
+	}()
 
+	if err = deps.MessageProcessor.Emit(msg); err != nil {
 		return err
 	}
 
 	// wait until the message is solid
-	utils.WaitForChannelClosed(context.Background(), msgSolidEventChan)
+	if err = utils.WaitForChannelClosed(context.Background(), msgSolidEventChan); err != nil {
+		return err
+	}
 
 	if len(msIndex) > 0 {
 		// if it was a milestone, also wait until the milestone was confirmed
-		utils.WaitForChannelClosed(context.Background(), milestoneConfirmedEventChan)
+		if err = utils.WaitForChannelClosed(context.Background(), milestoneConfirmedEventChan); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -516,7 +526,7 @@ func configureEvents() {
 		}
 	})
 
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
 		heaviestSelectorLock.Lock()
 		defer heaviestSelectorLock.Unlock()
 

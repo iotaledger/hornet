@@ -17,7 +17,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
+func snapshotGen(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
@@ -44,7 +44,7 @@ func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 	mintAddress := args[1]
 	addressBytes, err := hex.DecodeString(mintAddress)
 	if err != nil {
-		return fmt.Errorf("can't decode MINT_ADDRESS: %v", err)
+		return fmt.Errorf("can't decode MINT_ADDRESS: %w", err)
 	}
 	if len(addressBytes) != iotago.Ed25519AddressBytesLength {
 		return fmt.Errorf("incorrect MINT_ADDRESS length: %d != %d (%s)", len(addressBytes), iotago.Ed25519AddressBytesLength, mintAddress)
@@ -133,11 +133,11 @@ func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 		return fmt.Errorf("couldn't generate snapshot file: %w", err)
 	}
 
-	// rename tmp file to final file name
 	if err := snapshotFile.Close(); err != nil {
 		return fmt.Errorf("unable to close snapshot file: %w", err)
 	}
 
+	// rename tmp file to final file name
 	if err := os.Rename(outputFilePathTmp, outputFilePath); err != nil {
 		return fmt.Errorf("unable to rename temp snapshot file: %w", err)
 	}

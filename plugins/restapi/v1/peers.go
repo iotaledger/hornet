@@ -60,12 +60,14 @@ func removePeer(c echo.Context) error {
 		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
 
-	deps.PeeringConfigManager.RemovePeer(peerID)
+	// error is ignored because we don't care about the config here
+	_ = deps.PeeringConfigManager.RemovePeer(peerID)
 
 	return deps.Manager.DisconnectPeer(peerID, errors.New("peer was removed via API"))
 }
 
-func listPeers(c echo.Context) ([]*PeerResponse, error) {
+//nolint:unparam // even if the error is never used, the structure of all routes should be the same
+func listPeers(_ echo.Context) ([]*PeerResponse, error) {
 	peerInfos := deps.Manager.PeerInfoSnapshots()
 	results := make([]*PeerResponse, len(peerInfos))
 	for i, info := range peerInfos {
@@ -97,7 +99,7 @@ func addPeer(c echo.Context) (*PeerResponse, error) {
 		alias = *request.Alias
 	}
 
-	// error is ignored, because the peer is added to the known peers and protected from trimming
+	// error is ignored because the peer is added to the known peers and protected from trimming
 	_ = deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, alias)
 
 	info := deps.Manager.PeerInfoSnapshot(addrInfo.ID)
@@ -105,7 +107,8 @@ func addPeer(c echo.Context) (*PeerResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "peer not found, peerID: %s", addrInfo.ID.String())
 	}
 
-	deps.PeeringConfigManager.AddPeer(multiAddr, alias)
+	// error is ignored because we don't care about the config here
+	_ = deps.PeeringConfigManager.AddPeer(multiAddr, alias)
 
 	return WrapInfoSnapshot(info), nil
 }

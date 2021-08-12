@@ -103,13 +103,6 @@ func (i *SnapshotInfo) Bytes() []byte {
 
 func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
 
-	println(fmt.Sprintf(`SnapshotInfo:
-	NetworkID: %d
-	SnapshotIndex: %d
-	EntryPointIndex: %d
-	PruningIndex: %d
-	Timestamp: %v`, networkID, snapshotIndex, entryPointIndex, pruningIndex, timestamp.Truncate(time.Second)))
-
 	sn := &SnapshotInfo{
 		NetworkID:       networkID,
 		SnapshotIndex:   snapshotIndex,

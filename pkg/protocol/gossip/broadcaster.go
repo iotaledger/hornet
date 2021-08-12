@@ -61,7 +61,10 @@ func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
 	syncedCount := b.service.SynchronizedCount(confirmedMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
 
-	heartbeatMsg, _ := NewHeartbeatMsg(confirmedMilestoneIndex, snapshotInfo.PruningIndex, b.storage.LatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+	heartbeatMsg, err := NewHeartbeatMsg(confirmedMilestoneIndex, snapshotInfo.PruningIndex, b.storage.LatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+	if err != nil {
+		return
+	}
 
 	b.service.ForEach(func(proto *Protocol) bool {
 		if filter != nil && !filter(proto) {

@@ -2,7 +2,6 @@ package snapshot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/dustin/go-humanize"
 
@@ -192,7 +193,7 @@ func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
 	if err != nil {
 		return nil, fmt.Errorf("download failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)
@@ -207,7 +208,7 @@ func (s *Snapshot) downloadFile(path string, url string) error {
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)

@@ -11,7 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 )
 
-func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
+func generateP2PIdentity(_ *configuration.Configuration, args []string) error {
 
 	if len(args) > 0 {
 		return fmt.Errorf("too many arguments for '%s'", ToolP2PIdentity)

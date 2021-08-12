@@ -155,7 +155,7 @@ func run() {
 
 	// automatically start the spammer on node startup if the flag is set
 	if deps.NodeConfig.Bool(CfgSpammerAutostart) {
-		start(nil, nil, nil)
+		_ = start(nil, nil, nil)
 	}
 }
 
@@ -389,10 +389,10 @@ func measureSpammerMetrics() {
 	}
 
 	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamMessages.Load()
-	new := utils.Uint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
+	newMessagesCnt := utils.Uint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
 	lastSentSpamMsgsCnt = sentSpamMsgsCnt
 
-	spammerAvgHeap.Add(uint64(new))
+	spammerAvgHeap.Add(uint64(newMessagesCnt))
 
 	timeDiff := time.Since(spammerStartTime)
 	if timeDiff > 60*time.Second {
@@ -402,7 +402,7 @@ func measureSpammerMetrics() {
 
 	// trigger events for outside listeners
 	Events.AvgSpamMetricsUpdated.Trigger(&spammer.AvgSpamMetrics{
-		NewMessages:              new,
+		NewMessages:              newMessagesCnt,
 		AverageMessagesPerSecond: spammerAvgHeap.AveragePerSecond(timeDiff),
 	})
 }
