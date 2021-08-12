@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -24,15 +26,15 @@ type JWTAuth struct {
 	secret         []byte
 }
 
-func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeID string, secret crypto.PrivKey) *JWTAuth {
+func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeID string, secret crypto.PrivKey) (*JWTAuth, error) {
 
 	if len(subject) == 0 {
-		panic("subject must not be empty")
+		return nil, errors.New("subject must not be empty")
 	}
 
 	secretBytes, err := secret.Bytes()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("unable to convert private key: %w", err)
 	}
 
 	return &JWTAuth{
@@ -40,7 +42,7 @@ func NewJWTAuth(subject string, sessionTimeout time.Duration, nodeID string, sec
 		sessionTimeout: sessionTimeout,
 		nodeID:         nodeID,
 		secret:         secretBytes,
-	}
+	}, nil
 }
 
 type AuthClaims struct {

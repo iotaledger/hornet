@@ -27,11 +27,14 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 	}
 
 	// API tokens do not expire.
-	jwtAuth := jwt.NewJWTAuth(salt,
+	jwtAuth, err := jwt.NewJWTAuth(salt,
 		0,
 		pid.String(),
 		prvKey,
 	)
+	if err != nil {
+		return fmt.Errorf("JWT auth initialization failed: %w", err)
+	}
 
 	token, err := jwtAuth.IssueJWT(true, false)
 	if err != nil {

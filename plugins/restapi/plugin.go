@@ -123,11 +123,15 @@ func configure() {
 		}
 
 		// API tokens do not expire.
-		jwtAuth = jwt.NewJWTAuth(salt,
+		var err error
+		jwtAuth, err = jwt.NewJWTAuth(salt,
 			0,
 			deps.Host.ID().String(),
 			deps.NodePrivateKey,
 		)
+		if err != nil {
+			Plugin.Panicf("JWT auth initialization failed: %w", err)
+		}
 
 		excludedRoutes := make(map[string]struct{})
 		if deps.NodeConfig.Bool(CfgRestAPIExcludeHealthCheckFromAuth) {
