@@ -63,7 +63,6 @@ func init() {
 	InitPlugin = &node.InitPlugin{
 		Pluggable: node.Pluggable{
 			Name:      "App",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
 			Provide:   provide,
 			Configure: configure,
@@ -79,13 +78,7 @@ func init() {
 
 var (
 	InitPlugin *node.InitPlugin
-	deps       dependencies
 )
-
-type dependencies struct {
-	dig.In
-	AppInfo *app.AppInfo
-}
 
 func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.InitConfig, error) {
 	flagSets, err := normalizeFlagSets(params)
