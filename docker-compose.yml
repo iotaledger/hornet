@@ -13,8 +13,11 @@ services:
     network_mode: host
     # Else:
     #ports:
-    #  - "14265:14265"
-    #  - "15600:15600"
+    #  - "15600:15600/tcp"
+    #  - "14626:14626/udp"
+    #  - "14265:14265/tcp"
+    #  - "8081":8081/tcp"
+    #  - "1883:1883/tcp"
     cap_drop:
       - ALL
     volumes:
