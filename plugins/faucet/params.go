@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	// the amount of funds the requester receives if the target address has less funds than the given amount.
+	// the amount of funds the requester receives.
 	CfgFaucetAmount = "faucet.amount"
-	// the amount of funds the requester receives if the target address has more funds than the given amount.
+	// the amount of funds the requester receives if the target address has more funds than the faucet amount and less than maximum.
 	CfgFaucetSmallAmount = "faucet.smallAmount"
 	// the maximum allowed amount of funds on the target address.
 	CfgFaucetMaxAddressBalance = "faucet.maxAddressBalance"
@@ -30,8 +30,8 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.Int64(CfgFaucetAmount, 10000000, "the amount of funds the requester receives if the target address has less funds than the given amount")
-			fs.Int64(CfgFaucetSmallAmount, 1000000, "the amount of funds the requester receives if the target address has more funds than the given amount")
+			fs.Int64(CfgFaucetAmount, 10000000, "the amount of funds the requester receives")
+			fs.Int64(CfgFaucetSmallAmount, 1000000, "the amount of funds the requester receives if the target address has more funds than the faucet amount and less than maximum")
 			fs.Int64(CfgFaucetMaxAddressBalance, 20000000, "the maximum allowed amount of funds on the target address")
 			fs.Int(CfgFaucetMaxOutputCount, iotago.MaxOutputsCount, "the maximum output count per faucet message")
 			fs.String(CfgFaucetIndexationMessage, "HORNET FAUCET", "the faucet transaction indexation payload")
