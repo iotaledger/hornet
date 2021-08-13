@@ -129,7 +129,7 @@ func configure() {
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
-	if err := CorePlugin.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Database Health", func(_ <-chan struct{}) {
 		if err := deps.Storage.MarkDatabaseCorrupted(); err != nil {
 			CorePlugin.Panic(err)
 		}
@@ -211,18 +211,18 @@ func run() {
 }
 
 func configureEvents() {
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
 		// notify peers about our new solid milestone index
 		// bee differentiates between solid and confirmed milestone, for hornet it is the same.
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
-	onPruningMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onPruningMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
 		// notify peers about our new pruning milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
-	onLatestMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onLatestMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
 		// notify peers about our new latest milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
