@@ -28,7 +28,7 @@ func parseBech32Address(addressParam string) (*iotago.Ed25519Address, error) {
 	}
 }
 
-func getFaucetInfo(c echo.Context) (*faucet.FaucetInfoResponse, error) {
+func getFaucetInfo(_ echo.Context) (*faucet.FaucetInfoResponse, error) {
 	return deps.Faucet.Info()
 }
 

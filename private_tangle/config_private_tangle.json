@@ -245,6 +245,15 @@
     "workers": 0,
     "autostart": true
   },
+  "faucet": {
+    "amount": 10000000,
+    "smallAmount": 1000000,
+    "maxAddressBalance": 20000000,
+    "maxOutputCount": 127,
+    "indexationMessage": "HORNET FAUCET",
+    "batchTimeout": "2s",
+    "powWorkerCount": 0
+  },
   "mqtt": {
     "bindAddress": "localhost:1883",
     "wsPort": 1888,

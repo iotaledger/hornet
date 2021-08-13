@@ -104,7 +104,7 @@ type Faucet struct {
 
 // the default options applied to the faucet.
 var defaultOptions = []Option{
-	WithHRPNetworkPrefix("atoi"),
+	WithHRPNetworkPrefix(iotago.PrefixTestnet),
 	WithAmount(10000000),            // 10 Mi
 	WithSmallAmount(1000000),        // 1 Mi
 	WithMaxAddressBalance(20000000), // 20 Mi
@@ -143,9 +143,9 @@ func WithLogger(logger *logger.Logger) Option {
 }
 
 // WithHRPNetworkPrefix sets the bech32 HRP network prefix.
-func WithHRPNetworkPrefix(networkPrefix string) Option {
+func WithHRPNetworkPrefix(networkPrefix iotago.NetworkPrefix) Option {
 	return func(opts *Options) {
-		opts.hrpNetworkPrefix = iotago.NetworkPrefix(networkPrefix)
+		opts.hrpNetworkPrefix = networkPrefix
 	}
 }
 

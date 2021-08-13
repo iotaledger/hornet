@@ -94,6 +94,7 @@ func provide(c *dig.Container) {
 		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 		NetworkID        uint64                       `name:"networkId"`
 		BelowMaxDepth    int                          `name:"belowMaxDepth"`
+		Bech32HRP        iotago.NetworkPrefix         `name:"bech32HRP"`
 		TipSelector      *tipselect.TipSelector
 		MessageProcessor *gossip.MessageProcessor
 	}
@@ -110,7 +111,7 @@ func provide(c *dig.Container) {
 			deps.PowHandler,
 			deps.MessageProcessor.Emit,
 			faucet.WithLogger(Plugin.Logger()),
-			faucet.WithHRPNetworkPrefix(deps.NodeConfig.String(CfgFaucetHRPNetworkPrefix)),
+			faucet.WithHRPNetworkPrefix(deps.Bech32HRP),
 			faucet.WithAmount(uint64(deps.NodeConfig.Int64(CfgFaucetAmount))),
 			faucet.WithSmallAmount(uint64(deps.NodeConfig.Int64(CfgFaucetSmallAmount))),
 			faucet.WithMaxAddressBalance(uint64(deps.NodeConfig.Int64(CfgFaucetMaxAddressBalance))),
