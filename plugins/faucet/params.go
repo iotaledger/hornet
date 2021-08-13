@@ -10,21 +10,19 @@ import (
 )
 
 const (
-	// the bech32 HRP network prefix
-	CfgFaucetHRPNetworkPrefix = "faucet.hrpNetworkPrefix"
-	// the amount of funds the requester receives if the target address has less funds than the given amount
+	// the amount of funds the requester receives if the target address has less funds than the given amount.
 	CfgFaucetAmount = "faucet.amount"
-	// the amount of funds the requester receives if the target address has more funds than the given amount
+	// the amount of funds the requester receives if the target address has more funds than the given amount.
 	CfgFaucetSmallAmount = "faucet.smallAmount"
-	// the maximum allowed amount of funds on the target address
+	// the maximum allowed amount of funds on the target address.
 	CfgFaucetMaxAddressBalance = "faucet.maxAddressBalance"
-	// the maximum output count per faucet message
+	// the maximum output count per faucet message.
 	CfgFaucetMaxOutputCount = "faucet.maxOutputCount"
-	// the faucet transaction indexation payload
+	// the faucet transaction indexation payload.
 	CfgFaucetIndexationMessage = "faucet.indexationMessage"
-	// the maximum duration for collecting faucet batches
+	// the maximum duration for collecting faucet batches.
 	CfgFaucetBatchTimeout = "faucet.batchTimeout"
-	// the amount of workers used for calculating PoW when issuing faucet messages
+	// the amount of workers used for calculating PoW when issuing faucet messages.
 	CfgFaucetPoWWorkerCount = "faucet.powWorkerCount"
 )
 
@@ -32,7 +30,6 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgFaucetHRPNetworkPrefix, "atoi", "the bech32 HRP network prefix")
 			fs.Int64(CfgFaucetAmount, 10000000, "the amount of funds the requester receives if the target address has less funds than the given amount")
 			fs.Int64(CfgFaucetSmallAmount, 1000000, "the amount of funds the requester receives if the target address has more funds than the given amount")
 			fs.Int64(CfgFaucetMaxAddressBalance, 20000000, "the maximum allowed amount of funds on the target address")
