@@ -149,8 +149,7 @@ func WithHRPNetworkPrefix(networkPrefix iotago.NetworkPrefix) Option {
 	}
 }
 
-// WithAmount defines the amount of funds the requester receives
-// if the target address has less funds than the given amount.
+// WithAmount defines the amount of funds the requester receives.
 func WithAmount(amount uint64) Option {
 	return func(opts *Options) {
 		opts.amount = amount
@@ -158,7 +157,7 @@ func WithAmount(amount uint64) Option {
 }
 
 // WithSmallAmount defines the amount of funds the requester receives
-// if the target address has more funds than the given amount.
+// if the target address has more funds than the faucet amount and less than maximum.
 func WithSmallAmount(smallAmount uint64) Option {
 	return func(opts *Options) {
 		opts.smallAmount = smallAmount
