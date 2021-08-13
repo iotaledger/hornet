@@ -41,9 +41,10 @@ RUN GOOS=linux GOARCH=amd64 go build \
 # using distroless cc image, which includes everything in the base image (glibc, libssl and openssl)
 FROM gcr.io/distroless/cc@sha256:4cad7484b00d98ecb300916b1ab71d6c71babd6860c6c5dd6313be41a8c55adb
 
-EXPOSE 8081/tcp
-EXPOSE 14265/tcp
 EXPOSE 15600/tcp
+EXPOSE 14626/udp
+EXPOSE 14265/tcp
+EXPOSE 8081/tcp
 EXPOSE 1883/tcp
 
 # Copy the binary into distroless image
