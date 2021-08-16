@@ -164,7 +164,7 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 				CorePlugin.LogInfo("database revalidation aborted")
 				os.Exit(0)
 			}
-			CorePlugin.Panicf("%s %s", ErrDatabaseRevalidationFailed, err)
+			CorePlugin.Panicf("%s: %s", ErrDatabaseRevalidationFailed, err)
 		}
 		CorePlugin.LogInfo("database revalidation successful")
 	}
