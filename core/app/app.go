@@ -103,6 +103,10 @@ Command line flags:
 		return nil, err
 	}
 
+	if err = nodeConfig.SetDefault(logger.ConfigurationKeyDisableCaller, true); err != nil {
+		panic(err)
+	}
+
 	if err = logger.InitGlobalLogger(nodeConfig); err != nil {
 		panic(err)
 	}

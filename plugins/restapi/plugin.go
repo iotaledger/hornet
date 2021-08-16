@@ -115,11 +115,11 @@ func configure() {
 	deps.Echo.Use(middlewareFilterRoutes(whitelistedNetworks, permittedRoutes))
 
 	// set basic auth if enabled
-	if deps.NodeConfig.Bool(CfgRestAPIAuthEnabled) {
+	if deps.NodeConfig.Bool(CfgRestAPIJWTAuthEnabled) {
 
-		salt := deps.NodeConfig.String(CfgRestAPIAuthSalt)
+		salt := deps.NodeConfig.String(CfgRestAPIJWTAuthSalt)
 		if len(salt) == 0 {
-			Plugin.LogFatalf("'%s' should not be empty", CfgRestAPIAuthSalt)
+			Plugin.LogFatalf("'%s' should not be empty", CfgRestAPIJWTAuthSalt)
 		}
 
 		// API tokens do not expire.

@@ -29,7 +29,7 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgNodeAlias, "", "set an alias to identify a node")
+			fs.String(CfgNodeAlias, "HORNET node", "set an alias to identify a node")
 			fs.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be access from")
 			fs.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
 			fs.Duration(CfgDashboardAuthSessionTimeout, 72*time.Hour, "how long the auth session should last before expiring")

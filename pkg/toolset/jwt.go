@@ -16,9 +16,9 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 		return fmt.Errorf("too many arguments for '%s'", ToolJWTApi)
 	}
 
-	salt := nodeConfig.String(restapi.CfgRestAPIAuthSalt)
+	salt := nodeConfig.String(restapi.CfgRestAPIJWTAuthSalt)
 	if len(salt) == 0 {
-		return fmt.Errorf("'%s' should not be empty", restapi.CfgRestAPIAuthSalt)
+		return fmt.Errorf("'%s' should not be empty", restapi.CfgRestAPIJWTAuthSalt)
 	}
 
 	prvKey, pid, err := loadP2PPrivKeyAndIdentityFromStore(nodeConfig.String(p2p.CfgP2PPeerStorePath))
