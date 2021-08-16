@@ -46,7 +46,7 @@ The Docker image runs under user with user id 65532 and group id 65532. To make 
 You can pull the latest image from `gohornet/hornet` public Docker hub registry by running:
 
 ```bash
-docker pull gohornet/hornet:latest
+docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:latest
 ```
 
 We recommend that you run on host network to improve performance.  Otherwise, you are going to have to publish ports using iptables NAT which is slower.
@@ -64,23 +64,23 @@ docker run \
   -d \
   hornet:latest
 ```
-* `$(pwd)` \
+* `$(pwd)`<br>
 Stands for the present working directory. All mentioned directories are mapped to the container, so the Hornet in the container persists the data directly to those directories.
-* `-v $(pwd)/config.json:/app/config.json:ro` 
+* `-v $(pwd)/config.json:/app/config.json:ro`<br>
 Maps the local `config.json` file into the container in `readonly` mode.
-* `-v $(pwd)/peering.json:/app/peering.json` 
+* `-v $(pwd)/peering.json:/app/peering.json`<br>
 Maps the local `peering.json` file into the container.
-* `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet` 
+* `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet`<br>
 Maps the local `snapshots` directory into the container.
-* `-v $(pwd)/mainnetdb:/app/mainnetdb` 
+* `-v $(pwd)/mainnetdb:/app/mainnetdb`<br>
 Maps the local `mainnetdb` directory into the container.
-* `--restart always` 
+* `--restart always`<br>
 Instructs Docker to restart the container after Docker reboots.
-* `--name hornet` 
+* `--name hornet`<br
 Name of the running container instance. You can refer to the given container by this name.
-* `--net=host` 
+* `--net=host`<br>
 Instructs Docker to use the host's network, so the network is not isolated. We recommend that you run on host network for better performance.  This way, the container will also open any ports it needs on the host network, so you will not need to specify any ports.
-* `-d` \
+* `-d`<br>
 Instructs Docker to run the container instance in a detached mode (daemon).
 
 You can run `docker stop -t 200 hornet` to gracefully end the process.
