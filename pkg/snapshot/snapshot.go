@@ -1083,10 +1083,10 @@ SnapshotInfo:
 
 // optimalSnapshotType returns the optimal snapshot type
 // based on the file size of the last full and delta snapshot file.
-func (s *Snapshot) optimalSnapshotType() Type {
+func (s *Snapshot) optimalSnapshotType() (Type, error) {
 	if s.deltaSnapshotSizeThresholdPercentage == 0.0 {
 		// special case => always create a delta snapshot to keep entire milestone diff history
-		return Delta
+		return Delta, nil
 	}
 
 	fullSnapshotFileInfo, err := os.Stat(s.snapshotFullPath)
@@ -1094,7 +1094,12 @@ func (s *Snapshot) optimalSnapshotType() Type {
 
 	if !fullSnapshotFileExists {
 		// full snapshot doesn't exist => create a full snapshot
-		return Full
+		return Full, nil
+	}
+
+	if err != nil {
+		// there was another unknown error
+		return Full, err
 	}
 
 	deltaSnapshotFileInfo, err := os.Stat(s.snapshotDeltaPath)
@@ -1102,16 +1107,21 @@ func (s *Snapshot) optimalSnapshotType() Type {
 
 	if !deltaSnapshotFileExists {
 		// delta snapshot doesn't exist => create a delta snapshot
-		return Delta
+		return Delta, nil
+	}
+
+	if err != nil {
+		// there was another unknown error
+		return Delta, err
 	}
 
 	// if the file size of the last delta snapshot is bigger than a certain percentage
 	// of the full snapshot file, it's more efficient to create a new full snapshot.
 	if int64(float64(fullSnapshotFileInfo.Size())*s.deltaSnapshotSizeThresholdPercentage/100.0) < deltaSnapshotFileInfo.Size() {
-		return Full
+		return Full, nil
 	}
 
-	return Delta
+	return Delta, nil
 }
 
 // snapshotTypeFilePath returns the default file path
@@ -1138,12 +1148,17 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 	defer s.snapshotLock.Unlock()
 
 	if s.shouldTakeSnapshot(confirmedMilestoneIndex) {
-		snapshotType := s.optimalSnapshotType()
+		snapshotType, err := s.optimalSnapshotType()
+		if err != nil {
+			s.log.Warnf("%s: %s", ErrSnapshotCreationFailed, err)
+			return
+		}
+
 		if err := s.createSnapshotWithoutLocking(snapshotType, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true, shutdownSignal); err != nil {
 			if errors.Is(err, ErrCritical) {
-				s.log.Panicf("%s %s", ErrSnapshotCreationFailed, err)
+				s.log.Panicf("%s: %s", ErrSnapshotCreationFailed, err)
 			}
-			s.log.Warnf("%s %s", ErrSnapshotCreationFailed, err)
+			s.log.Warnf("%s: %s", ErrSnapshotCreationFailed, err)
 		}
 
 		if !s.storage.IsNodeSynced() {
