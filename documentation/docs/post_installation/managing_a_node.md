@@ -24,16 +24,11 @@ Another important directory is the `snapshots` directory.  You can control the `
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://ls.manapotion.io/full_snapshot.bin",
-        "delta": "https://ls.manapotion.io/delta_snapshot.bin"
+        "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
+        "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
       },
       {
-        "full": "https://x-vps.com/full_snapshot.bin",
-        "delta": "https://x-vps.com/delta_snapshot.bin"
-      },
-      {
-        "full": "https://dbfiles.iota.org/mainnet/hornet/full_snapshot.bin",
-        "delta": "https://dbfiles.iota.org/mainnet/hornet/delta_snapshot.bin"
+        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin"
       }
     ]
 ```
@@ -105,16 +100,11 @@ Your node's ledger accumulates many messages, which uses a significant disk capa
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://ls.manapotion.io/full_snapshot.bin",
-        "delta": "https://ls.manapotion.io/delta_snapshot.bin"
+        "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
+        "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
       },
       {
-        "full": "https://x-vps.com/full_snapshot.bin",
-        "delta": "https://x-vps.com/delta_snapshot.bin"
-      },
-      {
-        "full": "https://dbfiles.iota.org/mainnet/hornet/full_snapshot.bin",
-        "delta": "https://dbfiles.iota.org/mainnet/hornet/delta_snapshot.bin"
+        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin"
       }
     ]
   },

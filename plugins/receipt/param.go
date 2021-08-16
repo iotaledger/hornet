@@ -31,10 +31,10 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgReceiptsBackupPath, "receipts", "path to the receipts backup folder")
 			fs.Bool(CfgReceiptsBackupEnabled, false, "whether to backup receipts in the backup folder")
-			fs.Bool(CfgReceiptsValidatorIgnoreSoftErrors, false, "whether to ignore soft errors and not panic if one is encountered")
+			fs.String(CfgReceiptsBackupPath, "receipts", "path to the receipts backup folder")
 			fs.Bool(CfgReceiptsValidatorValidate, false, "whether to validate receipts")
+			fs.Bool(CfgReceiptsValidatorIgnoreSoftErrors, false, "whether to ignore soft errors and not panic if one is encountered")
 			fs.String(CfgReceiptsValidatorAPIAddress, "http://localhost:14266", "address of the legacy node API")
 			fs.Duration(CfgReceiptsValidatorAPITimeout, 5*time.Second, "timeout of API calls")
 			fs.String(CfgReceiptsValidatorCoordinatorAddress, "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ", "address of the legacy coordinator")

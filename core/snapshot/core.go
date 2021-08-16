@@ -87,7 +87,15 @@ func provide(c *dig.Container) {
 
 		networkIDSource := deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName)
 
-		if err := deps.NodeConfig.SetDefault(CfgSnapshotsDownloadURLs, []snapshot.DownloadTarget{}); err != nil {
+		if err := deps.NodeConfig.SetDefault(CfgSnapshotsDownloadURLs, []snapshot.DownloadTarget{
+			{
+				Full:  "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
+				Delta: "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin",
+			},
+			{
+				Full: "https://mainnet.tanglebay.com/ls/full_snapshot.bin",
+			},
+		}); err != nil {
 			CorePlugin.Panic(err)
 		}
 
