@@ -20,6 +20,7 @@ const (
 	ToolSnapInfo           = "snapinfo"
 	ToolBenchmarkIO        = "bench-io"
 	ToolBenchmarkCPU       = "bench-cpu"
+	ToolDatabaseMigration  = "db-migration"
 )
 
 // HandleTools handles available tools.
@@ -57,6 +58,7 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 		ToolSnapInfo:           snapshotInfo,
 		ToolBenchmarkIO:        benchmarkIO,
 		ToolBenchmarkCPU:       benchmarkCPU,
+		ToolDatabaseMigration:  databaseMigration,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -86,4 +88,5 @@ func listTools() {
 	fmt.Printf("%-20s outputs information about a snapshot file\n", fmt.Sprintf("%s:", ToolSnapInfo))
 	fmt.Printf("%-20s benchmarks the IO throughput\n", fmt.Sprintf("%s:", ToolBenchmarkIO))
 	fmt.Printf("%-20s benchmarks the CPU performance\n", fmt.Sprintf("%s:", ToolBenchmarkCPU))
+	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
 }
