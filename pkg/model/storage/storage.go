@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -11,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
@@ -198,20 +197,5 @@ func (s *Storage) CleanupDatabases() error {
 
 // DatabaseSize returns the size of the database.
 func (s *Storage) DatabaseSize() (int64, error) {
-
-	var size int64
-
-	err := filepath.Walk(s.databaseDir, func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() {
-			size += info.Size()
-		}
-
-		return err
-	})
-
-	return size, err
+	return utils.FolderSize(s.databaseDir)
 }
