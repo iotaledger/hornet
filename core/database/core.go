@@ -22,7 +22,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -137,19 +136,6 @@ func provide(c *dig.Container) {
 				func() bool { return deps.Metrics.CompactionRunning.Load() },
 			)
 
-		case "bolt":
-
-			db, err := database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db")
-			if err != nil {
-				CorePlugin.Panicf("database initialization failed: %s", err)
-			}
-
-			return database.New(
-				bolt.New(db),
-				false,
-				func() bool { return false },
-			)
-
 		case "rocksdb":
 			db, err := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
 			if err != nil {
@@ -176,7 +162,7 @@ func provide(c *dig.Container) {
 				},
 			)
 		default:
-			CorePlugin.Panicf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", deps.NodeConfig.String(CfgDatabaseEngine))
+			CorePlugin.Panicf("unknown database engine: %s, supported engines: pebble/rocksdb", deps.NodeConfig.String(CfgDatabaseEngine))
 			return nil
 		}
 	}); err != nil {
