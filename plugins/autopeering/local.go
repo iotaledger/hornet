@@ -2,27 +2,33 @@ package autopeering
 
 import (
 	"net"
+	"path/filepath"
 	"strconv"
 
 	"github.com/multiformats/go-multiaddr"
-	"go.etcd.io/bbolt"
 
 	"github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/pkg/database"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
-	"github.com/iotaledger/hive.go/kvstore/bolt"
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/logger"
 )
 
-// Local defines the local autopeering peer.
-type Local struct {
-	PeerLocal *peer.Local
-	boltDB    *bbolt.DB
+// LocalPeerContainer defines the container for the local autopeering peer.
+type LocalPeerContainer struct {
+	peerLocal *peer.Local
+	store     kvstore.KVStore
 	peerDB    *peer.DB
 }
 
-func newLocal(seed []byte, p2pDatabasePath string) *Local {
+// Local returns the local hive.go peer from the container.
+func (lpc *LocalPeerContainer) Local() *peer.Local {
+	return lpc.peerLocal
+}
+
+func newLocalPeerContainer(seed []byte, p2pDatabasePath string, dbEngine database.Engine) *LocalPeerContainer {
 	log := logger.NewLogger("Local")
 
 	// let the autopeering discover the IP
@@ -71,13 +77,13 @@ func newLocal(seed []byte, p2pDatabasePath string) *Local {
 		ownServices.Update(p2pServiceKey(), "tcp", libp2pBindPort)
 	}
 
-	boltDB, err := bolt.CreateDB(p2pDatabasePath, "autopeering.db")
+	store, err := database.StoreWithDefaultSettings(filepath.Join(p2pDatabasePath, "autopeering"), true, dbEngine)
 	if err != nil {
 		log.Fatalf("unable to create autopeering database: %s", err)
 	}
 
 	// realm doesn't matter
-	peerDB, err := peer.NewDB(bolt.New(boltDB))
+	peerDB, err := peer.NewDB(store)
 	if err != nil {
 		log.Fatalf("unable to create autopeering database: %s", err)
 	}
@@ -89,10 +95,15 @@ func newLocal(seed []byte, p2pDatabasePath string) *Local {
 
 	log.Infof("Initialized local autopeering: %s@%s", local.PublicKey(), local.Address())
 
-	return &Local{PeerLocal: local, boltDB: boltDB, peerDB: peerDB}
+	return &LocalPeerContainer{peerLocal: local, store: store, peerDB: peerDB}
 }
 
-func (l *Local) close() error {
+func (l *LocalPeerContainer) close() error {
 	l.peerDB.Close()
-	return l.boltDB.Close()
+
+	if err := l.store.Flush(); err != nil {
+		return err
+	}
+
+	return l.store.Close()
 }

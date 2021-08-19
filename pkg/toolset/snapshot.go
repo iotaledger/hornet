@@ -34,7 +34,7 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 	// check arguments
 	if len(args) != 4 {
 		printUsage()
-		return fmt.Errorf("wrong argument count '%s'", ToolSnapGen)
+		return fmt.Errorf("wrong argument count for '%s'", ToolSnapGen)
 	}
 
 	// check network ID

@@ -17,6 +17,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -49,6 +50,7 @@ type dependencies struct {
 	Manager              *p2p.Manager
 	Host                 host.Host
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	PeerStoreContainer   *p2p.PeerStoreContainer
 	PeeringConfig        *configuration.Configuration `name:"peeringConfig"`
 	PeeringConfigManager *p2p.ConfigManager
 }
@@ -57,15 +59,17 @@ func provide(c *dig.Container) {
 	type hostdeps struct {
 		dig.In
 
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+		DatabaseEngine database.Engine              `name:"databaseEngine"`
 	}
 
 	type p2presult struct {
 		dig.Out
 
-		P2PDatabasePath string `name:"p2pDatabasePath"`
-		NodePrivateKey  crypto.PrivKey `name:"nodePrivateKey"`
-		Host            host.Host
+		P2PDatabasePath    string `name:"p2pDatabasePath"`
+		PeerStoreContainer *p2p.PeerStoreContainer
+		NodePrivateKey     crypto.PrivKey `name:"nodePrivateKey"`
+		Host               host.Host
 	}
 
 	if err := c.Provide(func(deps hostdeps) (p2presult, error) {
@@ -77,13 +81,14 @@ func provide(c *dig.Container) {
 
 		pubKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PubKeyFileName)
 
-		peerStorePath := p2pDatabasePath
+		peerStorePath := filepath.Join(p2pDatabasePath, "peers")
 		peerStoreExists = p2p.PeerStoreExists(peerStorePath)
 
-		peerStore, err := p2p.NewPeerstore(peerStorePath)
+		peerStoreContainer, err := p2p.NewPeerStoreContainer(peerStorePath, deps.DatabaseEngine, true)
 		if err != nil {
 			CorePlugin.Panic(err)
 		}
+		res.PeerStoreContainer = peerStoreContainer
 
 		identityPrivKey := deps.NodeConfig.String(CfgP2PIdentityPrivKey)
 
@@ -95,7 +100,7 @@ func provide(c *dig.Container) {
 			var peerID peer.ID
 			peerID, err = p2p.LoadIdentityFromFile(pubKeyFilePath)
 			if err == nil {
-				prvKey, err = p2p.LoadPrivateKeyFromStore(peerID, peerStore, identityPrivKey)
+				prvKey, err = p2p.LoadPrivateKeyFromStore(peerID, peerStoreContainer.Peerstore(), identityPrivKey)
 			}
 		}
 		if err != nil {
@@ -109,7 +114,7 @@ func provide(c *dig.Container) {
 		createdHost, err := libp2p.New(context.Background(),
 			libp2p.Identity(prvKey),
 			libp2p.ListenAddrStrings(deps.NodeConfig.Strings(CfgP2PBindMultiAddresses)...),
-			libp2p.Peerstore(peerStore),
+			libp2p.Peerstore(peerStoreContainer.Peerstore()),
 			libp2p.DefaultTransports,
 			libp2p.ConnectionManager(connmgr.NewConnManager(
 				deps.NodeConfig.Int(CfgP2PConnMngLowWatermark),
@@ -228,6 +233,26 @@ func configure() {
 	}
 
 	CorePlugin.LogInfof("peer configured, ID: %s", deps.Host.ID())
+
+	if err := CorePlugin.Daemon().BackgroundWorker("Close p2p peer database", func(shutdownSignal <-chan struct{}) {
+		<-shutdownSignal
+
+		closeDatabases := func() error {
+			if err := deps.PeerStoreContainer.Flush(); err != nil {
+				return err
+			}
+
+			return deps.PeerStoreContainer.Close()
+		}
+
+		CorePlugin.LogInfo("Syncing p2p peer database to disk...")
+		if err := closeDatabases(); err != nil {
+			CorePlugin.Panicf("Syncing p2p peer database to disk... failed: %s", err)
+		}
+		CorePlugin.LogInfo("Syncing p2p peer database to disk... done")
+	}, shutdown.PriorityCloseDatabase); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 func run() {

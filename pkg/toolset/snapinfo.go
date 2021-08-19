@@ -19,7 +19,7 @@ func snapshotInfo(_ *configuration.Configuration, args []string) error {
 
 	if len(args) != 1 {
 		printUsage()
-		return fmt.Errorf("wrong argument count '%s'", ToolSnapInfo)
+		return fmt.Errorf("wrong argument count for '%s'", ToolSnapInfo)
 	}
 
 	filePath := args[0]

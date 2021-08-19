@@ -19,8 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
-	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 )
 
 const (
@@ -41,7 +39,7 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 
 	objectCnt := 500000
 	size := 1000
-	dbEngine := "rocksdb"
+	dbEngine := database.EngineRocksDB
 
 	if len(args) > 3 {
 		printUsage()
@@ -68,6 +66,11 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 		dbEngine = strings.ToLower(args[2])
 	}
 
+	engine, err := database.DatabaseEngine(dbEngine)
+	if err != nil {
+		return err
+	}
+
 	tempDir, err := ioutil.TempDir("", "benchmarkIO")
 	if err != nil {
 		return fmt.Errorf("can't create temp dir: %w", err)
@@ -75,23 +78,9 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 
 	defer func() { _ = os.RemoveAll(tempDir) }()
 
-	var store kvstore.KVStore
-
-	switch dbEngine {
-	case "pebble":
-		db, err := database.NewPebbleDB(tempDir, nil, true)
-		if err != nil {
-			return fmt.Errorf("database initialization failed: %w", err)
-		}
-		store = pebble.New(db)
-	case "rocksdb":
-		db, err := database.NewRocksDB(tempDir)
-		if err != nil {
-			return fmt.Errorf("database initialization failed: %w", err)
-		}
-		store = rocksdb.New(db)
-	default:
-		return fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb", dbEngine)
+	store, err := database.StoreWithDefaultSettings(tempDir, true, engine)
+	if err != nil {
+		return fmt.Errorf("database initialization failed: %w", err)
 	}
 
 	batchWriter := kvstore.NewBatchedWriter(store)

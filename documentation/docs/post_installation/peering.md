@@ -7,7 +7,7 @@ The IOTA network is a distributed network. It uses a gossip protocol to broadcas
 Each node can be uniquely identified by a `peer identity`. `Peer identity` (also called `PeerId`) is represented by a public
 and private key pair. Since `PeerId` is a cryptographic hash of peer's public key, the `PeerId` represents a verifiable link between the given peer and its public key. It enables individual peers to establish a secure communication channel as the hash can be used to verify an identity of the peer.
 
-When it is started for the first time, Hornet will automatically generate a `PeerId`, and save the identity's public key in the `./p2pstore/key.pub` file. The private key will be stored in a BadgerDB within `./p2pstore`. Hornet will keep the generated identity between subsequent restarts.
+When it is started for the first time, Hornet will automatically generate a `PeerId`, and save the identity's public key in the `./p2pstore/key.pub` file. The private key will be stored in a database within `./p2pstore/peers`. Hornet will keep the generated identity between subsequent restarts.
 
 Each time Hornet starts, the `PeerId` is written to stdout:
 

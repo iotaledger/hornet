@@ -8,16 +8,18 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"runtime"
+	"path/filepath"
 
-	badger "github.com/ipfs/go-ds-badger"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
+	kvstoreds "github.com/iotaledger/go-ds-kvstore"
+	"github.com/iotaledger/hive.go/kvstore"
 )
 
 const (
@@ -50,26 +52,59 @@ func PeerStoreExists(peerStorePath string) bool {
 	return true
 }
 
-// NewPeerstore creates a peerstore using badger DB.
-func NewPeerstore(peerStorePath string) (peerstore.Peerstore, error) {
-	// TODO: switch out with impl. using KVStore
-	defaultOpts := badger.DefaultOptions
+// PeerStoreContainer is a container for a libp2p peer store.
+type PeerStoreContainer struct {
+	store     kvstore.KVStore
+	peerStore peerstore.Peerstore
+}
 
-	// needed under Windows otherwise peer store is 'corrupted' after a restart
-	defaultOpts.Truncate = runtime.GOOS == "windows"
+// Peerstore returns the libp2p peer store from the container.
+func (psc *PeerStoreContainer) Peerstore() peerstore.Peerstore {
+	return psc.peerStore
+}
 
-	badgerStore, err := badger.NewDatastore(peerStorePath, &defaultOpts)
+// Flush persists all outstanding write operations to disc.
+func (psc *PeerStoreContainer) Flush() error {
+	return psc.store.Flush()
+}
+
+// Close flushes all outstanding write operations and closes the store.
+func (psc *PeerStoreContainer) Close() error {
+	psc.peerStore.Close()
+
+	if err := psc.store.Flush(); err != nil {
+		return err
+	}
+
+	return psc.store.Close()
+}
+
+// NewPeerStoreContainer creates a peerstore using kvstore.
+func NewPeerStoreContainer(peerStorePath string, dbEngine database.Engine, createDatabaseIfNotExists bool) (*PeerStoreContainer, error) {
+
+	dirPath := filepath.Dir(peerStorePath)
+
+	if createDatabaseIfNotExists {
+		if err := os.MkdirAll(dirPath, 0700); err != nil {
+			return nil, fmt.Errorf("could not create peer store database dir '%s': %w", dirPath, err)
+		}
+	}
+
+	store, err := database.StoreWithDefaultSettings(peerStorePath, createDatabaseIfNotExists, dbEngine)
 	if err != nil {
-		return nil, fmt.Errorf("unable to initialize data store for peer store: %w", err)
+		return nil, fmt.Errorf("peer store database initialization failed: %w", err)
 	}
 
 	// also takes care of this node's identity key pair
-	peerStore, err := pstoreds.NewPeerstore(context.Background(), badgerStore, pstoreds.DefaultOpts())
+	peerStore, err := pstoreds.NewPeerstore(context.Background(), kvstoreds.NewDatastore(store), pstoreds.DefaultOpts())
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize peer store: %w", err)
 	}
 
-	return peerStore, nil
+	return &PeerStoreContainer{
+		store:     store,
+		peerStore: peerStore,
+	}, nil
 }
 
 // ParsePrivateKeyFromString parses the libp2p private key from a string.
@@ -151,6 +186,9 @@ func LoadPrivateKeyFromStore(peerID peer.ID, peerStore peerstore.Peerstore, iden
 
 	// retrieve this node's private key from the peer store
 	storedPrivKey := peerStore.PrivKey(peerID)
+	if storedPrivKey == nil {
+		return nil, errors.New("error while fetching p2p private key from p2p peer database")
+	}
 
 	if len(identityPrivKey) > 0 {
 		// load an optional private key from the config and compare it to the stored private key
