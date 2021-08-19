@@ -61,6 +61,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multiaddr v0.4.0
 	github.com/pelletier/go-toml v1.9.3 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.0-beta.3
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.30.0 // indirect
