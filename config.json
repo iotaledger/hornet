@@ -173,15 +173,12 @@
       "streamWriteTimeout": "10s"
     },
     "identityPrivateKey": "",
-    "peerStore": {
-      "path": "./p2pstore"
+    "db": {
+      "path": "p2pstore"
     },
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "db": {
-        "path": "./p2pstore"
-      },
       "entryNodes": [
         "/dns/lucamoser.ch/udp/14926/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
         "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"

@@ -193,8 +193,8 @@ type NetworkConfig struct {
 	IdentityPrivKey string
 	// the bind addresses of this node.
 	BindMultiAddresses []string
-	// the path to the peerstore.
-	PeerStorePath string
+	// the path to the p2p database.
+	DatabasePath string
 	// the high watermark to use within the connection manager.
 	ConnMngHighWatermark int
 	// the low watermark to use within the connection manager.
@@ -214,7 +214,7 @@ func (netConfig *NetworkConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", p2p.CfgP2PIdentityPrivKey, netConfig.IdentityPrivKey),
 		fmt.Sprintf("--%s=%s", p2p.CfgP2PBindMultiAddresses, strings.Join(netConfig.BindMultiAddresses, ",")),
-		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeerStorePath, netConfig.PeerStorePath),
+		fmt.Sprintf("--%s=%s", p2p.CfgP2PDatabasePath, netConfig.DatabasePath),
 		fmt.Sprintf("--%s=%d", p2p.CfgP2PConnMngHighWatermark, netConfig.ConnMngHighWatermark),
 		fmt.Sprintf("--%s=%d", p2p.CfgP2PConnMngLowWatermark, netConfig.ConnMngLowWatermark),
 		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeers, strings.Join(netConfig.Peers, ",")),
@@ -229,7 +229,7 @@ func DefaultNetworkConfig() NetworkConfig {
 	return NetworkConfig{
 		IdentityPrivKey:         "",
 		BindMultiAddresses:      []string{"/ip4/0.0.0.0/tcp/15600"},
-		PeerStorePath:           "./p2pstore",
+		DatabasePath:            "p2pstore",
 		ConnMngHighWatermark:    8,
 		ConnMngLowWatermark:     4,
 		Peers:                   []string{},
@@ -253,8 +253,6 @@ type AutopeeringConfig struct {
 	OutboundPeers int
 	// The lifetime of the private and public local salt.
 	SaltLifetime time.Duration
-	// The path to the autopeering database.
-	DatabasePath string
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -266,7 +264,6 @@ func (autoConfig *AutopeeringConfig) CLIFlags() []string {
 		fmt.Sprintf("--%s=%d", autopeering.CfgNetAutopeeringInboundPeers, autoConfig.InboundPeers),
 		fmt.Sprintf("--%s=%d", autopeering.CfgNetAutopeeringOutboundPeers, autoConfig.OutboundPeers),
 		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringSaltLifetime, autoConfig.SaltLifetime),
-		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringDatabasePath, autoConfig.DatabasePath),
 	}
 }
 
@@ -279,7 +276,6 @@ func DefaultAutopeeringConfig() AutopeeringConfig {
 		InboundPeers:   2,
 		OutboundPeers:  2,
 		SaltLifetime:   30 * time.Minute,
-		DatabasePath:   "./p2pstore",
 	}
 }
 

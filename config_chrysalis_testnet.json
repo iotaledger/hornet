@@ -200,15 +200,12 @@
       "streamWriteTimeout": "10s"
     },
     "identityPrivateKey": "",
-    "peerStore": {
-      "path": "./p2pstore"
+    "db": {
+      "path": "p2pstore"
     },
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "db": {
-        "path": "./p2pstore"
-      },
       "entryNodes": [],
       "entryNodesPreferIPv6": false,
       "runAsEntryNode": false

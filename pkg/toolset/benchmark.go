@@ -19,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 )
@@ -37,7 +36,7 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 		println()
 		println("	[COUNT] 	- objects count (optional)")
 		println("	[SIZE]  	- objects size  (optional)")
-		println("	[DB_ENGINE] - database engine (optional, values: bolt, pebble, rocksdb)")
+		println("	[DB_ENGINE] - database engine (optional, values: pebble, rocksdb)")
 	}
 
 	objectCnt := 500000
@@ -85,12 +84,6 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 			return fmt.Errorf("database initialization failed: %w", err)
 		}
 		store = pebble.New(db)
-	case "bolt":
-		db, err := database.NewBoltDB(tempDir, "bolt.db")
-		if err != nil {
-			return fmt.Errorf("database initialization failed: %w", err)
-		}
-		store = bolt.New(db)
 	case "rocksdb":
 		db, err := database.NewRocksDB(tempDir)
 		if err != nil {
@@ -98,7 +91,7 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 		}
 		store = rocksdb.New(db)
 	default:
-		return fmt.Errorf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", dbEngine)
+		return fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb", dbEngine)
 	}
 
 	batchWriter := kvstore.NewBatchedWriter(store)

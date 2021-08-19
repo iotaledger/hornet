@@ -11,8 +11,6 @@ import (
 const (
 	// CfgNetAutopeeringBindAddr is bind address for autopeering.
 	CfgNetAutopeeringBindAddr = "p2p.autopeering.bindAddress"
-	// CfgNetAutopeeringDatabasePath is the path to the autopeering database.
-	CfgNetAutopeeringDatabasePath = "p2p.autopeering.db.path"
 	// CfgNetAutopeeringEntryNodes list of autopeering entry nodes to use.
 	CfgNetAutopeeringEntryNodes = "p2p.autopeering.entryNodes"
 	// CfgNetAutopeeringEntryNodesPreferIPv6 defines if connecting over IPv6 is preferred for entry nodes.
@@ -32,7 +30,6 @@ var params = &node.PluginParams{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.String(CfgNetAutopeeringBindAddr, "0.0.0.0:14626", "bind address for autopeering")
-			fs.String(CfgNetAutopeeringDatabasePath, "./p2pstore", "the directory path (excluding the name) to the autopeering database")
 			fs.StringSlice(CfgNetAutopeeringEntryNodes, []string{}, "list of autopeering entry nodes to use")
 			fs.Bool(CfgNetAutopeeringEntryNodesPreferIPv6, false, "defines if connecting over IPv6 is preferred for entry nodes")
 			fs.Bool(CfgNetAutopeeringRunAsEntryNode, false, "whether the node should act as an autopeering entry node")

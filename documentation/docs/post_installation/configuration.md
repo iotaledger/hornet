@@ -121,7 +121,7 @@ Example:
 
 | Name             | Description                                                                         | Type   |
 | :--------------- | :---------------------------------------------------------------------------------- | :----- |
-| engine           | The used database engine (pebble/bolt/rocksdb)                                      | string |
+| engine           | The used database engine (pebble/rocksdb)                                           | string |
 | path             | The path to the database folder                                                     | string |
 | autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | bool   |
 
@@ -577,7 +577,7 @@ Example:
 | [connectionManager](#connectionmanager) | Configuration for connection manager                               | object           |
 | [gossip](#gossip)                       | Configuration for gossip protocol                                  | object           |
 | identityPrivateKey                      | private key used to derive the node identity (optional)            | string           |
-| [peerStore](#peerstore)                 | Configuration for peer store                                       | object           |
+| [db](#database)                         | Configuration for p2p database                                     | object           |
 | reconnectInterval                       | The time to wait before trying to reconnect to a disconnected peer | string           |
 | [autopeering](#autopeering)             | Configuration for autopeering                                      | object           |
 
@@ -596,27 +596,20 @@ Example:
 | streamReadTimeout  | The read timeout for subsequent reads from the gossip stream                   | string  |
 | streamWriteTimeout | The write timeout for writes to the gossip stream                              | string  |
 
-### PeerStore
+### Database
 
-| Name | Description                | Type   |
-| :--- | :------------------------- | :----- |
-| path | The path to the peer store | string |
+| Name | Description                  | Type   |
+| :--- | :--------------------------- | :----- |
+| path | The path to the p2p database | string |
 
 ### Autopeering
 
-| Name                        | Description                                                      | Type             |
-| :-------------------------- | :--------------------------------------------------------------- | :--------------- |
-| bindAddress                 | The bind address on which the autopeering module listens on      | string           |
-| [db](#autopeering-database) | Configuration for the autopeering database                       | object           |
-| entryNodes                  | The list of autopeering entry nodes to use                       | array of strings |
-| entryNodesPreferIPv6        | Defines if connecting over IPv6 is preferred for entry nodes     | bool             |
-| runAsEntryNode              | Defines whether the node should act as an autopeering entry node | bool             |
-
-#### Autopeering database
-
-| Name | Description                          | Type   |
-| :--- | :----------------------------------- | :----- |
-| path | The path to the autopeering database | string |
+| Name                 | Description                                                      | Type             |
+| :------------------- | :--------------------------------------------------------------- | :--------------- |
+| bindAddress          | The bind address on which the autopeering module listens on      | string           |
+| entryNodes           | The list of autopeering entry nodes to use                       | array of strings |
+| entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes     | bool             |
+| runAsEntryNode       | Defines whether the node should act as an autopeering entry node | bool             |
 
 Example:
 
@@ -636,15 +629,12 @@ Example:
       "streamWriteTimeout": "10s"
     },
     "identityPrivateKey": "",
-    "peerStore": {
-      "path": "./p2pstore"
+    "db": {
+      "path": "p2pstore"
     },
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "db": {
-        "path": "./p2pstore"
-      },
       "entryNodes": [
         "/dns/lucamoser.ch/udp/14926/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
         "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"

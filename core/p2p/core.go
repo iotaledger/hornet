@@ -4,7 +4,7 @@ package p2p
 import (
 	"context"
 	"fmt"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -63,15 +63,21 @@ func provide(c *dig.Container) {
 	type p2presult struct {
 		dig.Out
 
-		Host           host.Host
-		NodePrivateKey crypto.PrivKey
+		P2PDatabasePath string `name:"p2pDatabasePath"`
+		NodePrivateKey  crypto.PrivKey `name:"nodePrivateKey"`
+		Host            host.Host
 	}
 
 	if err := c.Provide(func(deps hostdeps) (p2presult, error) {
 
 		res := p2presult{}
 
-		peerStorePath := deps.NodeConfig.String(CfgP2PPeerStorePath)
+		p2pDatabasePath := deps.NodeConfig.String(CfgP2PDatabasePath)
+		res.P2PDatabasePath = p2pDatabasePath
+
+		pubKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PubKeyFileName)
+
+		peerStorePath := p2pDatabasePath
 		peerStoreExists = p2p.PeerStoreExists(peerStorePath)
 
 		peerStore, err := p2p.NewPeerstore(peerStorePath)
@@ -79,7 +85,6 @@ func provide(c *dig.Container) {
 			CorePlugin.Panic(err)
 		}
 
-		pubKeyFilePath := path.Join(peerStorePath, p2p.PubKeyFileName)
 		identityPrivKey := deps.NodeConfig.String(CfgP2PIdentityPrivKey)
 
 		// load up the previously generated identity or create a new one
@@ -93,13 +98,13 @@ func provide(c *dig.Container) {
 				prvKey, err = p2p.LoadPrivateKeyFromStore(peerID, peerStore, identityPrivKey)
 			}
 		}
-
 		if err != nil {
 			if errors.Is(err, p2p.ErrPrivKeyInvalid) {
 				err = fmt.Errorf("config parameter '%s' contains an invalid private key", CfgP2PIdentityPrivKey)
 			}
 			CorePlugin.Panicf("unable to load/create peer identity: %s", err)
 		}
+		res.NodePrivateKey = prvKey
 
 		createdHost, err := libp2p.New(context.Background(),
 			libp2p.Identity(prvKey),
@@ -113,13 +118,11 @@ func provide(c *dig.Container) {
 			)),
 			libp2p.NATPortMap(),
 		)
-
 		if err != nil {
 			return res, fmt.Errorf("unable to initialize peer: %w", err)
 		}
 
 		res.Host = createdHost
-		res.NodePrivateKey = prvKey
 
 		return res, nil
 	}); err != nil {
@@ -214,9 +217,9 @@ func configure() {
 
 	// make sure nobody copies around the peer store since it contains the
 	// private key of the node
-	CorePlugin.LogInfof("never share your %s folder as it contains your node's private key!", deps.NodeConfig.String(CfgP2PPeerStorePath))
+	CorePlugin.LogInfof("never share your %s folder as it contains your node's private key!", deps.NodeConfig.String(CfgP2PDatabasePath))
 
-	pubKeyFilePath := path.Join(deps.NodeConfig.String(CfgP2PPeerStorePath), p2p.PubKeyFileName)
+	pubKeyFilePath := filepath.Join(deps.NodeConfig.String(CfgP2PDatabasePath), p2p.PubKeyFileName)
 
 	if !peerStoreExists {
 		CorePlugin.LogInfof("stored new peer identity under %s", pubKeyFilePath)
