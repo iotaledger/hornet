@@ -70,17 +70,28 @@ type dependencies struct {
 
 func provide(c *dig.Container) {
 
+	type dbdeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
 	type dbresult struct {
 		dig.Out
 
 		StorageMetrics     *metrics.StorageMetrics
 		DatabaseMetrics    *metrics.DatabaseMetrics
 		DatabaseEvents     *Events
-		DeleteDatabaseFlag bool `name:"deleteDatabase"`
-		DeleteAllFlag      bool `name:"deleteAll"`
+		DeleteDatabaseFlag bool            `name:"deleteDatabase"`
+		DeleteAllFlag      bool            `name:"deleteAll"`
+		DatabaseEngine     database.Engine `name:"databaseEngine"`
 	}
 
-	if err := c.Provide(func() dbresult {
+	if err := c.Provide(func(deps dbdeps) dbresult {
+
+		engine, err := database.DatabaseEngine(deps.NodeConfig.String(CfgDatabaseEngine))
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
 
 		res := dbresult{
 			StorageMetrics:  &metrics.StorageMetrics{},
@@ -91,22 +102,24 @@ func provide(c *dig.Container) {
 			},
 			DeleteDatabaseFlag: *deleteDatabase,
 			DeleteAllFlag:      *deleteAll,
+			DatabaseEngine:     engine,
 		}
 		return res
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
 
-	type dbdeps struct {
+	type databasedeps struct {
 		dig.In
 		DeleteDatabaseFlag bool                         `name:"deleteDatabase"`
 		DeleteAllFlag      bool                         `name:"deleteAll"`
 		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		DatabaseEngine     database.Engine              `name:"databaseEngine"`
 		Events             *Events
 		Metrics            *metrics.DatabaseMetrics
 	}
 
-	if err := c.Provide(func(deps dbdeps) *database.Database {
+	if err := c.Provide(func(deps databasedeps) *database.Database {
 
 		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 			// delete old database folder
@@ -115,8 +128,13 @@ func provide(c *dig.Container) {
 			}
 		}
 
-		switch deps.NodeConfig.String(CfgDatabaseEngine) {
-		case "pebble":
+		targetEngine, err := database.CheckDatabaseEngine(deps.NodeConfig.String(CfgDatabasePath), true, deps.DatabaseEngine)
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
+
+		switch targetEngine {
+		case database.EnginePebble:
 			reportCompactionRunning := func(running bool) {
 				deps.Metrics.CompactionRunning.Store(running)
 				if running {
@@ -136,7 +154,7 @@ func provide(c *dig.Container) {
 				func() bool { return deps.Metrics.CompactionRunning.Load() },
 			)
 
-		case "rocksdb":
+		case database.EngineRocksDB:
 			db, err := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
 			if err != nil {
 				CorePlugin.Panicf("database initialization failed: %s", err)
@@ -162,7 +180,7 @@ func provide(c *dig.Container) {
 				},
 			)
 		default:
-			CorePlugin.Panicf("unknown database engine: %s, supported engines: pebble/rocksdb", deps.NodeConfig.String(CfgDatabaseEngine))
+			CorePlugin.Panicf("unknown database engine: %s, supported engines: pebble/rocksdb", targetEngine)
 			return nil
 		}
 	}); err != nil {

@@ -32,7 +32,7 @@ var (
 	selectionProtocol *selection.Protocol
 )
 
-func configureAutopeering(local *Local) {
+func configureAutopeering(localPeerContainer *LocalPeerContainer) {
 	entryNodes, err := parseEntryNodes()
 	if err != nil {
 		Plugin.LogWarn(err)
@@ -42,7 +42,7 @@ func configureAutopeering(local *Local) {
 	gossipServiceKeyHash.Write([]byte(p2pServiceKey()))
 	networkID := gossipServiceKeyHash.Sum32()
 
-	discoveryProtocol = discover.New(local.PeerLocal, protocolVersion, networkID, discover.Logger(Plugin.Logger().Named("disc")), discover.MasterPeers(entryNodes))
+	discoveryProtocol = discover.New(localPeerContainer.Local(), protocolVersion, networkID, discover.Logger(Plugin.Logger().Named("disc")), discover.MasterPeers(entryNodes))
 
 	// only enable peer selection when the peering plugin is enabled
 	if deps.Manager == nil {
@@ -62,13 +62,13 @@ func configureAutopeering(local *Local) {
 	}
 
 	neighborValidator := selection.NeighborValidator(selection.ValidatorFunc(isValidPeer))
-	selectionProtocol = selection.New(local.PeerLocal, discoveryProtocol, selection.Logger(Plugin.Logger().Named("sel")), neighborValidator)
+	selectionProtocol = selection.New(localPeerContainer.Local(), discoveryProtocol, selection.Logger(Plugin.Logger().Named("sel")), neighborValidator)
 }
 
-func start(local *Local, shutdownSignal <-chan struct{}) {
+func start(localPeerContainer *LocalPeerContainer, shutdownSignal <-chan struct{}) {
 	Plugin.LogInfo("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
 
-	lPeer := local.PeerLocal
+	lPeer := localPeerContainer.Local()
 	peering := lPeer.Services().Get(service.PeeringKey)
 
 	// resolve the bind address
@@ -111,7 +111,7 @@ func start(local *Local, shutdownSignal <-chan struct{}) {
 	// underlying connection is closed by the server
 	srv.Close()
 
-	if err := local.close(); err != nil {
+	if err := localPeerContainer.close(); err != nil {
 		Plugin.LogErrorf("error closing peer database: %s", err)
 	}
 

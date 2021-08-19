@@ -4,6 +4,14 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
+type Engine string
+
+const (
+	EngineUnknown = "unknown"
+	EngineRocksDB = "rocksdb"
+	EnginePebble  = "pebble"
+)
+
 // New creates a new Database instance.
 func New(kvStore kvstore.KVStore, compactionSupported bool, compactionRunningFunc func() bool) *Database {
 	return &Database{
