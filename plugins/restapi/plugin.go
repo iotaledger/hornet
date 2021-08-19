@@ -55,8 +55,8 @@ type dependencies struct {
 	Echo                  *echo.Echo
 	RestAPIMetrics        *metrics.RestAPIMetrics
 	Host                  host.Host
-	NodePrivateKey        crypto.PrivKey
-	DashboardAuthUsername string `name:"dashboardAuthUsername" optional:"true"`
+	NodePrivateKey        crypto.PrivKey `name:"nodePrivateKey"`
+	DashboardAuthUsername string         `name:"dashboardAuthUsername" optional:"true"`
 }
 
 func provide(c *dig.Container) {

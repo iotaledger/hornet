@@ -195,15 +195,12 @@
       "streamWriteTimeout": "10s"
     },
     "identityPrivateKey": "",
-    "peerStore": {
-      "path": "./p2pstore"
+    "db": {
+      "path": "p2pstore"
     },
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "db": {
-        "path": "./p2pstore"
-      },
       "entryNodes": [
         "/dns/entry-comnet.tanglebay.com/udp/14636/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC",
         "/dns/comnet.positronium.io/udp/14626/autopeering/CiL1Np3Uihmsa2ZpdEtcHPkwSL8qCs9yNktjWx5dyy2S"

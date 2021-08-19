@@ -21,7 +21,7 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 		return fmt.Errorf("'%s' should not be empty", restapi.CfgRestAPIJWTAuthSalt)
 	}
 
-	prvKey, pid, err := loadP2PPrivKeyAndIdentityFromStore(nodeConfig.String(p2p.CfgP2PPeerStorePath))
+	prvKey, pid, err := loadP2PPrivKeyAndIdentityFromStore(nodeConfig.String(p2p.CfgP2PDatabasePath))
 	if err != nil {
 		return fmt.Errorf("loading private key from p2p store failed: %w", err)
 	}

@@ -22,7 +22,7 @@ type Local struct {
 	peerDB    *peer.DB
 }
 
-func newLocal(seed []byte) *Local {
+func newLocal(seed []byte, p2pDatabasePath string) *Local {
 	log := logger.NewLogger("Local")
 
 	// let the autopeering discover the IP
@@ -71,7 +71,7 @@ func newLocal(seed []byte) *Local {
 		ownServices.Update(p2pServiceKey(), "tcp", libp2pBindPort)
 	}
 
-	boltDB, err := bolt.CreateDB(deps.NodeConfig.String(CfgNetAutopeeringDatabasePath), "autopeering.db")
+	boltDB, err := bolt.CreateDB(p2pDatabasePath, "autopeering.db")
 	if err != nil {
 		log.Fatalf("unable to create autopeering database: %s", err)
 	}

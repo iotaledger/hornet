@@ -17,8 +17,8 @@ const (
 	CfgP2PConnMngLowWatermark = "p2p.connectionManager.lowWatermark"
 	// Defines the private key used to derive the node identity (optional).
 	CfgP2PIdentityPrivKey = "p2p.identityPrivateKey"
-	// Defines the path to the peerstore.
-	CfgP2PPeerStorePath = "p2p.peerStore.path"
+	// Defines the path to the p2p database.
+	CfgP2PDatabasePath = "p2p.db.path"
 	// Defines the time to wait before trying to reconnect to a disconnected peer.
 	CfgP2PReconnectInterval = "p2p.reconnectInterval"
 	// Defines the static peers this node should retain a connection to (config file).
@@ -37,7 +37,7 @@ var params = &node.PluginParams{
 			fs.Int(CfgP2PConnMngHighWatermark, 10, "the threshold up on which connections count truncates to the lower watermark")
 			fs.Int(CfgP2PConnMngLowWatermark, 5, "the minimum connections count to hold after the high watermark was reached")
 			fs.String(CfgP2PIdentityPrivKey, "", "private key used to derive the node identity (optional)")
-			fs.String(CfgP2PPeerStorePath, "./p2pstore", "the path to the peer store")
+			fs.String(CfgP2PDatabasePath, "p2pstore", "the path to the p2p database")
 			fs.Duration(CfgP2PReconnectInterval, 30*time.Second, "the time to wait before trying to reconnect to a disconnected peer")
 			return fs
 		}(),
