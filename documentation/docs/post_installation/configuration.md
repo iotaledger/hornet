@@ -121,7 +121,7 @@ Example:
 
 | Name             | Description                                                                         | Type   |
 | :--------------- | :---------------------------------------------------------------------------------- | :----- |
-| engine           | The used database engine (pebble/bolt/rocksdb)                                      | string |
+| engine           | The used database engine (pebble/rocksdb)                                           | string |
 | path             | The path to the database folder                                                     | string |
 | autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | bool   |
 

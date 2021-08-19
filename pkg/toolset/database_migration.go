@@ -65,9 +65,6 @@ func databaseMigration(config *configuration.Configuration, args []string) error
 		}
 		storeSource = pebble.New(db)
 
-	case "bolt":
-		return errors.New("bolt database can't be migrated")
-
 	case "rocksdb":
 		db, err := database.NewRocksDB(sourcePath)
 		if err != nil {
