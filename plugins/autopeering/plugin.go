@@ -55,9 +55,10 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-	Manager        *p2p.Manager                 `optional:"true"`
-	NodePrivateKey crypto.PrivKey
+	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
+	Manager         *p2p.Manager                 `optional:"true"`
+	NodePrivateKey  crypto.PrivKey               `name:"nodePrivateKey"`
+	P2PDatabasePath string                       `name:"p2pDatabasePath"`
 }
 
 func configure() {
@@ -76,7 +77,7 @@ func configure() {
 		Plugin.Panicf("unable to obtain raw private key: %s", err)
 	}
 
-	local = newLocal(rawPrvKey[:ed25519.SeedSize])
+	local = newLocal(rawPrvKey[:ed25519.SeedSize], deps.P2PDatabasePath)
 	configureAutopeering(local)
 	configureEvents()
 }

@@ -85,7 +85,7 @@ type dependencies struct {
 	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
 	AppInfo                  *app.AppInfo
 	Host                     host.Host
-	NodePrivateKey           crypto.PrivKey
+	NodePrivateKey           crypto.PrivKey `name:"nodePrivateKey"`
 	DatabaseEvents           *database.Events
 	DashboardAllowedAPIRoute restapipkg.AllowedRoute `optional:"true"`
 }
