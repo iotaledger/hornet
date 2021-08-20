@@ -10,93 +10,54 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	dbCore "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
-	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 )
 
-func databaseMigration(config *configuration.Configuration, args []string) error {
+func databaseMigration(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [DB_ENGINE]", ToolDatabaseMigration))
+		println(fmt.Sprintf("	%s [SOURCE_DATABASE_PATH] [TARGET_DATABASE_PATH] [TARGET_DATABASE_ENGINE]", ToolDatabaseMigration))
 		println()
-		println("   [DB_ENGINE] - target database engine (values: pebble, rocksdb)")
+		println("   [SOURCE_DATABASE_PATH]   - the path to the source database")
+		println("   [TARGET_DATABASE_PATH]   - the path to the target database")
+		println("   [TARGET_DATABASE_ENGINE] - the engine of the target database (values: pebble, rocksdb)")
 	}
 
 	// check arguments
-	if len(args) == 0 {
+	if len(args) != 3 {
 		printUsage()
-		return errors.New("DB_ENGINE missing")
+		return fmt.Errorf("wrong argument count for '%s'", ToolDatabaseMigration)
 	}
 
-	if len(args) > 1 {
-		printUsage()
-		return fmt.Errorf("too many arguments for '%s'", ToolDatabaseMigration)
+	sourcePath := args[0]
+	if _, err := os.Stat(sourcePath); err != nil || os.IsNotExist(err) {
+		return errors.New("SOURCE_DATABASE_PATH does not exist")
 	}
 
-	var dbEngineTarget string
-	if len(args) == 1 {
-		dbEngineTarget = strings.ToLower(args[0])
+	targetPath := args[1]
+	if _, err := os.Stat(targetPath); err == nil || !os.IsNotExist(err) {
+		return errors.New("TARGET_DATABASE_PATH already exists")
 	}
 
-	sourcePath := config.String(dbCore.CfgDatabasePath)
-	targetPath := fmt.Sprintf("%s_migrated", sourcePath)
-	_, err := os.Stat(targetPath)
-	if err == nil {
-		if err = os.RemoveAll(targetPath); err != nil {
-			return fmt.Errorf("can't remove target database directory: %w", err)
-		}
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("can't check target database directory: %w", err)
+	dbEngineTarget := strings.ToLower(args[2])
+	engineTarget, err := database.DatabaseEngine(dbEngineTarget)
+	if err != nil {
+		return err
 	}
 
-	var storeSource kvstore.KVStore
-	var storeTarget kvstore.KVStore
-
-	switch config.String(dbCore.CfgDatabaseEngine) {
-	case "pebble":
-		db, err := database.NewPebbleDB(sourcePath, nil, true)
-		if err != nil {
-			return fmt.Errorf("source database initialization failed: %w", err)
-		}
-		storeSource = pebble.New(db)
-
-	case "rocksdb":
-		db, err := database.NewRocksDB(sourcePath)
-		if err != nil {
-			return fmt.Errorf("source database initialization failed: %w", err)
-		}
-		storeSource = rocksdb.New(db)
-
-	default:
-		return fmt.Errorf("unknown source database engine: %s, supported engines: pebble/rocksdb", config.String(dbCore.CfgDatabaseEngine))
+	storeSource, err := database.StoreWithDefaultSettings(sourcePath, false)
+	if err != nil {
+		return fmt.Errorf("source database initialization failed: %w", err)
 	}
-
 	defer func() { _ = storeSource.Close() }()
 
-	switch dbEngineTarget {
-	case "pebble":
-		db, err := database.NewPebbleDB(targetPath, nil, true)
-		if err != nil {
-			return fmt.Errorf("target database initialization failed: %w", err)
-		}
-		storeTarget = pebble.New(db)
-
-	case "rocksdb":
-		db, err := database.NewRocksDB(targetPath)
-		if err != nil {
-			return fmt.Errorf("target database initialization failed: %w", err)
-		}
-		storeTarget = rocksdb.New(db)
-
-	default:
-		return fmt.Errorf("unknown target database engine: %s, supported engines: pebble/rocksdb", dbEngineTarget)
+	storeTarget, err := database.StoreWithDefaultSettings(targetPath, true, engineTarget)
+	if err != nil {
+		return fmt.Errorf("target database initialization failed: %w", err)
 	}
-
 	defer func() { _ = storeTarget.Close() }()
 
 	copyBytes := func(source []byte) []byte {

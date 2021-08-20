@@ -11,6 +11,7 @@ import (
 	"github.com/iotaledger/hive.go/crypto/ed25519"
 
 	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/p2p/autopeering"
@@ -41,7 +42,7 @@ var (
 	Plugin *node.Plugin
 	deps   dependencies
 
-	local *Local
+	localPeerContainer *LocalPeerContainer
 
 	onDiscoveryPeerDiscovered  *events.Closure
 	onDiscoveryPeerDeleted     *events.Closure
@@ -56,9 +57,10 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
-	Manager         *p2p.Manager                 `optional:"true"`
-	NodePrivateKey  crypto.PrivKey               `name:"nodePrivateKey"`
-	P2PDatabasePath string                       `name:"p2pDatabasePath"`
+	Manager         *p2p.Manager
+	NodePrivateKey  crypto.PrivKey  `name:"nodePrivateKey"`
+	P2PDatabasePath string          `name:"p2pDatabasePath"`
+	DatabaseEngine  database.Engine `name:"databaseEngine"`
 }
 
 func configure() {
@@ -77,15 +79,15 @@ func configure() {
 		Plugin.Panicf("unable to obtain raw private key: %s", err)
 	}
 
-	local = newLocal(rawPrvKey[:ed25519.SeedSize], deps.P2PDatabasePath)
-	configureAutopeering(local)
+	localPeerContainer = newLocalPeerContainer(rawPrvKey[:ed25519.SeedSize], deps.P2PDatabasePath, deps.DatabaseEngine)
+	configureAutopeering(localPeerContainer)
 	configureEvents()
 }
 
 func run() {
 	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		attachEvents()
-		start(local, shutdownSignal)
+		start(localPeerContainer, shutdownSignal)
 		detachEvents()
 	}, shutdown.PriorityAutopeering); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
