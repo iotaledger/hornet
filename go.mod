@@ -4,8 +4,6 @@ go 1.16
 
 replace github.com/labstack/gommon => github.com/muXxer/gommon v0.3.1-0.20210805133353-359faea1baf6
 
-replace github.com/wollac/iota-crypto-demo => github.com/muXxer/iota-crypto-demo v0.0.0-20210819204737-030e4ce5e724
-
 replace github.com/linxGnu/grocksdb => github.com/gohornet/grocksdb v1.6.34-0.20210518222204-d6ea5eedcfb9
 
 require (
@@ -34,10 +32,12 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20210819121432-6e2ce2d41200
-	github.com/iotaledger/hive.go v0.0.0-20210819120742-a8536d801087
+	github.com/iotaledger/hive.go v0.0.0-20210821074123-831d7702ae07
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v2 v2.0.1-0.20210819130518-ca11ee20d342
 	github.com/ipfs/go-cid v0.1.0 // indirect
+	github.com/ipfs/go-datastore v0.4.6
+	github.com/ipfs/go-ds-badger v0.2.7
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/labstack/echo/v4 v4.5.0
 	github.com/labstack/gommon v0.3.0
@@ -61,15 +61,15 @@ require (
 	github.com/tidwall/gjson v1.8.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.8 // indirect
 	github.com/ugorji/go v1.2.6 // indirect
-	github.com/wollac/iota-crypto-demo v0.0.0-20210722115658-f781c19dd0cc
+	github.com/wollac/iota-crypto-demo v0.0.0-20210820085437-1a7b8ead2881
 	gitlab.com/powsrv.io/go/client v0.0.0-20210203192329-84583796cd46
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.12.0
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/exp v0.0.0-20210819164307-503510c5c1ec // indirect
 	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d
-	golang.org/x/sys v0.0.0-20210819135213-f52c844e1c1c // indirect
+	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
-	google.golang.org/genproto v0.0.0-20210819152826-bb2f42df81c9 // indirect
+	google.golang.org/genproto v0.0.0-20210821163610-241b8fcbd6c8 // indirect
 )

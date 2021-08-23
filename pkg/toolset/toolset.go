@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	ToolPwdHash            = "pwdhash"
-	ToolP2PIdentity        = "p2pidentity"
-	ToolP2PExtractIdentity = "p2pidentityextract"
-	ToolEd25519Key         = "ed25519key"
-	ToolEd25519Addr        = "ed25519addr"
+	ToolPwdHash            = "pwd-hash"
+	ToolP2PIdentityGen     = "p2pidentity-gen"
+	ToolP2PExtractIdentity = "p2pidentity-extract"
+	ToolEd25519Key         = "ed25519-key"
+	ToolEd25519Addr        = "ed25519-addr"
 	ToolJWTApi             = "jwt-api"
-	ToolSnapGen            = "snapgen"
-	ToolSnapMerge          = "snapmerge"
-	ToolSnapInfo           = "snapinfo"
+	ToolSnapGen            = "snap-gen"
+	ToolSnapMerge          = "snap-merge"
+	ToolSnapInfo           = "snap-info"
 	ToolBenchmarkIO        = "bench-io"
 	ToolBenchmarkCPU       = "bench-cpu"
 	ToolDatabaseMigration  = "db-migration"
@@ -48,7 +48,7 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 
 	tools := map[string]func(*configuration.Configuration, []string) error{
 		ToolPwdHash:            hashPasswordAndSalt,
-		ToolP2PIdentity:        generateP2PIdentity,
+		ToolP2PIdentityGen:     generateP2PIdentity,
 		ToolP2PExtractIdentity: extractP2PIdentity,
 		ToolEd25519Key:         generateEd25519Key,
 		ToolEd25519Addr:        generateEd25519Address,
@@ -78,8 +78,8 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 
 func listTools() {
 	fmt.Printf("%-20s generates a scrypt hash from your password and salt\n", fmt.Sprintf("%s:", ToolPwdHash))
-	fmt.Printf("%-20s generates an p2p identity\n", fmt.Sprintf("%s:", ToolP2PIdentity))
-	fmt.Printf("%-20s extracts the p2p identity from the given store\n", fmt.Sprintf("%s:", ToolP2PExtractIdentity))
+	fmt.Printf("%-20s generates a p2p identity private key file\n", fmt.Sprintf("%s:", ToolP2PIdentityGen))
+	fmt.Printf("%-20s extracts the p2p identity from the private key file\n", fmt.Sprintf("%s:", ToolP2PExtractIdentity))
 	fmt.Printf("%-20s generates an ed25519 key pair\n", fmt.Sprintf("%s:", ToolEd25519Key))
 	fmt.Printf("%-20s generates an ed25519 address from a public key\n", fmt.Sprintf("%s:", ToolEd25519Addr))
 	fmt.Printf("%-20s generates a JWT token for REST-API access\n", fmt.Sprintf("%s:", ToolJWTApi))

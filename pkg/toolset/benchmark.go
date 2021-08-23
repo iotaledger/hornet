@@ -35,6 +35,8 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 		println("	[COUNT] 	- objects count (optional)")
 		println("	[SIZE]  	- objects size  (optional)")
 		println("	[DB_ENGINE] - database engine (optional, values: pebble, rocksdb)")
+		println()
+		println(fmt.Sprintf("example: %s %d %d %s", ToolBenchmarkIO, 500000, 1000, "rocksdb"))
 	}
 
 	objectCnt := 500000
@@ -134,6 +136,8 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 		println(fmt.Sprintf("	%s [THREADS]", ToolBenchmarkCPU))
 		println()
 		println("	[THREADS]  	- thread count (optional)")
+		println()
+		println(fmt.Sprintf("example: %s %d", ToolBenchmarkCPU, 2))
 	}
 
 	threads := runtime.NumCPU()

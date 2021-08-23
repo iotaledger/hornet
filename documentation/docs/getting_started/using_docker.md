@@ -90,7 +90,7 @@ You can run `docker stop -t 200 hornet` to gracefully end the process.
 If you use the Hornet dashboard, you need to create a secure password. Start your Hornet container and execute the following command when the container is running:
 
 ```sh
-docker exec -it hornet /app/hornet tool pwdhash
+docker exec -it hornet /app/hornet tool pwd-hash
 
 ```
 

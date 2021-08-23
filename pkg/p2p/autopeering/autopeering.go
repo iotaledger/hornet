@@ -214,15 +214,15 @@ func ConvertPeerIDToHiveIdentity(peer *p2p.Peer) (*identity.Identity, error) {
 
 // ConvertLibP2PPrivateKeyToHive converts a libp2p private key to a hive private key.
 func ConvertLibP2PPrivateKeyToHive(key *crypto.Ed25519PrivateKey) (*ed25519.PrivateKey, error) {
-	prvKeyBytes, err := key.Raw()
+	privKeyBytes, err := key.Raw()
 	if err != nil {
 		return nil, err
 	}
 
-	hivePrvKey, err, _ := ed25519.PrivateKeyFromBytes(prvKeyBytes)
+	hivePrivKey, err, _ := ed25519.PrivateKeyFromBytes(privKeyBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	return &hivePrvKey, nil
+	return &hivePrivKey, nil
 }

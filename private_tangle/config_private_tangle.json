@@ -210,7 +210,6 @@
       "streamReadTimeout": "1m0s",
       "streamWriteTimeout": "10s"
     },
-    "identityPrivateKey": "",
     "db": {
       "path": "p2pstore"
     },
