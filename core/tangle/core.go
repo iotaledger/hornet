@@ -148,14 +148,14 @@ func configure() {
 		// if it was not deleted before this check.
 		revalidateDatabase := *revalidateDatabase || deps.NodeConfig.Bool(database.CfgDatabaseAutoRevalidation)
 		if !revalidateDatabase {
-			CorePlugin.Panic(`
+			CorePlugin.Panicf(`
 HORNET was not shut down properly, the database may be corrupted.
-Please restart HORNET with one of the following flags or enable "db.autoRevalidation" in the config.
+Please restart HORNET with one of the following flags or enable "%s" in the config.
 
 --revalidate:     starts the database revalidation (might take a long time)
 --deleteDatabase: deletes the database
 --deleteAll:      deletes the database and the snapshot files
-`)
+`, database.CfgDatabaseAutoRevalidation)
 		}
 		CorePlugin.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 

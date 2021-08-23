@@ -1,7 +1,6 @@
 package toolset
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,6 +23,8 @@ func databaseMigration(_ *configuration.Configuration, args []string) error {
 		println("   [SOURCE_DATABASE_PATH]   - the path to the source database")
 		println("   [TARGET_DATABASE_PATH]   - the path to the target database")
 		println("   [TARGET_DATABASE_ENGINE] - the engine of the target database (values: pebble, rocksdb)")
+		println()
+		println(fmt.Sprintf("example: %s %s %s %s", ToolDatabaseMigration, "mainnetdb", "mainnetdb_new", "rocksdb"))
 	}
 
 	// check arguments
@@ -34,12 +35,12 @@ func databaseMigration(_ *configuration.Configuration, args []string) error {
 
 	sourcePath := args[0]
 	if _, err := os.Stat(sourcePath); err != nil || os.IsNotExist(err) {
-		return errors.New("SOURCE_DATABASE_PATH does not exist")
+		return fmt.Errorf("SOURCE_DATABASE_PATH (%s) does not exist", sourcePath)
 	}
 
 	targetPath := args[1]
 	if _, err := os.Stat(targetPath); err == nil || !os.IsNotExist(err) {
-		return errors.New("TARGET_DATABASE_PATH already exists")
+		return fmt.Errorf("TARGET_DATABASE_PATH (%s) already exist", targetPath)
 	}
 
 	dbEngineTarget := strings.ToLower(args[2])

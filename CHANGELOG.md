@@ -62,7 +62,7 @@ All notable changes to this project will be documented in this file.
 ## [1.0.2] - 28.05.2021
 
 ### Added
-    - p2pidentityextract tool (#1090)
+    - p2pidentity-extract tool (#1090)
     - tool to generate JWT token for REST API (#1085)
     - Add database pruning based on database size (#1115)
 

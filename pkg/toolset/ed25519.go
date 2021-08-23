@@ -35,6 +35,8 @@ func generateEd25519Address(_ *configuration.Configuration, args []string) error
 		println(fmt.Sprintf("	%s [ED25519_PUB_KEY]", ToolEd25519Addr))
 		println()
 		println("	[ED25519_PUB_KEY] - an ed25519 public key")
+		println()
+		println(fmt.Sprintf("example: %s %s", ToolEd25519Addr, "88457c9836b9b2c3cdf363ab9516aa5a9786f5c6ceff426efe25147c58b57839"))
 	}
 
 	// check arguments

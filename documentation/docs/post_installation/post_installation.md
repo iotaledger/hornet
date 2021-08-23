@@ -36,7 +36,7 @@ You can see a list of all the other altering command line parameters by running:
 
 ```bash
 hornet --help
-``` 
+```
 
 If you want a more detailed output you can run:
 
@@ -66,10 +66,10 @@ Change `dashboard.bindAddress` to either `0.0.0.0:8081` to listen on all availab
 
 Even if accessible from the Internet, any visitor will still need a valid username and password combination to access the management section of the dashboard.
 
-The password, hash, and salt can be generated using the integrated `pwdhash` CLI tool:
+The password, hash, and salt can be generated using the integrated `pwd-hash` CLI tool:
 
 ```bash
-./hornet tools pwdhash
+./hornet tools pwd-hash
 ```
 
 Output example:
@@ -83,7 +83,7 @@ Your salt: 6c71f4753f6fb52d7a4bb5471281400c8fef760533f0589026a0e646bc03acd4
 ```
 
 :::info
-The `pwdhash` tool outputs the `passwordHash` and `passwordSalt` based on your input password.
+The `pwd-hash` tool outputs the `passwordHash` and `passwordSalt` based on your input password.
 :::
 
 Copy both values to their corresponding configuration options: `dashboard.auth.passwordHash` and
