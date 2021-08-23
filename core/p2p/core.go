@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/libp2p/go-libp2p"
 	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -41,8 +39,6 @@ func init() {
 var (
 	CorePlugin *node.CorePlugin
 	deps       dependencies
-
-	peerStoreExists bool
 )
 
 type dependencies struct {
@@ -79,40 +75,46 @@ func provide(c *dig.Container) {
 		p2pDatabasePath := deps.NodeConfig.String(CfgP2PDatabasePath)
 		res.P2PDatabasePath = p2pDatabasePath
 
-		pubKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PubKeyFileName)
+		privKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PrivKeyFileName)
 
-		peerStorePath := filepath.Join(p2pDatabasePath, "peers")
-		peerStoreExists = p2p.PeerStoreExists(peerStorePath)
-
-		peerStoreContainer, err := p2p.NewPeerStoreContainer(peerStorePath, deps.DatabaseEngine, true)
+		peerStoreContainer, err := p2p.NewPeerStoreContainer(filepath.Join(p2pDatabasePath, "peers"), deps.DatabaseEngine, true)
 		if err != nil {
 			CorePlugin.Panic(err)
 		}
 		res.PeerStoreContainer = peerStoreContainer
 
+		// TODO: temporary migration logic
+		// this should be removed after some time / hornet versions (20.08.21: muXxer)
 		identityPrivKey := deps.NodeConfig.String(CfgP2PIdentityPrivKey)
+		migrated, err := p2p.MigrateDeprecatedPeerStore(p2pDatabasePath, identityPrivKey, peerStoreContainer)
+		if err != nil {
+			CorePlugin.Panicf("migration of deprecated peer store failed: %s", err)
+		}
+		if migrated {
+			CorePlugin.LogInfof(`The peer store was migrated successfully!
+
+Your node identity private key can now be found at "%s".
+`, privKeyFilePath)
+		}
+
+		// make sure nobody copies around the peer store since it contains the private key of the node
+		CorePlugin.LogInfof(`WARNING: never share your "%s" folder as it contains your node's private key!`, p2pDatabasePath)
 
 		// load up the previously generated identity or create a new one
-		var prvKey crypto.PrivKey
-		if !peerStoreExists {
-			prvKey, err = p2p.CreateIdentity(pubKeyFilePath, identityPrivKey)
-		} else {
-			var peerID peer.ID
-			peerID, err = p2p.LoadIdentityFromFile(pubKeyFilePath)
-			if err == nil {
-				prvKey, err = p2p.LoadPrivateKeyFromStore(peerID, peerStoreContainer.Peerstore(), identityPrivKey)
-			}
-		}
+		privKey, newlyCreated, err := p2p.LoadOrCreateIdentityPrivateKey(p2pDatabasePath, identityPrivKey)
 		if err != nil {
-			if errors.Is(err, p2p.ErrPrivKeyInvalid) {
-				err = fmt.Errorf("config parameter '%s' contains an invalid private key", CfgP2PIdentityPrivKey)
-			}
-			CorePlugin.Panicf("unable to load/create peer identity: %s", err)
+			CorePlugin.Panic(err)
 		}
-		res.NodePrivateKey = prvKey
+		res.NodePrivateKey = privKey
+
+		if newlyCreated {
+			CorePlugin.LogInfof(`stored new private key for peer identity under "%s"`, privKeyFilePath)
+		} else {
+			CorePlugin.LogInfof(`loaded existing private key for peer identity from "%s"`, privKeyFilePath)
+		}
 
 		createdHost, err := libp2p.New(context.Background(),
-			libp2p.Identity(prvKey),
+			libp2p.Identity(privKey),
 			libp2p.ListenAddrStrings(deps.NodeConfig.Strings(CfgP2PBindMultiAddresses)...),
 			libp2p.Peerstore(peerStoreContainer.Peerstore()),
 			libp2p.DefaultTransports,
@@ -126,7 +128,6 @@ func provide(c *dig.Container) {
 		if err != nil {
 			return res, fmt.Errorf("unable to initialize peer: %w", err)
 		}
-
 		res.Host = createdHost
 
 		return res, nil
@@ -219,18 +220,6 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-
-	// make sure nobody copies around the peer store since it contains the
-	// private key of the node
-	CorePlugin.LogInfof("never share your %s folder as it contains your node's private key!", deps.NodeConfig.String(CfgP2PDatabasePath))
-
-	pubKeyFilePath := filepath.Join(deps.NodeConfig.String(CfgP2PDatabasePath), p2p.PubKeyFileName)
-
-	if !peerStoreExists {
-		CorePlugin.LogInfof("stored new peer identity under %s", pubKeyFilePath)
-	} else {
-		CorePlugin.LogInfof("retrieved existing peer identity from %s", pubKeyFilePath)
-	}
 
 	CorePlugin.LogInfof("peer configured, ID: %s", deps.Host.ID())
 
