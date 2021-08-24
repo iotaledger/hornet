@@ -3,8 +3,6 @@ package storage
 import (
 	"sync"
 
-	"github.com/pkg/errors"
-
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -14,11 +12,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
-)
-
-var (
-	// ErrNothingToCleanUp is returned when nothing is there to clean up in the database.
-	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
 )
 
 type packageEvents struct {
@@ -183,16 +176,6 @@ func (s *Storage) loadConfirmedMilestoneFromDatabase() error {
 
 	// set the confirmed milestone index based on the ledger milestone
 	return s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
-}
-
-func (s *Storage) DatabaseSupportsCleanup() bool {
-	// ToDo: add this to the KVStore interface
-	return false
-}
-
-func (s *Storage) CleanupDatabases() error {
-	// ToDo: add this to the KVStore interface
-	return ErrNothingToCleanUp
 }
 
 // DatabaseSize returns the size of the database.

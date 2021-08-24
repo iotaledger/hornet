@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -327,7 +326,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
-	database.RunGarbageCollection()
+	s.database.RunGarbageCollection()
 
 	return targetIndex, nil
 }
