@@ -36,6 +36,9 @@ type Pluggable struct {
 	Params *PluginParams
 	// The function to call to initialize the plugin dependencies.
 	DepsFunc interface{}
+	// PreProvide gets called before the provide stage of node initialization.
+	// This can be used to force disable other pluggables before they get initialized.
+	PreProvide PreProvideFunc
 	// Provide gets called in the provide stage of node initialization.
 	Provide ProvideFunc
 	// Configure gets called in the configure stage of node initialization.
