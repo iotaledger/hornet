@@ -65,6 +65,7 @@ var (
 
 type dependencies struct {
 	dig.In
+	Database    *database.Database
 	Storage     *storage.Storage
 	Tangle      *tangle.Tangle
 	Requester   *gossip.Requester
@@ -176,7 +177,7 @@ Please restart HORNET with one of the following flags or enable "%s" in the conf
 func run() {
 
 	// run a full database garbage collection at startup
-	database.RunGarbageCollection()
+	deps.Database.RunGarbageCollection()
 
 	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
 		attachHeartbeatEvents()

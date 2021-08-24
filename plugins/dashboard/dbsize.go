@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
@@ -63,8 +63,8 @@ func runDatabaseSizeCollector() {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
-		deps.DatabaseEvents.DatabaseCleanup.Attach(onDatabaseCleanup)
-		defer deps.DatabaseEvents.DatabaseCleanup.Detach(onDatabaseCleanup)
+		deps.Database.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
+		defer deps.Database.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
 
 		ticker := timeutil.NewTicker(func() {
 			dbSizeMetric := currentDatabaseSize()
