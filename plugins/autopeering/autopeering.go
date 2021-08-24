@@ -32,7 +32,7 @@ var (
 	selectionProtocol *selection.Protocol
 )
 
-func configureAutopeering(localPeerContainer *LocalPeerContainer) {
+func configureAutopeering(localPeerContainer *autopeering.LocalPeerContainer) {
 	entryNodes, err := parseEntryNodes()
 	if err != nil {
 		Plugin.LogWarn(err)
@@ -65,7 +65,7 @@ func configureAutopeering(localPeerContainer *LocalPeerContainer) {
 	selectionProtocol = selection.New(localPeerContainer.Local(), discoveryProtocol, selection.Logger(Plugin.Logger().Named("sel")), neighborValidator)
 }
 
-func start(localPeerContainer *LocalPeerContainer, shutdownSignal <-chan struct{}) {
+func start(localPeerContainer *autopeering.LocalPeerContainer, shutdownSignal <-chan struct{}) {
 	Plugin.LogInfo("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
 
 	lPeer := localPeerContainer.Local()
@@ -111,7 +111,7 @@ func start(localPeerContainer *LocalPeerContainer, shutdownSignal <-chan struct{
 	// underlying connection is closed by the server
 	srv.Close()
 
-	if err := localPeerContainer.close(); err != nil {
+	if err := localPeerContainer.Close(); err != nil {
 		Plugin.LogErrorf("error closing peer database: %s", err)
 	}
 
