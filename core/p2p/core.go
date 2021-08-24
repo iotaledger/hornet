@@ -62,10 +62,11 @@ func provide(c *dig.Container) {
 	type p2presult struct {
 		dig.Out
 
-		P2PDatabasePath    string `name:"p2pDatabasePath"`
-		PeerStoreContainer *p2p.PeerStoreContainer
-		NodePrivateKey     crypto.PrivKey `name:"nodePrivateKey"`
-		Host               host.Host
+		P2PDatabasePath       string   `name:"p2pDatabasePath"`
+		P2PBindMultiAddresses []string `name:"p2pBindMultiAddresses"`
+		PeerStoreContainer    *p2p.PeerStoreContainer
+		NodePrivateKey        crypto.PrivKey `name:"nodePrivateKey"`
+		Host                  host.Host
 	}
 
 	if err := c.Provide(func(deps hostdeps) (p2presult, error) {
@@ -74,6 +75,7 @@ func provide(c *dig.Container) {
 
 		p2pDatabasePath := deps.NodeConfig.String(CfgP2PDatabasePath)
 		res.P2PDatabasePath = p2pDatabasePath
+		res.P2PBindMultiAddresses = deps.NodeConfig.Strings(CfgP2PBindMultiAddresses)
 
 		privKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PrivKeyFileName)
 

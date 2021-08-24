@@ -20,8 +20,10 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
+	"github.com/iotaledger/hive.go/logger"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
@@ -83,16 +85,23 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		serverMetrics:          &metrics.ServerMetrics{},
 	}
 
-	cooPrvKey1, err := utils.ParseEd25519PrivateKeyFromString("651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c")
-	require.NoError(testInterface, err)
-	cooPrvKey2, err := utils.ParseEd25519PrivateKeyFromString("0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c")
+	cfg := configuration.New()
+	err := cfg.Set("logger.disableStacktrace", true)
 	require.NoError(testInterface, err)
 
-	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", testInterface.Name()))
+	// no need to check the error, since the global logger could already be initialized
+	_ = logger.InitGlobalLogger(cfg)
+
+	cooPrvKey1, err := utils.ParseEd25519PrivateKeyFromString("651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c")
+	require.NoError(te.TestInterface, err)
+	cooPrvKey2, err := utils.ParseEd25519PrivateKeyFromString("0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c")
+	require.NoError(te.TestInterface, err)
+
+	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", te.TestInterface.Name()))
 	require.NoError(te.TestInterface, err)
 	te.tempDir = tempDir
 
-	testInterface.Logf("Testdir: %s", tempDir)
+	te.TestInterface.Logf("Testdir: %s", tempDir)
 
 	cooPrivateKeys := []ed25519.PrivateKey{cooPrvKey1, cooPrvKey2}
 
@@ -102,7 +111,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	}
 
 	te.store = mapdb.NewMapDB()
-	te.storage, err = storage.New(te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
+	te.storage, err = storage.New(logger.NewLogger("storage"), te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SEP
@@ -120,16 +129,16 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 
 	// Start up the coordinator
 	te.configureCoordinator(cooPrivateKeys, keyManager)
-	require.NotNil(testInterface, te.coo)
+	require.NotNil(te.TestInterface, te.coo)
 
 	te.VerifyCMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
 		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{hornet.NullMessageID()}, false)
-		require.Equal(testInterface, 1, confStats.MessagesReferenced)                  // 1 for milestone
-		require.Equal(testInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for milestone
-		require.Equal(testInterface, 0, confStats.MessagesIncludedWithTransactions)
-		require.Equal(testInterface, 0, confStats.MessagesExcludedWithConflictingTransactions)
+		require.Equal(te.TestInterface, 1, confStats.MessagesReferenced)                  // 1 for milestone
+		require.Equal(te.TestInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for milestone
+		require.Equal(te.TestInterface, 0, confStats.MessagesIncludedWithTransactions)
+		require.Equal(te.TestInterface, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	}
 
 	return te

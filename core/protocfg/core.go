@@ -6,6 +6,8 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
+	databaseCore "github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
@@ -53,9 +55,9 @@ func init() {
 
 var (
 	CorePlugin *node.CorePlugin
-)
 
-var cooPubKeyRangesFlag = flag.String(CfgProtocolPublicKeyRangesJSON, "", "overwrite public key ranges (JSON)")
+	cooPubKeyRangesFlag = flag.String(CfgProtocolPublicKeyRangesJSON, "", "overwrite public key ranges (JSON)")
+)
 
 func provide(c *dig.Container) {
 	type tangledeps struct {
@@ -66,18 +68,28 @@ func provide(c *dig.Container) {
 	type protoresult struct {
 		dig.Out
 
-		PublicKeyRanges coordinator.PublicKeyRanges
-		NetworkID       uint64               `name:"networkId"`
-		Bech32HRP       iotago.NetworkPrefix `name:"bech32HRP"`
-		MinPoWScore     float64              `name:"minPoWScore"`
+		PublicKeyRanges         coordinator.PublicKeyRanges
+		NetworkID               uint64               `name:"networkId"`
+		NetworkIDName           string               `name:"networkIdName"`
+		Bech32HRP               iotago.NetworkPrefix `name:"bech32HRP"`
+		MinPoWScore             float64              `name:"minPoWScore"`
+		MilestonePublicKeyCount int                  `name:"milestonePublicKeyCount"`
+		DatabaseEngine          database.Engine      `name:"databaseEngine"`
 	}
 
 	if err := c.Provide(func(deps tangledeps) protoresult {
+		engine, err := database.DatabaseEngine(deps.NodeConfig.String(databaseCore.CfgDatabaseEngine))
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
 
 		res := protoresult{
-			NetworkID:   iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
-			Bech32HRP:   iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
-			MinPoWScore: deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
+			NetworkID:               iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
+			NetworkIDName:           deps.NodeConfig.String(CfgProtocolNetworkIDName),
+			Bech32HRP:               iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
+			MinPoWScore:             deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
+			MilestonePublicKeyCount: deps.NodeConfig.Int(CfgProtocolMilestonePublicKeyCount),
+			DatabaseEngine:          engine,
 		}
 
 		if *cooPubKeyRangesFlag != "" {

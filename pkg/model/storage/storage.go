@@ -3,8 +3,6 @@ package storage
 import (
 	"sync"
 
-	"github.com/pkg/errors"
-
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -12,13 +10,9 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
-)
-
-var (
-	// ErrNothingToCleanUp is returned when nothing is there to clean up in the database.
-	ErrNothingToCleanUp = errors.New("Nothing to clean up in the databases")
 )
 
 type packageEvents struct {
@@ -30,6 +24,7 @@ type ReadOption = objectstorage.ReadOption
 type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
+	log *logger.Logger
 
 	// database
 	databaseDir   string
@@ -80,11 +75,12 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (*Storage, error) {
+func New(log *logger.Logger, databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (*Storage, error) {
 
 	utxoManager := utxo.New(store)
 
 	s := &Storage{
+		log:                     log,
 		databaseDir:             databaseDirectory,
 		store:                   store,
 		keyManager:              keyManager,
@@ -183,16 +179,6 @@ func (s *Storage) loadConfirmedMilestoneFromDatabase() error {
 
 	// set the confirmed milestone index based on the ledger milestone
 	return s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
-}
-
-func (s *Storage) DatabaseSupportsCleanup() bool {
-	// ToDo: add this to the KVStore interface
-	return false
-}
-
-func (s *Storage) CleanupDatabases() error {
-	// ToDo: add this to the KVStore interface
-	return ErrNothingToCleanUp
 }
 
 // DatabaseSize returns the size of the database.

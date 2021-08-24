@@ -7,7 +7,6 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -73,6 +72,18 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
+
+	type prunereceiptsdeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps prunereceiptsdeps) bool {
+		return deps.NodeConfig.Bool(CfgPruningPruneReceipts)
+	}, dig.Name("pruneReceipts")); err != nil {
+		CorePlugin.Panic(err)
+	}
+
 	type snapshotdeps struct {
 		dig.In
 		Database      *database.Database
@@ -81,11 +92,12 @@ func provide(c *dig.Container) {
 		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 		BelowMaxDepth int                          `name:"belowMaxDepth"`
 		NetworkID     uint64                       `name:"networkId"`
+		NetworkIDName string                       `name:"networkIdName"`
 	}
 
 	if err := c.Provide(func(deps snapshotdeps) *snapshot.Snapshot {
 
-		networkIDSource := deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName)
+		networkIDSource := deps.NetworkIDName
 
 		if err := deps.NodeConfig.SetDefault(CfgSnapshotsDownloadURLs, []snapshot.DownloadTarget{
 			{

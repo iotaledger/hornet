@@ -14,9 +14,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -75,6 +75,7 @@ var (
 
 type dependencies struct {
 	dig.In
+	Database                 *database.Database
 	Storage                  *storage.Storage
 	Tangle                   *tangle.Tangle
 	ServerMetrics            *metrics.ServerMetrics
@@ -85,8 +86,7 @@ type dependencies struct {
 	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
 	AppInfo                  *app.AppInfo
 	Host                     host.Host
-	NodePrivateKey           crypto.PrivKey `name:"nodePrivateKey"`
-	DatabaseEvents           *database.Events
+	NodePrivateKey           crypto.PrivKey          `name:"nodePrivateKey"`
 	DashboardAllowedAPIRoute restapipkg.AllowedRoute `optional:"true"`
 }
 

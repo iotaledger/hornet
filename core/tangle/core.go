@@ -8,9 +8,9 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/snapshot"
+	databaseCore "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -65,12 +65,16 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage     *storage.Storage
-	Tangle      *tangle.Tangle
-	Requester   *gossip.Requester
-	Broadcaster *gossip.Broadcaster
-	Snapshot    *snapshotpkg.Snapshot
-	NodeConfig  *configuration.Configuration `name:"nodeConfig"`
+	Database                 *database.Database
+	Storage                  *storage.Storage
+	Tangle                   *tangle.Tangle
+	Requester                *gossip.Requester
+	Broadcaster              *gossip.Broadcaster
+	Snapshot                 *snapshotpkg.Snapshot
+	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
+	DatabaseDebug            bool                         `name:"databaseDebug"`
+	DatabaseAutoRevalidation bool                         `name:"databaseAutoRevalidation"`
+	PruneReceipts            bool                         `name:"pruneReceipts"`
 }
 
 func provide(c *dig.Container) {
@@ -142,11 +146,11 @@ func configure() {
 		CorePlugin.Panic(err)
 	}
 
-	if databaseCorrupted && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
+	if databaseCorrupted && !deps.DatabaseDebug {
 		// no need to check for the "deleteDatabase" and "deleteAll" flags,
 		// since the database should only be marked as corrupted,
 		// if it was not deleted before this check.
-		revalidateDatabase := *revalidateDatabase || deps.NodeConfig.Bool(database.CfgDatabaseAutoRevalidation)
+		revalidateDatabase := *revalidateDatabase || deps.DatabaseAutoRevalidation
 		if !revalidateDatabase {
 			CorePlugin.Panicf(`
 HORNET was not shut down properly, the database may be corrupted.
@@ -155,11 +159,11 @@ Please restart HORNET with one of the following flags or enable "%s" in the conf
 --revalidate:     starts the database revalidation (might take a long time)
 --deleteDatabase: deletes the database
 --deleteAll:      deletes the database and the snapshot files
-`, database.CfgDatabaseAutoRevalidation)
+`, databaseCore.CfgDatabaseAutoRevalidation)
 		}
 		CorePlugin.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.NodeConfig.Bool(snapshot.CfgPruningPruneReceipts)); err != nil {
+		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.PruneReceipts); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				CorePlugin.LogInfo("database revalidation aborted")
 				os.Exit(0)
@@ -176,7 +180,7 @@ Please restart HORNET with one of the following flags or enable "%s" in the conf
 func run() {
 
 	// run a full database garbage collection at startup
-	database.RunGarbageCollection()
+	deps.Database.RunGarbageCollection()
 
 	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
 		attachHeartbeatEvents()

@@ -2,14 +2,10 @@ package database
 
 import (
 	"os"
-	"time"
-
-	"github.com/pkg/errors"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -24,7 +20,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
-	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hive.go/logger"
 )
 
 const (
@@ -54,8 +50,6 @@ var (
 	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
 	deleteAll      = flag.Bool(CfgTangleDeleteAll, false, "whether to delete the database and snapshots at startup")
 
-	garbageCollectionLock syncutils.Mutex
-
 	// Closures
 	onPruningStateChanged *events.Closure
 )
@@ -64,7 +58,6 @@ type dependencies struct {
 	dig.In
 	Database       *database.Database
 	Storage        *storage.Storage
-	Events         *Events
 	StorageMetrics *metrics.StorageMetrics
 }
 
@@ -78,31 +71,23 @@ func provide(c *dig.Container) {
 	type dbresult struct {
 		dig.Out
 
-		StorageMetrics     *metrics.StorageMetrics
-		DatabaseMetrics    *metrics.DatabaseMetrics
-		DatabaseEvents     *Events
-		DeleteDatabaseFlag bool            `name:"deleteDatabase"`
-		DeleteAllFlag      bool            `name:"deleteAll"`
-		DatabaseEngine     database.Engine `name:"databaseEngine"`
+		StorageMetrics           *metrics.StorageMetrics
+		DatabaseMetrics          *metrics.DatabaseMetrics
+		DeleteDatabaseFlag       bool `name:"deleteDatabase"`
+		DeleteAllFlag            bool `name:"deleteAll"`
+		DatabaseDebug            bool `name:"databaseDebug"`
+		DatabaseAutoRevalidation bool `name:"databaseAutoRevalidation"`
 	}
 
 	if err := c.Provide(func(deps dbdeps) dbresult {
 
-		engine, err := database.DatabaseEngine(deps.NodeConfig.String(CfgDatabaseEngine))
-		if err != nil {
-			CorePlugin.Panic(err)
-		}
-
 		res := dbresult{
-			StorageMetrics:  &metrics.StorageMetrics{},
-			DatabaseMetrics: &metrics.DatabaseMetrics{},
-			DatabaseEvents: &Events{
-				DatabaseCleanup:    events.NewEvent(DatabaseCleanupCaller),
-				DatabaseCompaction: events.NewEvent(events.BoolCaller),
-			},
-			DeleteDatabaseFlag: *deleteDatabase,
-			DeleteAllFlag:      *deleteAll,
-			DatabaseEngine:     engine,
+			StorageMetrics:           &metrics.StorageMetrics{},
+			DatabaseMetrics:          &metrics.DatabaseMetrics{},
+			DeleteDatabaseFlag:       *deleteDatabase,
+			DeleteAllFlag:            *deleteAll,
+			DatabaseDebug:            deps.NodeConfig.Bool(CfgDatabaseDebug),
+			DatabaseAutoRevalidation: deps.NodeConfig.Bool(CfgDatabaseAutoRevalidation),
 		}
 		return res
 	}); err != nil {
@@ -115,11 +100,15 @@ func provide(c *dig.Container) {
 		DeleteAllFlag      bool                         `name:"deleteAll"`
 		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
 		DatabaseEngine     database.Engine              `name:"databaseEngine"`
-		Events             *Events
 		Metrics            *metrics.DatabaseMetrics
 	}
 
 	if err := c.Provide(func(deps databasedeps) *database.Database {
+
+		events := &database.Events{
+			DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
+			DatabaseCompaction: events.NewEvent(events.BoolCaller),
+		}
 
 		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 			// delete old database folder
@@ -140,7 +129,7 @@ func provide(c *dig.Container) {
 				if running {
 					deps.Metrics.CompactionCount.Inc()
 				}
-				deps.Events.DatabaseCompaction.Trigger(running)
+				events.DatabaseCompaction.Trigger(running)
 			}
 
 			db, err := database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true)
@@ -149,7 +138,9 @@ func provide(c *dig.Container) {
 			}
 
 			return database.New(
+				CorePlugin.Logger(),
 				pebble.New(db),
+				events,
 				true,
 				func() bool { return deps.Metrics.CompactionRunning.Load() },
 			)
@@ -161,7 +152,9 @@ func provide(c *dig.Container) {
 			}
 
 			return database.New(
+				CorePlugin.Logger(),
 				rocksdb.New(db),
+				events,
 				true,
 				func() bool {
 					if numCompactions, success := db.GetIntProperty("rocksdb.num-running-compactions"); success {
@@ -172,7 +165,7 @@ func provide(c *dig.Container) {
 						if running && !runningBefore {
 							// we may miss some compactions, since this is only calculated if polled.
 							deps.Metrics.CompactionCount.Inc()
-							deps.Events.DatabaseCompaction.Trigger(running)
+							events.DatabaseCompaction.Trigger(running)
 						}
 						return running
 					}
@@ -194,6 +187,7 @@ func provide(c *dig.Container) {
 		Profile                    *profile.Profile
 		BelowMaxDepth              int `name:"belowMaxDepth"`
 		CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
+		MilestonePublicKeyCount    int `name:"milestonePublicKeyCount"`
 	}
 
 	if err := c.Provide(func(deps storagedeps) *storage.Storage {
@@ -208,7 +202,7 @@ func provide(c *dig.Container) {
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 		}
 
-		store, err := storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+		store, err := storage.New(logger.NewLogger("Storage"), deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.MilestonePublicKeyCount)
 		if err != nil {
 			CorePlugin.Panicf("can't initialize storage: %s", err)
 		}
@@ -269,41 +263,6 @@ func run() {
 	}, shutdown.PriorityMetricsUpdater); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
-}
-
-func RunGarbageCollection() {
-	if !deps.Storage.DatabaseSupportsCleanup() {
-		return
-	}
-
-	garbageCollectionLock.Lock()
-	defer garbageCollectionLock.Unlock()
-
-	CorePlugin.LogInfo("running full database garbage collection. This can take a while...")
-
-	start := time.Now()
-
-	deps.Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-		Start: start,
-	})
-
-	err := deps.Storage.CleanupDatabases()
-
-	end := time.Now()
-
-	deps.Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-		Start: start,
-		End:   end,
-	})
-
-	if err != nil {
-		if !errors.Is(err, storage.ErrNothingToCleanUp) {
-			CorePlugin.LogWarnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
-			return
-		}
-	}
-
-	CorePlugin.LogInfof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
 }
 
 func closeDatabases() error {
