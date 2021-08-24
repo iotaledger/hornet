@@ -22,6 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
+	"github.com/iotaledger/hive.go/logger"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
@@ -102,7 +103,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	}
 
 	te.store = mapdb.NewMapDB()
-	te.storage, err = storage.New(te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
+	te.storage, err = storage.New(logger.NewLogger("storage"), te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SEP

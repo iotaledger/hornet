@@ -6,7 +6,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -49,7 +48,7 @@ func info() (*infoResponse, error) {
 		Name:                        deps.AppInfo.Name,
 		Version:                     deps.AppInfo.Version,
 		IsHealthy:                   deps.Tangle.IsNodeHealthy(),
-		NetworkID:                   deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
+		NetworkID:                   deps.NetworkIDName,
 		Bech32HRP:                   string(deps.Bech32HRP),
 		MinPoWScore:                 deps.MinPoWScore,
 		MessagesPerSecond:           messagesPerSecond,

@@ -2,14 +2,10 @@ package database
 
 import (
 	"os"
-	"time"
-
-	"github.com/pkg/errors"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -75,26 +71,23 @@ func provide(c *dig.Container) {
 	type dbresult struct {
 		dig.Out
 
-		StorageMetrics     *metrics.StorageMetrics
-		DatabaseMetrics    *metrics.DatabaseMetrics
-		DeleteDatabaseFlag bool            `name:"deleteDatabase"`
-		DeleteAllFlag      bool            `name:"deleteAll"`
-		DatabaseEngine     database.Engine `name:"databaseEngine"`
+		StorageMetrics           *metrics.StorageMetrics
+		DatabaseMetrics          *metrics.DatabaseMetrics
+		DeleteDatabaseFlag       bool `name:"deleteDatabase"`
+		DeleteAllFlag            bool `name:"deleteAll"`
+		DatabaseDebug            bool `name:"databaseDebug"`
+		DatabaseAutoRevalidation bool `name:"databaseAutoRevalidation"`
 	}
 
 	if err := c.Provide(func(deps dbdeps) dbresult {
 
-		engine, err := database.DatabaseEngine(deps.NodeConfig.String(CfgDatabaseEngine))
-		if err != nil {
-			CorePlugin.Panic(err)
-		}
-
 		res := dbresult{
-			StorageMetrics:  &metrics.StorageMetrics{},
-			DatabaseMetrics: &metrics.DatabaseMetrics{},
-			DeleteDatabaseFlag: *deleteDatabase,
-			DeleteAllFlag:      *deleteAll,
-			DatabaseEngine:     engine,
+			StorageMetrics:           &metrics.StorageMetrics{},
+			DatabaseMetrics:          &metrics.DatabaseMetrics{},
+			DeleteDatabaseFlag:       *deleteDatabase,
+			DeleteAllFlag:            *deleteAll,
+			DatabaseDebug:            deps.NodeConfig.Bool(CfgDatabaseDebug),
+			DatabaseAutoRevalidation: deps.NodeConfig.Bool(CfgDatabaseAutoRevalidation),
 		}
 		return res
 	}); err != nil {
@@ -194,6 +187,7 @@ func provide(c *dig.Container) {
 		Profile                    *profile.Profile
 		BelowMaxDepth              int `name:"belowMaxDepth"`
 		CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
+		MilestonePublicKeyCount    int `name:"milestonePublicKeyCount"`
 	}
 
 	if err := c.Provide(func(deps storagedeps) *storage.Storage {
@@ -208,7 +202,7 @@ func provide(c *dig.Container) {
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 		}
 
-		store, err := storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+		store, err := storage.New(logger.NewLogger("Storage"), deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.MilestonePublicKeyCount)
 		if err != nil {
 			CorePlugin.Panicf("can't initialize storage: %s", err)
 		}

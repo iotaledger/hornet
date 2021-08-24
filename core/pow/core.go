@@ -6,7 +6,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
-	powpackage "github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
@@ -35,7 +35,7 @@ const (
 
 type dependencies struct {
 	dig.In
-	Handler *powpackage.Handler
+	Handler *pow.Handler
 }
 
 func provide(c *dig.Container) {
@@ -45,13 +45,13 @@ func provide(c *dig.Container) {
 		MinPoWScore float64                      `name:"minPoWScore"`
 	}
 
-	if err := c.Provide(func(deps handlerdeps) *powpackage.Handler {
+	if err := c.Provide(func(deps handlerdeps) *pow.Handler {
 		// init the pow handler with all possible settings
 		powsrvAPIKey, err := utils.LoadStringFromEnvironment("POWSRV_API_KEY")
 		if err == nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(CorePlugin.Logger(), deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
+		return pow.New(CorePlugin.Logger(), deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}

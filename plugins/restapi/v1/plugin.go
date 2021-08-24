@@ -179,6 +179,7 @@ type dependencies struct {
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager *p2p.ConfigManager
 	NetworkID            uint64                 `name:"networkId"`
+	NetworkIDName        string                 `name:"networkIdName"`
 	BelowMaxDepth        int                    `name:"belowMaxDepth"`
 	MinPoWScore          float64                `name:"minPoWScore"`
 	Bech32HRP            iotago.NetworkPrefix   `name:"bech32HRP"`
