@@ -8,7 +8,6 @@ import (
 	"go.uber.org/dig"
 	"golang.org/x/net/context"
 
-	"github.com/gohornet/hornet/core/gracefulshutdown"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -21,7 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
-	powpackage "github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -97,6 +96,7 @@ type dependencies struct {
 	BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	Coordinator      *coordinator.Coordinator
 	Selector         *mselection.HeaviestSelector
+	ShutdownHandler  *shutdown.ShutdownHandler
 }
 
 func provide(c *dig.Container) {
@@ -121,7 +121,7 @@ func provide(c *dig.Container) {
 		dig.In
 		Storage         *storage.Storage
 		Tangle          *tangle.Tangle
-		PoWHandler      *powpackage.Handler
+		PoWHandler      *pow.Handler
 		MigratorService *migrator.MigratorService `optional:"true"`
 		UTXOManager     *utxo.Manager
 		NodeConfig      *configuration.Configuration `name:"nodeConfig"`
@@ -227,7 +227,7 @@ func handleError(err error) bool {
 	}
 
 	if err := common.IsCriticalError(err); err != nil {
-		gracefulshutdown.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err))
+		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err))
 		return true
 	}
 

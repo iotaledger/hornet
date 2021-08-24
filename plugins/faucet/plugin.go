@@ -11,7 +11,6 @@ import (
 	"go.uber.org/dig"
 	"golang.org/x/time/rate"
 
-	"github.com/gohornet/hornet/core/gracefulshutdown"
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -59,8 +58,9 @@ var (
 
 type dependencies struct {
 	dig.In
-	Faucet *faucet.Faucet
-	Echo   *echo.Echo
+	Faucet          *faucet.Faucet
+	Echo            *echo.Echo
+	ShutdownHandler *shutdown.ShutdownHandler
 }
 
 func provide(c *dig.Container) {
@@ -196,7 +196,7 @@ func run() {
 	// create a background worker that handles the enqueued faucet requests
 	if err := Plugin.Daemon().BackgroundWorker("Faucet", func(shutdownSignal <-chan struct{}) {
 		if err := deps.Faucet.RunFaucetLoop(shutdownSignal); err != nil {
-			gracefulshutdown.SelfShutdown(fmt.Sprintf("faucet plugin hit a critical error: %s", err.Error()))
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("faucet plugin hit a critical error: %s", err.Error()))
 		}
 	}, shutdown.PriorityFaucet); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
