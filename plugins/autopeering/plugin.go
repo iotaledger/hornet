@@ -10,7 +10,6 @@ import (
 
 	"github.com/iotaledger/hive.go/crypto/ed25519"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
@@ -42,7 +41,7 @@ var (
 	Plugin *node.Plugin
 	deps   dependencies
 
-	localPeerContainer *LocalPeerContainer
+	localPeerContainer *autopeering.LocalPeerContainer
 
 	onDiscoveryPeerDiscovered  *events.Closure
 	onDiscoveryPeerDeleted     *events.Closure
@@ -56,6 +55,16 @@ var (
 
 type dependencies struct {
 	dig.In
+	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+	NodePrivateKey            crypto.PrivKey               `name:"nodePrivateKey"`
+	P2PDatabasePath           string                       `name:"p2pDatabasePath"`
+	P2PBindMultiAddresses     []string                     `name:"p2pBindMultiAddresses"`
+	DatabaseEngine            database.Engine              `name:"databaseEngine"`
+	NetworkIDName             string                       `name:"networkIdName"`
+	AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
+	Manager                   *p2p.Manager                 `optional:"true"`
+}
+
 
 func provide(c *dig.Container) {
 	type autopeeringdeps struct {
@@ -86,7 +95,19 @@ func configure() {
 		Plugin.Panicf("unable to obtain raw private key: %s", err)
 	}
 
-	localPeerContainer = newLocalPeerContainer(rawPrvKey[:ed25519.SeedSize], deps.P2PDatabasePath, deps.DatabaseEngine)
+	localPeerContainer, err = autopeering.NewLocalPeerContainer(p2pServiceKey(),
+		rawPrvKey[:ed25519.SeedSize],
+		deps.P2PDatabasePath,
+		deps.DatabaseEngine,
+		deps.P2PBindMultiAddresses,
+		deps.NodeConfig.String(CfgNetAutopeeringBindAddr),
+		deps.AutopeeringRunAsEntryNode)
+	if err != nil {
+		Plugin.Panicf(": %s", err)
+	}
+
+	Plugin.LogInfof("Initialized local autopeering: %s@%s", localPeerContainer.Local().PublicKey(), localPeerContainer.Local().Address())
+
 	configureAutopeering(localPeerContainer)
 	configureEvents()
 }
@@ -103,7 +124,7 @@ func run() {
 
 // gets the peering service key from the config.
 func p2pServiceKey() service.Key {
-	return service.Key(deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName))
+	return service.Key(deps.NetworkIDName)
 }
 
 func configureEvents() {

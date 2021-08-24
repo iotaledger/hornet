@@ -1,19 +1,18 @@
 package autopeering
 
 import (
+	"fmt"
 	"net"
 	"path/filepath"
 	"strconv"
 
 	"github.com/multiformats/go-multiaddr"
 
-	"github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/database"
 
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 // LocalPeerContainer defines the container for the local autopeering peer.
@@ -28,18 +27,23 @@ func (lpc *LocalPeerContainer) Local() *peer.Local {
 	return lpc.peerLocal
 }
 
-func newLocalPeerContainer(seed []byte, p2pDatabasePath string, dbEngine database.Engine) *LocalPeerContainer {
-	log := logger.NewLogger("Local")
+func NewLocalPeerContainer(p2pServiceKey service.Key,
+	seed []byte,
+	p2pDatabasePath string,
+	dbEngine database.Engine,
+	p2pBindMultiAddresses []string,
+	autopeeringBindAddr string,
+	runAsEntryNode bool) (*LocalPeerContainer, error) {
 
 	// let the autopeering discover the IP
 	// TODO: is this really necessary?
 	var peeringIP net.IP
-	bindAddr := deps.NodeConfig.Strings(p2p.CfgP2PBindMultiAddresses)[0]
+	bindAddr := p2pBindMultiAddresses[0]
 	multiAddrBindAddr, err := multiaddr.NewMultiaddr(bindAddr)
 	if err != nil {
-		log.Fatalf("unable to parse bind multi address %s", err)
-		return nil
+		return nil, fmt.Errorf("unable to parse bind multi address %w", err)
 	}
+
 	for _, proto := range multiAddrBindAddr.Protocols() {
 		switch proto.Code {
 		case multiaddr.P_IP4:
@@ -49,56 +53,54 @@ func newLocalPeerContainer(seed []byte, p2pDatabasePath string, dbEngine databas
 		}
 	}
 
-	_, peeringPortStr, err := net.SplitHostPort(deps.NodeConfig.String(CfgNetAutopeeringBindAddr))
+	_, peeringPortStr, err := net.SplitHostPort(autopeeringBindAddr)
 	if err != nil {
-		log.Fatalf("autopeering bind address is invalid: %s", err)
+		return nil, fmt.Errorf("autopeering bind address is invalid: %w", err)
 	}
 
 	peeringPort, err := strconv.Atoi(peeringPortStr)
 	if err != nil {
-		log.Fatalf("invalid autopeering port number: %s, Error: %s", peeringPortStr, err)
+		return nil, fmt.Errorf("invalid autopeering port number: %s, %w", peeringPortStr, err)
 	}
 
 	// announce the autopeering service
 	ownServices := service.New()
 	ownServices.Update(service.PeeringKey, "udp", peeringPort)
 
-	if !deps.NodeConfig.Bool(CfgNetAutopeeringRunAsEntryNode) {
+	if !runAsEntryNode {
 		libp2pBindPortStr, err := multiAddrBindAddr.ValueForProtocol(multiaddr.P_TCP)
 		if err != nil {
-			log.Fatalf("unable to extract libp2p bind port from multi address: %s", err)
+			return nil, fmt.Errorf("unable to extract libp2p bind port from multi address: %w", err)
 		}
 
 		libp2pBindPort, err := strconv.Atoi(libp2pBindPortStr)
 		if err != nil {
-			log.Fatalf("invalid libp2p bind port '%s': %s", libp2pBindPortStr, err)
+			return nil, fmt.Errorf("invalid libp2p bind port '%s': %w", libp2pBindPortStr, err)
 		}
 
-		ownServices.Update(p2pServiceKey(), "tcp", libp2pBindPort)
+		ownServices.Update(p2pServiceKey, "tcp", libp2pBindPort)
 	}
 
 	store, err := database.StoreWithDefaultSettings(filepath.Join(p2pDatabasePath, "autopeering"), true, dbEngine)
 	if err != nil {
-		log.Fatalf("unable to create autopeering database: %s", err)
+		return nil, fmt.Errorf("unable to create autopeering database: %w", err)
 	}
 
 	// realm doesn't matter
 	peerDB, err := peer.NewDB(store)
 	if err != nil {
-		log.Fatalf("unable to create autopeering database: %s", err)
+		return nil, fmt.Errorf("unable to create autopeering database: %w", err)
 	}
 
 	local, err := peer.NewLocal(peeringIP, ownServices, peerDB, [][]byte{seed}...)
 	if err != nil {
-		log.Fatalf("unable to create local autopeering peer instance: %s", err)
+		return nil, fmt.Errorf("unable to create local autopeering peer instance: %w", err)
 	}
 
-	log.Infof("Initialized local autopeering: %s@%s", local.PublicKey(), local.Address())
-
-	return &LocalPeerContainer{peerLocal: local, store: store, peerDB: peerDB}
+	return &LocalPeerContainer{peerLocal: local, store: store, peerDB: peerDB}, nil
 }
 
-func (l *LocalPeerContainer) close() error {
+func (l *LocalPeerContainer) Close() error {
 	l.peerDB.Close()
 
 	if err := l.store.Flush(); err != nil {
