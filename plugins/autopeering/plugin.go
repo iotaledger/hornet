@@ -65,7 +65,6 @@ type dependencies struct {
 	Manager                   *p2p.Manager                 `optional:"true"`
 }
 
-
 func provide(c *dig.Container) {
 	type autopeeringdeps struct {
 		dig.In
