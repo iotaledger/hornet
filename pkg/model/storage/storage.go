@@ -10,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 )
@@ -23,6 +24,7 @@ type ReadOption = objectstorage.ReadOption
 type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
+	log *logger.Logger
 
 	// database
 	databaseDir   string
@@ -73,11 +75,12 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (*Storage, error) {
+func New(log *logger.Logger, databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (*Storage, error) {
 
 	utxoManager := utxo.New(store)
 
 	s := &Storage{
+		log:                     log,
 		databaseDir:             databaseDirectory,
 		store:                   store,
 		keyManager:              keyManager,

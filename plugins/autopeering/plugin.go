@@ -31,7 +31,7 @@ func init() {
 			Name:      "Autopeering",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
-			Provide:   nil,
+			Provide:   provide,
 			Configure: configure,
 			Run:       run,
 		},
@@ -56,11 +56,18 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
-	Manager         *p2p.Manager
-	NodePrivateKey  crypto.PrivKey  `name:"nodePrivateKey"`
-	P2PDatabasePath string          `name:"p2pDatabasePath"`
-	DatabaseEngine  database.Engine `name:"databaseEngine"`
+
+func provide(c *dig.Container) {
+	type autopeeringdeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps autopeeringdeps) bool {
+		return deps.NodeConfig.Bool(CfgNetAutopeeringRunAsEntryNode)
+	}, dig.Name("autopeeringRunAsEntryNode")); err != nil {
+		Plugin.Panic(err)
+	}
 }
 
 func configure() {

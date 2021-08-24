@@ -8,7 +8,6 @@ import (
 	"go.uber.org/dig"
 	"golang.org/x/net/context"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/keymanager"
@@ -119,13 +118,14 @@ func provide(c *dig.Container) {
 
 	type coordinatordeps struct {
 		dig.In
-		Storage         *storage.Storage
-		Tangle          *tangle.Tangle
-		PoWHandler      *pow.Handler
-		MigratorService *migrator.MigratorService `optional:"true"`
-		UTXOManager     *utxo.Manager
-		NodeConfig      *configuration.Configuration `name:"nodeConfig"`
-		NetworkID       uint64                       `name:"networkId"`
+		Storage                 *storage.Storage
+		Tangle                  *tangle.Tangle
+		PoWHandler              *pow.Handler
+		MigratorService         *migrator.MigratorService `optional:"true"`
+		UTXOManager             *utxo.Manager
+		NodeConfig              *configuration.Configuration `name:"nodeConfig"`
+		NetworkID               uint64                       `name:"networkId"`
+		MilestonePublicKeyCount int                          `name:"milestonePublicKeyCount"`
 	}
 
 	if err := c.Provide(func(deps coordinatordeps) *coordinator.Coordinator {
@@ -136,7 +136,7 @@ func provide(c *dig.Container) {
 				deps.NodeConfig.String(CfgCoordinatorSigningProvider),
 				deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress),
 				deps.Storage.KeyManager(),
-				deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount),
+				deps.MilestonePublicKeyCount,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("failed to initialize signing provider: %s", err)
