@@ -10,11 +10,29 @@ import (
 
 	"github.com/iotaledger/hive.go/crypto/ed25519"
 
+	databaseCore "github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
+	"github.com/gohornet/hornet/core/pow"
+	"github.com/gohornet/hornet/core/snapshot"
+	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/p2p/autopeering"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/debug"
+	"github.com/gohornet/hornet/plugins/faucet"
+	"github.com/gohornet/hornet/plugins/migrator"
+	"github.com/gohornet/hornet/plugins/mqtt"
+	"github.com/gohornet/hornet/plugins/prometheus"
+	"github.com/gohornet/hornet/plugins/receipt"
+	"github.com/gohornet/hornet/plugins/restapi"
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	"github.com/gohornet/hornet/plugins/spammer"
+	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/gohornet/hornet/plugins/warpsync"
 
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
@@ -27,12 +45,13 @@ func init() {
 	Plugin = &node.Plugin{
 		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
-			Name:      "Autopeering",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:       "Autopeering",
+			DepsFunc:   func(cDeps dependencies) { deps = cDeps },
+			Params:     params,
+			PreProvide: preProvide,
+			Provide:    provide,
+			Configure:  configure,
+			Run:        run,
 		},
 	}
 }
@@ -63,6 +82,40 @@ type dependencies struct {
 	NetworkIDName             string                       `name:"networkIdName"`
 	AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
 	Manager                   *p2p.Manager                 `optional:"true"`
+}
+
+func preProvide(configs map[string]*configuration.Configuration, initConfig *node.InitConfig) {
+
+	if configs["nodeConfig"].Bool(CfgNetAutopeeringRunAsEntryNode) {
+		// the following pluggables stay enabled
+		// - profile
+		// - protocfg
+		// - gracefulshutdown
+		// - p2p
+		// - profiling
+		// - versioncheck
+		// - autopeering
+
+		// disable the other plugins if the node runs as an entry node for autopeering
+		initConfig.ForceDisablePluggable(databaseCore.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(pow.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(gossip.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(tangle.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(snapshot.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(restapi.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(restapiv1.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(warpsync.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(urts.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(dashboard.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(spammer.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(mqtt.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(coordinator.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(migrator.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(receipt.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(prometheus.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(debug.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(faucet.Plugin.Identifier())
+	}
 }
 
 func provide(c *dig.Container) {

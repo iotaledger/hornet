@@ -7,20 +7,22 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
 )
 
 type Node struct {
-	disabledPlugins map[string]struct{}
-	enabledPlugins  map[string]struct{}
-	corePluginsMap  map[string]*CorePlugin
-	corePlugins     []*CorePlugin
-	pluginsMap      map[string]*Plugin
-	plugins         []*Plugin
-	container       *dig.Container
-	log             *logger.Logger
-	options         *NodeOptions
+	enabledPlugins          map[string]struct{}
+	disabledPlugins         map[string]struct{}
+	forceDisabledPluggables map[string]struct{}
+	corePluginsMap          map[string]*CorePlugin
+	corePlugins             []*CorePlugin
+	pluginsMap              map[string]*Plugin
+	plugins                 []*Plugin
+	container               *dig.Container
+	log                     *logger.Logger
+	options                 *NodeOptions
 }
 
 func New(optionalOptions ...NodeOption) *Node {
@@ -29,14 +31,15 @@ func New(optionalOptions ...NodeOption) *Node {
 	nodeOpts.apply(optionalOptions...)
 
 	node := &Node{
-		disabledPlugins: make(map[string]struct{}),
-		enabledPlugins:  make(map[string]struct{}),
-		corePluginsMap:  make(map[string]*CorePlugin),
-		corePlugins:     make([]*CorePlugin, 0),
-		pluginsMap:      make(map[string]*Plugin),
-		plugins:         make([]*Plugin, 0),
-		container:       dig.New(dig.DeferAcyclicVerification()),
-		options:         nodeOpts,
+		enabledPlugins:          make(map[string]struct{}),
+		disabledPlugins:         make(map[string]struct{}),
+		forceDisabledPluggables: make(map[string]struct{}),
+		corePluginsMap:          make(map[string]*CorePlugin),
+		corePlugins:             make([]*CorePlugin, 0),
+		pluginsMap:              make(map[string]*Plugin),
+		plugins:                 make([]*Plugin, 0),
+		container:               dig.New(dig.DeferAcyclicVerification()),
+		options:                 nodeOpts,
 	}
 
 	// initialize the core plugins and plugins
@@ -125,20 +128,31 @@ func Run(optionalOptions ...NodeOption) *Node {
 	return node
 }
 
+func (n *Node) isEnabled(identifier string) bool {
+	_, exists := n.enabledPlugins[identifier]
+	return exists
+}
+
+func (n *Node) isDisabled(identifier string) bool {
+	_, exists := n.disabledPlugins[identifier]
+	return exists
+}
+
+func (n *Node) isForceDisabled(identifier string) bool {
+	_, exists := n.forceDisabledPluggables[identifier]
+	return exists
+}
+
 // IsSkipped returns whether the plugin is loaded or skipped.
 func (n *Node) IsSkipped(plugin *Plugin) bool {
-	return (plugin.Status == StatusDisabled || n.isDisabled(plugin)) &&
-		(plugin.Status == StatusEnabled || !n.isEnabled(plugin))
-}
+	// list of disabled plugins has the highest priority
+	if n.isDisabled(plugin.Identifier()) || n.isForceDisabled(plugin.Identifier()) {
+		return true
+	}
 
-func (n *Node) isDisabled(plugin *Plugin) bool {
-	_, exists := n.disabledPlugins[plugin.Identifier()]
-	return exists
-}
-
-func (n *Node) isEnabled(plugin *Plugin) bool {
-	_, exists := n.enabledPlugins[plugin.Identifier()]
-	return exists
+	// if the plugin was not in the list of disabled plugins, it is only skipped if
+	// the plugin was not enabled and not in the list of enabled plugins.
+	return plugin.Status != StatusEnabled && !n.isEnabled(plugin.Identifier())
 }
 
 func (n *Node) init() {
@@ -196,6 +210,20 @@ func (n *Node) init() {
 		panic(fmt.Errorf("unable to initialize node: %w", err))
 	}
 
+	forEachCorePlugin(n.options.corePlugins, func(corePlugin *CorePlugin) bool {
+		if corePlugin.PreProvide != nil {
+			corePlugin.PreProvide(n.options.initPlugin.Configs, initCfg)
+		}
+		return true
+	})
+
+	forEachPlugin(n.options.plugins, func(plugin *Plugin) bool {
+		if plugin.PreProvide != nil {
+			plugin.PreProvide(n.options.initPlugin.Configs, initCfg)
+		}
+		return true
+	})
+
 	for _, name := range initCfg.EnabledPlugins {
 		n.enabledPlugins[strings.ToLower(name)] = struct{}{}
 	}
@@ -204,7 +232,15 @@ func (n *Node) init() {
 		n.disabledPlugins[strings.ToLower(name)] = struct{}{}
 	}
 
+	for _, name := range initCfg.forceDisabledPluggables {
+		n.forceDisabledPluggables[strings.ToLower(name)] = struct{}{}
+	}
+
 	forEachCorePlugin(n.options.corePlugins, func(corePlugin *CorePlugin) bool {
+		if n.isForceDisabled(corePlugin.Identifier()) {
+			return true
+		}
+
 		n.addCorePlugin(corePlugin)
 		return true
 	})
@@ -357,13 +393,32 @@ func (n *Node) addPlugin(plugin *Plugin) {
 	n.plugins = append(n.plugins, plugin)
 }
 
+// PreProvideFunc gets called with the configs the InitPlugin brings to the node and the InitConfig.
+type PreProvideFunc func(configs map[string]*configuration.Configuration, initConf *InitConfig)
+
 // ProvideFunc gets called with a dig.Container.
 type ProvideFunc func(c *dig.Container)
 
 // InitConfig describes the result of a node initialization.
 type InitConfig struct {
-	EnabledPlugins  []string
-	DisabledPlugins []string
+	EnabledPlugins          []string
+	DisabledPlugins         []string
+	forceDisabledPluggables []string
+}
+
+// ForceDisablePluggable is used to force disable pluggables before the provide stage.
+func (ic *InitConfig) ForceDisablePluggable(identifier string) {
+	exists := false
+	for _, entry := range ic.forceDisabledPluggables {
+		if entry == identifier {
+			exists = true
+			break
+		}
+	}
+
+	if !exists {
+		ic.forceDisabledPluggables = append(ic.forceDisabledPluggables, identifier)
+	}
 }
 
 // InitFunc gets called as the initialization function of the node.

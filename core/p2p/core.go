@@ -140,15 +140,19 @@ Your node identity private key can now be found at "%s".
 	type mngdeps struct {
 		dig.In
 
-		Host   host.Host
-		Config *configuration.Configuration `name:"nodeConfig"`
+		Host                      host.Host
+		Config                    *configuration.Configuration `name:"nodeConfig"`
+		AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
 	}
 
 	if err := c.Provide(func(deps mngdeps) *p2p.Manager {
-		return p2p.NewManager(deps.Host,
-			p2p.WithManagerLogger(logger.NewLogger("P2P-Manager")),
-			p2p.WithManagerReconnectInterval(deps.Config.Duration(CfgP2PReconnectInterval), 1*time.Second),
-		)
+		if !deps.AutopeeringRunAsEntryNode {
+			return p2p.NewManager(deps.Host,
+				p2p.WithManagerLogger(logger.NewLogger("P2P-Manager")),
+				p2p.WithManagerReconnectInterval(deps.Config.Duration(CfgP2PReconnectInterval), 1*time.Second),
+			)
+		}
+		return nil
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
@@ -247,6 +251,10 @@ func configure() {
 }
 
 func run() {
+	if deps.Manager == nil {
+		// Manager is optional, due to autopeering entry node
+		return
+	}
 
 	// register a daemon to disconnect all peers up on shutdown
 	if err := CorePlugin.Daemon().BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
