@@ -10,7 +10,6 @@ import (
 
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/core/gracefulshutdown"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -56,6 +55,7 @@ type dependencies struct {
 	UTXOManager     *utxo.Manager
 	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
 	MigratorService *migrator.MigratorService
+	ShutdownHandler *shutdown.ShutdownHandler
 }
 
 // provide provides the MigratorService as a singleton.
@@ -102,7 +102,7 @@ func run() {
 		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
 
 			if err := common.IsCriticalError(err); err != nil {
-				gracefulshutdown.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err))
+				deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err))
 				return false
 			}
 

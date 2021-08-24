@@ -16,9 +16,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
-	databasepkg "github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -65,7 +64,7 @@ type dependencies struct {
 	dig.In
 	AppInfo          *app.AppInfo
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	Database         *databasepkg.Database
+	Database         *database.Database
 	Storage          *storage.Storage
 	ServerMetrics    *metrics.ServerMetrics
 	DatabaseMetrics  *metrics.DatabaseMetrics
@@ -81,7 +80,6 @@ type dependencies struct {
 	TipSelector      *tipselect.TipSelector `optional:"true"`
 	Snapshot         *snapshot.Snapshot
 	Coordinator      *coordinator.Coordinator `optional:"true"`
-	DatabaseEvents   *database.Events
 }
 
 func configure() {

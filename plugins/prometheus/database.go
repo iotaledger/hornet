@@ -38,7 +38,7 @@ func configureDatabase() {
 		},
 	)
 
-	deps.DatabaseEvents.DatabaseCompaction.Attach(events.NewClosure(func(running bool) {
+	deps.Database.Events().DatabaseCompaction.Attach(events.NewClosure(func(running bool) {
 		if running {
 			compactionCount.Inc()
 		}
