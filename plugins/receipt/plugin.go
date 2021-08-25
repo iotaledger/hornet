@@ -1,7 +1,6 @@
 package receipt
 
 import (
-	"fmt"
 	"net/http"
 
 	"go.uber.org/dig"
@@ -45,47 +44,52 @@ type dependencies struct {
 
 // provide provides the ReceiptService as a singleton.
 func provide(c *dig.Container) {
-	type validatorDependencies struct {
+
+	type validatorDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
-	if err := c.Provide(func(deps validatorDependencies) (*migrator.Validator, error) {
+
+	if err := c.Provide(func(deps validatorDeps) *migrator.Validator {
 		iotaAPI, err := api.ComposeAPI(api.HTTPClientSettings{
 			URI:    deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress),
 			Client: &http.Client{Timeout: deps.NodeConfig.Duration(CfgReceiptsValidatorAPITimeout)},
 		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize API: %w", err)
+			Plugin.Panicf("failed to initialize API: %s", err)
 		}
 		return migrator.NewValidator(
 			iotaAPI,
 			deps.NodeConfig.String(CfgReceiptsValidatorCoordinatorAddress),
 			deps.NodeConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
-		), nil
+		)
 	}); err != nil {
 		Plugin.Panic(err)
 	}
-	type serviceDependencies struct {
+
+	type serviceDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 		Validator  *migrator.Validator
 		UTXO       *utxo.Manager
 		Storage    *storage.Storage
 	}
-	if err := c.Provide(func(deps serviceDependencies) (*migrator.ReceiptService, error) {
+
+	if err := c.Provide(func(deps serviceDeps) *migrator.ReceiptService {
 		return migrator.NewReceiptService(
 			deps.Validator, deps.UTXO,
 			deps.NodeConfig.Bool(CfgReceiptsValidatorValidate),
 			deps.NodeConfig.Bool(CfgReceiptsBackupEnabled),
 			deps.NodeConfig.Bool(CfgReceiptsValidatorIgnoreSoftErrors),
 			deps.NodeConfig.String(CfgReceiptsBackupPath),
-		), nil
+		)
 	}); err != nil {
 		Plugin.Panic(err)
 	}
 }
 
 func configure() {
+
 	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.Receipt) {
 		if deps.ReceiptService.ValidationEnabled {
 			Plugin.LogInfof("receipt passed validation against %s", deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress))

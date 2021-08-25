@@ -8,7 +8,6 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	databaseCore "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -18,9 +17,8 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	snapshotpkg "github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -70,7 +68,7 @@ type dependencies struct {
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
-	Snapshot                 *snapshotpkg.Snapshot
+	Snapshot                 *snapshot.Snapshot
 	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
 	DatabaseDebug            bool                         `name:"databaseDebug"`
 	DatabaseAutoRevalidation bool                         `name:"databaseAutoRevalidation"`
@@ -78,24 +76,14 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
+
 	if err := c.Provide(func() *metrics.ServerMetrics {
 		return &metrics.ServerMetrics{}
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
 
-	type belowmaxdepthdeps struct {
-		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-	}
-
-	if err := c.Provide(func(deps belowmaxdepthdeps) int {
-		return deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)
-	}, dig.Name("belowMaxDepth")); err != nil {
-		CorePlugin.Panic(err)
-	}
-
-	type tangledeps struct {
+	type tangleDeps struct {
 		dig.In
 		Storage          *storage.Storage
 		RequestQueue     gossip.RequestQueue
@@ -108,7 +96,7 @@ func provide(c *dig.Container) {
 		BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	}
 
-	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
+	if err := c.Provide(func(deps tangleDeps) *tangle.Tangle {
 		return tangle.New(
 			logger.NewLogger("Tangle"),
 			deps.Storage,
@@ -152,14 +140,14 @@ func configure() {
 		// if it was not deleted before this check.
 		revalidateDatabase := *revalidateDatabase || deps.DatabaseAutoRevalidation
 		if !revalidateDatabase {
-			CorePlugin.Panicf(`
+			CorePlugin.Panic(`
 HORNET was not shut down properly, the database may be corrupted.
-Please restart HORNET with one of the following flags or enable "%s" in the config.
+Please restart HORNET with one of the following flags or enable "db.autoRevalidation" in the config.
 
 --revalidate:     starts the database revalidation (might take a long time)
 --deleteDatabase: deletes the database
 --deleteAll:      deletes the database and the snapshot files
-`, databaseCore.CfgDatabaseAutoRevalidation)
+`)
 		}
 		CorePlugin.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 

@@ -65,6 +65,7 @@ type dependencies struct {
 	AppInfo          *app.AppInfo
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	Database         *database.Database
+	DatabasePath     string `name:"databasePath"`
 	Storage          *storage.Storage
 	ServerMetrics    *metrics.ServerMetrics
 	DatabaseMetrics  *metrics.DatabaseMetrics

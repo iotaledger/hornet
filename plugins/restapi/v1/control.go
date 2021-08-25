@@ -8,7 +8,6 @@ import (
 	"github.com/labstack/gommon/bytes"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/restapi"
 )
@@ -85,7 +84,7 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 
 	if request.FullIndex != nil {
 		fullIndex = milestone.Index(*request.FullIndex)
-		fullSnapshotFilePath = filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsFullPath)), fmt.Sprintf("full_snapshot_%d.bin", fullIndex))
+		fullSnapshotFilePath = filepath.Join(filepath.Dir(deps.SnapshotsFullPath), fmt.Sprintf("full_snapshot_%d.bin", fullIndex))
 
 		// ToDo: abort signal?
 		if err := deps.Snapshot.CreateFullSnapshot(fullIndex, fullSnapshotFilePath, false, nil); err != nil {
@@ -95,7 +94,7 @@ func createSnapshots(c echo.Context) (*createSnapshotsResponse, error) {
 
 	if request.DeltaIndex != nil {
 		deltaIndex = milestone.Index(*request.DeltaIndex)
-		deltaSnapshotFilePath = filepath.Join(filepath.Dir(deps.NodeConfig.String(snapshot.CfgSnapshotsDeltaPath)), fmt.Sprintf("delta_snapshot_%d.bin", deltaIndex))
+		deltaSnapshotFilePath = filepath.Join(filepath.Dir(deps.SnapshotsDeltaPath), fmt.Sprintf("delta_snapshot_%d.bin", deltaIndex))
 
 		// ToDo: abort signal?
 		// if no full snapshot was created, the last existing full snapshot will be used

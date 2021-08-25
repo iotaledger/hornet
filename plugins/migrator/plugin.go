@@ -60,12 +60,14 @@ type dependencies struct {
 
 // provide provides the MigratorService as a singleton.
 func provide(c *dig.Container) {
-	type serviceDependencies struct {
+
+	type serviceDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 		Validator  *migrator.Validator
 	}
-	if err := c.Provide(func(deps serviceDependencies) (*migrator.MigratorService, error) {
+
+	if err := c.Provide(func(deps serviceDeps) *migrator.MigratorService {
 
 		maxReceiptEntries := deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries)
 		switch {
@@ -79,13 +81,14 @@ func provide(c *dig.Container) {
 			deps.Validator,
 			deps.NodeConfig.String(CfgMigratorStateFilePath),
 			deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries),
-		), nil
+		)
 	}); err != nil {
 		Plugin.Panic(err)
 	}
 }
 
 func configure() {
+
 	var msIndex *uint32
 	if *bootstrap {
 		msIndex = startIndex
@@ -97,6 +100,7 @@ func configure() {
 }
 
 func run() {
+
 	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		Plugin.LogInfof("Starting %s ... done", Plugin.Name)
 		deps.MigratorService.Start(shutdownSignal, func(err error) bool {

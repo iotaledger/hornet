@@ -15,7 +15,6 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/gohornet/hornet/pkg/jwt"
-	"github.com/gohornet/hornet/plugins/restapi"
 )
 
 const (
@@ -86,7 +85,7 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 		return !deps.DashboardAllowedAPIRoute(context)
 	}
 
-	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
+	apiBindAddr := deps.RestAPIBindAddress
 	_, apiBindPort, err := net.SplitHostPort(apiBindAddr)
 	if err != nil {
 		Plugin.LogFatalf("wrong REST API bind address: %s", err)

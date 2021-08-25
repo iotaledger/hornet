@@ -33,12 +33,13 @@ const (
 func init() {
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
-			Name:      "Database",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:           "Database",
+			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
+			Params:         params,
+			InitConfigPars: initConfigPars,
+			Provide:        provide,
+			Configure:      configure,
+			Run:            run,
 		},
 	}
 }
@@ -61,49 +62,69 @@ type dependencies struct {
 	StorageMetrics *metrics.StorageMetrics
 }
 
-func provide(c *dig.Container) {
+func initConfigPars(c *dig.Container) {
 
-	type dbdeps struct {
+	type cfgDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	type dbresult struct {
+	type cfgResult struct {
 		dig.Out
-
-		StorageMetrics           *metrics.StorageMetrics
-		DatabaseMetrics          *metrics.DatabaseMetrics
-		DeleteDatabaseFlag       bool `name:"deleteDatabase"`
-		DeleteAllFlag            bool `name:"deleteAll"`
-		DatabaseDebug            bool `name:"databaseDebug"`
-		DatabaseAutoRevalidation bool `name:"databaseAutoRevalidation"`
+		DatabaseEngine           database.Engine `name:"databaseEngine"`
+		DatabasePath             string          `name:"databasePath"`
+		DeleteDatabaseFlag       bool            `name:"deleteDatabase"`
+		DeleteAllFlag            bool            `name:"deleteAll"`
+		DatabaseDebug            bool            `name:"databaseDebug"`
+		DatabaseAutoRevalidation bool            `name:"databaseAutoRevalidation"`
 	}
 
-	if err := c.Provide(func(deps dbdeps) dbresult {
-
-		res := dbresult{
-			StorageMetrics:           &metrics.StorageMetrics{},
-			DatabaseMetrics:          &metrics.DatabaseMetrics{},
+	if err := c.Provide(func(deps cfgDeps) cfgResult {
+		dbEngine, err := database.DatabaseEngine(deps.NodeConfig.String(CfgDatabaseEngine))
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
+		return cfgResult{
+			DatabaseEngine:           dbEngine,
+			DatabasePath:             deps.NodeConfig.String(CfgDatabasePath),
 			DeleteDatabaseFlag:       *deleteDatabase,
 			DeleteAllFlag:            *deleteAll,
 			DatabaseDebug:            deps.NodeConfig.Bool(CfgDatabaseDebug),
 			DatabaseAutoRevalidation: deps.NodeConfig.Bool(CfgDatabaseAutoRevalidation),
 		}
-		return res
+	}); err != nil {
+		CorePlugin.Panic(err)
+	}
+}
+
+func provide(c *dig.Container) {
+
+	type dbResult struct {
+		dig.Out
+		StorageMetrics  *metrics.StorageMetrics
+		DatabaseMetrics *metrics.DatabaseMetrics
+	}
+
+	if err := c.Provide(func() dbResult {
+		return dbResult{
+			StorageMetrics:  &metrics.StorageMetrics{},
+			DatabaseMetrics: &metrics.DatabaseMetrics{},
+		}
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
 
-	type databasedeps struct {
+	type databaseDeps struct {
 		dig.In
 		DeleteDatabaseFlag bool                         `name:"deleteDatabase"`
 		DeleteAllFlag      bool                         `name:"deleteAll"`
 		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
 		DatabaseEngine     database.Engine              `name:"databaseEngine"`
+		DatabasePath       string                       `name:"databasePath"`
 		Metrics            *metrics.DatabaseMetrics
 	}
 
-	if err := c.Provide(func(deps databasedeps) *database.Database {
+	if err := c.Provide(func(deps databaseDeps) *database.Database {
 
 		events := &database.Events{
 			DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
@@ -112,12 +133,12 @@ func provide(c *dig.Container) {
 
 		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 			// delete old database folder
-			if err := os.RemoveAll(deps.NodeConfig.String(CfgDatabasePath)); err != nil {
+			if err := os.RemoveAll(deps.DatabasePath); err != nil {
 				CorePlugin.Panicf("deleting database folder failed: %s", err)
 			}
 		}
 
-		targetEngine, err := database.CheckDatabaseEngine(deps.NodeConfig.String(CfgDatabasePath), true, deps.DatabaseEngine)
+		targetEngine, err := database.CheckDatabaseEngine(deps.DatabasePath, true, deps.DatabaseEngine)
 		if err != nil {
 			CorePlugin.Panic(err)
 		}
@@ -132,7 +153,7 @@ func provide(c *dig.Container) {
 				events.DatabaseCompaction.Trigger(running)
 			}
 
-			db, err := database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true)
+			db, err := database.NewPebbleDB(deps.DatabasePath, reportCompactionRunning, true)
 			if err != nil {
 				CorePlugin.Panicf("database initialization failed: %s", err)
 			}
@@ -146,7 +167,7 @@ func provide(c *dig.Container) {
 			)
 
 		case database.EngineRocksDB:
-			db, err := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
+			db, err := database.NewRocksDB(deps.DatabasePath)
 			if err != nil {
 				CorePlugin.Panicf("database initialization failed: %s", err)
 			}
@@ -180,9 +201,10 @@ func provide(c *dig.Container) {
 		CorePlugin.Panic(err)
 	}
 
-	type storagedeps struct {
+	type storageDeps struct {
 		dig.In
 		NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
+		DatabasePath               string                       `name:"databasePath"`
 		Database                   *database.Database
 		Profile                    *profile.Profile
 		BelowMaxDepth              int `name:"belowMaxDepth"`
@@ -190,7 +212,7 @@ func provide(c *dig.Container) {
 		MilestonePublicKeyCount    int `name:"milestonePublicKeyCount"`
 	}
 
-	if err := c.Provide(func(deps storagedeps) *storage.Storage {
+	if err := c.Provide(func(deps storageDeps) *storage.Storage {
 
 		keyManager := keymanager.New()
 		for _, keyRange := range deps.CoordinatorPublicKeyRanges {
@@ -202,7 +224,7 @@ func provide(c *dig.Container) {
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 		}
 
-		store, err := storage.New(logger.NewLogger("Storage"), deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.MilestonePublicKeyCount)
+		store, err := storage.New(logger.NewLogger("Storage"), deps.DatabasePath, deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.MilestonePublicKeyCount)
 		if err != nil {
 			CorePlugin.Panicf("can't initialize storage: %s", err)
 		}
