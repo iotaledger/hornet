@@ -99,12 +99,13 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
-	type selectordeps struct {
+
+	type selectorDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps selectordeps) *mselection.HeaviestSelector {
+	if err := c.Provide(func(deps selectorDeps) *mselection.HeaviestSelector {
 		// use the heaviest branch tip selection for the milestones
 		return mselection.New(
 			deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
@@ -116,7 +117,7 @@ func provide(c *dig.Container) {
 		Plugin.Panic(err)
 	}
 
-	type coordinatordeps struct {
+	type coordinatorDeps struct {
 		dig.In
 		Storage                 *storage.Storage
 		Tangle                  *tangle.Tangle
@@ -128,7 +129,7 @@ func provide(c *dig.Container) {
 		MilestonePublicKeyCount int                          `name:"milestonePublicKeyCount"`
 	}
 
-	if err := c.Provide(func(deps coordinatordeps) *coordinator.Coordinator {
+	if err := c.Provide(func(deps coordinatorDeps) *coordinator.Coordinator {
 
 		initCoordinator := func() (*coordinator.Coordinator, error) {
 

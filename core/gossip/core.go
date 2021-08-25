@@ -70,13 +70,14 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
+
 	if err := c.Provide(func() gossip.RequestQueue {
 		return gossip.NewRequestQueue()
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
 
-	type msgprocdependencies struct {
+	type msgProcDeps struct {
 		dig.In
 		Storage       *storage.Storage
 		ServerMetrics *metrics.ServerMetrics
@@ -89,7 +90,7 @@ func provide(c *dig.Container) {
 		Profile       *profile.Profile
 	}
 
-	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
+	if err := c.Provide(func(deps msgProcDeps) *gossip.MessageProcessor {
 		msgProc, err := gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
 			MinPoWScore:       deps.MinPoWScore,
 			NetworkID:         deps.NetworkID,
@@ -105,7 +106,7 @@ func provide(c *dig.Container) {
 		CorePlugin.Panic(err)
 	}
 
-	type servicedeps struct {
+	type serviceDeps struct {
 		dig.In
 		Host          host.Host
 		Manager       *p2p.Manager
@@ -115,7 +116,7 @@ func provide(c *dig.Container) {
 		NetworkID     uint64                       `name:"networkId"`
 	}
 
-	if err := c.Provide(func(deps servicedeps) *gossip.Service {
+	if err := c.Provide(func(deps serviceDeps) *gossip.Service {
 		return gossip.NewService(
 			protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, deps.NetworkID)),
 			deps.Host, deps.Manager, deps.ServerMetrics,
@@ -128,7 +129,7 @@ func provide(c *dig.Container) {
 		CorePlugin.Panic(err)
 	}
 
-	type requesterdeps struct {
+	type requesterDeps struct {
 		dig.In
 		Service      *gossip.Service
 		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
@@ -136,7 +137,7 @@ func provide(c *dig.Container) {
 		Storage      *storage.Storage
 	}
 
-	if err := c.Provide(func(deps requesterdeps) *gossip.Requester {
+	if err := c.Provide(func(deps requesterDeps) *gossip.Requester {
 		return gossip.NewRequester(deps.Service,
 			deps.RequestQueue,
 			deps.Storage,
@@ -146,14 +147,14 @@ func provide(c *dig.Container) {
 		CorePlugin.Panic(err)
 	}
 
-	type broadcasterdeps struct {
+	type broadcasterDeps struct {
 		dig.In
 		Service *gossip.Service
 		Manager *p2p.Manager
 		Storage *storage.Storage
 	}
 
-	if err := c.Provide(func(deps broadcasterdeps) *gossip.Broadcaster {
+	if err := c.Provide(func(deps broadcasterDeps) *gossip.Broadcaster {
 		return gossip.NewBroadcaster(deps.Service, deps.Manager, deps.Storage, 1000)
 	}); err != nil {
 		CorePlugin.Panic(err)
@@ -161,6 +162,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+
 	// don't re-enqueue pending requests in case the node is running hot
 	deps.Requester.AddBackPressureFunc(func() bool {
 		return deps.Snapshot.IsSnapshottingOrPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()

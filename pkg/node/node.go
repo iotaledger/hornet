@@ -164,6 +164,9 @@ func (n *Node) init() {
 	params := map[string][]*flag.FlagSet{}
 	masked := []string{}
 
+	//
+	// Collect parameters
+	//
 	n.options.initPlugin.Node = n
 	if n.options.initPlugin.Params != nil {
 		for k, v := range n.options.initPlugin.Params.Params {
@@ -204,26 +207,62 @@ func (n *Node) init() {
 		return true
 	})
 
+	//
+	// Init Stage
+	//
+
 	// the init plugin parses the config files and initializes the global logger
 	initCfg, err := n.options.initPlugin.Init(params, masked)
 	if err != nil {
 		panic(fmt.Errorf("unable to initialize node: %w", err))
 	}
 
+	//
+	// InitConfig Stage
+	//
+	if n.options.initPlugin.InitConfigPars == nil {
+		panic(fmt.Errorf("the init plugin must have an InitConfigPars func"))
+	}
+	n.options.initPlugin.InitConfigPars(n.container)
+
+	forEachCorePlugin(n.options.corePlugins, func(corePlugin *CorePlugin) bool {
+		if corePlugin.InitConfigPars != nil {
+			corePlugin.InitConfigPars(n.container)
+		}
+		return true
+	})
+
+	forEachPlugin(n.options.plugins, func(plugin *Plugin) bool {
+		if plugin.InitConfigPars != nil {
+			plugin.InitConfigPars(n.container)
+		}
+		return true
+	})
+
+	//
+	// Pre-Provide Stage
+	//
+	if n.options.initPlugin.PreProvide != nil {
+		n.options.initPlugin.PreProvide(n.container, n.options.initPlugin.Configs, initCfg)
+	}
+
 	forEachCorePlugin(n.options.corePlugins, func(corePlugin *CorePlugin) bool {
 		if corePlugin.PreProvide != nil {
-			corePlugin.PreProvide(n.options.initPlugin.Configs, initCfg)
+			corePlugin.PreProvide(n.container, n.options.initPlugin.Configs, initCfg)
 		}
 		return true
 	})
 
 	forEachPlugin(n.options.plugins, func(plugin *Plugin) bool {
 		if plugin.PreProvide != nil {
-			plugin.PreProvide(n.options.initPlugin.Configs, initCfg)
+			plugin.PreProvide(n.container, n.options.initPlugin.Configs, initCfg)
 		}
 		return true
 	})
 
+	//
+	// Enable / (Force-) disable Pluggables
+	//
 	for _, name := range initCfg.EnabledPlugins {
 		n.enabledPlugins[strings.ToLower(name)] = struct{}{}
 	}
@@ -254,10 +293,12 @@ func (n *Node) init() {
 		return true
 	})
 
-	if n.options.initPlugin.Provide == nil {
-		panic(fmt.Errorf("the init plugin must have a provide func"))
+	//
+	// Provide Stage
+	//
+	if n.options.initPlugin.Provide != nil {
+		n.options.initPlugin.Provide(n.container)
 	}
-	n.options.initPlugin.Provide(n.container)
 
 	n.ForEachCorePlugin(func(corePlugin *CorePlugin) bool {
 		if corePlugin.Provide != nil {
@@ -273,6 +314,9 @@ func (n *Node) init() {
 		return true
 	})
 
+	//
+	// Invoke Stage
+	//
 	if n.options.initPlugin.DepsFunc != nil {
 		if err := n.container.Invoke(n.options.initPlugin.DepsFunc); err != nil {
 			panic(err)
@@ -393,8 +437,11 @@ func (n *Node) addPlugin(plugin *Plugin) {
 	n.plugins = append(n.plugins, plugin)
 }
 
-// PreProvideFunc gets called with the configs the InitPlugin brings to the node and the InitConfig.
-type PreProvideFunc func(configs map[string]*configuration.Configuration, initConf *InitConfig)
+// InitConfigParsFunc gets called with a dig.Container.
+type InitConfigParsFunc func(c *dig.Container)
+
+// PreProvideFunc gets called with a dig.Container, the configs the InitPlugin brings to the node and the InitConfig.
+type PreProvideFunc func(c *dig.Container, configs map[string]*configuration.Configuration, initConf *InitConfig)
 
 // ProvideFunc gets called with a dig.Container.
 type ProvideFunc func(c *dig.Container)

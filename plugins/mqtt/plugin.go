@@ -64,12 +64,14 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage       *storage.Storage
-	Tangle        *tangle.Tangle
-	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-	BelowMaxDepth int                          `name:"belowMaxDepth"`
-	Bech32HRP     iotago.NetworkPrefix         `name:"bech32HRP"`
-	Echo          *echo.Echo                   `optional:"true"`
+	Storage                               *storage.Storage
+	Tangle                                *tangle.Tangle
+	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
+	MaxDeltaMsgYoungestConeRootIndexToCMI int                          `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+	MaxDeltaMsgOldestConeRootIndexToCMI   int                          `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+	BelowMaxDepth                         int                          `name:"belowMaxDepth"`
+	Bech32HRP                             iotago.NetworkPrefix         `name:"bech32HRP"`
+	Echo                                  *echo.Echo                   `optional:"true"`
 }
 
 func configure() {

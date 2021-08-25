@@ -20,8 +20,6 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
-	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
-	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/objectstorage"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -94,11 +92,11 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 			// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
 			shouldPromote = false
 			shouldReattach = true
-		} else if (cmi - ycri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI)) {
+		} else if (cmi - ycri) > milestone.Index(deps.MaxDeltaMsgYoungestConeRootIndexToCMI) {
 			// if the CMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
-		} else if (cmi - ocri) > milestone.Index(deps.NodeConfig.Int(urts.CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI)) {
+		} else if (cmi - ocri) > milestone.Index(deps.MaxDeltaMsgOldestConeRootIndexToCMI) {
 			// if the OCRI to CMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy and should be promoted
 			shouldPromote = true
 			shouldReattach = false
@@ -153,7 +151,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
-	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
+	maxResults := deps.RestAPILimitsMaxResults
 	childrenMessageIDs := deps.Storage.ChildrenMessageIDs(messageID, objectstorage.WithIteratorMaxIterations(maxResults))
 
 	return &childrenResponse{
@@ -180,7 +178,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 		return nil, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter index too long, max. %d bytes but is %d", storage.IndexationIndexLength, len(indexBytes)))
 	}
 
-	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
+	maxResults := deps.RestAPILimitsMaxResults
 	indexMessageIDs := deps.Storage.IndexMessageIDs(indexBytes, objectstorage.WithIteratorMaxIterations(maxResults))
 
 	return &messageIDsByIndexResponse{

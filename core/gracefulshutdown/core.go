@@ -29,6 +29,7 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
+
 	if err := c.Provide(func() *shutdown.ShutdownHandler {
 		return shutdown.NewShutdownHandler(CorePlugin.Logger(), CorePlugin.Daemon())
 	}); err != nil {

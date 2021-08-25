@@ -1,6 +1,7 @@
 package autopeering
 
 import (
+	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -49,7 +50,6 @@ func init() {
 			DepsFunc:   func(cDeps dependencies) { deps = cDeps },
 			Params:     params,
 			PreProvide: preProvide,
-			Provide:    provide,
 			Configure:  configure,
 			Run:        run,
 		},
@@ -84,9 +84,33 @@ type dependencies struct {
 	Manager                   *p2p.Manager                 `optional:"true"`
 }
 
-func preProvide(configs map[string]*configuration.Configuration, initConfig *node.InitConfig) {
+func preProvide(c *dig.Container, configs map[string]*configuration.Configuration, initConfig *node.InitConfig) {
 
-	if configs["nodeConfig"].Bool(CfgNetAutopeeringRunAsEntryNode) {
+	pluginEnabled := true
+
+	containsPlugin := func(pluginsList []string, pluginIdentifier string) bool {
+		contains := false
+		for _, plugin := range pluginsList {
+			if strings.ToLower(plugin) == pluginIdentifier {
+				contains = true
+				break
+			}
+		}
+		return contains
+	}
+
+	if disabled := containsPlugin(initConfig.DisabledPlugins, Plugin.Identifier()); disabled {
+		// Autopeering is disabled
+		pluginEnabled = false
+	}
+
+	if enabled := containsPlugin(initConfig.EnabledPlugins, Plugin.Identifier()); !enabled {
+		// Autopeering was not enabled
+		pluginEnabled = false
+	}
+
+	runAsEntryNode := pluginEnabled && configs["nodeConfig"].Bool(CfgNetAutopeeringRunAsEntryNode)
+	if runAsEntryNode {
 		// the following pluggables stay enabled
 		// - profile
 		// - protocfg
@@ -116,17 +140,19 @@ func preProvide(configs map[string]*configuration.Configuration, initConfig *nod
 		initConfig.ForceDisablePluggable(debug.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(faucet.Plugin.Identifier())
 	}
-}
 
-func provide(c *dig.Container) {
-	type autopeeringdeps struct {
-		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	// the parameter has to be provided in the preProvide stage.
+	// this is a special case, since it only should be true if the plugin is enabled
+	type cfgResult struct {
+		dig.Out
+		AutopeeringRunAsEntryNode bool `name:"autopeeringRunAsEntryNode"`
 	}
 
-	if err := c.Provide(func(deps autopeeringdeps) bool {
-		return deps.NodeConfig.Bool(CfgNetAutopeeringRunAsEntryNode)
-	}, dig.Name("autopeeringRunAsEntryNode")); err != nil {
+	if err := c.Provide(func() cfgResult {
+		return cfgResult{
+			AutopeeringRunAsEntryNode: runAsEntryNode,
+		}
+	}); err != nil {
 		Plugin.Panic(err)
 	}
 }

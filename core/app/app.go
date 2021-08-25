@@ -62,10 +62,11 @@ var (
 func init() {
 	InitPlugin = &node.InitPlugin{
 		Pluggable: node.Pluggable{
-			Name:      "App",
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
+			Name:           "App",
+			Params:         params,
+			InitConfigPars: initConfigPars,
+			Provide:        provide,
+			Configure:      configure,
 		},
 		Configs: map[string]*configuration.Configuration{
 			"nodeConfig":    nodeConfig,
@@ -131,6 +132,28 @@ Command line flags:
 	}, nil
 }
 
+func initConfigPars(c *dig.Container) {
+
+	type cfgResult struct {
+		dig.Out
+		NodeConfig            *configuration.Configuration `name:"nodeConfig"`
+		PeeringConfig         *configuration.Configuration `name:"peeringConfig"`
+		ProfileConfig         *configuration.Configuration `name:"profilesConfig"`
+		PeeringConfigFilePath string                       `name:"peeringConfigFilePath"`
+	}
+
+	if err := c.Provide(func() cfgResult {
+		return cfgResult{
+			NodeConfig:            nodeConfig,
+			PeeringConfig:         peeringConfig,
+			ProfileConfig:         profileConfig,
+			PeeringConfigFilePath: *peeringCfgFilePath,
+		}
+	}); err != nil {
+		InitPlugin.Panic(err)
+	}
+}
+
 func provide(c *dig.Container) {
 
 	if err := c.Provide(func() *app.AppInfo {
@@ -140,26 +163,6 @@ func provide(c *dig.Container) {
 			LatestGitHubVersion: "",
 		}
 	}); err != nil {
-		InitPlugin.Panic(err)
-	}
-	if err := c.Provide(func() *configuration.Configuration {
-		return nodeConfig
-	}, dig.Name("nodeConfig")); err != nil {
-		InitPlugin.Panic(err)
-	}
-	if err := c.Provide(func() *configuration.Configuration {
-		return peeringConfig
-	}, dig.Name("peeringConfig")); err != nil {
-		InitPlugin.Panic(err)
-	}
-	if err := c.Provide(func() *configuration.Configuration {
-		return profileConfig
-	}, dig.Name("profilesConfig")); err != nil {
-		InitPlugin.Panic(err)
-	}
-	if err := c.Provide(func() string {
-		return *peeringCfgFilePath
-	}, dig.Name("peeringConfigFilePath")); err != nil {
 		InitPlugin.Panic(err)
 	}
 }

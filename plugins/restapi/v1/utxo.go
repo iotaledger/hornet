@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
-	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -154,7 +153,7 @@ func balanceByEd25519Address(c echo.Context) (*addressBalanceResponse, error) {
 }
 
 func outputsResponse(address iotago.Address, includeSpent bool, filterType *iotago.OutputType) (*addressOutputsResponse, error) {
-	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
+	maxResults := deps.RestAPILimitsMaxResults
 
 	opts := []utxo.UTXOIterateOption{
 		utxo.FilterAddress(address),

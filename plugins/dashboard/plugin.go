@@ -40,12 +40,12 @@ func init() {
 	Plugin = &node.Plugin{
 		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
-			Name:      "Dashboard",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:           "Dashboard",
+			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
+			Params:         params,
+			InitConfigPars: initConfigPars,
+			Configure:      configure,
+			Run:            run,
 		},
 	}
 }
@@ -84,27 +84,36 @@ type dependencies struct {
 	MessageProcessor         *gossip.MessageProcessor
 	TipSelector              *tipselect.TipSelector       `optional:"true"`
 	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
+	RestAPIBindAddress       string                       `name:"restAPIBindAddress"`
 	AppInfo                  *app.AppInfo
 	Host                     host.Host
 	NodePrivateKey           crypto.PrivKey          `name:"nodePrivateKey"`
 	DashboardAllowedAPIRoute restapipkg.AllowedRoute `optional:"true"`
 }
 
-func provide(c *dig.Container) {
+func initConfigPars(c *dig.Container) {
 
-	type configdeps struct {
+	type cfgDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps configdeps) string {
-		return deps.NodeConfig.String(CfgDashboardAuthUsername)
-	}, dig.Name("dashboardAuthUsername")); err != nil {
+	type cfgResult struct {
+		dig.Out
+		DashboardAuthUsername string `name:"dashboardAuthUsername"`
+	}
+
+	if err := c.Provide(func(deps cfgDeps) cfgResult {
+		return cfgResult{
+			DashboardAuthUsername: deps.NodeConfig.String(CfgDashboardAuthUsername),
+		}
+	}); err != nil {
 		Plugin.Panic(err)
 	}
 }
 
 func configure() {
+
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
 		Plugin.Panic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
