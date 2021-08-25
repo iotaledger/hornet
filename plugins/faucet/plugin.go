@@ -86,7 +86,7 @@ func provide(c *dig.Container) {
 	faucetAddress := iotago.AddressFromEd25519PubKey(privateKey.Public().(ed25519.PublicKey))
 	faucetSigner := iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&faucetAddress, privateKey))
 
-	type faucetdeps struct {
+	type faucetDeps struct {
 		dig.In
 		Storage          *storage.Storage
 		PowHandler       *pow.Handler
@@ -99,7 +99,7 @@ func provide(c *dig.Container) {
 		MessageProcessor *gossip.MessageProcessor
 	}
 
-	if err := c.Provide(func(deps faucetdeps) *faucet.Faucet {
+	if err := c.Provide(func(deps faucetDeps) *faucet.Faucet {
 		return faucet.New(
 			deps.Storage,
 			deps.NetworkID,
@@ -126,6 +126,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+
 	routeGroup := deps.Echo.Group("/api/plugins/faucet")
 
 	allowedRoutes := map[string][]string{

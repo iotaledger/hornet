@@ -42,12 +42,13 @@ func init() {
 
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
-			Name:      "Snapshot",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:           "Snapshot",
+			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
+			Params:         params,
+			InitConfigPars: initConfigPars,
+			Provide:        provide,
+			Configure:      configure,
+			Run:            run,
 		},
 	}
 }
@@ -61,41 +62,61 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage        *storage.Storage
-	Tangle         *tangle.Tangle
-	UTXO           *utxo.Manager
-	Snapshot       *snapshot.Snapshot
-	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-	NetworkID      uint64                       `name:"networkId"`
-	DeleteAllFlag  bool                         `name:"deleteAll"`
-	StorageMetrics *metrics.StorageMetrics
+	Storage              *storage.Storage
+	Tangle               *tangle.Tangle
+	UTXO                 *utxo.Manager
+	Snapshot             *snapshot.Snapshot
+	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	NetworkID            uint64                       `name:"networkId"`
+	DeleteAllFlag        bool                         `name:"deleteAll"`
+	PruningPruneReceipts bool                         `name:"pruneReceipts"`
+	SnapshotsFullPath    string                       `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath   string                       `name:"snapshotsDeltaPath"`
+	StorageMetrics       *metrics.StorageMetrics
 }
 
-func provide(c *dig.Container) {
+func initConfigPars(c *dig.Container) {
 
-	type prunereceiptsdeps struct {
+	type cfgDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps prunereceiptsdeps) bool {
-		return deps.NodeConfig.Bool(CfgPruningPruneReceipts)
-	}, dig.Name("pruneReceipts")); err != nil {
+	type cfgResult struct {
+		dig.Out
+		PruningPruneReceipts bool   `name:"pruneReceipts"`
+		SnapshotsFullPath    string `name:"snapshotsFullPath"`
+		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
+	}
+
+	if err := c.Provide(func(deps cfgDeps) cfgResult {
+		return cfgResult{
+			PruningPruneReceipts: deps.NodeConfig.Bool(CfgPruningPruneReceipts),
+			SnapshotsFullPath:    deps.NodeConfig.String(CfgSnapshotsFullPath),
+			SnapshotsDeltaPath:   deps.NodeConfig.String(CfgSnapshotsDeltaPath),
+		}
+	}); err != nil {
 		CorePlugin.Panic(err)
 	}
+}
 
-	type snapshotdeps struct {
+func provide(c *dig.Container) {
+
+	type snapshotDeps struct {
 		dig.In
-		Database      *database.Database
-		Storage       *storage.Storage
-		UTXO          *utxo.Manager
-		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-		BelowMaxDepth int                          `name:"belowMaxDepth"`
-		NetworkID     uint64                       `name:"networkId"`
-		NetworkIDName string                       `name:"networkIdName"`
+		Database             *database.Database
+		Storage              *storage.Storage
+		UTXO                 *utxo.Manager
+		NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+		BelowMaxDepth        int                          `name:"belowMaxDepth"`
+		NetworkID            uint64                       `name:"networkId"`
+		NetworkIDName        string                       `name:"networkIdName"`
+		PruningPruneReceipts bool                         `name:"pruneReceipts"`
+		SnapshotsFullPath    string                       `name:"snapshotsFullPath"`
+		SnapshotsDeltaPath   string                       `name:"snapshotsDeltaPath"`
 	}
 
-	if err := c.Provide(func(deps snapshotdeps) *snapshot.Snapshot {
+	if err := c.Provide(func(deps snapshotDeps) *snapshot.Snapshot {
 
 		networkIDSource := deps.NetworkIDName
 
@@ -155,8 +176,8 @@ func provide(c *dig.Container) {
 			deps.UTXO,
 			deps.NetworkID,
 			networkIDSource,
-			deps.NodeConfig.String(CfgSnapshotsFullPath),
-			deps.NodeConfig.String(CfgSnapshotsDeltaPath),
+			deps.SnapshotsFullPath,
+			deps.SnapshotsDeltaPath,
 			deps.NodeConfig.Float64(CfgSnapshotsDeltaSizeThresholdPercentage),
 			downloadTargets,
 			solidEntryPointCheckThresholdPast,
@@ -170,7 +191,7 @@ func provide(c *dig.Container) {
 			pruningTargetDatabaseSizeBytes,
 			deps.NodeConfig.Float64(CfgPruningSizeThresholdPercentage),
 			deps.NodeConfig.Duration(CfgPruningSizeCooldownTime),
-			deps.NodeConfig.Bool(CfgPruningPruneReceipts),
+			deps.PruningPruneReceipts,
 		)
 	}); err != nil {
 		CorePlugin.Panic(err)
@@ -181,11 +202,11 @@ func configure() {
 
 	if deps.DeleteAllFlag {
 		// delete old snapshot files
-		if err := os.Remove(deps.NodeConfig.String(CfgSnapshotsFullPath)); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
 			CorePlugin.Panicf("deleting full snapshot file failed: %s", err)
 		}
 
-		if err := os.Remove(deps.NodeConfig.String(CfgSnapshotsDeltaPath)); err != nil && !os.IsNotExist(err) {
+		if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
 			CorePlugin.Panicf("deleting delta snapshot file failed: %s", err)
 		}
 	}

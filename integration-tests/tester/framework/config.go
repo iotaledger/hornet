@@ -56,7 +56,7 @@ const (
 
 var (
 	disabledPluginsPeer      = []string{}
-	disabledPluginsEntryNode = []string{"dashboard", "profiling", "gossip", "snapshot", "metrics", "tangle", "warpsync", "webapi"}
+	disabledPluginsEntryNode = []string{}
 	// The seed on which the total supply resides on per default.
 	GenesisSeed    ed25519.PrivateKey
 	GenesisAddress iotago.Ed25519Address

@@ -40,12 +40,13 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
-	type deps struct {
+
+	type profileDeps struct {
 		dig.In
 		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
 		ProfilesConfig *configuration.Configuration `name:"profilesConfig"`
 	}
-	if err := c.Provide(func(d deps) *profile.Profile {
+	if err := c.Provide(func(d profileDeps) *profile.Profile {
 		return loadProfile(d.NodeConfig, d.ProfilesConfig)
 	}); err != nil {
 		CorePlugin.Panic(err)
@@ -53,6 +54,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+
 	if deps.NodeConfig.String(CfgNodeProfile) == AutoProfileName {
 		CorePlugin.LogInfof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
 	} else {

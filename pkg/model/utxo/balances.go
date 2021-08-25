@@ -44,10 +44,10 @@ func balanceFromBytes(value []byte) (balance uint64, dustAllowanceBalance uint64
 }
 
 func bytesFromBalance(balance uint64, dustAllowanceBalance uint64, outputCount int64) []byte {
-	marshalUtil := marshalutil.New(16)
-	marshalUtil.WriteUint64(balance)
-	marshalUtil.WriteUint64(dustAllowanceBalance)
-	marshalUtil.WriteInt64(outputCount)
+	marshalUtil := marshalutil.New(24)
+	marshalUtil.WriteUint64(balance)              // 8 bytes
+	marshalUtil.WriteUint64(dustAllowanceBalance) // 8 bytes
+	marshalUtil.WriteInt64(outputCount)           // 8 bytes
 	return marshalUtil.Bytes()
 }
 

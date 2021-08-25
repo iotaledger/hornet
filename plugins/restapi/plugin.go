@@ -30,12 +30,13 @@ func init() {
 	Plugin = &node.Plugin{
 		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
-			Name:      "RestAPI",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:           "RestAPI",
+			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
+			Params:         params,
+			InitConfigPars: initConfigPars,
+			Provide:        provide,
+			Configure:      configure,
+			Run:            run,
 		},
 	}
 }
@@ -55,8 +56,32 @@ type dependencies struct {
 	Echo                  *echo.Echo
 	RestAPIMetrics        *metrics.RestAPIMetrics
 	Host                  host.Host
+	RestAPIBindAddress    string         `name:"restAPIBindAddress"`
 	NodePrivateKey        crypto.PrivKey `name:"nodePrivateKey"`
 	DashboardAuthUsername string         `name:"dashboardAuthUsername" optional:"true"`
+}
+
+func initConfigPars(c *dig.Container) {
+
+	type cfgDeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	type cfgResult struct {
+		dig.Out
+		RestAPIBindAddress      string `name:"restAPIBindAddress"`
+		RestAPILimitsMaxResults int    `name:"restAPILimitsMaxResults"`
+	}
+
+	if err := c.Provide(func(deps cfgDeps) cfgResult {
+		return cfgResult{
+			RestAPIBindAddress:      deps.NodeConfig.String(CfgRestAPIBindAddress),
+			RestAPILimitsMaxResults: deps.NodeConfig.Int(CfgRestAPILimitsMaxResults),
+		}
+	}); err != nil {
+		Plugin.Panic(err)
+	}
 }
 
 func provide(c *dig.Container) {
@@ -67,25 +92,26 @@ func provide(c *dig.Container) {
 		Plugin.Panic(err)
 	}
 
-	type echodeps struct {
+	type echoDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	type resultdeps struct {
+	type echoResult struct {
 		dig.Out
 		Echo                     *echo.Echo
 		DashboardAllowedAPIRoute restapi.AllowedRoute
 	}
 
-	if err := c.Provide(func(deps echodeps) resultdeps {
+	if err := c.Provide(func(deps echoDeps) echoResult {
 		e := echo.New()
 		e.HideBanner = true
 		e.Use(middleware.Recover())
 		e.Use(middleware.CORS())
 		e.Use(middleware.Gzip())
 		e.Use(middleware.BodyLimit(deps.NodeConfig.String(CfgRestAPILimitsMaxBodyLength)))
-		return resultdeps{
+
+		return echoResult{
 			Echo:                     e,
 			DashboardAllowedAPIRoute: dashboardAllowedAPIRoute,
 		}
@@ -95,6 +121,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+
 	// load whitelisted networks
 	var whitelistedNetworks []*net.IPNet
 	for _, entry := range deps.NodeConfig.Strings(CfgRestAPIWhitelistedAddresses) {
@@ -170,12 +197,13 @@ func configure() {
 }
 
 func run() {
+
 	Plugin.LogInfo("Starting REST-API server ...")
 
 	if err := Plugin.Daemon().BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
 		Plugin.LogInfo("Starting REST-API server ... done")
 
-		bindAddr := deps.NodeConfig.String(CfgRestAPIBindAddress)
+		bindAddr := deps.RestAPIBindAddress
 		server := &http.Server{Addr: bindAddr, Handler: deps.Echo}
 
 		go func() {

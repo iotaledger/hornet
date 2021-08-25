@@ -167,24 +167,29 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage              *storage.Storage
-	Tangle               *tangle.Tangle
-	Manager              *p2p.Manager
-	Service              *gossip.Service
-	UTXO                 *utxo.Manager
-	PoWHandler           *pow.Handler
-	MessageProcessor     *gossip.MessageProcessor
-	Snapshot             *snapshot.Snapshot
-	AppInfo              *app.AppInfo
-	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
-	PeeringConfigManager *p2p.ConfigManager
-	NetworkID            uint64                 `name:"networkId"`
-	NetworkIDName        string                 `name:"networkIdName"`
-	BelowMaxDepth        int                    `name:"belowMaxDepth"`
-	MinPoWScore          float64                `name:"minPoWScore"`
-	Bech32HRP            iotago.NetworkPrefix   `name:"bech32HRP"`
-	TipSelector          *tipselect.TipSelector `optional:"true"`
-	Echo                 *echo.Echo             `optional:"true"`
+	Storage                               *storage.Storage
+	Tangle                                *tangle.Tangle
+	Manager                               *p2p.Manager
+	Service                               *gossip.Service
+	UTXO                                  *utxo.Manager
+	PoWHandler                            *pow.Handler
+	MessageProcessor                      *gossip.MessageProcessor
+	Snapshot                              *snapshot.Snapshot
+	AppInfo                               *app.AppInfo
+	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
+	PeeringConfigManager                  *p2p.ConfigManager
+	NetworkID                             uint64                 `name:"networkId"`
+	NetworkIDName                         string                 `name:"networkIdName"`
+	MaxDeltaMsgYoungestConeRootIndexToCMI int                    `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+	MaxDeltaMsgOldestConeRootIndexToCMI   int                    `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+	BelowMaxDepth                         int                    `name:"belowMaxDepth"`
+	MinPoWScore                           float64                `name:"minPoWScore"`
+	Bech32HRP                             iotago.NetworkPrefix   `name:"bech32HRP"`
+	RestAPILimitsMaxResults               int                    `name:"restAPILimitsMaxResults"`
+	SnapshotsFullPath                     string                 `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath                    string                 `name:"snapshotsDeltaPath"`
+	TipSelector                           *tipselect.TipSelector `optional:"true"`
+	Echo                                  *echo.Echo             `optional:"true"`
 }
 
 func configure() {

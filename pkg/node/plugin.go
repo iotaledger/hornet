@@ -36,11 +36,17 @@ type Pluggable struct {
 	Params *PluginParams
 	// The function to call to initialize the plugin dependencies.
 	DepsFunc interface{}
-	// Provide gets called in the provide stage of node initialization.
+	// InitConfigPars gets called in the init stage of node initialization.
+	// This can be used to provide config parameters even if the pluggable is disabled.
+	InitConfigPars InitConfigParsFunc
+	// PreProvide gets called before the provide stage of node initialization.
+	// This can be used to force disable other pluggables before they get initialized.
+	PreProvide PreProvideFunc
+	// Provide gets called in the provide stage of node initialization (enabled pluggables only).
 	Provide ProvideFunc
-	// Configure gets called in the configure stage of node initialization.
+	// Configure gets called in the configure stage of node initialization (enabled pluggables only).
 	Configure Callback
-	// Run gets called in the run stage of node initialization.
+	// Run gets called in the run stage of node initialization (enabled pluggables only).
 	Run Callback
 
 	// The logger instance used in this plugin.

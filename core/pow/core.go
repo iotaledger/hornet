@@ -39,13 +39,14 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
-	type handlerdeps struct {
+
+	type handlerDeps struct {
 		dig.In
 		NodeConfig  *configuration.Configuration `name:"nodeConfig"`
 		MinPoWScore float64                      `name:"minPoWScore"`
 	}
 
-	if err := c.Provide(func(deps handlerdeps) *pow.Handler {
+	if err := c.Provide(func(deps handlerDeps) *pow.Handler {
 		// init the pow handler with all possible settings
 		powsrvAPIKey, err := utils.LoadStringFromEnvironment("POWSRV_API_KEY")
 		if err == nil && len(powsrvAPIKey) > 12 {
