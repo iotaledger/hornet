@@ -284,7 +284,7 @@ func (f *Faucet) Enqueue(bech32 string, ed25519Addr *iotago.Ed25519Address) (*Fa
 	defer f.Unlock()
 
 	if _, exists := f.queueMap[bech32]; exists {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: address is already in the queue", bech32)
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "Address is already in the queue.")
 	}
 
 	amount := f.opts.amount
@@ -293,7 +293,7 @@ func (f *Faucet) Enqueue(bech32 string, ed25519Addr *iotago.Ed25519Address) (*Fa
 		amount = f.opts.smallAmount
 
 		if balance >= f.opts.maxAddressBalance {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: you already have enough coins to test", bech32)
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "You already have enough coins on your address.")
 		}
 	}
 
@@ -313,7 +313,7 @@ func (f *Faucet) Enqueue(bech32 string, ed25519Addr *iotago.Ed25519Address) (*Fa
 
 	default:
 		// queue is full
-		return nil, errors.WithMessage(echo.ErrInternalServerError, "queue is full, please try again later")
+		return nil, errors.WithMessage(echo.ErrInternalServerError, "Faucet queue is full. Please try again later!")
 	}
 }
 

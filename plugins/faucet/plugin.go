@@ -3,11 +3,13 @@ package faucet
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/pkg/errors"
 	"go.uber.org/dig"
 	"golang.org/x/time/rate"
 
@@ -58,9 +60,12 @@ var (
 
 type dependencies struct {
 	dig.In
-	Faucet          *faucet.Faucet
-	Echo            *echo.Echo
-	ShutdownHandler *shutdown.ShutdownHandler
+	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
+	RestAPIBindAddress    string                       `name:"restAPIBindAddress"`
+	FaucetAllowedAPIRoute restapi.AllowedRoute         `name:"faucetAllowedAPIRoute"`
+	Faucet                *faucet.Faucet
+	Echo                  *echo.Echo
+	ShutdownHandler       *shutdown.ShutdownHandler
 }
 
 func provide(c *dig.Container) {
@@ -186,7 +191,24 @@ func configure() {
 	routeGroup.POST(RouteFaucetEnqueue, func(c echo.Context) error {
 		resp, err := addFaucetOutputToQueue(c)
 		if err != nil {
-			return err
+			// own error handler to have nicer user facing error messages.
+			var statusCode int
+			var message string
+
+			var e *echo.HTTPError
+			if errors.As(err, &e) {
+				statusCode = e.Code
+				if errors.Is(err, restapi.ErrInvalidParameter) {
+					message = strings.Replace(err.Error(), ": "+errors.Unwrap(err).Error(), "", 1)
+				} else {
+					message = err.Error()
+				}
+			} else {
+				statusCode = http.StatusInternalServerError
+				message = fmt.Sprintf("internal server error. error: %s", err)
+			}
+
+			return c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
 		}
 
 		return restapi.JSONResponse(c, http.StatusAccepted, resp)
@@ -201,5 +223,25 @@ func run() {
 		}
 	}, shutdown.PriorityFaucet); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
+	}
+
+	websiteEnabled := deps.NodeConfig.Bool(CfgFaucetWebsiteEnabled)
+
+	if websiteEnabled {
+		bindAddr := deps.NodeConfig.String(CfgFaucetWebsiteBindAddress)
+
+		e := echo.New()
+		e.HideBanner = true
+		e.Use(middleware.Recover())
+
+		setupRoutes(e)
+
+		go func() {
+			Plugin.LogInfof("You can now access the faucet website using: http://%s", bindAddr)
+
+			if err := e.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				Plugin.LogWarnf("Stopped faucet website server due to an error (%s)", err)
+			}
+		}()
 	}
 }

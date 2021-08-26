@@ -88,7 +88,7 @@ type dependencies struct {
 	AppInfo                  *app.AppInfo
 	Host                     host.Host
 	NodePrivateKey           crypto.PrivKey          `name:"nodePrivateKey"`
-	DashboardAllowedAPIRoute restapipkg.AllowedRoute `optional:"true"`
+	DashboardAllowedAPIRoute restapipkg.AllowedRoute `name:"dashboardAllowedAPIRoute" optional:"true"`
 }
 
 func initConfigPars(c *dig.Container) {
