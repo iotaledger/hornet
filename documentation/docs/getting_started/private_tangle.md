@@ -21,7 +21,7 @@ If you want to use an existing address, search for your address in [the explorer
 
 ```bash
 ...
-go run "..\main.go" tool snapgen private_tangle1 [ADDRESS] 1000000000 "snapshots\private_tangle1\full_snapshot.bin"
+go run "..\main.go" tool snap-gen private_tangle1 [ADDRESS] 1000000000 "snapshots\private_tangle1\full_snapshot.bin"
 ...
 ```
 

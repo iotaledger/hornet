@@ -24,6 +24,10 @@ const (
 	CfgFaucetBatchTimeout = "faucet.batchTimeout"
 	// the amount of workers used for calculating PoW when issuing faucet messages.
 	CfgFaucetPoWWorkerCount = "faucet.powWorkerCount"
+	// the bind address on which the faucet website can be accessed from
+	CfgFaucetWebsiteBindAddress = "faucet.website.bindAddress"
+	// whether to host the faucet website
+	CfgFaucetWebsiteEnabled = "faucet.website.enabled"
 )
 
 var params = &node.PluginParams{
@@ -37,6 +41,8 @@ var params = &node.PluginParams{
 			fs.String(CfgFaucetIndexationMessage, "HORNET FAUCET", "the faucet transaction indexation payload")
 			fs.Duration(CfgFaucetBatchTimeout, 2*time.Second, "the maximum duration for collecting faucet batches")
 			fs.Int(CfgFaucetPoWWorkerCount, 0, "the amount of workers used for calculating PoW when issuing faucet messages")
+			fs.String(CfgFaucetWebsiteBindAddress, "localhost:8091", "the bind address on which the faucet website can be accessed from")
+			fs.Bool(CfgFaucetWebsiteEnabled, false, "whether to host the faucet website")
 			return fs
 		}(),
 	},

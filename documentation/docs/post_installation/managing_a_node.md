@@ -147,6 +147,6 @@ Additionally, you can start Hornet with a specific delta snapshot using the `Hor
 ```bash
 hornet tool
 ```
-- `snapgen` Generates an initial snapshot for a private network.
-- `snapmerge` Merges a full and delta snapshot into an updated full snapshot.
-- `snapinfo` Outputs information about a snapshot file.
+- `snap-gen` Generates an initial snapshot for a private network.
+- `snap-merge` Merges a full and delta snapshot into an updated full snapshot.
+- `snap-info` Outputs information about a snapshot file.

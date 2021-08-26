@@ -87,11 +87,11 @@ Example:
 
 ## 2. Dashboard
 
-| Name          | Description                                                | Type   |
-| :------------ | :--------------------------------------------------------- | :----- |
-| bindAddress   | The bind address on which the dashboard can be access from | string |
-| dev           | Whether to run the dashboard in dev mode                   | bool   |
-| [auth](#auth) | Configuration for dashboard auth                           | object |
+| Name          | Description                                                  | Type   |
+| :------------ | :----------------------------------------------------------- | :----- |
+| bindAddress   | The bind address on which the dashboard can be accessed from | string |
+| dev           | Whether to run the dashboard in dev mode                     | bool   |
+| [auth](#auth) | Configuration for dashboard auth                             | object |
 
 ### Auth
 

@@ -100,7 +100,8 @@ func provide(c *dig.Container) {
 	type echoResult struct {
 		dig.Out
 		Echo                     *echo.Echo
-		DashboardAllowedAPIRoute restapi.AllowedRoute
+		DashboardAllowedAPIRoute restapi.AllowedRoute `name:"dashboardAllowedAPIRoute"`
+		FaucetAllowedAPIRoute    restapi.AllowedRoute `name:"faucetAllowedAPIRoute"`
 	}
 
 	if err := c.Provide(func(deps echoDeps) echoResult {
@@ -114,6 +115,7 @@ func provide(c *dig.Container) {
 		return echoResult{
 			Echo:                     e,
 			DashboardAllowedAPIRoute: dashboardAllowedAPIRoute,
+			FaucetAllowedAPIRoute:    faucetAllowedAPIRoute,
 		}
 	}); err != nil {
 		Plugin.Panic(err)
@@ -253,7 +255,7 @@ func setupRoutes() {
 	setupHealthRoute()
 }
 
-var allowedRoutes = map[string][]string{
+var dashboardAllowedRoutes = map[string][]string{
 	http.MethodGet: {
 		"/api/v1/addresses",
 		"/api/v1/info",
@@ -273,9 +275,18 @@ var allowedRoutes = map[string][]string{
 	},
 }
 
-func dashboardAllowedAPIRoute(context echo.Context) bool {
+var faucetAllowedRoutes = map[string][]string{
+	http.MethodGet: {
+		"/api/plugins/faucet/info",
+	},
+	http.MethodPost: {
+		"/api/plugins/faucet/enqueue",
+	},
+}
 
-	// Check for which route we will allow the dashboard to access the API
+func checkAllowedAPIRoute(context echo.Context, allowedRoutes map[string][]string) bool {
+
+	// Check for which route we will allow to access the API
 	routesForMethod, exists := allowedRoutes[context.Request().Method]
 	if !exists {
 		return false
@@ -289,4 +300,12 @@ func dashboardAllowedAPIRoute(context echo.Context) bool {
 	}
 
 	return false
+}
+
+func dashboardAllowedAPIRoute(context echo.Context) bool {
+	return checkAllowedAPIRoute(context, dashboardAllowedRoutes)
+}
+
+func faucetAllowedAPIRoute(context echo.Context) bool {
+	return checkAllowedAPIRoute(context, faucetAllowedRoutes)
 }
