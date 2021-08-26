@@ -36,7 +36,9 @@
       "/api/plugins/debug/addresses/ed25519",
       "/api/plugins/debug/ms-diff/*",
       "/api/plugins/debug/requests",
-      "/api/plugins/debug/message-cones/*"
+      "/api/plugins/debug/message-cones/*",
+      "/api/plugins/faucet/info",
+      "/api/plugins/faucet/enqueue"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",
@@ -248,7 +250,11 @@
     "maxOutputCount": 127,
     "indexationMessage": "HORNET FAUCET",
     "batchTimeout": "2s",
-    "powWorkerCount": 0
+    "powWorkerCount": 0,
+    "website": {
+      "bindAddress": "localhost:8091",
+      "enabled": true
+    }
   },
   "mqtt": {
     "bindAddress": "localhost:1883",

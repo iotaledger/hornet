@@ -237,7 +237,11 @@
     "maxOutputCount": 127,
     "indexationMessage": "HORNET FAUCET",
     "batchTimeout": "2s",
-    "powWorkerCount": 0
+    "powWorkerCount": 0,
+    "website": {
+      "bindAddress": "localhost:8091",
+      "enabled": true
+    }
   },
   "mqtt": {
     "bindAddress": "localhost:1883",
