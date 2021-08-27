@@ -2,6 +2,105 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.5-rc1] - 27.08.2021
+
+### Added
+    - Add faucet plugin
+    - Add faucet website
+    - Add database migration tool
+    - Add io utils to read/write a TOML file
+
+### Changed
+    - Move p2p identity private key to PEM file
+    - Run autopeering entry node in standalone mode
+    - Merge peerstore and autopeering db path in config
+    - Expose autopeering port in dockerfile
+    - Add detailed reason for snapshot download failure
+    - Print bech32 address in toolset
+    - Use kvstore for libp2p peerstore and autopeering database
+    - Use internal bech32 HRP instead of additional config parameter
+    - Update go version in workflows and dockerfile
+    - Update github workflow actions
+    - Update go modules
+    - Update libp2p
+
+### Fixed
+    - Fix data size units according to SI units and IEC 60027
+    - Fix possible jwt token vulnerabilities
+    - Fix nil pointer exception in optimalSnapshotType
+    - Set missing config default values for mainnet
+    - Do not disable plugins for the entry nodes in the integration tests
+    - Fix dependency injection of global config pars if pluggables are disabled by adding a InitConfigPars stage
+    - Do not panic in MilestoneRetrieverFromStorage
+    - Fix logger init in test cases
+
+### Removed
+    - Remove support for boltdb
+
+### Cleanups
+    - Refactor node/pluggable logger interface
+    - Check returned error at the initialization of new background workers
+    - Fixed return values order of StreamSnapshotDataTo
+    - Do not use unbuffered channels for signal.Notify
+    - Change some variable names according to linter suggestions
+    - Remove duplicate imports
+    - Remove dead code
+    - Cleanup toolset listTools func
+    - Replace deprecated prometheus functions
+    - Fix comments
+    - Remove 'Get' from getter function names
+    - Add error return value to SetConfirmedMilestoneIndex
+    - Add error return value to SetSnapshotMilestone
+    - Add error return value to database health functions
+    - Add error return value to loadSnaphotInfo
+    - Replace http.Get with client.Do and a context
+    - Add missing checks for returned errors
+    - Add linter ignore rules
+    - Cleanup unused parameters and return values
+    - Fix some printouts and move hornet logo to startup
+    - Return error if database init fails
+    - Reduce dependencies between plugins/core modules
+    - Replace deprecated libp2p crypto Bytes function
+    - Add error return value to loadSolidEntryPoints
+    - Rename util files to utils
+    - Move database events to package
+    - Move graceful shutdown logic to package
+    - Move autopeering local to pkg
+    - Add error return value to authorization init functions
+
+### Config file changes
+
+`config.json`
+```diff
+  "p2p": {
+-    "identityPrivateKey": "",
+-    "peerStore": {
+-      "path": "./p2pstore"
+-    }
++    "db": {
++      "path": "p2pstore"
++    },
+    "autopeering": {
+-      "db": {
+-        "path": "./p2pstore"
+-      },
+    }
+  },
++  "faucet": {
++    "amount": 10000000,
++    "smallAmount": 1000000,
++    "maxAddressBalance": 20000000,
++    "maxOutputCount": 127,
++    "indexationMessage": "HORNET FAUCET",
++    "batchTimeout": "2s",
++    "powWorkerCount": 0,
++    "website": {
++      "bindAddress": "localhost:8091",
++      "enabled": true
++    },
+  }
+```
+
 ## [1.0.4] - 04.08.2021
 
 ### Added
