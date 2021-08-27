@@ -26,9 +26,9 @@ func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 	addr := iotago.AddressFromEd25519PubKey(pubKey)
 
 	fmt.Println("Your ed25519 private key: ", hex.EncodeToString(privKey))
-	fmt.Println("Your ed25519 public key: ", hex.EncodeToString(pubKey))
-	fmt.Println("Your ed25519 address: ", hex.EncodeToString(addr[:]))
-	fmt.Println("Your bech32 address: ", addr.Bech32(iotago.PrefixTestnet))
+	fmt.Println("Your ed25519 public key:  ", hex.EncodeToString(pubKey))
+	fmt.Println("Your ed25519 address:     ", hex.EncodeToString(addr[:]))
+	fmt.Println("Your bech32 address:      ", addr.Bech32(iotago.PrefixTestnet))
 
 	return nil
 }
@@ -64,6 +64,6 @@ func generateEd25519Address(_ *configuration.Configuration, args []string) error
 	addr := iotago.AddressFromEd25519PubKey(pubKey)
 
 	fmt.Println("Your ed25519 address: ", hex.EncodeToString(addr[:]))
-	fmt.Println("Your bech32 address: ", addr.Bech32(iotago.PrefixTestnet))
+	fmt.Println("Your bech32 address:  ", addr.Bech32(iotago.PrefixTestnet))
 	return nil
 }
