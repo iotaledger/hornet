@@ -67,10 +67,10 @@ func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirm
 
 func (o *Output) spentDatabaseKey() []byte {
 	ms := marshalutil.New(69)
-	ms.WriteByte(UTXOStoreKeyPrefixSpent)
-	ms.WriteBytes(o.addressBytes())
-	ms.WriteByte(o.outputType)
-	ms.WriteBytes(o.outputID[:])
+	ms.WriteByte(UTXOStoreKeyPrefixSpent) // 1 byte
+	ms.WriteBytes(o.addressBytes())       // 33 bytes
+	ms.WriteByte(o.outputType)            // 1 byte
+	ms.WriteBytes(o.outputID[:])          // 34 bytes
 	return ms.Bytes()
 }
 
@@ -80,8 +80,8 @@ func (s *Spent) kvStorableKey() (key []byte) {
 
 func (s *Spent) kvStorableValue() (value []byte) {
 	ms := marshalutil.New(36)
-	ms.WriteBytes(s.targetTransactionID[:])
-	ms.WriteUint32(uint32(s.confirmationIndex))
+	ms.WriteBytes(s.targetTransactionID[:])     // 32 bytes
+	ms.WriteUint32(uint32(s.confirmationIndex)) // 4 bytes
 	return ms.Bytes()
 }
 
@@ -138,7 +138,7 @@ func (u *Manager) loadOutputOfSpent(s *Spent) error {
 	}
 
 	output := &Output{}
-	if err := output.kvStorableLoad(u, key, value); err != nil {
+	if err = output.kvStorableLoad(u, key, value); err != nil {
 		return err
 	}
 
@@ -218,7 +218,9 @@ func storeSpentAndRemoveUnspent(spent *Spent, mutations kvstore.BatchedMutations
 	unspentKey := spent.Output().unspentDatabaseKey()
 	spentKey := spent.kvStorableKey()
 
-	mutations.Delete(unspentKey)
+	if err := mutations.Delete(unspentKey); err != nil {
+		return err
+	}
 
 	return mutations.Set(spentKey, spent.kvStorableValue())
 }

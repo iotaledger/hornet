@@ -18,14 +18,13 @@ import (
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/workerpool"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:      "MQTT",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -46,7 +45,6 @@ const (
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	newLatestMilestoneWorkerPool    *workerpool.WorkerPool
@@ -66,20 +64,20 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage       *storage.Storage
-	Tangle        *tangle.Tangle
-	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-	BelowMaxDepth int                          `name:"belowMaxDepth"`
-	Bech32HRP     iotago.NetworkPrefix         `name:"bech32HRP"`
-	Echo          *echo.Echo                   `optional:"true"`
+	Storage                               *storage.Storage
+	Tangle                                *tangle.Tangle
+	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
+	MaxDeltaMsgYoungestConeRootIndexToCMI int                          `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+	MaxDeltaMsgOldestConeRootIndexToCMI   int                          `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+	BelowMaxDepth                         int                          `name:"belowMaxDepth"`
+	Bech32HRP                             iotago.NetworkPrefix         `name:"bech32HRP"`
+	Echo                                  *echo.Echo                   `optional:"true"`
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		log.Panic("RestAPI plugin needs to be enabled to use the MQTT plugin")
+		Plugin.Panic("RestAPI plugin needs to be enabled to use the MQTT plugin")
 	}
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
@@ -118,8 +116,8 @@ func configure() {
 		topic := task.Param(0).([]byte)
 		topicName := string(topic)
 
-		if messageId := messageIdFromTopic(topicName); messageId != nil {
-			if cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageId); cachedMsgMeta != nil {
+		if messageID := messageIDFromTopic(topicName); messageID != nil {
+			if cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID); cachedMsgMeta != nil {
 				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMsgMeta); added {
 					return // Avoid Release (done inside workerpool task)
 				}
@@ -128,21 +126,21 @@ func configure() {
 			return
 		}
 
-		if transactionId := transactionIdFromTopic(topicName); transactionId != nil {
+		if transactionID := transactionIDFromTopic(topicName); transactionID != nil {
 			// Find the first output of the transaction
-			outputId := &iotago.UTXOInputID{}
-			copy(outputId[:], transactionId[:])
+			outputID := &iotago.UTXOInputID{}
+			copy(outputID[:], transactionID[:])
 
-			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputID)
 			if err != nil {
 				return
 			}
 
-			publishTransactionIncludedMessage(transactionId, output.MessageID())
+			publishTransactionIncludedMessage(transactionID, output.MessageID())
 			return
 		}
 
-		if outputId := outputIdFromTopic(topicName); outputId != nil {
+		if outputID := outputIDFromTopic(topicName); outputID != nil {
 
 			// we need to lock the ledger here to have the correct index for unspent info of the output.
 			deps.Storage.UTXO().ReadLockLedger()
@@ -153,7 +151,7 @@ func configure() {
 				return
 			}
 
-			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputId)
+			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputID)
 			if err != nil {
 				return
 			}
@@ -167,16 +165,16 @@ func configure() {
 		}
 
 		if topicName == topicMilestonesLatest {
-			index := deps.Storage.GetLatestMilestoneIndex()
-			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
+			index := deps.Storage.LatestMilestoneIndex()
+			if milestone := deps.Storage.CachedMilestoneOrNil(index); milestone != nil {
 				publishLatestMilestone(milestone) // milestone pass +1
 			}
 			return
 		}
 
 		if topicName == topicMilestonesConfirmed {
-			index := deps.Storage.GetConfirmedMilestoneIndex()
-			if milestone := deps.Storage.GetCachedMilestoneOrNil(index); milestone != nil {
+			index := deps.Storage.ConfirmedMilestoneIndex()
+			if milestone := deps.Storage.CachedMilestoneOrNil(index); milestone != nil {
 				publishConfirmedMilestone(milestone) // milestone pass +1
 			}
 			return
@@ -186,14 +184,14 @@ func configure() {
 
 	var err error
 	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", deps.NodeConfig.Int(CfgMQTTWorkerCount), func(topic []byte) {
-		log.Infof("Subscribe to topic: %s", string(topic))
+		Plugin.LogInfof("Subscribe to topic: %s", string(topic))
 		topicSubscriptionWorkerPool.TrySubmit(topic)
 	}, func(topic []byte) {
-		log.Infof("Unsubscribe from topic: %s", string(topic))
+		Plugin.LogInfof("Unsubscribe from topic: %s", string(topic))
 	})
 
 	if err != nil {
-		log.Fatalf("MQTT broker init failed! %s", err)
+		Plugin.LogFatalf("MQTT broker init failed! %s", err)
 	}
 
 	setupWebSocketRoute()
@@ -202,9 +200,9 @@ func configure() {
 func setupWebSocketRoute() {
 
 	// Configure MQTT WebSocket route
-	mqttWSUrl, err := url.Parse(fmt.Sprintf("http://%s:%s", mqttBroker.GetConfig().Host, mqttBroker.GetConfig().WsPort))
+	mqttWSUrl, err := url.Parse(fmt.Sprintf("http://%s:%s", mqttBroker.Config().Host, mqttBroker.Config().WsPort))
 	if err != nil {
-		log.Fatalf("MQTT WebSocket init failed! %s", err)
+		Plugin.LogFatalf("MQTT WebSocket init failed! %s", err)
 	}
 
 	wsGroup := deps.Echo.Group(RouteMQTT)
@@ -217,7 +215,7 @@ func setupWebSocketRoute() {
 		}),
 		// We need to forward any calls to the MQTT route to the ws endpoint of our broker
 		Rewrite: map[string]string{
-			RouteMQTT: mqttBroker.GetConfig().WsPath,
+			RouteMQTT: mqttBroker.Config().WsPath,
 		},
 	}
 
@@ -226,7 +224,7 @@ func setupWebSocketRoute() {
 
 func run() {
 
-	log.Infof("Starting MQTT Broker (port %s) ...", mqttBroker.GetConfig().Port)
+	Plugin.LogInfof("Starting MQTT Broker (port %s) ...", mqttBroker.Config().Port)
 
 	onLatestMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
@@ -256,7 +254,7 @@ func run() {
 		cachedMs.Release(true)
 	})
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
 		if !wasSyncBefore {
 			// Not sync
 			cachedMsg.Release(true)
@@ -276,7 +274,7 @@ func run() {
 		cachedMetadata.Release(true)
 	})
 
-	onMessageReferenced := events.NewClosure(func(cachedMetadata *storage.CachedMetadata, msIndex milestone.Index, confTime uint64) {
+	onMessageReferenced := events.NewClosure(func(cachedMetadata *storage.CachedMetadata, _ milestone.Index, _ uint64) {
 		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
 			return // Avoid Release (done inside workerpool task)
 		}
@@ -295,27 +293,29 @@ func run() {
 		receiptWorkerPool.TrySubmit(receipt)
 	})
 
-	Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
 		go func() {
 			mqttBroker.Start()
-			log.Infof("Starting MQTT Broker (port %s) ... done", mqttBroker.GetConfig().Port)
+			Plugin.LogInfof("Starting MQTT Broker (port %s) ... done", mqttBroker.Config().Port)
 		}()
 
-		if mqttBroker.GetConfig().Port != "" {
-			log.Infof("You can now listen to MQTT via: http://%s:%s", mqttBroker.GetConfig().Host, mqttBroker.GetConfig().Port)
+		if mqttBroker.Config().Port != "" {
+			Plugin.LogInfof("You can now listen to MQTT via: http://%s:%s", mqttBroker.Config().Host, mqttBroker.Config().Port)
 		}
 
-		if mqttBroker.GetConfig().TlsPort != "" {
-			log.Infof("You can now listen to MQTT via: https://%s:%s", mqttBroker.GetConfig().TlsHost, mqttBroker.GetConfig().TlsPort)
+		if mqttBroker.Config().TlsPort != "" {
+			Plugin.LogInfof("You can now listen to MQTT via: https://%s:%s", mqttBroker.Config().TlsHost, mqttBroker.Config().TlsPort)
 		}
 
 		<-shutdownSignal
-		log.Info("Stopping MQTT Broker ...")
-		log.Info("Stopping MQTT Broker ... done")
-	}, shutdown.PriorityMetricsPublishers)
+		Plugin.LogInfo("Stopping MQTT Broker ...")
+		Plugin.LogInfo("Stopping MQTT Broker ... done")
+	}, shutdown.PriorityMetricsPublishers); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
-	Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting MQTT Events ... done")
+	if err := Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
+		Plugin.LogInfo("Starting MQTT Events ... done")
 
 		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
 		deps.Tangle.Events.ConfirmedMilestoneChanged.Attach(onConfirmedMilestoneChanged)
@@ -359,6 +359,8 @@ func run() {
 		utxoOutputWorkerPool.StopAndWait()
 		receiptWorkerPool.StopAndWait()
 
-		log.Info("Stopping MQTT Events ... done")
-	}, shutdown.PriorityMetricsPublishers)
+		Plugin.LogInfo("Stopping MQTT Events ... done")
+	}, shutdown.PriorityMetricsPublishers); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }

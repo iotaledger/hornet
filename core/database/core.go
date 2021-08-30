@@ -1,16 +1,11 @@
 package database
 
 import (
-	"fmt"
 	"os"
-	"time"
-
-	"github.com/pkg/errors"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -23,11 +18,9 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/kvstore/bolt"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/syncutils"
 )
 
 const (
@@ -40,25 +33,23 @@ const (
 func init() {
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
-			Name:      "Database",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:           "Database",
+			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
+			Params:         params,
+			InitConfigPars: initConfigPars,
+			Provide:        provide,
+			Configure:      configure,
+			Run:            run,
 		},
 	}
 }
 
 var (
 	CorePlugin *node.CorePlugin
-	log        *logger.Logger
 	deps       dependencies
 
 	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
 	deleteAll      = flag.Bool(CfgTangleDeleteAll, false, "whether to delete the database and snapshots at startup")
-
-	garbageCollectionLock syncutils.Mutex
 
 	// Closures
 	onPruningStateChanged *events.Closure
@@ -68,87 +59,126 @@ type dependencies struct {
 	dig.In
 	Database       *database.Database
 	Storage        *storage.Storage
-	Events         *Events
 	StorageMetrics *metrics.StorageMetrics
+}
+
+func initConfigPars(c *dig.Container) {
+
+	type cfgDeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	type cfgResult struct {
+		dig.Out
+		DatabaseEngine           database.Engine `name:"databaseEngine"`
+		DatabasePath             string          `name:"databasePath"`
+		DeleteDatabaseFlag       bool            `name:"deleteDatabase"`
+		DeleteAllFlag            bool            `name:"deleteAll"`
+		DatabaseDebug            bool            `name:"databaseDebug"`
+		DatabaseAutoRevalidation bool            `name:"databaseAutoRevalidation"`
+	}
+
+	if err := c.Provide(func(deps cfgDeps) cfgResult {
+		dbEngine, err := database.DatabaseEngine(deps.NodeConfig.String(CfgDatabaseEngine))
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
+		return cfgResult{
+			DatabaseEngine:           dbEngine,
+			DatabasePath:             deps.NodeConfig.String(CfgDatabasePath),
+			DeleteDatabaseFlag:       *deleteDatabase,
+			DeleteAllFlag:            *deleteAll,
+			DatabaseDebug:            deps.NodeConfig.Bool(CfgDatabaseDebug),
+			DatabaseAutoRevalidation: deps.NodeConfig.Bool(CfgDatabaseAutoRevalidation),
+		}
+	}); err != nil {
+		CorePlugin.Panic(err)
+	}
 }
 
 func provide(c *dig.Container) {
 
-	type dbresult struct {
+	type dbResult struct {
 		dig.Out
-
-		StorageMetrics     *metrics.StorageMetrics
-		DatabaseMetrics    *metrics.DatabaseMetrics
-		DatabaseEvents     *Events
-		DeleteDatabaseFlag bool `name:"deleteDatabase"`
-		DeleteAllFlag      bool `name:"deleteAll"`
+		StorageMetrics  *metrics.StorageMetrics
+		DatabaseMetrics *metrics.DatabaseMetrics
 	}
 
-	if err := c.Provide(func() dbresult {
-
-		res := dbresult{
+	if err := c.Provide(func() dbResult {
+		return dbResult{
 			StorageMetrics:  &metrics.StorageMetrics{},
 			DatabaseMetrics: &metrics.DatabaseMetrics{},
-			DatabaseEvents: &Events{
-				DatabaseCleanup:    events.NewEvent(DatabaseCleanupCaller),
-				DatabaseCompaction: events.NewEvent(events.BoolCaller),
-			},
-			DeleteDatabaseFlag: *deleteDatabase,
-			DeleteAllFlag:      *deleteAll,
 		}
-		return res
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
-	type dbdeps struct {
+	type databaseDeps struct {
 		dig.In
 		DeleteDatabaseFlag bool                         `name:"deleteDatabase"`
 		DeleteAllFlag      bool                         `name:"deleteAll"`
 		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
-		Events             *Events
+		DatabaseEngine     database.Engine              `name:"databaseEngine"`
+		DatabasePath       string                       `name:"databasePath"`
 		Metrics            *metrics.DatabaseMetrics
 	}
 
-	if err := c.Provide(func(deps dbdeps) *database.Database {
+	if err := c.Provide(func(deps databaseDeps) *database.Database {
+
+		events := &database.Events{
+			DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
+			DatabaseCompaction: events.NewEvent(events.BoolCaller),
+		}
 
 		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 			// delete old database folder
-			if err := os.RemoveAll(deps.NodeConfig.String(CfgDatabasePath)); err != nil {
-				log.Panicf("deleting database folder failed: %s", err)
+			if err := os.RemoveAll(deps.DatabasePath); err != nil {
+				CorePlugin.Panicf("deleting database folder failed: %s", err)
 			}
 		}
 
-		switch deps.NodeConfig.String(CfgDatabaseEngine) {
-		case "pebble":
+		targetEngine, err := database.CheckDatabaseEngine(deps.DatabasePath, true, deps.DatabaseEngine)
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
+
+		switch targetEngine {
+		case database.EnginePebble:
 			reportCompactionRunning := func(running bool) {
 				deps.Metrics.CompactionRunning.Store(running)
 				if running {
 					deps.Metrics.CompactionCount.Inc()
 				}
-				deps.Events.DatabaseCompaction.Trigger(running)
+				events.DatabaseCompaction.Trigger(running)
+			}
+
+			db, err := database.NewPebbleDB(deps.DatabasePath, reportCompactionRunning, true)
+			if err != nil {
+				CorePlugin.Panicf("database initialization failed: %s", err)
 			}
 
 			return database.New(
-				pebble.New(database.NewPebbleDB(deps.NodeConfig.String(CfgDatabasePath), reportCompactionRunning, true)),
+				CorePlugin.Logger(),
+				pebble.New(db),
+				events,
 				true,
 				func() bool { return deps.Metrics.CompactionRunning.Load() },
 			)
 
-		case "bolt":
-			return database.New(
-				bolt.New(database.NewBoltDB(deps.NodeConfig.String(CfgDatabasePath), "tangle.db")),
-				false,
-				func() bool { return false },
-			)
+		case database.EngineRocksDB:
+			db, err := database.NewRocksDB(deps.DatabasePath)
+			if err != nil {
+				CorePlugin.Panicf("database initialization failed: %s", err)
+			}
 
-		case "rocksdb":
-			rocksDB := database.NewRocksDB(deps.NodeConfig.String(CfgDatabasePath))
 			return database.New(
-				rocksdb.New(rocksDB),
+				CorePlugin.Logger(),
+				rocksdb.New(db),
+				events,
 				true,
 				func() bool {
-					if numCompactions, success := rocksDB.GetIntProperty("rocksdb.num-running-compactions"); success {
+					if numCompactions, success := db.GetIntProperty("rocksdb.num-running-compactions"); success {
 						runningBefore := deps.Metrics.CompactionRunning.Load()
 						running := numCompactions != 0
 
@@ -156,7 +186,7 @@ func provide(c *dig.Container) {
 						if running && !runningBefore {
 							// we may miss some compactions, since this is only calculated if polled.
 							deps.Metrics.CompactionCount.Inc()
-							deps.Events.DatabaseCompaction.Trigger(running)
+							events.DatabaseCompaction.Trigger(running)
 						}
 						return running
 					}
@@ -164,106 +194,97 @@ func provide(c *dig.Container) {
 				},
 			)
 		default:
-			panic(fmt.Sprintf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", deps.NodeConfig.String(CfgDatabaseEngine)))
+			CorePlugin.Panicf("unknown database engine: %s, supported engines: pebble/rocksdb", targetEngine)
+			return nil
 		}
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
-	type storagedeps struct {
+	type storageDeps struct {
 		dig.In
 		NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
+		DatabasePath               string                       `name:"databasePath"`
 		Database                   *database.Database
 		Profile                    *profile.Profile
 		BelowMaxDepth              int `name:"belowMaxDepth"`
 		CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
+		MilestonePublicKeyCount    int `name:"milestonePublicKeyCount"`
 	}
 
-	if err := c.Provide(func(deps storagedeps) *storage.Storage {
+	if err := c.Provide(func(deps storageDeps) *storage.Storage {
 
 		keyManager := keymanager.New()
 		for _, keyRange := range deps.CoordinatorPublicKeyRanges {
 			pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
 			if err != nil {
-				panic(fmt.Sprintf("can't load public key ranges: %s", err))
+				CorePlugin.Panicf("can't load public key ranges: %s", err)
 			}
 
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 		}
 
-		return storage.New(deps.NodeConfig.String(CfgDatabasePath), deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount))
+		store, err := storage.New(logger.NewLogger("Storage"), deps.DatabasePath, deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.MilestonePublicKeyCount)
+		if err != nil {
+			CorePlugin.Panicf("can't initialize storage: %s", err)
+		}
+		return store
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
 	if err := c.Provide(func(storage *storage.Storage) *utxo.Manager {
 		return storage.UTXO()
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(CorePlugin.Name)
 
-	if !deps.Storage.IsCorrectDatabaseVersion() {
-		if !deps.Storage.UpdateDatabaseVersion() {
-			log.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
+	correctDatabaseVersion, err := deps.Storage.IsCorrectDatabaseVersion()
+	if err != nil {
+		CorePlugin.Panic(err)
+	}
+
+	if !correctDatabaseVersion {
+		databaseVersionUpdated, err := deps.Storage.UpdateDatabaseVersion()
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
+
+		if !databaseVersionUpdated {
+			CorePlugin.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 
-	CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
+	if err = CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
-		deps.Storage.MarkDatabaseHealthy()
-		log.Info("Syncing databases to disk...")
-		closeDatabases()
-		log.Info("Syncing databases to disk... done")
-	}, shutdown.PriorityCloseDatabase)
+
+		if err = deps.Storage.MarkDatabaseHealthy(); err != nil {
+			CorePlugin.Panic(err)
+		}
+
+		CorePlugin.LogInfo("Syncing databases to disk...")
+		if err = closeDatabases(); err != nil {
+			CorePlugin.Panicf("Syncing databases to disk... failed: %s", err)
+		}
+		CorePlugin.LogInfo("Syncing databases to disk... done")
+	}, shutdown.PriorityCloseDatabase); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
 	configureEvents()
 }
 
 func run() {
-	CorePlugin.Daemon().BackgroundWorker("Database[Events]", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Database[Events]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
-	}, shutdown.PriorityMetricsUpdater)
-}
-
-func RunGarbageCollection() {
-	if !deps.Storage.DatabaseSupportsCleanup() {
-		return
+	}, shutdown.PriorityMetricsUpdater); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
-
-	garbageCollectionLock.Lock()
-	defer garbageCollectionLock.Unlock()
-
-	log.Info("running full database garbage collection. This can take a while...")
-
-	start := time.Now()
-
-	deps.Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-		Start: start,
-	})
-
-	err := deps.Storage.CleanupDatabases()
-
-	end := time.Now()
-
-	deps.Events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-		Start: start,
-		End:   end,
-	})
-
-	if err != nil {
-		if !errors.Is(err, storage.ErrNothingToCleanUp) {
-			log.Warnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
-			return
-		}
-	}
-
-	log.Infof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
 }
 
 func closeDatabases() error {

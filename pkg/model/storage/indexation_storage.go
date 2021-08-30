@@ -11,11 +11,13 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
+// CachedIndexation represents a cached indexation.
 type CachedIndexation struct {
 	objectstorage.CachedObject
 }
 
-func (c *CachedIndexation) GetIndexation() *Indexation {
+// Indexation retrieves the indexation, that is cached in this container.
+func (c *CachedIndexation) Indexation() *Indexation {
 	return c.Get().(*Indexation)
 }
 
@@ -26,14 +28,21 @@ func indexationFactory(key []byte, data []byte) (objectstorage.StorableObject, e
 	}, nil
 }
 
-func (s *Storage) GetIndexationStorageSize() int {
+func (s *Storage) IndexationStorageSize() int {
 	return s.indexationStorage.GetSize()
 }
 
-func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
-	cacheTime, _ := time.ParseDuration(opts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	cacheTime, err := time.ParseDuration(opts.CacheTime)
+	if err != nil {
+		return err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return err
+	}
 
 	s.indexationStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixIndexation}),
@@ -50,10 +59,13 @@ func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profil
 				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
+
+	return nil
 }
 
+// IndexMessageIDs returns all known message IDs for the given index.
 // indexation +-0
-func (s *Storage) GetIndexMessageIDs(index []byte, iteratorOptions ...IteratorOption) hornet.MessageIDs {
+func (s *Storage) IndexMessageIDs(index []byte, iteratorOptions ...IteratorOption) hornet.MessageIDs {
 	var messageIDs hornet.MessageIDs
 
 	indexPadded := PadIndexationIndex(index)
@@ -89,27 +101,32 @@ func (s *Storage) ForEachIndexation(consumer CachedIndexationConsumer, iteratorO
 	}, iteratorOptions...)
 }
 
+// StoreIndexation stores the indexation in the persistence layer and returns a cached object.
 // indexation +1
 func (s *Storage) StoreIndexation(index []byte, messageID hornet.MessageID) *CachedIndexation {
 	indexation := NewIndexation(index, messageID)
 	return &CachedIndexation{CachedObject: s.indexationStorage.Store(indexation)}
 }
 
+// DeleteIndexation deletes the indexation in the cache/persistence layer.
 // indexation +-0
 func (s *Storage) DeleteIndexation(index []byte, messageID hornet.MessageID) {
 	indexation := NewIndexation(index, messageID)
 	s.indexationStorage.Delete(indexation.ObjectStorageKey())
 }
 
+// DeleteIndexationByKey deletes the indexation by key in the cache/persistence layer.
 // indexation +-0
 func (s *Storage) DeleteIndexationByKey(key []byte) {
 	s.indexationStorage.Delete(key)
 }
 
+// ShutdownIndexationStorage shuts down the indexation storage.
 func (s *Storage) ShutdownIndexationStorage() {
 	s.indexationStorage.Shutdown()
 }
 
+// FlushIndexationStorage flushes the indexation storage.
 func (s *Storage) FlushIndexationStorage() {
 	s.indexationStorage.Flush()
 }

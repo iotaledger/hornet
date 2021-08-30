@@ -23,9 +23,9 @@ const (
 	// ProtocolCode is the protocol code for autopeering within a multi address.
 	ProtocolCode = 1337
 	// the min size of a base58 encoded public key.
- 	autopeeringMinPubKeyBase58Size = 42
+	autopeeringMinPubKeyBase58Size = 42
 	// the max size of a base58 encoded public key.
- 	autopeeringMaxPubKeyBase58Size = 44
+	autopeeringMaxPubKeyBase58Size = 44
 )
 
 var (
@@ -214,15 +214,15 @@ func ConvertPeerIDToHiveIdentity(peer *p2p.Peer) (*identity.Identity, error) {
 
 // ConvertLibP2PPrivateKeyToHive converts a libp2p private key to a hive private key.
 func ConvertLibP2PPrivateKeyToHive(key *crypto.Ed25519PrivateKey) (*ed25519.PrivateKey, error) {
-	prvKeyBytes, err := key.Raw()
+	privKeyBytes, err := key.Raw()
 	if err != nil {
 		return nil, err
 	}
 
-	hivePrvKey, err, _ := ed25519.PrivateKeyFromBytes(prvKeyBytes)
+	hivePrivKey, err, _ := ed25519.PrivateKeyFromBytes(privKeyBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	return &hivePrvKey, nil
+	return &hivePrivKey, nil
 }

@@ -48,7 +48,7 @@ const (
 func websocketRoute(ctx echo.Context) error {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Errorf("recovered from panic within WS handle func: %s", r)
+			Plugin.LogErrorf("recovered from panic within WS handle func: %s", r)
 		}
 	}()
 
@@ -95,13 +95,13 @@ func websocketRoute(ctx echo.Context) error {
 			client.Send(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: cachedMilestoneMetrics})
 
 		case MsgTypeDatabaseSizeMetric:
-			client.Send(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: cachedDbSizeMetrics})
+			client.Send(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: cachedDBSizeMetrics})
 
 		case MsgTypeDatabaseCleanupEvent:
-			client.Send(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: lastDbCleanup})
+			client.Send(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: lastDBCleanup})
 
 		case MsgTypeMs:
-			start := deps.Storage.GetLatestMilestoneIndex()
+			start := deps.Storage.LatestMilestoneIndex()
 			for i := start - 10; i <= start; i++ {
 				if milestoneMessageID := getMilestoneMessageID(i); milestoneMessageID != nil {
 					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.ToHex(), Index: i}})
@@ -119,7 +119,7 @@ func websocketRoute(ctx echo.Context) error {
 	hub.ServeWebsocket(ctx.Response(), ctx.Request(),
 		// onCreate gets called when the client is created
 		func(client *websockethub.Client) {
-			client.FilterCallback = func(c *websockethub.Client, data interface{}) bool {
+			client.FilterCallback = func(_ *websockethub.Client, data interface{}) bool {
 				msg, ok := data.(*Msg)
 				if !ok {
 					return false
@@ -190,8 +190,8 @@ func websocketRoute(ctx echo.Context) error {
 		},
 
 		// onConnect gets called when the client was registered
-		func(client *websockethub.Client) {
-			log.Info("WebSocket client connection established")
+		func(_ *websockethub.Client) {
+			Plugin.LogInfo("WebSocket client connection established")
 		})
 
 	return nil

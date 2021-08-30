@@ -37,16 +37,11 @@ Another important directory is the `snapshots` directory.  You can control the `
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://ls.manapotion.io/full_snapshot.bin",
-        "delta": "https://ls.manapotion.io/delta_snapshot.bin"
+        "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
+        "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
       },
       {
-        "full": "https://x-vps.com/full_snapshot.bin",
-        "delta": "https://x-vps.com/delta_snapshot.bin"
-      },
-      {
-        "full": "https://dbfiles.iota.org/mainnet/hornet/full_snapshot.bin",
-        "delta": "https://dbfiles.iota.org/mainnet/hornet/delta_snapshot.bin"
+        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin"
       }
     ]
 ```
@@ -93,7 +88,7 @@ To enable this plugin, you will need to change the default configuration, as it 
 
 ```json
  "spammer": {
-    "message": "Binary is the future.",
+    "message": "IOTA - A new dawn",
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
@@ -118,16 +113,11 @@ Your node's ledger accumulates many messages, which uses a significant disk capa
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://ls.manapotion.io/full_snapshot.bin",
-        "delta": "https://ls.manapotion.io/delta_snapshot.bin"
+        "full": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
+        "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
       },
       {
-        "full": "https://x-vps.com/full_snapshot.bin",
-        "delta": "https://x-vps.com/delta_snapshot.bin"
-      },
-      {
-        "full": "https://dbfiles.iota.org/mainnet/hornet/full_snapshot.bin",
-        "delta": "https://dbfiles.iota.org/mainnet/hornet/delta_snapshot.bin"
+        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin"
       }
     ]
   },
@@ -147,7 +137,7 @@ Your node's ledger accumulates many messages, which uses a significant disk capa
 ```
 
 ### Snapshot Pruning
-During a snapshot, Hornet may delete messages from the ledger if they were confirmed by an old milestone. In other words, the term _pruning_ means the deletion of the old history from the node database.  
+During a snapshot, Hornet may delete messages from the ledger if they were confirmed by an old milestone. In other words, the term _pruning_ means the deletion of the old history from the node database.
 
 * If you want to enable pruning, you should set the `pruning.milestones.enabled` or `pruning.size.enabled` keys to _enabled_.
 * The `pruning.milestones.maxMilestonesToKeep` defines how far back from the current confirmed milestone should be pruned.
@@ -170,6 +160,6 @@ Additionally, you can start Hornet with a specific delta snapshot using the `Hor
 ```bash
 hornet tool
 ```
-- `snapgen` Generates an initial snapshot for a private network.
-- `snapmerge` Merges a full and delta snapshot into an updated full snapshot.
-- `snapinfo` Outputs information about a snapshot file.
+- `snap-gen` Generates an initial snapshot for a private network.
+- `snap-merge` Merges a full and delta snapshot into an updated full snapshot.
+- `snap-info` Outputs information about a snapshot file.

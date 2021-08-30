@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
-	restapiplugin "github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -154,7 +153,7 @@ func balanceByEd25519Address(c echo.Context) (*addressBalanceResponse, error) {
 }
 
 func outputsResponse(address iotago.Address, includeSpent bool, filterType *iotago.OutputType) (*addressOutputsResponse, error) {
-	maxResults := deps.NodeConfig.Int(restapiplugin.CfgRestAPILimitsMaxResults)
+	maxResults := deps.RestAPILimitsMaxResults
 
 	opts := []utxo.UTXOIterateOption{
 		utxo.FilterAddress(address),
@@ -215,6 +214,7 @@ func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) 
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
+	// error is ignored because it returns false in case it can't be parsed
 	includeSpent, _ := strconv.ParseBool(strings.ToLower(c.QueryParam("include-spent")))
 
 	typeParam := strings.ToLower(c.QueryParam("type"))
@@ -247,6 +247,7 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
+	// error is ignored because it returns false in case it can't be parsed
 	includeSpent, _ := strconv.ParseBool(strings.ToLower(c.QueryParam("include-spent")))
 
 	var filteredType *iotago.OutputType
@@ -279,11 +280,13 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 	return outputsResponse(&address, includeSpent, filteredType)
 }
 
-func treasury(c echo.Context) (*treasuryResponse, error) {
+func treasury(_ echo.Context) (*treasuryResponse, error) {
+
 	treasuryOutput, err := deps.UTXO.UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
 		return nil, err
 	}
+
 	return &treasuryResponse{
 		MilestoneID: hex.EncodeToString(treasuryOutput.MilestoneID[:]),
 		Amount:      treasuryOutput.Amount,

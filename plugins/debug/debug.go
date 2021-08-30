@@ -31,7 +31,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}
 
 	// check if the requested milestone index would be the next one
-	if request.Index > deps.Storage.GetConfirmedMilestoneIndex()+1 {
+	if request.Index > deps.Storage.ConfirmedMilestoneIndex()+1 {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, common.ErrNodeNotSynced.Error())
 	}
 
@@ -53,7 +53,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 
 	// check all parents for solidity
 	for _, parent := range parents {
-		cachedMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(parent)
+		cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(parent)
 		if cachedMsgMeta == nil {
 			if deps.Storage.SolidEntryPointsContain(parent) {
 				// deregister the event, because the parent is already solid (this also fires the event)
@@ -220,7 +220,7 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}, nil
 }
 
-func addresses(c echo.Context) (*addressesResponse, error) {
+func addresses(_ echo.Context) (*addressesResponse, error) {
 
 	addressMap := map[string]*address{}
 
@@ -255,7 +255,7 @@ func addresses(c echo.Context) (*addressesResponse, error) {
 	}, nil
 }
 
-func addressesEd25519(c echo.Context) (*addressesResponse, error) {
+func addressesEd25519(_ echo.Context) (*addressesResponse, error) {
 
 	addressMap := map[string]*address{}
 
@@ -298,7 +298,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		return nil, err
 	}
 
-	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(msIndex)
+	diff, err := deps.UTXO.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)
@@ -332,7 +332,8 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}, nil
 }
 
-func requests(c echo.Context) (*requestsResponse, error) {
+//nolint:unparam // even if the error is never used, the structure of all routes should be the same
+func requests(_ echo.Context) (*requestsResponse, error) {
 
 	queued, pending, processing := deps.RequestQueue.Requests()
 	debugReqs := make([]*request, 0, len(queued)+len(pending)+len(processing))
@@ -380,19 +381,19 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}
 
-	cachedStartMsgMeta := deps.Storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
+	cachedStartMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedStartMsgMeta == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
 	}
 	defer cachedStartMsgMeta.Release(true)
 
-	if !cachedStartMsgMeta.GetMetadata().IsSolid() {
+	if !cachedStartMsgMeta.Metadata().IsSolid() {
 		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start message is not solid: %s", messageIDHex)
 	}
 
-	startMsgReferened, startMsgReferenedAt := cachedStartMsgMeta.GetMetadata().GetReferenced()
+	startMsgReferened, startMsgReferenedAt := cachedStartMsgMeta.Metadata().ReferencedWithIndex()
 
-	entryPointIndex := deps.Storage.GetSnapshotInfo().EntryPointIndex
+	entryPointIndex := deps.Storage.SnapshotInfo().EntryPointIndex
 	entryPoints := []*entryPoint{}
 	tanglePath := []*messageWithParents{}
 
@@ -402,9 +403,9 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
-			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced {
+			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced {
 				if !startMsgReferened || (at < startMsgReferenedAt) {
-					entryPoints = append(entryPoints, &entryPoint{MessageID: cachedMsgMeta.GetMetadata().GetMessageID().ToHex(), ReferencedByMilestone: at})
+					entryPoints = append(entryPoints, &entryPoint{MessageID: cachedMsgMeta.Metadata().MessageID().ToHex(), ReferencedByMilestone: at})
 					return false, nil
 				}
 			}
@@ -416,8 +417,8 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 			cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
 				tanglePath = append(tanglePath,
 					&messageWithParents{
-						MessageID: metadata.GetMessageID().ToHex(),
-						Parents:   metadata.GetParents().ToHex(),
+						MessageID: metadata.MessageID().ToHex(),
+						Parents:   metadata.Parents().ToHex(),
 					},
 				)
 			})

@@ -49,17 +49,17 @@ func (s *Storage) ResetMilestoneIndexes() {
 	s.latestMilestoneIndex = 0
 }
 
-// GetMilestoneOrNil returns the CachedMessage of a milestone index or nil if it doesn't exist.
+// MilestoneCachedMessageOrNil returns the cached message of a milestone index or nil if it doesn't exist.
 // message +1
-func (s *Storage) GetMilestoneCachedMessageOrNil(milestoneIndex milestone.Index) *CachedMessage {
+func (s *Storage) MilestoneCachedMessageOrNil(milestoneIndex milestone.Index) *CachedMessage {
 
-	cachedMs := s.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+	cachedMs := s.CachedMilestoneOrNil(milestoneIndex) // milestone +1
 	if cachedMs == nil {
 		return nil
 	}
 	defer cachedMs.Release(true) // milestone -1
 
-	return s.GetCachedMessageOrNil(cachedMs.GetMilestone().MessageID)
+	return s.CachedMessageOrNil(cachedMs.Milestone().MessageID)
 }
 
 // IsNodeSynced returns whether the node is synced.
@@ -171,20 +171,21 @@ func (s *Storage) updateNodeSynced(confirmedIndex, latestIndex milestone.Index) 
 }
 
 // SetConfirmedMilestoneIndex sets the confirmed milestone index.
-func (s *Storage) SetConfirmedMilestoneIndex(index milestone.Index, updateSynced ...bool) {
+func (s *Storage) SetConfirmedMilestoneIndex(index milestone.Index, updateSynced ...bool) error {
 	s.confirmedMilestoneLock.Lock()
 	if s.confirmedMilestoneIndex > index {
-		panic(fmt.Sprintf("current confirmed milestone (%d) is newer than (%d)", s.confirmedMilestoneIndex, index))
+		return fmt.Errorf("current confirmed milestone (%d) is newer than (%d)", s.confirmedMilestoneIndex, index)
 	}
 	s.confirmedMilestoneIndex = index
 	s.confirmedMilestoneLock.Unlock()
 
 	if len(updateSynced) > 0 && !updateSynced[0] {
 		// always call updateNodeSynced if parameter is not given.
-		return
+		return nil
 	}
 
-	s.updateNodeSynced(index, s.GetLatestMilestoneIndex())
+	s.updateNodeSynced(index, s.LatestMilestoneIndex())
+	return nil
 }
 
 // OverwriteConfirmedMilestoneIndex is used to set older confirmed milestones (revalidation).
@@ -194,12 +195,12 @@ func (s *Storage) OverwriteConfirmedMilestoneIndex(index milestone.Index) {
 	s.confirmedMilestoneLock.Unlock()
 
 	if s.isNodeSynced {
-		s.updateNodeSynced(index, s.GetLatestMilestoneIndex())
+		s.updateNodeSynced(index, s.LatestMilestoneIndex())
 	}
 }
 
-// GetConfirmedMilestoneIndex returns the confirmed milestone index.
-func (s *Storage) GetConfirmedMilestoneIndex() milestone.Index {
+// ConfirmedMilestoneIndex returns the confirmed milestone index.
+func (s *Storage) ConfirmedMilestoneIndex() milestone.Index {
 	s.confirmedMilestoneLock.RLock()
 	defer s.confirmedMilestoneLock.RUnlock()
 
@@ -225,25 +226,26 @@ func (s *Storage) SetLatestMilestoneIndex(index milestone.Index, updateSynced ..
 		return true
 	}
 
-	s.updateNodeSynced(s.GetConfirmedMilestoneIndex(), index)
+	s.updateNodeSynced(s.ConfirmedMilestoneIndex(), index)
 
 	return true
 }
 
-// GetLatestMilestoneIndex returns the latest milestone index.
-func (s *Storage) GetLatestMilestoneIndex() milestone.Index {
+// LatestMilestoneIndex returns the latest milestone index.
+func (s *Storage) LatestMilestoneIndex() milestone.Index {
 	s.latestMilestoneLock.RLock()
 	defer s.latestMilestoneLock.RUnlock()
 
 	return s.latestMilestoneIndex
 }
 
+// FindClosestNextMilestoneOrNil searches for the next known cached milestone in the persistence layer.
 // message +1
 func (s *Storage) FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMilestone {
-	lmi := s.GetLatestMilestoneIndex()
+	lmi := s.LatestMilestoneIndex()
 	if lmi == 0 {
 		// no milestone received yet, check the next 100 milestones as a workaround
-		lmi = s.GetConfirmedMilestoneIndex() + 100
+		lmi = s.ConfirmedMilestoneIndex() + 100
 	}
 
 	if index == 4294967295 {
@@ -258,7 +260,7 @@ func (s *Storage) FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMi
 			return nil
 		}
 
-		cachedMs := s.GetCachedMilestoneOrNil(index) // milestone +1
+		cachedMs := s.CachedMilestoneOrNil(index) // milestone +1
 		if cachedMs != nil {
 			return cachedMs
 		}
@@ -268,7 +270,7 @@ func (s *Storage) FindClosestNextMilestoneOrNil(index milestone.Index) *CachedMi
 // VerifyMilestone checks if the message contains a valid milestone payload.
 // Returns a milestone payload if the signature is valid.
 func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
-	ms := message.GetMilestone()
+	ms := message.Milestone()
 	if ms == nil {
 		return nil
 	}
@@ -280,7 +282,7 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 		}
 	}
 
-	if err := ms.VerifySignatures(s.milestonePublicKeyCount, s.keyManager.GetPublicKeysSetForMilestoneIndex(milestone.Index(ms.Index))); err != nil {
+	if err := ms.VerifySignatures(s.milestonePublicKeyCount, s.keyManager.PublicKeysSetForMilestoneIndex(milestone.Index(ms.Index))); err != nil {
 		return nil
 	}
 
@@ -291,7 +293,7 @@ func (s *Storage) VerifyMilestone(message *Message) *iotago.Milestone {
 func (s *Storage) StoreMilestone(cachedMessage *CachedMessage, ms *iotago.Milestone, requested bool) {
 	defer cachedMessage.Release(true)
 
-	cachedMilestone, newlyAdded := s.storeMilestoneIfAbsent(milestone.Index(ms.Index), cachedMessage.GetMessage().GetMessageID(), time.Unix(int64(ms.Timestamp), 0))
+	cachedMilestone, newlyAdded := s.storeMilestoneIfAbsent(milestone.Index(ms.Index), cachedMessage.Message().MessageID(), time.Unix(int64(ms.Timestamp), 0))
 	if !newlyAdded {
 		return
 	}

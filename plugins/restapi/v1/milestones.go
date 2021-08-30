@@ -34,16 +34,16 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 		return nil, err
 	}
 
-	cachedMilestone := deps.Storage.GetCachedMilestoneOrNil(msIndex) // milestone +1
+	cachedMilestone := deps.Storage.CachedMilestoneOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "milestone not found: %d", msIndex)
 	}
 	defer cachedMilestone.Release(true)
 
 	return &milestoneResponse{
-		Index:     uint32(cachedMilestone.GetMilestone().Index),
-		MessageID: cachedMilestone.GetMilestone().MessageID.ToHex(),
-		Time:      cachedMilestone.GetMilestone().Timestamp.Unix(),
+		Index:     uint32(cachedMilestone.Milestone().Index),
+		MessageID: cachedMilestone.Milestone().MessageID.ToHex(),
+		Time:      cachedMilestone.Milestone().Timestamp.Unix(),
 	}, nil
 }
 
@@ -54,7 +54,7 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 		return nil, err
 	}
 
-	diff, err := deps.UTXO.GetMilestoneDiffWithoutLocking(msIndex)
+	diff, err := deps.UTXO.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)

@@ -11,7 +11,7 @@ import (
 
 const defaultTempDBForMerge = "./temp_snapshot_merge"
 
-func snapshotMerge(nodeConfig *configuration.Configuration, args []string) error {
+func snapshotMerge(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
@@ -26,7 +26,7 @@ func snapshotMerge(nodeConfig *configuration.Configuration, args []string) error
 
 	if len(args) != 3 {
 		printUsage()
-		return fmt.Errorf("wrong argument count '%s'", ToolSnapGen)
+		return fmt.Errorf("wrong argument count for '%s'", ToolSnapGen)
 	}
 
 	start := time.Now()

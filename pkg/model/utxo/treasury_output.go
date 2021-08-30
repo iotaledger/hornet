@@ -36,15 +36,15 @@ type TreasuryOutput struct {
 
 func (t *TreasuryOutput) kvStorableKey() (key []byte) {
 	return marshalutil.New(34).
-		WriteByte(UTXOStoreKeyPrefixTreasuryOutput).
-		WriteBool(t.Spent).
-		WriteBytes(t.MilestoneID[:]).
+		WriteByte(UTXOStoreKeyPrefixTreasuryOutput). // 1 byte
+		WriteBool(t.Spent).                          // 1 byte
+		WriteBytes(t.MilestoneID[:]).                // 32 bytes
 		Bytes()
 }
 
 func (t *TreasuryOutput) kvStorableValue() (value []byte) {
 	return marshalutil.New(8).
-		WriteUint64(t.Amount).
+		WriteUint64(t.Amount). // 8 bytes
 		Bytes()
 }
 
@@ -146,7 +146,7 @@ func (u *Manager) StoreUnspentTreasuryOutput(to *TreasuryOutput) error {
 
 	existing, err := u.UnspentTreasuryOutputWithoutLocking()
 	if err == nil {
-		if err := mutations.Delete(existing.kvStorableKey()); err != nil {
+		if err = mutations.Delete(existing.kvStorableKey()); err != nil {
 			mutations.Cancel()
 			return err
 		}

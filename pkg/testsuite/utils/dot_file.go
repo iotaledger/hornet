@@ -23,12 +23,12 @@ func ShortenedHash(hash hornet.MessageID) string {
 func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
 	defer cachedMessage.Release(true)
 
-	ms := cachedMessage.GetMessage().GetMilestone()
+	ms := cachedMessage.Message().Milestone()
 	if ms != nil {
 		return fmt.Sprintf("%d", ms.Index)
 	}
 
-	indexation := storage.CheckIfIndexation(cachedMessage.GetMessage())
+	indexation := storage.CheckIfIndexation(cachedMessage.Message())
 
 	index := indexation.Index
 	if len(index) > 4 {
@@ -36,8 +36,8 @@ func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
 	}
 	indexHex := hex.EncodeToString(index)
 
-	if cachedMessage.GetMetadata().IsConflictingTx() {
-		conflict := cachedMessage.GetMetadata().GetConflict()
+	if cachedMessage.Metadata().IsConflictingTx() {
+		conflict := cachedMessage.Metadata().Conflict()
 		return fmt.Sprintf("%s (%d)", indexHex, conflict)
 	}
 
@@ -58,10 +58,17 @@ func ShowDotFile(testInterface testing.TB, dotCommand string, outFilePath string
 		testInterface.Fatal(err)
 	}
 
-	stdin.Write([]byte(dotCommand))
-	stdin.Close()
+	if _, err := stdin.Write([]byte(dotCommand)); err != nil {
+		testInterface.Fatal(err)
+	}
 
-	cmd.Wait()
+	if err := stdin.Close(); err != nil {
+		testInterface.Fatal(err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		testInterface.Fatal(err)
+	}
 
 	switch os := runtime.GOOS; os {
 	case "darwin":

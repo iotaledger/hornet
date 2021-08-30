@@ -11,12 +11,14 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
+// CachedChild represents a cached Child.
 type CachedChild struct {
 	objectstorage.CachedObject
 }
 
 type CachedChildren []*CachedChild
 
+// Retain registers a new consumer for the cached children.
 func (cachedChildren CachedChildren) Retain() CachedChildren {
 	cachedResult := make(CachedChildren, len(cachedChildren))
 	for i, cachedChild := range cachedChildren {
@@ -25,33 +27,43 @@ func (cachedChildren CachedChildren) Retain() CachedChildren {
 	return cachedResult
 }
 
+// Release releases the cached children, to be picked up by the persistence layer (as soon as all consumers are done).
 func (cachedChildren CachedChildren) Release(force ...bool) {
 	for _, cachedChild := range cachedChildren {
 		cachedChild.Release(force...)
 	}
 }
 
+// Retain registers a new consumer for the cached child.
 func (c *CachedChild) Retain() *CachedChild {
 	return &CachedChild{c.CachedObject.Retain()}
 }
 
-func (c *CachedChild) GetChild() *Child {
+// Child retrieves the child, that is cached in this container.
+func (c *CachedChild) Child() *Child {
 	return c.Get().(*Child)
 }
 
-func childrenFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
+func childrenFactory(key []byte, _ []byte) (objectstorage.StorableObject, error) {
 	child := NewChild(hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]), hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 	return child, nil
 }
 
-func (s *Storage) GetChildrenStorageSize() int {
+func (s *Storage) ChildrenStorageSize() int {
 	return s.childrenStorage.GetSize()
 }
 
-func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
-	cacheTime, _ := time.ParseDuration(opts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	cacheTime, err := time.ParseDuration(opts.CacheTime)
+	if err != nil {
+		return err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return err
+	}
 
 	s.childrenStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixChildren}),
@@ -68,10 +80,13 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
+
+	return nil
 }
 
+// ChildrenMessageIDs returns the message IDs of the children of the given message.
 // children +-0
-func (s *Storage) GetChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...IteratorOption) hornet.MessageIDs {
+func (s *Storage) ChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...IteratorOption) hornet.MessageIDs {
 	var childrenMessageIDs hornet.MessageIDs
 
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
@@ -87,11 +102,11 @@ func (s *Storage) ContainsChild(messageID hornet.MessageID, childMessageID horne
 	return s.childrenStorage.Contains(append(messageID, childMessageID...), readOptions...)
 }
 
-// GetCachedChildrenOfMessageID returns the cached children of a message.
+// CachedChildrenOfMessageID returns the cached children of a message.
 // children +1
-func (s *Storage) GetCachedChildrenOfMessageID(messageID hornet.MessageID, iteratorOptions ...IteratorOption) CachedChildren {
+func (s *Storage) CachedChildrenOfMessageID(messageID hornet.MessageID, iteratorOptions ...IteratorOption) CachedChildren {
 	cachedChildren := make(CachedChildren, 0)
-	s.childrenStorage.ForEach(func(key []byte, cachedObject objectstorage.CachedObject) bool {
+	s.childrenStorage.ForEach(func(_ []byte, cachedObject objectstorage.CachedObject) bool {
 		cachedChildren = append(cachedChildren, &CachedChild{CachedObject: cachedObject})
 		return true
 	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(messageID))...)
@@ -108,18 +123,21 @@ func (s *Storage) ForEachChild(consumer ChildConsumer, iteratorOptions ...Iterat
 	}, iteratorOptions...)
 }
 
+// StoreChild stores the child in the persistence layer and returns a cached object.
 // child +1
 func (s *Storage) StoreChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *CachedChild {
 	child := NewChild(parentMessageID, childMessageID)
 	return &CachedChild{CachedObject: s.childrenStorage.Store(child)}
 }
 
+// DeleteChild deletes the child in the cache/persistence layer.
 // child +-0
 func (s *Storage) DeleteChild(messageID hornet.MessageID, childMessageID hornet.MessageID) {
 	child := NewChild(messageID, childMessageID)
 	s.childrenStorage.Delete(child.ObjectStorageKey())
 }
 
+// DeleteChildren deletes the children of the given message in the cache/persistence layer.
 // child +-0
 func (s *Storage) DeleteChildren(messageID hornet.MessageID, iteratorOptions ...IteratorOption) {
 
@@ -135,10 +153,12 @@ func (s *Storage) DeleteChildren(messageID hornet.MessageID, iteratorOptions ...
 	}
 }
 
+// ShutdownChildrenStorage shuts down the children storage.
 func (s *Storage) ShutdownChildrenStorage() {
 	s.childrenStorage.Shutdown()
 }
 
+// FlushChildrenStorage flushes the children storage.
 func (s *Storage) FlushChildrenStorage() {
 	s.childrenStorage.Flush()
 }

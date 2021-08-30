@@ -34,12 +34,12 @@ func TestConeRootIndexes(t *testing.T) {
 		func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs {
 			return hornet.MessageIDs{messages[len(messages)-1]}
 		},
-		func(msIndex milestone.Index, messages hornet.MessageIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats) {
+		func(msIndex milestone.Index, messages hornet.MessageIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
-			cmi := latestMilestone.GetMilestone().Index
+			cmi := latestMilestone.Milestone().Index
 
-			cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(messages[len(messages)-1])
-			ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
+			cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(messages[len(messages)-1])
+			ycri, ocri := dag.ConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
 
 			minOldestConeRootIndex := milestone.Index(1)
 			if cmi > milestone.Index(BelowMaxDepth) {
@@ -55,14 +55,14 @@ func TestConeRootIndexes(t *testing.T) {
 	)
 
 	latestMilestone := te.Milestones[len(te.Milestones)-1]
-	cmi := latestMilestone.GetMilestone().Index
+	cmi := latestMilestone.Milestone().Index
 
 	// Use Null hash and last milestone hash as parents
-	parents := hornet.MessageIDs{latestMilestone.GetMilestone().MessageID, hornet.GetNullMessageID()}
+	parents := hornet.MessageIDs{latestMilestone.Milestone().MessageID, hornet.NullMessageID()}
 	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildIndexation().Store()
 
-	cachedMsgMeta := te.Storage().GetCachedMessageMetadataOrNil(msg.StoredMessageID())
-	ycri, ocri := dag.GetConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
+	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID())
+	ycri, ocri := dag.ConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
 
 	// NullHash is SEP for index 0
 	require.Equal(te.TestInterface, uint32(0), uint32(ocri))

@@ -1,4 +1,5 @@
 name: Build HORNET
+
 on:
   pull_request:
     paths-ignore:

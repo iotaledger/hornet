@@ -168,7 +168,7 @@ func (s *Snapshot) IsSnapshottingOrPruning() bool {
 
 func (s *Snapshot) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
 
-	snapshotInfo := s.storage.GetSnapshotInfo()
+	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		s.log.Panic("No snapshotInfo found!")
 	}
@@ -194,15 +194,15 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 
 	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
 	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) bool {
-		for _, childMessageID := range s.storage.GetChildrenMessageIDs(messageID) {
-			cachedMsgMeta := metadataMemcache.GetCachedMetadataOrNil(childMessageID) // meta +1
+		for _, childMessageID := range s.storage.ChildrenMessageIDs(messageID) {
+			cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(childMessageID) // meta +1
 			if cachedMsgMeta == nil {
 				// Ignore this message since it doesn't exist anymore
 				s.log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
 				continue
 			}
 
-			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced && (at > targetIndex) {
+			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
 				// referenced by a later milestone than targetIndex => solidEntryPoint
 				return true
 			}
@@ -218,13 +218,13 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 		default:
 		}
 
-		cachedMilestone := s.storage.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+		cachedMilestone := s.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMilestone == nil {
 			return errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
 
 		// Get all parents of that milestone
-		milestoneMessageID := cachedMilestone.GetMilestone().MessageID
+		milestoneMessageID := cachedMilestone.Milestone().MessageID
 		cachedMilestone.Release(true) // message -1
 
 		// traverse the milestone and collect all messages that were referenced by this milestone or newer
@@ -235,7 +235,7 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 				defer cachedMsgMeta.Release(true) // msg -1
 
 				// collect all msg that were referenced by that milestone or newer
-				referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
 				return referenced && at >= milestoneIndex, nil
 			},
 			// consumer
@@ -248,13 +248,13 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 				default:
 				}
 
-				messageID := cachedMsgMeta.GetMetadata().GetMessageID()
+				messageID := cachedMsgMeta.Metadata().MessageID()
 
 				if isEntryPoint := isSolidEntryPoint(messageID, targetIndex); !isEntryPoint {
 					return nil
 				}
 
-				referenced, at := cachedMsgMeta.GetMetadata().GetReferenced()
+				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
 				if !referenced {
 					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", messageID.ToHex())
 				}
@@ -289,7 +289,7 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 
 func (s *Snapshot) checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *storage.SnapshotInfo, writeToDatabase bool) error {
 
-	confirmedMilestoneIndex := s.storage.GetConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := s.storage.ConfirmedMilestoneIndex()
 
 	if confirmedMilestoneIndex < s.solidEntryPointCheckThresholdFuture {
 		return errors.Wrapf(ErrNotEnoughHistory, "minimum confirmed index: %d, actual confirmed index: %d", s.solidEntryPointCheckThresholdFuture+1, confirmedMilestoneIndex)
@@ -452,7 +452,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, storage *s
 	}
 
 	var prevDeltaMsDiffProducerFinished bool
-	var prevDeltaUpToIndex milestone.Index = ledgerIndex
+	var prevDeltaUpToIndex = ledgerIndex
 	var dbMsDiffProducer MilestoneDiffProducerFunc
 	mrf := MilestoneRetrieverFromStorage(storage)
 	return func() (*MilestoneDiff, error) {
@@ -491,7 +491,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 	errChan := make(chan error)
 
 	go func() {
-		defer existingDeltaFile.Close()
+		defer func() { _ = existingDeltaFile.Close() }()
 
 		if err := StreamSnapshotDataFrom(existingDeltaFile,
 			func(header *ReadFileHeader) error {
@@ -528,18 +528,18 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 }
 
 // MilestoneRetrieverFunc is a function which returns the milestone for the given index.
-type MilestoneRetrieverFunc func(index milestone.Index) *iotago.Milestone
+type MilestoneRetrieverFunc func(index milestone.Index) (*iotago.Milestone, error)
 
 // MilestoneRetrieverFromStorage creates a MilestoneRetrieverFunc which access the storage.
 // If it can not retrieve a wanted milestone it panics.
 func MilestoneRetrieverFromStorage(storage *storage.Storage) MilestoneRetrieverFunc {
-	return func(index milestone.Index) *iotago.Milestone {
-		cachedMsMsg := storage.GetMilestoneCachedMessageOrNil(index)
+	return func(index milestone.Index) (*iotago.Milestone, error) {
+		cachedMsMsg := storage.MilestoneCachedMessageOrNil(index)
 		if cachedMsMsg == nil {
-			panic(fmt.Sprintf("message for milestone with index %d is not stored in the database", index))
+			return nil, fmt.Errorf("message for milestone with index %d is not stored in the database", index)
 		}
 		defer cachedMsMsg.Release()
-		return cachedMsMsg.GetMessage().GetMilestone()
+		return cachedMsMsg.Message().Milestone(), nil
 	}
 }
 
@@ -555,7 +555,7 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 		var msIndex milestone.Index
 
 		for msIndex, done = msIndexIterator(); !done; msIndex, done = msIndexIterator() {
-			diff, err := utxoManager.GetMilestoneDiffWithoutLocking(msIndex)
+			diff, err := utxoManager.MilestoneDiffWithoutLocking(msIndex)
 			if err != nil {
 				errChan <- err
 				close(prodChan)
@@ -589,9 +589,18 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 				}
 			}
 
-			ms := mrf(msIndex)
+			ms, err := mrf(msIndex)
+			if err != nil {
+				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved: %w", msIndex, err)
+				close(prodChan)
+				close(errChan)
+				return
+			}
 			if ms == nil {
-				panic(fmt.Sprintf("message for milestone with index %d could not be retrieved", msIndex))
+				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved", msIndex)
+				close(prodChan)
+				close(errChan)
+				return
 			}
 
 			prodChan <- &MilestoneDiff{
@@ -641,7 +650,7 @@ func (s *Snapshot) readLedgerIndex() (milestone.Index, error) {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
 	}
 
-	cachedMilestone := s.storage.GetCachedMilestoneOrNil(ledgerMilestoneIndex)
+	cachedMilestone := s.storage.CachedMilestoneOrNil(ledgerMilestoneIndex)
 	if cachedMilestone == nil {
 		return 0, errors.Wrapf(ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
 	}
@@ -670,6 +679,8 @@ func (s *Snapshot) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...str
 // creates the temp file into which to write the snapshot data into.
 func (s *Snapshot) createTempFile(filePath string) (*os.File, string, error) {
 	filePathTmp := filePath + "_tmp"
+
+	// we don't need to check the error, maybe the file doesn't exist
 	_ = os.Remove(filePathTmp)
 
 	lsFile, err := os.OpenFile(filePathTmp, os.O_RDWR|os.O_CREATE, 0666)
@@ -692,13 +703,13 @@ func (s *Snapshot) renameTempFile(tempFile *os.File, tempFilePath string, filePa
 
 // returns the timestamp of the target milestone.
 func (s *Snapshot) readTargetMilestoneTimestamp(targetIndex milestone.Index) (time.Time, error) {
-	cachedTargetMilestone := s.storage.GetCachedMilestoneOrNil(targetIndex) // milestone +1
+	cachedTargetMilestone := s.storage.CachedMilestoneOrNil(targetIndex) // milestone +1
 	if cachedTargetMilestone == nil {
 		return time.Time{}, errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
 	}
 	defer cachedTargetMilestone.Release(true) // milestone -1
 
-	ts := cachedTargetMilestone.GetMilestone().Timestamp
+	ts := cachedTargetMilestone.Milestone().Timestamp
 	return ts, nil
 }
 
@@ -722,7 +733,7 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 
 	timeReadLockLedger := time.Now()
 
-	snapshotInfo := s.storage.GetSnapshotInfo()
+	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return errors.Wrap(ErrCritical, "no snapshot info found")
 	}
@@ -803,7 +814,7 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 	}
 
 	// stream data into snapshot file
-	err, snapshotMetrics := StreamSnapshotDataTo(snapshotFile, uint64(ts.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer)
+	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint64(ts.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer)
 	if err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[snapshotType], err)
@@ -820,7 +831,7 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 		// if the old full snapshot file is overwritten
 		// we need to remove the old delta snapshot file since it
 		// isn't compatible to the full snapshot file anymore.
-		if err := os.Remove(s.snapshotDeltaPath); err != nil && !os.IsNotExist(err) {
+		if err = os.Remove(s.snapshotDeltaPath); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("deleting delta snapshot file failed: %s", err)
 		}
 	}
@@ -836,7 +847,9 @@ func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex m
 
 		snapshotInfo.SnapshotIndex = targetIndex
 		snapshotInfo.Timestamp = targetMsTimestamp
-		s.storage.SetSnapshotInfo(snapshotInfo)
+		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+			s.log.Panic(err)
+		}
 		timeSetSnapshotInfo = time.Now()
 		s.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
 		timeSnapshotMilestoneIndexChanged = time.Now()
@@ -995,26 +1008,31 @@ func newSEPsConsumer(storage *storage.Storage, header *ReadFileHeader) SEPConsum
 	// this information was included in pre Chrysalis Phase 2 snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
 	return func(solidEntryPointMessageID hornet.MessageID) error {
-		storage.SolidEntryPointsAdd(solidEntryPointMessageID, header.SEPMilestoneIndex)
+		storage.SolidEntryPointsAddWithoutLocking(solidEntryPointMessageID, header.SEPMilestoneIndex)
 		return nil
 	}
 }
 
 // LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
-func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, filePath string) error {
+func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, filePath string) (err error) {
 	s.log.Infof("importing %s snapshot file...", snapshotNames[snapshotType])
 	ts := time.Now()
 
 	s.storage.WriteLockSolidEntryPoints()
-	s.storage.ResetSolidEntryPoints()
-	defer s.storage.WriteUnlockSolidEntryPoints()
-	defer s.storage.StoreSolidEntryPoints()
+	s.storage.ResetSolidEntryPointsWithoutLocking()
+	defer func() {
+		if errStore := s.storage.StoreSolidEntryPointsWithoutLocking(); err == nil && errStore != nil {
+			err = errStore
+		}
+		s.storage.WriteUnlockSolidEntryPoints()
+	}()
 
-	lsFile, err := os.Open(filePath)
+	var lsFile *os.File
+	lsFile, err = os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("unable to open %s snapshot file for import: %w", snapshotNames[snapshotType], err)
 	}
-	defer lsFile.Close()
+	defer func() { _ = lsFile.Close() }()
 
 	header := &ReadFileHeader{}
 	headerConsumer := newFileHeaderConsumer(s.log, s.utxo, networkID, snapshotType, header)
@@ -1026,17 +1044,18 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 		treasuryOutputConsumer = newUnspentTreasuryOutputConsumer(s.utxo)
 	}
 	msDiffConsumer := newMsDiffConsumer(s.utxo)
-	if err := StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
+	if err = StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
 		return fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
 
 	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts).Truncate(time.Millisecond))
 
-	if err := s.utxo.CheckLedgerState(); err != nil {
+	if err = s.utxo.CheckLedgerState(); err != nil {
 		return err
 	}
 
-	ledgerIndex, err := s.utxo.ReadLedgerIndex()
+	var ledgerIndex milestone.Index
+	ledgerIndex, err = s.utxo.ReadLedgerIndex()
 	if err != nil {
 		return err
 	}
@@ -1045,18 +1064,29 @@ func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, fil
 		return errors.Wrapf(ErrFinalLedgerIndexDoesNotMatchSEPIndex, "%d != %d", ledgerIndex, header.SEPMilestoneIndex)
 	}
 
-	s.storage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, time.Now())
-	s.storage.SetConfirmedMilestoneIndex(header.SEPMilestoneIndex, false)
+	snapshotTimestamp := time.Unix(int64(header.Timestamp), 0)
+	if err = s.storage.SetSnapshotMilestone(header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, snapshotTimestamp); err != nil {
+		return fmt.Errorf("SetSnapshotMilestone failed: %w", err)
+	}
 
-	return nil
+	s.log.Infof(`
+SnapshotInfo:
+	Type: %s
+	NetworkID: %d
+	SnapshotIndex: %d
+	EntryPointIndex: %d
+	PruningIndex: %d
+	Timestamp: %v`, snapshotNames[snapshotType], header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, snapshotTimestamp)
+
+	return s.storage.SetConfirmedMilestoneIndex(header.SEPMilestoneIndex, false)
 }
 
 // optimalSnapshotType returns the optimal snapshot type
 // based on the file size of the last full and delta snapshot file.
-func (s *Snapshot) optimalSnapshotType() Type {
+func (s *Snapshot) optimalSnapshotType() (Type, error) {
 	if s.deltaSnapshotSizeThresholdPercentage == 0.0 {
 		// special case => always create a delta snapshot to keep entire milestone diff history
-		return Delta
+		return Delta, nil
 	}
 
 	fullSnapshotFileInfo, err := os.Stat(s.snapshotFullPath)
@@ -1064,7 +1094,12 @@ func (s *Snapshot) optimalSnapshotType() Type {
 
 	if !fullSnapshotFileExists {
 		// full snapshot doesn't exist => create a full snapshot
-		return Full
+		return Full, nil
+	}
+
+	if err != nil {
+		// there was another unknown error
+		return Full, err
 	}
 
 	deltaSnapshotFileInfo, err := os.Stat(s.snapshotDeltaPath)
@@ -1072,16 +1107,21 @@ func (s *Snapshot) optimalSnapshotType() Type {
 
 	if !deltaSnapshotFileExists {
 		// delta snapshot doesn't exist => create a delta snapshot
-		return Delta
+		return Delta, nil
+	}
+
+	if err != nil {
+		// there was another unknown error
+		return Delta, err
 	}
 
 	// if the file size of the last delta snapshot is bigger than a certain percentage
 	// of the full snapshot file, it's more efficient to create a new full snapshot.
 	if int64(float64(fullSnapshotFileInfo.Size())*s.deltaSnapshotSizeThresholdPercentage/100.0) < deltaSnapshotFileInfo.Size() {
-		return Full
+		return Full, nil
 	}
 
-	return Delta
+	return Delta, nil
 }
 
 // snapshotTypeFilePath returns the default file path
@@ -1108,12 +1148,17 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 	defer s.snapshotLock.Unlock()
 
 	if s.shouldTakeSnapshot(confirmedMilestoneIndex) {
-		snapshotType := s.optimalSnapshotType()
+		snapshotType, err := s.optimalSnapshotType()
+		if err != nil {
+			s.log.Warnf("%s: %s", ErrSnapshotCreationFailed, err)
+			return
+		}
+
 		if err := s.createSnapshotWithoutLocking(snapshotType, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true, shutdownSignal); err != nil {
 			if errors.Is(err, ErrCritical) {
-				s.log.Panicf("%s %s", ErrSnapshotCreationFailed, err)
+				s.log.Panicf("%s: %s", ErrSnapshotCreationFailed, err)
 			}
-			s.log.Warnf("%s %s", ErrSnapshotCreationFailed, err)
+			s.log.Warnf("%s: %s", ErrSnapshotCreationFailed, err)
 		}
 
 		if !s.storage.IsNodeSynced() {
@@ -1129,7 +1174,7 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 
 	pruningBySize := false
 	if s.pruningSizeEnabled && (s.lastPruningBySizeTime.IsZero() || time.Since(s.lastPruningBySizeTime) > s.pruningSizeCooldownTime) {
-		targetIndexSize, err := s.getTargetIndexBySize()
+		targetIndexSize, err := s.calcTargetIndexBySize()
 		if err == nil && ((targetIndex == 0) || (targetIndex < targetIndexSize)) {
 			targetIndex = targetIndexSize
 			pruningBySize = true
@@ -1150,8 +1195,8 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 	}
 }
 
-// GetSnapshotsFilesLedgerIndex returns the final ledger index if the snapshots from the configured file paths would be applied.
-func (s *Snapshot) GetSnapshotsFilesLedgerIndex() (milestone.Index, error) {
+// SnapshotsFilesLedgerIndex returns the final ledger index if the snapshots from the configured file paths would be applied.
+func (s *Snapshot) SnapshotsFilesLedgerIndex() (milestone.Index, error) {
 
 	snapAvail, err := s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
 	if err != nil {
@@ -1187,7 +1232,7 @@ func (s *Snapshot) ImportSnapshots() error {
 	}
 
 	if snapAvail == snapshotAvailNone {
-		if err := s.downloadSnapshotFiles(s.networkID, s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
+		if err = s.downloadSnapshotFiles(s.networkID, s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
 			return err
 		}
 	}
@@ -1201,8 +1246,8 @@ func (s *Snapshot) ImportSnapshots() error {
 		return errors.New("no snapshot files available after snapshot download")
 	}
 
-	if err := s.LoadSnapshotFromFile(Full, s.networkID, s.snapshotFullPath); err != nil {
-		s.storage.MarkDatabaseCorrupted()
+	if err = s.LoadSnapshotFromFile(Full, s.networkID, s.snapshotFullPath); err != nil {
+		_ = s.storage.MarkDatabaseCorrupted()
 		return err
 	}
 
@@ -1210,8 +1255,8 @@ func (s *Snapshot) ImportSnapshots() error {
 		return nil
 	}
 
-	if err := s.LoadSnapshotFromFile(Delta, s.networkID, s.snapshotDeltaPath); err != nil {
-		s.storage.MarkDatabaseCorrupted()
+	if err = s.LoadSnapshotFromFile(Delta, s.networkID, s.snapshotDeltaPath); err != nil {
+		_ = s.storage.MarkDatabaseCorrupted()
 		return err
 	}
 
@@ -1263,11 +1308,11 @@ func (s *Snapshot) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 		return ErrNoSnapshotDownloadURL
 	}
 
-	targetsJson, err := json.MarshalIndent(s.downloadTargets, "", "   ")
+	targetsJSON, err := json.MarshalIndent(s.downloadTargets, "", "   ")
 	if err != nil {
 		return fmt.Errorf("unable to marshal targets into formatted JSON: %w", err)
 	}
-	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJson))
+	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJSON))
 
 	if err := s.DownloadSnapshotFiles(wantedNetworkID, fullPath, deltaPath, s.downloadTargets); err != nil {
 		return fmt.Errorf("unable to download snapshot files: %w", err)
@@ -1277,7 +1322,7 @@ func (s *Snapshot) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 	return nil
 }
 
-// checks that the current snapshot info is valid regarding its network ID and the ledger state.
+// CheckCurrentSnapshot checks that the current snapshot info is valid regarding its network ID and the ledger state.
 func (s *Snapshot) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInfo) error {
 
 	// check that the stored snapshot corresponds to the wanted network ID
@@ -1288,7 +1333,7 @@ func (s *Snapshot) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInfo) erro
 	// if we don't enforce loading of a snapshot,
 	// we can check the ledger state of the current database and start the node.
 	if err := s.utxo.CheckLedgerState(); err != nil {
-		s.log.Fatal(err.Error())
+		s.log.Fatal(err)
 	}
 
 	return nil

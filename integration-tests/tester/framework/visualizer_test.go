@@ -36,7 +36,7 @@ func randMessageID() hornet.MessageID {
 func TestVisualizer(t *testing.T) {
 	f, err := os.OpenFile(fmt.Sprintf("vis_%d.html", time.Now().Unix()), os.O_RDWR|os.O_CREATE, 0666)
 	assert.NoError(t, err)
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	temp, err := template.New("vis").ParseFiles("./vis_temp.html")
 	assert.NoError(t, err)
@@ -47,7 +47,7 @@ func TestVisualizer(t *testing.T) {
 		v := Vertex{MessageID: randMessageID().ToHex()}
 		if i <= getFromLast {
 			// only one parent at the beginning
-			v.Parents = hornet.MessageIDs{hornet.GetNullMessageID()}.ToHex()
+			v.Parents = hornet.MessageIDs{hornet.NullMessageID()}.ToHex()
 			vertices = append(vertices, v)
 			continue
 		}

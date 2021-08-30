@@ -9,7 +9,7 @@ jobs:
     name: Release Binaries
     runs-on: ubuntu-latest
     container:
-      image: gohornet/goreleaser-cgo-cross-compiler:1.16.4
+      image: gohornet/goreleaser-cgo-cross-compiler:1.16.7
       volumes: [/repo]
     steps:
       - name: Check out code into the Go module directory
@@ -29,7 +29,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: crazy-max/ghaction-docker-meta@v2
+        uses: docker/metadata-action@v3
         with:
           images: gohornet/hornet
           tags: |

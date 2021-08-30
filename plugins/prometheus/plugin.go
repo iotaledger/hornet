@@ -12,12 +12,12 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
-	databasepkg "github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -30,7 +30,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 // RouteMetrics is the route for getting the prometheus metrics.
@@ -41,7 +40,7 @@ const (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
 			Name:      "Prometheus",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -54,7 +53,6 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	server   *http.Server
@@ -66,7 +64,8 @@ type dependencies struct {
 	dig.In
 	AppInfo          *app.AppInfo
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	Database         *databasepkg.Database
+	Database         *database.Database
+	DatabasePath     string `name:"databasePath"`
 	Storage          *storage.Storage
 	ServerMetrics    *metrics.ServerMetrics
 	DatabaseMetrics  *metrics.DatabaseMetrics
@@ -82,12 +81,9 @@ type dependencies struct {
 	TipSelector      *tipselect.TipSelector `optional:"true"`
 	Snapshot         *snapshot.Snapshot
 	Coordinator      *coordinator.Coordinator `optional:"true"`
-	DatabaseEvents   *database.Events
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	if deps.NodeConfig.Bool(CfgPrometheusDatabase) {
 		configureDatabase()
 	}
@@ -119,10 +115,10 @@ func configure() {
 		configureDebug()
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusGoMetrics) {
-		registry.MustRegister(prometheus.NewGoCollector())
+		registry.MustRegister(collectors.NewGoCollector())
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusProcessMetrics) {
-		registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+		registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	}
 }
 
@@ -143,27 +139,27 @@ func writeFileServiceDiscoveryFile() {
 	}}
 	j, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
-		log.Panic("unable to marshal file service discovery JSON:", err)
+		Plugin.Panic("unable to marshal file service discovery JSON:", err)
 		return
 	}
 
 	// this truncates an existing file
 	if err := ioutil.WriteFile(path, j, 0666); err != nil {
-		log.Panic("unable to write file service discovery file:", err)
+		Plugin.Panic("unable to write file service discovery file:", err)
 	}
 
-	log.Infof("Wrote 'file service discovery' content to %s", path)
+	Plugin.LogInfof("Wrote 'file service discovery' content to %s", path)
 }
 
 func run() {
-	log.Info("Starting Prometheus exporter ...")
+	Plugin.LogInfo("Starting Prometheus exporter ...")
 
 	if deps.NodeConfig.Bool(CfgPrometheusFileServiceDiscoveryEnabled) {
 		writeFileServiceDiscoveryFile()
 	}
 
-	Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting Prometheus exporter ... done")
+	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
+		Plugin.LogInfo("Starting Prometheus exporter ... done")
 
 		e := echo.New()
 		e.HideBanner = true
@@ -191,23 +187,25 @@ func run() {
 		server = &http.Server{Addr: bindAddr, Handler: e}
 
 		go func() {
-			log.Infof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
+			Plugin.LogInfof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
 			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				log.Warn("Stopping Prometheus exporter due to an error ... done")
+				Plugin.LogWarnf("Stopped Prometheus exporter due to an error (%s)", err)
 			}
 		}()
 
 		<-shutdownSignal
-		log.Info("Stopping Prometheus exporter ...")
+		Plugin.LogInfo("Stopping Prometheus exporter ...")
 
 		if server != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			err := server.Shutdown(ctx)
 			if err != nil {
-				log.Warn(err.Error())
+				Plugin.LogWarn(err)
 			}
 			cancel()
 		}
-		log.Info("Stopping Prometheus exporter ... done")
-	}, shutdown.PriorityPrometheus)
+		Plugin.LogInfo("Stopping Prometheus exporter ... done")
+	}, shutdown.PriorityPrometheus); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }

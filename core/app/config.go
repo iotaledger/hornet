@@ -11,7 +11,7 @@ import (
 
 func getList(a []string) string {
 	sort.Strings(a)
-	return strings.Join(a, " ")
+	return "\n   - " + strings.Join(a, "\n   - ")
 }
 
 func normalizeFlagSets(params map[string][]*flag.FlagSet) (map[string]*flag.FlagSet, error) {
@@ -103,11 +103,14 @@ func printConfig(maskedKeys []string) {
 	enablePlugins := nodeConfig.Strings(CfgNodeEnablePlugins)
 	disablePlugins := nodeConfig.Strings(CfgNodeDisablePlugins)
 
-	if len(enablePlugins) > 0 {
-		fmt.Printf("\nThe following plugins are enabled: %s", getList(enablePlugins))
-	}
-	if len(disablePlugins) > 0 {
-		fmt.Printf("\nThe following plugins are disabled: %s", getList(disablePlugins))
+	if len(enablePlugins) > 0 || len(disablePlugins) > 0 {
+		if len(enablePlugins) > 0 {
+			fmt.Printf("\nThe following plugins are enabled: %s\n", getList(enablePlugins))
+		}
+		if len(disablePlugins) > 0 {
+			fmt.Printf("\nThe following plugins are disabled: %s\n", getList(disablePlugins))
+		}
+		fmt.Println()
 	}
 }
 

@@ -23,7 +23,8 @@ import (
 
 func newNode(ctx context.Context, t require.TestingT) host.Host {
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
-	sk, _, _ := crypto.GenerateKeyPair(crypto.Ed25519, -1)
+	sk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
+	require.NoError(t, err)
 	h, err := libp2p.New(
 		ctx,
 		libp2p.Identity(sk),
@@ -42,7 +43,10 @@ func TestManager(t *testing.T) {
 	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 
 	cfg := configuration.New()
-	cfg.Set("logger.disableStacktrace", true)
+	err := cfg.Set("logger.disableStacktrace", true)
+	require.NoError(t, err)
+
+	// no need to check the error, since the global logger could already be initialized
 	_ = logger.InitGlobalLogger(cfg)
 
 	node1 := newNode(ctx, t)
@@ -79,9 +83,15 @@ func TestManager(t *testing.T) {
 
 	// connect to each other
 	node2AliasOnNode1 := "Node 2"
-	go node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown, node2AliasOnNode1)
-	go node2Manager.ConnectPeer(node1AddrInfo, p2p.PeerRelationKnown)
-	go node2Manager.ConnectPeer(node3AddrInfo, p2p.PeerRelationUnknown)
+	go func() {
+		_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown, node2AliasOnNode1)
+	}()
+	go func() {
+		_ = node2Manager.ConnectPeer(node1AddrInfo, p2p.PeerRelationKnown)
+	}()
+	go func() {
+		_ = node2Manager.ConnectPeer(node3AddrInfo, p2p.PeerRelationUnknown)
+	}()
 
 	// note we do not explicitly let node 3 connect to node 2
 
@@ -105,7 +115,7 @@ func TestManager(t *testing.T) {
 	})
 
 	// disconnect node 1 from 2
-	require.Nil(t, node1Manager.DisconnectPeer(node2.ID()))
+	require.NoError(t, node1Manager.DisconnectPeer(node2.ID()))
 	connectivity(t, node1Manager, node2.ID(), true)
 	connectivity(t, node2Manager, node1.ID(), true)
 
@@ -129,7 +139,9 @@ func TestManager(t *testing.T) {
 	require.True(t, node1.ConnManager().IsProtected(node2.ID(), p2p.PeerConnectivityProtectionTag))
 
 	// connect node 4 to node 2 too
-	go node2Manager.ConnectPeer(node4AddrInfo, p2p.PeerRelationUnknown)
+	go func() {
+		_ = node2Manager.ConnectPeer(node4AddrInfo, p2p.PeerRelationUnknown)
+	}()
 	connectivity(t, node2Manager, node4.ID(), false)
 	connectivity(t, node4Manager, node2.ID(), false)
 	require.False(t, node2.ConnManager().IsProtected(node4.ID(), p2p.PeerConnectivityProtectionTag))
@@ -200,7 +212,10 @@ func TestManagerEvents(t *testing.T) {
 	defer close(shutdownSignal)
 
 	cfg := configuration.New()
-	cfg.Set("logger.disableStacktrace", true)
+	err := cfg.Set("logger.disableStacktrace", true)
+	require.NoError(t, err)
+
+	// no need to check the error, since the global logger could already be initialized
 	_ = logger.InitGlobalLogger(cfg)
 
 	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
@@ -219,14 +234,16 @@ func TestManagerEvents(t *testing.T) {
 	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()}
 
 	var connectCalled, connectedCalled bool
-	node1Manager.Events.Connect.Attach(events.NewClosure(func(peer *p2p.Peer) {
+	node1Manager.Events.Connect.Attach(events.NewClosure(func(_ *p2p.Peer) {
 		connectCalled = true
 	}))
-	node1Manager.Events.Connected.Attach(events.NewClosure(func(peer *p2p.Peer, _ network.Conn) {
+	node1Manager.Events.Connected.Attach(events.NewClosure(func(_ *p2p.Peer, _ network.Conn) {
 		connectedCalled = true
 	}))
 
-	go node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationUnknown)
+	go func() {
+		_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationUnknown)
+	}()
 	require.Eventually(t, func() bool {
 		return connectCalled
 	}, 4*time.Second, 10*time.Millisecond)
@@ -235,14 +252,16 @@ func TestManagerEvents(t *testing.T) {
 	}, 4*time.Second, 10*time.Millisecond)
 
 	var disconnectCalled, disconnectedCalled bool
-	node1Manager.Events.Disconnect.Attach(events.NewClosure(func(peer *p2p.Peer) {
+	node1Manager.Events.Disconnect.Attach(events.NewClosure(func(_ *p2p.Peer) {
 		disconnectCalled = true
 	}))
-	node1Manager.Events.Disconnected.Attach(events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
+	node1Manager.Events.Disconnected.Attach(events.NewClosure(func(_ *p2p.PeerOptError) {
 		disconnectedCalled = true
 	}))
 
-	go node1Manager.DisconnectPeer(node2.ID())
+	go func() {
+		_ = node1Manager.DisconnectPeer(node2.ID())
+	}()
 	require.Eventually(t, func() bool {
 		return disconnectCalled
 	}, 4*time.Second, 10*time.Millisecond)
@@ -250,7 +269,9 @@ func TestManagerEvents(t *testing.T) {
 		return disconnectedCalled
 	}, 4*time.Second, 10*time.Millisecond)
 
-	go node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationUnknown)
+	go func() {
+		_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationUnknown)
+	}()
 	connectivity(t, node1Manager, node2.ID(), false)
 	connectivity(t, node2Manager, node1.ID(), false)
 
@@ -262,20 +283,22 @@ func TestManagerEvents(t *testing.T) {
 		oldRelation = oldRel
 	}))
 
-	node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
+	_ = node1Manager.ConnectPeer(node2AddrInfo, p2p.PeerRelationKnown)
 	require.True(t, relationUpdatedCalled)
 	require.Equal(t, p2p.PeerRelationKnown, updatedRelation)
 	require.Equal(t, p2p.PeerRelationUnknown, oldRelation)
 
 	var reconnectingCalled, reconnectedCalled bool
-	node1Manager.Events.Reconnecting.Attach(events.NewClosure(func(peer *p2p.Peer) {
+	node1Manager.Events.Reconnecting.Attach(events.NewClosure(func(_ *p2p.Peer) {
 		reconnectingCalled = true
 	}))
-	node1Manager.Events.Reconnected.Attach(events.NewClosure(func(peer *p2p.Peer) {
+	node1Manager.Events.Reconnected.Attach(events.NewClosure(func(_ *p2p.Peer) {
 		reconnectedCalled = true
 	}))
 
-	go node2Manager.DisconnectPeer(node1.ID())
+	go func() {
+		_ = node2Manager.DisconnectPeer(node1.ID())
+	}()
 
 	// node 1 should reconnect to node 2
 	connectivity(t, node1Manager, node2.ID(), true, 10*time.Second)

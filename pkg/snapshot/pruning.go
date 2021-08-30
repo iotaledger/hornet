@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -23,7 +22,7 @@ func (s *Snapshot) setIsPruning(value bool) {
 	s.statusLock.Unlock()
 }
 
-func (s *Snapshot) getTargetIndexBySize(targetSizeBytes ...int64) (milestone.Index, error) {
+func (s *Snapshot) calcTargetIndexBySize(targetSizeBytes ...int64) (milestone.Index, error) {
 
 	if !s.pruningSizeEnabled && len(targetSizeBytes) == 0 {
 		// pruning by size deactivated
@@ -38,7 +37,7 @@ func (s *Snapshot) getTargetIndexBySize(targetSizeBytes ...int64) (milestone.Ind
 		return 0, ErrDatabaseCompactionRunning
 	}
 
-	currentDatabaseSizeBytes, err := s.storage.GetDatabaseSize()
+	currentDatabaseSizeBytes, err := s.storage.DatabaseSize()
 	if err != nil {
 		return 0, err
 	}
@@ -57,12 +56,12 @@ func (s *Snapshot) getTargetIndexBySize(targetSizeBytes ...int64) (milestone.Ind
 		return 0, ErrNoPruningNeeded
 	}
 
-	milestoneRange := s.storage.GetConfirmedMilestoneIndex() - s.storage.GetSnapshotInfo().PruningIndex
+	milestoneRange := s.storage.ConfirmedMilestoneIndex() - s.storage.SnapshotInfo().PruningIndex
 	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - s.pruningSizeThresholdPercentage) / 100.0)
 	diffPercentage := (prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes))
 	milestoneDiff := milestone.Index(math.Ceil(float64(milestoneRange) * diffPercentage))
 
-	return s.storage.GetConfirmedMilestoneIndex() - milestoneDiff, nil
+	return s.storage.ConfirmedMilestoneIndex() - milestoneDiff, nil
 }
 
 // pruneUnreferencedMessages prunes all unreferenced messages from the database for the given milestone
@@ -71,19 +70,19 @@ func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCo
 	messageIDsToDeleteMap := make(map[string]struct{})
 
 	// Check if message is still unreferenced
-	for _, messageID := range s.storage.GetUnreferencedMessageIDs(targetIndex) {
+	for _, messageID := range s.storage.UnreferencedMessageIDs(targetIndex) {
 		messageIDMapKey := messageID.ToMapKey()
 		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
 			continue
 		}
 
-		cachedMsgMeta := s.storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
+		cachedMsgMeta := s.storage.CachedMessageMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			// message was already deleted or marked for deletion
 			continue
 		}
 
-		if cachedMsgMeta.GetMetadata().IsReferenced() {
+		if cachedMsgMeta.Metadata().IsReferenced() {
 			// message was already referenced
 			cachedMsgMeta.Release(true) // meta -1
 			continue
@@ -118,14 +117,14 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 
 		msgID := hornet.MessageIDFromMapKey(messageIDToDelete)
 
-		cachedMsg := s.storage.GetCachedMessageOrNil(msgID) // msg +1
+		cachedMsg := s.storage.CachedMessageOrNil(msgID) // msg +1
 		if cachedMsg == nil {
 			continue
 		}
 
 		cachedMsg.ConsumeMessage(func(msg *storage.Message) { // msg -1
 			// Delete the reference in the parents
-			for _, parent := range msg.GetParents() {
+			for _, parent := range msg.Parents() {
 				s.storage.DeleteChild(parent, msgID)
 			}
 
@@ -157,11 +156,12 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		return 0, ErrDatabaseCompactionRunning
 	}
 
-	snapshotInfo := s.storage.GetSnapshotInfo()
+	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		s.log.Panic("No snapshotInfo found!")
 	}
 
+	//lint:ignore SA5011 nil pointer is already checked before with a panic
 	if snapshotInfo.SnapshotIndex < s.solidEntryPointCheckThresholdPast+s.additionalPruningThreshold+1 {
 		// Not enough history
 		return 0, errors.Wrapf(ErrNotEnoughHistory, "minimum index: %d, target index: %d", s.solidEntryPointCheckThresholdPast+s.additionalPruningThreshold+1, targetIndex)
@@ -198,15 +198,19 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 	// temporarily add the new solid entry points and keep the old ones
 	s.storage.WriteLockSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
 	}
-	s.storage.StoreSolidEntryPoints()
+	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
+		s.log.Panic(err)
+	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
 	// we have to set the new solid entry point index.
 	// this way we can cleanly prune even if the pruning was aborted last time
 	snapshotInfo.EntryPointIndex = targetIndex
-	s.storage.SetSnapshotInfo(snapshotInfo)
+	if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+		s.log.Panic(err)
+	}
 
 	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be CMI at startup of the node
 	s.pruneUnreferencedMessages(snapshotInfo.PruningIndex)
@@ -226,7 +230,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		txCountDeleted, msgCountChecked := s.pruneUnreferencedMessages(milestoneIndex)
 		timePruneUnreferencedMessages := time.Now()
 
-		cachedMs := s.storage.GetCachedMilestoneOrNil(milestoneIndex) // milestone +1
+		cachedMs := s.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
 			// Milestone not found, pruning impossible
 			s.log.Warnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
@@ -235,7 +239,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 		messageIDsToDeleteMap := make(map[string]struct{})
 
-		err := dag.TraverseParentsOfMessage(s.storage, cachedMs.GetMilestone().MessageID,
+		err := dag.TraverseParentsOfMessage(s.storage, cachedMs.Milestone().MessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
@@ -246,7 +250,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 			// consumer
 			func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
 				defer cachedMsgMeta.Release(true) // msg -1
-				messageIDsToDeleteMap[cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()] = struct{}{}
+				messageIDsToDeleteMap[cachedMsgMeta.Metadata().MessageID().ToMapKey()] = struct{}{}
 				return nil
 			},
 			// called on missing parents
@@ -261,12 +265,12 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 		cachedMs.Release(true) // milestone -1
 		if err != nil {
-			s.log.Warnf("Pruning milestone (%d) failed! Error: %v", milestoneIndex, err)
+			s.log.Warnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 			continue
 		}
 
 		// check whether milestone contained receipt and delete it accordingly
-		cachedMsMsg := s.storage.GetMilestoneCachedMessageOrNil(milestoneIndex) // milestone msg +1
+		cachedMsMsg := s.storage.MilestoneCachedMessageOrNil(milestoneIndex) // milestone msg +1
 		if cachedMsMsg == nil {
 			// no message for milestone persisted
 			s.log.Warnf("Pruning milestone (%d) failed! Milestone message not found!", milestoneIndex)
@@ -274,7 +278,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		}
 
 		var migratedAtIndex []uint32
-		if r, ok := cachedMsMsg.GetMessage().GetMilestone().Receipt.(*iotago.Receipt); ok {
+		if r, ok := cachedMsMsg.Message().Milestone().Receipt.(*iotago.Receipt); ok {
 			migratedAtIndex = append(migratedAtIndex, r.MigratedAt)
 		}
 
@@ -290,7 +294,9 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 		timePruneMessages := time.Now()
 
 		snapshotInfo.PruningIndex = milestoneIndex
-		s.storage.SetSnapshotInfo(snapshotInfo)
+		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
+			s.log.Panic(err)
+		}
 		timeSetSnapshotInfo := time.Now()
 
 		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(timeStart).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
@@ -311,14 +317,16 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 
 	// finally set the new solid entry points and remove the old ones
 	s.storage.WriteLockSolidEntryPoints()
-	s.storage.ResetSolidEntryPoints()
+	s.storage.ResetSolidEntryPointsWithoutLocking()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAdd(sep.messageID, sep.index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
 	}
-	s.storage.StoreSolidEntryPoints()
+	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
+		s.log.Panic(err)
+	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
-	database.RunGarbageCollection()
+	s.database.RunGarbageCollection()
 
 	return targetIndex, nil
 }
@@ -327,7 +335,7 @@ func (s *Snapshot) PruneDatabaseByDepth(depth milestone.Index) (milestone.Index,
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	confirmedMilestoneIndex := s.storage.GetConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := s.storage.ConfirmedMilestoneIndex()
 
 	if confirmedMilestoneIndex <= depth {
 		// Not enough history
@@ -348,7 +356,7 @@ func (s *Snapshot) PruneDatabaseBySize(targetSizeBytes int64) (milestone.Index, 
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	targetIndex, err := s.getTargetIndexBySize(targetSizeBytes)
+	targetIndex, err := s.calcTargetIndexBySize(targetSizeBytes)
 	if err != nil {
 		return 0, err
 	}

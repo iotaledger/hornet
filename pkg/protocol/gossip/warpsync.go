@@ -263,31 +263,32 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(msIndex mile
 	w.Lock()
 	defer w.Unlock()
 
-	if msIndex <= w.storage.GetConfirmedMilestoneIndex() {
+	if msIndex <= w.storage.ConfirmedMilestoneIndex() {
 		return
 	}
 
-	cachedMs := w.storage.GetCachedMilestoneOrNil(msIndex) // milestone +1
+	cachedMs := w.storage.CachedMilestoneOrNil(msIndex) // milestone +1
 	if cachedMs == nil {
 		panic(fmt.Sprintf("milestone %d wasn't found", msIndex))
 	}
 
-	milestoneMessageID := cachedMs.GetMilestone().MessageID
+	milestoneMessageID := cachedMs.Milestone().MessageID
 	cachedMs.Release(true) // message -1
 
+	// error is ignored because the next milestone will repeat the process anyway
 	_ = dag.TraverseParentsOfMessage(w.storage, milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
-			mapKey := cachedMsgMeta.GetMetadata().GetMessageID().ToMapKey()
+			mapKey := cachedMsgMeta.Metadata().MessageID().ToMapKey()
 			if _, previouslyTraversed := w.traversed[mapKey]; previouslyTraversed {
 				return false, nil
 			}
 			w.traversed[mapKey] = struct{}{}
 
-			if cachedMsgMeta.GetMetadata().IsSolid() {
+			if cachedMsgMeta.Metadata().IsSolid() {
 				return false, nil
 			}
 

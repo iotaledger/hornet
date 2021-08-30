@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 
+	"github.com/pkg/errors"
+
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -19,8 +21,8 @@ func SaltGenerator(length int) ([]byte, error) {
 	return salt, nil
 }
 
-// GetPasswordKey calculates the key based on password and salt.
-func GetPasswordKey(password []byte, salt []byte) ([]byte, error) {
+// DerivePasswordKey calculates the key based on password and salt.
+func DerivePasswordKey(password []byte, salt []byte) ([]byte, error) {
 
 	dk, err := scrypt.Key(password, salt, 1<<15, 8, 1, 32)
 	if err != nil {
@@ -33,7 +35,7 @@ func GetPasswordKey(password []byte, salt []byte) ([]byte, error) {
 // VerifyPassword verifies if the password is correct.
 func VerifyPassword(password []byte, salt []byte, storedPasswordKey []byte) (bool, error) {
 
-	dk, err := GetPasswordKey(password, salt)
+	dk, err := DerivePasswordKey(password, salt)
 	if err != nil {
 		return false, err
 	}
@@ -47,35 +49,35 @@ type BasicAuth struct {
 	passwordSalt []byte
 }
 
-func NewBasicAuth(username string, passwordHashHex string, passwordSaltHex string) *BasicAuth {
+func NewBasicAuth(username string, passwordHashHex string, passwordSaltHex string) (*BasicAuth, error) {
 	if len(username) == 0 {
-		panic("username must not be empty")
+		return nil, errors.New("username must not be empty")
 	}
 
 	if len(passwordHashHex) != 64 {
-		panic("password hash must be 64 (hex encoded scrypt hash) in length")
+		return nil, errors.New("password hash must be 64 (hex encoded scrypt hash) in length")
 	}
 
 	if len(passwordSaltHex) != 64 {
-		panic("password salt must be 64 (hex encoded) in length")
+		return nil, errors.New("password salt must be 64 (hex encoded) in length")
 	}
 
 	var err error
 	passwordHash, err := hex.DecodeString(passwordHashHex)
 	if err != nil {
-		panic("password hash must be hex encoded")
+		return nil, errors.New("password hash must be hex encoded")
 	}
 
 	passwordSalt, err := hex.DecodeString(passwordSaltHex)
 	if err != nil {
-		panic("password salt must be hex encoded")
+		return nil, errors.New("password salt must be hex encoded")
 	}
 
 	return &BasicAuth{
 		username:     username,
 		passwordHash: passwordHash,
 		passwordSalt: passwordSalt,
-	}
+	}, nil
 }
 
 func (b *BasicAuth) VerifyUsernameAndPassword(username string, password string) bool {
@@ -83,6 +85,7 @@ func (b *BasicAuth) VerifyUsernameAndPassword(username string, password string) 
 		return false
 	}
 
+	// error is ignored because it returns false in case it can't be derived
 	valid, _ := VerifyPassword([]byte(password), b.passwordSalt, b.passwordHash)
 	return valid
 }

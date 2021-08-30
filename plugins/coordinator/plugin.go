@@ -8,8 +8,6 @@ import (
 	"go.uber.org/dig"
 	"golang.org/x/net/context"
 
-	"github.com/gohornet/hornet/core/gracefulshutdown"
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/keymanager"
@@ -21,14 +19,13 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
-	powpackage "github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/iota.go/v2/ed25519"
@@ -48,11 +45,11 @@ var (
 )
 
 func init() {
-	flag.CommandLine.MarkHidden(CfgCoordinatorBootstrap)
-	flag.CommandLine.MarkHidden(CfgCoordinatorStartIndex)
+	_ = flag.CommandLine.MarkHidden(CfgCoordinatorBootstrap)
+	_ = flag.CommandLine.MarkHidden(CfgCoordinatorStartIndex)
 
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
 			Name:      "Coordinator",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -66,7 +63,7 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
+	deps   dependencies
 
 	bootstrap  = flag.Bool(CfgCoordinatorBootstrap, false, "bootstrap the network")
 	startIndex = flag.Uint32(CfgCoordinatorStartIndex, 0, "index of the first milestone at bootstrap")
@@ -87,8 +84,6 @@ var (
 	onConfirmedMilestoneIndexChanged *events.Closure
 	onIssuedCheckpoint               *events.Closure
 	onIssuedMilestone                *events.Closure
-
-	deps dependencies
 )
 
 type dependencies struct {
@@ -100,17 +95,17 @@ type dependencies struct {
 	BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	Coordinator      *coordinator.Coordinator
 	Selector         *mselection.HeaviestSelector
+	ShutdownHandler  *shutdown.ShutdownHandler
 }
 
 func provide(c *dig.Container) {
-	log = logger.NewLogger(Plugin.Name)
 
-	type selectordeps struct {
+	type selectorDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps selectordeps) *mselection.HeaviestSelector {
+	if err := c.Provide(func(deps selectorDeps) *mselection.HeaviestSelector {
 		// use the heaviest branch tip selection for the milestones
 		return mselection.New(
 			deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
@@ -119,21 +114,22 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout),
 		)
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 
-	type coordinatordeps struct {
+	type coordinatorDeps struct {
 		dig.In
-		Storage         *storage.Storage
-		Tangle          *tangle.Tangle
-		PoWHandler      *powpackage.Handler
-		MigratorService *migrator.MigratorService `optional:"true"`
-		UTXOManager     *utxo.Manager
-		NodeConfig      *configuration.Configuration `name:"nodeConfig"`
-		NetworkID       uint64                       `name:"networkId"`
+		Storage                 *storage.Storage
+		Tangle                  *tangle.Tangle
+		PoWHandler              *pow.Handler
+		MigratorService         *migrator.MigratorService `optional:"true"`
+		UTXOManager             *utxo.Manager
+		NodeConfig              *configuration.Configuration `name:"nodeConfig"`
+		NetworkID               uint64                       `name:"networkId"`
+		MilestonePublicKeyCount int                          `name:"milestonePublicKeyCount"`
 	}
 
-	if err := c.Provide(func(deps coordinatordeps) *coordinator.Coordinator {
+	if err := c.Provide(func(deps coordinatorDeps) *coordinator.Coordinator {
 
 		initCoordinator := func() (*coordinator.Coordinator, error) {
 
@@ -141,7 +137,7 @@ func provide(c *dig.Container) {
 				deps.NodeConfig.String(CfgCoordinatorSigningProvider),
 				deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress),
 				deps.Storage.KeyManager(),
-				deps.NodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount),
+				deps.MilestonePublicKeyCount,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("failed to initialize signing provider: %s", err)
@@ -153,11 +149,11 @@ func provide(c *dig.Container) {
 			}
 
 			if deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled) {
-				log.Info("running Coordinator with quorum enabled")
+				Plugin.LogInfo("running Coordinator with quorum enabled")
 			}
 
 			if deps.MigratorService == nil {
-				log.Info("running Coordinator without migration enabled")
+				Plugin.LogInfo("running Coordinator without migration enabled")
 			}
 
 			coo, err := coordinator.New(
@@ -168,7 +164,7 @@ func provide(c *dig.Container) {
 				deps.UTXOManager,
 				deps.PoWHandler,
 				sendMessage,
-				coordinator.WithLogger(log),
+				coordinator.WithLogger(Plugin.Logger()),
 				coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
 				coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
 				coordinator.WithPoWWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
@@ -192,18 +188,23 @@ func provide(c *dig.Container) {
 
 		coo, err := initCoordinator()
 		if err != nil {
-			log.Panic(err)
+			Plugin.Panic(err)
 		}
 		return coo
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 }
 
 func configure() {
 
-	if deps.Storage.IsDatabaseTainted() {
-		panic(ErrDatabaseTainted)
+	databaseTainted, err := deps.Storage.IsDatabaseTainted()
+	if err != nil {
+		Plugin.Panic(err)
+	}
+
+	if databaseTainted {
+		Plugin.Panic(ErrDatabaseTainted)
 	}
 
 	nextCheckpointSignal = make(chan struct{})
@@ -227,25 +228,25 @@ func handleError(err error) bool {
 	}
 
 	if err := common.IsCriticalError(err); err != nil {
-		gracefulshutdown.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err.Error()))
+		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err))
 		return true
 	}
 
 	if err := common.IsSoftError(err); err != nil {
-		log.Warn(err)
+		Plugin.LogWarn(err)
 		deps.Coordinator.Events.SoftError.Trigger(err)
 		return false
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
-	log.Panicf("coordinator plugin hit an unknown error type: %s", err)
+	Plugin.Panicf("coordinator plugin hit an unknown error type: %s", err)
 	return true
 }
 
 func run() {
 
 	// create a background worker that signals to issue new milestones
-	Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
 
 		ticker := timeutil.NewTicker(func() {
 			// issue next milestone
@@ -254,12 +255,14 @@ func run() {
 			default:
 				// do not block if already another signal is waiting
 			}
-		}, deps.Coordinator.GetInterval(), shutdownSignal)
+		}, deps.Coordinator.Interval(), shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityCoordinator)
+	}, shutdown.PriorityCoordinator); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
 	// create a background worker that issues milestones
-	Plugin.Daemon().BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
 		// wait until all background workers of the tangle plugin are started
 		deps.Tangle.WaitForTangleProcessorStartup()
 
@@ -285,7 +288,7 @@ func run() {
 			select {
 			case <-nextCheckpointSignal:
 				// check the thresholds again, because a new milestone could have been issued in the meantime
-				if trackedMessagesCount := deps.Selector.GetTrackedMessagesCount(); trackedMessagesCount < maxTrackedMessages {
+				if trackedMessagesCount := deps.Selector.TrackedMessagesCount(); trackedMessagesCount < maxTrackedMessages {
 					continue
 				}
 
@@ -300,7 +303,7 @@ func run() {
 					if err != nil {
 						// issuing checkpoint failed => not critical
 						if !errors.Is(err, mselection.ErrNoTipsAvailable) {
-							log.Warn(err)
+							Plugin.LogWarn(err)
 						}
 						return
 					}
@@ -309,7 +312,7 @@ func run() {
 					checkpointMessageID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, tips)
 					if err != nil {
 						// issuing checkpoint failed => not critical
-						log.Warn(err)
+						Plugin.LogWarn(err)
 						return
 					}
 					lastCheckpointIndex++
@@ -324,7 +327,7 @@ func run() {
 				if err != nil {
 					// issuing checkpoint failed => not critical
 					if !errors.Is(err, mselection.ErrNoTipsAvailable) {
-						log.Warn(err)
+						Plugin.LogWarn(err)
 					}
 				} else {
 					if len(checkpointTips) > MilestoneMaxAdditionalTipsLimit {
@@ -332,7 +335,7 @@ func run() {
 						checkpointMessageID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointMessageID, checkpointTips[MilestoneMaxAdditionalTipsLimit:])
 						if err != nil {
 							// issuing checkpoint failed => not critical
-							log.Warn(err)
+							Plugin.LogWarn(err)
 						} else {
 							// use the new checkpoint message ID
 							lastCheckpointMessageID = checkpointMessageID
@@ -380,7 +383,9 @@ func run() {
 		}
 
 		detachEvents()
-	}, shutdown.PriorityCoordinator)
+	}, shutdown.PriorityCoordinator); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
 }
 
@@ -446,7 +451,9 @@ func initQuorumGroups(nodeConfig *configuration.Configuration) (map[string][]*co
 
 func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 
-	msgSolidEventChan := deps.Tangle.RegisterMessageSolidEvent(msg.GetMessageID())
+	var err error
+
+	msgSolidEventChan := deps.Tangle.RegisterMessageSolidEvent(msg.MessageID())
 
 	var milestoneConfirmedEventChan chan struct{}
 
@@ -454,21 +461,29 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 		milestoneConfirmedEventChan = deps.Tangle.RegisterMilestoneConfirmedEvent(msIndex[0])
 	}
 
-	if err := deps.MessageProcessor.Emit(msg); err != nil {
-		deps.Tangle.DeregisterMessageSolidEvent(msg.GetMessageID())
-		if len(msIndex) > 0 {
-			deps.Tangle.DeregisterMilestoneConfirmedEvent(msIndex[0])
+	defer func() {
+		if err != nil {
+			deps.Tangle.DeregisterMessageSolidEvent(msg.MessageID())
+			if len(msIndex) > 0 {
+				deps.Tangle.DeregisterMilestoneConfirmedEvent(msIndex[0])
+			}
 		}
+	}()
 
+	if err = deps.MessageProcessor.Emit(msg); err != nil {
 		return err
 	}
 
 	// wait until the message is solid
-	utils.WaitForChannelClosed(context.Background(), msgSolidEventChan)
+	if err = utils.WaitForChannelClosed(context.Background(), msgSolidEventChan); err != nil {
+		return err
+	}
 
 	if len(msIndex) > 0 {
 		// if it was a milestone, also wait until the milestone was confirmed
-		utils.WaitForChannelClosed(context.Background(), milestoneConfirmedEventChan)
+		if err = utils.WaitForChannelClosed(context.Background(), milestoneConfirmedEventChan); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -478,16 +493,16 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) bool {
 	defer cachedMsgMeta.Release(true)
 
-	cmi := deps.Storage.GetConfirmedMilestoneIndex()
+	cmi := deps.Storage.ConfirmedMilestoneIndex()
 
-	_, ocri := dag.GetConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	_, ocri := dag.ConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
 
 	// if the OCRI to CMI delta is over belowMaxDepth, then the tip is invalid.
 	return (cmi - ocri) > milestone.Index(deps.BelowMaxDepth)
 }
 
-// GetEvents returns the events of the coordinator
-func GetEvents() *coordinator.Events {
+// Events returns the events of the coordinator
+func Events() *coordinator.Events {
 	if deps.Coordinator == nil {
 		return nil
 	}
@@ -505,8 +520,8 @@ func configureEvents() {
 		}
 
 		// add tips to the heaviest branch selector
-		if trackedMessagesCount := deps.Selector.OnNewSolidMessage(cachedMsgMeta.GetMetadata()); trackedMessagesCount >= maxTrackedMessages {
-			log.Debugf("Coordinator Tipselector: trackedMessagesCount: %d", trackedMessagesCount)
+		if trackedMessagesCount := deps.Selector.OnNewSolidMessage(cachedMsgMeta.Metadata()); trackedMessagesCount >= maxTrackedMessages {
+			Plugin.LogDebugf("Coordinator Tipselector: trackedMessagesCount: %d", trackedMessagesCount)
 
 			// issue next checkpoint
 			select {
@@ -517,7 +532,7 @@ func configureEvents() {
 		}
 	})
 
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
 		heaviestSelectorLock.Lock()
 		defer heaviestSelectorLock.Unlock()
 
@@ -533,11 +548,11 @@ func configureEvents() {
 	})
 
 	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.MessageID) {
-		log.Infof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.ToHex())
+		Plugin.LogInfof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.ToHex())
 	})
 
 	onIssuedMilestone = events.NewClosure(func(index milestone.Index, messageID hornet.MessageID) {
-		log.Infof("milestone issued (%d): %v", index, messageID.ToHex())
+		Plugin.LogInfof("milestone issued (%d): %v", index, messageID.ToHex())
 	})
 }
 

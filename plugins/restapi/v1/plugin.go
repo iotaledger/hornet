@@ -21,7 +21,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -145,7 +144,7 @@ const (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:      "RestAPIV1",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -156,7 +155,6 @@ func init() {
 
 var (
 	Plugin         *node.Plugin
-	log            *logger.Logger
 	powEnabled     bool
 	powWorkerCount int
 	features       []string
@@ -169,31 +167,35 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage              *storage.Storage
-	Tangle               *tangle.Tangle
-	Manager              *p2p.Manager
-	Service              *gossip.Service
-	UTXO                 *utxo.Manager
-	PoWHandler           *pow.Handler
-	MessageProcessor     *gossip.MessageProcessor
-	Snapshot             *snapshot.Snapshot
-	AppInfo              *app.AppInfo
-	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
-	PeeringConfigManager *p2p.ConfigManager
-	NetworkID            uint64                 `name:"networkId"`
-	BelowMaxDepth        int                    `name:"belowMaxDepth"`
-	MinPoWScore          float64                `name:"minPoWScore"`
-	Bech32HRP            iotago.NetworkPrefix   `name:"bech32HRP"`
-	TipSelector          *tipselect.TipSelector `optional:"true"`
-	Echo                 *echo.Echo             `optional:"true"`
+	Storage                               *storage.Storage
+	Tangle                                *tangle.Tangle
+	Manager                               *p2p.Manager
+	Service                               *gossip.Service
+	UTXO                                  *utxo.Manager
+	PoWHandler                            *pow.Handler
+	MessageProcessor                      *gossip.MessageProcessor
+	Snapshot                              *snapshot.Snapshot
+	AppInfo                               *app.AppInfo
+	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
+	PeeringConfigManager                  *p2p.ConfigManager
+	NetworkID                             uint64                 `name:"networkId"`
+	NetworkIDName                         string                 `name:"networkIdName"`
+	MaxDeltaMsgYoungestConeRootIndexToCMI int                    `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+	MaxDeltaMsgOldestConeRootIndexToCMI   int                    `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+	BelowMaxDepth                         int                    `name:"belowMaxDepth"`
+	MinPoWScore                           float64                `name:"minPoWScore"`
+	Bech32HRP                             iotago.NetworkPrefix   `name:"bech32HRP"`
+	RestAPILimitsMaxResults               int                    `name:"restAPILimitsMaxResults"`
+	SnapshotsFullPath                     string                 `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath                    string                 `name:"snapshotsDeltaPath"`
+	TipSelector                           *tipselect.TipSelector `optional:"true"`
+	Echo                                  *echo.Echo             `optional:"true"`
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		log.Panic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
+		Plugin.Panic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
 	}
 
 	routeGroup := deps.Echo.Group("/api/v1")

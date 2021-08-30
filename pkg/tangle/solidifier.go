@@ -39,10 +39,10 @@ func (t *Tangle) markMessageAsSolid(cachedMetadata *storage.CachedMetadata) {
 	defer cachedMetadata.Release(true)
 
 	// update the solidity flags of this message
-	cachedMetadata.GetMetadata().SetSolid(true)
+	cachedMetadata.Metadata().SetSolid(true)
 
 	t.Events.MessageSolid.Trigger(cachedMetadata)
-	t.messageSolidSyncEvent.Trigger(cachedMetadata.GetMetadata().GetMessageID().ToMapKey())
+	t.messageSolidSyncEvent.Trigger(cachedMetadata.Metadata().MessageID().ToMapKey())
 }
 
 // SolidQueueCheck traverses a milestone and checks if it is solid.
@@ -73,7 +73,7 @@ func (t *Tangle) SolidQueueCheck(
 			defer cachedMsgMeta.Release(true) // meta -1
 
 			// if the msg is solid, there is no need to traverse its parents
-			return !cachedMsgMeta.GetMetadata().IsSolid(), nil
+			return !cachedMsgMeta.Metadata().IsSolid(), nil
 		},
 		// consumer
 		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
@@ -83,7 +83,7 @@ func (t *Tangle) SolidQueueCheck(
 			msgsChecked++
 
 			// collect the txToSolidify in an ordered way
-			messageIDsToSolidify = append(messageIDsToSolidify, cachedMsgMeta.GetMetadata().GetMessageID())
+			messageIDsToSolidify = append(messageIDsToSolidify, cachedMsgMeta.Metadata().MessageID())
 
 			return nil
 		},
@@ -119,7 +119,7 @@ func (t *Tangle) SolidQueueCheck(
 	// no messages to request => the whole cone is solid
 	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
 	for _, messageID := range messageIDsToSolidify {
-		cachedMsgMeta := metadataMemcache.GetCachedMetadataOrNil(messageID)
+		cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(messageID)
 		if cachedMsgMeta == nil {
 			t.log.Panicf("solidQueueCheck: Message metadata not found: %v", messageID.ToHex())
 		}
@@ -131,7 +131,9 @@ func (t *Tangle) SolidQueueCheck(
 
 	if t.storage.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
-		t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(messageIDsToSolidify, metadataMemcache, abortSignal)
+		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(messageIDsToSolidify, metadataMemcache, abortSignal); err != nil {
+			t.log.Debugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)
+		}
 	}
 
 	t.log.Infof("Solidifier finished: msgs: %d, collect: %v, solidity %v, propagation: %v, total: %v", msgsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
@@ -177,7 +179,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 		t.solidifierMilestoneIndexLock.RLock()
 		triggerSignal := (newMilestoneIndex == 0) && (t.solidifierMilestoneIndex == 0)
-		nextMilestoneSignal := newMilestoneIndex == t.storage.GetConfirmedMilestoneIndex()+1
+		nextMilestoneSignal := newMilestoneIndex == t.storage.ConfirmedMilestoneIndex()+1
 		olderMilestoneDetected := (newMilestoneIndex != 0) && ((t.solidifierMilestoneIndex != 0) && (newMilestoneIndex < t.solidifierMilestoneIndex))
 		newMilestoneReqQueueEmptySignal := (t.solidifierMilestoneIndex == 0) && (newMilestoneIndex != 0) && t.requestQueue.Empty()
 		if !(triggerSignal || nextMilestoneSignal || olderMilestoneDetected || newMilestoneReqQueueEmptySignal) {
@@ -194,8 +196,8 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	t.solidifierLock.Lock()
 	defer t.solidifierLock.Unlock()
 
-	currentConfirmedIndex := t.storage.GetConfirmedMilestoneIndex()
-	latestIndex := t.storage.GetLatestMilestoneIndex()
+	currentConfirmedIndex := t.storage.ConfirmedMilestoneIndex()
+	latestIndex := t.storage.LatestMilestoneIndex()
 
 	if currentConfirmedIndex == latestIndex && latestIndex != 0 {
 		// Latest milestone already solid
@@ -212,7 +214,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	// Release shouldn't be forced, to cache the latest milestones
 	defer cachedMsToSolidify.Release() // message -1
 
-	milestoneIndexToSolidify := cachedMsToSolidify.GetMilestone().Index
+	milestoneIndexToSolidify := cachedMsToSolidify.Milestone().Index
 	t.setSolidifierMilestoneIndex(milestoneIndexToSolidify)
 
 	t.signalChanMilestoneStopSolidificationLock.Lock()
@@ -227,7 +229,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	defer metadataMemcache.Cleanup(true)
 
 	t.log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	if becameSolid, aborted := t.SolidQueueCheck(messagesMemcache, metadataMemcache, milestoneIndexToSolidify, hornet.MessageIDs{cachedMsToSolidify.GetMilestone().MessageID}, t.signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
+	if becameSolid, aborted := t.SolidQueueCheck(messagesMemcache, metadataMemcache, milestoneIndexToSolidify, hornet.MessageIDs{cachedMsToSolidify.Milestone().MessageID}, t.signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			t.log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
@@ -245,12 +247,12 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
 		cachedClosestNextMs := t.storage.FindClosestNextMilestoneOrNil(currentConfirmedIndex) // message +1
-		cachedClosestNextMsIndex := cachedClosestNextMs.GetMilestone().Index
+		cachedClosestNextMsIndex := cachedClosestNextMs.Milestone().Index
 		if cachedClosestNextMsIndex == milestoneIndexToSolidify {
 			t.log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentConfirmedIndex, cachedClosestNextMsIndex)
 
 			// no Milestones found in between => search an older milestone in the solid cone
-			if found, err := t.searchMissingMilestone(currentConfirmedIndex, cachedClosestNextMsIndex, cachedMsToSolidify.GetMilestone().MessageID, t.signalChanMilestoneStopSolidification); !found {
+			if found, err := t.searchMissingMilestone(currentConfirmedIndex, cachedClosestNextMsIndex, cachedMsToSolidify.Milestone().MessageID, t.signalChanMilestoneStopSolidification); !found {
 				if err != nil {
 					// no milestones found => this should not happen!
 					t.log.Panicf("Milestones missing between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
@@ -270,13 +272,15 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	var timeStartConfirmation, timeSetConfirmedMilestoneIndex, timeUpdateConeRootIndexes, timeConfirmedMilestoneChanged, timeConfirmedMilestoneIndexChanged, timeMilestoneConfirmedSyncEvent, timeMilestoneConfirmed time.Time
 
 	timeStart := time.Now()
-	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, messagesMemcache, metadataMemcache, cachedMsToSolidify.GetMilestone().MessageID,
+	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(t.storage, t.serverMetrics, messagesMemcache, metadataMemcache, cachedMsToSolidify.Milestone().MessageID,
 		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 		},
 		func(confirmation *whiteflag.Confirmation) {
 			timeStartConfirmation = time.Now()
-			t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify)
+			if err := t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify); err != nil {
+				t.log.Panicf("SetConfirmedMilestoneIndex failed: %s", err)
+			}
 			timeSetConfirmedMilestoneIndex = time.Now()
 			if t.storage.IsNodeAlmostSynced() {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
@@ -303,7 +307,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 				if t.receiptService.ValidationEnabled {
 					if err := t.receiptService.ValidateWithoutLocking(rt.Receipt); err != nil {
 						if err := common.IsSoftError(err); err != nil && t.receiptService.IgnoreSoftErrors {
-							t.log.Warnf("soft error encountered during receipt validation: %s", err.Error())
+							t.log.Warnf("soft error encountered during receipt validation: %s", err)
 							return nil
 						}
 						return err
@@ -344,7 +348,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	t.Events.ConfirmationMetricsUpdated.Trigger(confirmationMetrics)
 
 	var rmpsMessage string
-	if metric, err := t.getConfirmedMilestoneMetric(cachedMsToSolidify.Retain(), confirmedMilestoneStats.Index); err == nil {
+	if metric, err := t.calcConfirmedMilestoneMetric(cachedMsToSolidify.Retain(), confirmedMilestoneStats.Index); err == nil {
 		if t.storage.IsNodeSynced() {
 			// Only trigger the metrics event if the node is sync (otherwise the MPS and conf.rate is wrong)
 			if t.firstSyncedMilestone == 0 {
@@ -381,26 +385,26 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), false)
 }
 
-func (t *Tangle) getConfirmedMilestoneMetric(cachedMilestone *storage.CachedMilestone, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
+func (t *Tangle) calcConfirmedMilestoneMetric(cachedMilestone *storage.CachedMilestone, milestoneIndexToSolidify milestone.Index) (*ConfirmedMilestoneMetric, error) {
 	defer cachedMilestone.Release(true)
 
-	oldMilestone := t.storage.GetCachedMilestoneOrNil(milestoneIndexToSolidify - 1) // milestone +1
+	oldMilestone := t.storage.CachedMilestoneOrNil(milestoneIndexToSolidify - 1) // milestone +1
 	if oldMilestone == nil {
 		return nil, ErrMilestoneNotFound
 	}
 	defer oldMilestone.Release(true) // milestone -1
 
-	timeDiff := cachedMilestone.GetMilestone().Timestamp.Sub(oldMilestone.GetMilestone().Timestamp).Seconds()
+	timeDiff := cachedMilestone.Milestone().Timestamp.Sub(oldMilestone.Milestone().Timestamp).Seconds()
 	if timeDiff == 0 {
 		return nil, ErrDivisionByZero
 	}
 
 	newNewMsgCount := t.serverMetrics.NewMessages.Load()
-	newMsgDiff := utils.GetUint32Diff(newNewMsgCount, t.oldNewMsgCount)
+	newMsgDiff := utils.Uint32Diff(newNewMsgCount, t.oldNewMsgCount)
 	t.oldNewMsgCount = newNewMsgCount
 
 	newReferencedMsgCount := t.serverMetrics.ReferencedMessages.Load()
-	referencedMsgDiff := utils.GetUint32Diff(newReferencedMsgCount, t.oldReferencedMsgCount)
+	referencedMsgDiff := utils.Uint32Diff(newReferencedMsgCount, t.oldReferencedMsgCount)
 	t.oldReferencedMsgCount = newReferencedMsgCount
 
 	referencedRate := 0.0
@@ -439,7 +443,7 @@ func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index,
 			defer cachedMsgMeta.Release(true) // meta -1
 
 			// if the message is referenced by an older milestone, there is no need to traverse its parents
-			if referenced, at := cachedMsgMeta.GetMetadata().GetReferenced(); referenced && (at <= confirmedMilestoneIndex) {
+			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced && (at <= confirmedMilestoneIndex) {
 				return false, nil
 			}
 
@@ -449,13 +453,13 @@ func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index,
 		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
 			defer cachedMsgMeta.Release(true) // meta -1
 
-			cachedMessage := t.storage.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID()) // message +1
+			cachedMessage := t.storage.CachedMessageOrNil(cachedMsgMeta.Metadata().MessageID()) // message +1
 			if cachedMessage == nil {
-				return fmt.Errorf("%w message ID: %s", common.ErrMessageNotFound, cachedMsgMeta.GetMetadata().GetMessageID().ToHex())
+				return fmt.Errorf("%w message ID: %s", common.ErrMessageNotFound, cachedMsgMeta.Metadata().MessageID().ToHex())
 			}
 			defer cachedMessage.Release(true) // message -1
 
-			ms := t.storage.VerifyMilestone(cachedMessage.GetMessage())
+			ms := t.storage.VerifyMilestone(cachedMessage.Message())
 			if ms == nil {
 				return nil
 			}

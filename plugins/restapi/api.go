@@ -8,7 +8,11 @@ import (
 )
 
 func networkWhitelisted(c echo.Context, whitelistedNetworks []*net.IPNet) bool {
-	remoteHost, _, _ := net.SplitHostPort(c.Request().RemoteAddr)
+	remoteHost, _, err := net.SplitHostPort(c.Request().RemoteAddr)
+	if err != nil {
+		return false
+	}
+
 	remoteAddress := net.ParseIP(remoteHost)
 	for _, whitelistedNet := range whitelistedNetworks {
 		if whitelistedNet.Contains(remoteAddress) {

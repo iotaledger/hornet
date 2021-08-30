@@ -157,17 +157,17 @@ func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, inde
 
 func (o *Output) kvStorableKey() (key []byte) {
 	ms := marshalutil.New(35)
-	ms.WriteByte(UTXOStoreKeyPrefixOutput)
-	ms.WriteBytes(o.outputID[:])
+	ms.WriteByte(UTXOStoreKeyPrefixOutput) // 1 byte
+	ms.WriteBytes(o.outputID[:])           // 34 bytes
 	return ms.Bytes()
 }
 
 func (o *Output) kvStorableValue() (value []byte) {
 	ms := marshalutil.New(74)
-	ms.WriteBytes(o.messageID)
-	ms.WriteByte(o.outputType)
-	ms.WriteBytes(o.addressBytes())
-	ms.WriteUint64(o.amount)
+	ms.WriteBytes(o.messageID)      // 32 bytes
+	ms.WriteByte(o.outputType)      // 1 byte
+	ms.WriteBytes(o.addressBytes()) // 33 bytes
+	ms.WriteUint64(o.amount)        // 8 bytes
 	return ms.Bytes()
 }
 

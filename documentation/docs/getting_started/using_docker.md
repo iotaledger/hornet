@@ -59,7 +59,7 @@ The Docker image runs under user with user id 65532 and group id 65532. To make 
 You can pull the latest image from `gohornet/hornet` public Docker hub registry by running:
 
 ```bash
-docker pull gohornet/hornet:latest
+docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:latest
 ```
 
 We recommend that you run on host network to improve performance.  Otherwise, you are going to have to publish ports using iptables NAT which is slower.
@@ -88,6 +88,7 @@ docker run \
 * `--net=host` Instructs Docker to use the host's network, so the network is not isolated. We recommend that you run on host network for better performance.  This way, the container will also open any ports it needs on the host network, so you will not need to specify any ports.
 * `-d` Instructs Docker to run the container instance in a detached mode (daemon).
 
+
 You can run `docker stop -t 200 hornet` to gracefully end the process.
 
 ## Create Username and Password for the Hornet Dashboard
@@ -95,7 +96,7 @@ You can run `docker stop -t 200 hornet` to gracefully end the process.
 If you use the Hornet dashboard, you need to create a secure password. Start your Hornet container and execute the following command when the container is running:
 
 ```sh
-docker exec -it hornet /app/hornet tool pwdhash
+docker exec -it hornet /app/hornet tool pwd-hash
 
 ```
 

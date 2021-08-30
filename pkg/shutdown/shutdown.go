@@ -4,13 +4,14 @@ package shutdown
 // Otherwise investigating deadlocks at shutdown is much more complicated.
 
 const (
-	PriorityCloseDatabase       = iota // no dependencies
-	PriorityFlushToDatabase            // depends on PriorityCloseDatabase
-	PriorityTipselection               // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker, PriorityMilestoneSolidifier
-	PriorityMilestoneSolidifier        // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker, PriorityMilestoneProcessor, PriorityMilestoneSolidifier, PriorityCoordinator, PriorityRestAPI, PriorityWarpSync
-	PriorityMilestoneProcessor         // depends on PriorityFlushToDatabase, PriorityMilestoneSolidifier, triggered by PriorityReceiveTxWorker, PriorityMilestoneSolidifier (searchMissingMilestone)
-	PrioritySolidifierGossip           // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker
-	PriorityReceiveTxWorker            // triggered by PriorityMessageProcessor
+	PriorityCloseDatabase   = iota // no dependencies
+	PriorityFlushToDatabase        // depends on PriorityCloseDatabase
+	PriorityDatabaseHealth
+	PriorityTipselection        // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker, PriorityMilestoneSolidifier
+	PriorityMilestoneSolidifier // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker, PriorityMilestoneProcessor, PriorityMilestoneSolidifier, PriorityCoordinator, PriorityRestAPI, PriorityWarpSync
+	PriorityMilestoneProcessor  // depends on PriorityFlushToDatabase, PriorityMilestoneSolidifier, triggered by PriorityReceiveTxWorker, PriorityMilestoneSolidifier (searchMissingMilestone)
+	PrioritySolidifierGossip    // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker
+	PriorityReceiveTxWorker     // triggered by PriorityMessageProcessor
 	PriorityMessageProcessor
 	PriorityPeerGossipProtocolWrite
 	PriorityPeerGossipProtocolRead
@@ -28,6 +29,7 @@ const (
 	PriorityRestAPI // depends on PriorityPoWHandler
 	PriorityMetricsPublishers
 	PrioritySpammer // depends on PriorityPoWHandler
+	PriorityFaucet  // depends on PriorityPoWHandler
 	PriorityStatusReport
 	PriorityMigrator
 	PriorityCoordinator // depends on PriorityPoWHandler

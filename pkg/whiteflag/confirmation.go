@@ -59,18 +59,18 @@ func ConfirmMilestone(
 	forEachNewSpent func(index milestone.Index, spent *utxo.Spent),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, *ConfirmationMetrics, error) {
 
-	cachedMilestoneMessage := messagesMemcache.GetCachedMessageOrNil(milestoneMessageID)
+	cachedMilestoneMessage := messagesMemcache.CachedMessageOrNil(milestoneMessageID)
 	if cachedMilestoneMessage == nil {
 		return nil, nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.ToHex())
 	}
 
 	s.UTXO().WriteLockLedger()
 	defer s.UTXO().WriteUnlockLedger()
-	message := cachedMilestoneMessage.GetMessage()
+	message := cachedMilestoneMessage.Message()
 
-	ms := message.GetMilestone()
+	ms := message.Milestone()
 	if ms == nil {
-		return nil, nil, fmt.Errorf("confirmMilestone: message does not contain a milestone payload: %v", message.GetMessageID().ToHex())
+		return nil, nil, fmt.Errorf("confirmMilestone: message does not contain a milestone payload: %v", message.MessageID().ToHex())
 	}
 
 	msID, err := ms.ID()
@@ -82,15 +82,15 @@ func ConfirmMilestone(
 
 	timeStart := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, metadataMemcache, messagesMemcache, message.GetParents())
+	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, metadataMemcache, messagesMemcache, message.Parents())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
-		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %v", err)
+		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
 	}
 
 	confirmation := &Confirmation{
 		MilestoneIndex:     milestoneIndex,
-		MilestoneMessageID: message.GetMessageID(),
+		MilestoneMessageID: message.MessageID(),
 		Mutations:          mutations,
 	}
 
@@ -138,7 +138,7 @@ func ConfirmMilestone(
 			return nil, nil, fmt.Errorf("invalid receipt contained within milestone: %w", err)
 		}
 
-		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, message.GetMessageID(), msID)
+		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, message.MessageID(), msID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to extract migrated outputs from receipt: %w", err)
 		}
@@ -158,13 +158,13 @@ func ConfirmMilestone(
 	}
 
 	if err = s.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt); err != nil {
-		return nil, nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed with Error: %v", err)
+		return nil, nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed: %w", err)
 	}
 	timeConfirmation := time.Now()
 
 	// load the message for the given id
 	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
-		cachedMsgMeta := metadataMemcache.GetCachedMetadataOrNil(messageID) // meta +1
+		cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			return fmt.Errorf("confirmMilestone: Message not found: %v", messageID.ToHex())
 		}
@@ -180,9 +180,9 @@ func ConfirmMilestone(
 	// confirm all included messages
 	for _, messageID := range mutations.MessagesIncludedWithTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *storage.CachedMetadata) {
-			if !meta.GetMetadata().IsReferenced() {
-				meta.GetMetadata().SetReferenced(true, milestoneIndex)
-				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+			if !meta.Metadata().IsReferenced() {
+				meta.Metadata().SetReferenced(true, milestoneIndex)
+				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.MessagesReferenced++
 				confirmedMilestoneStats.MessagesIncludedWithTransactions++
 				serverMetrics.IncludedTransactionMessages.Inc()
@@ -198,10 +198,10 @@ func ConfirmMilestone(
 	// confirm all excluded messages not containing ledger transactions
 	for _, messageID := range mutations.MessagesExcludedWithoutTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *storage.CachedMetadata) {
-			meta.GetMetadata().SetIsNoTransaction(true)
-			if !meta.GetMetadata().IsReferenced() {
-				meta.GetMetadata().SetReferenced(true, milestoneIndex)
-				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+			meta.Metadata().SetIsNoTransaction(true)
+			if !meta.Metadata().IsReferenced() {
+				meta.Metadata().SetReferenced(true, milestoneIndex)
+				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.MessagesReferenced++
 				confirmedMilestoneStats.MessagesExcludedWithoutTransactions++
 				serverMetrics.NoTransactionMessages.Inc()
@@ -216,11 +216,11 @@ func ConfirmMilestone(
 
 	// confirm the milestone itself
 	if err := forMessageMetadataWithMessageID(milestoneMessageID, func(meta *storage.CachedMetadata) {
-		meta.GetMetadata().SetIsNoTransaction(true)
-		if !meta.GetMetadata().IsReferenced() {
-			meta.GetMetadata().SetReferenced(true, milestoneIndex)
-			meta.GetMetadata().SetMilestone(true)
-			meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+		meta.Metadata().SetIsNoTransaction(true)
+		if !meta.Metadata().IsReferenced() {
+			meta.Metadata().SetReferenced(true, milestoneIndex)
+			meta.Metadata().SetMilestone(true)
+			meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 			confirmedMilestoneStats.MessagesReferenced++
 			confirmedMilestoneStats.MessagesExcludedWithoutTransactions++
 			serverMetrics.NoTransactionMessages.Inc()
@@ -235,10 +235,10 @@ func ConfirmMilestone(
 	// confirm all conflicting messages
 	for _, conflictedMessage := range mutations.MessagesExcludedWithConflictingTransactions {
 		if err := forMessageMetadataWithMessageID(conflictedMessage.MessageID, func(meta *storage.CachedMetadata) {
-			meta.GetMetadata().SetConflictingTx(conflictedMessage.Conflict)
-			if !meta.GetMetadata().IsReferenced() {
-				meta.GetMetadata().SetReferenced(true, milestoneIndex)
-				meta.GetMetadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
+			meta.Metadata().SetConflictingTx(conflictedMessage.Conflict)
+			if !meta.Metadata().IsReferenced() {
+				meta.Metadata().SetReferenced(true, milestoneIndex)
+				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.MessagesReferenced++
 				confirmedMilestoneStats.MessagesExcludedWithConflictingTransactions++
 				serverMetrics.ConflictingTransactionMessages.Inc()

@@ -52,11 +52,11 @@ func TestHeaviestSelector_SelectTipsChain(t *testing.T) {
 	defer te.CleanupTestEnvironment(true)
 
 	// create a chain
-	lastMsgID := hornet.GetNullMessageID()
+	lastMsgID := hornet.NullMessageID()
 	for i := 1; i <= numTestMsgs; i++ {
 		msg := te.NewTestMessage(i, hornet.MessageIDs{lastMsgID})
 		hps.OnNewSolidMessage(msg)
-		lastMsgID = msg.GetMessageID()
+		lastMsgID = msg.MessageID()
 	}
 
 	tips, err := hps.SelectTips(1)
@@ -78,9 +78,9 @@ func TestHeaviestSelector_CheckTipsRemoved(t *testing.T) {
 
 	messages := make(hornet.MessageIDs, count)
 	for i := 0; i < count; i++ {
-		msg := te.NewTestMessage(i, hornet.MessageIDs{hornet.GetNullMessageID()})
+		msg := te.NewTestMessage(i, hornet.MessageIDs{hornet.NullMessageID()})
 		hps.OnNewSolidMessage(msg)
-		messages[i] = msg.GetMessageID()
+		messages[i] = msg.MessageID()
 	}
 
 	// check if trackedMessages match the current count
@@ -107,7 +107,7 @@ func TestHeaviestSelector_CheckTipsRemoved(t *testing.T) {
 	assert.Len(t, tips, 1)
 
 	// check if the tip on top was picked
-	assert.ElementsMatch(t, msg.GetMessageID(), tips[0])
+	assert.ElementsMatch(t, msg.MessageID(), tips[0])
 
 	// check if trackedMessages are resetted after tipselect
 	assert.Len(t, hps.trackedMessages, 0)
@@ -123,16 +123,16 @@ func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
 	numChains := 2
 	lastMsgIDs := make(hornet.MessageIDs, 2)
 	for i := 0; i < numChains; i++ {
-		lastMsgIDs[i] = hornet.GetNullMessageID()
+		lastMsgIDs[i] = hornet.NullMessageID()
 		for j := 1; j <= numTestMsgs; j++ {
 			msgMeta := te.NewTestMessage(i*numTestMsgs+j, hornet.MessageIDs{lastMsgIDs[i]})
 			hps.OnNewSolidMessage(msgMeta)
-			lastMsgIDs[i] = msgMeta.GetMessageID()
+			lastMsgIDs[i] = msgMeta.MessageID()
 		}
 	}
 
 	// check if all messages are tracked
-	assert.Equal(t, numChains*numTestMsgs, hps.GetTrackedMessagesCount())
+	assert.Equal(t, numChains*numTestMsgs, hps.TrackedMessagesCount())
 
 	tips, err := hps.SelectTips(2)
 	assert.NoError(t, err)
@@ -175,7 +175,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 				defer cachedMetadata.Release(true) // meta -1
 
 				// first check if the msg was referenced => update ycri and ocri with the confirmation index
-				if referenced, at := cachedMetadata.GetMetadata().GetReferenced(); referenced {
+				if referenced, at := cachedMetadata.Metadata().ReferencedWithIndex(); referenced {
 					updateIndexes(at, at)
 					return false, nil
 				}
@@ -201,9 +201,9 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 	// isBelowMaxDepth checks the below max depth criteria for the given message.
 	isBelowMaxDepth := func(msgMeta *storage.MessageMetadata) bool {
 
-		cmi := te.Storage().GetConfirmedMilestoneIndex()
+		cmi := te.Storage().ConfirmedMilestoneIndex()
 
-		_, ocri := getConeRootIndexes(msgMeta.GetMessageID())
+		_, ocri := getConeRootIndexes(msgMeta.MessageID())
 
 		// if the OCRI to CMI delta is over belowMaxDepth, then the tip is invalid.
 		return (cmi - ocri) > milestone.Index(BelowMaxDepth)
@@ -211,7 +211,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 
 	checkTips := func(tips hornet.MessageIDs) {
 
-		cmi := te.Storage().GetConfirmedMilestoneIndex()
+		cmi := te.Storage().ConfirmedMilestoneIndex()
 
 		for _, tip := range tips {
 			_, ocri := getConeRootIndexes(tip)
@@ -227,7 +227,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 
 	// build a tangle with 30 milestones and 10 - 100 messages between the milestones
 	_, _ = te.BuildTangle(initMessagesCount, BelowMaxDepth-1, milestonesCount, minMessagesPerMilestone, maxMessagesPerMilestone,
-		func(cmi milestone.Index, msgMeta *storage.MessageMetadata) {
+		func(_ milestone.Index, msgMeta *storage.MessageMetadata) {
 
 			if isBelowMaxDepth(msgMeta) {
 				// ignore tips that are below max depth
@@ -236,11 +236,11 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 
 			hps.OnNewSolidMessage(msgMeta)
 		},
-		func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs {
+		func(_ hornet.MessageIDs, _ []hornet.MessageIDs) hornet.MessageIDs {
 			tips, err := hps.SelectTips(1)
 			if err == ErrNoTipsAvailable {
 				err = nil
-				latestMilestoneMessageID := te.Milestones[len(te.Milestones)-1].GetMilestone().MessageID
+				latestMilestoneMessageID := te.Milestones[len(te.Milestones)-1].Milestone().MessageID
 				tips = hornet.MessageIDs{latestMilestoneMessageID}
 			}
 
@@ -257,7 +257,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 
 			return tips
 		},
-		func(msIndex milestone.Index, messages hornet.MessageIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats) {
+		func(_ milestone.Index, _ hornet.MessageIDs, conf *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			dag.UpdateConeRootIndexes(te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
 		},
 	)
@@ -270,7 +270,7 @@ func BenchmarkHeaviestSelector_OnNewSolidMessage(b *testing.B) {
 	te, hps := initTest(b)
 	defer te.CleanupTestEnvironment(true)
 
-	msgIDs := hornet.MessageIDs{hornet.GetNullMessageID()}
+	msgIDs := hornet.MessageIDs{hornet.NullMessageID()}
 	msgs := make([]*storage.MessageMetadata, numBenchmarkMsgs)
 	for i := 0; i < numBenchmarkMsgs; i++ {
 		tipCount := 1 + rand.Intn(7)
@@ -284,7 +284,7 @@ func BenchmarkHeaviestSelector_OnNewSolidMessage(b *testing.B) {
 		tips = tips.RemoveDupsAndSortByLexicalOrder()
 
 		msgs[i] = te.NewTestMessage(i, tips)
-		msgIDs = append(msgIDs, msgs[i].GetMessageID())
+		msgIDs = append(msgIDs, msgs[i].MessageID())
 	}
 	b.ResetTimer()
 

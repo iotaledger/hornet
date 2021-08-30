@@ -44,10 +44,10 @@ func balanceFromBytes(value []byte) (balance uint64, dustAllowanceBalance uint64
 }
 
 func bytesFromBalance(balance uint64, dustAllowanceBalance uint64, outputCount int64) []byte {
-	marshalUtil := marshalutil.New(16)
-	marshalUtil.WriteUint64(balance)
-	marshalUtil.WriteUint64(dustAllowanceBalance)
-	marshalUtil.WriteInt64(outputCount)
+	marshalUtil := marshalutil.New(24)
+	marshalUtil.WriteUint64(balance)              // 8 bytes
+	marshalUtil.WriteUint64(dustAllowanceBalance) // 8 bytes
+	marshalUtil.WriteInt64(outputCount)           // 8 bytes
 	return marshalUtil.Bytes()
 }
 
@@ -191,7 +191,7 @@ func (u *Manager) storeBalanceForAddress(addressKey []byte, balance uint64, dust
 	return mutations.Set(dbKey, bytesFromBalance(balance, dustAllowanceBalance, dustOutputCount))
 }
 
-// This applies the diff to the current database
+// This applies the diff to the current database.
 func (u *Manager) applyBalanceDiff(allowance *BalanceDiff, mutations kvstore.BatchedMutations) error {
 
 	for addressMapKey, diff := range allowance.balances {
@@ -202,7 +202,7 @@ func (u *Manager) applyBalanceDiff(allowance *BalanceDiff, mutations kvstore.Bat
 	return nil
 }
 
-// This applies the diff to the current address by first reading the current value and adding the diff on it
+// This applies the diff to the current address by first reading the current value and adding the diff on it.
 func (u *Manager) applyBalanceDiffForAddress(addressKey []byte, balanceDiff int64, dustAllowanceBalanceDiff int64, dustOutputCountDiff int64, mutations kvstore.BatchedMutations) error {
 
 	balance, dustAllowanceBalance, dustOutputCount, err := u.readBalanceForAddress(addressKey)

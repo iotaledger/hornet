@@ -14,26 +14,25 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
-			Name:      "URTS",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:           "URTS",
+			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
+			Params:         params,
+			InitConfigPars: initConfigPars,
+			Provide:        provide,
+			Configure:      configure,
+			Run:            run,
 		},
 	}
 }
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	// Closures
@@ -48,22 +47,50 @@ type dependencies struct {
 	Tangle      *tangle.Tangle
 }
 
-func provide(c *dig.Container) {
-	type tipseldeps struct {
+func initConfigPars(c *dig.Container) {
+
+	type cfgDeps struct {
 		dig.In
-		Storage       *storage.Storage
-		ServerMetrics *metrics.ServerMetrics
-		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-		BelowMaxDepth int                          `name:"belowMaxDepth"`
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps tipseldeps) *tipselect.TipSelector {
+	type cfgResult struct {
+		dig.Out
+		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+		BelowMaxDepth                         int `name:"belowMaxDepth"`
+	}
+
+	if err := c.Provide(func(deps cfgDeps) cfgResult {
+		return cfgResult{
+			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI),
+			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI),
+			BelowMaxDepth:                         deps.NodeConfig.Int(CfgTipSelBelowMaxDepth),
+		}
+	}); err != nil {
+		Plugin.Panic(err)
+	}
+}
+
+func provide(c *dig.Container) {
+
+	type tipselDeps struct {
+		dig.In
+		Storage                               *storage.Storage
+		ServerMetrics                         *metrics.ServerMetrics
+		NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
+		MaxDeltaMsgYoungestConeRootIndexToCMI int                          `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+		MaxDeltaMsgOldestConeRootIndexToCMI   int                          `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+		BelowMaxDepth                         int                          `name:"belowMaxDepth"`
+	}
+
+	if err := c.Provide(func(deps tipselDeps) *tipselect.TipSelector {
 		return tipselect.New(
 			deps.Storage,
 			deps.ServerMetrics,
 
-			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI),
-			deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI),
+			deps.MaxDeltaMsgYoungestConeRootIndexToCMI,
+			deps.MaxDeltaMsgOldestConeRootIndexToCMI,
 			deps.BelowMaxDepth,
 
 			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),
@@ -77,23 +104,25 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
 		)
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
 	configureEvents()
 }
 
 func run() {
-	Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(shutdownSignal <-chan struct{}) {
+
+	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
-	}, shutdown.PriorityTipselection)
+	}, shutdown.PriorityTipselection); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
-	Plugin.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
 		for {
 			select {
 			case <-shutdownSignal:
@@ -101,10 +130,12 @@ func run() {
 			case <-time.After(time.Second):
 				ts := time.Now()
 				removedTipCount := deps.TipSelector.CleanUpReferencedTips()
-				log.Debugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+				Plugin.LogDebugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 			}
 		}
-	}, shutdown.PriorityTipselection)
+	}, shutdown.PriorityTipselection); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 func configureEvents() {
@@ -119,7 +150,7 @@ func configureEvents() {
 		})
 	})
 
-	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+	onMilestoneConfirmed = events.NewClosure(func(_ *whiteflag.Confirmation) {
 		// do not update tip scores during syncing, because it is not needed at all
 		if !deps.Storage.IsNodeAlmostSynced() {
 			return
@@ -127,7 +158,7 @@ func configureEvents() {
 
 		ts := time.Now()
 		removedTipCount := deps.TipSelector.UpdateScores()
-		log.Debugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
+		Plugin.LogDebugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 	})
 }
 

@@ -17,7 +17,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
+func snapshotGen(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
@@ -34,7 +34,7 @@ func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 	// check arguments
 	if len(args) != 4 {
 		printUsage()
-		return fmt.Errorf("wrong argument count '%s'", ToolSnapGen)
+		return fmt.Errorf("wrong argument count for '%s'", ToolSnapGen)
 	}
 
 	// check network ID
@@ -44,7 +44,7 @@ func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 	mintAddress := args[1]
 	addressBytes, err := hex.DecodeString(mintAddress)
 	if err != nil {
-		return fmt.Errorf("can't decode MINT_ADDRESS: %v", err)
+		return fmt.Errorf("can't decode MINT_ADDRESS: %w", err)
 	}
 	if len(addressBytes) != iotago.Ed25519AddressBytesLength {
 		return fmt.Errorf("incorrect MINT_ADDRESS length: %d != %d (%s)", len(addressBytes), iotago.Ed25519AddressBytesLength, mintAddress)
@@ -67,6 +67,8 @@ func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 
 	// build temp file path
 	outputFilePathTmp := outputFilePath + "_tmp"
+
+	// we don't need to check the error, maybe the file doesn't exist
 	_ = os.Remove(outputFilePathTmp)
 
 	snapshotFile, err := os.OpenFile(outputFilePathTmp, os.O_RDWR|os.O_CREATE, 0666)
@@ -98,7 +100,7 @@ func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 
 		nullHashAdded = true
 
-		return hornet.GetNullMessageID(), nil
+		return hornet.NullMessageID(), nil
 	}
 
 	// unspent transaction outputs
@@ -128,16 +130,16 @@ func snapshotGen(nodeConfig *configuration.Configuration, args []string) error {
 		return nil, nil
 	}
 
-	if err, _ := snapshot.StreamSnapshotDataTo(snapshotFile, uint64(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
+	if _, err := snapshot.StreamSnapshotDataTo(snapshotFile, uint64(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate snapshot file: %w", err)
 	}
 
-	// rename tmp file to final file name
 	if err := snapshotFile.Close(); err != nil {
 		return fmt.Errorf("unable to close snapshot file: %w", err)
 	}
 
+	// rename tmp file to final file name
 	if err := os.Rename(outputFilePathTmp, outputFilePath); err != nil {
 		return fmt.Errorf("unable to rename temp snapshot file: %w", err)
 	}

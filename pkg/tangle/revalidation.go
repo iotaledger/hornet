@@ -58,11 +58,13 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 
 	// mark the database as tainted forever.
 	// this is used to signal the coordinator plugin that it should never use a revalidated database.
-	t.storage.MarkDatabaseTainted()
+	if err := t.storage.MarkDatabaseTainted(); err != nil {
+		t.log.Panic(err)
+	}
 
 	start := time.Now()
 
-	snapshotInfo := t.storage.GetSnapshotInfo()
+	snapshotInfo := t.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return ErrSnapshotInfoMissing
 	}
@@ -74,7 +76,7 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 	}
 
 	// check if the ledger index of the snapshot files fit the revalidation target.
-	snapshotLedgerIndex, err := snapshot.GetSnapshotsFilesLedgerIndex()
+	snapshotLedgerIndex, err := snapshot.SnapshotsFilesLedgerIndex()
 	if err != nil {
 		return err
 	}
@@ -236,7 +238,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 			t.log.Infof("analyzed %d messages", txsCounter)
 		}
 
-		storedTxMeta := t.storage.GetStoredMetadataOrNil(messageID)
+		storedTxMeta := t.storage.StoredMetadataOrNil(messageID)
 
 		// delete message if metadata doesn't exist
 		if storedTxMeta == nil {
@@ -251,7 +253,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 		}
 
 		// not referenced or above snapshot index
-		if referenced, by := storedTxMeta.GetReferenced(); !referenced || by > info.SnapshotIndex {
+		if referenced, by := storedTxMeta.ReferencedWithIndex(); !referenced || by > info.SnapshotIndex {
 			messagesToDelete[messageID.ToMapKey()] = struct{}{}
 			return true
 		}
@@ -454,7 +456,7 @@ func (t *Tangle) cleanupIndexations() error {
 		}
 
 		// delete indexation if message metadata doesn't exist
-		if !t.storage.MessageMetadataExistsInStore(indexation.GetIndexation().GetMessageID()) {
+		if !t.storage.MessageMetadataExistsInStore(indexation.Indexation().MessageID()) {
 			indexationsToDelete[string(indexation.Key())] = struct{}{}
 		}
 
@@ -501,7 +503,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 
 	lastStatusTime := time.Now()
 	var unreferencedTxsCounter int64
-	t.storage.ForEachUnreferencedMessage(func(msIndex milestone.Index, messageID hornet.MessageID) bool {
+	t.storage.ForEachUnreferencedMessage(func(msIndex milestone.Index, _ hornet.MessageID) bool {
 		unreferencedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -561,16 +563,16 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 
 	// Restore the ledger state of the last snapshot
 	if err := snapshot.ImportSnapshots(); err != nil {
-		t.log.Panic(err.Error())
+		t.log.Panic(err)
 	}
 
 	if err := snapshot.CheckCurrentSnapshot(snapshotInfo); err != nil {
-		t.log.Panic(err.Error())
+		t.log.Panic(err)
 	}
 
 	ledgerIndex, err := t.storage.UTXO().ReadLedgerIndex()
 	if err != nil {
-		t.log.Panic(err.Error())
+		t.log.Panic(err)
 	}
 
 	if snapshotInfo.SnapshotIndex != ledgerIndex {

@@ -97,7 +97,7 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 	return s, nil
 }
 
-func (s *SolidEntryPoints) GetBytes() []byte {
+func (s *SolidEntryPoints) Bytes() []byte {
 
 	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(32+4)))
 

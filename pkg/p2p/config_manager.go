@@ -26,8 +26,8 @@ func NewConfigManager(storeCallback func([]*PeerConfig) error) *ConfigManager {
 	}
 }
 
-// GetPeers returns all known peers.
-func (pm *ConfigManager) GetPeers() []*PeerConfig {
+// Peers returns all known peers.
+func (pm *ConfigManager) Peers() []*PeerConfig {
 	pm.peersLock.RLock()
 	defer pm.peersLock.RUnlock()
 

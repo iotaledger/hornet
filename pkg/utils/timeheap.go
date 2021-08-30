@@ -12,7 +12,7 @@ type timeHeapEntry struct {
 	count     uint64
 }
 
-// TimeHeap implements a heap sorted by time, where older elements are popped during GetAveragePerSecond call.
+// TimeHeap implements a heap sorted by time, where older elements are popped during AveragePerSecond call.
 type TimeHeap struct {
 	lock  *sync.Mutex
 	list  []*timeHeapEntry
@@ -34,9 +34,9 @@ func (h *TimeHeap) Add(count uint64) {
 	h.total += count
 }
 
-// GetAveragePerSecond calculates the average per second of all entries in the given duration.
+// AveragePerSecond calculates the average per second of all entries in the given duration.
 // older elements are removed from the container.
-func (h *TimeHeap) GetAveragePerSecond(timeBefore time.Duration) float32 {
+func (h *TimeHeap) AveragePerSecond(timeBefore time.Duration) float32 {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
@@ -56,6 +56,7 @@ func (h *TimeHeap) GetAveragePerSecond(timeBefore time.Duration) float32 {
 }
 
 ///////////////// heap interface /////////////////
+
 func (h TimeHeap) Len() int           { return len(h.list) }
 func (h TimeHeap) Less(i, j int) bool { return h.list[i].timestamp.Before(h.list[j].timestamp) }
 func (h TimeHeap) Swap(i, j int)      { h.list[i], h.list[j] = h.list[j], h.list[i] }

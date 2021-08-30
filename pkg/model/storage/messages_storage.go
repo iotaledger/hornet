@@ -45,6 +45,7 @@ type CachedMetadata struct {
 
 type CachedMessages []*CachedMessage
 
+// Retain registers a new consumer for the cached messages.
 // msg +1
 func (cachedMsgs CachedMessages) Retain() CachedMessages {
 	cachedResult := make(CachedMessages, len(cachedMsgs))
@@ -54,6 +55,7 @@ func (cachedMsgs CachedMessages) Retain() CachedMessages {
 	return cachedResult
 }
 
+// Release releases the cached messsages, to be picked up by the persistence layer (as soon as all consumers are done).
 // msg -1
 func (cachedMsgs CachedMessages) Release(force ...bool) {
 	for _, cachedMsg := range cachedMsgs {
@@ -61,23 +63,28 @@ func (cachedMsgs CachedMessages) Release(force ...bool) {
 	}
 }
 
-func (c *CachedMessage) GetMessage() *Message {
+// Message retrieves the message, that is cached in this container.
+func (c *CachedMessage) Message() *Message {
 	return c.msg.Get().(*Message)
 }
 
+// CachedMetadata returns the underlying cached metadata.
 // meta +1
-func (c *CachedMessage) GetCachedMetadata() *CachedMetadata {
+func (c *CachedMessage) CachedMetadata() *CachedMetadata {
 	return &CachedMetadata{c.metadata.Retain()}
 }
 
-func (c *CachedMessage) GetMetadata() *MessageMetadata {
+// Metadata retrieves the metadata, that is cached in this container.
+func (c *CachedMessage) Metadata() *MessageMetadata {
 	return c.metadata.Get().(*MessageMetadata)
 }
 
-func (c *CachedMetadata) GetMetadata() *MessageMetadata {
+// Metadata retrieves the metadata, that is cached in this container.
+func (c *CachedMetadata) Metadata() *MessageMetadata {
 	return c.Get().(*MessageMetadata)
 }
 
+// Retain registers a new consumer for the cached message and metadata.
 // msg +1
 func (c *CachedMessage) Retain() *CachedMessage {
 	return &CachedMessage{
@@ -86,14 +93,18 @@ func (c *CachedMessage) Retain() *CachedMessage {
 	}
 }
 
+// Retain registers a new consumer for the cached metadata.
 func (c *CachedMetadata) Retain() *CachedMetadata {
 	return &CachedMetadata{c.CachedObject.Retain()}
 }
 
+// Exists returns true if the message in this container does exist
+// (could be found in the database and was not marked as deleted).
 func (c *CachedMessage) Exists() bool {
 	return c.msg.Exists()
 }
 
+// ConsumeMessageAndMetadata consumes the underlying message and metadata.
 // msg -1
 // meta -1
 func (c *CachedMessage) ConsumeMessageAndMetadata(consumer func(*Message, *MessageMetadata)) {
@@ -105,6 +116,7 @@ func (c *CachedMessage) ConsumeMessageAndMetadata(consumer func(*Message, *Messa
 	}, true)
 }
 
+// ConsumeMessage consumes the underlying message.
 // msg -1
 // meta -1
 func (c *CachedMessage) ConsumeMessage(consumer func(*Message)) {
@@ -114,6 +126,7 @@ func (c *CachedMessage) ConsumeMessage(consumer func(*Message)) {
 	}, true)
 }
 
+// ConsumeMetadata consumes the underlying metadata.
 // msg -1
 // meta -1
 func (c *CachedMessage) ConsumeMetadata(consumer func(*MessageMetadata)) {
@@ -123,6 +136,7 @@ func (c *CachedMessage) ConsumeMetadata(consumer func(*MessageMetadata)) {
 	}, true)
 }
 
+// ConsumeMetadata consumes the metadata.
 // meta -1
 func (c *CachedMetadata) ConsumeMetadata(consumer func(*MessageMetadata)) {
 	c.Consume(func(object objectstorage.StorableObject) {
@@ -130,6 +144,7 @@ func (c *CachedMetadata) ConsumeMetadata(consumer func(*MessageMetadata)) {
 	}, true)
 }
 
+// Release releases the cached message and metadata, to be picked up by the persistence layer (as soon as all consumers are done).
 // msg -1
 func (c *CachedMessage) Release(force ...bool) {
 	c.msg.Release(force...)
@@ -145,18 +160,25 @@ func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, erro
 	return msg, nil
 }
 
-func (s *Storage) GetMessageStorageSize() int {
+func (s *Storage) MessageStorageSize() int {
 	return s.messagesStorage.GetSize()
 }
 
-func (s *Storage) GetMessageMetadataStorageSize() int {
+func (s *Storage) MessageMetadataStorageSize() int {
 	return s.metadataStorage.GetSize()
 }
 
-func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
-	cacheTime, _ := time.ParseDuration(opts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	cacheTime, err := time.ParseDuration(opts.CacheTime)
+	if err != nil {
+		return err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return err
+	}
 
 	s.messagesStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixMessages}),
@@ -185,10 +207,13 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
+
+	return nil
 }
 
+// CachedMessageOrNil returns a cached message object.
 // msg +1
-func (s *Storage) GetCachedMessageOrNil(messageID hornet.MessageID) *CachedMessage {
+func (s *Storage) CachedMessageOrNil(messageID hornet.MessageID) *CachedMessage {
 	cachedMsg := s.messagesStorage.Load(messageID) // msg +1
 	if !cachedMsg.Exists() {
 		cachedMsg.Release(true) // msg -1
@@ -208,8 +233,9 @@ func (s *Storage) GetCachedMessageOrNil(messageID hornet.MessageID) *CachedMessa
 	}
 }
 
+// CachedMessageMetadataOrNil returns a cached metadata object.
 // metadata +1
-func (s *Storage) GetCachedMessageMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
+func (s *Storage) CachedMessageMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
 	cachedMeta := s.metadataStorage.Load(messageID) // meta +1
 	if !cachedMeta.Exists() {
 		cachedMeta.Release(true) // metadata -1
@@ -218,8 +244,8 @@ func (s *Storage) GetCachedMessageMetadataOrNil(messageID hornet.MessageID) *Cac
 	return &CachedMetadata{CachedObject: cachedMeta}
 }
 
-// GetStoredMetadataOrNil returns a metadata object without accessing the cache layer.
-func (s *Storage) GetStoredMetadataOrNil(messageID hornet.MessageID) *MessageMetadata {
+// StoredMetadataOrNil returns a metadata object without accessing the cache layer.
+func (s *Storage) StoredMetadataOrNil(messageID hornet.MessageID) *MessageMetadata {
 	storedMeta := s.metadataStorage.LoadObjectFromStore(messageID)
 	if storedMeta == nil {
 		return nil
@@ -242,17 +268,18 @@ func (s *Storage) MessageMetadataExistsInStore(messageID hornet.MessageID) bool 
 	return s.metadataStorage.ObjectExistsInStore(messageID)
 }
 
+// StoreMessageIfAbsent returns a cached object and stores the message in the persistence layer if it was absent.
 // msg +1
 func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessage, newlyAdded bool) {
 
 	// Store msg + metadata atomically in the same callback
 	var cachedMeta objectstorage.CachedObject
 
-	cachedMsgData := s.messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(key []byte) objectstorage.StorableObject { // msg +1
+	cachedMsgData := s.messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(_ []byte) objectstorage.StorableObject { // msg +1
 		newlyAdded = true
 
 		metadata := &MessageMetadata{
-			messageID: message.GetMessageID(),
+			messageID: message.MessageID(),
 			parents:   hornet.MessageIDsFromSliceOfArrays(message.message.Parents),
 		}
 
@@ -265,7 +292,7 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 
 	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
 	if !newlyAdded {
-		cachedMeta = s.metadataStorage.Load(message.GetMessageID()) // meta +1
+		cachedMeta = s.metadataStorage.Load(message.MessageID()) // meta +1
 	}
 
 	return &CachedMessage{msg: cachedMsgData, metadata: cachedMeta}, newlyAdded
@@ -300,16 +327,21 @@ func (s *Storage) DeleteMessageMetadata(messageID hornet.MessageID) {
 	s.metadataStorage.Delete(messageID)
 }
 
+// ShutdownMessagesStorage shuts down the messages storage.
 func (s *Storage) ShutdownMessagesStorage() {
 	s.messagesStorage.Shutdown()
 	s.metadataStorage.Shutdown()
 }
 
+// FlushMessagesStorage flushes the messages storage.
 func (s *Storage) FlushMessagesStorage() {
 	s.messagesStorage.Flush()
 	s.metadataStorage.Flush()
 }
 
+// AddMessageToStorage adds a new message to the cache/persistence layer,
+// including all additional information like metadata, children,
+// indexation, unreferenced messages and milestone entries.
 // msg +1
 func (s *Storage) AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index, requested bool, forceRelease bool, reapply bool) (cachedMessage *CachedMessage, alreadyAdded bool) {
 
@@ -318,20 +350,20 @@ func (s *Storage) AddMessageToStorage(message *Message, latestMilestoneIndex mil
 		return cachedMessage, true
 	}
 
-	for _, parent := range message.GetParents() {
-		s.StoreChild(parent, cachedMessage.GetMessage().GetMessageID()).Release(forceRelease)
+	for _, parent := range message.Parents() {
+		s.StoreChild(parent, cachedMessage.Message().MessageID()).Release(forceRelease)
 	}
 
-	indexationPayload := CheckIfIndexation(cachedMessage.GetMessage())
+	indexationPayload := CheckIfIndexation(cachedMessage.Message())
 	if indexationPayload != nil {
 		// store indexation if the message contains an indexation payload
-		s.StoreIndexation(indexationPayload.Index, cachedMessage.GetMessage().GetMessageID()).Release(true)
+		s.StoreIndexation(indexationPayload.Index, cachedMessage.Message().MessageID()).Release(true)
 	}
 
 	// Store only non-requested messages, since all requested messages are referenced by a milestone anyway
 	// This is only used to delete unreferenced messages from the database at pruning
 	if !requested {
-		s.StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.GetMessage().GetMessageID()).Release(true)
+		s.StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.Message().MessageID()).Release(true)
 	}
 
 	if ms := s.VerifyMilestone(message); ms != nil {

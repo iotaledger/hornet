@@ -8,91 +8,94 @@ import (
 )
 
 const (
-	DbVersion = 1
+	DBVersion = 1
 )
 
-func (s *Storage) configureHealthStore(store kvstore.KVStore) {
+func (s *Storage) configureHealthStore(store kvstore.KVStore) error {
 	s.healthStore = store.WithRealm([]byte{common.StorePrefixHealth})
-	s.setDatabaseVersion()
+	return s.setDatabaseVersion()
 }
 
-func (s *Storage) MarkDatabaseCorrupted() {
+func (s *Storage) MarkDatabaseCorrupted() error {
 
 	if err := s.healthStore.Set([]byte("dbCorrupted"), []byte{}); err != nil {
-		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
+		return errors.Wrap(NewDatabaseError(err), "failed to set database health status")
 	}
-	s.healthStore.Flush()
+	return s.healthStore.Flush()
 }
 
-func (s *Storage) MarkDatabaseTainted() {
+func (s *Storage) MarkDatabaseTainted() error {
 
 	if err := s.healthStore.Set([]byte("dbTainted"), []byte{}); err != nil {
-		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
+		return errors.Wrap(NewDatabaseError(err), "failed to set database health status")
 	}
-	s.healthStore.Flush()
+	return s.healthStore.Flush()
 }
 
-func (s *Storage) MarkDatabaseHealthy() {
+func (s *Storage) MarkDatabaseHealthy() error {
 
 	if err := s.healthStore.Delete([]byte("dbCorrupted")); err != nil {
-		panic(errors.Wrap(NewDatabaseError(err), "failed to set database health status"))
+		return errors.Wrap(NewDatabaseError(err), "failed to set database health status")
 	}
+
+	return nil
 }
 
-func (s *Storage) IsDatabaseCorrupted() bool {
+func (s *Storage) IsDatabaseCorrupted() (bool, error) {
 
 	contains, err := s.healthStore.Has([]byte("dbCorrupted"))
 	if err != nil {
-		panic(errors.Wrap(NewDatabaseError(err), "failed to read database health status"))
+		return true, errors.Wrap(NewDatabaseError(err), "failed to read database health status")
 	}
-	return contains
+	return contains, nil
 }
 
-func (s *Storage) IsDatabaseTainted() bool {
+func (s *Storage) IsDatabaseTainted() (bool, error) {
 
 	contains, err := s.healthStore.Has([]byte("dbTainted"))
 	if err != nil {
-		panic(errors.Wrap(NewDatabaseError(err), "failed to read database health status"))
+		return true, errors.Wrap(NewDatabaseError(err), "failed to read database health status")
 	}
-	return contains
+	return contains, nil
 }
 
-func (s *Storage) setDatabaseVersion() {
+func (s *Storage) setDatabaseVersion() error {
+
 	_, err := s.healthStore.Get([]byte("dbVersion"))
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// Only create the entry, if it doesn't exist already (fresh database)
-		if err := s.healthStore.Set([]byte("dbVersion"), []byte{DbVersion}); err != nil {
-			panic(errors.Wrap(NewDatabaseError(err), "failed to set database version"))
+		if err := s.healthStore.Set([]byte("dbVersion"), []byte{DBVersion}); err != nil {
+			return errors.Wrap(NewDatabaseError(err), "failed to set database version")
 		}
 	}
+	return nil
 }
 
-func (s *Storage) IsCorrectDatabaseVersion() bool {
+func (s *Storage) IsCorrectDatabaseVersion() (bool, error) {
 
 	value, err := s.healthStore.Get([]byte("dbVersion"))
 	if err != nil {
-		panic(errors.Wrap(NewDatabaseError(err), "failed to read database version"))
+		return false, errors.Wrap(NewDatabaseError(err), "failed to read database version")
 	}
 
 	if len(value) > 0 {
-		return value[0] == DbVersion
+		return value[0] == DBVersion, nil
 	}
 
-	return false
+	return false, nil
 }
 
 // UpdateDatabaseVersion tries to migrate the existing data to the new database version.
-func (s *Storage) UpdateDatabaseVersion() bool {
+func (s *Storage) UpdateDatabaseVersion() (bool, error) {
+
 	value, err := s.healthStore.Get([]byte("dbVersion"))
 	if err != nil {
-		panic(errors.Wrap(NewDatabaseError(err), "failed to read database version"))
+		return false, errors.Wrap(NewDatabaseError(err), "failed to read database version")
 	}
 
 	if len(value) < 1 {
-		return false
+		return false, nil
 	}
 
-	//currentDbVersion := int(value[0])
-
-	return false
+	return false, nil
 }

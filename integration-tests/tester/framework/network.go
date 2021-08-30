@@ -253,7 +253,7 @@ func (n *Network) Coordinator() *Node {
 	return n.Nodes[0]
 }
 
-// TakeCPUProfile takes a CPU profile on all nodes within the network.
+// TakeCPUProfiles takes a CPU profile on all nodes within the network.
 func (n *Network) TakeCPUProfiles(dur time.Duration) error {
 	log.Printf("taking CPU profile (%v) on all nodes", dur)
 	var wg sync.WaitGroup
@@ -276,7 +276,7 @@ func (n *Network) TakeCPUProfiles(dur time.Duration) error {
 	return profErr
 }
 
-// TakeHeapSnapshot takes a heap snapshot on all nodes within the network.
+// TakeHeapSnapshots takes a heap snapshot on all nodes within the network.
 func (n *Network) TakeHeapSnapshots() error {
 	log.Printf("taking heap snapshot on all nodes")
 	var wg sync.WaitGroup

@@ -28,14 +28,15 @@ func (c *MessagesMemcache) Cleanup(forceRelease bool) {
 	c.cachedMsgs = make(map[string]*CachedMessage)
 }
 
+// CachedMessageOrNil returns a cached message object.
 // msg +1
-func (c *MessagesMemcache) GetCachedMessageOrNil(messageID hornet.MessageID) *CachedMessage {
+func (c *MessagesMemcache) CachedMessageOrNil(messageID hornet.MessageID) *CachedMessage {
 	messageIDMapKey := messageID.ToMapKey()
 
 	// load up msg
 	cachedMsg, exists := c.cachedMsgs[messageIDMapKey]
 	if !exists {
-		cachedMsg = c.storage.GetCachedMessageOrNil(messageID) // msg +1
+		cachedMsg = c.storage.CachedMessageOrNil(messageID) // msg +1
 		if cachedMsg == nil {
 			return nil
 		}

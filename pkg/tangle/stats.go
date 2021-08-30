@@ -18,9 +18,9 @@ func (t *Tangle) measureMPS() {
 	outgoingMsgCnt := t.serverMetrics.SentMessages.Load()
 
 	mpsMetrics := &MPSMetrics{
-		Incoming: utils.GetUint32Diff(incomingMsgCnt, t.lastIncomingMsgCnt),
-		New:      utils.GetUint32Diff(incomingNewMsgCnt, t.lastIncomingNewMsgCnt),
-		Outgoing: utils.GetUint32Diff(outgoingMsgCnt, t.lastOutgoingMsgCnt),
+		Incoming: utils.Uint32Diff(incomingMsgCnt, t.lastIncomingMsgCnt),
+		New:      utils.Uint32Diff(incomingNewMsgCnt, t.lastIncomingNewMsgCnt),
+		Outgoing: utils.Uint32Diff(outgoingMsgCnt, t.lastOutgoingMsgCnt),
 	}
 
 	// store the new counters

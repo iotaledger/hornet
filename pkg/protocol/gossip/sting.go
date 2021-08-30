@@ -171,7 +171,7 @@ type Heartbeat struct {
 	SyncedNeighbors      int             `json:"syncedNeighbors"`
 }
 
-/// ParseHeartbeat parses the given message into a heartbeat.
+// ParseHeartbeat parses the given message into a heartbeat.
 func ParseHeartbeat(data []byte) *Heartbeat {
 	return &Heartbeat{
 		SolidMilestoneIndex:  milestone.Index(binary.LittleEndian.Uint32(data[:4])),
