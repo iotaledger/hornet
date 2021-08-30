@@ -1,5 +1,15 @@
-# Troubleshooting
+---
+keywords:
+- Troubleshooting
+- Problems
+- Discord
+- FAQ
+- Difficulties
+description: Resources to troubleshoot your node.  
+image: /img/logo/HornetLogo.png
+---
 
+# Troubleshooting
 
 Check our [Frequently asked questions](faq.md).
 

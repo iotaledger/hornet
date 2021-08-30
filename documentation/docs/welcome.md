@@ -1,3 +1,13 @@
+---
+keywords:
+- Hornet
+- IOTA
+- Node Software
+- Welcome
+description: Introducing Hornet, a powerful community driven IOTA node software written in GO.
+image: /img/logo/HornetLogo.png
+---
+
 # Welcome to HORNET
 
 ![Hornet Logo](/img/HORNET_logo.svg)

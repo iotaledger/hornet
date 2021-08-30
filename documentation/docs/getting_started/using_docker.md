@@ -1,3 +1,14 @@
+---
+keywords:
+- Docker
+- Install 
+- Run
+- macOS
+- Windows
+description: Install and run a Hornet node using Docker.  Recommended for macOS and Windows.
+image: /img/logo/HornetLogo.png
+---
+
 # Using Docker
 
 Hornet Docker images (amd64/x86_64 architecture) are available at [gohornet/hornet](https://hub.docker.com/r/gohornet/hornet) Docker hub.

@@ -1,3 +1,14 @@
+---
+keywords:
+- configuration
+- peer
+- peering
+- identity
+- autopeering
+description: How to configure your nodes peers, neighbors and auto-peering. 
+image: /img/logo/HornetLogo.png
+---
+
 # Peering Configuration
 
 The IOTA network is a distributed network. It uses a gossip protocol to broadcast data among IOTA nodes. To participate in a network, each node has to establish a secure connection to other nodes in the network (to its peer neighbors), and mutually exchange messages.

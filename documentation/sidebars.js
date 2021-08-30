@@ -31,8 +31,8 @@ module.exports = {
         label: 'Security 101',
       }, {
         type: 'doc',
-        id: 'getting_started/installation_steps',
-        label: 'Installation steps',
+        id: 'getting_started/hornet_apt_repository',
+        label: 'Hornet apt Repository',
       }, {
         type: 'doc',
         id: 'getting_started/using_docker',

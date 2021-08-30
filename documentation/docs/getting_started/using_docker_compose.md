@@ -1,3 +1,13 @@
+---
+keywords:
+- Linux
+- Install
+- Docker Compose
+- Build
+description: Install and run a Hornet node using Docker Compose.
+image: /img/logo/HornetLogo.png
+---
+
 # Using Docker Compose
 
 Make sure that you have read [Using Docker](using_docker.md) before you continue reading as this chapter is for advanced users.  You can find more information on Docker Compose in the [official Docker Compose documentation]( https://docs.docker.com/compose/).
