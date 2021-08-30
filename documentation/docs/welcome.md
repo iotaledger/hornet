@@ -1,6 +1,6 @@
 # Welcome to HORNET
 
-![](assets/HORNET_logo.svg)
+![Hornet Logo](/img/HORNET_logo.svg)
 
 HORNET is a powerful, community driven IOTA node software written in Go. It is easy to install and runs on low-end
 devices like the Raspberry Pi 4. a group of community developers alongside the
