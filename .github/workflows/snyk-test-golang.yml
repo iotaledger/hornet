@@ -1,13 +1,8 @@
 name: Test Golang dependencies with Snyk
 on:
-  push:
-    paths-ignore:
-      - 'docs/**'
-    branches: [main, develop]
   pull_request:
     paths-ignore:
-      - 'docs/**'
-    branches: [main, develop]
+      - 'documentation/**'
 
 jobs:
   security:
