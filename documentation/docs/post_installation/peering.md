@@ -1,5 +1,6 @@
 ---
 keywords:
+- IOTA Node 
 - Hornet Node
 - configuration
 - peer

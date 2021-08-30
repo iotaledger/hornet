@@ -1,5 +1,6 @@
 ---
 keywords:
+- IOTA Node 
 - Hornet Node
 - REST API
 - Node Event API 

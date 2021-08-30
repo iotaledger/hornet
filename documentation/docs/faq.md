@@ -1,5 +1,6 @@
 ---
 keywords:
+- IOTA Node 
 - Hornet Node
 - FAQ
 - Questions
