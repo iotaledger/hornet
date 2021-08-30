@@ -1,3 +1,16 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- storage
+- configuration
+- spammer
+- snapshots
+description: Key concepts to consider for Node maintenance. Configuring storage, plugins, spammer and how to work with snapshots.
+image: /img/logo/HornetLogo.png
+---
+
+
 # Managing a Node
 In this section, you can find an overview of the key concepts that you should consider during your node's maintenance cycle.
 

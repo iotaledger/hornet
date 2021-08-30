@@ -1,3 +1,16 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- Linux
+- macOS
+- Windows
+- Docker
+description: Getting Started.  Recommended requirements and installation links for Linux, macOS, and Windows
+image: /img/logo/HornetLogo.png
+---
+
+
 # Getting Started
 
 Running a node is the best way to use IOTA. By doing so, you have direct access to the Tangle instead of having to
@@ -52,13 +65,13 @@ Hornet ships as a single executable binary (`hornet` or `hornet.exe`) and some J
 
 Recommended installation methods:
 
-- [Hornet apt repository](installation_steps.md#hornet-apt-repository-linux-distro-specific)
+- [Hornet apt repository](hornet_apt_repository.md#hornet-apt-repository-linux-distro-specific)
 - [Docker image](using_docker.md)
 
 Other installation methods:
 
-- [Prebuilt binary files](installation_steps.md#pre-built-binaries)
-- [Build from source](installation_steps.md#build-from-source)
+- [Prebuilt binary files](hornet_apt_repository.md#pre-built-binaries)
+- [Build from source](hornet_apt_repository.md#build-from-source)
 
 ### MacOS
 
@@ -68,7 +81,7 @@ Recommended installation methods:
 
 Other installation methods:
 
-- [Prebuilt binary files](installation_steps.md#pre-built-binaries)
+- [Prebuilt binary files](hornet_apt_repository.md#pre-built-binaries)
 
 ### Windows
 
@@ -78,7 +91,7 @@ Recommended installation methods:
 
 Other installation methods:
 
-- [Prebuilt binary files](installation_steps.md#pre-built-binaries)
+- [Prebuilt binary files](hornet_apt_repository.md#pre-built-binaries)
 
 ## Configuration
 

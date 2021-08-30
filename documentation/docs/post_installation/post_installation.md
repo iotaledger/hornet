@@ -1,3 +1,15 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- Configuration
+- REST API
+- Dashboard
+description: Introducing the Hornet nodes configuration files and their settings.
+image: /img/logo/HornetLogo.png
+---
+
+
 # Post-installation
 
 Once you have deployed Hornet, you can set all the parameters using configuration files.

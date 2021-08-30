@@ -1,6 +1,18 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- verifier
+- Chrysalis Phase 2
+- receipts
+description: How to configure a Hornet node as a verifier node.  
+image: /img/logo/HornetLogo.png
+---
+
+
 # How to Run Hornet as a Verifier Node
 
- A verifier node is a node which validates receipts. Receipts are an integral component of the migration mechanism used to migrate funds from the legacy into the new Chrysalis Phase 2 network. You can find a more detailed explanation on how the migration mechanism works in the [Chrysalis documentation](https://chrysalis.docs.iota.org/guides/migration-mechanism) .
+ A verifier node is a node which validates receipts. Receipts are an integral component of the migration mechanism used to migrate funds from the legacy into the new Chrysalis Phase 2 network. You can find a more detailed explanation on how the migration mechanism works in the [Chrysalis documentation](https://chrysalis.docs.iota.org/guides/migration-mechanism).
 
 This guide explains how to configure a Hornet node as a verifier node:
 

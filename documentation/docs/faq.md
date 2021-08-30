@@ -1,3 +1,16 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- FAQ
+- Questions
+- Troubleshooting
+- Difficulties
+description: Frequently asked questions about the Hornet node. 
+image: /img/logo/HornetLogo.png
+---
+
+
 # Frequently Asked Questions
 
 ## What is HORNET?

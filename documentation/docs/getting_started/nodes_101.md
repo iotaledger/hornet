@@ -1,3 +1,15 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- messages
+- syncing
+- synchronizing
+- UTXO
+description: Introducing nodes and what they can do in the IOTA network (Tangle). 
+image: /img/logo/HornetLogo.png
+---
+
 # Nodes 101
 
 The IOTA network is a distributed type of network called Tangle.  The network is distributed among plenty of servers

@@ -1,3 +1,16 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- Configuration
+- JSON
+- Customize
+- Config
+description: This section describes the configuration parameters and their types for your Hornet node.
+image: /img/logo/HornetLogo.png
+---
+
+
 # Core Configuration
 Hornet uses a JSON standard format as a config file. If you are unsure about JSON syntax, you can find more information in the [official JSON specs](https://www.json.org).
 
