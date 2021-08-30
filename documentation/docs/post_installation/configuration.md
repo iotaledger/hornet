@@ -3,7 +3,7 @@ keywords:
 - Configuration
 - JSON
 - Customize
-- Interface
+- Config
 description: This section describes the configuration parameters and their types for your Hornet node.
 image: /img/logo/HornetLogo.png
 ---
