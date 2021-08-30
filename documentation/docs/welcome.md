@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - Hornet
 - IOTA
 - Node Software

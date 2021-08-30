@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - Configuration
 - REST API
 - Dashboard

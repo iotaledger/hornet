@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - FAQ
 - Questions
 - Troubleshooting

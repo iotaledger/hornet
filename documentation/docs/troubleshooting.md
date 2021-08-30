@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - Troubleshooting
 - Problems
 - Discord

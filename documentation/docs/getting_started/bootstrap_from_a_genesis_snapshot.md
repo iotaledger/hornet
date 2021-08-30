@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - genesis snapshot
 - Chrysalis Phase 2
 - bootstrap network

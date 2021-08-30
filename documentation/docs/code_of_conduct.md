@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - conduct
 - code
 description: Contributors code of conduct.  

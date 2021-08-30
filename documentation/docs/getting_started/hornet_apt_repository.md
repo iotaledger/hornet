@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - Linux
 - Ubuntu
 - apt

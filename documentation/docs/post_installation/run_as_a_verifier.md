@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - verifier
 - Chrysalis Phase 2
 - receipts

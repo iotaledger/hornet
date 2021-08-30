@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - REST API
 - Node Event API 
 - API

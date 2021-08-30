@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - Private Tangle
 - Chrysalis
 - Coordinator

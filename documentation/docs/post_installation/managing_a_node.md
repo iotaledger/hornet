@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - storage
 - configuration
 - spammer

@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - contribute
 - Pull request
 - GitHub

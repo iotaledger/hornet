@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - Linux
 - Install
 - Docker Compose

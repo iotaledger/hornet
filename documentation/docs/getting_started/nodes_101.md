@@ -1,5 +1,6 @@
 ---
 keywords:
+- Hornet Node
 - messages
 - syncing
 - synchronizing
