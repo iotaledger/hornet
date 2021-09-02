@@ -2,6 +2,7 @@ package framework
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -22,9 +23,11 @@ const (
 	cpuProfilePrefix   = "cpu_profile"
 	heapProfilePrefix  = "heap_profile"
 	metricsChartPrefix = "metrics_charts"
-)
 
-const byteMBDivider = 1000000
+	timeoutProfilingQuery = 1 * time.Minute
+
+	byteMBDivider = 1000000
+)
 
 // Profiler profiles a node for metrics.
 type Profiler struct {
@@ -262,12 +265,22 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 // queries the given pprof URI and returns the profile data.
 func (n *Profiler) query(path string) ([]byte, error) {
 	target := fmt.Sprintf("%s%s", n.pprofURI, path)
-	res, err := n.Get(target)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutProfilingQuery)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	if err != nil {
+		return nil, fmt.Errorf("download failed: %w", err)
+	}
+
+	resp, err := n.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("unable to take profile: %w", err)
 	}
-	defer res.Body.Close()
-	profileBytes, err := ioutil.ReadAll(res.Body)
+	defer func() { _ = resp.Body.Close() }()
+
+	profileBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read profile from response: %w", err)
 	}

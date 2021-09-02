@@ -28,14 +28,13 @@ import (
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
 			Name:      "Spammer",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -48,7 +47,6 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	spammerInstance *spammer.Spammer
@@ -94,16 +92,14 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		log.Panic("RestAPI plugin needs to be enabled to use the Spammer plugin")
+		Plugin.Panic("RestAPI plugin needs to be enabled to use the Spammer plugin")
 	}
 
 	// check if URTS plugin is disabled
 	if Plugin.Node.IsSkipped(urts.Plugin) {
-		log.Panic("URTS plugin needs to be enabled to use the Spammer plugin")
+		Plugin.Panic("URTS plugin needs to be enabled to use the Spammer plugin")
 	}
 
 	setupRoutes(deps.Echo.Group(RouteSpammer))
@@ -150,14 +146,16 @@ func run() {
 	}
 
 	// create a background worker that "measures" the spammer averages values every second
-	Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
 		ticker := timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PrioritySpammer)
+	}, shutdown.PrioritySpammer); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
 	// automatically start the spammer on node startup if the flag is set
 	if deps.NodeConfig.Bool(CfgSpammerAutostart) {
-		start(nil, nil, nil)
+		_ = start(nil, nil, nil)
 	}
 }
 
@@ -190,12 +188,12 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) err
 	}
 
 	if cpuMaxUsageCfg > 0.0 && runtime.GOOS == "windows" {
-		log.Warn("spammer.cpuMaxUsage not supported on Windows. will be deactivated")
+		Plugin.LogWarn("spammer.cpuMaxUsage not supported on Windows. will be deactivated")
 		cpuMaxUsageCfg = 0.0
 	}
 
 	if cpuMaxUsageCfg > 0.0 && runtime.NumCPU() == 1 {
-		log.Warn("spammer.cpuMaxUsage not supported on single core machines. will be deactivated")
+		Plugin.LogWarn("spammer.cpuMaxUsage not supported on single core machines. will be deactivated")
 		cpuMaxUsageCfg = 0.0
 	}
 
@@ -225,7 +223,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 		rateLimitAbortSignal = make(chan struct{})
 
 		// create a background worker that fills rateLimitChannel every second
-		Plugin.Daemon().BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
+		if err := Plugin.Daemon().BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
 			defer spammerWaitGroup.Done()
 
@@ -275,19 +273,21 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 				lastDuration = time.Since(timeStart)
 			}
 
-		}, shutdown.PrioritySpammer)
+		}, shutdown.PrioritySpammer); err != nil {
+			Plugin.LogWarnf("failed to start worker: %s", err)
+		}
 	}
 
 	spammerCnt := atomic.NewInt32(0)
 	for i := 0; i < spammerWorkerCount; i++ {
-		Plugin.Daemon().BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
+		if err := Plugin.Daemon().BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
 			spammerWaitGroup.Add(1)
 			defer spammerWaitGroup.Done()
 
 			spammerIndex := spammerCnt.Inc()
 			currentProcessID := processID.Load()
 
-			log.Infof("Starting Spammer %d... done", spammerIndex)
+			Plugin.LogInfof("Starting Spammer %d... done", spammerIndex)
 
 		spammerLoop:
 			for {
@@ -323,7 +323,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 
 					if err := waitForLowerCPUUsage(cpuMaxUsage, shutdownSignal); err != nil {
 						if !errors.Is(err, common.ErrOperationAborted) {
-							log.Warn(err.Error())
+							Plugin.LogWarn(err)
 						}
 						continue
 					}
@@ -341,9 +341,11 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 				}
 			}
 
-			log.Infof("Stopping Spammer %d...", spammerIndex)
-			log.Infof("Stopping Spammer %d... done", spammerIndex)
-		}, shutdown.PrioritySpammer)
+			Plugin.LogInfof("Stopping Spammer %d...", spammerIndex)
+			Plugin.LogInfof("Stopping Spammer %d... done", spammerIndex)
+		}, shutdown.PrioritySpammer); err != nil {
+			Plugin.LogWarnf("failed to start worker: %s", err)
+		}
 	}
 }
 
@@ -387,10 +389,10 @@ func measureSpammerMetrics() {
 	}
 
 	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamMessages.Load()
-	new := utils.GetUint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
+	newMessagesCnt := utils.Uint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
 	lastSentSpamMsgsCnt = sentSpamMsgsCnt
 
-	spammerAvgHeap.Add(uint64(new))
+	spammerAvgHeap.Add(uint64(newMessagesCnt))
 
 	timeDiff := time.Since(spammerStartTime)
 	if timeDiff > 60*time.Second {
@@ -400,7 +402,7 @@ func measureSpammerMetrics() {
 
 	// trigger events for outside listeners
 	Events.AvgSpamMetricsUpdated.Trigger(&spammer.AvgSpamMetrics{
-		NewMessages:              new,
-		AverageMessagesPerSecond: spammerAvgHeap.GetAveragePerSecond(timeDiff),
+		NewMessages:              newMessagesCnt,
+		AverageMessagesPerSecond: spammerAvgHeap.AveragePerSecond(timeDiff),
 	})
 }

@@ -16,9 +16,9 @@ const (
 	// whether to allow the health check route anyways
 	CfgRestAPIExcludeHealthCheckFromAuth = "restAPI.excludeHealthCheckFromAuth"
 	// whether to use JWT auth for the REST API
-	CfgRestAPIAuthEnabled = "restAPI.jwtAuth.enabled"
+	CfgRestAPIJWTAuthEnabled = "restAPI.jwtAuth.enabled"
 	// salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value
-	CfgRestAPIAuthSalt = "restAPI.jwtAuth.salt"
+	CfgRestAPIJWTAuthSalt = "restAPI.jwtAuth.salt"
 	// whether the node does PoW if messages are received via API
 	CfgRestAPIPoWEnabled = "restAPI.powEnabled"
 	// the amount of workers used for calculating PoW when issuing messages via API
@@ -57,8 +57,8 @@ var params = &node.PluginParams{
 				}, "the allowed HTTP REST routes which can be called from non whitelisted addresses")
 			fs.StringSlice(CfgRestAPIWhitelistedAddresses, []string{"127.0.0.1", "::1"}, "the whitelist of addresses which are allowed to access the REST API")
 			fs.Bool(CfgRestAPIExcludeHealthCheckFromAuth, false, "whether to allow the health check route anyways")
-			fs.Bool(CfgRestAPIAuthEnabled, false, "whether to use JWT auth for the REST API")
-			fs.String(CfgRestAPIAuthSalt, "HORNET", "salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value")
+			fs.Bool(CfgRestAPIJWTAuthEnabled, false, "whether to use JWT auth for the REST API")
+			fs.String(CfgRestAPIJWTAuthSalt, "HORNET", "salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value")
 			fs.Bool(CfgRestAPIPoWEnabled, false, "whether the node does PoW if messages are received via API")
 			fs.Int(CfgRestAPIPoWWorkerCount, 1, "the amount of workers used for calculating PoW when issuing messages via API")
 			fs.String(CfgRestAPILimitsMaxBodyLength, "1M", "the maximum number of characters that the body of an API call may contain")
@@ -66,5 +66,5 @@ var params = &node.PluginParams{
 			return fs
 		}(),
 	},
-	Masked: []string{CfgRestAPIAuthSalt},
+	Masked: []string{CfgRestAPIJWTAuthSalt},
 }

@@ -28,14 +28,15 @@ func (c *MetadataMemcache) Cleanup(forceRelease bool) {
 	c.cachedMsgMetas = make(map[string]*CachedMetadata)
 }
 
+// CachedMetadataOrNil returns a cached metadata object.
 // metadata +1
-func (c *MetadataMemcache) GetCachedMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
+func (c *MetadataMemcache) CachedMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
 	messageIDMapKey := messageID.ToMapKey()
 
 	// load up msg metadata
 	cachedMsgMeta, exists := c.cachedMsgMetas[messageIDMapKey]
 	if !exists {
-		cachedMsgMeta = c.storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
+		cachedMsgMeta = c.storage.CachedMessageMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			return nil
 		}

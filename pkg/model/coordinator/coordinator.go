@@ -44,7 +44,7 @@ var (
 	ErrInvalidSiblingsTrytesLength = errors.New("siblings trytes too long")
 )
 
-// The merkle tree root hash of all messages.
+// MerkleTreeHash is the merkle tree root hash of all messages.
 type MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 
 // Events are the events issued by the coordinator.
@@ -259,14 +259,14 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 			return fmt.Errorf("previous milestone does not match latest milestone in database! previous: %d, database: %d", startIndex-1, latestMilestoneFromDatabase)
 		}
 
-		latestMilestoneMessageID := hornet.GetNullMessageID()
+		latestMilestoneMessageID := hornet.NullMessageID()
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
-			cachedMilestoneMsg := coo.storage.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
+			cachedMilestoneMsg := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
 			if cachedMilestoneMsg == nil {
 				return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 			}
-			latestMilestoneMessageID = cachedMilestoneMsg.GetMessage().GetMessageID()
+			latestMilestoneMessageID = cachedMilestoneMsg.Message().MessageID()
 			cachedMilestoneMsg.Release()
 		}
 
@@ -294,7 +294,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		return fmt.Errorf("previous milestone does not match latest milestone in database. previous: %d, database: %d", coo.state.LatestMilestoneIndex, latestMilestoneFromDatabase)
 	}
 
-	cachedMilestoneMsg := coo.storage.GetMilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
+	cachedMilestoneMsg := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
 	if cachedMilestoneMsg == nil {
 		return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 	}
@@ -394,7 +394,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	}
 
 	// always reference the last milestone directly to speed up syncing
-	latestMilestoneMessageID := milestoneMsg.GetMessageID()
+	latestMilestoneMessageID := milestoneMsg.MessageID()
 
 	coo.state.LatestMilestoneMessageID = latestMilestoneMessageID
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
@@ -479,7 +479,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 			return nil, common.SoftError(fmt.Errorf("failed to send checkPoint: %w", err))
 		}
 
-		lastCheckpointMessageID = msg.GetMessageID()
+		lastCheckpointMessageID = msg.MessageID()
 
 		coo.Events.IssuedCheckpointMessage.Trigger(checkpointIndex, i, checkpointsNumber, lastCheckpointMessageID)
 	}
@@ -513,8 +513,8 @@ func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.Messag
 	return coo.state.LatestMilestoneMessageID, nil
 }
 
-// GetInterval returns the interval milestones should be issued.
-func (coo *Coordinator) GetInterval() time.Duration {
+// Interval returns the interval milestones should be issued.
+func (coo *Coordinator) Interval() time.Duration {
 	return coo.opts.milestoneInterval
 }
 

@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -12,9 +14,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/basicauth"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -31,20 +33,19 @@ import (
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/websockethub"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
-			Name:      "Dashboard",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:           "Dashboard",
+			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
+			Params:         params,
+			InitConfigPars: initConfigPars,
+			Configure:      configure,
+			Run:            run,
 		},
 	}
 }
@@ -57,7 +58,6 @@ const (
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	nodeStartAt = time.Now()
@@ -75,6 +75,7 @@ var (
 
 type dependencies struct {
 	dig.In
+	Database                 *database.Database
 	Storage                  *storage.Storage
 	Tangle                   *tangle.Tangle
 	ServerMetrics            *metrics.ServerMetrics
@@ -83,38 +84,44 @@ type dependencies struct {
 	MessageProcessor         *gossip.MessageProcessor
 	TipSelector              *tipselect.TipSelector       `optional:"true"`
 	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
+	RestAPIBindAddress       string                       `name:"restAPIBindAddress"`
 	AppInfo                  *app.AppInfo
 	Host                     host.Host
-	NodePrivateKey           crypto.PrivKey
-	DatabaseEvents           *database.Events
-	DashboardAllowedAPIRoute restapipkg.AllowedRoute `optional:"true"`
+	NodePrivateKey           crypto.PrivKey          `name:"nodePrivateKey"`
+	DashboardAllowedAPIRoute restapipkg.AllowedRoute `name:"dashboardAllowedAPIRoute" optional:"true"`
 }
 
-func provide(c *dig.Container) {
+func initConfigPars(c *dig.Container) {
 
-	type configdeps struct {
+	type cfgDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps configdeps) string {
-		return deps.NodeConfig.String(CfgDashboardAuthUsername)
-	}, dig.Name("dashboardAuthUsername")); err != nil {
-		panic(err)
+	type cfgResult struct {
+		dig.Out
+		DashboardAuthUsername string `name:"dashboardAuthUsername"`
+	}
+
+	if err := c.Provide(func(deps cfgDeps) cfgResult {
+		return cfgResult{
+			DashboardAuthUsername: deps.NodeConfig.String(CfgDashboardAuthUsername),
+		}
+	}); err != nil {
+		Plugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
 
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		log.Panic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
+		Plugin.Panic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	// check if RestAPIV1 plugin is disabled
 	if Plugin.Node.IsSkipped(restapiv1.Plugin) {
-		log.Panic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
+		Plugin.Panic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	upgrader = &websocket.Upgrader{
@@ -123,18 +130,25 @@ func configure() {
 		EnableCompression: true,
 	}
 
-	hub = websockethub.NewHub(log, upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
+	hub = websockethub.NewHub(Plugin.Logger(), upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
 
-	basicAuth = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
+	var err error
+	basicAuth, err = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt))
+	if err != nil {
+		Plugin.Panicf("basic auth initialization failed: %w", err)
+	}
 
-	jwtAuth = jwt.NewJWTAuth(
+	jwtAuth, err = jwt.NewJWTAuth(
 		deps.NodeConfig.String(CfgDashboardAuthUsername),
 		deps.NodeConfig.Duration(CfgDashboardAuthSessionTimeout),
 		deps.Host.ID().String(),
 		deps.NodePrivateKey,
 	)
+	if err != nil {
+		Plugin.Panicf("JWT auth initialization failed: %w", err)
+	}
 }
 
 func run() {
@@ -145,8 +159,14 @@ func run() {
 
 	setupRoutes(e)
 	bindAddr := deps.NodeConfig.String(CfgDashboardBindAddress)
-	log.Infof("You can now access the dashboard using: http://%s", bindAddr)
-	go e.Start(bindAddr)
+
+	go func() {
+		Plugin.LogInfof("You can now access the dashboard using: http://%s", bindAddr)
+
+		if err := e.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			Plugin.LogWarnf("Stopped dashboard server due to an error (%s)", err)
+		}
+	}()
 
 	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
@@ -155,11 +175,11 @@ func run() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
 	})
 
-	onConfirmedMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
-	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeSyncStatus, Data: currentSyncStatus()})
 	})
 
@@ -171,21 +191,23 @@ func run() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tangle.ConfirmedMilestoneMetric{metric}})
 	})
 
-	Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
 		go hub.Run(shutdownSignal)
 		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-shutdownSignal
-		log.Info("Stopping Dashboard[WSSend] ...")
+		Plugin.LogInfo("Stopping Dashboard[WSSend] ...")
 		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
 
-		log.Info("Stopping Dashboard[WSSend] ... done")
-	}, shutdown.PriorityDashboard)
+		Plugin.LogInfo("Stopping Dashboard[WSSend] ... done")
+	}, shutdown.PriorityDashboard); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
 	// run the message live feed
 	runLiveFeed()
@@ -204,13 +226,13 @@ func run() {
 }
 
 func getMilestoneMessageID(index milestone.Index) hornet.MessageID {
-	cachedMs := deps.Storage.GetMilestoneCachedMessageOrNil(index) // message +1
+	cachedMs := deps.Storage.MilestoneCachedMessageOrNil(index) // message +1
 	if cachedMs == nil {
 		return nil
 	}
 	defer cachedMs.Release(true) // message -1
 
-	return cachedMs.GetMessage().GetMessageID()
+	return cachedMs.Message().MessageID()
 }
 
 // Msg represents a websocket message.
@@ -315,7 +337,7 @@ func peerMetrics() []*restapiv1.PeerResponse {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{CMI: deps.Storage.GetConfirmedMilestoneIndex(), LMI: deps.Storage.GetLatestMilestoneIndex()}
+	return &SyncStatus{CMI: deps.Storage.ConfirmedMilestoneIndex(), LMI: deps.Storage.LatestMilestoneIndex()}
 }
 
 func currentPublicNodeStatus() *PublicNodeStatus {
@@ -324,7 +346,7 @@ func currentPublicNodeStatus() *PublicNodeStatus {
 	status.IsHealthy = deps.Tangle.IsNodeHealthy()
 	status.IsSynced = deps.Storage.IsNodeAlmostSynced()
 
-	snapshotInfo := deps.Storage.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo != nil {
 		status.SnapshotIndex = snapshotInfo.SnapshotIndex
 		status.PruningIndex = snapshotInfo.PruningIndex
@@ -362,16 +384,16 @@ func currentNodeStatus() *NodeStatus {
 	// cache metrics
 	status.Caches = &CachesMetric{
 		Children: Cache{
-			Size: deps.Storage.GetChildrenStorageSize(),
+			Size: deps.Storage.ChildrenStorageSize(),
 		},
 		RequestQueue: Cache{
 			Size: queued + pending,
 		},
 		Milestones: Cache{
-			Size: deps.Storage.GetMilestoneStorageSize(),
+			Size: deps.Storage.MilestoneStorageSize(),
 		},
 		Messages: Cache{
-			Size: deps.Storage.GetMessageStorageSize(),
+			Size: deps.Storage.MessageStorageSize(),
 		},
 		IncomingMessageWorkUnits: Cache{
 			Size: deps.MessageProcessor.WorkUnitsSize(),

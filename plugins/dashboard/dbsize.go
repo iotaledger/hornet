@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
 )
 
 var (
-	lastDbCleanup       = &database.DatabaseCleanup{}
-	cachedDbSizeMetrics []*DBSizeMetric
+	lastDBCleanup       = &database.DatabaseCleanup{}
+	cachedDBSizeMetrics []*DBSizeMetric
 )
 
 // DBSizeMetric represents database size metrics.
@@ -35,9 +35,9 @@ func (s *DBSizeMetric) MarshalJSON() ([]byte, error) {
 }
 
 func currentDatabaseSize() *DBSizeMetric {
-	dbSize, err := deps.Storage.GetDatabaseSize()
+	dbSize, err := deps.Storage.DatabaseSize()
 	if err != nil {
-		log.Warnf("error in GetDatabaseSize: %s", err)
+		Plugin.LogWarnf("error in database size calculation: %s", err)
 		return nil
 	}
 
@@ -45,9 +45,9 @@ func currentDatabaseSize() *DBSizeMetric {
 		Total: dbSize,
 		Time:  time.Now(),
 	}
-	cachedDbSizeMetrics = append(cachedDbSizeMetrics, newValue)
-	if len(cachedDbSizeMetrics) > 600 {
-		cachedDbSizeMetrics = cachedDbSizeMetrics[len(cachedDbSizeMetrics)-600:]
+	cachedDBSizeMetrics = append(cachedDBSizeMetrics, newValue)
+	if len(cachedDBSizeMetrics) > 600 {
+		cachedDBSizeMetrics = cachedDBSizeMetrics[len(cachedDBSizeMetrics)-600:]
 	}
 	return newValue
 }
@@ -58,18 +58,20 @@ func runDatabaseSizeCollector() {
 	currentDatabaseSize()
 
 	onDatabaseCleanup := events.NewClosure(func(cleanup *database.DatabaseCleanup) {
-		lastDbCleanup = cleanup
+		lastDBCleanup = cleanup
 		hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: cleanup})
 	})
 
-	Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
-		deps.DatabaseEvents.DatabaseCleanup.Attach(onDatabaseCleanup)
-		defer deps.DatabaseEvents.DatabaseCleanup.Detach(onDatabaseCleanup)
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
+		deps.Database.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
+		defer deps.Database.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
 
 		ticker := timeutil.NewTicker(func() {
 			dbSizeMetric := currentDatabaseSize()
 			hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: []*DBSizeMetric{dbSizeMetric}})
 		}, 1*time.Minute, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityDashboard)
+	}, shutdown.PriorityDashboard); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }

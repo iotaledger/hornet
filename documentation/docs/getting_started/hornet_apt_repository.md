@@ -1,3 +1,15 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- Linux
+- Ubuntu
+- apt
+- install
+description: Install and run a Hornet node using Hornets apt repository.  Recommended for Linux/Ubuntu.
+image: /img/logo/HornetLogo.png
+---
+
 # Hornet `apt` Repository (Linux-distro specific)
 Hornet developers maintain the Hornet `apt` repository. It installs Hornet as a `systemd` service under a user called `hornet`. 
 

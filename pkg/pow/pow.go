@@ -151,8 +151,8 @@ func (h *Handler) disconnectPowsrv() {
 	h.powsrvClient.Close()
 }
 
-// GetPoWType returns the fastest available PoW type which gets used for PoW requests
-func (h *Handler) GetPoWType() string {
+// PoWType returns the fastest available PoW type which gets used for PoW requests
+func (h *Handler) PoWType() string {
 	h.powsrvLock.RLock()
 	defer h.powsrvLock.RUnlock()
 

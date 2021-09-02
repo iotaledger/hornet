@@ -1,6 +1,7 @@
 package autopeering
 
 import (
+	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -10,44 +11,55 @@ import (
 
 	"github.com/iotaledger/hive.go/crypto/ed25519"
 
-	"github.com/gohornet/hornet/core/protocfg"
+	databaseCore "github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
+	"github.com/gohornet/hornet/core/pow"
+	"github.com/gohornet/hornet/core/snapshot"
+	"github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
-	p2ppkg "github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/p2p/autopeering"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/plugins/coordinator"
+	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/debug"
+	"github.com/gohornet/hornet/plugins/faucet"
+	"github.com/gohornet/hornet/plugins/migrator"
+	"github.com/gohornet/hornet/plugins/mqtt"
+	"github.com/gohornet/hornet/plugins/prometheus"
+	"github.com/gohornet/hornet/plugins/receipt"
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	"github.com/gohornet/hornet/plugins/spammer"
+	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/gohornet/hornet/plugins/warpsync"
 
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
-			Name:      "Autopeering",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   nil,
-			Configure: configure,
-			Run:       run,
+			Name:       "Autopeering",
+			DepsFunc:   func(cDeps dependencies) { deps = cDeps },
+			Params:     params,
+			PreProvide: preProvide,
+			Configure:  configure,
+			Run:        run,
 		},
 	}
 }
 
 var (
 	Plugin *node.Plugin
+	deps   dependencies
 
-	deps dependencies
-)
-
-var (
-	log   *logger.Logger
-	local *Local
+	localPeerContainer *autopeering.LocalPeerContainer
 
 	onDiscoveryPeerDiscovered  *events.Closure
 	onDiscoveryPeerDeleted     *events.Closure
@@ -61,9 +73,86 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-	Manager        *p2ppkg.Manager              `optional:"true"`
-	NodePrivateKey crypto.PrivKey
+	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+	NodePrivateKey            crypto.PrivKey               `name:"nodePrivateKey"`
+	P2PDatabasePath           string                       `name:"p2pDatabasePath"`
+	P2PBindMultiAddresses     []string                     `name:"p2pBindMultiAddresses"`
+	DatabaseEngine            database.Engine              `name:"databaseEngine"`
+	NetworkIDName             string                       `name:"networkIdName"`
+	AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
+	Manager                   *p2p.Manager                 `optional:"true"`
+}
+
+func preProvide(c *dig.Container, configs map[string]*configuration.Configuration, initConfig *node.InitConfig) {
+
+	pluginEnabled := true
+
+	containsPlugin := func(pluginsList []string, pluginIdentifier string) bool {
+		contains := false
+		for _, plugin := range pluginsList {
+			if strings.ToLower(plugin) == pluginIdentifier {
+				contains = true
+				break
+			}
+		}
+		return contains
+	}
+
+	if disabled := containsPlugin(initConfig.DisabledPlugins, Plugin.Identifier()); disabled {
+		// Autopeering is disabled
+		pluginEnabled = false
+	}
+
+	if enabled := containsPlugin(initConfig.EnabledPlugins, Plugin.Identifier()); !enabled {
+		// Autopeering was not enabled
+		pluginEnabled = false
+	}
+
+	runAsEntryNode := pluginEnabled && configs["nodeConfig"].Bool(CfgNetAutopeeringRunAsEntryNode)
+	if runAsEntryNode {
+		// the following pluggables stay enabled
+		// - profile
+		// - protocfg
+		// - gracefulshutdown
+		// - p2p
+		// - profiling
+		// - versioncheck
+		// - autopeering
+
+		// disable the other plugins if the node runs as an entry node for autopeering
+		initConfig.ForceDisablePluggable(databaseCore.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(pow.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(gossip.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(tangle.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(snapshot.CorePlugin.Identifier())
+		initConfig.ForceDisablePluggable(restapiv1.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(warpsync.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(urts.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(dashboard.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(spammer.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(mqtt.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(coordinator.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(migrator.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(receipt.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(prometheus.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(debug.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(faucet.Plugin.Identifier())
+	}
+
+	// the parameter has to be provided in the preProvide stage.
+	// this is a special case, since it only should be true if the plugin is enabled
+	type cfgResult struct {
+		dig.Out
+		AutopeeringRunAsEntryNode bool `name:"autopeeringRunAsEntryNode"`
+	}
+
+	if err := c.Provide(func() cfgResult {
+		return cfgResult{
+			AutopeeringRunAsEntryNode: runAsEntryNode,
+		}
+	}); err != nil {
+		Plugin.Panic(err)
+	}
 }
 
 func configure() {
@@ -72,43 +161,68 @@ func configure() {
 		OutboundNeighborSize: deps.NodeConfig.Int(CfgNetAutopeeringOutboundPeers),
 		SaltLifetime:         deps.NodeConfig.Duration(CfgNetAutopeeringSaltLifetime),
 	})
-	log = logger.NewLogger(Plugin.Name)
+
 	if err := autopeering.RegisterAutopeeringProtocolInMultiAddresses(); err != nil {
-		log.Panicf("unable to register autopeering protocol for multi addresses: %s", err)
+		Plugin.Panicf("unable to register autopeering protocol for multi addresses: %s", err)
 	}
+
 	rawPrvKey, err := deps.NodePrivateKey.Raw()
 	if err != nil {
-		log.Panicf("unable to obtain raw private key: %s", err)
+		Plugin.Panicf("unable to obtain raw private key: %s", err)
 	}
-	local = newLocal(rawPrvKey[:ed25519.SeedSize])
-	configureAutopeering(local)
+
+	localPeerContainer, err = autopeering.NewLocalPeerContainer(p2pServiceKey(),
+		rawPrvKey[:ed25519.SeedSize],
+		deps.P2PDatabasePath,
+		deps.DatabaseEngine,
+		deps.P2PBindMultiAddresses,
+		deps.NodeConfig.String(CfgNetAutopeeringBindAddr),
+		deps.AutopeeringRunAsEntryNode)
+	if err != nil {
+		Plugin.Panicf("unable to initialize local peer container: %s", err)
+	}
+
+	Plugin.LogInfof("initialized local autopeering: %s@%s", localPeerContainer.Local().PublicKey(), localPeerContainer.Local().Address())
+
+	if deps.AutopeeringRunAsEntryNode {
+		entryNodeMultiAddress, err := autopeering.GetEntryNodeMultiAddress(localPeerContainer.Local())
+		if err != nil {
+			Plugin.Panicf("unable to parse entry node multiaddress: %s", err)
+		}
+
+		Plugin.LogInfof("\n\nentry node multiaddress: %s\n", entryNodeMultiAddress.String())
+	}
+
+	configureAutopeering(localPeerContainer)
 	configureEvents()
 }
 
 func run() {
-	_ = Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		attachEvents()
-		start(local, shutdownSignal)
+		start(localPeerContainer, shutdownSignal)
 		detachEvents()
-	}, shutdown.PriorityAutopeering)
+	}, shutdown.PriorityAutopeering); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 // gets the peering service key from the config.
 func p2pServiceKey() service.Key {
-	return service.Key(deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName))
+	return service.Key(deps.NetworkIDName)
 }
 
 func configureEvents() {
 
 	onDiscoveryPeerDiscovered = events.NewClosure(func(ev *discover.DiscoveredEvent) {
-		if peerID := autopeering.ConvertHivePubKeyToPeerIDOrLog(ev.Peer.PublicKey(), log.Warnf); peerID != nil {
-			log.Infof("discovered: %s / %s", ev.Peer.Address(), *peerID)
+		if peerID := autopeering.ConvertHivePubKeyToPeerIDOrLog(ev.Peer.PublicKey(), Plugin.LogWarnf); peerID != nil {
+			Plugin.LogInfof("discovered: %s / %s", ev.Peer.Address(), *peerID)
 		}
 	})
 
 	onDiscoveryPeerDeleted = events.NewClosure(func(ev *discover.DeletedEvent) {
-		if peerID := autopeering.ConvertHivePubKeyToPeerIDOrLog(ev.Peer.PublicKey(), log.Warnf); peerID != nil {
-			log.Infof("removed offline: %s / %s", ev.Peer.Address(), *peerID)
+		if peerID := autopeering.ConvertHivePubKeyToPeerIDOrLog(ev.Peer.PublicKey(), Plugin.LogWarnf); peerID != nil {
+			Plugin.LogInfof("removed offline: %s / %s", ev.Peer.Address(), *peerID)
 		}
 	})
 
@@ -117,8 +231,8 @@ func configureEvents() {
 			return
 		}
 
-		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peerOptErr.Peer, log.Warnf); id != nil {
-			log.Infof("removing: %s", peerOptErr.Peer.ID)
+		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peerOptErr.Peer, Plugin.LogWarnf); id != nil {
+			Plugin.LogInfof("removing: %s", peerOptErr.Peer.ID)
 			selectionProtocol.RemoveNeighbor(id.ID())
 		}
 	})
@@ -127,32 +241,32 @@ func configureEvents() {
 		if oldRel != p2p.PeerRelationAutopeered {
 			return
 		}
-		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, log.Warnf); id != nil {
-			log.Infof("removing %s from autopeering selection protocol", p.ID)
+		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf); id != nil {
+			Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID)
 			selectionProtocol.RemoveNeighbor(id.ID())
 		}
 	})
 
 	onSelectionSaltUpdated = events.NewClosure(func(ev *selection.SaltUpdatedEvent) {
-		log.Infof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
+		Plugin.LogInfof("salt updated; expires=%s", ev.Public.GetExpiration().Format(time.RFC822))
 	})
 
 	onSelectionOutgoingPeering = events.NewClosure(func(ev *selection.PeeringEvent) {
 		if !ev.Status {
 			return
 		}
-		log.Infof("[outgoing peering] adding autopeering peer %s", ev.Peer.ID())
+		Plugin.LogInfof("[outgoing peering] adding autopeering peer %s", ev.Peer.ID())
 
 		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, p2pServiceKey())
 		if err != nil {
-			log.Warnf("unable to convert outgoing selection autopeering peer to addr info: %s", err)
+			Plugin.LogWarnf("unable to convert outgoing selection autopeering peer to addr info: %s", err)
 			return
 		}
 
 		handleSelection(ev, addrInfo, func() {
-			log.Infof("connecting to %s", addrInfo)
-			if err := deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationAutopeered); err != nil {
-				log.Warnf("couldn't add autopeering peer %s", err)
+			Plugin.LogInfof("connecting to %s", addrInfo)
+			if err := deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
+				Plugin.LogWarnf("couldn't add autopeering peer %s", err)
 			}
 		})
 	})
@@ -161,47 +275,47 @@ func configureEvents() {
 		if !ev.Status {
 			return
 		}
-		log.Infof("[incoming peering] whitelisting %s", ev.Peer.ID())
+		Plugin.LogInfof("[incoming peering] whitelisting %s", ev.Peer.ID())
 
 		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, p2pServiceKey())
 		if err != nil {
-			log.Warnf("unable to convert incoming selection autopeering peer to addr info: %s", err)
+			Plugin.LogWarnf("unable to convert incoming selection autopeering peer to addr info: %s", err)
 			return
 		}
 
 		handleSelection(ev, addrInfo, func() {
 			// TODO: maybe do whitelisting instead?
-			//log.Infof("connecting to %s", addrInfo)
-			//if err := deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationAutopeered); err != nil {
-			//	log.Warnf("couldn't add autopeering peer %s", err)
+			//Plugin.LogInfof("connecting to %s", addrInfo)
+			//if err := deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
+			//	Plugin.LogWarnf("couldn't add autopeering peer %s", err)
 			//}
 		})
 	})
 
 	onSelectionDropped = events.NewClosure(func(ev *selection.DroppedEvent) {
-		peerID := autopeering.ConvertHivePubKeyToPeerIDOrLog(ev.Peer.PublicKey(), log.Warnf)
+		peerID := autopeering.ConvertHivePubKeyToPeerIDOrLog(ev.Peer.PublicKey(), Plugin.LogWarnf)
 		if peerID == nil {
 			return
 		}
 
-		log.Infof("[dropped event] disconnecting %s", peerID)
-		var peerRelation p2ppkg.PeerRelation
-		deps.Manager.Call(*peerID, func(p *p2ppkg.Peer) {
+		Plugin.LogInfof("[dropped event] disconnecting %s", peerID)
+		var peerRelation p2p.PeerRelation
+		deps.Manager.Call(*peerID, func(p *p2p.Peer) {
 			peerRelation = p.Relation
 		})
 
 		if len(peerRelation) == 0 {
-			log.Warnf("didn't find autopeered peer %s for disconnecting", peerID)
+			Plugin.LogWarnf("didn't find autopeered peer %s for disconnecting", peerID)
 			return
 		}
 
-		if peerRelation != p2ppkg.PeerRelationAutopeered {
-			log.Warnf("won't disconnect %s as it its relation is not 'discovered' but '%s'", peerID, peerRelation)
+		if peerRelation != p2p.PeerRelationAutopeered {
+			Plugin.LogWarnf("won't disconnect %s as it its relation is not '%s' but '%s'", peerID, p2p.PeerRelationAutopeered, peerRelation)
 			return
 		}
 
 		if err := deps.Manager.DisconnectPeer(*peerID, errors.New("removed via autopeering selection")); err != nil {
-			log.Warnf("couldn't disconnect selection dropped autopeer: %s", err)
+			Plugin.LogWarnf("couldn't disconnect selection dropped autopeer: %s", err)
 		}
 	})
 }
@@ -210,19 +324,19 @@ func configureEvents() {
 // if the peer is not yet part of the peering manager, the given noRelationFunc is called.
 func handleSelection(ev *selection.PeeringEvent, addrInfo *libp2p.AddrInfo, noRelationFunc func()) {
 	// extract peer relation
-	var peerRelation p2ppkg.PeerRelation
-	deps.Manager.Call(addrInfo.ID, func(p *p2ppkg.Peer) {
+	var peerRelation p2p.PeerRelation
+	deps.Manager.Call(addrInfo.ID, func(p *p2p.Peer) {
 		peerRelation = p.Relation
 	})
 
 	switch peerRelation {
-	case p2ppkg.PeerRelationKnown:
+	case p2p.PeerRelationKnown:
 		clearFromAutopeeringSelector(ev)
 
-	case p2ppkg.PeerRelationUnknown:
+	case p2p.PeerRelationUnknown:
 		updatePeerRelationToDiscovered(addrInfo)
 
-	case p2ppkg.PeerRelationAutopeered:
+	case p2p.PeerRelationAutopeered:
 		handleAlreadyAutopeered(addrInfo)
 
 	default:
@@ -232,19 +346,19 @@ func handleSelection(ev *selection.PeeringEvent, addrInfo *libp2p.AddrInfo, noRe
 
 // logs a warning about a from the selector seen peer which is already autopeered.
 func handleAlreadyAutopeered(addrInfo *libp2p.AddrInfo) {
-	log.Warnf("peer is already autopeered %s", addrInfo.ID)
+	Plugin.LogWarnf("peer is already autopeered %s", addrInfo.ID)
 }
 
 // updates the given peers relation to discovered.
 func updatePeerRelationToDiscovered(addrInfo *libp2p.AddrInfo) {
-	if err := deps.Manager.ConnectPeer(addrInfo, p2ppkg.PeerRelationAutopeered); err != nil {
-		log.Warnf("couldn't update unknown peer to 'discovered' %s", err)
+	if err := deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
+		Plugin.LogWarnf("couldn't update unknown peer to 'discovered' %s", err)
 	}
 }
 
 // clears an already statically peered from the autopeering selector.
 func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
-	log.Infof("peer is statically peered already %s, removing from autopeering selection protocol", ev.Peer.ID())
+	Plugin.LogInfof("peer is statically peered already %s, removing from autopeering selection protocol", ev.Peer.ID())
 	selectionProtocol.RemoveNeighbor(ev.Peer.ID())
 }
 

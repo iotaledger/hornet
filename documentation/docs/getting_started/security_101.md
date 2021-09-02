@@ -1,3 +1,14 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- Hornet
+- Security
+description: This section provides a checklist of steps for running a reliable and secure node.
+image: /img/logo/HornetLogo.png
+---
+
+
 # Security 101
 
 This section provides a checklist of steps for running a reliable and secure node.

@@ -218,13 +218,13 @@ func (r *Requester) RequestMultiple(messageIDs hornet.MessageIDs, msIndex milest
 // given message is not a solid entry point and neither its parents are and also not in the database.
 func (r *Requester) RequestParents(cachedMsg *storage.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
 	cachedMsg.ConsumeMetadata(func(metadata *storage.MessageMetadata) {
-		messageID := metadata.GetMessageID()
+		messageID := metadata.MessageID()
 
 		if r.storage.SolidEntryPointsContain(messageID) {
 			return
 		}
 
-		for _, parent := range metadata.GetParents() {
+		for _, parent := range metadata.Parents() {
 			r.Request(parent, msIndex, preventDiscard...)
 		}
 	})
@@ -235,18 +235,18 @@ func (r *Requester) RequestParents(cachedMsg *storage.CachedMessage, msIndex mil
 func (r *Requester) RequestMilestoneParents(cachedMilestone *storage.CachedMilestone) bool {
 	defer cachedMilestone.Release(true) // message -1
 
-	msIndex := cachedMilestone.GetMilestone().Index
+	msIndex := cachedMilestone.Milestone().Index
 
-	cachedMilestoneMsgMeta := r.storage.GetCachedMessageMetadataOrNil(cachedMilestone.GetMilestone().MessageID) // meta +1
+	cachedMilestoneMsgMeta := r.storage.CachedMessageMetadataOrNil(cachedMilestone.Milestone().MessageID) // meta +1
 	if cachedMilestoneMsgMeta == nil {
 		panic("milestone metadata doesn't exist")
 	}
 	defer cachedMilestoneMsgMeta.Release(true) // meta -1
 
-	txMeta := cachedMilestoneMsgMeta.GetMetadata()
+	txMeta := cachedMilestoneMsgMeta.Metadata()
 
 	enqueued := false
-	for _, parent := range txMeta.GetParents() {
+	for _, parent := range txMeta.Parents() {
 		if r.Request(parent, msIndex, true) {
 			enqueued = true
 		}

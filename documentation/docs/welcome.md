@@ -1,6 +1,18 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- Hornet
+- IOTA
+- Node Software
+- Welcome
+description: Introducing Hornet, a powerful community driven IOTA node software written in GO.
+image: /img/logo/HornetLogo.png
+---
+
 # Welcome to HORNET
 
-![](assets/HORNET_logo.svg)
+![Hornet Logo](/img/logo/HORNET_logo.svg)
 
 HORNET is a powerful, community driven IOTA node software written in Go. It is easy to install and runs on low-end
 devices like the Raspberry Pi 4. a group of community developers alongside the

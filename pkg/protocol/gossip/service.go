@@ -25,7 +25,7 @@ type ServiceEvents struct {
 	ProtocolStarted *events.Event
 	// Fired when a protocol has ended.
 	ProtocolTerminated *events.Event
-	// Fired when an inbound stream gets cancelled.
+	// Fired when an inbound stream gets canceled.
 	InboundStreamCancelled *events.Event
 	// Fired when an internal error happens.
 	Error *events.Event
@@ -580,7 +580,7 @@ func (s *Service) registerLoggerOnEvents() {
 	}))
 	s.Events.InboundStreamCancelled.Attach(events.NewClosure(func(stream network.Stream, reason StreamCancelReason) {
 		remotePeer := stream.Conn().RemotePeer().ShortString()
-		s.opts.Logger.Infof("cancelled inbound protocol stream from %s: %s", remotePeer, reason)
+		s.opts.Logger.Infof("canceled inbound protocol stream from %s: %s", remotePeer, reason)
 	}))
 	s.Events.Error.Attach(events.NewClosure(func(err error) {
 		s.opts.Logger.Error(err)

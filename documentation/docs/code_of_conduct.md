@@ -1,3 +1,13 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- conduct
+- code
+description: Contributors code of conduct.  
+image: /img/logo/HornetLogo.png
+---
+
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge

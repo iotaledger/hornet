@@ -51,17 +51,20 @@ func (b *Broadcaster) Broadcast(broadcast *Broadcast) {
 
 // BroadcastHeartbeat broadcasts a heartbeat message to every peer.
 func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
-	snapshotInfo := b.storage.GetSnapshotInfo()
+	snapshotInfo := b.storage.SnapshotInfo()
 	if snapshotInfo == nil {
 		return
 	}
 
-	confirmedMilestoneIndex := b.storage.GetConfirmedMilestoneIndex() // bee differentiates between solid and confirmed milestone, for hornet it is the same.
+	confirmedMilestoneIndex := b.storage.ConfirmedMilestoneIndex() // bee differentiates between solid and confirmed milestone, for hornet it is the same.
 	connectedCount := b.manager.ConnectedCount(p2p.PeerRelationKnown)
 	syncedCount := b.service.SynchronizedCount(confirmedMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
 
-	heartbeatMsg, _ := NewHeartbeatMsg(confirmedMilestoneIndex, snapshotInfo.PruningIndex, b.storage.GetLatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+	heartbeatMsg, err := NewHeartbeatMsg(confirmedMilestoneIndex, snapshotInfo.PruningIndex, b.storage.LatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+	if err != nil {
+		return
+	}
 
 	b.service.ForEach(func(proto *Protocol) bool {
 		if filter != nil && !filter(proto) {
@@ -78,7 +81,7 @@ func (b *Broadcaster) BroadcastMilestoneRequests(rangeToRequest int, onExistingM
 	var requested int
 
 	// make sure we only request what we don't have
-	startingPoint := b.storage.GetConfirmedMilestoneIndex()
+	startingPoint := b.storage.ConfirmedMilestoneIndex()
 	if len(from) > 0 {
 		startingPoint = from[0]
 	}

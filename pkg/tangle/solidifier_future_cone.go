@@ -51,7 +51,7 @@ func (s *FutureConeSolidifier) SolidifyMessageAndFutureCone(cachedMsgMeta *stora
 
 	defer cachedMsgMeta.Release(true)
 
-	return s.solidifyFutureCone(s.childrenTraverser, s.metadataMemcache, hornet.MessageIDs{cachedMsgMeta.GetMetadata().GetMessageID()}, abortSignal)
+	return s.solidifyFutureCone(s.childrenTraverser, s.metadataMemcache, hornet.MessageIDs{cachedMsgMeta.Metadata().MessageID()}, abortSignal)
 }
 
 // SolidifyFutureConesWithMetadataMemcache updates the solidity of the given messages and their future cones (messages approving the given messages).
@@ -80,26 +80,26 @@ func (s *FutureConeSolidifier) solidifyFutureCone(traverser *dag.ChildrenTravers
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 
-				if cachedMsgMeta.GetMetadata().IsSolid() && !bytes.Equal(startMessageID, cachedMsgMeta.GetMetadata().GetMessageID()) {
+				if cachedMsgMeta.Metadata().IsSolid() && !bytes.Equal(startMessageID, cachedMsgMeta.Metadata().MessageID()) {
 					// do not walk the future cone if the current message is already solid, except it was the startTx
 					return false, nil
 				}
 
 				// check if current message is solid by checking the solidity of its parents
-				for _, parentMessageID := range cachedMsgMeta.GetMetadata().GetParents() {
+				for _, parentMessageID := range cachedMsgMeta.Metadata().Parents() {
 					if s.storage.SolidEntryPointsContain(parentMessageID) {
 						// Ignore solid entry points (snapshot milestone included)
 						continue
 					}
 
-					cachedParentMsgMeta := metadataMemcache.GetCachedMetadataOrNil(parentMessageID) // meta +1
+					cachedParentMsgMeta := metadataMemcache.CachedMetadataOrNil(parentMessageID) // meta +1
 					if cachedParentMsgMeta == nil {
 						// parent is missing => message is not solid
 						// do not walk the future cone if the current message is not solid
 						return false, nil
 					}
 
-					if !cachedParentMsgMeta.GetMetadata().IsSolid() {
+					if !cachedParentMsgMeta.Metadata().IsSolid() {
 						// parent is not solid => message is not solid
 						// do not walk the future cone if the current message is not solid
 						return false, nil

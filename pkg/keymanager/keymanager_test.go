@@ -26,35 +26,35 @@ func TestMilestoneKeyManager(t *testing.T) {
 	km.AddKeyRange(pubKey2, 3, 10)
 	km.AddKeyRange(pubKey3, 8, 15)
 
-	keysIndex_0 := km.GetPublicKeysForMilestoneIndex(0)
-	assert.Len(t, keysIndex_0, 1)
+	keysIndex0 := km.PublicKeysForMilestoneIndex(0)
+	assert.Len(t, keysIndex0, 1)
 
-	keysIndex_3 := km.GetPublicKeysForMilestoneIndex(3)
-	assert.Len(t, keysIndex_3, 2)
+	keysIndex3 := km.PublicKeysForMilestoneIndex(3)
+	assert.Len(t, keysIndex3, 2)
 
-	keysIndex_7 := km.GetPublicKeysForMilestoneIndex(7)
-	assert.Len(t, keysIndex_7, 2)
+	keysIndex7 := km.PublicKeysForMilestoneIndex(7)
+	assert.Len(t, keysIndex7, 2)
 
-	keysIndex_8 := km.GetPublicKeysForMilestoneIndex(8)
-	assert.Len(t, keysIndex_8, 3)
+	keysIndex8 := km.PublicKeysForMilestoneIndex(8)
+	assert.Len(t, keysIndex8, 3)
 
-	keysIndex_10 := km.GetPublicKeysForMilestoneIndex(10)
-	assert.Len(t, keysIndex_10, 3)
+	keysIndex10 := km.PublicKeysForMilestoneIndex(10)
+	assert.Len(t, keysIndex10, 3)
 
-	keysIndex_11 := km.GetPublicKeysForMilestoneIndex(11)
-	assert.Len(t, keysIndex_11, 2)
+	keysIndex11 := km.PublicKeysForMilestoneIndex(11)
+	assert.Len(t, keysIndex11, 2)
 
-	keysIndex_15 := km.GetPublicKeysForMilestoneIndex(15)
-	assert.Len(t, keysIndex_15, 2)
+	keysIndex15 := km.PublicKeysForMilestoneIndex(15)
+	assert.Len(t, keysIndex15, 2)
 
-	keysIndex_16 := km.GetPublicKeysForMilestoneIndex(16)
-	assert.Len(t, keysIndex_16, 1)
+	keysIndex16 := km.PublicKeysForMilestoneIndex(16)
+	assert.Len(t, keysIndex16, 1)
 
-	keysIndex_1000 := km.GetPublicKeysForMilestoneIndex(1000)
-	assert.Len(t, keysIndex_1000, 1)
+	keysIndex1000 := km.PublicKeysForMilestoneIndex(1000)
+	assert.Len(t, keysIndex1000, 1)
 
-	keysSet_8 := km.GetPublicKeysSetForMilestoneIndex(8)
-	assert.Len(t, keysSet_8, 3)
+	keysSet8 := km.PublicKeysSetForMilestoneIndex(8)
+	assert.Len(t, keysSet8, 3)
 
 	var msPubKey1 iotago.MilestonePublicKey
 	copy(msPubKey1[:], pubKey1)
@@ -65,13 +65,13 @@ func TestMilestoneKeyManager(t *testing.T) {
 	var msPubKey3 iotago.MilestonePublicKey
 	copy(msPubKey3[:], pubKey3)
 
-	assert.Contains(t, keysSet_8, msPubKey1)
-	assert.Contains(t, keysSet_8, msPubKey2)
-	assert.Contains(t, keysSet_8, msPubKey3)
+	assert.Contains(t, keysSet8, msPubKey1)
+	assert.Contains(t, keysSet8, msPubKey2)
+	assert.Contains(t, keysSet8, msPubKey3)
 
-	keyMapping_8 := km.GetMilestonePublicKeyMappingForMilestoneIndex(8, []ed25519.PrivateKey{privKey1, privKey2, privKey3}, 2)
-	assert.Len(t, keyMapping_8, 2)
+	keyMapping8 := km.MilestonePublicKeyMappingForMilestoneIndex(8, []ed25519.PrivateKey{privKey1, privKey2, privKey3}, 2)
+	assert.Len(t, keyMapping8, 2)
 
-	assert.Equal(t, keyMapping_8[msPubKey1], privKey1)
-	assert.Equal(t, keyMapping_8[msPubKey2], privKey2)
+	assert.Equal(t, keyMapping8[msPubKey1], privKey1)
+	assert.Equal(t, keyMapping8[msPubKey2], privKey2)
 }

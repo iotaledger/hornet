@@ -18,11 +18,13 @@ func runTipSelMetricWorker() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeTipSelMetric, Data: metrics})
 	})
 
-	Plugin.Daemon().BackgroundWorker("Dashboard[TipSelMetricUpdater]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[TipSelMetricUpdater]", func(shutdownSignal <-chan struct{}) {
 		deps.TipSelector.Events.TipSelPerformed.Attach(onTipSelPerformed)
 		<-shutdownSignal
-		log.Info("Stopping Dashboard[TipSelMetricUpdater] ...")
+		Plugin.LogInfo("Stopping Dashboard[TipSelMetricUpdater] ...")
 		deps.TipSelector.Events.TipSelPerformed.Detach(onTipSelPerformed)
-		log.Info("Stopping Dashboard[TipSelMetricUpdater] ... done")
-	}, shutdown.PriorityDashboard)
+		Plugin.LogInfo("Stopping Dashboard[TipSelMetricUpdater] ... done")
+	}, shutdown.PriorityDashboard); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }

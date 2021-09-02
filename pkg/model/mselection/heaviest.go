@@ -245,12 +245,12 @@ func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *storage.MessageMetadata) (
 	defer s.Unlock()
 
 	// filter duplicate messages
-	if _, contains := s.trackedMessages[msgMeta.GetMessageID().ToMapKey()]; contains {
+	if _, contains := s.trackedMessages[msgMeta.MessageID().ToMapKey()]; contains {
 		return
 	}
 
 	parentItems := []*trackedMessage{}
-	for _, parent := range msgMeta.GetParents() {
+	for _, parent := range msgMeta.Parents() {
 		parentItem := s.trackedMessages[parent.ToMapKey()]
 		if parentItem == nil {
 			continue
@@ -264,7 +264,7 @@ func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *storage.MessageMetadata) (
 	// if a new child is added, we expand the bitset by 1 bit and store the Union of the bitsets
 	// of the parents for this child, to know which parts of the cone are referenced by this child.
 	idx := uint(len(s.trackedMessages))
-	it := &trackedMessage{messageID: msgMeta.GetMessageID(), refs: bitset.New(idx + 1).Set(idx)}
+	it := &trackedMessage{messageID: msgMeta.MessageID(), refs: bitset.New(idx + 1).Set(idx)}
 
 	for _, parentItem := range parentItems {
 		it.refs.InPlaceUnion(parentItem.refs)
@@ -278,7 +278,7 @@ func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *storage.MessageMetadata) (
 
 	it.tip = s.tips.PushBack(it)
 
-	return s.GetTrackedMessagesCount()
+	return s.TrackedMessagesCount()
 }
 
 // removeTip removes the tip item from s.
@@ -303,7 +303,7 @@ func (s *HeaviestSelector) tipsToList() *trackedMessagesList {
 	return &trackedMessagesList{msgs: result}
 }
 
-// GetTrackedMessagesCount returns the amount of known messages.
-func (s *HeaviestSelector) GetTrackedMessagesCount() (trackedMessagesCount int) {
+// TrackedMessagesCount returns the amount of known messages.
+func (s *HeaviestSelector) TrackedMessagesCount() (trackedMessagesCount int) {
 	return len(s.trackedMessages)
 }

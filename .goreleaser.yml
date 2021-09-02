@@ -114,6 +114,34 @@ nfpms:
         dst: "/etc/default/hornet"
         type: config
 
+      - src: "private_tangle/config_private_tangle.json"
+        dst: "/var/lib/hornet/private_tangle/config_private_tangle.json"
+        type: config
+
+      - src: "private_tangle/create_snapshot_private_tangle.sh"
+        dst: "/var/lib/hornet/private_tangle/create_snapshot_private_tangle.sh"
+
+      - src: "private_tangle/migration_bootstrap.sh"
+        dst: "/var/lib/hornet/private_tangle/migration_bootstrap.sh"
+
+      - src: "private_tangle/private_tangle_keys.md"
+        dst: "/var/lib/hornet/private_tangle/private_tangle_keys.md"
+
+      - src: "private_tangle/run_2nd.sh"
+        dst: "/var/lib/hornet/private_tangle/run_2nd.sh"
+
+      - src: "private_tangle/run_3rd.sh"
+        dst: "/var/lib/hornet/private_tangle/run_3rd.sh"
+
+      - src: "private_tangle/run_4th.sh"
+        dst: "/var/lib/hornet/private_tangle/run_4th.sh"
+
+      - src: "private_tangle/run_coo_bootstrap.sh"
+        dst: "/var/lib/hornet/private_tangle/run_coo_bootstrap.sh"
+
+      - src: "private_tangle/run_coo.sh"
+        dst: "/var/lib/hornet/private_tangle/run_coo.sh"
+
     dependencies:
       - systemd
       - wget

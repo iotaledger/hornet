@@ -6,29 +6,26 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
-	powpackage "github.com/gohornet/hornet/pkg/pow"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
-			Name:      "PoW",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
+			Name:     "PoW",
+			DepsFunc: func(cDeps dependencies) { deps = cDeps },
+			Params:   params,
+			Provide:  provide,
+			Run:      run,
 		},
 	}
 }
 
 var (
 	CorePlugin *node.CorePlugin
-	log        *logger.Logger
 	deps       dependencies
 )
 
@@ -38,40 +35,39 @@ const (
 
 type dependencies struct {
 	dig.In
-	Handler *powpackage.Handler
+	Handler *pow.Handler
 }
 
 func provide(c *dig.Container) {
-	type handlerdeps struct {
+
+	type handlerDeps struct {
 		dig.In
 		NodeConfig  *configuration.Configuration `name:"nodeConfig"`
 		MinPoWScore float64                      `name:"minPoWScore"`
 	}
 
-	if err := c.Provide(func(deps handlerdeps) *powpackage.Handler {
+	if err := c.Provide(func(deps handlerDeps) *pow.Handler {
 		// init the pow handler with all possible settings
 		powsrvAPIKey, err := utils.LoadStringFromEnvironment("POWSRV_API_KEY")
 		if err == nil && len(powsrvAPIKey) > 12 {
 			powsrvAPIKey = powsrvAPIKey[:12]
 		}
-		return powpackage.New(log, deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
+		return pow.New(CorePlugin.Logger(), deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
-}
-
-func configure() {
-	log = logger.NewLogger(CorePlugin.Name)
 }
 
 func run() {
 
 	// close the PoW handler on shutdown
-	CorePlugin.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
-		log.Info("Starting PoW Handler ... done")
+	if err := CorePlugin.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
+		CorePlugin.LogInfo("Starting PoW Handler ... done")
 		<-shutdownSignal
-		log.Info("Stopping PoW Handler ...")
+		CorePlugin.LogInfo("Stopping PoW Handler ...")
 		deps.Handler.Close()
-		log.Info("Stopping PoW Handler ... done")
-	}, shutdown.PriorityPoWHandler)
+		CorePlugin.LogInfo("Stopping PoW Handler ... done")
+	}, shutdown.PriorityPoWHandler); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 }

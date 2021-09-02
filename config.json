@@ -64,8 +64,8 @@
         "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
       },
       {
-        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin",
-        "delta": "https://mainnet.tanglebay.com/ls/delta_snapshot.bin"
+        "full": "https://cdn.tanglebay.com/snapshots/mainnet/full_snapshot.bin",
+        "delta": "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin"
       }
     ]
   },
@@ -102,6 +102,21 @@
         "key": "ba6d07d1a1aea969e7e435f9f7d1b736ea9e0fcb8de400bf855dba7f2a57e947",
         "start": 552960,
         "end": 2108160
+      },
+      {
+        "key": "760d88e112c0fd210cf16a3dce3443ecf7e18c456c2fb9646cabb2e13e367569",
+        "start": 1333460,
+        "end": 2888660
+      },
+      {
+        "key": "7bac2209b576ea2235539358c7df8ca4d2f2fc35a663c760449e65eba9f8a6e7",
+        "start": 2111060,
+        "end": 3666260
+      },
+      {
+        "key": "edd9c639a719325e465346b84133bf94740b7d476dd87fc949c0e8df516f9954",
+        "start": 2888660,
+        "end": 4443860
       }
     ]
   },
@@ -172,18 +187,16 @@
       "streamReadTimeout": "1m0s",
       "streamWriteTimeout": "10s"
     },
-    "identityPrivateKey": "",
-    "peerStore": {
-      "path": "./p2pstore"
+    "db": {
+      "path": "p2pstore"
     },
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "db": {
-        "path": "./p2pstore"
-      },
       "entryNodes": [
-        "/dns/lucamoser.ch/udp/14926/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
+        "/dns/lucamoser.ch/udp/14826/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
+        "/dns/entry-hornet-0.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaPHdAn7eueBnXtikZMwhfPXaeGJGXDt4RBuLuGgb",
+        "/dns/entry-hornet-1.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaJJqMd5CQvv1A61coSQCYW9PNT1QKPs7xh2Qg5K2",
         "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"
       ],
       "entryNodesPreferIPv6": false,
@@ -209,6 +222,19 @@
     "mpsRateLimit": 0.0,
     "workers": 0,
     "autostart": false
+  },
+  "faucet": {
+    "amount": 10000000,
+    "smallAmount": 1000000,
+    "maxAddressBalance": 20000000,
+    "maxOutputCount": 127,
+    "indexationMessage": "HORNET FAUCET",
+    "batchTimeout": "2s",
+    "powWorkerCount": 0,
+    "website": {
+      "bindAddress": "localhost:8091",
+      "enabled": true
+    }
   },
   "mqtt": {
     "bindAddress": "localhost:1883",

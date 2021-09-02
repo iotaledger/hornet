@@ -1,3 +1,15 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- contribute
+- Pull request
+- GitHub
+- Fork
+description: How to contribute to Hornet.
+image: /img/logo/HornetLogo.png
+---
+
 # Contributing
 
 :::info

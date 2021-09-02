@@ -10,12 +10,10 @@ func setupHealthRoute() {
 	deps.Echo.GET(nodeAPIHealthRoute, func(c echo.Context) error {
 
 		// node mode
-		if !deps.Tangle.IsNodeHealthy() {
-			c.NoContent(http.StatusServiceUnavailable)
-			return nil
+		if deps.Tangle != nil && !deps.Tangle.IsNodeHealthy() {
+			return c.NoContent(http.StatusServiceUnavailable)
 		}
 
-		c.NoContent(http.StatusOK)
-		return nil
+		return c.NoContent(http.StatusOK)
 	})
 }

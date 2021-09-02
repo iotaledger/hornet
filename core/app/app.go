@@ -20,7 +20,7 @@ var (
 	Name = "HORNET"
 
 	// Version of the app.
-	Version = "1.0.4"
+	Version = "1.0.5"
 )
 
 var (
@@ -62,11 +62,11 @@ var (
 func init() {
 	InitPlugin = &node.InitPlugin{
 		Pluggable: node.Pluggable{
-			Name:      "App",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
+			Name:           "App",
+			Params:         params,
+			InitConfigPars: initConfigPars,
+			Provide:        provide,
+			Configure:      configure,
 		},
 		Configs: map[string]*configuration.Configuration{
 			"nodeConfig":    nodeConfig,
@@ -79,14 +79,7 @@ func init() {
 
 var (
 	InitPlugin *node.InitPlugin
-	log        *logger.Logger
-	deps       dependencies
 )
-
-type dependencies struct {
-	dig.In
-	AppInfo *app.AppInfo
-}
 
 func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.InitConfig, error) {
 	flagSets, err := normalizeFlagSets(params)
@@ -95,8 +88,7 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `Usage of %s:
-%s %s
+		fmt.Fprintf(os.Stderr, `Usage of %s (%s %s):
 
 Run '%s tools' to list all available tools.
 
@@ -108,21 +100,58 @@ Command line flags:
 	parseFlags(flagSets)
 	printVersion(flagSets)
 
-	if err := loadCfg(flagSets); err != nil {
+	if err = loadCfg(flagSets); err != nil {
 		return nil, err
 	}
 
-	if err := logger.InitGlobalLogger(nodeConfig); err != nil {
+	if err = nodeConfig.SetDefault(logger.ConfigurationKeyDisableCaller, true); err != nil {
+		panic(err)
+	}
+
+	if err = logger.InitGlobalLogger(nodeConfig); err != nil {
 		panic(err)
 	}
 
 	toolset.HandleTools(nodeConfig)
+
+	fmt.Printf(`
+              ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
+              ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
+              ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
+              ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
+              ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
+              ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
+                                   v%s
+`+"\n", Version)
+
 	printConfig(maskedKeys)
 
 	return &node.InitConfig{
 		EnabledPlugins:  nodeConfig.Strings(CfgNodeEnablePlugins),
 		DisabledPlugins: nodeConfig.Strings(CfgNodeDisablePlugins),
 	}, nil
+}
+
+func initConfigPars(c *dig.Container) {
+
+	type cfgResult struct {
+		dig.Out
+		NodeConfig            *configuration.Configuration `name:"nodeConfig"`
+		PeeringConfig         *configuration.Configuration `name:"peeringConfig"`
+		ProfileConfig         *configuration.Configuration `name:"profilesConfig"`
+		PeeringConfigFilePath string                       `name:"peeringConfigFilePath"`
+	}
+
+	if err := c.Provide(func() cfgResult {
+		return cfgResult{
+			NodeConfig:            nodeConfig,
+			PeeringConfig:         peeringConfig,
+			ProfileConfig:         profileConfig,
+			PeeringConfigFilePath: *peeringCfgFilePath,
+		}
+	}); err != nil {
+		InitPlugin.Panic(err)
+	}
 }
 
 func provide(c *dig.Container) {
@@ -134,42 +163,10 @@ func provide(c *dig.Container) {
 			LatestGitHubVersion: "",
 		}
 	}); err != nil {
-		panic(err)
-	}
-	if err := c.Provide(func() *configuration.Configuration {
-		return nodeConfig
-	}, dig.Name("nodeConfig")); err != nil {
-		panic(err)
-	}
-	if err := c.Provide(func() *configuration.Configuration {
-		return peeringConfig
-	}, dig.Name("peeringConfig")); err != nil {
-		panic(err)
-	}
-	if err := c.Provide(func() *configuration.Configuration {
-		return profileConfig
-	}, dig.Name("profilesConfig")); err != nil {
-		panic(err)
-	}
-	if err := c.Provide(func() string {
-		return *peeringCfgFilePath
-	}, dig.Name("peeringConfigFilePath")); err != nil {
-		panic(err)
+		InitPlugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(InitPlugin.Name)
-
-	fmt.Printf("\n\n"+`
-              ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
-              ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
-              ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
-              ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
-              ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
-              ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
-                                   v%s
-`+"\n\n", deps.AppInfo.Version)
-
-	log.Info("Loading plugins ...")
+	InitPlugin.LogInfo("Loading plugins ...")
 }

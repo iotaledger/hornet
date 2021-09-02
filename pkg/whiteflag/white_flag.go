@@ -85,7 +85,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, meta
 		defer cachedMetadata.Release(true) // meta -1
 
 		// only traverse and process the message if it was not referenced yet
-		return !cachedMetadata.GetMetadata().IsReferenced(), nil
+		return !cachedMetadata.Metadata().IsReferenced(), nil
 	}
 
 	// consumer
@@ -93,23 +93,23 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, meta
 		defer cachedMetadata.Release(true) // meta -1
 
 		// load up message
-		cachedMessage := messagesMemcache.GetCachedMessageOrNil(cachedMetadata.GetMetadata().GetMessageID())
+		cachedMessage := messagesMemcache.CachedMessageOrNil(cachedMetadata.Metadata().MessageID())
 		if cachedMessage == nil {
-			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.GetMetadata().GetMessageID().ToHex(), cachedMetadata.GetMetadata().GetMessageID().ToHex())
+			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.Metadata().MessageID().ToHex(), cachedMetadata.Metadata().MessageID().ToHex())
 		}
 
-		message := cachedMessage.GetMessage()
+		message := cachedMessage.Message()
 
 		// exclude message without transactions
 		if !message.IsTransaction() {
-			wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, message.GetMessageID())
-			wfConf.MessagesExcludedWithoutTransactions = append(wfConf.MessagesExcludedWithoutTransactions, message.GetMessageID())
+			wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, message.MessageID())
+			wfConf.MessagesExcludedWithoutTransactions = append(wfConf.MessagesExcludedWithoutTransactions, message.MessageID())
 			return nil
 		}
 
 		var conflict = storage.ConflictNone
 
-		transaction := message.GetTransaction()
+		transaction := message.Transaction()
 		transactionID, err := transaction.ID()
 		if err != nil {
 			return err
@@ -121,7 +121,7 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, meta
 			return err
 		}
 
-		inputs := message.GetTransactionEssenceUTXOInputs()
+		inputs := message.TransactionEssenceUTXOInputs()
 
 		// go through all the inputs and validate that they are still unspent, in the ledger or were created during confirmation
 		inputOutputs := utxo.Outputs{}
@@ -200,13 +200,13 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, meta
 		depositOutputs := utxo.Outputs{}
 		if conflict == storage.ConflictNone {
 
-			transactionEssence := message.GetTransactionEssence()
+			transactionEssence := message.TransactionEssence()
 			if transactionEssence == nil {
 				return fmt.Errorf("no transaction transactionEssence found")
 			}
 
 			for i := 0; i < len(transactionEssence.Outputs); i++ {
-				output, err := utxo.NewOutput(message.GetMessageID(), transaction, uint16(i))
+				output, err := utxo.NewOutput(message.MessageID(), transaction, uint16(i))
 				if err != nil {
 					return err
 				}
@@ -214,18 +214,18 @@ func ComputeWhiteFlagMutations(s *storage.Storage, msIndex milestone.Index, meta
 			}
 		}
 
-		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.GetMetadata().GetMessageID())
+		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.Metadata().MessageID())
 
 		if conflict != storage.ConflictNone {
 			wfConf.MessagesExcludedWithConflictingTransactions = append(wfConf.MessagesExcludedWithConflictingTransactions, MessageWithConflict{
-				MessageID: cachedMetadata.GetMetadata().GetMessageID(),
+				MessageID: cachedMetadata.Metadata().MessageID(),
 				Conflict:  conflict,
 			})
 			return nil
 		}
 
 		// mark the given message to be part of milestone ledger by changing message inclusion set
-		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.GetMetadata().GetMessageID())
+		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.Metadata().MessageID())
 
 		newSpents := make(utxo.Spents, len(inputOutputs))
 

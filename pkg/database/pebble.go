@@ -10,7 +10,7 @@ import (
 )
 
 // NewPebbleDB creates a new pebble DB instance.
-func NewPebbleDB(directory string, reportCompactionRunning func(running bool), enableFilter bool) *pebbleDB.DB {
+func NewPebbleDB(directory string, reportCompactionRunning func(running bool), enableFilter bool) (*pebbleDB.DB, error) {
 	cache := pebbleDB.NewCache(128 << 20) // 128 MB
 	defer cache.Unref()
 
@@ -238,10 +238,5 @@ func NewPebbleDB(directory string, reportCompactionRunning func(running bool), e
 	// The default value is 1.
 	opts.MaxConcurrentCompactions = 1
 
-	db, err := pebble.CreateDB(directory, opts)
-	if err != nil {
-		panic(err)
-	}
-
-	return db
+	return pebble.CreateDB(directory, opts)
 }

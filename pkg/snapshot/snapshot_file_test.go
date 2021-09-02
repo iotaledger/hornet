@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/blang/vfs/memfs"
+	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -135,13 +136,13 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileWrite, err := fs.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
 			require.NoError(t, err)
 
-			err, _ = snapshot.StreamSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator)
+			_, err = snapshot.StreamSnapshotDataTo(snapshotFileWrite, tt.originTimestamp, tt.originHeader, tt.sepGenerator, tt.outputGenerator, tt.msDiffGenerator)
 			require.NoError(t, err)
 			require.NoError(t, snapshotFileWrite.Close())
 
 			fileInfo, err := fs.Stat(filePath)
 			require.NoError(t, err)
-			fmt.Printf("%s: written (snapshot type: %d) snapshot file size: %d MB\n", tt.name, tt.originHeader.Type, fileInfo.Size()/1024/1024)
+			fmt.Printf("%s: written (snapshot type: %d) snapshot file size: %s\n", tt.name, tt.originHeader.Type, humanize.Bytes(uint64(fileInfo.Size())))
 
 			// read back written data and verify that it is equal
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
@@ -370,6 +371,7 @@ func randLSTransactionSpents() *snapshot.Spent {
 	return &snapshot.Spent{Output: *output, TargetTransactionID: rand32ByteHash()}
 }
 
+//nolint:unparam
 func randEd25519Addr() (*iotago.Ed25519Address, []byte) {
 	// type
 	edAddr := &iotago.Ed25519Address{}

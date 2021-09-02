@@ -28,11 +28,11 @@ func NewIndexation(index []byte, messageID hornet.MessageID) *Indexation {
 	}
 }
 
-func (i *Indexation) GetHash() hornet.MessageID {
+func (i *Indexation) Index() []byte {
 	return i.index
 }
 
-func (i *Indexation) GetMessageID() hornet.MessageID {
+func (i *Indexation) MessageID() hornet.MessageID {
 	return i.messageID
 }
 
@@ -52,11 +52,11 @@ func (i *Indexation) ObjectStorageValue() (_ []byte) {
 
 func CheckIfIndexation(msg *Message) (indexation *iotago.Indexation) {
 
-	if msgIndexation := msg.GetIndexation(); msgIndexation != nil {
+	if msgIndexation := msg.Indexation(); msgIndexation != nil {
 		return msgIndexation
 	}
 
-	if txIndexation := msg.GetTransactionEssenceIndexation(); txIndexation != nil {
+	if txIndexation := msg.TransactionEssenceIndexation(); txIndexation != nil {
 		return txIndexation
 	}
 

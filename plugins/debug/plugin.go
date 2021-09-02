@@ -15,7 +15,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 const (
@@ -71,7 +70,7 @@ const (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
 			Name:      "Debug",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -83,7 +82,6 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	whiteflagParentsSolidTimeout time.Duration
@@ -100,11 +98,9 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		log.Panic("RestAPI plugin needs to be enabled to use the Debug plugin")
+		Plugin.Panic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)

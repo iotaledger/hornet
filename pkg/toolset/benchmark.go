@@ -19,9 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/kvstore/bolt"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
-	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 )
 
 const (
@@ -29,7 +26,7 @@ const (
 	printStatusInterval = 2 * time.Second
 )
 
-func benchmarkIO(nodeConfig *configuration.Configuration, args []string) error {
+func benchmarkIO(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
@@ -37,12 +34,14 @@ func benchmarkIO(nodeConfig *configuration.Configuration, args []string) error {
 		println()
 		println("	[COUNT] 	- objects count (optional)")
 		println("	[SIZE]  	- objects size  (optional)")
-		println("	[DB_ENGINE] - database engine (optional, values: bolt, pebble, rocksdb)")
+		println("	[DB_ENGINE] - database engine (optional, values: pebble, rocksdb)")
+		println()
+		println(fmt.Sprintf("example: %s %d %d %s", ToolBenchmarkIO, 500000, 1000, "rocksdb"))
 	}
 
 	objectCnt := 500000
 	size := 1000
-	dbEngine := "rocksdb"
+	dbEngine := database.EngineRocksDB
 
 	if len(args) > 3 {
 		printUsage()
@@ -53,7 +52,7 @@ func benchmarkIO(nodeConfig *configuration.Configuration, args []string) error {
 		var err error
 		objectCnt, err = strconv.Atoi(args[0])
 		if err != nil {
-			return fmt.Errorf("can't parse COUNT: %v", err)
+			return fmt.Errorf("can't parse COUNT: %w", err)
 		}
 	}
 
@@ -61,7 +60,7 @@ func benchmarkIO(nodeConfig *configuration.Configuration, args []string) error {
 		var err error
 		size, err = strconv.Atoi(args[1])
 		if err != nil {
-			return fmt.Errorf("can't parse SIZE: %v", err)
+			return fmt.Errorf("can't parse SIZE: %w", err)
 		}
 	}
 
@@ -69,24 +68,21 @@ func benchmarkIO(nodeConfig *configuration.Configuration, args []string) error {
 		dbEngine = strings.ToLower(args[2])
 	}
 
-	tempDir, err := ioutil.TempDir("", "benchmarkIO")
+	engine, err := database.DatabaseEngine(dbEngine)
 	if err != nil {
-		return fmt.Errorf("can't create temp dir: %v", err)
+		return err
 	}
 
-	defer os.RemoveAll(tempDir)
+	tempDir, err := ioutil.TempDir("", "benchmarkIO")
+	if err != nil {
+		return fmt.Errorf("can't create temp dir: %w", err)
+	}
 
-	var store kvstore.KVStore
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
-	switch dbEngine {
-	case "pebble":
-		store = pebble.New(database.NewPebbleDB(tempDir, nil, true))
-	case "bolt":
-		store = bolt.New(database.NewBoltDB(tempDir, "bolt.db"))
-	case "rocksdb":
-		store = rocksdb.New(database.NewRocksDB(tempDir))
-	default:
-		return fmt.Errorf("unknown database engine: %s, supported engines: pebble/bolt/rocksdb", dbEngine)
+	store, err := database.StoreWithDefaultSettings(tempDir, true, engine)
+	if err != nil {
+		return fmt.Errorf("database initialization failed: %w", err)
 	}
 
 	batchWriter := kvstore.NewBatchedWriter(store)
@@ -109,18 +105,18 @@ func benchmarkIO(nodeConfig *configuration.Configuration, args []string) error {
 			bytesPerSecond := uint64(float64(bytes) / duration.Seconds())
 			objectsPerSecond := uint64(float64(i) / duration.Seconds())
 			percentage, remaining := utils.EstimateRemainingTime(ts, int64(i), int64(objectCnt))
-			fmt.Println(fmt.Sprintf("Average IO speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, %0.2f%%. %v left...)", humanize.Bytes(bytesPerSecond), i, size, dbEngine, humanize.Bytes(bytes), humanize.Bytes(totalBytes), objectsPerSecond, percentage, remaining.Truncate(time.Second)))
+			fmt.Printf("Average IO speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, %0.2f%%. %v left...)\n", humanize.Bytes(bytesPerSecond), i, size, dbEngine, humanize.Bytes(bytes), humanize.Bytes(totalBytes), objectsPerSecond, percentage, remaining.Truncate(time.Second))
 		}
 	}
 
 	writeDoneWaitGroup.Wait()
 
 	if err := store.Flush(); err != nil {
-		return fmt.Errorf("flush database failed: %v", err)
+		return fmt.Errorf("flush database failed: %w", err)
 	}
 
 	if err := store.Close(); err != nil {
-		return fmt.Errorf("close database failed: %v", err)
+		return fmt.Errorf("close database failed: %w", err)
 	}
 
 	te := time.Now()
@@ -129,17 +125,19 @@ func benchmarkIO(nodeConfig *configuration.Configuration, args []string) error {
 	bytesPerSecond := uint64(float64(totalBytes) / duration.Seconds())
 	objectsPerSecond := uint64(float64(objectCnt) / duration.Seconds())
 
-	fmt.Println(fmt.Sprintf("Average IO speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, took %v)", humanize.Bytes(bytesPerSecond), objectCnt, size, dbEngine, humanize.Bytes(totalBytes), humanize.Bytes(totalBytes), objectsPerSecond, duration.Truncate(time.Millisecond)))
+	fmt.Printf("Average IO speed: %s/s (%dx 32+%d byte chunks with %s database, total %s/%s, %d objects/s, took %v)\n", humanize.Bytes(bytesPerSecond), objectCnt, size, dbEngine, humanize.Bytes(totalBytes), humanize.Bytes(totalBytes), objectsPerSecond, duration.Truncate(time.Millisecond))
 
 	return nil
 }
 
-func benchmarkCPU(nodeConfig *configuration.Configuration, args []string) error {
+func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
 		println(fmt.Sprintf("	%s [THREADS]", ToolBenchmarkCPU))
 		println()
 		println("	[THREADS]  	- thread count (optional)")
+		println()
+		println(fmt.Sprintf("example: %s %d", ToolBenchmarkCPU, 2))
 	}
 
 	threads := runtime.NumCPU()
@@ -154,7 +152,7 @@ func benchmarkCPU(nodeConfig *configuration.Configuration, args []string) error 
 		var err error
 		threads, err = strconv.Atoi(args[0])
 		if err != nil {
-			return fmt.Errorf("can't parse THREADS: %v", err)
+			return fmt.Errorf("can't parse THREADS: %w", err)
 		}
 	}
 
@@ -165,7 +163,7 @@ func benchmarkCPU(nodeConfig *configuration.Configuration, args []string) error 
 
 	// doBenchmarkCPU mines with CURL until the context has been canceled.
 	// it returns the number of calculated hashes.
-	doBenchmarkCPU := func(ctx context.Context, numWorkers int) (uint64, error) {
+	doBenchmarkCPU := func(ctx context.Context, numWorkers int) uint64 {
 		var (
 			done    uint32
 			counter uint64
@@ -193,7 +191,7 @@ func benchmarkCPU(nodeConfig *configuration.Configuration, args []string) error 
 				elapsed := time.Since(ts)
 				percentage, remaining := utils.EstimateRemainingTime(ts, int64(elapsed.Milliseconds()), int64(duration.Milliseconds()))
 				megahashesPerSecond := float64(counter) / (elapsed.Seconds() * 1000000)
-				fmt.Println(fmt.Sprintf("Average CPU speed: %0.2fMH/s (%d thread(s), %0.2f%%. %v left...)", megahashesPerSecond, threads, percentage, remaining.Truncate(time.Second)))
+				fmt.Printf("Average CPU speed: %0.2fMH/s (%d thread(s), %0.2f%%. %v left...)\n", megahashesPerSecond, threads, percentage, remaining.Truncate(time.Second))
 			}
 		}()
 
@@ -213,16 +211,12 @@ func benchmarkCPU(nodeConfig *configuration.Configuration, args []string) error 
 		wg.Wait()
 		close(closing)
 
-		return counter, nil
+		return counter
 	}
 
-	hashes, err := doBenchmarkCPU(ctx, threads)
-	if err != nil {
-		panic(err)
-	}
-
+	hashes := doBenchmarkCPU(ctx, threads)
 	megahashesPerSecond := float64(hashes) / (duration.Seconds() * 1000000)
-	fmt.Println(fmt.Sprintf("Average CPU speed: %0.2fMH/s (%d thread(s), took %v)", megahashesPerSecond, threads, duration.Truncate(time.Millisecond)))
+	fmt.Printf("Average CPU speed: %0.2fMH/s (%d thread(s), took %v)\n", megahashesPerSecond, threads, duration.Truncate(time.Millisecond))
 
 	return nil
 }

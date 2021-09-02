@@ -1,3 +1,15 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- Private Tangle
+- Chrysalis
+- Coordinator
+- Wallet
+description: How to run your own private Chrysalis Tangle
+image: /img/logo/HornetLogo.png
+---
+
 # Private Tangle
 
 This is a small tutorial on how to run your own private [Chrysalis](https://chrysalis.iota.org/) tangle.
@@ -6,7 +18,7 @@ You will need to set up [a Coordinator](https://legacy.docs.iota.org/docs/gettin
 
 ## Preparations
 
-1. [Build HORNET](installation_steps.md).
+1. [Build HORNET](hornet_apt_repository.md).
 2. Install a wallet built for Chrysalis, for example [the cli-wallet](https://github.com/iotaledger/cli-wallet).
 
 ## Configuration
@@ -21,7 +33,7 @@ If you want to use an existing address, search for your address in [the explorer
 
 ```bash
 ...
-go run "..\main.go" tool snapgen private_tangle1 [ADDRESS] 1000000000 "snapshots\private_tangle1\full_snapshot.bin"
+go run "..\main.go" tool snap-gen private_tangle1 [ADDRESS] 1000000000 "snapshots\private_tangle1\full_snapshot.bin"
 ...
 ```
 

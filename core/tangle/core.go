@@ -8,20 +8,17 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	snapshotpkg "github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -36,7 +33,7 @@ const (
 )
 
 func init() {
-	flag.CommandLine.MarkHidden(CfgTangleSyncedAtStartup)
+	_ = flag.CommandLine.MarkHidden(CfgTangleSyncedAtStartup)
 
 	CorePlugin = &node.CorePlugin{
 		Pluggable: node.Pluggable{
@@ -52,7 +49,6 @@ func init() {
 
 var (
 	CorePlugin *node.CorePlugin
-	log        *logger.Logger
 	deps       dependencies
 
 	syncedAtStartup    = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
@@ -67,46 +63,40 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage     *storage.Storage
-	Tangle      *tangle.Tangle
-	Requester   *gossip.Requester
-	Broadcaster *gossip.Broadcaster
-	Snapshot    *snapshotpkg.Snapshot
-	NodeConfig  *configuration.Configuration `name:"nodeConfig"`
+	Database                 *database.Database
+	Storage                  *storage.Storage
+	Tangle                   *tangle.Tangle
+	Requester                *gossip.Requester
+	Broadcaster              *gossip.Broadcaster
+	Snapshot                 *snapshot.Snapshot
+	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
+	DatabaseDebug            bool                         `name:"databaseDebug"`
+	DatabaseAutoRevalidation bool                         `name:"databaseAutoRevalidation"`
+	PruneReceipts            bool                         `name:"pruneReceipts"`
 }
 
 func provide(c *dig.Container) {
+
 	if err := c.Provide(func() *metrics.ServerMetrics {
 		return &metrics.ServerMetrics{}
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
-	type belowmaxdepthdeps struct {
-		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-	}
-
-	if err := c.Provide(func(deps belowmaxdepthdeps) int {
-		return deps.NodeConfig.Int(urts.CfgTipSelBelowMaxDepth)
-	}, dig.Name("belowMaxDepth")); err != nil {
-		panic(err)
-	}
-
-	type tangledeps struct {
+	type tangleDeps struct {
 		dig.In
 		Storage          *storage.Storage
-		RequestQueue     gossippkg.RequestQueue
-		Service          *gossippkg.Service
-		Requester        *gossippkg.Requester
-		MessageProcessor *gossippkg.MessageProcessor
+		RequestQueue     gossip.RequestQueue
+		Service          *gossip.Service
+		Requester        *gossip.Requester
+		MessageProcessor *gossip.MessageProcessor
 		ServerMetrics    *metrics.ServerMetrics
 		ReceiptService   *migrator.ReceiptService     `optional:"true"`
 		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 		BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	}
 
-	if err := c.Provide(func(deps tangledeps) *tangle.Tangle {
+	if err := c.Provide(func(deps tangleDeps) *tangle.Tangle {
 		return tangle.New(
 			logger.NewLogger("Tangle"),
 			deps.Storage,
@@ -122,28 +112,35 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			*syncedAtStartup)
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(CorePlugin.Name)
-
 	// Create a background worker that marks the database as corrupted at clean startup.
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
-	CorePlugin.Daemon().BackgroundWorker("Database Health", func(shutdownSignal <-chan struct{}) {
-		deps.Storage.MarkDatabaseCorrupted()
-	})
+	if err := CorePlugin.Daemon().BackgroundWorker("Database Health", func(_ <-chan struct{}) {
+		if err := deps.Storage.MarkDatabaseCorrupted(); err != nil {
+			CorePlugin.Panic(err)
+		}
+	}, shutdown.PriorityDatabaseHealth); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
-	if deps.Storage.IsDatabaseCorrupted() && !deps.NodeConfig.Bool(database.CfgDatabaseDebug) {
+	databaseCorrupted, err := deps.Storage.IsDatabaseCorrupted()
+	if err != nil {
+		CorePlugin.Panic(err)
+	}
+
+	if databaseCorrupted && !deps.DatabaseDebug {
 		// no need to check for the "deleteDatabase" and "deleteAll" flags,
 		// since the database should only be marked as corrupted,
 		// if it was not deleted before this check.
-		revalidateDatabase := *revalidateDatabase || deps.NodeConfig.Bool(database.CfgDatabaseAutoRevalidation)
+		revalidateDatabase := *revalidateDatabase || deps.DatabaseAutoRevalidation
 		if !revalidateDatabase {
-			log.Panic(`
+			CorePlugin.Panic(`
 HORNET was not shut down properly, the database may be corrupted.
 Please restart HORNET with one of the following flags or enable "db.autoRevalidation" in the config.
 
@@ -152,16 +149,16 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 --deleteAll:      deletes the database and the snapshot files
 `)
 		}
-		log.Warnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
+		CorePlugin.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.NodeConfig.Bool(snapshot.CfgPruningPruneReceipts)); err != nil {
+		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.PruneReceipts); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
-				log.Info("database revalidation aborted")
+				CorePlugin.LogInfo("database revalidation aborted")
 				os.Exit(0)
 			}
-			log.Panicf("%s %s", ErrDatabaseRevalidationFailed, err)
+			CorePlugin.Panicf("%s: %s", ErrDatabaseRevalidationFailed, err)
 		}
-		log.Info("database revalidation successful")
+		CorePlugin.LogInfo("database revalidation successful")
 	}
 
 	configureEvents()
@@ -171,47 +168,53 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 func run() {
 
 	// run a full database garbage collection at startup
-	database.RunGarbageCollection()
+	deps.Database.RunGarbageCollection()
 
-	_ = CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
 		attachHeartbeatEvents()
 		<-shutdownSignal
 		detachHeartbeatEvents()
-	}, shutdown.PriorityHeartbeats)
+	}, shutdown.PriorityHeartbeats); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
-	_ = CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
 		<-shutdownSignal
 		deps.Tangle.AbortMilestoneSolidification()
 
-		log.Info("Flushing caches to database...")
+		CorePlugin.LogInfo("Flushing caches to database...")
 		deps.Storage.ShutdownStorages()
-		log.Info("Flushing caches to database... done")
+		CorePlugin.LogInfo("Flushing caches to database... done")
 
-	}, shutdown.PriorityFlushToDatabase)
+	}, shutdown.PriorityFlushToDatabase); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
 	deps.Tangle.RunTangleProcessor()
 
 	// create a background worker that prints a status message every second
-	_ = CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
 		ticker := timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityStatusReport)
+	}, shutdown.PriorityStatusReport); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
 }
 
 func configureEvents() {
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
 		// notify peers about our new solid milestone index
 		// bee differentiates between solid and confirmed milestone, for hornet it is the same.
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
-	onPruningMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onPruningMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
 		// notify peers about our new pruning milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})
 
-	onLatestMilestoneIndexChanged = events.NewClosure(func(msIndex milestone.Index) {
+	onLatestMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
 		// notify peers about our new latest milestone index
 		deps.Broadcaster.BroadcastHeartbeat(nil)
 	})

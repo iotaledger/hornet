@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 
 	"github.com/iotaledger/hive.go/configuration"
 
@@ -16,7 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
-func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string) error {
+func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 
 	if len(args) > 0 {
 		return fmt.Errorf("too many arguments for '%s'", ToolPwdHash)
@@ -27,31 +27,31 @@ func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string)
 	passwordEnv, err := utils.LoadStringFromEnvironment("HORNET_TOOL_PASSWORD")
 	if err != nil {
 		// get terminal state to be able to restore it in case of an interrupt
-		originalTerminalState, err := terminal.GetState(int(syscall.Stdin))
+		originalTerminalState, err := term.GetState(int(syscall.Stdin))
 		if err != nil {
 			return errors.New("failed to get terminal state")
 		}
 
-		signalChan := make(chan os.Signal)
+		signalChan := make(chan os.Signal, 1)
 		signal.Notify(signalChan, os.Interrupt)
 		go func() {
 			<-signalChan
 			// reset the terminal to the original state if we receive an interrupt
-			terminal.Restore(int(syscall.Stdin), originalTerminalState)
+			_ = term.Restore(int(syscall.Stdin), originalTerminalState)
 			fmt.Println("\naborted... Bye!")
 			os.Exit(1)
 		}()
 
 		fmt.Print("Enter a password: ")
-		password, err = terminal.ReadPassword(int(syscall.Stdin))
+		password, err = term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
-			return err
+			return fmt.Errorf("read password failed: %w", err)
 		}
 
 		fmt.Print("\nRe-enter your password: ")
-		passwordReenter, err := terminal.ReadPassword(int(syscall.Stdin))
+		passwordReenter, err := term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
-			return err
+			return fmt.Errorf("read password failed: %w", err)
 		}
 
 		if !bytes.Equal(password, passwordReenter) {
@@ -63,10 +63,13 @@ func hashPasswordAndSalt(nodeConfig *configuration.Configuration, args []string)
 
 	passwordSalt, err := basicauth.SaltGenerator(32)
 	if err != nil {
-		return err
+		return fmt.Errorf("generating random salt failed: %w", err)
 	}
 
-	passwordKey, err := basicauth.GetPasswordKey(password, passwordSalt)
+	passwordKey, err := basicauth.DerivePasswordKey(password, passwordSalt)
+	if err != nil {
+		return fmt.Errorf("deriving password key failed: %w", err)
+	}
 
 	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %x\n", passwordKey, passwordSalt)
 

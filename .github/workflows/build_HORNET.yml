@@ -1,14 +1,9 @@
 name: Build HORNET
+
 on:
-  push:
-    paths-ignore:
-      - 'docs/**'
-    branches:
-      - main
-      - develop
   pull_request:
     paths-ignore:
-      - 'docs/**'
+      - 'documentation/**'
 
 jobs:
   build:

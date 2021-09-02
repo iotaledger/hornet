@@ -2,7 +2,6 @@ package snapshot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,11 +10,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/dustin/go-humanize"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/utils"
+)
+
+const (
+	timeoutDownloadSnapshotHeader = 5 * time.Second
+	timeoutDownloadSnapshotFile   = 10 * time.Minute
 )
 
 // WriteCounter counts the number of bytes written to it. It implements to the io.Writer interface
@@ -85,7 +91,7 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 		}
 
 		if fullHeader.NetworkID != wantedNetworkID {
-			return ErrInvalidSnapshotAvailabilityState
+			return fmt.Errorf("full snapshot networkID does not match (%d != %d): %w", fullHeader.NetworkID, wantedNetworkID, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		if deltaHeader == nil {
@@ -93,16 +99,16 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 		}
 
 		if deltaHeader.NetworkID != wantedNetworkID {
-			return ErrInvalidSnapshotAvailabilityState
+			return fmt.Errorf("delta snapshot networkID does not match (%d != %d): %w", deltaHeader.NetworkID, wantedNetworkID, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		if fullHeader.SEPMilestoneIndex > deltaHeader.SEPMilestoneIndex {
-			return ErrInvalidSnapshotAvailabilityState
+			return fmt.Errorf("full snapshot SEP index is bigger than delta snapshot SEP index (%d > %d): %w", fullHeader.SEPMilestoneIndex, deltaHeader.SEPMilestoneIndex, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		if fullHeader.SEPMilestoneIndex != deltaHeader.LedgerMilestoneIndex {
 			// delta snapshot file doesn't fit the full snapshot file
-			return ErrInvalidSnapshotAvailabilityState
+			return fmt.Errorf("full snapshot SEP index does not match the delta snapshot ledger index (%d != %d): %w", fullHeader.SEPMilestoneIndex, deltaHeader.LedgerMilestoneIndex, ErrInvalidSnapshotAvailabilityState)
 		}
 
 		return nil
@@ -122,7 +128,7 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 		fullHeader, err := s.downloadHeader(target.Full)
 		if err != nil {
 			// as the full snapshot URL failed to download, we commence further with our targets
-			s.log.Debug(err.Error())
+			s.log.Debugf("downloading full snapshot header from %s failed: %s", target.Full, err)
 			continue
 		}
 
@@ -132,13 +138,13 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 			deltaHeader, err = s.downloadHeader(target.Delta)
 			if err != nil {
 				// it is valid that no delta snapshot file is available on the target.
-				s.log.Debug(err.Error())
+				s.log.Debugf("downloading delta snapshot header from %s failed: %s", target.Delta, err)
 			}
 		}
 
-		if err := checkTargetConsistency(wantedNetworkID, fullHeader, deltaHeader); err != nil {
+		if err = checkTargetConsistency(wantedNetworkID, fullHeader, deltaHeader); err != nil {
 			// the snapshots on the target do not seem to be consistent
-			s.log.Debug(err.Error())
+			s.log.Infof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
 			continue
 		}
 
@@ -168,7 +174,7 @@ func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 
 		s.log.Infof("downloading full snapshot file from %s", target.Full)
 		if err := s.downloadFile(fullPath, target.Full); err != nil {
-			s.log.Warn(err.Error())
+			s.log.Warn(err)
 			// as the full snapshot URL failed to download, we commence further with our targets
 			continue
 		}
@@ -177,7 +183,7 @@ func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 			s.log.Infof("downloading delta snapshot file from %s", target.Delta)
 			if err := s.downloadFile(deltaPath, target.Delta); err != nil {
 				// it is valid that no delta snapshot file is available on the target.
-				s.log.Warn(err.Error())
+				s.log.Warn(err)
 			}
 		}
 		return nil
@@ -188,11 +194,19 @@ func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 
 // downloads a snapshot header from the given url.
 func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
-	resp, err := http.Get(url)
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotHeader)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("download failed: %w", err)
 	}
-	defer resp.Body.Close()
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("download failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)
@@ -203,11 +217,19 @@ func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
 
 // downloads a snapshot file from the given url to the specified path.
 func (s *Snapshot) downloadFile(path string, url string) error {
-	resp, err := http.Get(url)
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
-	defer resp.Body.Close()
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("download failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download failed, server returned status code %d", resp.StatusCode)
@@ -222,6 +244,7 @@ func (s *Snapshot) downloadFile(path string, url string) error {
 	var ok bool
 	defer func() {
 		if !ok {
+			// we don't need to check the error, maybe the file doesn't exist
 			_ = os.Remove(tempFileName)
 		}
 	}()
@@ -237,7 +260,7 @@ func (s *Snapshot) downloadFile(path string, url string) error {
 	fmt.Print("\n")
 
 	_ = out.Close()
-	if err := os.Rename(tempFileName, path); err != nil {
+	if err = os.Rename(tempFileName, path); err != nil {
 		return fmt.Errorf("unable to rename downloaded snapshot file: %w", err)
 	}
 

@@ -77,13 +77,14 @@ func (coo *Coordinator) createSigningFuncWithRetries(signingFunc iotago.Mileston
 		}
 		for i := 0; i < coo.opts.signingRetryAmount; i++ {
 			sigs, err = signingFunc(pubKeys, msEssence)
-			if err == nil {
-				return
+			if err != nil {
+				if i+1 != coo.opts.signingRetryAmount {
+					coo.opts.logger.Warnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
+					time.Sleep(coo.opts.signingRetryTimeout)
+				}
+				continue
 			}
-			if i+1 != coo.opts.signingRetryAmount {
-				coo.opts.logger.Warnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
-				time.Sleep(coo.opts.signingRetryTimeout)
-			}
+			return sigs, nil
 		}
 		coo.opts.logger.Warnf("signing failed after %d attempts: %s ", coo.opts.signingRetryAmount, err)
 		return

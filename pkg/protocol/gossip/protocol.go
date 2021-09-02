@@ -134,25 +134,37 @@ func (p *Protocol) Send(message []byte) error {
 
 // SendMessage sends a storage.Message to the given peer.
 func (p *Protocol) SendMessage(msgData []byte) {
-	messageMsg, _ := NewMessageMsg(msgData)
+	messageMsg, err := NewMessageMsg(msgData)
+	if err != nil {
+		return
+	}
 	p.Enqueue(messageMsg)
 }
 
 // SendHeartbeat sends a Heartbeat to the given peer.
 func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex milestone.Index, latestMsIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) {
-	heartbeatData, _ := NewHeartbeatMsg(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
+	heartbeatData, err := NewHeartbeatMsg(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
+	if err != nil {
+		return
+	}
 	p.Enqueue(heartbeatData)
 }
 
 // SendMessageRequest sends a storage.Message request message to the given peer.
 func (p *Protocol) SendMessageRequest(requestedMessageID hornet.MessageID) {
-	txReqData, _ := NewMessageRequestMsg(requestedMessageID)
+	txReqData, err := NewMessageRequestMsg(requestedMessageID)
+	if err != nil {
+		return
+	}
 	p.Enqueue(txReqData)
 }
 
 // SendMilestoneRequest sends a storage.Milestone request to the given peer.
 func (p *Protocol) SendMilestoneRequest(index milestone.Index) {
-	milestoneRequestData, _ := NewMilestoneRequestMsg(index)
+	milestoneRequestData, err := NewMilestoneRequestMsg(index)
+	if err != nil {
+		return
+	}
 	p.Enqueue(milestoneRequestData)
 }
 

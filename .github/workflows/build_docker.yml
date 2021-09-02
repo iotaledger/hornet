@@ -1,9 +1,6 @@
 name: Build Docker
+
 on:
-  push:
-    paths:
-      - "docker/Dockerfile"
-      - "docker-compose.yml"
   pull_request:
     paths:
       - "docker/Dockerfile"

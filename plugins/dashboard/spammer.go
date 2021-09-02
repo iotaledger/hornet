@@ -17,13 +17,15 @@ func runSpammerMetricWorker() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeAvgSpamMetrics, Data: metrics})
 	})
 
-	Plugin.Daemon().BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(shutdownSignal <-chan struct{}) {
 		spammerplugin.Events.SpamPerformed.Attach(onSpamPerformed)
 		spammerplugin.Events.AvgSpamMetricsUpdated.Attach(onAvgSpamMetricsUpdated)
 		<-shutdownSignal
-		log.Info("Stopping Dashboard[SpammerMetricUpdater] ...")
+		Plugin.LogInfo("Stopping Dashboard[SpammerMetricUpdater] ...")
 		spammerplugin.Events.SpamPerformed.Detach(onSpamPerformed)
 		spammerplugin.Events.AvgSpamMetricsUpdated.Detach(onAvgSpamMetricsUpdated)
-		log.Info("Stopping Dashboard[SpammerMetricUpdater] ... done")
-	}, shutdown.PriorityDashboard)
+		Plugin.LogInfo("Stopping Dashboard[SpammerMetricUpdater] ... done")
+	}, shutdown.PriorityDashboard); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }

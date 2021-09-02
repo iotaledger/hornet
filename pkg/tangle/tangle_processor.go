@@ -8,7 +8,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	gossippkg "github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
@@ -19,12 +19,14 @@ import (
 func (t *Tangle) ConfigureTangleProcessor() {
 
 	t.receiveMsgWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.processIncomingTx(task.Param(0).(*storage.Message), task.Param(1).(*gossippkg.Request), task.Param(2).(*gossippkg.Protocol))
+		t.processIncomingTx(task.Param(0).(*storage.Message), task.Param(1).(*gossip.Request), task.Param(2).(*gossip.Protocol))
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
 	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil)
+		if err := t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil); err != nil {
+			t.log.Debugf("SolidifyMessageAndFutureCone failed: %s", err)
+		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -44,19 +46,19 @@ func (t *Tangle) RunTangleProcessor() {
 
 	// set latest known milestone from database
 	latestMilestoneFromDatabase := t.storage.SearchLatestMilestoneIndexInStore()
-	if latestMilestoneFromDatabase < t.storage.GetConfirmedMilestoneIndex() {
-		latestMilestoneFromDatabase = t.storage.GetConfirmedMilestoneIndex()
+	if latestMilestoneFromDatabase < t.storage.ConfirmedMilestoneIndex() {
+		latestMilestoneFromDatabase = t.storage.ConfirmedMilestoneIndex()
 	}
 
 	t.storage.SetLatestMilestoneIndex(latestMilestoneFromDatabase, t.updateSyncedAtStartup)
 
 	t.startWaitGroup.Add(5)
 
-	onMsgProcessed := events.NewClosure(func(message *storage.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
+	onMsgProcessed := events.NewClosure(func(message *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
 		t.receiveMsgWorkerPool.Submit(message, request, proto)
 	})
 
-	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
+	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
 		// cleanup the future cone solidifier to free the caches
 		t.futureConeSolidifier.Cleanup(true)
 
@@ -97,19 +99,23 @@ func (t *Tangle) RunTangleProcessor() {
 	})
 
 	// create a background worker that "measures" the MPS value every second
-	t.daemon.BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
 		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityMetricsUpdater)
+	}, shutdown.PriorityMetricsUpdater); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
 		t.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		t.startWaitGroup.Done()
 		<-shutdownSignal
 		t.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
-	}, shutdown.PriorityMetricsUpdater)
+	}, shutdown.PriorityMetricsUpdater); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[ReceiveTx] ... done")
 		t.messageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
 		t.Events.MessageSolid.Attach(onMessageSolid)
@@ -121,9 +127,11 @@ func (t *Tangle) RunTangleProcessor() {
 		t.Events.MessageSolid.Detach(onMessageSolid)
 		t.receiveMsgWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
-	}, shutdown.PriorityReceiveTxWorker)
+	}, shutdown.PriorityReceiveTxWorker); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[FutureConeSolidifier] ... done")
 		t.futureConeSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
@@ -131,9 +139,11 @@ func (t *Tangle) RunTangleProcessor() {
 		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ...")
 		t.futureConeSolidifierWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ... done")
-	}, shutdown.PrioritySolidifierGossip)
+	}, shutdown.PrioritySolidifierGossip); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
 		t.storage.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
@@ -148,9 +158,11 @@ func (t *Tangle) RunTangleProcessor() {
 		t.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
 		t.processValidMilestoneWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
-	}, shutdown.PriorityMilestoneProcessor)
+	}, shutdown.PriorityMilestoneProcessor); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
-	t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
 		t.milestoneSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
@@ -159,7 +171,9 @@ func (t *Tangle) RunTangleProcessor() {
 		t.milestoneSolidifierWorkerPool.StopAndWait()
 		t.futureConeSolidifier.Cleanup(true)
 		t.log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
-	}, shutdown.PriorityMilestoneSolidifier)
+	}, shutdown.PriorityMilestoneSolidifier); err != nil {
+		t.log.Panicf("failed to start worker: %s", err)
+	}
 
 }
 
@@ -172,9 +186,9 @@ func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
 	return t.receiveMsgWorkerPool.GetPendingQueueSize() > (t.receiveMsgQueueSize / 2)
 }
 
-func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossippkg.Request, proto *gossippkg.Protocol) {
+func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
 
-	latestMilestoneIndex := t.storage.GetLatestMilestoneIndex()
+	latestMilestoneIndex := t.storage.LatestMilestoneIndex()
 	isNodeSyncedWithinBelowMaxDepth := t.storage.IsNodeSyncedWithinBelowMaxDepth()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
@@ -197,14 +211,14 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 			t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
 		}
 
-		confirmedMilestoneIndex := t.storage.GetConfirmedMilestoneIndex()
+		confirmedMilestoneIndex := t.storage.ConfirmedMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = confirmedMilestoneIndex
 		}
 
 		if t.storage.IsNodeAlmostSynced() {
 			// try to solidify the message and its future cone
-			t.futureConeSolidifierWorkerPool.Submit(cachedMsg.GetCachedMetadata()) // meta pass +1
+			t.futureConeSolidifierWorkerPool.Submit(cachedMsg.CachedMetadata()) // meta pass +1
 		}
 
 		t.Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, confirmedMilestoneIndex)
@@ -221,12 +235,12 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
 	// with the message it issued itself because the message may be not solid yet and therefore their database entries
 	// are not created yet.
-	t.Events.ProcessedMessage.Trigger(incomingMsg.GetMessageID())
-	t.messageProcessedSyncEvent.Trigger(incomingMsg.GetMessageID().ToMapKey())
+	t.Events.ProcessedMessage.Trigger(incomingMsg.MessageID())
+	t.messageProcessedSyncEvent.Trigger(incomingMsg.MessageID().ToMapKey())
 
 	if request != nil {
 		// mark the received request as processed
-		t.requestQueue.Processed(incomingMsg.GetMessageID())
+		t.requestQueue.Processed(incomingMsg.MessageID())
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when
@@ -244,7 +258,7 @@ func (t *Tangle) RegisterMessageProcessedEvent(messageID hornet.MessageID) chan 
 	return t.messageProcessedSyncEvent.RegisterEvent(messageID.ToMapKey())
 }
 
-// DeregisterMessageProcessedEvent removes a registed event to free the memory if not used.
+// DeregisterMessageProcessedEvent removes a registered event to free the memory if not used.
 func (t *Tangle) DeregisterMessageProcessedEvent(messageID hornet.MessageID) {
 	t.messageProcessedSyncEvent.DeregisterEvent(messageID.ToMapKey())
 }
@@ -254,7 +268,7 @@ func (t *Tangle) RegisterMessageSolidEvent(messageID hornet.MessageID) chan stru
 	return t.messageSolidSyncEvent.RegisterEvent(messageID.ToMapKey())
 }
 
-// DeregisterMessageSolidEvent removes a registed event to free the memory if not used.
+// DeregisterMessageSolidEvent removes a registered event to free the memory if not used.
 func (t *Tangle) DeregisterMessageSolidEvent(messageID hornet.MessageID) {
 	t.messageSolidSyncEvent.DeregisterEvent(messageID.ToMapKey())
 }
@@ -264,7 +278,7 @@ func (t *Tangle) RegisterMilestoneConfirmedEvent(msIndex milestone.Index) chan s
 	return t.milestoneConfirmedSyncEvent.RegisterEvent(msIndex)
 }
 
-// DeregisterMilestoneConfirmedEvent removes a registed event to free the memory if not used.
+// DeregisterMilestoneConfirmedEvent removes a registered event to free the memory if not used.
 func (t *Tangle) DeregisterMilestoneConfirmedEvent(msIndex milestone.Index) {
 	t.milestoneConfirmedSyncEvent.DeregisterEvent(msIndex)
 }
@@ -289,8 +303,8 @@ func (t *Tangle) PrintStatus() {
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			t.receiveMsgWorkerPool.GetPendingQueueSize(),
-			t.storage.GetConfirmedMilestoneIndex(),
-			t.storage.GetLatestMilestoneIndex(),
+			t.storage.ConfirmedMilestoneIndex(),
+			t.storage.LatestMilestoneIndex(),
 			t.lastIncomingMPS,
 			t.lastNewMPS,
 			t.lastOutgoingMPS,

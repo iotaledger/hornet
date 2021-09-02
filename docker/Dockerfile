@@ -1,6 +1,6 @@
 # https://hub.docker.com/_/golang
-# golang 1.16.4-buster amd64
-FROM golang@sha256:f7a5c5872d4bb68e152be72e4a4bf9a142a47ec2dcbb4074798d4feb6197abd7 AS build
+# golang 1.16.7-buster amd64
+FROM golang@sha256:448a13037d13401ad9b31fabf91d6b8a3c5c35d336cc8af760b2ab4ed85d4155 AS build
 
 ARG BUILD_TAGS=builtin_static,rocksdb
 
@@ -8,7 +8,7 @@ LABEL org.label-schema.description="HORNET - The IOTA community node"
 LABEL org.label-schema.name="gohornet/hornet"
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.vcs-url="https://github.com/gohornet/hornet"
-LABEL org.label-schema.usage="https://github.com/gohornet/hornet/blob/master/DOCKER.md"
+LABEL org.label-schema.usage="https://github.com/gohornet/hornet/blob/main/documentation/docs/getting_started/using_docker.md"
 
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates
@@ -38,12 +38,13 @@ RUN GOOS=linux GOARCH=amd64 go build \
 # Image
 ############################
 # https://github.com/GoogleContainerTools/distroless/tree/master/cc
-# using distroless cc image, which includes everything in the base image (glibc, libssl and openssl)
-FROM gcr.io/distroless/cc@sha256:4cad7484b00d98ecb300916b1ab71d6c71babd6860c6c5dd6313be41a8c55adb
+# using distroless cc "nonroot" image, which includes everything in the base image (glibc, libssl and openssl)
+FROM gcr.io/distroless/cc@sha256:1a125767c4a066c5c2c70b326bcc3cff8ae4260de0b488ddcfdfe84f20a373b4
 
-EXPOSE 8081/tcp
-EXPOSE 14265/tcp
 EXPOSE 15600/tcp
+EXPOSE 14626/udp
+EXPOSE 14265/tcp
+EXPOSE 8081/tcp
 EXPOSE 1883/tcp
 
 # Copy the binary into distroless image

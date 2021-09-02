@@ -1,18 +1,16 @@
 name: Test release
 
 on:
-  push:
+  pull_request:
     paths-ignore:
-      - 'docs/**'
-    branches:
-      - main
+      - 'documentation/**'
 
 jobs:
   Release:
     name: Test release
     runs-on: [ubuntu-latest]
     container:
-      image: gohornet/goreleaser-cgo-cross-compiler:1.16.4
+      image: gohornet/goreleaser-cgo-cross-compiler:1.16.7
       volumes: [/repo]
 
     steps:

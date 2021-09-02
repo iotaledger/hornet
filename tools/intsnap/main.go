@@ -159,7 +159,7 @@ var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 func writeFullSnapshot() {
 	full, err := os.Create("full_snapshot.bin")
 	must(err)
-	defer full.Close()
+	defer func() { _ = full.Close() }()
 
 	var seps, sepsMax = 0, 10
 	fullSnapSEPProd := func() (hornet.MessageID, error) {
@@ -190,7 +190,7 @@ func writeFullSnapshot() {
 		return msDiff, nil
 	}
 
-	err, _ = snapshot.StreamSnapshotDataTo(full, uint64(time.Now().Unix()), fullSnapshotHeader, fullSnapSEPProd, fullSnapOutputProd, fullSnapMsDiffProd)
+	_, err = snapshot.StreamSnapshotDataTo(full, uint64(time.Now().Unix()), fullSnapshotHeader, fullSnapSEPProd, fullSnapOutputProd, fullSnapMsDiffProd)
 	must(err)
 }
 
@@ -312,7 +312,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 func writeDeltaSnapshot() {
 	delta, err := os.Create("delta_snapshot.bin")
 	must(err)
-	defer delta.Close()
+	defer func() { _ = delta.Close() }()
 
 	var seps, sepsMax = 0, 10
 	deltaSnapSEPProd := func() (hornet.MessageID, error) {
@@ -333,7 +333,7 @@ func writeDeltaSnapshot() {
 		return msDiff, nil
 	}
 
-	err, _ = snapshot.StreamSnapshotDataTo(delta, uint64(time.Now().Unix()), deltaSnapshotHeader, deltaSnapSEPProd, nil, deltaSnapMsDiffProd)
+	_, err = snapshot.StreamSnapshotDataTo(delta, uint64(time.Now().Unix()), deltaSnapshotHeader, deltaSnapSEPProd, nil, deltaSnapMsDiffProd)
 	must(err)
 }
 

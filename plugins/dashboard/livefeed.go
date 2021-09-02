@@ -14,12 +14,14 @@ func runLiveFeed() {
 		}
 	})
 
-	Plugin.Daemon().BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		defer deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 
 		<-shutdownSignal
-		log.Info("Stopping Dashboard[TxUpdater] ...")
-		log.Info("Stopping Dashboard[TxUpdater] ... done")
-	}, shutdown.PriorityDashboard)
+		Plugin.LogInfo("Stopping Dashboard[TxUpdater] ...")
+		Plugin.LogInfo("Stopping Dashboard[TxUpdater] ... done")
+	}, shutdown.PriorityDashboard); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }

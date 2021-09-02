@@ -1,3 +1,16 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- Configuration
+- JSON
+- Customize
+- Config
+description: This section describes the configuration parameters and their types for your Hornet node.
+image: /img/logo/HornetLogo.png
+---
+
+
 # Core Configuration
 Hornet uses a JSON standard format as a config file. If you are unsure about JSON syntax, you can find more information in the [official JSON specs](https://www.json.org).
 
@@ -87,11 +100,11 @@ Example:
 
 ## 2. Dashboard
 
-| Name          | Description                                                | Type   |
-| :------------ | :--------------------------------------------------------- | :----- |
-| bindAddress   | The bind address on which the dashboard can be access from | string |
-| dev           | Whether to run the dashboard in dev mode                   | bool   |
-| [auth](#auth) | Configuration for dashboard auth                           | object |
+| Name          | Description                                                  | Type   |
+| :------------ | :----------------------------------------------------------- | :----- |
+| bindAddress   | The bind address on which the dashboard can be accessed from | string |
+| dev           | Whether to run the dashboard in dev mode                     | bool   |
+| [auth](#auth) | Configuration for dashboard auth                             | object |
 
 ### Auth
 
@@ -121,7 +134,7 @@ Example:
 
 | Name             | Description                                                                         | Type   |
 | :--------------- | :---------------------------------------------------------------------------------- | :----- |
-| engine           | The used database engine (pebble/bolt/rocksdb)                                      | string |
+| engine           | The used database engine (pebble/rocksdb)                                           | string |
 | path             | The path to the database folder                                                     | string |
 | autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | bool   |
 
@@ -577,7 +590,7 @@ Example:
 | [connectionManager](#connectionmanager) | Configuration for connection manager                               | object           |
 | [gossip](#gossip)                       | Configuration for gossip protocol                                  | object           |
 | identityPrivateKey                      | private key used to derive the node identity (optional)            | string           |
-| [peerStore](#peerstore)                 | Configuration for peer store                                       | object           |
+| [db](#database)                         | Configuration for p2p database                                     | object           |
 | reconnectInterval                       | The time to wait before trying to reconnect to a disconnected peer | string           |
 | [autopeering](#autopeering)             | Configuration for autopeering                                      | object           |
 
@@ -596,27 +609,20 @@ Example:
 | streamReadTimeout  | The read timeout for subsequent reads from the gossip stream                   | string  |
 | streamWriteTimeout | The write timeout for writes to the gossip stream                              | string  |
 
-### PeerStore
+### Database
 
-| Name | Description                | Type   |
-| :--- | :------------------------- | :----- |
-| path | The path to the peer store | string |
+| Name | Description                  | Type   |
+| :--- | :--------------------------- | :----- |
+| path | The path to the p2p database | string |
 
 ### Autopeering
 
-| Name                        | Description                                                      | Type             |
-| :-------------------------- | :--------------------------------------------------------------- | :--------------- |
-| bindAddress                 | The bind address on which the autopeering module listens on      | string           |
-| [db](#autopeering-database) | Configuration for the autopeering database                       | object           |
-| entryNodes                  | The list of autopeering entry nodes to use                       | array of strings |
-| entryNodesPreferIPv6        | Defines if connecting over IPv6 is preferred for entry nodes     | bool             |
-| runAsEntryNode              | Defines whether the node should act as an autopeering entry node | bool             |
-
-#### Autopeering database
-
-| Name | Description                          | Type   |
-| :--- | :----------------------------------- | :----- |
-| path | The path to the autopeering database | string |
+| Name                 | Description                                                      | Type             |
+| :------------------- | :--------------------------------------------------------------- | :--------------- |
+| bindAddress          | The bind address on which the autopeering module listens on      | string           |
+| entryNodes           | The list of autopeering entry nodes to use                       | array of strings |
+| entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes     | bool             |
+| runAsEntryNode       | Defines whether the node should act as an autopeering entry node | bool             |
 
 Example:
 
@@ -636,17 +642,16 @@ Example:
       "streamWriteTimeout": "10s"
     },
     "identityPrivateKey": "",
-    "peerStore": {
-      "path": "./p2pstore"
+    "db": {
+      "path": "p2pstore"
     },
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "db": {
-        "path": "./p2pstore"
-      },
       "entryNodes": [
-        "/dns/lucamoser.ch/udp/14926/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
+        "/dns/lucamoser.ch/udp/14826/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
+        "/dns/entry-hornet-0.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaPHdAn7eueBnXtikZMwhfPXaeGJGXDt4RBuLuGgb",
+        "/dns/entry-hornet-1.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaJJqMd5CQvv1A61coSQCYW9PNT1QKPs7xh2Qg5K2",
         "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"
       ],
       "entryNodesPreferIPv6": false,
@@ -718,7 +723,45 @@ Example:
   },
 ```
 
-## 19. MQTT
+## 19. Faucet
+
+| Name                | Description                                                                                                                  | Type    |
+| :------------------ | :--------------------------------------------------------------------------------------------------------------------------- | :------ |
+| amount              | The amount of funds the requester receives                                                                                   | integer |
+| smallAmount         | The amount of funds the requester receives if the target address has more funds than the faucet amount and less than maximum | integer |
+| maxAddressBalance   | The maximum allowed amount of funds on the target address                                                                    | integer |
+| maxOutputCount      | The maximum output count per faucet message                                                                                  | integer |
+| indexationMessage   | The faucet transaction indexation payload                                                                                    | string  |
+| batchTimeout        | The maximum duration for collecting faucet batches                                                                           | string  |
+| powWorkerCount      | The amount of workers used for calculating PoW when issuing faucet messages                                                  | integer |
+| [website](#website) | Configuration for the faucet website                                                                                         | object  |
+
+### Website
+
+| Name        | Description                                                       | Type   |
+| :---------- | :---------------------------------------------------------------- | :----- |
+| bindAddress | The bind address on which the faucet website can be accessed from | string |
+| enabled     | Whether to host the faucet website                                | bool   |
+
+Example:
+
+```json
+  "faucet": {
+    "amount": 10000000,
+    "smallAmount": 1000000,
+    "maxAddressBalance": 20000000,
+    "maxOutputCount": 127,
+    "indexationMessage": "HORNET FAUCET",
+    "batchTimeout": "2s",
+    "powWorkerCount": 0,
+    "website": {
+      "bindAddress": "localhost:8091",
+      "enabled": true
+    }
+  },
+```
+
+## 20. MQTT
 
 | Name        | Description                                                         | Type    |
 | :---------- | :------------------------------------------------------------------ | :------ |
@@ -736,7 +779,7 @@ Example:
   },
 ```
 
-## 20. Profiling
+## 21. Profiling
 
 | Name        | Description                                       | Type   |
 | :---------- | :------------------------------------------------ | :----- |
@@ -750,7 +793,7 @@ Example:
   },
 ```
 
-## 21. Prometheus
+## 22. Prometheus
 
 | Name                                          | Description                                                  | Type   |
 | :-------------------------------------------- | :----------------------------------------------------------- | :----- |
@@ -800,7 +843,7 @@ Example:
   },
 ```
 
-## 22. Debug
+## 23. Debug
 
 | Name                         | Description                                                                                              | Type   |
 | :--------------------------- | :------------------------------------------------------------------------------------------------------- | :----- |

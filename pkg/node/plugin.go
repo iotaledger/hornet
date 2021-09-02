@@ -2,11 +2,20 @@ package node
 
 import (
 	"strings"
+	"sync"
 
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/daemon"
+	"github.com/iotaledger/hive.go/logger"
+)
+
+type PluginStatus int
+
+const (
+	StatusDisabled PluginStatus = iota
+	StatusEnabled
 )
 
 // PluginParams defines the parameters configuration of a plugin.
@@ -27,12 +36,99 @@ type Pluggable struct {
 	Params *PluginParams
 	// The function to call to initialize the plugin dependencies.
 	DepsFunc interface{}
-	// Provide gets called in the provide stage of node initialization.
+	// InitConfigPars gets called in the init stage of node initialization.
+	// This can be used to provide config parameters even if the pluggable is disabled.
+	InitConfigPars InitConfigParsFunc
+	// PreProvide gets called before the provide stage of node initialization.
+	// This can be used to force disable other pluggables before they get initialized.
+	PreProvide PreProvideFunc
+	// Provide gets called in the provide stage of node initialization (enabled pluggables only).
 	Provide ProvideFunc
-	// Configure gets called in the configure stage of node initialization.
+	// Configure gets called in the configure stage of node initialization (enabled pluggables only).
 	Configure Callback
-	// Run gets called in the run stage of node initialization.
+	// Run gets called in the run stage of node initialization (enabled pluggables only).
 	Run Callback
+
+	// The logger instance used in this plugin.
+	log     *logger.Logger
+	logOnce sync.Once
+}
+
+// Logger instantiates and returns a logger with the name of the plugin.
+func (p *Pluggable) Logger() *logger.Logger {
+	p.logOnce.Do(func() {
+		p.log = logger.NewLogger(p.Name)
+	})
+
+	return p.log
+}
+
+func (p *Pluggable) Daemon() daemon.Daemon {
+	return p.Node.Daemon()
+}
+
+func (p *Pluggable) Identifier() string {
+	return strings.ToLower(strings.Replace(p.Name, " ", "", -1))
+}
+
+// LogDebug uses fmt.Sprint to construct and log a message.
+func (p *Pluggable) LogDebug(args ...interface{}) {
+	p.Logger().Debug(args...)
+}
+
+// LogDebugf uses fmt.Sprintf to log a templated message.
+func (p *Pluggable) LogDebugf(template string, args ...interface{}) {
+	p.Logger().Debugf(template, args...)
+}
+
+// LogError uses fmt.Sprint to construct and log a message.
+func (p *Pluggable) LogError(args ...interface{}) {
+	p.Logger().Error(args...)
+}
+
+// LogErrorf uses fmt.Sprintf to log a templated message.
+func (p *Pluggable) LogErrorf(template string, args ...interface{}) {
+	p.Logger().Errorf(template, args...)
+}
+
+// LogFatal uses fmt.Sprint to construct and log a message, then calls os.Exit.
+func (p *Pluggable) LogFatal(args ...interface{}) {
+	p.Logger().Fatal(args...)
+}
+
+// LogFatalf uses fmt.Sprintf to log a templated message, then calls os.Exit.
+func (p *Pluggable) LogFatalf(template string, args ...interface{}) {
+	p.Logger().Fatalf(template, args...)
+}
+
+// LogInfo uses fmt.Sprint to construct and log a message.
+func (p *Pluggable) LogInfo(args ...interface{}) {
+	p.Logger().Info(args...)
+}
+
+// LogInfof uses fmt.Sprintf to log a templated message.
+func (p *Pluggable) LogInfof(template string, args ...interface{}) {
+	p.Logger().Infof(template, args...)
+}
+
+// LogWarn uses fmt.Sprint to construct and log a message.
+func (p *Pluggable) LogWarn(args ...interface{}) {
+	p.Logger().Warn(args...)
+}
+
+// LogWarnf uses fmt.Sprintf to log a templated message.
+func (p *Pluggable) LogWarnf(template string, args ...interface{}) {
+	p.Logger().Warnf(template, args...)
+}
+
+// Panic uses fmt.Sprint to construct and log a message, then panics.
+func (p *Pluggable) Panic(args ...interface{}) {
+	p.Logger().Panic(args...)
+}
+
+// Panicf uses fmt.Sprintf to log a templated message, then panics.
+func (p *Pluggable) Panicf(template string, args ...interface{}) {
+	p.Logger().Panicf(template, args...)
 }
 
 // InitPlugin is the module initializing configuration of the node.
@@ -51,25 +147,8 @@ type CorePlugin struct {
 	Pluggable
 }
 
-func (c *CorePlugin) Daemon() daemon.Daemon {
-	return c.Node.Daemon()
-}
-
-const (
-	Disabled = iota
-	Enabled
-)
-
 type Plugin struct {
 	Pluggable
 	// The status of the plugin.
-	Status int
-}
-
-func (p *Plugin) Daemon() daemon.Daemon {
-	return p.Node.Daemon()
-}
-
-func (p *Plugin) GetIdentifier() string {
-	return strings.ToLower(strings.Replace(p.Name, " ", "", -1))
+	Status PluginStatus
 }

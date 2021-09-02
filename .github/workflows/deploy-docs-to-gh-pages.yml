@@ -1,18 +1,17 @@
 name: Deploy docs to GitHub Pages
 
 on:
-  pull_request:
-    branches: [dev, main]
   push:
-    branches: [dev, main]
+    branches:
+      - develop
 
 jobs:
   checks:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
         with:
           node-version: '12.x'
       - name: Test Build
@@ -30,8 +29,8 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
         with:
           node-version: '12.x'
       - name: Build

@@ -12,36 +12,46 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 )
 
+// CachedUnreferencedMessage represents a cached unreferenced message.
 type CachedUnreferencedMessage struct {
 	objectstorage.CachedObject
 }
 
 type CachedUnreferencedMessages []*CachedUnreferencedMessage
 
+// Release releases the cached unreferenced messages, to be picked up by the persistence layer (as soon as all consumers are done).
 func (cachedUnreferencedMessages CachedUnreferencedMessages) Release(force ...bool) {
 	for _, cachedUnreferencedMessage := range cachedUnreferencedMessages {
 		cachedUnreferencedMessage.Release(force...)
 	}
 }
 
-func (c *CachedUnreferencedMessage) GetUnreferencedMessage() *UnreferencedMessage {
+// UnreferencedMessage retrieves the unreferenced message, that is cached in this container.
+func (c *CachedUnreferencedMessage) UnreferencedMessage() *UnreferencedMessage {
 	return c.Get().(*UnreferencedMessage)
 }
 
-func unreferencedMessageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
+func unreferencedMessageFactory(key []byte, _ []byte) (objectstorage.StorableObject, error) {
 
 	unreferencedTx := NewUnreferencedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromSlice(key[4:36]))
 	return unreferencedTx, nil
 }
 
-func (s *Storage) GetUnreferencedMessageStorageSize() int {
+func (s *Storage) UnreferencedMessageStorageSize() int {
 	return s.unreferencedMessagesStorage.GetSize()
 }
 
-func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) {
+func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
-	cacheTime, _ := time.ParseDuration(opts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	cacheTime, err := time.ParseDuration(opts.CacheTime)
+	if err != nil {
+		return err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(opts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return err
+	}
 
 	s.unreferencedMessagesStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixUnreferencedMessages}),
@@ -58,10 +68,12 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 				MaxConsumerHoldTime:   leakDetectionMaxConsumerHoldTime,
 			}),
 	)
+
+	return nil
 }
 
-// GetUnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
-func (s *Storage) GetUnreferencedMessageIDs(msIndex milestone.Index, iteratorOptions ...IteratorOption) hornet.MessageIDs {
+// UnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
+func (s *Storage) UnreferencedMessageIDs(msIndex milestone.Index, iteratorOptions ...IteratorOption) hornet.MessageIDs {
 
 	var unreferencedMessageIDs hornet.MessageIDs
 
@@ -86,13 +98,14 @@ func (s *Storage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsume
 	}, iteratorOptions...)
 }
 
+// StoreUnreferencedMessage stores the unreferenced message in the persistence layer and returns a cached object.
 // unreferencedTx +1
 func (s *Storage) StoreUnreferencedMessage(msIndex milestone.Index, messageID hornet.MessageID) *CachedUnreferencedMessage {
 	unreferencedTx := NewUnreferencedMessage(msIndex, messageID)
 	return &CachedUnreferencedMessage{CachedObject: s.unreferencedMessagesStorage.Store(unreferencedTx)}
 }
 
-// DeleteUnreferencedMessages deletes unreferenced message entries.
+// DeleteUnreferencedMessages deletes unreferenced message entries in the cache/persistence layer.
 func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index, iteratorOptions ...IteratorOption) int {
 
 	msIndexBytes := make([]byte, 4)
@@ -112,10 +125,12 @@ func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index, iteratorOp
 	return len(keysToDelete)
 }
 
+// ShutdownUnreferencedMessagesStorage shuts down the unreferenced messages storage.
 func (s *Storage) ShutdownUnreferencedMessagesStorage() {
 	s.unreferencedMessagesStorage.Shutdown()
 }
 
+// FlushUnreferencedMessagesStorage flushes the unreferenced messages storage.
 func (s *Storage) FlushUnreferencedMessagesStorage() {
 	s.unreferencedMessagesStorage.Flush()
 }

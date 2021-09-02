@@ -36,7 +36,9 @@
       "/api/plugins/debug/addresses/ed25519",
       "/api/plugins/debug/ms-diff/*",
       "/api/plugins/debug/requests",
-      "/api/plugins/debug/message-cones/*"
+      "/api/plugins/debug/message-cones/*",
+      "/api/plugins/faucet/info",
+      "/api/plugins/faucet/enqueue"
     ],
     "whitelistedAddresses": [
       "127.0.0.1",
@@ -210,16 +212,12 @@
       "streamReadTimeout": "1m0s",
       "streamWriteTimeout": "10s"
     },
-    "identityPrivateKey": "",
-    "peerStore": {
-      "path": "./p2pstore"
+    "db": {
+      "path": "p2pstore"
     },
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "db": {
-        "path": "./p2pstore"
-      },
       "entryNodes": [],
       "entryNodesPreferIPv6": false,
       "runAsEntryNode": false
@@ -244,6 +242,19 @@
     "mpsRateLimit": 5.0,
     "workers": 0,
     "autostart": true
+  },
+  "faucet": {
+    "amount": 10000000,
+    "smallAmount": 1000000,
+    "maxAddressBalance": 20000000,
+    "maxOutputCount": 127,
+    "indexationMessage": "HORNET FAUCET",
+    "batchTimeout": "2s",
+    "powWorkerCount": 0,
+    "website": {
+      "bindAddress": "localhost:8091",
+      "enabled": true
+    }
   },
   "mqtt": {
     "bindAddress": "localhost:1883",

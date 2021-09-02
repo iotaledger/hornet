@@ -51,7 +51,6 @@ func init() {
 
 var (
 	CorePlugin *node.CorePlugin
-	log        *logger.Logger
 	deps       dependencies
 )
 
@@ -71,13 +70,14 @@ type dependencies struct {
 }
 
 func provide(c *dig.Container) {
+
 	if err := c.Provide(func() gossip.RequestQueue {
 		return gossip.NewRequestQueue()
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
-	type msgprocdependencies struct {
+	type msgProcDeps struct {
 		dig.In
 		Storage       *storage.Storage
 		ServerMetrics *metrics.ServerMetrics
@@ -90,18 +90,23 @@ func provide(c *dig.Container) {
 		Profile       *profile.Profile
 	}
 
-	if err := c.Provide(func(deps msgprocdependencies) *gossip.MessageProcessor {
-		return gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
+	if err := c.Provide(func(deps msgProcDeps) *gossip.MessageProcessor {
+		msgProc, err := gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
 			MinPoWScore:       deps.MinPoWScore,
 			NetworkID:         deps.NetworkID,
 			BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 		})
+		if err != nil {
+			CorePlugin.Panicf("MessageProcessor initialization failed: %s", err)
+		}
+
+		return msgProc
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
-	type servicedeps struct {
+	type serviceDeps struct {
 		dig.In
 		Host          host.Host
 		Manager       *p2p.Manager
@@ -111,7 +116,7 @@ func provide(c *dig.Container) {
 		NetworkID     uint64                       `name:"networkId"`
 	}
 
-	if err := c.Provide(func(deps servicedeps) *gossip.Service {
+	if err := c.Provide(func(deps serviceDeps) *gossip.Service {
 		return gossip.NewService(
 			protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, deps.NetworkID)),
 			deps.Host, deps.Manager, deps.ServerMetrics,
@@ -121,10 +126,10 @@ func provide(c *dig.Container) {
 			gossip.WithStreamWriteTimeout(deps.NodeConfig.Duration(CfgP2PGossipStreamWriteTimeout)),
 		)
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
-	type requesterdeps struct {
+	type requesterDeps struct {
 		dig.In
 		Service      *gossip.Service
 		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
@@ -132,32 +137,31 @@ func provide(c *dig.Container) {
 		Storage      *storage.Storage
 	}
 
-	if err := c.Provide(func(deps requesterdeps) *gossip.Requester {
+	if err := c.Provide(func(deps requesterDeps) *gossip.Requester {
 		return gossip.NewRequester(deps.Service,
 			deps.RequestQueue,
 			deps.Storage,
 			gossip.WithRequesterDiscardRequestsOlderThan(deps.NodeConfig.Duration(CfgRequestsDiscardOlderThan)),
 			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.NodeConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 
-	type broadcasterdeps struct {
+	type broadcasterDeps struct {
 		dig.In
 		Service *gossip.Service
 		Manager *p2p.Manager
 		Storage *storage.Storage
 	}
 
-	if err := c.Provide(func(deps broadcasterdeps) *gossip.Broadcaster {
+	if err := c.Provide(func(deps broadcasterDeps) *gossip.Broadcaster {
 		return gossip.NewBroadcaster(deps.Service, deps.Manager, deps.Storage, 1000)
 	}); err != nil {
-		panic(err)
+		CorePlugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(CorePlugin.Name)
 
 	// don't re-enqueue pending requests in case the node is running hot
 	deps.Requester.AddBackPressureFunc(func() bool {
@@ -178,7 +182,7 @@ func configure() {
 			close(protocolTerminated)
 		}))
 
-		_ = CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
+		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ <-chan struct{}) {
 			buf := make([]byte, readBufSize)
 			// only way to break out is to Reset() the stream
 			for {
@@ -191,16 +195,18 @@ func configure() {
 					return
 				}
 			}
-		}, shutdown.PriorityPeerGossipProtocolRead)
+		}, shutdown.PriorityPeerGossipProtocolRead); err != nil {
+			CorePlugin.LogWarnf("failed to start worker: %s", err)
+		}
 
-		_ = CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
+		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
 			// send heartbeat and latest milestone request
-			if snapshotInfo := deps.Storage.GetSnapshotInfo(); snapshotInfo != nil {
-				latestMilestoneIndex := deps.Storage.GetLatestMilestoneIndex()
+			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
+				latestMilestoneIndex := deps.Storage.LatestMilestoneIndex()
 				syncedCount := deps.Service.SynchronizedCount(latestMilestoneIndex)
 				connectedCount := deps.Manager.ConnectedCount(p2p.PeerRelationKnown)
 				// TODO: overflow not handled for synced/connected
-				proto.SendHeartbeat(deps.Storage.GetConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
+				proto.SendHeartbeat(deps.Storage.ConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 				proto.SendLatestMilestoneRequest()
 			}
 
@@ -217,45 +223,59 @@ func configure() {
 					}
 				}
 			}
-		}, shutdown.PriorityPeerGossipProtocolWrite)
+		}, shutdown.PriorityPeerGossipProtocolWrite); err != nil {
+			CorePlugin.LogWarnf("failed to start worker: %s", err)
+		}
 	}))
 }
 
 func run() {
 
-	_ = CorePlugin.Daemon().BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
-		log.Info("Running GossipService")
+	if err := CorePlugin.Daemon().BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
+		CorePlugin.LogInfo("Running GossipService")
 		deps.Service.Start(shutdownSignal)
-		log.Info("Stopped GossipService")
-	}, shutdown.PriorityGossipService)
+		CorePlugin.LogInfo("Stopped GossipService")
+	}, shutdown.PriorityGossipService); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
-	_ = CorePlugin.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
 		deps.Requester.RunPendingRequestEnqueuer(shutdownSignal)
-	}, shutdown.PriorityRequestsProcessor)
+	}, shutdown.PriorityRequestsProcessor); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
-	_ = CorePlugin.Daemon().BackgroundWorker("RequestQueueDrainer", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("RequestQueueDrainer", func(shutdownSignal <-chan struct{}) {
 		deps.Requester.RunRequestQueueDrainer(shutdownSignal)
-	}, shutdown.PriorityRequestsProcessor)
+	}, shutdown.PriorityRequestsProcessor); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
-	_ = CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
-		log.Info("Running BroadcastQueue")
+	if err := CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
+		CorePlugin.LogInfo("Running BroadcastQueue")
 		onBroadcastMessage := events.NewClosure(deps.Broadcaster.Broadcast)
 		deps.MessageProcessor.Events.BroadcastMessage.Attach(onBroadcastMessage)
 		defer deps.MessageProcessor.Events.BroadcastMessage.Detach(onBroadcastMessage)
 		deps.Broadcaster.RunBroadcastQueueDrainer(shutdownSignal)
-		log.Info("Stopped BroadcastQueue")
-	}, shutdown.PriorityBroadcastQueue)
+		CorePlugin.LogInfo("Stopped BroadcastQueue")
+	}, shutdown.PriorityBroadcastQueue); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
-	_ = CorePlugin.Daemon().BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
-		log.Info("Running MessageProcessor")
+	if err := CorePlugin.Daemon().BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
+		CorePlugin.LogInfo("Running MessageProcessor")
 		deps.MessageProcessor.Run(shutdownSignal)
-		log.Info("Stopped MessageProcessor")
-	}, shutdown.PriorityMessageProcessor)
+		CorePlugin.LogInfo("Stopped MessageProcessor")
+	}, shutdown.PriorityMessageProcessor); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 
-	_ = CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
 		ticker := timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityHeartbeats)
+	}, shutdown.PriorityHeartbeats); err != nil {
+		CorePlugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 // checkHeartbeats sends a heartbeat to each peer and also checks
@@ -268,7 +288,6 @@ func checkHeartbeats() {
 		return time.Since(proto.HeartbeatSentTime) > heartbeatSentInterval
 	})
 
-	//peerIDsToRemove := make(map[string]struct{})
 	peersToReconnect := make(map[peer.ID]struct{})
 
 	// check if peers are alive by checking whether we received heartbeats lately
@@ -286,13 +305,13 @@ func checkHeartbeats() {
 			if p.Autopeering != nil {
 				// it's better to drop the connection to autopeered peers and free the slots for other peers
 				peerIDsToRemove[p.ID] = struct{}{}
-				log.Infof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
+				CorePlugin.LogInfof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
 				return true
 			}
 		*/
 
 		// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
-		log.Infof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
+		CorePlugin.LogInfof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
 		peersToReconnect[proto.PeerID] = struct{}{}
 		return true
 	})
@@ -304,6 +323,7 @@ func checkHeartbeats() {
 		}
 	*/
 
+	// close the connection to the peers to trigger a reconnect
 	for p := range peersToReconnect {
 		conns := deps.Host.Network().ConnsToPeer(p)
 		for _, conn := range conns {

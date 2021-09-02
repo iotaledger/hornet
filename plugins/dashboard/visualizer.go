@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	VisualizerIdLength = 7
+	VisualizerIDLength = 7
 )
 
 // vertex defines a vertex in a DAG.
@@ -44,22 +44,22 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
+	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
 		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // msg -1
 			if !deps.Storage.IsNodeAlmostSynced() {
 				return
 			}
 
-			parentsHex := make([]string, len(msg.GetParents()))
-			for i, parent := range msg.GetParents() {
-				parentsHex[i] = parent.ToHex()[:VisualizerIdLength]
+			parentsHex := make([]string, len(msg.Parents()))
+			for i, parent := range msg.Parents() {
+				parentsHex[i] = parent.ToHex()[:VisualizerIDLength]
 			}
 
 			hub.BroadcastMsg(
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:           msg.GetMessageID().ToHex(),
+						ID:           msg.MessageID().ToHex(),
 						Parents:      parentsHex,
 						IsSolid:      metadata.IsSolid(),
 						IsReferenced: metadata.IsReferenced(),
@@ -82,7 +82,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: cachedMsgMeta.GetMetadata().GetMessageID().ToHex()[:VisualizerIdLength],
+						ID: metadata.MessageID().ToHex()[:VisualizerIDLength],
 					},
 				},
 			)
@@ -100,14 +100,14 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: cachedMilestone.GetMilestone().MessageID.ToHex()[:VisualizerIdLength],
+					ID: cachedMilestone.Milestone().MessageID.ToHex()[:VisualizerIDLength],
 				},
 			},
 		)
 	})
 
 	// show checkpoints as milestones in the coordinator node
-	onIssuedCheckpointMessage := events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, messageID hornet.MessageID) {
+	onIssuedCheckpointMessage := events.NewClosure(func(_ int, _ int, _ int, messageID hornet.MessageID) {
 		if !deps.Storage.IsNodeAlmostSynced() {
 			return
 		}
@@ -116,7 +116,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: messageID.ToHex()[:VisualizerIdLength],
+					ID: messageID.ToHex()[:VisualizerIDLength],
 				},
 			},
 		)
@@ -129,14 +129,14 @@ func runVisualizer() {
 
 		excludedIDs := make([]string, len(confirmation.Mutations.MessagesExcludedWithConflictingTransactions))
 		for i, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
-			excludedIDs[i] = messageID.MessageID.ToHex()[:VisualizerIdLength]
+			excludedIDs[i] = messageID.MessageID.ToHex()[:VisualizerIDLength]
 		}
 
 		hub.BroadcastMsg(
 			&Msg{
 				Type: MsgTypeConfirmedInfo,
 				Data: &confirmationinfo{
-					ID:          confirmation.MilestoneMessageID.ToHex()[:VisualizerIdLength],
+					ID:          confirmation.MilestoneMessageID.ToHex()[:VisualizerIDLength],
 					ExcludedIDs: excludedIDs,
 				},
 			},
@@ -152,7 +152,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.ToHex()[:VisualizerIdLength],
+					ID:    tip.MessageID.ToHex()[:VisualizerIDLength],
 					IsTip: true,
 				},
 			},
@@ -168,21 +168,21 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.ToHex()[:VisualizerIdLength],
+					ID:    tip.MessageID.ToHex()[:VisualizerIDLength],
 					IsTip: false,
 				},
 			},
 		)
 	})
 
-	Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
 		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
 		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
 		defer deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
 		deps.Tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
 		defer deps.Tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
-		if cooEvents := coordinatorPlugin.GetEvents(); cooEvents != nil {
+		if cooEvents := coordinatorPlugin.Events(); cooEvents != nil {
 			cooEvents.IssuedCheckpointMessage.Attach(onIssuedCheckpointMessage)
 			defer cooEvents.IssuedCheckpointMessage.Detach(onIssuedCheckpointMessage)
 		}
@@ -198,7 +198,9 @@ func runVisualizer() {
 
 		<-shutdownSignal
 
-		log.Info("Stopping Dashboard[Visualizer] ...")
-		log.Info("Stopping Dashboard[Visualizer] ... done")
-	}, shutdown.PriorityDashboard)
+		Plugin.LogInfo("Stopping Dashboard[Visualizer] ...")
+		Plugin.LogInfo("Stopping Dashboard[Visualizer] ... done")
+	}, shutdown.PriorityDashboard); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }

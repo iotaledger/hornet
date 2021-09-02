@@ -60,8 +60,8 @@
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://comnet.tanglebay.com/ls/full_snapshot.bin",
-        "delta": "https://comnet.tanglebay.com/ls/delta_snapshot.bin"
+        "full": "https://cdn.tanglebay.com/snapshots/comnet/full_snapshot.bin",
+        "delta": "https://cdn.tanglebay.com/snapshots/comnet/delta_snapshot.bin"
       }
     ]
   },
@@ -194,16 +194,12 @@
       "streamReadTimeout": "1m0s",
       "streamWriteTimeout": "10s"
     },
-    "identityPrivateKey": "",
-    "peerStore": {
-      "path": "./p2pstore"
+    "db": {
+      "path": "p2pstore"
     },
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "db": {
-        "path": "./p2pstore"
-      },
       "entryNodes": [
         "/dns/entry-comnet.tanglebay.com/udp/14636/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC",
         "/dns/comnet.positronium.io/udp/14626/autopeering/CiL1Np3Uihmsa2ZpdEtcHPkwSL8qCs9yNktjWx5dyy2S"
@@ -231,6 +227,19 @@
     "mpsRateLimit": 0.0,
     "workers": 0,
     "autostart": false
+  },
+  "faucet": {
+    "amount": 10000000,
+    "smallAmount": 1000000,
+    "maxAddressBalance": 20000000,
+    "maxOutputCount": 127,
+    "indexationMessage": "HORNET FAUCET",
+    "batchTimeout": "2s",
+    "powWorkerCount": 0,
+    "website": {
+      "bindAddress": "localhost:8091",
+      "enabled": true
+    }
   },
   "mqtt": {
     "bindAddress": "localhost:1883",

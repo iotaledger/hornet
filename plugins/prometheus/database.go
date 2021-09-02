@@ -6,8 +6,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/gohornet/hornet/core/database"
-
 	"github.com/iotaledger/hive.go/events"
 )
 
@@ -38,7 +36,7 @@ func configureDatabase() {
 		},
 	)
 
-	deps.DatabaseEvents.DatabaseCompaction.Attach(events.NewClosure(func(running bool) {
+	deps.Database.Events().DatabaseCompaction.Attach(events.NewClosure(func(running bool) {
 		if running {
 			compactionCount.Inc()
 		}
@@ -84,7 +82,7 @@ func configureDatabase() {
 
 func collectDatabase() {
 	databaseSizeBytes.Set(0)
-	dbSize, err := directorySize(deps.NodeConfig.String(database.CfgDatabasePath))
+	dbSize, err := directorySize(deps.DatabasePath)
 	if err == nil {
 		databaseSizeBytes.Set(float64(dbSize))
 	}

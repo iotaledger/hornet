@@ -10,13 +10,12 @@ import (
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:      "VersionCheck",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -28,7 +27,6 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	githubTag *latest.GithubTag
@@ -40,8 +38,6 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
-
 	githubTag = &latest.GithubTag{
 		Owner:             "gohornet",
 		Repository:        "hornet",
@@ -54,10 +50,12 @@ func configure() {
 
 func run() {
 	// create a background worker that checks for latest version every hour
-	_ = Plugin.Node.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Node.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
 		ticker := timeutil.NewTicker(checkLatestVersion, 1*time.Hour, shutdownSignal)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityUpdateCheck)
+	}, shutdown.PriorityUpdateCheck); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 func fixVersion(version string) string {
@@ -85,12 +83,12 @@ func checkLatestVersion() {
 
 	res, err := latest.Check(githubTag, fixVersion(deps.AppInfo.Version))
 	if err != nil {
-		log.Warnf("Update check failed: %s", err)
+		Plugin.LogWarnf("Update check failed: %s", err)
 		return
 	}
 
 	if res.Outdated {
-		log.Infof("Update to %s available on https://github.com/gohornet/hornet/releases/latest", res.Current)
+		Plugin.LogInfof("Update to %s available on https://github.com/gohornet/hornet/releases/latest", res.Current)
 		deps.AppInfo.LatestGitHubVersion = res.Current
 	}
 }

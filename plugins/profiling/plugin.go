@@ -5,6 +5,8 @@ import (
 	_ "net/http/pprof"
 	"runtime"
 
+	"github.com/pkg/errors"
+
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
@@ -13,7 +15,7 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:     "Profiling",
 			DepsFunc: func(cDeps dependencies) { deps = cDeps },
@@ -38,5 +40,13 @@ func run() {
 	runtime.SetBlockProfileRate(5)
 
 	bindAddr := deps.NodeConfig.String(CfgProfilingBindAddress)
-	go http.ListenAndServe(bindAddr, nil) // pprof Server for Debbuging Mutexes
+
+	go func() {
+		Plugin.LogInfof("You can now access the profiling server using: http://%s/debug/pprof/", bindAddr)
+
+		// pprof Server for Debugging
+		if err := http.ListenAndServe(bindAddr, nil); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			Plugin.LogWarnf("Stopped profiling server due to an error (%s)", err)
+		}
+	}()
 }

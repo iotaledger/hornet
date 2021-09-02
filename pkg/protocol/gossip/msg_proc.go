@@ -34,8 +34,8 @@ var (
 	ErrMessageBelowMaxDepth = errors.New("msg is below max depth")
 )
 
-// New creates a new processor which parses messages.
-func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, peeringService *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts *Options) *MessageProcessor {
+// NewMessageProcessor creates a new processor which parses messages.
+func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, peeringService *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts *Options) (*MessageProcessor, error) {
 	proc := &MessageProcessor{
 		storage: storage,
 		Events: MessageProcessorEvents{
@@ -49,8 +49,16 @@ func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, pe
 	}
 
 	wuCacheOpts := opts.WorkUnitCacheOpts
-	cacheTime, _ := time.ParseDuration(wuCacheOpts.CacheTime)
-	leakDetectionMaxConsumerHoldTime, _ := time.ParseDuration(wuCacheOpts.LeakDetectionOptions.MaxConsumerHoldTime)
+
+	cacheTime, err := time.ParseDuration(wuCacheOpts.CacheTime)
+	if err != nil {
+		return nil, err
+	}
+
+	leakDetectionMaxConsumerHoldTime, err := time.ParseDuration(wuCacheOpts.LeakDetectionOptions.MaxConsumerHoldTime)
+	if err != nil {
+		return nil, err
+	}
 
 	proc.workUnits = objectstorage.New(
 		nil,
@@ -86,7 +94,7 @@ func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, pe
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(WorkerQueueSize))
 
-	return proc
+	return proc, nil
 }
 
 func MessageProcessedCaller(handler interface{}, params ...interface{}) {
@@ -105,7 +113,7 @@ func BroadcastCaller(handler interface{}, params ...interface{}) {
 	handler.(func(b *Broadcast))(params[0].(*Broadcast))
 }
 
-// MessageProcessorEventsEvents are the events fired by the MessageProcessor.
+// MessageProcessorEvents are the events fired by the MessageProcessor.
 type MessageProcessorEvents struct {
 	// Fired when a message was fully processed.
 	MessageProcessed *events.Event
@@ -164,20 +172,19 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 // this message would be seen as invalid gossip by other peers.
 func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
-	if msg.GetNetworkID() != proc.opts.NetworkID {
-		return fmt.Errorf("msg has invalid network ID %d instead of %d", msg.GetNetworkID(), proc.opts.NetworkID)
+	if msg.NetworkID() != proc.opts.NetworkID {
+		return fmt.Errorf("msg has invalid network ID %d instead of %d", msg.NetworkID(), proc.opts.NetworkID)
 	}
 
-	score := pow.Score(msg.GetData())
+	score := pow.Score(msg.Data())
 	if score < proc.opts.MinPoWScore {
 		return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
 	}
 
-	cmi := proc.storage.GetConfirmedMilestoneIndex()
+	cmi := proc.storage.ConfirmedMilestoneIndex()
 
-	checkParentFunc := func(parentMsgID iotago.MessageID) error {
-		messageID := hornet.MessageIDFromArray(parentMsgID)
-		cachedMsgMeta := proc.storage.GetCachedMessageMetadataOrNil(messageID) // meta +1
+	checkParentFunc := func(messageID hornet.MessageID) error {
+		cachedMsgMeta := proc.storage.CachedMessageMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			// parent not found
 			entryPointIndex, exists := proc.storage.SolidEntryPointsIndex(messageID)
@@ -195,12 +202,12 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		}
 		defer cachedMsgMeta.Release(true)
 
-		if !cachedMsgMeta.GetMetadata().IsSolid() {
+		if !cachedMsgMeta.Metadata().IsSolid() {
 			// if the parent is not solid, the message itself can't be solid
 			return ErrMessageNotSolid
 		}
 
-		_, ocri := dag.GetConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), cmi) // meta +
+		_, ocri := dag.ConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), cmi) // meta +
 		if (cmi - ocri) > proc.opts.BelowMaxDepth {
 			// the parent is below max depth
 			return ErrMessageBelowMaxDepth
@@ -209,20 +216,20 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		return nil
 	}
 
-	for _, parent := range msg.GetMessage().Parents {
-		err := checkParentFunc(parent)
+	for _, parentMsgID := range msg.Parents() {
+		err := checkParentFunc(parentMsgID)
 		if err != nil {
 			return err
 		}
 	}
 
 	proc.Events.MessageProcessed.Trigger(msg, (*Request)(nil), (*Protocol)(nil))
-	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msg.GetData()})
+	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msg.Data()})
 
 	return nil
 }
 
-// WorkUnitSize returns the size of WorkUnits currently cached.
+// WorkUnitsSize returns the size of WorkUnits currently cached.
 func (proc *MessageProcessor) WorkUnitsSize() int {
 	return proc.workUnits.GetSize()
 }
@@ -230,7 +237,7 @@ func (proc *MessageProcessor) WorkUnitsSize() int {
 // gets a CachedWorkUnit or creates a new one if it not existent.
 func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
 	return &CachedWorkUnit{
-		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(key []byte) objectstorage.StorableObject { // cachedWorkUnit +1
+		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(_ []byte) objectstorage.StorableObject { // cachedWorkUnit +1
 			newlyAdded = true
 			return newWorkUnit(receivedTxBytes, proc)
 		}),
@@ -250,17 +257,17 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 
 	// peers can request the latest milestone we know
 	if msIndex == LatestMilestoneRequestIndex {
-		msIndex = proc.storage.GetLatestMilestoneIndex()
+		msIndex = proc.storage.LatestMilestoneIndex()
 	}
 
-	cachedMessage := proc.storage.GetMilestoneCachedMessageOrNil(msIndex) // message +1
+	cachedMessage := proc.storage.MilestoneCachedMessageOrNil(msIndex) // message +1
 	if cachedMessage == nil {
 		// can't reply if we don't have the wanted milestone
 		return
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.GetMessage().GetMessage().Serialize(iotago.DeSeriModeNoValidation)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(iotago.DeSeriModeNoValidation)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -281,14 +288,14 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	cachedMessage := proc.storage.GetCachedMessageOrNil(hornet.MessageIDFromSlice(data)) // message +1
+	cachedMessage := proc.storage.CachedMessageOrNil(hornet.MessageIDFromSlice(data)) // message +1
 	if cachedMessage == nil {
 		// can't reply if we don't have the requested message
 		return
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.GetMessage().GetMessage().Serialize(iotago.DeSeriModeNoValidation)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(iotago.DeSeriModeNoValidation)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -311,7 +318,7 @@ func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
 	defer cachedWorkUnit.Release(!newlyAdded) // workUnit -1
 
 	workUnit := cachedWorkUnit.WorkUnit()
-	workUnit.addReceivedFrom(p, nil)
+	workUnit.addReceivedFrom(p)
 	proc.processWorkUnit(workUnit, p)
 }
 
@@ -341,12 +348,12 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 		// we need to check for requests here again because there is a race condition
 		// between processing received messages and enqueuing requests.
-		if request := proc.requestQueue.Received(wu.msg.GetMessageID()); request != nil {
+		if request := proc.requestQueue.Received(wu.msg.MessageID()); request != nil {
 			wu.requested = true
 			proc.Events.MessageProcessed.Trigger(wu.msg, request, p)
 		}
 
-		if proc.storage.ContainsMessage(wu.msg.GetMessageID()) {
+		if proc.storage.ContainsMessage(wu.msg.MessageID()) {
 			proc.serverMetrics.KnownMessages.Inc()
 			p.Metrics.KnownMessages.Inc()
 		}
@@ -366,14 +373,14 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	}
 
 	// check the network ID of the message
-	if msg.GetNetworkID() != proc.opts.NetworkID {
+	if msg.NetworkID() != proc.opts.NetworkID {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a message with an invalid network ID"))
 		return
 	}
 
 	// mark the message as received
-	request := proc.requestQueue.Received(msg.GetMessageID())
+	request := proc.requestQueue.Received(msg.MessageID())
 
 	// validate PoW score
 	if request == nil && pow.Score(wu.receivedMsgBytes) < proc.opts.MinPoWScore {
@@ -417,20 +424,20 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 		return
 	}
 
-	_, ocri := dag.GetConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), proc.storage.GetConfirmedMilestoneIndex())
-	if (proc.storage.GetLatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
+	_, ocri := dag.ConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), proc.storage.ConfirmedMilestoneIndex())
+	if (proc.storage.LatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
 		// the solid message was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}
 
-	cachedMsg := proc.storage.GetCachedMessageOrNil(cachedMsgMeta.GetMetadata().GetMessageID())
+	cachedMsg := proc.storage.CachedMessageOrNil(cachedMsgMeta.Metadata().MessageID())
 	if cachedMsg == nil {
 		return
 	}
 	defer cachedMsg.Release(true)
 
-	cachedWorkUnit, _ := proc.workUnitFor(cachedMsg.GetMessage().GetData()) // workUnit +1
-	defer cachedWorkUnit.Release(true)                                      // workUnit -1
+	cachedWorkUnit, _ := proc.workUnitFor(cachedMsg.Message().Data()) // workUnit +1
+	defer cachedWorkUnit.Release(true)                                // workUnit -1
 	wu := cachedWorkUnit.WorkUnit()
 
 	if wu.requested {

@@ -11,7 +11,7 @@ import (
 const (
 	// CfgNodeAlias set an alias to identify a node
 	CfgNodeAlias = "node.alias"
-	// the bind address on which the dashboard can be access from
+	// the bind address on which the dashboard can be accessed from
 	CfgDashboardBindAddress = "dashboard.bindAddress"
 	// whether to run the dashboard in dev mode
 	CfgDashboardDevMode = "dashboard.dev"
@@ -29,8 +29,8 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgNodeAlias, "", "set an alias to identify a node")
-			fs.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be access from")
+			fs.String(CfgNodeAlias, "HORNET node", "set an alias to identify a node")
+			fs.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be accessed from")
 			fs.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
 			fs.Duration(CfgDashboardAuthSessionTimeout, 72*time.Hour, "how long the auth session should last before expiring")
 			fs.String(CfgDashboardAuthUsername, "admin", "the auth username")

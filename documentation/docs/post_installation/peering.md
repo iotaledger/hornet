@@ -1,3 +1,16 @@
+---
+keywords:
+- IOTA Node 
+- Hornet Node
+- configuration
+- peer
+- peering
+- identity
+- autopeering
+description: How to configure your nodes peers, neighbors and auto-peering. 
+image: /img/logo/HornetLogo.png
+---
+
 # Peering Configuration
 
 The IOTA network is a distributed network. It uses a gossip protocol to broadcast data among IOTA nodes. To participate in a network, each node has to establish a secure connection to other nodes in the network (to its peer neighbors), and mutually exchange messages.
@@ -7,43 +20,38 @@ The IOTA network is a distributed network. It uses a gossip protocol to broadcas
 Each node can be uniquely identified by a `peer identity`. `Peer identity` (also called `PeerId`) is represented by a public
 and private key pair. Since `PeerId` is a cryptographic hash of peer's public key, the `PeerId` represents a verifiable link between the given peer and its public key. It enables individual peers to establish a secure communication channel as the hash can be used to verify an identity of the peer.
 
-When it is started for the first time, Hornet will automatically generate a `PeerId`, and save the identity's public key in the `./p2pstore/key.pub` file. The private key will be stored in a BadgerDB within `./p2pstore`. Hornet will keep the generated identity between subsequent restarts.
+When it is started for the first time, Hornet will automatically generate a `PeerId`, and save the identity's private key in the `./p2pstore/identity.key` file. Hornet will keep the generated identity between subsequent restarts.
 
 Each time Hornet starts, the `PeerId` is written to stdout:
 
 ```plaintext
-2021-04-19T14:27:55Z  INFO    P2P     never share your ./p2pstore folder as it contains your node's private key!
-2021-04-19T14:27:55Z  INFO    P2P     generating a new peer identity...
-2021-04-19T14:27:55Z  INFO    P2P     stored public key under p2pstore/key.pub
-2021-04-19T14:27:55Z  INFO    P2P     peer configured, ID: 12D3KooWEWunsQWGvSWYN2VR7wNNoHgae4XikBqwSre8K8sVTefu
+2021-08-23T17:17:50Z	INFO	  P2P	    WARNING: never share your "p2pstore" folder as it contains your node's private key!
+2021-08-23T17:17:50Z	INFO	  P2P	    stored new private key for peer identity under "p2pstore/identity.key"
+2021-08-23T17:17:50Z	INFO	  P2P     peer configured, ID: 12D3KooWQPA5woZRTT9ExAsq6gRrcPqf3bVn5M5taopJ5Uvhw4iz
+
 ```
 
 Your `PeerId` is an essential part of your `multiaddr` used to configure neighbors. For example,  `/dns/example.com/tcp/15600/p2p/12D3KooWHiPg9gzmy1cbTFAUekyLHQKQKvsKmhzB7NJ5xnhK4WKq`, where `12D3KooWHiPg9gzmy1cbTFAUekyLHQKQKvsKmhzB7NJ5xnhK4WKq` corresponds to your `PeerId`. Your `PeerId` is also visible on the start page of the dashboard.
 
-However, we recommended that you pre-generate the identity. This way you can pre-communicate it to your peers before you even start your node, and you will be able to retain the identity in case you accidentally delete your `./p2pstore`.
+However, you can pre-generate the identity if you want. This way you can pre-communicate it to your peers before you even start your node.
 
-You can use the `p2pidentity` CLI tool to generate a `PeerId` which simply generates a key pair and logs it to stdout:
+You can use the `p2pidentity-gen` CLI tool to generate a `PeerId` which simply generates a private key file and logs the output to stdout:
 
 ```bash
-./hornet tools p2pidentity
+./hornet tools p2pidentity-gen
 ```
 
 Example output:
 
 ```plaintext
-Your p2p private key (hex):  64166cc2627c369283cb1dd8412b6259232653611a3ae5cfb52398c23cfaead76af7a3cb775895046b9f28f2cf2b4150a9fd5dfd0ecf5c8d94529818578f40a2
-Your p2p public key (hex):  6af7a3cb775895046b9f28f2cf2b4150a9fd5dfd0ecf5c8d94529818578f40a2
-Your p2p public key (base58):  8CZELJwB3aBzxJgnLMvvt1FirAwNN6jif9LavYTNHCty
-Your p2p PeerID:  12D3KooWH1vQ5SWtEUTVNCCCxxgGeoLZLVz1PnpCcjhcJXcGB9cu
+Your p2p private key (hex):   64166cc2627c369283cb1dd8412b6259232653611a3ae5cfb52398c23cfaead76af7a3cb775895046b9f28f2cf2b4150a9fd5dfd0ecf5c8d94529818578f40a2
+Your p2p public key (hex):    6af7a3cb775895046b9f28f2cf2b4150a9fd5dfd0ecf5c8d94529818578f40a2
+Your p2p public key (base58): 8CZELJwB3aBzxJgnLMvvt1FirAwNN6jif9LavYTNHCty
+Your p2p PeerID:              12D3KooWH1vQ5SWtEUTVNCCCxxgGeoLZLVz1PnpCcjhcJXcGB9cu
 ```
 
-Now, copy the value of `Your p2p private key` to the `p2p.identityPrivateKey` configuration option.
-
-Your Hornet node will now use the specified private key in `p2p.identityPrivateKey` to generate the `PeerId` (which will
-ultimately be stored in `./p2pstore`).
-
 :::info
-In case there already is a `./p2pstore` with another identity, Hornet will alert you that you have a previous identity which does not match with what is defined via `p2p.identityPrivateKey` .  In this case, you should either delete the `./p2pstore` or reset the `p2p.identityPrivateKey`.
+Always take care of your `./p2pstore/identity.key` file, since it contains the private key to your nodes identity.
 :::
 
 More information regarding the `PeerId` is available on the [libp2p docs page](https://docs.libp2p.io/concepts/peer-id/).
@@ -72,7 +80,7 @@ If a node is reachable using a DNS name (for example `node01.iota.org`), then th
 ```
 
 You will need to find out your own `multiaddr` to give to your peers for neighboring. To do so, combine the `peerId` you have gotten
-from the stdout when the Hornet node started up (or which was shown via the `p2pidentity` CLI tool), and your
+from the stdout when the Hornet node started up (or which was shown via the `p2pidentity-gen` CLI tool), and your
 configured `p2p.bindAddress`. Replace the `/ip4/<ip_address>`/`/dns/<hostname>` segments with the actual information.
 
 You can find more information about `multiaddr` at the [libp2p docs page](https://docs.libp2p.io/concepts/addressing/).
@@ -137,7 +145,7 @@ By default, Hornet will peer up to 4 autopeered peers and initiate a gossip prot
 
 ### Entry Node
 
-If you want to run your own node as an autopeering entry node, you should enable `p2p.autopeering.runAsEntryNode`. The base58 encoded public key is in the output of the `p2pidentity` Hornet tool. Alternatively, if you already have an identity in a `./p2pstore`, you can use the `p2pidentityextract` Hornet tool to extract it.
+If you want to run your own node as an autopeering entry node, you should enable `p2p.autopeering.runAsEntryNode`. The base58 encoded public key is in the output of the `p2pidentity-gen` Hornet tool. Alternatively, if you already have an identity in a `./p2pstore`, you can use the `p2pidentity-extract` Hornet tool to extract it.
 
 ### Low/High Watermark
 

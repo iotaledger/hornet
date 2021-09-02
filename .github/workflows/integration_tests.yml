@@ -3,7 +3,7 @@ name: Integration Tests
 on:
   pull_request:
     paths-ignore:
-      - 'docs/**'
+      - 'documentation/**'
 
 jobs:
 
@@ -35,7 +35,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -68,7 +68,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -102,7 +102,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -135,7 +135,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -168,7 +168,7 @@ jobs:
 
       - name: Save logs as artifacts
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: ${{ env.TEST_NAME }}
           path: integration-tests/logs
@@ -201,7 +201,7 @@ jobs:
 
 #      - name: Save logs as artifacts
 #        if: always()
-#        uses: actions/upload-artifact@v1
+#        uses: actions/upload-artifact@v2
 #        with:
 #          name: ${{ env.TEST_NAME }}
 #          path: integration-tests/logs

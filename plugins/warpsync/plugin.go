@@ -14,12 +14,11 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.Enabled,
+		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
 			Name:      "WarpSync",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -32,7 +31,6 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-	log    *logger.Logger
 	deps   dependencies
 
 	warpSync                   *gossip.WarpSync
@@ -59,25 +57,26 @@ type dependencies struct {
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
 	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(CfgWarpSyncAdvancementRange))
 	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.Requester, true)
 	configureEvents()
 }
 
 func run() {
-	Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
 		attachEvents()
 		<-shutdownSignal
 		detachEvents()
-	}, shutdown.PriorityWarpSync)
+	}, shutdown.PriorityWarpSync); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 }
 
 func configureEvents() {
 
 	onGossipProtocolStreamCreated = events.NewClosure(func(p *gossip.Protocol) {
 		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *gossip.Heartbeat) {
-			warpSync.UpdateCurrentConfirmedMilestone(deps.Storage.GetConfirmedMilestoneIndex())
+			warpSync.UpdateCurrentConfirmedMilestone(deps.Storage.ConfirmedMilestoneIndex())
 			warpSync.UpdateTargetMilestone(hb.SolidMilestoneIndex)
 		}))
 	})
@@ -90,13 +89,13 @@ func configureEvents() {
 	onMilestoneSolidificationFailed = events.NewClosure(func(msIndex milestone.Index) {
 		if warpSync.CurrentCheckpoint != 0 && warpSync.CurrentCheckpoint < msIndex {
 			// rerequest since milestone requests could have been lost
-			log.Infof("Requesting missing milestones %d - %d", msIndex, msIndex+milestone.Index(warpSync.AdvancementRange))
+			Plugin.LogInfof("Requesting missing milestones %d - %d", msIndex, msIndex+milestone.Index(warpSync.AdvancementRange))
 			deps.Broadcaster.BroadcastMilestoneRequests(warpSync.AdvancementRange, nil)
 		}
 	})
 
 	onWarpSyncCheckpointUpdated = events.NewClosure(func(nextCheckpoint milestone.Index, oldCheckpoint milestone.Index, advRange int32, target milestone.Index) {
-		log.Infof("Checkpoint updated to milestone %d (target %d)", nextCheckpoint, target)
+		Plugin.LogInfof("Checkpoint updated to milestone %d (target %d)", nextCheckpoint, target)
 		// prevent any requests in the queue above our next checkpoint
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
@@ -105,11 +104,11 @@ func configureEvents() {
 	})
 
 	onWarpSyncTargetUpdated = events.NewClosure(func(checkpoint milestone.Index, newTarget milestone.Index) {
-		log.Infof("Target updated to milestone %d (checkpoint %d)", newTarget, checkpoint)
+		Plugin.LogInfof("Target updated to milestone %d (checkpoint %d)", newTarget, checkpoint)
 	})
 
 	onWarpSyncStart = events.NewClosure(func(targetMsIndex milestone.Index, nextCheckpoint milestone.Index, advRange int32) {
-		log.Infof("Synchronizing to milestone %d", targetMsIndex)
+		Plugin.LogInfof("Synchronizing to milestone %d", targetMsIndex)
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
@@ -119,7 +118,7 @@ func configureEvents() {
 		// it means we already had the milestones in the database, which suggests
 		// that we should manually kick start the milestone solidifier.
 		if msRequested != int(advRange) {
-			log.Info("Manually starting solidifier, as some milestones are already in the database")
+			Plugin.LogInfo("Manually starting solidifier, as some milestones are already in the database")
 			deps.Tangle.TriggerSolidifier()
 		}
 	})
@@ -130,7 +129,7 @@ func configureEvents() {
 		// walks the whole cone if there are already paths between newer milestones in the database.
 		warpSyncMilestoneRequester.Cleanup()
 
-		log.Infof("Synchronized %d milestones in %v (%0.2f MPS)", deltaSynced, took.Truncate(time.Millisecond), float64(referencedMessagesTotal)/took.Seconds())
+		Plugin.LogInfof("Synchronized %d milestones in %v (%0.2f MPS)", deltaSynced, took.Truncate(time.Millisecond), float64(referencedMessagesTotal)/took.Seconds())
 		deps.RequestQueue.Filter(nil)
 	})
 }

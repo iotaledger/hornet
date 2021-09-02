@@ -9,7 +9,6 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-// Storable Object
 type Message struct {
 	objectstorage.StorableObjectFlags
 
@@ -66,15 +65,15 @@ func MessageFromBytes(data []byte, deSeriMode iotago.DeSerializationMode) (*Mess
 	return msg, nil
 }
 
-func (msg *Message) GetMessageID() hornet.MessageID {
+func (msg *Message) MessageID() hornet.MessageID {
 	return msg.messageID
 }
 
-func (msg *Message) GetData() []byte {
+func (msg *Message) Data() []byte {
 	return msg.data
 }
 
-func (msg *Message) GetMessage() *iotago.Message {
+func (msg *Message) Message() *iotago.Message {
 	msg.messageOnce.Do(func() {
 		iotaMsg := &iotago.Message{}
 		if _, err := iotaMsg.Deserialize(msg.data, iotago.DeSeriModeNoValidation); err != nil {
@@ -86,16 +85,16 @@ func (msg *Message) GetMessage() *iotago.Message {
 	return msg.message
 }
 
-func (msg *Message) GetNetworkID() uint64 {
-	return msg.GetMessage().NetworkID
+func (msg *Message) NetworkID() uint64 {
+	return msg.Message().NetworkID
 }
 
-func (msg *Message) GetParents() hornet.MessageIDs {
-	return hornet.MessageIDsFromSliceOfArrays(msg.GetMessage().Parents)
+func (msg *Message) Parents() hornet.MessageIDs {
+	return hornet.MessageIDsFromSliceOfArrays(msg.Message().Parents)
 }
 
 func (msg *Message) IsMilestone() bool {
-	switch msg.GetMessage().Payload.(type) {
+	switch msg.Message().Payload.(type) {
 	case *iotago.Milestone:
 		return true
 	default:
@@ -104,8 +103,8 @@ func (msg *Message) IsMilestone() bool {
 	return false
 }
 
-func (msg *Message) GetMilestone() (ms *iotago.Milestone) {
-	switch ms := msg.GetMessage().Payload.(type) {
+func (msg *Message) Milestone() (ms *iotago.Milestone) {
+	switch ms := msg.Message().Payload.(type) {
 	case *iotago.Milestone:
 		return ms
 	default:
@@ -115,7 +114,7 @@ func (msg *Message) GetMilestone() (ms *iotago.Milestone) {
 }
 
 func (msg *Message) IsTransaction() bool {
-	switch msg.GetMessage().Payload.(type) {
+	switch msg.Message().Payload.(type) {
 	case *iotago.Transaction:
 		return true
 	default:
@@ -124,9 +123,9 @@ func (msg *Message) IsTransaction() bool {
 	return false
 }
 
-func (msg *Message) GetIndexation() *iotago.Indexation {
+func (msg *Message) Indexation() *iotago.Indexation {
 
-	switch payload := msg.GetMessage().Payload.(type) {
+	switch payload := msg.Message().Payload.(type) {
 	case *iotago.Indexation:
 		return payload
 	default:
@@ -134,9 +133,9 @@ func (msg *Message) GetIndexation() *iotago.Indexation {
 	}
 }
 
-func (msg *Message) GetTransaction() *iotago.Transaction {
+func (msg *Message) Transaction() *iotago.Transaction {
 
-	switch payload := msg.GetMessage().Payload.(type) {
+	switch payload := msg.Message().Payload.(type) {
 	case *iotago.Transaction:
 		return payload
 	default:
@@ -144,9 +143,9 @@ func (msg *Message) GetTransaction() *iotago.Transaction {
 	}
 }
 
-func (msg *Message) GetTransactionEssence() *iotago.TransactionEssence {
+func (msg *Message) TransactionEssence() *iotago.TransactionEssence {
 
-	if transaction := msg.GetTransaction(); transaction != nil {
+	if transaction := msg.Transaction(); transaction != nil {
 		switch essence := transaction.Essence.(type) {
 		case *iotago.TransactionEssence:
 			return essence
@@ -157,9 +156,9 @@ func (msg *Message) GetTransactionEssence() *iotago.TransactionEssence {
 	return nil
 }
 
-func (msg *Message) GetTransactionEssenceIndexation() *iotago.Indexation {
+func (msg *Message) TransactionEssenceIndexation() *iotago.Indexation {
 
-	if essence := msg.GetTransactionEssence(); essence != nil {
+	if essence := msg.TransactionEssence(); essence != nil {
 		switch payload := essence.Payload.(type) {
 		case *iotago.Indexation:
 			return payload
@@ -170,10 +169,10 @@ func (msg *Message) GetTransactionEssenceIndexation() *iotago.Indexation {
 	return nil
 }
 
-func (msg *Message) GetTransactionEssenceUTXOInputs() []*iotago.UTXOInputID {
+func (msg *Message) TransactionEssenceUTXOInputs() []*iotago.UTXOInputID {
 
 	var inputs []*iotago.UTXOInputID
-	if essence := msg.GetTransactionEssence(); essence != nil {
+	if essence := msg.TransactionEssence(); essence != nil {
 		for _, input := range essence.Inputs {
 			switch utxoInput := input.(type) {
 			case *iotago.UTXOInput:
@@ -187,9 +186,9 @@ func (msg *Message) GetTransactionEssenceUTXOInputs() []*iotago.UTXOInputID {
 	return inputs
 }
 
-func (msg *Message) GetSignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Signature {
+func (msg *Message) SignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Signature {
 
-	if transaction := msg.GetTransaction(); transaction != nil {
+	if transaction := msg.Transaction(); transaction != nil {
 		switch unlockBlock := transaction.UnlockBlocks[inputIndex].(type) {
 		case *iotago.SignatureUnlockBlock:
 			switch signature := unlockBlock.Signature.(type) {
@@ -199,7 +198,7 @@ func (msg *Message) GetSignatureForInputIndex(inputIndex uint16) *iotago.Ed25519
 				return nil
 			}
 		case *iotago.ReferenceUnlockBlock:
-			return msg.GetSignatureForInputIndex(unlockBlock.Reference)
+			return msg.SignatureForInputIndex(unlockBlock.Reference)
 		default:
 			return nil
 		}

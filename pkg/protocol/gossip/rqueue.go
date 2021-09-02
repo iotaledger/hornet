@@ -55,7 +55,7 @@ type FilterFunc func(r *Request) bool
 
 const DefaultLatencyResolution = 100
 
-// New creates a new RequestQueue where request are prioritized over their milestone index (lower = higher priority).
+// NewRequestQueue creates a new RequestQueue where request are prioritized over their milestone index (lower = higher priority).
 func NewRequestQueue(latencyResolution ...int32) RequestQueue {
 	q := &priorityqueue{
 		queue:      make([]*Request, 0),

@@ -4,7 +4,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -35,7 +34,7 @@ type CachedWorkUnit struct {
 	objectstorage.CachedObject
 }
 
-// WorkUnit gets the underlying WorkUnit.
+// WorkUnit retrieves the work unit, that is cached in this container.
 func (c *CachedWorkUnit) WorkUnit() *WorkUnit {
 	return c.Get().(*WorkUnit)
 }
@@ -91,9 +90,7 @@ func (wu *WorkUnit) Is(state WorkUnitState) bool {
 }
 
 // adds a Request for the given peer to this WorkUnit.
-// requestedMessageID can be nil to flag that this request just reflects a receive from the given
-// peer and has no associated request.
-func (wu *WorkUnit) addReceivedFrom(p *Protocol, requestedMessageID hornet.MessageID) {
+func (wu *WorkUnit) addReceivedFrom(p *Protocol) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	wu.receivedFrom = append(wu.receivedFrom, p)

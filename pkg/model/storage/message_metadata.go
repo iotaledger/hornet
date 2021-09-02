@@ -80,15 +80,15 @@ type MessageMetadata struct {
 	parents hornet.MessageIDs
 }
 
-func (m *MessageMetadata) GetMessageID() hornet.MessageID {
+func (m *MessageMetadata) MessageID() hornet.MessageID {
 	return m.messageID
 }
 
-func (m *MessageMetadata) GetParents() hornet.MessageIDs {
+func (m *MessageMetadata) Parents() hornet.MessageIDs {
 	return m.parents
 }
 
-func (m *MessageMetadata) GetSolidificationTimestamp() int32 {
+func (m *MessageMetadata) SolidificationTimestamp() int32 {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -131,7 +131,7 @@ func (m *MessageMetadata) IsReferenced() bool {
 	return m.metadata.HasBit(MessageMetadataReferenced)
 }
 
-func (m *MessageMetadata) GetReferenced() (bool, milestone.Index) {
+func (m *MessageMetadata) ReferencedWithIndex() (bool, milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -191,7 +191,7 @@ func (m *MessageMetadata) SetConflictingTx(conflict Conflict) {
 	}
 }
 
-func (m *MessageMetadata) GetConflict() Conflict {
+func (m *MessageMetadata) Conflict() Conflict {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -225,14 +225,14 @@ func (m *MessageMetadata) SetConeRootIndexes(ycri milestone.Index, ocri mileston
 	m.SetModified(true)
 }
 
-func (m *MessageMetadata) GetConeRootIndexes() (ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
+func (m *MessageMetadata) ConeRootIndexes() (ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()
 
 	return m.youngestConeRootIndex, m.oldestConeRootIndex, m.coneRootCalculationIndex
 }
 
-func (m *MessageMetadata) GetMetadata() byte {
+func (m *MessageMetadata) Metadata() byte {
 	m.RLock()
 	defer m.RUnlock()
 

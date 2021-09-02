@@ -24,11 +24,12 @@ type SnapshotInfo struct {
 	Metadata        bitmask.BitMask
 }
 
-func (s *Storage) loadSnapshotInfo() {
+func (s *Storage) loadSnapshotInfo() error {
 	info, err := s.readSnapshotInfo()
 	if err != nil {
-		panic(err)
+		return err
 	}
+
 	s.snapshot = info
 	if info != nil {
 		println(fmt.Sprintf(`SnapshotInfo:
@@ -38,6 +39,8 @@ func (s *Storage) loadSnapshotInfo() {
 	PruningIndex: %d
 	Timestamp: %v`, info.NetworkID, info.SnapshotIndex, info.EntryPointIndex, info.PruningIndex, info.Timestamp.Truncate(time.Second)))
 	}
+
+	return nil
 }
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
@@ -88,7 +91,7 @@ func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
 	}, nil
 }
 
-func (i *SnapshotInfo) GetBytes() []byte {
+func (i *SnapshotInfo) Bytes() []byte {
 	marshalUtil := marshalutil.New()
 
 	marshalUtil.WriteUint64(i.NetworkID)
@@ -101,14 +104,7 @@ func (i *SnapshotInfo) GetBytes() []byte {
 	return marshalUtil.Bytes()
 }
 
-func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) {
-
-	println(fmt.Sprintf(`SnapshotInfo:
-	NetworkID: %d
-	SnapshotIndex: %d
-	EntryPointIndex: %d
-	PruningIndex: %d
-	Timestamp: %v`, networkID, snapshotIndex, entryPointIndex, pruningIndex, timestamp.Truncate(time.Second)))
+func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) error {
 
 	sn := &SnapshotInfo{
 		NetworkID:       networkID,
@@ -119,21 +115,22 @@ func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone
 		Metadata:        bitmask.BitMask(0),
 	}
 
-	s.SetSnapshotInfo(sn)
+	return s.SetSnapshotInfo(sn)
 }
 
-func (s *Storage) SetSnapshotInfo(sn *SnapshotInfo) {
+func (s *Storage) SetSnapshotInfo(sn *SnapshotInfo) error {
 	s.snapshotMutex.Lock()
 	defer s.snapshotMutex.Unlock()
 
 	err := s.storeSnapshotInfo(sn)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	s.snapshot = sn
+	return nil
 }
 
-func (s *Storage) GetSnapshotInfo() *SnapshotInfo {
+func (s *Storage) SnapshotInfo() *SnapshotInfo {
 	s.snapshotMutex.RLock()
 	defer s.snapshotMutex.RUnlock()
 

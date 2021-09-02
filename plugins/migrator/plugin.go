@@ -10,14 +10,12 @@ import (
 
 	"github.com/iotaledger/hive.go/timeutil"
 
-	"github.com/gohornet/hornet/core/gracefulshutdown"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 const (
@@ -28,11 +26,11 @@ const (
 )
 
 func init() {
-	flag.CommandLine.MarkHidden(CfgMigratorBootstrap)
-	flag.CommandLine.MarkHidden(CfgMigratorStartIndex)
+	_ = flag.CommandLine.MarkHidden(CfgMigratorBootstrap)
+	_ = flag.CommandLine.MarkHidden(CfgMigratorStartIndex)
 
 	Plugin = &node.Plugin{
-		Status: node.Disabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
 			Name:      "Migrator",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -46,9 +44,7 @@ func init() {
 
 var (
 	Plugin *node.Plugin
-
-	log  *logger.Logger
-	deps dependencies
+	deps   dependencies
 
 	bootstrap  = flag.Bool(CfgMigratorBootstrap, false, "bootstrap the migration process")
 	startIndex = flag.Uint32(CfgMigratorStartIndex, 1, "index of the first milestone to migrate")
@@ -59,37 +55,39 @@ type dependencies struct {
 	UTXOManager     *utxo.Manager
 	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
 	MigratorService *migrator.MigratorService
+	ShutdownHandler *shutdown.ShutdownHandler
 }
 
 // provide provides the MigratorService as a singleton.
 func provide(c *dig.Container) {
-	type serviceDependencies struct {
+
+	type serviceDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
 		Validator  *migrator.Validator
 	}
-	if err := c.Provide(func(deps serviceDependencies) (*migrator.MigratorService, error) {
+
+	if err := c.Provide(func(deps serviceDeps) *migrator.MigratorService {
 
 		maxReceiptEntries := deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries)
 		switch {
 		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
-			panic(fmt.Sprintf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount))
+			Plugin.Panicf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
 		case maxReceiptEntries <= 0:
-			panic(fmt.Sprintf("%s must be greather than 0", CfgMigratorReceiptMaxEntries))
+			Plugin.Panicf("%s must be greather than 0", CfgMigratorReceiptMaxEntries)
 		}
 
 		return migrator.NewService(
 			deps.Validator,
 			deps.NodeConfig.String(CfgMigratorStateFilePath),
 			deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries),
-		), nil
+		)
 	}); err != nil {
-		panic(err)
+		Plugin.Panic(err)
 	}
 }
 
 func configure() {
-	log = logger.NewLogger(Plugin.Name)
 
 	var msIndex *uint32
 	if *bootstrap {
@@ -97,17 +95,18 @@ func configure() {
 	}
 
 	if err := deps.MigratorService.InitState(msIndex, deps.UTXOManager); err != nil {
-		log.Fatalf("failed to initialize migrator: %s", err)
+		Plugin.LogFatalf("failed to initialize migrator: %s", err)
 	}
 }
 
 func run() {
+
 	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
-		log.Infof("Starting %s ... done", Plugin.Name)
+		Plugin.LogInfof("Starting %s ... done", Plugin.Name)
 		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
 
 			if err := common.IsCriticalError(err); err != nil {
-				gracefulshutdown.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err.Error()))
+				deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err))
 				return false
 			}
 
@@ -116,11 +115,11 @@ func run() {
 			}
 
 			// lets just log the err and halt querying for a configured period
-			log.Warn(err)
+			Plugin.LogWarn(err)
 			return timeutil.Sleep(deps.NodeConfig.Duration(CfgMigratorQueryCooldownPeriod), shutdownSignal)
 		})
-		log.Infof("Stopping %s ... done", Plugin.Name)
+		Plugin.LogInfof("Stopping %s ... done", Plugin.Name)
 	}, shutdown.PriorityMigrator); err != nil {
-		log.Panicf("failed to start worker: %s", err)
+		Plugin.Panicf("failed to start worker: %s", err)
 	}
 }

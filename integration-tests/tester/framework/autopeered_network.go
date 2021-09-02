@@ -27,8 +27,8 @@ func (n *AutopeeredNetwork) entryNodePublicKey() string {
 }
 
 // createEntryNode creates the network's entry node.
-func (n *AutopeeredNetwork) createEntryNode(prvKey ed25519.PrivateKey) error {
-	n.entryNodeIdentity = identity.New(prvKey.Public())
+func (n *AutopeeredNetwork) createEntryNode(privKey ed25519.PrivateKey) error {
+	n.entryNodeIdentity = identity.New(privKey.Public())
 
 	// create entry node container
 	n.entryNode = NewDockerContainer(n.dockerClient)
@@ -66,7 +66,7 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumPeers int) error {
 		for _, p := range n.Nodes {
 			peersResponse, err := p.DebugNodeAPIClient.Peers(context.Background())
 			if err != nil {
-				log.Printf("request error: %v\n", err)
+				log.Printf("request error: %s\n", err)
 				continue
 			}
 			p.SetPeers(peersResponse)

@@ -1,10 +1,11 @@
 package autopeering
 
 import (
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"net"
+
+	"github.com/pkg/errors"
 
 	"github.com/multiformats/go-multiaddr"
 
@@ -31,17 +32,17 @@ var (
 	selectionProtocol *selection.Protocol
 )
 
-func configureAutopeering(local *Local) {
+func configureAutopeering(localPeerContainer *autopeering.LocalPeerContainer) {
 	entryNodes, err := parseEntryNodes()
 	if err != nil {
-		log.Warn(err)
+		Plugin.LogWarn(err)
 	}
 
 	gossipServiceKeyHash := fnv.New32a()
 	gossipServiceKeyHash.Write([]byte(p2pServiceKey()))
 	networkID := gossipServiceKeyHash.Sum32()
 
-	discoveryProtocol = discover.New(local.PeerLocal, protocolVersion, networkID, discover.Logger(log.Named("disc")), discover.MasterPeers(entryNodes))
+	discoveryProtocol = discover.New(localPeerContainer.Local(), protocolVersion, networkID, discover.Logger(Plugin.Logger().Named("disc")), discover.MasterPeers(entryNodes))
 
 	// only enable peer selection when the peering plugin is enabled
 	if deps.Manager == nil {
@@ -61,24 +62,24 @@ func configureAutopeering(local *Local) {
 	}
 
 	neighborValidator := selection.NeighborValidator(selection.ValidatorFunc(isValidPeer))
-	selectionProtocol = selection.New(local.PeerLocal, discoveryProtocol, selection.Logger(log.Named("sel")), neighborValidator)
+	selectionProtocol = selection.New(localPeerContainer.Local(), discoveryProtocol, selection.Logger(Plugin.Logger().Named("sel")), neighborValidator)
 }
 
-func start(local *Local, shutdownSignal <-chan struct{}) {
-	log.Info("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
+func start(localPeerContainer *autopeering.LocalPeerContainer, shutdownSignal <-chan struct{}) {
+	Plugin.LogInfo("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
 
-	lPeer := local.PeerLocal
+	lPeer := localPeerContainer.Local()
 	peering := lPeer.Services().Get(service.PeeringKey)
 
 	// resolve the bind address
 	localAddr, err := net.ResolveUDPAddr(peering.Network(), deps.NodeConfig.String(CfgNetAutopeeringBindAddr))
 	if err != nil {
-		log.Fatalf("error resolving %s: %v", deps.NodeConfig.String(CfgNetAutopeeringBindAddr), err)
+		Plugin.LogFatalf("error resolving %s: %s", deps.NodeConfig.String(CfgNetAutopeeringBindAddr), err)
 	}
 
 	conn, err := net.ListenUDP(peering.Network(), localAddr)
 	if err != nil {
-		log.Fatalf("error listening: %v", err)
+		Plugin.LogFatalf("error listening: %s", err)
 	}
 
 	handlers := []server.Handler{discoveryProtocol}
@@ -87,7 +88,7 @@ func start(local *Local, shutdownSignal <-chan struct{}) {
 	}
 
 	// start a server doing discovery and peering
-	srv := server.Serve(lPeer, conn, log.Named("srv"), handlers...)
+	srv := server.Serve(lPeer, conn, Plugin.Logger().Named("srv"), handlers...)
 
 	// start the discovery on that connection
 	discoveryProtocol.Start(srv)
@@ -97,10 +98,10 @@ func start(local *Local, shutdownSignal <-chan struct{}) {
 		selectionProtocol.Start(srv)
 	}
 
-	log.Infof("started: Address=%s/%s PublicKey=%s", localAddr.String(), localAddr.Network(), lPeer.PublicKey().String())
+	Plugin.LogInfof("started: Address=%s/%s PublicKey=%s", localAddr.String(), localAddr.Network(), lPeer.PublicKey().String())
 
 	<-shutdownSignal
-	log.Info("Stopping Autopeering ...")
+	Plugin.LogInfo("Stopping Autopeering ...")
 
 	if selectionProtocol != nil {
 		selectionProtocol.Close()
@@ -110,11 +111,11 @@ func start(local *Local, shutdownSignal <-chan struct{}) {
 	// underlying connection is closed by the server
 	srv.Close()
 
-	if err := local.close(); err != nil {
-		log.Errorf("error closing peer database: %v", err.Error())
+	if err := localPeerContainer.Close(); err != nil {
+		Plugin.LogErrorf("error closing peer database: %s", err)
 	}
 
-	log.Info("Stopping Autopeering ... done")
+	Plugin.LogInfo("Stopping Autopeering ... done")
 }
 
 // parses an entry node multi address string.
@@ -155,7 +156,7 @@ func parseEntryNodes() (result []*peer.Peer, err error) {
 	for _, entryNodeDefinition := range deps.NodeConfig.Strings(CfgNetAutopeeringEntryNodes) {
 		entryNode, err := parseEntryNode(entryNodeDefinition)
 		if err != nil {
-			log.Warnf("invalid entry node; ignoring: %s, error: %v", entryNodeDefinition, err)
+			Plugin.LogWarnf("invalid entry node; ignoring: %s, error: %s", entryNodeDefinition, err)
 			continue
 		}
 		result = append(result, entryNode)

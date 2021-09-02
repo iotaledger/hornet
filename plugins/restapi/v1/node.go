@@ -6,13 +6,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/tipselect"
 )
 
+//nolint:unparam // even if the error is never used, the structure of all routes should be the same
 func info() (*infoResponse, error) {
 
 	var messagesPerSecond, referencedMessagesPerSecond, referencedRate float64
@@ -24,22 +24,22 @@ func info() (*infoResponse, error) {
 	}
 
 	// latest milestone index
-	latestMilestoneIndex := deps.Storage.GetLatestMilestoneIndex()
+	latestMilestoneIndex := deps.Storage.LatestMilestoneIndex()
 
 	// latest milestone timestamp
 	var latestMilestoneTimestamp int64 = 0
-	cachedLatestMilestone := deps.Storage.GetCachedMilestoneOrNil(latestMilestoneIndex)
+	cachedLatestMilestone := deps.Storage.CachedMilestoneOrNil(latestMilestoneIndex)
 	if cachedLatestMilestone != nil {
-		latestMilestoneTimestamp = cachedLatestMilestone.GetMilestone().Timestamp.Unix()
+		latestMilestoneTimestamp = cachedLatestMilestone.Milestone().Timestamp.Unix()
 		cachedLatestMilestone.Release(true)
 	}
 
 	// confirmed milestone index
-	confirmedMilestoneIndex := deps.Storage.GetConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := deps.Storage.ConfirmedMilestoneIndex()
 
 	// pruning index
 	var pruningIndex milestone.Index
-	snapshotInfo := deps.Storage.GetSnapshotInfo()
+	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo != nil {
 		pruningIndex = snapshotInfo.PruningIndex
 	}
@@ -48,7 +48,7 @@ func info() (*infoResponse, error) {
 		Name:                        deps.AppInfo.Name,
 		Version:                     deps.AppInfo.Version,
 		IsHealthy:                   deps.Tangle.IsNodeHealthy(),
-		NetworkID:                   deps.NodeConfig.String(protocfg.CfgProtocolNetworkIDName),
+		NetworkID:                   deps.NetworkIDName,
 		Bech32HRP:                   string(deps.Bech32HRP),
 		MinPoWScore:                 deps.MinPoWScore,
 		MessagesPerSecond:           messagesPerSecond,

@@ -1,13 +1,9 @@
 name: Test Golang dependencies with Snyk
+
 on:
-  push:
-    paths-ignore:
-      - 'docs/**'
-    branches: [main, develop]
   pull_request:
     paths-ignore:
-      - 'docs/**'
-    branches: [main, develop]
+      - 'documentation/**'
 
 jobs:
   security:
@@ -19,7 +15,7 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
       - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/golang@0.1.1
+        uses: snyk/actions/golang@0.3.0
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:

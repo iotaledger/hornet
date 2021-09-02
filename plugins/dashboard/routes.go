@@ -15,7 +15,6 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/gohornet/hornet/pkg/jwt"
-	"github.com/gohornet/hornet/plugins/restapi"
 )
 
 const (
@@ -67,14 +66,14 @@ func appBoxMiddleware() echo.MiddlewareFunc {
 
 func devModeReverseProxyMiddleware() echo.MiddlewareFunc {
 
-	apiUrl, err := url.Parse("http://127.0.0.1:9090")
+	apiURL, err := url.Parse("http://127.0.0.1:9090")
 	if err != nil {
-		log.Fatalf("wrong devmode url: %s", err)
+		Plugin.LogFatalf("wrong devmode url: %s", err)
 	}
 
 	return middleware.Proxy(middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{
 		{
-			URL: apiUrl,
+			URL: apiURL,
 		},
 	}))
 }
@@ -86,15 +85,15 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 		return !deps.DashboardAllowedAPIRoute(context)
 	}
 
-	apiBindAddr := deps.NodeConfig.String(restapi.CfgRestAPIBindAddress)
+	apiBindAddr := deps.RestAPIBindAddress
 	_, apiBindPort, err := net.SplitHostPort(apiBindAddr)
 	if err != nil {
-		log.Fatalf("wrong REST API bind address: %s", err)
+		Plugin.LogFatalf("wrong REST API bind address: %s", err)
 	}
 
 	apiURL, err := url.Parse(fmt.Sprintf("http://localhost:%s", apiBindPort))
 	if err != nil {
-		log.Fatalf("wrong dashboard API url: %s", err)
+		Plugin.LogFatalf("wrong dashboard API url: %s", err)
 	}
 
 	balancer := middleware.NewRoundRobinBalancer([]*middleware.ProxyTarget{
@@ -125,7 +124,7 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 	}
 
 	// Only allow JWT created for the dashboard
-	jwtAuthAllow := func(c echo.Context, subject string, claims *jwt.AuthClaims) bool {
+	jwtAuthAllow := func(_ echo.Context, subject string, claims *jwt.AuthClaims) bool {
 		if claims.Dashboard {
 			return claims.VerifySubject(subject)
 		}
