@@ -52,7 +52,7 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
-	Tangle                *tangle.Tangle
+	Tangle                *tangle.Tangle               `optional:"true"`
 	Echo                  *echo.Echo
 	RestAPIMetrics        *metrics.RestAPIMetrics
 	Host                  host.Host

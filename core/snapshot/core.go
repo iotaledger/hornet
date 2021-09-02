@@ -126,7 +126,8 @@ func provide(c *dig.Container) {
 				Delta: "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin",
 			},
 			{
-				Full: "https://mainnet.tanglebay.com/ls/full_snapshot.bin",
+				Full:  "https://cdn.tanglebay.com/snapshots/mainnet/full_snapshot.bin",
+				Delta: "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin",
 			},
 		}); err != nil {
 			CorePlugin.Panic(err)

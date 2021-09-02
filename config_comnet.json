@@ -60,8 +60,8 @@
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://comnet.tanglebay.com/ls/full_snapshot.bin",
-        "delta": "https://comnet.tanglebay.com/ls/delta_snapshot.bin"
+        "full": "https://cdn.tanglebay.com/snapshots/comnet/full_snapshot.bin",
+        "delta": "https://cdn.tanglebay.com/snapshots/comnet/delta_snapshot.bin"
       }
     ]
   },

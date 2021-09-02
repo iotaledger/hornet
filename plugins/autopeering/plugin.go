@@ -29,7 +29,6 @@ import (
 	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
-	"github.com/gohornet/hornet/plugins/restapi"
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
@@ -126,7 +125,6 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 		initConfig.ForceDisablePluggable(gossip.CorePlugin.Identifier())
 		initConfig.ForceDisablePluggable(tangle.CorePlugin.Identifier())
 		initConfig.ForceDisablePluggable(snapshot.CorePlugin.Identifier())
-		initConfig.ForceDisablePluggable(restapi.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(restapiv1.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(warpsync.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(urts.Plugin.Identifier())
@@ -181,10 +179,19 @@ func configure() {
 		deps.NodeConfig.String(CfgNetAutopeeringBindAddr),
 		deps.AutopeeringRunAsEntryNode)
 	if err != nil {
-		Plugin.Panicf(": %s", err)
+		Plugin.Panicf("unable to initialize local peer container: %s", err)
 	}
 
-	Plugin.LogInfof("Initialized local autopeering: %s@%s", localPeerContainer.Local().PublicKey(), localPeerContainer.Local().Address())
+	Plugin.LogInfof("initialized local autopeering: %s@%s", localPeerContainer.Local().PublicKey(), localPeerContainer.Local().Address())
+
+	if deps.AutopeeringRunAsEntryNode {
+		entryNodeMultiAddress, err := autopeering.GetEntryNodeMultiAddress(localPeerContainer.Local())
+		if err != nil {
+			Plugin.Panicf("unable to parse entry node multiaddress: %s", err)
+		}
+
+		Plugin.LogInfof("\n\nentry node multiaddress: %s\n", entryNodeMultiAddress.String())
+	}
 
 	configureAutopeering(localPeerContainer)
 	configureEvents()
@@ -303,7 +310,7 @@ func configureEvents() {
 		}
 
 		if peerRelation != p2p.PeerRelationAutopeered {
-			Plugin.LogWarnf("won't disconnect %s as it its relation is not 'discovered' but '%s'", peerID, peerRelation)
+			Plugin.LogWarnf("won't disconnect %s as it its relation is not '%s' but '%s'", peerID, p2p.PeerRelationAutopeered, peerRelation)
 			return
 		}
 

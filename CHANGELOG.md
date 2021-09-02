@@ -2,13 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.5-rc1] - 27.08.2021
+## [1.0.5] - 02.09.2021
 
 ### Added
     - Add faucet plugin
     - Add faucet website
     - Add database migration tool
     - Add io utils to read/write a TOML file
+    - Add private tangle scripts to deb/rpm files
+    - New public keys applicable for milestone ranges between 1333460-4443860
 
 ### Changed
     - Move p2p identity private key to PEM file
@@ -23,6 +25,8 @@ All notable changes to this project will be documented in this file.
     - Update github workflow actions
     - Update go modules
     - Update libp2p
+    - Autopeering entry nodes for mainnet
+    - Snapshot download sources for mainnet/comnet
 
 ### Fixed
     - Fix data size units according to SI units and IEC 60027
@@ -72,6 +76,41 @@ All notable changes to this project will be documented in this file.
 
 `config.json`
 ```diff
+  "snapshots": {
+    "downloadURLs": [
+      {
+-        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin",
++        "full": "https://cdn.tanglebay.com/snapshots/mainnet/full_snapshot.bin",
+-        "delta": "https://mainnet.tanglebay.com/ls/delta_snapshot.bin"
++        "delta": "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin"
+      }
+    ]
+  },
+  "protocol": {
+    "publicKeyRanges": [
+      {
+        "key": "ba6d07d1a1aea969e7e435f9f7d1b736ea9e0fcb8de400bf855dba7f2a57e947",
+        "start": 552960,
+        "end": 2108160
+-      }
++      },
++      {
++        "key": "760d88e112c0fd210cf16a3dce3443ecf7e18c456c2fb9646cabb2e13e367569",
++        "start": 1333460,
++        "end": 2888660
++      },
++      {
++        "key": "7bac2209b576ea2235539358c7df8ca4d2f2fc35a663c760449e65eba9f8a6e7",
++        "start": 2111060,
++        "end": 3666260
++      },
++      {
++        "key": "edd9c639a719325e465346b84133bf94740b7d476dd87fc949c0e8df516f9954",
++        "start": 2888660,
++        "end": 4443860
++      }
+    ]
+  },
   "p2p": {
 -    "identityPrivateKey": "",
 -    "peerStore": {
@@ -84,6 +123,13 @@ All notable changes to this project will be documented in this file.
 -      "db": {
 -        "path": "./p2pstore"
 -      },
+      "entryNodes": [
+-        "/dns/lucamoser.ch/udp/14926/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
++        "/dns/lucamoser.ch/udp/14826/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
++        "/dns/entry-hornet-0.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaPHdAn7eueBnXtikZMwhfPXaeGJGXDt4RBuLuGgb",
++        "/dns/entry-hornet-1.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaJJqMd5CQvv1A61coSQCYW9PNT1QKPs7xh2Qg5K2",
+         "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"
+      ],
     }
   },
 +  "faucet": {
