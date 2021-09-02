@@ -14,7 +14,7 @@ require (
 	github.com/bits-and-blooms/bitset v1.2.0
 	github.com/blang/vfs v1.0.0
 	github.com/cockroachdb/errors v1.8.6 // indirect
-	github.com/cockroachdb/pebble v0.0.0-20210817201821-5e4468e97817
+	github.com/cockroachdb/pebble v0.0.0-20210831135706-8731fd6ed157
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/containerd/containerd v1.5.5 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
@@ -32,9 +32,9 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20210819121432-6e2ce2d41200
-	github.com/iotaledger/hive.go v0.0.0-20210821074123-831d7702ae07
+	github.com/iotaledger/hive.go v0.0.0-20210830134454-9d969a8cc0a2
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v2 v2.0.1-0.20210819130518-ca11ee20d342
+	github.com/iotaledger/iota.go/v2 v2.0.1-0.20210830162758-173bada804f9
 	github.com/ipfs/go-cid v0.1.0 // indirect
 	github.com/ipfs/go-datastore v0.4.6
 	github.com/ipfs/go-ds-badger v0.2.7
@@ -54,22 +54,22 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/segmentio/fasthash v1.0.3 // indirect
-	github.com/shirou/gopsutil v3.21.7+incompatible
+	github.com/shirou/gopsutil v3.21.8+incompatible
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1-0.20210427113832-6241f9ab9942
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/tidwall/gjson v1.8.1 // indirect
-	github.com/tklauser/go-sysconf v0.3.8 // indirect
+	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/ugorji/go v1.2.6 // indirect
 	github.com/wollac/iota-crypto-demo v0.0.0-20210820085437-1a7b8ead2881
 	gitlab.com/powsrv.io/go/client v0.0.0-20210203192329-84583796cd46
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.12.0
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
-	golang.org/x/exp v0.0.0-20210819164307-503510c5c1ec // indirect
-	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d
-	golang.org/x/sys v0.0.0-20210823070655-63515b42dcdf // indirect
+	golang.org/x/exp v0.0.0-20210831221722-b4e88ed8e8aa // indirect
+	golang.org/x/net v0.0.0-20210825183410-e898025ed96a
+	golang.org/x/sys v0.0.0-20210831042530-f4d43177bf5e // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
-	google.golang.org/genproto v0.0.0-20210821163610-241b8fcbd6c8 // indirect
+	google.golang.org/genproto v0.0.0-20210831024726-fe130286e0e2 // indirect
 )

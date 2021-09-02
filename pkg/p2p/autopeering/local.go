@@ -5,6 +5,7 @@ import (
 	"net"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/multiformats/go-multiaddr"
 
@@ -25,6 +26,27 @@ type LocalPeerContainer struct {
 // Local returns the local hive.go peer from the container.
 func (lpc *LocalPeerContainer) Local() *peer.Local {
 	return lpc.peerLocal
+}
+
+// GetEntryNodeMultiAddress returns the multiaddress for the autopeering entry node.
+func GetEntryNodeMultiAddress(local *peer.Local) (multiaddr.Multiaddr, error) {
+
+	// example: /ip4/127.0.0.1/udp/14626/autopeering/HmKTkSd9F6nnERBvVbr55FvL1hM5WfcLvsc9bc3hWxWc
+	localAddress := local.Address()
+
+	var maBuilder strings.Builder
+	if ipv4 := localAddress.IP.To4(); ipv4 != nil {
+		maBuilder.WriteString("/ip4/")
+	} else {
+		maBuilder.WriteString("/ip6/")
+	}
+	maBuilder.WriteString(localAddress.IP.String())
+	maBuilder.WriteString("/udp/")
+	maBuilder.WriteString(strconv.Itoa(localAddress.Port))
+	maBuilder.WriteString("/autopeering/")
+	maBuilder.WriteString(local.PublicKey().String())
+
+	return multiaddr.NewMultiaddr(maBuilder.String())
 }
 
 func NewLocalPeerContainer(p2pServiceKey service.Key,

@@ -41,7 +41,8 @@ Another important directory is the `snapshots` directory.  You can control the `
         "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
       },
       {
-        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin"
+        "full": "https://cdn.tanglebay.com/snapshots/mainnet/full_snapshot.bin",
+        "delta": "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin"
       }
     ]
 ```
@@ -117,7 +118,8 @@ Your node's ledger accumulates many messages, which uses a significant disk capa
         "delta": "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin"
       },
       {
-        "full": "https://mainnet.tanglebay.com/ls/full_snapshot.bin"
+        "full": "https://cdn.tanglebay.com/snapshots/mainnet/full_snapshot.bin",
+        "delta": "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin"
       }
     ]
   },

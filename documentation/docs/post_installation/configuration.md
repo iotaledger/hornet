@@ -649,7 +649,9 @@ Example:
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
       "entryNodes": [
-        "/dns/lucamoser.ch/udp/14926/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
+        "/dns/lucamoser.ch/udp/14826/autopeering/4H6WV54tB29u8xCcEaMGQMn37LFvM1ynNpp27TTXaqNM",
+        "/dns/entry-hornet-0.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaPHdAn7eueBnXtikZMwhfPXaeGJGXDt4RBuLuGgb",
+        "/dns/entry-hornet-1.h.chrysalis-mainnet.iotaledger.net/udp/14626/autopeering/iotaJJqMd5CQvv1A61coSQCYW9PNT1QKPs7xh2Qg5K2",
         "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"
       ],
       "entryNodesPreferIPv6": false,
@@ -721,7 +723,45 @@ Example:
   },
 ```
 
-## 19. MQTT
+## 19. Faucet
+
+| Name                | Description                                                                                                                  | Type    |
+| :------------------ | :--------------------------------------------------------------------------------------------------------------------------- | :------ |
+| amount              | The amount of funds the requester receives                                                                                   | integer |
+| smallAmount         | The amount of funds the requester receives if the target address has more funds than the faucet amount and less than maximum | integer |
+| maxAddressBalance   | The maximum allowed amount of funds on the target address                                                                    | integer |
+| maxOutputCount      | The maximum output count per faucet message                                                                                  | integer |
+| indexationMessage   | The faucet transaction indexation payload                                                                                    | string  |
+| batchTimeout        | The maximum duration for collecting faucet batches                                                                           | string  |
+| powWorkerCount      | The amount of workers used for calculating PoW when issuing faucet messages                                                  | integer |
+| [website](#website) | Configuration for the faucet website                                                                                         | object  |
+
+### Website
+
+| Name        | Description                                                       | Type   |
+| :---------- | :---------------------------------------------------------------- | :----- |
+| bindAddress | The bind address on which the faucet website can be accessed from | string |
+| enabled     | Whether to host the faucet website                                | bool   |
+
+Example:
+
+```json
+  "faucet": {
+    "amount": 10000000,
+    "smallAmount": 1000000,
+    "maxAddressBalance": 20000000,
+    "maxOutputCount": 127,
+    "indexationMessage": "HORNET FAUCET",
+    "batchTimeout": "2s",
+    "powWorkerCount": 0,
+    "website": {
+      "bindAddress": "localhost:8091",
+      "enabled": true
+    }
+  },
+```
+
+## 20. MQTT
 
 | Name        | Description                                                         | Type    |
 | :---------- | :------------------------------------------------------------------ | :------ |
@@ -739,7 +779,7 @@ Example:
   },
 ```
 
-## 20. Profiling
+## 21. Profiling
 
 | Name        | Description                                       | Type   |
 | :---------- | :------------------------------------------------ | :----- |
@@ -753,7 +793,7 @@ Example:
   },
 ```
 
-## 21. Prometheus
+## 22. Prometheus
 
 | Name                                          | Description                                                  | Type   |
 | :-------------------------------------------- | :----------------------------------------------------------- | :----- |
@@ -803,7 +843,7 @@ Example:
   },
 ```
 
-## 22. Debug
+## 23. Debug
 
 | Name                         | Description                                                                                              | Type   |
 | :--------------------------- | :------------------------------------------------------------------------------------------------------- | :----- |

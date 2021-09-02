@@ -1,6 +1,7 @@
 package toolset
 
 import (
+	stded25519 "crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	p2pCore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -19,14 +21,15 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [P2P_DATABASE_PATH]", ToolP2PIdentityGen))
+		println(fmt.Sprintf("	%s [P2P_DATABASE_PATH] [P2P_PRIVATE_KEY]", ToolP2PIdentityGen))
 		println()
 		println("	[P2P_DATABASE_PATH] - the path to the p2p database folder (optional)")
+		println("	[P2P_PRIVATE_KEY]   - the p2p private key (optional)")
 		println()
 		println(fmt.Sprintf("example: %s %s", ToolP2PIdentityGen, "p2pstore"))
 	}
 
-	if len(args) > 1 {
+	if len(args) > 2 {
 		printUsage()
 		return fmt.Errorf("too many arguments for '%s'", ToolP2PIdentityGen)
 	}
@@ -54,10 +57,26 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 		return fmt.Errorf("unable to check private key file (%s): %w", privKeyFilePath, err)
 	}
 
-	// create identity
-	privateKey, publicKey, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
-	if err != nil {
-		return fmt.Errorf("unable to generate Ed25519 private key for peer identity: %w", err)
+	var privateKey crypto.PrivKey
+	var publicKey crypto.PubKey
+
+	if len(args) > 1 {
+		hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(args[1])
+		if err != nil {
+			return fmt.Errorf("invalid private key given '%s': %w", args[1], err)
+		}
+
+		stdPrvKey := stded25519.PrivateKey(hivePrivKey)
+		privateKey, publicKey, err = crypto.KeyPairFromStdKey(&stdPrvKey)
+		if err != nil {
+			return fmt.Errorf("unable to convert given private key '%s': %w", args[1], err)
+		}
+	} else {
+		// create identity
+		privateKey, publicKey, err = crypto.GenerateKeyPair(crypto.Ed25519, -1)
+		if err != nil {
+			return fmt.Errorf("unable to generate Ed25519 private key for peer identity: %w", err)
+		}
 	}
 
 	// obtain Peer ID from public key

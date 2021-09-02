@@ -78,6 +78,18 @@ func initConfigPars(c *dig.Container) {
 				Key:        "ba6d07d1a1aea969e7e435f9f7d1b736ea9e0fcb8de400bf855dba7f2a57e947",
 				StartIndex: 552960,
 				EndIndex:   2108160,
+			}, {
+				Key:        "760d88e112c0fd210cf16a3dce3443ecf7e18c456c2fb9646cabb2e13e367569",
+				StartIndex: 1333460,
+				EndIndex:   2888660,
+			}, {
+				Key:        "7bac2209b576ea2235539358c7df8ca4d2f2fc35a663c760449e65eba9f8a6e7",
+				StartIndex: 2111060,
+				EndIndex:   3666260,
+			}, {
+				Key:        "edd9c639a719325e465346b84133bf94740b7d476dd87fc949c0e8df516f9954",
+				StartIndex: 2888660,
+				EndIndex:   4443860,
 			},
 		}); err != nil {
 			CorePlugin.Panic(err)
