@@ -45,6 +45,7 @@ EXPOSE 15600/tcp
 EXPOSE 14626/udp
 EXPOSE 14265/tcp
 EXPOSE 8081/tcp
+EXPOSE 8091/tcp
 EXPOSE 1883/tcp
 
 # Copy the binary into distroless image
