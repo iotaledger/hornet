@@ -16,14 +16,16 @@ services:
     #  - "15600:15600/tcp"
     #  - "14626:14626/udp"
     #  - "14265:14265/tcp"
-    #  - "8081":8081/tcp"
+    #  - "8081:8081/tcp"
+    #  - "8091:8091/tcp"
     #  - "1883:1883/tcp"
     cap_drop:
       - ALL
     volumes:
       - ./config.json:/app/config.json:ro
       - ./config_comnet.json:/app/config_comnet.json:ro
-      - ./profiles.json:/app/profiles.json
       - ./peering.json:/app/peering.json
-      - ./snapshots/mainnet:/app/snapshots/mainnet
+      - ./profiles.json:/app/profiles.json:ro
       - ./mainnetdb:/app/mainnetdb
+      - ./p2pstore:/app/p2pstore
+      - ./snapshots/mainnet:/app/snapshots/mainnet
