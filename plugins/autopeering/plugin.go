@@ -49,6 +49,7 @@ func init() {
 			DepsFunc:   func(cDeps dependencies) { deps = cDeps },
 			Params:     params,
 			PreProvide: preProvide,
+			Provide:    provide,
 			Configure:  configure,
 			Run:        run,
 		},
@@ -81,6 +82,7 @@ type dependencies struct {
 	NetworkIDName             string                       `name:"networkIdName"`
 	AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
 	Manager                   *p2p.Manager                 `optional:"true"`
+	AutopeeringManager        *autopeering.AutopeeringManager
 }
 
 func preProvide(c *dig.Container, configs map[string]*configuration.Configuration, initConfig *node.InitConfig) {
@@ -155,6 +157,25 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 	}
 }
 
+func provide(c *dig.Container) {
+
+	type autopeeringDeps struct {
+		dig.In
+		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		NetworkIDName string                       `name:"networkIdName"`
+	}
+
+	if err := c.Provide(func(deps autopeeringDeps) *autopeering.AutopeeringManager {
+		return autopeering.NewAutopeeringManager(Plugin.Logger(),
+			deps.NodeConfig.String(CfgNetAutopeeringBindAddr),
+			deps.NodeConfig.Strings(CfgNetAutopeeringEntryNodes),
+			deps.NodeConfig.Bool(CfgNetAutopeeringEntryNodesPreferIPv6),
+			service.Key(deps.NetworkIDName))
+	}); err != nil {
+		Plugin.Panic(err)
+	}
+}
+
 func configure() {
 	selection.SetParameters(selection.Parameters{
 		InboundNeighborSize:  deps.NodeConfig.Int(CfgNetAutopeeringInboundPeers),
@@ -171,7 +192,7 @@ func configure() {
 		Plugin.Panicf("unable to obtain raw private key: %s", err)
 	}
 
-	localPeerContainer, err = autopeering.NewLocalPeerContainer(p2pServiceKey(),
+	localPeerContainer, err = autopeering.NewLocalPeerContainer(deps.AutopeeringManager.P2PServiceKey(),
 		rawPrvKey[:ed25519.SeedSize],
 		deps.P2PDatabasePath,
 		deps.DatabaseEngine,
@@ -193,23 +214,21 @@ func configure() {
 		Plugin.LogInfof("\n\nentry node multiaddress: %s\n", entryNodeMultiAddress.String())
 	}
 
-	configureAutopeering(localPeerContainer)
+	// only enable peer selection when the peering plugin is enabled
+	initSelection := deps.Manager != nil
+
+	deps.AutopeeringManager.Init(localPeerContainer, initSelection)
 	configureEvents()
 }
 
 func run() {
 	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
 		attachEvents()
-		start(localPeerContainer, shutdownSignal)
+		deps.AutopeeringManager.Run(shutdownSignal)
 		detachEvents()
 	}, shutdown.PriorityAutopeering); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
 	}
-}
-
-// gets the peering service key from the config.
-func p2pServiceKey() service.Key {
-	return service.Key(deps.NetworkIDName)
 }
 
 func configureEvents() {
@@ -233,7 +252,9 @@ func configureEvents() {
 
 		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peerOptErr.Peer, Plugin.LogWarnf); id != nil {
 			Plugin.LogInfof("removing: %s", peerOptErr.Peer.ID)
-			selectionProtocol.RemoveNeighbor(id.ID())
+			if deps.AutopeeringManager.Selection() != nil {
+				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
+			}
 		}
 	})
 
@@ -243,7 +264,9 @@ func configureEvents() {
 		}
 		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf); id != nil {
 			Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID)
-			selectionProtocol.RemoveNeighbor(id.ID())
+			if deps.AutopeeringManager.Selection() != nil {
+				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
+			}
 		}
 	})
 
@@ -257,7 +280,7 @@ func configureEvents() {
 		}
 		Plugin.LogInfof("[outgoing peering] adding autopeering peer %s", ev.Peer.ID())
 
-		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, p2pServiceKey())
+		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
 		if err != nil {
 			Plugin.LogWarnf("unable to convert outgoing selection autopeering peer to addr info: %s", err)
 			return
@@ -277,7 +300,7 @@ func configureEvents() {
 		}
 		Plugin.LogInfof("[incoming peering] whitelisting %s", ev.Peer.ID())
 
-		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, p2pServiceKey())
+		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
 		if err != nil {
 			Plugin.LogWarnf("unable to convert incoming selection autopeering peer to addr info: %s", err)
 			return
@@ -359,38 +382,43 @@ func updatePeerRelationToDiscovered(addrInfo *libp2p.AddrInfo) {
 // clears an already statically peered from the autopeering selector.
 func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
 	Plugin.LogInfof("peer is statically peered already %s, removing from autopeering selection protocol", ev.Peer.ID())
-	selectionProtocol.RemoveNeighbor(ev.Peer.ID())
+
+	if deps.AutopeeringManager.Selection() != nil {
+		deps.AutopeeringManager.Selection().RemoveNeighbor(ev.Peer.ID())
+	}
 }
 
 func attachEvents() {
-	discoveryProtocol.Events().PeerDiscovered.Attach(onDiscoveryPeerDiscovered)
-	discoveryProtocol.Events().PeerDeleted.Attach(onDiscoveryPeerDeleted)
 
-	if deps.Manager == nil {
-		return
+	if deps.AutopeeringManager.Discovery() != nil {
+		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Attach(onDiscoveryPeerDiscovered)
+		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Attach(onDiscoveryPeerDeleted)
 	}
 
-	// notify the selection when a connection is closed or failed.
-	deps.Manager.Events.Disconnected.Attach(onPeerDisconnected)
-	deps.Manager.Events.RelationUpdated.Attach(onAutopeerBecameKnown)
-	selectionProtocol.Events().SaltUpdated.Attach(onSelectionSaltUpdated)
-	selectionProtocol.Events().OutgoingPeering.Attach(onSelectionOutgoingPeering)
-	selectionProtocol.Events().IncomingPeering.Attach(onSelectionIncomingPeering)
-	selectionProtocol.Events().Dropped.Attach(onSelectionDropped)
+	if deps.AutopeeringManager.Selection() != nil {
+		// notify the selection when a connection is closed or failed.
+		deps.Manager.Events.Disconnected.Attach(onPeerDisconnected)
+		deps.Manager.Events.RelationUpdated.Attach(onAutopeerBecameKnown)
+		deps.AutopeeringManager.Selection().Events().SaltUpdated.Attach(onSelectionSaltUpdated)
+		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Attach(onSelectionOutgoingPeering)
+		deps.AutopeeringManager.Selection().Events().IncomingPeering.Attach(onSelectionIncomingPeering)
+		deps.AutopeeringManager.Selection().Events().Dropped.Attach(onSelectionDropped)
+	}
 }
 
 func detachEvents() {
-	discoveryProtocol.Events().PeerDiscovered.Detach(onDiscoveryPeerDiscovered)
-	discoveryProtocol.Events().PeerDeleted.Detach(onDiscoveryPeerDeleted)
 
-	if deps.Manager == nil {
-		return
+	if deps.AutopeeringManager.Discovery() != nil {
+		deps.AutopeeringManager.Discovery().Events().PeerDiscovered.Detach(onDiscoveryPeerDiscovered)
+		deps.AutopeeringManager.Discovery().Events().PeerDeleted.Detach(onDiscoveryPeerDeleted)
 	}
 
-	deps.Manager.Events.Disconnected.Detach(onPeerDisconnected)
-	deps.Manager.Events.RelationUpdated.Detach(onAutopeerBecameKnown)
-	selectionProtocol.Events().SaltUpdated.Detach(onSelectionSaltUpdated)
-	selectionProtocol.Events().OutgoingPeering.Detach(onSelectionOutgoingPeering)
-	selectionProtocol.Events().IncomingPeering.Detach(onSelectionIncomingPeering)
-	selectionProtocol.Events().Dropped.Detach(onSelectionDropped)
+	if deps.AutopeeringManager.Selection() != nil {
+		deps.Manager.Events.Disconnected.Detach(onPeerDisconnected)
+		deps.Manager.Events.RelationUpdated.Detach(onAutopeerBecameKnown)
+		deps.AutopeeringManager.Selection().Events().SaltUpdated.Detach(onSelectionSaltUpdated)
+		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Detach(onSelectionOutgoingPeering)
+		deps.AutopeeringManager.Selection().Events().IncomingPeering.Detach(onSelectionIncomingPeering)
+		deps.AutopeeringManager.Selection().Events().Dropped.Detach(onSelectionDropped)
+	}
 }
