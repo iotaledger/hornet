@@ -67,8 +67,8 @@ type solidEntryPoint struct {
 	index     milestone.Index
 }
 
-// Snapshot handles reading and writing snapshot data.
-type Snapshot struct {
+// SnapshotManager handles reading and writing snapshot data.
+type SnapshotManager struct {
 	shutdownCtx                          context.Context
 	log                                  *logger.Logger
 	database                             *database.Database
@@ -102,8 +102,8 @@ type Snapshot struct {
 	Events *Events
 }
 
-// New creates a new snapshot instance.
-func New(shutdownCtx context.Context,
+// NewSnapshotManager creates a new snapshot manager instance.
+func NewSnapshotManager(shutdownCtx context.Context,
 	log *logger.Logger,
 	database *database.Database,
 	storage *storage.Storage,
@@ -125,9 +125,9 @@ func New(shutdownCtx context.Context,
 	pruningSizeTargetSizeBytes int64,
 	pruningSizeThresholdPercentage float64,
 	pruningSizeCooldownTime time.Duration,
-	pruneReceipts bool) *Snapshot {
+	pruneReceipts bool) *SnapshotManager {
 
-	return &Snapshot{
+	return &SnapshotManager{
 		shutdownCtx:                          shutdownCtx,
 		log:                                  log,
 		database:                             database,
@@ -160,13 +160,13 @@ func New(shutdownCtx context.Context,
 	}
 }
 
-func (s *Snapshot) IsSnapshottingOrPruning() bool {
+func (s *SnapshotManager) IsSnapshottingOrPruning() bool {
 	s.statusLock.RLock()
 	defer s.statusLock.RUnlock()
 	return s.isSnapshotting || s.isPruning
 }
 
-func (s *Snapshot) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
+func (s *SnapshotManager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) bool {
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
@@ -181,7 +181,7 @@ func (s *Snapshot) shouldTakeSnapshot(confirmedMilestoneIndex milestone.Index) b
 	return confirmedMilestoneIndex-(s.snapshotDepth+s.snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
-func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(sep *solidEntryPoint) bool) error {
+func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(sep *solidEntryPoint) bool) error {
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
@@ -287,7 +287,7 @@ func (s *Snapshot) forEachSolidEntryPoint(targetIndex milestone.Index, abortSign
 	return nil
 }
 
-func (s *Snapshot) checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *storage.SnapshotInfo, writeToDatabase bool) error {
+func (s *SnapshotManager) checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *storage.SnapshotInfo, writeToDatabase bool) error {
 
 	confirmedMilestoneIndex := s.storage.ConfirmedMilestoneIndex()
 
@@ -320,28 +320,28 @@ func (s *Snapshot) checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo
 	return nil
 }
 
-func (s *Snapshot) setIsSnapshotting(value bool) {
+func (s *SnapshotManager) setIsSnapshotting(value bool) {
 	s.statusLock.Lock()
 	s.isSnapshotting = value
 	s.statusLock.Unlock()
 }
 
 // CreateFullSnapshot creates a full snapshot for the given target milestone index.
-func (s *Snapshot) CreateFullSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
+func (s *SnapshotManager) CreateFullSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 	return s.createSnapshotWithoutLocking(Full, targetIndex, filePath, writeToDatabase, abortSignal)
 }
 
 // CreateDeltaSnapshot creates a delta snapshot for the given target milestone index.
-func (s *Snapshot) CreateDeltaSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}, snapshotFullPath ...string) error {
+func (s *SnapshotManager) CreateDeltaSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}, snapshotFullPath ...string) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 	return s.createSnapshotWithoutLocking(Delta, targetIndex, filePath, writeToDatabase, abortSignal, snapshotFullPath...)
 }
 
 // returns a producer which produces solid entry points.
-func newSEPsProducer(s *Snapshot, targetIndex milestone.Index, abortSignal <-chan struct{}) SEPProducerFunc {
+func newSEPsProducer(s *SnapshotManager, targetIndex milestone.Index, abortSignal <-chan struct{}) SEPProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
@@ -644,7 +644,7 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 }
 
 // reads out the index of the milestone which currently represents the ledger state.
-func (s *Snapshot) readLedgerIndex() (milestone.Index, error) {
+func (s *SnapshotManager) readLedgerIndex() (milestone.Index, error) {
 	ledgerMilestoneIndex, err := s.utxo.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
@@ -659,7 +659,7 @@ func (s *Snapshot) readLedgerIndex() (milestone.Index, error) {
 }
 
 // reads out the snapshot milestone index from the full snapshot file.
-func (s *Snapshot) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...string) (milestone.Index, error) {
+func (s *SnapshotManager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...string) (milestone.Index, error) {
 	filePath := s.snapshotFullPath
 	if len(snapshotFullPath) > 0 && snapshotFullPath[0] != "" {
 		filePath = snapshotFullPath[0]
@@ -677,7 +677,7 @@ func (s *Snapshot) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath ...str
 }
 
 // creates the temp file into which to write the snapshot data into.
-func (s *Snapshot) createTempFile(filePath string) (*os.File, string, error) {
+func (s *SnapshotManager) createTempFile(filePath string) (*os.File, string, error) {
 	filePathTmp := filePath + "_tmp"
 
 	// we don't need to check the error, maybe the file doesn't exist
@@ -691,7 +691,7 @@ func (s *Snapshot) createTempFile(filePath string) (*os.File, string, error) {
 }
 
 // renames the given temp file to the final file name.
-func (s *Snapshot) renameTempFile(tempFile *os.File, tempFilePath string, filePath string) error {
+func (s *SnapshotManager) renameTempFile(tempFile *os.File, tempFilePath string, filePath string) error {
 	if err := tempFile.Close(); err != nil {
 		return fmt.Errorf("unable to close snapshot file: %w", err)
 	}
@@ -702,7 +702,7 @@ func (s *Snapshot) renameTempFile(tempFile *os.File, tempFilePath string, filePa
 }
 
 // returns the timestamp of the target milestone.
-func (s *Snapshot) readTargetMilestoneTimestamp(targetIndex milestone.Index) (time.Time, error) {
+func (s *SnapshotManager) readTargetMilestoneTimestamp(targetIndex milestone.Index) (time.Time, error) {
 	cachedTargetMilestone := s.storage.CachedMilestoneOrNil(targetIndex) // milestone +1
 	if cachedTargetMilestone == nil {
 		return time.Time{}, errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
@@ -714,7 +714,7 @@ func (s *Snapshot) readTargetMilestoneTimestamp(targetIndex milestone.Index) (ti
 }
 
 // creates a snapshot file by streaming data from the database into a snapshot file.
-func (s *Snapshot) createSnapshotWithoutLocking(snapshotType Type, targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}, snapshotFullPath ...string) error {
+func (s *SnapshotManager) createSnapshotWithoutLocking(snapshotType Type, targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}, snapshotFullPath ...string) error {
 	s.log.Infof("creating %s snapshot for targetIndex %d", snapshotNames[snapshotType], targetIndex)
 	ts := time.Now()
 
@@ -1014,7 +1014,7 @@ func newSEPsConsumer(storage *storage.Storage, header *ReadFileHeader) SEPConsum
 }
 
 // LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
-func (s *Snapshot) LoadSnapshotFromFile(snapshotType Type, networkID uint64, filePath string) (err error) {
+func (s *SnapshotManager) LoadSnapshotFromFile(snapshotType Type, networkID uint64, filePath string) (err error) {
 	s.log.Infof("importing %s snapshot file...", snapshotNames[snapshotType])
 	ts := time.Now()
 
@@ -1083,7 +1083,7 @@ SnapshotInfo:
 
 // optimalSnapshotType returns the optimal snapshot type
 // based on the file size of the last full and delta snapshot file.
-func (s *Snapshot) optimalSnapshotType() (Type, error) {
+func (s *SnapshotManager) optimalSnapshotType() (Type, error) {
 	if s.deltaSnapshotSizeThresholdPercentage == 0.0 {
 		// special case => always create a delta snapshot to keep entire milestone diff history
 		return Delta, nil
@@ -1126,7 +1126,7 @@ func (s *Snapshot) optimalSnapshotType() (Type, error) {
 
 // snapshotTypeFilePath returns the default file path
 // for the given snapshot type.
-func (s *Snapshot) snapshotTypeFilePath(snapshotType Type) string {
+func (s *SnapshotManager) snapshotTypeFilePath(snapshotType Type) string {
 	switch snapshotType {
 	case Full:
 		return s.snapshotFullPath
@@ -1138,7 +1138,7 @@ func (s *Snapshot) snapshotTypeFilePath(snapshotType Type) string {
 }
 
 // HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a delta snapshot creation and pruning.
-func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
+func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
 	if !s.storage.IsNodeSynced() {
 		// do not prune or create snapshots while we are not synced
 		return
@@ -1196,7 +1196,7 @@ func (s *Snapshot) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex mile
 }
 
 // SnapshotsFilesLedgerIndex returns the final ledger index if the snapshots from the configured file paths would be applied.
-func (s *Snapshot) SnapshotsFilesLedgerIndex() (milestone.Index, error) {
+func (s *SnapshotManager) SnapshotsFilesLedgerIndex() (milestone.Index, error) {
 
 	snapAvail, err := s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
 	if err != nil {
@@ -1225,7 +1225,7 @@ func (s *Snapshot) SnapshotsFilesLedgerIndex() (milestone.Index, error) {
 
 // ImportSnapshots imports snapshot data from the configured file paths.
 // automatically downloads snapshot data if no files are available.
-func (s *Snapshot) ImportSnapshots() error {
+func (s *SnapshotManager) ImportSnapshots() error {
 	snapAvail, err := s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
 	if err != nil {
 		return err
@@ -1264,7 +1264,7 @@ func (s *Snapshot) ImportSnapshots() error {
 }
 
 // checks that either both snapshot files are available, only the full snapshot or none.
-func (s *Snapshot) checkSnapshotFilesAvailability(fullPath string, deltaPath string) (snapshotAvailability, error) {
+func (s *SnapshotManager) checkSnapshotFilesAvailability(fullPath string, deltaPath string) (snapshotAvailability, error) {
 	switch {
 	case len(fullPath) == 0:
 		return 0, fmt.Errorf("%w: full snapshot file path not defined", ErrNoSnapshotSpecified)
@@ -1292,7 +1292,7 @@ func (s *Snapshot) checkSnapshotFilesAvailability(fullPath string, deltaPath str
 }
 
 // ensures that the folders to both paths exists and then downloads the appropriate snapshot files.
-func (s *Snapshot) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string, deltaPath string) error {
+func (s *SnapshotManager) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string, deltaPath string) error {
 	fullPathDir := filepath.Dir(fullPath)
 	deltaPathDir := filepath.Dir(deltaPath)
 
@@ -1323,7 +1323,7 @@ func (s *Snapshot) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 }
 
 // CheckCurrentSnapshot checks that the current snapshot info is valid regarding its network ID and the ledger state.
-func (s *Snapshot) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInfo) error {
+func (s *SnapshotManager) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInfo) error {
 
 	// check that the stored snapshot corresponds to the wanted network ID
 	if snapshotInfo.NetworkID != s.networkID {

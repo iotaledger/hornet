@@ -54,7 +54,7 @@ var (
 //			- Diffs							=> will be removed and loaded again from last snapshot
 //			- Treasury						=> will be removed and loaded again from last snapshot
 //			- Receipts						=> will be removed and loaded again from last snapshot (if pruneReceipts is enabled)
-func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts bool) error {
+func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, pruneReceipts bool) error {
 
 	// mark the database as tainted forever.
 	// this is used to signal the coordinator plugin that it should never use a revalidated database.
@@ -76,7 +76,7 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 	}
 
 	// check if the ledger index of the snapshot files fit the revalidation target.
-	snapshotLedgerIndex, err := snapshot.SnapshotsFilesLedgerIndex()
+	snapshotLedgerIndex, err := snapshotManager.SnapshotsFilesLedgerIndex()
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (t *Tangle) RevalidateDatabase(snapshot *snapshot.Snapshot, pruneReceipts b
 	t.log.Info("flushing storages... done!")
 
 	// apply the ledger from the last snapshot to the database
-	if err := t.applySnapshotLedger(snapshotInfo, snapshot); err != nil {
+	if err := t.applySnapshotLedger(snapshotInfo, snapshotManager); err != nil {
 		return err
 	}
 
@@ -553,7 +553,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 }
 
 // apply the ledger from the last snapshot to the database
-func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshot *snapshot.Snapshot) error {
+func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshotManager *snapshot.SnapshotManager) error {
 
 	t.log.Info("applying snapshot balances to the ledger state...")
 
@@ -562,11 +562,11 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 	t.storage.OverwriteConfirmedMilestoneIndex(0)
 
 	// Restore the ledger state of the last snapshot
-	if err := snapshot.ImportSnapshots(); err != nil {
+	if err := snapshotManager.ImportSnapshots(); err != nil {
 		t.log.Panic(err)
 	}
 
-	if err := snapshot.CheckCurrentSnapshot(snapshotInfo); err != nil {
+	if err := snapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
 		t.log.Panic(err)
 	}
 

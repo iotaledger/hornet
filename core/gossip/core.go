@@ -61,7 +61,7 @@ type dependencies struct {
 	Requester        *gossip.Requester
 	Storage          *storage.Storage
 	Tangle           *tangle.Tangle
-	Snapshot         *snapshot.Snapshot
+	SnapshotManager  *snapshot.SnapshotManager
 	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
@@ -165,7 +165,7 @@ func configure() {
 
 	// don't re-enqueue pending requests in case the node is running hot
 	deps.Requester.AddBackPressureFunc(func() bool {
-		return deps.Snapshot.IsSnapshottingOrPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
+		return deps.SnapshotManager.IsSnapshottingOrPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
 	})
 
 	// register event handlers for messages

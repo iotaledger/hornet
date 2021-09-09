@@ -174,7 +174,7 @@ type dependencies struct {
 	UTXO                                  *utxo.Manager
 	PoWHandler                            *pow.Handler
 	MessageProcessor                      *gossip.MessageProcessor
-	Snapshot                              *snapshot.Snapshot
+	SnapshotManager                       *snapshot.SnapshotManager
 	AppInfo                               *app.AppInfo
 	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager                  *p2p.ConfigManager

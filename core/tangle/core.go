@@ -68,7 +68,7 @@ type dependencies struct {
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
-	Snapshot                 *snapshot.Snapshot
+	SnapshotManager          *snapshot.SnapshotManager
 	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
 	DatabaseDebug            bool                         `name:"databaseDebug"`
 	DatabaseAutoRevalidation bool                         `name:"databaseAutoRevalidation"`
@@ -151,7 +151,7 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 		}
 		CorePlugin.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.PruneReceipts); err != nil {
+		if err := deps.Tangle.RevalidateDatabase(deps.SnapshotManager, deps.PruneReceipts); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				CorePlugin.LogInfo("database revalidation aborted")
 				os.Exit(0)
@@ -222,12 +222,12 @@ func configureEvents() {
 
 func attachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-	deps.Snapshot.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
 
 func detachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
-	deps.Snapshot.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 }

@@ -79,7 +79,7 @@ type dependencies struct {
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
 	TipSelector      *tipselect.TipSelector `optional:"true"`
-	Snapshot         *snapshot.Snapshot
+	SnapshotManager  *snapshot.SnapshotManager
 	Coordinator      *coordinator.Coordinator `optional:"true"`
 }
 

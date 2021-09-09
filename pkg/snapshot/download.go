@@ -82,7 +82,7 @@ type DownloadTarget struct {
 	Delta string `json:"delta"`
 }
 
-func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
+func (s *SnapshotManager) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
 
 	// check if the remote snapshot files fit the network ID and if delta fits the full snapshot.
 	checkTargetConsistency := func(wantedNetworkID uint64, fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) error {
@@ -168,7 +168,7 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 }
 
 // DownloadSnapshotFiles tries to download snapshots files from the given targets.
-func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
+func (s *SnapshotManager) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
 
 	for _, target := range s.filterTargets(wantedNetworkID, targets) {
 
@@ -193,7 +193,7 @@ func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 }
 
 // downloads a snapshot header from the given url.
-func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
+func (s *SnapshotManager) downloadHeader(url string) (*ReadFileHeader, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotHeader)
 	defer cancel()
 
@@ -216,7 +216,7 @@ func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
 }
 
 // downloads a snapshot file from the given url to the specified path.
-func (s *Snapshot) downloadFile(path string, url string) error {
+func (s *SnapshotManager) downloadFile(path string, url string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
 	defer cancel()
 

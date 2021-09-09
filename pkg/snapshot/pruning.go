@@ -15,14 +15,14 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func (s *Snapshot) setIsPruning(value bool) {
+func (s *SnapshotManager) setIsPruning(value bool) {
 	s.statusLock.Lock()
 	s.isPruning = value
 	s.storage.Events.PruningStateChanged.Trigger(value)
 	s.statusLock.Unlock()
 }
 
-func (s *Snapshot) calcTargetIndexBySize(targetSizeBytes ...int64) (milestone.Index, error) {
+func (s *SnapshotManager) calcTargetIndexBySize(targetSizeBytes ...int64) (milestone.Index, error) {
 
 	if !s.pruningSizeEnabled && len(targetSizeBytes) == 0 {
 		// pruning by size deactivated
@@ -65,7 +65,7 @@ func (s *Snapshot) calcTargetIndexBySize(targetSizeBytes ...int64) (milestone.In
 }
 
 // pruneUnreferencedMessages prunes all unreferenced messages from the database for the given milestone
-func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int, msgCountChecked int) {
+func (s *SnapshotManager) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int, msgCountChecked int) {
 
 	messageIDsToDeleteMap := make(map[string]struct{})
 
@@ -99,7 +99,7 @@ func (s *Snapshot) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCo
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
-func (s *Snapshot) pruneMilestone(milestoneIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
+func (s *SnapshotManager) pruneMilestone(milestoneIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
 
 	if err := s.utxo.PruneMilestoneIndexWithoutLocking(milestoneIndex, s.pruneReceipts, receiptMigratedAtIndex...); err != nil {
 		return err
@@ -111,7 +111,7 @@ func (s *Snapshot) pruneMilestone(milestoneIndex milestone.Index, receiptMigrate
 }
 
 // pruneMessages removes all the associated data of the given message IDs from the database
-func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
+func (s *SnapshotManager) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
 
 	for messageIDToDelete := range messageIDsToDeleteMap {
 
@@ -145,7 +145,7 @@ func (s *Snapshot) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int 
 	return len(messageIDsToDeleteMap)
 }
 
-func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (milestone.Index, error) {
+func (s *SnapshotManager) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan struct{}) (milestone.Index, error) {
 
 	if err := utils.ReturnErrIfCtxDone(s.shutdownCtx, common.ErrOperationAborted); err != nil {
 		// do not prune the database if the node was shut down
@@ -331,7 +331,7 @@ func (s *Snapshot) pruneDatabase(targetIndex milestone.Index, abortSignal <-chan
 	return targetIndex, nil
 }
 
-func (s *Snapshot) PruneDatabaseByDepth(depth milestone.Index) (milestone.Index, error) {
+func (s *SnapshotManager) PruneDatabaseByDepth(depth milestone.Index) (milestone.Index, error) {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
@@ -345,14 +345,14 @@ func (s *Snapshot) PruneDatabaseByDepth(depth milestone.Index) (milestone.Index,
 	return s.pruneDatabase(confirmedMilestoneIndex-depth, nil)
 }
 
-func (s *Snapshot) PruneDatabaseByTargetIndex(targetIndex milestone.Index) (milestone.Index, error) {
+func (s *SnapshotManager) PruneDatabaseByTargetIndex(targetIndex milestone.Index) (milestone.Index, error) {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
 	return s.pruneDatabase(targetIndex, nil)
 }
 
-func (s *Snapshot) PruneDatabaseBySize(targetSizeBytes int64) (milestone.Index, error) {
+func (s *SnapshotManager) PruneDatabaseBySize(targetSizeBytes int64) (milestone.Index, error) {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
