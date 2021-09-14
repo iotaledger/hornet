@@ -204,7 +204,7 @@ func configure() {
 			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
 				latestMilestoneIndex := deps.Storage.LatestMilestoneIndex()
 				syncedCount := deps.Service.SynchronizedCount(latestMilestoneIndex)
-				connectedCount := deps.Manager.ConnectedCount(p2p.PeerRelationKnown)
+				connectedCount := deps.Manager.ConnectedCount()
 				// TODO: overflow not handled for synced/connected
 				proto.SendHeartbeat(deps.Storage.ConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 				proto.SendLatestMilestoneRequest()
