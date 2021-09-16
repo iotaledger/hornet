@@ -49,6 +49,15 @@ sudo service hornet start
 
 ### Managing the Node
 
+#### Unattended Upgrades
+
+Keeping up with Hornet releases can be automated by using [unattended system upgrades](https://wiki.debian.org/UnattendedUpgrades). To enable these, run:
+
+```bash
+sudo apt install unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades
+```
+
 #### Displaying log output
 
 You can display the nodes logs by running the following command:
@@ -67,7 +76,7 @@ You can restart `hornet` by running the following command:
 sudo systemctl restart hornet
 ```
 
-####Stopping Hornet
+#### Stopping Hornet
 You can stop `hornet` by running the following command:
 
 ```bash
@@ -76,7 +85,7 @@ sudo systemctl stop hornet
 
 :::info
 Hornet uses an in-memory cache.  In order to save all data to the underlying persistent storage, it is necessary to provide a grace period of at least 200 seconds while shutting it down.
-::: 
+:::
 
 You can find more details on how to configure Hornet in the [post installation](../post_installation/post_installation.md) chapter.
 
