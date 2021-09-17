@@ -37,7 +37,7 @@ func (s *SnapshotManager) calcTargetIndexBySize(targetSizeBytes ...int64) (miles
 		return 0, ErrDatabaseCompactionRunning
 	}
 
-	currentDatabaseSizeBytes, err := s.storage.DatabaseSize()
+	currentDatabaseSizeBytes, err := s.database.Size()
 	if err != nil {
 		return 0, err
 	}

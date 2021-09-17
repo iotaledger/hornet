@@ -7,7 +7,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
@@ -24,7 +23,6 @@ type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
 	// database
-	databaseDir   string
 	store         kvstore.KVStore
 	belowMaxDepth milestone.Index
 
@@ -72,12 +70,11 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (*Storage, error) {
+func New(store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (*Storage, error) {
 
 	utxoManager := utxo.New(store)
 
 	s := &Storage{
-		databaseDir:             databaseDirectory,
 		store:                   store,
 		keyManager:              keyManager,
 		milestonePublicKeyCount: milestonePublicKeyCount,
@@ -175,9 +172,4 @@ func (s *Storage) loadConfirmedMilestoneFromDatabase() error {
 
 	// set the confirmed milestone index based on the ledger milestone
 	return s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
-}
-
-// DatabaseSize returns the size of the database.
-func (s *Storage) DatabaseSize() (int64, error) {
-	return utils.FolderSize(s.databaseDir)
 }
