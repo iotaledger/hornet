@@ -49,19 +49,19 @@
   },
   "db": {
     "engine": "rocksdb",
-    "path": "testnetdb",
+    "path": "devnetdb",
     "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
     "interval": 200,
-    "fullPath": "snapshots/testnet/full_snapshot.bin",
-    "deltaPath": "snapshots/testnet/delta_snapshot.bin",
+    "fullPath": "snapshots/devnet/full_snapshot.bin",
+    "deltaPath": "snapshots/devnet/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": [
       {
-        "full": "https://dbfiles.testnet.chrysalis2.com/full_snapshot.bin",
-        "delta": "https://dbfiles.testnet.chrysalis2.com/delta_snapshot.bin"
+        "full": "http://dbfiles.chrysalis-devnet.iota.cafe/snapshots/hornet/latest-full_snapshot.bin",
+        "delta": "http://dbfiles.chrysalis-devnet.iota.cafe/snapshots/hornet/latest-delta_snapshot.bin"
       }
     ]
   },
@@ -79,23 +79,18 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "testnet7",
+    "networkID": "chrysalis-devnet",
     "bech32HRP": "atoi",
-    "minPoWScore": 4000.0,
+    "minPoWScore": 2000.0,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
-        "key": "7205c145525cee64f1c9363696811d239919d830ad964b4e29359e6475848f5a",
+        "key": "31ea3169abd40ee4096dfa4940962c64c8500066ca2ec1eedb2c5ee9aa0db5d8",
         "start": 0,
         "end": 0
       },
       {
-        "key": "e468e82df33d10dea3bd0eadcd7867946a674d207c39f5af4cc44365d268a7e6",
-        "start": 0,
-        "end": 0
-      },
-      {
-        "key": "0758028d34508079ba1f223907ac3bb5ce8f6bdccc6b961c7c85a2f460b30c1d",
+        "key": "5a1f0250640fb1ba82315b8aee4ebbe466da083a13adf77347c4516376cb4431",
         "start": 0,
         "end": 0
       }
@@ -177,7 +172,7 @@
     }
   },
   "node": {
-    "alias": "HORNET chrysalis-testnet node",
+    "alias": "HORNET devnet node",
     "profile": "auto",
     "disablePlugins": [],
     "enablePlugins": [
@@ -205,7 +200,10 @@
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
-      "entryNodes": [],
+      "entryNodes": [
+        "/dns/entry-hornet-0.h.chrysalis-devnet.iota.cafe/udp/14626/autopeering/iotab4LmPqc3GLin7voytPr8oQnHToQad3ULbvhPZwq",
+        "/dns/entry-hornet-1.h.chrysalis-devnet.iota.cafe/udp/14626/autopeering/iotaUTEYvLskg8ZqLHBaCK5BiYNt6R1byksZQXobVUn"
+      ],
       "entryNodesPreferIPv6": false,
       "runAsEntryNode": false
     }
@@ -228,7 +226,7 @@
     "cpuMaxUsage": 0.8,
     "mpsRateLimit": 0.0,
     "workers": 0,
-    "autostart": true
+    "autostart": false
   },
   "faucet": {
     "amount": 10000000,

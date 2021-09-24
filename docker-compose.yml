@@ -23,6 +23,7 @@ services:
       - ALL
     volumes:
       - ./config.json:/app/config.json:ro
+      - ./config_devnet.json:/app/config_devnet.json:ro
       - ./config_comnet.json:/app/config_comnet.json:ro
       - ./peering.json:/app/peering.json
       - ./profiles.json:/app/profiles.json:ro
