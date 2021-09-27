@@ -418,8 +418,12 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 		SEPMilestoneIndex: targetIndex,
 	}
 
+	targetMsTimestamp, err := s.readTargetMilestoneTimestamp(targetIndex)
+	if err != nil {
+		return err
+	}
+
 	// generate producers
-	var err error
 	var utxoProducer OutputProducerFunc
 	var milestoneDiffProducer MilestoneDiffProducerFunc
 	switch snapshotType {
@@ -483,7 +487,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 	}
 
 	// stream data into snapshot file
-	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint64(ts.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer)
+	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint64(targetMsTimestamp.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer)
 	if err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[snapshotType], err)
