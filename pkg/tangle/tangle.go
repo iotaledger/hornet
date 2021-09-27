@@ -9,7 +9,9 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/daemon"
@@ -21,16 +23,30 @@ import (
 )
 
 type Tangle struct {
-	log                   *logger.Logger
-	storage               *storage.Storage
-	requestQueue          gossip.RequestQueue
-	service               *gossip.Service
-	messageProcessor      *gossip.MessageProcessor
-	serverMetrics         *metrics.ServerMetrics
-	requester             *gossip.Requester
-	receiptService        *migrator.ReceiptService
-	daemon                daemon.Daemon
-	shutdownCtx           context.Context
+	// the logger used to log events.
+	log *logger.Logger
+	// used to access the node storage.
+	storage *storage.Storage
+	// used to determine the sync status of the node.
+	syncManager *syncmanager.SyncManager
+	// milestoneManager is used to retrieve, verify and store milestones.
+	milestoneManager *milestonemanager.MilestoneManager
+	// contains requests for needed messages.
+	requestQueue gossip.RequestQueue
+	// used to access gossip gossipService.
+	gossipService *gossip.Service
+	// used to parses and emit new messages.
+	messageProcessor *gossip.MessageProcessor
+	// shared server metrics instance.
+	serverMetrics *metrics.ServerMetrics
+	// used to request messages from peers.
+	requester *gossip.Requester
+	// used to persist and validate batches of receipts.
+	receiptService *migrator.ReceiptService
+	daemon         daemon.Daemon
+	shutdownCtx    context.Context
+	// belowMaxDepth is the maximum allowed delta value between OCRI of
+	// a given message in relation to the current CMI before it gets lazy.
 	belowMaxDepth         milestone.Index
 	milestoneTimeout      time.Duration
 	updateSyncedAtStartup bool
@@ -91,9 +107,11 @@ type Tangle struct {
 
 func New(
 	log *logger.Logger,
-	s *storage.Storage,
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
+	milestoneManager *milestonemanager.MilestoneManager,
 	requestQueue gossip.RequestQueue,
-	service *gossip.Service,
+	gossipService *gossip.Service,
 	messageProcessor *gossip.MessageProcessor,
 	serverMetrics *metrics.ServerMetrics,
 	requester *gossip.Requester,
@@ -106,9 +124,11 @@ func New(
 
 	t := &Tangle{
 		log:                   log,
-		storage:               s,
+		storage:               dbStorage,
+		syncManager:           syncManager,
+		milestoneManager:      milestoneManager,
 		requestQueue:          requestQueue,
-		service:               service,
+		gossipService:         gossipService,
 		messageProcessor:      messageProcessor,
 		serverMetrics:         serverMetrics,
 		requester:             requester,

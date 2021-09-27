@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/profile"
@@ -159,6 +160,7 @@ func provide(c *dig.Container) {
 
 			return database.New(
 				CorePlugin.Logger(),
+				deps.DatabasePath,
 				pebble.New(db),
 				events,
 				true,
@@ -173,6 +175,7 @@ func provide(c *dig.Container) {
 
 			return database.New(
 				CorePlugin.Logger(),
+				deps.DatabasePath,
 				rocksdb.New(db),
 				events,
 				true,
@@ -200,21 +203,9 @@ func provide(c *dig.Container) {
 		CorePlugin.Panic(err)
 	}
 
-	type storageDeps struct {
-		dig.In
-		NodeConfig                 *configuration.Configuration `name:"nodeConfig"`
-		DatabasePath               string                       `name:"databasePath"`
-		Database                   *database.Database
-		Profile                    *profile.Profile
-		BelowMaxDepth              int `name:"belowMaxDepth"`
-		CoordinatorPublicKeyRanges coordinator.PublicKeyRanges
-		MilestonePublicKeyCount    int `name:"milestonePublicKeyCount"`
-	}
-
-	if err := c.Provide(func(deps storageDeps) *storage.Storage {
-
+	if err := c.Provide(func(coordinatorPublicKeyRanges coordinator.PublicKeyRanges) *keymanager.KeyManager {
 		keyManager := keymanager.New()
-		for _, keyRange := range deps.CoordinatorPublicKeyRanges {
+		for _, keyRange := range coordinatorPublicKeyRanges {
 			pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
 			if err != nil {
 				CorePlugin.Panicf("can't load public key ranges: %s", err)
@@ -223,7 +214,20 @@ func provide(c *dig.Container) {
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 		}
 
-		store, err := storage.New(deps.Database.KVStore(), deps.Profile.Caches, deps.BelowMaxDepth, keyManager, deps.MilestonePublicKeyCount)
+		return keyManager
+	}); err != nil {
+		CorePlugin.Panic(err)
+	}
+
+	type storageDeps struct {
+		dig.In
+		Database *database.Database
+		Profile  *profile.Profile
+	}
+
+	if err := c.Provide(func(deps storageDeps) *storage.Storage {
+
+		store, err := storage.New(deps.Database.KVStore(), deps.Profile.Caches)
 		if err != nil {
 			CorePlugin.Panicf("can't initialize storage: %s", err)
 		}
@@ -233,7 +237,23 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(storage *storage.Storage) *utxo.Manager {
-		return storage.UTXO()
+		return storage.UTXOManager()
+	}); err != nil {
+		CorePlugin.Panic(err)
+	}
+
+	type syncManagerDeps struct {
+		dig.In
+		UTXOManager   *utxo.Manager
+		BelowMaxDepth int `name:"belowMaxDepth"`
+	}
+
+	if err := c.Provide(func(deps syncManagerDeps) *syncmanager.SyncManager {
+		sync, err := syncmanager.New(deps.UTXOManager, deps.BelowMaxDepth)
+		if err != nil {
+			CorePlugin.Panicf("can't initialize sync manager: %s", err)
+		}
+		return sync
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}

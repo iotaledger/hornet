@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
@@ -19,7 +20,7 @@ import (
 func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMessage {
 
 	// Store message in the database
-	cachedMsg, alreadyAdded := te.storage.AddMessageToStorage(msg, te.storage.LatestMilestoneIndex(), false, true, true)
+	cachedMsg, alreadyAdded := tangle.AddMessageToStorage(te.storage, te.milestoneManager, msg, te.syncManager.LatestMilestoneIndex(), false, true, true)
 	require.NotNil(te.TestInterface, cachedMsg)
 	require.False(te.TestInterface, alreadyAdded)
 
@@ -37,21 +38,21 @@ func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMes
 
 // VerifyCMI checks if the confirmed milestone index is equal to the given milestone index.
 func (te *TestEnvironment) VerifyCMI(index milestone.Index) {
-	cmi := te.storage.ConfirmedMilestoneIndex()
+	cmi := te.syncManager.ConfirmedMilestoneIndex()
 	require.Equal(te.TestInterface, index, cmi)
 }
 
 // VerifyLMI checks if the latest milestone index is equal to the given milestone index.
 func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
-	lmi := te.storage.LatestMilestoneIndex()
+	lmi := te.syncManager.LatestMilestoneIndex()
 	require.Equal(te.TestInterface, index, lmi)
 }
 
 // AssertWalletBalance generates an address for the given seed and index and checks correct balance.
 func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedBalance uint64) {
-	addrBalance, _, _, err := te.storage.UTXO().AddressBalance(wallet.Address())
+	addrBalance, _, _, err := te.storage.UTXOManager().AddressBalance(wallet.Address())
 	require.NoError(te.TestInterface, err)
-	computedAddrBalance, _, err := te.storage.UTXO().ComputeBalance(utxo.FilterAddress(wallet.Address()))
+	computedAddrBalance, _, err := te.storage.UTXOManager().ComputeBalance(utxo.FilterAddress(wallet.Address()))
 	require.NoError(te.TestInterface, err)
 
 	var balanceStatus string
@@ -69,7 +70,7 @@ func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedB
 
 // AssertTotalSupplyStillValid checks if the total supply in the database is still correct.
 func (te *TestEnvironment) AssertTotalSupplyStillValid() {
-	err := te.storage.UTXO().CheckLedgerState()
+	err := te.storage.UTXOManager().CheckLedgerState()
 	require.NoError(te.TestInterface, err)
 }
 

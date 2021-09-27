@@ -15,6 +15,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/pow"
@@ -94,8 +95,9 @@ func provide(c *dig.Container) {
 	type faucetDeps struct {
 		dig.In
 		Storage          *storage.Storage
+		SyncManager      *syncmanager.SyncManager
 		PowHandler       *pow.Handler
-		UTXO             *utxo.Manager
+		UTXOManager      *utxo.Manager
 		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 		NetworkID        uint64                       `name:"networkId"`
 		BelowMaxDepth    int                          `name:"belowMaxDepth"`
@@ -107,9 +109,10 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps faucetDeps) *faucet.Faucet {
 		return faucet.New(
 			deps.Storage,
+			deps.SyncManager,
 			deps.NetworkID,
 			deps.BelowMaxDepth,
-			deps.UTXO,
+			deps.UTXOManager,
 			&faucetAddress,
 			faucetSigner,
 			deps.TipSelector.SelectNonLazyTips,

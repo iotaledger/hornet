@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/restapi"
@@ -71,6 +72,8 @@ type Faucet struct {
 
 	// used to access the node storage.
 	storage *storage.Storage
+	// used to determine the sync status of the node.
+	syncManager *syncmanager.SyncManager
 	// id of the network the faucet is running in.
 	networkID uint64
 	// belowMaxDepth is the maximum allowed delta
@@ -217,7 +220,8 @@ type Option func(opts *Options)
 
 // New creates a new faucet instance.
 func New(
-	storage *storage.Storage,
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
 	networkID uint64,
 	belowMaxDepth int,
 	utxoManager *utxo.Manager,
@@ -233,7 +237,8 @@ func New(
 	options.apply(opts...)
 
 	faucet := &Faucet{
-		storage:         storage,
+		storage:         dbStorage,
+		syncManager:     syncManager,
 		networkID:       networkID,
 		belowMaxDepth:   milestone.Index(belowMaxDepth),
 		utxoManager:     utxoManager,
@@ -393,8 +398,8 @@ func (f *Faucet) createMessage(txPayload iotago.Serializable, shutdownSignal <-c
 			return nil
 		}
 
-		_, ocri := dag.ConeRootIndexes(f.storage, cachedMsgMeta.Retain(), f.storage.ConfirmedMilestoneIndex()) // meta +
-		if (f.storage.LatestMilestoneIndex() - ocri) > f.belowMaxDepth {
+		_, ocri := dag.ConeRootIndexes(f.storage, cachedMsgMeta.Retain(), f.syncManager.ConfirmedMilestoneIndex()) // meta +
+		if (f.syncManager.LatestMilestoneIndex() - ocri) > f.belowMaxDepth {
 			// the last faucet message is not confirmed yet, but it is already below max depth
 			// we need to reattach it
 			msg, err := reattachMessage(f.lastMessageID)

@@ -28,7 +28,7 @@ func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
 	outputID := &iotago.UTXOInputID{}
 	copy(outputID[:], transactionID)
 
-	output, err := deps.UTXO.ReadOutputByOutputIDWithoutLocking(outputID)
+	output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "output for transaction not found: %s", transactionIDHex)

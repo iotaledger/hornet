@@ -17,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/mselection"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/pow"
@@ -89,6 +90,7 @@ var (
 type dependencies struct {
 	dig.In
 	Storage          *storage.Storage
+	SyncManager      *syncmanager.SyncManager
 	Tangle           *tangle.Tangle
 	MessageProcessor *gossip.MessageProcessor
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
@@ -120,6 +122,8 @@ func provide(c *dig.Container) {
 	type coordinatorDeps struct {
 		dig.In
 		Storage                 *storage.Storage
+		SyncManager             *syncmanager.SyncManager
+		KeyManager              *keymanager.KeyManager
 		Tangle                  *tangle.Tangle
 		PoWHandler              *pow.Handler
 		MigratorService         *migrator.MigratorService `optional:"true"`
@@ -136,7 +140,7 @@ func provide(c *dig.Container) {
 			signingProvider, err := initSigningProvider(
 				deps.NodeConfig.String(CfgCoordinatorSigningProvider),
 				deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress),
-				deps.Storage.KeyManager(),
+				deps.KeyManager,
 				deps.MilestonePublicKeyCount,
 			)
 			if err != nil {
@@ -158,6 +162,7 @@ func provide(c *dig.Container) {
 
 			coo, err := coordinator.New(
 				deps.Storage,
+				deps.SyncManager,
 				deps.NetworkID,
 				signingProvider,
 				deps.MigratorService,
@@ -493,7 +498,7 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) bool {
 	defer cachedMsgMeta.Release(true)
 
-	cmi := deps.Storage.ConfirmedMilestoneIndex()
+	cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
 	_, ocri := dag.ConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
 

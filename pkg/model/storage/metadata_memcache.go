@@ -4,17 +4,17 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
-// NewMetadataMemcache creates a new NewMetadataMemcache instance.
-func NewMetadataMemcache(storage *Storage) *MetadataMemcache {
-	return &MetadataMemcache{
-		storage:        storage,
-		cachedMsgMetas: make(map[string]*CachedMetadata),
-	}
-}
-
 type MetadataMemcache struct {
 	storage        *Storage
 	cachedMsgMetas map[string]*CachedMetadata
+}
+
+// NewMetadataMemcache creates a new NewMetadataMemcache instance.
+func NewMetadataMemcache(dbStorage *Storage) *MetadataMemcache {
+	return &MetadataMemcache{
+		storage:        dbStorage,
+		cachedMsgMetas: make(map[string]*CachedMetadata),
+	}
 }
 
 // Cleanup releases all the cached objects that have been used.

@@ -127,7 +127,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 			messageMetadataResponse.LedgerInclusionState = &inclusionState
 		} else if metadata.IsSolid() {
 			// determine info about the quality of the tip if not referenced
-			cmi := deps.Storage.ConfirmedMilestoneIndex()
+			cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 			ycri, ocri := dag.ConeRootIndexes(deps.Storage, cachedMetadata.Retain(), cmi)
 
 			// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach

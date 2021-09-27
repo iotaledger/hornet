@@ -16,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
@@ -73,7 +74,8 @@ type SnapshotManager struct {
 	log                                  *logger.Logger
 	database                             *database.Database
 	storage                              *storage.Storage
-	utxo                                 *utxo.Manager
+	syncManager                          *syncmanager.SyncManager
+	utxoManager                          *utxo.Manager
 	networkID                            uint64
 	networkIDSource                      string
 	snapshotFullPath                     string
@@ -107,7 +109,8 @@ func NewSnapshotManager(shutdownCtx context.Context,
 	log *logger.Logger,
 	database *database.Database,
 	storage *storage.Storage,
-	utxo *utxo.Manager,
+	syncManager *syncmanager.SyncManager,
+	utxoManager *utxo.Manager,
 	networkID uint64,
 	networkIDSource string,
 	snapshotFullPath string,
@@ -132,7 +135,8 @@ func NewSnapshotManager(shutdownCtx context.Context,
 		log:                                  log,
 		database:                             database,
 		storage:                              storage,
-		utxo:                                 utxo,
+		syncManager:                          syncManager,
+		utxoManager:                          utxoManager,
 		networkID:                            networkID,
 		networkIDSource:                      networkIDSource,
 		snapshotFullPath:                     snapshotFullPath,
@@ -289,7 +293,7 @@ func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, ab
 
 func (s *SnapshotManager) checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *storage.SnapshotInfo, writeToDatabase bool) error {
 
-	confirmedMilestoneIndex := s.storage.ConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := s.syncManager.ConfirmedMilestoneIndex()
 
 	if confirmedMilestoneIndex < s.solidEntryPointCheckThresholdFuture {
 		return errors.Wrapf(ErrNotEnoughHistory, "minimum confirmed index: %d, actual confirmed index: %d", s.solidEntryPointCheckThresholdFuture+1, confirmedMilestoneIndex)
@@ -445,7 +449,7 @@ func newMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, 
 
 // returns a milestone diff producer which first reads out milestone diffs from an existing delta
 // snapshot file and then the remaining diffs from the database up to the target index.
-func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, storage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index) (MilestoneDiffProducerFunc, error) {
+func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index) (MilestoneDiffProducerFunc, error) {
 	prevDeltaFileMsDiffsProducer, err := newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath, ledgerIndex)
 	if err != nil {
 		return nil, err
@@ -454,7 +458,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, storage *s
 	var prevDeltaMsDiffProducerFinished bool
 	var prevDeltaUpToIndex = ledgerIndex
 	var dbMsDiffProducer MilestoneDiffProducerFunc
-	mrf := MilestoneRetrieverFromStorage(storage)
+	mrf := MilestoneRetrieverFromStorage(dbStorage)
 	return func() (*MilestoneDiff, error) {
 		if prevDeltaMsDiffProducerFinished {
 			return dbMsDiffProducer()
@@ -532,9 +536,9 @@ type MilestoneRetrieverFunc func(index milestone.Index) (*iotago.Milestone, erro
 
 // MilestoneRetrieverFromStorage creates a MilestoneRetrieverFunc which access the storage.
 // If it can not retrieve a wanted milestone it panics.
-func MilestoneRetrieverFromStorage(storage *storage.Storage) MilestoneRetrieverFunc {
+func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieverFunc {
 	return func(index milestone.Index) (*iotago.Milestone, error) {
-		cachedMsMsg := storage.MilestoneCachedMessageOrNil(index)
+		cachedMsMsg := dbStorage.MilestoneCachedMessageOrNil(index)
 		if cachedMsMsg == nil {
 			return nil, fmt.Errorf("message for milestone with index %d is not stored in the database", index)
 		}
@@ -645,7 +649,7 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 
 // reads out the index of the milestone which currently represents the ledger state.
 func (s *SnapshotManager) readLedgerIndex() (milestone.Index, error) {
-	ledgerMilestoneIndex, err := s.utxo.ReadLedgerIndexWithoutLocking()
+	ledgerMilestoneIndex, err := s.utxoManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
 	}
@@ -723,8 +727,8 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(snapshotType Type, target
 
 	timeStart := time.Now()
 
-	s.utxo.ReadLockLedger()
-	defer s.utxo.ReadUnlockLedger()
+	s.utxoManager.ReadLockLedger()
+	defer s.utxoManager.ReadUnlockLedger()
 
 	if err := utils.ReturnErrIfCtxDone(s.shutdownCtx, common.ErrOperationAborted); err != nil {
 		// do not create the snapshot if the node was shut down
@@ -762,15 +766,15 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(snapshotType Type, target
 		}
 
 		// read out treasury tx
-		header.TreasuryOutput, err = s.utxo.UnspentTreasuryOutputWithoutLocking()
+		header.TreasuryOutput, err = s.utxoManager.UnspentTreasuryOutputWithoutLocking()
 		if err != nil {
 			return err
 		}
 
 		// a full snapshot contains the ledger UTXOs as of the CMI
 		// and the milestone diffs from the CMI back to the target index (excluding the target index)
-		utxoProducer = newCMIUTXOProducer(s.utxo)
-		milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxo, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
+		utxoProducer = newCMIUTXOProducer(s.utxoManager)
+		milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionBackwards, header.LedgerMilestoneIndex, targetIndex)
 
 	case Delta:
 		// ledger index corresponds to the origin snapshot snapshot ledger.
@@ -795,11 +799,11 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(snapshotType Type, target
 			fallthrough
 		case snapshotInfo.PruningIndex < header.LedgerMilestoneIndex:
 			// we have the needed milestone diffs in the database
-			milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxo, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
+			milestoneDiffProducer = newMsDiffsProducer(MilestoneRetrieverFromStorage(s.storage), s.utxoManager, MsDiffDirectionOnwards, header.LedgerMilestoneIndex, targetIndex)
 		default:
 			// as the needed milestone diffs are pruned from the database, we need to use
 			// the previous delta snapshot file to extract those in conjunction with what the database has available
-			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxo, header.LedgerMilestoneIndex, targetIndex)
+			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxoManager, header.LedgerMilestoneIndex, targetIndex)
 			if err != nil {
 				return err
 			}
@@ -1078,7 +1082,7 @@ SnapshotInfo:
 	PruningIndex: %d
 	Timestamp: %v`, snapshotNames[snapshotType], header.NetworkID, header.SEPMilestoneIndex, header.SEPMilestoneIndex, header.SEPMilestoneIndex, snapshotTimestamp)
 
-	return s.storage.SetConfirmedMilestoneIndex(header.SEPMilestoneIndex, false)
+	return s.syncManager.SetConfirmedMilestoneIndex(header.SEPMilestoneIndex, false)
 }
 
 // optimalSnapshotType returns the optimal snapshot type
@@ -1139,7 +1143,7 @@ func (s *SnapshotManager) snapshotTypeFilePath(snapshotType Type) string {
 
 // HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a delta snapshot creation and pruning.
 func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
-	if !s.storage.IsNodeSynced() {
+	if !s.syncManager.IsNodeSynced() {
 		// do not prune or create snapshots while we are not synced
 		return
 	}
@@ -1161,7 +1165,7 @@ func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(confirmedMilestoneInd
 			s.log.Warnf("%s: %s", ErrSnapshotCreationFailed, err)
 		}
 
-		if !s.storage.IsNodeSynced() {
+		if !s.syncManager.IsNodeSynced() {
 			// do not prune while we are not synced
 			return
 		}
@@ -1332,7 +1336,7 @@ func (s *SnapshotManager) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInf
 
 	// if we don't enforce loading of a snapshot,
 	// we can check the ledger state of the current database and start the node.
-	if err := s.utxo.CheckLedgerState(); err != nil {
+	if err := s.utxoManager.CheckLedgerState(); err != nil {
 		s.log.Fatal(err)
 	}
 

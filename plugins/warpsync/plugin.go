@@ -7,6 +7,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -47,18 +48,19 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage      *storage.Storage
-	Tangle       *tangle.Tangle
-	RequestQueue gossip.RequestQueue
-	Service      *gossip.Service
-	Broadcaster  *gossip.Broadcaster
-	Requester    *gossip.Requester
-	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
+	Storage       *storage.Storage
+	SyncManager   *syncmanager.SyncManager
+	Tangle        *tangle.Tangle
+	RequestQueue  gossip.RequestQueue
+	GossipService *gossip.Service
+	Broadcaster   *gossip.Broadcaster
+	Requester     *gossip.Requester
+	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 }
 
 func configure() {
 	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(CfgWarpSyncAdvancementRange))
-	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.Requester, true)
+	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.SyncManager, deps.Requester, true)
 	configureEvents()
 }
 
@@ -76,7 +78,7 @@ func configureEvents() {
 
 	onGossipProtocolStreamCreated = events.NewClosure(func(p *gossip.Protocol) {
 		p.Events.HeartbeatUpdated.Attach(events.NewClosure(func(hb *gossip.Heartbeat) {
-			warpSync.UpdateCurrentConfirmedMilestone(deps.Storage.ConfirmedMilestoneIndex())
+			warpSync.UpdateCurrentConfirmedMilestone(deps.SyncManager.ConfirmedMilestoneIndex())
 			warpSync.UpdateTargetMilestone(hb.SolidMilestoneIndex)
 		}))
 	})
@@ -135,7 +137,7 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.Service.Events.ProtocolStarted.Attach(onGossipProtocolStreamCreated)
+	deps.GossipService.Events.ProtocolStarted.Attach(onGossipProtocolStreamCreated)
 	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 	deps.Tangle.Events.MilestoneSolidificationFailed.Attach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Attach(onWarpSyncCheckpointUpdated)
@@ -145,7 +147,7 @@ func attachEvents() {
 }
 
 func detachEvents() {
-	deps.Service.Events.ProtocolStarted.Detach(onGossipProtocolStreamCreated)
+	deps.GossipService.Events.ProtocolStarted.Detach(onGossipProtocolStreamCreated)
 	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 	deps.Tangle.Events.MilestoneSolidificationFailed.Detach(onMilestoneSolidificationFailed)
 	warpSync.Events.CheckpointUpdated.Detach(onWarpSyncCheckpointUpdated)

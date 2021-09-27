@@ -46,11 +46,11 @@ func (t *Tangle) RunTangleProcessor() {
 
 	// set latest known milestone from database
 	latestMilestoneFromDatabase := t.storage.SearchLatestMilestoneIndexInStore()
-	if latestMilestoneFromDatabase < t.storage.ConfirmedMilestoneIndex() {
-		latestMilestoneFromDatabase = t.storage.ConfirmedMilestoneIndex()
+	if latestMilestoneFromDatabase < t.syncManager.ConfirmedMilestoneIndex() {
+		latestMilestoneFromDatabase = t.syncManager.ConfirmedMilestoneIndex()
 	}
 
-	t.storage.SetLatestMilestoneIndex(latestMilestoneFromDatabase, t.updateSyncedAtStartup)
+	t.syncManager.SetLatestMilestoneIndex(latestMilestoneFromDatabase, t.updateSyncedAtStartup)
 
 	t.startWaitGroup.Add(5)
 
@@ -146,14 +146,14 @@ func (t *Tangle) RunTangleProcessor() {
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
 		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
-		t.storage.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
+		t.milestoneManager.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Attach(onMilestoneTimeout)
 		t.startWaitGroup.Done()
 		<-shutdownSignal
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
 		t.StopMilestoneTimeoutTicker()
-		t.storage.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
+		t.milestoneManager.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
 		t.processValidMilestoneWorkerPool.StopAndWait()
@@ -188,11 +188,11 @@ func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
 
 func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
 
-	latestMilestoneIndex := t.storage.LatestMilestoneIndex()
-	isNodeSyncedWithinBelowMaxDepth := t.storage.IsNodeSyncedWithinBelowMaxDepth()
+	latestMilestoneIndex := t.syncManager.LatestMilestoneIndex()
+	isNodeSyncedWithinBelowMaxDepth := t.syncManager.IsNodeSyncedWithinBelowMaxDepth()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
-	cachedMsg, alreadyAdded := t.storage.AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithinBelowMaxDepth, false) // msg +1
+	cachedMsg, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithinBelowMaxDepth, false) // msg +1
 
 	// Release shouldn't be forced, to cache the latest messages
 	defer cachedMsg.Release(!isNodeSyncedWithinBelowMaxDepth) // msg -1
@@ -211,12 +211,12 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 			t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
 		}
 
-		confirmedMilestoneIndex := t.storage.ConfirmedMilestoneIndex()
+		confirmedMilestoneIndex := t.syncManager.ConfirmedMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = confirmedMilestoneIndex
 		}
 
-		if t.storage.IsNodeAlmostSynced() {
+		if t.syncManager.IsNodeAlmostSynced() {
 			// try to solidify the message and its future cone
 			t.futureConeSolidifierWorkerPool.Submit(cachedMsg.CachedMetadata()) // meta pass +1
 		}
@@ -246,7 +246,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 	// we check whether the request is nil, so we only trigger the solidifier when
 	// we actually handled a message stemming from a request (as otherwise the solidifier
 	// is triggered too often through messages received from normal gossip)
-	if request != nil && !t.storage.IsNodeSynced() && t.requestQueue.Empty() {
+	if request != nil && !t.syncManager.IsNodeSynced() && t.requestQueue.Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
 		t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
@@ -303,8 +303,8 @@ func (t *Tangle) PrintStatus() {
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			t.receiveMsgWorkerPool.GetPendingQueueSize(),
-			t.storage.ConfirmedMilestoneIndex(),
-			t.storage.LatestMilestoneIndex(),
+			t.syncManager.ConfirmedMilestoneIndex(),
+			t.syncManager.LatestMilestoneIndex(),
 			t.lastIncomingMPS,
 			t.lastNewMPS,
 			t.lastOutgoingMPS,

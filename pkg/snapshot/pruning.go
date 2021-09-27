@@ -56,12 +56,12 @@ func (s *SnapshotManager) calcTargetIndexBySize(targetSizeBytes ...int64) (miles
 		return 0, ErrNoPruningNeeded
 	}
 
-	milestoneRange := s.storage.ConfirmedMilestoneIndex() - s.storage.SnapshotInfo().PruningIndex
+	milestoneRange := s.syncManager.ConfirmedMilestoneIndex() - s.storage.SnapshotInfo().PruningIndex
 	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - s.pruningSizeThresholdPercentage) / 100.0)
 	diffPercentage := (prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes))
 	milestoneDiff := milestone.Index(math.Ceil(float64(milestoneRange) * diffPercentage))
 
-	return s.storage.ConfirmedMilestoneIndex() - milestoneDiff, nil
+	return s.syncManager.ConfirmedMilestoneIndex() - milestoneDiff, nil
 }
 
 // pruneUnreferencedMessages prunes all unreferenced messages from the database for the given milestone
@@ -101,7 +101,7 @@ func (s *SnapshotManager) pruneUnreferencedMessages(targetIndex milestone.Index)
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
 func (s *SnapshotManager) pruneMilestone(milestoneIndex milestone.Index, receiptMigratedAtIndex ...uint32) error {
 
-	if err := s.utxo.PruneMilestoneIndexWithoutLocking(milestoneIndex, s.pruneReceipts, receiptMigratedAtIndex...); err != nil {
+	if err := s.utxoManager.PruneMilestoneIndexWithoutLocking(milestoneIndex, s.pruneReceipts, receiptMigratedAtIndex...); err != nil {
 		return err
 	}
 
@@ -335,7 +335,7 @@ func (s *SnapshotManager) PruneDatabaseByDepth(depth milestone.Index) (milestone
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
 
-	confirmedMilestoneIndex := s.storage.ConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := s.syncManager.ConfirmedMilestoneIndex()
 
 	if confirmedMilestoneIndex <= depth {
 		// Not enough history

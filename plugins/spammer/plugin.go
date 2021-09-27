@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
@@ -81,10 +82,10 @@ var (
 type dependencies struct {
 	dig.In
 	MessageProcessor *gossip.MessageProcessor
-	Storage          *storage.Storage
+	SyncManager      *syncmanager.SyncManager
 	ServerMetrics    *metrics.ServerMetrics
 	PoWHandler       *pow.Handler
-	Manager          *p2p.Manager
+	PeeringManager   *p2p.Manager
 	TipSelector      *tipselect.TipSelector       `optional:"true"`
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
@@ -311,12 +312,12 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						}
 					}
 
-					if !deps.Storage.IsNodeAlmostSynced() {
+					if !deps.SyncManager.IsNodeAlmostSynced() {
 						time.Sleep(time.Second)
 						continue
 					}
 
-					if checkPeersConnected && deps.Manager.ConnectedCount(p2p.PeerRelationKnown) == 0 {
+					if checkPeersConnected && deps.PeeringManager.ConnectedCount(p2p.PeerRelationKnown) == 0 {
 						time.Sleep(time.Second)
 						continue
 					}

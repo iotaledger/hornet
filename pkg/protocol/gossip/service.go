@@ -147,43 +147,6 @@ func WithUnknownPeersLimit(limit int) ServiceOption {
 // ServiceOption is a function setting a ServiceOptions option.
 type ServiceOption func(opts *ServiceOptions)
 
-// NewService creates a new Service.
-func NewService(
-	protocol protocol.ID, host host.Host,
-	manager *p2p.Manager,
-	serverMetrics *metrics.ServerMetrics, opts ...ServiceOption) *Service {
-	srvOpts := &ServiceOptions{}
-	srvOpts.apply(defaultServiceOptions...)
-	srvOpts.apply(opts...)
-	s := &Service{
-		Events: ServiceEvents{
-			ProtocolStarted:        events.NewEvent(ProtocolCaller),
-			ProtocolTerminated:     events.NewEvent(ProtocolCaller),
-			InboundStreamCancelled: events.NewEvent(StreamCancelCaller),
-			Error:                  events.NewEvent(events.ErrorCaller),
-		},
-		host:                host,
-		protocol:            protocol,
-		streams:             make(map[peer.ID]*Protocol),
-		manager:             manager,
-		serverMetrics:       serverMetrics,
-		opts:                srvOpts,
-		stopped:             typeutils.NewAtomicBool(),
-		unknownPeers:        map[peer.ID]struct{}{},
-		inboundStreamChan:   make(chan network.Stream, 10),
-		connectedChan:       make(chan *connectionmsg, 10),
-		disconnectedChan:    make(chan *connectionmsg, 10),
-		streamClosedChan:    make(chan *streamclosedmsg, 10),
-		relationUpdatedChan: make(chan *relationupdatedmsg, 10),
-		streamReqChan:       make(chan *streamreqmsg, 10),
-		forEachChan:         make(chan *foreachmsg, 10),
-	}
-	if s.opts.Logger != nil {
-		s.registerLoggerOnEvents()
-	}
-	return s
-}
-
 // Service handles ongoing gossip streams.
 type Service struct {
 	// Events happening around a Service.
@@ -193,8 +156,8 @@ type Service struct {
 	protocol protocol.ID
 	// holds the set of protocols.
 	streams map[peer.ID]*Protocol
-	// the instance of the manager to work with.
-	manager *p2p.Manager
+	// the instance of the peeringManager to work with.
+	peeringManager *p2p.Manager
 	// the instance of the server metrics.
 	serverMetrics *metrics.ServerMetrics
 	// holds the service options.
@@ -211,6 +174,46 @@ type Service struct {
 	relationUpdatedChan chan *relationupdatedmsg
 	streamReqChan       chan *streamreqmsg
 	forEachChan         chan *foreachmsg
+}
+
+// NewService creates a new Service.
+func NewService(
+	protocol protocol.ID, host host.Host,
+	peeringManager *p2p.Manager,
+	serverMetrics *metrics.ServerMetrics,
+	opts ...ServiceOption) *Service {
+
+	srvOpts := &ServiceOptions{}
+	srvOpts.apply(defaultServiceOptions...)
+	srvOpts.apply(opts...)
+
+	gossipService := &Service{
+		Events: ServiceEvents{
+			ProtocolStarted:        events.NewEvent(ProtocolCaller),
+			ProtocolTerminated:     events.NewEvent(ProtocolCaller),
+			InboundStreamCancelled: events.NewEvent(StreamCancelCaller),
+			Error:                  events.NewEvent(events.ErrorCaller),
+		},
+		host:                host,
+		protocol:            protocol,
+		streams:             make(map[peer.ID]*Protocol),
+		peeringManager:      peeringManager,
+		serverMetrics:       serverMetrics,
+		opts:                srvOpts,
+		stopped:             typeutils.NewAtomicBool(),
+		unknownPeers:        map[peer.ID]struct{}{},
+		inboundStreamChan:   make(chan network.Stream, 10),
+		connectedChan:       make(chan *connectionmsg, 10),
+		disconnectedChan:    make(chan *connectionmsg, 10),
+		streamClosedChan:    make(chan *streamclosedmsg, 10),
+		relationUpdatedChan: make(chan *relationupdatedmsg, 10),
+		streamReqChan:       make(chan *streamreqmsg, 10),
+		forEachChan:         make(chan *foreachmsg, 10),
+	}
+	if gossipService.opts.Logger != nil {
+		gossipService.registerLoggerOnEvents()
+	}
+	return gossipService
 }
 
 // Protocol returns the gossip.Protocol instance for the given peer or nil.
@@ -261,19 +264,19 @@ func (s *Service) Start(shutdownSignal <-chan struct{}) {
 		}
 		s.inboundStreamChan <- stream
 	})
-	s.manager.Events.Connected.Attach(events.NewClosure(func(peer *p2p.Peer, conn network.Conn) {
+	s.peeringManager.Events.Connected.Attach(events.NewClosure(func(peer *p2p.Peer, conn network.Conn) {
 		if s.stopped.IsSet() {
 			return
 		}
 		s.connectedChan <- &connectionmsg{peer: peer, conn: conn}
 	}))
-	s.manager.Events.Disconnected.Attach(events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
+	s.peeringManager.Events.Disconnected.Attach(events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
 		if s.stopped.IsSet() {
 			return
 		}
 		s.disconnectedChan <- &connectionmsg{peer: peerOptErr.Peer, conn: nil}
 	}))
-	s.manager.Events.RelationUpdated.Attach(events.NewClosure(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
+	s.peeringManager.Events.RelationUpdated.Attach(events.NewClosure(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
 		if s.stopped.IsSet() {
 			return
 		}
@@ -406,7 +409,7 @@ func (s *Service) handleInboundStream(stream network.Stream) *Protocol {
 
 	// close if the relation to the peer is unknown and no slot is available
 	var hasKnownRelation bool
-	s.manager.Call(remotePeerID, func(peer *p2p.Peer) {
+	s.peeringManager.Call(remotePeerID, func(peer *p2p.Peer) {
 		if peer.Relation == p2p.PeerRelationUnknown {
 			return
 		}

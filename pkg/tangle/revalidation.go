@@ -143,7 +143,7 @@ func (t *Tangle) cleanupLedger(pruneReceipts bool) error {
 	start := time.Now()
 
 	t.log.Info("clearing ledger... ")
-	if err := t.storage.UTXO().ClearLedger(pruneReceipts); err != nil {
+	if err := t.storage.UTXOManager().ClearLedger(pruneReceipts); err != nil {
 		return err
 	}
 	t.log.Infof("clearing ledger... done. took %v", time.Since(start).Truncate(time.Millisecond))
@@ -559,7 +559,7 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 
 	// set the confirmed milestone index to 0.
 	// the correct milestone index will be applied during "ImportSnapshots"
-	t.storage.OverwriteConfirmedMilestoneIndex(0)
+	t.syncManager.OverwriteConfirmedMilestoneIndex(0)
 
 	// Restore the ledger state of the last snapshot
 	if err := snapshotManager.ImportSnapshots(); err != nil {
@@ -570,7 +570,7 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 		t.log.Panic(err)
 	}
 
-	ledgerIndex, err := t.storage.UTXO().ReadLedgerIndex()
+	ledgerIndex, err := t.storage.UTXOManager().ReadLedgerIndex()
 	if err != nil {
 		t.log.Panic(err)
 	}

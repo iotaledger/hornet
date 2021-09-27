@@ -376,7 +376,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	te.AssertMessageConflictReason(messageE.StoredMessageID(), storage.ConflictInvalidDustAllowance)
 
 	// Verify that the dust allowance is still unspent
-	unspent, err := te.UTXO().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
+	unspent, err := te.UTXOManager().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
 	require.NoError(t, err)
 	require.True(t, unspent)
 
@@ -407,7 +407,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
 
 	// Verify that the dust allowance spent
-	unspent, err = te.UTXO().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
+	unspent, err = te.UTXOManager().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
 	require.NoError(t, err)
 	require.False(t, unspent)
 

@@ -1,13 +1,13 @@
 package database
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"

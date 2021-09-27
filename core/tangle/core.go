@@ -10,10 +10,13 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -83,9 +86,29 @@ func provide(c *dig.Container) {
 		CorePlugin.Panic(err)
 	}
 
+	type milestoneManagerDeps struct {
+		dig.In
+		Storage                 *storage.Storage
+		SyncManager             *syncmanager.SyncManager
+		CoordinatorKeyManager   *keymanager.KeyManager
+		MilestonePublicKeyCount int `name:"milestonePublicKeyCount"`
+	}
+
+	if err := c.Provide(func(deps milestoneManagerDeps) *milestonemanager.MilestoneManager {
+		return milestonemanager.New(
+			deps.Storage,
+			deps.SyncManager,
+			deps.CoordinatorKeyManager,
+			deps.MilestonePublicKeyCount)
+	}); err != nil {
+		CorePlugin.Panic(err)
+	}
+
 	type tangleDeps struct {
 		dig.In
 		Storage          *storage.Storage
+		SyncManager      *syncmanager.SyncManager
+		MilestoneManager *milestonemanager.MilestoneManager
 		RequestQueue     gossip.RequestQueue
 		Service          *gossip.Service
 		Requester        *gossip.Requester
@@ -100,6 +123,8 @@ func provide(c *dig.Container) {
 		return tangle.New(
 			logger.NewLogger("Tangle"),
 			deps.Storage,
+			deps.SyncManager,
+			deps.MilestoneManager,
 			deps.RequestQueue,
 			deps.Service,
 			deps.MessageProcessor,

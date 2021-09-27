@@ -2,8 +2,9 @@ package database
 
 import (
 	"encoding/json"
-	"errors"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
