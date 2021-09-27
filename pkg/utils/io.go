@@ -134,3 +134,28 @@ func WriteTOMLToFile(filename string, data interface{}, perm os.FileMode, header
 
 	return nil
 }
+
+// CreateTempFile creates a file descriptor with _tmp as file extension.
+func CreateTempFile(filePath string) (*os.File, string, error) {
+	filePathTmp := filePath + "_tmp"
+
+	// we don't need to check the error, maybe the file doesn't exist
+	_ = os.Remove(filePathTmp)
+
+	fileDescriptor, err := os.OpenFile(filePathTmp, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to create temp file: %w", err)
+	}
+	return fileDescriptor, filePathTmp, nil
+}
+
+// CloseFileAndRename closes the file descriptor and renames the file.
+func CloseFileAndRename(fileDescriptor *os.File, sourceFilePath string, targetFilePath string) error {
+	if err := fileDescriptor.Close(); err != nil {
+		return fmt.Errorf("unable to close file: %w", err)
+	}
+	if err := os.Rename(sourceFilePath, targetFilePath); err != nil {
+		return fmt.Errorf("unable to rename file: %w", err)
+	}
+	return nil
+}
