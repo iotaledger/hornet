@@ -7,6 +7,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -43,7 +44,7 @@ var (
 type dependencies struct {
 	dig.In
 	TipSelector *tipselect.TipSelector
-	Storage     *storage.Storage
+	SyncManager *syncmanager.SyncManager
 	Tangle      *tangle.Tangle
 }
 
@@ -77,6 +78,7 @@ func provide(c *dig.Container) {
 	type tipselDeps struct {
 		dig.In
 		Storage                               *storage.Storage
+		SyncManager                           *syncmanager.SyncManager
 		ServerMetrics                         *metrics.ServerMetrics
 		NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
 		MaxDeltaMsgYoungestConeRootIndexToCMI int                          `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
@@ -87,6 +89,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps tipselDeps) *tipselect.TipSelector {
 		return tipselect.New(
 			deps.Storage,
+			deps.SyncManager,
 			deps.ServerMetrics,
 
 			deps.MaxDeltaMsgYoungestConeRootIndexToCMI,
@@ -142,7 +145,7 @@ func configureEvents() {
 	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
 		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 			// do not add tips during syncing, because it is not needed at all
-			if !deps.Storage.IsNodeAlmostSynced() {
+			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
 
@@ -152,7 +155,7 @@ func configureEvents() {
 
 	onMilestoneConfirmed = events.NewClosure(func(_ *whiteflag.Confirmation) {
 		// do not update tip scores during syncing, because it is not needed at all
-		if !deps.Storage.IsNodeAlmostSynced() {
+		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
 

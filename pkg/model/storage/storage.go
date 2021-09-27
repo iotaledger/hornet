@@ -3,33 +3,24 @@ package storage
 import (
 	"sync"
 
-	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
 type packageEvents struct {
-	ReceivedValidMilestone *events.Event
-	PruningStateChanged    *events.Event
+	PruningStateChanged *events.Event
 }
 
 type ReadOption = objectstorage.ReadOption
 type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
-	log *logger.Logger
-
 	// database
-	databaseDir   string
-	store         kvstore.KVStore
-	belowMaxDepth milestone.Index
+	store kvstore.KVStore
 
 	// kv storages
 	healthStore   kvstore.KVStore
@@ -51,23 +42,6 @@ type Storage struct {
 	snapshot      *SnapshotInfo
 	snapshotMutex syncutils.RWMutex
 
-	// milestones
-	confirmedMilestoneIndex milestone.Index
-	confirmedMilestoneLock  syncutils.RWMutex
-	latestMilestoneIndex    milestone.Index
-	latestMilestoneLock     syncutils.RWMutex
-
-	// node synced
-	isNodeSynced                    bool
-	isNodeAlmostSynced              bool
-	isNodeSyncedWithinBelowMaxDepth bool
-	waitForNodeSyncedChannelsLock   syncutils.Mutex
-	waitForNodeSyncedChannels       []chan struct{}
-
-	// milestones
-	keyManager              *keymanager.KeyManager
-	milestonePublicKeyCount int
-
 	// utxo
 	utxoManager *utxo.Manager
 
@@ -75,29 +49,19 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(log *logger.Logger, databaseDirectory string, store kvstore.KVStore, cachesProfile *profile.Caches, belowMaxDepth int, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (*Storage, error) {
+func New(store kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, error) {
 
 	utxoManager := utxo.New(store)
 
 	s := &Storage{
-		log:                     log,
-		databaseDir:             databaseDirectory,
-		store:                   store,
-		keyManager:              keyManager,
-		milestonePublicKeyCount: milestonePublicKeyCount,
-		utxoManager:             utxoManager,
-		belowMaxDepth:           milestone.Index(belowMaxDepth),
+		store:       store,
+		utxoManager: utxoManager,
 		Events: &packageEvents{
-			ReceivedValidMilestone: events.NewEvent(MilestoneWithRequestedCaller),
-			PruningStateChanged:    events.NewEvent(events.BoolCaller),
+			PruningStateChanged: events.NewEvent(events.BoolCaller),
 		},
 	}
 
-	if err := s.configureStorages(s.store, cachesProfile); err != nil {
-		return nil, err
-	}
-
-	if err := s.loadConfirmedMilestoneFromDatabase(); err != nil {
+	if err := s.configureStorages(s.store, cachesProfile...); err != nil {
 		return nil, err
 	}
 
@@ -116,33 +80,107 @@ func (s *Storage) KVStore() kvstore.KVStore {
 	return s.store
 }
 
-func (s *Storage) UTXO() *utxo.Manager {
+func (s *Storage) UTXOManager() *utxo.Manager {
 	return s.utxoManager
 }
 
-func (s *Storage) configureStorages(store kvstore.KVStore, caches *profile.Caches) error {
+// profileCachesDisabled returns a Caches profile with caching disabled.
+func (s *Storage) profileCachesDisabled() *profile.Caches {
+	return &profile.Caches{
+		Addresses: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 10,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		Children: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 10,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		Indexations: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 10,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		Milestones: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 10,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		Messages: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 10,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		UnreferencedMessages: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 10,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		IncomingMessagesFilter: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 10,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+	}
+}
+
+func (s *Storage) configureStorages(store kvstore.KVStore, cachesProfile ...*profile.Caches) error {
 
 	if err := s.configureHealthStore(store); err != nil {
 		return err
 	}
 
-	if err := s.configureMessageStorage(store, caches.Messages); err != nil {
+	cachesOpts := s.profileCachesDisabled()
+	if len(cachesProfile) > 0 {
+		cachesOpts = cachesProfile[0]
+	}
+
+	if err := s.configureMessageStorage(store, cachesOpts.Messages); err != nil {
 		return err
 	}
 
-	if err := s.configureChildrenStorage(store, caches.Children); err != nil {
+	if err := s.configureChildrenStorage(store, cachesOpts.Children); err != nil {
 		return err
 	}
 
-	if err := s.configureMilestoneStorage(store, caches.Milestones); err != nil {
+	if err := s.configureMilestoneStorage(store, cachesOpts.Milestones); err != nil {
 		return err
 	}
 
-	if err := s.configureUnreferencedMessageStorage(store, caches.UnreferencedMessages); err != nil {
+	if err := s.configureUnreferencedMessageStorage(store, cachesOpts.UnreferencedMessages); err != nil {
 		return err
 	}
 
-	if err := s.configureIndexationStorage(store, caches.Indexations); err != nil {
+	if err := s.configureIndexationStorage(store, cachesOpts.Indexations); err != nil {
 		return err
 	}
 
@@ -168,20 +206,4 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownChildrenStorage()
 	s.ShutdownIndexationStorage()
 	s.ShutdownUnreferencedMessagesStorage()
-}
-
-func (s *Storage) loadConfirmedMilestoneFromDatabase() error {
-
-	ledgerMilestoneIndex, err := s.UTXO().ReadLedgerIndex()
-	if err != nil {
-		return err
-	}
-
-	// set the confirmed milestone index based on the ledger milestone
-	return s.SetConfirmedMilestoneIndex(ledgerMilestoneIndex, false)
-}
-
-// DatabaseSize returns the size of the database.
-func (s *Storage) DatabaseSize() (int64, error) {
-	return utils.FolderSize(s.databaseDir)
 }

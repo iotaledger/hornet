@@ -129,7 +129,7 @@ func (t *Tangle) SolidQueueCheck(
 
 	tSolid := time.Now()
 
-	if t.storage.IsNodeAlmostSynced() {
+	if t.syncManager.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
 		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(messageIDsToSolidify, metadataMemcache, abortSignal); err != nil {
 			t.log.Debugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)
@@ -179,7 +179,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 		t.solidifierMilestoneIndexLock.RLock()
 		triggerSignal := (newMilestoneIndex == 0) && (t.solidifierMilestoneIndex == 0)
-		nextMilestoneSignal := newMilestoneIndex == t.storage.ConfirmedMilestoneIndex()+1
+		nextMilestoneSignal := newMilestoneIndex == t.syncManager.ConfirmedMilestoneIndex()+1
 		olderMilestoneDetected := (newMilestoneIndex != 0) && ((t.solidifierMilestoneIndex != 0) && (newMilestoneIndex < t.solidifierMilestoneIndex))
 		newMilestoneReqQueueEmptySignal := (t.solidifierMilestoneIndex == 0) && (newMilestoneIndex != 0) && t.requestQueue.Empty()
 		if !(triggerSignal || nextMilestoneSignal || olderMilestoneDetected || newMilestoneReqQueueEmptySignal) {
@@ -196,8 +196,8 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	t.solidifierLock.Lock()
 	defer t.solidifierLock.Unlock()
 
-	currentConfirmedIndex := t.storage.ConfirmedMilestoneIndex()
-	latestIndex := t.storage.LatestMilestoneIndex()
+	currentConfirmedIndex := t.syncManager.ConfirmedMilestoneIndex()
+	latestIndex := t.syncManager.LatestMilestoneIndex()
 
 	if currentConfirmedIndex == latestIndex && latestIndex != 0 {
 		// Latest milestone already solid
@@ -205,7 +205,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	}
 
 	// Always traverse the oldest non-solid milestone, either it gets solid, or something is missing that should be requested.
-	cachedMsToSolidify := t.storage.FindClosestNextMilestoneOrNil(currentConfirmedIndex) // message +1
+	cachedMsToSolidify := t.milestoneManager.FindClosestNextMilestoneOrNil(currentConfirmedIndex) // message +1
 	if cachedMsToSolidify == nil {
 		// No newer milestone available
 		return
@@ -246,7 +246,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 		// Milestone is stable, but some Milestones are missing in between
 		// => check if they were found, or search for them in the solidified cone
-		cachedClosestNextMs := t.storage.FindClosestNextMilestoneOrNil(currentConfirmedIndex) // message +1
+		cachedClosestNextMs := t.milestoneManager.FindClosestNextMilestoneOrNil(currentConfirmedIndex) // message +1
 		cachedClosestNextMsIndex := cachedClosestNextMs.Milestone().Index
 		if cachedClosestNextMsIndex == milestoneIndexToSolidify {
 			t.log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentConfirmedIndex, cachedClosestNextMsIndex)
@@ -278,11 +278,11 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		},
 		func(confirmation *whiteflag.Confirmation) {
 			timeStartConfirmation = time.Now()
-			if err := t.storage.SetConfirmedMilestoneIndex(milestoneIndexToSolidify); err != nil {
+			if err := t.syncManager.SetConfirmedMilestoneIndex(milestoneIndexToSolidify); err != nil {
 				t.log.Panicf("SetConfirmedMilestoneIndex failed: %s", err)
 			}
 			timeSetConfirmedMilestoneIndex = time.Now()
-			if t.storage.IsNodeAlmostSynced() {
+			if t.syncManager.IsNodeAlmostSynced() {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
 				dag.UpdateConeRootIndexes(t.storage, metadataMemcache, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 			}
@@ -349,7 +349,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	var rmpsMessage string
 	if metric, err := t.calcConfirmedMilestoneMetric(cachedMsToSolidify.Retain(), confirmedMilestoneStats.Index); err == nil {
-		if t.storage.IsNodeSynced() {
+		if t.syncManager.IsNodeSynced() {
 			// Only trigger the metrics event if the node is sync (otherwise the MPS and conf.rate is wrong)
 			if t.firstSyncedMilestone == 0 {
 				t.firstSyncedMilestone = confirmedMilestoneStats.Index
@@ -359,7 +359,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			t.firstSyncedMilestone = 0
 		}
 
-		if t.storage.IsNodeSynced() && (confirmedMilestoneStats.Index > t.firstSyncedMilestone+1) {
+		if t.syncManager.IsNodeSynced() && (confirmedMilestoneStats.Index > t.firstSyncedMilestone+1) {
 			t.lastConfirmedMilestoneMetricLock.Lock()
 			t.lastConfirmedMilestoneMetric = metric
 			t.lastConfirmedMilestoneMetricLock.Unlock()
@@ -459,7 +459,7 @@ func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index,
 			}
 			defer cachedMessage.Release(true) // message -1
 
-			ms := t.storage.VerifyMilestone(cachedMessage.Message())
+			ms := t.milestoneManager.VerifyMilestone(cachedMessage.Message())
 			if ms == nil {
 				return nil
 			}
@@ -470,7 +470,7 @@ func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index,
 			}
 
 			// milestone found!
-			t.storage.StoreMilestone(cachedMessage.Retain(), ms, false)
+			t.milestoneManager.StoreMilestone(cachedMessage.Retain(), ms, false)
 
 			return ErrMissingMilestoneFound // we return this as an error to stop the traverser
 		},

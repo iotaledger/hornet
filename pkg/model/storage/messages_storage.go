@@ -338,37 +338,3 @@ func (s *Storage) FlushMessagesStorage() {
 	s.messagesStorage.Flush()
 	s.metadataStorage.Flush()
 }
-
-// AddMessageToStorage adds a new message to the cache/persistence layer,
-// including all additional information like metadata, children,
-// indexation, unreferenced messages and milestone entries.
-// msg +1
-func (s *Storage) AddMessageToStorage(message *Message, latestMilestoneIndex milestone.Index, requested bool, forceRelease bool, reapply bool) (cachedMessage *CachedMessage, alreadyAdded bool) {
-
-	cachedMessage, isNew := s.StoreMessageIfAbsent(message) // msg +1
-	if !isNew && !reapply {
-		return cachedMessage, true
-	}
-
-	for _, parent := range message.Parents() {
-		s.StoreChild(parent, cachedMessage.Message().MessageID()).Release(forceRelease)
-	}
-
-	indexationPayload := CheckIfIndexation(cachedMessage.Message())
-	if indexationPayload != nil {
-		// store indexation if the message contains an indexation payload
-		s.StoreIndexation(indexationPayload.Index, cachedMessage.Message().MessageID()).Release(true)
-	}
-
-	// Store only non-requested messages, since all requested messages are referenced by a milestone anyway
-	// This is only used to delete unreferenced messages from the database at pruning
-	if !requested {
-		s.StoreUnreferencedMessage(latestMilestoneIndex, cachedMessage.Message().MessageID()).Release(true)
-	}
-
-	if ms := s.VerifyMilestone(message); ms != nil {
-		s.StoreMilestone(cachedMessage.Retain(), ms, requested)
-	}
-
-	return cachedMessage, false
-}

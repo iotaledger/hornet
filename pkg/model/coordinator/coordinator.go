@@ -16,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -75,6 +76,8 @@ type Coordinator struct {
 	milestoneLock syncutils.Mutex
 	// used to access the node storage.
 	storage *storage.Storage
+	// used to determine the sync status of the node.
+	syncManager *syncmanager.SyncManager
 	// id of the network the coordinator is running in.
 	networkID uint64
 	// used to get receipts for the WOTS migration.
@@ -207,16 +210,24 @@ func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfi
 type Option func(opts *Options)
 
 // New creates a new coordinator instance.
-func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider,
-	migratorService *migrator.MigratorService, utxoManager *utxo.Manager, powHandler *pow.Handler,
-	sendMessageFunc SendMessageFunc, opts ...Option) (*Coordinator, error) {
+func New(
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
+	networkID uint64,
+	signerProvider MilestoneSignerProvider,
+	migratorService *migrator.MigratorService,
+	utxoManager *utxo.Manager,
+	powHandler *pow.Handler,
+	sendMessageFunc SendMessageFunc,
+	opts ...Option) (*Coordinator, error) {
 
 	options := &Options{}
 	options.apply(defaultOptions...)
 	options.apply(opts...)
 
 	result := &Coordinator{
-		storage:          storage,
+		storage:          dbStorage,
+		syncManager:      syncManager,
 		networkID:        networkID,
 		signerProvider:   signerProvider,
 		migratorService:  migratorService,
@@ -444,7 +455,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
-	if !coo.storage.IsNodeSynced() {
+	if !coo.syncManager.IsNodeSynced() {
 		return nil, common.SoftError(common.ErrNodeNotSynced)
 	}
 
@@ -494,7 +505,7 @@ func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.Messag
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
-	if !coo.storage.IsNodeSynced() {
+	if !coo.syncManager.IsNodeSynced() {
 		// return a non-critical error to not kill the database
 		return nil, common.SoftError(common.ErrNodeNotSynced)
 	}

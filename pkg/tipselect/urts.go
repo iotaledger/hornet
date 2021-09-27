@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -84,6 +85,8 @@ type Events struct {
 type TipSelector struct {
 	// tangle contains the database.
 	storage *storage.Storage
+	// used to determine the sync status of the node
+	syncManager *syncmanager.SyncManager
 	// serverMetrics is the shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
 	// maxDeltaMsgYoungestConeRootIndexToCMI is the maximum allowed delta
@@ -136,7 +139,9 @@ type TipSelector struct {
 }
 
 // New creates a new tip-selector.
-func New(storage *storage.Storage,
+func New(
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
 	serverMetrics *metrics.ServerMetrics,
 	maxDeltaMsgYoungestConeRootIndexToCMI int,
 	maxDeltaMsgOldestConeRootIndexToCMI int,
@@ -151,7 +156,8 @@ func New(storage *storage.Storage,
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
-		storage:                               storage,
+		storage:                               dbStorage,
+		syncManager:                           syncManager,
 		serverMetrics:                         serverMetrics,
 		maxDeltaMsgYoungestConeRootIndexToCMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToCMI),
 		maxDeltaMsgOldestConeRootIndexToCMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToCMI),
@@ -192,7 +198,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 		return
 	}
 
-	cmi := ts.storage.ConfirmedMilestoneIndex()
+	cmi := ts.syncManager.ConfirmedMilestoneIndex()
 
 	score := ts.calculateScore(messageID, cmi)
 	if score == ScoreLazy {
@@ -310,7 +316,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 // selectTipWithoutLocking selects a tip.
 func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.MessageID, error) {
 
-	if !ts.storage.IsNodeAlmostSynced() {
+	if !ts.syncManager.IsNodeAlmostSynced() {
 		return nil, common.ErrNodeNotSynced
 	}
 
@@ -468,7 +474,7 @@ func (ts *TipSelector) UpdateScores() int {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	cmi := ts.storage.ConfirmedMilestoneIndex()
+	cmi := ts.syncManager.ConfirmedMilestoneIndex()
 
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {

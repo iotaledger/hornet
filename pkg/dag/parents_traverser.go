@@ -34,11 +34,11 @@ type ParentTraverser struct {
 }
 
 // NewParentTraverser create a new traverser to traverse the parents (past cone)
-func NewParentTraverser(s *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ParentTraverser {
+func NewParentTraverser(dbStorage *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ParentTraverser {
 
 	t := &ParentTraverser{
-		storage:          s,
-		metadataMemcache: storage.NewMetadataMemcache(s),
+		storage:          dbStorage,
+		metadataMemcache: storage.NewMetadataMemcache(dbStorage),
 		stack:            list.New(),
 		processed:        make(map[string]struct{}),
 		checked:          make(map[string]bool),

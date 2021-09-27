@@ -15,6 +15,21 @@ type MessageID []byte
 // MessageIDs is a slice of MessageID.
 type MessageIDs []MessageID
 
+// LexicalOrderedOutputs are MessageIDs ordered in lexical order.
+type LexicalOrderedMessageIDs MessageIDs
+
+func (l LexicalOrderedMessageIDs) Len() int {
+	return len(l)
+}
+
+func (l LexicalOrderedMessageIDs) Less(i, j int) bool {
+	return bytes.Compare(l[i], l[j]) < 0
+}
+
+func (l LexicalOrderedMessageIDs) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+
 // ToHex converts the MessageID to its hex representation.
 func (m MessageID) ToHex() string {
 	return hex.EncodeToString(m)

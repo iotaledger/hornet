@@ -3,25 +3,39 @@ package gossip
 import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/p2p"
 )
 
-// NewBroadcaster creates a new Broadcaster.
-func NewBroadcaster(service *Service, manager *p2p.Manager, storage *storage.Storage, broadcastQueueSize int) *Broadcaster {
-	return &Broadcaster{
-		service: service,
-		manager: manager,
-		storage: storage,
-		queue:   make(chan *Broadcast, broadcastQueueSize),
-	}
-}
-
 // Broadcaster provides functions to broadcast data to gossip streams.
 type Broadcaster struct {
-	service *Service
-	manager *p2p.Manager
+	// used to access the node storage.
 	storage *storage.Storage
-	queue   chan *Broadcast
+	// used to determine the sync status of the node.
+	syncManager *syncmanager.SyncManager
+	// used to access the p2p peeringManager.
+	peeringManager *p2p.Manager
+	// used to access gossip service.
+	service *Service
+	// the queue for pending broadcasts.
+	queue chan *Broadcast
+}
+
+// NewBroadcaster creates a new Broadcaster.
+func NewBroadcaster(
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
+	peeringManager *p2p.Manager,
+	service *Service,
+	broadcastQueueSize int) *Broadcaster {
+
+	return &Broadcaster{
+		storage:        dbStorage,
+		syncManager:    syncManager,
+		peeringManager: peeringManager,
+		service:        service,
+		queue:          make(chan *Broadcast, broadcastQueueSize),
+	}
 }
 
 // RunBroadcastQueueDrainer runs the broadcast queue drainer.
@@ -56,12 +70,12 @@ func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
 		return
 	}
 
-	confirmedMilestoneIndex := b.storage.ConfirmedMilestoneIndex() // bee differentiates between solid and confirmed milestone, for hornet it is the same.
-	connectedCount := b.manager.ConnectedCount()
+	confirmedMilestoneIndex := b.syncManager.ConfirmedMilestoneIndex() // bee differentiates between solid and confirmed milestone, for hornet it is the same.
+	connectedCount := b.peeringManager.ConnectedCount()
 	syncedCount := b.service.SynchronizedCount(confirmedMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
 
-	heartbeatMsg, err := NewHeartbeatMsg(confirmedMilestoneIndex, snapshotInfo.PruningIndex, b.storage.LatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
+	heartbeatMsg, err := NewHeartbeatMsg(confirmedMilestoneIndex, snapshotInfo.PruningIndex, b.syncManager.LatestMilestoneIndex(), byte(connectedCount), byte(syncedCount))
 	if err != nil {
 		return
 	}
@@ -77,11 +91,11 @@ func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
 
 // BroadcastMilestoneRequests broadcasts up to N requests for milestones nearest to the current confirmed milestone index
 // to every connected peer. Returns the number of milestones requested.
-func (b *Broadcaster) BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange func(index milestone.Index), from ...milestone.Index) int {
+func (b *Broadcaster) BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange func(milestone *storage.CachedMilestone), from ...milestone.Index) int {
 	var requested int
 
 	// make sure we only request what we don't have
-	startingPoint := b.storage.ConfirmedMilestoneIndex()
+	startingPoint := b.syncManager.ConfirmedMilestoneIndex()
 	if len(from) > 0 {
 		startingPoint = from[0]
 	}
@@ -89,15 +103,21 @@ func (b *Broadcaster) BroadcastMilestoneRequests(rangeToRequest int, onExistingM
 	var msIndexes []milestone.Index
 	for i := 1; i <= rangeToRequest; i++ {
 		toReq := startingPoint + milestone.Index(i)
-		// only request if we do not have the milestone
-		if !b.storage.ContainsMilestone(toReq) {
+
+		cachedMs := b.storage.CachedMilestoneOrNil(toReq) // milestone +1
+		if cachedMs == nil {
+			// only request if we do not have the milestone
 			requested++
 			msIndexes = append(msIndexes, toReq)
 			continue
 		}
+
+		// milestone already exists
 		if onExistingMilestoneInRange != nil {
-			onExistingMilestoneInRange(toReq)
+			onExistingMilestoneInRange(cachedMs.Retain())
 		}
+
+		cachedMs.Release(true) // milestone -1
 	}
 
 	if len(msIndexes) == 0 {

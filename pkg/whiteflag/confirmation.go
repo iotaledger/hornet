@@ -49,7 +49,8 @@ type ConfirmationMetrics struct {
 // if one is present. The treasury is mutated accordingly.
 // metadataMemcache has to be cleaned up outside.
 func ConfirmMilestone(
-	s *storage.Storage, serverMetrics *metrics.ServerMetrics,
+	dbStorage *storage.Storage,
+	serverMetrics *metrics.ServerMetrics,
 	messagesMemcache *storage.MessagesMemcache,
 	metadataMemcache *storage.MetadataMemcache,
 	milestoneMessageID hornet.MessageID,
@@ -64,8 +65,8 @@ func ConfirmMilestone(
 		return nil, nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.ToHex())
 	}
 
-	s.UTXO().WriteLockLedger()
-	defer s.UTXO().WriteUnlockLedger()
+	dbStorage.UTXOManager().WriteLockLedger()
+	defer dbStorage.UTXOManager().WriteUnlockLedger()
 	message := cachedMilestoneMessage.Message()
 
 	ms := message.Milestone()
@@ -82,7 +83,7 @@ func ConfirmMilestone(
 
 	timeStart := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(s, milestoneIndex, metadataMemcache, messagesMemcache, message.Parents())
+	mutations, err := ComputeWhiteFlagMutations(dbStorage, milestoneIndex, metadataMemcache, messagesMemcache, message.Parents())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
@@ -130,7 +131,7 @@ func ConfirmMilestone(
 			}
 		}
 
-		unspentTreasuryOutput, err := s.UTXO().UnspentTreasuryOutputWithoutLocking()
+		unspentTreasuryOutput, err := dbStorage.UTXOManager().UnspentTreasuryOutputWithoutLocking()
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to fetch previous unspent treasury output: %w", err)
 		}
@@ -157,7 +158,7 @@ func ConfirmMilestone(
 		newSpents = append(newSpents, spent)
 	}
 
-	if err = s.UTXO().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt); err != nil {
+	if err = dbStorage.UTXOManager().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt); err != nil {
 		return nil, nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed: %w", err)
 	}
 	timeConfirmation := time.Now()

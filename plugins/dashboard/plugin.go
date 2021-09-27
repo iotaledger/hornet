@@ -22,6 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -77,10 +78,11 @@ type dependencies struct {
 	dig.In
 	Database                 *database.Database
 	Storage                  *storage.Storage
+	SyncManager              *syncmanager.SyncManager
 	Tangle                   *tangle.Tangle
 	ServerMetrics            *metrics.ServerMetrics
 	RequestQueue             gossip.RequestQueue
-	Manager                  *p2p.Manager
+	PeeringManager           *p2p.Manager
 	MessageProcessor         *gossip.MessageProcessor
 	TipSelector              *tipselect.TipSelector       `optional:"true"`
 	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
@@ -328,7 +330,7 @@ type Cache struct {
 }
 
 func peerMetrics() []*restapiv1.PeerResponse {
-	peerInfos := deps.Manager.PeerInfoSnapshots()
+	peerInfos := deps.PeeringManager.PeerInfoSnapshots()
 	results := make([]*restapiv1.PeerResponse, len(peerInfos))
 	for i, info := range peerInfos {
 		results[i] = restapiv1.WrapInfoSnapshot(info)
@@ -337,14 +339,14 @@ func peerMetrics() []*restapiv1.PeerResponse {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{CMI: deps.Storage.ConfirmedMilestoneIndex(), LMI: deps.Storage.LatestMilestoneIndex()}
+	return &SyncStatus{CMI: deps.SyncManager.ConfirmedMilestoneIndex(), LMI: deps.SyncManager.LatestMilestoneIndex()}
 }
 
 func currentPublicNodeStatus() *PublicNodeStatus {
 	status := &PublicNodeStatus{}
 
 	status.IsHealthy = deps.Tangle.IsNodeHealthy()
-	status.IsSynced = deps.Storage.IsNodeAlmostSynced()
+	status.IsSynced = deps.SyncManager.IsNodeAlmostSynced()
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo != nil {
@@ -374,7 +376,7 @@ func currentNodeStatus() *NodeStatus {
 	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
 	status.NodeID = deps.Host.ID().String()
 
-	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
+	status.ConnectedPeersCount = deps.PeeringManager.ConnectedCount()
 	status.CurrentRequestedMs = requestedMilestone
 	status.RequestQueueQueued = queued
 	status.RequestQueuePending = pending

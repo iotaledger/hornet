@@ -12,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
@@ -56,16 +57,17 @@ var (
 
 type dependencies struct {
 	dig.In
-	Service          *gossip.Service
+	GossipService    *gossip.Service
 	Broadcaster      *gossip.Broadcaster
 	Requester        *gossip.Requester
 	Storage          *storage.Storage
+	SyncManager      *syncmanager.SyncManager
 	Tangle           *tangle.Tangle
-	Snapshot         *snapshot.Snapshot
+	SnapshotManager  *snapshot.SnapshotManager
 	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
-	Manager          *p2p.Manager
+	PeeringManager   *p2p.Manager
 	Host             host.Host
 }
 
@@ -79,24 +81,31 @@ func provide(c *dig.Container) {
 
 	type msgProcDeps struct {
 		dig.In
-		Storage       *storage.Storage
-		ServerMetrics *metrics.ServerMetrics
-		RequestQueue  gossip.RequestQueue
-		Manager       *p2p.Manager
-		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-		NetworkID     uint64                       `name:"networkId"`
-		BelowMaxDepth int                          `name:"belowMaxDepth"`
-		MinPoWScore   float64                      `name:"minPoWScore"`
-		Profile       *profile.Profile
+		Storage        *storage.Storage
+		SyncManager    *syncmanager.SyncManager
+		ServerMetrics  *metrics.ServerMetrics
+		RequestQueue   gossip.RequestQueue
+		PeeringManager *p2p.Manager
+		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+		NetworkID      uint64                       `name:"networkId"`
+		BelowMaxDepth  int                          `name:"belowMaxDepth"`
+		MinPoWScore    float64                      `name:"minPoWScore"`
+		Profile        *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgProcDeps) *gossip.MessageProcessor {
-		msgProc, err := gossip.NewMessageProcessor(deps.Storage, deps.RequestQueue, deps.Manager, deps.ServerMetrics, &gossip.Options{
-			MinPoWScore:       deps.MinPoWScore,
-			NetworkID:         deps.NetworkID,
-			BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
-			WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
-		})
+		msgProc, err := gossip.NewMessageProcessor(
+			deps.Storage,
+			deps.SyncManager,
+			deps.RequestQueue,
+			deps.PeeringManager,
+			deps.ServerMetrics,
+			&gossip.Options{
+				MinPoWScore:       deps.MinPoWScore,
+				NetworkID:         deps.NetworkID,
+				BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
+				WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
+			})
 		if err != nil {
 			CorePlugin.Panicf("MessageProcessor initialization failed: %s", err)
 		}
@@ -108,18 +117,20 @@ func provide(c *dig.Container) {
 
 	type serviceDeps struct {
 		dig.In
-		Host          host.Host
-		Manager       *p2p.Manager
-		Storage       *storage.Storage
-		ServerMetrics *metrics.ServerMetrics
-		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-		NetworkID     uint64                       `name:"networkId"`
+		Host           host.Host
+		PeeringManager *p2p.Manager
+		Storage        *storage.Storage
+		ServerMetrics  *metrics.ServerMetrics
+		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+		NetworkID      uint64                       `name:"networkId"`
 	}
 
 	if err := c.Provide(func(deps serviceDeps) *gossip.Service {
 		return gossip.NewService(
 			protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, deps.NetworkID)),
-			deps.Host, deps.Manager, deps.ServerMetrics,
+			deps.Host,
+			deps.PeeringManager,
+			deps.ServerMetrics,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
 			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(CfgP2PGossipUnknownPeersLimit)),
 			gossip.WithStreamReadTimeout(deps.NodeConfig.Duration(CfgP2PGossipStreamReadTimeout)),
@@ -131,16 +142,17 @@ func provide(c *dig.Container) {
 
 	type requesterDeps struct {
 		dig.In
-		Service      *gossip.Service
-		NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-		RequestQueue gossip.RequestQueue
-		Storage      *storage.Storage
+		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		Storage       *storage.Storage
+		GossipService *gossip.Service
+		RequestQueue  gossip.RequestQueue
 	}
 
 	if err := c.Provide(func(deps requesterDeps) *gossip.Requester {
-		return gossip.NewRequester(deps.Service,
-			deps.RequestQueue,
+		return gossip.NewRequester(
 			deps.Storage,
+			deps.GossipService,
+			deps.RequestQueue,
 			gossip.WithRequesterDiscardRequestsOlderThan(deps.NodeConfig.Duration(CfgRequestsDiscardOlderThan)),
 			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.NodeConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
 	}); err != nil {
@@ -149,13 +161,19 @@ func provide(c *dig.Container) {
 
 	type broadcasterDeps struct {
 		dig.In
-		Service *gossip.Service
-		Manager *p2p.Manager
-		Storage *storage.Storage
+		Storage        *storage.Storage
+		SyncManager    *syncmanager.SyncManager
+		PeeringManager *p2p.Manager
+		GossipService  *gossip.Service
 	}
 
 	if err := c.Provide(func(deps broadcasterDeps) *gossip.Broadcaster {
-		return gossip.NewBroadcaster(deps.Service, deps.Manager, deps.Storage, 1000)
+		return gossip.NewBroadcaster(
+			deps.Storage,
+			deps.SyncManager,
+			deps.PeeringManager,
+			deps.GossipService,
+			1000)
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
@@ -165,17 +183,17 @@ func configure() {
 
 	// don't re-enqueue pending requests in case the node is running hot
 	deps.Requester.AddBackPressureFunc(func() bool {
-		return deps.Snapshot.IsSnapshottingOrPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
+		return deps.SnapshotManager.IsSnapshottingOrPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
 	})
 
 	// register event handlers for messages
-	deps.Service.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
+	deps.GossipService.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
 		addMessageEventHandlers(proto)
 
 		// stream close handler
 		protocolTerminated := make(chan struct{})
 
-		deps.Service.Events.ProtocolTerminated.Attach(events.NewClosure(func(terminatedProto *gossip.Protocol) {
+		deps.GossipService.Events.ProtocolTerminated.Attach(events.NewClosure(func(terminatedProto *gossip.Protocol) {
 			if terminatedProto != proto {
 				return
 			}
@@ -202,11 +220,11 @@ func configure() {
 		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
 			// send heartbeat and latest milestone request
 			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
-				latestMilestoneIndex := deps.Storage.LatestMilestoneIndex()
-				syncedCount := deps.Service.SynchronizedCount(latestMilestoneIndex)
-				connectedCount := deps.Manager.ConnectedCount()
+				latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
+				syncedCount := deps.GossipService.SynchronizedCount(latestMilestoneIndex)
+				connectedCount := deps.PeeringManager.ConnectedCount()
 				// TODO: overflow not handled for synced/connected
-				proto.SendHeartbeat(deps.Storage.ConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
+				proto.SendHeartbeat(deps.SyncManager.ConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 				proto.SendLatestMilestoneRequest()
 			}
 
@@ -233,7 +251,7 @@ func run() {
 
 	if err := CorePlugin.Daemon().BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
 		CorePlugin.LogInfo("Running GossipService")
-		deps.Service.Start(shutdownSignal)
+		deps.GossipService.Start(shutdownSignal)
 		CorePlugin.LogInfo("Stopped GossipService")
 	}, shutdown.PriorityGossipService); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
@@ -291,7 +309,7 @@ func checkHeartbeats() {
 	peersToReconnect := make(map[peer.ID]struct{})
 
 	// check if peers are alive by checking whether we received heartbeats lately
-	deps.Service.ForEach(func(proto *gossip.Protocol) bool {
+	deps.GossipService.ForEach(func(proto *gossip.Protocol) bool {
 
 		// use a grace period before the heartbeat check is applied
 		if time.Since(proto.Stream.Stat().Opened) <= checkHeartbeatsInterval ||

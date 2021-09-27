@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 )
@@ -236,44 +236,54 @@ func (ws *WarpSync) reset() {
 	ws.referencedMessagesTotal = 0
 }
 
+// WarpSyncMilestoneRequester walks the cones of existing but non-solid milestones and memoizes already walked messages and milestones.
+type WarpSyncMilestoneRequester struct {
+	syncutils.Mutex
+
+	// used to access the node storage.
+	storage *storage.Storage
+	// used to determine the sync status of the node.
+	syncManager *syncmanager.SyncManager
+	// used to request messages from peers.
+	requester *Requester
+	// do not remove requests if the enqueue time is over the given threshold.
+	preventDiscard bool
+	// map of already traversed messages to to prevent traversing the same cones multiple times.
+	traversed map[string]struct{}
+}
+
 // NewWarpSyncMilestoneRequester creates a new WarpSyncMilestoneRequester instance.
-func NewWarpSyncMilestoneRequester(storage *storage.Storage, requester *Requester, preventDiscard bool) *WarpSyncMilestoneRequester {
+func NewWarpSyncMilestoneRequester(
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
+	requester *Requester,
+	preventDiscard bool) *WarpSyncMilestoneRequester {
+
 	return &WarpSyncMilestoneRequester{
-		storage:        storage,
+		storage:        dbStorage,
+		syncManager:    syncManager,
 		requester:      requester,
 		preventDiscard: preventDiscard,
 		traversed:      make(map[string]struct{}),
 	}
 }
 
-// WarpSyncMilestoneRequester walks the cones of existing but non-solid milestones and memoizes already walked messages and milestones.
-type WarpSyncMilestoneRequester struct {
-	syncutils.Mutex
-
-	storage        *storage.Storage
-	requester      *Requester
-	preventDiscard bool
-	traversed      map[string]struct{}
-}
-
 // RequestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
 // Already requested milestones or traversed messages will be ignored, to circumvent requesting
 // the same parents multiple times.
-func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(msIndex milestone.Index) {
+func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(cachedMs *storage.CachedMilestone) {
+	defer cachedMs.Release(true) // milestone -1
+
 	w.Lock()
 	defer w.Unlock()
 
-	if msIndex <= w.storage.ConfirmedMilestoneIndex() {
+	msIndex := cachedMs.Milestone().Index
+
+	if msIndex <= w.syncManager.ConfirmedMilestoneIndex() {
 		return
 	}
 
-	cachedMs := w.storage.CachedMilestoneOrNil(msIndex) // milestone +1
-	if cachedMs == nil {
-		panic(fmt.Sprintf("milestone %d wasn't found", msIndex))
-	}
-
 	milestoneMessageID := cachedMs.Milestone().MessageID
-	cachedMs.Release(true) // message -1
 
 	// error is ignored because the next milestone will repeat the process anyway
 	_ = dag.TraverseParentsOfMessage(w.storage, milestoneMessageID,

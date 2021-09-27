@@ -35,7 +35,7 @@ func (s *DBSizeMetric) MarshalJSON() ([]byte, error) {
 }
 
 func currentDatabaseSize() *DBSizeMetric {
-	dbSize, err := deps.Storage.DatabaseSize()
+	dbSize, err := deps.Database.Size()
 	if err != nil {
 		Plugin.LogWarnf("error in database size calculation: %s", err)
 		return nil

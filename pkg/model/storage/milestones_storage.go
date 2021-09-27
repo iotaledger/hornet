@@ -175,7 +175,7 @@ func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, iterato
 }
 
 // milestone +1
-func (s *Storage) storeMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (cachedMilestone *CachedMilestone, newlyAdded bool) {
+func (s *Storage) StoreMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (cachedMilestone *CachedMilestone, newlyAdded bool) {
 
 	cachedMs, newlyAdded := s.milestoneStorage.StoreIfAbsent(&Milestone{
 		Index:     index,

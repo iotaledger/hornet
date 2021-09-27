@@ -10,10 +10,13 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/database"
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -68,7 +71,7 @@ type dependencies struct {
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
-	Snapshot                 *snapshot.Snapshot
+	SnapshotManager          *snapshot.SnapshotManager
 	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
 	DatabaseDebug            bool                         `name:"databaseDebug"`
 	DatabaseAutoRevalidation bool                         `name:"databaseAutoRevalidation"`
@@ -83,9 +86,29 @@ func provide(c *dig.Container) {
 		CorePlugin.Panic(err)
 	}
 
+	type milestoneManagerDeps struct {
+		dig.In
+		Storage                 *storage.Storage
+		SyncManager             *syncmanager.SyncManager
+		CoordinatorKeyManager   *keymanager.KeyManager
+		MilestonePublicKeyCount int `name:"milestonePublicKeyCount"`
+	}
+
+	if err := c.Provide(func(deps milestoneManagerDeps) *milestonemanager.MilestoneManager {
+		return milestonemanager.New(
+			deps.Storage,
+			deps.SyncManager,
+			deps.CoordinatorKeyManager,
+			deps.MilestonePublicKeyCount)
+	}); err != nil {
+		CorePlugin.Panic(err)
+	}
+
 	type tangleDeps struct {
 		dig.In
 		Storage          *storage.Storage
+		SyncManager      *syncmanager.SyncManager
+		MilestoneManager *milestonemanager.MilestoneManager
 		RequestQueue     gossip.RequestQueue
 		Service          *gossip.Service
 		Requester        *gossip.Requester
@@ -100,6 +123,8 @@ func provide(c *dig.Container) {
 		return tangle.New(
 			logger.NewLogger("Tangle"),
 			deps.Storage,
+			deps.SyncManager,
+			deps.MilestoneManager,
 			deps.RequestQueue,
 			deps.Service,
 			deps.MessageProcessor,
@@ -151,7 +176,7 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 		}
 		CorePlugin.LogWarnf("HORNET was not shut down correctly, the database may be corrupted. Starting revalidation...")
 
-		if err := deps.Tangle.RevalidateDatabase(deps.Snapshot, deps.PruneReceipts); err != nil {
+		if err := deps.Tangle.RevalidateDatabase(deps.SnapshotManager, deps.PruneReceipts); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				CorePlugin.LogInfo("database revalidation aborted")
 				os.Exit(0)
@@ -222,12 +247,12 @@ func configureEvents() {
 
 func attachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
-	deps.Snapshot.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
+	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Attach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 }
 
 func detachHeartbeatEvents() {
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
-	deps.Snapshot.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
+	deps.SnapshotManager.Events.PruningMilestoneIndexChanged.Detach(onPruningMilestoneIndexChanged)
 	deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 }

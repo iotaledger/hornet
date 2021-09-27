@@ -9,10 +9,10 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone,
 
 	t.Events.ReceivedNewMilestone.Trigger(cachedMilestone) // milestone pass +1
 
-	confirmedMsIndex := t.storage.ConfirmedMilestoneIndex()
+	confirmedMsIndex := t.syncManager.ConfirmedMilestoneIndex()
 	msIndex := cachedMilestone.Milestone().Index
 
-	if t.storage.SetLatestMilestoneIndex(msIndex) {
+	if t.syncManager.SetLatestMilestoneIndex(msIndex) {
 		t.Events.LatestMilestoneChanged.Trigger(cachedMilestone) // milestone pass +1
 		t.Events.LatestMilestoneIndexChanged.Trigger(msIndex)
 	}

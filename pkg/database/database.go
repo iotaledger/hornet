@@ -2,9 +2,11 @@ package database
 
 import (
 	"encoding/json"
-	"errors"
 	"time"
 
+	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/logger"
@@ -59,25 +61,27 @@ type Events struct {
 	DatabaseCompaction *events.Event
 }
 
-// New creates a new Database instance.
-func New(log *logger.Logger, kvStore kvstore.KVStore, events *Events, compactionSupported bool, compactionRunningFunc func() bool) *Database {
-	return &Database{
-		log:                   log,
-		store:                 kvStore,
-		events:                events,
-		compactionSupported:   compactionSupported,
-		compactionRunningFunc: compactionRunningFunc,
-	}
-}
-
 // Database holds the underlying KVStore and database specific functions.
 type Database struct {
 	log                   *logger.Logger
+	databaseDir           string
 	store                 kvstore.KVStore
 	events                *Events
 	compactionSupported   bool
 	compactionRunningFunc func() bool
 	garbageCollectionLock syncutils.Mutex
+}
+
+// New creates a new Database instance.
+func New(log *logger.Logger, databaseDirectory string, kvStore kvstore.KVStore, events *Events, compactionSupported bool, compactionRunningFunc func() bool) *Database {
+	return &Database{
+		log:                   log,
+		databaseDir:           databaseDirectory,
+		store:                 kvStore,
+		events:                events,
+		compactionSupported:   compactionSupported,
+		compactionRunningFunc: compactionRunningFunc,
+	}
 }
 
 // KVStore returns the underlying KVStore.
@@ -118,8 +122,9 @@ func (db *Database) RunGarbageCollection() {
 	db.garbageCollectionLock.Lock()
 	defer db.garbageCollectionLock.Unlock()
 
-	db.log.Info("running full database garbage collection. This can take a while...")
-
+	if db.log != nil {
+		db.log.Info("running full database garbage collection. This can take a while...")
+	}
 	start := time.Now()
 
 	db.events.DatabaseCleanup.Trigger(&DatabaseCleanup{
@@ -137,10 +142,19 @@ func (db *Database) RunGarbageCollection() {
 
 	if err != nil {
 		if !errors.Is(err, ErrNothingToCleanUp) {
-			db.log.Warnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
+			if db.log != nil {
+				db.log.Warnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
+			}
 			return
 		}
 	}
 
-	db.log.Infof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
+	if db.log != nil {
+		db.log.Infof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
+	}
+}
+
+// Size returns the size of the database.
+func (db *Database) Size() (int64, error) {
+	return utils.FolderSize(db.databaseDir)
 }

@@ -49,31 +49,36 @@ func WithRequesterPendingRequestReEnqueueInterval(dur time.Duration) RequesterOp
 	}
 }
 
+// Requester handles requesting packets.
+type Requester struct {
+	storage *storage.Storage
+	service *Service
+	rQueue  RequestQueue
+	opts    *RequesterOptions
+
+	running     bool
+	backPFuncs  []RequestBackPressureFunc
+	drainSignal chan struct{}
+}
+
 // NewRequester creates a new Requester.
-func NewRequester(service *Service, rQueue RequestQueue, storage *storage.Storage, opts ...RequesterOption) *Requester {
+func NewRequester(
+	dbStorage *storage.Storage,
+	service *Service,
+	rQueue RequestQueue,
+	opts ...RequesterOption) *Requester {
 
 	reqOpts := &RequesterOptions{}
 	reqOpts.apply(defaultRequesterOpts...)
 	reqOpts.apply(opts...)
 
 	return &Requester{
+		storage:     dbStorage,
 		service:     service,
 		rQueue:      rQueue,
-		storage:     storage,
 		opts:        reqOpts,
 		drainSignal: make(chan struct{}, 2),
 	}
-}
-
-// Requester handles requesting packets.
-type Requester struct {
-	running     bool
-	service     *Service
-	rQueue      RequestQueue
-	storage     *storage.Storage
-	opts        *RequesterOptions
-	backPFuncs  []RequestBackPressureFunc
-	drainSignal chan struct{}
 }
 
 // RunRequestQueueDrainer runs the RequestQueue drainer.

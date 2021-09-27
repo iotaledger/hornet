@@ -8,6 +8,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -90,9 +91,10 @@ var (
 type dependencies struct {
 	dig.In
 	Storage      *storage.Storage
+	SyncManager  *syncmanager.SyncManager
 	Tangle       *tangle.Tangle
 	RequestQueue gossip.RequestQueue
-	UTXO         *utxo.Manager
+	UTXOManager  *utxo.Manager
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
 	Echo         *echo.Echo                   `optional:"true"`
 }
