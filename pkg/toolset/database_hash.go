@@ -34,14 +34,6 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 		return errors.New("no snapshot info found")
 	}
 
-	var solidEntryPoints hornet.LexicalOrderedMessageIDs
-	dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
-		solidEntryPoints = append(solidEntryPoints, sep.MessageID)
-		return true
-	})
-	// sort the solid entry points lexicographically by their MessageID
-	sort.Sort(solidEntryPoints)
-
 	// read out treasury tx
 	treasuryOutput, err := dbStorage.UTXOManager().UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
@@ -57,6 +49,14 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 	}
 	// sort the outputs lexicographically by their OutputID
 	sort.Sort(outputs)
+
+	var solidEntryPoints hornet.LexicalOrderedMessageIDs
+	dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
+		solidEntryPoints = append(solidEntryPoints, sep.MessageID)
+		return true
+	})
+	// sort the solid entry points lexicographically by their MessageID
+	sort.Sort(solidEntryPoints)
 
 	// compute the sha256 of the ledger state
 	lsHash := sha256.New()
@@ -76,18 +76,6 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 		}
 	}
 
-	// write all solid entry points in lexicographical order
-	for _, solidEntryPoint := range solidEntryPoints {
-		sepBytes, err := solidEntryPoint.MarshalBinary()
-		if err != nil {
-			return fmt.Errorf("unable to serialize solid entry point %s: %w", solidEntryPoint.ToHex(), err)
-		}
-
-		if err := binary.Write(lsHash, binary.LittleEndian, sepBytes); err != nil {
-			return fmt.Errorf("unable to calculate snapshot hash: %w", err)
-		}
-	}
-
 	// write all unspent outputs in lexicographical order
 	for _, output := range outputs {
 		outputBytes, err := output.MarshalBinary()
@@ -101,7 +89,21 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 	}
 
 	// calculate sha256 hash of the current ledger state
-	snapshotHashSum := lsHash.Sum(nil)
+	snapshotHashSumWithoutSEPs := lsHash.Sum(nil)
+
+	// write all solid entry points in lexicographical order
+	for _, solidEntryPoint := range solidEntryPoints {
+		sepBytes, err := solidEntryPoint.MarshalBinary()
+		if err != nil {
+			return fmt.Errorf("unable to serialize solid entry point %s: %w", solidEntryPoint.ToHex(), err)
+		}
+
+		if err := binary.Write(lsHash, binary.LittleEndian, sepBytes); err != nil {
+			return fmt.Errorf("unable to calculate snapshot hash: %w", err)
+		}
+	}
+
+	snapshotHashSumWithSEPs := lsHash.Sum(nil)
 
 	fmt.Printf(`> 
 	- Snapshot time %v
@@ -111,7 +113,8 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 	- Snapshot index %d
 	- UTXOs count %d
 	- SEPs count %d
-	- Ledger state hash: %s`+"\n\n",
+	- Ledger state hash (w/o  solid entry points): %s
+	- Ledger state hash (with solid entry points): %s`+"\n\n",
 		snapshotInfo.Timestamp,
 		snapshotInfo.NetworkID,
 		func() string {
@@ -124,7 +127,8 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 		snapshotInfo.SnapshotIndex,
 		len(outputs),
 		len(solidEntryPoints),
-		hex.EncodeToString(snapshotHashSum),
+		hex.EncodeToString(snapshotHashSumWithoutSEPs),
+		hex.EncodeToString(snapshotHashSumWithSEPs),
 	)
 
 	fmt.Printf("successfully calculated ledger state hash, took %v\n", time.Since(ts).Truncate(time.Millisecond))
