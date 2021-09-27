@@ -223,10 +223,10 @@ func loadSnapshotFileToStorage(
 	return header, nil
 }
 
-// LoadSnapshotFileToStorage loads a snapshot file from the given file path into the storage.
-func loadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, fullPath string, deltaPath ...string) (*ReadFileHeader, *ReadFileHeader, error) {
+// LoadSnapshotFilesToStorage loads the snapshot files from the given file paths into the storage.
+func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, fullPath string, deltaPath ...string) (*ReadFileHeader, *ReadFileHeader, error) {
 
-	if len(deltaPath) > 0 {
+	if len(deltaPath) > 0 && deltaPath[0] != "" {
 
 		// check that the delta snapshot file's ledger index equals the snapshot index of the full one
 		fullHeader, err := ReadSnapshotHeaderFromFile(fullPath)
@@ -251,7 +251,7 @@ func loadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage,
 		return nil, nil, err
 	}
 
-	if len(deltaPath) > 0 {
+	if len(deltaPath) > 0 && deltaPath[0] != "" {
 		deltaSnapshotHeader, err = loadSnapshotFileToStorage(ctx, dbStorage, Delta, deltaPath[0])
 		if err != nil {
 			return nil, nil, err

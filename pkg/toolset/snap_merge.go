@@ -29,7 +29,9 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 		return fmt.Errorf("wrong argument count for '%s'", ToolSnapMerge)
 	}
 
-	start := time.Now()
+	ts := time.Now()
+	fmt.Println("merging snapshot files...")
+
 	var fullPath, deltaPath, targetPath = args[0], args[1], args[2]
 	mergeInfo, err := snapshot.MergeSnapshotsFiles(defaultTempDBForMerge, fullPath, deltaPath, targetPath)
 	if err != nil {
@@ -40,7 +42,7 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 	printSnapshotHeaderInfo("full", fullPath, mergeInfo.FullSnapshotHeader)
 	printSnapshotHeaderInfo("delta", deltaPath, mergeInfo.DeltaSnapshotHeader)
 	printSnapshotHeaderInfo("merged", targetPath, mergeInfo.MergedSnapshotHeader)
-	fmt.Printf("successfully created merged full snapshot '%s', took %v\n", args[2], time.Since(start).Truncate(time.Millisecond))
+	fmt.Printf("successfully created merged full snapshot '%s', took %v\n", args[2], time.Since(ts).Truncate(time.Millisecond))
 
 	return nil
 }

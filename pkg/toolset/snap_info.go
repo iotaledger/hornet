@@ -12,9 +12,9 @@ func snapshotInfo(_ *configuration.Configuration, args []string) error {
 		println("Usage:")
 		println(fmt.Sprintf("	%s [SNAPSHOT_PATH]", ToolSnapInfo))
 		println()
-		println("	[SNAPSHOT_PATH]	- the path to the snapshot file")
+		println("	[SNAPSHOT_PATH] - the path to the snapshot file")
 		println()
-		println(fmt.Sprintf("example: %s %s", ToolSnapGen, "./snapshot.bin"))
+		println(fmt.Sprintf("example: %s %s", ToolSnapInfo, "./snapshot.bin"))
 	}
 
 	if len(args) != 1 {

@@ -74,6 +74,21 @@ type Output struct {
 	Amount uint64 `json:"amount"`
 }
 
+// LexicalOrderedOutputs are Outputs ordered in lexical order by their OutputID.
+type LexicalOrderedOutputs []*Output
+
+func (l LexicalOrderedOutputs) Len() int {
+	return len(l)
+}
+
+func (l LexicalOrderedOutputs) Less(i, j int) bool {
+	return bytes.Compare(l[i].OutputID[:], l[j].OutputID[:]) < 0
+}
+
+func (l LexicalOrderedOutputs) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+
 func (s *Output) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
 	if _, err := b.Write(s.MessageID[:]); err != nil {
