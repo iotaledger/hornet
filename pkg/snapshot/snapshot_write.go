@@ -3,18 +3,20 @@ package snapshot
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
 	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/pkg/errors"
 )
 
 // MsDiffDirection determines the milestone diff direction.
@@ -651,23 +653,31 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 // and the ledger and snapshot index are equal.
 // This function consumes disk space over memory by importing the full snapshot into a temporary database,
 // applying the delta diffs onto it and then writing out the merged state.
-func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
+func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
 
-	// spawn temporary database to built up the wanted merged state in
-	pebbleDB, err := pebble.CreateDB(tempDBPath)
+	targetEngine, err := database.DatabaseEngine(database.EnginePebble)
 	if err != nil {
 		return nil, err
 	}
-	kvStore := pebble.New(pebbleDB)
 
+	tempDir, err := ioutil.TempDir("", "snapMerge")
+	if err != nil {
+		return nil, fmt.Errorf("can't create temp dir: %w", err)
+	}
+
+	store, err := database.StoreWithDefaultSettings(tempDir, true, targetEngine)
+	if err != nil {
+		return nil, fmt.Errorf("database initialization failed: %w", err)
+	}
+
+	// clean up temp db
 	defer func() {
-		// clean up temp db
-		kvStore.Shutdown()
-		_ = kvStore.Close()
-		_ = os.RemoveAll(tempDBPath)
+		store.Shutdown()
+		_ = store.Close()
+		_ = os.RemoveAll(tempDir)
 	}()
 
-	dbStorage, err := storage.New(kvStore)
+	dbStorage, err := storage.New(store)
 	if err != nil {
 		return nil, err
 	}

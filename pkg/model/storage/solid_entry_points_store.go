@@ -106,7 +106,7 @@ func (s *Storage) StoreSolidEntryPointsWithoutLocking() error {
 	return s.storeSolidEntryPoints(s.solidEntryPoints)
 }
 
-// StoreSolidEntryPointsWithoutLocking stores the solid entry points in the persistence layer.
+// ForEachSolidEntryPointWithoutLocking loops over all solid entry points in the persistence layer.
 // WriteLockSolidEntryPoints must be held while entering this function.
 func (s *Storage) ForEachSolidEntryPointWithoutLocking(consumer SolidEntryPointConsumer) {
 	if s.solidEntryPoints == nil {

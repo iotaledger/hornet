@@ -9,8 +9,6 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 )
 
-const defaultTempDBForMerge = "./temp_snapshot_merge"
-
 func snapshotMerge(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
@@ -33,7 +31,7 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 	fmt.Println("merging snapshot files...")
 
 	var fullPath, deltaPath, targetPath = args[0], args[1], args[2]
-	mergeInfo, err := snapshot.MergeSnapshotsFiles(defaultTempDBForMerge, fullPath, deltaPath, targetPath)
+	mergeInfo, err := snapshot.MergeSnapshotsFiles(fullPath, deltaPath, targetPath)
 	if err != nil {
 		return err
 	}

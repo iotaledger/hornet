@@ -60,12 +60,17 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 		return fmt.Errorf("can't create temp dir: %w", err)
 	}
 
-	defer func() { _ = os.RemoveAll(tempDir) }()
-
 	store, err := database.StoreWithDefaultSettings(tempDir, true, targetEngine)
 	if err != nil {
 		return fmt.Errorf("database initialization failed: %w", err)
 	}
+
+	// clean up temp db
+	defer func() {
+		store.Shutdown()
+		_ = store.Close()
+		_ = os.RemoveAll(tempDir)
+	}()
 
 	ts := time.Now()
 	fmt.Println("calculating ledger state hash...")
@@ -74,8 +79,6 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	defer func() { _ = store.Close() }()
 
 	_, _, err = snapshot.LoadSnapshotFilesToStorage(context.Background(), dbStorage, fullPath, deltaPath)
 	if err != nil {
@@ -97,7 +100,7 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 		solidEntryPoints = append(solidEntryPoints, sep.MessageID)
 		return true
 	})
-	// sort the outputs lexicographically by their OutputID
+	// sort the solid entry points lexicographically by their MessageID
 	sort.Sort(solidEntryPoints)
 
 	// read out treasury tx
@@ -158,7 +161,7 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 		}
 	}
 
-	// write sha256 hash into the file
+	// calculate sha256 hash of the current ledger state
 	snapshotHashSum := lsHash.Sum(nil)
 
 	fmt.Printf(`> 
