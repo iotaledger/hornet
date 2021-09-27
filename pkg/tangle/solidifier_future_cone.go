@@ -22,15 +22,15 @@ type FutureConeSolidifier struct {
 }
 
 // NewFutureConeSolidifier creates a new FutureConeSolidifier instance.
-func NewFutureConeSolidifier(s *storage.Storage, markMessageAsSolidFunc func(*storage.CachedMetadata)) *FutureConeSolidifier {
+func NewFutureConeSolidifier(dbStorage *storage.Storage, markMessageAsSolidFunc func(*storage.CachedMetadata)) *FutureConeSolidifier {
 
-	metadataMemcache := storage.NewMetadataMemcache(s)
+	metadataMemcache := storage.NewMetadataMemcache(dbStorage)
 
 	return &FutureConeSolidifier{
-		storage:                s,
+		storage:                dbStorage,
 		markMessageAsSolidFunc: markMessageAsSolidFunc,
 		metadataMemcache:       metadataMemcache,
-		childrenTraverser:      dag.NewChildrenTraverser(s, metadataMemcache),
+		childrenTraverser:      dag.NewChildrenTraverser(dbStorage, metadataMemcache),
 	}
 }
 

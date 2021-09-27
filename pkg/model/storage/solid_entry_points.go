@@ -10,6 +10,11 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
+type SolidEntryPoint struct {
+	MessageID hornet.MessageID
+	Index     milestone.Index
+}
+
 type SolidEntryPoints struct {
 	entryPointsMap   map[string]milestone.Index
 	entryPointsSlice hornet.MessageIDs
@@ -26,9 +31,26 @@ func NewSolidEntryPoints() *SolidEntryPoints {
 }
 
 func (s *SolidEntryPoints) Hashes() hornet.MessageIDs {
-	solidEntryPointCopy := make(hornet.MessageIDs, len(s.entryPointsSlice))
-	copy(solidEntryPointCopy, s.entryPointsSlice)
-	return solidEntryPointCopy
+	solidEntryPointsCopy := make(hornet.MessageIDs, len(s.entryPointsSlice))
+	copy(solidEntryPointsCopy, s.entryPointsSlice)
+	return solidEntryPointsCopy
+}
+
+func (s *SolidEntryPoints) Copy() []*SolidEntryPoint {
+	solidEntryPointsCount := len(s.entryPointsMap)
+	result := make([]*SolidEntryPoint, solidEntryPointsCount)
+
+	i := 0
+	for hash, msIndex := range s.entryPointsMap {
+		messageID := hornet.MessageIDFromMapKey(hash)
+		result[i] = &SolidEntryPoint{
+			MessageID: messageID,
+			Index:     msIndex,
+		}
+		i++
+	}
+
+	return result
 }
 
 func (s *SolidEntryPoints) Contains(messageID hornet.MessageID) bool {

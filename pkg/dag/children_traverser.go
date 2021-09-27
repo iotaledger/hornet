@@ -31,11 +31,11 @@ type ChildrenTraverser struct {
 }
 
 // NewChildrenTraverser create a new traverser to traverse the children (future cone)
-func NewChildrenTraverser(s *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ChildrenTraverser {
+func NewChildrenTraverser(dbStorage *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ChildrenTraverser {
 
 	t := &ChildrenTraverser{
-		storage:          s,
-		metadataMemcache: storage.NewMetadataMemcache(s),
+		storage:          dbStorage,
+		metadataMemcache: storage.NewMetadataMemcache(dbStorage),
 		stack:            list.New(),
 		discovered:       make(map[string]struct{}),
 	}

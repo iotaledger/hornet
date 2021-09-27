@@ -179,7 +179,8 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 	mngOpts := &ManagerOptions{}
 	mngOpts.apply(defaultManagerOptions...)
 	mngOpts.apply(opts...)
-	mng := &Manager{
+
+	peeringManager := &Manager{
 		Events: ManagerEvents{
 			Connect:            events.NewEvent(PeerCaller),
 			Disconnect:         events.NewEvent(PeerCaller),
@@ -205,10 +206,10 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 		forEachChan:        make(chan *foreachmsg, 10),
 		callChan:           make(chan *callmsg, 10),
 	}
-	if mng.opts.Logger != nil {
-		mng.registerLoggerOnEvents()
+	if peeringManager.opts.Logger != nil {
+		peeringManager.registerLoggerOnEvents()
 	}
-	return mng
+	return peeringManager
 }
 
 // Manager manages a set of known and other connected peers.

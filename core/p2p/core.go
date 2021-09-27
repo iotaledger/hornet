@@ -43,7 +43,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	Manager              *p2p.Manager
+	PeeringManager       *p2p.Manager
 	Host                 host.Host
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 	PeerStoreContainer   *p2p.PeerStoreContainer
@@ -267,7 +267,7 @@ func configure() {
 }
 
 func run() {
-	if deps.Manager == nil {
+	if deps.PeeringManager == nil {
 		// Manager is optional, due to autopeering entry node
 		return
 	}
@@ -275,7 +275,7 @@ func run() {
 	// register a daemon to disconnect all peers up on shutdown
 	if err := CorePlugin.Daemon().BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
 		CorePlugin.LogInfof("listening on: %s", deps.Host.Addrs())
-		go deps.Manager.Start(shutdownSignal)
+		go deps.PeeringManager.Start(shutdownSignal)
 		connectConfigKnownPeers()
 		<-shutdownSignal
 		if err := deps.Host.Peerstore().Close(); err != nil {
@@ -299,7 +299,7 @@ func connectConfigKnownPeers() {
 			CorePlugin.Panicf("invalid peer address info: %s", err)
 		}
 
-		if err = deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, p.Alias); err != nil {
+		if err = deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, p.Alias); err != nil {
 			CorePlugin.LogInfof("can't connect to peer (%s): %s", multiAddr.String(), err)
 		}
 	}

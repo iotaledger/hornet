@@ -81,7 +81,7 @@ type dependencies struct {
 	DatabaseEngine            database.Engine              `name:"databaseEngine"`
 	NetworkIDName             string                       `name:"networkIdName"`
 	AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
-	Manager                   *p2p.Manager                 `optional:"true"`
+	PeeringManager            *p2p.Manager                 `optional:"true"`
 	AutopeeringManager        *autopeering.AutopeeringManager
 }
 
@@ -215,7 +215,7 @@ func configure() {
 	}
 
 	// only enable peer selection when the peering plugin is enabled
-	initSelection := deps.Manager != nil
+	initSelection := deps.PeeringManager != nil
 
 	deps.AutopeeringManager.Init(localPeerContainer, initSelection)
 	configureEvents()
@@ -288,7 +288,7 @@ func configureEvents() {
 
 		handleSelection(ev, addrInfo, func() {
 			Plugin.LogInfof("connecting to %s", addrInfo)
-			if err := deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
+			if err := deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
 				Plugin.LogWarnf("couldn't add autopeering peer %s", err)
 			}
 		})
@@ -323,7 +323,7 @@ func configureEvents() {
 
 		Plugin.LogInfof("[dropped event] disconnecting %s", peerID)
 		var peerRelation p2p.PeerRelation
-		deps.Manager.Call(*peerID, func(p *p2p.Peer) {
+		deps.PeeringManager.Call(*peerID, func(p *p2p.Peer) {
 			peerRelation = p.Relation
 		})
 
@@ -337,7 +337,7 @@ func configureEvents() {
 			return
 		}
 
-		if err := deps.Manager.DisconnectPeer(*peerID, errors.New("removed via autopeering selection")); err != nil {
+		if err := deps.PeeringManager.DisconnectPeer(*peerID, errors.New("removed via autopeering selection")); err != nil {
 			Plugin.LogWarnf("couldn't disconnect selection dropped autopeer: %s", err)
 		}
 	})
@@ -348,7 +348,7 @@ func configureEvents() {
 func handleSelection(ev *selection.PeeringEvent, addrInfo *libp2p.AddrInfo, noRelationFunc func()) {
 	// extract peer relation
 	var peerRelation p2p.PeerRelation
-	deps.Manager.Call(addrInfo.ID, func(p *p2p.Peer) {
+	deps.PeeringManager.Call(addrInfo.ID, func(p *p2p.Peer) {
 		peerRelation = p.Relation
 	})
 
@@ -374,7 +374,7 @@ func handleAlreadyAutopeered(addrInfo *libp2p.AddrInfo) {
 
 // updates the given peers relation to discovered.
 func updatePeerRelationToDiscovered(addrInfo *libp2p.AddrInfo) {
-	if err := deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
+	if err := deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
 		Plugin.LogWarnf("couldn't update unknown peer to 'discovered' %s", err)
 	}
 }
@@ -397,8 +397,8 @@ func attachEvents() {
 
 	if deps.AutopeeringManager.Selection() != nil {
 		// notify the selection when a connection is closed or failed.
-		deps.Manager.Events.Disconnected.Attach(onPeerDisconnected)
-		deps.Manager.Events.RelationUpdated.Attach(onAutopeerBecameKnown)
+		deps.PeeringManager.Events.Disconnected.Attach(onPeerDisconnected)
+		deps.PeeringManager.Events.RelationUpdated.Attach(onAutopeerBecameKnown)
 		deps.AutopeeringManager.Selection().Events().SaltUpdated.Attach(onSelectionSaltUpdated)
 		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Attach(onSelectionOutgoingPeering)
 		deps.AutopeeringManager.Selection().Events().IncomingPeering.Attach(onSelectionIncomingPeering)
@@ -414,8 +414,8 @@ func detachEvents() {
 	}
 
 	if deps.AutopeeringManager.Selection() != nil {
-		deps.Manager.Events.Disconnected.Detach(onPeerDisconnected)
-		deps.Manager.Events.RelationUpdated.Detach(onAutopeerBecameKnown)
+		deps.PeeringManager.Events.Disconnected.Detach(onPeerDisconnected)
+		deps.PeeringManager.Events.RelationUpdated.Detach(onAutopeerBecameKnown)
 		deps.AutopeeringManager.Selection().Events().SaltUpdated.Detach(onSelectionSaltUpdated)
 		deps.AutopeeringManager.Selection().Events().OutgoingPeering.Detach(onSelectionOutgoingPeering)
 		deps.AutopeeringManager.Selection().Events().IncomingPeering.Detach(onSelectionIncomingPeering)

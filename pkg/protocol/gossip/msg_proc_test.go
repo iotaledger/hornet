@@ -53,7 +53,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 
 	networkID := iotago.NetworkIDFromString("testnet4")
 
-	processor, err := gossip.NewMessageProcessor(te.Storage(), gossip.NewRequestQueue(), manager, serverMetrics, &gossip.Options{
+	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, &gossip.Options{
 		MinPoWScore:       MinPoWScore,
 		NetworkID:         networkID,
 		BelowMaxDepth:     BelowMaxDepth,

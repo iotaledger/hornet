@@ -6,7 +6,6 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/model/migrator"
-	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -69,15 +68,15 @@ func provide(c *dig.Container) {
 
 	type serviceDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		Validator  *migrator.Validator
-		UTXO       *utxo.Manager
-		Storage    *storage.Storage
+		NodeConfig  *configuration.Configuration `name:"nodeConfig"`
+		Validator   *migrator.Validator
+		UTXOManager *utxo.Manager
 	}
 
 	if err := c.Provide(func(deps serviceDeps) *migrator.ReceiptService {
 		return migrator.NewReceiptService(
-			deps.Validator, deps.UTXO,
+			deps.Validator,
+			deps.UTXOManager,
 			deps.NodeConfig.Bool(CfgReceiptsValidatorValidate),
 			deps.NodeConfig.Bool(CfgReceiptsBackupEnabled),
 			deps.NodeConfig.Bool(CfgReceiptsValidatorIgnoreSoftErrors),

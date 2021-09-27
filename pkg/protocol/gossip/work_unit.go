@@ -106,7 +106,7 @@ func (wu *WorkUnit) punish(reason error) {
 		wu.messageProcessor.serverMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		_ = wu.messageProcessor.ps.DisconnectPeer(p.PeerID, errors.WithMessagef(reason, "peer was punished"))
+		_ = wu.messageProcessor.peeringManager.DisconnectPeer(p.PeerID, errors.WithMessagef(reason, "peer was punished"))
 	}
 }
 

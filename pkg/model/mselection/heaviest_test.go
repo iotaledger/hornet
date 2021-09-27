@@ -201,7 +201,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 	// isBelowMaxDepth checks the below max depth criteria for the given message.
 	isBelowMaxDepth := func(msgMeta *storage.MessageMetadata) bool {
 
-		cmi := te.Storage().ConfirmedMilestoneIndex()
+		cmi := te.SyncManager().ConfirmedMilestoneIndex()
 
 		_, ocri := getConeRootIndexes(msgMeta.MessageID())
 
@@ -211,7 +211,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 
 	checkTips := func(tips hornet.MessageIDs) {
 
-		cmi := te.Storage().ConfirmedMilestoneIndex()
+		cmi := te.SyncManager().ConfirmedMilestoneIndex()
 
 		for _, tip := range tips {
 			_, ocri := getConeRootIndexes(tip)

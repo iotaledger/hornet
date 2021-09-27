@@ -31,7 +31,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}
 
 	// check if the requested milestone index would be the next one
-	if request.Index > deps.Storage.ConfirmedMilestoneIndex()+1 {
+	if request.Index > deps.SyncManager.ConfirmedMilestoneIndex()+1 {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, common.ErrNodeNotSynced.Error())
 	}
 
@@ -153,7 +153,7 @@ func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}
 	opts = append(opts, filter...)
 
-	err = deps.UTXO.ForEachOutput(outputConsumerFunc, opts...)
+	err = deps.UTXOManager.ForEachOutput(outputConsumerFunc, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -181,7 +181,7 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}
 	opts = append(opts, filter...)
 
-	err = deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, opts...)
+	err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -210,7 +210,7 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}
 	opts = append(opts, filter...)
 
-	err = deps.UTXO.ForEachSpentOutput(spentConsumerFunc, opts...)
+	err = deps.UTXOManager.ForEachSpentOutput(spentConsumerFunc, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent outputs failed, error: %s", err)
 	}
@@ -240,7 +240,7 @@ func addresses(_ echo.Context) (*addressesResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
+	err := deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading addresses failed, error: %s", err)
 	}
@@ -276,7 +276,7 @@ func addressesEd25519(_ echo.Context) (*addressesResponse, error) {
 		return true
 	}
 
-	err := deps.UTXO.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
+	err := deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading addresses failed, error: %s", err)
 	}
@@ -298,7 +298,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		return nil, err
 	}
 
-	diff, err := deps.UTXO.MilestoneDiffWithoutLocking(msIndex)
+	diff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)

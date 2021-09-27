@@ -18,9 +18,11 @@ const (
 	ToolSnapGen            = "snap-gen"
 	ToolSnapMerge          = "snap-merge"
 	ToolSnapInfo           = "snap-info"
+	ToolSnapHash           = "snap-hash"
 	ToolBenchmarkIO        = "bench-io"
 	ToolBenchmarkCPU       = "bench-cpu"
 	ToolDatabaseMigration  = "db-migration"
+	ToolDatabaseLedgerHash = "db-hash"
 )
 
 // HandleTools handles available tools.
@@ -56,9 +58,11 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 		ToolSnapGen:            snapshotGen,
 		ToolSnapMerge:          snapshotMerge,
 		ToolSnapInfo:           snapshotInfo,
+		ToolSnapHash:           snapshotHash,
 		ToolBenchmarkIO:        benchmarkIO,
 		ToolBenchmarkCPU:       benchmarkCPU,
 		ToolDatabaseMigration:  databaseMigration,
+		ToolDatabaseLedgerHash: databaseLedgerHash,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -86,7 +90,9 @@ func listTools() {
 	fmt.Printf("%-20s generates an initial snapshot for a private network\n", fmt.Sprintf("%s:", ToolSnapGen))
 	fmt.Printf("%-20s merges a full and delta snapshot into an updated full snapshot\n", fmt.Sprintf("%s:", ToolSnapMerge))
 	fmt.Printf("%-20s outputs information about a snapshot file\n", fmt.Sprintf("%s:", ToolSnapInfo))
+	fmt.Printf("%-20s calculates the sha256 hash of the ledger state inside a snapshot file\n", fmt.Sprintf("%s:", ToolSnapHash))
 	fmt.Printf("%-20s benchmarks the IO throughput\n", fmt.Sprintf("%s:", ToolBenchmarkIO))
 	fmt.Printf("%-20s benchmarks the CPU performance\n", fmt.Sprintf("%s:", ToolBenchmarkCPU))
 	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
+	fmt.Printf("%-20s calculates the sha256 hash of the ledger state of a database\n", fmt.Sprintf("%s:", ToolDatabaseLedgerHash))
 }

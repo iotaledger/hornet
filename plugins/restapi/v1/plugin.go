@@ -10,6 +10,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
@@ -168,13 +169,14 @@ var (
 type dependencies struct {
 	dig.In
 	Storage                               *storage.Storage
+	SyncManager                           *syncmanager.SyncManager
 	Tangle                                *tangle.Tangle
-	Manager                               *p2p.Manager
-	Service                               *gossip.Service
-	UTXO                                  *utxo.Manager
+	PeeringManager                        *p2p.Manager
+	GossipService                         *gossip.Service
+	UTXOManager                           *utxo.Manager
 	PoWHandler                            *pow.Handler
 	MessageProcessor                      *gossip.MessageProcessor
-	Snapshot                              *snapshot.Snapshot
+	SnapshotManager                       *snapshot.SnapshotManager
 	AppInfo                               *app.AppInfo
 	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager                  *p2p.ConfigManager

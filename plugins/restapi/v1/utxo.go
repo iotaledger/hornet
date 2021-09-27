@@ -68,15 +68,15 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 	copy(outputID[:], outputIDBytes)
 
 	// we need to lock the ledger here to have the correct index for unspent info of the output.
-	deps.UTXO.ReadLockLedger()
-	defer deps.UTXO.ReadUnlockLedger()
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
 
-	ledgerIndex, err := deps.UTXO.ReadLedgerIndexWithoutLocking()
+	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputIDParam, err)
 	}
 
-	output, err := deps.UTXO.ReadOutputByOutputIDWithoutLocking(&outputID)
+	output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(&outputID)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputIDParam)
@@ -84,7 +84,7 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputIDParam, err)
 	}
 
-	unspent, err := deps.UTXO.IsOutputUnspentWithoutLocking(output)
+	unspent, err := deps.UTXOManager.IsOutputUnspentWithoutLocking(output)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent status failed: %s, error: %s", outputIDParam, err)
 	}
@@ -94,7 +94,7 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 
 func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, error) {
 
-	balance, dustAllowed, ledgerIndex, err := deps.UTXO.AddressBalance(address)
+	balance, dustAllowed, ledgerIndex, err := deps.UTXOManager.AddressBalance(address)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading address balance failed: %s, error: %s", address, err)
 	}
@@ -110,7 +110,7 @@ func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, er
 
 func balanceByBech32Address(c echo.Context) (*addressBalanceResponse, error) {
 
-	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -131,7 +131,7 @@ func balanceByBech32Address(c echo.Context) (*addressBalanceResponse, error) {
 
 func balanceByEd25519Address(c echo.Context) (*addressBalanceResponse, error) {
 
-	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -165,15 +165,15 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 	}
 
 	// we need to lock the ledger here to have the same index for unspent and spent outputs.
-	deps.UTXO.ReadLockLedger()
-	defer deps.UTXO.ReadUnlockLedger()
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
 
-	ledgerIndex, err := deps.UTXO.ReadLedgerIndexWithoutLocking()
+	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
 
-	unspentOutputs, err := deps.UTXO.UnspentOutputs(append(opts, utxo.MaxResultCount(maxResults))...)
+	unspentOutputs, err := deps.UTXOManager.UnspentOutputs(append(opts, utxo.MaxResultCount(maxResults))...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
@@ -185,7 +185,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 
 	if includeSpent && maxResults-len(outputIDs) > 0 {
 
-		spents, err := deps.UTXO.SpentOutputs(append(opts, utxo.MaxResultCount(maxResults-len(outputIDs)))...)
+		spents, err := deps.UTXOManager.SpentOutputs(append(opts, utxo.MaxResultCount(maxResults-len(outputIDs)))...)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent outputs failed: %s, error: %s", address, err)
 		}
@@ -210,7 +210,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 
 func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) {
 
-	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -243,7 +243,7 @@ func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) 
 
 func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error) {
 
-	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -282,7 +282,7 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 
 func treasury(_ echo.Context) (*treasuryResponse, error) {
 
-	treasuryOutput, err := deps.UTXO.UnspentTreasuryOutputWithoutLocking()
+	treasuryOutput, err := deps.UTXOManager.UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
 		return nil, err
 	}

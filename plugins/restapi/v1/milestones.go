@@ -54,7 +54,7 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 		return nil, err
 	}
 
-	diff, err := deps.UTXO.MilestoneDiffWithoutLocking(msIndex)
+	diff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "can't load milestone diff for index: %d, error: %s", msIndex, err)

@@ -80,7 +80,7 @@ func collectGossipPeers() {
 	gossipPeersDroppedPackets.Reset()
 	gossipPeersConnected.Reset()
 
-	for _, peer := range deps.Manager.PeerInfoSnapshots() {
+	for _, peer := range deps.PeeringManager.PeerInfoSnapshots() {
 
 		peerLabels := prometheus.Labels{
 			"id":      peer.ID,
@@ -97,7 +97,7 @@ func collectGossipPeers() {
 			}
 		}
 
-		gossipProto := deps.Service.Protocol(peer.Peer.ID)
+		gossipProto := deps.GossipService.Protocol(peer.Peer.ID)
 		if gossipProto == nil {
 			continue
 		}

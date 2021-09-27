@@ -30,7 +30,7 @@ var (
 
 func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
-	if !deps.Storage.IsNodeAlmostSynced() {
+	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -81,7 +81,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		messageMetadataResponse.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
-		cmi := deps.Storage.ConfirmedMilestoneIndex()
+		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 		ycri, ocri := dag.ConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi)
 
 		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
@@ -191,7 +191,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
-	if !deps.Storage.IsNodeAlmostSynced() {
+	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 

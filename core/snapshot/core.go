@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -64,8 +65,8 @@ type dependencies struct {
 	dig.In
 	Storage              *storage.Storage
 	Tangle               *tangle.Tangle
-	UTXO                 *utxo.Manager
-	Snapshot             *snapshot.Snapshot
+	UTXOManager          *utxo.Manager
+	SnapshotManager      *snapshot.SnapshotManager
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 	NetworkID            uint64                       `name:"networkId"`
 	DeleteAllFlag        bool                         `name:"deleteAll"`
@@ -106,7 +107,8 @@ func provide(c *dig.Container) {
 		dig.In
 		Database             *database.Database
 		Storage              *storage.Storage
-		UTXO                 *utxo.Manager
+		SyncManager          *syncmanager.SyncManager
+		UTXOManager          *utxo.Manager
 		NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 		BelowMaxDepth        int                          `name:"belowMaxDepth"`
 		NetworkID            uint64                       `name:"networkId"`
@@ -116,7 +118,7 @@ func provide(c *dig.Container) {
 		SnapshotsDeltaPath   string                       `name:"snapshotsDeltaPath"`
 	}
 
-	if err := c.Provide(func(deps snapshotDeps) *snapshot.Snapshot {
+	if err := c.Provide(func(deps snapshotDeps) *snapshot.SnapshotManager {
 
 		networkIDSource := deps.NetworkIDName
 
@@ -170,11 +172,12 @@ func provide(c *dig.Container) {
 			CorePlugin.Panicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
 		}
 
-		return snapshot.New(CorePlugin.Daemon().ContextStopped(),
+		return snapshot.NewSnapshotManager(CorePlugin.Daemon().ContextStopped(),
 			CorePlugin.Logger(),
 			deps.Database,
 			deps.Storage,
-			deps.UTXO,
+			deps.SyncManager,
+			deps.UTXOManager,
 			deps.NetworkID,
 			networkIDSource,
 			deps.SnapshotsFullPath,
@@ -216,11 +219,11 @@ func configure() {
 
 	switch {
 	case snapshotInfo != nil && !*forceLoadingSnapshot:
-		if err := deps.Snapshot.CheckCurrentSnapshot(snapshotInfo); err != nil {
+		if err := deps.SnapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
 			CorePlugin.Panic(err)
 		}
 	default:
-		if err := deps.Snapshot.ImportSnapshots(); err != nil {
+		if err := deps.SnapshotManager.ImportSnapshots(); err != nil {
 			CorePlugin.Panic(err)
 		}
 	}
@@ -251,7 +254,7 @@ func run() {
 				return
 
 			case confirmedMilestoneIndex := <-newConfirmedMilestoneSignal:
-				deps.Snapshot.HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex, shutdownSignal)
+				deps.SnapshotManager.HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex, shutdownSignal)
 			}
 		}
 	}, shutdown.PrioritySnapshots); err != nil {

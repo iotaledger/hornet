@@ -15,7 +15,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
@@ -45,7 +47,7 @@ type TestEnvironment struct {
 	// PoWHandler holds the PoWHandler instance.
 	PoWHandler *pow.Handler
 
-	// networkID is the network ID used for this test network
+	// networkID is the network ID used for this test network.
 	networkID uint64
 
 	// coo holds the coordinator instance.
@@ -60,13 +62,19 @@ type TestEnvironment struct {
 	// store is the temporary key value store for the test.
 	store kvstore.KVStore
 
-	// storage is the tangle storage for this test
+	// storage is the tangle storage for this test.
 	storage *storage.Storage
 
-	// serverMetrics holds metrics about the tangle
+	// syncManager is used to determine the sync status of the node in this test.
+	syncManager *syncmanager.SyncManager
+
+	// milestoneManager is used to retrieve, verify and store milestones.
+	milestoneManager *milestonemanager.MilestoneManager
+
+	// serverMetrics holds metrics about the tangle.
 	serverMetrics *metrics.ServerMetrics
 
-	// GenesisOutput marks the initial output created when bootstrapping the tangle
+	// GenesisOutput marks the initial output created when bootstrapping the tangle.
 	GenesisOutput *utxo.Output
 }
 
@@ -111,18 +119,25 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	}
 
 	te.store = mapdb.NewMapDB()
-	te.storage, err = storage.New(logger.NewLogger("storage"), te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
+	te.storage, err = storage.New(te.store, TestProfileCaches)
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SEP
 	te.storage.SolidEntryPointsAddWithoutLocking(hornet.NullMessageID(), 0)
 
-	// Initialize UTXO
-	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
-	err = te.storage.UTXO().AddUnspentOutput(te.GenesisOutput)
+	// Initialize SyncManager
+	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), belowMaxDepth)
 	require.NoError(te.TestInterface, err)
 
-	err = te.storage.UTXO().StoreUnspentTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
+	// Initialize MilestoneManager
+	te.milestoneManager = milestonemanager.New(te.storage, te.syncManager, keyManager, len(cooPrivateKeys))
+
+	// Initialize UTXO
+	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
+	err = te.storage.UTXOManager().AddUnspentOutput(te.GenesisOutput)
+	require.NoError(te.TestInterface, err)
+
+	err = te.storage.UTXOManager().StoreUnspentTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
 	require.NoError(te.TestInterface, err)
 
 	te.AssertTotalSupplyStillValid()
@@ -148,8 +163,12 @@ func (te *TestEnvironment) Storage() *storage.Storage {
 	return te.storage
 }
 
-func (te *TestEnvironment) UTXO() *utxo.Manager {
-	return te.storage.UTXO()
+func (te *TestEnvironment) UTXOManager() *utxo.Manager {
+	return te.storage.UTXOManager()
+}
+
+func (te *TestEnvironment) SyncManager() *syncmanager.SyncManager {
+	return te.syncManager
 }
 
 // CleanupTestEnvironment cleans up everything at the end of the test.
@@ -222,7 +241,7 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 	for msIndex := 2; msIndex < milestonesCount; msIndex++ {
 		messagesPerMilestones = append(messagesPerMilestones, hornet.MessageIDs{})
 
-		cmi := te.Storage().ConfirmedMilestoneIndex()
+		cmi := te.SyncManager().ConfirmedMilestoneIndex()
 
 		msgsCount := minMessagesPerMilestone + rand.Intn(maxMessagesPerMilestone-minMessagesPerMilestone)
 		for msgCount := 0; msgCount < msgsCount; msgCount++ {

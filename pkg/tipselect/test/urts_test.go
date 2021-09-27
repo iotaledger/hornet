@@ -41,6 +41,7 @@ func TestTipSelect(t *testing.T) {
 
 	ts := tipselect.New(
 		te.Storage(),
+		te.SyncManager(),
 		&serverMetrics,
 		MaxDeltaMsgYoungestConeRootIndexToCMI,
 		MaxDeltaMsgOldestConeRootIndexToCMI,
@@ -71,7 +72,7 @@ func TestTipSelect(t *testing.T) {
 		require.GreaterOrEqual(te.TestInterface, len(tips), 1)
 		require.LessOrEqual(te.TestInterface, len(tips), 8)
 
-		cmi := te.Storage().ConfirmedMilestoneIndex()
+		cmi := te.SyncManager().ConfirmedMilestoneIndex()
 
 		for _, tip := range tips {
 			// we walk the cone of every tip to check the youngest and oldest milestone index it references

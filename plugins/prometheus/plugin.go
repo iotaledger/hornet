@@ -22,6 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -67,19 +68,20 @@ type dependencies struct {
 	Database         *database.Database
 	DatabasePath     string `name:"databasePath"`
 	Storage          *storage.Storage
+	SyncManager      *syncmanager.SyncManager
 	ServerMetrics    *metrics.ServerMetrics
 	DatabaseMetrics  *metrics.DatabaseMetrics
 	StorageMetrics   *metrics.StorageMetrics
 	RestAPIMetrics   *metrics.RestAPIMetrics `optional:"true"`
-	Service          *gossip.Service
+	GossipService    *gossip.Service
 	ReceiptService   *migrator.ReceiptService `optional:"true"`
 	Tangle           *tangle.Tangle
 	MigratorService  *migrator.MigratorService `optional:"true"`
-	Manager          *p2p.Manager
+	PeeringManager   *p2p.Manager
 	RequestQueue     gossip.RequestQueue
 	MessageProcessor *gossip.MessageProcessor
 	TipSelector      *tipselect.TipSelector `optional:"true"`
-	Snapshot         *snapshot.Snapshot
+	SnapshotManager  *snapshot.SnapshotManager
 	Coordinator      *coordinator.Coordinator `optional:"true"`
 }
 
