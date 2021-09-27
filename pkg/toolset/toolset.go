@@ -22,6 +22,7 @@ const (
 	ToolBenchmarkIO        = "bench-io"
 	ToolBenchmarkCPU       = "bench-cpu"
 	ToolDatabaseMigration  = "db-migration"
+	ToolDatabaseLedgerHash = "db-hash"
 )
 
 // HandleTools handles available tools.
@@ -61,6 +62,7 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 		ToolBenchmarkIO:        benchmarkIO,
 		ToolBenchmarkCPU:       benchmarkCPU,
 		ToolDatabaseMigration:  databaseMigration,
+		ToolDatabaseLedgerHash: databaseLedgerHash,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -92,4 +94,5 @@ func listTools() {
 	fmt.Printf("%-20s benchmarks the IO throughput\n", fmt.Sprintf("%s:", ToolBenchmarkIO))
 	fmt.Printf("%-20s benchmarks the CPU performance\n", fmt.Sprintf("%s:", ToolBenchmarkCPU))
 	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
+	fmt.Printf("%-20s calculates the sha256 hash of the ledger state of a database\n", fmt.Sprintf("%s:", ToolDatabaseLedgerHash))
 }
