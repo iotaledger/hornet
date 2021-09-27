@@ -186,8 +186,8 @@ func (s *SnapshotManager) pruneDatabase(targetIndex milestone.Index, abortSignal
 	defer s.setIsPruning(false)
 
 	// calculate solid entry points for the new end of the tangle history
-	var solidEntryPoints []*solidEntryPoint
-	err := s.forEachSolidEntryPoint(targetIndex, abortSignal, func(sep *solidEntryPoint) bool {
+	var solidEntryPoints []*storage.SolidEntryPoint
+	err := s.forEachSolidEntryPoint(targetIndex, abortSignal, func(sep *storage.SolidEntryPoint) bool {
 		solidEntryPoints = append(solidEntryPoints, sep)
 		return true
 	})
@@ -198,7 +198,7 @@ func (s *SnapshotManager) pruneDatabase(targetIndex milestone.Index, abortSignal
 	// temporarily add the new solid entry points and keep the old ones
 	s.storage.WriteLockSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.MessageID, sep.Index)
 	}
 	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
 		s.log.Panic(err)
@@ -319,7 +319,7 @@ func (s *SnapshotManager) pruneDatabase(targetIndex milestone.Index, abortSignal
 	s.storage.WriteLockSolidEntryPoints()
 	s.storage.ResetSolidEntryPointsWithoutLocking()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAddWithoutLocking(sep.messageID, sep.index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.MessageID, sep.Index)
 	}
 	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
 		s.log.Panic(err)

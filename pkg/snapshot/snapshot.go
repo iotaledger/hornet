@@ -63,11 +63,6 @@ const (
 	snapshotAvailNone
 )
 
-type solidEntryPoint struct {
-	messageID hornet.MessageID
-	index     milestone.Index
-}
-
 // SnapshotManager handles reading and writing snapshot data.
 type SnapshotManager struct {
 	shutdownCtx                          context.Context
@@ -185,7 +180,7 @@ func (s *SnapshotManager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.I
 	return confirmedMilestoneIndex-(s.snapshotDepth+s.snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
-func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(sep *solidEntryPoint) bool) error {
+func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(sep *storage.SolidEntryPoint) bool) error {
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
@@ -266,7 +261,7 @@ func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, ab
 				messageIDMapKey := messageID.ToMapKey()
 				if _, exists := solidEntryPoints[messageIDMapKey]; !exists {
 					solidEntryPoints[messageIDMapKey] = at
-					if !solidEntryPointConsumer(&solidEntryPoint{messageID: messageID, index: at}) {
+					if !solidEntryPointConsumer(&storage.SolidEntryPoint{MessageID: messageID, Index: at}) {
 						return ErrSnapshotCreationWasAborted
 					}
 				}
@@ -351,8 +346,8 @@ func newSEPsProducer(s *SnapshotManager, targetIndex milestone.Index, abortSigna
 
 	go func() {
 		// calculate solid entry points for the target index
-		if err := s.forEachSolidEntryPoint(targetIndex, abortSignal, func(sep *solidEntryPoint) bool {
-			prodChan <- sep.messageID
+		if err := s.forEachSolidEntryPoint(targetIndex, abortSignal, func(sep *storage.SolidEntryPoint) bool {
+			prodChan <- sep.MessageID
 			return true
 		}); err != nil {
 			errChan <- err

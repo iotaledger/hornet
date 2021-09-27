@@ -12,6 +12,9 @@ var (
 	ErrSolidEntryPointsNotInitialized     = errors.New("solidEntryPoints not initialized")
 )
 
+// SolidEntryPointConsumer consumes the solid entry point during looping through all solid entry points.
+type SolidEntryPointConsumer func(solidEntryPoint *SolidEntryPoint) bool
+
 func (s *Storage) ReadLockSolidEntryPoints() {
 	s.solidEntryPointsLock.RLock()
 }
@@ -101,4 +104,23 @@ func (s *Storage) StoreSolidEntryPointsWithoutLocking() error {
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
 	return s.storeSolidEntryPoints(s.solidEntryPoints)
+}
+
+// StoreSolidEntryPointsWithoutLocking stores the solid entry points in the persistence layer.
+// WriteLockSolidEntryPoints must be held while entering this function.
+func (s *Storage) ForEachSolidEntryPointWithoutLocking(consumer SolidEntryPointConsumer) {
+	if s.solidEntryPoints == nil {
+		// this can only happen at startup of the node, no need to return an unused error all the time
+		panic(ErrSolidEntryPointsNotInitialized)
+	}
+
+	seps := s.solidEntryPoints.Copy()
+	for i := 0; i < len(seps); i++ {
+		sep := seps[i]
+
+		// Call consumer with the cached object and check if we should abort the iteration.
+		if !consumer(sep) {
+			return
+		}
+	}
 }
