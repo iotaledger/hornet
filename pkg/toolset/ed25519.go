@@ -47,7 +47,7 @@ func generateEd25519Address(_ *configuration.Configuration, args []string) error
 	// check arguments
 	if len(args) == 0 {
 		printUsage()
-		return errors.New("ED25519_PUB_KEY missing")
+		return errors.New("ED25519_PUB_KEY is missing")
 	}
 
 	if len(args) > 1 {
