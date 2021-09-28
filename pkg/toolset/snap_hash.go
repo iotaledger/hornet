@@ -33,7 +33,7 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 	// check arguments
 	if len(args) == 0 {
 		printUsage()
-		return errors.New("FULL_SNAPSHOT_PATH missing")
+		return errors.New("FULL_SNAPSHOT_PATH is missing")
 	}
 
 	fullPath := args[0]

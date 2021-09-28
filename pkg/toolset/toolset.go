@@ -9,20 +9,21 @@ import (
 )
 
 const (
-	ToolPwdHash            = "pwd-hash"
-	ToolP2PIdentityGen     = "p2pidentity-gen"
-	ToolP2PExtractIdentity = "p2pidentity-extract"
-	ToolEd25519Key         = "ed25519-key"
-	ToolEd25519Addr        = "ed25519-addr"
-	ToolJWTApi             = "jwt-api"
-	ToolSnapGen            = "snap-gen"
-	ToolSnapMerge          = "snap-merge"
-	ToolSnapInfo           = "snap-info"
-	ToolSnapHash           = "snap-hash"
-	ToolBenchmarkIO        = "bench-io"
-	ToolBenchmarkCPU       = "bench-cpu"
-	ToolDatabaseMigration  = "db-migration"
-	ToolDatabaseLedgerHash = "db-hash"
+	ToolPwdHash                 = "pwd-hash"
+	ToolP2PIdentityGen          = "p2pidentity-gen"
+	ToolP2PExtractIdentity      = "p2pidentity-extract"
+	ToolEd25519Key              = "ed25519-key"
+	ToolEd25519Addr             = "ed25519-addr"
+	ToolJWTApi                  = "jwt-api"
+	ToolSnapGen                 = "snap-gen"
+	ToolSnapMerge               = "snap-merge"
+	ToolSnapInfo                = "snap-info"
+	ToolSnapHash                = "snap-hash"
+	ToolBenchmarkIO             = "bench-io"
+	ToolBenchmarkCPU            = "bench-cpu"
+	ToolDatabaseMigration       = "db-migration"
+	ToolDatabaseLedgerHash      = "db-hash"
+	ToolCoordinatorFixStateFile = "coo-fix-state"
 )
 
 // HandleTools handles available tools.
@@ -49,20 +50,21 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 	}
 
 	tools := map[string]func(*configuration.Configuration, []string) error{
-		ToolPwdHash:            hashPasswordAndSalt,
-		ToolP2PIdentityGen:     generateP2PIdentity,
-		ToolP2PExtractIdentity: extractP2PIdentity,
-		ToolEd25519Key:         generateEd25519Key,
-		ToolEd25519Addr:        generateEd25519Address,
-		ToolJWTApi:             generateJWTApiToken,
-		ToolSnapGen:            snapshotGen,
-		ToolSnapMerge:          snapshotMerge,
-		ToolSnapInfo:           snapshotInfo,
-		ToolSnapHash:           snapshotHash,
-		ToolBenchmarkIO:        benchmarkIO,
-		ToolBenchmarkCPU:       benchmarkCPU,
-		ToolDatabaseMigration:  databaseMigration,
-		ToolDatabaseLedgerHash: databaseLedgerHash,
+		ToolPwdHash:                 hashPasswordAndSalt,
+		ToolP2PIdentityGen:          generateP2PIdentity,
+		ToolP2PExtractIdentity:      extractP2PIdentity,
+		ToolEd25519Key:              generateEd25519Key,
+		ToolEd25519Addr:             generateEd25519Address,
+		ToolJWTApi:                  generateJWTApiToken,
+		ToolSnapGen:                 snapshotGen,
+		ToolSnapMerge:               snapshotMerge,
+		ToolSnapInfo:                snapshotInfo,
+		ToolSnapHash:                snapshotHash,
+		ToolBenchmarkIO:             benchmarkIO,
+		ToolBenchmarkCPU:            benchmarkCPU,
+		ToolDatabaseMigration:       databaseMigration,
+		ToolDatabaseLedgerHash:      databaseLedgerHash,
+		ToolCoordinatorFixStateFile: coordinatorFixStateFile,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -95,4 +97,5 @@ func listTools() {
 	fmt.Printf("%-20s benchmarks the CPU performance\n", fmt.Sprintf("%s:", ToolBenchmarkCPU))
 	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
 	fmt.Printf("%-20s calculates the sha256 hash of the ledger state of a database\n", fmt.Sprintf("%s:", ToolDatabaseLedgerHash))
+	fmt.Printf("%-20s applies the latest milestone in the database to the coordinator state file\n", fmt.Sprintf("%s:", ToolCoordinatorFixStateFile))
 }

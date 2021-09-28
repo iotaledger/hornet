@@ -154,7 +154,7 @@ func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 	// check arguments
 	if len(args) == 0 {
 		printUsage()
-		return errors.New("DATABASE_PATH missing")
+		return errors.New("DATABASE_PATH is missing")
 	}
 
 	databasePath := args[0]
