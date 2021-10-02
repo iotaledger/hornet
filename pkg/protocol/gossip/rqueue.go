@@ -2,7 +2,6 @@ package gossip
 
 import (
 	"container/heap"
-	"strconv"
 	"sync"
 	"time"
 
@@ -134,7 +133,7 @@ func (r *Request) MapKey() string {
 	case RequestTypeMessageID:
 		return r.MessageID.ToMapKey()
 	case RequestTypeMilestoneIndex:
-		return strconv.Itoa(int(r.MilestoneIndex))
+		return r.MilestoneIndex.String()
 	default:
 		panic(ErrUnknownRequestType)
 	}
