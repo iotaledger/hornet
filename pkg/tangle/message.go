@@ -10,10 +10,17 @@ import (
 // including all additional information like metadata, children,
 // indexation, unreferenced messages and milestone entries.
 // msg +1
-func AddMessageToStorage(dbStorage *storage.Storage, milestoneManager *milestonemanager.MilestoneManager, message *storage.Message, latestMilestoneIndex milestone.Index, requested bool, forceRelease bool, reapply bool) (cachedMessage *storage.CachedMessage, alreadyAdded bool) {
+func AddMessageToStorage(dbStorage *storage.Storage, milestoneManager *milestonemanager.MilestoneManager, message *storage.Message, latestMilestoneIndex milestone.Index, requested bool, forceRelease bool) (cachedMessage *storage.CachedMessage, alreadyAdded bool) {
 
 	cachedMessage, isNew := dbStorage.StoreMessageIfAbsent(message) // msg +1
-	if !isNew && !reapply {
+	if !isNew {
+		if requested && cachedMessage.Message().IsMilestone() && !dbStorage.ContainsMilestone(milestone.Index(cachedMessage.Message().Milestone().Index)) {
+			// if the message was requested, was already known, but contains an unknown milestone payload, we need to re-verfiy the milestone payload.
+			// (maybe caused by formerly invalid milestones e.g. because of missing COO public keys in the node config).
+			if ms := milestoneManager.VerifyMilestone(message); ms != nil {
+				milestoneManager.StoreMilestone(cachedMessage.Retain(), ms, requested)
+			}
+		}
 		return cachedMessage, true
 	}
 

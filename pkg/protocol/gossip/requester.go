@@ -93,6 +93,17 @@ func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
 			// drain request queue
 			for request := r.rQueue.Next(); request != nil; request = r.rQueue.Next() {
 
+				sendRequest := func(request *Request, proto *Protocol) {
+					switch request.RequestType {
+					case RequestTypeMessageID:
+						proto.SendMessageRequest(request.MessageID)
+					case RequestTypeMilestoneIndex:
+						proto.SendMilestoneRequest(request.MilestoneIndex)
+					default:
+						panic(ErrUnknownRequestType)
+					}
+				}
+
 				requested := false
 				r.service.ForEach(func(proto *Protocol) bool {
 					// we only send a request message if the peer actually has the data
@@ -101,7 +112,7 @@ func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
 						return true
 					}
 
-					proto.SendMessageRequest(request.MessageID)
+					sendRequest(request, proto)
 					requested = true
 					return false
 				})
@@ -116,7 +127,7 @@ func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
 							return true
 						}
 
-						proto.SendMessageRequest(request.MessageID)
+						sendRequest(request, proto)
 						return true
 					})
 				}
@@ -191,16 +202,32 @@ func (r *Requester) AddBackPressureFunc(pressureFunc RequestBackPressureFunc) {
 
 // Request enqueues a request to the request queue for the given message if it isn't a solid entry point
 // and is not contained in the database already.
-func (r *Requester) Request(messageID hornet.MessageID, msIndex milestone.Index, preventDiscard ...bool) bool {
-	if r.storage.SolidEntryPointsContain(messageID) {
-		return false
+func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDiscard ...bool) bool {
+
+	var request *Request
+
+	switch value := data.(type) {
+	case hornet.MessageID:
+		messageID := value
+		if r.storage.SolidEntryPointsContain(messageID) {
+			return false
+		}
+		if r.storage.ContainsMessage(messageID) {
+			return false
+		}
+		request = NewMessageIDRequest(messageID, msIndex)
+
+	case milestone.Index:
+		msIndex := value
+		if r.storage.ContainsMilestone(msIndex) {
+			return false
+		}
+		request = NewMilestoneIndexRequest(msIndex)
+
+	default:
+		panic(ErrUnknownRequestType)
 	}
 
-	if r.storage.ContainsMessage(messageID) {
-		return false
-	}
-
-	request := &Request{MessageID: messageID, MilestoneIndex: msIndex}
 	if len(preventDiscard) > 0 {
 		request.PreventDiscard = preventDiscard[0]
 	}

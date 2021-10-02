@@ -324,3 +324,46 @@ func (w *WarpSyncMilestoneRequester) Cleanup() {
 
 	w.traversed = make(map[string]struct{})
 }
+
+// RequestMilestoneRange requests up to N milestones nearest to the current confirmed milestone index.
+// Returns the number of milestones requested.
+func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(rangeToRequest int, onExistingMilestoneInRange func(milestone *storage.CachedMilestone), from ...milestone.Index) int {
+	var requested int
+
+	// make sure we only request what we don't have
+	startingPoint := w.syncManager.ConfirmedMilestoneIndex()
+	if len(from) > 0 {
+		startingPoint = from[0]
+	}
+
+	var msIndexes []milestone.Index
+	for i := 1; i <= rangeToRequest; i++ {
+		toReq := startingPoint + milestone.Index(i)
+
+		cachedMs := w.storage.CachedMilestoneOrNil(toReq) // milestone +1
+		if cachedMs == nil {
+			// only request if we do not have the milestone
+			requested++
+			msIndexes = append(msIndexes, toReq)
+			continue
+		}
+
+		// milestone already exists
+		if onExistingMilestoneInRange != nil {
+			onExistingMilestoneInRange(cachedMs.Retain())
+		}
+
+		cachedMs.Release(true) // milestone -1
+	}
+
+	if len(msIndexes) == 0 {
+		return requested
+	}
+
+	// enque every milestone request to the request queue
+	for _, msIndex := range msIndexes {
+		w.requester.Request(msIndex, msIndex)
+	}
+
+	return requested
+}
