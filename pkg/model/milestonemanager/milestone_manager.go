@@ -49,6 +49,11 @@ func New(
 	return t
 }
 
+// KeyManager returns the used key manager.
+func (m *MilestoneManager) KeyManager() *keymanager.KeyManager {
+	return m.keyManager
+}
+
 // FindClosestNextMilestoneOrNil searches for the next known cached milestone in the persistence layer.
 // message +1
 func (m *MilestoneManager) FindClosestNextMilestoneOrNil(index milestone.Index) *storage.CachedMilestone {
