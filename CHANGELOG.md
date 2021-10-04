@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.6-rc1] - 04.10.2021
+
+### Added
+    - Add config_devnet.json (#1183)
+    - Add snap-hash tool to calculate the ledger state hash of a snapshot (#1184)
+    - Add db-hash tool to calculate the ledger state hash of a database (#1184)
+    - Add coo-fix-state tool (#1185)
+    - Add p2pstore to docker docs (#1177)
+
+### Changed
+    - Use target milestone timestamp for snapshots timestamps (#1184)
+
+### Fixed
+    - Fix warpsync milestone deadlock (re-verify known milestone payloads) (#1186)
+    - Fix mqtt port in private tangle scripts (#1186)
+
+### Removed
+    - Remove config_chrysalis_testnet.json (#1183)
+
+### Cleanups
+    - Move autopeering logic to AutopeeringManager (#1178)
+    - Rename Snapshot to SnapshotManager (#1184)
+    - Rename UTXO to to UTXOManager (#1184)
+    - Rename Manager to to PeeringManager (#1184)
+    - Rename Service to GossipService (#1184)
+    - Move DatabaseSize function from storage to database  (#1184)
+    - Move sync status logic to SyncManager (#1184)
+    - Move Milestone validation logic to MilestoneManager (#1184)
+    - Refactor snapshot package (#1184)
+
 ## [1.0.5] - 02.09.2021
 
 ### Added
