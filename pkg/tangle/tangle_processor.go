@@ -19,7 +19,7 @@ import (
 func (t *Tangle) ConfigureTangleProcessor() {
 
 	t.receiveMsgWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.processIncomingTx(task.Param(0).(*storage.Message), task.Param(1).(*gossip.Request), task.Param(2).(*gossip.Protocol))
+		t.processIncomingTx(task.Param(0).(*storage.Message), task.Param(1).(gossip.Requests), task.Param(2).(*gossip.Protocol))
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
@@ -54,8 +54,8 @@ func (t *Tangle) RunTangleProcessor() {
 
 	t.startWaitGroup.Add(5)
 
-	onMsgProcessed := events.NewClosure(func(message *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
-		t.receiveMsgWorkerPool.Submit(message, request, proto)
+	onMsgProcessed := events.NewClosure(func(message *storage.Message, requests gossip.Requests, proto *gossip.Protocol) {
+		t.receiveMsgWorkerPool.Submit(message, requests, proto)
 	})
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
@@ -186,13 +186,15 @@ func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
 	return t.receiveMsgWorkerPool.GetPendingQueueSize() > (t.receiveMsgQueueSize / 2)
 }
 
-func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
+func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip.Requests, proto *gossip.Protocol) {
 
 	latestMilestoneIndex := t.syncManager.LatestMilestoneIndex()
 	isNodeSyncedWithinBelowMaxDepth := t.syncManager.IsNodeSyncedWithinBelowMaxDepth()
 
+	requested := requests.HasRequest()
+
 	// The msg will be added to the storage inside this function, so the message object automatically updates
-	cachedMsg, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithinBelowMaxDepth, false) // msg +1
+	cachedMsg, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // msg +1
 
 	// Release shouldn't be forced, to cache the latest messages
 	defer cachedMsg.Release(!isNodeSyncedWithinBelowMaxDepth) // msg -1
@@ -206,9 +208,11 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 
 		// since we only add the parents if there was a source request, we only
 		// request them for messages which should be part of milestone cones
-		if request != nil {
+		for _, request := range requests {
 			// add this newly received message's parents to the request queue
-			t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
+			if request.RequestType == gossip.RequestTypeMessageID {
+				t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
+			}
 		}
 
 		confirmedMilestoneIndex := t.syncManager.ConfirmedMilestoneIndex()
@@ -238,15 +242,15 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 	t.Events.ProcessedMessage.Trigger(incomingMsg.MessageID())
 	t.messageProcessedSyncEvent.Trigger(incomingMsg.MessageID().ToMapKey())
 
-	if request != nil {
+	for _, request := range requests {
 		// mark the received request as processed
-		t.requestQueue.Processed(incomingMsg.MessageID())
+		t.requestQueue.Processed(request)
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when
-	// we actually handled a message stemming from a request (as otherwise the solidifier
+	// we actually handled a message coming from a request (as otherwise the solidifier
 	// is triggered too often through messages received from normal gossip)
-	if request != nil && !t.syncManager.IsNodeSynced() && t.requestQueue.Empty() {
+	if requested && !t.syncManager.IsNodeSynced() && t.requestQueue.Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
 		t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)

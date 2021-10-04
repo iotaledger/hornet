@@ -1,7 +1,6 @@
 package gossip
 
 import (
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/p2p"
@@ -87,52 +86,4 @@ func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
 		proto.Enqueue(heartbeatMsg)
 		return true
 	})
-}
-
-// BroadcastMilestoneRequests broadcasts up to N requests for milestones nearest to the current confirmed milestone index
-// to every connected peer. Returns the number of milestones requested.
-func (b *Broadcaster) BroadcastMilestoneRequests(rangeToRequest int, onExistingMilestoneInRange func(milestone *storage.CachedMilestone), from ...milestone.Index) int {
-	var requested int
-
-	// make sure we only request what we don't have
-	startingPoint := b.syncManager.ConfirmedMilestoneIndex()
-	if len(from) > 0 {
-		startingPoint = from[0]
-	}
-
-	var msIndexes []milestone.Index
-	for i := 1; i <= rangeToRequest; i++ {
-		toReq := startingPoint + milestone.Index(i)
-
-		cachedMs := b.storage.CachedMilestoneOrNil(toReq) // milestone +1
-		if cachedMs == nil {
-			// only request if we do not have the milestone
-			requested++
-			msIndexes = append(msIndexes, toReq)
-			continue
-		}
-
-		// milestone already exists
-		if onExistingMilestoneInRange != nil {
-			onExistingMilestoneInRange(cachedMs.Retain())
-		}
-
-		cachedMs.Release(true) // milestone -1
-	}
-
-	if len(msIndexes) == 0 {
-		return requested
-	}
-
-	// send each ms request to a random peer who supports the message
-	for _, msIndex := range msIndexes {
-		b.service.ForEach(func(proto *Protocol) bool {
-			if !proto.HasDataForMilestone(msIndex) {
-				return true
-			}
-			proto.SendMilestoneRequest(msIndex)
-			return false
-		})
-	}
-	return requested
 }

@@ -53,7 +53,6 @@ type dependencies struct {
 	Tangle        *tangle.Tangle
 	RequestQueue  gossip.RequestQueue
 	GossipService *gossip.Service
-	Broadcaster   *gossip.Broadcaster
 	Requester     *gossip.Requester
 	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
 }
@@ -92,7 +91,7 @@ func configureEvents() {
 		if warpSync.CurrentCheckpoint != 0 && warpSync.CurrentCheckpoint < msIndex {
 			// rerequest since milestone requests could have been lost
 			Plugin.LogInfof("Requesting missing milestones %d - %d", msIndex, msIndex+milestone.Index(warpSync.AdvancementRange))
-			deps.Broadcaster.BroadcastMilestoneRequests(warpSync.AdvancementRange, nil)
+			warpSyncMilestoneRequester.RequestMilestoneRange(warpSync.AdvancementRange, nil)
 		}
 	})
 
@@ -102,7 +101,7 @@ func configureEvents() {
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		deps.Broadcaster.BroadcastMilestoneRequests(int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents, oldCheckpoint)
+		warpSyncMilestoneRequester.RequestMilestoneRange(int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents, oldCheckpoint)
 	})
 
 	onWarpSyncTargetUpdated = events.NewClosure(func(checkpoint milestone.Index, newTarget milestone.Index) {
@@ -115,7 +114,7 @@ func configureEvents() {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
 
-		msRequested := deps.Broadcaster.BroadcastMilestoneRequests(int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents)
+		msRequested := warpSyncMilestoneRequester.RequestMilestoneRange(int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents)
 		// if the amount of requested milestones doesn't correspond to the range,
 		// it means we already had the milestones in the database, which suggests
 		// that we should manually kick start the milestone solidifier.
