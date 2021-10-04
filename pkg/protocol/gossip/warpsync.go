@@ -330,7 +330,6 @@ func (w *WarpSyncMilestoneRequester) Cleanup() {
 func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(rangeToRequest int, onExistingMilestoneInRange func(milestone *storage.CachedMilestone), from ...milestone.Index) int {
 	var requested int
 
-	// make sure we only request what we don't have
 	startingPoint := w.syncManager.ConfirmedMilestoneIndex()
 	if len(from) > 0 {
 		startingPoint = from[0]
@@ -360,7 +359,7 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(rangeToRequest int, o
 		return requested
 	}
 
-	// enque every milestone request to the request queue
+	// enqueue every milestone request to the request queue
 	for _, msIndex := range msIndexes {
 		w.requester.Request(msIndex, msIndex)
 	}

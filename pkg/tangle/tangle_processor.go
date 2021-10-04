@@ -191,7 +191,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 	latestMilestoneIndex := t.syncManager.LatestMilestoneIndex()
 	isNodeSyncedWithinBelowMaxDepth := t.syncManager.IsNodeSyncedWithinBelowMaxDepth()
 
-	requested := requests.Requested()
+	requested := requests.HasRequest()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
 	cachedMsg, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // msg +1

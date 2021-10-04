@@ -369,7 +369,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 			}
 		}
 
-		wu.requested = requests.Requested()
+		wu.requested = requests.HasRequest()
 		return requests
 	}
 

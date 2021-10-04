@@ -141,7 +141,8 @@ func (r *Request) MapKey() string {
 
 type Requests []*Request
 
-func (r Requests) Requested() bool {
+// HasRequest returns true if Requests contains a Request.
+func (r Requests) HasRequest() bool {
 	return len(r) > 0
 }
 
