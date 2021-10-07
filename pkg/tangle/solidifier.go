@@ -18,9 +18,8 @@ import (
 )
 
 var (
-	ErrMilestoneNotFound     = errors.New("milestone not found")
-	ErrDivisionByZero        = errors.New("division by zero")
-	ErrMissingMilestoneFound = errors.New("missing milestone found")
+	ErrMilestoneNotFound = errors.New("milestone not found")
+	ErrDivisionByZero    = errors.New("division by zero")
 )
 
 type ConfirmedMilestoneMetric struct {
@@ -265,7 +264,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			t.log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentConfirmedIndex, cachedClosestNextMsIndex)
 
 			// no Milestones found in between => search an older milestone in the solid cone
-			if found, err := t.searchMissingMilestone(milestoneSolidificationCtx, currentConfirmedIndex, cachedClosestNextMsIndex, cachedMsToSolidify.Milestone().MessageID); !found {
+			if found, err := t.searchMissingMilestones(milestoneSolidificationCtx, currentConfirmedIndex, cachedClosestNextMsIndex, cachedMsToSolidify.Milestone().MessageID); !found {
 				if err != nil {
 					// no milestones found => this should not happen!
 					t.log.Panicf("Milestones missing between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
@@ -443,8 +442,8 @@ func (t *Tangle) setSolidifierMilestoneIndex(index milestone.Index) {
 	t.solidifierMilestoneIndexLock.Unlock()
 }
 
-// searchMissingMilestone searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
-func (t *Tangle) searchMissingMilestone(ctx context.Context, confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneMessageID hornet.MessageID) (found bool, err error) {
+// searchMissingMilestones searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
+func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneMessageID hornet.MessageID) (found bool, err error) {
 
 	var milestoneFound bool
 
@@ -483,7 +482,8 @@ func (t *Tangle) searchMissingMilestone(ctx context.Context, confirmedMilestoneI
 			// milestone found!
 			t.milestoneManager.StoreMilestone(cachedMessage.Retain(), ms, false)
 
-			return false, ErrMissingMilestoneFound // we return this as an error to stop the traverser
+			milestoneFound = true
+			return true, nil // we keep searching for all missing milestones
 		},
 		// consumer
 		nil,
@@ -496,8 +496,6 @@ func (t *Tangle) searchMissingMilestone(ctx context.Context, confirmedMilestoneI
 		false); err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return false, nil
-		} else if errors.Is(err, ErrMissingMilestoneFound) {
-			milestoneFound = true
 		} else {
 			return false, err
 		}
