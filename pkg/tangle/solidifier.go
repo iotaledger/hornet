@@ -464,33 +464,29 @@ func (t *Tangle) searchMissingMilestone(ctx context.Context, confirmedMilestoneI
 				return false, nil
 			}
 
-			return true, nil
-		},
-		// consumer
-		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
-			defer cachedMsgMeta.Release(true) // meta -1
-
 			cachedMessage := t.storage.CachedMessageOrNil(cachedMsgMeta.Metadata().MessageID()) // message +1
 			if cachedMessage == nil {
-				return fmt.Errorf("%w message ID: %s", common.ErrMessageNotFound, cachedMsgMeta.Metadata().MessageID().ToHex())
+				return false, fmt.Errorf("%w message ID: %s", common.ErrMessageNotFound, cachedMsgMeta.Metadata().MessageID().ToHex())
 			}
 			defer cachedMessage.Release(true) // message -1
 
 			ms := t.milestoneManager.VerifyMilestone(cachedMessage.Message())
 			if ms == nil {
-				return nil
+				return true, nil
 			}
 
 			msIndex := milestone.Index(ms.Index)
 			if (msIndex <= confirmedMilestoneIndex) || (msIndex >= startMilestoneIndex) {
-				return nil
+				return true, nil
 			}
 
 			// milestone found!
 			t.milestoneManager.StoreMilestone(cachedMessage.Retain(), ms, false)
 
-			return ErrMissingMilestoneFound // we return this as an error to stop the traverser
+			return false, ErrMissingMilestoneFound // we return this as an error to stop the traverser
 		},
+		// consumer
+		nil,
 		// called on missing parents
 		// return error on missing parents
 		nil,
