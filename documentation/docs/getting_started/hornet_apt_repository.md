@@ -67,7 +67,7 @@ You can restart `hornet` by running the following command:
 sudo systemctl restart hornet
 ```
 
-####Stopping Hornet
+#### Stopping Hornet
 You can stop `hornet` by running the following command:
 
 ```bash
@@ -91,7 +91,7 @@ We consider this as an advanced installation method for production use as you wi
 1. Download the latest release compiled for your system from [GitHub release assets](https://github.com/gohornet/hornet/releases):
 
    ```bash
-   curl -LO https://github.com/gohornet/hornet/releases/download/v0.6.0/HORNET-0.6.0_Linux_x86_64.tar.gz
+   curl -LO https://github.com/gohornet/hornet/releases/download/v1.0.5/HORNET-1.0.5_Linux_x86_64.tar.gz
    ```
 
    Please make sure to download the binaries for your system:
@@ -104,7 +104,7 @@ We consider this as an advanced installation method for production use as you wi
 2. Extract the files in a folder of your choice (for example `/opt` on Linux):
 
    ```bash
-   tar -xf HORNET-0.6.0_Linux_x86_64.tar.gz
+   tar -xf HORNET-1.0.5_Linux_x86_64.tar.gz
    ```
 
 3. Once you have extracted the files, you get a main executable file. You can also find sample [configuration](../post_installation/post_installation.md) JSON files available in the archive (tar or zip).
@@ -197,9 +197,9 @@ You can find installation instructions in the  [official Go documentation](https
 
 5. Build the Hornet:
    ```bash
-   ./build_hornet_rocksdb_builtin.sh
+   ./scritps/build_hornet_rocksdb_builtin.sh
    ```
-   * This command will build Hornet based on the latest commit from `main` branch.
+   * This command will build Hornet based on the latest commit from the currently chosen branch.
    * This may take a couple of minutes.
    
 6. Once it is compiled, then the executable file named `hornet` should be available in the current directory.  You can check the version by running:
@@ -210,10 +210,9 @@ You can find installation instructions in the  [official Go documentation](https
 
    Example of version:
    ```plaintext
-   HORNET 0.6.0-31ad46bb
+   HORNET c37bbe0f
    ```
-   You can also find a short commit `sha`, which you can use to check which commit the given version is compiled against
-
+   For self-compiled binaries, the version is the short commit `sha`, which you can use to check which commit the given version is compiled against.
 
 You can run Hornet using `--help` to get all executable-related arguments by running:
    
