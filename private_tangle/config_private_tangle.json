@@ -10,6 +10,8 @@
       "/api/v1/*",
       "/api/plugins/*"
     ],
+    "protectedRoutes": [
+    ],
     "powEnabled": true,
     "powWorkerCount": 1,
     "limits": {
