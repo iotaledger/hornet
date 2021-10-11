@@ -2,47 +2,15 @@
   "restAPI": {
     "bindAddress": "0.0.0.0:14265",
     "jwtAuth": {
-      "enabled": false,
       "salt": "HORNET"
     },
-    "excludeHealthCheckFromAuth": false,
-    "permittedRoutes": [
+    "publicRoutes": [
       "/health",
       "/mqtt",
-      "/api/v1/info",
-      "/api/v1/tips",
-      "/api/v1/messages/:messageID",
-      "/api/v1/messages/:messageID/metadata",
-      "/api/v1/messages/:messageID/raw",
-      "/api/v1/messages/:messageID/children",
-      "/api/v1/messages",
-      "/api/v1/transactions/:transactionID/included-message",
-      "/api/v1/milestones/:milestoneIndex",
-      "/api/v1/milestones/:milestoneIndex/utxo-changes",
-      "/api/v1/outputs/:outputID",
-      "/api/v1/addresses/:address",
-      "/api/v1/addresses/:address/outputs",
-      "/api/v1/addresses/ed25519/:address",
-      "/api/v1/addresses/ed25519/:address/outputs",
-      "/api/v1/treasury",
-      "/api/v1/peers/:peerID",
-      "/api/v1/peers",
-      "/api/plugins/debug/whiteflag",
-      "/api/plugins/debug/solidifier",
-      "/api/plugins/debug/outputs",
-      "/api/plugins/debug/outputs/unspent",
-      "/api/plugins/debug/outputs/spent",
-      "/api/plugins/debug/addresses",
-      "/api/plugins/debug/addresses/ed25519",
-      "/api/plugins/debug/ms-diff/*",
-      "/api/plugins/debug/requests",
-      "/api/plugins/debug/message-cones/*",
-      "/api/plugins/faucet/info",
-      "/api/plugins/faucet/enqueue"
+      "/api/v1/*",
+      "/api/plugins/*"
     ],
-    "whitelistedAddresses": [
-      "127.0.0.1",
-      "::1"
+    "protectedRoutes": [
     ],
     "powEnabled": true,
     "powWorkerCount": 1,

@@ -117,33 +117,24 @@ You can find the HTTP REST API related options in the  `restAPI` section within 
 ```json
   "restAPI": {
     "jwtAuth": {
-      "enabled": false,
       "salt": "HORNET"
     },
-    "excludeHealthCheckFromAuth": false,
-    "permittedRoutes": [
+    "publicRoutes": [
       "/health",
       "/mqtt",
       "/api/v1/info",
       "/api/v1/tips",
-      "/api/v1/messages/:messageID",
-      "/api/v1/messages/:messageID/metadata",
-      "/api/v1/messages/:messageID/raw",
-      "/api/v1/messages/:messageID/children",
-      "/api/v1/messages",
-      "/api/v1/transactions/:transactionID/included-message",
-      "/api/v1/milestones/:milestoneIndex",
-      "/api/v1/milestones/:milestoneIndex/utxo-changes",
-      "/api/v1/outputs/:outputID",
-      "/api/v1/addresses/:address",
-      "/api/v1/addresses/:address/outputs",
-      "/api/v1/addresses/ed25519/:address",
-      "/api/v1/addresses/ed25519/:address/outputs",
-      "/api/v1/treasury"
+      "/api/v1/messages*",
+      "/api/v1/transactions*",
+      "/api/v1/milestones*",
+      "/api/v1/outputs*",
+      "/api/v1/addresses*",
+      "/api/v1/treasury",
+      "/api/v1/receipts*"
     ],
-    "whitelistedAddresses": [
-      "127.0.0.1",
-      "::1"
+    "protectedRoutes": [
+      "/api/v1/*",
+      "/api/plugins/*"
     ],
     "bindAddress": "0.0.0.0:14265",
     "powEnabled": true,
@@ -157,7 +148,7 @@ You can find the HTTP REST API related options in the  `restAPI` section within 
 
 If you want to make the HTTP REST API only accessible from localhost, you change the `restAPI.bindAddress` config option accordingly.
 
-`restAPI.permittedRoutes` defines which routes can be called from foreign addresses which are not defined under `restAPI.whitelistedAddresses`.
+`restAPI.publicRoutes` defines which routes can be called without JWT authorization. `restAPI.protectedRoutes` defines which routes require JWT authorization. All other routes will not be exposed.
 
 If you are concerned with resource consumption, consider turning off `restAPI.powEnabled`.  This way, the clients must perform proof of work locally, before submitting a message for broadcast. In case you'd like to offer proof of work to clients, consider increasing the `restAPI.powWorkerCount` to provide a faster message submission experience.
 
