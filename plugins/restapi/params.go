@@ -43,12 +43,12 @@ var params = &node.PluginParams{
 					"/api/v1/addresses*",
 					"/api/v1/treasury",
 					"/api/v1/receipts*",
-				}, "the HTTP REST routes which need to be called with authorization")
+				}, "the HTTP REST routes which can be called without authorization. Wildcards using * are allowed")
 			fs.StringSlice(CfgRestAPIProtectedRoutes,
 				[]string{
 					"/api/v1/*",
 					"/api/plugins/*",
-				}, "the HTTP REST routes which need to be called with authorization")
+				}, "the HTTP REST routes which need to be called with authorization. Wildcards using * are allowed")
 			fs.String(CfgRestAPIJWTAuthSalt, "HORNET", "salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value")
 			fs.Bool(CfgRestAPIPoWEnabled, false, "whether the node does PoW if messages are received via API")
 			fs.Int(CfgRestAPIPoWWorkerCount, 1, "the amount of workers used for calculating PoW when issuing messages via API")
