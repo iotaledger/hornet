@@ -308,21 +308,11 @@ func DefaultRestAPIConfig() RestAPIConfig {
 		PublicRoutes: []string{
 			"/health",
 			"/mqtt",
-			"/api/v1/info",
-			"/api/v1/tips",
-			"/api/v1/messages*",
-			"/api/v1/transactions*",
-			"/api/v1/milestones*",
-			"/api/v1/outputs*",
-			"/api/v1/addresses*",
-			"/api/v1/treasury",
-			"/api/v1/receipts*",
-		},
-		ProtectedRoutes: []string{
 			"/api/v1/*",
 			"/api/plugins/*",
 		},
-		PoWEnabled: true,
+		ProtectedRoutes: []string{},
+		PoWEnabled:      true,
 	}
 }
 
