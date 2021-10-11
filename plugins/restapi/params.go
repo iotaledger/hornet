@@ -42,9 +42,11 @@ var params = &node.PluginParams{
 					"/api/v1/outputs*",
 					"/api/v1/addresses*",
 					"/api/v1/treasury",
+					"/api/v1/receipts*",
 				}, "the HTTP REST routes which need to be called with authorization")
 			fs.StringSlice(CfgRestAPIProtectedRoutes,
 				[]string{
+					"/api/v1/*",
 					"/api/plugins/*",
 				}, "the HTTP REST routes which need to be called with authorization")
 			fs.String(CfgRestAPIJWTAuthSalt, "HORNET", "salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value")
