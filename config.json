@@ -2,33 +2,24 @@
   "restAPI": {
     "bindAddress": "0.0.0.0:14265",
     "jwtAuth": {
-      "enabled": false,
       "salt": "HORNET"
     },
-    "excludeHealthCheckFromAuth": false,
-    "permittedRoutes": [
+    "publicRoutes": [
       "/health",
       "/mqtt",
       "/api/v1/info",
       "/api/v1/tips",
-      "/api/v1/messages/:messageID",
-      "/api/v1/messages/:messageID/metadata",
-      "/api/v1/messages/:messageID/raw",
-      "/api/v1/messages/:messageID/children",
-      "/api/v1/messages",
-      "/api/v1/transactions/:transactionID/included-message",
-      "/api/v1/milestones/:milestoneIndex",
-      "/api/v1/milestones/:milestoneIndex/utxo-changes",
-      "/api/v1/outputs/:outputID",
-      "/api/v1/addresses/:address",
-      "/api/v1/addresses/:address/outputs",
-      "/api/v1/addresses/ed25519/:address",
-      "/api/v1/addresses/ed25519/:address/outputs",
-      "/api/v1/treasury"
+      "/api/v1/messages*",
+      "/api/v1/transactions*",
+      "/api/v1/milestones*",
+      "/api/v1/outputs*",
+      "/api/v1/addresses*",
+      "/api/v1/treasury",
+      "/api/v1/receipts*"
     ],
-    "whitelistedAddresses": [
-      "127.0.0.1",
-      "::1"
+    "protectedRoutes": [
+      "/api/v1/*",
+      "/api/plugins/*"
     ],
     "powEnabled": true,
     "powWorkerCount": 1,

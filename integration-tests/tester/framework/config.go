@@ -283,8 +283,10 @@ func DefaultAutopeeringConfig() AutopeeringConfig {
 type RestAPIConfig struct {
 	// The bind address for the REST API.
 	BindAddress string
-	// Explicit permitted REST API routes.
-	PermittedRoutes []string
+	// Public REST API routes.
+	PublicRoutes []string
+	// Protected REST API routes.
+	ProtectedRoutes []string
 	// Whether the node does proof-of-work for submitted messages.
 	PoWEnabled bool
 }
@@ -293,7 +295,8 @@ type RestAPIConfig struct {
 func (restAPIConfig *RestAPIConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIBindAddress, restAPIConfig.BindAddress),
-		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIPermittedRoutes, strings.Join(restAPIConfig.PermittedRoutes, ",")),
+		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIPublicRoutes, strings.Join(restAPIConfig.PublicRoutes, ",")),
+		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIProtectedRoutes, strings.Join(restAPIConfig.ProtectedRoutes, ",")),
 		fmt.Sprintf("--%s=%v", restapi.CfgRestAPIPoWEnabled, restAPIConfig.PoWEnabled),
 	}
 }
@@ -302,28 +305,21 @@ func (restAPIConfig *RestAPIConfig) CLIFlags() []string {
 func DefaultRestAPIConfig() RestAPIConfig {
 	return RestAPIConfig{
 		BindAddress: "0.0.0.0:14265",
-		PermittedRoutes: []string{
+		PublicRoutes: []string{
 			"/health",
 			"/mqtt",
 			"/api/v1/info",
 			"/api/v1/tips",
-			"/api/v1/messages/:messageID",
-			"/api/v1/messages/:messageID/metadata",
-			"/api/v1/messages/:messageID/raw",
-			"/api/v1/messages/:messageID/children",
-			"/api/v1/messages",
-			"/api/v1/transactions/:transactionID/included-message",
-			"/api/v1/milestones/:milestoneIndex",
-			"/api/v1/outputs/:outputID",
-			"/api/v1/addresses/:address",
-			"/api/v1/addresses/:address/outputs",
-			"/api/v1/addresses/ed25519/:address",
-			"/api/v1/addresses/ed25519/:address/outputs",
+			"/api/v1/messages*",
+			"/api/v1/transactions*",
+			"/api/v1/milestones*",
+			"/api/v1/outputs*",
+			"/api/v1/addresses*",
 			"/api/v1/treasury",
-			"/api/v1/receipts",
-			"/api/v1/receipts/:milestoneIndex",
-			"/api/v1/peers/:peerID",
-			"/api/v1/peers",
+			"/api/v1/receipts*",
+		},
+		ProtectedRoutes: []string{
+			"/api/v1/*",
 			"/api/plugins/*",
 		},
 		PoWEnabled: true,

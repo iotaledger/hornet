@@ -29,22 +29,20 @@ hornet -h --full
 
 ## 1. REST API
 
-| Name                       | Description                                                                     | Type             |
-| :------------------------- | :------------------------------------------------------------------------------ | :--------------- |
-| bindAddress                | The bind address on which the REST API listens on                               | string           |
-| [jwtAuth](#jwt-auth)       | Config for JWT auth                                                             | object           |
-| excludeHealthCheckFromAuth | Whether to allow the health check route anyways                                 | bool             |
-| permittedRoutes            | The allowed HTTP REST routes which can be called from non whitelisted addresses | array of strings |
-| whitelistedAddresses       | The whitelist of addresses which are allowed to access the REST API             | array of strings |
-| powEnabled                 | Whether the node does PoW if messages are received via API                      | bool             |
-| powWorkerCount             | The amount of workers used for calculating PoW when issuing messages via API    | integer          |
-| [limits](#limits)          | Configuration for api limits                                                    | object           |
+| Name                       | Description                                                                                      | Type             |
+| :------------------------- | :----------------------------------------------------------------------------------------------- | :--------------- |
+| bindAddress                | The bind address on which the REST API listens on                                                | string           |
+| [jwtAuth](#jwt-auth)       | Config for JWT auth                                                                              | object           |
+| publicRoutes               | the HTTP REST routes which can be called without authorization. Wildcards using * are allowed.   | array of strings |
+| protectedRoutes            | the HTTP REST routes which need to be called with authorization. Wildcards using * are allowed.  | array of strings |
+| powEnabled                 | Whether the node does PoW if messages are received via API                                       | bool             |
+| powWorkerCount             | The amount of workers used for calculating PoW when issuing messages via API                     | integer          |
+| [limits](#limits)          | Configuration for api limits                                                                     | object           |
 
 ### JWT Auth
 
 | Name    | Description                                                                                                                             | Type   |
 | :------ | :-------------------------------------------------------------------------------------------------------------------------------------- | :----- |
-| enabled | Whether to use JWT auth for the REST API                                                                                                | bool   |
 | salt    | Salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value | string |
 
 
@@ -61,33 +59,24 @@ Example:
   "restAPI": {
     "bindAddress": "0.0.0.0:14265",
     "jwtAuth": {
-      "enabled": false,
       "salt": "HORNET"
     },
-    "excludeHealthCheckFromAuth": false,
-    "permittedRoutes": [
+    "publicRoutes": [
       "/health",
       "/mqtt",
       "/api/v1/info",
       "/api/v1/tips",
-      "/api/v1/messages/:messageID",
-      "/api/v1/messages/:messageID/metadata",
-      "/api/v1/messages/:messageID/raw",
-      "/api/v1/messages/:messageID/children",
-      "/api/v1/messages",
-      "/api/v1/transactions/:transactionID/included-message",
-      "/api/v1/milestones/:milestoneIndex",
-      "/api/v1/milestones/:milestoneIndex/utxo-changes",
-      "/api/v1/outputs/:outputID",
-      "/api/v1/addresses/:address",
-      "/api/v1/addresses/:address/outputs",
-      "/api/v1/addresses/ed25519/:address",
-      "/api/v1/addresses/ed25519/:address/outputs",
-      "/api/v1/treasury"
+      "/api/v1/messages*",
+      "/api/v1/transactions*",
+      "/api/v1/milestones*",
+      "/api/v1/outputs*",
+      "/api/v1/addresses*",
+      "/api/v1/treasury",
+      "/api/v1/receipts*"
     ],
-    "whitelistedAddresses": [
-      "127.0.0.1",
-      "::1"
+    "protectedRoutes": [
+      "/api/v1/*",
+      "/api/plugins/*"
     ],
     "powEnabled": true,
     "powWorkerCount": 1,
