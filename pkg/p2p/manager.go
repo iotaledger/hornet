@@ -237,15 +237,15 @@ type Manager struct {
 }
 
 // Start starts the Manager's event loop.
-// This method blocks until shutdownSignal has been signaled.
-func (m *Manager) Start(shutdownSignal <-chan struct{}) {
+// This method blocks until the given context is done.
+func (m *Manager) Start(ctx context.Context) {
 	// manage libp2p network events
 	m.host.Network().Notify((*netNotifiee)(m))
 
 	m.Events.StateChange.Trigger(ManagerStateStarted)
 
 	// run the event loop machinery
-	m.eventLoop(shutdownSignal)
+	m.eventLoop(ctx)
 
 	m.Events.StateChange.Trigger(ManagerStateStopping)
 
@@ -457,10 +457,10 @@ type callmsg struct {
 // because dealing with the natural concurrency of handling network connections
 // becomes very messy, especially since libp2p's notifiee system isn't clear on
 // what event is triggered when.
-func (m *Manager) eventLoop(shutdownSignal <-chan struct{}) {
+func (m *Manager) eventLoop(ctx context.Context) {
 	for {
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			m.shutdown()
 			return
 

@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -62,14 +63,14 @@ func runDatabaseSizeCollector() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: cleanup})
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(ctx context.Context) {
 		deps.Database.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
 		defer deps.Database.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
 
 		ticker := timeutil.NewTicker(func() {
 			dbSizeMetric := currentDatabaseSize()
 			hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: []*DBSizeMetric{dbSizeMetric}})
-		}, 1*time.Minute, shutdownSignal)
+		}, 1*time.Minute, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityDashboard); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)

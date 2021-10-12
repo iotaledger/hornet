@@ -61,16 +61,19 @@ func producerFromChannels(prodChan <-chan interface{}, errChan <-chan error) fun
 }
 
 // returns a producer which produces solid entry points.
-func newSEPsProducer(s *SnapshotManager, targetIndex milestone.Index, abortSignal <-chan struct{}) SEPProducerFunc {
+func newSEPsProducer(ctx context.Context, s *SnapshotManager, targetIndex milestone.Index) SEPProducerFunc {
 	prodChan := make(chan interface{})
 	errChan := make(chan error)
 
 	go func() {
 		// calculate solid entry points for the target index
-		if err := s.forEachSolidEntryPoint(targetIndex, abortSignal, func(sep *storage.SolidEntryPoint) bool {
-			prodChan <- sep.MessageID
-			return true
-		}); err != nil {
+		if err := s.forEachSolidEntryPoint(
+			ctx,
+			targetIndex,
+			func(sep *storage.SolidEntryPoint) bool {
+				prodChan <- sep.MessageID
+				return true
+			}); err != nil {
 			errChan <- err
 		}
 
@@ -379,11 +382,11 @@ func (s *SnapshotManager) readTargetMilestoneTimestamp(targetIndex milestone.Ind
 
 // creates a snapshot file by streaming data from the database into a snapshot file.
 func (s *SnapshotManager) createSnapshotWithoutLocking(
+	ctx context.Context,
 	snapshotType Type,
 	targetIndex milestone.Index,
 	filePath string,
 	writeToDatabase bool,
-	abortSignal <-chan struct{},
 	snapshotFullPath ...string) error {
 
 	s.log.Infof("creating %s snapshot for targetIndex %d", snapshotNames[snapshotType], targetIndex)
@@ -397,9 +400,9 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 	s.utxoManager.ReadLockLedger()
 	defer s.utxoManager.ReadUnlockLedger()
 
-	if err := utils.ReturnErrIfCtxDone(s.shutdownCtx, common.ErrOperationAborted); err != nil {
+	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		// do not create the snapshot if the node was shut down
-		return common.ErrOperationAborted
+		return err
 	}
 
 	timeReadLockLedger := time.Now()
@@ -489,7 +492,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 	}
 
 	// stream data into snapshot file
-	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint64(targetMsTimestamp.Unix()), header, newSEPsProducer(s, targetIndex, abortSignal), utxoProducer, milestoneDiffProducer)
+	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint64(targetMsTimestamp.Unix()), header, newSEPsProducer(ctx, s, targetIndex), utxoProducer, milestoneDiffProducer)
 	if err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[snapshotType], err)

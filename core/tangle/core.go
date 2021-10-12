@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -122,6 +123,8 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps tangleDeps) *tangle.Tangle {
 		return tangle.New(
 			logger.NewLogger("Tangle"),
+			CorePlugin.Daemon(),
+			CorePlugin.Daemon().ContextStopped(),
 			deps.Storage,
 			deps.SyncManager,
 			deps.MilestoneManager,
@@ -131,8 +134,6 @@ func provide(c *dig.Container) {
 			deps.ServerMetrics,
 			deps.Requester,
 			deps.ReceiptService,
-			CorePlugin.Daemon(),
-			CorePlugin.Daemon().ContextStopped(),
 			deps.BelowMaxDepth,
 			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			*syncedAtStartup)
@@ -146,7 +147,7 @@ func configure() {
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
-	if err := CorePlugin.Daemon().BackgroundWorker("Database Health", func(_ <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Database Health", func(_ context.Context) {
 		if err := deps.Storage.MarkDatabaseCorrupted(); err != nil {
 			CorePlugin.Panic(err)
 		}
@@ -195,16 +196,16 @@ func run() {
 	// run a full database garbage collection at startup
 	deps.Database.RunGarbageCollection()
 
-	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(ctx context.Context) {
 		attachHeartbeatEvents()
-		<-shutdownSignal
+		<-ctx.Done()
 		detachHeartbeatEvents()
 	}, shutdown.PriorityHeartbeats); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(shutdownSignal <-chan struct{}) {
-		<-shutdownSignal
+	if err := CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(ctx context.Context) {
+		<-ctx.Done()
 		deps.Tangle.AbortMilestoneSolidification()
 
 		CorePlugin.LogInfo("Flushing caches to database...")
@@ -218,8 +219,8 @@ func run() {
 	deps.Tangle.RunTangleProcessor()
 
 	// create a background worker that prints a status message every second
-	if err := CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(shutdownSignal <-chan struct{}) {
-		ticker := timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, shutdownSignal)
+	if err := CorePlugin.Daemon().BackgroundWorker("Tangle status reporter", func(ctx context.Context) {
+		ticker := timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityStatusReport); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)

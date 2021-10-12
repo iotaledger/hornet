@@ -18,6 +18,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -63,7 +64,6 @@ const (
 
 // SnapshotManager handles reading and writing snapshot data.
 type SnapshotManager struct {
-	shutdownCtx                          context.Context
 	log                                  *logger.Logger
 	database                             *database.Database
 	storage                              *storage.Storage
@@ -98,7 +98,7 @@ type SnapshotManager struct {
 }
 
 // NewSnapshotManager creates a new snapshot manager instance.
-func NewSnapshotManager(shutdownCtx context.Context,
+func NewSnapshotManager(
 	log *logger.Logger,
 	database *database.Database,
 	storage *storage.Storage,
@@ -124,7 +124,6 @@ func NewSnapshotManager(shutdownCtx context.Context,
 	pruneReceipts bool) *SnapshotManager {
 
 	return &SnapshotManager{
-		shutdownCtx:                          shutdownCtx,
 		log:                                  log,
 		database:                             database,
 		storage:                              storage,
@@ -178,7 +177,7 @@ func (s *SnapshotManager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.I
 	return confirmedMilestoneIndex-(s.snapshotDepth+s.snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
-func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, abortSignal <-chan struct{}, solidEntryPointConsumer func(sep *storage.SolidEntryPoint) bool) error {
+func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetIndex milestone.Index, solidEntryPointConsumer func(sep *storage.SolidEntryPoint) bool) error {
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
@@ -209,10 +208,10 @@ func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, ab
 
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
 	for milestoneIndex := targetIndex - s.solidEntryPointCheckThresholdPast; milestoneIndex <= targetIndex; milestoneIndex++ {
-		select {
-		case <-abortSignal:
-			return ErrSnapshotCreationWasAborted
-		default:
+
+		if err := utils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
+			// stop snapshot creation if node was shutdown
+			return err
 		}
 
 		cachedMilestone := s.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
@@ -225,7 +224,9 @@ func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, ab
 		cachedMilestone.Release(true) // message -1
 
 		// traverse the milestone and collect all messages that were referenced by this milestone or newer
-		if err := parentsTraverser.Traverse(hornet.MessageIDs{milestoneMessageID},
+		if err := parentsTraverser.Traverse(
+			ctx,
+			hornet.MessageIDs{milestoneMessageID},
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
@@ -239,10 +240,9 @@ func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, ab
 			func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
 				defer cachedMsgMeta.Release(true) // msg -1
 
-				select {
-				case <-abortSignal:
-					return ErrSnapshotCreationWasAborted
-				default:
+				if err := utils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
+					// stop snapshot creation if node was shutdown
+					return err
 				}
 
 				messageID := cachedMsgMeta.Metadata().MessageID()
@@ -273,8 +273,7 @@ func (s *SnapshotManager) forEachSolidEntryPoint(targetIndex milestone.Index, ab
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
 			// the pruning target index is also a solid entry point => traverse it anyways
-			true,
-			abortSignal); err != nil {
+			true); err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return ErrSnapshotCreationWasAborted
 			}
@@ -324,25 +323,25 @@ func (s *SnapshotManager) setIsSnapshotting(value bool) {
 }
 
 // CreateFullSnapshot creates a full snapshot for the given target milestone index.
-func (s *SnapshotManager) CreateFullSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}) error {
+func (s *SnapshotManager) CreateFullSnapshot(ctx context.Context, targetIndex milestone.Index, filePath string, writeToDatabase bool) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
-	return s.createSnapshotWithoutLocking(Full, targetIndex, filePath, writeToDatabase, abortSignal)
+	return s.createSnapshotWithoutLocking(ctx, Full, targetIndex, filePath, writeToDatabase)
 }
 
 // CreateDeltaSnapshot creates a delta snapshot for the given target milestone index.
-func (s *SnapshotManager) CreateDeltaSnapshot(targetIndex milestone.Index, filePath string, writeToDatabase bool, abortSignal <-chan struct{}, snapshotFullPath ...string) error {
+func (s *SnapshotManager) CreateDeltaSnapshot(ctx context.Context, targetIndex milestone.Index, filePath string, writeToDatabase bool, snapshotFullPath ...string) error {
 	s.snapshotLock.Lock()
 	defer s.snapshotLock.Unlock()
-	return s.createSnapshotWithoutLocking(Delta, targetIndex, filePath, writeToDatabase, abortSignal, snapshotFullPath...)
+	return s.createSnapshotWithoutLocking(ctx, Delta, targetIndex, filePath, writeToDatabase, snapshotFullPath...)
 }
 
 // LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
-func (s *SnapshotManager) LoadSnapshotFromFile(snapshotType Type, networkID uint64, filePath string) (err error) {
+func (s *SnapshotManager) LoadSnapshotFromFile(ctx context.Context, snapshotType Type, networkID uint64, filePath string) (err error) {
 	s.log.Infof("importing %s snapshot file...", snapshotNames[snapshotType])
 	ts := time.Now()
 
-	header, err := loadSnapshotFileToStorage(s.shutdownCtx, s.storage, snapshotType, filePath, networkID)
+	header, err := loadSnapshotFileToStorage(ctx, s.storage, snapshotType, filePath, networkID)
 	if err != nil {
 		return err
 	}
@@ -422,7 +421,7 @@ func (s *SnapshotManager) snapshotTypeFilePath(snapshotType Type) string {
 }
 
 // HandleNewConfirmedMilestoneEvent handles new confirmed milestone events which may trigger a delta snapshot creation and pruning.
-func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex milestone.Index, shutdownSignal <-chan struct{}) {
+func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(ctx context.Context, confirmedMilestoneIndex milestone.Index) {
 	if !s.syncManager.IsNodeSynced() {
 		// do not prune or create snapshots while we are not synced
 		return
@@ -438,7 +437,7 @@ func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(confirmedMilestoneInd
 			return
 		}
 
-		if err := s.createSnapshotWithoutLocking(snapshotType, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true, shutdownSignal); err != nil {
+		if err := s.createSnapshotWithoutLocking(ctx, snapshotType, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true); err != nil {
 			if errors.Is(err, ErrCritical) {
 				s.log.Panicf("%s: %s", ErrSnapshotCreationFailed, err)
 			}
@@ -470,7 +469,7 @@ func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(confirmedMilestoneInd
 		return
 	}
 
-	if _, err := s.pruneDatabase(targetIndex, shutdownSignal); err != nil {
+	if _, err := s.pruneDatabase(ctx, targetIndex); err != nil {
 		s.log.Debugf("pruning aborted: %v", err)
 	}
 
@@ -509,14 +508,14 @@ func (s *SnapshotManager) SnapshotsFilesLedgerIndex() (milestone.Index, error) {
 
 // ImportSnapshots imports snapshot data from the configured file paths.
 // automatically downloads snapshot data if no files are available.
-func (s *SnapshotManager) ImportSnapshots() error {
+func (s *SnapshotManager) ImportSnapshots(ctx context.Context) error {
 	snapAvail, err := s.checkSnapshotFilesAvailability(s.snapshotFullPath, s.snapshotDeltaPath)
 	if err != nil {
 		return err
 	}
 
 	if snapAvail == snapshotAvailNone {
-		if err = s.downloadSnapshotFiles(s.networkID, s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
+		if err = s.downloadSnapshotFiles(ctx, s.networkID, s.snapshotFullPath, s.snapshotDeltaPath); err != nil {
 			return err
 		}
 	}
@@ -530,7 +529,7 @@ func (s *SnapshotManager) ImportSnapshots() error {
 		return errors.New("no snapshot files available after snapshot download")
 	}
 
-	if err = s.LoadSnapshotFromFile(Full, s.networkID, s.snapshotFullPath); err != nil {
+	if err = s.LoadSnapshotFromFile(ctx, Full, s.networkID, s.snapshotFullPath); err != nil {
 		_ = s.storage.MarkDatabaseCorrupted()
 		return err
 	}
@@ -539,7 +538,7 @@ func (s *SnapshotManager) ImportSnapshots() error {
 		return nil
 	}
 
-	if err = s.LoadSnapshotFromFile(Delta, s.networkID, s.snapshotDeltaPath); err != nil {
+	if err = s.LoadSnapshotFromFile(ctx, Delta, s.networkID, s.snapshotDeltaPath); err != nil {
 		_ = s.storage.MarkDatabaseCorrupted()
 		return err
 	}
@@ -576,7 +575,7 @@ func (s *SnapshotManager) checkSnapshotFilesAvailability(fullPath string, deltaP
 }
 
 // ensures that the folders to both paths exists and then downloads the appropriate snapshot files.
-func (s *SnapshotManager) downloadSnapshotFiles(wantedNetworkID uint64, fullPath string, deltaPath string) error {
+func (s *SnapshotManager) downloadSnapshotFiles(ctx context.Context, wantedNetworkID uint64, fullPath string, deltaPath string) error {
 	fullPathDir := filepath.Dir(fullPath)
 	deltaPathDir := filepath.Dir(deltaPath)
 
@@ -598,7 +597,7 @@ func (s *SnapshotManager) downloadSnapshotFiles(wantedNetworkID uint64, fullPath
 	}
 	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJSON))
 
-	if err := s.DownloadSnapshotFiles(wantedNetworkID, fullPath, deltaPath, s.downloadTargets); err != nil {
+	if err := s.DownloadSnapshotFiles(ctx, wantedNetworkID, fullPath, deltaPath, s.downloadTargets); err != nil {
 		return fmt.Errorf("unable to download snapshot files: %w", err)
 	}
 

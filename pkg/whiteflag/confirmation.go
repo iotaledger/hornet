@@ -1,6 +1,7 @@
 package whiteflag
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -83,7 +84,9 @@ func ConfirmMilestone(
 
 	timeStart := time.Now()
 
-	mutations, err := ComputeWhiteFlagMutations(dbStorage, milestoneIndex, metadataMemcache, messagesMemcache, message.Parents())
+	// we pass a background context here to not cancel the whiteflag computation!
+	// otherwise the node could panic at shutdown.
+	mutations, err := ComputeWhiteFlagMutations(context.Background(), dbStorage, milestoneIndex, metadataMemcache, messagesMemcache, message.Parents())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)

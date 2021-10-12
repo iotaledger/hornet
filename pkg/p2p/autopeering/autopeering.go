@@ -1,6 +1,7 @@
 package autopeering
 
 import (
+	"context"
 	"fmt"
 	"hash/fnv"
 	"net"
@@ -376,7 +377,7 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 	a.selectionProtocol = selection.New(localPeerContainer.Local(), a.discoveryProtocol, selection.Logger(a.log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
 }
 
-func (a *AutopeeringManager) Run(shutdownSignal <-chan struct{}) {
+func (a *AutopeeringManager) Run(ctx context.Context) {
 	a.log.Info("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
 
 	lPeer := a.localPeerContainer.Local()
@@ -411,7 +412,7 @@ func (a *AutopeeringManager) Run(shutdownSignal <-chan struct{}) {
 
 	a.log.Infof("started: Address=%s/%s PublicKey=%s", localAddr.String(), localAddr.Network(), lPeer.PublicKey().String())
 
-	<-shutdownSignal
+	<-ctx.Done()
 	a.log.Info("Stopping Autopeering ...")
 
 	if a.selectionProtocol != nil {

@@ -82,7 +82,13 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
-		ycri, ocri := dag.ConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi)
+		ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi)
+		if err != nil {
+			if errors.Is(err, common.ErrOperationAborted) {
+				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
+			}
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+		}
 
 		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 		shouldPromote := false
@@ -260,7 +266,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 				return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
 			}
 
-			if err := deps.PoWHandler.DoPoW(msg, nil, powWorkerCount, refreshTipsFunc); err != nil {
+			if err := deps.PoWHandler.DoPoW(Plugin.Daemon().ContextStopped(), msg, powWorkerCount, refreshTipsFunc); err != nil {
 				return nil, err
 			}
 		}

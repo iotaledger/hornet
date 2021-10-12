@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"context"
 	"net/http"
 	"runtime"
 	"time"
@@ -193,13 +194,13 @@ func run() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tangle.ConfirmedMilestoneMetric{metric}})
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
-		go hub.Run(shutdownSignal)
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(ctx context.Context) {
+		go hub.Run(ctx)
 		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[WSSend] ...")
 		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)

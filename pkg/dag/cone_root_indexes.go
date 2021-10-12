@@ -2,6 +2,7 @@ package dag
 
 import (
 	"bytes"
+	"context"
 	"math"
 
 	"github.com/pkg/errors"
@@ -14,26 +15,30 @@ import (
 
 // updateOutdatedConeRootIndexes updates the cone root indexes of the given messages.
 // the "outdatedMessageIDs" should be ordered from oldest to latest to avoid recursion.
-func updateOutdatedConeRootIndexes(dbStorage *storage.Storage, outdatedMessageIDs hornet.MessageIDs, cmi milestone.Index) {
+func updateOutdatedConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, outdatedMessageIDs hornet.MessageIDs, cmi milestone.Index) error {
 	for _, outdatedMessageID := range outdatedMessageIDs {
 		cachedMsgMeta := dbStorage.CachedMessageMetadataOrNil(outdatedMessageID)
 		if cachedMsgMeta == nil {
 			panic(common.ErrMessageNotFound)
 		}
-		ConeRootIndexes(dbStorage, cachedMsgMeta, cmi)
+
+		if _, _, err := ConeRootIndexes(ctx, dbStorage, cachedMsgMeta, cmi); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // ConeRootIndexes searches the cone root indexes for a given message.
 // cachedMsgMeta has to be solid, otherwise youngestConeRootIndex and oldestConeRootIndex will be 0 if a message is missing in the cone.
-func ConeRootIndexes(dbStorage *storage.Storage, cachedMsgMeta *storage.CachedMetadata, cmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index) {
+func ConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, cachedMsgMeta *storage.CachedMetadata, cmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index, err error) {
 	defer cachedMsgMeta.Release(true) // meta -1
 
 	// if the msg already contains recent (calculation index matches CMI)
 	// information about ycri and ocri, return that info
 	ycri, ocri, ci := cachedMsgMeta.Metadata().ConeRootIndexes()
 	if ci == cmi {
-		return ycri, ocri
+		return ycri, ocri, nil
 	}
 
 	youngestConeRootIndex = 0
@@ -58,7 +63,10 @@ func ConeRootIndexes(dbStorage *storage.Storage, cachedMsgMeta *storage.CachedMe
 
 	// traverse the parents of this message to calculate the cone root indexes for this message.
 	// this walk will also collect all outdated messages in the same cone, to update them afterwards.
-	if err := TraverseParentsOfMessage(dbStorage, cachedMsgMeta.Metadata().MessageID(),
+	if err := TraverseParentsOfMessage(
+		ctx,
+		dbStorage,
+		cachedMsgMeta.Metadata().MessageID(),
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
@@ -105,9 +113,12 @@ func ConeRootIndexes(dbStorage *storage.Storage, cachedMsgMeta *storage.CachedMe
 			// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 			entryPointIndex, _ := dbStorage.SolidEntryPointsIndex(messageID)
 			updateIndexes(entryPointIndex, entryPointIndex)
-		}, false, nil); err != nil {
+		}, false); err != nil {
 		if errors.Is(err, common.ErrMessageNotFound) {
 			indexesValid = false
+		} else if errors.Is(err, common.ErrOperationAborted) {
+			// if the context was canceled, directly stop traversing
+			return 0, 0, err
 		} else {
 			panic(err)
 		}
@@ -115,18 +126,20 @@ func ConeRootIndexes(dbStorage *storage.Storage, cachedMsgMeta *storage.CachedMe
 
 	// update the outdated cone root indexes of all messages in the cone in order from oldest msgs to latest.
 	// this is an efficient way to update the whole cone, because updating from oldest to latest will not be recursive.
-	updateOutdatedConeRootIndexes(dbStorage, outdatedMessageIDs, cmi)
+	if err := updateOutdatedConeRootIndexes(ctx, dbStorage, outdatedMessageIDs, cmi); err != nil {
+		return 0, 0, err
+	}
 
 	// only set the calculated cone root indexes if all messages in the past cone were found
 	// and the oldestConeRootIndex was found.
 	if !indexesValid || oldestConeRootIndex == math.MaxUint32 {
-		return 0, 0
+		return 0, 0, nil
 	}
 
 	// set the new cone root indexes in the metadata of the message
 	cachedMsgMeta.Metadata().SetConeRootIndexes(youngestConeRootIndex, oldestConeRootIndex, cmi)
 
-	return youngestConeRootIndex, oldestConeRootIndex
+	return youngestConeRootIndex, oldestConeRootIndex, nil
 }
 
 // UpdateConeRootIndexes updates the cone root indexes of the future cone of all given messages.
@@ -134,7 +147,7 @@ func ConeRootIndexes(dbStorage *storage.Storage, cachedMsgMeta *storage.CachedMe
 // we have to walk the future cone, and update the past cone of all messages that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same messages multiple times.
-func UpdateConeRootIndexes(dbStorage *storage.Storage, metadataMemcache *storage.MetadataMemcache, messageIDs hornet.MessageIDs, cmi milestone.Index, iteratorOptions ...storage.IteratorOption) {
+func UpdateConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, metadataMemcache *storage.MetadataMemcache, messageIDs hornet.MessageIDs, cmi milestone.Index, iteratorOptions ...storage.IteratorOption) error {
 	traversed := map[string]struct{}{}
 
 	t := NewChildrenTraverser(dbStorage, metadataMemcache)
@@ -147,7 +160,9 @@ func UpdateConeRootIndexes(dbStorage *storage.Storage, metadataMemcache *storage
 	// we update all messages in order from oldest to latest
 	for _, messageID := range messageIDs {
 
-		if err := t.Traverse(messageID,
+		if err := t.Traverse(
+			ctx,
+			messageID,
 			// traversal stops if no more messages pass the given condition
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
@@ -163,11 +178,14 @@ func UpdateConeRootIndexes(dbStorage *storage.Storage, metadataMemcache *storage
 				traversed[cachedMsgMeta.Metadata().MessageID().ToMapKey()] = struct{}{}
 
 				// updates the cone root indexes of the outdated past cone for this message
-				ConeRootIndexes(dbStorage, cachedMsgMeta.Retain(), cmi) // meta pass +1
+				if _, _, err := ConeRootIndexes(ctx, dbStorage, cachedMsgMeta.Retain(), cmi); err != nil { // meta pass +1
+					return err
+				}
 
 				return nil
-			}, false, nil, iteratorOptions...); err != nil {
-			panic(err)
+			}, false, iteratorOptions...); err != nil {
+			return err
 		}
 	}
+	return nil
 }

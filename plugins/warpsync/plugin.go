@@ -1,6 +1,7 @@
 package warpsync
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/dig"
@@ -64,9 +65,9 @@ func configure() {
 }
 
 func run() {
-	if err := Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(ctx context.Context) {
 		attachEvents()
-		<-shutdownSignal
+		<-ctx.Done()
 		detachEvents()
 	}, shutdown.PriorityWarpSync); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
@@ -91,7 +92,7 @@ func configureEvents() {
 		if warpSync.CurrentCheckpoint != 0 && warpSync.CurrentCheckpoint < msIndex {
 			// rerequest since milestone requests could have been lost
 			Plugin.LogInfof("Requesting missing milestones %d - %d", msIndex, msIndex+milestone.Index(warpSync.AdvancementRange))
-			warpSyncMilestoneRequester.RequestMilestoneRange(warpSync.AdvancementRange, nil)
+			warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), warpSync.AdvancementRange, nil)
 		}
 	})
 
@@ -101,7 +102,7 @@ func configureEvents() {
 		deps.RequestQueue.Filter(func(r *gossip.Request) bool {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
-		warpSyncMilestoneRequester.RequestMilestoneRange(int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents, oldCheckpoint)
+		warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents, oldCheckpoint)
 	})
 
 	onWarpSyncTargetUpdated = events.NewClosure(func(checkpoint milestone.Index, newTarget milestone.Index) {
@@ -114,7 +115,7 @@ func configureEvents() {
 			return r.MilestoneIndex <= nextCheckpoint
 		})
 
-		msRequested := warpSyncMilestoneRequester.RequestMilestoneRange(int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents)
+		msRequested := warpSyncMilestoneRequester.RequestMilestoneRange(Plugin.Daemon().ContextStopped(), int(advRange), warpSyncMilestoneRequester.RequestMissingMilestoneParents)
 		// if the amount of requested milestones doesn't correspond to the range,
 		// it means we already had the milestones in the database, which suggests
 		// that we should manually kick start the milestone solidifier.

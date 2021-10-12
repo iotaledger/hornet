@@ -562,7 +562,7 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 	t.syncManager.OverwriteConfirmedMilestoneIndex(0)
 
 	// Restore the ledger state of the last snapshot
-	if err := snapshotManager.ImportSnapshots(); err != nil {
+	if err := snapshotManager.ImportSnapshots(t.shutdownCtx); err != nil {
 		t.log.Panic(err)
 	}
 

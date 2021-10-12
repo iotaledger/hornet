@@ -160,7 +160,7 @@ func run() {
 		writeFileServiceDiscoveryFile()
 	}
 
-	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(ctx context.Context) {
 		Plugin.LogInfo("Starting Prometheus exporter ... done")
 
 		e := echo.New()
@@ -195,16 +195,16 @@ func run() {
 			}
 		}()
 
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping Prometheus exporter ...")
 
 		if server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			err := server.Shutdown(ctx)
+			shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			err := server.Shutdown(shutdownCtx)
 			if err != nil {
 				Plugin.LogWarn(err)
 			}
-			cancel()
+			shutdownCtxCancel()
 		}
 		Plugin.LogInfo("Stopping Prometheus exporter ... done")
 	}, shutdown.PriorityPrometheus); err != nil {

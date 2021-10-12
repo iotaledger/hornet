@@ -4,8 +4,10 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"strings"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -128,7 +130,14 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		} else if metadata.IsSolid() {
 			// determine info about the quality of the tip if not referenced
 			cmi := deps.SyncManager.ConfirmedMilestoneIndex()
-			ycri, ocri := dag.ConeRootIndexes(deps.Storage, cachedMetadata.Retain(), cmi)
+			ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMetadata.Retain(), cmi)
+			if err != nil {
+				if !errors.Is(err, common.ErrOperationAborted) {
+					Plugin.LogWarn(err)
+				}
+				// do not publish the message if calculation was aborted or failed
+				return
+			}
 
 			// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 			shouldPromote := false

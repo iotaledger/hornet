@@ -257,7 +257,7 @@ func (s *Service) SynchronizedCount(latestMilestoneIndex milestone.Index) int {
 }
 
 // Start starts the Service's event loop.
-func (s *Service) Start(shutdownSignal <-chan struct{}) {
+func (s *Service) Start(ctx context.Context) {
 	s.host.SetStreamHandler(s.protocol, func(stream network.Stream) {
 		if s.stopped.IsSet() {
 			return
@@ -284,7 +284,7 @@ func (s *Service) Start(shutdownSignal <-chan struct{}) {
 	}))
 	// manage libp2p network events
 	s.host.Network().Notify((*netNotifiee)(s))
-	s.eventLoop(shutdownSignal)
+	s.eventLoop(ctx)
 	// de-register libp2p network events
 	s.host.Network().StopNotify((*netNotifiee)(s))
 }
@@ -347,10 +347,10 @@ type foreachmsg struct {
 }
 
 // runs the Service's event loop, handling inbound/outbound streams.
-func (s *Service) eventLoop(shutdownSignal <-chan struct{}) {
+func (s *Service) eventLoop(ctx context.Context) {
 	for {
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			s.shutdown()
 			return
 

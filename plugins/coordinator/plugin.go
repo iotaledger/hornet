@@ -251,7 +251,7 @@ func handleError(err error) bool {
 func run() {
 
 	// create a background worker that signals to issue new milestones
-	if err := Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(ctx context.Context) {
 
 		ticker := timeutil.NewTicker(func() {
 			// issue next milestone
@@ -260,14 +260,14 @@ func run() {
 			default:
 				// do not block if already another signal is waiting
 			}
-		}, deps.Coordinator.Interval(), shutdownSignal)
+		}, deps.Coordinator.Interval(), ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityCoordinator); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
 	}
 
 	// create a background worker that issues milestones
-	if err := Plugin.Daemon().BackgroundWorker("Coordinator", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Coordinator", func(ctx context.Context) {
 		// wait until all background workers of the tangle plugin are started
 		deps.Tangle.WaitForTangleProcessorStartup()
 
@@ -382,7 +382,7 @@ func run() {
 				lastCheckpointMessageID = milestoneMessageID
 				lastCheckpointIndex = 0
 
-			case <-shutdownSignal:
+			case <-ctx.Done():
 				break coordinatorLoop
 			}
 		}
@@ -495,15 +495,18 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 }
 
 // isBelowMaxDepth checks the below max depth criteria for the given message.
-func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) bool {
+func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) (bool, error) {
 	defer cachedMsgMeta.Release(true)
 
 	cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
-	_, ocri := dag.ConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	_, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	if err != nil {
+		return true, err
+	}
 
 	// if the OCRI to CMI delta is over belowMaxDepth, then the tip is invalid.
-	return (cmi - ocri) > milestone.Index(deps.BelowMaxDepth)
+	return (cmi - ocri) > milestone.Index(deps.BelowMaxDepth), nil
 }
 
 // Events returns the events of the coordinator
@@ -519,7 +522,17 @@ func configureEvents() {
 	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
 		defer cachedMsgMeta.Release(true)
 
-		if isBelowMaxDepth(cachedMsgMeta.Retain()) {
+		belowMaxDepth, err := isBelowMaxDepth(cachedMsgMeta.Retain())
+		if err != nil {
+			if errors.Is(err, common.ErrOperationAborted) {
+				// ignore errors due to node shutdown
+				return
+			}
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error during tipselection: %s", err))
+			return
+		}
+
+		if belowMaxDepth {
 			// ignore tips that are below max depth
 			return
 		}

@@ -1,6 +1,7 @@
 package spammer
 
 import (
+	"context"
 	"math/rand"
 	"runtime"
 	"time"
@@ -62,7 +63,7 @@ func cpuUsageGuessWithAdditionalWorker() (float64, error) {
 }
 
 // waitForLowerCPUUsage waits until the cpu usage drops below cpuMaxUsage.
-func waitForLowerCPUUsage(cpuMaxUsage float64, shutdownSignal <-chan struct{}) error {
+func waitForLowerCPUUsage(ctx context.Context, cpuMaxUsage float64) error {
 	if cpuMaxUsage == 0.0 {
 		return nil
 	}
@@ -78,7 +79,7 @@ func waitForLowerCPUUsage(cpuMaxUsage float64, shutdownSignal <-chan struct{}) e
 		}
 
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			return common.ErrOperationAborted
 		default:
 		}

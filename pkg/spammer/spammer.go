@@ -1,6 +1,7 @@
 package spammer
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -44,7 +45,7 @@ func New(networkID uint64, message string, index string, indexSemiLazy string, t
 	}
 }
 
-func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Duration, error) {
+func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, error) {
 
 	timeStart := time.Now()
 	isSemiLazy, tips, err := s.tipselFunc()
@@ -78,7 +79,7 @@ func (s *Spammer) DoSpam(shutdownSignal <-chan struct{}) (time.Duration, time.Du
 	}
 
 	timeStart = time.Now()
-	if err := s.powHandler.DoPoW(iotaMsg, shutdownSignal, 1, func() (tips hornet.MessageIDs, err error) {
+	if err := s.powHandler.DoPoW(ctx, iotaMsg, 1, func() (tips hornet.MessageIDs, err error) {
 		// refresh tips of the spammer if PoW takes longer than a configured duration.
 		_, refreshedTips, err := s.tipselFunc()
 		return refreshedTips, err

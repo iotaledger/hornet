@@ -1,6 +1,7 @@
 package autopeering
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -222,9 +223,9 @@ func configure() {
 }
 
 func run() {
-	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
 		attachEvents()
-		deps.AutopeeringManager.Run(shutdownSignal)
+		deps.AutopeeringManager.Run(ctx)
 		detachEvents()
 	}, shutdown.PriorityAutopeering); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
