@@ -57,7 +57,7 @@ The Docker image runs under user with user id 65532 and group id 65532. To make 
 3. Create the directory for the snapshots by running the following command:
 
    ```sh
-   sudo mkdir -p snapshots/mainnet && sudo chown 65532:65532 snapshots -R
+   sudo mkdir -p snapshots/mainnet && sudo chown -R 65532:65532 snapshots
    ```
 
 ## Run
