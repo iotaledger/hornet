@@ -186,10 +186,10 @@ func configure() {
 
 	var err error
 	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", deps.NodeConfig.Int(CfgMQTTWorkerCount), func(topic []byte) {
-		Plugin.LogInfof("Subscribe to topic: %s", string(topic))
+		Plugin.LogDebugf("Subscribe to topic: %s", string(topic))
 		topicSubscriptionWorkerPool.TrySubmit(topic)
 	}, func(topic []byte) {
-		Plugin.LogInfof("Unsubscribe from topic: %s", string(topic))
+		Plugin.LogDebugf("Unsubscribe from topic: %s", string(topic))
 	})
 
 	if err != nil {
