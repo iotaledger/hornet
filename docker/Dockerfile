@@ -1,6 +1,6 @@
 # https://hub.docker.com/_/golang
-# golang 1.16.7-buster amd64
-FROM golang@sha256:448a13037d13401ad9b31fabf91d6b8a3c5c35d336cc8af760b2ab4ed85d4155 AS build
+# golang 1.17.2-bullseye amd64
+FROM golang@sha256:26eb06358c4e5d36a304b74fa6af08d08a7943e6babadd8d1ba14491120cf62a AS build
 
 ARG BUILD_TAGS=builtin_static,rocksdb
 
@@ -39,7 +39,8 @@ RUN GOOS=linux GOARCH=amd64 go build \
 ############################
 # https://github.com/GoogleContainerTools/distroless/tree/master/cc
 # using distroless cc "nonroot" image, which includes everything in the base image (glibc, libssl and openssl)
-FROM gcr.io/distroless/cc@sha256:1a125767c4a066c5c2c70b326bcc3cff8ae4260de0b488ddcfdfe84f20a373b4
+# gcr.io/distroless/cc-debian11:latest
+FROM gcr.io/distroless/cc@sha256:53ae81ce96dfebf79d515e89af05c5cea25ad42618ceb77be7b6160a3e2d32da
 
 EXPOSE 15600/tcp
 EXPOSE 14626/udp
