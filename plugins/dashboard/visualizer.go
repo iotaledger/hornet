@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"context"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -175,7 +177,7 @@ func runVisualizer() {
 		)
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(ctx context.Context) {
 		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
 		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
@@ -196,7 +198,7 @@ func runVisualizer() {
 			defer deps.TipSelector.Events.TipRemoved.Detach(onTipRemoved)
 		}
 
-		<-shutdownSignal
+		<-ctx.Done()
 
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ...")
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ... done")

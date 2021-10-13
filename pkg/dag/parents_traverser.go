@@ -2,12 +2,14 @@ package dag
 
 import (
 	"container/list"
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 type ParentTraverser struct {
@@ -23,12 +25,12 @@ type ParentTraverser struct {
 	// checked map with result of traverse condition
 	checked map[string]bool
 
+	ctx                      context.Context
 	condition                Predicate
 	consumer                 Consumer
 	onMissingParent          OnMissingParent
 	onSolidEntryPoint        OnSolidEntryPoint
 	traverseSolidEntryPoints bool
-	abortSignal              <-chan struct{}
 
 	traverserLock sync.Mutex
 }
@@ -69,7 +71,7 @@ func (t *ParentTraverser) Cleanup(forceRelease bool) {
 // the traversal stops due to no more messages passing the given condition.
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func (t *ParentTraverser) Traverse(parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+func (t *ParentTraverser) Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -77,12 +79,12 @@ func (t *ParentTraverser) Traverse(parents hornet.MessageIDs, condition Predicat
 	// release lock so the traverser can be reused
 	defer t.traverserLock.Unlock()
 
+	t.ctx = ctx
 	t.condition = condition
 	t.consumer = consumer
 	t.onMissingParent = onMissingParent
 	t.onSolidEntryPoint = onSolidEntryPoint
 	t.traverseSolidEntryPoints = traverseSolidEntryPoints
-	t.abortSignal = abortSignal
 
 	// Prepare for a new traversal
 	t.reset()
@@ -109,10 +111,8 @@ func (t *ParentTraverser) Traverse(parents hornet.MessageIDs, condition Predicat
 // the paths of the parents are traversed one after another.
 func (t *ParentTraverser) processStackParents() error {
 
-	select {
-	case <-t.abortSignal:
-		return common.ErrOperationAborted
-	default:
+	if err := utils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
+		return err
 	}
 
 	// load candidate msg

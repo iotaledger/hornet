@@ -2,6 +2,7 @@ package faucet
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"runtime"
 	"time"
@@ -334,7 +335,7 @@ func (f *Faucet) clearRequests(batchedRequests []*queueItem) {
 }
 
 // createMessage creates a new message and references the last faucet message (also reattaches if below max depth).
-func (f *Faucet) createMessage(txPayload iotago.Serializable, shutdownSignal <-chan struct{}) (*storage.Message, error) {
+func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Serializable) (*storage.Message, error) {
 
 	tips, err := f.tipselFunc()
 	if err != nil {
@@ -360,7 +361,7 @@ func (f *Faucet) createMessage(txPayload iotago.Serializable, shutdownSignal <-c
 			Payload:   cachedMsg.Message().Message().Payload,
 		}
 
-		if err := f.powHandler.DoPoW(iotaMsg, shutdownSignal, 1); err != nil {
+		if err := f.powHandler.DoPoW(ctx, iotaMsg, 1); err != nil {
 			return nil, err
 		}
 
@@ -398,7 +399,11 @@ func (f *Faucet) createMessage(txPayload iotago.Serializable, shutdownSignal <-c
 			return nil
 		}
 
-		_, ocri := dag.ConeRootIndexes(f.storage, cachedMsgMeta.Retain(), f.syncManager.ConfirmedMilestoneIndex()) // meta +
+		_, ocri, err := dag.ConeRootIndexes(ctx, f.storage, cachedMsgMeta.Retain(), f.syncManager.ConfirmedMilestoneIndex()) // meta +
+		if err != nil {
+			return err
+		}
+
 		if (f.syncManager.LatestMilestoneIndex() - ocri) > f.belowMaxDepth {
 			// the last faucet message is not confirmed yet, but it is already below max depth
 			// we need to reattach it
@@ -426,7 +431,7 @@ func (f *Faucet) createMessage(txPayload iotago.Serializable, shutdownSignal <-c
 		Payload:   txPayload,
 	}
 
-	if err := f.powHandler.DoPoW(iotaMsg, shutdownSignal, 1); err != nil {
+	if err := f.powHandler.DoPoW(ctx, iotaMsg, 1); err != nil {
 		return nil, err
 	}
 
@@ -525,14 +530,14 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 }
 
 // sendFaucetMessage creates a faucet transaction payload and remembers the last sent messageID.
-func (f *Faucet) sendFaucetMessage(unspentOutputs []*utxo.Output, batchedRequests []*queueItem, shutdownSignal <-chan struct{}) (*utxo.Output, error) {
+func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.Output, batchedRequests []*queueItem) (*utxo.Output, error) {
 
 	txPayload, remainderIotaGoOutput, remainderAmount, err := f.buildTransactionPayload(unspentOutputs, batchedRequests)
 	if err != nil {
 		return nil, fmt.Errorf("build transaction payload failed, error: %w", err)
 	}
 
-	msg, err := f.createMessage(txPayload, shutdownSignal)
+	msg, err := f.createMessage(ctx, txPayload)
 	if err != nil {
 		return nil, fmt.Errorf("build faucet message failed, error: %w", err)
 	}
@@ -557,13 +562,13 @@ func (f *Faucet) logSoftError(err error) {
 }
 
 // RunFaucetLoop collects unspent outputs on the faucet address and batches the requests from the queue.
-func (f *Faucet) RunFaucetLoop(shutdownSignal <-chan struct{}) error {
+func (f *Faucet) RunFaucetLoop(ctx context.Context) error {
 
 	var lastRemainderOutput *utxo.Output
 
 	for {
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			// faucet was stopped
 			return nil
 
@@ -614,7 +619,7 @@ func (f *Faucet) RunFaucetLoop(shutdownSignal <-chan struct{}) error {
 		CollectValues:
 			for collectedRequestsCounter < f.opts.maxOutputCount-1 && amount > f.opts.amount {
 				select {
-				case <-shutdownSignal:
+				case <-ctx.Done():
 					// faucet was stopped
 					return nil
 
@@ -636,7 +641,7 @@ func (f *Faucet) RunFaucetLoop(shutdownSignal <-chan struct{}) error {
 				continue
 			}
 
-			remainderOutput, err := f.sendFaucetMessage(unspentOutputs, batchedRequests, shutdownSignal)
+			remainderOutput, err := f.sendFaucetMessage(ctx, unspentOutputs, batchedRequests)
 			if err != nil {
 				if common.IsCriticalError(err) != nil {
 					// error is a critical error

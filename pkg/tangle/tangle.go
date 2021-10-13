@@ -25,6 +25,10 @@ import (
 type Tangle struct {
 	// the logger used to log events.
 	log *logger.Logger
+	// used to access the global daemon.
+	daemon daemon.Daemon
+	// context that is done when the node is shutting down.
+	shutdownCtx context.Context
 	// used to access the node storage.
 	storage *storage.Storage
 	// used to determine the sync status of the node.
@@ -43,8 +47,6 @@ type Tangle struct {
 	requester *gossip.Requester
 	// used to persist and validate batches of receipts.
 	receiptService *migrator.ReceiptService
-	daemon         daemon.Daemon
-	shutdownCtx    context.Context
 	// belowMaxDepth is the maximum allowed delta value between OCRI of
 	// a given message in relation to the current CMI before it gets lazy.
 	belowMaxDepth         milestone.Index
@@ -85,8 +87,8 @@ type Tangle struct {
 	messageSolidSyncEvent       *utils.SyncEvent
 	milestoneConfirmedSyncEvent *utils.SyncEvent
 
-	signalChanMilestoneStopSolidification     chan struct{}
-	signalChanMilestoneStopSolidificationLock syncutils.Mutex
+	milestoneSolidificationCtxLock    syncutils.Mutex
+	milestoneSolidificationCancelFunc context.CancelFunc
 
 	solidifierMilestoneIndex     milestone.Index
 	solidifierMilestoneIndexLock syncutils.RWMutex
@@ -107,6 +109,8 @@ type Tangle struct {
 
 func New(
 	log *logger.Logger,
+	daemon daemon.Daemon,
+	shutdownCtx context.Context,
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	milestoneManager *milestonemanager.MilestoneManager,
@@ -116,14 +120,14 @@ func New(
 	serverMetrics *metrics.ServerMetrics,
 	requester *gossip.Requester,
 	receiptService *migrator.ReceiptService,
-	daemon daemon.Daemon,
-	shutdownCtx context.Context,
 	belowMaxDepth int,
 	milestoneTimeout time.Duration,
 	updateSyncedAtStartup bool) *Tangle {
 
 	t := &Tangle{
 		log:                   log,
+		daemon:                daemon,
+		shutdownCtx:           shutdownCtx,
 		storage:               dbStorage,
 		syncManager:           syncManager,
 		milestoneManager:      milestoneManager,
@@ -133,8 +137,6 @@ func New(
 		serverMetrics:         serverMetrics,
 		requester:             requester,
 		receiptService:        receiptService,
-		daemon:                daemon,
-		shutdownCtx:           shutdownCtx,
 		belowMaxDepth:         milestone.Index(belowMaxDepth),
 		milestoneTimeout:      milestoneTimeout,
 		updateSyncedAtStartup: updateSyncedAtStartup,

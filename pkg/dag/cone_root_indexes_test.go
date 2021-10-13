@@ -1,6 +1,7 @@
 package dag_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -39,7 +40,8 @@ func TestConeRootIndexes(t *testing.T) {
 			cmi := latestMilestone.Milestone().Index
 
 			cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(messages[len(messages)-1])
-			ycri, ocri := dag.ConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
+			ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta, cmi)
+			require.NoError(te.TestInterface, err)
 
 			minOldestConeRootIndex := milestone.Index(1)
 			if cmi > milestone.Index(BelowMaxDepth) {
@@ -62,7 +64,8 @@ func TestConeRootIndexes(t *testing.T) {
 	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildIndexation().Store()
 
 	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID())
-	ycri, ocri := dag.ConeRootIndexes(te.Storage(), cachedMsgMeta, cmi)
+	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta, cmi)
+	require.NoError(te.TestInterface, err)
 
 	// NullHash is SEP for index 0
 	require.Equal(te.TestInterface, uint32(0), uint32(ocri))

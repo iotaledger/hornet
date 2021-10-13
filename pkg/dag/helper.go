@@ -1,6 +1,8 @@
 package dag
 
 import (
+	"context"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 )
@@ -21,33 +23,33 @@ type OnSolidEntryPoint func(messageID hornet.MessageID)
 // the traversal stops due to no more messages passing the given condition.
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func TraverseParents(dbStorage *storage.Storage, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+func TraverseParents(ctx context.Context, dbStorage *storage.Storage, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	t := NewParentTraverser(dbStorage)
 	defer t.Cleanup(true)
 
-	return t.Traverse(parents, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints, abortSignal)
+	return t.Traverse(ctx, parents, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints)
 }
 
 // TraverseParentsOfMessage starts to traverse the parents (past cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func TraverseParentsOfMessage(dbStorage *storage.Storage, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool, abortSignal <-chan struct{}) error {
+func TraverseParentsOfMessage(ctx context.Context, dbStorage *storage.Storage, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	t := NewParentTraverser(dbStorage)
 	defer t.Cleanup(true)
 
-	return t.Traverse(hornet.MessageIDs{startMessageID}, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints, abortSignal)
+	return t.Traverse(ctx, hornet.MessageIDs{startMessageID}, condition, consumer, onMissingParent, onSolidEntryPoint, traverseSolidEntryPoints)
 }
 
 // TraverseChildren starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func TraverseChildren(dbStorage *storage.Storage, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}, iteratorOptions ...storage.IteratorOption) error {
+func TraverseChildren(ctx context.Context, dbStorage *storage.Storage, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, iteratorOptions ...storage.IteratorOption) error {
 
 	t := NewChildrenTraverser(dbStorage)
 	defer t.Cleanup(true)
 
-	return t.Traverse(startMessageID, condition, consumer, walkAlreadyDiscovered, abortSignal, iteratorOptions...)
+	return t.Traverse(ctx, startMessageID, condition, consumer, walkAlreadyDiscovered, iteratorOptions...)
 }

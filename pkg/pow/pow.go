@@ -11,6 +11,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -166,12 +167,10 @@ func (h *Handler) PoWType() string {
 // DoPoW does the proof-of-work required to hit the target score configured on this Handler.
 // The given iota.Message's nonce is automatically updated.
 // If a powsrv.io key was provided, then powsrv.io is used to commence the proof-of-work.
-func (h *Handler) DoPoW(msg *iotago.Message, shutdownSignal <-chan struct{}, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (err error) {
+func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (err error) {
 
-	select {
-	case <-shutdownSignal:
-		return common.ErrOperationAborted
-	default:
+	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+		return err
 	}
 
 	getPoWData := func(msg *iotago.Message) (powData []byte, err error) {

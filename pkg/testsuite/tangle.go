@@ -2,6 +2,7 @@ package testsuite
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/stretchr/testify/require"
@@ -100,7 +101,10 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 
 	visitedCachedMessages := make(map[string]*storage.CachedMessage)
 
-	err := dag.TraverseParentsOfMessage(te.storage, conf.MilestoneMessageID,
+	err := dag.TraverseParentsOfMessage(
+		context.Background(),
+		te.storage,
+		conf.MilestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -124,7 +128,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false, nil)
+		false)
 	require.NoError(te.TestInterface, err)
 
 	var milestoneMsgs []string

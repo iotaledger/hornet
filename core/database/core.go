@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"os"
 
 	flag "github.com/spf13/pflag"
@@ -277,8 +278,8 @@ func configure() {
 		}
 	}
 
-	if err = CorePlugin.Daemon().BackgroundWorker("Close database", func(shutdownSignal <-chan struct{}) {
-		<-shutdownSignal
+	if err = CorePlugin.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
+		<-ctx.Done()
 
 		if err = deps.Storage.MarkDatabaseHealthy(); err != nil {
 			CorePlugin.Panic(err)
@@ -297,9 +298,9 @@ func configure() {
 }
 
 func run() {
-	if err := CorePlugin.Daemon().BackgroundWorker("Database[Events]", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Database[Events]", func(ctx context.Context) {
 		attachEvents()
-		<-shutdownSignal
+		<-ctx.Done()
 		detachEvents()
 	}, shutdown.PriorityMetricsUpdater); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)

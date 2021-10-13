@@ -1,6 +1,7 @@
 package pow
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/dig"
@@ -61,9 +62,9 @@ func provide(c *dig.Container) {
 func run() {
 
 	// close the PoW handler on shutdown
-	if err := CorePlugin.Daemon().BackgroundWorker("PoW Handler", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("PoW Handler", func(ctx context.Context) {
 		CorePlugin.LogInfo("Starting PoW Handler ... done")
-		<-shutdownSignal
+		<-ctx.Done()
 		CorePlugin.LogInfo("Stopping PoW Handler ...")
 		deps.Handler.Close()
 		CorePlugin.LogInfo("Stopping PoW Handler ... done")

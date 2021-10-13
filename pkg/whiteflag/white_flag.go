@@ -1,6 +1,7 @@
 package whiteflag
 
 import (
+	"context"
 	"crypto"
 	"encoding"
 	"fmt"
@@ -68,7 +69,7 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // metadataMemcache has to be cleaned up outside.
-func ComputeWhiteFlagMutations(dbStorage *storage.Storage, msIndex milestone.Index, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, msIndex milestone.Index, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
@@ -252,7 +253,9 @@ func ComputeWhiteFlagMutations(dbStorage *storage.Storage, msIndex milestone.Ind
 	// If the parents are SEPs, are already processed or already referenced,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
 	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncludedWithTransactions.
-	if err := parentsTraverser.Traverse(parents,
+	if err := parentsTraverser.Traverse(
+		ctx,
+		parents,
 		condition,
 		consumer,
 		// called on missing parents
@@ -261,8 +264,7 @@ func ComputeWhiteFlagMutations(dbStorage *storage.Storage, msIndex milestone.Ind
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false,
-		nil); err != nil {
+		false); err != nil {
 		return nil, err
 	}
 

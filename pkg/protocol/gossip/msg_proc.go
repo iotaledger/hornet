@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -167,9 +168,9 @@ func NewMessageProcessor(
 }
 
 // Run runs the processor and blocks until the shutdown signal is triggered.
-func (proc *MessageProcessor) Run(shutdownSignal <-chan struct{}) {
+func (proc *MessageProcessor) Run(ctx context.Context) {
 	proc.wp.Start()
-	<-shutdownSignal
+	<-ctx.Done()
 	proc.Shutdown()
 }
 
@@ -230,7 +231,12 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 			return ErrMessageNotSolid
 		}
 
-		_, ocri := dag.ConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), cmi) // meta +
+		// we pass a background context here to not prevent emitting messages at shutdown (COO etc).
+		_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), cmi) // meta +
+		if err != nil {
+			return err
+		}
+
 		if (cmi - ocri) > proc.opts.BelowMaxDepth {
 			// the parent is below max depth
 			return ErrMessageBelowMaxDepth
@@ -471,7 +477,12 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 		return
 	}
 
-	_, ocri := dag.ConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex())
+	// we pass a background context here to not prevent broadcasting messages at shutdown (COO etc).
+	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex())
+	if err != nil {
+		return
+	}
+
 	if (proc.syncManager.LatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
 		// the solid message was below max depth in relation to the latest milestone index, do not broadcast
 		return

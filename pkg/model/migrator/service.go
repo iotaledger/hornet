@@ -1,6 +1,7 @@
 package migrator
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -175,8 +176,8 @@ func (s *MigratorService) InitState(msIndex *uint32, utxoManager *utxo.Manager) 
 // Returning false from the error handler tells the service to terminate.
 type OnServiceErrorFunc func(err error) (terminate bool)
 
-// Start stats the MigratorService s, it stops when shutdownSignal is closed.
-func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServiceErrorFunc) {
+// Start stats the MigratorService s, it stops when the given context is done.
+func (s *MigratorService) Start(ctx context.Context, onError OnServiceErrorFunc) {
 	var startIndex uint32
 	for {
 		msIndex, migratedFunds, err := s.nextMigrations(startIndex)
@@ -202,7 +203,7 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 			}
 			select {
 			case s.migrations <- &migrationResult{msIndex, lastBatch, batch}:
-			case <-shutdownSignal:
+			case <-ctx.Done():
 				close(s.migrations)
 				return
 			}

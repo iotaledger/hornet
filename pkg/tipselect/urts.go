@@ -1,6 +1,7 @@
 package tipselect
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"time"
@@ -83,6 +84,8 @@ type Events struct {
 
 // TipSelector manages a list of tips and emits events for their removal and addition.
 type TipSelector struct {
+	// context that is done when the node is shutting down.
+	shutdownCtx context.Context
 	// tangle contains the database.
 	storage *storage.Storage
 	// used to determine the sync status of the node
@@ -140,6 +143,7 @@ type TipSelector struct {
 
 // New creates a new tip-selector.
 func New(
+	shutdownCtx context.Context,
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	serverMetrics *metrics.ServerMetrics,
@@ -156,6 +160,7 @@ func New(
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
+		shutdownCtx:                           shutdownCtx,
 		storage:                               dbStorage,
 		syncManager:                           syncManager,
 		serverMetrics:                         serverMetrics,
@@ -200,7 +205,12 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 
 	cmi := ts.syncManager.ConfirmedMilestoneIndex()
 
-	score := ts.calculateScore(messageID, cmi)
+	score, err := ts.calculateScore(messageID, cmi)
+	if err != nil {
+		// do not add tips if the calculation failed
+		return
+	}
+
 	if score == ScoreLazy {
 		// do not add lazy tips.
 		// lazy tips should also not remove other tips from the pool, otherwise the tip pool will run empty.
@@ -469,7 +479,7 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 }
 
 // UpdateScores updates the scores of the tips and removes lazy ones.
-func (ts *TipSelector) UpdateScores() int {
+func (ts *TipSelector) UpdateScores() (int, error) {
 
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
@@ -479,7 +489,13 @@ func (ts *TipSelector) UpdateScores() int {
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
 		// check the score of the tip again to avoid old tips
-		tip.Score = ts.calculateScore(tip.MessageID, cmi)
+		score, err := ts.calculateScore(tip.MessageID, cmi)
+		if err != nil {
+			// do not continue if calculation of the tip score failed
+			return count, err
+		}
+		tip.Score = score
+
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.MessageID) {
@@ -505,7 +521,13 @@ func (ts *TipSelector) UpdateScores() int {
 
 	for _, tip := range ts.semiLazyTipsMap {
 		// check the score of the tip again to avoid old tips
-		tip.Score = ts.calculateScore(tip.MessageID, cmi)
+		score, err := ts.calculateScore(tip.MessageID, cmi)
+		if err != nil {
+			// do not continue if calculation of the tip score failed
+			return count, err
+		}
+		tip.Score = score
+
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
 			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.MessageID) {
@@ -529,35 +551,38 @@ func (ts *TipSelector) UpdateScores() int {
 		}
 	}
 
-	return count
+	return count, nil
 }
 
 // calculateScore calculates the tip selection score of this message
-func (ts *TipSelector) calculateScore(messageID hornet.MessageID, cmi milestone.Index) Score {
+func (ts *TipSelector) calculateScore(messageID hornet.MessageID, cmi milestone.Index) (Score, error) {
 	cachedMsgMeta := ts.storage.CachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedMsgMeta == nil {
 		// we need to return lazy instead of panic here, because the message could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
-		return ScoreLazy
+		return ScoreLazy, nil
 	}
 	defer cachedMsgMeta.Release(true)
 
-	ycri, ocri := dag.ConeRootIndexes(ts.storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	ycri, ocri, err := dag.ConeRootIndexes(ts.shutdownCtx, ts.storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	if err != nil {
+		return ScoreLazy, err
+	}
 
 	// if the CMI to YCRI delta is over maxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy
 	if (cmi - ycri) > ts.maxDeltaMsgYoungestConeRootIndexToCMI {
-		return ScoreLazy
+		return ScoreLazy, nil
 	}
 
 	// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
 	if (cmi - ocri) > ts.belowMaxDepth {
-		return ScoreLazy
+		return ScoreLazy, nil
 	}
 
 	// if the OCRI to CMI delta is over maxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy
 	if (cmi - ocri) > ts.maxDeltaMsgOldestConeRootIndexToCMI {
-		return ScoreSemiLazy
+		return ScoreSemiLazy, nil
 	}
 
-	return ScoreNonLazy
+	return ScoreNonLazy, nil
 }

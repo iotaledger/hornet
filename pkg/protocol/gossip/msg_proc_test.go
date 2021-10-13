@@ -28,9 +28,6 @@ func TestMsgProcessorEmit(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	shutdownSignal := make(chan struct{})
-	defer close(shutdownSignal)
-
 	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
@@ -46,10 +43,10 @@ func TestMsgProcessorEmit(t *testing.T) {
 	serverMetrics := &metrics.ServerMetrics{}
 
 	manager := p2p.NewManager(n)
-	go manager.Start(shutdownSignal)
+	go manager.Start(ctx)
 
 	service := gossip.NewService(protocolID, n, manager, serverMetrics)
-	go service.Start(shutdownSignal)
+	go service.Start(ctx)
 
 	networkID := iotago.NetworkIDFromString("testnet4")
 
@@ -92,7 +89,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.Parents = iotago.MessageIDs{[32]byte{}}
 
 	// pow again, so we have a valid message
-	err = te.PoWHandler.DoPoW(msg, nil, 1)
+	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
@@ -107,7 +104,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.NetworkID = 1
 
 	// pow again, so we have a valid message
-	err = te.PoWHandler.DoPoW(msg, nil, 1)
+	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
@@ -122,7 +119,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.NetworkID = networkID
 
 	// pow again, so we have a valid message
-	err = te.PoWHandler.DoPoW(msg, nil, 1)
+	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again

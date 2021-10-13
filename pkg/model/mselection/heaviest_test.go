@@ -1,6 +1,7 @@
 package mselection
 
 import (
+	"context"
 	"math"
 	"math/rand"
 	"testing"
@@ -168,7 +169,10 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 			}
 		}
 
-		err := dag.TraverseParentsOfMessage(te.Storage(), tip,
+		err := dag.TraverseParentsOfMessage(
+			context.Background(),
+			te.Storage(),
+			tip,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
@@ -192,7 +196,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 				// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 				at, _ := te.Storage().SolidEntryPointsIndex(messageID)
 				updateIndexes(at, at)
-			}, false, nil)
+			}, false)
 		require.NoError(te.TestInterface, err)
 
 		return youngestConeRootIndex, oldestConeRootIndex
@@ -258,7 +262,7 @@ func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
 			return tips
 		},
 		func(_ milestone.Index, _ hornet.MessageIDs, conf *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
-			dag.UpdateConeRootIndexes(te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
+			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
 		},
 	)
 

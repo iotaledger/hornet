@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -191,16 +192,16 @@ func configure() {
 		addMessageEventHandlers(proto)
 
 		// stream close handler
-		protocolTerminated := make(chan struct{})
+		protocolTerminatedCtx, protocolTerminatedCtxCancel := context.WithCancel(context.Background())
 
 		deps.GossipService.Events.ProtocolTerminated.Attach(events.NewClosure(func(terminatedProto *gossip.Protocol) {
 			if terminatedProto != proto {
 				return
 			}
-			close(protocolTerminated)
+			protocolTerminatedCtxCancel()
 		}))
 
-		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ <-chan struct{}) {
+		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
 			buf := make([]byte, readBufSize)
 			// only way to break out is to Reset() the stream
 			for {
@@ -217,7 +218,7 @@ func configure() {
 			CorePlugin.LogWarnf("failed to start worker: %s", err)
 		}
 
-		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(shutdownSignal <-chan struct{}) {
+		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
 			// send heartbeat and latest milestone request
 			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
 				latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
@@ -230,9 +231,9 @@ func configure() {
 
 			for {
 				select {
-				case <-protocolTerminated:
+				case <-protocolTerminatedCtx.Done():
 					return
-				case <-shutdownSignal:
+				case <-ctx.Done():
 					return
 				case data := <-proto.SendQueue:
 					if err := proto.Send(data); err != nil {
@@ -249,47 +250,47 @@ func configure() {
 
 func run() {
 
-	if err := CorePlugin.Daemon().BackgroundWorker("GossipService", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("GossipService", func(ctx context.Context) {
 		CorePlugin.LogInfo("Running GossipService")
-		deps.GossipService.Start(shutdownSignal)
+		deps.GossipService.Start(ctx)
 		CorePlugin.LogInfo("Stopped GossipService")
 	}, shutdown.PriorityGossipService); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(shutdownSignal <-chan struct{}) {
-		deps.Requester.RunPendingRequestEnqueuer(shutdownSignal)
+	if err := CorePlugin.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(ctx context.Context) {
+		deps.Requester.RunPendingRequestEnqueuer(ctx)
 	}, shutdown.PriorityRequestsProcessor); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("RequestQueueDrainer", func(shutdownSignal <-chan struct{}) {
-		deps.Requester.RunRequestQueueDrainer(shutdownSignal)
+	if err := CorePlugin.Daemon().BackgroundWorker("RequestQueueDrainer", func(ctx context.Context) {
+		deps.Requester.RunRequestQueueDrainer(ctx)
 	}, shutdown.PriorityRequestsProcessor); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(ctx context.Context) {
 		CorePlugin.LogInfo("Running BroadcastQueue")
 		onBroadcastMessage := events.NewClosure(deps.Broadcaster.Broadcast)
 		deps.MessageProcessor.Events.BroadcastMessage.Attach(onBroadcastMessage)
 		defer deps.MessageProcessor.Events.BroadcastMessage.Detach(onBroadcastMessage)
-		deps.Broadcaster.RunBroadcastQueueDrainer(shutdownSignal)
+		deps.Broadcaster.RunBroadcastQueueDrainer(ctx)
 		CorePlugin.LogInfo("Stopped BroadcastQueue")
 	}, shutdown.PriorityBroadcastQueue); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("MessageProcessor", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("MessageProcessor", func(ctx context.Context) {
 		CorePlugin.LogInfo("Running MessageProcessor")
-		deps.MessageProcessor.Run(shutdownSignal)
+		deps.MessageProcessor.Run(ctx)
 		CorePlugin.LogInfo("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(shutdownSignal <-chan struct{}) {
-		ticker := timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, shutdownSignal)
+	if err := CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(ctx context.Context) {
+		ticker := timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityHeartbeats); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)

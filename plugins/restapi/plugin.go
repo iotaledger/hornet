@@ -128,7 +128,7 @@ func run() {
 
 	Plugin.LogInfo("Starting REST-API server ...")
 
-	if err := Plugin.Daemon().BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("REST-API server", func(ctx context.Context) {
 		Plugin.LogInfo("Starting REST-API server ... done")
 
 		bindAddr := deps.RestAPIBindAddress
@@ -141,15 +141,15 @@ func run() {
 			}
 		}()
 
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping REST-API server ...")
 
 		if server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if err := server.Shutdown(ctx); err != nil {
+			shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := server.Shutdown(shutdownCtx); err != nil {
 				Plugin.LogWarn(err)
 			}
-			cancel()
+			shutdownCtxCancel()
 		}
 		Plugin.LogInfo("Stopping REST-API server ... done")
 	}, shutdown.PriorityRestAPI); err != nil {

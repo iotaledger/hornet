@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -24,7 +25,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
 	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		if err := t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil); err != nil {
+		if err := t.futureConeSolidifier.SolidifyMessageAndFutureCone(t.shutdownCtx, task.Param(0).(*storage.CachedMetadata)); err != nil {
 			t.log.Debugf("SolidifyMessageAndFutureCone failed: %s", err)
 		}
 		task.Return(nil)
@@ -99,29 +100,29 @@ func (t *Tangle) RunTangleProcessor() {
 	})
 
 	// create a background worker that "measures" the MPS value every second
-	if err := t.daemon.BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
-		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, shutdownSignal)
+	if err := t.daemon.BackgroundWorker("Metrics MPS Updater", func(ctx context.Context) {
+		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityMetricsUpdater); err != nil {
 		t.log.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(ctx context.Context) {
 		t.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		t.startWaitGroup.Done()
-		<-shutdownSignal
+		<-ctx.Done()
 		t.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater); err != nil {
 		t.log.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(ctx context.Context) {
 		t.log.Info("Starting TangleProcessor[ReceiveTx] ... done")
 		t.messageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
 		t.Events.MessageSolid.Attach(onMessageSolid)
 		t.receiveMsgWorkerPool.Start()
 		t.startWaitGroup.Done()
-		<-shutdownSignal
+		<-ctx.Done()
 		t.log.Info("Stopping TangleProcessor[ReceiveTx] ...")
 		t.messageProcessor.Events.MessageProcessed.Detach(onMsgProcessed)
 		t.Events.MessageSolid.Detach(onMessageSolid)
@@ -131,11 +132,11 @@ func (t *Tangle) RunTangleProcessor() {
 		t.log.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(ctx context.Context) {
 		t.log.Info("Starting TangleProcessor[FutureConeSolidifier] ... done")
 		t.futureConeSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
-		<-shutdownSignal
+		<-ctx.Done()
 		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ...")
 		t.futureConeSolidifierWorkerPool.StopAndWait()
 		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ... done")
@@ -143,14 +144,14 @@ func (t *Tangle) RunTangleProcessor() {
 		t.log.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(ctx context.Context) {
 		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
 		t.milestoneManager.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Attach(onMilestoneTimeout)
 		t.startWaitGroup.Done()
-		<-shutdownSignal
+		<-ctx.Done()
 		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
 		t.StopMilestoneTimeoutTicker()
 		t.milestoneManager.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
@@ -162,11 +163,11 @@ func (t *Tangle) RunTangleProcessor() {
 		t.log.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(ctx context.Context) {
 		t.log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
 		t.milestoneSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
-		<-shutdownSignal
+		<-ctx.Done()
 		t.log.Info("Stopping TangleProcessor[MilestoneSolidifier] ...")
 		t.milestoneSolidifierWorkerPool.StopAndWait()
 		t.futureConeSolidifier.Cleanup(true)

@@ -1,6 +1,7 @@
 package faucet
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -220,8 +221,8 @@ func configure() {
 
 func run() {
 	// create a background worker that handles the enqueued faucet requests
-	if err := Plugin.Daemon().BackgroundWorker("Faucet", func(shutdownSignal <-chan struct{}) {
-		if err := deps.Faucet.RunFaucetLoop(shutdownSignal); err != nil {
+	if err := Plugin.Daemon().BackgroundWorker("Faucet", func(ctx context.Context) {
+		if err := deps.Faucet.RunFaucetLoop(ctx); err != nil {
 			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("faucet plugin hit a critical error: %s", err.Error()))
 		}
 	}, shutdown.PriorityFaucet); err != nil {

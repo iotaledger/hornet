@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -47,14 +48,14 @@ func (t *Tangle) markMessageAsSolid(cachedMetadata *storage.CachedMetadata) {
 
 // SolidQueueCheck traverses a milestone and checks if it is solid.
 // Missing messages are requested.
-// Can be aborted with abortSignal.
+// Can be aborted if the given context is canceled.
 // metadataMemcache has to be cleaned up outside.
 func (t *Tangle) SolidQueueCheck(
+	ctx context.Context,
 	messagesMemcache *storage.MessagesMemcache,
 	metadataMemcache *storage.MetadataMemcache,
 	milestoneIndex milestone.Index,
-	parents hornet.MessageIDs,
-	abortSignal chan struct{}) (solid bool, aborted bool) {
+	parents hornet.MessageIDs) (solid bool, aborted bool) {
 
 	ts := time.Now()
 
@@ -66,7 +67,9 @@ func (t *Tangle) SolidQueueCheck(
 	parentsTraverser := dag.NewParentTraverser(t.storage, metadataMemcache)
 
 	// collect all msg to solidify by traversing the tangle
-	if err := parentsTraverser.Traverse(parents,
+	if err := parentsTraverser.Traverse(
+		ctx,
+		parents,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -96,8 +99,7 @@ func (t *Tangle) SolidQueueCheck(
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false,
-		abortSignal); err != nil {
+		false); err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return false, true
 		}
@@ -131,7 +133,7 @@ func (t *Tangle) SolidQueueCheck(
 
 	if t.syncManager.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
-		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(messageIDsToSolidify, metadataMemcache, abortSignal); err != nil {
+		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(ctx, messageIDsToSolidify, metadataMemcache); err != nil {
 			t.log.Debugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)
 		}
 	}
@@ -140,13 +142,25 @@ func (t *Tangle) SolidQueueCheck(
 	return true, false
 }
 
+func (t *Tangle) newMilestoneSolidificationCtx() (context.Context, context.CancelFunc) {
+	t.milestoneSolidificationCtxLock.Lock()
+	defer t.milestoneSolidificationCtxLock.Unlock()
+
+	// milestone solidification can be canceled by node shutdown or external signal
+	ctx, ctxCancel := context.WithCancel(t.shutdownCtx)
+	t.milestoneSolidificationCancelFunc = ctxCancel
+	return ctx, ctxCancel
+}
+
 func (t *Tangle) AbortMilestoneSolidification() {
-	t.signalChanMilestoneStopSolidificationLock.Lock()
-	if t.signalChanMilestoneStopSolidification != nil {
-		close(t.signalChanMilestoneStopSolidification)
-		t.signalChanMilestoneStopSolidification = nil
+	t.milestoneSolidificationCtxLock.Lock()
+	defer t.milestoneSolidificationCtxLock.Unlock()
+
+	if t.milestoneSolidificationCancelFunc != nil {
+		// cancel ongoing solidifications
+		t.milestoneSolidificationCancelFunc()
+		t.milestoneSolidificationCancelFunc = nil
 	}
-	t.signalChanMilestoneStopSolidificationLock.Unlock()
 }
 
 // solidifyMilestone tries to solidify the next known non-solid milestone and requests missing msg
@@ -217,9 +231,8 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	milestoneIndexToSolidify := cachedMsToSolidify.Milestone().Index
 	t.setSolidifierMilestoneIndex(milestoneIndexToSolidify)
 
-	t.signalChanMilestoneStopSolidificationLock.Lock()
-	t.signalChanMilestoneStopSolidification = make(chan struct{})
-	t.signalChanMilestoneStopSolidificationLock.Unlock()
+	milestoneSolidificationCtx, milestoneSolidificationCancelFunc := t.newMilestoneSolidificationCtx()
+	defer milestoneSolidificationCancelFunc()
 
 	messagesMemcache := storage.NewMessagesMemcache(t.storage)
 	metadataMemcache := storage.NewMetadataMemcache(t.storage)
@@ -229,7 +242,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	defer metadataMemcache.Cleanup(true)
 
 	t.log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	if becameSolid, aborted := t.SolidQueueCheck(messagesMemcache, metadataMemcache, milestoneIndexToSolidify, hornet.MessageIDs{cachedMsToSolidify.Milestone().MessageID}, t.signalChanMilestoneStopSolidification); !becameSolid { // meta pass +1
+	if becameSolid, aborted := t.SolidQueueCheck(milestoneSolidificationCtx, messagesMemcache, metadataMemcache, milestoneIndexToSolidify, hornet.MessageIDs{cachedMsToSolidify.Milestone().MessageID}); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			t.log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
@@ -252,7 +265,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			t.log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentConfirmedIndex, cachedClosestNextMsIndex)
 
 			// no Milestones found in between => search an older milestone in the solid cone
-			if found, err := t.searchMissingMilestone(currentConfirmedIndex, cachedClosestNextMsIndex, cachedMsToSolidify.Milestone().MessageID, t.signalChanMilestoneStopSolidification); !found {
+			if found, err := t.searchMissingMilestone(milestoneSolidificationCtx, currentConfirmedIndex, cachedClosestNextMsIndex, cachedMsToSolidify.Milestone().MessageID); !found {
 				if err != nil {
 					// no milestones found => this should not happen!
 					t.log.Panicf("Milestones missing between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
@@ -284,7 +297,8 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			timeSetConfirmedMilestoneIndex = time.Now()
 			if t.syncManager.IsNodeAlmostSynced() {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
-				dag.UpdateConeRootIndexes(t.storage, metadataMemcache, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+				// we can safely ignore errors of the future cone solidifier.
+				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, t.storage, metadataMemcache, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 			}
 			timeUpdateConeRootIndexes = time.Now()
 			t.Events.ConfirmedMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1
@@ -430,13 +444,16 @@ func (t *Tangle) setSolidifierMilestoneIndex(index milestone.Index) {
 }
 
 // searchMissingMilestone searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
-func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneMessageID hornet.MessageID, abortSignal chan struct{}) (found bool, err error) {
+func (t *Tangle) searchMissingMilestone(ctx context.Context, confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneMessageID hornet.MessageID) (found bool, err error) {
 
 	var milestoneFound bool
 
 	ts := time.Now()
 
-	if err := dag.TraverseParentsOfMessage(t.storage, milestoneMessageID,
+	if err := dag.TraverseParentsOfMessage(
+		ctx,
+		t.storage,
+		milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -480,7 +497,7 @@ func (t *Tangle) searchMissingMilestone(confirmedMilestoneIndex milestone.Index,
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false, abortSignal); err != nil {
+		false); err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return false, nil
 		} else if errors.Is(err, ErrMissingMilestoneFound) {

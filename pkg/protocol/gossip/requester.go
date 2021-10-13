@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -82,11 +83,11 @@ func NewRequester(
 }
 
 // RunRequestQueueDrainer runs the RequestQueue drainer.
-func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
+func (r *Requester) RunRequestQueueDrainer(ctx context.Context) {
 	r.running = true
 	for {
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			return
 		case <-r.drainSignal:
 
@@ -137,13 +138,13 @@ func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
 }
 
 // RunPendingRequestEnqueuer runs the loop to periodically re-request pending requests from the RequestQueue.
-func (r *Requester) RunPendingRequestEnqueuer(shutdownSignal <-chan struct{}) {
+func (r *Requester) RunPendingRequestEnqueuer(ctx context.Context) {
 	r.running = true
 	reEnqueueTicker := time.NewTicker(r.opts.PendingRequestReEnqueueInterval)
 reEnqueueLoop:
 	for {
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			return
 		case <-reEnqueueTicker.C:
 

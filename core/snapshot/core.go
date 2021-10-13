@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"context"
 	"os"
 
 	"github.com/labstack/gommon/bytes"
@@ -172,7 +173,7 @@ func provide(c *dig.Container) {
 			CorePlugin.Panicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
 		}
 
-		return snapshot.NewSnapshotManager(CorePlugin.Daemon().ContextStopped(),
+		return snapshot.NewSnapshotManager(
 			CorePlugin.Logger(),
 			deps.Database,
 			deps.Storage,
@@ -223,7 +224,7 @@ func configure() {
 			CorePlugin.Panic(err)
 		}
 	default:
-		if err := deps.SnapshotManager.ImportSnapshots(); err != nil {
+		if err := deps.SnapshotManager.ImportSnapshots(CorePlugin.Daemon().ContextStopped()); err != nil {
 			CorePlugin.Panic(err)
 		}
 	}
@@ -240,7 +241,7 @@ func run() {
 		}
 	})
 
-	if err := CorePlugin.Daemon().BackgroundWorker("Snapshots", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
 		CorePlugin.LogInfo("Starting Snapshots ... done")
 
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
@@ -248,13 +249,13 @@ func run() {
 
 		for {
 			select {
-			case <-shutdownSignal:
+			case <-ctx.Done():
 				CorePlugin.LogInfo("Stopping Snapshots...")
 				CorePlugin.LogInfo("Stopping Snapshots... done")
 				return
 
 			case confirmedMilestoneIndex := <-newConfirmedMilestoneSignal:
-				deps.SnapshotManager.HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex, shutdownSignal)
+				deps.SnapshotManager.HandleNewConfirmedMilestoneEvent(ctx, confirmedMilestoneIndex)
 			}
 		}
 	}, shutdown.PrioritySnapshots); err != nil {

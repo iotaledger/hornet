@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"context"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/events"
@@ -14,11 +16,11 @@ func runLiveFeed() {
 		}
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("Dashboard[TxUpdater]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[TxUpdater]", func(ctx context.Context) {
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		defer deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[TxUpdater] ...")
 		Plugin.LogInfo("Stopping Dashboard[TxUpdater] ... done")
 	}, shutdown.PriorityDashboard); err != nil {

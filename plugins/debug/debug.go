@@ -89,7 +89,10 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}()
 
 	// check if all requested parents are solid
-	solid, _ := deps.Tangle.SolidQueueCheck(messagesMemcache, metadataMemcache, request.Index, parents, nil)
+	solid, aborted := deps.Tangle.SolidQueueCheck(Plugin.Daemon().ContextStopped(), messagesMemcache, metadataMemcache, request.Index, parents)
+	if aborted {
+		return nil, errors.WithMessage(echo.ErrServiceUnavailable, common.ErrOperationAborted.Error())
+	}
 
 	if !solid {
 		// wait for at most "whiteFlagParentsSolidTimeout" for the parents to become solid
@@ -106,8 +109,11 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 
 	// at this point all parents are solid
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(deps.Storage, request.Index, metadataMemcache, messagesMemcache, parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), deps.Storage, request.Index, metadataMemcache, messagesMemcache, parents)
 	if err != nil {
+		if errors.Is(err, common.ErrOperationAborted) {
+			return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "failed to compute white flag mutations: %s", err)
+		}
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to compute white flag mutations: %s", err)
 	}
 
@@ -397,7 +403,10 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 	entryPoints := []*entryPoint{}
 	tanglePath := []*messageWithParents{}
 
-	if err := dag.TraverseParentsOfMessage(deps.Storage, messageID,
+	if err := dag.TraverseParentsOfMessage(
+		Plugin.Daemon().ContextStopped(),
+		deps.Storage,
+		messageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -432,7 +441,10 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		func(messageID hornet.MessageID) {
 			entryPoints = append(entryPoints, &entryPoint{MessageID: messageID.ToHex(), ReferencedByMilestone: entryPointIndex})
 		},
-		false, nil); err != nil {
+		false); err != nil {
+		if errors.Is(err, common.ErrOperationAborted) {
+			return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "traverse parents failed, error: %s", err)
+		}
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "traverse parents failed, error: %s", err)
 	}
 

@@ -14,7 +14,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/utils"
 )
@@ -27,6 +26,7 @@ const (
 // WriteCounter counts the number of bytes written to it. It implements to the io.Writer interface
 // and we can pass this into io.TeeReader() which will report progress on each write cycle.
 type WriteCounter struct {
+	// context that is done when the node is shutting down.
 	shutdownCtx context.Context
 	Expected    uint64
 
@@ -47,8 +47,8 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.total += uint64(n)
 
-	if err := utils.ReturnErrIfCtxDone(wc.shutdownCtx, common.ErrOperationAborted); err != nil {
-		return n, ErrSnapshotDownloadWasAborted
+	if err := utils.ReturnErrIfCtxDone(wc.shutdownCtx, ErrSnapshotDownloadWasAborted); err != nil {
+		return n, err
 	}
 
 	wc.PrintProgress()
@@ -168,12 +168,12 @@ func (s *SnapshotManager) filterTargets(wantedNetworkID uint64, targets []*Downl
 }
 
 // DownloadSnapshotFiles tries to download snapshots files from the given targets.
-func (s *SnapshotManager) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
+func (s *SnapshotManager) DownloadSnapshotFiles(ctx context.Context, wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
 
 	for _, target := range s.filterTargets(wantedNetworkID, targets) {
 
 		s.log.Infof("downloading full snapshot file from %s", target.Full)
-		if err := s.downloadFile(fullPath, target.Full); err != nil {
+		if err := s.downloadFile(ctx, fullPath, target.Full); err != nil {
 			s.log.Warn(err)
 			// as the full snapshot URL failed to download, we commence further with our targets
 			continue
@@ -181,7 +181,7 @@ func (s *SnapshotManager) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath
 
 		if len(target.Delta) > 0 {
 			s.log.Infof("downloading delta snapshot file from %s", target.Delta)
-			if err := s.downloadFile(deltaPath, target.Delta); err != nil {
+			if err := s.downloadFile(ctx, deltaPath, target.Delta); err != nil {
 				// it is valid that no delta snapshot file is available on the target.
 				s.log.Warn(err)
 			}
@@ -216,11 +216,11 @@ func (s *SnapshotManager) downloadHeader(url string) (*ReadFileHeader, error) {
 }
 
 // downloads a snapshot file from the given url to the specified path.
-func (s *SnapshotManager) downloadFile(path string, url string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
-	defer cancel()
+func (s *SnapshotManager) downloadFile(ctx context.Context, path string, url string) error {
+	downloadCtx, downloadCtxCancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
+	defer downloadCtxCancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(downloadCtx, http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
@@ -250,7 +250,7 @@ func (s *SnapshotManager) downloadFile(path string, url string) error {
 	}()
 
 	// create our progress reporter and pass it to be used alongside our writer
-	counter := NewWriteCounter(s.shutdownCtx, uint64(resp.ContentLength))
+	counter := NewWriteCounter(ctx, uint64(resp.ContentLength))
 	if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
 		_ = out.Close()
 		return fmt.Errorf("download failed: %w", err)

@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -335,7 +336,9 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	parents = parents.RemoveDupsAndSortByLexicalOrder()
 
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.storage, newMilestoneIndex, metadataMemcache, messagesMemcache, parents)
+	// we pass a background context here to not cancel the whiteflag computation!
+	// otherwise the coordinator could panic at shutdown.
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage, newMilestoneIndex, metadataMemcache, messagesMemcache, parents)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}

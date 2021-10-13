@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"math"
 	"testing"
 	"time"
@@ -40,6 +41,7 @@ func TestTipSelect(t *testing.T) {
 	serverMetrics := metrics.ServerMetrics{}
 
 	ts := tipselect.New(
+		context.Background(),
 		te.Storage(),
 		te.SyncManager(),
 		&serverMetrics,
@@ -88,7 +90,10 @@ func TestTipSelect(t *testing.T) {
 				}
 			}
 
-			err := dag.TraverseParentsOfMessage(te.Storage(), tip,
+			err := dag.TraverseParentsOfMessage(
+				context.Background(),
+				te.Storage(),
+				tip,
 				// traversal stops if no more messages pass the given condition
 				// Caution: condition func is not in DFS order
 				func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
@@ -112,7 +117,7 @@ func TestTipSelect(t *testing.T) {
 					// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 					at, _ := te.Storage().SolidEntryPointsIndex(messageID)
 					updateIndexes(at, at)
-				}, false, nil)
+				}, false)
 			require.NoError(te.TestInterface, err)
 
 			minOldestConeRootIndex := milestone.Index(1)
@@ -139,7 +144,7 @@ func TestTipSelect(t *testing.T) {
 		if i%10 == 0 {
 			// Issue a new milestone every 10 messages
 			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{msgMeta.MessageID()}, false)
-			dag.UpdateConeRootIndexes(te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
+			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
 			ts.UpdateScores()
 		}
 	}

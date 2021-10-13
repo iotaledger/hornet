@@ -156,8 +156,8 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), duration)
-	defer cancel()
+	benchmarkCtx, benchmarkCtxCancel := context.WithTimeout(context.Background(), duration)
+	defer benchmarkCtxCancel()
 
 	ts := time.Now()
 
@@ -165,10 +165,10 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 	// it returns the number of calculated hashes.
 	doBenchmarkCPU := func(ctx context.Context, numWorkers int) uint64 {
 		var (
-			done    uint32
-			counter uint64
-			wg      sync.WaitGroup
-			closing = make(chan struct{})
+			done                         uint32
+			counter                      uint64
+			wg                           sync.WaitGroup
+			closingCtx, closingCtxCancel = context.WithCancel(context.Background())
 		)
 
 		// random digest
@@ -179,7 +179,7 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 			select {
 			case <-ctx.Done():
 				atomic.StoreUint32(&done, 1)
-			case <-closing:
+			case <-closingCtx.Done():
 				return
 			}
 		}()
@@ -209,12 +209,12 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 			}()
 		}
 		wg.Wait()
-		close(closing)
+		closingCtxCancel()
 
 		return counter
 	}
 
-	hashes := doBenchmarkCPU(ctx, threads)
+	hashes := doBenchmarkCPU(benchmarkCtx, threads)
 	megahashesPerSecond := float64(hashes) / (duration.Seconds() * 1000000)
 	fmt.Printf("Average CPU speed: %0.2fMH/s (%d thread(s), took %v)\n", megahashesPerSecond, threads, duration.Truncate(time.Millisecond))
 

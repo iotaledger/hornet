@@ -41,7 +41,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/websocket v1.4.2
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20210819121432-6e2ce2d41200
-	github.com/iotaledger/hive.go v0.0.0-20211011085923-fd2eb0a47bf8
+	github.com/iotaledger/hive.go v0.0.0-20211012165228-2f217dcf2ad7
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v2 v2.0.1-0.20210830162758-173bada804f9
 	github.com/ipfs/go-datastore v0.4.6

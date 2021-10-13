@@ -1,6 +1,7 @@
 package mqtt
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -186,10 +187,10 @@ func configure() {
 
 	var err error
 	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", deps.NodeConfig.Int(CfgMQTTWorkerCount), func(topic []byte) {
-		Plugin.LogInfof("Subscribe to topic: %s", string(topic))
+		Plugin.LogDebugf("Subscribe to topic: %s", string(topic))
 		topicSubscriptionWorkerPool.TrySubmit(topic)
 	}, func(topic []byte) {
-		Plugin.LogInfof("Unsubscribe from topic: %s", string(topic))
+		Plugin.LogDebugf("Unsubscribe from topic: %s", string(topic))
 	})
 
 	if err != nil {
@@ -295,7 +296,7 @@ func run() {
 		receiptWorkerPool.TrySubmit(receipt)
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("MQTT Broker", func(ctx context.Context) {
 		go func() {
 			mqttBroker.Start()
 			Plugin.LogInfof("Starting MQTT Broker (port %s) ... done", mqttBroker.Config().Port)
@@ -309,14 +310,14 @@ func run() {
 			Plugin.LogInfof("You can now listen to MQTT via: https://%s:%s", mqttBroker.Config().TlsHost, mqttBroker.Config().TlsPort)
 		}
 
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping MQTT Broker ...")
 		Plugin.LogInfo("Stopping MQTT Broker ... done")
 	}, shutdown.PriorityMetricsPublishers); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
 	}
 
-	if err := Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("MQTT Events", func(ctx context.Context) {
 		Plugin.LogInfo("Starting MQTT Events ... done")
 
 		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
@@ -339,7 +340,7 @@ func run() {
 		utxoOutputWorkerPool.Start()
 		receiptWorkerPool.Start()
 
-		<-shutdownSignal
+		<-ctx.Done()
 
 		deps.Tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
 		deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(onConfirmedMilestoneChanged)

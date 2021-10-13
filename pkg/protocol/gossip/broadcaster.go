@@ -1,6 +1,8 @@
 package gossip
 
 import (
+	"context"
+
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/p2p"
@@ -38,11 +40,11 @@ func NewBroadcaster(
 }
 
 // RunBroadcastQueueDrainer runs the broadcast queue drainer.
-func (b *Broadcaster) RunBroadcastQueueDrainer(shutdownSignal <-chan struct{}) {
+func (b *Broadcaster) RunBroadcastQueueDrainer(ctx context.Context) {
 exit:
 	for {
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			break exit
 		case broadcast := <-b.queue:
 			b.service.ForEach(func(proto *Protocol) bool {

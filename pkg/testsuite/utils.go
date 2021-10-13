@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 
@@ -97,7 +98,7 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 	msg, err := iotago.NewMessageBuilder().Parents(parents).Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil}).Build()
 	require.NoError(b.te.TestInterface, err)
 
-	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
+	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
 	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
@@ -178,7 +179,7 @@ func (b *MessageBuilder) Build() *Message {
 	msg, err := iotago.NewMessageBuilder().Parents(b.parents.ToSliceOfSlices()).Payload(transaction).Build()
 	require.NoError(b.te.TestInterface, err)
 
-	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
+	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
 	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)

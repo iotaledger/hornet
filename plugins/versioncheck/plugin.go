@@ -1,6 +1,7 @@
 package versioncheck
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -50,8 +51,8 @@ func configure() {
 
 func run() {
 	// create a background worker that checks for latest version every hour
-	if err := Plugin.Node.Daemon().BackgroundWorker("Version update checker", func(shutdownSignal <-chan struct{}) {
-		ticker := timeutil.NewTicker(checkLatestVersion, 1*time.Hour, shutdownSignal)
+	if err := Plugin.Node.Daemon().BackgroundWorker("Version update checker", func(ctx context.Context) {
+		ticker := timeutil.NewTicker(checkLatestVersion, 1*time.Hour, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityUpdateCheck); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)

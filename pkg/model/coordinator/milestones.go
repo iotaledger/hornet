@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"context"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -17,7 +18,8 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*storage.Me
 		Payload:   nil,
 	}
 
-	if err := coo.powHandler.DoPoW(iotaMsg, nil, coo.opts.powWorkerCount); err != nil {
+	// we pass a background context here to not create invalid checkpoints at node shutdown.
+	if err := coo.powHandler.DoPoW(context.Background(), iotaMsg, coo.opts.powWorkerCount); err != nil {
 		return nil, err
 	}
 
@@ -57,7 +59,9 @@ func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.Me
 		return nil, err
 	}
 
-	if err := coo.powHandler.DoPoW(iotaMsg, nil, coo.opts.powWorkerCount); err != nil {
+	// we pass a background context here to not create invalid milestones at node shutdown.
+	// otherwise the coordinator could panic at shutdown.
+	if err := coo.powHandler.DoPoW(context.Background(), iotaMsg, coo.opts.powWorkerCount); err != nil {
 		return nil, err
 	}
 

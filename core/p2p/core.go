@@ -245,8 +245,8 @@ func configure() {
 
 	CorePlugin.LogInfof("peer configured, ID: %s", deps.Host.ID())
 
-	if err := CorePlugin.Daemon().BackgroundWorker("Close p2p peer database", func(shutdownSignal <-chan struct{}) {
-		<-shutdownSignal
+	if err := CorePlugin.Daemon().BackgroundWorker("Close p2p peer database", func(ctx context.Context) {
+		<-ctx.Done()
 
 		closeDatabases := func() error {
 			if err := deps.PeerStoreContainer.Flush(); err != nil {
@@ -273,11 +273,11 @@ func run() {
 	}
 
 	// register a daemon to disconnect all peers up on shutdown
-	if err := CorePlugin.Daemon().BackgroundWorker("Manager", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Manager", func(ctx context.Context) {
 		CorePlugin.LogInfof("listening on: %s", deps.Host.Addrs())
-		go deps.PeeringManager.Start(shutdownSignal)
+		go deps.PeeringManager.Start(ctx)
 		connectConfigKnownPeers()
-		<-shutdownSignal
+		<-ctx.Done()
 		if err := deps.Host.Peerstore().Close(); err != nil {
 			CorePlugin.LogError("unable to cleanly closing peer store: %s", err)
 		}
