@@ -116,9 +116,13 @@ func balanceByBech32Address(c echo.Context) (*addressBalanceResponse, error) {
 
 	addressParam := strings.ToLower(c.Param(ParameterAddress))
 
-	_, bech32Address, err := iotago.ParseBech32(addressParam)
+	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if hrp != deps.Bech32HRP {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", deps.Bech32HRP)
 	}
 
 	switch address := bech32Address.(type) {
@@ -233,9 +237,13 @@ func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) 
 	}
 
 	addressParam := strings.ToLower(c.Param(ParameterAddress))
-	_, bech32Address, err := iotago.ParseBech32(addressParam)
+	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if hrp != deps.Bech32HRP {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", deps.Bech32HRP)
 	}
 
 	return outputsResponse(bech32Address, includeSpent, filteredType)
