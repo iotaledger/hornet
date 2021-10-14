@@ -217,7 +217,7 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 
 	// Fall back to local PoW
 	for {
-		powCtx, powCancel := context.WithCancel(context.Background())
+		powCtx, powCancel := context.WithCancel(ctx)
 		if refreshTips {
 			powCtx, powCancel = context.WithTimeout(powCtx, h.refreshTipsInterval)
 		}
