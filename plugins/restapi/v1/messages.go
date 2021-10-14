@@ -266,7 +266,10 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 				return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
 			}
 
-			if err := deps.PoWHandler.DoPoW(Plugin.Daemon().ContextStopped(), msg, powWorkerCount, refreshTipsFunc); err != nil {
+			mergedCtx, mergedCtxCancel := utils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
+			defer mergedCtxCancel()
+
+			if err := deps.PoWHandler.DoPoW(mergedCtx, msg, powWorkerCount, refreshTipsFunc); err != nil {
 				return nil, err
 			}
 		}
