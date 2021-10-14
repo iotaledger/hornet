@@ -21,8 +21,8 @@ func ReturnErrIfCtxDone(ctx context.Context, err error) error {
 	}
 }
 
-// MergedContext is a merged context based on two contexts.
-type MergedContext struct {
+// mergedContext is a merged context based on two contexts.
+type mergedContext struct {
 	sync.RWMutex
 
 	ctxPrimary   context.Context
@@ -34,11 +34,11 @@ type MergedContext struct {
 	err  error
 }
 
-// MergeContexts creates a new MergedContext based on two contexts.
+// MergeContexts creates a new mergedContext based on two contexts.
 func MergeContexts(ctxPrimary context.Context, ctxSecondary context.Context) (context.Context, context.CancelFunc) {
 	ctxMain, mainCancelFunc := context.WithCancel(context.Background())
 
-	mc := &MergedContext{
+	mc := &mergedContext{
 		ctxPrimary:   ctxPrimary,
 		ctxSecondary: ctxSecondary,
 		cancelCtx:    ctxMain,
@@ -85,7 +85,7 @@ func MergeContexts(ctxPrimary context.Context, ctxSecondary context.Context) (co
 // done on behalf of the contexts should be canceled.
 // Deadline returns ok==false when no deadline is set.
 // Successive calls to Deadline return the same results.
-func (mc *MergedContext) Deadline() (time.Time, bool) {
+func (mc *mergedContext) Deadline() (time.Time, bool) {
 	min := time.Time{}
 
 	if dl, ok := mc.ctxPrimary.Deadline(); ok {
@@ -107,16 +107,16 @@ func (mc *MergedContext) Deadline() (time.Time, bool) {
 // never be canceled. Successive calls to Done return the same value.
 // The close of the Done channel may happen asynchronously,
 // after the cancel function returns.
-func (mc *MergedContext) Done() <-chan struct{} {
+func (mc *mergedContext) Done() <-chan struct{} {
 	return mc.done
 }
 
-// If Done is not yet closed, Err returns nil.
+// Err returns nil if Done is not yet closed.
 // If Done is closed, Err returns a non-nil error explaining why:
 // Canceled if one the contexts was canceled
 // or DeadlineExceeded if one of the contexts deadline passed.
 // After Err returns a non-nil error, successive calls to Err return the same error.
-func (mc *MergedContext) Err() error {
+func (mc *mergedContext) Err() error {
 	mc.RLock()
 	defer mc.RUnlock()
 	return mc.err
@@ -125,7 +125,7 @@ func (mc *MergedContext) Err() error {
 // Value returns the value associated with the key in one of the two contexts,
 // or nil if no value is associated with the key. Successive calls to Value with
 // the same key returns the same result.
-func (mc *MergedContext) Value(key interface{}) interface{} {
+func (mc *mergedContext) Value(key interface{}) interface{} {
 	if value := mc.ctxPrimary.Value(key); value != nil {
 		return value
 	}
