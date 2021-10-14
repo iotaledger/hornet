@@ -82,6 +82,9 @@ var (
 )
 
 func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.InitConfig, error) {
+
+	toolsRequested := toolset.ShouldHandleTools()
+
 	flagSets, err := normalizeFlagSets(params)
 	if err != nil {
 		return nil, err
@@ -97,8 +100,11 @@ Command line flags:
 		flag.PrintDefaults()
 	}
 
-	parseFlags(flagSets)
-	printVersion(flagSets)
+	if !toolsRequested {
+		// No tools requested, so parse all flags as config flags
+		parseFlags(flagSets)
+		printVersion(flagSets)
+	}
 
 	if err = loadCfg(flagSets); err != nil {
 		return nil, err
@@ -112,7 +118,9 @@ Command line flags:
 		panic(err)
 	}
 
-	toolset.HandleTools(nodeConfig)
+	if toolsRequested {
+		toolset.HandleTools(nodeConfig)
+	}
 
 	fmt.Printf(`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗

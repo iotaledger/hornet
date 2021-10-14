@@ -26,24 +26,24 @@ const (
 	ToolCoordinatorFixStateFile = "coo-fix-state"
 )
 
-// HandleTools handles available tools.
-func HandleTools(nodeConfig *configuration.Configuration) {
+// ShouldHandleTools checks if tools were requested.
+func ShouldHandleTools() bool {
 	args := os.Args[1:]
 
-	toolFound := false
 	for i, arg := range args {
 		if strings.ToLower(arg) == "tool" || strings.ToLower(arg) == "tools" {
 			args = args[i:]
-			toolFound = true
+			return true
 			break
 		}
 	}
+	return false
+}
 
-	if !toolFound {
-		// 'tool' was not found
-		return
-	}
+// HandleTools handles available tools.
+func HandleTools(nodeConfig *configuration.Configuration) {
 
+	args := os.Args[1:]
 	if len(args) == 1 {
 		listTools()
 		os.Exit(1)
