@@ -106,7 +106,8 @@ func provide(c *dig.Container) {
 
 	type snapshotDeps struct {
 		dig.In
-		Database             *database.Database
+		TangleDatabase       *database.Database `name:"tangleDatabase"`
+		UTXODatabase         *database.Database `name:"utxoDatabase"`
 		Storage              *storage.Storage
 		SyncManager          *syncmanager.SyncManager
 		UTXOManager          *utxo.Manager
@@ -173,9 +174,10 @@ func provide(c *dig.Container) {
 			CorePlugin.Panicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
 		}
 
+		//TODO: also add deps.UTXODatabase here
 		return snapshot.NewSnapshotManager(
 			CorePlugin.Logger(),
-			deps.Database,
+			deps.TangleDatabase,
 			deps.Storage,
 			deps.SyncManager,
 			deps.UTXOManager,

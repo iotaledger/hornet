@@ -36,7 +36,9 @@ func (s *DBSizeMetric) MarshalJSON() ([]byte, error) {
 }
 
 func currentDatabaseSize() *DBSizeMetric {
-	dbSize, err := deps.Database.Size()
+	//TODO: Also add UTXO or separate into 2 metrics?
+
+	dbSize, err := deps.TangleDatabase.Size()
 	if err != nil {
 		Plugin.LogWarnf("error in database size calculation: %s", err)
 		return nil
@@ -64,8 +66,8 @@ func runDatabaseSizeCollector() {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(ctx context.Context) {
-		deps.Database.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
-		defer deps.Database.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
+		deps.TangleDatabase.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
+		defer deps.TangleDatabase.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
 
 		ticker := timeutil.NewTicker(func() {
 			dbSizeMetric := currentDatabaseSize()

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -673,14 +674,23 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		return nil, fmt.Errorf("database initialization failed: %w", err)
 	}
 
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, "utxo"), true, targetEngine)
+	if err != nil {
+		return nil, fmt.Errorf("utxo database initialization failed: %w", err)
+	}
+
 	// clean up temp db
 	defer func() {
 		store.Shutdown()
 		_ = store.Close()
+
+		utxoStore.Shutdown()
+		_ = utxoStore.Close()
+
 		_ = os.RemoveAll(tempDir)
 	}()
 
-	dbStorage, err := storage.New(store)
+	dbStorage, err := storage.New(store, utxoStore)
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package toolset
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 
@@ -44,13 +45,21 @@ func coordinatorFixStateFile(_ *configuration.Configuration, args []string) erro
 		return fmt.Errorf("database initialization failed: %w", err)
 	}
 
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, "utxo"), false)
+	if err != nil {
+		return fmt.Errorf("utxo database initialization failed: %w", err)
+	}
+
 	// clean up store
 	defer func() {
 		store.Shutdown()
 		_ = store.Close()
+
+		utxoStore.Shutdown()
+		_ = utxoStore.Close()
 	}()
 
-	dbStorage, err := storage.New(store)
+	dbStorage, err := storage.New(store, utxoStore)
 	if err != nil {
 		return err
 	}

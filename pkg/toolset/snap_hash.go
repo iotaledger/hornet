@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 
@@ -58,14 +59,23 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 		return fmt.Errorf("database initialization failed: %w", err)
 	}
 
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, "utxo"), true, targetEngine)
+	if err != nil {
+		return fmt.Errorf("utxo database initialization failed: %w", err)
+	}
+
 	// clean up temp db
 	defer func() {
 		store.Shutdown()
 		_ = store.Close()
+
+		utxoStore.Shutdown()
+		_ = utxoStore.Close()
+
 		_ = os.RemoveAll(tempDir)
 	}()
 
-	dbStorage, err := storage.New(store)
+	dbStorage, err := storage.New(store, utxoStore)
 	if err != nil {
 		return err
 	}

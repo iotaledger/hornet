@@ -19,9 +19,6 @@ type ReadOption = objectstorage.ReadOption
 type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
-	// database
-	store kvstore.KVStore
-
 	// kv storages
 	healthStore   kvstore.KVStore
 	snapshotStore kvstore.KVStore
@@ -49,19 +46,18 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(store kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, error) {
+func New(store kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, error) {
 
-	utxoManager := utxo.New(store)
+	utxoManager := utxo.New(utxoStore)
 
 	s := &Storage{
-		store:       store,
 		utxoManager: utxoManager,
 		Events: &packageEvents{
 			PruningStateChanged: events.NewEvent(events.BoolCaller),
 		},
 	}
 
-	if err := s.configureStorages(s.store, cachesProfile...); err != nil {
+	if err := s.configureStorages(store, cachesProfile...); err != nil {
 		return nil, err
 	}
 
@@ -74,10 +70,6 @@ func New(store kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, err
 	}
 
 	return s, nil
-}
-
-func (s *Storage) KVStore() kvstore.KVStore {
-	return s.store
 }
 
 func (s *Storage) UTXOManager() *utxo.Manager {

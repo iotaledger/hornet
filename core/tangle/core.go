@@ -67,7 +67,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	Database                 *database.Database
+	TangleDatabase           *database.Database `name:"tangleDatabase"`
 	Storage                  *storage.Storage
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
@@ -194,7 +194,8 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 func run() {
 
 	// run a full database garbage collection at startup
-	deps.Database.RunGarbageCollection()
+	deps.TangleDatabase.RunGarbageCollection()
+	//TODO: run it for the UTXODatabase? If yes, where?
 
 	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(ctx context.Context) {
 		attachHeartbeatEvents()

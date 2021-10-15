@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -173,7 +174,18 @@ func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 		_ = store.Close()
 	}()
 
-	dbStorage, err := storage.New(store)
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, "utxo"), false)
+	if err != nil {
+		return fmt.Errorf("utxo database initialization failed: %w", err)
+	}
+
+	// clean up store
+	defer func() {
+		utxoStore.Shutdown()
+		_ = utxoStore.Close()
+	}()
+
+	dbStorage, err := storage.New(store, utxoStore)
 	if err != nil {
 		return err
 	}
