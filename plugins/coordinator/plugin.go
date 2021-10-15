@@ -203,12 +203,12 @@ func provide(c *dig.Container) {
 
 func configure() {
 
-	databaseTainted, err := deps.Storage.IsDatabaseTainted()
+	databasesTainted, err := deps.Storage.AreDatabasesTainted()
 	if err != nil {
 		Plugin.Panic(err)
 	}
 
-	if databaseTainted {
+	if databasesTainted {
 		Plugin.Panic(ErrDatabaseTainted)
 	}
 

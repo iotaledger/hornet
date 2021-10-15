@@ -530,7 +530,7 @@ func (s *SnapshotManager) ImportSnapshots(ctx context.Context) error {
 	}
 
 	if err = s.LoadSnapshotFromFile(ctx, Full, s.networkID, s.snapshotFullPath); err != nil {
-		_ = s.storage.MarkDatabaseCorrupted()
+		_ = s.storage.MarkDatabasesCorrupted()
 		return err
 	}
 
@@ -539,7 +539,7 @@ func (s *SnapshotManager) ImportSnapshots(ctx context.Context) error {
 	}
 
 	if err = s.LoadSnapshotFromFile(ctx, Delta, s.networkID, s.snapshotDeltaPath); err != nil {
-		_ = s.storage.MarkDatabaseCorrupted()
+		_ = s.storage.MarkDatabasesCorrupted()
 		return err
 	}
 

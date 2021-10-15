@@ -58,7 +58,7 @@ func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, p
 
 	// mark the database as tainted forever.
 	// this is used to signal the coordinator plugin that it should never use a revalidated database.
-	if err := t.storage.MarkDatabaseTainted(); err != nil {
+	if err := t.storage.MarkDatabasesTainted(); err != nil {
 		t.log.Panic(err)
 	}
 

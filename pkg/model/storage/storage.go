@@ -19,8 +19,11 @@ type ReadOption = objectstorage.ReadOption
 type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
+
+	// healthTrackers
+	healthTrackers []*storeHealthTracker
+
 	// kv storages
-	healthStore   kvstore.KVStore
 	snapshotStore kvstore.KVStore
 
 	// object storages
@@ -51,6 +54,10 @@ func New(store kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile ...*pro
 	utxoManager := utxo.New(utxoStore)
 
 	s := &Storage{
+		healthTrackers: []*storeHealthTracker{
+			newStoreHealthTracker(store),
+			newStoreHealthTracker(utxoStore),
+		},
 		utxoManager: utxoManager,
 		Events: &packageEvents{
 			PruningStateChanged: events.NewEvent(events.BoolCaller),
@@ -146,10 +153,6 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 }
 
 func (s *Storage) configureStorages(store kvstore.KVStore, cachesProfile ...*profile.Caches) error {
-
-	if err := s.configureHealthStore(store); err != nil {
-		return err
-	}
 
 	cachesOpts := s.profileCachesDisabled()
 	if len(cachesProfile) > 0 {
