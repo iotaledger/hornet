@@ -1,13 +1,15 @@
 package toolset
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/iotaledger/hive.go/configuration"
-
 	"github.com/libp2p/go-libp2p-core/peer"
+	flag "github.com/spf13/pflag"
+
+	"github.com/iotaledger/hive.go/configuration"
 
 	p2pCore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/jwt"
@@ -17,18 +19,23 @@ import (
 
 func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string) error {
 
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("	%s [P2P_DATABASE_PATH]", ToolJWTApi))
-		println()
-		println("	[P2P_DATABASE_PATH] - the path to the p2p database folder (optional)")
-		println()
-		println(fmt.Sprintf("example: %s %s", ToolJWTApi, "p2pstore"))
+	fs := flag.NewFlagSet("", flag.ExitOnError)
+	outputJSON := fs.Bool("json", false, "format output as JSON")
+	databasePath := fs.String("database", "", "the path to the p2p database folder (optional)")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolJWTApi)
+		fs.PrintDefaults()
 	}
 
-	if len(args) > 1 {
-		printUsage()
-		return fmt.Errorf("too many arguments for '%s'", ToolJWTApi)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	// Check if all parameters were parsed
+	if fs.NArg() != 0 {
+		fs.Usage()
+		os.Exit(2)
 	}
 
 	salt := nodeConfig.String(restapi.CfgRestAPIJWTAuthSalt)
@@ -37,8 +44,8 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 	}
 
 	p2pDatabasePath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if len(args) > 0 {
-		p2pDatabasePath = args[0]
+	if len(*databasePath) > 0 {
+		p2pDatabasePath = *databasePath
 	}
 	privKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PrivKeyFileName)
 
@@ -80,7 +87,22 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 		return fmt.Errorf("issuing JWT token failed: %w", err)
 	}
 
-	fmt.Println("Your API JWT token: ", jwtToken)
+	if *outputJSON {
 
+		result := struct {
+			JWT string `json:"jwt"`
+		}{
+			JWT: jwtToken,
+		}
+
+		output, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			fmt.Printf("Error: %s\n", err)
+		}
+		fmt.Println(string(output))
+		return nil
+	}
+
+	fmt.Println("Your API JWT token: ", jwtToken)
 	return nil
 }
