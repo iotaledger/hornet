@@ -1,19 +1,19 @@
 name: Test Golang dependencies with Snyk
 
 on:
-  pull_request:
-    paths-ignore:
-      - 'documentation/**'
+  # Run this check every day at 03:00 to find potential new vulnerabilities in the develop branch
+  schedule:
+    - cron: "0 3 * * *"
 
 jobs:
-  security:
-    # Only run on push events or PRs from gohornet/hornet, skip on PRs from forks
-    # Secret variables cannot be exposed to PRs from forks
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+  snyk-test:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
+        with:
+          ref: develop
+
       - name: Run Snyk to check for vulnerabilities
         uses: snyk/actions/golang@0.3.0
         env:
