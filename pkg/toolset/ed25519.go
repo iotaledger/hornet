@@ -21,7 +21,7 @@ type keys struct {
 	Bech32Address  string `json:"bech32"`
 }
 
-func print(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp iotago.NetworkPrefix, outputJSON bool) {
+func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp iotago.NetworkPrefix, outputJSON bool) {
 
 	addr := iotago.AddressFromEd25519PubKey(pubKey)
 
@@ -78,7 +78,7 @@ func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	print(pubKey, privKey, iotago.NetworkPrefix(*hrp), *outputJSON)
+	printEd25519Info(pubKey, privKey, iotago.NetworkPrefix(*hrp), *outputJSON)
 	return nil
 }
 
@@ -110,7 +110,7 @@ func generateEd25519Address(_ *configuration.Configuration, args []string) error
 		return fmt.Errorf("can't decode publicKey: %w", err)
 	}
 
-	print(pubKey, nil, iotago.NetworkPrefix(*hrp), *outputJSON)
+	printEd25519Info(pubKey, nil, iotago.NetworkPrefix(*hrp), *outputJSON)
 
 	return nil
 }

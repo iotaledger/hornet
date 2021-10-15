@@ -34,7 +34,6 @@ func ShouldHandleTools() bool {
 		if strings.ToLower(arg) == "tool" || strings.ToLower(arg) == "tools" {
 			args = args[i:]
 			return true
-			break
 		}
 	}
 	return false
