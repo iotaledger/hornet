@@ -73,7 +73,7 @@ func readPasswordFromStdin() ([]byte, error) {
 func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ExitOnError)
-	passwordFlag := fs.StringP("password", "p", "", fmt.Sprintf("password to hash (optional). Can also be passed as %s environment variable.", passwordEnvKey))
+	passwordFlag := fs.String("password", "", fmt.Sprintf("password to hash (optional). Can also be passed as %s environment variable.", passwordEnvKey))
 	outputJSON := fs.Bool("json", false, "format output as JSON")
 
 	fs.Usage = func() {

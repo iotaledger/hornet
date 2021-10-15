@@ -85,7 +85,7 @@ func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 func generateEd25519Address(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ExitOnError)
-	publicKey := fs.StringP("publicKey", "p", "", "an ed25519 public key")
+	publicKey := fs.String("publicKey", "", "an ed25519 public key")
 	outputJSON := fs.Bool("json", false, "format output as JSON")
 	hrp := fs.String("hrp", string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
 
