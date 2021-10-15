@@ -33,10 +33,11 @@ var (
 	peeringConfig = configuration.New()
 	profileConfig = configuration.New()
 
-	// flags
-	nodeCfgFilePath     = flag.StringP(CfgConfigFilePathNodeConfig, "c", "config.json", "file path of the config file")
-	peeringCfgFilePath  = flag.StringP(CfgConfigFilePathPeeringConfig, "n", "peering.json", "file path of the peering config file")
-	profilesCfgFilePath = flag.String(CfgConfigFilePathProfilesConfig, "profiles.json", "file path of the profiles config file")
+	// config file flags
+	configFilesFlagSet  = flag.NewFlagSet("config_files", flag.ContinueOnError)
+	nodeCfgFilePath     = configFilesFlagSet.StringP(CfgConfigFilePathNodeConfig, "c", "config.json", "file path of the config file")
+	peeringCfgFilePath  = configFilesFlagSet.StringP(CfgConfigFilePathPeeringConfig, "n", "peering.json", "file path of the peering config file")
+	profilesCfgFilePath = configFilesFlagSet.String(CfgConfigFilePathProfilesConfig, "profiles.json", "file path of the profiles config file")
 
 	nonHiddenFlag = map[string]struct{}{
 		"config":              {},
@@ -83,11 +84,22 @@ var (
 
 func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.InitConfig, error) {
 
-	toolsRequested := toolset.ShouldHandleTools()
-
-	flagSets, err := normalizeFlagSets(params)
+	configFlagSets, err := normalizeFlagSets(params)
 	if err != nil {
 		return nil, err
+	}
+
+	if toolset.ShouldHandleTools() {
+		// Just parse the configFilesFlagSet and ignore errors
+		fs := flag.NewFlagSet("", flag.ContinueOnError)
+		fs.AddFlagSet(configFilesFlagSet)
+		fs.Parse(os.Args[1:])
+
+		if err = loadCfg(configFlagSets); err != nil {
+			return nil, err
+		}
+		toolset.HandleTools(nodeConfig)
+		// HandleTools will call os.Exit
 	}
 
 	flag.Usage = func() {
@@ -100,13 +112,13 @@ Command line flags:
 		flag.PrintDefaults()
 	}
 
-	if !toolsRequested {
-		// No tools requested, so parse all flags as config flags
-		parseFlags(flagSets)
-		printVersion(flagSets)
-	}
+	var flagSetsToParse = configFlagSets
+	flagSetsToParse["config_files"] = configFilesFlagSet
 
-	if err = loadCfg(flagSets); err != nil {
+	parseFlags(flagSetsToParse)
+	printVersion(flagSetsToParse)
+
+	if err = loadCfg(configFlagSets); err != nil {
 		return nil, err
 	}
 
@@ -116,10 +128,6 @@ Command line flags:
 
 	if err = logger.InitGlobalLogger(nodeConfig); err != nil {
 		panic(err)
-	}
-
-	if toolsRequested {
-		toolset.HandleTools(nodeConfig)
 	}
 
 	fmt.Printf(`
