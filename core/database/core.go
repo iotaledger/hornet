@@ -21,8 +21,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
-	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 )
 
 const (
@@ -109,21 +107,6 @@ func initConfigPars(c *dig.Container) {
 
 func provide(c *dig.Container) {
 
-	type dbResult struct {
-		dig.Out
-		StorageMetrics  *metrics.StorageMetrics
-		DatabaseMetrics *metrics.DatabaseMetrics
-	}
-
-	if err := c.Provide(func() dbResult {
-		return dbResult{
-			StorageMetrics:  &metrics.StorageMetrics{},
-			DatabaseMetrics: &metrics.DatabaseMetrics{},
-		}
-	}); err != nil {
-		CorePlugin.Panic(err)
-	}
-
 	type databaseDeps struct {
 		dig.In
 		DeleteDatabaseFlag bool                         `name:"deleteDatabase"`
@@ -133,21 +116,21 @@ func provide(c *dig.Container) {
 		DatabasePath       string                       `name:"databasePath"`
 		UTXODatabasePath   string                       `name:"utxoDatabasePath"`
 		TangleDatabasePath string                       `name:"tangleDatabasePath"`
-		Metrics            *metrics.DatabaseMetrics
 	}
 
 	type databaseOut struct {
 		dig.Out
-		TangleDatabase *database.Database `name:"tangleDatabase"`
-		UTXODatabase   *database.Database `name:"utxoDatabase"`
+
+		StorageMetrics *metrics.StorageMetrics
+
+		TangleDatabase        *database.Database       `name:"tangleDatabase"`
+		TangleDatabaseMetrics *metrics.DatabaseMetrics `name:"tangleDatabaseMetrics"`
+
+		UTXODatabase        *database.Database       `name:"utxoDatabase"`
+		UTXODatabaseMetrics *metrics.DatabaseMetrics `name:"utxoDatabaseMetrics"`
 	}
 
 	if err := c.Provide(func(deps databaseDeps) databaseOut {
-
-		events := &database.Events{
-			DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
-			DatabaseCompaction: events.NewEvent(events.BoolCaller),
-		}
 
 		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 			// delete old database folder
@@ -166,103 +149,26 @@ func provide(c *dig.Container) {
 			CorePlugin.Panic(err)
 		}
 
+		tangleDatabaseMetrics := &metrics.DatabaseMetrics{}
+		utxoDatabaseMetrics := &metrics.DatabaseMetrics{}
+
 		switch targetEngine {
 		case database.EnginePebble:
-			reportCompactionRunning := func(running bool) {
-				deps.Metrics.CompactionRunning.Store(running)
-				if running {
-					deps.Metrics.CompactionCount.Inc()
-				}
-				events.DatabaseCompaction.Trigger(running)
-			}
-
-			db, err := database.NewPebbleDB(deps.TangleDatabasePath, reportCompactionRunning, true)
-			if err != nil {
-				CorePlugin.Panicf("database initialization failed: %s", err)
-			}
-
-			tangleDatabase := database.New(
-				CorePlugin.Logger(),
-				deps.TangleDatabasePath,
-				pebble.New(db),
-				events,
-				true,
-				func() bool {
-					return deps.Metrics.CompactionRunning.Load()
-				},
-			)
-
-			//TODO: handle compaction here and events
-			utxoDb, err := database.NewPebbleDB(deps.UTXODatabasePath, func(running bool) {}, true)
-			if err != nil {
-				CorePlugin.Panicf("database initialization failed: %s", err)
-			}
-
-			utxoDatabase := database.New(
-				CorePlugin.Logger(),
-				deps.UTXODatabasePath,
-				pebble.New(utxoDb),
-				nil,
-				false,
-				func() bool {
-					return false
-				},
-			)
-
 			return databaseOut{
-				TangleDatabase: tangleDatabase,
-				UTXODatabase:   utxoDatabase,
+				StorageMetrics:        &metrics.StorageMetrics{},
+				TangleDatabase:        newPebble(deps.TangleDatabasePath, tangleDatabaseMetrics),
+				TangleDatabaseMetrics: tangleDatabaseMetrics,
+				UTXODatabase:          newPebble(deps.UTXODatabasePath, utxoDatabaseMetrics),
+				UTXODatabaseMetrics:   utxoDatabaseMetrics,
 			}
 
 		case database.EngineRocksDB:
-			db, err := database.NewRocksDB(deps.TangleDatabasePath)
-			if err != nil {
-				CorePlugin.Panicf("tangle database initialization failed: %s", err)
-			}
-
-			tangleDatabase := database.New(
-				CorePlugin.Logger(),
-				deps.TangleDatabasePath,
-				rocksdb.New(db),
-				events,
-				true,
-				func() bool {
-					if numCompactions, success := db.GetIntProperty("rocksdb.num-running-compactions"); success {
-						runningBefore := deps.Metrics.CompactionRunning.Load()
-						running := numCompactions != 0
-
-						deps.Metrics.CompactionRunning.Store(running)
-						if running && !runningBefore {
-							// we may miss some compactions, since this is only calculated if polled.
-							deps.Metrics.CompactionCount.Inc()
-							events.DatabaseCompaction.Trigger(running)
-						}
-						return running
-					}
-					return false
-				},
-			)
-
-			utxoDb, err := database.NewRocksDB(deps.UTXODatabasePath)
-			if err != nil {
-				CorePlugin.Panicf("utxo database initialization failed: %s", err)
-			}
-
-			//TODO: handle compaction here and events
-			utxoDatabase := database.New(
-				CorePlugin.Logger(),
-				deps.UTXODatabasePath,
-				rocksdb.New(utxoDb),
-				nil,
-				false,
-				func() bool {
-					return false
-				},
-			)
-
 			return databaseOut{
-				TangleDatabase: tangleDatabase,
-				UTXODatabase:   utxoDatabase,
+				StorageMetrics:        &metrics.StorageMetrics{},
+				TangleDatabase:        newRocksDB(deps.TangleDatabasePath, tangleDatabaseMetrics),
+				TangleDatabaseMetrics: tangleDatabaseMetrics,
+				UTXODatabase:          newRocksDB(deps.UTXODatabasePath, utxoDatabaseMetrics),
+				UTXODatabaseMetrics:   utxoDatabaseMetrics,
 			}
 
 		default:
