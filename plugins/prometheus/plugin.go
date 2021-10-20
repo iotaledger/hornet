@@ -63,31 +63,34 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo          *app.AppInfo
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	Database         *database.Database
-	DatabasePath     string `name:"databasePath"`
-	Storage          *storage.Storage
-	SyncManager      *syncmanager.SyncManager
-	ServerMetrics    *metrics.ServerMetrics
-	DatabaseMetrics  *metrics.DatabaseMetrics
-	StorageMetrics   *metrics.StorageMetrics
-	RestAPIMetrics   *metrics.RestAPIMetrics `optional:"true"`
-	GossipService    *gossip.Service
-	ReceiptService   *migrator.ReceiptService `optional:"true"`
-	Tangle           *tangle.Tangle
-	MigratorService  *migrator.MigratorService `optional:"true"`
-	PeeringManager   *p2p.Manager
-	RequestQueue     gossip.RequestQueue
-	MessageProcessor *gossip.MessageProcessor
-	TipSelector      *tipselect.TipSelector `optional:"true"`
-	SnapshotManager  *snapshot.SnapshotManager
-	Coordinator      *coordinator.Coordinator `optional:"true"`
+	AppInfo               *app.AppInfo
+	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
+	SyncManager           *syncmanager.SyncManager
+	ServerMetrics         *metrics.ServerMetrics
+	Storage               *storage.Storage
+	StorageMetrics        *metrics.StorageMetrics
+	TangleDatabase        *database.Database       `name:"tangleDatabase"`
+	TangleDatabaseMetrics *metrics.DatabaseMetrics `name:"tangleDatabaseMetrics"`
+	UTXODatabase          *database.Database       `name:"utxoDatabase"`
+	UTXODatabaseMetrics   *metrics.DatabaseMetrics `name:"utxoDatabaseMetrics"`
+	RestAPIMetrics        *metrics.RestAPIMetrics  `optional:"true"`
+	GossipService         *gossip.Service
+	ReceiptService        *migrator.ReceiptService `optional:"true"`
+	Tangle                *tangle.Tangle
+	MigratorService       *migrator.MigratorService `optional:"true"`
+	PeeringManager        *p2p.Manager
+	RequestQueue          gossip.RequestQueue
+	MessageProcessor      *gossip.MessageProcessor
+	TipSelector           *tipselect.TipSelector `optional:"true"`
+	SnapshotManager       *snapshot.SnapshotManager
+	Coordinator           *coordinator.Coordinator `optional:"true"`
 }
 
 func configure() {
 	if deps.NodeConfig.Bool(CfgPrometheusDatabase) {
-		configureDatabase()
+		configureDatabase("tangle", deps.TangleDatabase, deps.TangleDatabaseMetrics)
+		configureDatabase("utxo", deps.UTXODatabase, deps.UTXODatabaseMetrics)
+		configureStorage(deps.Storage, deps.StorageMetrics)
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusNode) {
 		configureNode()
