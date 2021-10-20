@@ -78,6 +78,7 @@ var (
 type dependencies struct {
 	dig.In
 	TangleDatabase           *database.Database `name:"tangleDatabase"`
+	UTXODatabase             *database.Database `name:"utxoDatabase"`
 	Storage                  *storage.Storage
 	SyncManager              *syncmanager.SyncManager
 	Tangle                   *tangle.Tangle

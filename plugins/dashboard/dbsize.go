@@ -18,35 +18,47 @@ var (
 
 // DBSizeMetric represents database size metrics.
 type DBSizeMetric struct {
-	Total    int64
-	Snapshot int64
-	Time     time.Time
+	Tangle int64
+	UTXO   int64
+	Total  int64
+	Time   time.Time
 }
 
 func (s *DBSizeMetric) MarshalJSON() ([]byte, error) {
 	size := struct {
-		Total int64 `json:"total"`
-		Time  int64 `json:"ts"`
+		Tangle int64 `json:"tangle"`
+		UTXO   int64 `json:"utxo"`
+		Total  int64 `json:"total"`
+		Time   int64 `json:"ts"`
 	}{
-		Total: s.Total,
-		Time:  s.Time.Unix(),
+		Tangle: s.Tangle,
+		UTXO:   s.UTXO,
+		Total:  s.Total,
+		Time:   s.Time.Unix(),
 	}
 
 	return json.Marshal(size)
 }
 
 func currentDatabaseSize() *DBSizeMetric {
-	//TODO: Also add UTXO or separate into 2 metrics?
 
-	dbSize, err := deps.TangleDatabase.Size()
+	tangleDbSize, err := deps.TangleDatabase.Size()
 	if err != nil {
-		Plugin.LogWarnf("error in database size calculation: %s", err)
+		Plugin.LogWarnf("error in tangle database size calculation: %s", err)
+		return nil
+	}
+
+	utxoDbSize, err := deps.UTXODatabase.Size()
+	if err != nil {
+		Plugin.LogWarnf("error in utxo database size calculation: %s", err)
 		return nil
 	}
 
 	newValue := &DBSizeMetric{
-		Total: dbSize,
-		Time:  time.Now(),
+		Tangle: tangleDbSize,
+		UTXO:   utxoDbSize,
+		Total:  tangleDbSize + utxoDbSize,
+		Time:   time.Now(),
 	}
 	cachedDBSizeMetrics = append(cachedDBSizeMetrics, newValue)
 	if len(cachedDBSizeMetrics) > 600 {
@@ -68,6 +80,9 @@ func runDatabaseSizeCollector() {
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[DBSize]", func(ctx context.Context) {
 		deps.TangleDatabase.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
 		defer deps.TangleDatabase.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
+
+		deps.UTXODatabase.Events().DatabaseCleanup.Attach(onDatabaseCleanup)
+		defer deps.UTXODatabase.Events().DatabaseCleanup.Detach(onDatabaseCleanup)
 
 		ticker := timeutil.NewTicker(func() {
 			dbSizeMetric := currentDatabaseSize()
