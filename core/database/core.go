@@ -202,19 +202,22 @@ func provide(c *dig.Container) {
 		Profile        *profile.Profile
 	}
 
-	if err := c.Provide(func(deps storageDeps) *storage.Storage {
+	type storageOut struct {
+		dig.Out
+		Storage     *storage.Storage
+		UTXOManager *utxo.Manager
+	}
+
+	if err := c.Provide(func(deps storageDeps) storageOut {
 
 		store, err := storage.New(deps.TangleDatabase.KVStore(), deps.UTXODatabase.KVStore(), deps.Profile.Caches)
 		if err != nil {
 			CorePlugin.Panicf("can't initialize storage: %s", err)
 		}
-		return store
-	}); err != nil {
-		CorePlugin.Panic(err)
-	}
-
-	if err := c.Provide(func(storage *storage.Storage) *utxo.Manager {
-		return storage.UTXOManager()
+		return storageOut{
+			Storage:     store,
+			UTXOManager: store.UTXOManager(),
+		}
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
