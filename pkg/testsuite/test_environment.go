@@ -59,8 +59,11 @@ type TestEnvironment struct {
 	// tempDir is the directory that contains the temporary files for the test.
 	tempDir string
 
-	// store is the temporary key value store for the test.
-	store kvstore.KVStore
+	// tangleStore is the temporary key value store for the test holding the tangle.
+	tangleStore kvstore.KVStore
+
+	// utxoStore is the temporary key value store for the test holding the utxo ledger.
+	utxoStore kvstore.KVStore
 
 	// storage is the tangle storage for this test.
 	storage *storage.Storage
@@ -68,7 +71,7 @@ type TestEnvironment struct {
 	// syncManager is used to determine the sync status of the node in this test.
 	syncManager *syncmanager.SyncManager
 
-	// milestoneManager is used to retrieve, verify and store milestones.
+	// milestoneManager is used to retrieve, verify and tangleStore milestones.
 	milestoneManager *milestonemanager.MilestoneManager
 
 	// serverMetrics holds metrics about the tangle.
@@ -118,8 +121,9 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		keyManager.AddKeyRange(key.Public().(ed25519.PublicKey), 0, 0)
 	}
 
-	te.store = mapdb.NewMapDB()
-	te.storage, err = storage.New(te.store, TestProfileCaches)
+	te.tangleStore = mapdb.NewMapDB()
+	te.utxoStore = mapdb.NewMapDB()
+	te.storage, err = storage.New(te.tangleStore, te.utxoStore, TestProfileCaches)
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SEP
@@ -182,7 +186,10 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	// this should not hang, i.e. all objects should be released
 	te.storage.ShutdownStorages()
 
-	err := te.store.Clear()
+	err := te.tangleStore.Clear()
+	require.NoError(te.TestInterface, err)
+
+	err = te.utxoStore.Clear()
 	require.NoError(te.TestInterface, err)
 
 	if removeTempDir && te.tempDir != "" {
