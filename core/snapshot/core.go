@@ -174,10 +174,10 @@ func provide(c *dig.Container) {
 			CorePlugin.Panicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
 		}
 
-		//TODO: also add deps.UTXODatabase here
 		return snapshot.NewSnapshotManager(
 			CorePlugin.Logger(),
 			deps.TangleDatabase,
+			deps.UTXODatabase,
 			deps.Storage,
 			deps.SyncManager,
 			deps.UTXOManager,

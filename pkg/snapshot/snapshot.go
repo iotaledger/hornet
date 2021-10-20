@@ -65,7 +65,8 @@ const (
 // SnapshotManager handles reading and writing snapshot data.
 type SnapshotManager struct {
 	log                                  *logger.Logger
-	database                             *database.Database
+	tangleDatabase                       *database.Database
+	utxoDatabase                         *database.Database
 	storage                              *storage.Storage
 	syncManager                          *syncmanager.SyncManager
 	utxoManager                          *utxo.Manager
@@ -100,7 +101,8 @@ type SnapshotManager struct {
 // NewSnapshotManager creates a new snapshot manager instance.
 func NewSnapshotManager(
 	log *logger.Logger,
-	database *database.Database,
+	tangleDatabase *database.Database,
+	utxoDatabase *database.Database,
 	storage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	utxoManager *utxo.Manager,
@@ -125,7 +127,8 @@ func NewSnapshotManager(
 
 	return &SnapshotManager{
 		log:                                  log,
-		database:                             database,
+		tangleDatabase:                       tangleDatabase,
+		utxoDatabase:                         utxoDatabase,
 		storage:                              storage,
 		syncManager:                          syncManager,
 		utxoManager:                          utxoManager,
