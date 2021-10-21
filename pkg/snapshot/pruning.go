@@ -338,9 +338,6 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
-	s.tangleDatabase.RunGarbageCollection()
-	s.utxoDatabase.RunGarbageCollection()
-
 	return targetIndex, nil
 }
 

@@ -10,7 +10,6 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -67,7 +66,6 @@ var (
 
 type dependencies struct {
 	dig.In
-	TangleDatabase           *database.Database `name:"tangleDatabase"`
 	Storage                  *storage.Storage
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
@@ -192,10 +190,6 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 }
 
 func run() {
-
-	// run a full database garbage collection at startup
-	deps.TangleDatabase.RunGarbageCollection()
-	//TODO: run it for the UTXODatabase? If yes, where?
 
 	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(ctx context.Context) {
 		attachHeartbeatEvents()
