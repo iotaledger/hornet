@@ -28,6 +28,9 @@ const (
 	CfgTangleDeleteDatabase = "deleteDatabase"
 	// whether to delete the database and snapshots at startup
 	CfgTangleDeleteAll = "deleteAll"
+
+	TangleDatabaseDirectoryName = "tangle"
+	UTXODatabaseDirectoryName   = "utxo"
 )
 
 func init() {
@@ -93,8 +96,8 @@ func initConfigPars(c *dig.Container) {
 		return cfgResult{
 			DatabaseEngine:           dbEngine,
 			DatabasePath:             databasePath,
-			TangleDatabasePath:       filepath.Join(databasePath, "tangle"),
-			UTXODatabasePath:         filepath.Join(databasePath, "utxo"),
+			TangleDatabasePath:       filepath.Join(databasePath, TangleDatabaseDirectoryName),
+			UTXODatabasePath:         filepath.Join(databasePath, UTXODatabaseDirectoryName),
 			DeleteDatabaseFlag:       *deleteDatabase,
 			DeleteAllFlag:            *deleteAll,
 			DatabaseDebug:            deps.NodeConfig.Bool(CfgDatabaseDebug),

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	coreDatabase "github.com/gohornet/hornet/core/database"
+
 	"github.com/pkg/errors"
 
 	"github.com/labstack/echo/v4"
@@ -88,8 +90,8 @@ type dependencies struct {
 
 func configure() {
 	if deps.NodeConfig.Bool(CfgPrometheusDatabase) {
-		configureDatabase("tangle", deps.TangleDatabase, deps.TangleDatabaseMetrics)
-		configureDatabase("utxo", deps.UTXODatabase, deps.UTXODatabaseMetrics)
+		configureDatabase(coreDatabase.TangleDatabaseDirectoryName, deps.TangleDatabase, deps.TangleDatabaseMetrics)
+		configureDatabase(coreDatabase.UTXODatabaseDirectoryName, deps.UTXODatabase, deps.UTXODatabaseMetrics)
 		configureStorage(deps.Storage, deps.StorageMetrics)
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusNode) {

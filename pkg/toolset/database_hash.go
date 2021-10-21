@@ -12,6 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -21,6 +22,25 @@ import (
 )
 
 func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
+
+	correctVersion, err := dbStorage.CheckCorrectDatabasesVersion()
+	if err != nil {
+		return err
+	}
+
+	if !correctVersion {
+		return fmt.Errorf("database version outdated")
+	}
+
+	corrupted, err := dbStorage.AreDatabasesCorrupted()
+	if err != nil {
+		return err
+	}
+
+	tainted, err := dbStorage.AreDatabasesTainted()
+	if err != nil {
+		return err
+	}
 
 	ts := time.Now()
 	fmt.Println("calculating ledger state hash...")
@@ -106,7 +126,16 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 
 	snapshotHashSumWithSEPs := lsHash.Sum(nil)
 
-	fmt.Printf(`> 
+	yesOrNo := func(value bool) string {
+		if value {
+			return "YES"
+		}
+		return "NO"
+	}
+
+	fmt.Printf(`>
+	- Healthy %s
+	- Tainted %s
 	- Snapshot time %v
 	- Network ID %d
 	- Treasury %s
@@ -116,6 +145,8 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 	- SEPs count %d
 	- Ledger state hash (w/o  solid entry points): %s
 	- Ledger state hash (with solid entry points): %s`+"\n\n",
+		yesOrNo(!corrupted),
+		yesOrNo(tainted),
 		snapshotInfo.Timestamp,
 		snapshotInfo.NetworkID,
 		func() string {
@@ -163,18 +194,18 @@ func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 		return fmt.Errorf("DATABASE_PATH (%s) does not exist", databasePath)
 	}
 
-	store, err := database.StoreWithDefaultSettings(databasePath, false)
+	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.TangleDatabaseDirectoryName), false)
 	if err != nil {
 		return fmt.Errorf("database initialization failed: %w", err)
 	}
 
 	// clean up store
 	defer func() {
-		store.Shutdown()
-		_ = store.Close()
+		tangleStore.Shutdown()
+		_ = tangleStore.Close()
 	}()
 
-	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, "utxo"), false)
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.UTXODatabaseDirectoryName), false)
 	if err != nil {
 		return fmt.Errorf("utxo database initialization failed: %w", err)
 	}
@@ -185,7 +216,7 @@ func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 		_ = utxoStore.Close()
 	}()
 
-	dbStorage, err := storage.New(store, utxoStore)
+	dbStorage, err := storage.New(tangleStore, utxoStore)
 	if err != nil {
 		return err
 	}
