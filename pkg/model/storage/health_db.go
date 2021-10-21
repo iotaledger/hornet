@@ -83,20 +83,21 @@ func (s *Storage) CheckCorrectDatabasesVersion() (bool, error) {
 // UpdateDatabasesVersion tries to migrate the existing data to the new database version.
 func (s *Storage) UpdateDatabasesVersion() (bool, error) {
 
-	var updatedAll bool
+	allCorrect := true
 	for _, h := range s.healthTrackers {
-		updated, err := h.updateDatabaseVersion()
+		_, err := h.updateDatabaseVersion()
 		if err != nil {
 			return false, err
 		}
-		updatedAll = updatedAll && updated
 
 		correct, err := h.checkCorrectDatabaseVersion(DBVersion)
 		if err != nil {
 			return false, err
 		}
-		updatedAll = updated && correct
+		if !correct {
+			allCorrect = false
+		}
 	}
 
-	return updatedAll, nil
+	return allCorrect, nil
 }
