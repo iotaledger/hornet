@@ -227,6 +227,11 @@
       "enabled": true
     }
   },
+  "referendum": {
+    "db": {
+      "path": "referendumStore"
+    }
+  },
   "mqtt": {
     "bindAddress": "localhost:1883",
     "wsPort": 1888,
