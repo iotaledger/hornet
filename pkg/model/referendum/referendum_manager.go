@@ -74,6 +74,7 @@ type Option func(opts *Options)
 // NewManager creates a new ReferendumManager instance.
 func NewManager(
 	storage *storage.Storage,
+	referendumStore kvstore.KVStore,
 	opts ...Option) *ReferendumManager {
 
 	options := &Options{}
@@ -81,8 +82,9 @@ func NewManager(
 	options.apply(opts...)
 
 	manager := &ReferendumManager{
-		storage: storage,
-		opts:    options,
+		storage:         storage,
+		referendumStore: referendumStore,
+		opts:            options,
 
 		Events: &Events{
 			SoftError: events.NewEvent(events.ErrorCaller),
@@ -94,6 +96,17 @@ func NewManager(
 }
 
 func (rm *ReferendumManager) init() {
+}
+
+func (rm *ReferendumManager) CloseDatabase() error {
+	var flushAndCloseError error
+	if err := rm.referendumStore.Flush(); err != nil {
+		flushAndCloseError = err
+	}
+	if err := rm.referendumStore.Close(); err != nil {
+		flushAndCloseError = err
+	}
+	return flushAndCloseError
 }
 
 func (rm *ReferendumManager) Referendums() ([]*Referendum, error) {

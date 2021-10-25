@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/referendum"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -76,13 +77,21 @@ func provide(c *dig.Container) {
 
 	type referendumDeps struct {
 		dig.In
-		Storage    *storage.Storage
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		Storage        *storage.Storage
+		DatabaseEngine database.Engine              `name:"databaseEngine"`
+		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
 	}
 
 	if err := c.Provide(func(deps referendumDeps) *referendum.ReferendumManager {
+
+		referendumStore, err := database.StoreWithDefaultSettings(deps.NodeConfig.String(CfgReferendumDatabasePath), true, deps.DatabaseEngine)
+		if err != nil {
+			Plugin.Panic(err)
+		}
+
 		return referendum.NewManager(
 			deps.Storage,
+			referendumStore,
 			referendum.WithLogger(Plugin.Logger()),
 		)
 	}); err != nil {
@@ -138,6 +147,18 @@ func configure() {
 
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
+
+	if err := Plugin.Node.Daemon().BackgroundWorker("Close Referendum database", func(ctx context.Context) {
+		<-ctx.Done()
+
+		Plugin.LogInfo("Syncing Referendum database to disk...")
+		if err := deps.ReferendumManager.CloseDatabase(); err != nil {
+			Plugin.Panicf("Syncing Referendum database to disk... failed: %s", err)
+		}
+		Plugin.LogInfo("Syncing Referendum database to disk... done")
+	}, shutdown.PriorityCloseDatabase); err != nil {
+		Plugin.Panicf("failed to start worker: %s", err)
+	}
 
 	configureEvents()
 }
