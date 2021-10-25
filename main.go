@@ -22,6 +22,7 @@ import (
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
+	"github.com/gohornet/hornet/plugins/referendum"
 	"github.com/gohornet/hornet/plugins/restapi"
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/gohornet/hornet/plugins/spammer"
@@ -61,6 +62,7 @@ func main() {
 			prometheus.Plugin,
 			debug.Plugin,
 			faucet.Plugin,
+			referendum.Plugin,
 		}...),
 	)
 }
