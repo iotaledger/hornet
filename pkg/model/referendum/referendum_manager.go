@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -20,7 +20,7 @@ type Events struct {
 	SoftError *events.Event
 }
 
-// ReferendumManager is used to track the outcome of referendas in the tangle.
+// ReferendumManager is used to track the outcome of referendums in the tangle.
 type ReferendumManager struct {
 	syncutils.Mutex
 
@@ -28,6 +28,8 @@ type ReferendumManager struct {
 	storage *storage.Storage
 	// holds the ReferendumManager options.
 	opts *Options
+
+	referendumStore kvstore.KVStore
 
 	// events of the ReferendumManager.
 	Events *Events
@@ -94,36 +96,62 @@ func NewManager(
 func (rm *ReferendumManager) init() {
 }
 
-func (rm *ReferendumManager) Referenda() (*ReferendaResponse, error) {
-	return &ReferendaResponse{}, nil
+func (rm *ReferendumManager) Referendums() ([]*Referendum, error) {
+	return []*Referendum{}, nil
 }
 
-func (rm *ReferendumManager) CreateReferendum() (*CreateReferendumResponse, error) {
-	return &CreateReferendumResponse{}, nil
+func (rm *ReferendumManager) IsAnyReferendumAcceptingVotes(index milestone.Index) bool {
+
+	referendums, err := rm.ReferendumsAcceptingVotes(index)
+	if err != nil {
+		return false
+	}
+	return len(referendums) > 0
 }
 
-func (rm *ReferendumManager) Referendum(referendumID hornet.MessageID) (*ReferendumResponse, error) {
-	return &ReferendumResponse{}, nil
+func (rm *ReferendumManager) ReferendumsAcceptingVotes(index milestone.Index) ([]*Referendum, error) {
+
+	referendums, err := rm.Referendums()
+	if err != nil {
+		return nil, err
+	}
+
+	var filtered []*Referendum
+	for _, referendum := range referendums {
+		if referendumIsAcceptingVotes(referendum, index) {
+			filtered = append(filtered, referendum)
+		}
+	}
+
+	return filtered, nil
 }
 
-func (rm *ReferendumManager) DeleteReferendum(referendumID hornet.MessageID) error {
+func (rm *ReferendumManager) ReferendumsCountingVotes(index milestone.Index) ([]*Referendum, error) {
+	referendums, err := rm.Referendums()
+	if err != nil {
+		return nil, err
+	}
+
+	var filtered []*Referendum
+	for _, referendum := range referendums {
+		if referendumIsCountingVotes(referendum, index) {
+			filtered = append(filtered, referendum)
+		}
+	}
+
+	return filtered, nil
+}
+
+func (rm *ReferendumManager) StoreReferendum(referendum *Referendum) (ReferendumID, error) {
+	return referendum.ID()
+}
+
+func (rm *ReferendumManager) Referendum(referendumID ReferendumID) (*Referendum, error) {
+	return &Referendum{}, nil
+}
+
+func (rm *ReferendumManager) DeleteReferendum(referendumID ReferendumID) error {
 	return nil
-}
-
-func (rm *ReferendumManager) ReferendumQuestions(referendumID hornet.MessageID) (*ReferendumQuestionsResponse, error) {
-	return &ReferendumQuestionsResponse{}, nil
-}
-
-func (rm *ReferendumManager) ReferendumQuestion(referendumID hornet.MessageID, questionIndex int) (*ReferendumQuestionResponse, error) {
-	return &ReferendumQuestionResponse{}, nil
-}
-
-func (rm *ReferendumManager) ReferendumStatus(referendumID hornet.MessageID) (*ReferendumStatusResponse, error) {
-	return &ReferendumStatusResponse{}, nil
-}
-
-func (rm *ReferendumManager) ReferendumQuestionStatus(referendumID hornet.MessageID, questionIndex int) (*ReferendumQuestionStatusResponse, error) {
-	return &ReferendumQuestionStatusResponse{}, nil
 }
 
 // logSoftError logs a soft error and triggers the event.
@@ -132,6 +160,14 @@ func (rm *ReferendumManager) logSoftError(err error) {
 		rm.opts.logger.Warn(err)
 	}
 	rm.Events.SoftError.Trigger(err)
+}
+
+func referendumIsAcceptingVotes(referendum *Referendum, index milestone.Index) bool {
+	return index >= referendum.MilestoneStart && index <= referendum.MilestoneEnd
+}
+
+func referendumIsCountingVotes(referendum *Referendum, index milestone.Index) bool {
+	return index >= referendum.MilestoneStartHolding && index <= referendum.MilestoneEnd
 }
 
 // ApplyNewUTXO checks if the new UTXO is part of a voting transaction.
@@ -143,6 +179,11 @@ func (rm *ReferendumManager) logSoftError(err error) {
 // 	- The Indexation must match the configured Indexation.
 //  - The vote data must be parseable.
 func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
+
+	// No active referendum running, so no work to be done
+	if !rm.IsAnyReferendumAcceptingVotes(index) {
+		return nil
+	}
 
 	messageID := newOutput.MessageID()
 
@@ -244,16 +285,115 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 
 func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
 
-	// TODO:
-	// check if we were tracking that UTXO => do something
+	// No active referendum running, so no work to be done
+	if !rm.IsAnyReferendumAcceptingVotes(index) {
+		return nil
+	}
 
 	return nil
 }
 
+// ApplyNewConfirmedMilestoneIndex iterates over each counting referendum and applies the current vote for each question to the total vote
 func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
 
-	// TODO:
-	// Do all the fancy vote balance calculations
+	countingReferendums, err := rm.ReferendumsCountingVotes(index)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	// No counting referendum, so no work to be done
+	if len(countingReferendums) == 0 {
+		return nil
+	}
+
+	mutations := rm.referendumStore.Batched()
+
+	// Iterate over all known referendums that are currently counting
+	for _, referendum := range countingReferendums {
+
+		referendumID, err := referendum.ID()
+		if err != nil {
+			mutations.Cancel()
+			return err
+		}
+
+		// For each referendum, iterate over all questions
+		for idx, value := range referendum.Questions {
+			questionIndex := uint8(idx)
+			question := value.(*Question) // force cast here since we are sure the stored Referendum is valid
+
+			// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter
+			for idx := 0; idx <= len(question.Answers); idx++ {
+				answerIndex := uint8(idx)
+
+				totalBalance, err := rm.TotalBalanceForReferendum(referendumID, questionIndex, answerIndex)
+				if err != nil {
+					mutations.Cancel()
+					return err
+				}
+
+				currentBalance, err := rm.CurrentBalanceForReferendum(referendumID, questionIndex, answerIndex)
+				if err != nil {
+					mutations.Cancel()
+					return err
+				}
+
+				// Add current vote balance to total vote balance for each answer
+				newTotal := totalBalance + currentBalance
+
+				if err := setTotalBalanceForReferendum(referendumID, questionIndex, answerIndex, newTotal, mutations); err != nil {
+					mutations.Cancel()
+					return err
+				}
+			}
+		}
+	}
+
+	return mutations.Commit()
+}
+
+func (rm *ReferendumManager) validVotes(index milestone.Index, votes []*Vote) []*Vote {
+
+	var validVotes []*Vote
+	for _, vote := range votes {
+
+		// Check that we have the referendum vor the given vote
+		referendum, err := rm.Referendum(vote.ReferendumID)
+		if err != nil {
+			continue
+		}
+
+		// Check that the referendum is accepting votes
+		if !referendumIsAcceptingVotes(referendum, index) {
+			continue
+		}
+
+		// Check that the amount of answers equals the questions in the referendum
+		if len(vote.Answers) != len(referendum.Questions) {
+			continue
+		}
+
+		//TODO: validate answers? We would create a current vote for invalid answers, but only count valid answers and skipped (index == 0) anyway
+
+		validVotes = append(validVotes, vote)
+	}
+
+	return validVotes
+}
+
+func votesFromIndexation(indexation *iotago.Indexation) ([]*Vote, error) {
+
+	// try to parse the votes payload
+	parsedVotes := &Votes{}
+	if _, err := parsedVotes.Deserialize(indexation.Data, iotago.DeSeriModePerformValidation); err != nil {
+		// votes payload can't be parsed => ignore votes
+		return nil, fmt.Errorf("no valid votes payload")
+	}
+
+	var votes []*Vote
+	for _, vote := range parsedVotes.Votes {
+		votes = append(votes, vote.(*Vote))
+	}
+
+	return votes, nil
 }

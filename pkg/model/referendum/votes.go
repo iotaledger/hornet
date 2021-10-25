@@ -20,7 +20,7 @@ var (
 	}
 )
 
-// Votes holds the votes for multiple referenda
+// Votes holds the votes for multiple referendums
 type Votes struct {
 	Votes iotago.Serializables
 }

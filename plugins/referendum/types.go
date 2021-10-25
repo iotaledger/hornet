@@ -1,41 +1,29 @@
 package referendum
 
-// ReferendaResponse defines the response of a GET RouteReferenda REST API call.
-type ReferendaResponse struct {
-	// TODO:
+// ReferendumsResponse defines the response of a GET RouteReferendums REST API call.
+type ReferendumsResponse struct {
+	// The hex encoded referendum IDs of the found referendums.
+	ReferendumIDs []string `json:"referendumIds"`
 }
 
-// CreateReferendumRequest defines the request of a POST RouteReferenda REST API call.
-type CreateReferendumRequest struct {
-	// TODO:
-}
-
-// CreateReferendumResponse defines the response of a POST RouteReferenda REST API call.
+// CreateReferendumResponse defines the response of a POST RouteReferendums REST API call.
 type CreateReferendumResponse struct {
-	// TODO:
+	// The hex encoded referendum ID of the created referendum.
+	ReferendumID string `json:"referendumId"`
 }
 
-// ReferendumResponse defines the response of a GET RouteReferendum REST API call.
-type ReferendumResponse struct {
-	// TODO:
+// AnswerStatus holds the current and accumulated vote for an answer.
+type AnswerStatus struct {
+	Current     uint64 `json:"current"`
+	Accumulated uint64 `json:"accumulated"`
 }
 
-// ReferendumQuestionsResponse defines the response of a GET RouteReferendumQuestions REST API call.
-type ReferendumQuestionsResponse struct {
-	// TODO:
-}
-
-// ReferendumQuestionResponse defines the response of a GET RouteReferendumQuestion REST API call.
-type ReferendumQuestionResponse struct {
-	// TODO:
+// QuestionStatus holds the answers for a question.
+type QuestionStatus struct {
+	Answers []AnswerStatus `json:"answers"`
 }
 
 // ReferendumStatusResponse defines the response of a GET RouteReferendumStatus REST API call.
 type ReferendumStatusResponse struct {
-	// TODO:
-}
-
-// ReferendumQuestionStatusResponse defines the response of a GET RouteReferendumQuestionStatus REST API call.
-type ReferendumQuestionStatusResponse struct {
-	// TODO:
+	Questions []QuestionStatus `json:"questions"`
 }

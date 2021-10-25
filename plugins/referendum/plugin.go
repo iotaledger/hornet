@@ -23,33 +23,21 @@ import (
 const (
 	// ParameterReferendumID is used to identify a referendum by it's ID.
 	ParameterReferendumID = "referendumID"
-
-	// ParameterQuestionIndex is used to identify a question by it's index.
-	ParameterQuestionIndex = "questionIndex"
 )
 
 const (
 
-	// RouteReferendum is the route to list all referenda, returning their UUID, the referendum name and status.
-	// GET returns a list of all referenda known to the node.
+	// RouteReferendums is the route to list all referendums, returning their UUID, the referendum name and status.
+	// GET returns a list of all referendums known to the node.
 	// POST creates a new vote to track
-	RouteReferenda = "/referendum"
+	RouteReferendums = "/referendums"
 
-	// GET gives a quick overview of the referendum. This does not include the questions or current standings.
-	// DELETE removes a tracked vote
-	RouteReferendum = "/referendum/:" + ParameterReferendumID
-
-	// GET returns the entire vote with all questions, but not current standings.
-	RouteReferendumQuestions = "/referendum/:" + ParameterReferendumID + "/questions"
-
-	// GET returns information and vote options for a specific question.
-	RouteReferendumQuestion = "/referendum/:" + ParameterReferendumID + "/questions/" + ParameterQuestionIndex
+	// GET gives a quick overview of the referendum. This does not include the current standings.
+	// DELETE removes a tracked referendum.
+	RouteReferendum = "/referendums/:" + ParameterReferendumID
 
 	// GET returns the amount of tokens voting and the weight on each option of every question.
-	RouteReferendumStatus = "/referendum/:" + ParameterReferendumID + "/status"
-
-	// GET returns the amount of tokens voting for each option on the specified question.
-	RouteReferendumQuestionStatus = "/referendum/:" + ParameterReferendumID + "/status/" + ParameterQuestionIndex
+	RouteReferendumStatus = "/referendums/:" + ParameterReferendumID + "/status"
 )
 
 func init() {
@@ -106,8 +94,8 @@ func configure() {
 
 	routeGroup := deps.Echo.Group("/api/plugins/referendum")
 
-	routeGroup.GET(RouteReferenda, func(c echo.Context) error {
-		resp, err := getReferenda(c)
+	routeGroup.GET(RouteReferendums, func(c echo.Context) error {
+		resp, err := getReferendums(c)
 		if err != nil {
 			return err
 		}
@@ -115,12 +103,14 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.POST(RouteReferenda, func(c echo.Context) error {
+	routeGroup.POST(RouteReferendums, func(c echo.Context) error {
+
 		resp, err := createReferendum(c)
 		if err != nil {
 			return err
 		}
 
+		c.Response().Header().Set(echo.HeaderLocation, resp.ReferendumID)
 		return restapi.JSONResponse(c, http.StatusCreated, resp)
 	})
 
@@ -140,35 +130,8 @@ func configure() {
 		return c.NoContent(http.StatusNoContent)
 	})
 
-	routeGroup.GET(RouteReferendumQuestions, func(c echo.Context) error {
-		resp, err := getReferendumQuestions(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteReferendumQuestion, func(c echo.Context) error {
-		resp, err := getReferendumQuestion(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
 	routeGroup.GET(RouteReferendumStatus, func(c echo.Context) error {
 		resp, err := getReferendumStatus(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteReferendumQuestionStatus, func(c echo.Context) error {
-		resp, err := getReferendumQuestionStatus(c)
 		if err != nil {
 			return err
 		}
