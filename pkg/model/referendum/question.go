@@ -25,7 +25,6 @@ var (
 
 // Question
 type Question struct {
-	Index          uint8
 	Text           string
 	Answers        iotago.Serializables
 	AdditionalInfo string
@@ -33,9 +32,6 @@ type Question struct {
 
 func (q *Question) Deserialize(data []byte, deSeriMode iotago.DeSerializationMode) (int, error) {
 	return iotago.NewDeserializer(data).
-		ReadNum(&q.Index, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum question index: %w", err)
-		}).
 		ReadString(&q.Text, iotago.SeriSliceLengthAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum question text: %w", err)
 		}, QuestionTextMaxLength).
@@ -53,9 +49,6 @@ func (q *Question) Deserialize(data []byte, deSeriMode iotago.DeSerializationMod
 
 func (q *Question) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, error) {
 	return iotago.NewSerializer().
-		WriteNum(q.Index, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum question index: %w", err)
-		}).
 		WriteString(q.Text, iotago.SeriSliceLengthAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum question text: %w", err)
 		}).
@@ -70,7 +63,6 @@ func (q *Question) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, err
 
 func (q *Question) MarshalJSON() ([]byte, error) {
 	jQuestion := &jsonQuestion{
-		Index:          q.Index,
 		Text:           q.Text,
 		AdditionalInfo: q.AdditionalInfo,
 	}
@@ -103,7 +95,6 @@ func (q *Question) UnmarshalJSON(bytes []byte) error {
 
 // jsonQuestion defines the json representation of a Question.
 type jsonQuestion struct {
-	Index          uint8              `json:"index"`
 	Text           string             `json:"text"`
 	Answers        []*json.RawMessage `json:"answers"`
 	AdditionalInfo string             `json:"additionalInfo"`
@@ -111,7 +102,6 @@ type jsonQuestion struct {
 
 func (j *jsonQuestion) ToSerializable() (iotago.Serializable, error) {
 	payload := &Question{
-		Index:          j.Index,
 		Text:           j.Text,
 		AdditionalInfo: j.AdditionalInfo,
 	}
