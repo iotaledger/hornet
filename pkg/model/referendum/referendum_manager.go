@@ -270,17 +270,36 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 		}
 	}
 
-	// try to parse the vote payload
-	v := &Vote{}
-	if _, err := v.Deserialize(txEssenceIndexation.Data, iotago.DeSeriModePerformValidation); err != nil {
-		// vote payload can't be parsed => ignore vote
+	votes, err := votesFromIndexation(txEssenceIndexation)
+	if err != nil {
+		return err
+	}
+
+	validVotes := rm.validVotes(index, votes)
+
+	if len(validVotes) == 0 {
+		// No votes for anything we are tracking
 		return nil
 	}
 
-	// TODO:
-	// do something with the vote :)
+	mutations := rm.referendumStore.Batched()
 
-	return nil
+	//Store the message holding the vote
+	if err := rm.storeMessage(msg, mutations); err != nil {
+		mutations.Cancel()
+		return err
+	}
+
+
+	// Count the new votes by increasing the current vote balance
+	for _, vote := range validVotes {
+		if err := rm.countCurrentVote(depositOutputs[0], vote, true, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
+	return mutations.Commit()
 }
 
 func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
@@ -290,7 +309,46 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 		return nil
 	}
 
-	return nil
+	// Check if we tracked the vote initially, e.g. saved the Message that created this UTXO
+	msg, err := rm.messageForMessageId(spent.MessageID())
+	if err != nil {
+		return err
+	}
+
+	if msg == nil {
+		// This UTXO had no valid vote, so we did not store the message for it
+		return nil
+	}
+
+	txEssenceIndexation := msg.TransactionEssenceIndexation()
+	if txEssenceIndexation == nil {
+		// We tracked this vote before, and now we don't have its indexation, so something happened
+		return ErrInvalidPreviouslyTrackedVote
+	}
+
+	votes, err := votesFromIndexation(txEssenceIndexation)
+	if err != nil {
+		return err
+	}
+
+	validVotes := rm.validVotes(index, votes)
+
+	if len(validVotes) == 0 {
+		// We were previously tracking this vote, but now there are no valid votes, so something happened
+		return ErrInvalidPreviouslyTrackedVote
+	}
+
+	mutations := rm.referendumStore.Batched()
+
+	// Count the spent votes by decreasing the current vote balance
+	for _, vote := range validVotes {
+		if err := rm.countCurrentVote(spent.Output(), vote, false, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+	}
+
+	return mutations.Commit()
 }
 
 // ApplyNewConfirmedMilestoneIndex iterates over each counting referendum and applies the current vote for each question to the total vote
