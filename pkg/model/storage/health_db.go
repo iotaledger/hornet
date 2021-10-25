@@ -6,31 +6,30 @@ const (
 
 func (s *Storage) MarkDatabasesCorrupted() error {
 
+	var markingErr error
 	for _, h := range s.healthTrackers {
-		err := h.markCorrupted()
-		if err != nil {
-			return err
+		if err := h.markCorrupted(); err != nil {
+			markingErr = err
 		}
 	}
-	return nil
+	return markingErr
 }
 
 func (s *Storage) MarkDatabasesTainted() error {
 
+	var markingErr error
 	for _, h := range s.healthTrackers {
-		err := h.markTainted()
-		if err != nil {
-			return err
+		if err := h.markTainted(); err != nil {
+			markingErr = err
 		}
 	}
-	return nil
+	return markingErr
 }
 
 func (s *Storage) MarkDatabasesHealthy() error {
 
 	for _, h := range s.healthTrackers {
-		err := h.markHealthy()
-		if err != nil {
+		if err := h.markHealthy(); err != nil {
 			return err
 		}
 	}
