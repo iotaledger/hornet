@@ -5,20 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"golang.org/x/crypto/blake2b"
-
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-const (
-	// ReferendumIDLength defines the length of a referendum ID.
-	ReferendumIDLength = blake2b.Size256
-)
-
-// ReferendumID is the ID of a referendum.
-type ReferendumID = [ReferendumIDLength]byte
-
-// Vote
+// Vote holds the vote for a referendum and the answer to each question
 type Vote struct {
 	ReferendumID ReferendumID
 	Answers      []byte

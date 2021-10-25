@@ -12,12 +12,18 @@ import (
 )
 
 const (
+	// ReferendumIDLength defines the length of a referendum ID.
+	ReferendumIDLength = blake2b.Size256
+
 	ReferendumNameMaxLength           = 255
 	ReferendumAdditionalInfoMaxLength = 500
 
 	MinQuestionsCount = 2
 	MaxQuestionsCount = 10
 )
+
+// ReferendumID is the ID of a referendum.
+type ReferendumID = [ReferendumIDLength]byte
 
 var (
 	questionsArrayRules = &iotago.ArrayRules{
