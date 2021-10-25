@@ -20,6 +20,10 @@ type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
 
+	// databases
+	tangleStore kvstore.KVStore
+	utxoStore   kvstore.KVStore
+
 	// healthTrackers
 	healthTrackers []*storeHealthTracker
 
@@ -51,14 +55,14 @@ type Storage struct {
 
 func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, error) {
 
-	utxoManager := utxo.New(utxoStore)
-
 	s := &Storage{
+		tangleStore: tangleStore,
+		utxoStore:   utxoStore,
 		healthTrackers: []*storeHealthTracker{
 			newStoreHealthTracker(tangleStore),
 			newStoreHealthTracker(utxoStore),
 		},
-		utxoManager: utxoManager,
+		utxoManager: utxo.New(utxoStore),
 		Events: &packageEvents{
 			PruningStateChanged: events.NewEvent(events.BoolCaller),
 		},
@@ -182,6 +186,24 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 	s.configureSnapshotStore(tangleStore)
 
 	return nil
+}
+
+func (s *Storage) FlushAndCloseStores() error {
+
+	var flushAndCloseError error
+	if err := s.tangleStore.Flush(); err != nil {
+		flushAndCloseError = err
+	}
+	if err := s.utxoStore.Flush(); err != nil {
+		flushAndCloseError = err
+	}
+	if err := s.tangleStore.Close(); err != nil {
+		flushAndCloseError = err
+	}
+	if err := s.utxoStore.Close(); err != nil {
+		flushAndCloseError = err
+	}
+	return flushAndCloseError
 }
 
 // FlushStorages flushes all storages.

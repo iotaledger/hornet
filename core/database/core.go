@@ -273,7 +273,7 @@ func configure() {
 		}
 
 		CorePlugin.LogInfo("Syncing databases to disk...")
-		if err = closeDatabases(); err != nil {
+		if err = deps.Storage.FlushAndCloseStores(); err != nil {
 			CorePlugin.Panicf("Syncing databases to disk... failed: %s", err)
 		}
 		CorePlugin.LogInfo("Syncing databases to disk... done")
@@ -292,27 +292,6 @@ func run() {
 	}, shutdown.PriorityMetricsUpdater); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
-}
-
-func closeDatabases() error {
-
-	if err := deps.TangleDatabase.KVStore().Flush(); err != nil {
-		return err
-	}
-
-	if err := deps.TangleDatabase.KVStore().Close(); err != nil {
-		return err
-	}
-
-	if err := deps.UTXODatabase.KVStore().Flush(); err != nil {
-		return err
-	}
-
-	if err := deps.UTXODatabase.KVStore().Close(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func configureEvents() {
