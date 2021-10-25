@@ -13,7 +13,7 @@ import (
 func databaseSplit(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ExitOnError)
-	databasePath := fs.String("database", "", "the path to the p2p database folder")
+	databasePath := fs.String("database", "", "the path to the database folder that should be split")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseSplit)

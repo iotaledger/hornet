@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -669,20 +670,20 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		return nil, fmt.Errorf("can't create temp dir: %w", err)
 	}
 
-	store, err := database.StoreWithDefaultSettings(tempDir, true, targetEngine)
+	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.TangleDatabaseDirectoryName), true, targetEngine)
 	if err != nil {
-		return nil, fmt.Errorf("database initialization failed: %w", err)
+		return nil, fmt.Errorf("%s database initialization failed: %w", coreDatabase.TangleDatabaseDirectoryName, err)
 	}
 
-	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, "utxo"), true, targetEngine)
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.UTXODatabaseDirectoryName), true, targetEngine)
 	if err != nil {
-		return nil, fmt.Errorf("utxo database initialization failed: %w", err)
+		return nil, fmt.Errorf("%s database initialization failed: %w", coreDatabase.UTXODatabaseDirectoryName, err)
 	}
 
 	// clean up temp db
 	defer func() {
-		store.Shutdown()
-		_ = store.Close()
+		tangleStore.Shutdown()
+		_ = tangleStore.Close()
 
 		utxoStore.Shutdown()
 		_ = utxoStore.Close()
@@ -690,7 +691,7 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		_ = os.RemoveAll(tempDir)
 	}()
 
-	dbStorage, err := storage.New(store, utxoStore)
+	dbStorage, err := storage.New(tangleStore, utxoStore)
 	if err != nil {
 		return nil, err
 	}

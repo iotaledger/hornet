@@ -71,7 +71,7 @@ type TestEnvironment struct {
 	// syncManager is used to determine the sync status of the node in this test.
 	syncManager *syncmanager.SyncManager
 
-	// milestoneManager is used to retrieve, verify and tangleStore milestones.
+	// milestoneManager is used to retrieve, verify and store milestones.
 	milestoneManager *milestonemanager.MilestoneManager
 
 	// serverMetrics holds metrics about the tangle.

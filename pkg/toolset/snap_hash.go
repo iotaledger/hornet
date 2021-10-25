@@ -57,12 +57,12 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 
 	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.TangleDatabaseDirectoryName), true, targetEngine)
 	if err != nil {
-		return fmt.Errorf("database initialization failed: %w", err)
+		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.TangleDatabaseDirectoryName, err)
 	}
 
 	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(tempDir, coreDatabase.UTXODatabaseDirectoryName), true, targetEngine)
 	if err != nil {
-		return fmt.Errorf("utxo database initialization failed: %w", err)
+		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.UTXODatabaseDirectoryName, err)
 	}
 
 	// clean up temp db

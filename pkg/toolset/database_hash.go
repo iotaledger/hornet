@@ -196,7 +196,7 @@ func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 
 	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.TangleDatabaseDirectoryName), false)
 	if err != nil {
-		return fmt.Errorf("database initialization failed: %w", err)
+		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.TangleDatabaseDirectoryName, err)
 	}
 
 	// clean up store
@@ -207,7 +207,7 @@ func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 
 	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.UTXODatabaseDirectoryName), false)
 	if err != nil {
-		return fmt.Errorf("utxo database initialization failed: %w", err)
+		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.UTXODatabaseDirectoryName, err)
 	}
 
 	// clean up store

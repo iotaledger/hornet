@@ -86,13 +86,13 @@ func SplitIntoTangleAndUTXO(databasePath string) error {
 
 	tangleStore, err := database.StoreWithDefaultSettings(tangleDatabasePath, false, dbEngine)
 	if err != nil {
-		return fmt.Errorf("tangle database initialization failed: %w", err)
+		return fmt.Errorf("%s database initialization failed: %w", TangleDatabaseDirectoryName, err)
 	}
 	defer func() { _ = tangleStore.Close() }()
 
 	utxoStore, err := database.StoreWithDefaultSettings(utxoDatabasePath, true, dbEngine)
 	if err != nil {
-		return fmt.Errorf("utxo database initialization failed: %w", err)
+		return fmt.Errorf("%s database initialization failed: %w", UTXODatabaseDirectoryName, err)
 	}
 	defer func() { _ = utxoStore.Close() }()
 

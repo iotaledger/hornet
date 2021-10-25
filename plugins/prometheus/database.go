@@ -93,7 +93,7 @@ func configureDatabase(name string, db *database.Database, metrics *metrics.Data
 			Namespace: "iota",
 			Subsystem: "database",
 			Name:      fmt.Sprintf("%s_compaction_count", name),
-			Help:      "The total amount of tangle database compactions.",
+			Help:      fmt.Sprintf("The total amount of %s database compactions.", name),
 		},
 	)
 
