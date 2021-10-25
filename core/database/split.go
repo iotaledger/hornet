@@ -12,6 +12,11 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/utils"
 )
 
+const (
+	storePrefixHealthDeprecated byte = 0
+	storePrefixUTXODeprecated   byte = 8
+)
+
 func NeedsSplitting(databasePath string) (bool, error) {
 
 	exists, err := utils.PathExists(databasePath)
@@ -94,7 +99,7 @@ func SplitIntoTangleAndUTXO(databasePath string) error {
 	fmt.Printf("Splitting database using %s...\n", dbEngine)
 
 	// Migrate the UTXO data by removing the old 8 prefix
-	legacyStorePrefixUTXO := kvstore.KeyPrefix{byte(8)}
+	legacyStorePrefixUTXO := kvstore.KeyPrefix{storePrefixUTXODeprecated}
 	if err := databaseMigrateKeys(tangleStore, utxoStore, legacyStorePrefixUTXO, kvstore.EmptyPrefix); err != nil {
 		return fmt.Errorf("error migrating data to utxo database: %w", err)
 	}
@@ -105,17 +110,17 @@ func SplitIntoTangleAndUTXO(databasePath string) error {
 	}
 
 	// Copy the DB health data to UTXO by replacing the old 0 prefix with the new 255 prefix
-	if err := databaseMigrateKeys(tangleStore, utxoStore, kvstore.KeyPrefix{common.StorePrefixHealthDeprecated}, kvstore.KeyPrefix{common.StorePrefixHealth}); err != nil {
+	if err := databaseMigrateKeys(tangleStore, utxoStore, kvstore.KeyPrefix{storePrefixHealthDeprecated}, kvstore.KeyPrefix{common.StorePrefixHealth}); err != nil {
 		return fmt.Errorf("error copying health data to utxo database: %w", err)
 	}
 
 	// Migrate the DB health data in the tangle database to the new keys
-	if err := databaseMigrateKeys(tangleStore, tangleStore, kvstore.KeyPrefix{common.StorePrefixHealthDeprecated}, kvstore.KeyPrefix{common.StorePrefixHealth}); err != nil {
+	if err := databaseMigrateKeys(tangleStore, tangleStore, kvstore.KeyPrefix{storePrefixHealthDeprecated}, kvstore.KeyPrefix{common.StorePrefixHealth}); err != nil {
 		return fmt.Errorf("error migrating tangle health database: %w", err)
 	}
 
 	// Remove old DB health data from tangle database
-	if err := tangleStore.DeletePrefix(kvstore.KeyPrefix{common.StorePrefixHealthDeprecated}); err != nil {
+	if err := tangleStore.DeletePrefix(kvstore.KeyPrefix{storePrefixHealthDeprecated}); err != nil {
 		return fmt.Errorf("error deleting legacy health data from tangle database: %w", err)
 	}
 

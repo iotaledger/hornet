@@ -1,7 +1,6 @@
 package common
 
 const (
-	StorePrefixHealthDeprecated     byte = 0
 	StorePrefixMessages             byte = 1
 	StorePrefixMessageMetadata      byte = 2
 	StorePrefixMilestones           byte = 3
