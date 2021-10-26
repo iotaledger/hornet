@@ -19,7 +19,7 @@ var (
 	answersArrayRules = &iotago.ArrayRules{
 		Min:            MinAnswersCount,
 		Max:            MaxAnswersCount,
-		ValidationMode: iotago.ArrayValidationModeNone,
+		ValidationMode: iotago.ArrayValidationModeNoDuplicates,
 	}
 )
 
@@ -48,6 +48,13 @@ func (q *Question) Deserialize(data []byte, deSeriMode iotago.DeSerializationMod
 }
 
 func (q *Question) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, error) {
+	if deSeriMode.HasMode(iotago.DeSeriModePerformValidation) {
+		//TODO: this should be moved as an arrayRule parameter to WriteSliceOfObjects in iota.go
+		if err := answersArrayRules.CheckBounds(uint(len(q.Answers))); err != nil {
+			return nil, fmt.Errorf("unable to serialize question answers: %w", err)
+		}
+		//TODO: this should also check the NoDups rule
+	}
 	return iotago.NewSerializer().
 		WriteString(q.Text, iotago.SeriSliceLengthAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum question text: %w", err)

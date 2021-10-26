@@ -18,7 +18,7 @@ const (
 	ReferendumNameMaxLength           = 255
 	ReferendumAdditionalInfoMaxLength = 500
 
-	MinQuestionsCount = 2
+	MinQuestionsCount = 1
 	MaxQuestionsCount = 10
 )
 
@@ -82,6 +82,12 @@ func (r *Referendum) Deserialize(data []byte, deSeriMode iotago.DeSerializationM
 }
 
 func (r *Referendum) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, error) {
+	if deSeriMode.HasMode(iotago.DeSeriModePerformValidation) {
+		//TODO: this should be moved as an arrayRule parameter to WriteSliceOfObjects in iota.go
+		if err := questionsArrayRules.CheckBounds(uint(len(r.Questions))); err != nil {
+			return nil, fmt.Errorf("unable to serialize referendum questions: %w", err)
+		}
+	}
 	return iotago.NewSerializer().
 		WriteString(r.Name, iotago.SeriSliceLengthAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum name: %w", err)
