@@ -14,9 +14,9 @@ const (
 
 // Answer
 type Answer struct {
-	Index          uint8  `json:"index"`
-	Text           string `json:"text"`
-	AdditionalInfo string `json:"additionalInfo"`
+	Index          uint8
+	Text           string
+	AdditionalInfo string
 }
 
 func (a *Answer) Deserialize(data []byte, deSeriMode iotago.DeSerializationMode) (int, error) {
@@ -48,12 +48,39 @@ func (a *Answer) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, error
 }
 
 func (a *Answer) MarshalJSON() ([]byte, error) {
-	return json.Marshal(a)
+	jAnswer := &jsonAnswer{
+		Index:          a.Index,
+		Text:           a.Text,
+		AdditionalInfo: a.AdditionalInfo,
+	}
+	return json.Marshal(jAnswer)
 }
 
-func (ra *Answer) UnmarshalJSON(bytes []byte) error {
-	if err := json.Unmarshal(bytes, ra); err != nil {
+func (a *Answer) UnmarshalJSON(bytes []byte) error {
+	jAnswer := &jsonAnswer{}
+	if err := json.Unmarshal(bytes, jAnswer); err != nil {
 		return err
 	}
+	seri, err := jAnswer.ToSerializable()
+	if err != nil {
+		return err
+	}
+	*a = *seri.(*Answer)
 	return nil
+}
+
+// jsonAnswer defines the json representation of an Answer
+type jsonAnswer struct {
+	Index          uint8  `json:"index"`
+	Text           string `json:"text"`
+	AdditionalInfo string `json:"additionalInfo"`
+}
+
+func (j *jsonAnswer) ToSerializable() (iotago.Serializable, error) {
+	payload := &Answer{
+		Index:          j.Index,
+		Text:           j.Text,
+		AdditionalInfo: j.AdditionalInfo,
+	}
+	return payload, nil
 }
