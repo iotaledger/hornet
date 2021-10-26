@@ -12,16 +12,12 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 )
 
-var (
-	NullReferendumID = referendum.ReferendumID{}
-)
-
 // ReferendumIDFromHex creates a ReferendumID from a hex string representation.
 func ReferendumIDFromHex(hexString string) (referendum.ReferendumID, error) {
 
 	b, err := hex.DecodeString(hexString)
 	if err != nil {
-		return NullReferendumID, err
+		return referendum.NullReferendumID, err
 	}
 
 	if len(b) != referendum.ReferendumIDLength {
@@ -37,12 +33,12 @@ func parseReferendumIDParam(c echo.Context) (referendum.ReferendumID, error) {
 
 	referendumIDHex := strings.ToLower(c.Param(ParameterReferendumID))
 	if referendumIDHex == "" {
-		return NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterReferendumID)
+		return referendum.NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterReferendumID)
 	}
 
 	referendumID, err := ReferendumIDFromHex(referendumIDHex)
 	if err != nil {
-		return NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid referendum ID: %s, error: %s", referendumIDHex, err)
+		return referendum.NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid referendum ID: %s, error: %s", referendumIDHex, err)
 	}
 
 	return referendumID, nil
@@ -75,7 +71,7 @@ func createReferendum(c echo.Context) (*CreateReferendumResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request! Error: %s", err)
 	}
 
-	referendumID, err := deps.ReferendumManager.StoreReferendum(referendum)
+	referendumID, err := deps.ReferendumManager.StoreReferendum(referendum, deps.SyncManager.ConfirmedMilestoneIndex())
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid referendum, error: %s", err)
 	}

@@ -26,6 +26,8 @@ const (
 type ReferendumID = [ReferendumIDLength]byte
 
 var (
+	NullReferendumID = ReferendumID{}
+
 	questionsArrayRules = &iotago.ArrayRules{
 		Min:            MinQuestionsCount,
 		Max:            MaxQuestionsCount,

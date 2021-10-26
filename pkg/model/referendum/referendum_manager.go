@@ -2,6 +2,7 @@ package referendum
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -19,6 +20,11 @@ type Events struct {
 	// SoftError is triggered when a soft error is encountered.
 	SoftError *events.Event
 }
+
+var (
+	ErrReferendumAlreadyStarted = errors.New("the given referendum already started")
+	ErrReferendumAlreadyEnded   = errors.New("the given referendum already ended")
+)
 
 // ReferendumManager is used to track the outcome of referendums in the tangle.
 type ReferendumManager struct {
@@ -155,7 +161,18 @@ func (rm *ReferendumManager) ReferendumsCountingVotes(index milestone.Index) ([]
 	return filtered, nil
 }
 
-func (rm *ReferendumManager) StoreReferendum(referendum *Referendum) (ReferendumID, error) {
+// StoreReferendum accepts a new Referendum the manager should track.
+// The current confirmed milestone index needs to be provided, so that the manager can check if the referendum can be added.
+func (rm *ReferendumManager) StoreReferendum(referendum *Referendum, confirmedMilestoneIndex milestone.Index) (ReferendumID, error) {
+
+	if confirmedMilestoneIndex >= referendum.MilestoneEnd {
+		return NullReferendumID, ErrReferendumAlreadyEnded
+	}
+
+	if confirmedMilestoneIndex >= referendum.MilestoneStart {
+		return NullReferendumID, ErrReferendumAlreadyStarted
+	}
+
 	return referendum.ID()
 }
 

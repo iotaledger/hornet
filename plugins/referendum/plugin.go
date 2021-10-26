@@ -12,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/referendum"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/restapi"
@@ -22,7 +23,7 @@ import (
 )
 
 const (
-	// ParameterReferendumID is used to identify a referendum by it's ID.
+	// ParameterReferendumID is used to identify a referendum by its ID.
 	ParameterReferendumID = "referendumID"
 )
 
@@ -33,10 +34,12 @@ const (
 	// POST creates a new vote to track
 	RouteReferendums = "/referendums"
 
+	// RouteReferendum is the route to access a single referendum by its ID.
 	// GET gives a quick overview of the referendum. This does not include the current standings.
 	// DELETE removes a tracked referendum.
 	RouteReferendum = "/referendums/:" + ParameterReferendumID
 
+	// RouteReferendumStatus is the route to access the status of a single referendum by its ID.
 	// GET returns the amount of tokens voting and the weight on each option of every question.
 	RouteReferendumStatus = "/referendums/:" + ParameterReferendumID + "/status"
 )
@@ -67,6 +70,7 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig        *configuration.Configuration `name:"nodeConfig"`
+	SyncManager       syncmanager.SyncManager
 	ReferendumManager *referendum.ReferendumManager
 	Tangle            *tangle.Tangle
 	Echo              *echo.Echo
