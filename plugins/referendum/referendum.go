@@ -101,48 +101,21 @@ func deleteReferendum(c echo.Context) error {
 	return deps.ReferendumManager.DeleteReferendum(referendumID)
 }
 
-func getReferendumStatus(c echo.Context) (*ReferendumStatusResponse, error) {
+func getReferendumStatus(c echo.Context) (*referendum.ReferendumStatus, error) {
 
 	referendumID, err := parseReferendumIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	ref := deps.ReferendumManager.Referendum(referendumID)
-	if ref == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "referendum not found: %s", hex.EncodeToString(referendumID[:]))
-	}
-
-	response := &ReferendumStatusResponse{}
-
-	// For each referendum, iterate over all questions
-	for idx, value := range ref.Questions {
-		questionIndex := uint8(idx)
-		question := value.(*referendum.Question) // force cast here since we are sure the stored Referendum is valid
-
-		questionStatus := QuestionStatus{}
-		// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter
-		for idx := 0; idx <= len(question.Answers); idx++ {
-			answerIndex := uint8(idx)
-
-			currentBalance, err := deps.ReferendumManager.CurrentBalanceForReferendum(referendumID, questionIndex, answerIndex)
-			if err != nil {
-				return nil, err
-			}
-
-			totalBalance, err := deps.ReferendumManager.TotalBalanceForReferendum(referendumID, questionIndex, answerIndex)
-			if err != nil {
-				return nil, err
-			}
-			questionStatus.Answers = append(questionStatus.Answers, AnswerStatus{
-				Current:     currentBalance,
-				Accumulated: totalBalance,
-			})
+	status, err := deps.ReferendumManager.ReferendumStatus(referendumID)
+	if err != nil {
+		if errors.Is(err, referendum.ErrReferendumNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "referendum not found: %s", hex.EncodeToString(referendumID[:]))
 		}
-		response.Questions = append(response.Questions, questionStatus)
+		return nil, err
 	}
-
-	return response, nil
+	return status, nil
 }
 
 func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
