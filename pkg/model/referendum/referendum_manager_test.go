@@ -383,3 +383,104 @@ func TestReferendumStates(t *testing.T) {
 	require.Equal(t, 0, len(env.rm.ReferendumsAcceptingVotes()))
 	require.Equal(t, 0, len(env.rm.ReferendumsCountingVotes()))
 }
+
+func TestSingleReferendumVote(t *testing.T) {
+	env := newEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	defer env.Cleanup()
+
+	confirmedMilestoneIndex := env.te.SyncManager().ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	referendumID := env.registerSampleReferendum(5, 2, 3)
+
+	ref := env.rm.Referendum(referendumID)
+	require.NotNil(t, ref)
+
+	// Verify the configured referendum indexes
+	require.Equal(t, milestone.Index(5), ref.MilestoneStart)
+	require.Equal(t, milestone.Index(7), ref.MilestoneStartHolding)
+	require.Equal(t, milestone.Index(10), ref.MilestoneEnd)
+
+	// Referendum should not be accepting votes yet
+	require.Equal(t, 0, len(env.rm.ReferendumsAcceptingVotes()))
+
+	// Issue a vote and milestone
+	env.issueSampleVoteAndMilestone(referendumID, env.wallet1) // 5
+
+	// Votes should not have been counted so far because it was not accepting votes yet
+	status, err := env.rm.ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	printJSON(t, status)
+	require.Equal(t, env.te.SyncManager().ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Accumulated)
+
+	// Referendum should be accepting votes now
+	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
+
+	// Vote again
+	env.issueSampleVoteAndMilestone(referendumID, env.wallet1) // 6
+
+	// Referendum should be accepting votes, but the vote should not be weighted yet, just added to the current status
+	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
+	require.Equal(t, 0, len(env.rm.ReferendumsCountingVotes()))
+
+	status, err = env.rm.ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	printJSON(t, status)
+	require.Equal(t, env.te.SyncManager().ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Accumulated)
+
+	env.IssueMilestone() // 7
+
+	// Referendum should be accepting and counting votes, but the vote we did before should not be weighted yet
+	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
+	require.Equal(t, 1, len(env.rm.ReferendumsCountingVotes()))
+
+	status, err = env.rm.ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	printJSON(t, status)
+	require.Equal(t, env.te.SyncManager().ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Accumulated)
+
+	env.IssueMilestone() // 8
+
+	// Referendum should be accepting and counting votes, the vote should now be weighted
+	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
+	require.Equal(t, 1, len(env.rm.ReferendumsCountingVotes()))
+
+	status, err = env.rm.ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	printJSON(t, status)
+	require.Equal(t, env.te.SyncManager().ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Accumulated)
+
+	env.IssueMilestone() // 9
+
+	// Referendum should be accepting and counting votes, the vote should now be weighted double
+	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
+	require.Equal(t, 1, len(env.rm.ReferendumsCountingVotes()))
+
+	status, err = env.rm.ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	printJSON(t, status)
+	require.Equal(t, env.te.SyncManager().ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Equal(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
+	require.Equal(t, uint64(2_000_000), status.Questions[0].Answers[1].Accumulated)
+
+	env.IssueMilestone() // 10
+
+	// Referendum should be ended
+	require.Equal(t, 0, len(env.rm.ReferendumsAcceptingVotes()))
+	require.Equal(t, 0, len(env.rm.ReferendumsCountingVotes()))
+
+	status, err = env.rm.ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	printJSON(t, status)
+	require.Equal(t, env.te.SyncManager().ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Equal(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
+	require.Equal(t, uint64(3_000_000), status.Questions[0].Answers[1].Accumulated)
+}
