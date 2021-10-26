@@ -60,7 +60,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	milestoneMessageID, err := te.coo.Bootstrap()
 	require.NoError(te.TestInterface, err)
 
-	te.lastMilestoneMessageID = milestoneMessageID
+	te.LastMilestoneMessageID = milestoneMessageID
 
 	ms := te.storage.CachedMilestoneOrNil(1)
 	require.NotNil(te.TestInterface, ms)
@@ -102,9 +102,9 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
 
-	milestoneMessageID, err := te.coo.IssueMilestone(append(tips, te.lastMilestoneMessageID))
+	milestoneMessageID, err := te.coo.IssueMilestone(append(tips, te.LastMilestoneMessageID))
 	require.NoError(te.TestInterface, err)
-	te.lastMilestoneMessageID = milestoneMessageID
+	te.LastMilestoneMessageID = milestoneMessageID
 
 	te.VerifyLMI(currentIndex + 1)
 

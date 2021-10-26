@@ -53,8 +53,8 @@ type TestEnvironment struct {
 	// coo holds the coordinator instance.
 	coo *coordinator.Coordinator
 
-	// lastMilestoneMessageID is the message ID of the last issued milestone.
-	lastMilestoneMessageID hornet.MessageID
+	// LastMilestoneMessageID is the message ID of the last issued milestone.
+	LastMilestoneMessageID hornet.MessageID
 
 	// tempDir is the directory that contains the temporary files for the test.
 	tempDir string
@@ -105,7 +105,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(nil, targetScore, 5*time.Second, "", 30*time.Second),
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
-		lastMilestoneMessageID: hornet.NullMessageID(),
+		LastMilestoneMessageID: hornet.NullMessageID(),
 		serverMetrics:          &metrics.ServerMetrics{},
 	}
 
