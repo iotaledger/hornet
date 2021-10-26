@@ -28,7 +28,7 @@ var (
 
 // ReferendumManager is used to track the outcome of referendums in the tangle.
 type ReferendumManager struct {
-	syncutils.Mutex
+	syncutils.RWMutex
 
 	// used to access the node storage.
 	storage *storage.Storage
@@ -37,6 +37,8 @@ type ReferendumManager struct {
 
 	//TODO: add health check when the db split is merged
 	referendumStore kvstore.KVStore
+
+	referendums map[ReferendumID]*Referendum
 
 	// events of the ReferendumManager.
 	Events *Events
@@ -82,7 +84,7 @@ type Option func(opts *Options)
 func NewManager(
 	storage *storage.Storage,
 	referendumStore kvstore.KVStore,
-	opts ...Option) *ReferendumManager {
+	opts ...Option) (*ReferendumManager, error) {
 
 	options := &Options{}
 	options.apply(defaultOptions...)
@@ -97,12 +99,23 @@ func NewManager(
 			SoftError: events.NewEvent(events.ErrorCaller),
 		},
 	}
-	manager.init()
 
-	return manager
+	err := manager.init()
+	if err != nil {
+		return nil, err
+	}
+
+	return manager, nil
 }
 
-func (rm *ReferendumManager) init() {
+func (rm *ReferendumManager) init() error {
+	// Read referendums from storage
+	referendums, err := rm.loadReferendums()
+	if err != nil {
+		return err
+	}
+	rm.referendums = referendums
+	return nil
 }
 
 func (rm *ReferendumManager) CloseDatabase() error {
@@ -116,55 +129,58 @@ func (rm *ReferendumManager) CloseDatabase() error {
 	return flushAndCloseError
 }
 
-func (rm *ReferendumManager) Referendums() ([]*Referendum, error) {
-	return []*Referendum{}, nil
+func (rm *ReferendumManager) ReferendumIDs() []ReferendumID {
+	rm.RLock()
+	defer rm.RUnlock()
+	var ids []ReferendumID
+	for id, _ := range rm.referendums {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func (rm *ReferendumManager) Referendums() []*Referendum {
+	rm.RLock()
+	defer rm.RUnlock()
+	var ref []*Referendum
+	for _, r := range rm.referendums {
+		ref = append(ref, r)
+	}
+	return ref
 }
 
 func (rm *ReferendumManager) IsAnyReferendumAcceptingVotes(index milestone.Index) bool {
-
-	referendums, err := rm.ReferendumsAcceptingVotes(index)
-	if err != nil {
-		return false
-	}
+	referendums := rm.ReferendumsAcceptingVotes(index)
 	return len(referendums) > 0
 }
 
-func (rm *ReferendumManager) ReferendumsAcceptingVotes(index milestone.Index) ([]*Referendum, error) {
-
-	referendums, err := rm.Referendums()
-	if err != nil {
-		return nil, err
-	}
-
+func (rm *ReferendumManager) ReferendumsAcceptingVotes(index milestone.Index) []*Referendum {
+	referendums := rm.Referendums()
 	var filtered []*Referendum
 	for _, referendum := range referendums {
 		if referendumIsAcceptingVotes(referendum, index) {
 			filtered = append(filtered, referendum)
 		}
 	}
-
-	return filtered, nil
+	return filtered
 }
 
-func (rm *ReferendumManager) ReferendumsCountingVotes(index milestone.Index) ([]*Referendum, error) {
-	referendums, err := rm.Referendums()
-	if err != nil {
-		return nil, err
-	}
-
+func (rm *ReferendumManager) ReferendumsCountingVotes(index milestone.Index) []*Referendum {
+	referendums := rm.Referendums()
 	var filtered []*Referendum
 	for _, referendum := range referendums {
 		if referendumIsCountingVotes(referendum, index) {
 			filtered = append(filtered, referendum)
 		}
 	}
-
-	return filtered, nil
+	return filtered
 }
 
 // StoreReferendum accepts a new Referendum the manager should track.
 // The current confirmed milestone index needs to be provided, so that the manager can check if the referendum can be added.
 func (rm *ReferendumManager) StoreReferendum(referendum *Referendum, confirmedMilestoneIndex milestone.Index) (ReferendumID, error) {
+	rm.Lock()
+	defer rm.Unlock()
 
 	if confirmedMilestoneIndex >= referendum.MilestoneEnd {
 		return NullReferendumID, ErrReferendumAlreadyEnded
@@ -174,14 +190,36 @@ func (rm *ReferendumManager) StoreReferendum(referendum *Referendum, confirmedMi
 		return NullReferendumID, ErrReferendumAlreadyStarted
 	}
 
-	return referendum.ID()
+	referendumID, err := rm.storeReferendum(referendum)
+	if err != nil {
+		return NullReferendumID, err
+	}
+
+	rm.referendums[referendumID] = referendum
+
+	return referendumID, err
 }
 
-func (rm *ReferendumManager) Referendum(referendumID ReferendumID) (*Referendum, error) {
-	return &Referendum{}, nil
+func (rm *ReferendumManager) Referendum(referendumID ReferendumID) *Referendum {
+	rm.RLock()
+	defer rm.RUnlock()
+	return rm.referendums[referendumID]
 }
 
 func (rm *ReferendumManager) DeleteReferendum(referendumID ReferendumID) error {
+	rm.Lock()
+	defer rm.Unlock()
+
+	referendum := rm.Referendum(referendumID)
+	if referendum == nil {
+		return ErrReferendumNotFound
+	}
+
+	if err := rm.deleteReferendum(referendumID); err != nil {
+		return err
+	}
+
+	delete(rm.referendums, referendumID)
 	return nil
 }
 
@@ -396,10 +434,7 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 // ApplyNewConfirmedMilestoneIndex iterates over each counting referendum and applies the current vote for each question to the total vote
 func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
 
-	countingReferendums, err := rm.ReferendumsCountingVotes(index)
-	if err != nil {
-		return err
-	}
+	countingReferendums := rm.ReferendumsCountingVotes(index)
 
 	// No counting referendum, so no work to be done
 	if len(countingReferendums) == 0 {
@@ -458,8 +493,8 @@ func (rm *ReferendumManager) validVotes(index milestone.Index, votes []*Vote) []
 	for _, vote := range votes {
 
 		// Check that we have the referendum vor the given vote
-		referendum, err := rm.Referendum(vote.ReferendumID)
-		if err != nil {
+		referendum := rm.Referendum(vote.ReferendumID)
+		if referendum == nil {
 			continue
 		}
 

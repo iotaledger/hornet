@@ -77,7 +77,7 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig        *configuration.Configuration `name:"nodeConfig"`
-	SyncManager       syncmanager.SyncManager
+	SyncManager       *syncmanager.SyncManager
 	ReferendumManager *referendum.ReferendumManager
 	Tangle            *tangle.Tangle
 	Echo              *echo.Echo
@@ -100,11 +100,15 @@ func provide(c *dig.Container) {
 			Plugin.Panic(err)
 		}
 
-		return referendum.NewManager(
+		rm, err := referendum.NewManager(
 			deps.Storage,
 			referendumStore,
 			referendum.WithLogger(Plugin.Logger()),
 		)
+		if err != nil {
+			Plugin.Panic(err)
+		}
+		return rm
 	}); err != nil {
 		Plugin.Panic(err)
 	}

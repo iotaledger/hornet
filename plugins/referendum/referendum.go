@@ -47,21 +47,14 @@ func parseReferendumIDParam(c echo.Context) (referendum.ReferendumID, error) {
 }
 
 func getReferendums(_ echo.Context) (*ReferendumsResponse, error) {
-	referendums, err := deps.ReferendumManager.Referendums()
-	if err != nil {
-		return nil, err
+	referendumIDs := deps.ReferendumManager.ReferendumIDs()
+
+	hexReferendumIDs := []string{}
+	for _, id := range referendumIDs {
+		hexReferendumIDs = append(hexReferendumIDs, hex.EncodeToString(id[:]))
 	}
 
-	referendumIDs := []string{}
-	for _, referendum := range referendums {
-		referendumID, err := referendum.ID()
-		if err != nil {
-			return nil, err
-		}
-		referendumIDs = append(referendumIDs, hex.EncodeToString(referendumID[:]))
-	}
-
-	return &ReferendumsResponse{ReferendumIDs: referendumIDs}, nil
+	return &ReferendumsResponse{ReferendumIDs: hexReferendumIDs}, nil
 }
 
 func createReferendum(c echo.Context) (*CreateReferendumResponse, error) {
@@ -90,11 +83,7 @@ func getReferendum(c echo.Context) (*referendum.Referendum, error) {
 		return nil, err
 	}
 
-	referendum, err := deps.ReferendumManager.Referendum(referendumID)
-	if err != nil {
-		return nil, err
-	}
-
+	referendum := deps.ReferendumManager.Referendum(referendumID)
 	if referendum == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "referendum not found: %s", hex.EncodeToString(referendumID[:]))
 	}
@@ -119,11 +108,7 @@ func getReferendumStatus(c echo.Context) (*ReferendumStatusResponse, error) {
 		return nil, err
 	}
 
-	ref, err := deps.ReferendumManager.Referendum(referendumID)
-	if err != nil {
-		return nil, err
-	}
-
+	ref := deps.ReferendumManager.Referendum(referendumID)
 	if ref == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "referendum not found: %s", hex.EncodeToString(referendumID[:]))
 	}
