@@ -346,7 +346,7 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 	}
 
 	// Check if we tracked the vote initially, e.g. saved the Message that created this UTXO
-	msg, err := rm.messageForMessageId(spent.MessageID())
+	msg, err := rm.messageForMessageID(spent.MessageID())
 	if err != nil {
 		return err
 	}

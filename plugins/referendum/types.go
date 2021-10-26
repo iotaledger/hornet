@@ -1,5 +1,7 @@
 package referendum
 
+import "github.com/gohornet/hornet/pkg/model/milestone"
+
 // ReferendumsResponse defines the response of a GET RouteReferendums REST API call.
 type ReferendumsResponse struct {
 	// The hex encoded referendum IDs of the found referendums.
@@ -26,4 +28,11 @@ type QuestionStatus struct {
 // ReferendumStatusResponse defines the response of a GET RouteReferendumStatus REST API call.
 type ReferendumStatusResponse struct {
 	Questions []QuestionStatus `json:"questions"`
+}
+
+// OutputStatusResponse defines the response of a GET RouteOutputStatus REST API call.
+type OutputStatusResponse struct {
+	MessageID           string          `json:"messageId"`
+	StartMilestoneIndex milestone.Index `json:"startMilestoneIndex"`
+	EndMilestoneIndex   milestone.Index `json:"endMilestoneIndex"`
 }

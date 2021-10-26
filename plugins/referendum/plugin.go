@@ -25,6 +25,9 @@ import (
 const (
 	// ParameterReferendumID is used to identify a referendum by its ID.
 	ParameterReferendumID = "referendumID"
+
+	// ParameterOutputID is used to identify an output by its ID.
+	ParameterOutputID = "outputID"
 )
 
 const (
@@ -42,6 +45,10 @@ const (
 	// RouteReferendumStatus is the route to access the status of a single referendum by its ID.
 	// GET returns the amount of tokens voting and the weight on each option of every question.
 	RouteReferendumStatus = "/referendums/:" + ParameterReferendumID + "/status"
+
+	// RouteOutputStatus is the route to get the vote status for a given outputID.
+	// GET returns the messageID the vote was included, the starting and ending milestone index this vote was tracked.
+	RouteOutputStatus = "/outputs/:" + ParameterOutputID
 )
 
 func init() {
@@ -149,6 +156,14 @@ func configure() {
 			return err
 		}
 
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteOutputStatus, func(c echo.Context) error {
+		resp, err := getOutputStatus(c)
+		if err != nil {
+			return err
+		}
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 

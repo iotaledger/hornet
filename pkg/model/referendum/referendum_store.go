@@ -14,29 +14,30 @@ import (
 )
 
 var (
+	ErrUnknownVote                  = errors.New("no vote found")
 	ErrInvalidReferendum            = errors.New("invalid referendum")
 	ErrInvalidPreviouslyTrackedVote = errors.New("a previously tracked vote changed and is now invalid")
 	ErrInvalidCurrentVoteBalance    = errors.New("current vote balance invalid")
 )
 
-func messageKeyForMessageId(messageID hornet.MessageID) []byte {
+func messageKeyForMessageID(messageID hornet.MessageID) []byte {
 	m := marshalutil.New(33)
 	m.WriteByte(ReferendumStoreKeyPrefixMessages) // 1 byte
 	m.WriteBytes(messageID)                       // 32 bytes
 	return m.Bytes()
 }
 
-func referendumKeyForReferendumId(referendumID ReferendumID) []byte {
+func referendumKeyForReferendumID(referendumID ReferendumID) []byte {
 	m := marshalutil.New(33)
 	m.WriteByte(ReferendumStoreKeyPrefixMessages) // 1 byte
 	m.WriteBytes(referendumID[:])                 // 32 bytes
 	return m.Bytes()
 }
 
-func voteKeyForOutput(output *utxo.Output) []byte {
+func voteKeyForOutputID(outputID *iotago.UTXOInputID) []byte {
 	m := marshalutil.New(35)
 	m.WriteByte(ReferendumStoreKeyPrefixOutputs) // 1 byte
-	m.WriteBytes(output.OutputID()[:])           // 34 bytes
+	m.WriteBytes(outputID[:])                    // 34 bytes
 	return m.Bytes()
 }
 
@@ -59,11 +60,11 @@ func totalVoteBalanceKeyForQuestionAndAnswer(referendumID ReferendumID, question
 }
 
 func (rm *ReferendumManager) storeMessage(message *storage.Message, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(messageKeyForMessageId(message.MessageID()), message.Data())
+	return mutations.Set(messageKeyForMessageID(message.MessageID()), message.Data())
 }
 
-func (rm *ReferendumManager) messageForMessageId(messageId hornet.MessageID) (*storage.Message, error) {
-	value, err := rm.referendumStore.Get(messageKeyForMessageId(messageId))
+func (rm *ReferendumManager) messageForMessageID(messageId hornet.MessageID) (*storage.Message, error) {
+	value, err := rm.referendumStore.Get(messageKeyForMessageID(messageId))
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		return nil, nil
 	}
@@ -82,12 +83,12 @@ func (rm *ReferendumManager) startVoteAtMilestone(output *utxo.Output, startInde
 	m.WriteUint32(uint32(startIndex)) // 4 bytes
 	m.WriteUint32(0)                  // 4 bytes. Empty end index, since the vote just started to be counted
 
-	return mutations.Set(voteKeyForOutput(output), m.Bytes())
+	return mutations.Set(voteKeyForOutputID(output.OutputID()), m.Bytes())
 }
 
 func (rm *ReferendumManager) endVoteAtMilestone(output *utxo.Output, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
 
-	key := voteKeyForOutput(output)
+	key := voteKeyForOutputID(output.OutputID())
 
 	value, err := rm.referendumStore.Get(key)
 	if err != nil {
@@ -102,6 +103,43 @@ func (rm *ReferendumManager) endVoteAtMilestone(output *utxo.Output, endIndex mi
 	m.WriteUint32(uint32(endIndex))
 
 	return mutations.Set(key, m.Bytes())
+}
+
+func (rm *ReferendumManager) VoteForOutputID(outputID *iotago.UTXOInputID) (messageID hornet.MessageID, startIndex milestone.Index, endIndex milestone.Index, err error) {
+
+	key := voteKeyForOutputID(outputID)
+	value, err := rm.referendumStore.Get(key)
+	if errors.Is(err, kvstore.ErrKeyNotFound) {
+		err = ErrUnknownVote
+		return
+	}
+	if err != nil {
+		return
+	}
+
+	if len(value) != 40 {
+		err = ErrInvalidPreviouslyTrackedVote
+		return
+	}
+
+	m := marshalutil.New(value)
+	if messageID, err = m.ReadBytes(32); err != nil {
+		return
+	}
+
+	start, err := m.ReadUint32()
+	if err != nil {
+		return
+	}
+	startIndex = milestone.Index(start)
+
+	end, err := m.ReadUint32()
+	if err != nil {
+		return
+	}
+	endIndex = milestone.Index(end)
+
+	return
 }
 
 func (rm *ReferendumManager) CurrentBalanceForReferendum(referendumID ReferendumID, questionIdx uint8, answerIdx uint8) (uint64, error) {

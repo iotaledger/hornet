@@ -9,7 +9,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/referendum"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // ReferendumIDFromHex creates a ReferendumID from a hex string representation.
@@ -156,4 +158,36 @@ func getReferendumStatus(c echo.Context) (*ReferendumStatusResponse, error) {
 	}
 
 	return response, nil
+}
+
+func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
+
+	outputIDParam := strings.ToLower(c.Param(ParameterOutputID))
+
+	outputIDBytes, err := hex.DecodeString(outputIDParam)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
+	}
+
+	if len(outputIDBytes) != utxo.OutputIDLength {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
+	}
+
+	var outputID iotago.UTXOInputID
+	copy(outputID[:], outputIDBytes)
+
+	messageID, startIndex, endIndex, err := deps.ReferendumManager.VoteForOutputID(&outputID)
+	if err != nil {
+		if errors.Is(err, referendum.ErrUnknownVote) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", hex.EncodeToString(outputIDBytes))
+		}
+		return nil, err
+	}
+
+	return &OutputStatusResponse{
+		MessageID:           messageID.ToHex(),
+		StartMilestoneIndex: startIndex,
+		EndMilestoneIndex:   endIndex,
+	}, nil
+
 }
