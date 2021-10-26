@@ -19,20 +19,34 @@ var (
 	ErrInvalidCurrentVoteBalance    = errors.New("current vote balance invalid")
 )
 
-func messageKeyForMessageId(messageId hornet.MessageID) []byte {
+func messageKeyForMessageId(messageID hornet.MessageID) []byte {
 	m := marshalutil.New(33)
 	m.WriteByte(ReferendumStoreKeyPrefixMessages) // 1 byte
-	m.WriteBytes(messageId)                       // 32 bytes
+	m.WriteBytes(messageID)                       // 32 bytes
+	return m.Bytes()
+}
+
+func referendumKeyForReferendumId(referendumID ReferendumID) []byte {
+	m := marshalutil.New(33)
+	m.WriteByte(ReferendumStoreKeyPrefixMessages) // 1 byte
+	m.WriteBytes(referendumID[:])                 // 32 bytes
+	return m.Bytes()
+}
+
+func voteKeyForOutput(output *utxo.Output) []byte {
+	m := marshalutil.New(35)
+	m.WriteByte(ReferendumStoreKeyPrefixOutputs) // 1 byte
+	m.WriteBytes(output.OutputID()[:])           // 34 bytes
 	return m.Bytes()
 }
 
 func currentVoteBalanceKeyForQuestionAndAnswer(referendumID ReferendumID, questionIndex uint8, answerIndex uint8) []byte {
-	ms := marshalutil.New(35)
-	ms.WriteByte(ReferendumStoreKeyPrefixCurrentVoteBalanceForQuestionAndAnswer) // 1 byte
-	ms.WriteBytes(referendumID[:])                                               // 32 bytes
-	ms.WriteUint8(questionIndex)                                                 // 1 byte
-	ms.WriteUint8(answerIndex)                                                   // 1 byte
-	return ms.Bytes()
+	m := marshalutil.New(35)
+	m.WriteByte(ReferendumStoreKeyPrefixCurrentVoteBalanceForQuestionAndAnswer) // 1 byte
+	m.WriteBytes(referendumID[:])                                               // 32 bytes
+	m.WriteUint8(questionIndex)                                                 // 1 byte
+	m.WriteUint8(answerIndex)                                                   // 1 byte
+	return m.Bytes()
 }
 
 func totalVoteBalanceKeyForQuestionAndAnswer(referendumID ReferendumID, questionIndex uint8, answerIndex uint8) []byte {
@@ -58,6 +72,36 @@ func (rm *ReferendumManager) messageForMessageId(messageId hornet.MessageID) (*s
 	}
 
 	return storage.MessageFromBytes(value, iotago.DeSeriModeNoValidation)
+}
+
+func (rm *ReferendumManager) startVoteAtMilestone(output *utxo.Output, startIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+
+	// Store the OutputId with the milestone index to track that this vote was counted for this milestone
+	m := marshalutil.New(40)
+	m.WriteBytes(output.MessageID())  // 32 bytes
+	m.WriteUint32(uint32(startIndex)) // 4 bytes
+	m.WriteUint32(0)                  // 4 bytes. Empty end index, since the vote just started to be counted
+
+	return mutations.Set(voteKeyForOutput(output), m.Bytes())
+}
+
+func (rm *ReferendumManager) endVoteAtMilestone(output *utxo.Output, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+
+	key := voteKeyForOutput(output)
+
+	value, err := rm.referendumStore.Get(key)
+	if err != nil {
+		return err
+	}
+
+	if len(value) != 40 {
+		return ErrInvalidPreviouslyTrackedVote
+	}
+
+	m := marshalutil.New(value[:36])
+	m.WriteUint32(uint32(endIndex))
+
+	return mutations.Set(key, m.Bytes())
 }
 
 func (rm *ReferendumManager) CurrentBalanceForReferendum(referendumID ReferendumID, questionIdx uint8, answerIdx uint8) (uint64, error) {

@@ -35,6 +35,7 @@ type ReferendumManager struct {
 	// holds the ReferendumManager options.
 	opts *Options
 
+	//TODO: add health check when the db split is merged
 	referendumStore kvstore.KVStore
 
 	// events of the ReferendumManager.
@@ -320,6 +321,11 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 		return err
 	}
 
+	// Store the vote started at this milestone
+	if err := rm.startVoteAtMilestone(depositOutputs[0], index, mutations); err != nil {
+		mutations.Cancel()
+		return err
+	}
 
 	// Count the new votes by increasing the current vote balance
 	for _, vote := range validVotes {
@@ -369,6 +375,12 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 	}
 
 	mutations := rm.referendumStore.Batched()
+
+	// Store the vote ended at this milestone
+	if err := rm.endVoteAtMilestone(spent.Output(), index, mutations); err != nil {
+		mutations.Cancel()
+		return err
+	}
 
 	// Count the spent votes by decreasing the current vote balance
 	for _, vote := range validVotes {
