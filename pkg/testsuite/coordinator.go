@@ -132,9 +132,20 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 			wfConf = confirmation
 			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
+			if te.OnNewConfirmedMilestone != nil {
+				te.OnNewConfirmedMilestone(confirmation.MilestoneIndex)
+			}
 		},
-		func(index milestone.Index, output *utxo.Output) {},
-		func(index milestone.Index, spent *utxo.Spent) {},
+		func(index milestone.Index, output *utxo.Output) {
+			if te.OnNewOutput != nil {
+				te.OnNewOutput(index, output)
+			}
+		},
+		func(index milestone.Index, spent *utxo.Spent) {
+			if te.OnNewSpent != nil {
+				te.OnNewSpent(index, spent)
+			}
+		},
 		nil,
 	)
 	require.NoError(te.TestInterface, err)
