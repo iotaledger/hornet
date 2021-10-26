@@ -232,7 +232,7 @@ func (env *testEnv) registerSampleReferendum(startMilestoneIndex milestone.Index
 	return referendumID
 }
 
-func (env *testEnv) issueSampleVoteAndMilestone(referendumID referendum.ReferendumID, wallet *utils.HDWallet) {
+func (env *testEnv) issueSampleVoteAndMilestone(referendumID referendum.ReferendumID, wallet *utils.HDWallet) *testsuite.Message {
 
 	votesBuilder := referendum.NewVotesBuilder()
 	votesBuilder.AddVote(&referendum.Vote{
@@ -247,6 +247,8 @@ func (env *testEnv) issueSampleVoteAndMilestone(referendumID referendum.Referend
 
 	_, confStats := env.te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{message.StoredMessageID()}, false)
 	require.Equal(env.t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
+
+	return message
 }
 
 func (env *testEnv) IssueMilestone() {
@@ -419,7 +421,7 @@ func TestSingleReferendumVote(t *testing.T) {
 	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
 
 	// Vote again
-	env.issueSampleVoteAndMilestone(referendumID, env.wallet1) // 6
+	votingMessage := env.issueSampleVoteAndMilestone(referendumID, env.wallet1) // 6
 
 	// Referendum should be accepting votes, but the vote should not be weighted yet, just added to the current status
 	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
@@ -483,4 +485,16 @@ func TestSingleReferendumVote(t *testing.T) {
 	require.Equal(t, env.te.SyncManager().ConfirmedMilestoneIndex(), status.MilestoneIndex)
 	require.Equal(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
 	require.Equal(t, uint64(3_000_000), status.Questions[0].Answers[1].Accumulated)
+
+	env.IssueMilestone() // 11
+
+	messageId, startIndex, endIndex, err := env.rm.VoteForOutputID(votingMessage.GeneratedUTXO().OutputID())
+	require.Equal(t, messageId, votingMessage.StoredMessageID())
+	require.Equal(t, milestone.Index(6), startIndex)
+	require.Equal(t, milestone.Index(0), endIndex) // was never spent, so the vote is still valid, although the referendum ended
+
+	messageFromReferendum, err := env.rm.MessageForMessageID(messageId)
+	require.NoError(t, err)
+	require.NotNil(t, messageFromReferendum)
+	require.Equal(t, messageFromReferendum.Message(), votingMessage.IotaMessage())
 }

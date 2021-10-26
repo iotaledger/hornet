@@ -94,7 +94,7 @@ func (rm *ReferendumManager) storeMessage(message *storage.Message, mutations kv
 	return mutations.Set(messageKeyForMessageID(message.MessageID()), message.Data())
 }
 
-func (rm *ReferendumManager) messageForMessageID(messageId hornet.MessageID) (*storage.Message, error) {
+func (rm *ReferendumManager) MessageForMessageID(messageId hornet.MessageID) (*storage.Message, error) {
 	value, err := rm.referendumStore.Get(messageKeyForMessageID(messageId))
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		return nil, nil

@@ -264,6 +264,10 @@ func (m *Message) GeneratedUTXO() *utxo.Output {
 	return m.sentOutput
 }
 
+func (m *Message) IotaMessage() *iotago.Message {
+	return m.message.Message()
+}
+
 func (m *Message) StoredMessageID() hornet.MessageID {
 	require.NotNil(m.builder.te.TestInterface, m.storedMessageID)
 	return m.storedMessageID
