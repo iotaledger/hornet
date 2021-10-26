@@ -77,7 +77,6 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig        *configuration.Configuration `name:"nodeConfig"`
-	SyncManager       *syncmanager.SyncManager
 	ReferendumManager *referendum.ReferendumManager
 	Tangle            *tangle.Tangle
 	Echo              *echo.Echo
@@ -89,6 +88,7 @@ func provide(c *dig.Container) {
 	type referendumDeps struct {
 		dig.In
 		Storage        *storage.Storage
+		SyncManager    *syncmanager.SyncManager
 		DatabaseEngine database.Engine              `name:"databaseEngine"`
 		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
 	}
@@ -102,6 +102,7 @@ func provide(c *dig.Container) {
 
 		rm, err := referendum.NewManager(
 			deps.Storage,
+			deps.SyncManager,
 			referendumStore,
 			referendum.WithLogger(Plugin.Logger()),
 		)

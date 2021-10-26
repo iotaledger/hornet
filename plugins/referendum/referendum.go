@@ -66,7 +66,7 @@ func createReferendum(c echo.Context) (*CreateReferendumResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request! Error: %s", err)
 	}
 
-	referendumID, err := deps.ReferendumManager.StoreReferendum(referendum, deps.SyncManager.ConfirmedMilestoneIndex())
+	referendumID, err := deps.ReferendumManager.StoreReferendum(referendum)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid referendum, error: %s", err)
 	}
