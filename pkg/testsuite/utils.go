@@ -15,8 +15,9 @@ import (
 )
 
 type MessageBuilder struct {
-	te         *TestEnvironment
-	indexation string
+	te             *TestEnvironment
+	indexation     string
+	indexationData []byte
 
 	parents hornet.MessageIDs
 
@@ -84,6 +85,11 @@ func (b *MessageBuilder) UsingOutput(output *utxo.Output) *MessageBuilder {
 	return b
 }
 
+func (b *MessageBuilder) IndexationData(data []byte) *MessageBuilder {
+	b.indexationData = data
+	return b
+}
+
 func (b *MessageBuilder) BuildIndexation() *Message {
 
 	require.NotEmpty(b.te.TestInterface, b.indexation)
@@ -95,7 +101,7 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 		parents = append(parents, parent[:])
 	}
 
-	msg, err := iotago.NewMessageBuilder().Parents(parents).Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil}).Build()
+	msg, err := iotago.NewMessageBuilder().Parents(parents).Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData}).Build()
 	require.NoError(b.te.TestInterface, err)
 
 	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
@@ -165,7 +171,7 @@ func (b *MessageBuilder) Build() *Message {
 	}
 
 	require.NotEmpty(b.te.TestInterface, b.indexation)
-	builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil})
+	builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData})
 
 	// Sign transaction
 	inputPrivateKey, _ := b.fromWallet.KeyPair()
