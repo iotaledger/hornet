@@ -193,13 +193,11 @@ func TestTestEnv(t *testing.T) {
 	require.NotNil(t, env)
 }
 
-func (env *testEnv) registerDefaultReferendum(startOffset milestone.Index, holdingDuration milestone.Index, duration milestone.Index) referendum.ReferendumID {
+func (env *testEnv) registerSampleReferendum(startMilestoneIndex milestone.Index, startPhaseDuration milestone.Index, holdingDuration milestone.Index) referendum.ReferendumID {
 
-	confirmedMilestoneIndex := env.te.SyncManager().ConfirmedMilestoneIndex()
-
-	referendumStartIndex := confirmedMilestoneIndex + startOffset
-	referendumStartHoldingIndex := referendumStartIndex + holdingDuration
-	referendumEndIndex := referendumStartHoldingIndex + duration
+	referendumStartIndex := startMilestoneIndex
+	referendumStartHoldingIndex := referendumStartIndex + startPhaseDuration
+	referendumEndIndex := referendumStartHoldingIndex + holdingDuration
 
 	referendumBuilder := referendum.NewReferendumBuilder("All 4 HORNET", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "The biggest governance decision in the history of IOTA")
 
@@ -229,50 +227,156 @@ func (env *testEnv) registerDefaultReferendum(startOffset milestone.Index, holdi
 	// Check the stored referendum is still there
 	require.NotNil(env.t, env.rm.Referendum(referendumID))
 
-	j, err := json.MarshalIndent(ref, "", "  ")
-	require.NoError(env.t, err)
-	fmt.Println(string(j))
+	printJSON(env.t, ref)
 
 	return referendumID
+}
+
+func (env *testEnv) issueSampleVoteAndMilestone(referendumID referendum.ReferendumID, wallet *utils.HDWallet) {
+
+	votesBuilder := referendum.NewVotesBuilder()
+	votesBuilder.AddVote(&referendum.Vote{
+		ReferendumID: referendumID,
+		Answers:      []byte{byte(1)},
+	})
+
+	votes, err := votesBuilder.Build()
+	require.NoError(env.t, err)
+
+	message := env.IssueVote(wallet, wallet.Balance(), votes)
+
+	_, confStats := env.te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{message.StoredMessageID()}, false)
+	require.Equal(env.t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
+}
+
+func (env *testEnv) IssueMilestone() {
+	env.te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{env.te.LastMilestoneMessageID}, false)
+}
+
+func printJSON(t *testing.T, i interface{}) {
+	j, err := json.MarshalIndent(i, "", "  ")
+	require.NoError(t, err)
+	fmt.Println(string(j))
+}
+
+func TestReferendumStateHelpers(t *testing.T) {
+
+	referendumStartIndex := milestone.Index(90)
+	referendumStartHoldingIndex := milestone.Index(100)
+	referendumEndIndex := milestone.Index(200)
+
+	referendumBuilder := referendum.NewReferendumBuilder("Test", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "Sample")
+
+	questionBuilder := referendum.NewQuestionBuilder("Q1", "-")
+	questionBuilder.AddAnswer(&referendum.Answer{
+		Index:          1,
+		Text:           "A1",
+		AdditionalInfo: "-",
+	})
+	questionBuilder.AddAnswer(&referendum.Answer{
+		Index:          2,
+		Text:           "A2",
+		AdditionalInfo: "-",
+	})
+
+	question, err := questionBuilder.Build()
+	require.NoError(t, err)
+
+	referendumBuilder.AddQuestion(question)
+
+	ref, err := referendumBuilder.Build()
+	require.NoError(t, err)
+
+	// Verify ReferendumIsAcceptingVotes
+	require.False(t, referendum.ReferendumIsAcceptingVotes(ref, 89))
+	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 90))
+	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 91))
+	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 99))
+	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 100))
+	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 101))
+	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 199))
+	require.False(t, referendum.ReferendumIsAcceptingVotes(ref, 200))
+	require.False(t, referendum.ReferendumIsAcceptingVotes(ref, 201))
+
+	// Verify ReferendumIsCountingVotes
+	require.False(t, referendum.ReferendumIsCountingVotes(ref, 89))
+	require.False(t, referendum.ReferendumIsCountingVotes(ref, 90))
+	require.False(t, referendum.ReferendumIsCountingVotes(ref, 91))
+	require.False(t, referendum.ReferendumIsCountingVotes(ref, 99))
+	require.True(t, referendum.ReferendumIsCountingVotes(ref, 100))
+	require.True(t, referendum.ReferendumIsCountingVotes(ref, 101))
+	require.True(t, referendum.ReferendumIsCountingVotes(ref, 199))
+	require.False(t, referendum.ReferendumIsCountingVotes(ref, 200))
+	require.False(t, referendum.ReferendumIsCountingVotes(ref, 201))
+
+	// Verify ReferendumShouldAcceptVotes
+	require.False(t, referendum.ReferendumShouldAcceptVotes(ref, 89))
+	require.False(t, referendum.ReferendumShouldAcceptVotes(ref, 90))
+	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 91))
+	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 99))
+	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 100))
+	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 101))
+	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 199))
+	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 200))
+	require.False(t, referendum.ReferendumShouldAcceptVotes(ref, 201))
+
+	// Verify ReferendumShouldCountVotes
+	require.False(t, referendum.ReferendumShouldCountVotes(ref, 89))
+	require.False(t, referendum.ReferendumShouldCountVotes(ref, 90))
+	require.False(t, referendum.ReferendumShouldCountVotes(ref, 91))
+	require.False(t, referendum.ReferendumShouldCountVotes(ref, 99))
+	require.False(t, referendum.ReferendumShouldCountVotes(ref, 100))
+	require.True(t, referendum.ReferendumShouldCountVotes(ref, 101))
+	require.True(t, referendum.ReferendumShouldCountVotes(ref, 199))
+	require.True(t, referendum.ReferendumShouldCountVotes(ref, 200))
+	require.False(t, referendum.ReferendumShouldCountVotes(ref, 201))
 }
 
 func TestReferendumStates(t *testing.T) {
 	env := newEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
-	confirmedMilestoneIndex := env.te.SyncManager().ConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := env.te.SyncManager().ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
 	require.Empty(t, env.rm.Referendums())
-	referendumID := env.registerDefaultReferendum(1, 1, 1)
+	referendumID := env.registerSampleReferendum(5, 1, 2)
 
 	ref := env.rm.Referendum(referendumID)
 	require.NotNil(t, ref)
 
 	// Verify the configured referendum indexes
-	require.Equal(t, confirmedMilestoneIndex+1, ref.MilestoneStart)
-	require.Equal(t, confirmedMilestoneIndex+2, ref.MilestoneStartHolding)
-	require.Equal(t, confirmedMilestoneIndex+3, ref.MilestoneEnd)
+	require.Equal(t, milestone.Index(5), ref.MilestoneStart)
+	require.Equal(t, milestone.Index(6), ref.MilestoneStartHolding)
+	require.Equal(t, milestone.Index(8), ref.MilestoneEnd)
 
 	// No referendum should be running right now
 	require.Equal(t, 1, len(env.rm.Referendums()))
 	require.Equal(t, 0, len(env.rm.ReferendumsAcceptingVotes()))
 	require.Equal(t, 0, len(env.rm.ReferendumsCountingVotes()))
 
-	env.te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{env.te.LastMilestoneMessageID}, false)
+	env.IssueMilestone() // 5
 
 	// Referendum should be accepting votes, but not counting
 	require.Equal(t, 1, len(env.rm.Referendums()))
 	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
 	require.Equal(t, 0, len(env.rm.ReferendumsCountingVotes()))
 
-	env.te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{env.te.LastMilestoneMessageID}, false)
+	env.IssueMilestone() // 6
 
 	// Referendum should be accepting and counting votes
 	require.Equal(t, 1, len(env.rm.Referendums()))
 	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
 	require.Equal(t, 1, len(env.rm.ReferendumsCountingVotes()))
 
-	env.te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{env.te.LastMilestoneMessageID}, false)
+	env.IssueMilestone() // 7
+
+	// Referendum should be ended
+	require.Equal(t, 1, len(env.rm.Referendums()))
+	require.Equal(t, 1, len(env.rm.ReferendumsAcceptingVotes()))
+	require.Equal(t, 1, len(env.rm.ReferendumsCountingVotes()))
+
+	env.IssueMilestone() // 8
 
 	// Referendum should be ended
 	require.Equal(t, 1, len(env.rm.Referendums()))
