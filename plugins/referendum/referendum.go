@@ -134,18 +134,29 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 	var outputID iotago.UTXOInputID
 	copy(outputID[:], outputIDBytes)
 
-	trackedVote, err := deps.ReferendumManager.VoteForOutputID(&outputID)
+	trackedVotes, err := deps.ReferendumManager.VotesForOutputID(&outputID)
 	if err != nil {
-		if errors.Is(err, referendum.ErrUnknownVote) {
-			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", hex.EncodeToString(outputIDBytes))
-		}
 		return nil, err
 	}
 
-	return &OutputStatusResponse{
-		MessageID:           trackedVote.MessageID.ToHex(),
-		StartMilestoneIndex: trackedVote.StartIndex,
-		EndMilestoneIndex:   trackedVote.EndIndex,
-	}, nil
+	if len(trackedVotes) == 0 {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", hex.EncodeToString(outputIDBytes))
+	}
+
+	response := &OutputStatusResponse{
+		ReferendumVotes: make(map[string]*TrackedVote),
+	}
+
+	for _, trackedVote := range trackedVotes {
+		t := &TrackedVote{
+			MessageID:           trackedVote.MessageID.ToHex(),
+			Amount:              trackedVote.Amount,
+			StartMilestoneIndex: trackedVote.StartIndex,
+			EndMilestoneIndex:   trackedVote.EndIndex,
+		}
+		response.ReferendumVotes[hex.EncodeToString(trackedVote.ReferendumID[:])] = t
+	}
+
+	return response, nil
 
 }

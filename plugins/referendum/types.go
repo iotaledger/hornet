@@ -14,9 +14,15 @@ type CreateReferendumResponse struct {
 	ReferendumID string `json:"referendumId"`
 }
 
-// OutputStatusResponse defines the response of a GET RouteOutputStatus REST API call.
-type OutputStatusResponse struct {
+// TrackedVote holds the information for each tracked vote.
+type TrackedVote struct {
 	MessageID           string          `json:"messageId"`
+	Amount              uint64          `json:"amount"`
 	StartMilestoneIndex milestone.Index `json:"startMilestoneIndex"`
 	EndMilestoneIndex   milestone.Index `json:"endMilestoneIndex"`
+}
+
+// OutputStatusResponse defines the response of a GET RouteOutputStatus REST API call.
+type OutputStatusResponse struct {
+	ReferendumVotes map[string]*TrackedVote `json:"referendumVotes"`
 }

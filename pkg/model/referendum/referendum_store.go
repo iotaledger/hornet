@@ -108,34 +108,60 @@ func (rm *ReferendumManager) MessageForMessageID(messageId hornet.MessageID) (*s
 
 // Outputs
 
-func voteKeyForOutputID(outputID *iotago.UTXOInputID) []byte {
-	m := marshalutil.New(35)
-	m.WriteByte(ReferendumStoreKeyPrefixOutputs) // 1 byte
-	m.WriteBytes(outputID[:])                    // 34 bytes
+func voteKeyForReferendumIDOutputsPrefix(referendumID ReferendumID) []byte {
+	m := marshalutil.New(33)
+	m.WriteByte(ReferendumStoreKeyPrefixReferendumOutputs) // 1 byte
+	m.WriteBytes(referendumID[:])                          // 32 bytes
 	return m.Bytes()
 }
 
-func voteKeyForSpentOutputID(outputID *iotago.UTXOInputID) []byte {
-	m := marshalutil.New(35)
-	m.WriteByte(ReferendumStoreKeyPrefixSpentOutputs) // 1 byte
-	m.WriteBytes(outputID[:])                         // 34 bytes
+func voteKeyForReferendumIDAndOutputID(referendumID ReferendumID, outputID *iotago.UTXOInputID) []byte {
+	m := marshalutil.New(67)
+	m.WriteBytes(voteKeyForReferendumIDOutputsPrefix(referendumID)) // 32 bytes
+	m.WriteBytes(outputID[:])                                       // 34 bytes
+	return m.Bytes()
+}
+
+func voteKeyForReferendumIDSpentOutputsPrefix(referendumID ReferendumID) []byte {
+	m := marshalutil.New(33)
+	m.WriteByte(ReferendumStoreKeyPrefixReferendumSpentOutputs) // 1 byte
+	m.WriteBytes(referendumID[:])                               // 32 bytes
+	return m.Bytes()
+}
+
+func voteKeyForReferendumIDAndSpentOutputID(referendumID ReferendumID, outputID *iotago.UTXOInputID) []byte {
+	m := marshalutil.New(67)
+	m.WriteBytes(voteKeyForReferendumIDSpentOutputsPrefix(referendumID)) // 33 bytes
+	m.WriteBytes(outputID[:])                                            // 34 bytes
 	return m.Bytes()
 }
 
 type TrackedVote struct {
-	OutputID   *iotago.UTXOInputID
-	MessageID  hornet.MessageID
-	StartIndex milestone.Index
-	EndIndex   milestone.Index
+	ReferendumID ReferendumID
+	OutputID     *iotago.UTXOInputID
+	MessageID    hornet.MessageID
+	Amount       uint64
+	StartIndex   milestone.Index
+	EndIndex     milestone.Index
+}
+
+func ParseReferendumID(ms *marshalutil.MarshalUtil) (ReferendumID, error) {
+	bytes, err := ms.ReadBytes(ReferendumIDLength)
+	if err != nil {
+		return NullReferendumID, err
+	}
+	o := ReferendumID{}
+	copy(o[:], bytes)
+	return o, nil
 }
 
 func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
 
-	if len(key) != 35 {
+	if len(key) != 67 {
 		return nil, ErrInvalidPreviouslyTrackedVote
 	}
 
-	if len(value) != 40 {
+	if len(value) != 48 {
 		return nil, ErrInvalidPreviouslyTrackedVote
 	}
 
@@ -143,6 +169,12 @@ func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
 
 	// Skip prefix
 	if _, err := mKey.ReadByte(); err != nil {
+		return nil, err
+	}
+
+	// Read ReferendumID
+	referendumID, err := ParseReferendumID(mKey)
+	if err != nil {
 		return nil, err
 	}
 
@@ -159,6 +191,11 @@ func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
 		return nil, err
 	}
 
+	amount, err := mValue.ReadUint64()
+	if err != nil {
+		return nil, err
+	}
+
 	start, err := mValue.ReadUint32()
 	if err != nil {
 		return nil, err
@@ -170,17 +207,47 @@ func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
 	}
 
 	return &TrackedVote{
-		OutputID:   outputID,
-		MessageID:  messageID,
-		StartIndex: milestone.Index(start),
-		EndIndex:   milestone.Index(end),
+		ReferendumID: referendumID,
+		OutputID:     outputID,
+		MessageID:    messageID,
+		Amount:       amount,
+		StartIndex:   milestone.Index(start),
+		EndIndex:     milestone.Index(end),
 	}, nil
 }
 
-func (rm *ReferendumManager) VoteForOutputID(outputID *iotago.UTXOInputID) (*TrackedVote, error) {
+func (t *TrackedVote) valueBytes() []byte {
+	m := marshalutil.New(48)
+	m.WriteBytes(t.MessageID) // 32 bytes
+	m.WriteUint64(t.Amount)
+	m.WriteUint32(uint32(t.StartIndex)) // 4 bytes
+	m.WriteUint32(uint32(t.EndIndex))   // 4 bytes
+	return m.Bytes()
+}
 
-	readOutput := func(outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
-		key := voteKeyForOutputID(outputID)
+func (rm *ReferendumManager) VotesForOutputID(outputID *iotago.UTXOInputID) ([]*TrackedVote, error) {
+
+	referendumIDs := rm.ReferendumIDs()
+
+	trackedVotes := []*TrackedVote{}
+	for _, referendumID := range referendumIDs {
+		vote, err := rm.VoteForOutputID(referendumID, outputID)
+		if err != nil {
+			if errors.Is(err, ErrUnknownVote) {
+				continue
+			}
+			return nil, err
+		}
+		trackedVotes = append(trackedVotes, vote)
+	}
+
+	return trackedVotes, nil
+}
+
+func (rm *ReferendumManager) VoteForOutputID(referendumID ReferendumID, outputID *iotago.UTXOInputID) (*TrackedVote, error) {
+
+	readOutput := func(referendumID ReferendumID, outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
+		key := voteKeyForReferendumIDAndOutputID(referendumID, outputID)
 		value, err := rm.referendumStore.Get(key)
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, nil, ErrUnknownVote
@@ -191,8 +258,8 @@ func (rm *ReferendumManager) VoteForOutputID(outputID *iotago.UTXOInputID) (*Tra
 		return key, value, nil
 	}
 
-	readSpent := func(outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
-		key := voteKeyForSpentOutputID(outputID)
+	readSpent := func(referendumID ReferendumID, outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
+		key := voteKeyForReferendumIDAndSpentOutputID(referendumID, outputID)
 		value, err := rm.referendumStore.Get(key)
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, nil, ErrUnknownVote
@@ -207,9 +274,9 @@ func (rm *ReferendumManager) VoteForOutputID(outputID *iotago.UTXOInputID) (*Tra
 	var value kvstore.Value
 	var err error
 
-	key, value, err = readOutput(outputID)
+	key, value, err = readOutput(referendumID, outputID)
 	if errors.Is(err, ErrUnknownVote) {
-		key, value, err = readSpent(outputID)
+		key, value, err = readSpent(referendumID, outputID)
 	}
 
 	if err != nil {
@@ -244,7 +311,7 @@ func iterateOptions(optionalOptions []IterateOption) *IterateOptions {
 
 type TrackedVoteConsumer func(trackedVote *TrackedVote) bool
 
-func (rm *ReferendumManager) ForEachActiveVote(consumer TrackedVoteConsumer, options ...IterateOption) error {
+func (rm *ReferendumManager) ForEachActiveVote(referendumID ReferendumID, consumer TrackedVoteConsumer, options ...IterateOption) error {
 
 	opt := iterateOptions(options)
 
@@ -252,7 +319,7 @@ func (rm *ReferendumManager) ForEachActiveVote(consumer TrackedVoteConsumer, opt
 
 	var innerErr error
 	var i int
-	if err := rm.referendumStore.Iterate([]byte{ReferendumStoreKeyPrefixOutputs}, func(key kvstore.Key, value kvstore.Value) bool {
+	if err := rm.referendumStore.Iterate(voteKeyForReferendumIDOutputsPrefix(referendumID), func(key kvstore.Key, value kvstore.Value) bool {
 
 		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
@@ -274,7 +341,7 @@ func (rm *ReferendumManager) ForEachActiveVote(consumer TrackedVoteConsumer, opt
 	return innerErr
 }
 
-func (rm *ReferendumManager) ForEachPastVote(consumer TrackedVoteConsumer, options ...IterateOption) error {
+func (rm *ReferendumManager) ForEachPastVote(referendumID ReferendumID, consumer TrackedVoteConsumer, options ...IterateOption) error {
 
 	opt := iterateOptions(options)
 
@@ -282,7 +349,7 @@ func (rm *ReferendumManager) ForEachPastVote(consumer TrackedVoteConsumer, optio
 
 	var innerErr error
 	var i int
-	if err := rm.referendumStore.Iterate([]byte{ReferendumStoreKeyPrefixSpentOutputs}, func(key kvstore.Key, value kvstore.Value) bool {
+	if err := rm.referendumStore.Iterate(voteKeyForReferendumIDSpentOutputsPrefix(referendumID), func(key kvstore.Key, value kvstore.Value) bool {
 
 		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
@@ -324,33 +391,35 @@ func totalVoteBalanceKeyForQuestionAndAnswer(referendumID ReferendumID, question
 	return ms.Bytes()
 }
 
-func (rm *ReferendumManager) startVoteAtMilestone(output *utxo.Output, startIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+func (rm *ReferendumManager) startVoteAtMilestone(referendumID ReferendumID, output *utxo.Output, startIndex milestone.Index, mutations kvstore.BatchedMutations) error {
 
-	// Store the OutputId with the milestone index to track that this vote was counted for this milestone
-	m := marshalutil.New(40)
-	m.WriteBytes(output.MessageID())  // 32 bytes
-	m.WriteUint32(uint32(startIndex)) // 4 bytes
-	m.WriteUint32(0)                  // 4 bytes. Empty end index, since the vote just started to be counted
+	trackedVote := &TrackedVote{
+		ReferendumID: referendumID,
+		OutputID:     output.OutputID(),
+		MessageID:    output.MessageID(),
+		Amount:       output.Amount(),
+		StartIndex:   startIndex,
+		EndIndex:     0,
+	}
 
-	return mutations.Set(voteKeyForOutputID(output.OutputID()), m.Bytes())
+	return mutations.Set(voteKeyForReferendumIDAndOutputID(referendumID, output.OutputID()), trackedVote.valueBytes())
 }
 
-func (rm *ReferendumManager) endVoteAtMilestone(output *utxo.Output, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+func (rm *ReferendumManager) endVoteAtMilestone(referendumID ReferendumID, output *utxo.Output, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
 
-	key := voteKeyForOutputID(output.OutputID())
+	key := voteKeyForReferendumIDAndOutputID(referendumID, output.OutputID())
 
 	value, err := rm.referendumStore.Get(key)
 	if err != nil {
 		return err
 	}
 
-	if len(value) != 40 {
-		return ErrInvalidPreviouslyTrackedVote
+	trackedVote, err := trackedVote(key, value)
+	if err != nil {
+		return err
 	}
 
-	m := marshalutil.New(40)
-	m.WriteBytes(value[:36])
-	m.WriteUint32(uint32(endIndex))
+	trackedVote.EndIndex = endIndex
 
 	// Delete the entry from the Outputs list
 	if err := mutations.Delete(key); err != nil {
@@ -358,7 +427,7 @@ func (rm *ReferendumManager) endVoteAtMilestone(output *utxo.Output, endIndex mi
 	}
 
 	// Add the entry to the Spent list
-	return mutations.Set(voteKeyForSpentOutputID(output.OutputID()), m.Bytes())
+	return mutations.Set(voteKeyForReferendumIDAndSpentOutputID(referendumID, output.OutputID()), trackedVote.valueBytes())
 }
 
 func (rm *ReferendumManager) CurrentBalanceForReferendum(referendumID ReferendumID, questionIdx uint8, answerIdx uint8) (uint64, error) {
