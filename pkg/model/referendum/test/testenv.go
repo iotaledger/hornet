@@ -166,6 +166,10 @@ func (env *ReferendumTestEnv) ConfirmedMilestoneIndex() milestone.Index {
 	return env.te.SyncManager().ConfirmedMilestoneIndex()
 }
 
+func (env *ReferendumTestEnv) LastMilestoneMessageID() hornet.MessageID {
+	return env.te.LastMilestoneMessageID
+}
+
 func (env *ReferendumTestEnv) Cleanup() {
 	env.rm.CloseDatabase()
 	env.te.CleanupTestEnvironment(true)

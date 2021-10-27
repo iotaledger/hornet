@@ -196,7 +196,8 @@ func (rm *ReferendumManager) endVoteAtMilestone(output *utxo.Output, endIndex mi
 		return ErrInvalidPreviouslyTrackedVote
 	}
 
-	m := marshalutil.New(value[:36])
+	m := marshalutil.New(40)
+	m.WriteBytes(value[:36])
 	m.WriteUint32(uint32(endIndex))
 
 	return mutations.Set(key, m.Bytes())

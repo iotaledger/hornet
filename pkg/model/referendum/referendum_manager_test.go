@@ -247,3 +247,123 @@ func TestSingleReferendumVote(t *testing.T) {
 	require.NotNil(t, messageFromReferendum)
 	require.Equal(t, messageFromReferendum.Message(), votingMessage.IotaMessage())
 }
+
+func TestReferendumVoteCancel(t *testing.T) {
+	env := test.NewReferendumTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	defer env.Cleanup()
+
+	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	referendumID := env.RegisterSampleReferendum(5, 2, 5)
+
+	ref := env.ReferendumManager().Referendum(referendumID)
+	require.NotNil(t, ref)
+
+	// Verify the configured referendum indexes
+	require.Equal(t, milestone.Index(5), ref.MilestoneStart)
+	require.Equal(t, milestone.Index(7), ref.MilestoneStartHolding)
+	require.Equal(t, milestone.Index(12), ref.MilestoneEnd)
+
+	// Referendum should not be accepting votes yet
+	require.Equal(t, 0, len(env.ReferendumManager().ReferendumsAcceptingVotes()))
+
+	env.IssueMilestone() // 5
+
+	// Issue a vote and milestone
+	vote1Msg := env.IssueSampleVoteAndMilestone(referendumID, env.Wallet1) // 6
+
+	// Verify vote
+	status, err := env.ReferendumManager().ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Accumulated)
+
+	// Cancel vote
+	cancelVote1Msg := env.CancelVote(env.Wallet1)
+	env.IssueMilestone(cancelVote1Msg.StoredMessageID(), env.LastMilestoneMessageID()) // 7
+
+	// Verify vote
+	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Accumulated)
+
+	// Vote again
+	vote2Msg := env.IssueSampleVoteAndMilestone(referendumID, env.Wallet1) // 8
+
+	// Verify vote
+	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Accumulated)
+
+	// Cancel vote
+	cancelVote2Msg := env.CancelVote(env.Wallet1)
+	env.IssueMilestone(cancelVote2Msg.StoredMessageID(), env.LastMilestoneMessageID()) // 9
+
+	// Verify vote
+	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Accumulated)
+
+	env.IssueMilestone() // 10
+
+	// Verify vote
+	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Accumulated)
+
+	// Vote again
+	vote3Msg := env.IssueSampleVoteAndMilestone(referendumID, env.Wallet1) // 11
+
+	// Verify vote
+	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(2_000_000), status.Questions[0].Answers[1].Accumulated)
+
+	env.IssueMilestone() // 12
+
+	// Verify vote
+	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
+	require.Exactly(t, uint64(3_000_000), status.Questions[0].Answers[1].Accumulated)
+
+	// Verify the vote history
+	vote1MessageId, vote1StartIndex, vote1EndIndex, err := env.ReferendumManager().VoteForOutputID(vote1Msg.GeneratedUTXO().OutputID())
+	require.NoError(t, err)
+	require.Equal(t, vote1MessageId, vote1Msg.StoredMessageID())
+	require.Equal(t, milestone.Index(6), vote1StartIndex)
+	require.Equal(t, milestone.Index(7), vote1EndIndex)
+
+	vote2MessageId, vote2StartIndex, vote2EndIndex, err := env.ReferendumManager().VoteForOutputID(vote2Msg.GeneratedUTXO().OutputID())
+	require.NoError(t, err)
+	require.Equal(t, vote2MessageId, vote2Msg.StoredMessageID())
+	require.Equal(t, milestone.Index(8), vote2StartIndex)
+	require.Equal(t, milestone.Index(9), vote2EndIndex)
+
+	vote3MessageId, vote3StartIndex, vote3EndIndex, err := env.ReferendumManager().VoteForOutputID(vote3Msg.GeneratedUTXO().OutputID())
+	require.NoError(t, err)
+	require.Equal(t, vote3MessageId, vote3Msg.StoredMessageID())
+	require.Equal(t, milestone.Index(11), vote3StartIndex)
+	require.Equal(t, milestone.Index(0), vote3EndIndex)
+
+}
