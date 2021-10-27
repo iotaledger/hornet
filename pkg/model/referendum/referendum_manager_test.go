@@ -107,9 +107,9 @@ func TestReferendumStates(t *testing.T) {
 	require.NotNil(t, ref)
 
 	// Verify the configured referendum indexes
-	require.Equal(t, milestone.Index(5), ref.MilestoneStart())
-	require.Equal(t, milestone.Index(6), ref.MilestoneStartHolding())
-	require.Equal(t, milestone.Index(8), ref.MilestoneEnd())
+	require.Equal(t, milestone.Index(5), ref.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(6), ref.StartHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(8), ref.EndMilestoneIndex())
 
 	// No referendum should be running right now
 	require.Equal(t, 1, len(env.ReferendumManager().Referendums()))
@@ -158,9 +158,9 @@ func TestSingleReferendumVote(t *testing.T) {
 	require.NotNil(t, ref)
 
 	// Verify the configured referendum indexes
-	require.Equal(t, milestone.Index(5), ref.MilestoneStart())
-	require.Equal(t, milestone.Index(7), ref.MilestoneStartHolding())
-	require.Equal(t, milestone.Index(10), ref.MilestoneEnd())
+	require.Equal(t, milestone.Index(5), ref.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(10), ref.EndMilestoneIndex())
 
 	// Referendum should not be accepting votes yet
 	require.Equal(t, 0, len(env.ReferendumManager().ReferendumsAcceptingVotes()))
@@ -271,9 +271,9 @@ func TestReferendumVoteCancel(t *testing.T) {
 	require.NotNil(t, ref)
 
 	// Verify the configured referendum indexes
-	require.Equal(t, milestone.Index(5), ref.MilestoneStart())
-	require.Equal(t, milestone.Index(7), ref.MilestoneStartHolding())
-	require.Equal(t, milestone.Index(12), ref.MilestoneEnd())
+	require.Equal(t, milestone.Index(5), ref.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
 
 	// Referendum should not be accepting votes yet
 	require.Equal(t, 0, len(env.ReferendumManager().ReferendumsAcceptingVotes()))

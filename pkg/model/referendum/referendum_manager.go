@@ -178,11 +178,11 @@ func (rm *ReferendumManager) StoreReferendum(referendum *Referendum) (Referendum
 
 	confirmedMilestoneIndex := rm.syncManager.ConfirmedMilestoneIndex()
 
-	if confirmedMilestoneIndex >= referendum.MilestoneEnd() {
+	if confirmedMilestoneIndex >= referendum.EndMilestoneIndex() {
 		return NullReferendumID, ErrReferendumAlreadyEnded
 	}
 
-	if confirmedMilestoneIndex >= referendum.MilestoneStart() {
+	if confirmedMilestoneIndex >= referendum.StartMilestoneIndex() {
 		return NullReferendumID, ErrReferendumAlreadyStarted
 	}
 
@@ -483,7 +483,7 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 		}
 
 		// End all votes if referendum is ending this milestone
-		if referendum.MilestoneEnd() == index {
+		if referendum.EndMilestoneIndex() == index {
 			if err := rm.endAllVotesAtMilestone(referendumID, index, mutations); err != nil {
 				mutations.Cancel()
 				return err

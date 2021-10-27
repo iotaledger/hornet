@@ -11,12 +11,12 @@ import (
 func NewReferendumBuilder(name string, milestoneStart milestone.Index, milestoneStartHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *ReferendumBuilder {
 	return &ReferendumBuilder{
 		r: &Referendum{
-			Name:                  name,
-			milestoneStart:        uint32(milestoneStart),
-			milestoneStartHolding: uint32(milestoneStartHolding),
-			milestoneEnd:          uint32(milestoneEnd),
-			Questions:             iotago.Serializables{},
-			AdditionalInfo:        additionalInfo,
+			Name:                       name,
+			milestoneIndexStart:        uint32(milestoneStart),
+			milestoneIndexStartHolding: uint32(milestoneStartHolding),
+			milestoneIndexEnd:          uint32(milestoneEnd),
+			Questions:                  iotago.Serializables{},
+			AdditionalInfo:             additionalInfo,
 		},
 	}
 }
