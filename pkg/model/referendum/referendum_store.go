@@ -115,41 +115,193 @@ func voteKeyForOutputID(outputID *iotago.UTXOInputID) []byte {
 	return m.Bytes()
 }
 
-func (rm *ReferendumManager) VoteForOutputID(outputID *iotago.UTXOInputID) (messageID hornet.MessageID, startIndex milestone.Index, endIndex milestone.Index, err error) {
+func voteKeyForSpentOutputID(outputID *iotago.UTXOInputID) []byte {
+	m := marshalutil.New(35)
+	m.WriteByte(ReferendumStoreKeyPrefixSpentOutputs) // 1 byte
+	m.WriteBytes(outputID[:])                         // 34 bytes
+	return m.Bytes()
+}
 
-	key := voteKeyForOutputID(outputID)
-	value, err := rm.referendumStore.Get(key)
-	if errors.Is(err, kvstore.ErrKeyNotFound) {
-		err = ErrUnknownVote
-		return
-	}
-	if err != nil {
-		return
+type TrackedVote struct {
+	OutputID   *iotago.UTXOInputID
+	MessageID  hornet.MessageID
+	StartIndex milestone.Index
+	EndIndex   milestone.Index
+}
+
+func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
+
+	if len(key) != 35 {
+		return nil, ErrInvalidPreviouslyTrackedVote
 	}
 
 	if len(value) != 40 {
-		err = ErrInvalidPreviouslyTrackedVote
-		return
+		return nil, ErrInvalidPreviouslyTrackedVote
 	}
 
-	m := marshalutil.New(value)
-	if messageID, err = m.ReadBytes(32); err != nil {
-		return
+	mKey := marshalutil.New(key)
+
+	// Skip prefix
+	if _, err := mKey.ReadByte(); err != nil {
+		return nil, err
 	}
 
-	start, err := m.ReadUint32()
+	// Read OutputID
+	outputID, err := utxo.ParseOutputID(mKey)
 	if err != nil {
-		return
+		return nil, err
 	}
-	startIndex = milestone.Index(start)
 
-	end, err := m.ReadUint32()
+	mValue := marshalutil.New(value)
+
+	messageID, err := utxo.ParseMessageID(mValue)
 	if err != nil {
-		return
+		return nil, err
 	}
-	endIndex = milestone.Index(end)
 
-	return
+	start, err := mValue.ReadUint32()
+	if err != nil {
+		return nil, err
+	}
+
+	end, err := mValue.ReadUint32()
+	if err != nil {
+		return nil, err
+	}
+
+	return &TrackedVote{
+		OutputID:   outputID,
+		MessageID:  messageID,
+		StartIndex: milestone.Index(start),
+		EndIndex:   milestone.Index(end),
+	}, nil
+}
+
+func (rm *ReferendumManager) VoteForOutputID(outputID *iotago.UTXOInputID) (*TrackedVote, error) {
+
+	readOutput := func(outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
+		key := voteKeyForOutputID(outputID)
+		value, err := rm.referendumStore.Get(key)
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, nil, ErrUnknownVote
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+		return key, value, nil
+	}
+
+	readSpent := func(outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
+		key := voteKeyForSpentOutputID(outputID)
+		value, err := rm.referendumStore.Get(key)
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, nil, ErrUnknownVote
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+		return key, value, nil
+	}
+
+	var key kvstore.Key
+	var value kvstore.Value
+	var err error
+
+	key, value, err = readOutput(outputID)
+	if errors.Is(err, ErrUnknownVote) {
+		key, value, err = readSpent(outputID)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return trackedVote(key, value)
+}
+
+type IterateOptions struct {
+	maxResultCount int
+}
+
+type IterateOption func(*IterateOptions)
+
+func MaxResultCount(count int) IterateOption {
+	return func(args *IterateOptions) {
+		args.maxResultCount = count
+	}
+}
+
+func iterateOptions(optionalOptions []IterateOption) *IterateOptions {
+	result := &IterateOptions{
+		maxResultCount: 0,
+	}
+
+	for _, optionalOption := range optionalOptions {
+		optionalOption(result)
+	}
+	return result
+}
+
+type TrackedVoteConsumer func(trackedVote *TrackedVote) bool
+
+func (rm *ReferendumManager) ForEachActiveVote(consumer TrackedVoteConsumer, options ...IterateOption) error {
+
+	opt := iterateOptions(options)
+
+	consumerFunc := consumer
+
+	var innerErr error
+	var i int
+	if err := rm.referendumStore.Iterate([]byte{ReferendumStoreKeyPrefixOutputs}, func(key kvstore.Key, value kvstore.Value) bool {
+
+		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
+			return false
+		}
+
+		i++
+
+		trackedVote, err := trackedVote(key, value)
+		if err != nil {
+			innerErr = err
+			return false
+		}
+
+		return consumerFunc(trackedVote)
+	}); err != nil {
+		return err
+	}
+
+	return innerErr
+}
+
+func (rm *ReferendumManager) ForEachPastVote(consumer TrackedVoteConsumer, options ...IterateOption) error {
+
+	opt := iterateOptions(options)
+
+	consumerFunc := consumer
+
+	var innerErr error
+	var i int
+	if err := rm.referendumStore.Iterate([]byte{ReferendumStoreKeyPrefixSpentOutputs}, func(key kvstore.Key, value kvstore.Value) bool {
+
+		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
+			return false
+		}
+
+		i++
+
+		trackedVote, err := trackedVote(key, value)
+		if err != nil {
+			innerErr = err
+			return false
+		}
+
+		return consumerFunc(trackedVote)
+	}); err != nil {
+		return err
+	}
+
+	return innerErr
 }
 
 // Votes
@@ -200,7 +352,13 @@ func (rm *ReferendumManager) endVoteAtMilestone(output *utxo.Output, endIndex mi
 	m.WriteBytes(value[:36])
 	m.WriteUint32(uint32(endIndex))
 
-	return mutations.Set(key, m.Bytes())
+	// Delete the entry from the Outputs list
+	if err := mutations.Delete(key); err != nil {
+		return err
+	}
+
+	// Add the entry to the Spent list
+	return mutations.Set(voteKeyForSpentOutputID(output.OutputID()), m.Bytes())
 }
 
 func (rm *ReferendumManager) CurrentBalanceForReferendum(referendumID ReferendumID, questionIdx uint8, answerIdx uint8) (uint64, error) {

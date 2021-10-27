@@ -183,7 +183,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	}
 
 	// Read OutputID
-	if o.outputID, err = parseOutputID(keyUtil); err != nil {
+	if o.outputID, err = ParseOutputID(keyUtil); err != nil {
 		return err
 	}
 
@@ -191,7 +191,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	valueUtil := marshalutil.New(value)
 
 	// Read MessageID
-	if o.messageID, err = parseMessageID(valueUtil); err != nil {
+	if o.messageID, err = ParseMessageID(valueUtil); err != nil {
 		return err
 	}
 

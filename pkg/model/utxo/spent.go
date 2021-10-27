@@ -107,7 +107,7 @@ func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 
 	// Read outputID
 	var err error
-	if s.outputID, err = parseOutputID(keyUtil); err != nil {
+	if s.outputID, err = ParseOutputID(keyUtil); err != nil {
 		return err
 	}
 

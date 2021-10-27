@@ -6,7 +6,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func parseOutputID(ms *marshalutil.MarshalUtil) (*iotago.UTXOInputID, error) {
+func ParseOutputID(ms *marshalutil.MarshalUtil) (*iotago.UTXOInputID, error) {
 	bytes, err := ms.ReadBytes(OutputIDLength)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func parseTransactionID(ms *marshalutil.MarshalUtil) (*iotago.TransactionID, err
 	return t, nil
 }
 
-func parseMessageID(ms *marshalutil.MarshalUtil) (hornet.MessageID, error) {
+func ParseMessageID(ms *marshalutil.MarshalUtil) (hornet.MessageID, error) {
 	bytes, err := ms.ReadBytes(iotago.MessageIDLength)
 	if err != nil {
 		return nil, err
