@@ -24,8 +24,8 @@ var (
 
 func referendumKeyForReferendumID(referendumID ReferendumID) []byte {
 	m := marshalutil.New(33)
-	m.WriteByte(ReferendumStoreKeyPrefixMessages) // 1 byte
-	m.WriteBytes(referendumID[:])                 // 32 bytes
+	m.WriteByte(ReferendumStoreKeyPrefixReferendums) // 1 byte
+	m.WriteBytes(referendumID[:])                    // 32 bytes
 	return m.Bytes()
 }
 
@@ -34,7 +34,7 @@ func (rm *ReferendumManager) loadReferendums() (map[ReferendumID]*Referendum, er
 	referendums := make(map[ReferendumID]*Referendum)
 
 	var innerErr error
-	if err := rm.referendumStore.Iterate(kvstore.KeyPrefix{ReferendumStoreKeyPrefixMessages}, func(key kvstore.Key, value kvstore.Value) bool {
+	if err := rm.referendumStore.Iterate(kvstore.KeyPrefix{ReferendumStoreKeyPrefixReferendums}, func(key kvstore.Key, value kvstore.Value) bool {
 
 		referendumID := ReferendumID{}
 		copy(referendumID[:], key[1:]) // Skip the prefix
