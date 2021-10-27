@@ -158,12 +158,16 @@ func (rm *ReferendumManager) Referendums() []*Referendum {
 
 // ReferendumsAcceptingVotes returns the referendums that are currently accepting votes, i.e. started or in the holding period.
 func (rm *ReferendumManager) ReferendumsAcceptingVotes() []*Referendum {
-	return filterReferendums(rm.Referendums(), rm.syncManager.ConfirmedMilestoneIndex(), ReferendumIsAcceptingVotes)
+	return filterReferendums(rm.Referendums(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Referendum, index milestone.Index) bool {
+		return ref.IsAcceptingVotes(index)
+	})
 }
 
 // ReferendumsCountingVotes returns the referendums that are currently actively counting votes, i.e. started or in the holding period
 func (rm *ReferendumManager) ReferendumsCountingVotes() []*Referendum {
-	return filterReferendums(rm.Referendums(), rm.syncManager.ConfirmedMilestoneIndex(), ReferendumIsCountingVotes)
+	return filterReferendums(rm.Referendums(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Referendum, index milestone.Index) bool {
+		return ref.IsCountingVotes(index)
+	})
 }
 
 // StoreReferendum accepts a new Referendum the manager should track.
@@ -174,11 +178,11 @@ func (rm *ReferendumManager) StoreReferendum(referendum *Referendum) (Referendum
 
 	confirmedMilestoneIndex := rm.syncManager.ConfirmedMilestoneIndex()
 
-	if confirmedMilestoneIndex >= referendum.MilestoneEnd {
+	if confirmedMilestoneIndex >= referendum.MilestoneEnd() {
 		return NullReferendumID, ErrReferendumAlreadyEnded
 	}
 
-	if confirmedMilestoneIndex >= referendum.MilestoneStart {
+	if confirmedMilestoneIndex >= referendum.MilestoneStart() {
 		return NullReferendumID, ErrReferendumAlreadyStarted
 	}
 
@@ -233,7 +237,9 @@ func (rm *ReferendumManager) logSoftError(err error) {
 //  - The vote data must be parseable.
 func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
 
-	acceptingReferendums := filterReferendums(rm.Referendums(), index, ReferendumShouldAcceptVotes)
+	acceptingReferendums := filterReferendums(rm.Referendums(), index, func(ref *Referendum, index milestone.Index) bool {
+		return ref.ShouldAcceptVotes(index)
+	})
 
 	// No referendum accepting votes, so no work to be done
 	if len(acceptingReferendums) == 0 {
@@ -364,7 +370,9 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 
 func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
 
-	acceptingReferendums := filterReferendums(rm.Referendums(), index, ReferendumShouldAcceptVotes)
+	acceptingReferendums := filterReferendums(rm.Referendums(), index, func(ref *Referendum, index milestone.Index) bool {
+		return ref.ShouldAcceptVotes(index)
+	})
 
 	// No referendum accepting votes, so no work to be done
 	if len(acceptingReferendums) == 0 {
@@ -423,7 +431,9 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 // ApplyNewConfirmedMilestoneIndex iterates over each counting referendum and applies the current vote for each question to the total vote
 func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
 
-	countingReferendums := filterReferendums(rm.Referendums(), index, ReferendumShouldCountVotes)
+	countingReferendums := filterReferendums(rm.Referendums(), index, func(ref *Referendum, index milestone.Index) bool {
+		return ref.ShouldCountVotes(index)
+	})
 
 	// No counting referendum, so no work to be done
 	if len(countingReferendums) == 0 {
@@ -473,7 +483,7 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 		}
 
 		// End all votes if referendum is ending this milestone
-		if referendum.MilestoneEnd == index {
+		if referendum.MilestoneEnd() == index {
 			if err := rm.endAllVotesAtMilestone(referendumID, index, mutations); err != nil {
 				mutations.Cancel()
 				return err
@@ -496,7 +506,7 @@ func (rm *ReferendumManager) validVotes(index milestone.Index, votes []*Vote) []
 		}
 
 		// Check that the referendum is accepting votes
-		if !ReferendumShouldAcceptVotes(referendum, index) {
+		if !referendum.ShouldAcceptVotes(index) {
 			continue
 		}
 
@@ -538,20 +548,4 @@ func filterReferendums(referendums []*Referendum, index milestone.Index, include
 		}
 	}
 	return filtered
-}
-
-func ReferendumShouldAcceptVotes(referendum *Referendum, forIndex milestone.Index) bool {
-	return forIndex > referendum.MilestoneStart && forIndex <= referendum.MilestoneEnd
-}
-
-func ReferendumIsAcceptingVotes(referendum *Referendum, atIndex milestone.Index) bool {
-	return atIndex >= referendum.MilestoneStart && atIndex < referendum.MilestoneEnd
-}
-
-func ReferendumShouldCountVotes(referendum *Referendum, forIndex milestone.Index) bool {
-	return forIndex > referendum.MilestoneStartHolding && forIndex <= referendum.MilestoneEnd
-}
-
-func ReferendumIsCountingVotes(referendum *Referendum, atIndex milestone.Index) bool {
-	return atIndex >= referendum.MilestoneStartHolding && atIndex < referendum.MilestoneEnd
 }

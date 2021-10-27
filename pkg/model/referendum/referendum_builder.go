@@ -12,9 +12,9 @@ func NewReferendumBuilder(name string, milestoneStart milestone.Index, milestone
 	return &ReferendumBuilder{
 		r: &Referendum{
 			Name:                  name,
-			MilestoneStart:        milestoneStart,
-			MilestoneStartHolding: milestoneStartHolding,
-			MilestoneEnd:          milestoneEnd,
+			milestoneStart:        uint32(milestoneStart),
+			milestoneStartHolding: uint32(milestoneStartHolding),
+			milestoneEnd:          uint32(milestoneEnd),
 			Questions:             iotago.Serializables{},
 			AdditionalInfo:        additionalInfo,
 		},

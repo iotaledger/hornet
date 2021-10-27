@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+
 	iotago "github.com/iotaledger/iota.go/v2"
 
 	// import implementation
@@ -38,9 +39,9 @@ var (
 // Referendum
 type Referendum struct {
 	Name                  string
-	MilestoneStart        milestone.Index
-	MilestoneStartHolding milestone.Index
-	MilestoneEnd          milestone.Index
+	milestoneStart        uint32
+	milestoneStartHolding uint32
+	milestoneEnd          uint32
 	Questions             iotago.Serializables
 	AdditionalInfo        string
 }
@@ -60,13 +61,13 @@ func (r *Referendum) Deserialize(data []byte, deSeriMode iotago.DeSerializationM
 		ReadString(&r.Name, iotago.SeriSliceLengthAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum name: %w", err)
 		}, ReferendumNameMaxLength).
-		ReadNum(&r.MilestoneStart, func(err error) error {
+		ReadNum(&r.milestoneStart, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum start milestone: %w", err)
 		}).
-		ReadNum(&r.MilestoneStartHolding, func(err error) error {
+		ReadNum(&r.milestoneStartHolding, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum start holding milestone: %w", err)
 		}).
-		ReadNum(&r.MilestoneEnd, func(err error) error {
+		ReadNum(&r.milestoneEnd, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum end milestone: %w", err)
 		}).
 		ReadSliceOfObjects(func(seri iotago.Serializables) { r.Questions = seri }, deSeriMode, iotago.SeriSliceLengthAsByte, iotago.TypeDenotationNone, func(_ uint32) (iotago.Serializable, error) {
@@ -92,13 +93,13 @@ func (r *Referendum) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, e
 		WriteString(r.Name, iotago.SeriSliceLengthAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum name: %w", err)
 		}).
-		WriteNum(r.MilestoneStart, func(err error) error {
+		WriteNum(r.milestoneStart, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum start milestone: %w", err)
 		}).
-		WriteNum(r.MilestoneStartHolding, func(err error) error {
+		WriteNum(r.milestoneStartHolding, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum start holding milestone: %w", err)
 		}).
-		WriteNum(r.MilestoneEnd, func(err error) error {
+		WriteNum(r.milestoneEnd, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum end milestone: %w", err)
 		}).
 		WriteSliceOfObjects(r.Questions, deSeriMode, iotago.SeriSliceLengthAsByte, nil, func(err error) error {
@@ -113,9 +114,9 @@ func (r *Referendum) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, e
 func (r *Referendum) MarshalJSON() ([]byte, error) {
 	jReferendum := &jsonReferendum{
 		Name:                  r.Name,
-		MilestoneStart:        r.MilestoneStart,
-		MilestoneStartHolding: r.MilestoneStartHolding,
-		MilestoneEnd:          r.MilestoneEnd,
+		MilestoneStart:        r.milestoneStart,
+		MilestoneStartHolding: r.milestoneStartHolding,
+		MilestoneEnd:          r.milestoneEnd,
 		AdditionalInfo:        r.AdditionalInfo,
 	}
 
@@ -148,9 +149,9 @@ func (r *Referendum) UnmarshalJSON(bytes []byte) error {
 // jsonReferendum defines the json representation of a Referendum.
 type jsonReferendum struct {
 	Name                  string             `json:"name"`
-	MilestoneStart        milestone.Index    `json:"milestoneStart"`
-	MilestoneStartHolding milestone.Index    `json:"milestoneStartHolding"`
-	MilestoneEnd          milestone.Index    `json:"milestoneEnd"`
+	MilestoneStart        uint32             `json:"milestoneStart"`
+	MilestoneStartHolding uint32             `json:"milestoneStartHolding"`
+	MilestoneEnd          uint32             `json:"milestoneEnd"`
 	Questions             []*json.RawMessage `json:"questions"`
 	AdditionalInfo        string             `json:"additionalInfo"`
 }
@@ -158,9 +159,9 @@ type jsonReferendum struct {
 func (j *jsonReferendum) ToSerializable() (iotago.Serializable, error) {
 	payload := &Referendum{
 		Name:                  j.Name,
-		MilestoneStart:        j.MilestoneStart,
-		MilestoneStartHolding: j.MilestoneStartHolding,
-		MilestoneEnd:          j.MilestoneEnd,
+		milestoneStart:        j.MilestoneStart,
+		milestoneStartHolding: j.MilestoneStartHolding,
+		milestoneEnd:          j.MilestoneEnd,
 		AdditionalInfo:        j.AdditionalInfo,
 	}
 
@@ -182,4 +183,47 @@ func (j *jsonReferendum) ToSerializable() (iotago.Serializable, error) {
 	payload.Questions = questions
 
 	return payload, nil
+}
+
+// Helpers
+
+func (r *Referendum) Status(atIndex milestone.Index) string {
+	if atIndex < r.MilestoneStart() {
+		return "upcoming"
+	}
+	if r.IsCountingVotes(atIndex) {
+		return "holding"
+	}
+	if r.IsAcceptingVotes(atIndex) {
+		return "commencing"
+	}
+	return "ended"
+}
+
+func (r *Referendum) MilestoneStart() milestone.Index {
+	return milestone.Index(r.milestoneStart)
+}
+
+func (r *Referendum) MilestoneStartHolding() milestone.Index {
+	return milestone.Index(r.milestoneStartHolding)
+}
+
+func (r *Referendum) MilestoneEnd() milestone.Index {
+	return milestone.Index(r.milestoneEnd)
+}
+
+func (r *Referendum) ShouldAcceptVotes(forIndex milestone.Index) bool {
+	return forIndex > r.MilestoneStart() && forIndex <= r.MilestoneEnd()
+}
+
+func (r *Referendum) IsAcceptingVotes(atIndex milestone.Index) bool {
+	return atIndex >= r.MilestoneStart() && atIndex < r.MilestoneEnd()
+}
+
+func (r *Referendum) ShouldCountVotes(forIndex milestone.Index) bool {
+	return forIndex > r.MilestoneStartHolding() && forIndex <= r.MilestoneEnd()
+}
+
+func (r *Referendum) IsCountingVotes(atIndex milestone.Index) bool {
+	return atIndex >= r.MilestoneStartHolding() && atIndex < r.MilestoneEnd()
 }

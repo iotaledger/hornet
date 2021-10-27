@@ -38,49 +38,59 @@ func TestReferendumStateHelpers(t *testing.T) {
 	ref, err := referendumBuilder.Build()
 	require.NoError(t, err)
 
+	// Verify status
+	require.Equal(t, "upcoming", ref.Status(89))
+	require.Equal(t, "commencing", ref.Status(90))
+	require.Equal(t, "commencing", ref.Status(91))
+	require.Equal(t, "holding", ref.Status(100))
+	require.Equal(t, "holding", ref.Status(101))
+	require.Equal(t, "holding", ref.Status(199))
+	require.Equal(t, "ended", ref.Status(200))
+	require.Equal(t, "ended", ref.Status(201))
+
 	// Verify ReferendumIsAcceptingVotes
-	require.False(t, referendum.ReferendumIsAcceptingVotes(ref, 89))
-	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 90))
-	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 91))
-	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 99))
-	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 100))
-	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 101))
-	require.True(t, referendum.ReferendumIsAcceptingVotes(ref, 199))
-	require.False(t, referendum.ReferendumIsAcceptingVotes(ref, 200))
-	require.False(t, referendum.ReferendumIsAcceptingVotes(ref, 201))
+	require.False(t, ref.IsAcceptingVotes(89))
+	require.True(t, ref.IsAcceptingVotes(90))
+	require.True(t, ref.IsAcceptingVotes(91))
+	require.True(t, ref.IsAcceptingVotes(99))
+	require.True(t, ref.IsAcceptingVotes(100))
+	require.True(t, ref.IsAcceptingVotes(101))
+	require.True(t, ref.IsAcceptingVotes(199))
+	require.False(t, ref.IsAcceptingVotes(200))
+	require.False(t, ref.IsAcceptingVotes(201))
 
 	// Verify ReferendumIsCountingVotes
-	require.False(t, referendum.ReferendumIsCountingVotes(ref, 89))
-	require.False(t, referendum.ReferendumIsCountingVotes(ref, 90))
-	require.False(t, referendum.ReferendumIsCountingVotes(ref, 91))
-	require.False(t, referendum.ReferendumIsCountingVotes(ref, 99))
-	require.True(t, referendum.ReferendumIsCountingVotes(ref, 100))
-	require.True(t, referendum.ReferendumIsCountingVotes(ref, 101))
-	require.True(t, referendum.ReferendumIsCountingVotes(ref, 199))
-	require.False(t, referendum.ReferendumIsCountingVotes(ref, 200))
-	require.False(t, referendum.ReferendumIsCountingVotes(ref, 201))
+	require.False(t, ref.IsCountingVotes(89))
+	require.False(t, ref.IsCountingVotes(90))
+	require.False(t, ref.IsCountingVotes(91))
+	require.False(t, ref.IsCountingVotes(99))
+	require.True(t, ref.IsCountingVotes(100))
+	require.True(t, ref.IsCountingVotes(101))
+	require.True(t, ref.IsCountingVotes(199))
+	require.False(t, ref.IsCountingVotes(200))
+	require.False(t, ref.IsCountingVotes(201))
 
 	// Verify ReferendumShouldAcceptVotes
-	require.False(t, referendum.ReferendumShouldAcceptVotes(ref, 89))
-	require.False(t, referendum.ReferendumShouldAcceptVotes(ref, 90))
-	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 91))
-	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 99))
-	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 100))
-	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 101))
-	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 199))
-	require.True(t, referendum.ReferendumShouldAcceptVotes(ref, 200))
-	require.False(t, referendum.ReferendumShouldAcceptVotes(ref, 201))
+	require.False(t, ref.ShouldAcceptVotes(89))
+	require.False(t, ref.ShouldAcceptVotes(90))
+	require.True(t, ref.ShouldAcceptVotes(91))
+	require.True(t, ref.ShouldAcceptVotes(99))
+	require.True(t, ref.ShouldAcceptVotes(100))
+	require.True(t, ref.ShouldAcceptVotes(101))
+	require.True(t, ref.ShouldAcceptVotes(199))
+	require.True(t, ref.ShouldAcceptVotes(200))
+	require.False(t, ref.ShouldAcceptVotes(201))
 
 	// Verify ReferendumShouldCountVotes
-	require.False(t, referendum.ReferendumShouldCountVotes(ref, 89))
-	require.False(t, referendum.ReferendumShouldCountVotes(ref, 90))
-	require.False(t, referendum.ReferendumShouldCountVotes(ref, 91))
-	require.False(t, referendum.ReferendumShouldCountVotes(ref, 99))
-	require.False(t, referendum.ReferendumShouldCountVotes(ref, 100))
-	require.True(t, referendum.ReferendumShouldCountVotes(ref, 101))
-	require.True(t, referendum.ReferendumShouldCountVotes(ref, 199))
-	require.True(t, referendum.ReferendumShouldCountVotes(ref, 200))
-	require.False(t, referendum.ReferendumShouldCountVotes(ref, 201))
+	require.False(t, ref.ShouldCountVotes(89))
+	require.False(t, ref.ShouldCountVotes(90))
+	require.False(t, ref.ShouldCountVotes(91))
+	require.False(t, ref.ShouldCountVotes(99))
+	require.False(t, ref.ShouldCountVotes(100))
+	require.True(t, ref.ShouldCountVotes(101))
+	require.True(t, ref.ShouldCountVotes(199))
+	require.True(t, ref.ShouldCountVotes(200))
+	require.False(t, ref.ShouldCountVotes(201))
 }
 
 func TestReferendumStates(t *testing.T) {
@@ -97,9 +107,9 @@ func TestReferendumStates(t *testing.T) {
 	require.NotNil(t, ref)
 
 	// Verify the configured referendum indexes
-	require.Equal(t, milestone.Index(5), ref.MilestoneStart)
-	require.Equal(t, milestone.Index(6), ref.MilestoneStartHolding)
-	require.Equal(t, milestone.Index(8), ref.MilestoneEnd)
+	require.Equal(t, milestone.Index(5), ref.MilestoneStart())
+	require.Equal(t, milestone.Index(6), ref.MilestoneStartHolding())
+	require.Equal(t, milestone.Index(8), ref.MilestoneEnd())
 
 	// No referendum should be running right now
 	require.Equal(t, 1, len(env.ReferendumManager().Referendums()))
@@ -148,9 +158,9 @@ func TestSingleReferendumVote(t *testing.T) {
 	require.NotNil(t, ref)
 
 	// Verify the configured referendum indexes
-	require.Equal(t, milestone.Index(5), ref.MilestoneStart)
-	require.Equal(t, milestone.Index(7), ref.MilestoneStartHolding)
-	require.Equal(t, milestone.Index(10), ref.MilestoneEnd)
+	require.Equal(t, milestone.Index(5), ref.MilestoneStart())
+	require.Equal(t, milestone.Index(7), ref.MilestoneStartHolding())
+	require.Equal(t, milestone.Index(10), ref.MilestoneEnd())
 
 	// Referendum should not be accepting votes yet
 	require.Equal(t, 0, len(env.ReferendumManager().ReferendumsAcceptingVotes()))
@@ -240,7 +250,7 @@ func TestSingleReferendumVote(t *testing.T) {
 	trackedVote, err := env.ReferendumManager().VoteForOutputID(referendumID, votingMessage.GeneratedUTXO().OutputID())
 	require.Equal(t, votingMessage.StoredMessageID(), trackedVote.MessageID)
 	require.Equal(t, milestone.Index(6), trackedVote.StartIndex)
-	require.Equal(t, milestone.Index(0), trackedVote.EndIndex) // was never spent, so the vote is still valid, although the referendum ended
+	require.Equal(t, milestone.Index(10), trackedVote.EndIndex)
 
 	messageFromReferendum, err := env.ReferendumManager().MessageForMessageID(trackedVote.MessageID)
 	require.NoError(t, err)
@@ -261,9 +271,9 @@ func TestReferendumVoteCancel(t *testing.T) {
 	require.NotNil(t, ref)
 
 	// Verify the configured referendum indexes
-	require.Equal(t, milestone.Index(5), ref.MilestoneStart)
-	require.Equal(t, milestone.Index(7), ref.MilestoneStartHolding)
-	require.Equal(t, milestone.Index(12), ref.MilestoneEnd)
+	require.Equal(t, milestone.Index(5), ref.MilestoneStart())
+	require.Equal(t, milestone.Index(7), ref.MilestoneStartHolding())
+	require.Equal(t, milestone.Index(12), ref.MilestoneEnd())
 
 	// Referendum should not be accepting votes yet
 	require.Equal(t, 0, len(env.ReferendumManager().ReferendumsAcceptingVotes()))

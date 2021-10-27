@@ -175,11 +175,11 @@ func (env *ReferendumTestEnv) Cleanup() {
 	env.te.CleanupTestEnvironment(true)
 }
 
-func (env *ReferendumTestEnv) RegisterSampleReferendum(startMilestoneIndex milestone.Index, startPhaseDuration milestone.Index, holdingDuration milestone.Index) referendum.ReferendumID {
+func (env *ReferendumTestEnv) RegisterSampleReferendum(startMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) referendum.ReferendumID {
 
 	referendumStartIndex := startMilestoneIndex
-	referendumStartHoldingIndex := referendumStartIndex + startPhaseDuration
-	referendumEndIndex := referendumStartHoldingIndex + holdingDuration
+	referendumStartHoldingIndex := referendumStartIndex + milestone.Index(startPhaseDuration)
+	referendumEndIndex := referendumStartHoldingIndex + milestone.Index(holdingDuration)
 
 	referendumBuilder := referendum.NewReferendumBuilder("All 4 HORNET", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "The biggest governance decision in the history of IOTA")
 

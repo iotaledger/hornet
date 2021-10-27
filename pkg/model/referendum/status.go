@@ -17,6 +17,7 @@ type QuestionStatus struct {
 // ReferendumStatus holds the status for all questions
 type ReferendumStatus struct {
 	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
+	Status         string            `json:"status"`
 	Questions      []*QuestionStatus `json:"questions"`
 }
 
@@ -31,6 +32,7 @@ func (rm *ReferendumManager) ReferendumStatus(referendumID ReferendumID) (*Refer
 
 	status := &ReferendumStatus{
 		MilestoneIndex: confirmedMilestoneIndex,
+		Status:         referendum.Status(confirmedMilestoneIndex),
 	}
 
 	// For each referendum, iterate over all questions
