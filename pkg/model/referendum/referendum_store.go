@@ -430,6 +430,40 @@ func (rm *ReferendumManager) endVoteAtMilestone(referendumID ReferendumID, outpu
 	return mutations.Set(voteKeyForReferendumIDAndSpentOutputID(referendumID, output.OutputID()), trackedVote.valueBytes())
 }
 
+func (rm *ReferendumManager) endAllVotesAtMilestone(referendumID ReferendumID, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+
+	var innerErr error
+	if err := rm.referendumStore.Iterate(voteKeyForReferendumIDOutputsPrefix(referendumID), func(key kvstore.Key, value kvstore.Value) bool {
+
+		trackedVote, err := trackedVote(key, value)
+		if err != nil {
+			innerErr = err
+			return false
+		}
+
+		trackedVote.EndIndex = endIndex
+
+		// Delete the entry from the Outputs list
+		if err := mutations.Delete(key); err != nil {
+			innerErr = err
+			return false
+		}
+
+		// Add the entry to the Spent list
+		if err := mutations.Set(voteKeyForReferendumIDAndSpentOutputID(referendumID, trackedVote.OutputID), trackedVote.valueBytes()); err != nil {
+			innerErr = err
+			return false
+		}
+
+		return true
+
+	}); err != nil {
+		return err
+	}
+
+	return innerErr
+}
+
 func (rm *ReferendumManager) CurrentBalanceForReferendum(referendumID ReferendumID, questionIdx uint8, answerIdx uint8) (uint64, error) {
 
 	val, err := rm.referendumStore.Get(currentVoteBalanceKeyForQuestionAndAnswer(referendumID, questionIdx, answerIdx))

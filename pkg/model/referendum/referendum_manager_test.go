@@ -337,7 +337,24 @@ func TestReferendumVoteCancel(t *testing.T) {
 	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
 	require.Exactly(t, uint64(2_000_000), status.Questions[0].Answers[1].Accumulated)
 
+	require.Equal(t, 1, len(env.ActiveVotesForReferendum(referendumID)))
+	require.Equal(t, 2, len(env.PastVotesForReferendum(referendumID)))
+
+	// Verify the last issued vote is still active, i.e. EndIndex == 0
+	lastIssuedVote, err := env.ReferendumManager().VoteForOutputID(referendumID, vote3Msg.GeneratedUTXO().OutputID())
+	require.NoError(t, err)
+	require.Equal(t, vote3Msg.GeneratedUTXO().OutputID(), lastIssuedVote.OutputID)
+	require.Equal(t, vote3Msg.StoredMessageID(), lastIssuedVote.MessageID)
+	require.Equal(t, uint64(1_000_000), lastIssuedVote.Amount)
+	require.Equal(t, milestone.Index(11), lastIssuedVote.StartIndex)
+	require.Equal(t, milestone.Index(0), lastIssuedVote.EndIndex)
+
+	// Issue final milestone that ends the referendum
 	env.IssueMilestone() // 12
+
+	// There should be no active votes left
+	require.Equal(t, 0, len(env.ActiveVotesForReferendum(referendumID)))
+	require.Equal(t, 3, len(env.PastVotesForReferendum(referendumID)))
 
 	// Verify vote
 	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
@@ -347,7 +364,7 @@ func TestReferendumVoteCancel(t *testing.T) {
 	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
 	require.Exactly(t, uint64(3_000_000), status.Questions[0].Answers[1].Accumulated)
 
-	// Verify the vote history
+	// Verify the vote history after the referendum ended
 	trackedVote1, err := env.ReferendumManager().VoteForOutputID(referendumID, vote1Msg.GeneratedUTXO().OutputID())
 	require.NoError(t, err)
 	require.Equal(t, vote1Msg.GeneratedUTXO().OutputID(), trackedVote1.OutputID)
@@ -370,20 +387,5 @@ func TestReferendumVoteCancel(t *testing.T) {
 	require.Equal(t, vote3Msg.StoredMessageID(), trackedVote3.MessageID)
 	require.Equal(t, uint64(1_000_000), trackedVote3.Amount)
 	require.Equal(t, milestone.Index(11), trackedVote3.StartIndex)
-	require.Equal(t, milestone.Index(0), trackedVote3.EndIndex)
-
-	var activeVotes []*referendum.TrackedVote
-	env.ReferendumManager().ForEachActiveVote(referendumID, func(trackedVote *referendum.TrackedVote) bool {
-		activeVotes = append(activeVotes, trackedVote)
-		return true
-	})
-
-	var pastVotes []*referendum.TrackedVote
-	env.ReferendumManager().ForEachPastVote(referendumID, func(trackedVote *referendum.TrackedVote) bool {
-		pastVotes = append(pastVotes, trackedVote)
-		return true
-	})
-
-	require.Equal(t, 1, len(activeVotes))
-	require.Equal(t, 2, len(pastVotes))
+	require.Equal(t, milestone.Index(12), trackedVote3.EndIndex)
 }

@@ -269,6 +269,24 @@ func (env *ReferendumTestEnv) IssueMilestone(onTips ...hornet.MessageID) (*white
 	return env.te.IssueAndConfirmMilestoneOnTips(onTips, false)
 }
 
+func (env *ReferendumTestEnv) ActiveVotesForReferendum(referendumID referendum.ReferendumID) []*referendum.TrackedVote {
+	var votes []*referendum.TrackedVote
+	env.ReferendumManager().ForEachActiveVote(referendumID, func(trackedVote *referendum.TrackedVote) bool {
+		votes = append(votes, trackedVote)
+		return true
+	})
+	return votes
+}
+
+func (env *ReferendumTestEnv) PastVotesForReferendum(referendumID referendum.ReferendumID) []*referendum.TrackedVote {
+	var votes []*referendum.TrackedVote
+	env.ReferendumManager().ForEachPastVote(referendumID, func(trackedVote *referendum.TrackedVote) bool {
+		votes = append(votes, trackedVote)
+		return true
+	})
+	return votes
+}
+
 func (env *ReferendumTestEnv) PrintJSON(i interface{}) {
 	j, err := json.MarshalIndent(i, "", "  ")
 	require.NoError(env.t, err)

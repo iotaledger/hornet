@@ -471,6 +471,14 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 				}
 			}
 		}
+
+		// End all votes if referendum is ending this milestone
+		if referendum.MilestoneEnd == index {
+			if err := rm.endAllVotesAtMilestone(referendumID, index, mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
+		}
 	}
 
 	return mutations.Commit()
