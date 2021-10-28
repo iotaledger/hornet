@@ -17,7 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer"
 )
 
 var (
@@ -198,7 +198,12 @@ func (env *ReferendumTestEnv) RegisterSampleReferendum(startMilestoneIndex miles
 	question, err := questionBuilder.Build()
 	require.NoError(env.t, err)
 
-	referendumBuilder.AddQuestion(question)
+	questionsBuilder := referendum.NewQuestionsBuilder()
+	questionsBuilder.AddQuestion(question)
+	payload, err := questionsBuilder.Build()
+	require.NoError(env.t, err)
+
+	referendumBuilder.Payload(payload)
 
 	ref, err := referendumBuilder.Build()
 	require.NoError(env.t, err)
@@ -218,7 +223,7 @@ func (env *ReferendumTestEnv) IssueVote(wallet *utils.HDWallet, amount uint64, v
 
 	require.LessOrEqualf(env.t, amount, wallet.Balance(), "trying to vote with more than available in the wallet")
 
-	votesData, err := votes.Serialize(iotago.DeSeriModePerformValidation)
+	votesData, err := votes.Serialize(serializer.DeSeriModePerformValidation)
 	require.NoError(env.t, err)
 
 	return env.te.NewMessageBuilder(voteIndexation).

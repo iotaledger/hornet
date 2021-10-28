@@ -1,6 +1,8 @@
 package referendum
 
-import "github.com/gohornet/hornet/pkg/model/milestone"
+import (
+	"github.com/gohornet/hornet/pkg/model/milestone"
+)
 
 // AnswerStatus holds the current and accumulated vote for an answer.
 type AnswerStatus struct {
@@ -18,7 +20,7 @@ type QuestionStatus struct {
 type ReferendumStatus struct {
 	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
 	Status         string            `json:"status"`
-	Questions      []*QuestionStatus `json:"questions"`
+	Questions      []*QuestionStatus `json:"questions,omitempty"`
 }
 
 func (rm *ReferendumManager) ReferendumStatus(referendumID ReferendumID) (*ReferendumStatus, error) {
@@ -36,9 +38,8 @@ func (rm *ReferendumManager) ReferendumStatus(referendumID ReferendumID) (*Refer
 	}
 
 	// For each referendum, iterate over all questions
-	for idx, value := range referendum.Questions {
+	for idx, question := range referendum.Questions() {
 		questionIndex := uint8(idx)
-		question := value.(*Question) // force cast here since we are sure the stored Referendum is valid
 
 		questionStatus := &QuestionStatus{}
 		// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter

@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -312,14 +313,14 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 		return nil
 	}
 
-	outputAddress, err := depositOutputs[0].Address().Serialize(iotago.DeSeriModeNoValidation)
+	outputAddress, err := depositOutputs[0].Address().Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		return nil
 	}
 
 	// check if all inputs come from the same address as the output
 	for _, input := range inputOutputs {
-		inputAddress, err := input.Address().Serialize(iotago.DeSeriModeNoValidation)
+		inputAddress, err := input.Address().Serialize(serializer.DeSeriModeNoValidation)
 		if err != nil {
 			return nil
 		}
@@ -452,9 +453,8 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 		}
 
 		// For each referendum, iterate over all questions
-		for idx, value := range referendum.Questions {
+		for idx, question := range referendum.Questions() {
 			questionIndex := uint8(idx)
-			question := value.(*Question) // force cast here since we are sure the stored Referendum is valid
 
 			// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter
 			for idx := 0; idx <= len(question.Answers); idx++ {
@@ -511,7 +511,7 @@ func (rm *ReferendumManager) validVotes(index milestone.Index, votes []*Vote) []
 		}
 
 		// Check that the amount of answers equals the questions in the referendum
-		if len(vote.Answers) != len(referendum.Questions) {
+		if len(vote.Answers) != len(referendum.Questions()) {
 			continue
 		}
 
@@ -527,7 +527,7 @@ func votesFromIndexation(indexation *iotago.Indexation) ([]*Vote, error) {
 
 	// try to parse the votes payload
 	parsedVotes := &Votes{}
-	if _, err := parsedVotes.Deserialize(indexation.Data, iotago.DeSeriModePerformValidation); err != nil {
+	if _, err := parsedVotes.Deserialize(indexation.Data, serializer.DeSeriModePerformValidation); err != nil {
 		// votes payload can't be parsed => ignore votes
 		return nil, fmt.Errorf("no valid votes payload")
 	}

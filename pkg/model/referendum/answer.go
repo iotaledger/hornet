@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer"
 )
 
 const (
@@ -19,29 +19,30 @@ type Answer struct {
 	AdditionalInfo string
 }
 
-func (a *Answer) Deserialize(data []byte, deSeriMode iotago.DeSerializationMode) (int, error) {
-	return iotago.NewDeserializer(data).
+func (a *Answer) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+	return serializer.NewDeserializer(data).
 		ReadNum(&a.Index, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum answer index: %w", err)
 		}).
-		ReadString(&a.Text, iotago.SeriSliceLengthAsByte, func(err error) error {
+		ReadString(&a.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum answer text: %w", err)
 		}, AnswerTextMaxLength).
-		ReadString(&a.AdditionalInfo, iotago.SeriSliceLengthAsUint16, func(err error) error {
+		ReadString(&a.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum answer additional info: %w", err)
 		}, AnswerAdditionalInfoMaxLength).
 		Done()
 }
 
-func (a *Answer) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, error) {
-	return iotago.NewSerializer().
+func (a *Answer) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+	//TODO: validate text lengths
+	return serializer.NewSerializer().
 		WriteNum(a.Index, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum answer index: %w", err)
 		}).
-		WriteString(a.Text, iotago.SeriSliceLengthAsByte, func(err error) error {
+		WriteString(a.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum answer text: %w", err)
 		}).
-		WriteString(a.AdditionalInfo, iotago.SeriSliceLengthAsUint16, func(err error) error {
+		WriteString(a.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum answer additional info: %w", err)
 		}).
 		Serialize()
@@ -76,7 +77,7 @@ type jsonAnswer struct {
 	AdditionalInfo string `json:"additionalInfo"`
 }
 
-func (j *jsonAnswer) ToSerializable() (iotago.Serializable, error) {
+func (j *jsonAnswer) ToSerializable() (serializer.Serializable, error) {
 	payload := &Answer{
 		Index:          j.Index,
 		Text:           j.Text,

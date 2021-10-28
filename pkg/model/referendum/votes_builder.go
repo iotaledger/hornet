@@ -3,14 +3,14 @@ package referendum
 import (
 	"fmt"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer"
 )
 
 // NewVotesBuilder creates a new VotesBuilder.
 func NewVotesBuilder() *VotesBuilder {
 	return &VotesBuilder{
 		v: &Votes{
-			Votes: iotago.Serializables{},
+			Votes: serializer.Serializables{},
 		},
 	}
 }
@@ -28,7 +28,7 @@ func (vb *VotesBuilder) AddVote(entry *Vote) *VotesBuilder {
 
 // Build builds the Votes.
 func (vb *VotesBuilder) Build() (*Votes, error) {
-	if _, err := vb.v.Serialize(iotago.DeSeriModePerformValidation); err != nil {
+	if _, err := vb.v.Serialize(serializer.DeSeriModePerformValidation); err != nil {
 		return nil, fmt.Errorf("unable to build question: %w", err)
 	}
 	return vb.v, nil

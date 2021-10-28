@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer"
 )
 
 const (
@@ -13,21 +13,21 @@ const (
 )
 
 var (
-	votesArrayRules = &iotago.ArrayRules{
+	votesArrayRules = &serializer.ArrayRules{
 		Min:            MinVotesCount,
 		Max:            MaxVotesCount,
-		ValidationMode: iotago.ArrayValidationModeNone,
+		ValidationMode: serializer.ArrayValidationModeNone,
 	}
 )
 
 // Votes holds the votes for multiple referendums
 type Votes struct {
-	Votes iotago.Serializables
+	Votes serializer.Serializables
 }
 
-func (v *Votes) Deserialize(data []byte, deSeriMode iotago.DeSerializationMode) (int, error) {
-	return iotago.NewDeserializer(data).
-		ReadSliceOfObjects(func(seri iotago.Serializables) { v.Votes = seri }, deSeriMode, iotago.SeriSliceLengthAsByte, iotago.TypeDenotationNone, func(_ uint32) (iotago.Serializable, error) {
+func (v *Votes) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+	return serializer.NewDeserializer(data).
+		ReadSliceOfObjects(func(seri serializer.Serializables) { v.Votes = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
 			// there is no real selector, so we always return a fresh Vote
 			return &Vote{}, nil
 		}, votesArrayRules, func(err error) error {
@@ -36,9 +36,9 @@ func (v *Votes) Deserialize(data []byte, deSeriMode iotago.DeSerializationMode) 
 		Done()
 }
 
-func (v *Votes) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, error) {
-	return iotago.NewSerializer().
-		WriteSliceOfObjects(v.Votes, deSeriMode, iotago.SeriSliceLengthAsByte, nil, func(err error) error {
+func (v *Votes) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+	return serializer.NewSerializer().
+		WriteSliceOfObjects(v.Votes, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
 			return fmt.Errorf("unable to serialize votes: %w", err)
 		}).
 		Serialize()
@@ -78,10 +78,10 @@ type jsonVotes struct {
 	Votes []*json.RawMessage `json:"votes"`
 }
 
-func (j *jsonVotes) ToSerializable() (iotago.Serializable, error) {
+func (j *jsonVotes) ToSerializable() (serializer.Serializable, error) {
 	payload := &Votes{}
 
-	votes := make(iotago.Serializables, len(j.Votes))
+	votes := make(serializer.Serializables, len(j.Votes))
 	for i, ele := range j.Votes {
 		vote := &Answer{}
 

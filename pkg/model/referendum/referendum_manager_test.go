@@ -33,7 +33,12 @@ func TestReferendumStateHelpers(t *testing.T) {
 	question, err := questionBuilder.Build()
 	require.NoError(t, err)
 
-	referendumBuilder.AddQuestion(question)
+	questionsBuilder := referendum.NewQuestionsBuilder()
+	questionsBuilder.AddQuestion(question)
+	payload, err := questionsBuilder.Build()
+	require.NoError(t, err)
+
+	referendumBuilder.Payload(payload)
 
 	ref, err := referendumBuilder.Build()
 	require.NoError(t, err)

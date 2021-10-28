@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer"
 )
 
 // Vote holds the vote for a referendum and the answer to each question
@@ -14,23 +14,23 @@ type Vote struct {
 	Answers      []byte
 }
 
-func (v *Vote) Deserialize(data []byte, deSeriMode iotago.DeSerializationMode) (int, error) {
-	return iotago.NewDeserializer(data).
+func (v *Vote) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+	return serializer.NewDeserializer(data).
 		ReadArrayOf32Bytes(&v.ReferendumID, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum ID in vote: %w", err)
 		}).
-		ReadVariableByteSlice(&v.Answers, iotago.SeriSliceLengthAsByte, func(err error) error {
+		ReadVariableByteSlice(&v.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize answers in vote: %w", err)
 		}).
 		Done()
 }
 
-func (v *Vote) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, error) {
-	return iotago.NewSerializer().
+func (v *Vote) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+	return serializer.NewSerializer().
 		WriteBytes(v.ReferendumID[:], func(err error) error {
 			return fmt.Errorf("unable to serialize referendum ID in vote: %w", err)
 		}).
-		WriteVariableByteSlice(v.Answers, iotago.SeriSliceLengthAsByte, func(err error) error {
+		WriteVariableByteSlice(v.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize answers in vote: %w", err)
 		}).
 		Serialize()
@@ -62,7 +62,7 @@ type jsonVote struct {
 	Answers      string `json:"answers"`
 }
 
-func (j *jsonVote) ToSerializable() (iotago.Serializable, error) {
+func (j *jsonVote) ToSerializable() (serializer.Serializable, error) {
 	vote := &Vote{
 		ReferendumID: ReferendumID{},
 		Answers:      []byte{},

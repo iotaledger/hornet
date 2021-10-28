@@ -9,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -40,7 +41,7 @@ func (rm *ReferendumManager) loadReferendums() (map[ReferendumID]*Referendum, er
 		copy(referendumID[:], key[1:]) // Skip the prefix
 
 		referendum := &Referendum{}
-		_, innerErr = referendum.Deserialize(value, iotago.DeSeriModeNoValidation)
+		_, innerErr = referendum.Deserialize(value, serializer.DeSeriModeNoValidation)
 		if innerErr != nil {
 			return false
 		}
@@ -60,7 +61,7 @@ func (rm *ReferendumManager) loadReferendums() (map[ReferendumID]*Referendum, er
 
 func (rm *ReferendumManager) storeReferendum(referendum *Referendum) (ReferendumID, error) {
 
-	referendumBytes, err := referendum.Serialize(iotago.DeSeriModePerformValidation)
+	referendumBytes, err := referendum.Serialize(serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return NullReferendumID, err
 	}
@@ -103,7 +104,7 @@ func (rm *ReferendumManager) MessageForMessageID(messageId hornet.MessageID) (*s
 		return nil, err
 	}
 
-	return storage.MessageFromBytes(value, iotago.DeSeriModeNoValidation)
+	return storage.MessageFromBytes(value, serializer.DeSeriModeNoValidation)
 }
 
 // Outputs

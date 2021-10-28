@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer"
 )
 
 const (
@@ -16,53 +16,55 @@ const (
 )
 
 var (
-	answersArrayRules = &iotago.ArrayRules{
+	answersArrayRules = &serializer.ArrayRules{
 		Min:            MinAnswersCount,
 		Max:            MaxAnswersCount,
-		ValidationMode: iotago.ArrayValidationModeNoDuplicates,
+		ValidationMode: serializer.ArrayValidationModeNoDuplicates,
 	}
 )
 
 // Question
 type Question struct {
 	Text           string
-	Answers        iotago.Serializables
+	Answers        serializer.Serializables
 	AdditionalInfo string
 }
 
-func (q *Question) Deserialize(data []byte, deSeriMode iotago.DeSerializationMode) (int, error) {
-	return iotago.NewDeserializer(data).
-		ReadString(&q.Text, iotago.SeriSliceLengthAsByte, func(err error) error {
+func (q *Question) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+	return serializer.NewDeserializer(data).
+		ReadString(&q.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum question text: %w", err)
 		}, QuestionTextMaxLength).
-		ReadSliceOfObjects(func(seri iotago.Serializables) { q.Answers = seri }, deSeriMode, iotago.SeriSliceLengthAsByte, iotago.TypeDenotationNone, func(_ uint32) (iotago.Serializable, error) {
+		ReadSliceOfObjects(func(seri serializer.Serializables) { q.Answers = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
 			// there is no real selector, so we always return a fresh Answer
 			return &Answer{}, nil
 		}, answersArrayRules, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum question answers: %w", err)
 		}).
-		ReadString(&q.AdditionalInfo, iotago.SeriSliceLengthAsUint16, func(err error) error {
+		ReadString(&q.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum question additional info: %w", err)
 		}, QuestionAdditionalInfoMaxLength).
 		Done()
 }
 
-func (q *Question) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, error) {
-	if deSeriMode.HasMode(iotago.DeSeriModePerformValidation) {
+func (q *Question) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+	if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
 		//TODO: this should be moved as an arrayRule parameter to WriteSliceOfObjects in iota.go
 		if err := answersArrayRules.CheckBounds(uint(len(q.Answers))); err != nil {
 			return nil, fmt.Errorf("unable to serialize question answers: %w", err)
 		}
 		//TODO: this should also check the NoDups rule
+
+		//TODO: validate text lengths
 	}
-	return iotago.NewSerializer().
-		WriteString(q.Text, iotago.SeriSliceLengthAsByte, func(err error) error {
+	return serializer.NewSerializer().
+		WriteString(q.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum question text: %w", err)
 		}).
-		WriteSliceOfObjects(q.Answers, deSeriMode, iotago.SeriSliceLengthAsByte, nil, func(err error) error {
+		WriteSliceOfObjects(q.Answers, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum question answers: %w", err)
 		}).
-		WriteString(q.AdditionalInfo, iotago.SeriSliceLengthAsUint16, func(err error) error {
+		WriteString(q.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum question additional info: %w", err)
 		}).
 		Serialize()
@@ -107,13 +109,13 @@ type jsonQuestion struct {
 	AdditionalInfo string             `json:"additionalInfo"`
 }
 
-func (j *jsonQuestion) ToSerializable() (iotago.Serializable, error) {
+func (j *jsonQuestion) ToSerializable() (serializer.Serializable, error) {
 	payload := &Question{
 		Text:           j.Text,
 		AdditionalInfo: j.AdditionalInfo,
 	}
 
-	answers := make(iotago.Serializables, len(j.Answers))
+	answers := make(serializer.Serializables, len(j.Answers))
 	for i, ele := range j.Answers {
 		answer := &Answer{}
 
