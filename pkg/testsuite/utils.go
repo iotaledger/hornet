@@ -44,11 +44,19 @@ type Message struct {
 	storedMessageID hornet.MessageID
 }
 
-func (te *TestEnvironment) NewMessageBuilder(indexation string) *MessageBuilder {
+func (te *TestEnvironment) NewMessageBuilder(optionalIndexation ...string) *MessageBuilder {
+	indexation := ""
+	if len(optionalIndexation) > 0 {
+		indexation = optionalIndexation[0]
+	}
 	return &MessageBuilder{
 		te:         te,
 		indexation: indexation,
 	}
+}
+
+func (b *MessageBuilder) LatestMilestonesAsParents() *MessageBuilder {
+	return b.Parents(hornet.MessageIDs{b.te.Milestones[len(b.te.Milestones)-1].Milestone().MessageID, b.te.Milestones[len(b.te.Milestones)-2].Milestone().MessageID})
 }
 
 func (b *MessageBuilder) Parents(parents hornet.MessageIDs) *MessageBuilder {
@@ -102,7 +110,10 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 		parents = append(parents, parent[:])
 	}
 
-	msg, err := iotago.NewMessageBuilder().Parents(parents).Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData}).Build()
+	msg, err := iotago.NewMessageBuilder().
+		Parents(parents).
+		Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData}).
+		Build()
 	require.NoError(b.te.TestInterface, err)
 
 	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
@@ -119,7 +130,7 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 
 func (b *MessageBuilder) Build() *Message {
 
-	require.True(b.te.TestInterface, b.amount > 0)
+	require.Greater(b.te.TestInterface, b.amount, uint64(0))
 
 	builder := iotago.NewTransactionBuilder()
 
@@ -147,6 +158,13 @@ func (b *MessageBuilder) Build() *Message {
 
 	require.NotEmpty(b.te.TestInterface, outputsThatCanBeConsumed)
 
+	outputsBalance := uint64(0)
+	for _, utxo := range outputsThatCanBeConsumed {
+		outputsBalance += utxo.Amount()
+	}
+
+	require.GreaterOrEqual(b.te.TestInterface, outputsBalance, b.amount)
+
 	for _, utxo := range outputsThatCanBeConsumed {
 
 		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: utxo.UTXOInput()})
@@ -171,8 +189,9 @@ func (b *MessageBuilder) Build() *Message {
 		builder.AddOutput(&iotago.SigLockedSingleOutput{Address: fromAddr, Amount: remainderAmount})
 	}
 
-	require.NotEmpty(b.te.TestInterface, b.indexation)
-	builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData})
+	if len(b.indexation) > 0 {
+		builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData})
+	}
 
 	// Sign transaction
 	inputPrivateKey, _ := b.fromWallet.KeyPair()
@@ -183,7 +202,9 @@ func (b *MessageBuilder) Build() *Message {
 
 	require.NotNil(b.te.TestInterface, b.parents)
 
-	msg, err := iotago.NewMessageBuilder().Parents(b.parents.ToSliceOfSlices()).Payload(transaction).Build()
+	msg, err := iotago.NewMessageBuilder().
+		Parents(b.parents.ToSliceOfSlices()).
+		Payload(transaction).Build()
 	require.NoError(b.te.TestInterface, err)
 
 	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
@@ -263,6 +284,11 @@ func (m *Message) BookOnWallets() *Message {
 func (m *Message) GeneratedUTXO() *utxo.Output {
 	require.NotNil(m.builder.te.TestInterface, m.sentOutput)
 	return m.sentOutput
+}
+
+func (m *Message) RemainderUTXO() *utxo.Output {
+	require.NotNil(m.builder.te.TestInterface, m.remainderOutput)
+	return m.remainderOutput
 }
 
 func (m *Message) IotaMessage() *iotago.Message {

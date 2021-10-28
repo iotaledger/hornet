@@ -17,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	"github.com/iotaledger/hive.go/serializer"
 )
 
 var (
@@ -198,7 +197,7 @@ func (env *ReferendumTestEnv) RegisterSampleReferendum(startMilestoneIndex miles
 	question, err := questionBuilder.Build()
 	require.NoError(env.t, err)
 
-	questionsBuilder := referendum.NewQuestionsBuilder()
+	questionsBuilder := referendum.NewBallotBuilder()
 	questionsBuilder.AddQuestion(question)
 	payload, err := questionsBuilder.Build()
 	require.NoError(env.t, err)
@@ -219,27 +218,13 @@ func (env *ReferendumTestEnv) RegisterSampleReferendum(startMilestoneIndex miles
 	return referendumID
 }
 
-func (env *ReferendumTestEnv) IssueVote(wallet *utils.HDWallet, amount uint64, votes *referendum.Votes) *testsuite.Message {
-
-	require.LessOrEqualf(env.t, amount, wallet.Balance(), "trying to vote with more than available in the wallet")
-
-	votesData, err := votes.Serialize(serializer.DeSeriModePerformValidation)
-	require.NoError(env.t, err)
-
-	return env.te.NewMessageBuilder(voteIndexation).
-		Parents(hornet.MessageIDs{env.te.Milestones[len(env.te.Milestones)-1].Milestone().MessageID, env.te.Milestones[len(env.te.Milestones)-2].Milestone().MessageID}).
-		FromWallet(wallet).
-		ToWallet(wallet).
-		Amount(amount).
-		IndexationData(votesData).
-		Build().
-		Store().
-		BookOnWallets()
+func (env *ReferendumTestEnv) IssueVote(wallet *utils.HDWallet, amount uint64, votes []*referendum.Vote) *CastVote {
+	return env.NewVoteBuilder(wallet).Amount(amount).AddVotes(votes).Cast()
 }
 
 func (env *ReferendumTestEnv) CancelVote(wallet *utils.HDWallet) *testsuite.Message {
 	return env.te.NewMessageBuilder("Not a vote").
-		Parents(hornet.MessageIDs{env.te.Milestones[len(env.te.Milestones)-1].Milestone().MessageID, env.te.Milestones[len(env.te.Milestones)-2].Milestone().MessageID}).
+		LatestMilestonesAsParents().
 		FromWallet(wallet).
 		ToWallet(wallet).
 		Amount(wallet.Balance()).
@@ -248,23 +233,23 @@ func (env *ReferendumTestEnv) CancelVote(wallet *utils.HDWallet) *testsuite.Mess
 		BookOnWallets()
 }
 
-func (env *ReferendumTestEnv) IssueSampleVoteAndMilestone(referendumID referendum.ReferendumID, wallet *utils.HDWallet) *testsuite.Message {
+func (env *ReferendumTestEnv) IssueSampleVoteAndMilestone(referendumID referendum.ReferendumID, wallet *utils.HDWallet, balance ...uint64) *CastVote {
 
-	votesBuilder := referendum.NewVotesBuilder()
-	votesBuilder.AddVote(&referendum.Vote{
+	amountToSend := wallet.Balance()
+	if len(balance) > 0 {
+		require.LessOrEqualf(env.t, balance[0], wallet.Balance(), "trying to send more balance than available in wallet")
+		amountToSend = balance[0]
+	}
+
+	castVote := env.NewVoteBuilder(wallet).Amount(amountToSend).AddVote(&referendum.Vote{
 		ReferendumID: referendumID,
 		Answers:      []byte{byte(1)},
-	})
+	}).Cast()
 
-	votes, err := votesBuilder.Build()
-	require.NoError(env.t, err)
-
-	message := env.IssueVote(wallet, wallet.Balance(), votes)
-
-	_, confStats := env.IssueMilestone(message.StoredMessageID())
+	_, confStats := env.IssueMilestone(castVote.Message().StoredMessageID())
 	require.Equal(env.t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
 
-	return message
+	return castVote
 }
 
 func (env *ReferendumTestEnv) IssueMilestone(onTips ...hornet.MessageID) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
