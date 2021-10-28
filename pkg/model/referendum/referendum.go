@@ -34,8 +34,8 @@ var (
 func PayloadSelector(payloadType uint32) (serializer.Serializable, error) {
 	var seri serializer.Serializable
 	switch payloadType {
-	case QuestionsPayloadTypeID:
-		seri = &Questions{}
+	case BallotPayloadTypeID:
+		seri = &Ballot{}
 	default:
 		return nil, fmt.Errorf("%w: type %d", ErrUnknownPayloadType, payloadType)
 	}
@@ -78,7 +78,7 @@ func (r *Referendum) Deserialize(data []byte, deSeriMode serializer.DeSerializat
 		}).
 		ReadPayload(func(seri serializer.Serializable) { r.Payload = seri }, deSeriMode, func(ty uint32) (serializer.Serializable, error) {
 			switch ty {
-			case QuestionsPayloadTypeID:
+			case BallotPayloadTypeID:
 			default:
 				return nil, fmt.Errorf("invalid referendum payload type ID %d: %w", ty, iotago.ErrUnsupportedPayloadType)
 			}
@@ -156,8 +156,8 @@ func (r *Referendum) UnmarshalJSON(bytes []byte) error {
 func jsonPayloadSelector(ty int) (iotago.JSONSerializable, error) {
 	var obj iotago.JSONSerializable
 	switch uint32(ty) {
-	case QuestionsPayloadTypeID:
-		obj = &jsonQuestions{}
+	case BallotPayloadTypeID:
+		obj = &jsonBallot{}
 	default:
 		return nil, fmt.Errorf("unable to decode payload type from JSON: %w", ErrUnknownPayloadType)
 	}
@@ -198,10 +198,9 @@ func (j *jsonReferendum) ToSerializable() (serializer.Serializable, error) {
 
 // Helpers
 
-func (r *Referendum) Questions() []*Question {
-
+func (r *Referendum) BallotQuestions() []*Question {
 	switch payload := r.Payload.(type) {
-	case *Questions:
+	case *Ballot:
 		questions := make([]*Question, len(payload.Questions))
 		for i := range payload.Questions {
 			questions[i] = payload.Questions[i].(*Question)

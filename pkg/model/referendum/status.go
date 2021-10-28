@@ -38,7 +38,7 @@ func (rm *ReferendumManager) ReferendumStatus(referendumID ReferendumID) (*Refer
 	}
 
 	// For each referendum, iterate over all questions
-	for idx, question := range referendum.Questions() {
+	for idx, question := range referendum.BallotQuestions() {
 		questionIndex := uint8(idx)
 
 		questionStatus := &QuestionStatus{}

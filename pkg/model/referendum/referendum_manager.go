@@ -453,7 +453,7 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 		}
 
 		// For each referendum, iterate over all questions
-		for idx, question := range referendum.Questions() {
+		for idx, question := range referendum.BallotQuestions() {
 			questionIndex := uint8(idx)
 
 			// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter
@@ -511,7 +511,7 @@ func (rm *ReferendumManager) validVotes(index milestone.Index, votes []*Vote) []
 		}
 
 		// Check that the amount of answers equals the questions in the referendum
-		if len(vote.Answers) != len(referendum.Questions()) {
+		if len(vote.Answers) != len(referendum.BallotQuestions()) {
 			continue
 		}
 

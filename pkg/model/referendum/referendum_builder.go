@@ -32,7 +32,7 @@ func (rb *ReferendumBuilder) Payload(seri serializer.Serializable) *ReferendumBu
 		return rb
 	}
 	switch seri.(type) {
-	case *Questions:
+	case *Ballot:
 	case nil:
 	default:
 		rb.err = fmt.Errorf("%w: unsupported type %T", ErrUnknownPayloadType, seri)

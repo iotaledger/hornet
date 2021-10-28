@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	// QuestionsPayloadTypeID defines the questions payload's type ID.
-	QuestionsPayloadTypeID uint32 = 0
+	// BallotPayloadTypeID defines the ballot payload's type ID.
+	BallotPayloadTypeID uint32 = 0
 
 	MinQuestionsCount = 1
 	MaxQuestionsCount = 10
@@ -23,12 +23,12 @@ var (
 	}
 )
 
-// Questions
-type Questions struct {
+// Ballot
+type Ballot struct {
 	Questions serializer.Serializables
 }
 
-func (q *Questions) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (q *Ballot) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadSliceOfObjects(func(seri serializer.Serializables) { q.Questions = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
 			// there is no real selector, so we always return a fresh Question
@@ -39,7 +39,7 @@ func (q *Questions) Deserialize(data []byte, deSeriMode serializer.DeSerializati
 		Done()
 }
 
-func (q *Questions) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (q *Ballot) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 
 	//TODO: validate text lengths
 
@@ -56,8 +56,8 @@ func (q *Questions) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte
 		Serialize()
 }
 
-func (q *Questions) MarshalJSON() ([]byte, error) {
-	jQuestions := &jsonQuestions{}
+func (q *Ballot) MarshalJSON() ([]byte, error) {
+	jQuestions := &jsonBallot{}
 
 	jQuestions.Questions = make([]*json.RawMessage, len(q.Questions))
 	for i, question := range q.Questions {
@@ -72,8 +72,8 @@ func (q *Questions) MarshalJSON() ([]byte, error) {
 	return json.Marshal(jQuestions)
 }
 
-func (q *Questions) UnmarshalJSON(bytes []byte) error {
-	jQuestions := &jsonQuestions{}
+func (q *Ballot) UnmarshalJSON(bytes []byte) error {
+	jQuestions := &jsonBallot{}
 	if err := json.Unmarshal(bytes, jQuestions); err != nil {
 		return err
 	}
@@ -81,17 +81,17 @@ func (q *Questions) UnmarshalJSON(bytes []byte) error {
 	if err != nil {
 		return err
 	}
-	*q = *seri.(*Questions)
+	*q = *seri.(*Ballot)
 	return nil
 }
 
-// jsonReferendum defines the json representation of a Referendum.
-type jsonQuestions struct {
+// jsonBallot defines the json representation of a Ballot.
+type jsonBallot struct {
 	Questions []*json.RawMessage `json:"questions"`
 }
 
-func (j *jsonQuestions) ToSerializable() (serializer.Serializable, error) {
-	payload := &Questions{}
+func (j *jsonBallot) ToSerializable() (serializer.Serializable, error) {
+	payload := &Ballot{}
 
 	questions := make(serializer.Serializables, len(j.Questions))
 	for i, ele := range j.Questions {
