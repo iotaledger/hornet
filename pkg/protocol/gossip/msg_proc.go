@@ -19,6 +19,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -296,7 +297,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(iotago.DeSeriModeNoValidation)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -324,7 +325,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(iotago.DeSeriModeNoValidation)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -418,7 +419,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.processingLock.Unlock()
 
 	// build HORNET representation of the message
-	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, iotago.DeSeriModePerformValidation)
+	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.WithMessagef(err, "peer sent an invalid message"))

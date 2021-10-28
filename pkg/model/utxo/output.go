@@ -10,11 +10,12 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
-	OutputIDLength = iotago.TransactionIDLength + iotago.UInt16ByteSize
+	OutputIDLength = iotago.TransactionIDLength + serializer.UInt16ByteSize
 )
 
 var FakeTreasuryAddress = iotago.Ed25519Address{}
@@ -51,14 +52,14 @@ func (o *Output) Amount() uint64 {
 
 func (o *Output) addressBytes() []byte {
 	// This never throws an error for current Ed25519 addresses
-	bytes, _ := o.address.Serialize(iotago.DeSeriModeNoValidation)
+	bytes, _ := o.address.Serialize(serializer.DeSeriModeNoValidation)
 	return bytes
 }
 
 func (o *Output) UTXOInput() *iotago.UTXOInput {
 	input := &iotago.UTXOInput{}
 	copy(input.TransactionID[:], o.outputID[:iotago.TransactionIDLength])
-	input.TransactionOutputIndex = binary.LittleEndian.Uint16(o.outputID[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize])
+	input.TransactionOutputIndex = binary.LittleEndian.Uint16(o.outputID[iotago.TransactionIDLength : iotago.TransactionIDLength+serializer.UInt16ByteSize])
 	return input
 }
 
@@ -138,12 +139,12 @@ func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, inde
 		return nil, err
 	}
 
-	bytes := make([]byte, iotago.UInt16ByteSize)
+	bytes := make([]byte, serializer.UInt16ByteSize)
 	binary.LittleEndian.PutUint16(bytes, index)
 
 	var outputID iotago.UTXOInputID
 	copy(outputID[:iotago.TransactionIDLength], txID[:])
-	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+iotago.UInt16ByteSize], bytes)
+	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+serializer.UInt16ByteSize], bytes)
 
 	amount, err := output.Deposit()
 	if err != nil {

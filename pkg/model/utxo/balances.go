@@ -7,10 +7,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -112,7 +112,7 @@ func (u *Manager) AddressBalance(address iotago.Address) (balance uint64, dustAl
 
 func (u *Manager) AddressBalanceWithoutLocking(address iotago.Address) (balance uint64, dustAllowed bool, err error) {
 
-	addressKey, err := address.Serialize(iotago.DeSeriModeNoValidation)
+	addressKey, err := address.Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		return 0, false, err
 	}
@@ -137,7 +137,7 @@ func (u *Manager) AddressBalanceWithoutLocking(address iotago.Address) (balance 
 
 func (u *Manager) ReadDustForAddress(address iotago.Address, applyDiff *BalanceDiff) (dustAllowanceBalance uint64, dustOutputCount int64, err error) {
 
-	addressKey, err := address.Serialize(iotago.DeSeriModeNoValidation)
+	addressKey, err := address.Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		return 0, 0, err
 	}

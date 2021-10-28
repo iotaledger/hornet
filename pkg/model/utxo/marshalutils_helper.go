@@ -3,6 +3,7 @@ package utxo
 import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -52,7 +53,7 @@ func parseAddress(ms *marshalutil.MarshalUtil) (iotago.Address, error) {
 	address := addr.(iotago.Address)
 
 	pre := ms.ReadOffset()
-	readBytes, err := address.Deserialize(ms.ReadRemainingBytes(), iotago.DeSeriModePerformValidation)
+	readBytes, err := address.Deserialize(ms.ReadRemainingBytes(), serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
 	}

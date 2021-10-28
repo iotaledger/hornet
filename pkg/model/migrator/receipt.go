@@ -12,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/iota.go/encoding/t5b1"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -228,12 +229,12 @@ func compareAgainstEntries(entries map[string]*iotago.MigratedFundsEntry, target
 		return fmt.Errorf("%w: target entry %s not in entries set", ErrInvalidReceiptServiceState, trytes)
 	}
 
-	entryBytes, err := entry.Serialize(iotago.DeSeriModePerformValidation)
+	entryBytes, err := entry.Serialize(serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return fmt.Errorf("unable to deserialize entry: %w", err)
 	}
 
-	targetEntryBytes, err := targetEntry.Serialize(iotago.DeSeriModePerformValidation)
+	targetEntryBytes, err := targetEntry.Serialize(serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return fmt.Errorf("unable to deserialize target entry: %w", err)
 	}

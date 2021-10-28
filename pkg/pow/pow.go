@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
 	powsrvio "gitlab.com/powsrv.io/go/client"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/pow"
@@ -174,7 +174,7 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 	}
 
 	getPoWData := func(msg *iotago.Message) (powData []byte, err error) {
-		msgData, err := msg.Serialize(iotago.DeSeriModeNoValidation)
+		msgData, err := msg.Serialize(serializer.DeSeriModeNoValidation)
 		if err != nil {
 			return nil, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
 		}

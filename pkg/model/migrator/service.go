@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -272,7 +273,7 @@ func createReceipt(migratedAt uint32, final bool, funds []*iotago.MigratedFundsE
 	receipt := &iotago.Receipt{
 		MigratedAt: migratedAt,
 		Final:      final,
-		Funds:      make([]iotago.Serializable, len(funds)),
+		Funds:      make([]serializer.Serializable, len(funds)),
 	}
 	for i := range funds {
 		receipt.Funds[i] = funds[i]

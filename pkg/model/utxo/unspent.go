@@ -4,6 +4,7 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -79,7 +80,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 
 	// Filter by address
 	if opt.address != nil {
-		addrBytes, err := opt.address.Serialize(iotago.DeSeriModeNoValidation)
+		addrBytes, err := opt.address.Serialize(serializer.DeSeriModeNoValidation)
 		if err != nil {
 			return err
 		}

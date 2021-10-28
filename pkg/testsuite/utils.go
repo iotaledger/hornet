@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -107,7 +108,7 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	require.NoError(b.te.TestInterface, err)
 
 	return &Message{
@@ -188,7 +189,7 @@ func (b *MessageBuilder) Build() *Message {
 	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	require.NoError(b.te.TestInterface, err)
 
 	var outputType string

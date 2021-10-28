@@ -7,6 +7,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -23,7 +24,7 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*storage.Me
 		return nil, err
 	}
 
-	msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.Me
 		return nil, err
 	}
 
-	msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
 	}
