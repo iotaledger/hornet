@@ -364,8 +364,8 @@ func TestReferendumVoteAddVoteBalanceBySweeping(t *testing.T) {
 	env.AssertDefaultBallotAnswerStatus(referendumID, 5_000_000, 10_000_000)
 
 	// Sweep all funds
+	require.Equal(t, 2, len(env.Wallet1.Outputs()))
 	castVote2 := env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1, 6_500_000) // 10
-	require.NotNil(t, castVote2)
 	require.Equal(t, 1, len(env.Wallet1.Outputs()))
 
 	// Verify current vote status
@@ -378,5 +378,59 @@ func TestReferendumVoteAddVoteBalanceBySweeping(t *testing.T) {
 }
 
 func TestReferendumVoteAddVoteBalanceByMultipleOutputs(t *testing.T) {
+	env := test.NewReferendumTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	defer env.Cleanup()
 
+	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	referendumID := env.RegisterDefaultReferendum(5, 2, 5)
+
+	ref := env.ReferendumManager().Referendum(referendumID)
+	require.NotNil(t, ref)
+
+	// Verify the configured referendum indexes
+	require.Equal(t, milestone.Index(5), ref.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
+
+	env.IssueMilestone() // 5
+	env.IssueMilestone() // 6
+	env.IssueMilestone() // 7
+
+	// Issue a vote and milestone
+	castVote1 := env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1, 5_000_000) // 8
+	require.NotNil(t, castVote1)
+
+	// Verify current vote status
+	env.AssertReferendumVoteStatus(referendumID, 1, 0)
+	env.AssertDefaultBallotAnswerStatus(referendumID, 5_000_000, 5_000_000)
+
+	// Send more funds to wallet1
+	transfer := env.Transfer(env.Wallet2, env.Wallet1, 1_500_000)
+	require.Equal(t, 2, len(env.Wallet1.Outputs()))
+
+	env.IssueMilestone(transfer.StoredMessageID()) // 9
+
+	// Verify current vote status
+	env.AssertReferendumVoteStatus(referendumID, 1, 0)
+	env.AssertDefaultBallotAnswerStatus(referendumID, 5_000_000, 10_000_000)
+
+	// Cast a separate vote, without sweeping
+	require.Equal(t, 2, len(env.Wallet1.Outputs()))
+	castVote2 := env.NewVoteBuilder(env.Wallet1).
+		Amount(1_500_000).
+		UsingOutput(transfer.GeneratedUTXO()).
+		AddDefaultVote(referendumID).
+		Cast()
+	env.IssueMilestone(castVote2.Message().StoredMessageID()) // 10
+	require.Equal(t, 2, len(env.Wallet1.Outputs()))
+
+	// Verify current vote status
+	env.AssertReferendumVoteStatus(referendumID, 2, 0)
+	env.AssertDefaultBallotAnswerStatus(referendumID, 6_500_000, 16_500_000)
+
+	// Verify both votes
+	env.AssertTrackedVote(referendumID, castVote1, 8, 0, 5_000_000)
+	env.AssertTrackedVote(referendumID, castVote2, 10, 0, 1_500_000)
 }

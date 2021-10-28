@@ -61,6 +61,14 @@ func (b *VoteBuilder) AddVotes(votes []*referendum.Vote) *VoteBuilder {
 	return b
 }
 
+func (b *VoteBuilder) AddDefaultVote(referendumID referendum.ReferendumID) *VoteBuilder {
+	b.votesBuilder.AddVote(&referendum.Vote{
+		ReferendumID: referendumID,
+		Answers:      []byte{byte(1)},
+	})
+	return b
+}
+
 func (b *VoteBuilder) AddVote(vote *referendum.Vote) *VoteBuilder {
 	require.NotNil(b.env.t, vote)
 	b.votesBuilder.AddVote(vote)

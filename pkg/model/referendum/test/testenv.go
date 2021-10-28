@@ -251,10 +251,10 @@ func (env *ReferendumTestEnv) IssueDefaultVoteAndMilestone(referendumID referend
 		amountToSend = balance[0]
 	}
 
-	castVote := env.NewVoteBuilder(wallet).Amount(amountToSend).AddVote(&referendum.Vote{
-		ReferendumID: referendumID,
-		Answers:      []byte{byte(1)},
-	}).Cast()
+	castVote := env.NewVoteBuilder(wallet).
+		Amount(amountToSend).
+		AddDefaultVote(referendumID).
+		Cast()
 
 	_, confStats := env.IssueMilestone(castVote.Message().StoredMessageID())
 	require.Equal(env.t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
