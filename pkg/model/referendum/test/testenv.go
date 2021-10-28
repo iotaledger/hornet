@@ -174,7 +174,7 @@ func (env *ReferendumTestEnv) Cleanup() {
 	env.te.CleanupTestEnvironment(true)
 }
 
-func (env *ReferendumTestEnv) RegisterSampleReferendum(startMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) referendum.ReferendumID {
+func (env *ReferendumTestEnv) RegisterDefaultReferendum(startMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) referendum.ReferendumID {
 
 	referendumStartIndex := startMilestoneIndex
 	referendumStartHoldingIndex := referendumStartIndex + milestone.Index(startPhaseDuration)
@@ -233,11 +233,21 @@ func (env *ReferendumTestEnv) CancelVote(wallet *utils.HDWallet) *testsuite.Mess
 		BookOnWallets()
 }
 
-func (env *ReferendumTestEnv) IssueSampleVoteAndMilestone(referendumID referendum.ReferendumID, wallet *utils.HDWallet, balance ...uint64) *CastVote {
+func (env *ReferendumTestEnv) Transfer(fromWallet *utils.HDWallet, toWallet *utils.HDWallet, amount uint64) *testsuite.Message {
+	return env.te.NewMessageBuilder("Not a vote").
+		LatestMilestonesAsParents().
+		FromWallet(fromWallet).
+		ToWallet(toWallet).
+		Amount(amount).
+		Build().
+		Store().
+		BookOnWallets()
+}
+
+func (env *ReferendumTestEnv) IssueDefaultVoteAndMilestone(referendumID referendum.ReferendumID, wallet *utils.HDWallet, balance ...uint64) *CastVote {
 
 	amountToSend := wallet.Balance()
 	if len(balance) > 0 {
-		require.LessOrEqualf(env.t, balance[0], wallet.Balance(), "trying to send more balance than available in wallet")
 		amountToSend = balance[0]
 	}
 
@@ -281,4 +291,39 @@ func (env *ReferendumTestEnv) PrintJSON(i interface{}) {
 	j, err := json.MarshalIndent(i, "", "  ")
 	require.NoError(env.t, err)
 	fmt.Println(string(j))
+}
+
+func (env *ReferendumTestEnv) AssertReferendumsCount(acceptingCount int, countingCount int) {
+	// Verify current vote status
+	require.Equal(env.t, acceptingCount, len(env.ReferendumManager().ReferendumsAcceptingVotes()))
+	require.Equal(env.t, countingCount, len(env.ReferendumManager().ReferendumsCountingVotes()))
+}
+
+func (env *ReferendumTestEnv) AssertReferendumVoteStatus(referendumID referendum.ReferendumID, activeVotes int, pastVotes int) {
+	// Verify current vote status
+	require.Equal(env.t, activeVotes, len(env.ActiveVotesForReferendum(referendumID)))
+	require.Equal(env.t, pastVotes, len(env.PastVotesForReferendum(referendumID)))
+}
+
+func (env *ReferendumTestEnv) AssertDefaultBallotAnswerStatus(referendumID referendum.ReferendumID, currentVoteAmount uint64, accumulatedVoteAmount uint64) {
+	env.AssertBallotAnswerStatus(referendumID, currentVoteAmount, accumulatedVoteAmount, 0, 1)
+}
+
+func (env *ReferendumTestEnv) AssertBallotAnswerStatus(referendumID referendum.ReferendumID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerIndex int) {
+	status, err := env.ReferendumManager().ReferendumStatus(referendumID)
+	require.NoError(env.t, err)
+	env.PrintJSON(status)
+	require.Equal(env.t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Exactly(env.t, currentVoteAmount, status.Questions[questionIndex].Answers[answerIndex].Current)
+	require.Exactly(env.t, accumulatedVoteAmount, status.Questions[questionIndex].Answers[answerIndex].Accumulated)
+}
+
+func (env *ReferendumTestEnv) AssertTrackedVote(referendumID referendum.ReferendumID, castVote *CastVote, startMilestoneIndex milestone.Index, endMilestoneIndex milestone.Index, amount uint64) {
+	trackedVote, err := env.ReferendumManager().VoteForOutputID(referendumID, castVote.Message().GeneratedUTXO().OutputID())
+	require.NoError(env.t, err)
+	require.Equal(env.t, castVote.Message().GeneratedUTXO().OutputID(), trackedVote.OutputID)
+	require.Equal(env.t, castVote.Message().StoredMessageID(), trackedVote.MessageID)
+	require.Equal(env.t, amount, trackedVote.Amount)
+	require.Equal(env.t, startMilestoneIndex, trackedVote.StartIndex)
+	require.Equal(env.t, endMilestoneIndex, trackedVote.EndIndex)
 }

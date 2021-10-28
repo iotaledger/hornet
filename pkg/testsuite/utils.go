@@ -130,7 +130,7 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 
 func (b *MessageBuilder) Build() *Message {
 
-	require.Greater(b.te.TestInterface, b.amount, uint64(0))
+	require.Greaterf(b.te.TestInterface, b.amount, uint64(0), "trying to send a transaction with no value")
 
 	builder := iotago.NewTransactionBuilder()
 
@@ -156,14 +156,14 @@ func (b *MessageBuilder) Build() *Message {
 		}
 	}
 
-	require.NotEmpty(b.te.TestInterface, outputsThatCanBeConsumed)
+	require.NotEmptyf(b.te.TestInterface, outputsThatCanBeConsumed, "no outputs available on the wallet")
 
 	outputsBalance := uint64(0)
 	for _, utxo := range outputsThatCanBeConsumed {
 		outputsBalance += utxo.Amount()
 	}
 
-	require.GreaterOrEqual(b.te.TestInterface, outputsBalance, b.amount)
+	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
 
 	for _, utxo := range outputsThatCanBeConsumed {
 
