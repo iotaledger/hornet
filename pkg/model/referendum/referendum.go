@@ -2,14 +2,15 @@ package referendum
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-
-	"github.com/gohornet/hornet/pkg/model/milestone"
-
-	iotago "github.com/iotaledger/iota.go/v2"
 
 	// import implementation
 	"golang.org/x/crypto/blake2b"
+
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/serializer"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
@@ -18,9 +19,6 @@ const (
 
 	ReferendumNameMaxLength           = 255
 	ReferendumAdditionalInfoMaxLength = 500
-
-	MinQuestionsCount = 1
-	MaxQuestionsCount = 10
 )
 
 // ReferendumID is the ID of a referendum.
@@ -29,12 +27,20 @@ type ReferendumID = [ReferendumIDLength]byte
 var (
 	NullReferendumID = ReferendumID{}
 
-	questionsArrayRules = &iotago.ArrayRules{
-		Min:            MinQuestionsCount,
-		Max:            MaxQuestionsCount,
-		ValidationMode: iotago.ArrayValidationModeNone,
-	}
+	ErrUnknownPayloadType = errors.New("unknown payload type")
 )
+
+// PayloadSelector implements SerializableSelectorFunc for payload types.
+func PayloadSelector(payloadType uint32) (serializer.Serializable, error) {
+	var seri serializer.Serializable
+	switch payloadType {
+	case QuestionsPayloadTypeID:
+		seri = &Questions{}
+	default:
+		return nil, fmt.Errorf("%w: type %d", ErrUnknownPayloadType, payloadType)
+	}
+	return seri, nil
+}
 
 // Referendum
 type Referendum struct {
@@ -42,13 +48,13 @@ type Referendum struct {
 	milestoneIndexStart        uint32
 	milestoneIndexStartHolding uint32
 	milestoneIndexEnd          uint32
-	Questions                  iotago.Serializables
+	Payload                    serializer.Serializable
 	AdditionalInfo             string
 }
 
 // ID returns the ID of the referendum.
 func (r *Referendum) ID() (ReferendumID, error) {
-	data, err := r.Serialize(iotago.DeSeriModeNoValidation)
+	data, err := r.Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		return ReferendumID{}, err
 	}
@@ -56,9 +62,9 @@ func (r *Referendum) ID() (ReferendumID, error) {
 	return blake2b.Sum256(data), nil
 }
 
-func (r *Referendum) Deserialize(data []byte, deSeriMode iotago.DeSerializationMode) (int, error) {
-	return iotago.NewDeserializer(data).
-		ReadString(&r.Name, iotago.SeriSliceLengthAsByte, func(err error) error {
+func (r *Referendum) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+	return serializer.NewDeserializer(data).
+		ReadString(&r.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum name: %w", err)
 		}, ReferendumNameMaxLength).
 		ReadNum(&r.milestoneIndexStart, func(err error) error {
@@ -70,27 +76,30 @@ func (r *Referendum) Deserialize(data []byte, deSeriMode iotago.DeSerializationM
 		ReadNum(&r.milestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum end milestone: %w", err)
 		}).
-		ReadSliceOfObjects(func(seri iotago.Serializables) { r.Questions = seri }, deSeriMode, iotago.SeriSliceLengthAsByte, iotago.TypeDenotationNone, func(_ uint32) (iotago.Serializable, error) {
-			// there is no real selector, so we always return a fresh Question
-			return &Question{}, nil
-		}, questionsArrayRules, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum questions: %w", err)
+		ReadPayload(func(seri serializer.Serializable) { r.Payload = seri }, deSeriMode, func(ty uint32) (serializer.Serializable, error) {
+			switch ty {
+			case QuestionsPayloadTypeID:
+			default:
+				return nil, fmt.Errorf("invalid referendum payload type ID %d: %w", ty, iotago.ErrUnsupportedPayloadType)
+			}
+			return PayloadSelector(ty)
+		}, func(err error) error {
+			return fmt.Errorf("unable to deserialize payload's inner payload: %w", err)
 		}).
-		ReadString(&r.AdditionalInfo, iotago.SeriSliceLengthAsUint16, func(err error) error {
+		ReadString(&r.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum additional info: %w", err)
 		}, ReferendumAdditionalInfoMaxLength).
+		ConsumedAll(func(leftOver int, err error) error {
+			return fmt.Errorf("%w: unable to deserialize referendum: %d bytes are still available", err, leftOver)
+		}).
 		Done()
 }
 
-func (r *Referendum) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, error) {
-	if deSeriMode.HasMode(iotago.DeSeriModePerformValidation) {
-		//TODO: this should be moved as an arrayRule parameter to WriteSliceOfObjects in iota.go
-		if err := questionsArrayRules.CheckBounds(uint(len(r.Questions))); err != nil {
-			return nil, fmt.Errorf("unable to serialize referendum questions: %w", err)
-		}
-	}
-	return iotago.NewSerializer().
-		WriteString(r.Name, iotago.SeriSliceLengthAsByte, func(err error) error {
+func (r *Referendum) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+
+	//TODO: validate text lengths
+	return serializer.NewSerializer().
+		WriteString(r.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum name: %w", err)
 		}).
 		WriteNum(r.milestoneIndexStart, func(err error) error {
@@ -102,10 +111,10 @@ func (r *Referendum) Serialize(deSeriMode iotago.DeSerializationMode) ([]byte, e
 		WriteNum(r.milestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum end milestone: %w", err)
 		}).
-		WriteSliceOfObjects(r.Questions, deSeriMode, iotago.SeriSliceLengthAsByte, nil, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum questions: %w", err)
+		WritePayload(r.Payload, deSeriMode, func(err error) error {
+			return fmt.Errorf("unable to serialize referendum inner payload: %w", err)
 		}).
-		WriteString(r.AdditionalInfo, iotago.SeriSliceLengthAsUint16, func(err error) error {
+		WriteString(r.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum additional info: %w", err)
 		}).
 		Serialize()
@@ -120,15 +129,12 @@ func (r *Referendum) MarshalJSON() ([]byte, error) {
 		AdditionalInfo:             r.AdditionalInfo,
 	}
 
-	jReferendum.Questions = make([]*json.RawMessage, len(r.Questions))
-	for i, question := range r.Questions {
-		jsonQuestion, err := question.MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
-		rawJSONQuestion := json.RawMessage(jsonQuestion)
-		jReferendum.Questions[i] = &rawJSONQuestion
+	jsonPayload, err := r.Payload.MarshalJSON()
+	if err != nil {
+		return nil, err
 	}
+	rawMsgJsonPayload := json.RawMessage(jsonPayload)
+	jReferendum.Payload = &rawMsgJsonPayload
 
 	return json.Marshal(jReferendum)
 }
@@ -146,18 +152,30 @@ func (r *Referendum) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-// jsonReferendum defines the json representation of a Referendum.
-type jsonReferendum struct {
-	Name                       string             `json:"name"`
-	MilestoneIndexStart        uint32             `json:"milestoneIndexStart"`
-	MilestoneIndexStartHolding uint32             `json:"milestoneIndexStartHolding"`
-	MilestoneIndexEnd          uint32             `json:"milestoneIndexEnd"`
-	Questions                  []*json.RawMessage `json:"questions"`
-	AdditionalInfo             string             `json:"additionalInfo"`
+// selects the json object for the given type.
+func jsonPayloadSelector(ty int) (iotago.JSONSerializable, error) {
+	var obj iotago.JSONSerializable
+	switch uint32(ty) {
+	case QuestionsPayloadTypeID:
+		obj = &jsonQuestions{}
+	default:
+		return nil, fmt.Errorf("unable to decode payload type from JSON: %w", ErrUnknownPayloadType)
+	}
+	return obj, nil
 }
 
-func (j *jsonReferendum) ToSerializable() (iotago.Serializable, error) {
-	payload := &Referendum{
+// jsonReferendum defines the json representation of a Referendum.
+type jsonReferendum struct {
+	Name                       string           `json:"name"`
+	MilestoneIndexStart        uint32           `json:"milestoneIndexStart"`
+	MilestoneIndexStartHolding uint32           `json:"milestoneIndexStartHolding"`
+	MilestoneIndexEnd          uint32           `json:"milestoneIndexEnd"`
+	Payload                    *json.RawMessage `json:"payload"`
+	AdditionalInfo             string           `json:"additionalInfo"`
+}
+
+func (j *jsonReferendum) ToSerializable() (serializer.Serializable, error) {
+	r := &Referendum{
 		Name:                       j.Name,
 		milestoneIndexStart:        j.MilestoneIndexStart,
 		milestoneIndexStartHolding: j.MilestoneIndexStartHolding,
@@ -165,27 +183,34 @@ func (j *jsonReferendum) ToSerializable() (iotago.Serializable, error) {
 		AdditionalInfo:             j.AdditionalInfo,
 	}
 
-	questions := make(iotago.Serializables, len(j.Questions))
-	for i, ele := range j.Questions {
-		question := &Question{}
-
-		rawJSON, err := ele.MarshalJSON()
-		if err != nil {
-			return nil, fmt.Errorf("pos %d: %w", i, err)
-		}
-
-		if err := json.Unmarshal(rawJSON, question); err != nil {
-			return nil, fmt.Errorf("pos %d: %w", i, err)
-		}
-
-		questions[i] = question
+	jsonPayload, err := iotago.DeserializeObjectFromJSON(j.Payload, jsonPayloadSelector)
+	if err != nil {
+		return nil, err
 	}
-	payload.Questions = questions
 
-	return payload, nil
+	r.Payload, err = jsonPayload.ToSerializable()
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 // Helpers
+
+func (r *Referendum) Questions() []*Question {
+
+	switch payload := r.Payload.(type) {
+	case *Questions:
+		questions := make([]*Question, len(payload.Questions))
+		for i := range payload.Questions {
+			questions[i] = payload.Questions[i].(*Question)
+		}
+		return questions
+	default:
+		return nil
+	}
+}
 
 func (r *Referendum) Status(atIndex milestone.Index) string {
 	if atIndex < r.StartMilestoneIndex() {

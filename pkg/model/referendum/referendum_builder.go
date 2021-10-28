@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer"
 )
 
 // NewReferendumBuilder creates a new ReferendumBuilder.
@@ -15,7 +15,6 @@ func NewReferendumBuilder(name string, milestoneStart milestone.Index, milestone
 			milestoneIndexStart:        uint32(milestoneStart),
 			milestoneIndexStartHolding: uint32(milestoneStartHolding),
 			milestoneIndexEnd:          uint32(milestoneEnd),
-			Questions:                  iotago.Serializables{},
 			AdditionalInfo:             additionalInfo,
 		},
 	}
@@ -23,18 +22,33 @@ func NewReferendumBuilder(name string, milestoneStart milestone.Index, milestone
 
 // ReferendumBuilder is used to easily build up a Referendum.
 type ReferendumBuilder struct {
-	r *Referendum
+	r   *Referendum
+	err error
 }
 
-// AddQuestion adds the given question to the referendum.
-func (rb *ReferendumBuilder) AddQuestion(entry *Question) *ReferendumBuilder {
-	rb.r.Questions = append(rb.r.Questions, entry)
+// Payload sets the payload to embed within the message.
+func (rb *ReferendumBuilder) Payload(seri serializer.Serializable) *ReferendumBuilder {
+	if rb.err != nil {
+		return rb
+	}
+	switch seri.(type) {
+	case *Questions:
+	case nil:
+	default:
+		rb.err = fmt.Errorf("%w: unsupported type %T", ErrUnknownPayloadType, seri)
+		return rb
+	}
+	rb.r.Payload = seri
 	return rb
 }
 
 // Build builds the Referendum.
 func (rb *ReferendumBuilder) Build() (*Referendum, error) {
-	if _, err := rb.r.Serialize(iotago.DeSeriModePerformValidation); err != nil {
+	if rb.err != nil {
+		return nil, rb.err
+	}
+
+	if _, err := rb.r.Serialize(serializer.DeSeriModePerformValidation); err != nil {
 		return nil, fmt.Errorf("unable to build referendum: %w", err)
 	}
 	return rb.r, nil

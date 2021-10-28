@@ -87,12 +87,7 @@ func (q *Questions) UnmarshalJSON(bytes []byte) error {
 
 // jsonReferendum defines the json representation of a Referendum.
 type jsonQuestions struct {
-	Name                       string             `json:"name"`
-	MilestoneIndexStart        uint32             `json:"milestoneIndexStart"`
-	MilestoneIndexStartHolding uint32             `json:"milestoneIndexStartHolding"`
-	MilestoneIndexEnd          uint32             `json:"milestoneIndexEnd"`
-	Questions                  []*json.RawMessage `json:"questions"`
-	AdditionalInfo             string             `json:"additionalInfo"`
+	Questions []*json.RawMessage `json:"questions"`
 }
 
 func (j *jsonQuestions) ToSerializable() (serializer.Serializable, error) {
