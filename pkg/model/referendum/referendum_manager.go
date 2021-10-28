@@ -360,7 +360,7 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 			return err
 		}
 
-		if err := rm.countCurrentVote(depositOutputs[0], vote, true, mutations); err != nil {
+		if err := rm.startCountingVoteAnswers(vote, depositOutputs[0].Amount(), mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -420,7 +420,7 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 			return err
 		}
 
-		if err := rm.countCurrentVote(spent.Output(), vote, false, mutations); err != nil {
+		if err := rm.stopCountingVoteAnswers(vote, spent.Output().Amount(), mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -460,22 +460,22 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 			for idx := 0; idx <= len(question.Answers); idx++ {
 				answerIndex := uint8(idx)
 
-				totalBalance, err := rm.TotalBalanceForReferendum(referendumID, questionIndex, answerIndex)
+				accumulatedBalance, err := rm.AccumulatedVoteBalanceForQuestionAndAnswer(referendumID, questionIndex, answerIndex)
 				if err != nil {
 					mutations.Cancel()
 					return err
 				}
 
-				currentBalance, err := rm.CurrentBalanceForReferendum(referendumID, questionIndex, answerIndex)
+				currentBalance, err := rm.CurrentVoteBalanceForQuestionAndAnswer(referendumID, questionIndex, answerIndex)
 				if err != nil {
 					mutations.Cancel()
 					return err
 				}
 
-				// Add current vote balance to total vote balance for each answer
-				newTotal := totalBalance + currentBalance
+				// Add current vote balance to accumulated vote balance for each answer
+				newAccumulatedBalance := accumulatedBalance + currentBalance
 
-				if err := setTotalBalanceForReferendum(referendumID, questionIndex, answerIndex, newTotal, mutations); err != nil {
+				if err := setAccumulatedVoteBalanceForQuestionAndAnswer(referendumID, questionIndex, answerIndex, newAccumulatedBalance, mutations); err != nil {
 					mutations.Cancel()
 					return err
 				}

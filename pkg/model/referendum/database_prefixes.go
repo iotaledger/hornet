@@ -8,6 +8,6 @@ const (
 	ReferendumStoreKeyPrefixReferendumOutputs      byte = 2
 	ReferendumStoreKeyPrefixReferendumSpentOutputs byte = 3
 
-	ReferendumStoreKeyPrefixCurrentVoteBalanceForQuestionAndAnswer byte = 4
-	ReferendumStoreKeyPrefixTotalVoteBalanceForQuestionAndAnswer   byte = 5
+	ReferendumStoreKeyPrefixCurrentVoteBalanceForQuestionAndAnswer     byte = 4
+	ReferendumStoreKeyPrefixAccululatedVoteBalanceForQuestionAndAnswer byte = 5
 )

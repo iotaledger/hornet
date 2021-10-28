@@ -46,19 +46,19 @@ func (rm *ReferendumManager) ReferendumStatus(referendumID ReferendumID) (*Refer
 		for idx := 0; idx <= len(question.Answers); idx++ {
 			answerIndex := uint8(idx)
 
-			currentBalance, err := rm.CurrentBalanceForReferendum(referendumID, questionIndex, answerIndex)
+			currentBalance, err := rm.CurrentVoteBalanceForQuestionAndAnswer(referendumID, questionIndex, answerIndex)
 			if err != nil {
 				return nil, err
 			}
 
-			totalBalance, err := rm.TotalBalanceForReferendum(referendumID, questionIndex, answerIndex)
+			accumulatedBalance, err := rm.AccumulatedVoteBalanceForQuestionAndAnswer(referendumID, questionIndex, answerIndex)
 			if err != nil {
 				return nil, err
 			}
 			questionStatus.Answers = append(questionStatus.Answers, &AnswerStatus{
 				Index:       answerIndex,
 				Current:     currentBalance,
-				Accumulated: totalBalance,
+				Accumulated: accumulatedBalance,
 			})
 		}
 		status.Questions = append(status.Questions, questionStatus)
