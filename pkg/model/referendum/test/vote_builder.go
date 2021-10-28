@@ -14,6 +14,7 @@ import (
 
 type VoteBuilder struct {
 	env          *ReferendumTestEnv
+	wallet       *utils.HDWallet
 	msgBuilder   *testsuite.MessageBuilder
 	votesBuilder *referendum.VotesBuilder
 }
@@ -25,15 +26,19 @@ type CastVote struct {
 
 func (env *ReferendumTestEnv) NewVoteBuilder(wallet *utils.HDWallet) *VoteBuilder {
 	msgBuilder := env.te.NewMessageBuilder(voteIndexation).
-		LatestMilestonesAsParents().
-		FromWallet(wallet).
-		ToWallet(wallet)
+		LatestMilestonesAsParents()
 
 	return &VoteBuilder{
 		env:          env,
+		wallet:       wallet,
 		msgBuilder:   msgBuilder,
 		votesBuilder: referendum.NewVotesBuilder(),
 	}
+}
+
+func (b *VoteBuilder) WholeWalletBalance() *VoteBuilder {
+	b.msgBuilder.Amount(b.wallet.Balance())
+	return b
 }
 
 func (b *VoteBuilder) Amount(amount uint64) *VoteBuilder {
@@ -83,6 +88,8 @@ func (b *VoteBuilder) Cast() *CastVote {
 	require.NoError(b.env.t, err)
 
 	msg := b.msgBuilder.
+		FromWallet(b.wallet).
+		ToWallet(b.wallet).
 		IndexationData(votesData).
 		Build().
 		Store().

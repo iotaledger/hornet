@@ -399,7 +399,7 @@ func TestReferendumVoteAddVoteBalanceByMultipleOutputs(t *testing.T) {
 	env.IssueMilestone() // 7
 
 	// Issue a vote and milestone
-	castVote1 := env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1, 5_000_000) // 8
+	castVote1 := env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1) // 8
 	require.NotNil(t, castVote1)
 
 	// Verify current vote status
@@ -433,4 +433,83 @@ func TestReferendumVoteAddVoteBalanceByMultipleOutputs(t *testing.T) {
 	// Verify both votes
 	env.AssertTrackedVote(referendumID, castVote1, 8, 0, 5_000_000)
 	env.AssertTrackedVote(referendumID, castVote2, 10, 0, 1_500_000)
+}
+
+func TestReferendumMultipleVotes(t *testing.T) {
+	env := test.NewReferendumTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	defer env.Cleanup()
+
+	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	referendumID := env.RegisterDefaultReferendum(5, 2, 5)
+
+	ref := env.ReferendumManager().Referendum(referendumID)
+	require.NotNil(t, ref)
+
+	// Verify the configured referendum indexes
+	require.Equal(t, milestone.Index(5), ref.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
+
+	env.IssueMilestone() // 5
+	env.IssueMilestone() // 6
+	env.IssueMilestone() // 7
+
+	wallet1Vote := env.NewVoteBuilder(env.Wallet1).
+		WholeWalletBalance().
+		AddVote(&referendum.Vote{
+			ReferendumID: referendumID,
+			Answers:      []byte{0},
+		}).
+		Cast()
+
+	wallet2Vote := env.NewVoteBuilder(env.Wallet2).
+		WholeWalletBalance().
+		AddVote(&referendum.Vote{
+			ReferendumID: referendumID,
+			Answers:      []byte{1},
+		}).
+		Cast()
+
+	wallet3Vote := env.NewVoteBuilder(env.Wallet3).
+		WholeWalletBalance().
+		AddVote(&referendum.Vote{
+			ReferendumID: referendumID,
+			Answers:      []byte{2},
+		}).
+		Cast()
+
+	_, confStats := env.IssueMilestone(wallet1Vote.Message().StoredMessageID(), wallet2Vote.Message().StoredMessageID(), wallet3Vote.Message().StoredMessageID()) // 8
+	require.Equal(t, 3+1, confStats.MessagesReferenced)                                                                                                           // 3 + milestone itself
+	require.Equal(t, 3, confStats.MessagesIncludedWithTransactions)
+	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify current vote status
+	env.AssertReferendumVoteStatus(referendumID, 3, 0)
+	env.AssertBallotAnswerStatus(referendumID, 5_000_000, 5_000_000, 0, 0)
+	env.AssertBallotAnswerStatus(referendumID, 150_000_000, 150_000_000, 0, 1)
+	env.AssertBallotAnswerStatus(referendumID, 200_000_000, 200_000_000, 0, 2)
+
+	// Verify all votes
+	env.AssertTrackedVote(referendumID, wallet1Vote, 8, 0, 5_000_000)
+	env.AssertTrackedVote(referendumID, wallet2Vote, 8, 0, 150_000_000)
+	env.AssertTrackedVote(referendumID, wallet3Vote, 8, 0, 200_000_000)
+
+	env.IssueMilestone() // 9
+	env.IssueMilestone() // 10
+	env.IssueMilestone() // 11
+	env.IssueMilestone() // 12
+
+	// Verify current vote status
+	env.AssertReferendumVoteStatus(referendumID, 0, 3)
+	env.AssertBallotAnswerStatus(referendumID, 5_000_000, 25_000_000, 0, 0)
+	env.AssertBallotAnswerStatus(referendumID, 150_000_000, 750_000_000, 0, 1)
+	env.AssertBallotAnswerStatus(referendumID, 200_000_000, 1000_000_000, 0, 2)
+
+	// Verify all votes
+	env.AssertTrackedVote(referendumID, wallet1Vote, 8, 12, 5_000_000)
+	env.AssertTrackedVote(referendumID, wallet2Vote, 8, 12, 150_000_000)
+	env.AssertTrackedVote(referendumID, wallet3Vote, 8, 12, 200_000_000)
 }
