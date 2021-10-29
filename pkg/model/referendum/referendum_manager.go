@@ -406,7 +406,9 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 
 	if len(validVotes) == 0 {
 		// We were previously tracking this vote, but now there are no valid votes, so something happened
-		return ErrInvalidPreviouslyTrackedVote
+		//TODO: this might happen if the vote ended and we spend the UTXO. Do we want to try to verify this assumption and else throw an error?
+		//return ErrInvalidPreviouslyTrackedVote
+		return nil
 	}
 
 	mutations := rm.referendumStore.Batched()
@@ -416,6 +418,11 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 
 		// Store the vote ended at this milestone
 		if err := rm.endVoteAtMilestone(vote.ReferendumID, spent.Output(), index, mutations); err != nil {
+			if errors.Is(err, ErrUnknownVote) {
+				// This was a previously invalid vote, so we did not track it
+				//TODO: verify this assumption and catch real errors? We could check when the output was initially created and if it was before the referendum was accepting votes
+				continue
+			}
 			mutations.Cancel()
 			return err
 		}

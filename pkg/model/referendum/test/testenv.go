@@ -327,3 +327,9 @@ func (env *ReferendumTestEnv) AssertTrackedVote(referendumID referendum.Referend
 	require.Equal(env.t, startMilestoneIndex, trackedVote.StartIndex)
 	require.Equal(env.t, endMilestoneIndex, trackedVote.EndIndex)
 }
+
+func (env *ReferendumTestEnv) AssertInvalidVote(referendumID referendum.ReferendumID, castVote *CastVote) {
+	_, err := env.ReferendumManager().VoteForOutputID(referendumID, castVote.Message().GeneratedUTXO().OutputID())
+	require.Error(env.t, err)
+	require.ErrorIs(env.t, err, referendum.ErrUnknownVote)
+}

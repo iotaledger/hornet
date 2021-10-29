@@ -312,6 +312,9 @@ func (rm *ReferendumManager) endVoteAtMilestone(referendumID ReferendumID, outpu
 
 	value, err := rm.referendumStore.Get(key)
 	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return ErrUnknownVote
+		}
 		return err
 	}
 
