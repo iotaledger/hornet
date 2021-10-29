@@ -74,6 +74,7 @@ func (q *Ballot) MarshalJSON() ([]byte, error) {
 
 func (q *Ballot) UnmarshalJSON(bytes []byte) error {
 	jQuestions := &jsonBallot{}
+	jQuestions.Type = int(BallotPayloadTypeID)
 	if err := json.Unmarshal(bytes, jQuestions); err != nil {
 		return err
 	}
@@ -87,6 +88,7 @@ func (q *Ballot) UnmarshalJSON(bytes []byte) error {
 
 // jsonBallot defines the json representation of a Ballot.
 type jsonBallot struct {
+	Type      int                `json:"type"`
 	Questions []*json.RawMessage `json:"questions"`
 }
 
