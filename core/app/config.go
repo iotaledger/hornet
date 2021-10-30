@@ -41,7 +41,7 @@ func loadCfg(flagSets map[string]*flag.FlagSet) error {
 			// if a file was explicitly specified, raise the error
 			return err
 		}
-		fmt.Printf("No config file found via '%s'. Loading default settings.", *nodeCfgFilePath)
+		fmt.Printf("Failed loading config with following error: '%s'. Loading default settings.", err)
 	}
 
 	if err := peeringConfig.LoadFile(*peeringCfgFilePath); err != nil {
