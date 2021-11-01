@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -20,8 +21,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
-	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 )
 
 const (
@@ -29,6 +28,9 @@ const (
 	CfgTangleDeleteDatabase = "deleteDatabase"
 	// whether to delete the database and snapshots at startup
 	CfgTangleDeleteAll = "deleteAll"
+
+	TangleDatabaseDirectoryName = "tangle"
+	UTXODatabaseDirectoryName   = "utxo"
 )
 
 func init() {
@@ -58,7 +60,8 @@ var (
 
 type dependencies struct {
 	dig.In
-	Database       *database.Database
+	TangleDatabase *database.Database `name:"tangleDatabase"`
+	UTXODatabase   *database.Database `name:"utxoDatabase"`
 	Storage        *storage.Storage
 	StorageMetrics *metrics.StorageMetrics
 }
@@ -74,6 +77,8 @@ func initConfigPars(c *dig.Container) {
 		dig.Out
 		DatabaseEngine           database.Engine `name:"databaseEngine"`
 		DatabasePath             string          `name:"databasePath"`
+		TangleDatabasePath       string          `name:"tangleDatabasePath"`
+		UTXODatabasePath         string          `name:"utxoDatabasePath"`
 		DeleteDatabaseFlag       bool            `name:"deleteDatabase"`
 		DeleteAllFlag            bool            `name:"deleteAll"`
 		DatabaseDebug            bool            `name:"databaseDebug"`
@@ -85,9 +90,14 @@ func initConfigPars(c *dig.Container) {
 		if err != nil {
 			CorePlugin.Panic(err)
 		}
+
+		databasePath := deps.NodeConfig.String(CfgDatabasePath)
+
 		return cfgResult{
 			DatabaseEngine:           dbEngine,
-			DatabasePath:             deps.NodeConfig.String(CfgDatabasePath),
+			DatabasePath:             databasePath,
+			TangleDatabasePath:       filepath.Join(databasePath, TangleDatabaseDirectoryName),
+			UTXODatabasePath:         filepath.Join(databasePath, UTXODatabaseDirectoryName),
 			DeleteDatabaseFlag:       *deleteDatabase,
 			DeleteAllFlag:            *deleteAll,
 			DatabaseDebug:            deps.NodeConfig.Bool(CfgDatabaseDebug),
@@ -100,21 +110,6 @@ func initConfigPars(c *dig.Container) {
 
 func provide(c *dig.Container) {
 
-	type dbResult struct {
-		dig.Out
-		StorageMetrics  *metrics.StorageMetrics
-		DatabaseMetrics *metrics.DatabaseMetrics
-	}
-
-	if err := c.Provide(func() dbResult {
-		return dbResult{
-			StorageMetrics:  &metrics.StorageMetrics{},
-			DatabaseMetrics: &metrics.DatabaseMetrics{},
-		}
-	}); err != nil {
-		CorePlugin.Panic(err)
-	}
-
 	type databaseDeps struct {
 		dig.In
 		DeleteDatabaseFlag bool                         `name:"deleteDatabase"`
@@ -122,15 +117,23 @@ func provide(c *dig.Container) {
 		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
 		DatabaseEngine     database.Engine              `name:"databaseEngine"`
 		DatabasePath       string                       `name:"databasePath"`
-		Metrics            *metrics.DatabaseMetrics
+		UTXODatabasePath   string                       `name:"utxoDatabasePath"`
+		TangleDatabasePath string                       `name:"tangleDatabasePath"`
 	}
 
-	if err := c.Provide(func(deps databaseDeps) *database.Database {
+	type databaseOut struct {
+		dig.Out
 
-		events := &database.Events{
-			DatabaseCleanup:    events.NewEvent(database.DatabaseCleanupCaller),
-			DatabaseCompaction: events.NewEvent(events.BoolCaller),
-		}
+		StorageMetrics *metrics.StorageMetrics
+
+		TangleDatabase        *database.Database       `name:"tangleDatabase"`
+		TangleDatabaseMetrics *metrics.DatabaseMetrics `name:"tangleDatabaseMetrics"`
+
+		UTXODatabase        *database.Database       `name:"utxoDatabase"`
+		UTXODatabaseMetrics *metrics.DatabaseMetrics `name:"utxoDatabaseMetrics"`
+	}
+
+	if err := c.Provide(func(deps databaseDeps) databaseOut {
 
 		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 			// delete old database folder
@@ -139,66 +142,46 @@ func provide(c *dig.Container) {
 			}
 		}
 
-		targetEngine, err := database.CheckDatabaseEngine(deps.DatabasePath, true, deps.DatabaseEngine)
+		// Check if we need to migrate a legacy database into the split format
+		if err := SplitIntoTangleAndUTXO(deps.DatabasePath); err != nil {
+			CorePlugin.Panic(err)
+		}
+
+		targetEngine, err := database.CheckDatabaseEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine)
 		if err != nil {
 			CorePlugin.Panic(err)
 		}
 
+		_, err = database.CheckDatabaseEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine)
+		if err != nil {
+			CorePlugin.Panic(err)
+		}
+
+		tangleDatabaseMetrics := &metrics.DatabaseMetrics{}
+		utxoDatabaseMetrics := &metrics.DatabaseMetrics{}
+
 		switch targetEngine {
 		case database.EnginePebble:
-			reportCompactionRunning := func(running bool) {
-				deps.Metrics.CompactionRunning.Store(running)
-				if running {
-					deps.Metrics.CompactionCount.Inc()
-				}
-				events.DatabaseCompaction.Trigger(running)
+			return databaseOut{
+				StorageMetrics:        &metrics.StorageMetrics{},
+				TangleDatabase:        newPebble(deps.TangleDatabasePath, tangleDatabaseMetrics),
+				TangleDatabaseMetrics: tangleDatabaseMetrics,
+				UTXODatabase:          newPebble(deps.UTXODatabasePath, utxoDatabaseMetrics),
+				UTXODatabaseMetrics:   utxoDatabaseMetrics,
 			}
-
-			db, err := database.NewPebbleDB(deps.DatabasePath, reportCompactionRunning, true)
-			if err != nil {
-				CorePlugin.Panicf("database initialization failed: %s", err)
-			}
-
-			return database.New(
-				CorePlugin.Logger(),
-				deps.DatabasePath,
-				pebble.New(db),
-				events,
-				true,
-				func() bool { return deps.Metrics.CompactionRunning.Load() },
-			)
 
 		case database.EngineRocksDB:
-			db, err := database.NewRocksDB(deps.DatabasePath)
-			if err != nil {
-				CorePlugin.Panicf("database initialization failed: %s", err)
+			return databaseOut{
+				StorageMetrics:        &metrics.StorageMetrics{},
+				TangleDatabase:        newRocksDB(deps.TangleDatabasePath, tangleDatabaseMetrics),
+				TangleDatabaseMetrics: tangleDatabaseMetrics,
+				UTXODatabase:          newRocksDB(deps.UTXODatabasePath, utxoDatabaseMetrics),
+				UTXODatabaseMetrics:   utxoDatabaseMetrics,
 			}
 
-			return database.New(
-				CorePlugin.Logger(),
-				deps.DatabasePath,
-				rocksdb.New(db),
-				events,
-				true,
-				func() bool {
-					if numCompactions, success := db.GetIntProperty("rocksdb.num-running-compactions"); success {
-						runningBefore := deps.Metrics.CompactionRunning.Load()
-						running := numCompactions != 0
-
-						deps.Metrics.CompactionRunning.Store(running)
-						if running && !runningBefore {
-							// we may miss some compactions, since this is only calculated if polled.
-							deps.Metrics.CompactionCount.Inc()
-							events.DatabaseCompaction.Trigger(running)
-						}
-						return running
-					}
-					return false
-				},
-			)
 		default:
 			CorePlugin.Panicf("unknown database engine: %s, supported engines: pebble/rocksdb", targetEngine)
-			return nil
+			return databaseOut{}
 		}
 	}); err != nil {
 		CorePlugin.Panic(err)
@@ -222,23 +205,27 @@ func provide(c *dig.Container) {
 
 	type storageDeps struct {
 		dig.In
-		Database *database.Database
-		Profile  *profile.Profile
+		TangleDatabase *database.Database `name:"tangleDatabase"`
+		UTXODatabase   *database.Database `name:"utxoDatabase"`
+		Profile        *profile.Profile
 	}
 
-	if err := c.Provide(func(deps storageDeps) *storage.Storage {
+	type storageOut struct {
+		dig.Out
+		Storage     *storage.Storage
+		UTXOManager *utxo.Manager
+	}
 
-		store, err := storage.New(deps.Database.KVStore(), deps.Profile.Caches)
+	if err := c.Provide(func(deps storageDeps) storageOut {
+
+		store, err := storage.New(deps.TangleDatabase.KVStore(), deps.UTXODatabase.KVStore(), deps.Profile.Caches)
 		if err != nil {
 			CorePlugin.Panicf("can't initialize storage: %s", err)
 		}
-		return store
-	}); err != nil {
-		CorePlugin.Panic(err)
-	}
-
-	if err := c.Provide(func(storage *storage.Storage) *utxo.Manager {
-		return storage.UTXOManager()
+		return storageOut{
+			Storage:     store,
+			UTXOManager: store.UTXOManager(),
+		}
 	}); err != nil {
 		CorePlugin.Panic(err)
 	}
@@ -262,13 +249,13 @@ func provide(c *dig.Container) {
 
 func configure() {
 
-	correctDatabaseVersion, err := deps.Storage.IsCorrectDatabaseVersion()
+	correctDatabasesVersion, err := deps.Storage.CheckCorrectDatabasesVersion()
 	if err != nil {
 		CorePlugin.Panic(err)
 	}
 
-	if !correctDatabaseVersion {
-		databaseVersionUpdated, err := deps.Storage.UpdateDatabaseVersion()
+	if !correctDatabasesVersion {
+		databaseVersionUpdated, err := deps.Storage.UpdateDatabasesVersion()
 		if err != nil {
 			CorePlugin.Panic(err)
 		}
@@ -281,12 +268,12 @@ func configure() {
 	if err = CorePlugin.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
 		<-ctx.Done()
 
-		if err = deps.Storage.MarkDatabaseHealthy(); err != nil {
+		if err = deps.Storage.MarkDatabasesHealthy(); err != nil {
 			CorePlugin.Panic(err)
 		}
 
 		CorePlugin.LogInfo("Syncing databases to disk...")
-		if err = closeDatabases(); err != nil {
+		if err = deps.Storage.FlushAndCloseStores(); err != nil {
 			CorePlugin.Panicf("Syncing databases to disk... failed: %s", err)
 		}
 		CorePlugin.LogInfo("Syncing databases to disk... done")
@@ -305,19 +292,6 @@ func run() {
 	}, shutdown.PriorityMetricsUpdater); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
-}
-
-func closeDatabases() error {
-
-	if err := deps.Database.KVStore().Flush(); err != nil {
-		return err
-	}
-
-	if err := deps.Database.KVStore().Close(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func configureEvents() {

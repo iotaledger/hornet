@@ -3,9 +3,11 @@ package toolset
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 
+	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -39,18 +41,26 @@ func coordinatorFixStateFile(_ *configuration.Configuration, args []string) erro
 		return errors.New("COO_STATE_FILE_PATH is missing")
 	}
 
-	store, err := database.StoreWithDefaultSettings(databasePath, false)
+	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.TangleDatabaseDirectoryName), false)
 	if err != nil {
-		return fmt.Errorf("database initialization failed: %w", err)
+		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.TangleDatabaseDirectoryName, err)
+	}
+
+	utxoStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.UTXODatabaseDirectoryName), false)
+	if err != nil {
+		return fmt.Errorf("%s database initialization failed: %w", coreDatabase.UTXODatabaseDirectoryName, err)
 	}
 
 	// clean up store
 	defer func() {
-		store.Shutdown()
-		_ = store.Close()
+		tangleStore.Shutdown()
+		_ = tangleStore.Close()
+
+		utxoStore.Shutdown()
+		_ = utxoStore.Close()
 	}()
 
-	dbStorage, err := storage.New(store)
+	dbStorage, err := storage.New(tangleStore, utxoStore)
 	if err != nil {
 		return err
 	}

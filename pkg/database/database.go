@@ -10,7 +10,6 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/logger"
-	"github.com/iotaledger/hive.go/syncutils"
 )
 
 type Engine string
@@ -69,7 +68,6 @@ type Database struct {
 	events                *Events
 	compactionSupported   bool
 	compactionRunningFunc func() bool
-	garbageCollectionLock syncutils.Mutex
 }
 
 // New creates a new Database instance.
@@ -102,56 +100,6 @@ func (db *Database) CompactionSupported() bool {
 // CompactionRunning returns whether a compaction is running.
 func (db *Database) CompactionRunning() bool {
 	return db.compactionRunningFunc()
-}
-
-func (db *Database) DatabaseSupportsCleanup() bool {
-	// ToDo: add this to the db initialization of the different database engines in the core module
-	return false
-}
-
-func (db *Database) CleanupDatabases() error {
-	// ToDo: add this to the db initialization of the different database engines in the core module
-	return ErrNothingToCleanUp
-}
-
-func (db *Database) RunGarbageCollection() {
-	if !db.DatabaseSupportsCleanup() {
-		return
-	}
-
-	db.garbageCollectionLock.Lock()
-	defer db.garbageCollectionLock.Unlock()
-
-	if db.log != nil {
-		db.log.Info("running full database garbage collection. This can take a while...")
-	}
-	start := time.Now()
-
-	db.events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-		Start: start,
-	})
-
-	err := db.CleanupDatabases()
-
-	end := time.Now()
-
-	db.events.DatabaseCleanup.Trigger(&DatabaseCleanup{
-		Start: start,
-		End:   end,
-	})
-
-	if err != nil {
-		if !errors.Is(err, ErrNothingToCleanUp) {
-			if db.log != nil {
-				db.log.Warnf("full database garbage collection failed with error: %s. took: %v", err, end.Sub(start).Truncate(time.Millisecond))
-			}
-			return
-		}
-	}
-
-	if db.log != nil {
-		db.log.Infof("full database garbage collection finished. took %v", end.Sub(start).Truncate(time.Millisecond))
-	}
 }
 
 // Size returns the size of the database.

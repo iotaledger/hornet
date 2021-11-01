@@ -10,7 +10,6 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -67,7 +66,6 @@ var (
 
 type dependencies struct {
 	dig.In
-	Database                 *database.Database
 	Storage                  *storage.Storage
 	Tangle                   *tangle.Tangle
 	Requester                *gossip.Requester
@@ -148,14 +146,14 @@ func configure() {
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
 	// and the database will never be marked as corrupted.
 	if err := CorePlugin.Daemon().BackgroundWorker("Database Health", func(_ context.Context) {
-		if err := deps.Storage.MarkDatabaseCorrupted(); err != nil {
+		if err := deps.Storage.MarkDatabasesCorrupted(); err != nil {
 			CorePlugin.Panic(err)
 		}
 	}, shutdown.PriorityDatabaseHealth); err != nil {
 		CorePlugin.Panicf("failed to start worker: %s", err)
 	}
 
-	databaseCorrupted, err := deps.Storage.IsDatabaseCorrupted()
+	databaseCorrupted, err := deps.Storage.AreDatabasesCorrupted()
 	if err != nil {
 		CorePlugin.Panic(err)
 	}
@@ -192,9 +190,6 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 }
 
 func run() {
-
-	// run a full database garbage collection at startup
-	deps.Database.RunGarbageCollection()
 
 	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(ctx context.Context) {
 		attachHeartbeatEvents()

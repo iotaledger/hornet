@@ -19,11 +19,15 @@ type ReadOption = objectstorage.ReadOption
 type IteratorOption = objectstorage.IteratorOption
 
 type Storage struct {
-	// database
-	store kvstore.KVStore
+
+	// databases
+	tangleStore kvstore.KVStore
+	utxoStore   kvstore.KVStore
+
+	// healthTrackers
+	healthTrackers []*storeHealthTracker
 
 	// kv storages
-	healthStore   kvstore.KVStore
 	snapshotStore kvstore.KVStore
 
 	// object storages
@@ -49,19 +53,22 @@ type Storage struct {
 	Events *packageEvents
 }
 
-func New(store kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, error) {
-
-	utxoManager := utxo.New(store)
+func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, error) {
 
 	s := &Storage{
-		store:       store,
-		utxoManager: utxoManager,
+		tangleStore: tangleStore,
+		utxoStore:   utxoStore,
+		healthTrackers: []*storeHealthTracker{
+			newStoreHealthTracker(tangleStore),
+			newStoreHealthTracker(utxoStore),
+		},
+		utxoManager: utxo.New(utxoStore),
 		Events: &packageEvents{
 			PruningStateChanged: events.NewEvent(events.BoolCaller),
 		},
 	}
 
-	if err := s.configureStorages(s.store, cachesProfile...); err != nil {
+	if err := s.configureStorages(tangleStore, cachesProfile...); err != nil {
 		return nil, err
 	}
 
@@ -74,10 +81,6 @@ func New(store kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, err
 	}
 
 	return s, nil
-}
-
-func (s *Storage) KVStore() kvstore.KVStore {
-	return s.store
 }
 
 func (s *Storage) UTXOManager() *utxo.Manager {
@@ -153,40 +156,54 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 	}
 }
 
-func (s *Storage) configureStorages(store kvstore.KVStore, cachesProfile ...*profile.Caches) error {
-
-	if err := s.configureHealthStore(store); err != nil {
-		return err
-	}
+func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile ...*profile.Caches) error {
 
 	cachesOpts := s.profileCachesDisabled()
 	if len(cachesProfile) > 0 {
 		cachesOpts = cachesProfile[0]
 	}
 
-	if err := s.configureMessageStorage(store, cachesOpts.Messages); err != nil {
+	if err := s.configureMessageStorage(tangleStore, cachesOpts.Messages); err != nil {
 		return err
 	}
 
-	if err := s.configureChildrenStorage(store, cachesOpts.Children); err != nil {
+	if err := s.configureChildrenStorage(tangleStore, cachesOpts.Children); err != nil {
 		return err
 	}
 
-	if err := s.configureMilestoneStorage(store, cachesOpts.Milestones); err != nil {
+	if err := s.configureMilestoneStorage(tangleStore, cachesOpts.Milestones); err != nil {
 		return err
 	}
 
-	if err := s.configureUnreferencedMessageStorage(store, cachesOpts.UnreferencedMessages); err != nil {
+	if err := s.configureUnreferencedMessageStorage(tangleStore, cachesOpts.UnreferencedMessages); err != nil {
 		return err
 	}
 
-	if err := s.configureIndexationStorage(store, cachesOpts.Indexations); err != nil {
+	if err := s.configureIndexationStorage(tangleStore, cachesOpts.Indexations); err != nil {
 		return err
 	}
 
-	s.configureSnapshotStore(store)
+	s.configureSnapshotStore(tangleStore)
 
 	return nil
+}
+
+func (s *Storage) FlushAndCloseStores() error {
+
+	var flushAndCloseError error
+	if err := s.tangleStore.Flush(); err != nil {
+		flushAndCloseError = err
+	}
+	if err := s.utxoStore.Flush(); err != nil {
+		flushAndCloseError = err
+	}
+	if err := s.tangleStore.Close(); err != nil {
+		flushAndCloseError = err
+	}
+	if err := s.utxoStore.Close(); err != nil {
+		flushAndCloseError = err
+	}
+	return flushAndCloseError
 }
 
 // FlushStorages flushes all storages.

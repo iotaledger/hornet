@@ -30,18 +30,25 @@ func (s *SnapshotManager) calcTargetIndexBySize(targetSizeBytes ...int64) (miles
 		return 0, ErrNoPruningNeeded
 	}
 
-	if !s.database.CompactionSupported() {
+	if !s.tangleDatabase.CompactionSupported() || !s.utxoDatabase.CompactionSupported() {
 		return 0, ErrDatabaseCompactionNotSupported
 	}
 
-	if s.database.CompactionRunning() {
+	if s.tangleDatabase.CompactionRunning() || s.utxoDatabase.CompactionRunning() {
 		return 0, ErrDatabaseCompactionRunning
 	}
 
-	currentDatabaseSizeBytes, err := s.database.Size()
+	currentTangleDatabaseSizeBytes, err := s.tangleDatabase.Size()
 	if err != nil {
 		return 0, err
 	}
+
+	currentUTXODatabaseSizeBytes, err := s.utxoDatabase.Size()
+	if err != nil {
+		return 0, err
+	}
+
+	currentDatabaseSizeBytes := currentTangleDatabaseSizeBytes + currentUTXODatabaseSizeBytes
 
 	targetDatabaseSizeBytes := s.pruningSizeTargetSizeBytes
 	if len(targetSizeBytes) > 0 {
@@ -59,7 +66,7 @@ func (s *SnapshotManager) calcTargetIndexBySize(targetSizeBytes ...int64) (miles
 
 	milestoneRange := s.syncManager.ConfirmedMilestoneIndex() - s.storage.SnapshotInfo().PruningIndex
 	prunedDatabaseSizeBytes := float64(targetDatabaseSizeBytes) * ((100.0 - s.pruningSizeThresholdPercentage) / 100.0)
-	diffPercentage := (prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes))
+	diffPercentage := prunedDatabaseSizeBytes / float64(currentDatabaseSizeBytes)
 	milestoneDiff := milestone.Index(math.Ceil(float64(milestoneRange) * diffPercentage))
 
 	return s.syncManager.ConfirmedMilestoneIndex() - milestoneDiff, nil
@@ -153,7 +160,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		return 0, err
 	}
 
-	if s.database.CompactionRunning() {
+	if s.tangleDatabase.CompactionRunning() || s.utxoDatabase.CompactionRunning() {
 		return 0, ErrDatabaseCompactionRunning
 	}
 
@@ -330,8 +337,6 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		s.log.Panic(err)
 	}
 	s.storage.WriteUnlockSolidEntryPoints()
-
-	s.database.RunGarbageCollection()
 
 	return targetIndex, nil
 }
