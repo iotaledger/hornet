@@ -38,7 +38,7 @@ type ParticipationManager struct {
 	participationStore       kvstore.KVStore
 	participationStoreHealth *storage.StoreHealthTracker
 
-	participationEvents map[ParticipationEventID]*ParticipationEvent
+	events map[EventID]*Event
 }
 
 // the default options applied to the ParticipationManager.
@@ -131,11 +131,11 @@ func (rm *ParticipationManager) init() error {
 	}
 
 	// Read events from storage
-	events, err := rm.loadParticipationEvents()
+	events, err := rm.loadEvents()
 	if err != nil {
 		return err
 	}
-	rm.participationEvents = events
+	rm.events = events
 
 	// Mark the database as corrupted here and as clean when we shut it down
 	return rm.participationStoreHealth.MarkCorrupted()
@@ -157,86 +157,86 @@ func (rm *ParticipationManager) CloseDatabase() error {
 	return flushAndCloseError
 }
 
-func (rm *ParticipationManager) ParticipationEventIDs() []ParticipationEventID {
+func (rm *ParticipationManager) EventIDs() []EventID {
 	rm.RLock()
 	defer rm.RUnlock()
-	var ids []ParticipationEventID
-	for id, _ := range rm.participationEvents {
+	var ids []EventID
+	for id, _ := range rm.events {
 		ids = append(ids, id)
 	}
 	return ids
 }
 
-func (rm *ParticipationManager) ParticipationEvents() []*ParticipationEvent {
+func (rm *ParticipationManager) Events() []*Event {
 	rm.RLock()
 	defer rm.RUnlock()
-	var ref []*ParticipationEvent
-	for _, r := range rm.participationEvents {
+	var ref []*Event
+	for _, r := range rm.events {
 		ref = append(ref, r)
 	}
 	return ref
 }
 
-// EventsAcceptingParticipation returns the participationEvents that are currently accepting participation, i.event. commencing or in the holding period.
-func (rm *ParticipationManager) EventsAcceptingParticipation() []*ParticipationEvent {
-	return filterEvents(rm.ParticipationEvents(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *ParticipationEvent, index milestone.Index) bool {
+// EventsAcceptingParticipation returns the events that are currently accepting participation, i.event. commencing or in the holding period.
+func (rm *ParticipationManager) EventsAcceptingParticipation() []*Event {
+	return filterEvents(rm.Events(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Event, index milestone.Index) bool {
 		return ref.IsAcceptingParticipation(index)
 	})
 }
 
-// EventsCountingParticipation returns the participationEvents that are currently actively counting participation, i.event. in the holding period
-func (rm *ParticipationManager) EventsCountingParticipation() []*ParticipationEvent {
-	return filterEvents(rm.ParticipationEvents(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *ParticipationEvent, index milestone.Index) bool {
+// EventsCountingParticipation returns the events that are currently actively counting participation, i.event. in the holding period
+func (rm *ParticipationManager) EventsCountingParticipation() []*Event {
+	return filterEvents(rm.Events(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Event, index milestone.Index) bool {
 		return ref.IsCountingParticipation(index)
 	})
 }
 
-// StoreParticipationEvent accepts a new ParticipationEvent the manager should track.
+// StoreEvent accepts a new Event the manager should track.
 // The current confirmed milestone index needs to be provided, so that the manager can check if the event can be added.
-func (rm *ParticipationManager) StoreParticipationEvent(event *ParticipationEvent) (ParticipationEventID, error) {
+func (rm *ParticipationManager) StoreEvent(event *Event) (EventID, error) {
 	rm.Lock()
 	defer rm.Unlock()
 
 	confirmedMilestoneIndex := rm.syncManager.ConfirmedMilestoneIndex()
 
 	if confirmedMilestoneIndex >= event.EndMilestoneIndex() {
-		return NullParticipationEventID, ErrParticipationEventAlreadyEnded
+		return NullEventID, ErrParticipationEventAlreadyEnded
 	}
 
 	if confirmedMilestoneIndex >= event.CommenceMilestoneIndex() {
-		return NullParticipationEventID, ErrParticipationEventAlreadyStarted
+		return NullEventID, ErrParticipationEventAlreadyStarted
 	}
 
-	eventID, err := rm.storeReferendum(event)
+	eventID, err := rm.storeEvent(event)
 	if err != nil {
-		return NullParticipationEventID, err
+		return NullEventID, err
 	}
 
-	rm.participationEvents[eventID] = event
+	rm.events[eventID] = event
 
 	return eventID, err
 }
 
-func (rm *ParticipationManager) ParticipationEvent(eventID ParticipationEventID) *ParticipationEvent {
+func (rm *ParticipationManager) Event(eventID EventID) *Event {
 	rm.RLock()
 	defer rm.RUnlock()
-	return rm.participationEvents[eventID]
+	return rm.events[eventID]
 }
 
-func (rm *ParticipationManager) DeleteParticipationEvent(eventID ParticipationEventID) error {
+func (rm *ParticipationManager) DeleteEvent(eventID EventID) error {
 	rm.Lock()
 	defer rm.Unlock()
 
-	referendum := rm.ParticipationEvent(eventID)
-	if referendum == nil {
-		return ErrParticipationEventNotFound
+	event := rm.Event(eventID)
+	if event == nil {
+		return ErrEventNotFound
 	}
 
-	if err := rm.deleteReferendum(eventID); err != nil {
+	if err := rm.deleteEvent(eventID); err != nil {
 		return err
 	}
 
-	delete(rm.participationEvents, eventID)
+	delete(rm.events, eventID)
 	return nil
 }
 
@@ -247,10 +247,10 @@ func (rm *ParticipationManager) DeleteParticipationEvent(eventID ParticipationEv
 // 	- Has a singular output going to the same address as all input addresses.
 // 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
 // 	- The Indexation must match the configured Indexation.
-//  - The vote data must be parseable.
+//  - The participation data must be parseable.
 func (rm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
 
-	acceptingEvents := filterEvents(rm.ParticipationEvents(), index, func(ref *ParticipationEvent, index milestone.Index) bool {
+	acceptingEvents := filterEvents(rm.Events(), index, func(ref *Event, index milestone.Index) bool {
 		return ref.ShouldAcceptParticipation(index)
 	})
 
@@ -343,36 +343,36 @@ func (rm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 		}
 	}
 
-	votes, err := participationFromIndexation(txEssenceIndexation)
+	participations, err := participationFromIndexation(txEssenceIndexation)
 	if err != nil {
 		return err
 	}
 
-	validVotes := rm.validParticipation(index, votes)
+	validParticipations := rm.validParticipation(index, participations)
 
-	if len(validVotes) == 0 {
-		// No votes for anything we are tracking
+	if len(validParticipations) == 0 {
+		// No participations for anything we are tracking
 		return nil
 	}
 
 	mutations := rm.participationStore.Batched()
 
-	// Store the message holding the vote
+	// Store the message holding the participation
 	if err := rm.storeMessage(msg, mutations); err != nil {
 		mutations.Cancel()
 		return err
 	}
 
-	// Count the new votes by increasing the current vote balance
-	for _, vote := range validVotes {
+	for _, participation := range validParticipations {
 
-		// Store the vote started at this milestone
-		if err := rm.startVoteAtMilestone(vote.ParticipationEventID, depositOutputs[0], index, mutations); err != nil {
+		// Store the participation started at this milestone
+		if err := rm.startParticipationAtMilestone(participation.EventID, depositOutputs[0], index, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
 
-		if err := rm.startCountingVoteAnswers(vote, depositOutputs[0].Amount(), mutations); err != nil {
+		// Count the new ballot votes by increasing the current vote balance
+		if err := rm.startCountingBallotAnswers(participation, depositOutputs[0].Amount(), mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -383,7 +383,7 @@ func (rm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 
 func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
 
-	acceptingEvents := filterEvents(rm.ParticipationEvents(), index, func(ref *ParticipationEvent, index milestone.Index) bool {
+	acceptingEvents := filterEvents(rm.Events(), index, func(ref *Event, index milestone.Index) bool {
 		return ref.ShouldAcceptParticipation(index)
 	})
 
@@ -392,51 +392,51 @@ func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 		return nil
 	}
 
-	// Check if we tracked the vote initially, event.g. saved the Message that created this UTXO
+	// Check if we tracked the participation initially, event.g. saved the Message that created this UTXO
 	msg, err := rm.MessageForMessageID(spent.MessageID())
 	if err != nil {
 		return err
 	}
 
 	if msg == nil {
-		// This UTXO had no valid vote, so we did not store the message for it
+		// This UTXO had no valid participation, so we did not store the message for it
 		return nil
 	}
 
 	txEssenceIndexation := msg.TransactionEssenceIndexation()
 	if txEssenceIndexation == nil {
-		// We tracked this vote before, and now we don't have its indexation, so something happened
+		// We tracked this participation before, and now we don't have its indexation, so something happened
 		return ErrInvalidPreviouslyTrackedParticipation
 	}
 
-	votes, err := participationFromIndexation(txEssenceIndexation)
+	participations, err := participationFromIndexation(txEssenceIndexation)
 	if err != nil {
 		return err
 	}
 
-	validVotes := rm.validParticipation(index, votes)
+	validParticipations := rm.validParticipation(index, participations)
 
-	if len(validVotes) == 0 {
-		// This might happen if the vote ended, and we spend the UTXO
+	if len(validParticipations) == 0 {
+		// This might happen if the participation ended, and we spend the UTXO
 		return nil
 	}
 
 	mutations := rm.participationStore.Batched()
 
-	// Count the spent votes by decreasing the current vote balance
-	for _, vote := range validVotes {
+	for _, participation := range validParticipations {
 
-		// Store the vote ended at this milestone
-		if err := rm.endVoteAtMilestone(vote.ParticipationEventID, spent.Output(), index, mutations); err != nil {
-			if errors.Is(err, ErrUnknownVote) {
-				// This was a previously invalid vote, so we did not track it
+		// Store the participation ended at this milestone
+		if err := rm.endParticipationAtMilestone(participation.EventID, spent.Output(), index, mutations); err != nil {
+			if errors.Is(err, ErrUnknownParticipation) {
+				// This was a previously invalid participation, so we did not track it
 				continue
 			}
 			mutations.Cancel()
 			return err
 		}
 
-		if err := rm.stopCountingVoteAnswers(vote, spent.Output().Amount(), mutations); err != nil {
+		// Count the spent votes by decreasing the current vote balance
+		if err := rm.stopCountingBallotAnswers(participation, spent.Output().Amount(), mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -445,10 +445,10 @@ func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 	return mutations.Commit()
 }
 
-// ApplyNewConfirmedMilestoneIndex iterates over each counting participation and applies the current vote for each question to the total vote
+// ApplyNewConfirmedMilestoneIndex iterates over each counting ballot participation and applies the current vote balance for each question to the total vote balance
 func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
 
-	countingEvents := filterEvents(rm.ParticipationEvents(), index, func(ref *ParticipationEvent, index milestone.Index) bool {
+	countingEvents := filterEvents(rm.Events(), index, func(ref *Event, index milestone.Index) bool {
 		return ref.ShouldCountParticipation(index)
 	})
 
@@ -459,7 +459,7 @@ func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 
 	mutations := rm.participationStore.Batched()
 
-	// Iterate over all known participationEvents that are currently counting
+	// Iterate over all known events that are currently counting
 	for _, event := range countingEvents {
 
 		eventID, err := event.ID()
@@ -477,13 +477,13 @@ func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 			for idx := 0; idx <= len(question.Answers); idx++ {
 				answerIndex := uint8(idx)
 
-				accumulatedBalance, err := rm.AccumulatedVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
+				accumulatedBalance, err := rm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
 				if err != nil {
 					mutations.Cancel()
 					return err
 				}
 
-				currentBalance, err := rm.CurrentVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
+				currentBalance, err := rm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
 				if err != nil {
 					mutations.Cancel()
 					return err
@@ -492,7 +492,7 @@ func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 				// Add current vote balance to accumulated vote balance for each answer
 				newAccumulatedBalance := accumulatedBalance + currentBalance
 
-				if err := setAccumulatedVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex, newAccumulatedBalance, mutations); err != nil {
+				if err := setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex, newAccumulatedBalance, mutations); err != nil {
 					mutations.Cancel()
 					return err
 				}
@@ -501,7 +501,7 @@ func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 
 		// End all participation if event is ending this milestone
 		if event.EndMilestoneIndex() == index {
-			if err := rm.endAllVotesAtMilestone(eventID, index, mutations); err != nil {
+			if err := rm.endAllParticipationsAtMilestone(eventID, index, mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
@@ -513,31 +513,31 @@ func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 
 func (rm *ParticipationManager) validParticipation(index milestone.Index, votes []*Participation) []*Participation {
 
-	var validVotes []*Participation
+	var validParticipations []*Participation
 	for _, vote := range votes {
 
-		// Check that we have the participation for the given vote
-		referendum := rm.ParticipationEvent(vote.ParticipationEventID)
-		if referendum == nil {
+		// Check that we have the event for the given participation
+		event := rm.Event(vote.EventID)
+		if event == nil {
 			continue
 		}
 
-		// Check that the participation is accepting votes
-		if !referendum.ShouldAcceptParticipation(index) {
+		// Check that the event is accepting participations
+		if !event.ShouldAcceptParticipation(index) {
 			continue
 		}
 
-		// Check that the amount of answers equals the questions in the participation
-		if len(vote.Answers) != len(referendum.BallotQuestions()) {
+		// Check that the amount of answers equals the questions in the ballot
+		if len(vote.Answers) != len(event.BallotQuestions()) {
 			continue
 		}
 
 		//TODO: validate answers? We would create a current vote for invalid answers, but only count valid answers and skipped (index == 0) anyway
 
-		validVotes = append(validVotes, vote)
+		validParticipations = append(validParticipations, vote)
 	}
 
-	return validVotes
+	return validParticipations
 }
 
 func participationFromIndexation(indexation *iotago.Indexation) ([]*Participation, error) {
@@ -557,11 +557,11 @@ func participationFromIndexation(indexation *iotago.Indexation) ([]*Participatio
 	return votes, nil
 }
 
-func filterEvents(referendums []*ParticipationEvent, index milestone.Index, includeFunc func(ref *ParticipationEvent, index milestone.Index) bool) []*ParticipationEvent {
-	var filtered []*ParticipationEvent
-	for _, referendum := range referendums {
-		if includeFunc(referendum, index) {
-			filtered = append(filtered, referendum)
+func filterEvents(events []*Event, index milestone.Index, includeFunc func(ref *Event, index milestone.Index) bool) []*Event {
+	var filtered []*Event
+	for _, event := range events {
+		if includeFunc(event, index) {
+			filtered = append(filtered, event)
 		}
 	}
 	return filtered

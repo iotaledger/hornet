@@ -86,7 +86,7 @@ type dependencies struct {
 
 func provide(c *dig.Container) {
 
-	type referendumDeps struct {
+	type participationDeps struct {
 		dig.In
 		Storage        *storage.Storage
 		SyncManager    *syncmanager.SyncManager
@@ -95,23 +95,23 @@ func provide(c *dig.Container) {
 		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps referendumDeps) *participation.ParticipationManager {
+	if err := c.Provide(func(deps participationDeps) *participation.ParticipationManager {
 
-		referendumStore, err := database.StoreWithDefaultSettings(filepath.Join(deps.DatabasePath, "participation"), true, deps.DatabaseEngine)
+		participationStore, err := database.StoreWithDefaultSettings(filepath.Join(deps.DatabasePath, "participation"), true, deps.DatabaseEngine)
 		if err != nil {
 			Plugin.Panic(err)
 		}
 
-		rm, err := participation.NewManager(
+		pm, err := participation.NewManager(
 			deps.Storage,
 			deps.SyncManager,
-			referendumStore,
+			participationStore,
 			participation.WithLogger(Plugin.Logger()),
 		)
 		if err != nil {
 			Plugin.Panic(err)
 		}
-		return rm
+		return pm
 	}); err != nil {
 		Plugin.Panic(err)
 	}
@@ -137,7 +137,7 @@ func configure() {
 			return err
 		}
 
-		c.Response().Header().Set(echo.HeaderLocation, resp.ParticipationEventID)
+		c.Response().Header().Set(echo.HeaderLocation, resp.eventID)
 		return restapi.JSONResponse(c, http.StatusCreated, resp)
 	})
 

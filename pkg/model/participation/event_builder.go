@@ -7,10 +7,10 @@ import (
 	"github.com/iotaledger/hive.go/serializer"
 )
 
-// NewParticipationEventBuilder creates a new ParticipationEventBuilder.
-func NewParticipationEventBuilder(name string, milestoneCommence milestone.Index, milestoneBeginHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *ParticipationEventBuilder {
-	return &ParticipationEventBuilder{
-		event: &ParticipationEvent{
+// NewEventBuilder creates a new EventBuilder.
+func NewEventBuilder(name string, milestoneCommence milestone.Index, milestoneBeginHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *EventBuilder {
+	return &EventBuilder{
+		event: &Event{
 			Name:                   name,
 			milestoneIndexCommence: uint32(milestoneCommence),
 			milestoneIndexStart:    uint32(milestoneBeginHolding),
@@ -20,14 +20,14 @@ func NewParticipationEventBuilder(name string, milestoneCommence milestone.Index
 	}
 }
 
-// ParticipationEventBuilder is used to easily build up a ParticipationEvent.
-type ParticipationEventBuilder struct {
-	event *ParticipationEvent
+// EventBuilder is used to easily build up a Event.
+type EventBuilder struct {
+	event *Event
 	err   error
 }
 
 // Payload sets the payload to embed within the message.
-func (rb *ParticipationEventBuilder) Payload(seri serializer.Serializable) *ParticipationEventBuilder {
+func (rb *EventBuilder) Payload(seri serializer.Serializable) *EventBuilder {
 	if rb.err != nil {
 		return rb
 	}
@@ -42,8 +42,8 @@ func (rb *ParticipationEventBuilder) Payload(seri serializer.Serializable) *Part
 	return rb
 }
 
-// Build builds the ParticipationEvent.
-func (rb *ParticipationEventBuilder) Build() (*ParticipationEvent, error) {
+// Build builds the Event.
+func (rb *EventBuilder) Build() (*Event, error) {
 	if rb.err != nil {
 		return nil, rb.err
 	}

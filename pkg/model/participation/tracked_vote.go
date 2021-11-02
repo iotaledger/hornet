@@ -9,20 +9,20 @@ import (
 )
 
 type TrackedParticipation struct {
-	ParticipationEventID ParticipationEventID
-	OutputID             *iotago.UTXOInputID
-	MessageID            hornet.MessageID
-	Amount               uint64
-	StartIndex           milestone.Index
-	EndIndex             milestone.Index
+	EventID    EventID
+	OutputID   *iotago.UTXOInputID
+	MessageID  hornet.MessageID
+	Amount     uint64
+	StartIndex milestone.Index
+	EndIndex   milestone.Index
 }
 
-func ParseParticipationEventID(ms *marshalutil.MarshalUtil) (ParticipationEventID, error) {
-	bytes, err := ms.ReadBytes(ParticipationEventIDLength)
+func ParseEventID(ms *marshalutil.MarshalUtil) (EventID, error) {
+	bytes, err := ms.ReadBytes(EventIDLength)
 	if err != nil {
-		return NullParticipationEventID, err
+		return NullEventID, err
 	}
-	o := ParticipationEventID{}
+	o := EventID{}
 	copy(o[:], bytes)
 	return o, nil
 }
@@ -44,8 +44,8 @@ func trackedParticipation(key []byte, value []byte) (*TrackedParticipation, erro
 		return nil, err
 	}
 
-	// Read ParticipationEventID
-	eventID, err := ParseParticipationEventID(mKey)
+	// Read EventID
+	eventID, err := ParseEventID(mKey)
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +79,12 @@ func trackedParticipation(key []byte, value []byte) (*TrackedParticipation, erro
 	}
 
 	return &TrackedParticipation{
-		ParticipationEventID: eventID,
-		OutputID:             outputID,
-		MessageID:            messageID,
-		Amount:               amount,
-		StartIndex:           milestone.Index(start),
-		EndIndex:             milestone.Index(end),
+		EventID:    eventID,
+		OutputID:   outputID,
+		MessageID:  messageID,
+		Amount:     amount,
+		StartIndex: milestone.Index(start),
+		EndIndex:   milestone.Index(end),
 	}, nil
 }
 

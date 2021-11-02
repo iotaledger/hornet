@@ -10,35 +10,35 @@ import (
 
 // Participation holds the participation for an event and the optional answer to a ballot
 type Participation struct {
-	ParticipationEventID ParticipationEventID
-	Answers              []byte
+	EventID EventID
+	Answers []byte
 }
 
 func (p *Participation) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
-		ReadArrayOf32Bytes(&p.ParticipationEventID, func(err error) error {
-			return fmt.Errorf("unable to deserialize participation ID in vote: %w", err)
+		ReadArrayOf32Bytes(&p.EventID, func(err error) error {
+			return fmt.Errorf("unable to deserialize eventID in participation: %w", err)
 		}).
 		ReadVariableByteSlice(&p.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
-			return fmt.Errorf("unable to deserialize answers in vote: %w", err)
+			return fmt.Errorf("unable to deserialize answers in participation: %w", err)
 		}).
 		Done()
 }
 
 func (p *Participation) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 	return serializer.NewSerializer().
-		WriteBytes(p.ParticipationEventID[:], func(err error) error {
-			return fmt.Errorf("unable to serialize participation ID in vote: %w", err)
+		WriteBytes(p.EventID[:], func(err error) error {
+			return fmt.Errorf("unable to serialize eventID in participation: %w", err)
 		}).
 		WriteVariableByteSlice(p.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
-			return fmt.Errorf("unable to serialize answers in vote: %w", err)
+			return fmt.Errorf("unable to serialize answers in participation: %w", err)
 		}).
 		Serialize()
 }
 
 func (p *Participation) MarshalJSON() ([]byte, error) {
 	j := &jsonParticipation{}
-	j.ParticipationEventID = hex.EncodeToString(p.ParticipationEventID[:])
+	j.EventID = hex.EncodeToString(p.EventID[:])
 	j.Answers = hex.EncodeToString(p.Answers)
 	return json.Marshal(j)
 }
@@ -58,28 +58,28 @@ func (p *Participation) UnmarshalJSON(bytes []byte) error {
 
 // jsonParticipation defines the JSON representation of a Participation.
 type jsonParticipation struct {
-	ParticipationEventID string `json:"participationEventId"`
-	Answers              string `json:"answers"`
+	EventID string `json:"eventId"`
+	Answers string `json:"answers"`
 }
 
 func (j *jsonParticipation) ToSerializable() (serializer.Serializable, error) {
-	vote := &Participation{
-		ParticipationEventID: ParticipationEventID{},
-		Answers:              []byte{},
+	p := &Participation{
+		EventID: EventID{},
+		Answers: []byte{},
 	}
 
-	referendumIDBytes, err := hex.DecodeString(j.ParticipationEventID)
+	eventIDBytes, err := hex.DecodeString(j.EventID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to decode participation ID from JSON in vote: %w", err)
+		return nil, fmt.Errorf("unable to decode event ID from JSON in participation: %w", err)
 	}
-	copy(vote.ParticipationEventID[:], referendumIDBytes)
+	copy(p.EventID[:], eventIDBytes)
 
 	answersBytes, err := hex.DecodeString(j.Answers)
 	if err != nil {
-		return nil, fmt.Errorf("unable to decode answers from JSON in vote: %w", err)
+		return nil, fmt.Errorf("unable to decode answers from JSON in participation: %w", err)
 	}
-	vote.Answers = make([]byte, len(answersBytes))
-	copy(vote.Answers, answersBytes)
+	p.Answers = make([]byte, len(answersBytes))
+	copy(p.Answers, answersBytes)
 
-	return vote, nil
+	return p, nil
 }

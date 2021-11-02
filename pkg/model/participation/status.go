@@ -24,13 +24,13 @@ type ParticipationEventStatus struct {
 	//TODO: add hash of all QuestionStatus to make comparison easier
 }
 
-func (rm *ParticipationManager) ParticipationEventStatus(eventID ParticipationEventID) (*ParticipationEventStatus, error) {
+func (rm *ParticipationManager) ParticipationEventStatus(eventID EventID) (*ParticipationEventStatus, error) {
 
 	confirmedMilestoneIndex := rm.syncManager.ConfirmedMilestoneIndex()
 
-	event := rm.ParticipationEvent(eventID)
+	event := rm.Event(eventID)
 	if event == nil {
-		return nil, ErrParticipationEventNotFound
+		return nil, ErrEventNotFound
 	}
 
 	status := &ParticipationEventStatus{
@@ -44,15 +44,16 @@ func (rm *ParticipationManager) ParticipationEventStatus(eventID ParticipationEv
 
 		questionStatus := &QuestionStatus{}
 		// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter
+		// TODO: count invalid votes? -> maybe mapped to 255
 		for idx := 0; idx <= len(question.Answers); idx++ {
 			answerIndex := uint8(idx)
 
-			currentBalance, err := rm.CurrentVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
+			currentBalance, err := rm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
 			if err != nil {
 				return nil, err
 			}
 
-			accumulatedBalance, err := rm.AccumulatedVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
+			accumulatedBalance, err := rm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
 			if err != nil {
 				return nil, err
 			}

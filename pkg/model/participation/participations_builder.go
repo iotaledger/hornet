@@ -20,16 +20,16 @@ type ParticipationsBuilder struct {
 	p *Participations
 }
 
-// AddVote adds the given vote to the votes.
-func (vb *ParticipationsBuilder) AddVote(entry *Participation) *ParticipationsBuilder {
-	vb.p.Participations = append(vb.p.Participations, entry)
-	return vb
+// AddParticipation adds the given participation to the participations.
+func (b *ParticipationsBuilder) AddParticipation(entry *Participation) *ParticipationsBuilder {
+	b.p.Participations = append(b.p.Participations, entry)
+	return b
 }
 
 // Build builds the Participations.
-func (vb *ParticipationsBuilder) Build() (*Participations, error) {
-	if _, err := vb.p.Serialize(serializer.DeSeriModePerformValidation); err != nil {
+func (b *ParticipationsBuilder) Build() (*Participations, error) {
+	if _, err := b.p.Serialize(serializer.DeSeriModePerformValidation); err != nil {
 		return nil, fmt.Errorf("unable to build question: %w", err)
 	}
-	return vb.p, nil
+	return b.p, nil
 }

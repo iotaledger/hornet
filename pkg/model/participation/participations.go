@@ -31,7 +31,7 @@ func (p *Participations) Deserialize(data []byte, deSeriMode serializer.DeSerial
 			// there is no real selector, so we always return a fresh Participation
 			return &Participation{}, nil
 		}, participationsArrayRules, func(err error) error {
-			return fmt.Errorf("unable to deserialize votes: %w", err)
+			return fmt.Errorf("unable to deserialize participations: %w", err)
 		}).
 		Done()
 }
@@ -39,7 +39,7 @@ func (p *Participations) Deserialize(data []byte, deSeriMode serializer.DeSerial
 func (p *Participations) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 	return serializer.NewSerializer().
 		WriteSliceOfObjects(p.Participations, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
-			return fmt.Errorf("unable to serialize votes: %w", err)
+			return fmt.Errorf("unable to serialize participations: %w", err)
 		}).
 		Serialize()
 }
@@ -48,13 +48,13 @@ func (p *Participations) MarshalJSON() ([]byte, error) {
 	j := &jsonParticipations{}
 
 	j.Participations = make([]*json.RawMessage, len(p.Participations))
-	for i, vote := range p.Participations {
-		jsonVote, err := vote.MarshalJSON()
+	for i, participation := range p.Participations {
+		jsonParticipation, err := participation.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
-		rawJSONVote := json.RawMessage(jsonVote)
-		j.Participations[i] = &rawJSONVote
+		rawJSONParticipation := json.RawMessage(jsonParticipation)
+		j.Participations[i] = &rawJSONParticipation
 	}
 
 	return json.Marshal(j)
@@ -81,22 +81,22 @@ type jsonParticipations struct {
 func (j *jsonParticipations) ToSerializable() (serializer.Serializable, error) {
 	payload := &Participations{}
 
-	votes := make(serializer.Serializables, len(j.Participations))
+	participations := make(serializer.Serializables, len(j.Participations))
 	for i, ele := range j.Participations {
-		vote := &Answer{}
+		answer := &Answer{}
 
 		rawJSON, err := ele.MarshalJSON()
 		if err != nil {
 			return nil, fmt.Errorf("pos %d: %w", i, err)
 		}
 
-		if err := json.Unmarshal(rawJSON, vote); err != nil {
+		if err := json.Unmarshal(rawJSON, answer); err != nil {
 			return nil, fmt.Errorf("pos %d: %w", i, err)
 		}
 
-		votes[i] = vote
+		participations[i] = answer
 	}
-	payload.Participations = votes
+	payload.Participations = participations
 
 	return payload, nil
 }

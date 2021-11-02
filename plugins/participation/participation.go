@@ -14,78 +14,78 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-// ParticipationEventIDFromHex creates a ParticipationEventID from a hex string representation.
-func ParticipationEventIDFromHex(hexString string) (participation.ParticipationEventID, error) {
+// EventIDFromHex creates a EventID from a hex string representation.
+func EventIDFromHex(hexString string) (participation.EventID, error) {
 
 	b, err := hex.DecodeString(hexString)
 	if err != nil {
-		return participation.NullParticipationEventID, err
+		return participation.NullEventID, err
 	}
 
-	if len(b) != participation.ParticipationEventIDLength {
-		return participation.ParticipationEventID{}, fmt.Errorf("unknown referendumID length (%d)", len(b))
+	if len(b) != participation.EventIDLength {
+		return participation.EventID{}, fmt.Errorf("unknown eventID length (%d)", len(b))
 	}
 
-	var referendumID participation.ParticipationEventID
-	copy(referendumID[:], b)
-	return referendumID, nil
+	var eventID participation.EventID
+	copy(eventID[:], b)
+	return eventID, nil
 }
 
-func parseParticipationEventIDParam(c echo.Context) (participation.ParticipationEventID, error) {
+func parseEventIDParam(c echo.Context) (participation.EventID, error) {
 
-	referendumIDHex := strings.ToLower(c.Param(ParameterParticipationEventID))
-	if referendumIDHex == "" {
-		return participation.NullParticipationEventID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterParticipationEventID)
+	eventIDHex := strings.ToLower(c.Param(ParameterParticipationEventID))
+	if eventIDHex == "" {
+		return participation.NullEventID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterParticipationEventID)
 	}
 
-	referendumID, err := ParticipationEventIDFromHex(referendumIDHex)
+	eventID, err := EventIDFromHex(eventIDHex)
 	if err != nil {
-		return participation.NullParticipationEventID, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid participation ID: %s, error: %s", referendumIDHex, err)
+		return participation.NullEventID, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event ID: %s, error: %s", eventIDHex, err)
 	}
 
-	return referendumID, nil
+	return eventID, nil
 }
 
-func getEvents(_ echo.Context) (*ParticipationEventsResponse, error) {
-	eventIDs := deps.ParticipationManager.ParticipationEventIDs()
+func getEvents(_ echo.Context) (*EventsResponse, error) {
+	eventIDs := deps.ParticipationManager.EventIDs()
 
 	hexEventIDs := []string{}
 	for _, id := range eventIDs {
 		hexEventIDs = append(hexEventIDs, hex.EncodeToString(id[:]))
 	}
 
-	return &ParticipationEventsResponse{ParticipationEventIDs: hexEventIDs}, nil
+	return &EventsResponse{EventIDs: hexEventIDs}, nil
 }
 
-func createEvent(c echo.Context) (*CreateParticipationEventResponse, error) {
+func createEvent(c echo.Context) (*CreateEventResponse, error) {
 
 	//TODO: add support for binary representation too?
 
-	event := &participation.ParticipationEvent{}
+	event := &participation.Event{}
 	if err := c.Bind(event); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request! Error: %s", err)
 	}
 
-	eventID, err := deps.ParticipationManager.StoreParticipationEvent(event)
+	eventID, err := deps.ParticipationManager.StoreEvent(event)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid participation event, error: %s", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event, error: %s", err)
 	}
 
-	return &CreateParticipationEventResponse{
-		ParticipationEventID: hex.EncodeToString(eventID[:]),
+	return &CreateEventResponse{
+		eventID: hex.EncodeToString(eventID[:]),
 	}, nil
 }
 
-func getEvent(c echo.Context) (*participation.ParticipationEvent, error) {
+func getEvent(c echo.Context) (*participation.Event, error) {
 
-	eventID, err := parseParticipationEventIDParam(c)
+	eventID, err := parseEventIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	event := deps.ParticipationManager.ParticipationEvent(eventID)
+	event := deps.ParticipationManager.Event(eventID)
 	if event == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "participation event not found: %s", hex.EncodeToString(eventID[:]))
+		return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))
 	}
 
 	return event, nil
@@ -93,25 +93,25 @@ func getEvent(c echo.Context) (*participation.ParticipationEvent, error) {
 
 func deleteEvent(c echo.Context) error {
 
-	eventID, err := parseParticipationEventIDParam(c)
+	eventID, err := parseEventIDParam(c)
 	if err != nil {
 		return nil
 	}
 
-	return deps.ParticipationManager.DeleteParticipationEvent(eventID)
+	return deps.ParticipationManager.DeleteEvent(eventID)
 }
 
 func getEventStatus(c echo.Context) (*participation.ParticipationEventStatus, error) {
 
-	eventID, err := parseParticipationEventIDParam(c)
+	eventID, err := parseEventIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
 	status, err := deps.ParticipationManager.ParticipationEventStatus(eventID)
 	if err != nil {
-		if errors.Is(err, participation.ErrParticipationEventNotFound) {
-			return nil, errors.WithMessagef(echo.ErrNotFound, "participation event not found: %s", hex.EncodeToString(eventID[:]))
+		if errors.Is(err, participation.ErrEventNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))
 		}
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 	var outputID iotago.UTXOInputID
 	copy(outputID[:], outputIDBytes)
 
-	trackedParticipations, err := deps.ParticipationManager.VotesForOutputID(&outputID)
+	trackedParticipations, err := deps.ParticipationManager.ParticipationsForOutputID(&outputID)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 			StartMilestoneIndex: trackedParticipation.StartIndex,
 			EndMilestoneIndex:   trackedParticipation.EndIndex,
 		}
-		response.Participations[hex.EncodeToString(trackedParticipation.ParticipationEventID[:])] = t
+		response.Participations[hex.EncodeToString(trackedParticipation.EventID[:])] = t
 	}
 
 	return response, nil

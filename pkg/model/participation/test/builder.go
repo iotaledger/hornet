@@ -12,23 +12,23 @@ import (
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 )
 
-type ParticipationsBuilder struct {
+type ParticipationHelper struct {
 	env                   *ParticipationTestEnv
 	wallet                *utils.HDWallet
 	msgBuilder            *testsuite.MessageBuilder
 	participationsBuilder *participation.ParticipationsBuilder
 }
 
-type SentParticipation struct {
-	builder *ParticipationsBuilder
+type SentParticipations struct {
+	builder *ParticipationHelper
 	message *testsuite.Message
 }
 
-func (env *ParticipationTestEnv) NewParticipationsBuilder(wallet *utils.HDWallet) *ParticipationsBuilder {
-	msgBuilder := env.te.NewMessageBuilder(voteIndexation).
+func (env *ParticipationTestEnv) NewParticipationHelper(wallet *utils.HDWallet) *ParticipationHelper {
+	msgBuilder := env.te.NewMessageBuilder(participationIndexation).
 		LatestMilestonesAsParents()
 
-	return &ParticipationsBuilder{
+	return &ParticipationHelper{
 		env:                   env,
 		wallet:                wallet,
 		msgBuilder:            msgBuilder,
@@ -36,29 +36,29 @@ func (env *ParticipationTestEnv) NewParticipationsBuilder(wallet *utils.HDWallet
 	}
 }
 
-func (b *ParticipationsBuilder) WholeWalletBalance() *ParticipationsBuilder {
+func (b *ParticipationHelper) WholeWalletBalance() *ParticipationHelper {
 	b.msgBuilder.Amount(b.wallet.Balance())
 	return b
 }
 
-func (b *ParticipationsBuilder) Amount(amount uint64) *ParticipationsBuilder {
+func (b *ParticipationHelper) Amount(amount uint64) *ParticipationHelper {
 	b.msgBuilder.Amount(amount)
 	return b
 }
 
-func (b *ParticipationsBuilder) Parents(parents hornet.MessageIDs) *ParticipationsBuilder {
+func (b *ParticipationHelper) Parents(parents hornet.MessageIDs) *ParticipationHelper {
 	require.NotEmpty(b.env.t, parents)
 	b.msgBuilder.Parents(parents)
 	return b
 }
 
-func (b *ParticipationsBuilder) UsingOutput(output *utxo.Output) *ParticipationsBuilder {
+func (b *ParticipationHelper) UsingOutput(output *utxo.Output) *ParticipationHelper {
 	require.NotNil(b.env.t, output)
 	b.msgBuilder.UsingOutput(output)
 	return b
 }
 
-func (b *ParticipationsBuilder) AddParticipations(participations []*participation.Participation) *ParticipationsBuilder {
+func (b *ParticipationHelper) AddParticipations(participations []*participation.Participation) *ParticipationHelper {
 	require.NotEmpty(b.env.t, participations)
 	for _, p := range participations {
 		b.AddParticipation(p)
@@ -66,21 +66,21 @@ func (b *ParticipationsBuilder) AddParticipations(participations []*participatio
 	return b
 }
 
-func (b *ParticipationsBuilder) AddDefaultBallotVote(eventID participation.ParticipationEventID) *ParticipationsBuilder {
-	b.participationsBuilder.AddVote(&participation.Participation{
-		ParticipationEventID: eventID,
-		Answers:              []byte{byte(1)},
+func (b *ParticipationHelper) AddDefaultBallotVote(eventID participation.EventID) *ParticipationHelper {
+	b.participationsBuilder.AddParticipation(&participation.Participation{
+		EventID: eventID,
+		Answers: []byte{byte(1)},
 	})
 	return b
 }
 
-func (b *ParticipationsBuilder) AddParticipation(participation *participation.Participation) *ParticipationsBuilder {
+func (b *ParticipationHelper) AddParticipation(participation *participation.Participation) *ParticipationHelper {
 	require.NotNil(b.env.t, participation)
-	b.participationsBuilder.AddVote(participation)
+	b.participationsBuilder.AddParticipation(participation)
 	return b
 }
 
-func (b *ParticipationsBuilder) Participate() *SentParticipation {
+func (b *ParticipationHelper) Send() *SentParticipations {
 	votes, err := b.participationsBuilder.Build()
 	require.NoError(b.env.t, err)
 
@@ -95,12 +95,12 @@ func (b *ParticipationsBuilder) Participate() *SentParticipation {
 		Store().
 		BookOnWallets()
 
-	return &SentParticipation{
+	return &SentParticipations{
 		builder: b,
 		message: msg,
 	}
 }
 
-func (c *SentParticipation) Message() *testsuite.Message {
+func (c *SentParticipations) Message() *testsuite.Message {
 	return c.message
 }
