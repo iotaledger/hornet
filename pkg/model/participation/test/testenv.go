@@ -218,8 +218,8 @@ func (env *ParticipationTestEnv) RegisterDefaultReferendum(startMilestoneIndex m
 	return referendumID
 }
 
-func (env *ParticipationTestEnv) IssueVote(wallet *utils.HDWallet, amount uint64, votes []*participation.Participation) *CastVote {
-	return env.NewVoteBuilder(wallet).Amount(amount).AddVotes(votes).Cast()
+func (env *ParticipationTestEnv) IssueVote(wallet *utils.HDWallet, amount uint64, votes []*participation.Participation) *SentParticipation {
+	return env.NewParticipationsBuilder(wallet).Amount(amount).AddParticipations(votes).Participate()
 }
 
 func (env *ParticipationTestEnv) CancelVote(wallet *utils.HDWallet) *testsuite.Message {
@@ -244,17 +244,17 @@ func (env *ParticipationTestEnv) Transfer(fromWallet *utils.HDWallet, toWallet *
 		BookOnWallets()
 }
 
-func (env *ParticipationTestEnv) IssueDefaultVoteAndMilestone(referendumID participation.ParticipationEventID, wallet *utils.HDWallet, balance ...uint64) *CastVote {
+func (env *ParticipationTestEnv) IssueDefaultVoteAndMilestone(referendumID participation.ParticipationEventID, wallet *utils.HDWallet, balance ...uint64) *SentParticipation {
 
 	amountToSend := wallet.Balance()
 	if len(balance) > 0 {
 		amountToSend = balance[0]
 	}
 
-	castVote := env.NewVoteBuilder(wallet).
+	castVote := env.NewParticipationsBuilder(wallet).
 		Amount(amountToSend).
-		AddDefaultVote(referendumID).
-		Cast()
+		AddDefaultBallotVote(referendumID).
+		Participate()
 
 	_, confStats := env.IssueMilestone(castVote.Message().StoredMessageID())
 	require.Equal(env.t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
@@ -318,7 +318,7 @@ func (env *ParticipationTestEnv) AssertBallotAnswerStatus(referendumID participa
 	require.Exactly(env.t, accumulatedVoteAmount, status.Questions[questionIndex].Answers[answerIndex].Accumulated)
 }
 
-func (env *ParticipationTestEnv) AssertTrackedVote(referendumID participation.ParticipationEventID, castVote *CastVote, startMilestoneIndex milestone.Index, endMilestoneIndex milestone.Index, amount uint64) {
+func (env *ParticipationTestEnv) AssertTrackedVote(referendumID participation.ParticipationEventID, castVote *SentParticipation, startMilestoneIndex milestone.Index, endMilestoneIndex milestone.Index, amount uint64) {
 	trackedVote, err := env.ReferendumManager().VoteForOutputID(referendumID, castVote.Message().GeneratedUTXO().OutputID())
 	require.NoError(env.t, err)
 	require.Equal(env.t, castVote.Message().GeneratedUTXO().OutputID(), trackedVote.OutputID)
@@ -328,7 +328,7 @@ func (env *ParticipationTestEnv) AssertTrackedVote(referendumID participation.Pa
 	require.Equal(env.t, endMilestoneIndex, trackedVote.EndIndex)
 }
 
-func (env *ParticipationTestEnv) AssertInvalidVote(referendumID participation.ParticipationEventID, castVote *CastVote) {
+func (env *ParticipationTestEnv) AssertInvalidVote(referendumID participation.ParticipationEventID, castVote *SentParticipation) {
 	_, err := env.ReferendumManager().VoteForOutputID(referendumID, castVote.Message().GeneratedUTXO().OutputID())
 	require.Error(env.t, err)
 	require.ErrorIs(env.t, err, participation.ErrUnknownVote)

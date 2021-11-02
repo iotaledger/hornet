@@ -12,95 +12,95 @@ import (
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 )
 
-type VoteBuilder struct {
-	env          *ParticipationTestEnv
-	wallet       *utils.HDWallet
-	msgBuilder   *testsuite.MessageBuilder
-	votesBuilder *participation.VotesBuilder
+type ParticipationsBuilder struct {
+	env                   *ParticipationTestEnv
+	wallet                *utils.HDWallet
+	msgBuilder            *testsuite.MessageBuilder
+	participationsBuilder *participation.ParticipationsBuilder
 }
 
-type CastVote struct {
-	builder *VoteBuilder
+type SentParticipation struct {
+	builder *ParticipationsBuilder
 	message *testsuite.Message
 }
 
-func (env *ParticipationTestEnv) NewVoteBuilder(wallet *utils.HDWallet) *VoteBuilder {
+func (env *ParticipationTestEnv) NewParticipationsBuilder(wallet *utils.HDWallet) *ParticipationsBuilder {
 	msgBuilder := env.te.NewMessageBuilder(voteIndexation).
 		LatestMilestonesAsParents()
 
-	return &VoteBuilder{
-		env:          env,
-		wallet:       wallet,
-		msgBuilder:   msgBuilder,
-		votesBuilder: participation.NewVotesBuilder(),
+	return &ParticipationsBuilder{
+		env:                   env,
+		wallet:                wallet,
+		msgBuilder:            msgBuilder,
+		participationsBuilder: participation.NewParticipationsBuilder(),
 	}
 }
 
-func (b *VoteBuilder) WholeWalletBalance() *VoteBuilder {
+func (b *ParticipationsBuilder) WholeWalletBalance() *ParticipationsBuilder {
 	b.msgBuilder.Amount(b.wallet.Balance())
 	return b
 }
 
-func (b *VoteBuilder) Amount(amount uint64) *VoteBuilder {
+func (b *ParticipationsBuilder) Amount(amount uint64) *ParticipationsBuilder {
 	b.msgBuilder.Amount(amount)
 	return b
 }
 
-func (b *VoteBuilder) Parents(parents hornet.MessageIDs) *VoteBuilder {
+func (b *ParticipationsBuilder) Parents(parents hornet.MessageIDs) *ParticipationsBuilder {
 	require.NotEmpty(b.env.t, parents)
 	b.msgBuilder.Parents(parents)
 	return b
 }
 
-func (b *VoteBuilder) UsingOutput(output *utxo.Output) *VoteBuilder {
+func (b *ParticipationsBuilder) UsingOutput(output *utxo.Output) *ParticipationsBuilder {
 	require.NotNil(b.env.t, output)
 	b.msgBuilder.UsingOutput(output)
 	return b
 }
 
-func (b *VoteBuilder) AddVotes(votes []*participation.Participation) *VoteBuilder {
-	require.NotEmpty(b.env.t, votes)
-	for _, vote := range votes {
-		b.AddVote(vote)
+func (b *ParticipationsBuilder) AddParticipations(participations []*participation.Participation) *ParticipationsBuilder {
+	require.NotEmpty(b.env.t, participations)
+	for _, p := range participations {
+		b.AddParticipation(p)
 	}
 	return b
 }
 
-func (b *VoteBuilder) AddDefaultVote(referendumID participation.ParticipationEventID) *VoteBuilder {
-	b.votesBuilder.AddVote(&participation.Participation{
-		ParticipationEventID: referendumID,
+func (b *ParticipationsBuilder) AddDefaultBallotVote(eventID participation.ParticipationEventID) *ParticipationsBuilder {
+	b.participationsBuilder.AddVote(&participation.Participation{
+		ParticipationEventID: eventID,
 		Answers:              []byte{byte(1)},
 	})
 	return b
 }
 
-func (b *VoteBuilder) AddVote(vote *participation.Participation) *VoteBuilder {
-	require.NotNil(b.env.t, vote)
-	b.votesBuilder.AddVote(vote)
+func (b *ParticipationsBuilder) AddParticipation(participation *participation.Participation) *ParticipationsBuilder {
+	require.NotNil(b.env.t, participation)
+	b.participationsBuilder.AddVote(participation)
 	return b
 }
 
-func (b *VoteBuilder) Cast() *CastVote {
-	votes, err := b.votesBuilder.Build()
+func (b *ParticipationsBuilder) Participate() *SentParticipation {
+	votes, err := b.participationsBuilder.Build()
 	require.NoError(b.env.t, err)
 
-	votesData, err := votes.Serialize(serializer.DeSeriModePerformValidation)
+	participationsData, err := votes.Serialize(serializer.DeSeriModePerformValidation)
 	require.NoError(b.env.t, err)
 
 	msg := b.msgBuilder.
 		FromWallet(b.wallet).
 		ToWallet(b.wallet).
-		IndexationData(votesData).
+		IndexationData(participationsData).
 		Build().
 		Store().
 		BookOnWallets()
 
-	return &CastVote{
+	return &SentParticipation{
 		builder: b,
 		message: msg,
 	}
 }
 
-func (c *CastVote) Message() *testsuite.Message {
+func (c *SentParticipation) Message() *testsuite.Message {
 	return c.message
 }
