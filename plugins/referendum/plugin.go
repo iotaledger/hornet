@@ -59,7 +59,6 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "Referendum",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
 			Provide:   provide,
 			Configure: configure,
 			Run:       run,
