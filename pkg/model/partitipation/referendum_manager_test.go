@@ -99,7 +99,7 @@ func TestReferendumStateHelpers(t *testing.T) {
 }
 
 func TestReferendumStates(t *testing.T) {
-	env := test.NewReferendumTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	env := test.NewParticipationTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
@@ -146,7 +146,7 @@ func TestReferendumStates(t *testing.T) {
 }
 
 func TestSingleReferendumVote(t *testing.T) {
-	env := test.NewReferendumTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	env := test.NewParticipationTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
@@ -248,7 +248,7 @@ func TestSingleReferendumVote(t *testing.T) {
 }
 
 func TestReferendumVoteCancel(t *testing.T) {
-	env := test.NewReferendumTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	env := test.NewParticipationTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
@@ -325,7 +325,7 @@ func TestReferendumVoteCancel(t *testing.T) {
 }
 
 func TestReferendumVoteAddVoteBalanceBySweeping(t *testing.T) {
-	env := test.NewReferendumTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	env := test.NewParticipationTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
@@ -378,7 +378,7 @@ func TestReferendumVoteAddVoteBalanceBySweeping(t *testing.T) {
 }
 
 func TestReferendumVoteAddVoteBalanceByMultipleOutputs(t *testing.T) {
-	env := test.NewReferendumTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	env := test.NewParticipationTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
@@ -436,7 +436,7 @@ func TestReferendumVoteAddVoteBalanceByMultipleOutputs(t *testing.T) {
 }
 
 func TestReferendumMultipleVotes(t *testing.T) {
-	env := test.NewReferendumTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	env := test.NewParticipationTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
@@ -515,7 +515,7 @@ func TestReferendumMultipleVotes(t *testing.T) {
 }
 
 func TestReferendumChangeOpinionMidVote(t *testing.T) {
-	env := test.NewReferendumTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	env := test.NewParticipationTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
@@ -589,7 +589,7 @@ func TestReferendumChangeOpinionMidVote(t *testing.T) {
 }
 
 func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
-	env := test.NewReferendumTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	env := test.NewParticipationTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4

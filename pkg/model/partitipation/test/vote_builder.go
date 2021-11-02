@@ -13,7 +13,7 @@ import (
 )
 
 type VoteBuilder struct {
-	env          *ReferendumTestEnv
+	env          *ParticipationTestEnv
 	wallet       *utils.HDWallet
 	msgBuilder   *testsuite.MessageBuilder
 	votesBuilder *partitipation.VotesBuilder
@@ -24,7 +24,7 @@ type CastVote struct {
 	message *testsuite.Message
 }
 
-func (env *ReferendumTestEnv) NewVoteBuilder(wallet *utils.HDWallet) *VoteBuilder {
+func (env *ParticipationTestEnv) NewVoteBuilder(wallet *utils.HDWallet) *VoteBuilder {
 	msgBuilder := env.te.NewMessageBuilder(voteIndexation).
 		LatestMilestonesAsParents()
 
