@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 
 	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
@@ -89,13 +90,14 @@ func provide(c *dig.Container) {
 		dig.In
 		Storage        *storage.Storage
 		SyncManager    *syncmanager.SyncManager
+		DatabasePath   string                       `name:"databasePath"`
 		DatabaseEngine database.Engine              `name:"databaseEngine"`
 		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
 	}
 
 	if err := c.Provide(func(deps referendumDeps) *referendum.ReferendumManager {
 
-		referendumStore, err := database.StoreWithDefaultSettings(deps.NodeConfig.String(CfgReferendumDatabasePath), true, deps.DatabaseEngine)
+		referendumStore, err := database.StoreWithDefaultSettings(filepath.Join(deps.DatabasePath, "referendum"), true, deps.DatabaseEngine)
 		if err != nil {
 			Plugin.Panic(err)
 		}
