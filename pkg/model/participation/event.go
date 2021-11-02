@@ -198,6 +198,16 @@ func (j *jsonEvent) ToSerializable() (serializer.Serializable, error) {
 
 // Helpers
 
+func (e *Event) payloadType() *uint32 {
+	switch e.Payload.(type) {
+	case *Ballot:
+		t := BallotPayloadTypeID
+		return &t
+	default:
+		return nil
+	}
+}
+
 func (e *Event) BallotQuestions() []*Question {
 	switch payload := e.Payload.(type) {
 	case *Ballot:

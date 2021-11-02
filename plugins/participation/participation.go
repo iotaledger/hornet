@@ -3,6 +3,7 @@ package participation
 import (
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -31,6 +32,30 @@ func EventIDFromHex(hexString string) (participation.EventID, error) {
 	return eventID, nil
 }
 
+func parseEventTypeQueryParam(c echo.Context) ([]uint32, error) {
+	typeParams := c.QueryParams()["type"]
+
+	if len(typeParams) == 0 {
+		return []uint32{}, nil
+	}
+
+	var returnTypes []uint32
+	for _, typeParam := range typeParams {
+		intParam, err := strconv.ParseUint(typeParam, 10, 32)
+		if err != nil {
+			return []uint32{}, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event type: %s, error: %s", typeParam, err)
+		}
+		eventType := uint32(intParam)
+		switch eventType {
+		case participation.BallotPayloadTypeID:
+			returnTypes = append(returnTypes, eventType)
+		default:
+			return []uint32{}, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event type: %s", typeParam)
+		}
+	}
+	return returnTypes, nil
+}
+
 func parseEventIDParam(c echo.Context) (participation.EventID, error) {
 
 	eventIDHex := strings.ToLower(c.Param(ParameterParticipationEventID))
@@ -46,8 +71,14 @@ func parseEventIDParam(c echo.Context) (participation.EventID, error) {
 	return eventID, nil
 }
 
-func getEvents(_ echo.Context) (*EventsResponse, error) {
-	eventIDs := deps.ParticipationManager.EventIDs()
+func getEvents(c echo.Context) (*EventsResponse, error) {
+
+	eventTypes, err := parseEventTypeQueryParam(c)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type parameter: %s", err)
+	}
+
+	eventIDs := deps.ParticipationManager.EventIDs(eventTypes...)
 
 	hexEventIDs := []string{}
 	for _, id := range eventIDs {

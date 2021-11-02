@@ -157,11 +157,17 @@ func (rm *ParticipationManager) CloseDatabase() error {
 	return flushAndCloseError
 }
 
-func (rm *ParticipationManager) EventIDs() []EventID {
+func (rm *ParticipationManager) EventIDs(eventPayloadType ...uint32) []EventID {
 	rm.RLock()
 	defer rm.RUnlock()
+
+	events := rm.events
+	if len(eventPayloadType) > 0 {
+		events = filteredEvents(events, eventPayloadType)
+	}
+
 	var ids []EventID
-	for id, _ := range rm.events {
+	for id, _ := range events {
 		ids = append(ids, id)
 	}
 	return ids
@@ -177,17 +183,36 @@ func (rm *ParticipationManager) Events() []*Event {
 	return ref
 }
 
+func filteredEvents(events map[EventID]*Event, filterPayloadTypes []uint32) map[EventID]*Event {
+
+	filtered := make(map[EventID]*Event)
+eventLoop:
+	for id, event := range events {
+		eventPayloadType := event.payloadType()
+		if eventPayloadType == nil {
+			continue
+		}
+		for _, payloadType := range filterPayloadTypes {
+			if payloadType == *eventPayloadType {
+				filtered[id] = event
+			}
+			continue eventLoop
+		}
+	}
+	return filtered
+}
+
 // EventsAcceptingParticipation returns the events that are currently accepting participation, i.event. commencing or in the holding period.
 func (rm *ParticipationManager) EventsAcceptingParticipation() []*Event {
-	return filterEvents(rm.Events(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Event, index milestone.Index) bool {
-		return ref.IsAcceptingParticipation(index)
+	return filterEvents(rm.Events(), rm.syncManager.ConfirmedMilestoneIndex(), func(e *Event, index milestone.Index) bool {
+		return e.IsAcceptingParticipation(index)
 	})
 }
 
 // EventsCountingParticipation returns the events that are currently actively counting participation, i.event. in the holding period
 func (rm *ParticipationManager) EventsCountingParticipation() []*Event {
-	return filterEvents(rm.Events(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Event, index milestone.Index) bool {
-		return ref.IsCountingParticipation(index)
+	return filterEvents(rm.Events(), rm.syncManager.ConfirmedMilestoneIndex(), func(e *Event, index milestone.Index) bool {
+		return e.IsCountingParticipation(index)
 	})
 }
 
@@ -250,8 +275,8 @@ func (rm *ParticipationManager) DeleteEvent(eventID EventID) error {
 //  - The participation data must be parseable.
 func (rm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
 
-	acceptingEvents := filterEvents(rm.Events(), index, func(ref *Event, index milestone.Index) bool {
-		return ref.ShouldAcceptParticipation(index)
+	acceptingEvents := filterEvents(rm.Events(), index, func(e *Event, index milestone.Index) bool {
+		return e.ShouldAcceptParticipation(index)
 	})
 
 	// No events accepting participation, so no work to be done
@@ -383,8 +408,8 @@ func (rm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 
 func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
 
-	acceptingEvents := filterEvents(rm.Events(), index, func(ref *Event, index milestone.Index) bool {
-		return ref.ShouldAcceptParticipation(index)
+	acceptingEvents := filterEvents(rm.Events(), index, func(e *Event, index milestone.Index) bool {
+		return e.ShouldAcceptParticipation(index)
 	})
 
 	// No events accepting participation, so no work to be done
@@ -448,8 +473,8 @@ func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 // ApplyNewConfirmedMilestoneIndex iterates over each counting ballot participation and applies the current vote balance for each question to the total vote balance
 func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
 
-	countingEvents := filterEvents(rm.Events(), index, func(ref *Event, index milestone.Index) bool {
-		return ref.ShouldCountParticipation(index)
+	countingEvents := filterEvents(rm.Events(), index, func(e *Event, index milestone.Index) bool {
+		return e.ShouldCountParticipation(index)
 	})
 
 	// No events counting participation, so no work to be done
@@ -557,7 +582,7 @@ func participationFromIndexation(indexation *iotago.Indexation) ([]*Participatio
 	return votes, nil
 }
 
-func filterEvents(events []*Event, index milestone.Index, includeFunc func(ref *Event, index milestone.Index) bool) []*Event {
+func filterEvents(events []*Event, index milestone.Index, includeFunc func(e *Event, index milestone.Index) bool) []*Event {
 	var filtered []*Event
 	for _, event := range events {
 		if includeFunc(event, index) {
