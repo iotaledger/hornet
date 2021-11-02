@@ -103,7 +103,7 @@ func createEvent(c echo.Context) (*CreateEventResponse, error) {
 	}
 
 	return &CreateEventResponse{
-		eventID: hex.EncodeToString(eventID[:]),
+		EventID: hex.EncodeToString(eventID[:]),
 	}, nil
 }
 

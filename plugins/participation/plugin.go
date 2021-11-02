@@ -136,7 +136,7 @@ func configure() {
 			return err
 		}
 
-		c.Response().Header().Set(echo.HeaderLocation, resp.eventID)
+		c.Response().Header().Set(echo.HeaderLocation, resp.EventID)
 		return restapi.JSONResponse(c, http.StatusCreated, resp)
 	})
 

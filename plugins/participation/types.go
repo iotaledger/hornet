@@ -11,7 +11,7 @@ type EventsResponse struct {
 // CreateEventResponse defines the response of a POST RouteParticipationEvents REST API call.
 type CreateEventResponse struct {
 	// The hex encoded ID of the created participation event.
-	eventID string `json:"eventId"`
+	EventID string `json:"eventId"`
 }
 
 // TrackedParticipation holds the information for each tracked participation.
