@@ -8,6 +8,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/model/participation/test"
+	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 func TestEventStateHelpers(t *testing.T) {
@@ -236,12 +237,15 @@ func TestSingleBallotVote(t *testing.T) {
 
 	env.IssueMilestone() // 11
 
-	trackedVote, err := env.ParticipationManager().ParticipationForOutputID(eventID, castVote.Message().GeneratedUTXO().OutputID())
+	var trackedVote *participation.TrackedParticipation
+	trackedVote, err = env.ParticipationManager().ParticipationForOutputID(eventID, castVote.Message().GeneratedUTXO().OutputID())
+	require.NoError(t, err)
 	require.Equal(t, castVote.Message().StoredMessageID(), trackedVote.MessageID)
 	require.Equal(t, milestone.Index(6), trackedVote.StartIndex)
 	require.Equal(t, milestone.Index(10), trackedVote.EndIndex)
 
-	messageFromParticipationStore, err := env.ParticipationManager().MessageForMessageID(trackedVote.MessageID)
+	var messageFromParticipationStore *storage.Message
+	messageFromParticipationStore, err = env.ParticipationManager().MessageForMessageID(trackedVote.MessageID)
 	require.NoError(t, err)
 	require.NotNil(t, messageFromParticipationStore)
 	require.Equal(t, messageFromParticipationStore.Message(), castVote.Message().IotaMessage())

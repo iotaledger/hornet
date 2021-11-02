@@ -167,7 +167,7 @@ func (rm *ParticipationManager) EventIDs(eventPayloadType ...uint32) []EventID {
 	}
 
 	var ids []EventID
-	for id, _ := range events {
+	for id := range events {
 		ids = append(ids, id)
 	}
 	return ids
