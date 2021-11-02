@@ -10,9 +10,12 @@ import (
 const (
 	AnswerTextMaxLength           = 255
 	AnswerAdditionalInfoMaxLength = 500
+
+	AnswerSkippedIndex = 0
+	AnswerInvalidIndex = 255
 )
 
-// Answer
+// Answer is a possible answer to a Ballot Question
 type Answer struct {
 	Index          uint8
 	Text           string
@@ -34,7 +37,10 @@ func (a *Answer) Deserialize(data []byte, deSeriMode serializer.DeSerializationM
 }
 
 func (a *Answer) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
-	//TODO: validate text lengths
+	// TODO: validate text lengths
+
+	// TODO: validate that answer index != 0 and != 255
+
 	return serializer.NewSerializer().
 		WriteNum(a.Index, func(err error) error {
 			return fmt.Errorf("unable to serialize participation answer index: %w", err)

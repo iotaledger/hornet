@@ -170,7 +170,7 @@ func TestSingleBallotVote(t *testing.T) {
 	env.IssueDefaultBallotVoteAndMilestone(eventID, env.Wallet1) // 5
 
 	// Participations should not have been counted so far because it was not accepting votes yet
-	status, err := env.ParticipationManager().ParticipationEventStatus(eventID)
+	status, err := env.ParticipationManager().EventStatus(eventID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
@@ -186,7 +186,7 @@ func TestSingleBallotVote(t *testing.T) {
 	// Event should be accepting votes, but the vote should not be weighted yet, just added to the current status
 	env.AssertEventsCount(1, 0)
 
-	status, err = env.ParticipationManager().ParticipationEventStatus(eventID)
+	status, err = env.ParticipationManager().EventStatus(eventID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
@@ -198,7 +198,7 @@ func TestSingleBallotVote(t *testing.T) {
 	// Event should be accepting and counting votes, but the vote we did before should not be weighted yet
 	env.AssertEventsCount(1, 1)
 
-	status, err = env.ParticipationManager().ParticipationEventStatus(eventID)
+	status, err = env.ParticipationManager().EventStatus(eventID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
@@ -210,7 +210,7 @@ func TestSingleBallotVote(t *testing.T) {
 	// Event should be accepting and counting votes, the vote should now be weighted
 	env.AssertEventsCount(1, 1)
 
-	status, err = env.ParticipationManager().ParticipationEventStatus(eventID)
+	status, err = env.ParticipationManager().EventStatus(eventID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
@@ -222,7 +222,7 @@ func TestSingleBallotVote(t *testing.T) {
 	// Event should be accepting and counting votes, the vote should now be weighted double
 	env.AssertEventsCount(1, 1)
 
-	status, err = env.ParticipationManager().ParticipationEventStatus(eventID)
+	status, err = env.ParticipationManager().EventStatus(eventID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)

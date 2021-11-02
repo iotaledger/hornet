@@ -208,6 +208,7 @@ func (e *Event) payloadType() *uint32 {
 	}
 }
 
+// BallotQuestions returns the questions contained in the Ballot payload if this participation contains a Ballot.
 func (e *Event) BallotQuestions() []*Question {
 	switch payload := e.Payload.(type) {
 	case *Ballot:
@@ -221,6 +222,7 @@ func (e *Event) BallotQuestions() []*Question {
 	}
 }
 
+// Status returns a human-readable status of the event. Possible values are "upcoming", "commencing", "holding" and "ended"
 func (e *Event) Status(atIndex milestone.Index) string {
 	if atIndex < e.CommenceMilestoneIndex() {
 		return "upcoming"
@@ -234,30 +236,37 @@ func (e *Event) Status(atIndex milestone.Index) string {
 	return "ended"
 }
 
+// CommenceMilestoneIndex returns the milestone index the commencing phase of the participation starts.
 func (e *Event) CommenceMilestoneIndex() milestone.Index {
 	return milestone.Index(e.milestoneIndexCommence)
 }
 
+// StartMilestoneIndex returns the milestone index the holding phase of the participation starts.
 func (e *Event) StartMilestoneIndex() milestone.Index {
 	return milestone.Index(e.milestoneIndexStart)
 }
 
+// EndMilestoneIndex returns the milestone index the participation ends.
 func (e *Event) EndMilestoneIndex() milestone.Index {
 	return milestone.Index(e.milestoneIndexEnd)
 }
 
+// ShouldAcceptParticipation returns true if the event should accept the participation for the given milestone index.
 func (e *Event) ShouldAcceptParticipation(forIndex milestone.Index) bool {
 	return forIndex > e.CommenceMilestoneIndex() && forIndex <= e.EndMilestoneIndex()
 }
 
+// IsAcceptingParticipation returns true if the event already commenced or started the holding phase for the given milestone index.
 func (e *Event) IsAcceptingParticipation(atIndex milestone.Index) bool {
 	return atIndex >= e.CommenceMilestoneIndex() && atIndex < e.EndMilestoneIndex()
 }
 
+// ShouldCountParticipation returns true if the event should count the participation for the given milestone index.
 func (e *Event) ShouldCountParticipation(forIndex milestone.Index) bool {
 	return forIndex > e.StartMilestoneIndex() && forIndex <= e.EndMilestoneIndex()
 }
 
+// IsCountingParticipation returns true if the event already started the holding phase for the given milestone index.
 func (e *Event) IsCountingParticipation(atIndex milestone.Index) bool {
 	return atIndex >= e.StartMilestoneIndex() && atIndex < e.EndMilestoneIndex()
 }

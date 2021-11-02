@@ -1,4 +1,3 @@
 package participation_test
 
-// TODO:
-// Add tests for serialization
+// TODO: Add tests for serialization

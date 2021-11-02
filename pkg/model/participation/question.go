@@ -23,7 +23,7 @@ var (
 	}
 )
 
-// Question
+// Question defines a single question inside a Ballot that can have multiple Answers.
 type Question struct {
 	Text           string
 	Answers        serializer.Serializables

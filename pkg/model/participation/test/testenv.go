@@ -303,7 +303,7 @@ func (env *ParticipationTestEnv) AssertDefaultBallotAnswerStatus(eventID partici
 }
 
 func (env *ParticipationTestEnv) AssertBallotAnswerStatus(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerIndex int) {
-	status, err := env.ParticipationManager().ParticipationEventStatus(eventID)
+	status, err := env.ParticipationManager().EventStatus(eventID)
 	require.NoError(env.t, err)
 	env.PrintJSON(status)
 	require.Equal(env.t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)

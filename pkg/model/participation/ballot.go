@@ -23,7 +23,7 @@ var (
 	}
 )
 
-// Ballot
+// Ballot can be used to define a voting participation with variable questions.
 type Ballot struct {
 	Questions serializer.Serializables
 }

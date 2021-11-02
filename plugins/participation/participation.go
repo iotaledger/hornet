@@ -132,14 +132,14 @@ func deleteEvent(c echo.Context) error {
 	return deps.ParticipationManager.DeleteEvent(eventID)
 }
 
-func getEventStatus(c echo.Context) (*participation.ParticipationEventStatus, error) {
+func getEventStatus(c echo.Context) (*participation.EventStatus, error) {
 
 	eventID, err := parseEventIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	status, err := deps.ParticipationManager.ParticipationEventStatus(eventID)
+	status, err := deps.ParticipationManager.EventStatus(eventID)
 	if err != nil {
 		if errors.Is(err, participation.ErrEventNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))

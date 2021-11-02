@@ -16,15 +16,16 @@ type QuestionStatus struct {
 	Answers []*AnswerStatus `json:"answers"`
 }
 
-// ParticipationEventStatus holds the status of the event
-type ParticipationEventStatus struct {
+// EventStatus holds the status of the event
+type EventStatus struct {
 	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
 	Status         string            `json:"status"`
 	Questions      []*QuestionStatus `json:"questions,omitempty"`
-	//TODO: add hash of all QuestionStatus to make comparison easier
+	// TODO: add hash of all QuestionStatus to make comparison easier
 }
 
-func (rm *ParticipationManager) ParticipationEventStatus(eventID EventID) (*ParticipationEventStatus, error) {
+// EventStatus returns the EventStatus for an event with the given eventID.
+func (rm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, error) {
 
 	confirmedMilestoneIndex := rm.syncManager.ConfirmedMilestoneIndex()
 
@@ -33,7 +34,7 @@ func (rm *ParticipationManager) ParticipationEventStatus(eventID EventID) (*Part
 		return nil, ErrEventNotFound
 	}
 
-	status := &ParticipationEventStatus{
+	status := &EventStatus{
 		MilestoneIndex: confirmedMilestoneIndex,
 		Status:         event.Status(confirmedMilestoneIndex),
 	}

@@ -141,6 +141,7 @@ func (rm *ParticipationManager) init() error {
 	return rm.participationStoreHealth.MarkCorrupted()
 }
 
+// CloseDatabase flushes the store and closes the underlying database
 func (rm *ParticipationManager) CloseDatabase() error {
 	var flushAndCloseError error
 
@@ -157,6 +158,7 @@ func (rm *ParticipationManager) CloseDatabase() error {
 	return flushAndCloseError
 }
 
+// EventIDs return the IDs of all known events. Can be optionally filtered by event payload type.
 func (rm *ParticipationManager) EventIDs(eventPayloadType ...uint32) []EventID {
 	rm.RLock()
 	defer rm.RUnlock()
@@ -173,6 +175,7 @@ func (rm *ParticipationManager) EventIDs(eventPayloadType ...uint32) []EventID {
 	return ids
 }
 
+// Events returns all known events
 func (rm *ParticipationManager) Events() []*Event {
 	rm.RLock()
 	defer rm.RUnlock()
@@ -242,12 +245,14 @@ func (rm *ParticipationManager) StoreEvent(event *Event) (EventID, error) {
 	return eventID, err
 }
 
+// Event returns the event for the given eventID if it exists
 func (rm *ParticipationManager) Event(eventID EventID) *Event {
 	rm.RLock()
 	defer rm.RUnlock()
 	return rm.events[eventID]
 }
 
+// DeleteEvent deletes the event for the given eventID if it exists, else returns ErrEventNotFound.
 func (rm *ParticipationManager) DeleteEvent(eventID EventID) error {
 	rm.Lock()
 	defer rm.Unlock()
@@ -265,7 +270,7 @@ func (rm *ParticipationManager) DeleteEvent(eventID EventID) error {
 	return nil
 }
 
-// ApplyNewUTXO checks if the new UTXO is part of a voting transaction.
+// ApplyNewUTXO checks if the new UTXO is part of a participation transaction.
 // The following rules must be satisfied:
 // 	- Must be a value transaction
 // 	- Inputs must all come from the same address. Multiple inputs are allowed.
@@ -406,6 +411,7 @@ func (rm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 	return mutations.Commit()
 }
 
+// ApplyNewUTXO checks if the spent UTXO was part of a participation transaction.
 func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
 
 	acceptingEvents := filterEvents(rm.Events(), index, func(e *Event, index milestone.Index) bool {
@@ -556,8 +562,6 @@ func (rm *ParticipationManager) validParticipation(index milestone.Index, votes 
 		if len(vote.Answers) != len(event.BallotQuestions()) {
 			continue
 		}
-
-		//TODO: validate answers? We would create a current vote for invalid answers, but only count valid answers and skipped (index == 0) anyway
 
 		validParticipations = append(validParticipations, vote)
 	}

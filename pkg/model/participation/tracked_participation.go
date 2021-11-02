@@ -8,6 +8,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
+// TrackedParticipation holds the information the node tracked for the participation.
 type TrackedParticipation struct {
 	EventID    EventID
 	OutputID   *iotago.UTXOInputID
@@ -17,6 +18,7 @@ type TrackedParticipation struct {
 	EndIndex   milestone.Index
 }
 
+// ParseEventID helps to parse an EventID using marshalutil.
 func ParseEventID(ms *marshalutil.MarshalUtil) (EventID, error) {
 	bytes, err := ms.ReadBytes(EventIDLength)
 	if err != nil {
