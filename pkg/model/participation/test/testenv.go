@@ -180,7 +180,7 @@ func (env *ParticipationTestEnv) RegisterDefaultReferendum(startMilestoneIndex m
 	referendumStartHoldingIndex := referendumStartIndex + milestone.Index(startPhaseDuration)
 	referendumEndIndex := referendumStartHoldingIndex + milestone.Index(holdingDuration)
 
-	referendumBuilder := participation.NewReferendumBuilder("All 4 HORNET", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "The biggest governance decision in the history of IOTA")
+	referendumBuilder := participation.NewParticipationEventBuilder("All 4 HORNET", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "The biggest governance decision in the history of IOTA")
 
 	questionBuilder := participation.NewQuestionBuilder("Give all the funds to the HORNET developers?", "This would fund the development of HORNET indefinitely")
 	questionBuilder.AddAnswer(&participation.Answer{

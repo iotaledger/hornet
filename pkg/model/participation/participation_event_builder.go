@@ -7,9 +7,9 @@ import (
 	"github.com/iotaledger/hive.go/serializer"
 )
 
-// NewReferendumBuilder creates a new ReferendumBuilder.
-func NewReferendumBuilder(name string, milestoneCommence milestone.Index, milestoneBeginHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *ReferendumBuilder {
-	return &ReferendumBuilder{
+// NewParticipationEventBuilder creates a new ParticipationEventBuilder.
+func NewParticipationEventBuilder(name string, milestoneCommence milestone.Index, milestoneBeginHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *ParticipationEventBuilder {
+	return &ParticipationEventBuilder{
 		r: &ParticipationEvent{
 			Name:                   name,
 			milestoneIndexCommence: uint32(milestoneCommence),
@@ -20,14 +20,14 @@ func NewReferendumBuilder(name string, milestoneCommence milestone.Index, milest
 	}
 }
 
-// ReferendumBuilder is used to easily build up a ParticipationEvent.
-type ReferendumBuilder struct {
+// ParticipationEventBuilder is used to easily build up a ParticipationEvent.
+type ParticipationEventBuilder struct {
 	r   *ParticipationEvent
 	err error
 }
 
 // Payload sets the payload to embed within the message.
-func (rb *ReferendumBuilder) Payload(seri serializer.Serializable) *ReferendumBuilder {
+func (rb *ParticipationEventBuilder) Payload(seri serializer.Serializable) *ParticipationEventBuilder {
 	if rb.err != nil {
 		return rb
 	}
@@ -43,7 +43,7 @@ func (rb *ReferendumBuilder) Payload(seri serializer.Serializable) *ReferendumBu
 }
 
 // Build builds the ParticipationEvent.
-func (rb *ReferendumBuilder) Build() (*ParticipationEvent, error) {
+func (rb *ParticipationEventBuilder) Build() (*ParticipationEvent, error) {
 	if rb.err != nil {
 		return nil, rb.err
 	}

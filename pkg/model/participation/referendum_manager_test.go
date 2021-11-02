@@ -16,7 +16,7 @@ func TestReferendumStateHelpers(t *testing.T) {
 	referendumStartHoldingIndex := milestone.Index(100)
 	referendumEndIndex := milestone.Index(200)
 
-	referendumBuilder := participation.NewReferendumBuilder("Test", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "Sample")
+	referendumBuilder := participation.NewParticipationEventBuilder("Test", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "Sample")
 
 	questionBuilder := participation.NewQuestionBuilder("Q1", "-")
 	questionBuilder.AddAnswer(&participation.Answer{
