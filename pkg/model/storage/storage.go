@@ -25,7 +25,7 @@ type Storage struct {
 	utxoStore   kvstore.KVStore
 
 	// healthTrackers
-	healthTrackers []*storeHealthTracker
+	healthTrackers []*StoreHealthTracker
 
 	// kv storages
 	snapshotStore kvstore.KVStore
@@ -58,9 +58,9 @@ func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile .
 	s := &Storage{
 		tangleStore: tangleStore,
 		utxoStore:   utxoStore,
-		healthTrackers: []*storeHealthTracker{
-			newStoreHealthTracker(tangleStore),
-			newStoreHealthTracker(utxoStore),
+		healthTrackers: []*StoreHealthTracker{
+			NewStoreHealthTracker(tangleStore),
+			NewStoreHealthTracker(utxoStore),
 		},
 		utxoManager: utxo.New(utxoStore),
 		Events: &packageEvents{

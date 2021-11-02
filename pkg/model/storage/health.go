@@ -7,19 +7,19 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
-type storeHealthTracker struct {
+type StoreHealthTracker struct {
 	store kvstore.KVStore
 }
 
-func newStoreHealthTracker(store kvstore.KVStore) *storeHealthTracker {
-	s := &storeHealthTracker{
+func NewStoreHealthTracker(store kvstore.KVStore) *StoreHealthTracker {
+	s := &StoreHealthTracker{
 		store: store.WithRealm([]byte{common.StorePrefixHealth}),
 	}
 	s.setDatabaseVersion(DBVersion)
 	return s
 }
 
-func (s *storeHealthTracker) markCorrupted() error {
+func (s *StoreHealthTracker) MarkCorrupted() error {
 
 	if err := s.store.Set([]byte("dbCorrupted"), []byte{}); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to set database healthTrackers status")
@@ -27,7 +27,7 @@ func (s *storeHealthTracker) markCorrupted() error {
 	return s.store.Flush()
 }
 
-func (s *storeHealthTracker) markTainted() error {
+func (s *StoreHealthTracker) MarkTainted() error {
 
 	if err := s.store.Set([]byte("dbTainted"), []byte{}); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to set database healthTrackers status")
@@ -35,7 +35,7 @@ func (s *storeHealthTracker) markTainted() error {
 	return s.store.Flush()
 }
 
-func (s *storeHealthTracker) markHealthy() error {
+func (s *StoreHealthTracker) MarkHealthy() error {
 
 	if err := s.store.Delete([]byte("dbCorrupted")); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to set database healthTrackers status")
@@ -44,7 +44,7 @@ func (s *storeHealthTracker) markHealthy() error {
 	return nil
 }
 
-func (s *storeHealthTracker) isCorrupted() (bool, error) {
+func (s *StoreHealthTracker) IsCorrupted() (bool, error) {
 
 	contains, err := s.store.Has([]byte("dbCorrupted"))
 	if err != nil {
@@ -53,7 +53,7 @@ func (s *storeHealthTracker) isCorrupted() (bool, error) {
 	return contains, nil
 }
 
-func (s *storeHealthTracker) isTainted() (bool, error) {
+func (s *StoreHealthTracker) IsTainted() (bool, error) {
 
 	contains, err := s.store.Has([]byte("dbTainted"))
 	if err != nil {
@@ -62,7 +62,7 @@ func (s *storeHealthTracker) isTainted() (bool, error) {
 	return contains, nil
 }
 
-func (s *storeHealthTracker) setDatabaseVersion(version byte) error {
+func (s *StoreHealthTracker) setDatabaseVersion(version byte) error {
 
 	_, err := s.store.Get([]byte("dbVersion"))
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -74,7 +74,7 @@ func (s *storeHealthTracker) setDatabaseVersion(version byte) error {
 	return nil
 }
 
-func (s *storeHealthTracker) checkCorrectDatabaseVersion(expectedVersion byte) (bool, error) {
+func (s *StoreHealthTracker) CheckCorrectDatabaseVersion() (bool, error) {
 
 	value, err := s.store.Get([]byte("dbVersion"))
 	if err != nil {
@@ -82,14 +82,14 @@ func (s *storeHealthTracker) checkCorrectDatabaseVersion(expectedVersion byte) (
 	}
 
 	if len(value) > 0 {
-		return value[0] == expectedVersion, nil
+		return value[0] == DBVersion, nil
 	}
 
 	return false, nil
 }
 
 // UpdateDatabaseVersion tries to migrate the existing data to the new database version.
-func (s *storeHealthTracker) updateDatabaseVersion() (bool, error) {
+func (s *StoreHealthTracker) UpdateDatabaseVersion() (bool, error) {
 
 	value, err := s.store.Get([]byte("dbVersion"))
 	if err != nil {

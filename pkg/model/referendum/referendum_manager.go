@@ -24,8 +24,9 @@ type Events struct {
 }
 
 var (
-	ErrReferendumAlreadyStarted = errors.New("the given referendum already started")
-	ErrReferendumAlreadyEnded   = errors.New("the given referendum already ended")
+	ErrReferendumCorruptedStorage = errors.New("the referendum database was not shutdown properly")
+	ErrReferendumAlreadyStarted   = errors.New("the given referendum already started")
+	ErrReferendumAlreadyEnded     = errors.New("the given referendum already ended")
 )
 
 // ReferendumManager is used to track the outcome of referendums in the tangle.
@@ -41,8 +42,8 @@ type ReferendumManager struct {
 	// holds the ReferendumManager options.
 	opts *Options
 
-	//TODO: add health check when the db split is merged
-	referendumStore kvstore.KVStore
+	referendumStore       kvstore.KVStore
+	referendumStoreHealth *storage.StoreHealthTracker
 
 	referendums map[ReferendumID]*Referendum
 
@@ -88,7 +89,7 @@ type Option func(opts *Options)
 
 // NewManager creates a new ReferendumManager instance.
 func NewManager(
-	storage *storage.Storage,
+	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	referendumStore kvstore.KVStore,
 	opts ...Option) (*ReferendumManager, error) {
@@ -98,10 +99,11 @@ func NewManager(
 	options.apply(opts...)
 
 	manager := &ReferendumManager{
-		storage:         storage,
-		syncManager:     syncManager,
-		referendumStore: referendumStore,
-		opts:            options,
+		storage:               dbStorage,
+		syncManager:           syncManager,
+		referendumStore:       referendumStore,
+		referendumStoreHealth: storage.NewStoreHealthTracker(referendumStore),
+		opts:                  options,
 
 		Events: &Events{
 			SoftError: events.NewEvent(events.ErrorCaller),
@@ -117,17 +119,49 @@ func NewManager(
 }
 
 func (rm *ReferendumManager) init() error {
+
+	corrupted, err := rm.referendumStoreHealth.IsCorrupted()
+	if err != nil {
+		return err
+	}
+	if corrupted {
+		return ErrReferendumCorruptedStorage
+	}
+
+	correctDatabasesVersion, err := rm.referendumStoreHealth.CheckCorrectDatabaseVersion()
+	if err != nil {
+		return err
+	}
+
+	if !correctDatabasesVersion {
+		databaseVersionUpdated, err := rm.referendumStoreHealth.UpdateDatabaseVersion()
+		if err != nil {
+			return err
+		}
+
+		if !databaseVersionUpdated {
+			return errors.New("HORNET referendum database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
+		}
+	}
+
 	// Read referendums from storage
 	referendums, err := rm.loadReferendums()
 	if err != nil {
 		return err
 	}
 	rm.referendums = referendums
-	return nil
+
+	// Mark the database as corrupted here and as clean when we shut it down
+	return rm.referendumStoreHealth.MarkCorrupted()
 }
 
 func (rm *ReferendumManager) CloseDatabase() error {
 	var flushAndCloseError error
+
+	if err := rm.referendumStoreHealth.MarkHealthy(); err != nil {
+		flushAndCloseError = err
+	}
+
 	if err := rm.referendumStore.Flush(); err != nil {
 		flushAndCloseError = err
 	}
