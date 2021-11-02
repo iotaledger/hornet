@@ -17,20 +17,20 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-// Events are the events issued by the ReferendumManager.
+// Events are the events issued by the ParticipationManager.
 type Events struct {
 	// SoftError is triggered when a soft error is encountered.
 	SoftError *events.Event
 }
 
 var (
-	ErrReferendumCorruptedStorage = errors.New("the partitipation database was not shutdown properly")
-	ErrReferendumAlreadyStarted   = errors.New("the given partitipation already started")
-	ErrReferendumAlreadyEnded     = errors.New("the given partitipation already ended")
+	ErrParticipationCorruptedStorage    = errors.New("the partitipation database was not shutdown properly")
+	ErrParticipationEventAlreadyStarted = errors.New("the given partitipation event already started")
+	ErrParticipationEventAlreadyEnded   = errors.New("the given partitipation event already ended")
 )
 
-// ReferendumManager is used to track the outcome of referendums in the tangle.
-type ReferendumManager struct {
+// ParticipationManager is used to track the outcome of participation in the tangle.
+type ParticipationManager struct {
 	syncutils.RWMutex
 
 	// used to access the node storage.
@@ -39,24 +39,24 @@ type ReferendumManager struct {
 	// used to sync with the nodes status.
 	syncManager *syncmanager.SyncManager
 
-	// holds the ReferendumManager options.
+	// holds the ParticipationManager options.
 	opts *Options
 
-	referendumStore       kvstore.KVStore
-	referendumStoreHealth *storage.StoreHealthTracker
+	participationStore       kvstore.KVStore
+	participationStoreHealth *storage.StoreHealthTracker
 
 	referendums map[ReferendumID]*Referendum
 
-	// events of the ReferendumManager.
+	// events of the ParticipationManager.
 	Events *Events
 }
 
-// the default options applied to the ReferendumManager.
+// the default options applied to the ParticipationManager.
 var defaultOptions = []Option{
 	WithIndexationMessage("IOTAVOTE"),
 }
 
-// Options define options for the ReferendumManager.
+// Options define options for the ParticipationManager.
 type Options struct {
 	logger *logger.Logger
 
@@ -77,7 +77,7 @@ func WithLogger(logger *logger.Logger) Option {
 	}
 }
 
-// WithIndexationMessage defines the ReferendumManager indexation payload to track.
+// WithIndexationMessage defines the ParticipationManager indexation payload to track.
 func WithIndexationMessage(indexationMessage string) Option {
 	return func(opts *Options) {
 		opts.indexationMessage = []byte(indexationMessage)
@@ -87,23 +87,23 @@ func WithIndexationMessage(indexationMessage string) Option {
 // Option is a function setting a faucet option.
 type Option func(opts *Options)
 
-// NewManager creates a new ReferendumManager instance.
+// NewManager creates a new ParticipationManager instance.
 func NewManager(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
-	referendumStore kvstore.KVStore,
-	opts ...Option) (*ReferendumManager, error) {
+	participationStore kvstore.KVStore,
+	opts ...Option) (*ParticipationManager, error) {
 
 	options := &Options{}
 	options.apply(defaultOptions...)
 	options.apply(opts...)
 
-	manager := &ReferendumManager{
-		storage:               dbStorage,
-		syncManager:           syncManager,
-		referendumStore:       referendumStore,
-		referendumStoreHealth: storage.NewStoreHealthTracker(referendumStore),
-		opts:                  options,
+	manager := &ParticipationManager{
+		storage:                  dbStorage,
+		syncManager:              syncManager,
+		participationStore:       participationStore,
+		participationStoreHealth: storage.NewStoreHealthTracker(participationStore),
+		opts:                     options,
 
 		Events: &Events{
 			SoftError: events.NewEvent(events.ErrorCaller),
@@ -118,23 +118,23 @@ func NewManager(
 	return manager, nil
 }
 
-func (rm *ReferendumManager) init() error {
+func (rm *ParticipationManager) init() error {
 
-	corrupted, err := rm.referendumStoreHealth.IsCorrupted()
+	corrupted, err := rm.participationStoreHealth.IsCorrupted()
 	if err != nil {
 		return err
 	}
 	if corrupted {
-		return ErrReferendumCorruptedStorage
+		return ErrParticipationCorruptedStorage
 	}
 
-	correctDatabasesVersion, err := rm.referendumStoreHealth.CheckCorrectDatabaseVersion()
+	correctDatabasesVersion, err := rm.participationStoreHealth.CheckCorrectDatabaseVersion()
 	if err != nil {
 		return err
 	}
 
 	if !correctDatabasesVersion {
-		databaseVersionUpdated, err := rm.referendumStoreHealth.UpdateDatabaseVersion()
+		databaseVersionUpdated, err := rm.participationStoreHealth.UpdateDatabaseVersion()
 		if err != nil {
 			return err
 		}
@@ -152,26 +152,26 @@ func (rm *ReferendumManager) init() error {
 	rm.referendums = referendums
 
 	// Mark the database as corrupted here and as clean when we shut it down
-	return rm.referendumStoreHealth.MarkCorrupted()
+	return rm.participationStoreHealth.MarkCorrupted()
 }
 
-func (rm *ReferendumManager) CloseDatabase() error {
+func (rm *ParticipationManager) CloseDatabase() error {
 	var flushAndCloseError error
 
-	if err := rm.referendumStoreHealth.MarkHealthy(); err != nil {
+	if err := rm.participationStoreHealth.MarkHealthy(); err != nil {
 		flushAndCloseError = err
 	}
 
-	if err := rm.referendumStore.Flush(); err != nil {
+	if err := rm.participationStore.Flush(); err != nil {
 		flushAndCloseError = err
 	}
-	if err := rm.referendumStore.Close(); err != nil {
+	if err := rm.participationStore.Close(); err != nil {
 		flushAndCloseError = err
 	}
 	return flushAndCloseError
 }
 
-func (rm *ReferendumManager) ReferendumIDs() []ReferendumID {
+func (rm *ParticipationManager) ReferendumIDs() []ReferendumID {
 	rm.RLock()
 	defer rm.RUnlock()
 	var ids []ReferendumID
@@ -181,7 +181,7 @@ func (rm *ReferendumManager) ReferendumIDs() []ReferendumID {
 	return ids
 }
 
-func (rm *ReferendumManager) Referendums() []*Referendum {
+func (rm *ParticipationManager) Referendums() []*Referendum {
 	rm.RLock()
 	defer rm.RUnlock()
 	var ref []*Referendum
@@ -192,14 +192,14 @@ func (rm *ReferendumManager) Referendums() []*Referendum {
 }
 
 // ReferendumsAcceptingVotes returns the referendums that are currently accepting votes, i.e. commencing or in the holding period.
-func (rm *ReferendumManager) ReferendumsAcceptingVotes() []*Referendum {
+func (rm *ParticipationManager) ReferendumsAcceptingVotes() []*Referendum {
 	return filterReferendums(rm.Referendums(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Referendum, index milestone.Index) bool {
 		return ref.IsAcceptingVotes(index)
 	})
 }
 
 // ReferendumsCountingVotes returns the referendums that are currently actively counting votes, i.e. in the holding period
-func (rm *ReferendumManager) ReferendumsCountingVotes() []*Referendum {
+func (rm *ParticipationManager) ReferendumsCountingVotes() []*Referendum {
 	return filterReferendums(rm.Referendums(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Referendum, index milestone.Index) bool {
 		return ref.IsCountingVotes(index)
 	})
@@ -207,18 +207,18 @@ func (rm *ReferendumManager) ReferendumsCountingVotes() []*Referendum {
 
 // StoreReferendum accepts a new Referendum the manager should track.
 // The current confirmed milestone index needs to be provided, so that the manager can check if the partitipation can be added.
-func (rm *ReferendumManager) StoreReferendum(referendum *Referendum) (ReferendumID, error) {
+func (rm *ParticipationManager) StoreReferendum(referendum *Referendum) (ReferendumID, error) {
 	rm.Lock()
 	defer rm.Unlock()
 
 	confirmedMilestoneIndex := rm.syncManager.ConfirmedMilestoneIndex()
 
 	if confirmedMilestoneIndex >= referendum.EndMilestoneIndex() {
-		return NullReferendumID, ErrReferendumAlreadyEnded
+		return NullReferendumID, ErrParticipationEventAlreadyEnded
 	}
 
 	if confirmedMilestoneIndex >= referendum.CommenceMilestoneIndex() {
-		return NullReferendumID, ErrReferendumAlreadyStarted
+		return NullReferendumID, ErrParticipationEventAlreadyStarted
 	}
 
 	referendumID, err := rm.storeReferendum(referendum)
@@ -231,13 +231,13 @@ func (rm *ReferendumManager) StoreReferendum(referendum *Referendum) (Referendum
 	return referendumID, err
 }
 
-func (rm *ReferendumManager) Referendum(referendumID ReferendumID) *Referendum {
+func (rm *ParticipationManager) Referendum(referendumID ReferendumID) *Referendum {
 	rm.RLock()
 	defer rm.RUnlock()
 	return rm.referendums[referendumID]
 }
 
-func (rm *ReferendumManager) DeleteReferendum(referendumID ReferendumID) error {
+func (rm *ParticipationManager) DeleteReferendum(referendumID ReferendumID) error {
 	rm.Lock()
 	defer rm.Unlock()
 
@@ -255,7 +255,7 @@ func (rm *ReferendumManager) DeleteReferendum(referendumID ReferendumID) error {
 }
 
 // logSoftError logs a soft error and triggers the event.
-func (rm *ReferendumManager) logSoftError(err error) {
+func (rm *ParticipationManager) logSoftError(err error) {
 	if rm.opts.logger != nil {
 		rm.opts.logger.Warn(err)
 	}
@@ -270,7 +270,7 @@ func (rm *ReferendumManager) logSoftError(err error) {
 // 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
 // 	- The Indexation must match the configured Indexation.
 //  - The vote data must be parseable.
-func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
+func (rm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
 
 	acceptingReferendums := filterReferendums(rm.Referendums(), index, func(ref *Referendum, index milestone.Index) bool {
 		return ref.ShouldAcceptVotes(index)
@@ -377,7 +377,7 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 		return nil
 	}
 
-	mutations := rm.referendumStore.Batched()
+	mutations := rm.participationStore.Batched()
 
 	// Store the message holding the vote
 	if err := rm.storeMessage(msg, mutations); err != nil {
@@ -403,7 +403,7 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 	return mutations.Commit()
 }
 
-func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
+func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
 
 	acceptingReferendums := filterReferendums(rm.Referendums(), index, func(ref *Referendum, index milestone.Index) bool {
 		return ref.ShouldAcceptVotes(index)
@@ -443,7 +443,7 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 		return nil
 	}
 
-	mutations := rm.referendumStore.Batched()
+	mutations := rm.participationStore.Batched()
 
 	// Count the spent votes by decreasing the current vote balance
 	for _, vote := range validVotes {
@@ -468,7 +468,7 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 }
 
 // ApplyNewConfirmedMilestoneIndex iterates over each counting partitipation and applies the current vote for each question to the total vote
-func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
+func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
 
 	countingReferendums := filterReferendums(rm.Referendums(), index, func(ref *Referendum, index milestone.Index) bool {
 		return ref.ShouldCountVotes(index)
@@ -479,7 +479,7 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 		return nil
 	}
 
-	mutations := rm.referendumStore.Batched()
+	mutations := rm.participationStore.Batched()
 
 	// Iterate over all known referendums that are currently counting
 	for _, referendum := range countingReferendums {
@@ -533,7 +533,7 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 	return mutations.Commit()
 }
 
-func (rm *ReferendumManager) validVotes(index milestone.Index, votes []*Vote) []*Vote {
+func (rm *ParticipationManager) validVotes(index milestone.Index, votes []*Vote) []*Vote {
 
 	var validVotes []*Vote
 	for _, vote := range votes {

@@ -79,7 +79,7 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig        *configuration.Configuration `name:"nodeConfig"`
-	ReferendumManager *partitipation.ReferendumManager
+	ReferendumManager *partitipation.ParticipationManager
 	Tangle            *tangle.Tangle
 	Echo              *echo.Echo
 	ShutdownHandler   *shutdown.ShutdownHandler
@@ -96,7 +96,7 @@ func provide(c *dig.Container) {
 		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps referendumDeps) *partitipation.ReferendumManager {
+	if err := c.Provide(func(deps referendumDeps) *partitipation.ParticipationManager {
 
 		referendumStore, err := database.StoreWithDefaultSettings(filepath.Join(deps.DatabasePath, "partitipation"), true, deps.DatabaseEngine)
 		if err != nil {

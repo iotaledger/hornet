@@ -43,7 +43,7 @@ type ParticipationTestEnv struct {
 	Wallet4       *utils.HDWallet
 
 	referendumStore kvstore.KVStore
-	rm              *partitipation.ReferendumManager
+	rm              *partitipation.ParticipationManager
 }
 
 func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance uint64, wallet3Balance uint64, wallet4Balance uint64, assertSteps bool) *ParticipationTestEnv {
@@ -131,7 +131,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 	)
 	require.NoError(t, err)
 
-	// Connect the callbacks from the testsuite to the ReferendumManager
+	// Connect the callbacks from the testsuite to the ParticipationManager
 	te.ConfigureUTXOCallbacks(
 		func(index milestone.Index, output *utxo.Output) {
 			require.NoError(t, rm.ApplyNewUTXO(index, output))
@@ -157,7 +157,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 	}
 }
 
-func (env *ParticipationTestEnv) ReferendumManager() *partitipation.ReferendumManager {
+func (env *ParticipationTestEnv) ReferendumManager() *partitipation.ParticipationManager {
 	return env.rm
 }
 
