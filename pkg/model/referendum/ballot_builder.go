@@ -13,7 +13,7 @@ func NewBallotBuilder() *BallotBuilder {
 	}
 }
 
-// QuestionBuilder is used to easily build up a Question.
+// BallotBuilder is used to easily build up a Ballot.
 type BallotBuilder struct {
 	ballot *Ballot
 }

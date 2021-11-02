@@ -191,14 +191,14 @@ func (rm *ReferendumManager) Referendums() []*Referendum {
 	return ref
 }
 
-// ReferendumsAcceptingVotes returns the referendums that are currently accepting votes, i.e. started or in the holding period.
+// ReferendumsAcceptingVotes returns the referendums that are currently accepting votes, i.e. commencing or in the holding period.
 func (rm *ReferendumManager) ReferendumsAcceptingVotes() []*Referendum {
 	return filterReferendums(rm.Referendums(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Referendum, index milestone.Index) bool {
 		return ref.IsAcceptingVotes(index)
 	})
 }
 
-// ReferendumsCountingVotes returns the referendums that are currently actively counting votes, i.e. started or in the holding period
+// ReferendumsCountingVotes returns the referendums that are currently actively counting votes, i.e. in the holding period
 func (rm *ReferendumManager) ReferendumsCountingVotes() []*Referendum {
 	return filterReferendums(rm.Referendums(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *Referendum, index milestone.Index) bool {
 		return ref.IsCountingVotes(index)
@@ -217,7 +217,7 @@ func (rm *ReferendumManager) StoreReferendum(referendum *Referendum) (Referendum
 		return NullReferendumID, ErrReferendumAlreadyEnded
 	}
 
-	if confirmedMilestoneIndex >= referendum.StartMilestoneIndex() {
+	if confirmedMilestoneIndex >= referendum.CommenceMilestoneIndex() {
 		return NullReferendumID, ErrReferendumAlreadyStarted
 	}
 
@@ -379,7 +379,7 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 
 	mutations := rm.referendumStore.Batched()
 
-	//Store the message holding the vote
+	// Store the message holding the vote
 	if err := rm.storeMessage(msg, mutations); err != nil {
 		mutations.Cancel()
 		return err
@@ -439,9 +439,7 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 	validVotes := rm.validVotes(index, votes)
 
 	if len(validVotes) == 0 {
-		// We were previously tracking this vote, but now there are no valid votes, so something happened
-		//TODO: this might happen if the vote ended and we spend the UTXO. Do we want to try to verify this assumption and else throw an error?
-		//return ErrInvalidPreviouslyTrackedVote
+		// This might happen if the vote ended, and we spend the UTXO
 		return nil
 	}
 
@@ -454,7 +452,6 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 		if err := rm.endVoteAtMilestone(vote.ReferendumID, spent.Output(), index, mutations); err != nil {
 			if errors.Is(err, ErrUnknownVote) {
 				// This was a previously invalid vote, so we did not track it
-				//TODO: verify this assumption and catch real errors? We could check when the output was initially created and if it was before the referendum was accepting votes
 				continue
 			}
 			mutations.Cancel()
@@ -540,7 +537,7 @@ func (rm *ReferendumManager) validVotes(index milestone.Index, votes []*Vote) []
 	var validVotes []*Vote
 	for _, vote := range votes {
 
-		// Check that we have the referendum vor the given vote
+		// Check that we have the referendum for the given vote
 		referendum := rm.Referendum(vote.ReferendumID)
 		if referendum == nil {
 			continue

@@ -8,12 +8,12 @@ import (
 )
 
 // NewReferendumBuilder creates a new ReferendumBuilder.
-func NewReferendumBuilder(name string, milestoneStart milestone.Index, milestoneStartHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *ReferendumBuilder {
+func NewReferendumBuilder(name string, milestoneCommence milestone.Index, milestoneBeginHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *ReferendumBuilder {
 	return &ReferendumBuilder{
 		r: &Referendum{
 			Name:                       name,
-			milestoneIndexStart:        uint32(milestoneStart),
-			milestoneIndexStartHolding: uint32(milestoneStartHolding),
+			milestoneIndexCommence:     uint32(milestoneCommence),
+			milestoneIndexBeginHolding: uint32(milestoneBeginHolding),
 			milestoneIndexEnd:          uint32(milestoneEnd),
 			AdditionalInfo:             additionalInfo,
 		},

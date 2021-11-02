@@ -45,8 +45,8 @@ func PayloadSelector(payloadType uint32) (serializer.Serializable, error) {
 // Referendum
 type Referendum struct {
 	Name                       string
-	milestoneIndexStart        uint32
-	milestoneIndexStartHolding uint32
+	milestoneIndexCommence     uint32
+	milestoneIndexBeginHolding uint32
 	milestoneIndexEnd          uint32
 	Payload                    serializer.Serializable
 	AdditionalInfo             string
@@ -67,11 +67,11 @@ func (r *Referendum) Deserialize(data []byte, deSeriMode serializer.DeSerializat
 		ReadString(&r.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum name: %w", err)
 		}, ReferendumNameMaxLength).
-		ReadNum(&r.milestoneIndexStart, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum start milestone: %w", err)
+		ReadNum(&r.milestoneIndexCommence, func(err error) error {
+			return fmt.Errorf("unable to deserialize referendum commence milestone: %w", err)
 		}).
-		ReadNum(&r.milestoneIndexStartHolding, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum start holding milestone: %w", err)
+		ReadNum(&r.milestoneIndexBeginHolding, func(err error) error {
+			return fmt.Errorf("unable to deserialize referendum begin holding milestone: %w", err)
 		}).
 		ReadNum(&r.milestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to deserialize referendum end milestone: %w", err)
@@ -102,11 +102,11 @@ func (r *Referendum) Serialize(deSeriMode serializer.DeSerializationMode) ([]byt
 		WriteString(r.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum name: %w", err)
 		}).
-		WriteNum(r.milestoneIndexStart, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum start milestone: %w", err)
+		WriteNum(r.milestoneIndexCommence, func(err error) error {
+			return fmt.Errorf("unable to serialize referendum commence milestone: %w", err)
 		}).
-		WriteNum(r.milestoneIndexStartHolding, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum start holding milestone: %w", err)
+		WriteNum(r.milestoneIndexBeginHolding, func(err error) error {
+			return fmt.Errorf("unable to serialize referendum begin holding milestone: %w", err)
 		}).
 		WriteNum(r.milestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to serialize referendum end milestone: %w", err)
@@ -123,8 +123,8 @@ func (r *Referendum) Serialize(deSeriMode serializer.DeSerializationMode) ([]byt
 func (r *Referendum) MarshalJSON() ([]byte, error) {
 	jReferendum := &jsonReferendum{
 		Name:                       r.Name,
-		MilestoneIndexStart:        r.milestoneIndexStart,
-		MilestoneIndexStartHolding: r.milestoneIndexStartHolding,
+		MilestoneIndexCommence:     r.milestoneIndexCommence,
+		MilestoneIndexBeginHolding: r.milestoneIndexBeginHolding,
 		MilestoneIndexEnd:          r.milestoneIndexEnd,
 		AdditionalInfo:             r.AdditionalInfo,
 	}
@@ -167,8 +167,8 @@ func jsonPayloadSelector(ty int) (iotago.JSONSerializable, error) {
 // jsonReferendum defines the json representation of a Referendum.
 type jsonReferendum struct {
 	Name                       string           `json:"name"`
-	MilestoneIndexStart        uint32           `json:"milestoneIndexStart"`
-	MilestoneIndexStartHolding uint32           `json:"milestoneIndexStartHolding"`
+	MilestoneIndexCommence     uint32           `json:"milestoneIndexCommence"`
+	MilestoneIndexBeginHolding uint32           `json:"milestoneIndexBeginHolding"`
 	MilestoneIndexEnd          uint32           `json:"milestoneIndexEnd"`
 	Payload                    *json.RawMessage `json:"payload"`
 	AdditionalInfo             string           `json:"additionalInfo"`
@@ -177,8 +177,8 @@ type jsonReferendum struct {
 func (j *jsonReferendum) ToSerializable() (serializer.Serializable, error) {
 	r := &Referendum{
 		Name:                       j.Name,
-		milestoneIndexStart:        j.MilestoneIndexStart,
-		milestoneIndexStartHolding: j.MilestoneIndexStartHolding,
+		milestoneIndexCommence:     j.MilestoneIndexCommence,
+		milestoneIndexBeginHolding: j.MilestoneIndexBeginHolding,
 		milestoneIndexEnd:          j.MilestoneIndexEnd,
 		AdditionalInfo:             j.AdditionalInfo,
 	}
@@ -212,7 +212,7 @@ func (r *Referendum) BallotQuestions() []*Question {
 }
 
 func (r *Referendum) Status(atIndex milestone.Index) string {
-	if atIndex < r.StartMilestoneIndex() {
+	if atIndex < r.CommenceMilestoneIndex() {
 		return "upcoming"
 	}
 	if r.IsCountingVotes(atIndex) {
@@ -224,12 +224,12 @@ func (r *Referendum) Status(atIndex milestone.Index) string {
 	return "ended"
 }
 
-func (r *Referendum) StartMilestoneIndex() milestone.Index {
-	return milestone.Index(r.milestoneIndexStart)
+func (r *Referendum) CommenceMilestoneIndex() milestone.Index {
+	return milestone.Index(r.milestoneIndexCommence)
 }
 
-func (r *Referendum) StartHoldingMilestoneIndex() milestone.Index {
-	return milestone.Index(r.milestoneIndexStartHolding)
+func (r *Referendum) BeginHoldingMilestoneIndex() milestone.Index {
+	return milestone.Index(r.milestoneIndexBeginHolding)
 }
 
 func (r *Referendum) EndMilestoneIndex() milestone.Index {
@@ -237,17 +237,17 @@ func (r *Referendum) EndMilestoneIndex() milestone.Index {
 }
 
 func (r *Referendum) ShouldAcceptVotes(forIndex milestone.Index) bool {
-	return forIndex > r.StartMilestoneIndex() && forIndex <= r.EndMilestoneIndex()
+	return forIndex > r.CommenceMilestoneIndex() && forIndex <= r.EndMilestoneIndex()
 }
 
 func (r *Referendum) IsAcceptingVotes(atIndex milestone.Index) bool {
-	return atIndex >= r.StartMilestoneIndex() && atIndex < r.EndMilestoneIndex()
+	return atIndex >= r.CommenceMilestoneIndex() && atIndex < r.EndMilestoneIndex()
 }
 
 func (r *Referendum) ShouldCountVotes(forIndex milestone.Index) bool {
-	return forIndex > r.StartHoldingMilestoneIndex() && forIndex <= r.EndMilestoneIndex()
+	return forIndex > r.BeginHoldingMilestoneIndex() && forIndex <= r.EndMilestoneIndex()
 }
 
 func (r *Referendum) IsCountingVotes(atIndex milestone.Index) bool {
-	return atIndex >= r.StartHoldingMilestoneIndex() && atIndex < r.EndMilestoneIndex()
+	return atIndex >= r.BeginHoldingMilestoneIndex() && atIndex < r.EndMilestoneIndex()
 }
