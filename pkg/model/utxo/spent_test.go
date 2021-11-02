@@ -9,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -22,7 +23,7 @@ func EqualSpent(t *testing.T, expected *Spent, actual *Spent) {
 func TestSpentSerialization(t *testing.T) {
 
 	outputID := &iotago.UTXOInputID{}
-	copy(outputID[:], randBytes(iotago.TransactionIDLength+iotago.UInt16ByteSize))
+	copy(outputID[:], randBytes(iotago.TransactionIDLength+serializer.UInt16ByteSize))
 
 	messageID := randMessageID()
 

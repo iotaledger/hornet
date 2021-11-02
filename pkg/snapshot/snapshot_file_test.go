@@ -16,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
@@ -380,6 +381,6 @@ func randEd25519Addr() (*iotago.Ed25519Address, []byte) {
 	// serialized
 	var b [iotago.Ed25519AddressSerializedBytesSize]byte
 	b[0] = iotago.AddressEd25519
-	copy(b[iotago.SmallTypeDenotationByteSize:], addr)
+	copy(b[serializer.SmallTypeDenotationByteSize:], addr)
 	return edAddr, b[:]
 }
