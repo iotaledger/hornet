@@ -20,7 +20,7 @@ var (
 	}
 )
 
-// Votes holds the votes for multiple referendums
+// Votes holds the votes for multiple participationEvents
 type Votes struct {
 	Votes serializer.Serializables
 }

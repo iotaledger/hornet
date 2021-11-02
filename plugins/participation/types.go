@@ -2,16 +2,16 @@ package participation
 
 import "github.com/gohornet/hornet/pkg/model/milestone"
 
-// ReferendumsResponse defines the response of a GET RouteReferendums REST API call.
-type ReferendumsResponse struct {
+// ParticipationEventsResponse defines the response of a GET RouteReferendums REST API call.
+type ParticipationEventsResponse struct {
 	// The hex encoded partitipation IDs of the found referendums.
-	ReferendumIDs []string `json:"referendumIds"`
+	ParticipationEventIDs []string `json:"participationEventIds"`
 }
 
 // CreateReferendumResponse defines the response of a POST RouteReferendums REST API call.
 type CreateReferendumResponse struct {
-	// The hex encoded partitipation ID of the created partitipation.
-	ReferendumID string `json:"referendumId"`
+	// The hex encoded ID of the created partitipation event.
+	ParticipationEventID string `json:"participationEventId"`
 }
 
 // TrackedVote holds the information for each tracked vote.

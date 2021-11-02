@@ -9,20 +9,20 @@ import (
 )
 
 type TrackedVote struct {
-	ReferendumID ReferendumID
-	OutputID     *iotago.UTXOInputID
-	MessageID    hornet.MessageID
-	Amount       uint64
-	StartIndex   milestone.Index
-	EndIndex     milestone.Index
+	ParticipationEventID ParticipationEventID
+	OutputID             *iotago.UTXOInputID
+	MessageID            hornet.MessageID
+	Amount               uint64
+	StartIndex           milestone.Index
+	EndIndex             milestone.Index
 }
 
-func ParseReferendumID(ms *marshalutil.MarshalUtil) (ReferendumID, error) {
-	bytes, err := ms.ReadBytes(ReferendumIDLength)
+func ParseParticipationEventID(ms *marshalutil.MarshalUtil) (ParticipationEventID, error) {
+	bytes, err := ms.ReadBytes(ParticipationEventIDLength)
 	if err != nil {
-		return NullReferendumID, err
+		return NullParticipationEventID, err
 	}
-	o := ReferendumID{}
+	o := ParticipationEventID{}
 	copy(o[:], bytes)
 	return o, nil
 }
@@ -44,8 +44,8 @@ func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
 		return nil, err
 	}
 
-	// Read ReferendumID
-	referendumID, err := ParseReferendumID(mKey)
+	// Read ParticipationEventID
+	eventID, err := ParseParticipationEventID(mKey)
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +79,12 @@ func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
 	}
 
 	return &TrackedVote{
-		ReferendumID: referendumID,
-		OutputID:     outputID,
-		MessageID:    messageID,
-		Amount:       amount,
-		StartIndex:   milestone.Index(start),
-		EndIndex:     milestone.Index(end),
+		ParticipationEventID: eventID,
+		OutputID:             outputID,
+		MessageID:            messageID,
+		Amount:               amount,
+		StartIndex:           milestone.Index(start),
+		EndIndex:             milestone.Index(end),
 	}, nil
 }
 

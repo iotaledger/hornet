@@ -54,48 +54,48 @@ func TestReferendumStateHelpers(t *testing.T) {
 	require.Equal(t, "ended", ref.Status(201))
 
 	// Verify ReferendumIsAcceptingVotes
-	require.False(t, ref.IsAcceptingVotes(89))
-	require.True(t, ref.IsAcceptingVotes(90))
-	require.True(t, ref.IsAcceptingVotes(91))
-	require.True(t, ref.IsAcceptingVotes(99))
-	require.True(t, ref.IsAcceptingVotes(100))
-	require.True(t, ref.IsAcceptingVotes(101))
-	require.True(t, ref.IsAcceptingVotes(199))
-	require.False(t, ref.IsAcceptingVotes(200))
-	require.False(t, ref.IsAcceptingVotes(201))
+	require.False(t, ref.IsAcceptingParticipation(89))
+	require.True(t, ref.IsAcceptingParticipation(90))
+	require.True(t, ref.IsAcceptingParticipation(91))
+	require.True(t, ref.IsAcceptingParticipation(99))
+	require.True(t, ref.IsAcceptingParticipation(100))
+	require.True(t, ref.IsAcceptingParticipation(101))
+	require.True(t, ref.IsAcceptingParticipation(199))
+	require.False(t, ref.IsAcceptingParticipation(200))
+	require.False(t, ref.IsAcceptingParticipation(201))
 
 	// Verify ReferendumIsCountingVotes
-	require.False(t, ref.IsCountingVotes(89))
-	require.False(t, ref.IsCountingVotes(90))
-	require.False(t, ref.IsCountingVotes(91))
-	require.False(t, ref.IsCountingVotes(99))
-	require.True(t, ref.IsCountingVotes(100))
-	require.True(t, ref.IsCountingVotes(101))
-	require.True(t, ref.IsCountingVotes(199))
-	require.False(t, ref.IsCountingVotes(200))
-	require.False(t, ref.IsCountingVotes(201))
+	require.False(t, ref.IsCountingParticipation(89))
+	require.False(t, ref.IsCountingParticipation(90))
+	require.False(t, ref.IsCountingParticipation(91))
+	require.False(t, ref.IsCountingParticipation(99))
+	require.True(t, ref.IsCountingParticipation(100))
+	require.True(t, ref.IsCountingParticipation(101))
+	require.True(t, ref.IsCountingParticipation(199))
+	require.False(t, ref.IsCountingParticipation(200))
+	require.False(t, ref.IsCountingParticipation(201))
 
 	// Verify ReferendumShouldAcceptVotes
-	require.False(t, ref.ShouldAcceptVotes(89))
-	require.False(t, ref.ShouldAcceptVotes(90))
-	require.True(t, ref.ShouldAcceptVotes(91))
-	require.True(t, ref.ShouldAcceptVotes(99))
-	require.True(t, ref.ShouldAcceptVotes(100))
-	require.True(t, ref.ShouldAcceptVotes(101))
-	require.True(t, ref.ShouldAcceptVotes(199))
-	require.True(t, ref.ShouldAcceptVotes(200))
-	require.False(t, ref.ShouldAcceptVotes(201))
+	require.False(t, ref.ShouldAcceptParticipation(89))
+	require.False(t, ref.ShouldAcceptParticipation(90))
+	require.True(t, ref.ShouldAcceptParticipation(91))
+	require.True(t, ref.ShouldAcceptParticipation(99))
+	require.True(t, ref.ShouldAcceptParticipation(100))
+	require.True(t, ref.ShouldAcceptParticipation(101))
+	require.True(t, ref.ShouldAcceptParticipation(199))
+	require.True(t, ref.ShouldAcceptParticipation(200))
+	require.False(t, ref.ShouldAcceptParticipation(201))
 
 	// Verify ReferendumShouldCountVotes
-	require.False(t, ref.ShouldCountVotes(89))
-	require.False(t, ref.ShouldCountVotes(90))
-	require.False(t, ref.ShouldCountVotes(91))
-	require.False(t, ref.ShouldCountVotes(99))
-	require.False(t, ref.ShouldCountVotes(100))
-	require.True(t, ref.ShouldCountVotes(101))
-	require.True(t, ref.ShouldCountVotes(199))
-	require.True(t, ref.ShouldCountVotes(200))
-	require.False(t, ref.ShouldCountVotes(201))
+	require.False(t, ref.ShouldCountParticipation(89))
+	require.False(t, ref.ShouldCountParticipation(90))
+	require.False(t, ref.ShouldCountParticipation(91))
+	require.False(t, ref.ShouldCountParticipation(99))
+	require.False(t, ref.ShouldCountParticipation(100))
+	require.True(t, ref.ShouldCountParticipation(101))
+	require.True(t, ref.ShouldCountParticipation(199))
+	require.True(t, ref.ShouldCountParticipation(200))
+	require.False(t, ref.ShouldCountParticipation(201))
 }
 
 func TestReferendumStates(t *testing.T) {
@@ -105,7 +105,7 @@ func TestReferendumStates(t *testing.T) {
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
 	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
-	require.Empty(t, env.ReferendumManager().Referendums())
+	require.Empty(t, env.ReferendumManager().ParticipationEvents())
 	referendumID := env.RegisterDefaultReferendum(5, 1, 2)
 
 	ref := env.ReferendumManager().Referendum(referendumID)
@@ -117,31 +117,31 @@ func TestReferendumStates(t *testing.T) {
 	require.Equal(t, milestone.Index(8), ref.EndMilestoneIndex())
 
 	// No partitipation should be running right now
-	require.Equal(t, 1, len(env.ReferendumManager().Referendums()))
+	require.Equal(t, 1, len(env.ReferendumManager().ParticipationEvents()))
 	env.AssertReferendumsCount(0, 0)
 
 	env.IssueMilestone() // 5
 
-	// Referendum should be accepting votes, but not counting
-	require.Equal(t, 1, len(env.ReferendumManager().Referendums()))
+	// ParticipationEvent should be accepting votes, but not counting
+	require.Equal(t, 1, len(env.ReferendumManager().ParticipationEvents()))
 	env.AssertReferendumsCount(1, 0)
 
 	env.IssueMilestone() // 6
 
-	// Referendum should be accepting and counting votes
-	require.Equal(t, 1, len(env.ReferendumManager().Referendums()))
+	// ParticipationEvent should be accepting and counting votes
+	require.Equal(t, 1, len(env.ReferendumManager().ParticipationEvents()))
 	env.AssertReferendumsCount(1, 1)
 
 	env.IssueMilestone() // 7
 
-	// Referendum should be ended
-	require.Equal(t, 1, len(env.ReferendumManager().Referendums()))
+	// ParticipationEvent should be ended
+	require.Equal(t, 1, len(env.ReferendumManager().ParticipationEvents()))
 	env.AssertReferendumsCount(1, 1)
 
 	env.IssueMilestone() // 8
 
-	// Referendum should be ended
-	require.Equal(t, 1, len(env.ReferendumManager().Referendums()))
+	// ParticipationEvent should be ended
+	require.Equal(t, 1, len(env.ReferendumManager().ParticipationEvents()))
 	env.AssertReferendumsCount(0, 0)
 }
 
@@ -162,8 +162,8 @@ func TestSingleReferendumVote(t *testing.T) {
 	require.Equal(t, milestone.Index(7), ref.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(10), ref.EndMilestoneIndex())
 
-	// Referendum should not be accepting votes yet
-	require.Equal(t, 0, len(env.ReferendumManager().ReferendumsAcceptingVotes()))
+	// ParticipationEvent should not be accepting votes yet
+	require.Equal(t, 0, len(env.ReferendumManager().EventsAcceptingParticipation()))
 
 	// Issue a vote and milestone
 	env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1) // 5
@@ -176,13 +176,13 @@ func TestSingleReferendumVote(t *testing.T) {
 	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Current)
 	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Accumulated)
 
-	// Referendum should be accepting votes now
-	require.Equal(t, 1, len(env.ReferendumManager().ReferendumsAcceptingVotes()))
+	// ParticipationEvent should be accepting votes now
+	require.Equal(t, 1, len(env.ReferendumManager().EventsAcceptingParticipation()))
 
 	// Vote again
 	castVote := env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1) // 6
 
-	// Referendum should be accepting votes, but the vote should not be weighted yet, just added to the current status
+	// ParticipationEvent should be accepting votes, but the vote should not be weighted yet, just added to the current status
 	env.AssertReferendumsCount(1, 0)
 
 	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
@@ -194,7 +194,7 @@ func TestSingleReferendumVote(t *testing.T) {
 
 	env.IssueMilestone() // 7
 
-	// Referendum should be accepting and counting votes, but the vote we did before should not be weighted yet
+	// ParticipationEvent should be accepting and counting votes, but the vote we did before should not be weighted yet
 	env.AssertReferendumsCount(1, 1)
 
 	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
@@ -206,7 +206,7 @@ func TestSingleReferendumVote(t *testing.T) {
 
 	env.IssueMilestone() // 8
 
-	// Referendum should be accepting and counting votes, the vote should now be weighted
+	// ParticipationEvent should be accepting and counting votes, the vote should now be weighted
 	env.AssertReferendumsCount(1, 1)
 
 	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
@@ -218,7 +218,7 @@ func TestSingleReferendumVote(t *testing.T) {
 
 	env.IssueMilestone() // 9
 
-	// Referendum should be accepting and counting votes, the vote should now be weighted double
+	// ParticipationEvent should be accepting and counting votes, the vote should now be weighted double
 	env.AssertReferendumsCount(1, 1)
 
 	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
@@ -230,7 +230,7 @@ func TestSingleReferendumVote(t *testing.T) {
 
 	env.IssueMilestone() // 10
 
-	// Referendum should be ended
+	// ParticipationEvent should be ended
 	env.AssertReferendumsCount(0, 0)
 	env.AssertDefaultBallotAnswerStatus(referendumID, 1_000_000, 3_000_000)
 
@@ -264,8 +264,8 @@ func TestReferendumVoteCancel(t *testing.T) {
 	require.Equal(t, milestone.Index(7), ref.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
 
-	// Referendum should not be accepting votes yet
-	require.Equal(t, 0, len(env.ReferendumManager().ReferendumsAcceptingVotes()))
+	// ParticipationEvent should not be accepting votes yet
+	require.Equal(t, 0, len(env.ReferendumManager().EventsAcceptingParticipation()))
 
 	env.IssueMilestone() // 5
 

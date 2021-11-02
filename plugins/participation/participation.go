@@ -14,54 +14,54 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-// ReferendumIDFromHex creates a ReferendumID from a hex string representation.
-func ReferendumIDFromHex(hexString string) (partitipation.ReferendumID, error) {
+// ParticipationEventIDFromHex creates a ParticipationEventID from a hex string representation.
+func ParticipationEventIDFromHex(hexString string) (partitipation.ParticipationEventID, error) {
 
 	b, err := hex.DecodeString(hexString)
 	if err != nil {
-		return partitipation.NullReferendumID, err
+		return partitipation.NullParticipationEventID, err
 	}
 
-	if len(b) != partitipation.ReferendumIDLength {
-		return partitipation.ReferendumID{}, fmt.Errorf("unknown referendumID length (%d)", len(b))
+	if len(b) != partitipation.ParticipationEventIDLength {
+		return partitipation.ParticipationEventID{}, fmt.Errorf("unknown referendumID length (%d)", len(b))
 	}
 
-	var referendumID partitipation.ReferendumID
+	var referendumID partitipation.ParticipationEventID
 	copy(referendumID[:], b)
 	return referendumID, nil
 }
 
-func parseReferendumIDParam(c echo.Context) (partitipation.ReferendumID, error) {
+func parseReferendumIDParam(c echo.Context) (partitipation.ParticipationEventID, error) {
 
-	referendumIDHex := strings.ToLower(c.Param(ParameterReferendumID))
+	referendumIDHex := strings.ToLower(c.Param(ParameterParticipationEventID))
 	if referendumIDHex == "" {
-		return partitipation.NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterReferendumID)
+		return partitipation.NullParticipationEventID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterParticipationEventID)
 	}
 
-	referendumID, err := ReferendumIDFromHex(referendumIDHex)
+	referendumID, err := ParticipationEventIDFromHex(referendumIDHex)
 	if err != nil {
-		return partitipation.NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid partitipation ID: %s, error: %s", referendumIDHex, err)
+		return partitipation.NullParticipationEventID, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid partitipation ID: %s, error: %s", referendumIDHex, err)
 	}
 
 	return referendumID, nil
 }
 
-func getReferendums(_ echo.Context) (*ReferendumsResponse, error) {
-	referendumIDs := deps.ParticipationManager.ReferendumIDs()
+func getReferendums(_ echo.Context) (*ParticipationEventsResponse, error) {
+	referendumIDs := deps.ParticipationManager.ParticipationEventIDs()
 
 	hexReferendumIDs := []string{}
 	for _, id := range referendumIDs {
 		hexReferendumIDs = append(hexReferendumIDs, hex.EncodeToString(id[:]))
 	}
 
-	return &ReferendumsResponse{ReferendumIDs: hexReferendumIDs}, nil
+	return &ParticipationEventsResponse{ParticipationEventIDs: hexReferendumIDs}, nil
 }
 
 func createReferendum(c echo.Context) (*CreateReferendumResponse, error) {
 
 	//TODO: add support for binary representation too?
 
-	referendum := &partitipation.Referendum{}
+	referendum := &partitipation.ParticipationEvent{}
 	if err := c.Bind(referendum); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request! Error: %s", err)
 	}
@@ -72,11 +72,11 @@ func createReferendum(c echo.Context) (*CreateReferendumResponse, error) {
 	}
 
 	return &CreateReferendumResponse{
-		ReferendumID: hex.EncodeToString(referendumID[:]),
+		ParticipationEventID: hex.EncodeToString(referendumID[:]),
 	}, nil
 }
 
-func getReferendum(c echo.Context) (*partitipation.Referendum, error) {
+func getReferendum(c echo.Context) (*partitipation.ParticipationEvent, error) {
 
 	referendumID, err := parseReferendumIDParam(c)
 	if err != nil {
@@ -154,7 +154,7 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 			StartMilestoneIndex: trackedVote.StartIndex,
 			EndMilestoneIndex:   trackedVote.EndIndex,
 		}
-		response.ReferendumVotes[hex.EncodeToString(trackedVote.ReferendumID[:])] = t
+		response.ReferendumVotes[hex.EncodeToString(trackedVote.ParticipationEventID[:])] = t
 	}
 
 	return response, nil

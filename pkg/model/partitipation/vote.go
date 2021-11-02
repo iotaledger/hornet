@@ -10,7 +10,7 @@ import (
 
 // Vote holds the vote for a partitipation and the answer to each question
 type Vote struct {
-	ReferendumID ReferendumID
+	ReferendumID ParticipationEventID
 	Answers      []byte
 }
 
@@ -64,7 +64,7 @@ type jsonVote struct {
 
 func (j *jsonVote) ToSerializable() (serializer.Serializable, error) {
 	vote := &Vote{
-		ReferendumID: ReferendumID{},
+		ReferendumID: ParticipationEventID{},
 		Answers:      []byte{},
 	}
 

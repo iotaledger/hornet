@@ -24,7 +24,7 @@ type ReferendumStatus struct {
 	//TODO: add hash of all QuestionStatus to make comparison easier
 }
 
-func (rm *ParticipationManager) ReferendumStatus(referendumID ReferendumID) (*ReferendumStatus, error) {
+func (rm *ParticipationManager) ReferendumStatus(referendumID ParticipationEventID) (*ReferendumStatus, error) {
 
 	confirmedMilestoneIndex := rm.syncManager.ConfirmedMilestoneIndex()
 

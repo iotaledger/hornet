@@ -66,7 +66,7 @@ func (b *VoteBuilder) AddVotes(votes []*partitipation.Vote) *VoteBuilder {
 	return b
 }
 
-func (b *VoteBuilder) AddDefaultVote(referendumID partitipation.ReferendumID) *VoteBuilder {
+func (b *VoteBuilder) AddDefaultVote(referendumID partitipation.ParticipationEventID) *VoteBuilder {
 	b.votesBuilder.AddVote(&partitipation.Vote{
 		ReferendumID: referendumID,
 		Answers:      []byte{byte(1)},

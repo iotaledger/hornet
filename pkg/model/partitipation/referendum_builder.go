@@ -10,7 +10,7 @@ import (
 // NewReferendumBuilder creates a new ReferendumBuilder.
 func NewReferendumBuilder(name string, milestoneCommence milestone.Index, milestoneBeginHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *ReferendumBuilder {
 	return &ReferendumBuilder{
-		r: &Referendum{
+		r: &ParticipationEvent{
 			Name:                   name,
 			milestoneIndexCommence: uint32(milestoneCommence),
 			milestoneIndexStart:    uint32(milestoneBeginHolding),
@@ -20,9 +20,9 @@ func NewReferendumBuilder(name string, milestoneCommence milestone.Index, milest
 	}
 }
 
-// ReferendumBuilder is used to easily build up a Referendum.
+// ReferendumBuilder is used to easily build up a ParticipationEvent.
 type ReferendumBuilder struct {
-	r   *Referendum
+	r   *ParticipationEvent
 	err error
 }
 
@@ -42,8 +42,8 @@ func (rb *ReferendumBuilder) Payload(seri serializer.Serializable) *ReferendumBu
 	return rb
 }
 
-// Build builds the Referendum.
-func (rb *ReferendumBuilder) Build() (*Referendum, error) {
+// Build builds the ParticipationEvent.
+func (rb *ReferendumBuilder) Build() (*ParticipationEvent, error) {
 	if rb.err != nil {
 		return nil, rb.err
 	}

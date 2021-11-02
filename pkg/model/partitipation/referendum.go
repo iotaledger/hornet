@@ -14,18 +14,18 @@ import (
 )
 
 const (
-	// ReferendumIDLength defines the length of a partitipation ID.
-	ReferendumIDLength = blake2b.Size256
+	// ParticipationEventIDLength defines the length of a partitipation event ID.
+	ParticipationEventIDLength = blake2b.Size256
 
 	ReferendumNameMaxLength           = 255
 	ReferendumAdditionalInfoMaxLength = 500
 )
 
-// ReferendumID is the ID of a partitipation.
-type ReferendumID = [ReferendumIDLength]byte
+// ParticipationEventID is the ID of a partitipation.
+type ParticipationEventID = [ParticipationEventIDLength]byte
 
 var (
-	NullReferendumID = ReferendumID{}
+	NullParticipationEventID = ParticipationEventID{}
 
 	ErrUnknownPayloadType = errors.New("unknown payload type")
 )
@@ -42,8 +42,8 @@ func PayloadSelector(payloadType uint32) (serializer.Serializable, error) {
 	return seri, nil
 }
 
-// Referendum
-type Referendum struct {
+// ParticipationEvent
+type ParticipationEvent struct {
 	Name                   string
 	milestoneIndexCommence uint32
 	milestoneIndexStart    uint32
@@ -52,17 +52,17 @@ type Referendum struct {
 	AdditionalInfo         string
 }
 
-// ID returns the ID of the partitipation.
-func (r *Referendum) ID() (ReferendumID, error) {
+// ID returns the ID of the event.
+func (r *ParticipationEvent) ID() (ParticipationEventID, error) {
 	data, err := r.Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
-		return ReferendumID{}, err
+		return ParticipationEventID{}, err
 	}
 
 	return blake2b.Sum256(data), nil
 }
 
-func (r *Referendum) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (r *ParticipationEvent) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadString(&r.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize partitipation name: %w", err)
@@ -95,7 +95,7 @@ func (r *Referendum) Deserialize(data []byte, deSeriMode serializer.DeSerializat
 		Done()
 }
 
-func (r *Referendum) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (r *ParticipationEvent) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 
 	//TODO: validate text lengths
 	return serializer.NewSerializer().
@@ -106,7 +106,7 @@ func (r *Referendum) Serialize(deSeriMode serializer.DeSerializationMode) ([]byt
 			return fmt.Errorf("unable to serialize partitipation commence milestone: %w", err)
 		}).
 		WriteNum(r.milestoneIndexStart, func(err error) error {
-			return fmt.Errorf("unable to serialize partitipation begin holding milestone: %w", err)
+			return fmt.Errorf("unable to serialize partitipation start milestone: %w", err)
 		}).
 		WriteNum(r.milestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to serialize partitipation end milestone: %w", err)
@@ -120,8 +120,8 @@ func (r *Referendum) Serialize(deSeriMode serializer.DeSerializationMode) ([]byt
 		Serialize()
 }
 
-func (r *Referendum) MarshalJSON() ([]byte, error) {
-	jReferendum := &jsonReferendum{
+func (r *ParticipationEvent) MarshalJSON() ([]byte, error) {
+	jReferendum := &jsonParticipationEvent{
 		Name:                   r.Name,
 		MilestoneIndexCommence: r.milestoneIndexCommence,
 		MilestoneIndexStart:    r.milestoneIndexStart,
@@ -139,8 +139,8 @@ func (r *Referendum) MarshalJSON() ([]byte, error) {
 	return json.Marshal(jReferendum)
 }
 
-func (r *Referendum) UnmarshalJSON(bytes []byte) error {
-	jReferendum := &jsonReferendum{}
+func (r *ParticipationEvent) UnmarshalJSON(bytes []byte) error {
+	jReferendum := &jsonParticipationEvent{}
 	if err := json.Unmarshal(bytes, jReferendum); err != nil {
 		return err
 	}
@@ -148,7 +148,7 @@ func (r *Referendum) UnmarshalJSON(bytes []byte) error {
 	if err != nil {
 		return err
 	}
-	*r = *seri.(*Referendum)
+	*r = *seri.(*ParticipationEvent)
 	return nil
 }
 
@@ -164,8 +164,8 @@ func jsonPayloadSelector(ty int) (iotago.JSONSerializable, error) {
 	return obj, nil
 }
 
-// jsonReferendum defines the json representation of a Referendum.
-type jsonReferendum struct {
+// jsonParticipationEvent defines the json representation of a ParticipationEvent.
+type jsonParticipationEvent struct {
 	Name                   string           `json:"name"`
 	MilestoneIndexCommence uint32           `json:"milestoneIndexCommence"`
 	MilestoneIndexStart    uint32           `json:"milestoneIndexStart"`
@@ -174,8 +174,8 @@ type jsonReferendum struct {
 	AdditionalInfo         string           `json:"additionalInfo"`
 }
 
-func (j *jsonReferendum) ToSerializable() (serializer.Serializable, error) {
-	r := &Referendum{
+func (j *jsonParticipationEvent) ToSerializable() (serializer.Serializable, error) {
+	r := &ParticipationEvent{
 		Name:                   j.Name,
 		milestoneIndexCommence: j.MilestoneIndexCommence,
 		milestoneIndexStart:    j.MilestoneIndexStart,
@@ -198,7 +198,7 @@ func (j *jsonReferendum) ToSerializable() (serializer.Serializable, error) {
 
 // Helpers
 
-func (r *Referendum) BallotQuestions() []*Question {
+func (r *ParticipationEvent) BallotQuestions() []*Question {
 	switch payload := r.Payload.(type) {
 	case *Ballot:
 		questions := make([]*Question, len(payload.Questions))
@@ -211,43 +211,43 @@ func (r *Referendum) BallotQuestions() []*Question {
 	}
 }
 
-func (r *Referendum) Status(atIndex milestone.Index) string {
+func (r *ParticipationEvent) Status(atIndex milestone.Index) string {
 	if atIndex < r.CommenceMilestoneIndex() {
 		return "upcoming"
 	}
-	if r.IsCountingVotes(atIndex) {
+	if r.IsCountingParticipation(atIndex) {
 		return "holding"
 	}
-	if r.IsAcceptingVotes(atIndex) {
+	if r.IsAcceptingParticipation(atIndex) {
 		return "commencing"
 	}
 	return "ended"
 }
 
-func (r *Referendum) CommenceMilestoneIndex() milestone.Index {
+func (r *ParticipationEvent) CommenceMilestoneIndex() milestone.Index {
 	return milestone.Index(r.milestoneIndexCommence)
 }
 
-func (r *Referendum) StartMilestoneIndex() milestone.Index {
+func (r *ParticipationEvent) StartMilestoneIndex() milestone.Index {
 	return milestone.Index(r.milestoneIndexStart)
 }
 
-func (r *Referendum) EndMilestoneIndex() milestone.Index {
+func (r *ParticipationEvent) EndMilestoneIndex() milestone.Index {
 	return milestone.Index(r.milestoneIndexEnd)
 }
 
-func (r *Referendum) ShouldAcceptVotes(forIndex milestone.Index) bool {
+func (r *ParticipationEvent) ShouldAcceptParticipation(forIndex milestone.Index) bool {
 	return forIndex > r.CommenceMilestoneIndex() && forIndex <= r.EndMilestoneIndex()
 }
 
-func (r *Referendum) IsAcceptingVotes(atIndex milestone.Index) bool {
+func (r *ParticipationEvent) IsAcceptingParticipation(atIndex milestone.Index) bool {
 	return atIndex >= r.CommenceMilestoneIndex() && atIndex < r.EndMilestoneIndex()
 }
 
-func (r *Referendum) ShouldCountVotes(forIndex milestone.Index) bool {
+func (r *ParticipationEvent) ShouldCountParticipation(forIndex milestone.Index) bool {
 	return forIndex > r.StartMilestoneIndex() && forIndex <= r.EndMilestoneIndex()
 }
 
-func (r *Referendum) IsCountingVotes(atIndex milestone.Index) bool {
+func (r *ParticipationEvent) IsCountingParticipation(atIndex milestone.Index) bool {
 	return atIndex >= r.StartMilestoneIndex() && atIndex < r.EndMilestoneIndex()
 }

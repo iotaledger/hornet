@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	// ParameterReferendumID is used to identify a partitipation by its ID.
-	ParameterReferendumID = "referendumID"
+	// ParameterParticipationEventID is used to identify a partitipation event by its ID.
+	ParameterParticipationEventID = "eventID"
 
 	// ParameterOutputID is used to identify an output by its ID.
 	ParameterOutputID = "outputID"
@@ -42,11 +42,11 @@ const (
 	// RouteReferendum is the route to access a single partitipation by its ID.
 	// GET gives a quick overview of the partitipation. This does not include the current standings.
 	// DELETE removes a tracked partitipation.
-	RouteReferendum = "/referendums/:" + ParameterReferendumID
+	RouteReferendum = "/referendums/:" + ParameterParticipationEventID
 
 	// RouteReferendumStatus is the route to access the status of a single partitipation by its ID.
 	// GET returns the amount of tokens voting and the weight on each option of every question.
-	RouteReferendumStatus = "/referendums/:" + ParameterReferendumID + "/status"
+	RouteReferendumStatus = "/referendums/:" + ParameterParticipationEventID + "/status"
 
 	// RouteOutputStatus is the route to get the vote status for a given outputID.
 	// GET returns the messageID the vote was included, the starting and ending milestone index this vote was tracked.
@@ -137,7 +137,7 @@ func configure() {
 			return err
 		}
 
-		c.Response().Header().Set(echo.HeaderLocation, resp.ReferendumID)
+		c.Response().Header().Set(echo.HeaderLocation, resp.ParticipationEventID)
 		return restapi.JSONResponse(c, http.StatusCreated, resp)
 	})
 
