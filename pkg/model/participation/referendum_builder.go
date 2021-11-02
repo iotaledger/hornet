@@ -1,4 +1,4 @@
-package partitipation
+package participation
 
 import (
 	"fmt"
@@ -49,7 +49,7 @@ func (rb *ReferendumBuilder) Build() (*ParticipationEvent, error) {
 	}
 
 	if _, err := rb.r.Serialize(serializer.DeSeriModePerformValidation); err != nil {
-		return nil, fmt.Errorf("unable to build partitipation: %w", err)
+		return nil, fmt.Errorf("unable to build participation: %w", err)
 	}
 	return rb.r, nil
 }

@@ -1,4 +1,4 @@
-package partitipation
+package participation
 
 import (
 	"bytes"
@@ -24,9 +24,9 @@ type Events struct {
 }
 
 var (
-	ErrParticipationCorruptedStorage    = errors.New("the partitipation database was not shutdown properly")
-	ErrParticipationEventAlreadyStarted = errors.New("the given partitipation event already started")
-	ErrParticipationEventAlreadyEnded   = errors.New("the given partitipation event already ended")
+	ErrParticipationCorruptedStorage    = errors.New("the participation database was not shutdown properly")
+	ErrParticipationEventAlreadyStarted = errors.New("the given participation event already started")
+	ErrParticipationEventAlreadyEnded   = errors.New("the given participation event already ended")
 )
 
 // ParticipationManager is used to track the outcome of participation in the tangle.
@@ -140,7 +140,7 @@ func (rm *ParticipationManager) init() error {
 		}
 
 		if !databaseVersionUpdated {
-			return errors.New("HORNET partitipation database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
+			return errors.New("HORNET participation database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 
@@ -206,7 +206,7 @@ func (rm *ParticipationManager) EventsCountingParticipation() []*ParticipationEv
 }
 
 // StoreReferendum accepts a new ParticipationEvent the manager should track.
-// The current confirmed milestone index needs to be provided, so that the manager can check if the partitipation can be added.
+// The current confirmed milestone index needs to be provided, so that the manager can check if the participation can be added.
 func (rm *ParticipationManager) StoreReferendum(referendum *ParticipationEvent) (ParticipationEventID, error) {
 	rm.Lock()
 	defer rm.Unlock()
@@ -276,7 +276,7 @@ func (rm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 		return ref.ShouldAcceptParticipation(index)
 	})
 
-	// No partitipation accepting votes, so no work to be done
+	// No participation accepting votes, so no work to be done
 	if len(acceptingReferendums) == 0 {
 		return nil
 	}
@@ -409,7 +409,7 @@ func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 		return ref.ShouldAcceptParticipation(index)
 	})
 
-	// No partitipation accepting votes, so no work to be done
+	// No participation accepting votes, so no work to be done
 	if len(acceptingReferendums) == 0 {
 		return nil
 	}
@@ -467,14 +467,14 @@ func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 	return mutations.Commit()
 }
 
-// ApplyNewConfirmedMilestoneIndex iterates over each counting partitipation and applies the current vote for each question to the total vote
+// ApplyNewConfirmedMilestoneIndex iterates over each counting participation and applies the current vote for each question to the total vote
 func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
 
 	countingReferendums := filterReferendums(rm.ParticipationEvents(), index, func(ref *ParticipationEvent, index milestone.Index) bool {
 		return ref.ShouldCountParticipation(index)
 	})
 
-	// No counting partitipation, so no work to be done
+	// No counting participation, so no work to be done
 	if len(countingReferendums) == 0 {
 		return nil
 	}
@@ -490,7 +490,7 @@ func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 			return err
 		}
 
-		// For each partitipation, iterate over all questions
+		// For each participation, iterate over all questions
 		for idx, question := range referendum.BallotQuestions() {
 			questionIndex := uint8(idx)
 
@@ -521,7 +521,7 @@ func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 			}
 		}
 
-		// End all votes if partitipation is ending this milestone
+		// End all votes if participation is ending this milestone
 		if referendum.EndMilestoneIndex() == index {
 			if err := rm.endAllVotesAtMilestone(referendumID, index, mutations); err != nil {
 				mutations.Cancel()
@@ -538,18 +538,18 @@ func (rm *ParticipationManager) validVotes(index milestone.Index, votes []*Vote)
 	var validVotes []*Vote
 	for _, vote := range votes {
 
-		// Check that we have the partitipation for the given vote
+		// Check that we have the participation for the given vote
 		referendum := rm.Referendum(vote.ReferendumID)
 		if referendum == nil {
 			continue
 		}
 
-		// Check that the partitipation is accepting votes
+		// Check that the participation is accepting votes
 		if !referendum.ShouldAcceptParticipation(index) {
 			continue
 		}
 
-		// Check that the amount of answers equals the questions in the partitipation
+		// Check that the amount of answers equals the questions in the participation
 		if len(vote.Answers) != len(referendum.BallotQuestions()) {
 			continue
 		}

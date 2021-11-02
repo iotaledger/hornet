@@ -1,4 +1,4 @@
-package partitipation
+package participation
 
 const (
 	ReferendumStoreKeyPrefixReferendums byte = 0

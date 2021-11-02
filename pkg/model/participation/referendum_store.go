@@ -1,4 +1,4 @@
-package partitipation
+package participation
 
 import (
 	"errors"
@@ -15,8 +15,8 @@ import (
 
 var (
 	ErrUnknownVote                  = errors.New("no vote found")
-	ErrReferendumNotFound           = errors.New("referenced partitipation does not exist")
-	ErrInvalidReferendum            = errors.New("invalid partitipation")
+	ErrReferendumNotFound           = errors.New("referenced participation does not exist")
+	ErrInvalidReferendum            = errors.New("invalid participation")
 	ErrInvalidPreviouslyTrackedVote = errors.New("a previously tracked vote changed and is now invalid")
 	ErrInvalidCurrentVoteBalance    = errors.New("current vote balance invalid")
 )

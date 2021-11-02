@@ -1,4 +1,4 @@
-package partitipation
+package participation
 
 import (
 	"github.com/gohornet/hornet/pkg/model/hornet"

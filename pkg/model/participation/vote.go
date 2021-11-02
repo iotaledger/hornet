@@ -1,4 +1,4 @@
-package partitipation
+package participation
 
 import (
 	"encoding/hex"
@@ -8,7 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/serializer"
 )
 
-// Vote holds the vote for a partitipation and the answer to each question
+// Vote holds the vote for a participation and the answer to each question
 type Vote struct {
 	ReferendumID ParticipationEventID
 	Answers      []byte
@@ -17,7 +17,7 @@ type Vote struct {
 func (v *Vote) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadArrayOf32Bytes(&v.ReferendumID, func(err error) error {
-			return fmt.Errorf("unable to deserialize partitipation ID in vote: %w", err)
+			return fmt.Errorf("unable to deserialize participation ID in vote: %w", err)
 		}).
 		ReadVariableByteSlice(&v.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize answers in vote: %w", err)
@@ -28,7 +28,7 @@ func (v *Vote) Deserialize(data []byte, deSeriMode serializer.DeSerializationMod
 func (v *Vote) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 	return serializer.NewSerializer().
 		WriteBytes(v.ReferendumID[:], func(err error) error {
-			return fmt.Errorf("unable to serialize partitipation ID in vote: %w", err)
+			return fmt.Errorf("unable to serialize participation ID in vote: %w", err)
 		}).
 		WriteVariableByteSlice(v.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize answers in vote: %w", err)
@@ -70,7 +70,7 @@ func (j *jsonVote) ToSerializable() (serializer.Serializable, error) {
 
 	referendumIDBytes, err := hex.DecodeString(j.ReferendumID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to decode partitipation ID from JSON in vote: %w", err)
+		return nil, fmt.Errorf("unable to decode participation ID from JSON in vote: %w", err)
 	}
 	copy(vote.ReferendumID[:], referendumIDBytes)
 

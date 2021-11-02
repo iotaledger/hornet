@@ -1,4 +1,4 @@
-package partitipation
+package participation
 
 import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -38,7 +38,7 @@ func (rm *ParticipationManager) ReferendumStatus(referendumID ParticipationEvent
 		Status:         referendum.Status(confirmedMilestoneIndex),
 	}
 
-	// For each partitipation, iterate over all questions
+	// For each participation, iterate over all questions
 	for idx, question := range referendum.BallotQuestions() {
 		questionIndex := uint8(idx)
 

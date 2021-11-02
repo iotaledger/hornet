@@ -1,4 +1,4 @@
-package partitipation
+package participation
 
 import (
 	"encoding/json"
@@ -14,14 +14,14 @@ import (
 )
 
 const (
-	// ParticipationEventIDLength defines the length of a partitipation event ID.
+	// ParticipationEventIDLength defines the length of a participation event ID.
 	ParticipationEventIDLength = blake2b.Size256
 
 	ReferendumNameMaxLength           = 255
 	ReferendumAdditionalInfoMaxLength = 500
 )
 
-// ParticipationEventID is the ID of a partitipation.
+// ParticipationEventID is the ID of a participation.
 type ParticipationEventID = [ParticipationEventIDLength]byte
 
 var (
@@ -65,32 +65,32 @@ func (r *ParticipationEvent) ID() (ParticipationEventID, error) {
 func (r *ParticipationEvent) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadString(&r.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
-			return fmt.Errorf("unable to deserialize partitipation name: %w", err)
+			return fmt.Errorf("unable to deserialize participation name: %w", err)
 		}, ReferendumNameMaxLength).
 		ReadNum(&r.milestoneIndexCommence, func(err error) error {
-			return fmt.Errorf("unable to deserialize partitipation commence milestone: %w", err)
+			return fmt.Errorf("unable to deserialize participation commence milestone: %w", err)
 		}).
 		ReadNum(&r.milestoneIndexStart, func(err error) error {
-			return fmt.Errorf("unable to deserialize partitipation start milestone: %w", err)
+			return fmt.Errorf("unable to deserialize participation start milestone: %w", err)
 		}).
 		ReadNum(&r.milestoneIndexEnd, func(err error) error {
-			return fmt.Errorf("unable to deserialize partitipation end milestone: %w", err)
+			return fmt.Errorf("unable to deserialize participation end milestone: %w", err)
 		}).
 		ReadPayload(func(seri serializer.Serializable) { r.Payload = seri }, deSeriMode, func(ty uint32) (serializer.Serializable, error) {
 			switch ty {
 			case BallotPayloadTypeID:
 			default:
-				return nil, fmt.Errorf("invalid partitipation payload type ID %d: %w", ty, iotago.ErrUnsupportedPayloadType)
+				return nil, fmt.Errorf("invalid participation payload type ID %d: %w", ty, iotago.ErrUnsupportedPayloadType)
 			}
 			return PayloadSelector(ty)
 		}, func(err error) error {
 			return fmt.Errorf("unable to deserialize payload's inner payload: %w", err)
 		}).
 		ReadString(&r.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
-			return fmt.Errorf("unable to deserialize partitipation additional info: %w", err)
+			return fmt.Errorf("unable to deserialize participation additional info: %w", err)
 		}, ReferendumAdditionalInfoMaxLength).
 		ConsumedAll(func(leftOver int, err error) error {
-			return fmt.Errorf("%w: unable to deserialize partitipation: %d bytes are still available", err, leftOver)
+			return fmt.Errorf("%w: unable to deserialize participation: %d bytes are still available", err, leftOver)
 		}).
 		Done()
 }
@@ -100,22 +100,22 @@ func (r *ParticipationEvent) Serialize(deSeriMode serializer.DeSerializationMode
 	//TODO: validate text lengths
 	return serializer.NewSerializer().
 		WriteString(r.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
-			return fmt.Errorf("unable to serialize partitipation name: %w", err)
+			return fmt.Errorf("unable to serialize participation name: %w", err)
 		}).
 		WriteNum(r.milestoneIndexCommence, func(err error) error {
-			return fmt.Errorf("unable to serialize partitipation commence milestone: %w", err)
+			return fmt.Errorf("unable to serialize participation commence milestone: %w", err)
 		}).
 		WriteNum(r.milestoneIndexStart, func(err error) error {
-			return fmt.Errorf("unable to serialize partitipation start milestone: %w", err)
+			return fmt.Errorf("unable to serialize participation start milestone: %w", err)
 		}).
 		WriteNum(r.milestoneIndexEnd, func(err error) error {
-			return fmt.Errorf("unable to serialize partitipation end milestone: %w", err)
+			return fmt.Errorf("unable to serialize participation end milestone: %w", err)
 		}).
 		WritePayload(r.Payload, deSeriMode, func(err error) error {
-			return fmt.Errorf("unable to serialize partitipation inner payload: %w", err)
+			return fmt.Errorf("unable to serialize participation inner payload: %w", err)
 		}).
 		WriteString(r.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
-			return fmt.Errorf("unable to serialize partitipation additional info: %w", err)
+			return fmt.Errorf("unable to serialize participation additional info: %w", err)
 		}).
 		Serialize()
 }

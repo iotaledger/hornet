@@ -1,4 +1,4 @@
-package partitipation
+package participation
 
 import (
 	"encoding/json"

@@ -10,7 +10,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/partitipation"
+	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
@@ -43,7 +43,7 @@ type ParticipationTestEnv struct {
 	Wallet4       *utils.HDWallet
 
 	participationStore kvstore.KVStore
-	rm                 *partitipation.ParticipationManager
+	rm                 *participation.ParticipationManager
 }
 
 func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance uint64, wallet3Balance uint64, wallet4Balance uint64, assertSteps bool) *ParticipationTestEnv {
@@ -123,11 +123,11 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 
 	referendumStore := mapdb.NewMapDB()
 
-	rm, err := partitipation.NewManager(
+	rm, err := participation.NewManager(
 		te.Storage(),
 		te.SyncManager(),
 		referendumStore,
-		partitipation.WithIndexationMessage(voteIndexation),
+		participation.WithIndexationMessage(voteIndexation),
 	)
 	require.NoError(t, err)
 
@@ -157,7 +157,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 	}
 }
 
-func (env *ParticipationTestEnv) ReferendumManager() *partitipation.ParticipationManager {
+func (env *ParticipationTestEnv) ReferendumManager() *participation.ParticipationManager {
 	return env.rm
 }
 
@@ -174,21 +174,21 @@ func (env *ParticipationTestEnv) Cleanup() {
 	env.te.CleanupTestEnvironment(true)
 }
 
-func (env *ParticipationTestEnv) RegisterDefaultReferendum(startMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) partitipation.ParticipationEventID {
+func (env *ParticipationTestEnv) RegisterDefaultReferendum(startMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) participation.ParticipationEventID {
 
 	referendumStartIndex := startMilestoneIndex
 	referendumStartHoldingIndex := referendumStartIndex + milestone.Index(startPhaseDuration)
 	referendumEndIndex := referendumStartHoldingIndex + milestone.Index(holdingDuration)
 
-	referendumBuilder := partitipation.NewReferendumBuilder("All 4 HORNET", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "The biggest governance decision in the history of IOTA")
+	referendumBuilder := participation.NewReferendumBuilder("All 4 HORNET", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "The biggest governance decision in the history of IOTA")
 
-	questionBuilder := partitipation.NewQuestionBuilder("Give all the funds to the HORNET developers?", "This would fund the development of HORNET indefinitely")
-	questionBuilder.AddAnswer(&partitipation.Answer{
+	questionBuilder := participation.NewQuestionBuilder("Give all the funds to the HORNET developers?", "This would fund the development of HORNET indefinitely")
+	questionBuilder.AddAnswer(&participation.Answer{
 		Index:          1,
 		Text:           "YES",
 		AdditionalInfo: "Go team!",
 	})
-	questionBuilder.AddAnswer(&partitipation.Answer{
+	questionBuilder.AddAnswer(&participation.Answer{
 		Index:          2,
 		Text:           "Doh! Of course!",
 		AdditionalInfo: "There is no other option",
@@ -197,7 +197,7 @@ func (env *ParticipationTestEnv) RegisterDefaultReferendum(startMilestoneIndex m
 	question, err := questionBuilder.Build()
 	require.NoError(env.t, err)
 
-	questionsBuilder := partitipation.NewBallotBuilder()
+	questionsBuilder := participation.NewBallotBuilder()
 	questionsBuilder.AddQuestion(question)
 	payload, err := questionsBuilder.Build()
 	require.NoError(env.t, err)
@@ -210,7 +210,7 @@ func (env *ParticipationTestEnv) RegisterDefaultReferendum(startMilestoneIndex m
 	referendumID, err := env.rm.StoreReferendum(ref)
 	require.NoError(env.t, err)
 
-	// Check the stored partitipation is still there
+	// Check the stored participation is still there
 	require.NotNil(env.t, env.rm.Referendum(referendumID))
 
 	env.PrintJSON(ref)
@@ -218,7 +218,7 @@ func (env *ParticipationTestEnv) RegisterDefaultReferendum(startMilestoneIndex m
 	return referendumID
 }
 
-func (env *ParticipationTestEnv) IssueVote(wallet *utils.HDWallet, amount uint64, votes []*partitipation.Vote) *CastVote {
+func (env *ParticipationTestEnv) IssueVote(wallet *utils.HDWallet, amount uint64, votes []*participation.Vote) *CastVote {
 	return env.NewVoteBuilder(wallet).Amount(amount).AddVotes(votes).Cast()
 }
 
@@ -244,7 +244,7 @@ func (env *ParticipationTestEnv) Transfer(fromWallet *utils.HDWallet, toWallet *
 		BookOnWallets()
 }
 
-func (env *ParticipationTestEnv) IssueDefaultVoteAndMilestone(referendumID partitipation.ParticipationEventID, wallet *utils.HDWallet, balance ...uint64) *CastVote {
+func (env *ParticipationTestEnv) IssueDefaultVoteAndMilestone(referendumID participation.ParticipationEventID, wallet *utils.HDWallet, balance ...uint64) *CastVote {
 
 	amountToSend := wallet.Balance()
 	if len(balance) > 0 {
@@ -269,18 +269,18 @@ func (env *ParticipationTestEnv) IssueMilestone(onTips ...hornet.MessageID) (*wh
 	return env.te.IssueAndConfirmMilestoneOnTips(onTips, false)
 }
 
-func (env *ParticipationTestEnv) ActiveVotesForReferendum(referendumID partitipation.ParticipationEventID) []*partitipation.TrackedVote {
-	var votes []*partitipation.TrackedVote
-	env.ReferendumManager().ForEachActiveVote(referendumID, func(trackedVote *partitipation.TrackedVote) bool {
+func (env *ParticipationTestEnv) ActiveVotesForReferendum(referendumID participation.ParticipationEventID) []*participation.TrackedVote {
+	var votes []*participation.TrackedVote
+	env.ReferendumManager().ForEachActiveVote(referendumID, func(trackedVote *participation.TrackedVote) bool {
 		votes = append(votes, trackedVote)
 		return true
 	})
 	return votes
 }
 
-func (env *ParticipationTestEnv) PastVotesForReferendum(referendumID partitipation.ParticipationEventID) []*partitipation.TrackedVote {
-	var votes []*partitipation.TrackedVote
-	env.ReferendumManager().ForEachPastVote(referendumID, func(trackedVote *partitipation.TrackedVote) bool {
+func (env *ParticipationTestEnv) PastVotesForReferendum(referendumID participation.ParticipationEventID) []*participation.TrackedVote {
+	var votes []*participation.TrackedVote
+	env.ReferendumManager().ForEachPastVote(referendumID, func(trackedVote *participation.TrackedVote) bool {
 		votes = append(votes, trackedVote)
 		return true
 	})
@@ -299,17 +299,17 @@ func (env *ParticipationTestEnv) AssertReferendumsCount(acceptingCount int, coun
 	require.Equal(env.t, countingCount, len(env.ReferendumManager().EventsCountingParticipation()))
 }
 
-func (env *ParticipationTestEnv) AssertReferendumVoteStatus(referendumID partitipation.ParticipationEventID, activeVotes int, pastVotes int) {
+func (env *ParticipationTestEnv) AssertReferendumVoteStatus(referendumID participation.ParticipationEventID, activeVotes int, pastVotes int) {
 	// Verify current vote status
 	require.Equal(env.t, activeVotes, len(env.ActiveVotesForReferendum(referendumID)))
 	require.Equal(env.t, pastVotes, len(env.PastVotesForReferendum(referendumID)))
 }
 
-func (env *ParticipationTestEnv) AssertDefaultBallotAnswerStatus(referendumID partitipation.ParticipationEventID, currentVoteAmount uint64, accumulatedVoteAmount uint64) {
+func (env *ParticipationTestEnv) AssertDefaultBallotAnswerStatus(referendumID participation.ParticipationEventID, currentVoteAmount uint64, accumulatedVoteAmount uint64) {
 	env.AssertBallotAnswerStatus(referendumID, currentVoteAmount, accumulatedVoteAmount, 0, 1)
 }
 
-func (env *ParticipationTestEnv) AssertBallotAnswerStatus(referendumID partitipation.ParticipationEventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerIndex int) {
+func (env *ParticipationTestEnv) AssertBallotAnswerStatus(referendumID participation.ParticipationEventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerIndex int) {
 	status, err := env.ReferendumManager().ReferendumStatus(referendumID)
 	require.NoError(env.t, err)
 	env.PrintJSON(status)
@@ -318,7 +318,7 @@ func (env *ParticipationTestEnv) AssertBallotAnswerStatus(referendumID partitipa
 	require.Exactly(env.t, accumulatedVoteAmount, status.Questions[questionIndex].Answers[answerIndex].Accumulated)
 }
 
-func (env *ParticipationTestEnv) AssertTrackedVote(referendumID partitipation.ParticipationEventID, castVote *CastVote, startMilestoneIndex milestone.Index, endMilestoneIndex milestone.Index, amount uint64) {
+func (env *ParticipationTestEnv) AssertTrackedVote(referendumID participation.ParticipationEventID, castVote *CastVote, startMilestoneIndex milestone.Index, endMilestoneIndex milestone.Index, amount uint64) {
 	trackedVote, err := env.ReferendumManager().VoteForOutputID(referendumID, castVote.Message().GeneratedUTXO().OutputID())
 	require.NoError(env.t, err)
 	require.Equal(env.t, castVote.Message().GeneratedUTXO().OutputID(), trackedVote.OutputID)
@@ -328,8 +328,8 @@ func (env *ParticipationTestEnv) AssertTrackedVote(referendumID partitipation.Pa
 	require.Equal(env.t, endMilestoneIndex, trackedVote.EndIndex)
 }
 
-func (env *ParticipationTestEnv) AssertInvalidVote(referendumID partitipation.ParticipationEventID, castVote *CastVote) {
+func (env *ParticipationTestEnv) AssertInvalidVote(referendumID participation.ParticipationEventID, castVote *CastVote) {
 	_, err := env.ReferendumManager().VoteForOutputID(referendumID, castVote.Message().GeneratedUTXO().OutputID())
 	require.Error(env.t, err)
-	require.ErrorIs(env.t, err, partitipation.ErrUnknownVote)
+	require.ErrorIs(env.t, err, participation.ErrUnknownVote)
 }
