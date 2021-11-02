@@ -10,7 +10,7 @@ import (
 // NewParticipationEventBuilder creates a new ParticipationEventBuilder.
 func NewParticipationEventBuilder(name string, milestoneCommence milestone.Index, milestoneBeginHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *ParticipationEventBuilder {
 	return &ParticipationEventBuilder{
-		r: &ParticipationEvent{
+		event: &ParticipationEvent{
 			Name:                   name,
 			milestoneIndexCommence: uint32(milestoneCommence),
 			milestoneIndexStart:    uint32(milestoneBeginHolding),
@@ -22,8 +22,8 @@ func NewParticipationEventBuilder(name string, milestoneCommence milestone.Index
 
 // ParticipationEventBuilder is used to easily build up a ParticipationEvent.
 type ParticipationEventBuilder struct {
-	r   *ParticipationEvent
-	err error
+	event *ParticipationEvent
+	err   error
 }
 
 // Payload sets the payload to embed within the message.
@@ -38,7 +38,7 @@ func (rb *ParticipationEventBuilder) Payload(seri serializer.Serializable) *Part
 		rb.err = fmt.Errorf("%w: unsupported type %T", ErrUnknownPayloadType, seri)
 		return rb
 	}
-	rb.r.Payload = seri
+	rb.event.Payload = seri
 	return rb
 }
 
@@ -48,8 +48,8 @@ func (rb *ParticipationEventBuilder) Build() (*ParticipationEvent, error) {
 		return nil, rb.err
 	}
 
-	if _, err := rb.r.Serialize(serializer.DeSeriModePerformValidation); err != nil {
+	if _, err := rb.event.Serialize(serializer.DeSeriModePerformValidation); err != nil {
 		return nil, fmt.Errorf("unable to build participation: %w", err)
 	}
-	return rb.r, nil
+	return rb.event, nil
 }

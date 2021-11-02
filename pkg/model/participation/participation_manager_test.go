@@ -308,7 +308,7 @@ func TestReferendumVoteCancel(t *testing.T) {
 
 	env.AssertReferendumVoteStatus(referendumID, 1, 2)
 
-	// Verify the last issued vote is still active, i.e. EndIndex == 0
+	// Verify the last issued vote is still active, i.event. EndIndex == 0
 	env.AssertTrackedVote(referendumID, castVote3, 11, 0, 1_000_000)
 
 	// Issue final milestone that ends the participation

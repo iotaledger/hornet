@@ -191,14 +191,14 @@ func (rm *ParticipationManager) ParticipationEvents() []*ParticipationEvent {
 	return ref
 }
 
-// EventsAcceptingParticipation returns the participationEvents that are currently accepting participation, i.e. commencing or in the holding period.
+// EventsAcceptingParticipation returns the participationEvents that are currently accepting participation, i.event. commencing or in the holding period.
 func (rm *ParticipationManager) EventsAcceptingParticipation() []*ParticipationEvent {
 	return filterReferendums(rm.ParticipationEvents(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *ParticipationEvent, index milestone.Index) bool {
 		return ref.IsAcceptingParticipation(index)
 	})
 }
 
-// EventsCountingParticipation returns the participationEvents that are currently actively counting participation, i.e. in the holding period
+// EventsCountingParticipation returns the participationEvents that are currently actively counting participation, i.event. in the holding period
 func (rm *ParticipationManager) EventsCountingParticipation() []*ParticipationEvent {
 	return filterReferendums(rm.ParticipationEvents(), rm.syncManager.ConfirmedMilestoneIndex(), func(ref *ParticipationEvent, index milestone.Index) bool {
 		return ref.IsCountingParticipation(index)
@@ -414,7 +414,7 @@ func (rm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 		return nil
 	}
 
-	// Check if we tracked the vote initially, e.g. saved the Message that created this UTXO
+	// Check if we tracked the vote initially, event.g. saved the Message that created this UTXO
 	msg, err := rm.MessageForMessageID(spent.MessageID())
 	if err != nil {
 		return err
@@ -494,7 +494,7 @@ func (rm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 		for idx, question := range referendum.BallotQuestions() {
 			questionIndex := uint8(idx)
 
-			// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter
+			// For each question, iterate over all answers. Include 0 here, since that is valid, i.event. answer skipped by voter
 			// TODO: also handle the invalid vote usecase 255
 			for idx := 0; idx <= len(question.Answers); idx++ {
 				answerIndex := uint8(idx)
