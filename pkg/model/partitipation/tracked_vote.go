@@ -1,4 +1,4 @@
-package referendum
+package partitipation
 
 import (
 	"github.com/gohornet/hornet/pkg/model/hornet"

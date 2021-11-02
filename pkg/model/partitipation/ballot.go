@@ -1,4 +1,4 @@
-package referendum
+package partitipation
 
 import (
 	"encoding/json"
@@ -34,7 +34,7 @@ func (q *Ballot) Deserialize(data []byte, deSeriMode serializer.DeSerializationM
 			// there is no real selector, so we always return a fresh Question
 			return &Question{}, nil
 		}, questionsArrayRules, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum questions: %w", err)
+			return fmt.Errorf("unable to deserialize partitipation questions: %w", err)
 		}).
 		Done()
 }
@@ -46,12 +46,12 @@ func (q *Ballot) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, e
 	if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
 		//TODO: this should be moved as an arrayRule parameter to WriteSliceOfObjects in iota.go
 		if err := questionsArrayRules.CheckBounds(uint(len(q.Questions))); err != nil {
-			return nil, fmt.Errorf("unable to serialize referendum questions: %w", err)
+			return nil, fmt.Errorf("unable to serialize partitipation questions: %w", err)
 		}
 	}
 	return serializer.NewSerializer().
 		WriteSliceOfObjects(q.Questions, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum questions: %w", err)
+			return fmt.Errorf("unable to serialize partitipation questions: %w", err)
 		}).
 		Serialize()
 }

@@ -11,7 +11,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/referendum"
+	"github.com/gohornet/hornet/pkg/model/partitipation"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	// ParameterReferendumID is used to identify a referendum by its ID.
+	// ParameterReferendumID is used to identify a partitipation by its ID.
 	ParameterReferendumID = "referendumID"
 
 	// ParameterOutputID is used to identify an output by its ID.
@@ -33,17 +33,18 @@ const (
 
 const (
 
-	// RouteReferendums is the route to list all referendums, returning their UUID, the referendum name and status.
+	// RouteReferendums is the route to list all referendums, returning their UUID, the partitipation name and status.
 	// GET returns a list of all referendums known to the node.
 	// POST creates a new vote to track
+	// TODO: add query filter for payload type
 	RouteReferendums = "/referendums"
 
-	// RouteReferendum is the route to access a single referendum by its ID.
-	// GET gives a quick overview of the referendum. This does not include the current standings.
-	// DELETE removes a tracked referendum.
+	// RouteReferendum is the route to access a single partitipation by its ID.
+	// GET gives a quick overview of the partitipation. This does not include the current standings.
+	// DELETE removes a tracked partitipation.
 	RouteReferendum = "/referendums/:" + ParameterReferendumID
 
-	// RouteReferendumStatus is the route to access the status of a single referendum by its ID.
+	// RouteReferendumStatus is the route to access the status of a single partitipation by its ID.
 	// GET returns the amount of tokens voting and the weight on each option of every question.
 	RouteReferendumStatus = "/referendums/:" + ParameterReferendumID + "/status"
 
@@ -78,7 +79,7 @@ var (
 type dependencies struct {
 	dig.In
 	NodeConfig        *configuration.Configuration `name:"nodeConfig"`
-	ReferendumManager *referendum.ReferendumManager
+	ReferendumManager *partitipation.ReferendumManager
 	Tangle            *tangle.Tangle
 	Echo              *echo.Echo
 	ShutdownHandler   *shutdown.ShutdownHandler
@@ -95,18 +96,18 @@ func provide(c *dig.Container) {
 		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
 	}
 
-	if err := c.Provide(func(deps referendumDeps) *referendum.ReferendumManager {
+	if err := c.Provide(func(deps referendumDeps) *partitipation.ReferendumManager {
 
-		referendumStore, err := database.StoreWithDefaultSettings(filepath.Join(deps.DatabasePath, "referendum"), true, deps.DatabaseEngine)
+		referendumStore, err := database.StoreWithDefaultSettings(filepath.Join(deps.DatabasePath, "partitipation"), true, deps.DatabaseEngine)
 		if err != nil {
 			Plugin.Panic(err)
 		}
 
-		rm, err := referendum.NewManager(
+		rm, err := partitipation.NewManager(
 			deps.Storage,
 			deps.SyncManager,
 			referendumStore,
-			referendum.WithLogger(Plugin.Logger()),
+			partitipation.WithLogger(Plugin.Logger()),
 		)
 		if err != nil {
 			Plugin.Panic(err)
@@ -119,7 +120,7 @@ func provide(c *dig.Container) {
 
 func configure() {
 
-	routeGroup := deps.Echo.Group("/api/plugins/referendum")
+	routeGroup := deps.Echo.Group("/api/plugins/partitipation")
 
 	routeGroup.GET(RouteReferendums, func(c echo.Context) error {
 		resp, err := getReferendums(c)
@@ -190,7 +191,7 @@ func configure() {
 }
 
 func run() {
-	// create a background worker that handles the referendum events
+	// create a background worker that handles the partitipation events
 	if err := Plugin.Daemon().BackgroundWorker("Referendum", func(ctx context.Context) {
 		Plugin.LogInfo("Starting Referendum Manager ... done")
 		attachEvents()
@@ -206,19 +207,19 @@ func configureEvents() {
 
 	onUTXOOutput = events.NewClosure(func(index milestone.Index, output *utxo.Output) {
 		if err := deps.ReferendumManager.ApplyNewUTXO(index, output); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("referendum plugin hit a critical error while applying new UTXO: %s", err.Error()))
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("partitipation plugin hit a critical error while applying new UTXO: %s", err.Error()))
 		}
 	})
 
 	onUTXOSpent = events.NewClosure(func(index milestone.Index, spent *utxo.Spent) {
 		if err := deps.ReferendumManager.ApplySpentUTXO(index, spent); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("referendum plugin hit a critical error while applying spent TXO: %s", err.Error()))
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("partitipation plugin hit a critical error while applying spent TXO: %s", err.Error()))
 		}
 	})
 
 	onConfirmedMilestoneIndexChanged = events.NewClosure(func(index milestone.Index) {
 		if err := deps.ReferendumManager.ApplyNewConfirmedMilestoneIndex(index); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("referendum plugin hit a critical error while applying new confirmed milestone index: %s", err.Error()))
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("partitipation plugin hit a critical error while applying new confirmed milestone index: %s", err.Error()))
 		}
 	})
 }

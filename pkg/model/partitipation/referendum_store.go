@@ -1,4 +1,4 @@
-package referendum
+package partitipation
 
 import (
 	"errors"
@@ -15,8 +15,8 @@ import (
 
 var (
 	ErrUnknownVote                  = errors.New("no vote found")
-	ErrReferendumNotFound           = errors.New("referenced referendum does not exist")
-	ErrInvalidReferendum            = errors.New("invalid referendum")
+	ErrReferendumNotFound           = errors.New("referenced partitipation does not exist")
+	ErrInvalidReferendum            = errors.New("invalid partitipation")
 	ErrInvalidPreviouslyTrackedVote = errors.New("a previously tracked vote changed and is now invalid")
 	ErrInvalidCurrentVoteBalance    = errors.New("current vote balance invalid")
 )
@@ -419,6 +419,7 @@ func (rm *ReferendumManager) startCountingVoteAnswers(vote *Vote, amount uint64,
 			return err
 		}
 
+		// TODO: divide amount by 1000
 		currentVoteBalance += amount
 
 		if err := setCurrentVoteBalanceForQuestionAndAnswer(vote.ReferendumID, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
@@ -436,6 +437,7 @@ func (rm *ReferendumManager) stopCountingVoteAnswers(vote *Vote, amount uint64, 
 			return err
 		}
 
+		// TODO: divide amount by 1000
 		if currentVoteBalance < amount {
 			// Votes can't be less than 0
 			return ErrInvalidCurrentVoteBalance

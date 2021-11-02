@@ -1,4 +1,4 @@
-package referendum
+package partitipation
 
 import (
 	"encoding/json"
@@ -22,13 +22,13 @@ type Answer struct {
 func (a *Answer) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadNum(&a.Index, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum answer index: %w", err)
+			return fmt.Errorf("unable to deserialize partitipation answer index: %w", err)
 		}).
 		ReadString(&a.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum answer text: %w", err)
+			return fmt.Errorf("unable to deserialize partitipation answer text: %w", err)
 		}, AnswerTextMaxLength).
 		ReadString(&a.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum answer additional info: %w", err)
+			return fmt.Errorf("unable to deserialize partitipation answer additional info: %w", err)
 		}, AnswerAdditionalInfoMaxLength).
 		Done()
 }
@@ -37,13 +37,13 @@ func (a *Answer) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, e
 	//TODO: validate text lengths
 	return serializer.NewSerializer().
 		WriteNum(a.Index, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum answer index: %w", err)
+			return fmt.Errorf("unable to serialize partitipation answer index: %w", err)
 		}).
 		WriteString(a.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum answer text: %w", err)
+			return fmt.Errorf("unable to serialize partitipation answer text: %w", err)
 		}).
 		WriteString(a.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum answer additional info: %w", err)
+			return fmt.Errorf("unable to serialize partitipation answer additional info: %w", err)
 		}).
 		Serialize()
 }

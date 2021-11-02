@@ -1,4 +1,4 @@
-package referendum
+package partitipation
 
 import (
 	"bytes"
@@ -24,9 +24,9 @@ type Events struct {
 }
 
 var (
-	ErrReferendumCorruptedStorage = errors.New("the referendum database was not shutdown properly")
-	ErrReferendumAlreadyStarted   = errors.New("the given referendum already started")
-	ErrReferendumAlreadyEnded     = errors.New("the given referendum already ended")
+	ErrReferendumCorruptedStorage = errors.New("the partitipation database was not shutdown properly")
+	ErrReferendumAlreadyStarted   = errors.New("the given partitipation already started")
+	ErrReferendumAlreadyEnded     = errors.New("the given partitipation already ended")
 )
 
 // ReferendumManager is used to track the outcome of referendums in the tangle.
@@ -140,7 +140,7 @@ func (rm *ReferendumManager) init() error {
 		}
 
 		if !databaseVersionUpdated {
-			return errors.New("HORNET referendum database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
+			return errors.New("HORNET partitipation database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 
@@ -206,7 +206,7 @@ func (rm *ReferendumManager) ReferendumsCountingVotes() []*Referendum {
 }
 
 // StoreReferendum accepts a new Referendum the manager should track.
-// The current confirmed milestone index needs to be provided, so that the manager can check if the referendum can be added.
+// The current confirmed milestone index needs to be provided, so that the manager can check if the partitipation can be added.
 func (rm *ReferendumManager) StoreReferendum(referendum *Referendum) (ReferendumID, error) {
 	rm.Lock()
 	defer rm.Unlock()
@@ -276,7 +276,7 @@ func (rm *ReferendumManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo
 		return ref.ShouldAcceptVotes(index)
 	})
 
-	// No referendum accepting votes, so no work to be done
+	// No partitipation accepting votes, so no work to be done
 	if len(acceptingReferendums) == 0 {
 		return nil
 	}
@@ -409,7 +409,7 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 		return ref.ShouldAcceptVotes(index)
 	})
 
-	// No referendum accepting votes, so no work to be done
+	// No partitipation accepting votes, so no work to be done
 	if len(acceptingReferendums) == 0 {
 		return nil
 	}
@@ -467,14 +467,14 @@ func (rm *ReferendumManager) ApplySpentUTXO(index milestone.Index, spent *utxo.S
 	return mutations.Commit()
 }
 
-// ApplyNewConfirmedMilestoneIndex iterates over each counting referendum and applies the current vote for each question to the total vote
+// ApplyNewConfirmedMilestoneIndex iterates over each counting partitipation and applies the current vote for each question to the total vote
 func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
 
 	countingReferendums := filterReferendums(rm.Referendums(), index, func(ref *Referendum, index milestone.Index) bool {
 		return ref.ShouldCountVotes(index)
 	})
 
-	// No counting referendum, so no work to be done
+	// No counting partitipation, so no work to be done
 	if len(countingReferendums) == 0 {
 		return nil
 	}
@@ -490,11 +490,12 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 			return err
 		}
 
-		// For each referendum, iterate over all questions
+		// For each partitipation, iterate over all questions
 		for idx, question := range referendum.BallotQuestions() {
 			questionIndex := uint8(idx)
 
 			// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter
+			// TODO: also handle the invalid vote usecase 255
 			for idx := 0; idx <= len(question.Answers); idx++ {
 				answerIndex := uint8(idx)
 
@@ -520,7 +521,7 @@ func (rm *ReferendumManager) ApplyNewConfirmedMilestoneIndex(index milestone.Ind
 			}
 		}
 
-		// End all votes if referendum is ending this milestone
+		// End all votes if partitipation is ending this milestone
 		if referendum.EndMilestoneIndex() == index {
 			if err := rm.endAllVotesAtMilestone(referendumID, index, mutations); err != nil {
 				mutations.Cancel()
@@ -537,18 +538,18 @@ func (rm *ReferendumManager) validVotes(index milestone.Index, votes []*Vote) []
 	var validVotes []*Vote
 	for _, vote := range votes {
 
-		// Check that we have the referendum for the given vote
+		// Check that we have the partitipation for the given vote
 		referendum := rm.Referendum(vote.ReferendumID)
 		if referendum == nil {
 			continue
 		}
 
-		// Check that the referendum is accepting votes
+		// Check that the partitipation is accepting votes
 		if !referendum.ShouldAcceptVotes(index) {
 			continue
 		}
 
-		// Check that the amount of answers equals the questions in the referendum
+		// Check that the amount of answers equals the questions in the partitipation
 		if len(vote.Answers) != len(referendum.BallotQuestions()) {
 			continue
 		}

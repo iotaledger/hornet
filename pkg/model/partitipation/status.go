@@ -1,4 +1,4 @@
-package referendum
+package partitipation
 
 import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -21,6 +21,7 @@ type ReferendumStatus struct {
 	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
 	Status         string            `json:"status"`
 	Questions      []*QuestionStatus `json:"questions,omitempty"`
+	//TODO: add hash of all QuestionStatus to make comparison easier
 }
 
 func (rm *ReferendumManager) ReferendumStatus(referendumID ReferendumID) (*ReferendumStatus, error) {
@@ -37,7 +38,7 @@ func (rm *ReferendumManager) ReferendumStatus(referendumID ReferendumID) (*Refer
 		Status:         referendum.Status(confirmedMilestoneIndex),
 	}
 
-	// For each referendum, iterate over all questions
+	// For each partitipation, iterate over all questions
 	for idx, question := range referendum.BallotQuestions() {
 		questionIndex := uint8(idx)
 

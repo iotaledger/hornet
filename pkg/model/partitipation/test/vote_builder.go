@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/referendum"
+	"github.com/gohornet/hornet/pkg/model/partitipation"
 	"github.com/iotaledger/hive.go/serializer"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -16,7 +16,7 @@ type VoteBuilder struct {
 	env          *ReferendumTestEnv
 	wallet       *utils.HDWallet
 	msgBuilder   *testsuite.MessageBuilder
-	votesBuilder *referendum.VotesBuilder
+	votesBuilder *partitipation.VotesBuilder
 }
 
 type CastVote struct {
@@ -32,7 +32,7 @@ func (env *ReferendumTestEnv) NewVoteBuilder(wallet *utils.HDWallet) *VoteBuilde
 		env:          env,
 		wallet:       wallet,
 		msgBuilder:   msgBuilder,
-		votesBuilder: referendum.NewVotesBuilder(),
+		votesBuilder: partitipation.NewVotesBuilder(),
 	}
 }
 
@@ -58,7 +58,7 @@ func (b *VoteBuilder) UsingOutput(output *utxo.Output) *VoteBuilder {
 	return b
 }
 
-func (b *VoteBuilder) AddVotes(votes []*referendum.Vote) *VoteBuilder {
+func (b *VoteBuilder) AddVotes(votes []*partitipation.Vote) *VoteBuilder {
 	require.NotEmpty(b.env.t, votes)
 	for _, vote := range votes {
 		b.AddVote(vote)
@@ -66,15 +66,15 @@ func (b *VoteBuilder) AddVotes(votes []*referendum.Vote) *VoteBuilder {
 	return b
 }
 
-func (b *VoteBuilder) AddDefaultVote(referendumID referendum.ReferendumID) *VoteBuilder {
-	b.votesBuilder.AddVote(&referendum.Vote{
+func (b *VoteBuilder) AddDefaultVote(referendumID partitipation.ReferendumID) *VoteBuilder {
+	b.votesBuilder.AddVote(&partitipation.Vote{
 		ReferendumID: referendumID,
 		Answers:      []byte{byte(1)},
 	})
 	return b
 }
 
-func (b *VoteBuilder) AddVote(vote *referendum.Vote) *VoteBuilder {
+func (b *VoteBuilder) AddVote(vote *partitipation.Vote) *VoteBuilder {
 	require.NotNil(b.env.t, vote)
 	b.votesBuilder.AddVote(vote)
 	return b

@@ -4,13 +4,13 @@ import "github.com/gohornet/hornet/pkg/model/milestone"
 
 // ReferendumsResponse defines the response of a GET RouteReferendums REST API call.
 type ReferendumsResponse struct {
-	// The hex encoded referendum IDs of the found referendums.
+	// The hex encoded partitipation IDs of the found referendums.
 	ReferendumIDs []string `json:"referendumIds"`
 }
 
 // CreateReferendumResponse defines the response of a POST RouteReferendums REST API call.
 type CreateReferendumResponse struct {
-	// The hex encoded referendum ID of the created referendum.
+	// The hex encoded partitipation ID of the created partitipation.
 	ReferendumID string `json:"referendumId"`
 }
 

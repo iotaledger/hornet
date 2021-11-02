@@ -1,4 +1,4 @@
-package referendum
+package partitipation
 
 import (
 	"encoding/json"

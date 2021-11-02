@@ -1,4 +1,4 @@
-package referendum_test
+package partitipation_test
 
 import (
 	"testing"
@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/referendum"
-	"github.com/gohornet/hornet/pkg/model/referendum/test"
+	"github.com/gohornet/hornet/pkg/model/partitipation"
+	"github.com/gohornet/hornet/pkg/model/partitipation/test"
 )
 
 func TestReferendumStateHelpers(t *testing.T) {
@@ -16,15 +16,15 @@ func TestReferendumStateHelpers(t *testing.T) {
 	referendumStartHoldingIndex := milestone.Index(100)
 	referendumEndIndex := milestone.Index(200)
 
-	referendumBuilder := referendum.NewReferendumBuilder("Test", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "Sample")
+	referendumBuilder := partitipation.NewReferendumBuilder("Test", referendumStartIndex, referendumStartHoldingIndex, referendumEndIndex, "Sample")
 
-	questionBuilder := referendum.NewQuestionBuilder("Q1", "-")
-	questionBuilder.AddAnswer(&referendum.Answer{
+	questionBuilder := partitipation.NewQuestionBuilder("Q1", "-")
+	questionBuilder.AddAnswer(&partitipation.Answer{
 		Index:          1,
 		Text:           "A1",
 		AdditionalInfo: "-",
 	})
-	questionBuilder.AddAnswer(&referendum.Answer{
+	questionBuilder.AddAnswer(&partitipation.Answer{
 		Index:          2,
 		Text:           "A2",
 		AdditionalInfo: "-",
@@ -33,7 +33,7 @@ func TestReferendumStateHelpers(t *testing.T) {
 	question, err := questionBuilder.Build()
 	require.NoError(t, err)
 
-	questionsBuilder := referendum.NewBallotBuilder()
+	questionsBuilder := partitipation.NewBallotBuilder()
 	questionsBuilder.AddQuestion(question)
 	payload, err := questionsBuilder.Build()
 	require.NoError(t, err)
@@ -111,12 +111,12 @@ func TestReferendumStates(t *testing.T) {
 	ref := env.ReferendumManager().Referendum(referendumID)
 	require.NotNil(t, ref)
 
-	// Verify the configured referendum indexes
+	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
 	require.Equal(t, milestone.Index(6), ref.BeginHoldingMilestoneIndex())
 	require.Equal(t, milestone.Index(8), ref.EndMilestoneIndex())
 
-	// No referendum should be running right now
+	// No partitipation should be running right now
 	require.Equal(t, 1, len(env.ReferendumManager().Referendums()))
 	env.AssertReferendumsCount(0, 0)
 
@@ -157,7 +157,7 @@ func TestSingleReferendumVote(t *testing.T) {
 	ref := env.ReferendumManager().Referendum(referendumID)
 	require.NotNil(t, ref)
 
-	// Verify the configured referendum indexes
+	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
 	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
 	require.Equal(t, milestone.Index(10), ref.EndMilestoneIndex())
@@ -259,7 +259,7 @@ func TestReferendumVoteCancel(t *testing.T) {
 	ref := env.ReferendumManager().Referendum(referendumID)
 	require.NotNil(t, ref)
 
-	// Verify the configured referendum indexes
+	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
 	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
@@ -311,14 +311,14 @@ func TestReferendumVoteCancel(t *testing.T) {
 	// Verify the last issued vote is still active, i.e. EndIndex == 0
 	env.AssertTrackedVote(referendumID, castVote3, 11, 0, 1_000_000)
 
-	// Issue final milestone that ends the referendum
+	// Issue final milestone that ends the partitipation
 	env.IssueMilestone() // 12
 
 	// There should be no active votes left
 	env.AssertReferendumVoteStatus(referendumID, 0, 3)
 	env.AssertDefaultBallotAnswerStatus(referendumID, 1_000_000, 3_000_000)
 
-	// Verify the vote history after the referendum ended
+	// Verify the vote history after the partitipation ended
 	env.AssertTrackedVote(referendumID, castVote1, 6, 7, 1_000_000)
 	env.AssertTrackedVote(referendumID, castVote2, 8, 9, 1_000_000)
 	env.AssertTrackedVote(referendumID, castVote3, 11, 12, 1_000_000)
@@ -336,7 +336,7 @@ func TestReferendumVoteAddVoteBalanceBySweeping(t *testing.T) {
 	ref := env.ReferendumManager().Referendum(referendumID)
 	require.NotNil(t, ref)
 
-	// Verify the configured referendum indexes
+	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
 	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
@@ -389,7 +389,7 @@ func TestReferendumVoteAddVoteBalanceByMultipleOutputs(t *testing.T) {
 	ref := env.ReferendumManager().Referendum(referendumID)
 	require.NotNil(t, ref)
 
-	// Verify the configured referendum indexes
+	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
 	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
@@ -447,7 +447,7 @@ func TestReferendumMultipleVotes(t *testing.T) {
 	ref := env.ReferendumManager().Referendum(referendumID)
 	require.NotNil(t, ref)
 
-	// Verify the configured referendum indexes
+	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
 	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
@@ -458,7 +458,7 @@ func TestReferendumMultipleVotes(t *testing.T) {
 
 	wallet1Vote := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID,
 			Answers:      []byte{0},
 		}).
@@ -466,7 +466,7 @@ func TestReferendumMultipleVotes(t *testing.T) {
 
 	wallet2Vote := env.NewVoteBuilder(env.Wallet2).
 		WholeWalletBalance().
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID,
 			Answers:      []byte{1},
 		}).
@@ -474,7 +474,7 @@ func TestReferendumMultipleVotes(t *testing.T) {
 
 	wallet3Vote := env.NewVoteBuilder(env.Wallet3).
 		WholeWalletBalance().
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID,
 			Answers:      []byte{2},
 		}).
@@ -526,7 +526,7 @@ func TestReferendumChangeOpinionMidVote(t *testing.T) {
 	ref := env.ReferendumManager().Referendum(referendumID)
 	require.NotNil(t, ref)
 
-	// Verify the configured referendum indexes
+	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
 	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
@@ -537,7 +537,7 @@ func TestReferendumChangeOpinionMidVote(t *testing.T) {
 
 	wallet1Vote1 := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID,
 			Answers:      []byte{1},
 		}).
@@ -556,7 +556,7 @@ func TestReferendumChangeOpinionMidVote(t *testing.T) {
 
 	wallet1Vote2 := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID,
 			Answers:      []byte{2},
 		}).
@@ -604,7 +604,7 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 	ref2 := env.ReferendumManager().Referendum(referendumID2)
 	require.NotNil(t, ref1)
 
-	// Verify the configured referendum indexes
+	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref1.CommenceMilestoneIndex())
 	require.Equal(t, milestone.Index(7), ref1.BeginHoldingMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref1.EndMilestoneIndex())
@@ -622,12 +622,12 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 	wallet1Vote1 := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
 		// Vote for the commencing ref1
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID1,
 			Answers:      []byte{1},
 		}).
 		// Vote too early for the upcoming ref2
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID2,
 			Answers:      []byte{2},
 		}).
@@ -636,7 +636,7 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 	wallet2Vote1 := env.NewVoteBuilder(env.Wallet2).
 		WholeWalletBalance().
 		// Vote for the commencing ref1
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID1,
 			Answers:      []byte{1},
 		}).
@@ -657,7 +657,7 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 	wallet3Vote1 := env.NewVoteBuilder(env.Wallet3).
 		WholeWalletBalance().
 		// Vote for the commencing ref2
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID2,
 			Answers:      []byte{2},
 		}).
@@ -680,12 +680,12 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 	wallet1Vote2 := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
 		// Keep Vote for the holding ref1
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID1,
 			Answers:      []byte{1},
 		}).
 		// Re-Vote holding ref2
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID2,
 			Answers:      []byte{2},
 		}).
@@ -700,7 +700,7 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 	wallet4Vote1 := env.NewVoteBuilder(env.Wallet4).
 		WholeWalletBalance().
 		// Vote for the holding ref1
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID1,
 			Answers:      []byte{0},
 		}).
@@ -715,7 +715,7 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 	wallet4Vote2 := env.NewVoteBuilder(env.Wallet4).
 		WholeWalletBalance().
 		// Vote for the holding ref2
-		AddVote(&referendum.Vote{
+		AddVote(&partitipation.Vote{
 			ReferendumID: referendumID2,
 			Answers:      []byte{2},
 		}).

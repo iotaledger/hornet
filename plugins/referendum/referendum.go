@@ -8,39 +8,39 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/referendum"
+	"github.com/gohornet/hornet/pkg/model/partitipation"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // ReferendumIDFromHex creates a ReferendumID from a hex string representation.
-func ReferendumIDFromHex(hexString string) (referendum.ReferendumID, error) {
+func ReferendumIDFromHex(hexString string) (partitipation.ReferendumID, error) {
 
 	b, err := hex.DecodeString(hexString)
 	if err != nil {
-		return referendum.NullReferendumID, err
+		return partitipation.NullReferendumID, err
 	}
 
-	if len(b) != referendum.ReferendumIDLength {
-		return referendum.ReferendumID{}, fmt.Errorf("unknown referendumID length (%d)", len(b))
+	if len(b) != partitipation.ReferendumIDLength {
+		return partitipation.ReferendumID{}, fmt.Errorf("unknown referendumID length (%d)", len(b))
 	}
 
-	var referendumID referendum.ReferendumID
+	var referendumID partitipation.ReferendumID
 	copy(referendumID[:], b)
 	return referendumID, nil
 }
 
-func parseReferendumIDParam(c echo.Context) (referendum.ReferendumID, error) {
+func parseReferendumIDParam(c echo.Context) (partitipation.ReferendumID, error) {
 
 	referendumIDHex := strings.ToLower(c.Param(ParameterReferendumID))
 	if referendumIDHex == "" {
-		return referendum.NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterReferendumID)
+		return partitipation.NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterReferendumID)
 	}
 
 	referendumID, err := ReferendumIDFromHex(referendumIDHex)
 	if err != nil {
-		return referendum.NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid referendum ID: %s, error: %s", referendumIDHex, err)
+		return partitipation.NullReferendumID, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid partitipation ID: %s, error: %s", referendumIDHex, err)
 	}
 
 	return referendumID, nil
@@ -61,14 +61,14 @@ func createReferendum(c echo.Context) (*CreateReferendumResponse, error) {
 
 	//TODO: add support for binary representation too?
 
-	referendum := &referendum.Referendum{}
+	referendum := &partitipation.Referendum{}
 	if err := c.Bind(referendum); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request! Error: %s", err)
 	}
 
 	referendumID, err := deps.ReferendumManager.StoreReferendum(referendum)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid referendum, error: %s", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid partitipation, error: %s", err)
 	}
 
 	return &CreateReferendumResponse{
@@ -76,7 +76,7 @@ func createReferendum(c echo.Context) (*CreateReferendumResponse, error) {
 	}, nil
 }
 
-func getReferendum(c echo.Context) (*referendum.Referendum, error) {
+func getReferendum(c echo.Context) (*partitipation.Referendum, error) {
 
 	referendumID, err := parseReferendumIDParam(c)
 	if err != nil {
@@ -85,7 +85,7 @@ func getReferendum(c echo.Context) (*referendum.Referendum, error) {
 
 	referendum := deps.ReferendumManager.Referendum(referendumID)
 	if referendum == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "referendum not found: %s", hex.EncodeToString(referendumID[:]))
+		return nil, errors.WithMessagef(echo.ErrNotFound, "partitipation not found: %s", hex.EncodeToString(referendumID[:]))
 	}
 
 	return referendum, nil
@@ -101,7 +101,7 @@ func deleteReferendum(c echo.Context) error {
 	return deps.ReferendumManager.DeleteReferendum(referendumID)
 }
 
-func getReferendumStatus(c echo.Context) (*referendum.ReferendumStatus, error) {
+func getReferendumStatus(c echo.Context) (*partitipation.ReferendumStatus, error) {
 
 	referendumID, err := parseReferendumIDParam(c)
 	if err != nil {
@@ -110,8 +110,8 @@ func getReferendumStatus(c echo.Context) (*referendum.ReferendumStatus, error) {
 
 	status, err := deps.ReferendumManager.ReferendumStatus(referendumID)
 	if err != nil {
-		if errors.Is(err, referendum.ErrReferendumNotFound) {
-			return nil, errors.WithMessagef(echo.ErrNotFound, "referendum not found: %s", hex.EncodeToString(referendumID[:]))
+		if errors.Is(err, partitipation.ErrReferendumNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "partitipation not found: %s", hex.EncodeToString(referendumID[:]))
 		}
 		return nil, err
 	}

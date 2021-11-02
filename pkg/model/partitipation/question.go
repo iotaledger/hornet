@@ -1,4 +1,4 @@
-package referendum
+package partitipation
 
 import (
 	"encoding/json"
@@ -33,16 +33,16 @@ type Question struct {
 func (q *Question) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadString(&q.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum question text: %w", err)
+			return fmt.Errorf("unable to deserialize partitipation question text: %w", err)
 		}, QuestionTextMaxLength).
 		ReadSliceOfObjects(func(seri serializer.Serializables) { q.Answers = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
 			// there is no real selector, so we always return a fresh Answer
 			return &Answer{}, nil
 		}, answersArrayRules, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum question answers: %w", err)
+			return fmt.Errorf("unable to deserialize partitipation question answers: %w", err)
 		}).
 		ReadString(&q.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
-			return fmt.Errorf("unable to deserialize referendum question additional info: %w", err)
+			return fmt.Errorf("unable to deserialize partitipation question additional info: %w", err)
 		}, QuestionAdditionalInfoMaxLength).
 		Done()
 }
@@ -59,13 +59,13 @@ func (q *Question) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte,
 	}
 	return serializer.NewSerializer().
 		WriteString(q.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum question text: %w", err)
+			return fmt.Errorf("unable to serialize partitipation question text: %w", err)
 		}).
 		WriteSliceOfObjects(q.Answers, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum question answers: %w", err)
+			return fmt.Errorf("unable to serialize partitipation question answers: %w", err)
 		}).
 		WriteString(q.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
-			return fmt.Errorf("unable to serialize referendum question additional info: %w", err)
+			return fmt.Errorf("unable to serialize partitipation question additional info: %w", err)
 		}).
 		Serialize()
 }

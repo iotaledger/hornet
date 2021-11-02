@@ -1,4 +1,4 @@
-package referendum_test
+package partitipation_test
 
 // TODO:
 // Add tests for serialization
