@@ -1,4 +1,4 @@
-package referendum
+package participation
 
 import (
 	"encoding/hex"
@@ -47,7 +47,7 @@ func parseReferendumIDParam(c echo.Context) (partitipation.ReferendumID, error) 
 }
 
 func getReferendums(_ echo.Context) (*ReferendumsResponse, error) {
-	referendumIDs := deps.ReferendumManager.ReferendumIDs()
+	referendumIDs := deps.ParticipationManager.ReferendumIDs()
 
 	hexReferendumIDs := []string{}
 	for _, id := range referendumIDs {
@@ -66,7 +66,7 @@ func createReferendum(c echo.Context) (*CreateReferendumResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request! Error: %s", err)
 	}
 
-	referendumID, err := deps.ReferendumManager.StoreReferendum(referendum)
+	referendumID, err := deps.ParticipationManager.StoreReferendum(referendum)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid partitipation, error: %s", err)
 	}
@@ -83,7 +83,7 @@ func getReferendum(c echo.Context) (*partitipation.Referendum, error) {
 		return nil, err
 	}
 
-	referendum := deps.ReferendumManager.Referendum(referendumID)
+	referendum := deps.ParticipationManager.Referendum(referendumID)
 	if referendum == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "partitipation not found: %s", hex.EncodeToString(referendumID[:]))
 	}
@@ -98,7 +98,7 @@ func deleteReferendum(c echo.Context) error {
 		return nil
 	}
 
-	return deps.ReferendumManager.DeleteReferendum(referendumID)
+	return deps.ParticipationManager.DeleteReferendum(referendumID)
 }
 
 func getReferendumStatus(c echo.Context) (*partitipation.ReferendumStatus, error) {
@@ -108,7 +108,7 @@ func getReferendumStatus(c echo.Context) (*partitipation.ReferendumStatus, error
 		return nil, err
 	}
 
-	status, err := deps.ReferendumManager.ReferendumStatus(referendumID)
+	status, err := deps.ParticipationManager.ReferendumStatus(referendumID)
 	if err != nil {
 		if errors.Is(err, partitipation.ErrReferendumNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "partitipation not found: %s", hex.EncodeToString(referendumID[:]))
@@ -134,7 +134,7 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 	var outputID iotago.UTXOInputID
 	copy(outputID[:], outputIDBytes)
 
-	trackedVotes, err := deps.ReferendumManager.VotesForOutputID(&outputID)
+	trackedVotes, err := deps.ParticipationManager.VotesForOutputID(&outputID)
 	if err != nil {
 		return nil, err
 	}

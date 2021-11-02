@@ -1,4 +1,4 @@
-package referendum
+package participation
 
 import "github.com/gohornet/hornet/pkg/model/milestone"
 

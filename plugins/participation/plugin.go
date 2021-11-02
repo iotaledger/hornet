@@ -1,4 +1,4 @@
-package referendum
+package participation
 
 import (
 	"context"
@@ -57,7 +57,7 @@ func init() {
 	Plugin = &node.Plugin{
 		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
-			Name:      "Referendum",
+			Name:      "Participation",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Provide:   provide,
 			Configure: configure,
@@ -77,11 +77,11 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig        *configuration.Configuration `name:"nodeConfig"`
-	ReferendumManager *partitipation.ParticipationManager
-	Tangle            *tangle.Tangle
-	Echo              *echo.Echo
-	ShutdownHandler   *shutdown.ShutdownHandler
+	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	ParticipationManager *partitipation.ParticipationManager
+	Tangle               *tangle.Tangle
+	Echo                 *echo.Echo
+	ShutdownHandler      *shutdown.ShutdownHandler
 }
 
 func provide(c *dig.Container) {
@@ -174,14 +174,14 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	if err := Plugin.Node.Daemon().BackgroundWorker("Close Referendum database", func(ctx context.Context) {
+	if err := Plugin.Node.Daemon().BackgroundWorker("Close Participation database", func(ctx context.Context) {
 		<-ctx.Done()
 
-		Plugin.LogInfo("Syncing Referendum database to disk...")
-		if err := deps.ReferendumManager.CloseDatabase(); err != nil {
-			Plugin.Panicf("Syncing Referendum database to disk... failed: %s", err)
+		Plugin.LogInfo("Syncing Participation database to disk...")
+		if err := deps.ParticipationManager.CloseDatabase(); err != nil {
+			Plugin.Panicf("Syncing Participation database to disk... failed: %s", err)
 		}
-		Plugin.LogInfo("Syncing Referendum database to disk... done")
+		Plugin.LogInfo("Syncing Participation database to disk... done")
 	}, shutdown.PriorityCloseDatabase); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
 	}
@@ -191,12 +191,12 @@ func configure() {
 
 func run() {
 	// create a background worker that handles the partitipation events
-	if err := Plugin.Daemon().BackgroundWorker("Referendum", func(ctx context.Context) {
-		Plugin.LogInfo("Starting Referendum Manager ... done")
+	if err := Plugin.Daemon().BackgroundWorker("Participation", func(ctx context.Context) {
+		Plugin.LogInfo("Starting Participation ... done")
 		attachEvents()
 		<-ctx.Done()
 		detachEvents()
-		Plugin.LogInfo("Stopping Referendum Manager ... done")
+		Plugin.LogInfo("Stopping Participation ... done")
 	}, shutdown.PriorityReferendum); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
 	}
@@ -205,19 +205,19 @@ func run() {
 func configureEvents() {
 
 	onUTXOOutput = events.NewClosure(func(index milestone.Index, output *utxo.Output) {
-		if err := deps.ReferendumManager.ApplyNewUTXO(index, output); err != nil {
+		if err := deps.ParticipationManager.ApplyNewUTXO(index, output); err != nil {
 			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("partitipation plugin hit a critical error while applying new UTXO: %s", err.Error()))
 		}
 	})
 
 	onUTXOSpent = events.NewClosure(func(index milestone.Index, spent *utxo.Spent) {
-		if err := deps.ReferendumManager.ApplySpentUTXO(index, spent); err != nil {
+		if err := deps.ParticipationManager.ApplySpentUTXO(index, spent); err != nil {
 			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("partitipation plugin hit a critical error while applying spent TXO: %s", err.Error()))
 		}
 	})
 
 	onConfirmedMilestoneIndexChanged = events.NewClosure(func(index milestone.Index) {
-		if err := deps.ReferendumManager.ApplyNewConfirmedMilestoneIndex(index); err != nil {
+		if err := deps.ParticipationManager.ApplyNewConfirmedMilestoneIndex(index); err != nil {
 			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("partitipation plugin hit a critical error while applying new confirmed milestone index: %s", err.Error()))
 		}
 	})
