@@ -11,11 +11,11 @@ import (
 func NewReferendumBuilder(name string, milestoneCommence milestone.Index, milestoneBeginHolding milestone.Index, milestoneEnd milestone.Index, additionalInfo string) *ReferendumBuilder {
 	return &ReferendumBuilder{
 		r: &Referendum{
-			Name:                       name,
-			milestoneIndexCommence:     uint32(milestoneCommence),
-			milestoneIndexBeginHolding: uint32(milestoneBeginHolding),
-			milestoneIndexEnd:          uint32(milestoneEnd),
-			AdditionalInfo:             additionalInfo,
+			Name:                   name,
+			milestoneIndexCommence: uint32(milestoneCommence),
+			milestoneIndexStart:    uint32(milestoneBeginHolding),
+			milestoneIndexEnd:      uint32(milestoneEnd),
+			AdditionalInfo:         additionalInfo,
 		},
 	}
 }

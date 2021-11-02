@@ -44,12 +44,12 @@ func PayloadSelector(payloadType uint32) (serializer.Serializable, error) {
 
 // Referendum
 type Referendum struct {
-	Name                       string
-	milestoneIndexCommence     uint32
-	milestoneIndexBeginHolding uint32
-	milestoneIndexEnd          uint32
-	Payload                    serializer.Serializable
-	AdditionalInfo             string
+	Name                   string
+	milestoneIndexCommence uint32
+	milestoneIndexStart    uint32
+	milestoneIndexEnd      uint32
+	Payload                serializer.Serializable
+	AdditionalInfo         string
 }
 
 // ID returns the ID of the partitipation.
@@ -70,8 +70,8 @@ func (r *Referendum) Deserialize(data []byte, deSeriMode serializer.DeSerializat
 		ReadNum(&r.milestoneIndexCommence, func(err error) error {
 			return fmt.Errorf("unable to deserialize partitipation commence milestone: %w", err)
 		}).
-		ReadNum(&r.milestoneIndexBeginHolding, func(err error) error {
-			return fmt.Errorf("unable to deserialize partitipation begin holding milestone: %w", err)
+		ReadNum(&r.milestoneIndexStart, func(err error) error {
+			return fmt.Errorf("unable to deserialize partitipation start milestone: %w", err)
 		}).
 		ReadNum(&r.milestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to deserialize partitipation end milestone: %w", err)
@@ -105,7 +105,7 @@ func (r *Referendum) Serialize(deSeriMode serializer.DeSerializationMode) ([]byt
 		WriteNum(r.milestoneIndexCommence, func(err error) error {
 			return fmt.Errorf("unable to serialize partitipation commence milestone: %w", err)
 		}).
-		WriteNum(r.milestoneIndexBeginHolding, func(err error) error {
+		WriteNum(r.milestoneIndexStart, func(err error) error {
 			return fmt.Errorf("unable to serialize partitipation begin holding milestone: %w", err)
 		}).
 		WriteNum(r.milestoneIndexEnd, func(err error) error {
@@ -122,11 +122,11 @@ func (r *Referendum) Serialize(deSeriMode serializer.DeSerializationMode) ([]byt
 
 func (r *Referendum) MarshalJSON() ([]byte, error) {
 	jReferendum := &jsonReferendum{
-		Name:                       r.Name,
-		MilestoneIndexCommence:     r.milestoneIndexCommence,
-		MilestoneIndexBeginHolding: r.milestoneIndexBeginHolding,
-		MilestoneIndexEnd:          r.milestoneIndexEnd,
-		AdditionalInfo:             r.AdditionalInfo,
+		Name:                   r.Name,
+		MilestoneIndexCommence: r.milestoneIndexCommence,
+		MilestoneIndexStart:    r.milestoneIndexStart,
+		MilestoneIndexEnd:      r.milestoneIndexEnd,
+		AdditionalInfo:         r.AdditionalInfo,
 	}
 
 	jsonPayload, err := r.Payload.MarshalJSON()
@@ -166,21 +166,21 @@ func jsonPayloadSelector(ty int) (iotago.JSONSerializable, error) {
 
 // jsonReferendum defines the json representation of a Referendum.
 type jsonReferendum struct {
-	Name                       string           `json:"name"`
-	MilestoneIndexCommence     uint32           `json:"milestoneIndexCommence"`
-	MilestoneIndexBeginHolding uint32           `json:"milestoneIndexBeginHolding"`
-	MilestoneIndexEnd          uint32           `json:"milestoneIndexEnd"`
-	Payload                    *json.RawMessage `json:"payload"`
-	AdditionalInfo             string           `json:"additionalInfo"`
+	Name                   string           `json:"name"`
+	MilestoneIndexCommence uint32           `json:"milestoneIndexCommence"`
+	MilestoneIndexStart    uint32           `json:"milestoneIndexStart"`
+	MilestoneIndexEnd      uint32           `json:"milestoneIndexEnd"`
+	Payload                *json.RawMessage `json:"payload"`
+	AdditionalInfo         string           `json:"additionalInfo"`
 }
 
 func (j *jsonReferendum) ToSerializable() (serializer.Serializable, error) {
 	r := &Referendum{
-		Name:                       j.Name,
-		milestoneIndexCommence:     j.MilestoneIndexCommence,
-		milestoneIndexBeginHolding: j.MilestoneIndexBeginHolding,
-		milestoneIndexEnd:          j.MilestoneIndexEnd,
-		AdditionalInfo:             j.AdditionalInfo,
+		Name:                   j.Name,
+		milestoneIndexCommence: j.MilestoneIndexCommence,
+		milestoneIndexStart:    j.MilestoneIndexStart,
+		milestoneIndexEnd:      j.MilestoneIndexEnd,
+		AdditionalInfo:         j.AdditionalInfo,
 	}
 
 	jsonPayload, err := iotago.DeserializeObjectFromJSON(j.Payload, jsonPayloadSelector)
@@ -228,8 +228,8 @@ func (r *Referendum) CommenceMilestoneIndex() milestone.Index {
 	return milestone.Index(r.milestoneIndexCommence)
 }
 
-func (r *Referendum) BeginHoldingMilestoneIndex() milestone.Index {
-	return milestone.Index(r.milestoneIndexBeginHolding)
+func (r *Referendum) StartMilestoneIndex() milestone.Index {
+	return milestone.Index(r.milestoneIndexStart)
 }
 
 func (r *Referendum) EndMilestoneIndex() milestone.Index {
@@ -245,9 +245,9 @@ func (r *Referendum) IsAcceptingVotes(atIndex milestone.Index) bool {
 }
 
 func (r *Referendum) ShouldCountVotes(forIndex milestone.Index) bool {
-	return forIndex > r.BeginHoldingMilestoneIndex() && forIndex <= r.EndMilestoneIndex()
+	return forIndex > r.StartMilestoneIndex() && forIndex <= r.EndMilestoneIndex()
 }
 
 func (r *Referendum) IsCountingVotes(atIndex milestone.Index) bool {
-	return atIndex >= r.BeginHoldingMilestoneIndex() && atIndex < r.EndMilestoneIndex()
+	return atIndex >= r.StartMilestoneIndex() && atIndex < r.EndMilestoneIndex()
 }

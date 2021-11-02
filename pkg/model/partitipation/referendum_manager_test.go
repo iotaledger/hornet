@@ -113,7 +113,7 @@ func TestReferendumStates(t *testing.T) {
 
 	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
-	require.Equal(t, milestone.Index(6), ref.BeginHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(6), ref.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(8), ref.EndMilestoneIndex())
 
 	// No partitipation should be running right now
@@ -159,7 +159,7 @@ func TestSingleReferendumVote(t *testing.T) {
 
 	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
-	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(10), ref.EndMilestoneIndex())
 
 	// Referendum should not be accepting votes yet
@@ -261,7 +261,7 @@ func TestReferendumVoteCancel(t *testing.T) {
 
 	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
-	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
 
 	// Referendum should not be accepting votes yet
@@ -338,7 +338,7 @@ func TestReferendumVoteAddVoteBalanceBySweeping(t *testing.T) {
 
 	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
-	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
 
 	env.IssueMilestone() // 5
@@ -391,7 +391,7 @@ func TestReferendumVoteAddVoteBalanceByMultipleOutputs(t *testing.T) {
 
 	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
-	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
 
 	env.IssueMilestone() // 5
@@ -449,7 +449,7 @@ func TestReferendumMultipleVotes(t *testing.T) {
 
 	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
-	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
 
 	env.IssueMilestone() // 5
@@ -528,7 +528,7 @@ func TestReferendumChangeOpinionMidVote(t *testing.T) {
 
 	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref.CommenceMilestoneIndex())
-	require.Equal(t, milestone.Index(7), ref.BeginHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref.EndMilestoneIndex())
 
 	env.IssueMilestone() // 5
@@ -606,11 +606,11 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 
 	// Verify the configured partitipation indexes
 	require.Equal(t, milestone.Index(5), ref1.CommenceMilestoneIndex())
-	require.Equal(t, milestone.Index(7), ref1.BeginHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(7), ref1.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(12), ref1.EndMilestoneIndex())
 
 	require.Equal(t, milestone.Index(7), ref2.CommenceMilestoneIndex())
-	require.Equal(t, milestone.Index(9), ref2.BeginHoldingMilestoneIndex())
+	require.Equal(t, milestone.Index(9), ref2.StartMilestoneIndex())
 	require.Equal(t, milestone.Index(14), ref2.EndMilestoneIndex())
 
 	env.IssueMilestone() // 5
