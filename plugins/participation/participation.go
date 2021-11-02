@@ -31,7 +31,7 @@ func ParticipationEventIDFromHex(hexString string) (participation.ParticipationE
 	return referendumID, nil
 }
 
-func parseReferendumIDParam(c echo.Context) (participation.ParticipationEventID, error) {
+func parseParticipationEventIDParam(c echo.Context) (participation.ParticipationEventID, error) {
 
 	referendumIDHex := strings.ToLower(c.Param(ParameterParticipationEventID))
 	if referendumIDHex == "" {
@@ -46,72 +46,72 @@ func parseReferendumIDParam(c echo.Context) (participation.ParticipationEventID,
 	return referendumID, nil
 }
 
-func getReferendums(_ echo.Context) (*ParticipationEventsResponse, error) {
-	referendumIDs := deps.ParticipationManager.ParticipationEventIDs()
+func getEvents(_ echo.Context) (*ParticipationEventsResponse, error) {
+	eventIDs := deps.ParticipationManager.ParticipationEventIDs()
 
-	hexReferendumIDs := []string{}
-	for _, id := range referendumIDs {
-		hexReferendumIDs = append(hexReferendumIDs, hex.EncodeToString(id[:]))
+	hexEventIDs := []string{}
+	for _, id := range eventIDs {
+		hexEventIDs = append(hexEventIDs, hex.EncodeToString(id[:]))
 	}
 
-	return &ParticipationEventsResponse{ParticipationEventIDs: hexReferendumIDs}, nil
+	return &ParticipationEventsResponse{ParticipationEventIDs: hexEventIDs}, nil
 }
 
-func createReferendum(c echo.Context) (*CreateReferendumResponse, error) {
+func createEvent(c echo.Context) (*CreateParticipationEventResponse, error) {
 
 	//TODO: add support for binary representation too?
 
-	referendum := &participation.ParticipationEvent{}
-	if err := c.Bind(referendum); err != nil {
+	event := &participation.ParticipationEvent{}
+	if err := c.Bind(event); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request! Error: %s", err)
 	}
 
-	referendumID, err := deps.ParticipationManager.StoreReferendum(referendum)
+	eventID, err := deps.ParticipationManager.StoreParticipationEvent(event)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid participation, error: %s", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid participation event, error: %s", err)
 	}
 
-	return &CreateReferendumResponse{
-		ParticipationEventID: hex.EncodeToString(referendumID[:]),
+	return &CreateParticipationEventResponse{
+		ParticipationEventID: hex.EncodeToString(eventID[:]),
 	}, nil
 }
 
-func getReferendum(c echo.Context) (*participation.ParticipationEvent, error) {
+func getEvent(c echo.Context) (*participation.ParticipationEvent, error) {
 
-	referendumID, err := parseReferendumIDParam(c)
+	eventID, err := parseParticipationEventIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	referendum := deps.ParticipationManager.Referendum(referendumID)
-	if referendum == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "participation not found: %s", hex.EncodeToString(referendumID[:]))
+	event := deps.ParticipationManager.ParticipationEvent(eventID)
+	if event == nil {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "participation event not found: %s", hex.EncodeToString(eventID[:]))
 	}
 
-	return referendum, nil
+	return event, nil
 }
 
-func deleteReferendum(c echo.Context) error {
+func deleteEvent(c echo.Context) error {
 
-	referendumID, err := parseReferendumIDParam(c)
+	eventID, err := parseParticipationEventIDParam(c)
 	if err != nil {
 		return nil
 	}
 
-	return deps.ParticipationManager.DeleteReferendum(referendumID)
+	return deps.ParticipationManager.DeleteParticipationEvent(eventID)
 }
 
-func getReferendumStatus(c echo.Context) (*participation.ReferendumStatus, error) {
+func getEventStatus(c echo.Context) (*participation.ParticipationEventStatus, error) {
 
-	referendumID, err := parseReferendumIDParam(c)
+	eventID, err := parseParticipationEventIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	status, err := deps.ParticipationManager.ReferendumStatus(referendumID)
+	status, err := deps.ParticipationManager.ParticipationEventStatus(eventID)
 	if err != nil {
-		if errors.Is(err, participation.ErrReferendumNotFound) {
-			return nil, errors.WithMessagef(echo.ErrNotFound, "participation not found: %s", hex.EncodeToString(referendumID[:]))
+		if errors.Is(err, participation.ErrParticipationEventNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "participation event not found: %s", hex.EncodeToString(eventID[:]))
 		}
 		return nil, err
 	}
@@ -134,27 +134,27 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 	var outputID iotago.UTXOInputID
 	copy(outputID[:], outputIDBytes)
 
-	trackedVotes, err := deps.ParticipationManager.VotesForOutputID(&outputID)
+	trackedParticipations, err := deps.ParticipationManager.VotesForOutputID(&outputID)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(trackedVotes) == 0 {
+	if len(trackedParticipations) == 0 {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", hex.EncodeToString(outputIDBytes))
 	}
 
 	response := &OutputStatusResponse{
-		ReferendumVotes: make(map[string]*TrackedVote),
+		Participations: make(map[string]*TrackedParticipation),
 	}
 
-	for _, trackedVote := range trackedVotes {
-		t := &TrackedVote{
-			MessageID:           trackedVote.MessageID.ToHex(),
-			Amount:              trackedVote.Amount,
-			StartMilestoneIndex: trackedVote.StartIndex,
-			EndMilestoneIndex:   trackedVote.EndIndex,
+	for _, trackedParticipation := range trackedParticipations {
+		t := &TrackedParticipation{
+			MessageID:           trackedParticipation.MessageID.ToHex(),
+			Amount:              trackedParticipation.Amount,
+			StartMilestoneIndex: trackedParticipation.StartIndex,
+			EndMilestoneIndex:   trackedParticipation.EndIndex,
 		}
-		response.ReferendumVotes[hex.EncodeToString(trackedVote.ParticipationEventID[:])] = t
+		response.Participations[hex.EncodeToString(trackedParticipation.ParticipationEventID[:])] = t
 	}
 
 	return response, nil

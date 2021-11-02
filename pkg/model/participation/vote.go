@@ -8,71 +8,71 @@ import (
 	"github.com/iotaledger/hive.go/serializer"
 )
 
-// Vote holds the vote for a participation and the answer to each question
-type Vote struct {
-	ReferendumID ParticipationEventID
-	Answers      []byte
+// Participation holds the participation for an event and the optional answer to a ballot
+type Participation struct {
+	ParticipationEventID ParticipationEventID
+	Answers              []byte
 }
 
-func (v *Vote) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (p *Participation) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
-		ReadArrayOf32Bytes(&v.ReferendumID, func(err error) error {
+		ReadArrayOf32Bytes(&p.ParticipationEventID, func(err error) error {
 			return fmt.Errorf("unable to deserialize participation ID in vote: %w", err)
 		}).
-		ReadVariableByteSlice(&v.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
+		ReadVariableByteSlice(&p.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize answers in vote: %w", err)
 		}).
 		Done()
 }
 
-func (v *Vote) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (p *Participation) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 	return serializer.NewSerializer().
-		WriteBytes(v.ReferendumID[:], func(err error) error {
+		WriteBytes(p.ParticipationEventID[:], func(err error) error {
 			return fmt.Errorf("unable to serialize participation ID in vote: %w", err)
 		}).
-		WriteVariableByteSlice(v.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
+		WriteVariableByteSlice(p.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize answers in vote: %w", err)
 		}).
 		Serialize()
 }
 
-func (v *Vote) MarshalJSON() ([]byte, error) {
-	jVote := &jsonVote{}
-	jVote.ReferendumID = hex.EncodeToString(v.ReferendumID[:])
-	jVote.Answers = hex.EncodeToString(v.Answers)
-	return json.Marshal(jVote)
+func (p *Participation) MarshalJSON() ([]byte, error) {
+	j := &jsonParticipation{}
+	j.ParticipationEventID = hex.EncodeToString(p.ParticipationEventID[:])
+	j.Answers = hex.EncodeToString(p.Answers)
+	return json.Marshal(j)
 }
 
-func (v *Vote) UnmarshalJSON(bytes []byte) error {
-	jVote := &jsonVote{}
-	if err := json.Unmarshal(bytes, jVote); err != nil {
+func (p *Participation) UnmarshalJSON(bytes []byte) error {
+	j := &jsonParticipation{}
+	if err := json.Unmarshal(bytes, j); err != nil {
 		return err
 	}
-	seri, err := jVote.ToSerializable()
+	seri, err := j.ToSerializable()
 	if err != nil {
 		return err
 	}
-	*v = *seri.(*Vote)
+	*p = *seri.(*Participation)
 	return nil
 }
 
-// jsonVote defines the JSON representation of a Vote.
-type jsonVote struct {
-	ReferendumID string `json:"referendumID"`
-	Answers      string `json:"answers"`
+// jsonParticipation defines the JSON representation of a Participation.
+type jsonParticipation struct {
+	ParticipationEventID string `json:"participationEventId"`
+	Answers              string `json:"answers"`
 }
 
-func (j *jsonVote) ToSerializable() (serializer.Serializable, error) {
-	vote := &Vote{
-		ReferendumID: ParticipationEventID{},
-		Answers:      []byte{},
+func (j *jsonParticipation) ToSerializable() (serializer.Serializable, error) {
+	vote := &Participation{
+		ParticipationEventID: ParticipationEventID{},
+		Answers:              []byte{},
 	}
 
-	referendumIDBytes, err := hex.DecodeString(j.ReferendumID)
+	referendumIDBytes, err := hex.DecodeString(j.ParticipationEventID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode participation ID from JSON in vote: %w", err)
 	}
-	copy(vote.ReferendumID[:], referendumIDBytes)
+	copy(vote.ParticipationEventID[:], referendumIDBytes)
 
 	answersBytes, err := hex.DecodeString(j.Answers)
 	if err != nil {

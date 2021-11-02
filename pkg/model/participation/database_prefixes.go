@@ -1,13 +1,13 @@
 package participation
 
 const (
-	ReferendumStoreKeyPrefixReferendums byte = 0
+	ParticipationStoreKeyPrefixParticipationEvents byte = 0
 
-	ReferendumStoreKeyPrefixMessages byte = 1
+	ParticipationStoreKeyPrefixMessages byte = 1
 
-	ReferendumStoreKeyPrefixReferendumOutputs      byte = 2
-	ReferendumStoreKeyPrefixReferendumSpentOutputs byte = 3
+	ParticipationStoreKeyPrefixReferendumOutputs      byte = 2
+	ParticipationStoreKeyPrefixReferendumSpentOutputs byte = 3
 
-	ReferendumStoreKeyPrefixCurrentVoteBalanceForQuestionAndAnswer     byte = 4
-	ReferendumStoreKeyPrefixAccululatedVoteBalanceForQuestionAndAnswer byte = 5
+	ParticipationStoreKeyPrefixBallotCurrentVoteBalanceForQuestionAndAnswer     byte = 4
+	ParticipationStoreKeyPrefixBallotAccululatedVoteBalanceForQuestionAndAnswer byte = 5
 )

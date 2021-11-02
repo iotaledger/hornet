@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	// ParameterParticipationEventID is used to identify a participation event by its ID.
+	// ParameterParticipationEventID is used to identify an event by its ID.
 	ParameterParticipationEventID = "eventID"
 
 	// ParameterOutputID is used to identify an output by its ID.
@@ -33,23 +33,23 @@ const (
 
 const (
 
-	// RouteReferendums is the route to list all referendums, returning their UUID, the participation name and status.
-	// GET returns a list of all referendums known to the node.
-	// POST creates a new vote to track
+	// RouteParticipationEvents is the route to list all events, returning their ID, the event name and status.
+	// GET returns a list of all events known to the node.
+	// POST creates a new event to track
 	// TODO: add query filter for payload type
-	RouteReferendums = "/referendums"
+	RouteParticipationEvents = "/events"
 
-	// RouteReferendum is the route to access a single participation by its ID.
+	// RouteParticipationEvent is the route to access a single participation by its ID.
 	// GET gives a quick overview of the participation. This does not include the current standings.
 	// DELETE removes a tracked participation.
-	RouteReferendum = "/referendums/:" + ParameterParticipationEventID
+	RouteParticipationEvent = "/events/:" + ParameterParticipationEventID
 
-	// RouteReferendumStatus is the route to access the status of a single participation by its ID.
-	// GET returns the amount of tokens voting and the weight on each option of every question.
-	RouteReferendumStatus = "/referendums/:" + ParameterParticipationEventID + "/status"
+	// RouteParticipationEventStatus is the route to access the status of a single participation by its ID.
+	// GET returns the amount of tokens participating and accumulated votes for the ballot if the event contains a ballot.
+	RouteParticipationEventStatus = "/events/:" + ParameterParticipationEventID + "/status"
 
 	// RouteOutputStatus is the route to get the vote status for a given outputID.
-	// GET returns the messageID the vote was included, the starting and ending milestone index this vote was tracked.
+	// GET returns the messageID the participation was included, the starting and ending milestone index this participation was tracked.
 	RouteOutputStatus = "/outputs/:" + ParameterOutputID
 )
 
@@ -121,8 +121,8 @@ func configure() {
 
 	routeGroup := deps.Echo.Group("/api/plugins/participation")
 
-	routeGroup.GET(RouteReferendums, func(c echo.Context) error {
-		resp, err := getReferendums(c)
+	routeGroup.GET(RouteParticipationEvents, func(c echo.Context) error {
+		resp, err := getEvents(c)
 		if err != nil {
 			return err
 		}
@@ -130,9 +130,9 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.POST(RouteReferendums, func(c echo.Context) error {
+	routeGroup.POST(RouteParticipationEvents, func(c echo.Context) error {
 
-		resp, err := createReferendum(c)
+		resp, err := createEvent(c)
 		if err != nil {
 			return err
 		}
@@ -141,8 +141,8 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusCreated, resp)
 	})
 
-	routeGroup.GET(RouteReferendum, func(c echo.Context) error {
-		resp, err := getReferendum(c)
+	routeGroup.GET(RouteParticipationEvent, func(c echo.Context) error {
+		resp, err := getEvent(c)
 		if err != nil {
 			return err
 		}
@@ -150,15 +150,15 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.DELETE(RouteReferendum, func(c echo.Context) error {
-		if err := deleteReferendum(c); err != nil {
+	routeGroup.DELETE(RouteParticipationEvent, func(c echo.Context) error {
+		if err := deleteEvent(c); err != nil {
 			return err
 		}
 		return c.NoContent(http.StatusNoContent)
 	})
 
-	routeGroup.GET(RouteReferendumStatus, func(c echo.Context) error {
-		resp, err := getReferendumStatus(c)
+	routeGroup.GET(RouteParticipationEventStatus, func(c echo.Context) error {
+		resp, err := getEventStatus(c)
 		if err != nil {
 			return err
 		}

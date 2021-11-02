@@ -8,81 +8,81 @@ import (
 )
 
 const (
-	MinVotesCount = 1
-	MaxVotesCount = 255
+	MinParticipationCount = 1
+	MaxParticipationCount = 255
 )
 
 var (
-	votesArrayRules = &serializer.ArrayRules{
-		Min:            MinVotesCount,
-		Max:            MaxVotesCount,
+	participationsArrayRules = &serializer.ArrayRules{
+		Min:            MinParticipationCount,
+		Max:            MaxParticipationCount,
 		ValidationMode: serializer.ArrayValidationModeNone,
 	}
 )
 
-// Votes holds the votes for multiple participationEvents
-type Votes struct {
-	Votes serializer.Serializables
+// Participations holds the participation for multiple events
+type Participations struct {
+	Participations serializer.Serializables
 }
 
-func (v *Votes) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (p *Participations) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
-		ReadSliceOfObjects(func(seri serializer.Serializables) { v.Votes = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
-			// there is no real selector, so we always return a fresh Vote
-			return &Vote{}, nil
-		}, votesArrayRules, func(err error) error {
+		ReadSliceOfObjects(func(seri serializer.Serializables) { p.Participations = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
+			// there is no real selector, so we always return a fresh Participation
+			return &Participation{}, nil
+		}, participationsArrayRules, func(err error) error {
 			return fmt.Errorf("unable to deserialize votes: %w", err)
 		}).
 		Done()
 }
 
-func (v *Votes) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (p *Participations) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 	return serializer.NewSerializer().
-		WriteSliceOfObjects(v.Votes, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
+		WriteSliceOfObjects(p.Participations, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
 			return fmt.Errorf("unable to serialize votes: %w", err)
 		}).
 		Serialize()
 }
 
-func (v *Votes) MarshalJSON() ([]byte, error) {
-	jVotes := &jsonVotes{}
+func (p *Participations) MarshalJSON() ([]byte, error) {
+	j := &jsonParticipations{}
 
-	jVotes.Votes = make([]*json.RawMessage, len(v.Votes))
-	for i, vote := range v.Votes {
+	j.Participations = make([]*json.RawMessage, len(p.Participations))
+	for i, vote := range p.Participations {
 		jsonVote, err := vote.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
 		rawJSONVote := json.RawMessage(jsonVote)
-		jVotes.Votes[i] = &rawJSONVote
+		j.Participations[i] = &rawJSONVote
 	}
 
-	return json.Marshal(jVotes)
+	return json.Marshal(j)
 }
 
-func (v *Votes) UnmarshalJSON(bytes []byte) error {
-	jVotes := &jsonVotes{}
-	if err := json.Unmarshal(bytes, jVotes); err != nil {
+func (p *Participations) UnmarshalJSON(bytes []byte) error {
+	j := &jsonParticipations{}
+	if err := json.Unmarshal(bytes, j); err != nil {
 		return err
 	}
-	seri, err := jVotes.ToSerializable()
+	seri, err := j.ToSerializable()
 	if err != nil {
 		return err
 	}
-	*v = *seri.(*Votes)
+	*p = *seri.(*Participations)
 	return nil
 }
 
-// jsonVotes defines the JSON representation of Votes.
-type jsonVotes struct {
-	Votes []*json.RawMessage `json:"votes"`
+// jsonParticipations defines the JSON representation of Participations.
+type jsonParticipations struct {
+	Participations []*json.RawMessage `json:"participations"`
 }
 
-func (j *jsonVotes) ToSerializable() (serializer.Serializable, error) {
-	payload := &Votes{}
+func (j *jsonParticipations) ToSerializable() (serializer.Serializable, error) {
+	payload := &Participations{}
 
-	votes := make(serializer.Serializables, len(j.Votes))
-	for i, ele := range j.Votes {
+	votes := make(serializer.Serializables, len(j.Participations))
+	for i, ele := range j.Participations {
 		vote := &Answer{}
 
 		rawJSON, err := ele.MarshalJSON()
@@ -96,7 +96,7 @@ func (j *jsonVotes) ToSerializable() (serializer.Serializable, error) {
 
 		votes[i] = vote
 	}
-	payload.Votes = votes
+	payload.Participations = votes
 
 	return payload, nil
 }

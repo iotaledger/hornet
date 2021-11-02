@@ -16,30 +16,30 @@ type QuestionStatus struct {
 	Answers []*AnswerStatus `json:"answers"`
 }
 
-// ReferendumStatus holds the status for all questions
-type ReferendumStatus struct {
+// ParticipationEventStatus holds the status of the event
+type ParticipationEventStatus struct {
 	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
 	Status         string            `json:"status"`
 	Questions      []*QuestionStatus `json:"questions,omitempty"`
 	//TODO: add hash of all QuestionStatus to make comparison easier
 }
 
-func (rm *ParticipationManager) ReferendumStatus(referendumID ParticipationEventID) (*ReferendumStatus, error) {
+func (rm *ParticipationManager) ParticipationEventStatus(eventID ParticipationEventID) (*ParticipationEventStatus, error) {
 
 	confirmedMilestoneIndex := rm.syncManager.ConfirmedMilestoneIndex()
 
-	referendum := rm.Referendum(referendumID)
-	if referendum == nil {
-		return nil, ErrReferendumNotFound
+	event := rm.ParticipationEvent(eventID)
+	if event == nil {
+		return nil, ErrParticipationEventNotFound
 	}
 
-	status := &ReferendumStatus{
+	status := &ParticipationEventStatus{
 		MilestoneIndex: confirmedMilestoneIndex,
-		Status:         referendum.Status(confirmedMilestoneIndex),
+		Status:         event.Status(confirmedMilestoneIndex),
 	}
 
 	// For each participation, iterate over all questions
-	for idx, question := range referendum.BallotQuestions() {
+	for idx, question := range event.BallotQuestions() {
 		questionIndex := uint8(idx)
 
 		questionStatus := &QuestionStatus{}
@@ -47,12 +47,12 @@ func (rm *ParticipationManager) ReferendumStatus(referendumID ParticipationEvent
 		for idx := 0; idx <= len(question.Answers); idx++ {
 			answerIndex := uint8(idx)
 
-			currentBalance, err := rm.CurrentVoteBalanceForQuestionAndAnswer(referendumID, questionIndex, answerIndex)
+			currentBalance, err := rm.CurrentVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
 			if err != nil {
 				return nil, err
 			}
 
-			accumulatedBalance, err := rm.AccumulatedVoteBalanceForQuestionAndAnswer(referendumID, questionIndex, answerIndex)
+			accumulatedBalance, err := rm.AccumulatedVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
 			if err != nil {
 				return nil, err
 			}

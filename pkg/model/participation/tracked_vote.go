@@ -8,7 +8,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-type TrackedVote struct {
+type TrackedParticipation struct {
 	ParticipationEventID ParticipationEventID
 	OutputID             *iotago.UTXOInputID
 	MessageID            hornet.MessageID
@@ -27,14 +27,14 @@ func ParseParticipationEventID(ms *marshalutil.MarshalUtil) (ParticipationEventI
 	return o, nil
 }
 
-func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
+func trackedParticipation(key []byte, value []byte) (*TrackedParticipation, error) {
 
 	if len(key) != 67 {
-		return nil, ErrInvalidPreviouslyTrackedVote
+		return nil, ErrInvalidPreviouslyTrackedParticipation
 	}
 
 	if len(value) != 48 {
-		return nil, ErrInvalidPreviouslyTrackedVote
+		return nil, ErrInvalidPreviouslyTrackedParticipation
 	}
 
 	mKey := marshalutil.New(key)
@@ -78,7 +78,7 @@ func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
 		return nil, err
 	}
 
-	return &TrackedVote{
+	return &TrackedParticipation{
 		ParticipationEventID: eventID,
 		OutputID:             outputID,
 		MessageID:            messageID,
@@ -88,7 +88,7 @@ func trackedVote(key []byte, value []byte) (*TrackedVote, error) {
 	}, nil
 }
 
-func (t *TrackedVote) valueBytes() []byte {
+func (t *TrackedParticipation) valueBytes() []byte {
 	m := marshalutil.New(48)
 	m.WriteBytes(t.MessageID) // 32 bytes
 	m.WriteUint64(t.Amount)

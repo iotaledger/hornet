@@ -58,7 +58,7 @@ func (b *VoteBuilder) UsingOutput(output *utxo.Output) *VoteBuilder {
 	return b
 }
 
-func (b *VoteBuilder) AddVotes(votes []*participation.Vote) *VoteBuilder {
+func (b *VoteBuilder) AddVotes(votes []*participation.Participation) *VoteBuilder {
 	require.NotEmpty(b.env.t, votes)
 	for _, vote := range votes {
 		b.AddVote(vote)
@@ -67,14 +67,14 @@ func (b *VoteBuilder) AddVotes(votes []*participation.Vote) *VoteBuilder {
 }
 
 func (b *VoteBuilder) AddDefaultVote(referendumID participation.ParticipationEventID) *VoteBuilder {
-	b.votesBuilder.AddVote(&participation.Vote{
-		ReferendumID: referendumID,
-		Answers:      []byte{byte(1)},
+	b.votesBuilder.AddVote(&participation.Participation{
+		ParticipationEventID: referendumID,
+		Answers:              []byte{byte(1)},
 	})
 	return b
 }
 
-func (b *VoteBuilder) AddVote(vote *participation.Vote) *VoteBuilder {
+func (b *VoteBuilder) AddVote(vote *participation.Participation) *VoteBuilder {
 	require.NotNil(b.env.t, vote)
 	b.votesBuilder.AddVote(vote)
 	return b

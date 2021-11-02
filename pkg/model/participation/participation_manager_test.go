@@ -108,7 +108,7 @@ func TestReferendumStates(t *testing.T) {
 	require.Empty(t, env.ReferendumManager().ParticipationEvents())
 	referendumID := env.RegisterDefaultReferendum(5, 1, 2)
 
-	ref := env.ReferendumManager().Referendum(referendumID)
+	ref := env.ReferendumManager().ParticipationEvent(referendumID)
 	require.NotNil(t, ref)
 
 	// Verify the configured participation indexes
@@ -154,7 +154,7 @@ func TestSingleReferendumVote(t *testing.T) {
 
 	referendumID := env.RegisterDefaultReferendum(5, 2, 3)
 
-	ref := env.ReferendumManager().Referendum(referendumID)
+	ref := env.ReferendumManager().ParticipationEvent(referendumID)
 	require.NotNil(t, ref)
 
 	// Verify the configured participation indexes
@@ -168,8 +168,8 @@ func TestSingleReferendumVote(t *testing.T) {
 	// Issue a vote and milestone
 	env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1) // 5
 
-	// Votes should not have been counted so far because it was not accepting votes yet
-	status, err := env.ReferendumManager().ReferendumStatus(referendumID)
+	// Participations should not have been counted so far because it was not accepting votes yet
+	status, err := env.ReferendumManager().ParticipationEventStatus(referendumID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
@@ -179,13 +179,13 @@ func TestSingleReferendumVote(t *testing.T) {
 	// ParticipationEvent should be accepting votes now
 	require.Equal(t, 1, len(env.ReferendumManager().EventsAcceptingParticipation()))
 
-	// Vote again
+	// Participation again
 	castVote := env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1) // 6
 
 	// ParticipationEvent should be accepting votes, but the vote should not be weighted yet, just added to the current status
 	env.AssertReferendumsCount(1, 0)
 
-	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	status, err = env.ReferendumManager().ParticipationEventStatus(referendumID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
@@ -197,7 +197,7 @@ func TestSingleReferendumVote(t *testing.T) {
 	// ParticipationEvent should be accepting and counting votes, but the vote we did before should not be weighted yet
 	env.AssertReferendumsCount(1, 1)
 
-	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	status, err = env.ReferendumManager().ParticipationEventStatus(referendumID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
@@ -209,7 +209,7 @@ func TestSingleReferendumVote(t *testing.T) {
 	// ParticipationEvent should be accepting and counting votes, the vote should now be weighted
 	env.AssertReferendumsCount(1, 1)
 
-	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	status, err = env.ReferendumManager().ParticipationEventStatus(referendumID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
@@ -221,7 +221,7 @@ func TestSingleReferendumVote(t *testing.T) {
 	// ParticipationEvent should be accepting and counting votes, the vote should now be weighted double
 	env.AssertReferendumsCount(1, 1)
 
-	status, err = env.ReferendumManager().ReferendumStatus(referendumID)
+	status, err = env.ReferendumManager().ParticipationEventStatus(referendumID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
@@ -256,7 +256,7 @@ func TestReferendumVoteCancel(t *testing.T) {
 
 	referendumID := env.RegisterDefaultReferendum(5, 2, 5)
 
-	ref := env.ReferendumManager().Referendum(referendumID)
+	ref := env.ReferendumManager().ParticipationEvent(referendumID)
 	require.NotNil(t, ref)
 
 	// Verify the configured participation indexes
@@ -282,7 +282,7 @@ func TestReferendumVoteCancel(t *testing.T) {
 	// Verify vote
 	env.AssertDefaultBallotAnswerStatus(referendumID, 0, 0)
 
-	// Vote again
+	// Participation again
 	castVote2 := env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1) // 8
 
 	// Verify vote
@@ -300,7 +300,7 @@ func TestReferendumVoteCancel(t *testing.T) {
 	// Verify vote
 	env.AssertDefaultBallotAnswerStatus(referendumID, 0, 1_000_000)
 
-	// Vote again
+	// Participation again
 	castVote3 := env.IssueDefaultVoteAndMilestone(referendumID, env.Wallet1) // 11
 
 	// Verify vote
@@ -333,7 +333,7 @@ func TestReferendumVoteAddVoteBalanceBySweeping(t *testing.T) {
 
 	referendumID := env.RegisterDefaultReferendum(5, 2, 5)
 
-	ref := env.ReferendumManager().Referendum(referendumID)
+	ref := env.ReferendumManager().ParticipationEvent(referendumID)
 	require.NotNil(t, ref)
 
 	// Verify the configured participation indexes
@@ -386,7 +386,7 @@ func TestReferendumVoteAddVoteBalanceByMultipleOutputs(t *testing.T) {
 
 	referendumID := env.RegisterDefaultReferendum(5, 2, 5)
 
-	ref := env.ReferendumManager().Referendum(referendumID)
+	ref := env.ReferendumManager().ParticipationEvent(referendumID)
 	require.NotNil(t, ref)
 
 	// Verify the configured participation indexes
@@ -444,7 +444,7 @@ func TestReferendumMultipleVotes(t *testing.T) {
 
 	referendumID := env.RegisterDefaultReferendum(5, 2, 5)
 
-	ref := env.ReferendumManager().Referendum(referendumID)
+	ref := env.ReferendumManager().ParticipationEvent(referendumID)
 	require.NotNil(t, ref)
 
 	// Verify the configured participation indexes
@@ -458,25 +458,25 @@ func TestReferendumMultipleVotes(t *testing.T) {
 
 	wallet1Vote := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID,
-			Answers:      []byte{0},
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID,
+			Answers:              []byte{0},
 		}).
 		Cast()
 
 	wallet2Vote := env.NewVoteBuilder(env.Wallet2).
 		WholeWalletBalance().
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID,
-			Answers:      []byte{1},
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID,
+			Answers:              []byte{1},
 		}).
 		Cast()
 
 	wallet3Vote := env.NewVoteBuilder(env.Wallet3).
 		WholeWalletBalance().
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID,
-			Answers:      []byte{2},
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID,
+			Answers:              []byte{2},
 		}).
 		Cast()
 
@@ -523,7 +523,7 @@ func TestReferendumChangeOpinionMidVote(t *testing.T) {
 
 	referendumID := env.RegisterDefaultReferendum(5, 2, 5)
 
-	ref := env.ReferendumManager().Referendum(referendumID)
+	ref := env.ReferendumManager().ParticipationEvent(referendumID)
 	require.NotNil(t, ref)
 
 	// Verify the configured participation indexes
@@ -537,9 +537,9 @@ func TestReferendumChangeOpinionMidVote(t *testing.T) {
 
 	wallet1Vote1 := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID,
-			Answers:      []byte{1},
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID,
+			Answers:              []byte{1},
 		}).
 		Cast()
 
@@ -556,9 +556,9 @@ func TestReferendumChangeOpinionMidVote(t *testing.T) {
 
 	wallet1Vote2 := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID,
-			Answers:      []byte{2},
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID,
+			Answers:              []byte{2},
 		}).
 		Cast()
 
@@ -598,10 +598,10 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 	referendumID1 := env.RegisterDefaultReferendum(5, 2, 5)
 	referendumID2 := env.RegisterDefaultReferendum(7, 2, 5)
 
-	ref1 := env.ReferendumManager().Referendum(referendumID1)
+	ref1 := env.ReferendumManager().ParticipationEvent(referendumID1)
 	require.NotNil(t, ref1)
 
-	ref2 := env.ReferendumManager().Referendum(referendumID2)
+	ref2 := env.ReferendumManager().ParticipationEvent(referendumID2)
 	require.NotNil(t, ref1)
 
 	// Verify the configured participation indexes
@@ -621,24 +621,24 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 
 	wallet1Vote1 := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
-		// Vote for the commencing ref1
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID1,
-			Answers:      []byte{1},
+		// Participation for the commencing ref1
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID1,
+			Answers:              []byte{1},
 		}).
-		// Vote too early for the upcoming ref2
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID2,
-			Answers:      []byte{2},
+		// Participation too early for the upcoming ref2
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID2,
+			Answers:              []byte{2},
 		}).
 		Cast()
 
 	wallet2Vote1 := env.NewVoteBuilder(env.Wallet2).
 		WholeWalletBalance().
-		// Vote for the commencing ref1
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID1,
-			Answers:      []byte{1},
+		// Participation for the commencing ref1
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID1,
+			Answers:              []byte{1},
 		}).
 		Cast()
 
@@ -656,10 +656,10 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 
 	wallet3Vote1 := env.NewVoteBuilder(env.Wallet3).
 		WholeWalletBalance().
-		// Vote for the commencing ref2
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID2,
-			Answers:      []byte{2},
+		// Participation for the commencing ref2
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID2,
+			Answers:              []byte{2},
 		}).
 		Cast()
 
@@ -679,15 +679,15 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 
 	wallet1Vote2 := env.NewVoteBuilder(env.Wallet1).
 		WholeWalletBalance().
-		// Keep Vote for the holding ref1
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID1,
-			Answers:      []byte{1},
+		// Keep Participation for the holding ref1
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID1,
+			Answers:              []byte{1},
 		}).
-		// Re-Vote holding ref2
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID2,
-			Answers:      []byte{2},
+		// Re-Participation holding ref2
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID2,
+			Answers:              []byte{2},
 		}).
 		Cast()
 
@@ -699,10 +699,10 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 
 	wallet4Vote1 := env.NewVoteBuilder(env.Wallet4).
 		WholeWalletBalance().
-		// Vote for the holding ref1
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID1,
-			Answers:      []byte{0},
+		// Participation for the holding ref1
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID1,
+			Answers:              []byte{0},
 		}).
 		Cast()
 
@@ -714,10 +714,10 @@ func TestReferendumMultipleConcurrentReferendums(t *testing.T) {
 
 	wallet4Vote2 := env.NewVoteBuilder(env.Wallet4).
 		WholeWalletBalance().
-		// Vote for the holding ref2
-		AddVote(&participation.Vote{
-			ReferendumID: referendumID2,
-			Answers:      []byte{2},
+		// Participation for the holding ref2
+		AddVote(&participation.Participation{
+			ParticipationEventID: referendumID2,
+			Answers:              []byte{2},
 		}).
 		Cast()
 

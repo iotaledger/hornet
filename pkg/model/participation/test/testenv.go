@@ -207,18 +207,18 @@ func (env *ParticipationTestEnv) RegisterDefaultReferendum(startMilestoneIndex m
 	ref, err := referendumBuilder.Build()
 	require.NoError(env.t, err)
 
-	referendumID, err := env.rm.StoreReferendum(ref)
+	referendumID, err := env.rm.StoreParticipationEvent(ref)
 	require.NoError(env.t, err)
 
 	// Check the stored participation is still there
-	require.NotNil(env.t, env.rm.Referendum(referendumID))
+	require.NotNil(env.t, env.rm.ParticipationEvent(referendumID))
 
 	env.PrintJSON(ref)
 
 	return referendumID
 }
 
-func (env *ParticipationTestEnv) IssueVote(wallet *utils.HDWallet, amount uint64, votes []*participation.Vote) *CastVote {
+func (env *ParticipationTestEnv) IssueVote(wallet *utils.HDWallet, amount uint64, votes []*participation.Participation) *CastVote {
 	return env.NewVoteBuilder(wallet).Amount(amount).AddVotes(votes).Cast()
 }
 
@@ -269,18 +269,18 @@ func (env *ParticipationTestEnv) IssueMilestone(onTips ...hornet.MessageID) (*wh
 	return env.te.IssueAndConfirmMilestoneOnTips(onTips, false)
 }
 
-func (env *ParticipationTestEnv) ActiveVotesForReferendum(referendumID participation.ParticipationEventID) []*participation.TrackedVote {
-	var votes []*participation.TrackedVote
-	env.ReferendumManager().ForEachActiveVote(referendumID, func(trackedVote *participation.TrackedVote) bool {
+func (env *ParticipationTestEnv) ActiveVotesForReferendum(referendumID participation.ParticipationEventID) []*participation.TrackedParticipation {
+	var votes []*participation.TrackedParticipation
+	env.ReferendumManager().ForEachActiveVote(referendumID, func(trackedVote *participation.TrackedParticipation) bool {
 		votes = append(votes, trackedVote)
 		return true
 	})
 	return votes
 }
 
-func (env *ParticipationTestEnv) PastVotesForReferendum(referendumID participation.ParticipationEventID) []*participation.TrackedVote {
-	var votes []*participation.TrackedVote
-	env.ReferendumManager().ForEachPastVote(referendumID, func(trackedVote *participation.TrackedVote) bool {
+func (env *ParticipationTestEnv) PastVotesForReferendum(referendumID participation.ParticipationEventID) []*participation.TrackedParticipation {
+	var votes []*participation.TrackedParticipation
+	env.ReferendumManager().ForEachPastVote(referendumID, func(trackedVote *participation.TrackedParticipation) bool {
 		votes = append(votes, trackedVote)
 		return true
 	})
@@ -310,7 +310,7 @@ func (env *ParticipationTestEnv) AssertDefaultBallotAnswerStatus(referendumID pa
 }
 
 func (env *ParticipationTestEnv) AssertBallotAnswerStatus(referendumID participation.ParticipationEventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerIndex int) {
-	status, err := env.ReferendumManager().ReferendumStatus(referendumID)
+	status, err := env.ReferendumManager().ParticipationEventStatus(referendumID)
 	require.NoError(env.t, err)
 	env.PrintJSON(status)
 	require.Equal(env.t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
