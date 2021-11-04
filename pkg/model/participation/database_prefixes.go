@@ -8,8 +8,8 @@ const (
 	ParticipationStoreKeyPrefixMessages byte = 1
 
 	// Tracks all active and past participations
-	ParticipationStoreKeyPrefixReferendumOutputs      byte = 2
-	ParticipationStoreKeyPrefixReferendumSpentOutputs byte = 3
+	ParticipationStoreKeyPrefixTrackedOutputs      byte = 2
+	ParticipationStoreKeyPrefixTrackedSpentOutputs byte = 3
 
 	// Voting
 	ParticipationStoreKeyPrefixBallotCurrentVoteBalanceForQuestionAndAnswer     byte = 4

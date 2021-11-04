@@ -28,9 +28,9 @@ const (
 	PriorityPoWHandler
 	PriorityRestAPI // depends on PriorityPoWHandler
 	PriorityMetricsPublishers
-	PrioritySpammer    // depends on PriorityPoWHandler
-	PriorityFaucet     // depends on PriorityPoWHandler
-	PriorityReferendum // depends on PriorityPoWHandler
+	PrioritySpammer // depends on PriorityPoWHandler
+	PriorityFaucet  // depends on PriorityPoWHandler
+	PriorityParticipation
 	PriorityStatusReport
 	PriorityMigrator
 	PriorityCoordinator // depends on PriorityPoWHandler

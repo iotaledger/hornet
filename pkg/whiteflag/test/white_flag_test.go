@@ -78,7 +78,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	// Confirming milestone at message C (message D and E are not included)
 	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageB.StoredMessageID()}, true)
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // 2 + milestone itself
+	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
 	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
 	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone

@@ -25,11 +25,11 @@ type EventStatus struct {
 }
 
 // EventStatus returns the EventStatus for an event with the given eventID.
-func (rm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, error) {
+func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, error) {
 
-	confirmedMilestoneIndex := rm.syncManager.ConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := pm.syncManager.ConfirmedMilestoneIndex()
 
-	event := rm.Event(eventID)
+	event := pm.Event(eventID)
 	if event == nil {
 		return nil, ErrEventNotFound
 	}
@@ -49,12 +49,12 @@ func (rm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, erro
 		for idx := 0; idx <= len(question.Answers); idx++ {
 			answerIndex := uint8(idx)
 
-			currentBalance, err := rm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
+			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
 			if err != nil {
 				return nil, err
 			}
 
-			accumulatedBalance, err := rm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
+			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
 			if err != nil {
 				return nil, err
 			}

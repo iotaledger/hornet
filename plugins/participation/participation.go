@@ -24,7 +24,7 @@ func EventIDFromHex(hexString string) (participation.EventID, error) {
 	}
 
 	if len(b) != participation.EventIDLength {
-		return participation.EventID{}, fmt.Errorf("unknown eventID length (%d)", len(b))
+		return participation.NullEventID, fmt.Errorf("unknown eventID length (%d)", len(b))
 	}
 
 	var eventID participation.EventID

@@ -86,7 +86,7 @@ type TestEnvironment struct {
 	// OnNewSpent callback that will be called for each spent UTXO. This is equivalent to the tangle.NewUTXOSpent event.
 	OnNewSpent OnNewSpentFunc
 
-	// OnNewSpent callback that will be called after confirming a milestone. This is equivalent to the tangle.ConfirmedMilestoneIndexChanged event.
+	// OnNewConfirmedMilestone callback that will be called after confirming a milestone. This is equivalent to the tangle.ConfirmedMilestoneIndexChanged event.
 	OnNewConfirmedMilestone OnNewConfirmedMilestoneFunc
 }
 

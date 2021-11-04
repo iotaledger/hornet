@@ -18,16 +18,16 @@ type BallotBuilder struct {
 	ballot *Ballot
 }
 
-// AddQuestion adds the given question to the questions.
+// AddQuestion adds the given question to the Ballot.
 func (qb *BallotBuilder) AddQuestion(entry *Question) *BallotBuilder {
 	qb.ballot.Questions = append(qb.ballot.Questions, entry)
 	return qb
 }
 
-// Build builds the Question.
+// Build builds the Ballot.
 func (qb *BallotBuilder) Build() (*Ballot, error) {
 	if _, err := qb.ballot.Serialize(serializer.DeSeriModePerformValidation); err != nil {
-		return nil, fmt.Errorf("unable to build question: %w", err)
+		return nil, fmt.Errorf("unable to build ballot: %w", err)
 	}
 	return qb.ballot, nil
 }

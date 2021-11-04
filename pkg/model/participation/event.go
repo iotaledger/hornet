@@ -140,11 +140,11 @@ func (e *Event) MarshalJSON() ([]byte, error) {
 }
 
 func (e *Event) UnmarshalJSON(bytes []byte) error {
-	jReferendum := &jsonEvent{}
-	if err := json.Unmarshal(bytes, jReferendum); err != nil {
+	j := &jsonEvent{}
+	if err := json.Unmarshal(bytes, j); err != nil {
 		return err
 	}
-	seri, err := jReferendum.ToSerializable()
+	seri, err := j.ToSerializable()
 	if err != nil {
 		return err
 	}

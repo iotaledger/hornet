@@ -92,8 +92,8 @@ func trackedParticipation(key []byte, value []byte) (*TrackedParticipation, erro
 
 func (t *TrackedParticipation) valueBytes() []byte {
 	m := marshalutil.New(48)
-	m.WriteBytes(t.MessageID) // 32 bytes
-	m.WriteUint64(t.Amount)
+	m.WriteBytes(t.MessageID)           // 32 bytes
+	m.WriteUint64(t.Amount)             // 8 bytes
 	m.WriteUint32(uint32(t.StartIndex)) // 4 bytes
 	m.WriteUint32(uint32(t.EndIndex))   // 4 bytes
 	return m.Bytes()

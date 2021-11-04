@@ -34,9 +34,9 @@ func TestEventStateHelpers(t *testing.T) {
 	question, err := questionBuilder.Build()
 	require.NoError(t, err)
 
-	questionsBuilder := participation.NewBallotBuilder()
-	questionsBuilder.AddQuestion(question)
-	payload, err := questionsBuilder.Build()
+	ballotBuilder := participation.NewBallotBuilder()
+	ballotBuilder.AddQuestion(question)
+	payload, err := ballotBuilder.Build()
 	require.NoError(t, err)
 
 	eventBuilder.Payload(payload)
@@ -135,7 +135,7 @@ func TestEventStates(t *testing.T) {
 
 	env.IssueMilestone() // 7
 
-	// Event should be ended
+	// Event should be accepting and counting votes
 	require.Equal(t, 1, len(env.ParticipationManager().Events()))
 	env.AssertEventsCount(1, 1)
 
@@ -312,7 +312,7 @@ func TestBallotVoteCancel(t *testing.T) {
 
 	env.AssertEventParticipationStatus(eventID, 1, 2)
 
-	// Verify the last issued vote is still active, i.event. EndIndex == 0
+	// Verify the last issued vote is still active, i.e. EndIndex == 0
 	env.AssertTrackedParticipation(eventID, castVote3, 11, 0, 1_000_000)
 
 	// Issue final milestone that ends the participation

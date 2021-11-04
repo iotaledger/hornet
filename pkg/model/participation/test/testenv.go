@@ -123,7 +123,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 
 	store := mapdb.NewMapDB()
 
-	rm, err := participation.NewManager(
+	pm, err := participation.NewManager(
 		te.Storage(),
 		te.SyncManager(),
 		store,
@@ -134,13 +134,13 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 	// Connect the callbacks from the testsuite to the ParticipationManager
 	te.ConfigureUTXOCallbacks(
 		func(index milestone.Index, output *utxo.Output) {
-			require.NoError(t, rm.ApplyNewUTXO(index, output))
+			require.NoError(t, pm.ApplyNewUTXO(index, output))
 		},
 		func(index milestone.Index, spent *utxo.Spent) {
-			require.NoError(t, rm.ApplySpentUTXO(index, spent))
+			require.NoError(t, pm.ApplySpentUTXO(index, spent))
 		},
 		func(index milestone.Index) {
-			require.NoError(t, rm.ApplyNewConfirmedMilestoneIndex(index))
+			require.NoError(t, pm.ApplyNewConfirmedMilestoneIndex(index))
 		},
 	)
 
@@ -153,7 +153,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		Wallet3:            seed3Wallet,
 		Wallet4:            seed4Wallet,
 		participationStore: store,
-		rm:                 rm,
+		rm:                 pm,
 	}
 }
 
@@ -197,9 +197,9 @@ func (env *ParticipationTestEnv) RegisterDefaultEvent(commenceMilestoneIndex mil
 	question, err := questionBuilder.Build()
 	require.NoError(env.t, err)
 
-	questionsBuilder := participation.NewBallotBuilder()
-	questionsBuilder.AddQuestion(question)
-	payload, err := questionsBuilder.Build()
+	ballotBuilder := participation.NewBallotBuilder()
+	ballotBuilder.AddQuestion(question)
+	payload, err := ballotBuilder.Build()
 	require.NoError(env.t, err)
 
 	eventBuilder.Payload(payload)

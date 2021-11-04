@@ -29,7 +29,7 @@ func (b *ParticipationsBuilder) AddParticipation(entry *Participation) *Particip
 // Build builds the Participations.
 func (b *ParticipationsBuilder) Build() (*Participations, error) {
 	if _, err := b.p.Serialize(serializer.DeSeriModePerformValidation); err != nil {
-		return nil, fmt.Errorf("unable to build question: %w", err)
+		return nil, fmt.Errorf("unable to build participations: %w", err)
 	}
 	return b.p, nil
 }

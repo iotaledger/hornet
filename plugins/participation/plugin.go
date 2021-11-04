@@ -196,7 +196,7 @@ func run() {
 		<-ctx.Done()
 		detachEvents()
 		Plugin.LogInfo("Stopping Participation ... done")
-	}, shutdown.PriorityReferendum); err != nil {
+	}, shutdown.PriorityParticipation); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
 	}
 }

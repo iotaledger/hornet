@@ -30,12 +30,12 @@ func eventKeyForEventID(eventID EventID) []byte {
 	return m.Bytes()
 }
 
-func (rm *ParticipationManager) loadEvents() (map[EventID]*Event, error) {
+func (pm *ParticipationManager) loadEvents() (map[EventID]*Event, error) {
 
 	events := make(map[EventID]*Event)
 
 	var innerErr error
-	if err := rm.participationStore.Iterate(kvstore.KeyPrefix{ParticipationStoreKeyPrefixEvents}, func(key kvstore.Key, value kvstore.Value) bool {
+	if err := pm.participationStore.Iterate(kvstore.KeyPrefix{ParticipationStoreKeyPrefixEvents}, func(key kvstore.Key, value kvstore.Value) bool {
 
 		eventID := EventID{}
 		copy(eventID[:], key[1:]) // Skip the prefix
@@ -59,7 +59,7 @@ func (rm *ParticipationManager) loadEvents() (map[EventID]*Event, error) {
 	return events, nil
 }
 
-func (rm *ParticipationManager) storeEvent(event *Event) (EventID, error) {
+func (pm *ParticipationManager) storeEvent(event *Event) (EventID, error) {
 
 	eventBytes, err := event.Serialize(serializer.DeSeriModePerformValidation)
 	if err != nil {
@@ -71,15 +71,15 @@ func (rm *ParticipationManager) storeEvent(event *Event) (EventID, error) {
 		return NullEventID, err
 	}
 
-	if err := rm.participationStore.Set(eventKeyForEventID(eventID), eventBytes); err != nil {
+	if err := pm.participationStore.Set(eventKeyForEventID(eventID), eventBytes); err != nil {
 		return NullEventID, err
 	}
 
 	return eventID, nil
 }
 
-func (rm *ParticipationManager) deleteEvent(eventID EventID) error {
-	return rm.participationStore.Delete(eventKeyForEventID(eventID))
+func (pm *ParticipationManager) deleteEvent(eventID EventID) error {
+	return pm.participationStore.Delete(eventKeyForEventID(eventID))
 }
 
 // Messages
@@ -91,12 +91,12 @@ func messageKeyForMessageID(messageID hornet.MessageID) []byte {
 	return m.Bytes()
 }
 
-func (rm *ParticipationManager) storeMessage(message *storage.Message, mutations kvstore.BatchedMutations) error {
+func (pm *ParticipationManager) storeMessage(message *storage.Message, mutations kvstore.BatchedMutations) error {
 	return mutations.Set(messageKeyForMessageID(message.MessageID()), message.Data())
 }
 
-func (rm *ParticipationManager) MessageForMessageID(messageId hornet.MessageID) (*storage.Message, error) {
-	value, err := rm.participationStore.Get(messageKeyForMessageID(messageId))
+func (pm *ParticipationManager) MessageForMessageID(messageId hornet.MessageID) (*storage.Message, error) {
+	value, err := pm.participationStore.Get(messageKeyForMessageID(messageId))
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		return nil, nil
 	}
@@ -111,8 +111,8 @@ func (rm *ParticipationManager) MessageForMessageID(messageId hornet.MessageID) 
 
 func participationKeyForEventOutputsPrefix(eventID EventID) []byte {
 	m := marshalutil.New(33)
-	m.WriteByte(ParticipationStoreKeyPrefixReferendumOutputs) // 1 byte
-	m.WriteBytes(eventID[:])                                  // 32 bytes
+	m.WriteByte(ParticipationStoreKeyPrefixTrackedOutputs) // 1 byte
+	m.WriteBytes(eventID[:])                               // 32 bytes
 	return m.Bytes()
 }
 
@@ -125,8 +125,8 @@ func participationKeyForEventAndOutputID(eventID EventID, outputID *iotago.UTXOI
 
 func participationKeyForEventSpentOutputsPrefix(eventID EventID) []byte {
 	m := marshalutil.New(33)
-	m.WriteByte(ParticipationStoreKeyPrefixReferendumSpentOutputs) // 1 byte
-	m.WriteBytes(eventID[:])                                       // 32 bytes
+	m.WriteByte(ParticipationStoreKeyPrefixTrackedSpentOutputs) // 1 byte
+	m.WriteBytes(eventID[:])                                    // 32 bytes
 	return m.Bytes()
 }
 
@@ -137,11 +137,11 @@ func participationKeyForEventAndSpentOutputID(eventID EventID, outputID *iotago.
 	return m.Bytes()
 }
 
-func (rm *ParticipationManager) ParticipationsForOutputID(outputID *iotago.UTXOInputID) ([]*TrackedParticipation, error) {
-	eventIDs := rm.EventIDs()
+func (pm *ParticipationManager) ParticipationsForOutputID(outputID *iotago.UTXOInputID) ([]*TrackedParticipation, error) {
+	eventIDs := pm.EventIDs()
 	trackedParticipations := []*TrackedParticipation{}
 	for _, eventID := range eventIDs {
-		participation, err := rm.ParticipationForOutputID(eventID, outputID)
+		participation, err := pm.ParticipationForOutputID(eventID, outputID)
 		if err != nil {
 			if errors.Is(err, ErrUnknownParticipation) {
 				continue
@@ -153,10 +153,10 @@ func (rm *ParticipationManager) ParticipationsForOutputID(outputID *iotago.UTXOI
 	return trackedParticipations, nil
 }
 
-func (rm *ParticipationManager) ParticipationForOutputID(eventID EventID, outputID *iotago.UTXOInputID) (*TrackedParticipation, error) {
+func (pm *ParticipationManager) ParticipationForOutputID(eventID EventID, outputID *iotago.UTXOInputID) (*TrackedParticipation, error) {
 	readOutput := func(eventID EventID, outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
 		key := participationKeyForEventAndOutputID(eventID, outputID)
-		value, err := rm.participationStore.Get(key)
+		value, err := pm.participationStore.Get(key)
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, nil, ErrUnknownParticipation
 		}
@@ -168,7 +168,7 @@ func (rm *ParticipationManager) ParticipationForOutputID(eventID EventID, output
 
 	readSpent := func(eventID EventID, outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
 		key := participationKeyForEventAndSpentOutputID(eventID, outputID)
-		value, err := rm.participationStore.Get(key)
+		value, err := pm.participationStore.Get(key)
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, nil, ErrUnknownParticipation
 		}
@@ -219,13 +219,13 @@ func iterateOptions(optionalOptions []IterateOption) *IterateOptions {
 
 type TrackedParticipationConsumer func(trackedParticipation *TrackedParticipation) bool
 
-func (rm *ParticipationManager) ForEachActiveParticipation(eventID EventID, consumer TrackedParticipationConsumer, options ...IterateOption) error {
+func (pm *ParticipationManager) ForEachActiveParticipation(eventID EventID, consumer TrackedParticipationConsumer, options ...IterateOption) error {
 	opt := iterateOptions(options)
 	consumerFunc := consumer
 
 	var innerErr error
 	var i int
-	if err := rm.participationStore.Iterate(participationKeyForEventOutputsPrefix(eventID), func(key kvstore.Key, value kvstore.Value) bool {
+	if err := pm.participationStore.Iterate(participationKeyForEventOutputsPrefix(eventID), func(key kvstore.Key, value kvstore.Value) bool {
 
 		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
@@ -247,13 +247,13 @@ func (rm *ParticipationManager) ForEachActiveParticipation(eventID EventID, cons
 	return innerErr
 }
 
-func (rm *ParticipationManager) ForEachPastParticipation(eventID EventID, consumer TrackedParticipationConsumer, options ...IterateOption) error {
+func (pm *ParticipationManager) ForEachPastParticipation(eventID EventID, consumer TrackedParticipationConsumer, options ...IterateOption) error {
 	opt := iterateOptions(options)
 	consumerFunc := consumer
 
 	var innerErr error
 	var i int
-	if err := rm.participationStore.Iterate(participationKeyForEventSpentOutputsPrefix(eventID), func(key kvstore.Key, value kvstore.Value) bool {
+	if err := pm.participationStore.Iterate(participationKeyForEventSpentOutputsPrefix(eventID), func(key kvstore.Key, value kvstore.Value) bool {
 
 		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
@@ -295,7 +295,7 @@ func accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, questi
 	return ms.Bytes()
 }
 
-func (rm *ParticipationManager) startParticipationAtMilestone(eventID EventID, output *utxo.Output, startIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+func (pm *ParticipationManager) startParticipationAtMilestone(eventID EventID, output *utxo.Output, startIndex milestone.Index, mutations kvstore.BatchedMutations) error {
 	trackedVote := &TrackedParticipation{
 		EventID:    eventID,
 		OutputID:   output.OutputID(),
@@ -307,10 +307,10 @@ func (rm *ParticipationManager) startParticipationAtMilestone(eventID EventID, o
 	return mutations.Set(participationKeyForEventAndOutputID(eventID, output.OutputID()), trackedVote.valueBytes())
 }
 
-func (rm *ParticipationManager) endParticipationAtMilestone(eventID EventID, output *utxo.Output, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+func (pm *ParticipationManager) endParticipationAtMilestone(eventID EventID, output *utxo.Output, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
 	key := participationKeyForEventAndOutputID(eventID, output.OutputID())
 
-	value, err := rm.participationStore.Get(key)
+	value, err := pm.participationStore.Get(key)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return ErrUnknownParticipation
@@ -334,9 +334,9 @@ func (rm *ParticipationManager) endParticipationAtMilestone(eventID EventID, out
 	return mutations.Set(participationKeyForEventAndSpentOutputID(eventID, output.OutputID()), participation.valueBytes())
 }
 
-func (rm *ParticipationManager) endAllParticipationsAtMilestone(eventID EventID, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
+func (pm *ParticipationManager) endAllParticipationsAtMilestone(eventID EventID, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
 	var innerErr error
-	if err := rm.participationStore.Iterate(participationKeyForEventOutputsPrefix(eventID), func(key kvstore.Key, value kvstore.Value) bool {
+	if err := pm.participationStore.Iterate(participationKeyForEventOutputsPrefix(eventID), func(key kvstore.Key, value kvstore.Value) bool {
 
 		participation, err := trackedParticipation(key, value)
 		if err != nil {
@@ -367,8 +367,8 @@ func (rm *ParticipationManager) endAllParticipationsAtMilestone(eventID EventID,
 	return innerErr
 }
 
-func (rm *ParticipationManager) CurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8) (uint64, error) {
-	val, err := rm.participationStore.Get(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx))
+func (pm *ParticipationManager) CurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8) (uint64, error) {
+	val, err := pm.participationStore.Get(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx))
 
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// No votes for this answer yet
@@ -383,8 +383,8 @@ func (rm *ParticipationManager) CurrentBallotVoteBalanceForQuestionAndAnswer(eve
 	return ms.ReadUint64()
 }
 
-func (rm *ParticipationManager) AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8) (uint64, error) {
-	val, err := rm.participationStore.Get(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx))
+func (pm *ParticipationManager) AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8) (uint64, error) {
+	val, err := pm.participationStore.Get(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx))
 
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// No votes for this answer yet
@@ -411,13 +411,13 @@ func setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questi
 	return mutations.Set(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx), ms.Bytes())
 }
 
-func (rm *ParticipationManager) startCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
+func (pm *ParticipationManager) startCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
 	for idx, answerValue := range vote.Answers {
 		questionIndex := uint8(idx)
 
 		// TODO: check for valid answers and map invalids to 255? 0 means skipped
 
-		currentVoteBalance, err := rm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
+		currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
 		if err != nil {
 			return err
 		}
@@ -432,13 +432,13 @@ func (rm *ParticipationManager) startCountingBallotAnswers(vote *Participation, 
 	return nil
 }
 
-func (rm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
+func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
 	for idx, answerValue := range vote.Answers {
 		questionIndex := uint8(idx)
 
 		// TODO: check for valid answers and map invalids to 255? 0 means skipped
 
-		currentVoteBalance, err := rm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
+		currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
 		if err != nil {
 			return err
 		}
