@@ -69,7 +69,7 @@ func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirm
 func (o *Output) spentDatabaseKey() []byte {
 	ms := marshalutil.New(69)
 	ms.WriteByte(UTXOStoreKeyPrefixSpent) // 1 byte
-	ms.WriteBytes(o.addressBytes())       // 33 bytes
+	ms.WriteBytes(o.AddressBytes())       // 33 bytes
 	ms.WriteByte(o.outputType)            // 1 byte
 	ms.WriteBytes(o.outputID[:])          // 34 bytes
 	return ms.Bytes()

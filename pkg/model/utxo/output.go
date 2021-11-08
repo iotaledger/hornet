@@ -50,7 +50,7 @@ func (o *Output) Amount() uint64 {
 	return o.amount
 }
 
-func (o *Output) addressBytes() []byte {
+func (o *Output) AddressBytes() []byte {
 	// This never throws an error for current Ed25519 addresses
 	bytes, _ := o.address.Serialize(serializer.DeSeriModeNoValidation)
 	return bytes
@@ -167,7 +167,7 @@ func (o *Output) kvStorableValue() (value []byte) {
 	ms := marshalutil.New(74)
 	ms.WriteBytes(o.messageID)      // 32 bytes
 	ms.WriteByte(o.outputType)      // 1 byte
-	ms.WriteBytes(o.addressBytes()) // 33 bytes
+	ms.WriteBytes(o.AddressBytes()) // 33 bytes
 	ms.WriteUint64(o.amount)        // 8 bytes
 	return ms.Bytes()
 }

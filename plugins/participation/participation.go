@@ -48,10 +48,10 @@ func parseEventTypeQueryParam(c echo.Context) ([]uint32, error) {
 		eventType := uint32(intParam)
 		switch eventType {
 		case participation.BallotPayloadTypeID:
-			returnTypes = append(returnTypes, eventType)
 		default:
 			return []uint32{}, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event type: %s", typeParam)
 		}
+		returnTypes = append(returnTypes, eventType)
 	}
 	return returnTypes, nil
 }

@@ -97,6 +97,9 @@ func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMo
 
 func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 
+	//TODO: check milestoneIndexCommence < milestoneIndexStart < milestoneIndexEnd
+	//TODO: check there is a payload
+
 	//TODO: validate text lengths
 	return serializer.NewSerializer().
 		WriteString(e.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {

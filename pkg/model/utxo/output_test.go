@@ -51,7 +51,7 @@ func TestOutputSerialization(t *testing.T) {
 
 	output := CreateOutput(outputID, messageID, outputType, address, amount)
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{iotago.AddressEd25519}, addressBytes), output.addressBytes())
+	require.Equal(t, byteutils.ConcatBytes([]byte{iotago.AddressEd25519}, addressBytes), output.AddressBytes())
 
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:]), output.kvStorableKey())
 

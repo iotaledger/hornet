@@ -13,7 +13,7 @@ type OutputConsumer func(output *Output) bool
 func (o *Output) unspentDatabaseKey() []byte {
 	ms := marshalutil.New(69)
 	ms.WriteByte(UTXOStoreKeyPrefixUnspent) // 1 byte
-	ms.WriteBytes(o.addressBytes())         // 33 bytes
+	ms.WriteBytes(o.AddressBytes())         // 33 bytes
 	ms.WriteByte(o.outputType)              // 1 byte
 	ms.WriteBytes(o.outputID[:])            // 34 bytes
 	return ms.Bytes()
