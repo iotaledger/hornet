@@ -35,12 +35,10 @@ const (
 
 	// RouteParticipationEvents is the route to list all events, returning their ID, the event name and status.
 	// GET returns a list of all events known to the node. Optional query parameter returns filters events by type (query parameters: "type").
-	// POST creates a new event to track
 	RouteParticipationEvents = "/events"
 
 	// RouteParticipationEvent is the route to access a single participation by its ID.
 	// GET gives a quick overview of the participation. This does not include the current standings.
-	// DELETE removes a tracked participation.
 	RouteParticipationEvent = "/events/:" + ParameterParticipationEventID
 
 	// RouteParticipationEventStatus is the route to access the status of a single participation by its ID.
@@ -50,6 +48,14 @@ const (
 	// RouteOutputStatus is the route to get the vote status for a given outputID.
 	// GET returns the messageID the participation was included, the starting and ending milestone index this participation was tracked.
 	RouteOutputStatus = "/outputs/:" + ParameterOutputID
+
+	// RouteAdminCreateEvent is the route the node operator can use to add events.
+	// POST creates a new event to track
+	RouteAdminCreateEvent = "/admin/events"
+
+	// RouteAdminDeleteEvent is the route the node operator can use to remove events.
+	// DELETE removes a tracked participation.
+	RouteAdminDeleteEvent = "/admin/events/:" + ParameterParticipationEventID
 )
 
 func init() {
@@ -129,7 +135,7 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.POST(RouteParticipationEvents, func(c echo.Context) error {
+	routeGroup.POST(RouteAdminCreateEvent, func(c echo.Context) error {
 
 		resp, err := createEvent(c)
 		if err != nil {
@@ -149,7 +155,7 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.DELETE(RouteParticipationEvent, func(c echo.Context) error {
+	routeGroup.DELETE(RouteAdminDeleteEvent, func(c echo.Context) error {
 		if err := deleteEvent(c); err != nil {
 			return err
 		}
