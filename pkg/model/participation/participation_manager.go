@@ -538,6 +538,44 @@ func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 			}
 		}
 
+		staking := event.Staking()
+		if staking != nil {
+			utxoManager := pm.storage.UTXOManager()
+			addressRewardsIncreases := make(map[string]uint64)
+			var innerErr error
+			pm.ForEachActiveParticipation(eventID, func(trackedParticipation *TrackedParticipation) bool {
+				output, err := utxoManager.ReadOutputByOutputIDWithoutLocking(trackedParticipation.OutputID)
+				if err != nil {
+					// We should have the output in the ledger, if not, something happened
+					innerErr = err
+					return false
+				}
+
+				// TODO: how to handle overflow?
+				increaseAmount := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
+
+				addr := string(output.AddressBytes())
+				balance, found := addressRewardsIncreases[addr]
+				if !found {
+					addressRewardsIncreases[addr] = increaseAmount
+					return true
+				}
+				addressRewardsIncreases[addr] = balance + increaseAmount
+				return true
+			})
+			if innerErr != nil {
+				return innerErr
+			}
+
+			for addr, diff := range addressRewardsIncreases {
+				addrBytes := []byte(addr)
+				if err := pm.increaseStakingRewardForEventAndAddress(eventID, addrBytes, diff, mutations); err != nil {
+					mutations.Cancel()
+					return err
+				}
+			}
+		}
+
 		// End all participation if event is ending this milestone
 		if event.EndMilestoneIndex() == index {
 			if err := pm.endAllParticipationsAtMilestone(eventID, index, mutations); err != nil {

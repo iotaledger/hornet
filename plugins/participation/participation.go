@@ -48,6 +48,7 @@ func parseEventTypeQueryParam(c echo.Context) ([]uint32, error) {
 		eventType := uint32(intParam)
 		switch eventType {
 		case participation.BallotPayloadTypeID:
+		case participation.StakingPayloadTypeID:
 		default:
 			return []uint32{}, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event type: %s", typeParam)
 		}
@@ -189,5 +190,77 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 	}
 
 	return response, nil
+}
 
+func getRewardsByBech32Address(c echo.Context) (*AddressRewardsResponse, error) {
+
+	addressParam := strings.ToLower(c.Param(ParameterAddress))
+
+	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if hrp != deps.Bech32HRP {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", deps.Bech32HRP)
+	}
+
+	switch address := bech32Address.(type) {
+	case *iotago.Ed25519Address:
+		return ed25519Rewards(address)
+	default:
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", addressParam)
+	}
+}
+
+func getRewardsByEd25519Address(c echo.Context) (*AddressRewardsResponse, error) {
+
+	addressParam := strings.ToLower(c.Param(ParameterAddress))
+
+	addressBytes, err := hex.DecodeString(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if len(addressBytes) != (iotago.Ed25519AddressBytesLength) {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address length: %s", addressParam)
+	}
+
+	var address iotago.Ed25519Address
+	copy(address[:], addressBytes)
+
+	return ed25519Rewards(&address)
+}
+
+func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, error) {
+
+	eventIDs := deps.ParticipationManager.EventIDs(participation.StakingPayloadTypeID)
+
+	response := &AddressRewardsResponse{
+		Rewards: make(map[string]*AddressReward),
+	}
+
+	for _, eventID := range eventIDs {
+
+		event := deps.ParticipationManager.Event(eventID)
+		if event == nil {
+			return nil, errors.WithMessage(echo.ErrInternalServerError, "event not found")
+		}
+
+		staking := event.Staking()
+		if staking == nil {
+			return nil, errors.WithMessage(echo.ErrInternalServerError, "event not found")
+		}
+
+		amount, err := deps.ParticipationManager.StakingRewardForAddress(eventID, address)
+		if err != nil {
+			return nil, errors.WithMessage(echo.ErrInternalServerError, "error fetching rewards")
+		}
+		response.Rewards[hex.EncodeToString(eventID[:])] = &AddressReward{
+			Amount: amount,
+			Symbol: staking.Symbol,
+		}
+	}
+
+	return response, nil
 }

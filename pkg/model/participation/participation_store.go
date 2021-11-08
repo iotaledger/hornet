@@ -470,3 +470,53 @@ func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, a
 	}
 	return nil
 }
+
+// Staking
+
+func stakingKeyForEventAndAddress(eventID EventID, addressBytes []byte) []byte {
+	m := marshalutil.New(66)
+	m.WriteByte(ParticipationStoreKeyPrefixStakingAddress) // 1 byte
+	m.WriteBytes(eventID[:])                               // 32 bytes
+	m.WriteBytes(addressBytes)                             // 33 bytes
+	return m.Bytes()
+}
+
+func (pm *ParticipationManager) StakingRewardForAddress(eventID EventID, address iotago.Address) (uint64, error) {
+
+	addressBytes, err := address.Serialize(serializer.DeSeriModeNoValidation)
+	if err != nil {
+		return 0, err
+	}
+
+	return pm.stakingRewardForEventAndAddress(eventID, addressBytes)
+}
+
+func (pm *ParticipationManager) stakingRewardForEventAndAddress(eventID EventID, addressBytes []byte) (uint64, error) {
+	key := stakingKeyForEventAndAddress(eventID, addressBytes)
+	value, err := pm.participationStore.Get(key)
+	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	m := marshalutil.New(value)
+	balance, err := m.ReadUint64()
+	if err != nil {
+		return 0, err
+	}
+	return balance, err
+}
+
+func (pm *ParticipationManager) increaseStakingRewardForEventAndAddress(eventID EventID, addressBytes []byte, amountToIncrease uint64, mutations kvstore.BatchedMutations) error {
+	balance, err := pm.stakingRewardForEventAndAddress(eventID, addressBytes)
+	if err != nil {
+		return err
+	}
+
+	newBalance := balance + amountToIncrease
+	m := marshalutil.New(8)
+	m.WriteUint64(newBalance)
+
+	return mutations.Set(stakingKeyForEventAndAddress(eventID, addressBytes), m.Bytes())
+}

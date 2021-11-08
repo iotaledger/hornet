@@ -40,6 +40,8 @@ func PayloadSelector(payloadType uint32) (serializer.Serializable, error) {
 	switch payloadType {
 	case BallotPayloadTypeID:
 		seri = &Ballot{}
+	case StakingPayloadTypeID:
+		seri = &Staking{}
 	default:
 		return nil, fmt.Errorf("%w: type %d", ErrUnknownPayloadType, payloadType)
 	}
@@ -83,6 +85,7 @@ func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMo
 		ReadPayload(func(seri serializer.Serializable) { e.Payload = seri }, deSeriMode, func(ty uint32) (serializer.Serializable, error) {
 			switch ty {
 			case BallotPayloadTypeID:
+			case StakingPayloadTypeID:
 			default:
 				return nil, fmt.Errorf("invalid event payload type ID %d: %w", ty, ErrUnknownPayloadType)
 			}
@@ -194,6 +197,8 @@ func jsonPayloadSelector(ty int) (iotago.JSONSerializable, error) {
 	switch uint32(ty) {
 	case BallotPayloadTypeID:
 		obj = &jsonBallot{}
+	case StakingPayloadTypeID:
+		obj = &jsonStaking{}
 	default:
 		return nil, fmt.Errorf("unable to decode payload type from JSON: %w", ErrUnknownPayloadType)
 	}
@@ -238,6 +243,8 @@ func (e *Event) payloadType() uint32 {
 	switch e.Payload.(type) {
 	case *Ballot:
 		return BallotPayloadTypeID
+	case *Staking:
+		return StakingPayloadTypeID
 	default:
 		panic(ErrUnknownPayloadType)
 	}
@@ -252,6 +259,16 @@ func (e *Event) BallotQuestions() []*Question {
 			questions[i] = payload.Questions[i].(*Question)
 		}
 		return questions
+	default:
+		return nil
+	}
+}
+
+// Staking returns the staking payload if this participation is for a Staking event
+func (e *Event) Staking() *Staking {
+	switch payload := e.Payload.(type) {
+	case *Staking:
+		return payload
 	default:
 		return nil
 	}

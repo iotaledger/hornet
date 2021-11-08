@@ -21,6 +21,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
@@ -29,6 +30,9 @@ const (
 
 	// ParameterOutputID is used to identify an output by its ID.
 	ParameterOutputID = "outputID"
+
+	// ParameterAddress is used to identify an address.
+	ParameterAddress = "address"
 )
 
 const (
@@ -48,6 +52,12 @@ const (
 	// RouteOutputStatus is the route to get the vote status for a given outputID.
 	// GET returns the messageID the participation was included, the starting and ending milestone index this participation was tracked.
 	RouteOutputStatus = "/outputs/:" + ParameterOutputID
+
+	// RouteAddressBech32Status is the route to get the staking rewards for the given bech32 address.
+	RouteAddressBech32Status = "/addresses/:" + ParameterAddress
+
+	// RouteAddressEd25519Status is the route to get the staking rewards for the given ed25519 address.
+	RouteAddressEd25519Status = "/addresses/ed25519/:" + ParameterAddress
 
 	// RouteAdminCreateEvent is the route the node operator can use to add events.
 	// POST creates a new event to track
@@ -86,6 +96,7 @@ type dependencies struct {
 	ParticipationManager *participation.ParticipationManager
 	Tangle               *tangle.Tangle
 	Echo                 *echo.Echo
+	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
 	ShutdownHandler      *shutdown.ShutdownHandler
 }
 
@@ -173,6 +184,22 @@ func configure() {
 
 	routeGroup.GET(RouteOutputStatus, func(c echo.Context) error {
 		resp, err := getOutputStatus(c)
+		if err != nil {
+			return err
+		}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAddressBech32Status, func(c echo.Context) error {
+		resp, err := getRewardsByBech32Address(c)
+		if err != nil {
+			return err
+		}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAddressEd25519Status, func(c echo.Context) error {
+		resp, err := getRewardsByEd25519Address(c)
 		if err != nil {
 			return err
 		}
