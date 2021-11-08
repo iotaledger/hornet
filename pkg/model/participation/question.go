@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/hive.go/serializer"
 )
 
@@ -21,6 +23,8 @@ var (
 		Max:            MaxAnswersCount,
 		ValidationMode: serializer.ArrayValidationModeNoDuplicates,
 	}
+
+	ErrDuplicateAnswerValue = errors.New("duplicate answer value found")
 )
 
 // Question defines a single question inside a Ballot that can have multiple Answers.
@@ -44,20 +48,54 @@ func (q *Question) Deserialize(data []byte, deSeriMode serializer.DeSerializatio
 		ReadString(&q.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to deserialize participation question additional info: %w", err)
 		}, QuestionAdditionalInfoMaxLength).
+		AbortIf(func(err error) error {
+			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
+				seenValues := make(map[uint8]struct{})
+				for _, s := range q.Answers {
+					switch a := s.(type) {
+					case *Answer:
+						if _, found := seenValues[a.Value]; found {
+							return ErrDuplicateAnswerValue
+						}
+						seenValues[a.Value] = struct{}{}
+					default:
+						return errors.New("invalid answer type")
+					}
+				}
+			}
+			return nil
+		}).
 		Done()
 }
 
 func (q *Question) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
-	if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-		//TODO: this should be moved as an arrayRule parameter to WriteSliceOfObjects in iota.go
-		if err := answersArrayRules.CheckBounds(uint(len(q.Answers))); err != nil {
-			return nil, fmt.Errorf("unable to serialize question answers: %w", err)
-		}
-		//TODO: this should also check the NoDups rule
-
-		//TODO: validate text lengths
-	}
 	return serializer.NewSerializer().
+		AbortIf(func(err error) error {
+			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
+				if len(q.Text) > QuestionTextMaxLength {
+					return fmt.Errorf("text too long. Max allowed %d", QuestionTextMaxLength)
+				}
+				if len(q.AdditionalInfo) > QuestionAdditionalInfoMaxLength {
+					return fmt.Errorf("additional info too long. Max allowed %d", QuestionAdditionalInfoMaxLength)
+				}
+				if err := answersArrayRules.CheckBounds(uint(len(q.Answers))); err != nil {
+					return fmt.Errorf("unable to serialize question answers: %w", err)
+				}
+				seenValues := make(map[uint8]struct{})
+				for _, s := range q.Answers {
+					switch a := s.(type) {
+					case *Answer:
+						if _, found := seenValues[a.Value]; found {
+							return ErrDuplicateAnswerValue
+						}
+						seenValues[a.Value] = struct{}{}
+					default:
+						return errors.New("invalid answer type")
+					}
+				}
+			}
+			return nil
+		}).
 		WriteString(q.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize participation question text: %w", err)
 		}).
@@ -133,4 +171,27 @@ func (j *jsonQuestion) ToSerializable() (serializer.Serializable, error) {
 	payload.Answers = answers
 
 	return payload, nil
+}
+
+// QuestionAnswers returns the possible answers for a Que
+func (q *Question) QuestionAnswers() []*Answer {
+	answers := make([]*Answer, len(q.Answers))
+	for i := range q.Answers {
+		answers[i] = q.Answers[i].(*Answer)
+	}
+	return answers
+}
+
+// answerValueForByte checks if the given value is a valid and maps any other values to AnswerValueInvalid
+func (q *Question) answerValueForByte(byteValue byte) uint8 {
+	if byteValue == 0 {
+		return 0
+	}
+	for i := range q.Answers {
+		a := q.Answers[i].(*Answer)
+		if a.Value == byteValue {
+			return a.Value
+		}
+	}
+	return AnswerValueInvalid
 }

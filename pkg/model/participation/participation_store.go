@@ -412,46 +412,60 @@ func setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questi
 }
 
 func (pm *ParticipationManager) startCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
-	for idx, answerValue := range vote.Answers {
-		questionIndex := uint8(idx)
+	event := pm.Event(vote.EventID)
+	if event == nil {
+		return nil
+	}
+	if event.payloadType() == BallotPayloadTypeID {
+		questions := event.BallotQuestions()
+		for idx, answerByte := range vote.Answers {
+			questionIndex := uint8(idx)
+			// We already verified, that there are exactly as many answers as questions in the ballot, so no need to check here again
+			answerValue := questions[idx].answerValueForByte(answerByte)
 
-		// TODO: check for valid answers and map invalids to 255? 0 means skipped
+			currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
+			if err != nil {
+				return err
+			}
 
-		currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
-		if err != nil {
-			return err
-		}
+			voteCount := amount / 1000
+			currentVoteBalance += voteCount
 
-		// TODO: divide amount by 1000
-		currentVoteBalance += amount
-
-		if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
-			return err
+			if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
 func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
-	for idx, answerValue := range vote.Answers {
-		questionIndex := uint8(idx)
+	event := pm.Event(vote.EventID)
+	if event == nil {
+		return nil
+	}
+	if event.payloadType() == BallotPayloadTypeID {
+		questions := event.BallotQuestions()
+		for idx, answerByte := range vote.Answers {
+			questionIndex := uint8(idx)
+			// We already verified, that there are exactly as many answers as questions in the ballot, so no need to check here again
+			answerValue := questions[idx].answerValueForByte(answerByte)
 
-		// TODO: check for valid answers and map invalids to 255? 0 means skipped
+			currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
+			if err != nil {
+				return err
+			}
 
-		currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
-		if err != nil {
-			return err
-		}
+			voteCount := amount / 1000
+			if currentVoteBalance < voteCount {
+				// currentVoteBalance can't be less than 0
+				return ErrInvalidCurrentBallotVoteBalance
+			}
+			currentVoteBalance -= voteCount
 
-		// TODO: divide amount by 1000
-		if currentVoteBalance < amount {
-			// Participations can't be less than 0
-			return ErrInvalidCurrentBallotVoteBalance
-		}
-		currentVoteBalance -= amount
-
-		if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
-			return err
+			if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

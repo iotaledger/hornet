@@ -19,6 +19,11 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 )
 
+const (
+	participationIndexation        = "TEST"
+	defaultBallotAnswerValue uint8 = 10
+)
+
 var (
 	genesisSeed, _ = hex.DecodeString("2f54b071657e6644629a40518ba6554de4eee89f0757713005ad26137d80968d05e1ca1bca555d8b4b85a3f4fcf11a6a48d3d628d1ace40f48009704472fc8f9")
 	seed1, _       = hex.DecodeString("96d9ff7a79e4b0a5f3e5848ae7867064402da92a62eabb4ebbe463f12d1f3b1aace1775488f51cb1e3a80732a03ef60b111d6833ab605aa9f8faebeb33bbe3d9")
@@ -28,8 +33,6 @@ var (
 
 	MinPoWScore   = 100.0
 	BelowMaxDepth = 15
-
-	participationIndexation = "TEST"
 )
 
 type ParticipationTestEnv struct {
@@ -184,12 +187,12 @@ func (env *ParticipationTestEnv) RegisterDefaultEvent(commenceMilestoneIndex mil
 
 	questionBuilder := participation.NewQuestionBuilder("Give all the funds to the HORNET developers?", "This would fund the development of HORNET indefinitely")
 	questionBuilder.AddAnswer(&participation.Answer{
-		Index:          1,
+		Value:          defaultBallotAnswerValue,
 		Text:           "YES",
 		AdditionalInfo: "Go team!",
 	})
 	questionBuilder.AddAnswer(&participation.Answer{
-		Index:          2,
+		Value:          20,
 		Text:           "Doh! Of course!",
 		AdditionalInfo: "There is no other option",
 	})
@@ -299,16 +302,16 @@ func (env *ParticipationTestEnv) AssertEventParticipationStatus(eventID particip
 }
 
 func (env *ParticipationTestEnv) AssertDefaultBallotAnswerStatus(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64) {
-	env.AssertBallotAnswerStatus(eventID, currentVoteAmount, accumulatedVoteAmount, 0, 1)
+	env.AssertBallotAnswerStatus(eventID, currentVoteAmount, accumulatedVoteAmount, 0, defaultBallotAnswerValue)
 }
 
-func (env *ParticipationTestEnv) AssertBallotAnswerStatus(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerIndex int) {
+func (env *ParticipationTestEnv) AssertBallotAnswerStatus(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerValue uint8) {
 	status, err := env.ParticipationManager().EventStatus(eventID)
 	require.NoError(env.t, err)
 	env.PrintJSON(status)
 	require.Equal(env.t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
-	require.Exactly(env.t, currentVoteAmount, status.Questions[questionIndex].Answers[answerIndex].Current)
-	require.Exactly(env.t, accumulatedVoteAmount, status.Questions[questionIndex].Answers[answerIndex].Accumulated)
+	require.Exactly(env.t, currentVoteAmount, status.Questions[questionIndex].StatusForAnswerValue(answerValue).Current)
+	require.Exactly(env.t, accumulatedVoteAmount, status.Questions[questionIndex].StatusForAnswerValue(answerValue).Accumulated)
 }
 
 func (env *ParticipationTestEnv) AssertTrackedParticipation(eventID participation.EventID, sentParticipations *SentParticipations, startMilestoneIndex milestone.Index, endMilestoneIndex milestone.Index, amount uint64) {

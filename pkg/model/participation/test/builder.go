@@ -69,7 +69,7 @@ func (b *ParticipationHelper) AddParticipations(participations []*participation.
 func (b *ParticipationHelper) AddDefaultBallotVote(eventID participation.EventID) *ParticipationHelper {
 	b.participationsBuilder.AddParticipation(&participation.Participation{
 		EventID: eventID,
-		Answers: []byte{byte(1)},
+		Answers: []byte{defaultBallotAnswerValue},
 	})
 	return b
 }

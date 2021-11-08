@@ -192,11 +192,8 @@ func filteredEvents(events map[EventID]*Event, filterPayloadTypes []uint32) map[
 eventLoop:
 	for id, event := range events {
 		eventPayloadType := event.payloadType()
-		if eventPayloadType == nil {
-			continue
-		}
 		for _, payloadType := range filterPayloadTypes {
-			if payloadType == *eventPayloadType {
+			if payloadType == eventPayloadType {
 				filtered[id] = event
 			}
 			continue eventLoop
@@ -411,7 +408,7 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 	return mutations.Commit()
 }
 
-// ApplyNewUTXO checks if the spent UTXO was part of a participation transaction.
+// ApplySpentUTXO checks if the spent UTXO was part of a participation transaction.
 func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
 
 	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
@@ -499,34 +496,44 @@ func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 			return err
 		}
 
+		increaseAnswerValueBalances := func(questionIndex uint8, answerValue uint8) error {
+			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
+			if err != nil {
+				mutations.Cancel()
+				return err
+			}
+
+			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
+			if err != nil {
+				mutations.Cancel()
+				return err
+			}
+
+			// Add current vote balance to accumulated vote balance for each answer
+			newAccumulatedBalance := accumulatedBalance + currentBalance
+
+			if err := setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue, newAccumulatedBalance, mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
+			return nil
+		}
+
 		// For each participation, iterate over all questions
 		for idx, question := range event.BallotQuestions() {
 			questionIndex := uint8(idx)
 
-			// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter
-			// TODO: also handle the invalid vote usecase 255
-			for idx := 0; idx <= len(question.Answers); idx++ {
-				answerIndex := uint8(idx)
-
-				accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
-				if err != nil {
-					mutations.Cancel()
+			// For each question, iterate over all answers values
+			for _, answer := range question.QuestionAnswers() {
+				if err := increaseAnswerValueBalances(questionIndex, answer.Value); err != nil {
 					return err
 				}
-
-				currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
-				if err != nil {
-					mutations.Cancel()
-					return err
-				}
-
-				// Add current vote balance to accumulated vote balance for each answer
-				newAccumulatedBalance := accumulatedBalance + currentBalance
-
-				if err := setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex, newAccumulatedBalance, mutations); err != nil {
-					mutations.Cancel()
-					return err
-				}
+			}
+			if err := increaseAnswerValueBalances(questionIndex, AnswerValueSkipped); err != nil {
+				return err
+			}
+			if err := increaseAnswerValueBalances(questionIndex, AnswerValueInvalid); err != nil {
+				return err
 			}
 		}
 

@@ -6,7 +6,7 @@ import (
 
 // AnswerStatus holds the current and accumulated vote for an answer.
 type AnswerStatus struct {
-	Index       uint8  `json:"index"`
+	Value       uint8  `json:"value"`
 	Current     uint64 `json:"current"`
 	Accumulated uint64 `json:"accumulated"`
 }
@@ -44,28 +44,58 @@ func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, erro
 		questionIndex := uint8(idx)
 
 		questionStatus := &QuestionStatus{}
-		// For each question, iterate over all answers. Include 0 here, since that is valid, i.e. answer skipped by voter
-		// TODO: count invalid votes? -> maybe mapped to 255
-		for idx := 0; idx <= len(question.Answers); idx++ {
-			answerIndex := uint8(idx)
 
-			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
+		balanceForAnswerValue := func(answerValue uint8) (*AnswerStatus, error) {
+			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
 			if err != nil {
 				return nil, err
 			}
 
-			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerIndex)
+			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
 			if err != nil {
 				return nil, err
 			}
-			questionStatus.Answers = append(questionStatus.Answers, &AnswerStatus{
-				Index:       answerIndex,
+			return &AnswerStatus{
+				Value:       answerValue,
 				Current:     currentBalance,
 				Accumulated: accumulatedBalance,
-			})
+			}, nil
 		}
+
+		// Add valid answer values
+		for _, answer := range question.QuestionAnswers() {
+			status, err := balanceForAnswerValue(answer.Value)
+			if err != nil {
+				return nil, err
+			}
+			questionStatus.Answers = append(questionStatus.Answers, status)
+		}
+
+		// Add skipped (value == 0)
+		skippedValue, err := balanceForAnswerValue(AnswerValueSkipped)
+		if err != nil {
+			return nil, err
+		}
+		questionStatus.Answers = append(questionStatus.Answers, skippedValue)
+
+		// Add invalid (value == 255)
+		invalidValue, err := balanceForAnswerValue(AnswerValueInvalid)
+		if err != nil {
+			return nil, err
+		}
+		questionStatus.Answers = append(questionStatus.Answers, invalidValue)
+
 		status.Questions = append(status.Questions, questionStatus)
 	}
 
 	return status, nil
+}
+
+func (q *QuestionStatus) StatusForAnswerValue(answerValue uint8) *AnswerStatus {
+	for _, a := range q.Answers {
+		if a.Value == answerValue {
+			return a
+		}
+	}
+	return nil
 }

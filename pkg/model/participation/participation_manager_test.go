@@ -21,12 +21,12 @@ func TestEventStateHelpers(t *testing.T) {
 
 	questionBuilder := participation.NewQuestionBuilder("Q1", "-")
 	questionBuilder.AddAnswer(&participation.Answer{
-		Index:          1,
+		Value:          1,
 		Text:           "A1",
 		AdditionalInfo: "-",
 	})
 	questionBuilder.AddAnswer(&participation.Answer{
-		Index:          2,
+		Value:          2,
 		Text:           "A2",
 		AdditionalInfo: "-",
 	})
@@ -174,8 +174,7 @@ func TestSingleBallotVote(t *testing.T) {
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
-	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Current)
-	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Accumulated)
+	env.AssertDefaultBallotAnswerStatus(eventID, 0, 0)
 
 	// Event should be accepting votes now
 	require.Equal(t, 1, len(env.ParticipationManager().EventsAcceptingParticipation()))
@@ -190,8 +189,7 @@ func TestSingleBallotVote(t *testing.T) {
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
-	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
-	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Accumulated)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 0)
 
 	env.IssueMilestone() // 7
 
@@ -202,8 +200,7 @@ func TestSingleBallotVote(t *testing.T) {
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
-	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
-	require.Exactly(t, uint64(0), status.Questions[0].Answers[1].Accumulated)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 0)
 
 	env.IssueMilestone() // 8
 
@@ -214,8 +211,7 @@ func TestSingleBallotVote(t *testing.T) {
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
-	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
-	require.Exactly(t, uint64(1_000_000), status.Questions[0].Answers[1].Accumulated)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 1_000)
 
 	env.IssueMilestone() // 9
 
@@ -226,14 +222,13 @@ func TestSingleBallotVote(t *testing.T) {
 	require.NoError(t, err)
 	env.PrintJSON(status)
 	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
-	require.Equal(t, uint64(1_000_000), status.Questions[0].Answers[1].Current)
-	require.Equal(t, uint64(2_000_000), status.Questions[0].Answers[1].Accumulated)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 2_000)
 
 	env.IssueMilestone() // 10
 
 	// Event should be ended
 	env.AssertEventsCount(0, 0)
-	env.AssertDefaultBallotAnswerStatus(eventID, 1_000_000, 3_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 3_000)
 
 	env.IssueMilestone() // 11
 
@@ -277,7 +272,7 @@ func TestBallotVoteCancel(t *testing.T) {
 	castVote1 := env.IssueDefaultBallotVoteAndMilestone(eventID, env.Wallet1) // 6
 
 	// Verify vote
-	env.AssertDefaultBallotAnswerStatus(eventID, 1_000_000, 0)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 0)
 
 	// Cancel vote
 	cancelVote1Msg := env.CancelParticipations(env.Wallet1)
@@ -290,25 +285,25 @@ func TestBallotVoteCancel(t *testing.T) {
 	castVote2 := env.IssueDefaultBallotVoteAndMilestone(eventID, env.Wallet1) // 8
 
 	// Verify vote
-	env.AssertDefaultBallotAnswerStatus(eventID, 1_000_000, 1_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 1_000)
 
 	// Cancel vote
 	cancelVote2Msg := env.CancelParticipations(env.Wallet1)
 	env.IssueMilestone(cancelVote2Msg.StoredMessageID(), env.LastMilestoneMessageID()) // 9
 
 	// Verify vote
-	env.AssertDefaultBallotAnswerStatus(eventID, 0, 1_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 0, 1_000)
 
 	env.IssueMilestone() // 10
 
 	// Verify vote
-	env.AssertDefaultBallotAnswerStatus(eventID, 0, 1_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 0, 1_000)
 
 	// Participation again
 	castVote3 := env.IssueDefaultBallotVoteAndMilestone(eventID, env.Wallet1) // 11
 
 	// Verify vote
-	env.AssertDefaultBallotAnswerStatus(eventID, 1_000_000, 2_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 2_000)
 
 	env.AssertEventParticipationStatus(eventID, 1, 2)
 
@@ -320,7 +315,7 @@ func TestBallotVoteCancel(t *testing.T) {
 
 	// There should be no active votes left
 	env.AssertEventParticipationStatus(eventID, 0, 3)
-	env.AssertDefaultBallotAnswerStatus(eventID, 1_000_000, 3_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 3_000)
 
 	// Verify the vote history after the participation ended
 	env.AssertTrackedParticipation(eventID, castVote1, 6, 7, 1_000_000)
@@ -355,7 +350,7 @@ func TestBallotAddVoteBalanceBySweeping(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 1, 0)
-	env.AssertDefaultBallotAnswerStatus(eventID, 5_000_000, 5_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 5_000, 5_000)
 
 	// Send more funds to wallet1
 	transfer := env.Transfer(env.Wallet2, env.Wallet1, 1_500_000)
@@ -365,7 +360,7 @@ func TestBallotAddVoteBalanceBySweeping(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 1, 0)
-	env.AssertDefaultBallotAnswerStatus(eventID, 5_000_000, 10_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 5_000, 10_000)
 
 	// Sweep all funds
 	require.Equal(t, 2, len(env.Wallet1.Outputs()))
@@ -374,7 +369,7 @@ func TestBallotAddVoteBalanceBySweeping(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 1, 1)
-	env.AssertDefaultBallotAnswerStatus(eventID, 6_500_000, 16_500_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 6_500, 16_500)
 
 	// Verify both votes
 	env.AssertTrackedParticipation(eventID, castVote1, 8, 10, 5_000_000)
@@ -408,7 +403,7 @@ func TestBallotAddVoteBalanceByMultipleOutputs(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 1, 0)
-	env.AssertDefaultBallotAnswerStatus(eventID, 5_000_000, 5_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 5_000, 5_000)
 
 	// Send more funds to wallet1
 	transfer := env.Transfer(env.Wallet2, env.Wallet1, 1_500_000)
@@ -418,7 +413,7 @@ func TestBallotAddVoteBalanceByMultipleOutputs(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 1, 0)
-	env.AssertDefaultBallotAnswerStatus(eventID, 5_000_000, 10_000_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 5_000, 10_000)
 
 	// Send a separate vote, without sweeping
 	require.Equal(t, 2, len(env.Wallet1.Outputs()))
@@ -432,7 +427,7 @@ func TestBallotAddVoteBalanceByMultipleOutputs(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 2, 0)
-	env.AssertDefaultBallotAnswerStatus(eventID, 6_500_000, 16_500_000)
+	env.AssertDefaultBallotAnswerStatus(eventID, 6_500, 16_500)
 
 	// Verify both votes
 	env.AssertTrackedParticipation(eventID, castVote1, 8, 0, 5_000_000)
@@ -472,7 +467,7 @@ func TestMultipleBallotVotes(t *testing.T) {
 		WholeWalletBalance().
 		AddParticipation(&participation.Participation{
 			EventID: eventID,
-			Answers: []byte{1},
+			Answers: []byte{10},
 		}).
 		Send()
 
@@ -480,7 +475,7 @@ func TestMultipleBallotVotes(t *testing.T) {
 		WholeWalletBalance().
 		AddParticipation(&participation.Participation{
 			EventID: eventID,
-			Answers: []byte{2},
+			Answers: []byte{20},
 		}).
 		Send()
 
@@ -492,9 +487,9 @@ func TestMultipleBallotVotes(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 3, 0)
-	env.AssertBallotAnswerStatus(eventID, 5_000_000, 5_000_000, 0, 0)
-	env.AssertBallotAnswerStatus(eventID, 150_000_000, 150_000_000, 0, 1)
-	env.AssertBallotAnswerStatus(eventID, 200_000_000, 200_000_000, 0, 2)
+	env.AssertBallotAnswerStatus(eventID, 5_000, 5_000, 0, 0)
+	env.AssertBallotAnswerStatus(eventID, 150_000, 150_000, 0, 10)
+	env.AssertBallotAnswerStatus(eventID, 200_000, 200_000, 0, 20)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote, 8, 0, 5_000_000)
@@ -508,9 +503,9 @@ func TestMultipleBallotVotes(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 0, 3)
-	env.AssertBallotAnswerStatus(eventID, 5_000_000, 25_000_000, 0, 0)
-	env.AssertBallotAnswerStatus(eventID, 150_000_000, 750_000_000, 0, 1)
-	env.AssertBallotAnswerStatus(eventID, 200_000_000, 1000_000_000, 0, 2)
+	env.AssertBallotAnswerStatus(eventID, 5_000, 25_000, 0, 0)
+	env.AssertBallotAnswerStatus(eventID, 150_000, 750_000, 0, 10)
+	env.AssertBallotAnswerStatus(eventID, 200_000, 1000_000, 0, 20)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote, 8, 12, 5_000_000)
@@ -543,7 +538,7 @@ func TestChangeOpinionMidVote(t *testing.T) {
 		WholeWalletBalance().
 		AddParticipation(&participation.Participation{
 			EventID: eventID,
-			Answers: []byte{1},
+			Answers: []byte{10},
 		}).
 		Send()
 
@@ -551,7 +546,7 @@ func TestChangeOpinionMidVote(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 1, 0)
-	env.AssertBallotAnswerStatus(eventID, 5_000_000, 5_000_000, 0, 1)
+	env.AssertBallotAnswerStatus(eventID, 5_000, 5_000, 0, 10)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote1, 8, 0, 5_000_000)
@@ -562,7 +557,7 @@ func TestChangeOpinionMidVote(t *testing.T) {
 		WholeWalletBalance().
 		AddParticipation(&participation.Participation{
 			EventID: eventID,
-			Answers: []byte{2},
+			Answers: []byte{20},
 		}).
 		Send()
 
@@ -570,8 +565,8 @@ func TestChangeOpinionMidVote(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 1, 1)
-	env.AssertBallotAnswerStatus(eventID, 0, 5_000_000, 0, 1)
-	env.AssertBallotAnswerStatus(eventID, 5_000_000, 5_000_000, 0, 2)
+	env.AssertBallotAnswerStatus(eventID, 0, 5_000, 0, 10)
+	env.AssertBallotAnswerStatus(eventID, 5_000, 5_000, 0, 20)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote1, 8, 9, 5_000_000)
@@ -584,8 +579,8 @@ func TestChangeOpinionMidVote(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 0, 2)
-	env.AssertBallotAnswerStatus(eventID, 0, 5_000_000, 0, 1)
-	env.AssertBallotAnswerStatus(eventID, 0, 5_000_000, 0, 2)
+	env.AssertBallotAnswerStatus(eventID, 0, 5_000, 0, 10)
+	env.AssertBallotAnswerStatus(eventID, 0, 5_000, 0, 20)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote1, 8, 9, 5_000_000)
@@ -628,12 +623,12 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 		// Participation for the commencing event1
 		AddParticipation(&participation.Participation{
 			EventID: eventID1,
-			Answers: []byte{1},
+			Answers: []byte{10},
 		}).
 		// Participation too early for the upcoming event2
 		AddParticipation(&participation.Participation{
 			EventID: eventID2,
-			Answers: []byte{2},
+			Answers: []byte{20},
 		}).
 		Send()
 
@@ -642,7 +637,7 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 		// Participation for the commencing event1
 		AddParticipation(&participation.Participation{
 			EventID: eventID1,
-			Answers: []byte{1},
+			Answers: []byte{10},
 		}).
 		Send()
 
@@ -663,7 +658,7 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 		// Participation for the commencing event2
 		AddParticipation(&participation.Participation{
 			EventID: eventID2,
-			Answers: []byte{2},
+			Answers: []byte{20},
 		}).
 		Send()
 
@@ -686,12 +681,12 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 		// Keep Participation for the holding event1
 		AddParticipation(&participation.Participation{
 			EventID: eventID1,
-			Answers: []byte{1},
+			Answers: []byte{10},
 		}).
 		// Re-Participation holding event2
 		AddParticipation(&participation.Participation{
 			EventID: eventID2,
-			Answers: []byte{2},
+			Answers: []byte{20},
 		}).
 		Send()
 
@@ -721,7 +716,7 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 		// Participation for the holding event2
 		AddParticipation(&participation.Participation{
 			EventID: eventID2,
-			Answers: []byte{2},
+			Answers: []byte{20},
 		}).
 		Send()
 
@@ -748,11 +743,11 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 14, 300_000_000) // Voted 2
 
 	// Verify end results
-	env.AssertBallotAnswerStatus(eventID1, 300_000_000, 300_000_000, 0, 0)
-	env.AssertBallotAnswerStatus(eventID1, 155_000_000, 775_000_000, 0, 1)
-	env.AssertBallotAnswerStatus(eventID1, 0, 0, 0, 2)
+	env.AssertBallotAnswerStatus(eventID1, 300_000, 300_000, 0, 0)
+	env.AssertBallotAnswerStatus(eventID1, 155_000, 775_000, 0, 10)
+	env.AssertBallotAnswerStatus(eventID1, 0, 0, 0, 20)
 
 	env.AssertBallotAnswerStatus(eventID2, 0, 0, 0, 0)
-	env.AssertBallotAnswerStatus(eventID2, 0, 0, 0, 1)
-	env.AssertBallotAnswerStatus(eventID2, 505_000_000, 1_620_000_000, 0, 2)
+	env.AssertBallotAnswerStatus(eventID2, 0, 0, 0, 10)
+	env.AssertBallotAnswerStatus(eventID2, 505_000, 1_620_000, 0, 20)
 }
