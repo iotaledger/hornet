@@ -17,8 +17,8 @@ const (
 	// EventIDLength defines the length of a participation event ID.
 	EventIDLength = blake2b.Size256
 
-	ReferendumNameMaxLength           = 255
-	ReferendumAdditionalInfoMaxLength = 500
+	EventNameMaxLength           = 255
+	EventAdditionalInfoMaxLength = 500
 )
 
 // EventID is the ID of an event.
@@ -66,7 +66,7 @@ func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMo
 	return serializer.NewDeserializer(data).
 		ReadString(&e.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize event name: %w", err)
-		}, ReferendumNameMaxLength).
+		}, EventNameMaxLength).
 		ReadNum(&e.milestoneIndexCommence, func(err error) error {
 			return fmt.Errorf("unable to deserialize event commence milestone: %w", err)
 		}).
@@ -88,20 +88,46 @@ func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMo
 		}).
 		ReadString(&e.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to deserialize event additional info: %w", err)
-		}, ReferendumAdditionalInfoMaxLength).
+		}, EventAdditionalInfoMaxLength).
 		ConsumedAll(func(leftOver int, err error) error {
 			return fmt.Errorf("%w: unable to deserialize event: %d bytes are still available", err, leftOver)
+		}).
+		AbortIf(func(err error) error {
+			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
+				if e.milestoneIndexCommence >= e.milestoneIndexStart {
+					return fmt.Errorf("unable to deserialize event, commence milestone needs to be before the start milestone: %d vs %d", e.milestoneIndexCommence, e.milestoneIndexStart)
+				}
+				if e.milestoneIndexStart >= e.milestoneIndexEnd {
+					return fmt.Errorf("unable to deserialize event, start milestone needs to be before the end milestone: %d vs %d", e.milestoneIndexStart, e.milestoneIndexEnd)
+				}
+			}
+			return nil
 		}).
 		Done()
 }
 
 func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
-
-	//TODO: check milestoneIndexCommence < milestoneIndexStart < milestoneIndexEnd
-	//TODO: check there is a payload
-
-	//TODO: validate text lengths
 	return serializer.NewSerializer().
+		AbortIf(func(err error) error {
+			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
+				if e.milestoneIndexCommence >= e.milestoneIndexStart {
+					return fmt.Errorf("unable to serialize event, commence milestone needs to be before the start: %d vs %d", e.milestoneIndexCommence, e.milestoneIndexStart)
+				}
+				if e.milestoneIndexStart >= e.milestoneIndexEnd {
+					return fmt.Errorf("unable to serialize event, start milestone needs to be before the end: %d vs %d", e.milestoneIndexStart, e.milestoneIndexEnd)
+				}
+				if e.Payload == nil {
+					return errors.New("unable to serialize event, payload cannot be empty")
+				}
+				if len(e.Name) > EventNameMaxLength {
+					return fmt.Errorf("unable to serialize event, name too long. Max allowed %d", EventNameMaxLength)
+				}
+				if len(e.AdditionalInfo) > EventAdditionalInfoMaxLength {
+					return fmt.Errorf("unable to serialize event, additional info too long. Max allowed %d", EventAdditionalInfoMaxLength)
+				}
+			}
+			return nil
+		}).
 		WriteString(e.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize event name: %w", err)
 		}).
@@ -201,13 +227,12 @@ func (j *jsonEvent) ToSerializable() (serializer.Serializable, error) {
 
 // Helpers
 
-func (e *Event) payloadType() *uint32 {
+func (e *Event) payloadType() uint32 {
 	switch e.Payload.(type) {
 	case *Ballot:
-		t := BallotPayloadTypeID
-		return &t
+		return BallotPayloadTypeID
 	default:
-		return nil
+		panic(ErrUnknownPayloadType)
 	}
 }
 

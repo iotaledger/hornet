@@ -40,16 +40,15 @@ func (q *Ballot) Deserialize(data []byte, deSeriMode serializer.DeSerializationM
 }
 
 func (q *Ballot) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
-
-	//TODO: validate text lengths
-
-	if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-		//TODO: this should be moved as an arrayRule parameter to WriteSliceOfObjects in iota.go
-		if err := questionsArrayRules.CheckBounds(uint(len(q.Questions))); err != nil {
-			return nil, fmt.Errorf("unable to serialize participation questions: %w", err)
-		}
-	}
 	return serializer.NewSerializer().
+		AbortIf(func(err error) error {
+			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
+				if err := questionsArrayRules.CheckBounds(uint(len(q.Questions))); err != nil {
+					return fmt.Errorf("unable to serialize participation questions: %w", err)
+				}
+			}
+			return nil
+		}).
 		WriteSliceOfObjects(q.Questions, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
 			return fmt.Errorf("unable to serialize participation questions: %w", err)
 		}).
