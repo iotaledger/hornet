@@ -12,6 +12,10 @@ import (
 	"github.com/iotaledger/hive.go/serializer"
 )
 
+func RandValidQuestion() (*participation.Question, []byte) {
+	return RandQuestion(participation.QuestionTextMaxLength, participation.QuestionAdditionalInfoMaxLength, []byte{1, 2, 3, 4})
+}
+
 func RandQuestion(textLength int, additionalTextLength int, answerValues []uint8) (*participation.Question, []byte) {
 	q := &participation.Question{
 		Text:           RandString(textLength),
@@ -19,7 +23,7 @@ func RandQuestion(textLength int, additionalTextLength int, answerValues []uint8
 		AdditionalInfo: RandString(additionalTextLength),
 	}
 
-	answersBytes := make([][]byte, len(answerValues))
+	var answersBytes [][]byte
 	for _, value := range answerValues {
 		a, b := RandAnswer(value, rand.Intn(participation.AnswerTextMaxLength), rand.Intn(participation.AnswerAdditionalInfoMaxLength))
 		answersBytes = append(answersBytes, b)

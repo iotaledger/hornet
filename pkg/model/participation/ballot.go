@@ -30,6 +30,9 @@ type Ballot struct {
 
 func (q *Ballot) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
 	return serializer.NewDeserializer(data).
+		Skip(serializer.TypeDenotationByteSize, func(err error) error {
+			return fmt.Errorf("unable to skip ballot payload ID during deserialization: %w", err)
+		}).
 		ReadSliceOfObjects(func(seri serializer.Serializables) { q.Questions = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
 			// there is no real selector, so we always return a fresh Question
 			return &Question{}, nil
@@ -49,6 +52,9 @@ func (q *Ballot) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, e
 			}
 			return nil
 		}).
+		WriteNum(BallotPayloadTypeID, func(err error) error {
+			return fmt.Errorf("%w: unable to serialize ballot payload ID", err)
+		}).
 		WriteSliceOfObjects(q.Questions, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
 			return fmt.Errorf("unable to serialize participation questions: %w", err)
 		}).
@@ -56,28 +62,27 @@ func (q *Ballot) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, e
 }
 
 func (q *Ballot) MarshalJSON() ([]byte, error) {
-	jQuestions := &jsonBallot{}
-
-	jQuestions.Questions = make([]*json.RawMessage, len(q.Questions))
+	j := &jsonBallot{}
+	j.Questions = make([]*json.RawMessage, len(q.Questions))
 	for i, question := range q.Questions {
 		jsonQuestion, err := question.MarshalJSON()
 		if err != nil {
 			return nil, err
 		}
 		rawJSONQuestion := json.RawMessage(jsonQuestion)
-		jQuestions.Questions[i] = &rawJSONQuestion
+		j.Questions[i] = &rawJSONQuestion
 	}
 
-	return json.Marshal(jQuestions)
+	return json.Marshal(j)
 }
 
 func (q *Ballot) UnmarshalJSON(bytes []byte) error {
-	jQuestions := &jsonBallot{}
-	jQuestions.Type = int(BallotPayloadTypeID)
-	if err := json.Unmarshal(bytes, jQuestions); err != nil {
+	j := &jsonBallot{}
+	j.Type = int(BallotPayloadTypeID)
+	if err := json.Unmarshal(bytes, j); err != nil {
 		return err
 	}
-	seri, err := jQuestions.ToSerializable()
+	seri, err := j.ToSerializable()
 	if err != nil {
 		return err
 	}
