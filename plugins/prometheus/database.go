@@ -2,8 +2,6 @@ package prometheus
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -128,18 +126,4 @@ func (m *databaseMetrics) collect() {
 	if m.database.CompactionRunning() {
 		m.compactionRunning.Set(1)
 	}
-}
-
-func directorySize(path string) (int64, error) {
-	var size int64
-	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			size += info.Size()
-		}
-		return err
-	})
-	return size, err
 }
