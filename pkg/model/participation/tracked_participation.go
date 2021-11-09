@@ -29,7 +29,7 @@ func ParseEventID(ms *marshalutil.MarshalUtil) (EventID, error) {
 	return o, nil
 }
 
-func trackedParticipation(key []byte, value []byte) (*TrackedParticipation, error) {
+func TrackedParticipationFromBytes(key []byte, value []byte) (*TrackedParticipation, error) {
 
 	if len(key) != 67 {
 		return nil, ErrInvalidPreviouslyTrackedParticipation
@@ -90,7 +90,7 @@ func trackedParticipation(key []byte, value []byte) (*TrackedParticipation, erro
 	}, nil
 }
 
-func (t *TrackedParticipation) valueBytes() []byte {
+func (t *TrackedParticipation) ValueBytes() []byte {
 	m := marshalutil.New(48)
 	m.WriteBytes(t.MessageID)           // 32 bytes
 	m.WriteUint64(t.Amount)             // 8 bytes

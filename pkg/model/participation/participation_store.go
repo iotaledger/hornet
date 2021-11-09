@@ -191,7 +191,7 @@ func (pm *ParticipationManager) ParticipationForOutputID(eventID EventID, output
 		return nil, err
 	}
 
-	return trackedParticipation(key, value)
+	return TrackedParticipationFromBytes(key, value)
 }
 
 type IterateOptions struct {
@@ -233,7 +233,7 @@ func (pm *ParticipationManager) ForEachActiveParticipation(eventID EventID, cons
 
 		i++
 
-		participation, err := trackedParticipation(key, value)
+		participation, err := TrackedParticipationFromBytes(key, value)
 		if err != nil {
 			innerErr = err
 			return false
@@ -261,7 +261,7 @@ func (pm *ParticipationManager) ForEachPastParticipation(eventID EventID, consum
 
 		i++
 
-		participation, err := trackedParticipation(key, value)
+		participation, err := TrackedParticipationFromBytes(key, value)
 		if err != nil {
 			innerErr = err
 			return false
@@ -304,7 +304,7 @@ func (pm *ParticipationManager) startParticipationAtMilestone(eventID EventID, o
 		StartIndex: startIndex,
 		EndIndex:   0,
 	}
-	return mutations.Set(participationKeyForEventAndOutputID(eventID, output.OutputID()), trackedVote.valueBytes())
+	return mutations.Set(participationKeyForEventAndOutputID(eventID, output.OutputID()), trackedVote.ValueBytes())
 }
 
 func (pm *ParticipationManager) endParticipationAtMilestone(eventID EventID, output *utxo.Output, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
@@ -318,7 +318,7 @@ func (pm *ParticipationManager) endParticipationAtMilestone(eventID EventID, out
 		return err
 	}
 
-	participation, err := trackedParticipation(key, value)
+	participation, err := TrackedParticipationFromBytes(key, value)
 	if err != nil {
 		return err
 	}
@@ -331,14 +331,14 @@ func (pm *ParticipationManager) endParticipationAtMilestone(eventID EventID, out
 	}
 
 	// Add the entry to the Spent list
-	return mutations.Set(participationKeyForEventAndSpentOutputID(eventID, output.OutputID()), participation.valueBytes())
+	return mutations.Set(participationKeyForEventAndSpentOutputID(eventID, output.OutputID()), participation.ValueBytes())
 }
 
 func (pm *ParticipationManager) endAllParticipationsAtMilestone(eventID EventID, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
 	var innerErr error
 	if err := pm.participationStore.Iterate(participationKeyForEventOutputsPrefix(eventID), func(key kvstore.Key, value kvstore.Value) bool {
 
-		participation, err := trackedParticipation(key, value)
+		participation, err := TrackedParticipationFromBytes(key, value)
 		if err != nil {
 			innerErr = err
 			return false
@@ -353,7 +353,7 @@ func (pm *ParticipationManager) endAllParticipationsAtMilestone(eventID EventID,
 		}
 
 		// Add the entry to the Spent list
-		if err := mutations.Set(participationKeyForEventAndSpentOutputID(eventID, participation.OutputID), participation.valueBytes()); err != nil {
+		if err := mutations.Set(participationKeyForEventAndSpentOutputID(eventID, participation.OutputID), participation.ValueBytes()); err != nil {
 			innerErr = err
 			return false
 		}
