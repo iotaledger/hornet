@@ -21,7 +21,7 @@ var (
 	answersArrayRules = &serializer.ArrayRules{
 		Min:            MinAnswersCount,
 		Max:            MaxAnswersCount,
-		ValidationMode: serializer.ArrayValidationModeNoDuplicates,
+		ValidationMode: serializer.ArrayValidationModeNone,
 	}
 
 	ErrDuplicateAnswerValue = errors.New("duplicate answer value found")
@@ -73,10 +73,10 @@ func (q *Question) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte,
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
 				if len(q.Text) > QuestionTextMaxLength {
-					return fmt.Errorf("text too long. Max allowed %d", QuestionTextMaxLength)
+					return fmt.Errorf("%w: text too long. Max allowed %d", ErrSerializationStringLengthInvalid, QuestionTextMaxLength)
 				}
 				if len(q.AdditionalInfo) > QuestionAdditionalInfoMaxLength {
-					return fmt.Errorf("additional info too long. Max allowed %d", QuestionAdditionalInfoMaxLength)
+					return fmt.Errorf("%w: additional info too long. Max allowed %d", ErrSerializationStringLengthInvalid, QuestionAdditionalInfoMaxLength)
 				}
 				if err := answersArrayRules.CheckBounds(uint(len(q.Answers))); err != nil {
 					return fmt.Errorf("unable to serialize question answers: %w", err)

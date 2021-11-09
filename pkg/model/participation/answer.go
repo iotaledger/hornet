@@ -2,6 +2,7 @@ package participation
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/iotaledger/hive.go/serializer"
@@ -13,6 +14,10 @@ const (
 
 	AnswerValueSkipped = 0
 	AnswerValueInvalid = 255
+)
+
+var (
+	ErrSerializationReservedValue = errors.New("reserved value used")
 )
 
 // Answer is a possible answer to a Ballot Question
@@ -36,7 +41,7 @@ func (a *Answer) Deserialize(data []byte, deSeriMode serializer.DeSerializationM
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
 				if a.Value == AnswerValueSkipped || a.Value == AnswerValueInvalid {
-					return fmt.Errorf("answer is using a reserved value %d", a.Value)
+					return fmt.Errorf("%w: answer is using a reserved value %d", ErrSerializationReservedValue, a.Value)
 				}
 			}
 			return nil
@@ -49,13 +54,13 @@ func (a *Answer) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, e
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
 				if len(a.Text) > AnswerTextMaxLength {
-					return fmt.Errorf("text too long. Max allowed %d", AnswerTextMaxLength)
+					return fmt.Errorf("%w: text too long. Max allowed %d", ErrSerializationStringLengthInvalid, AnswerTextMaxLength)
 				}
 				if len(a.AdditionalInfo) > AnswerAdditionalInfoMaxLength {
-					return fmt.Errorf("additional info too long. Max allowed %d", AnswerAdditionalInfoMaxLength)
+					return fmt.Errorf("%w: additional info too long. Max allowed %d", ErrSerializationStringLengthInvalid, AnswerAdditionalInfoMaxLength)
 				}
 				if a.Value == AnswerValueSkipped || a.Value == AnswerValueInvalid {
-					return fmt.Errorf("answer is using a reserved value %d", a.Value)
+					return fmt.Errorf("%w: answer is using a reserved value %d", ErrSerializationReservedValue, a.Value)
 				}
 			}
 			return nil

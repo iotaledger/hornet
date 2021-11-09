@@ -28,6 +28,8 @@ var (
 	NullEventID = EventID{}
 
 	ErrUnknownPayloadType = errors.New("unknown payload type")
+
+	ErrSerializationStringLengthInvalid = errors.New("invalid string length")
 )
 
 // PayloadSelector implements SerializableSelectorFunc for payload types.
