@@ -1,6 +1,10 @@
 package participation
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -21,7 +25,7 @@ type EventStatus struct {
 	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
 	Status         string            `json:"status"`
 	Questions      []*QuestionStatus `json:"questions,omitempty"`
-	// TODO: add hash of all QuestionStatus to make comparison easier
+	Checksum       string            `json:"checksum"`
 }
 
 // EventStatus returns the EventStatus for an event with the given eventID.
@@ -39,9 +43,15 @@ func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, erro
 		Status:         event.Status(confirmedMilestoneIndex),
 	}
 
+	// compute the sha256 of all the question and answer status to easily compare answers
+	statusHash := sha256.New()
+
 	// For each participation, iterate over all questions
 	for idx, question := range event.BallotQuestions() {
 		questionIndex := uint8(idx)
+		if err := binary.Write(statusHash, binary.LittleEndian, questionIndex); err != nil {
+			return nil, err
+		}
 
 		questionStatus := &QuestionStatus{}
 
@@ -53,6 +63,16 @@ func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, erro
 
 			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
 			if err != nil {
+				return nil, err
+			}
+
+			if err := binary.Write(statusHash, binary.LittleEndian, answerValue); err != nil {
+				return nil, err
+			}
+			if err := binary.Write(statusHash, binary.LittleEndian, currentBalance); err != nil {
+				return nil, err
+			}
+			if err := binary.Write(statusHash, binary.LittleEndian, accumulatedBalance); err != nil {
 				return nil, err
 			}
 			return &AnswerStatus{
@@ -87,7 +107,7 @@ func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, erro
 
 		status.Questions = append(status.Questions, questionStatus)
 	}
-
+	status.Checksum = hex.EncodeToString(statusHash.Sum(nil))
 	return status, nil
 }
 
