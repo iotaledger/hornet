@@ -12,9 +12,9 @@ func NewEventBuilder(name string, milestoneCommence milestone.Index, milestoneBe
 	return &EventBuilder{
 		event: &Event{
 			Name:                   name,
-			milestoneIndexCommence: uint32(milestoneCommence),
-			milestoneIndexStart:    uint32(milestoneBeginHolding),
-			milestoneIndexEnd:      uint32(milestoneEnd),
+			MilestoneIndexCommence: uint32(milestoneCommence),
+			MilestoneIndexStart:    uint32(milestoneBeginHolding),
+			MilestoneIndexEnd:      uint32(milestoneEnd),
 			AdditionalInfo:         additionalInfo,
 		},
 	}

@@ -27,8 +27,9 @@ type EventID = [EventIDLength]byte
 var (
 	NullEventID = EventID{}
 
-	ErrUnknownPayloadType = errors.New("unknown payload type")
-
+	ErrUnknownPayloadType               = errors.New("unknown payload type")
+	ErrInvalidMilestoneSequence         = errors.New("milestone are not monotonically increasing")
+	ErrPayloadEmpty                     = errors.New("payload cannot be empty")
 	ErrSerializationStringLengthInvalid = errors.New("invalid string length")
 )
 
@@ -47,9 +48,9 @@ func PayloadSelector(payloadType uint32) (serializer.Serializable, error) {
 // Event
 type Event struct {
 	Name                   string
-	milestoneIndexCommence uint32
-	milestoneIndexStart    uint32
-	milestoneIndexEnd      uint32
+	MilestoneIndexCommence uint32
+	MilestoneIndexStart    uint32
+	MilestoneIndexEnd      uint32
 	Payload                serializer.Serializable
 	AdditionalInfo         string
 }
@@ -69,20 +70,20 @@ func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMo
 		ReadString(&e.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize event name: %w", err)
 		}, EventNameMaxLength).
-		ReadNum(&e.milestoneIndexCommence, func(err error) error {
+		ReadNum(&e.MilestoneIndexCommence, func(err error) error {
 			return fmt.Errorf("unable to deserialize event commence milestone: %w", err)
 		}).
-		ReadNum(&e.milestoneIndexStart, func(err error) error {
+		ReadNum(&e.MilestoneIndexStart, func(err error) error {
 			return fmt.Errorf("unable to deserialize event start milestone: %w", err)
 		}).
-		ReadNum(&e.milestoneIndexEnd, func(err error) error {
+		ReadNum(&e.MilestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to deserialize event end milestone: %w", err)
 		}).
 		ReadPayload(func(seri serializer.Serializable) { e.Payload = seri }, deSeriMode, func(ty uint32) (serializer.Serializable, error) {
 			switch ty {
 			case BallotPayloadTypeID:
 			default:
-				return nil, fmt.Errorf("invalid event payload type ID %d: %w", ty, iotago.ErrUnsupportedPayloadType)
+				return nil, fmt.Errorf("invalid event payload type ID %d: %w", ty, ErrUnknownPayloadType)
 			}
 			return PayloadSelector(ty)
 		}, func(err error) error {
@@ -96,11 +97,14 @@ func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMo
 		}).
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-				if e.milestoneIndexCommence >= e.milestoneIndexStart {
-					return fmt.Errorf("unable to deserialize event, commence milestone needs to be before the start milestone: %d vs %d", e.milestoneIndexCommence, e.milestoneIndexStart)
+				if e.MilestoneIndexCommence >= e.MilestoneIndexStart {
+					return fmt.Errorf("%w: unable to deserialize event, commence milestone needs to be before the start milestone: %d vs %d", ErrInvalidMilestoneSequence, e.MilestoneIndexCommence, e.MilestoneIndexStart)
 				}
-				if e.milestoneIndexStart >= e.milestoneIndexEnd {
-					return fmt.Errorf("unable to deserialize event, start milestone needs to be before the end milestone: %d vs %d", e.milestoneIndexStart, e.milestoneIndexEnd)
+				if e.MilestoneIndexStart >= e.MilestoneIndexEnd {
+					return fmt.Errorf("%w: unable to deserialize event, start milestone needs to be before the end milestone: %d vs %d", ErrInvalidMilestoneSequence, e.MilestoneIndexStart, e.MilestoneIndexEnd)
+				}
+				if e.Payload == nil {
+					return fmt.Errorf("%w: unable to deserialize event, payload cannot be empty", ErrPayloadEmpty)
 				}
 			}
 			return nil
@@ -112,20 +116,20 @@ func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, er
 	return serializer.NewSerializer().
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-				if e.milestoneIndexCommence >= e.milestoneIndexStart {
-					return fmt.Errorf("unable to serialize event, commence milestone needs to be before the start: %d vs %d", e.milestoneIndexCommence, e.milestoneIndexStart)
+				if e.MilestoneIndexCommence >= e.MilestoneIndexStart {
+					return fmt.Errorf("%w: unable to serialize event, commence milestone needs to be before the start: %d vs %d", ErrInvalidMilestoneSequence, e.MilestoneIndexCommence, e.MilestoneIndexStart)
 				}
-				if e.milestoneIndexStart >= e.milestoneIndexEnd {
-					return fmt.Errorf("unable to serialize event, start milestone needs to be before the end: %d vs %d", e.milestoneIndexStart, e.milestoneIndexEnd)
+				if e.MilestoneIndexStart >= e.MilestoneIndexEnd {
+					return fmt.Errorf("%w: unable to serialize event, start milestone needs to be before the end: %d vs %d", ErrInvalidMilestoneSequence, e.MilestoneIndexStart, e.MilestoneIndexEnd)
 				}
 				if e.Payload == nil {
-					return errors.New("unable to serialize event, payload cannot be empty")
+					return fmt.Errorf("%w: unable to serialize event, payload cannot be empty", ErrPayloadEmpty)
 				}
 				if len(e.Name) > EventNameMaxLength {
-					return fmt.Errorf("unable to serialize event, name too long. Max allowed %d", EventNameMaxLength)
+					return fmt.Errorf("%w: unable to serialize event, name too long. Max allowed %d", ErrSerializationStringLengthInvalid, EventNameMaxLength)
 				}
 				if len(e.AdditionalInfo) > EventAdditionalInfoMaxLength {
-					return fmt.Errorf("unable to serialize event, additional info too long. Max allowed %d", EventAdditionalInfoMaxLength)
+					return fmt.Errorf("%w: unable to serialize event, additional info too long. Max allowed %d", ErrSerializationStringLengthInvalid, EventAdditionalInfoMaxLength)
 				}
 			}
 			return nil
@@ -133,13 +137,13 @@ func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, er
 		WriteString(e.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize event name: %w", err)
 		}).
-		WriteNum(e.milestoneIndexCommence, func(err error) error {
+		WriteNum(e.MilestoneIndexCommence, func(err error) error {
 			return fmt.Errorf("unable to serialize event commence milestone: %w", err)
 		}).
-		WriteNum(e.milestoneIndexStart, func(err error) error {
+		WriteNum(e.MilestoneIndexStart, func(err error) error {
 			return fmt.Errorf("unable to serialize event start milestone: %w", err)
 		}).
-		WriteNum(e.milestoneIndexEnd, func(err error) error {
+		WriteNum(e.MilestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to serialize event end milestone: %w", err)
 		}).
 		WritePayload(e.Payload, deSeriMode, func(err error) error {
@@ -154,9 +158,9 @@ func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, er
 func (e *Event) MarshalJSON() ([]byte, error) {
 	j := &jsonEvent{
 		Name:                   e.Name,
-		MilestoneIndexCommence: e.milestoneIndexCommence,
-		MilestoneIndexStart:    e.milestoneIndexStart,
-		MilestoneIndexEnd:      e.milestoneIndexEnd,
+		MilestoneIndexCommence: e.MilestoneIndexCommence,
+		MilestoneIndexStart:    e.MilestoneIndexStart,
+		MilestoneIndexEnd:      e.MilestoneIndexEnd,
 		AdditionalInfo:         e.AdditionalInfo,
 	}
 
@@ -208,9 +212,9 @@ type jsonEvent struct {
 func (j *jsonEvent) ToSerializable() (serializer.Serializable, error) {
 	e := &Event{
 		Name:                   j.Name,
-		milestoneIndexCommence: j.MilestoneIndexCommence,
-		milestoneIndexStart:    j.MilestoneIndexStart,
-		milestoneIndexEnd:      j.MilestoneIndexEnd,
+		MilestoneIndexCommence: j.MilestoneIndexCommence,
+		MilestoneIndexStart:    j.MilestoneIndexStart,
+		MilestoneIndexEnd:      j.MilestoneIndexEnd,
 		AdditionalInfo:         j.AdditionalInfo,
 	}
 
@@ -268,17 +272,17 @@ func (e *Event) Status(atIndex milestone.Index) string {
 
 // CommenceMilestoneIndex returns the milestone index the commencing phase of the participation starts.
 func (e *Event) CommenceMilestoneIndex() milestone.Index {
-	return milestone.Index(e.milestoneIndexCommence)
+	return milestone.Index(e.MilestoneIndexCommence)
 }
 
 // StartMilestoneIndex returns the milestone index the holding phase of the participation starts.
 func (e *Event) StartMilestoneIndex() milestone.Index {
-	return milestone.Index(e.milestoneIndexStart)
+	return milestone.Index(e.MilestoneIndexStart)
 }
 
 // EndMilestoneIndex returns the milestone index the participation ends.
 func (e *Event) EndMilestoneIndex() milestone.Index {
-	return milestone.Index(e.milestoneIndexEnd)
+	return milestone.Index(e.MilestoneIndexEnd)
 }
 
 // ShouldAcceptParticipation returns true if the event should accept the participation for the given milestone index.
