@@ -11,14 +11,14 @@ const (
 	// BallotPayloadTypeID defines the ballot payload's type ID.
 	BallotPayloadTypeID uint32 = 0
 
-	MinQuestionsCount = 1
-	MaxQuestionsCount = 10
+	BallotMinQuestionsCount = 1
+	BallotMaxQuestionsCount = 10
 )
 
 var (
 	questionsArrayRules = &serializer.ArrayRules{
-		Min:            MinQuestionsCount,
-		Max:            MaxQuestionsCount,
+		Min:            BallotMinQuestionsCount,
+		Max:            BallotMaxQuestionsCount,
 		ValidationMode: serializer.ArrayValidationModeNone,
 	}
 )

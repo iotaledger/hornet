@@ -48,6 +48,7 @@ func TestBallot_Deserialize(t *testing.T) {
 		err    error
 	}{
 		{"ok", validBallotData, validBallot, nil},
+		{"not enough data", validBallotData[:len(validBallotData)-1], validBallot, serializer.ErrDeserializationNotEnoughData},
 		{"max questions", maxQuestionsBallotData, maxQuestionsBallot, nil},
 		{"no questions", noQuestionsBallotData, noQuestions, serializer.ErrArrayValidationMinElementsNotReached},
 		{"too many questions", tooManyQuestionsBallotData, tooManyQuestionsBallot, serializer.ErrArrayValidationMaxElementsExceeded},

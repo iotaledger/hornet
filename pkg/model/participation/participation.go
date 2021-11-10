@@ -3,9 +3,14 @@ package participation
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/iotaledger/hive.go/serializer"
+)
+
+var (
+	ErrParticipationTooManyAnswers = errors.New("participation contains more answers than what a ballot can hold")
 )
 
 // Participation holds the participation for an event and the optional answer to a ballot
@@ -22,11 +27,27 @@ func (p *Participation) Deserialize(data []byte, deSeriMode serializer.DeSeriali
 		ReadVariableByteSlice(&p.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize answers in participation: %w", err)
 		}).
+		AbortIf(func(err error) error {
+			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
+				if len(p.Answers) > BallotMaxQuestionsCount {
+					return ErrParticipationTooManyAnswers
+				}
+			}
+			return nil
+		}).
 		Done()
 }
 
 func (p *Participation) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 	return serializer.NewSerializer().
+		AbortIf(func(err error) error {
+			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
+				if len(p.Answers) > BallotMaxQuestionsCount {
+					return ErrParticipationTooManyAnswers
+				}
+			}
+			return nil
+		}).
 		WriteBytes(p.EventID[:], func(err error) error {
 			return fmt.Errorf("unable to serialize eventID in participation: %w", err)
 		}).

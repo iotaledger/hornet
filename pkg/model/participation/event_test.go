@@ -2,6 +2,9 @@ package participation_test
 
 import (
 	"math/rand"
+
+	"github.com/gohornet/hornet/pkg/model/participation"
+	"github.com/iotaledger/hive.go/testutil"
 )
 
 // TODO: Add tests for serialization
@@ -14,4 +17,10 @@ func RandString(strLen int) string {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
+}
+
+func RandEventID() participation.EventID {
+	eventID := participation.EventID{}
+	copy(eventID[:], testutil.RandBytes(participation.EventIDLength))
+	return eventID
 }

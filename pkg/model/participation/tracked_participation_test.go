@@ -16,18 +16,17 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func RandomTrackedParticipation() *participation.TrackedParticipation {
-	eventID := participation.EventID{}
-	copy(eventID[:], testutil.RandBytes(participation.EventIDLength))
-
+func RandOutputID() *iotago.UTXOInputID {
 	outputID := &iotago.UTXOInputID{}
 	copy(outputID[:], testutil.RandBytes(iotago.TransactionIDLength+serializer.UInt16ByteSize))
+	return outputID
+}
 
+func RandomTrackedParticipation() *participation.TrackedParticipation {
 	msIndex := milestone.Index(rand.Int31())
-
 	return &participation.TrackedParticipation{
-		EventID:    eventID,
-		OutputID:   outputID,
+		EventID:    RandEventID(),
+		OutputID:   RandOutputID(),
 		MessageID:  hornet.MessageIDFromSlice(testutil.RandBytes(iotago.MessageIDLength)),
 		Amount:     uint64(rand.Int63()),
 		StartIndex: msIndex,
@@ -36,7 +35,6 @@ func RandomTrackedParticipation() *participation.TrackedParticipation {
 }
 
 func TestTrackedParticipation_Serialization(t *testing.T) {
-
 	p := RandomTrackedParticipation()
 
 	ms := marshalutil.New(p.ValueBytes())
@@ -60,17 +58,10 @@ func TestTrackedParticipation_Serialization(t *testing.T) {
 }
 
 func TestTrackedParticipation_Deserialization(t *testing.T) {
-
-	eventID := participation.EventID{}
-	copy(eventID[:], testutil.RandBytes(participation.EventIDLength))
-
-	outputID := &iotago.UTXOInputID{}
-	copy(outputID[:], testutil.RandBytes(iotago.TransactionIDLength+serializer.UInt16ByteSize))
-
+	eventID := RandEventID()
+	outputID := RandOutputID()
 	messageID := hornet.MessageIDFromSlice(testutil.RandBytes(iotago.MessageIDLength))
-
 	amount := uint64(rand.Int63())
-
 	startIndex := milestone.Index(rand.Int31())
 	endIndex := startIndex + 25
 
