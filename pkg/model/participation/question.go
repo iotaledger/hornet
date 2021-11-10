@@ -13,14 +13,14 @@ const (
 	QuestionTextMaxLength           = 255
 	QuestionAdditionalInfoMaxLength = 500
 
-	MinAnswersCount = 2
-	MaxAnswersCount = 10
+	QuestionMinAnswersCount = 2
+	QuestionMaxAnswersCount = 10
 )
 
 var (
 	answersArrayRules = &serializer.ArrayRules{
-		Min:            MinAnswersCount,
-		Max:            MaxAnswersCount,
+		Min:            QuestionMinAnswersCount,
+		Max:            QuestionMaxAnswersCount,
 		ValidationMode: serializer.ArrayValidationModeNone,
 	}
 

@@ -8,14 +8,14 @@ import (
 )
 
 const (
-	MinParticipationCount = 1
-	MaxParticipationCount = 255
+	ParticipationsMinParticipationCount = 1
+	ParticipationsMaxParticipationCount = 255
 )
 
 var (
 	participationsArrayRules = &serializer.ArrayRules{
-		Min:            MinParticipationCount,
-		Max:            MaxParticipationCount,
+		Min:            ParticipationsMinParticipationCount,
+		Max:            ParticipationsMaxParticipationCount,
 		ValidationMode: serializer.ArrayValidationModeNone,
 	}
 )
@@ -38,6 +38,14 @@ func (p *Participations) Deserialize(data []byte, deSeriMode serializer.DeSerial
 
 func (p *Participations) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
 	return serializer.NewSerializer().
+		AbortIf(func(err error) error {
+			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
+				if err := participationsArrayRules.CheckBounds(uint(len(p.Participations))); err != nil {
+					return fmt.Errorf("unable to serialize participations: %w", err)
+				}
+			}
+			return nil
+		}).
 		WriteSliceOfObjects(p.Participations, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
 			return fmt.Errorf("unable to serialize participations: %w", err)
 		}).
