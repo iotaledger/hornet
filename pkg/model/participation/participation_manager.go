@@ -43,7 +43,7 @@ type ParticipationManager struct {
 
 // the default options applied to the ParticipationManager.
 var defaultOptions = []Option{
-	WithIndexationMessage("IOTAVOTE"),
+	WithIndexationMessage("PARTICIPATE"),
 }
 
 // Options define options for the ParticipationManager.
