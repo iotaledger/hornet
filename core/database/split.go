@@ -17,26 +17,27 @@ const (
 	storePrefixUTXODeprecated   byte = 8
 )
 
-func NeedsSplitting(databasePath string) (bool, error) {
+func NeedsSplitting(dbPath string) (bool, error) {
 
-	exists, err := utils.PathExists(databasePath)
+	// check if the database exists
+	dbExists, err := database.DatabaseExists(dbPath)
 	if err != nil {
 		return false, err
 	}
-	if !exists {
-		// There is no database, so no need to even split
+	if !dbExists {
+		// there is no database, so no need to even split
 		return false, nil
 	}
 
-	tangleDatabasePath := filepath.Join(databasePath, TangleDatabaseDirectoryName)
-	utxoDatabasePath := filepath.Join(databasePath, UTXODatabaseDirectoryName)
+	tangleDatabasePath := filepath.Join(dbPath, TangleDatabaseDirectoryName)
+	utxoDatabasePath := filepath.Join(dbPath, UTXODatabaseDirectoryName)
 
-	tangleExists, err := utils.PathExists(tangleDatabasePath)
+	tangleExists, err := database.DatabaseExists(tangleDatabasePath)
 	if err != nil {
 		return false, err
 	}
 
-	utxoExists, err := utils.PathExists(utxoDatabasePath)
+	utxoExists, err := database.DatabaseExists(utxoDatabasePath)
 	if err != nil {
 		return false, err
 	}
