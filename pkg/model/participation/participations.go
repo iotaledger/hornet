@@ -91,18 +91,18 @@ func (j *jsonParticipations) ToSerializable() (serializer.Serializable, error) {
 
 	participations := make(serializer.Serializables, len(j.Participations))
 	for i, ele := range j.Participations {
-		answer := &Answer{}
+		participation := &Participation{}
 
 		rawJSON, err := ele.MarshalJSON()
 		if err != nil {
 			return nil, fmt.Errorf("pos %d: %w", i, err)
 		}
 
-		if err := json.Unmarshal(rawJSON, answer); err != nil {
+		if err := json.Unmarshal(rawJSON, participation); err != nil {
 			return nil, fmt.Errorf("pos %d: %w", i, err)
 		}
 
-		participations[i] = answer
+		participations[i] = participation
 	}
 	payload.Participations = participations
 
