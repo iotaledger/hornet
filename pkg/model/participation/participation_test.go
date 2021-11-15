@@ -1,16 +1,15 @@
 package participation_test
 
 import (
-	"errors"
 	"testing"
 
-	"github.com/iotaledger/iota.go/v2/tpkg"
-
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/iota.go/v2/tpkg"
 )
 
 func RandParticipation(answerCount int) (*participation.Participation, []byte) {

@@ -2,9 +2,10 @@ package gossip
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"

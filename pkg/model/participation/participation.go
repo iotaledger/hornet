@@ -3,8 +3,9 @@ package participation
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/serializer"
 )

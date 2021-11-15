@@ -2,9 +2,10 @@ package utils
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 var (

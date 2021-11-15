@@ -2,8 +2,9 @@ package participation
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"

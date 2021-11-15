@@ -2,8 +2,9 @@ package participation
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/serializer"
 )

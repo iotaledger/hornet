@@ -2,8 +2,9 @@ package participation
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 
 	// import implementation
 	"golang.org/x/crypto/blake2b"

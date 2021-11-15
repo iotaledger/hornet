@@ -1,7 +1,7 @@
 package participation
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
