@@ -8,7 +8,7 @@ func (s *Storage) MarkDatabasesCorrupted() error {
 
 	var markingErr error
 	for _, h := range s.healthTrackers {
-		if err := h.markCorrupted(); err != nil {
+		if err := h.MarkCorrupted(); err != nil {
 			markingErr = err
 		}
 	}
@@ -19,7 +19,7 @@ func (s *Storage) MarkDatabasesTainted() error {
 
 	var markingErr error
 	for _, h := range s.healthTrackers {
-		if err := h.markTainted(); err != nil {
+		if err := h.MarkTainted(); err != nil {
 			markingErr = err
 		}
 	}
@@ -29,7 +29,7 @@ func (s *Storage) MarkDatabasesTainted() error {
 func (s *Storage) MarkDatabasesHealthy() error {
 
 	for _, h := range s.healthTrackers {
-		if err := h.markHealthy(); err != nil {
+		if err := h.MarkHealthy(); err != nil {
 			return err
 		}
 	}
@@ -39,7 +39,7 @@ func (s *Storage) MarkDatabasesHealthy() error {
 func (s *Storage) AreDatabasesCorrupted() (bool, error) {
 
 	for _, h := range s.healthTrackers {
-		corrupted, err := h.isCorrupted()
+		corrupted, err := h.IsCorrupted()
 		if err != nil {
 			return true, err
 		}
@@ -53,7 +53,7 @@ func (s *Storage) AreDatabasesCorrupted() (bool, error) {
 func (s *Storage) AreDatabasesTainted() (bool, error) {
 
 	for _, h := range s.healthTrackers {
-		tainted, err := h.isTainted()
+		tainted, err := h.IsTainted()
 		if err != nil {
 			return true, err
 		}
@@ -67,7 +67,7 @@ func (s *Storage) AreDatabasesTainted() (bool, error) {
 func (s *Storage) CheckCorrectDatabasesVersion() (bool, error) {
 
 	for _, h := range s.healthTrackers {
-		correct, err := h.checkCorrectDatabaseVersion(DBVersion)
+		correct, err := h.CheckCorrectDatabaseVersion()
 		if err != nil {
 			return false, err
 		}
@@ -84,12 +84,12 @@ func (s *Storage) UpdateDatabasesVersion() (bool, error) {
 
 	allCorrect := true
 	for _, h := range s.healthTrackers {
-		_, err := h.updateDatabaseVersion()
+		_, err := h.UpdateDatabaseVersion()
 		if err != nil {
 			return false, err
 		}
 
-		correct, err := h.checkCorrectDatabaseVersion(DBVersion)
+		correct, err := h.CheckCorrectDatabaseVersion()
 		if err != nil {
 			return false, err
 		}

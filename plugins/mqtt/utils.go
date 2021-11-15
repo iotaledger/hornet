@@ -4,8 +4,9 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
@@ -13,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -206,7 +208,7 @@ func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bo
 		MessageID:     output.MessageID().ToHex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
-		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
+		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+serializer.UInt16ByteSize]),
 		LedgerIndex:   ledgerIndex,
 		RawOutput:     &rawRawOutputJSON,
 	}
@@ -296,7 +298,7 @@ func outputIDFromTopic(topicName string) *iotago.UTXOInputID {
 			return nil
 		}
 
-		if len(bytes) == iotago.TransactionIDLength+iotago.UInt16ByteSize {
+		if len(bytes) == iotago.TransactionIDLength+serializer.UInt16ByteSize {
 			outputID := &iotago.UTXOInputID{}
 			copy(outputID[:], bytes)
 			return outputID

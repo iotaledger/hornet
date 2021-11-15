@@ -60,7 +60,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	milestoneMessageID, err := te.coo.Bootstrap()
 	require.NoError(te.TestInterface, err)
 
-	te.lastMilestoneMessageID = milestoneMessageID
+	te.LastMilestoneMessageID = milestoneMessageID
 
 	ms := te.storage.CachedMilestoneOrNil(1)
 	require.NotNil(te.TestInterface, ms)
@@ -102,9 +102,9 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
 
-	milestoneMessageID, err := te.coo.IssueMilestone(append(tips, te.lastMilestoneMessageID))
+	milestoneMessageID, err := te.coo.IssueMilestone(append(tips, te.LastMilestoneMessageID))
 	require.NoError(te.TestInterface, err)
-	te.lastMilestoneMessageID = milestoneMessageID
+	te.LastMilestoneMessageID = milestoneMessageID
 
 	te.VerifyLMI(currentIndex + 1)
 
@@ -132,9 +132,20 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 			wfConf = confirmation
 			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
+			if te.OnNewConfirmedMilestone != nil {
+				te.OnNewConfirmedMilestone(confirmation.MilestoneIndex)
+			}
 		},
-		func(index milestone.Index, output *utxo.Output) {},
-		func(index milestone.Index, spent *utxo.Spent) {},
+		func(index milestone.Index, output *utxo.Output) {
+			if te.OnNewOutput != nil {
+				te.OnNewOutput(index, output)
+			}
+		},
+		func(index milestone.Index, spent *utxo.Spent) {
+			if te.OnNewSpent != nil {
+				te.OnNewSpent(index, spent)
+			}
+		},
 		nil,
 	)
 	require.NoError(te.TestInterface, err)

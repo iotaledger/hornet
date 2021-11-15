@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -46,7 +47,7 @@ func NewOutputResponse(output *utxo.Output, spent bool, ledgerIndex milestone.In
 		MessageID:     output.MessageID().ToHex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
-		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
+		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+serializer.UInt16ByteSize]),
 		RawOutput:     &rawRawOutputJSON,
 		LedgerIndex:   ledgerIndex,
 	}, nil

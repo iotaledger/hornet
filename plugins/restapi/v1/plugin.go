@@ -30,13 +30,13 @@ const (
 )
 
 const (
-	// ParameterMessageID is used to identify a message by it's ID.
+	// ParameterMessageID is used to identify a message by its ID.
 	ParameterMessageID = "messageID"
 
-	// ParameterTransactionID is used to identify a transaction by it's ID.
+	// ParameterTransactionID is used to identify a transaction by its ID.
 	ParameterTransactionID = "transactionID"
 
-	// ParameterOutputID is used to identify an output by it's ID.
+	// ParameterOutputID is used to identify an output by its ID.
 	ParameterOutputID = "outputID"
 
 	// ParameterAddress is used to identify an address.
@@ -58,11 +58,11 @@ const (
 	// GET returns the tips.
 	RouteTips = "/tips"
 
-	// RouteMessageData is the route for getting message data by it's messageID.
+	// RouteMessageData is the route for getting message data by its messageID.
 	// GET returns message data (json).
 	RouteMessageData = "/messages/:" + ParameterMessageID
 
-	// RouteMessageMetadata is the route for getting message metadata by it's messageID.
+	// RouteMessageMetadata is the route for getting message metadata by its messageID.
 	// GET returns message metadata (including info about "promotion/reattachment needed").
 	RouteMessageMetadata = "/messages/:" + ParameterMessageID + "/metadata"
 
@@ -70,7 +70,7 @@ const (
 	// GET returns raw message data (bytes).
 	RouteMessageBytes = "/messages/:" + ParameterMessageID + "/raw"
 
-	// RouteMessageChildren is the route for getting message IDs of the children of a message, identified by it's messageID.
+	// RouteMessageChildren is the route for getting message IDs of the children of a message, identified by its messageID.
 	// GET returns the message IDs of all children.
 	RouteMessageChildren = "/messages/:" + ParameterMessageID + "/children"
 
@@ -87,7 +87,7 @@ const (
 	// GET returns the milestone.
 	RouteMilestone = "/milestones/:" + ParameterMilestoneIndex
 
-	// RouteMilestoneUTXOChanges is the route for getting all UTXO changes of a milestone by it's milestoneIndex.
+	// RouteMilestoneUTXOChanges is the route for getting all UTXO changes of a milestone by its milestoneIndex.
 	// GET returns the output IDs of all UTXO changes.
 	RouteMilestoneUTXOChanges = "/milestones/:" + ParameterMilestoneIndex + "/utxo-changes"
 
@@ -121,7 +121,7 @@ const (
 	// RouteReceipts is the route for getting all stored receipts.
 	RouteReceipts = "/receipts"
 
-	// RouteReceipts is the route for getting all receipts for a given migrated at index.
+	// RouteReceiptsMigratedAtIndex is the route for getting all receipts for a given migrated at index.
 	RouteReceiptsMigratedAtIndex = "/receipts/:" + ParameterMilestoneIndex
 
 	// RoutePeer is the route for getting peers by their peerID.

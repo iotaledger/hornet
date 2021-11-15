@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -127,7 +128,7 @@ func (m MessageIDs) ToSliceOfArrays() iotago.MessageIDs {
 // RemoveDupsAndSortByLexicalOrder returns a new slice of MessageIDs sorted by lexical order and without duplicates.
 func (m MessageIDs) RemoveDupsAndSortByLexicalOrder() MessageIDs {
 	// sort the messages lexicographically
-	sorted := make(iotago.LexicalOrderedByteSlices, len(m))
+	sorted := make(serializer.LexicalOrderedByteSlices, len(m))
 	for i, id := range m {
 		sorted[i] = id
 	}

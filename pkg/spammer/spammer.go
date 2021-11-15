@@ -9,6 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -88,7 +89,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	}
 	durationPOW := time.Since(timeStart)
 
-	msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}

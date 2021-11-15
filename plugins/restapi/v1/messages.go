@@ -21,6 +21,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -220,7 +221,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
-		if _, err := msg.Deserialize(bytes, iotago.DeSeriModeNoValidation); err != nil {
+		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation); err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 	}
@@ -275,7 +276,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		}
 	}
 
-	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}

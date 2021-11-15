@@ -6,6 +6,7 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -68,7 +69,7 @@ func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirm
 func (o *Output) spentDatabaseKey() []byte {
 	ms := marshalutil.New(69)
 	ms.WriteByte(UTXOStoreKeyPrefixSpent) // 1 byte
-	ms.WriteBytes(o.addressBytes())       // 33 bytes
+	ms.WriteBytes(o.AddressBytes())       // 33 bytes
 	ms.WriteByte(o.outputType)            // 1 byte
 	ms.WriteBytes(o.outputID[:])          // 34 bytes
 	return ms.Bytes()
@@ -107,7 +108,7 @@ func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 
 	// Read outputID
 	var err error
-	if s.outputID, err = parseOutputID(keyUtil); err != nil {
+	if s.outputID, err = ParseOutputID(keyUtil); err != nil {
 		return err
 	}
 
@@ -164,7 +165,7 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIter
 
 	// Filter by address
 	if opt.address != nil {
-		addrBytes, err := opt.address.Serialize(iotago.DeSeriModeNoValidation)
+		addrBytes, err := opt.address.Serialize(serializer.DeSeriModeNoValidation)
 		if err != nil {
 			return err
 		}

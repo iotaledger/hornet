@@ -18,8 +18,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 // Score defines the score of a tip.
@@ -348,7 +348,7 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.MessageIDs, e
 	maxRetries := (tipCount - 1) * 10
 
 	seen := make(map[string]struct{})
-	orderedSlicesWithoutDups := make(iotago.LexicalOrderedByteSlices, tipCount)
+	orderedSlicesWithoutDups := make(serializer.LexicalOrderedByteSlices, tipCount)
 
 	// retry the tipselection several times if parents not unique
 	uniqueElements := 0

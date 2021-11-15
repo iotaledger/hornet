@@ -32,9 +32,9 @@ type ConfirmationMetrics struct {
 	DurationApplyExcludedWithoutTransactions         time.Duration
 	DurationApplyMilestone                           time.Duration
 	DurationApplyExcludedWithConflictingTransactions time.Duration
-	DurationOnMilestoneConfirmed                     time.Duration
 	DurationForEachNewOutput                         time.Duration
 	DurationForEachNewSpent                          time.Duration
+	DurationOnMilestoneConfirmed                     time.Duration
 	DurationSetConfirmedMilestoneIndex               time.Duration
 	DurationUpdateConeRootIndexes                    time.Duration
 	DurationConfirmedMilestoneChanged                time.Duration
@@ -255,9 +255,6 @@ func ConfirmMilestone(
 	}
 	timeApplyExcludedWithConflictingTransactions := time.Now()
 
-	onMilestoneConfirmed(confirmation)
-	timeOnMilestoneConfirmed := time.Now()
-
 	for _, output := range newOutputs {
 		forEachNewOutput(milestoneIndex, output)
 	}
@@ -268,6 +265,9 @@ func ConfirmMilestone(
 	}
 	timeForEachNewSpent := time.Now()
 
+	onMilestoneConfirmed(confirmation)
+	timeOnMilestoneConfirmed := time.Now()
+
 	return confirmedMilestoneStats, &ConfirmationMetrics{
 		DurationWhiteflag:                                timeWhiteflag.Sub(timeStart),
 		DurationReceipts:                                 timeReceipts.Sub(timeWhiteflag),
@@ -276,8 +276,8 @@ func ConfirmMilestone(
 		DurationApplyExcludedWithoutTransactions:         timeApplyExcludedWithoutTransactions.Sub(timeApplyIncludedWithTransactions),
 		DurationApplyMilestone:                           timeApplyMilestone.Sub(timeApplyExcludedWithoutTransactions),
 		DurationApplyExcludedWithConflictingTransactions: timeApplyExcludedWithConflictingTransactions.Sub(timeApplyMilestone),
-		DurationOnMilestoneConfirmed:                     timeOnMilestoneConfirmed.Sub(timeApplyExcludedWithConflictingTransactions),
-		DurationForEachNewOutput:                         timeForEachNewOutput.Sub(timeOnMilestoneConfirmed),
+		DurationForEachNewOutput:                         timeForEachNewOutput.Sub(timeApplyExcludedWithConflictingTransactions),
 		DurationForEachNewSpent:                          timeForEachNewSpent.Sub(timeForEachNewOutput),
+		DurationOnMilestoneConfirmed:                     timeOnMilestoneConfirmed.Sub(timeForEachNewSpent),
 	}, nil
 }

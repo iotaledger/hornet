@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/byteutils"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -25,8 +26,8 @@ const (
 
 	// The offset of counters within a snapshot file:
 	// version + type + timestamp + network-id + sep-ms-index + ledger-ms-index
-	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + iotago.UInt64ByteSize +
-		iotago.UInt32ByteSize + iotago.UInt32ByteSize
+	countersOffset = serializer.OneByte + serializer.OneByte + serializer.UInt64ByteSize + serializer.UInt64ByteSize +
+		serializer.UInt32ByteSize + serializer.UInt32ByteSize
 )
 
 var (
@@ -69,7 +70,7 @@ type Output struct {
 	// The type of the output.
 	OutputType iotago.OutputType `json:"output_type"`
 	// The underlying address to which this output deposits to.
-	Address iotago.Serializable `json:"address"`
+	Address serializer.Serializable `json:"address"`
 	// The amount of the deposit.
 	Amount uint64 `json:"amount"`
 }
@@ -100,7 +101,7 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	if err := b.WriteByte(s.OutputType); err != nil {
 		return nil, fmt.Errorf("unable to write output type for ls-output: %w", err)
 	}
-	addrData, err := s.Address.Serialize(iotago.DeSeriModePerformValidation)
+	addrData, err := s.Address.Serialize(serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize address for ls-output: %w", err)
 	}
@@ -163,7 +164,7 @@ func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
 func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
 
-	msBytes, err := md.Milestone.Serialize(iotago.DeSeriModePerformValidation)
+	msBytes, err := md.Milestone.Serialize(serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize milestone for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
@@ -335,9 +336,9 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *
 	}
 
 	// write count placeholders
-	placeholderSpace := iotago.UInt64ByteSize * 3
+	placeholderSpace := serializer.UInt64ByteSize * 3
 	if header.Type == Delta {
-		placeholderSpace -= iotago.UInt64ByteSize
+		placeholderSpace -= serializer.UInt64ByteSize
 	}
 	if _, err := writeSeeker.Write(make([]byte, placeholderSpace)); err != nil {
 		return nil, fmt.Errorf("unable to write LS counter placeholders: %w", err)
@@ -583,7 +584,7 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 		return nil, fmt.Errorf("unable to read LS ms-diff ms: %w", err)
 	}
 
-	if _, err := ms.Deserialize(msBytes, iotago.DeSeriModePerformValidation); err != nil {
+	if _, err := ms.Deserialize(msBytes, serializer.DeSeriModePerformValidation); err != nil {
 		return nil, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
 	}
 
@@ -650,7 +651,7 @@ func readOutput(reader io.Reader) (*Output, error) {
 	output.OutputType = typeBuf[0]
 
 	// look ahead address type
-	var addrTypeBuf [iotago.SmallTypeDenotationByteSize]byte
+	var addrTypeBuf [serializer.SmallTypeDenotationByteSize]byte
 	if _, err := io.ReadFull(reader, addrTypeBuf[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS output address type byte: %w", err)
 	}
@@ -674,7 +675,7 @@ func readOutput(reader io.Reader) (*Output, error) {
 		return nil, fmt.Errorf("unable to read LS output address: %w", err)
 	}
 
-	if _, err := addr.Deserialize(append(addrTypeBuf[:], addrDataWithoutType...), iotago.DeSeriModePerformValidation); err != nil {
+	if _, err := addr.Deserialize(append(addrTypeBuf[:], addrDataWithoutType...), serializer.DeSeriModePerformValidation); err != nil {
 		return nil, fmt.Errorf("invalid LS output address: %w", err)
 	}
 	output.Address = addr

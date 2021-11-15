@@ -73,7 +73,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 	outputs := make(Outputs, int(outputCount))
 	for i := 0; i < int(outputCount); i++ {
 		var outputID *iotago.UTXOInputID
-		if outputID, err = parseOutputID(marshalUtil); err != nil {
+		if outputID, err = ParseOutputID(marshalUtil); err != nil {
 			return err
 		}
 
@@ -93,7 +93,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 	spents := make(Spents, spentCount)
 	for i := 0; i < int(spentCount); i++ {
 		var outputID *iotago.UTXOInputID
-		if outputID, err = parseOutputID(marshalUtil); err != nil {
+		if outputID, err = ParseOutputID(marshalUtil); err != nil {
 			return err
 		}
 

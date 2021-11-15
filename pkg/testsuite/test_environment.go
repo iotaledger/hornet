@@ -53,8 +53,8 @@ type TestEnvironment struct {
 	// coo holds the coordinator instance.
 	coo *coordinator.Coordinator
 
-	// lastMilestoneMessageID is the message ID of the last issued milestone.
-	lastMilestoneMessageID hornet.MessageID
+	// LastMilestoneMessageID is the message ID of the last issued milestone.
+	LastMilestoneMessageID hornet.MessageID
 
 	// tempDir is the directory that contains the temporary files for the test.
 	tempDir string
@@ -79,7 +79,20 @@ type TestEnvironment struct {
 
 	// GenesisOutput marks the initial output created when bootstrapping the tangle.
 	GenesisOutput *utxo.Output
+
+	// OnNewOutput callback that will be called for each created UTXO. This is equivalent to the tangle.NewUTXOOutput event.
+	OnNewOutput OnNewOutputFunc
+
+	// OnNewSpent callback that will be called for each spent UTXO. This is equivalent to the tangle.NewUTXOSpent event.
+	OnNewSpent OnNewSpentFunc
+
+	// OnNewConfirmedMilestone callback that will be called after confirming a milestone. This is equivalent to the tangle.ConfirmedMilestoneIndexChanged event.
+	OnNewConfirmedMilestone OnNewConfirmedMilestoneFunc
 }
+
+type OnNewOutputFunc func(index milestone.Index, output *utxo.Output)
+type OnNewSpentFunc func(index milestone.Index, spent *utxo.Spent)
+type OnNewConfirmedMilestoneFunc func(index milestone.Index)
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
@@ -92,7 +105,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(nil, targetScore, 5*time.Second, "", 30*time.Second),
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
-		lastMilestoneMessageID: hornet.NullMessageID(),
+		LastMilestoneMessageID: hornet.NullMessageID(),
 		serverMetrics:          &metrics.ServerMetrics{},
 	}
 
@@ -161,6 +174,12 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	}
 
 	return te
+}
+
+func (te *TestEnvironment) ConfigureUTXOCallbacks(outputFunc OnNewOutputFunc, spentFunc OnNewSpentFunc, milestoneFunc OnNewConfirmedMilestoneFunc) {
+	te.OnNewOutput = outputFunc
+	te.OnNewSpent = spentFunc
+	te.OnNewConfirmedMilestone = milestoneFunc
 }
 
 func (te *TestEnvironment) Storage() *storage.Storage {

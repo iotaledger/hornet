@@ -21,6 +21,7 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -335,7 +336,7 @@ func (f *Faucet) clearRequests(batchedRequests []*queueItem) {
 }
 
 // createMessage creates a new message and references the last faucet message (also reattaches if below max depth).
-func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Serializable) (*storage.Message, error) {
+func (f *Faucet) createMessage(ctx context.Context, txPayload serializer.Serializable) (*storage.Message, error) {
 
 	tips, err := f.tipselFunc()
 	if err != nil {
@@ -365,7 +366,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Serializabl
 			return nil, err
 		}
 
-		msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+		msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
 		if err != nil {
 			return nil, err
 		}
@@ -435,7 +436,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Serializabl
 		return nil, err
 	}
 
-	msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
 	}

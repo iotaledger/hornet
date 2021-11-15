@@ -41,9 +41,9 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/websocket v1.4.2
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20210819121432-6e2ce2d41200
-	github.com/iotaledger/hive.go v0.0.0-20211012165228-2f217dcf2ad7
+	github.com/iotaledger/hive.go v0.0.0-20211025103336-00824706557d
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v2 v2.0.1-0.20210830162758-173bada804f9
+	github.com/iotaledger/iota.go/v2 v2.0.1-0.20211018071144-edf83a5ab704
 	github.com/ipfs/go-datastore v0.4.6
 	github.com/ipfs/go-ds-badger v0.2.7
 	github.com/labstack/echo/v4 v4.6.1
@@ -66,7 +66,7 @@ require (
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.13.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
-	golang.org/x/net v0.0.0-20211011170408-caeb26a5c8c0
+	golang.org/x/net v0.0.0-20211020060615-d418f374d309
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 )
@@ -92,12 +92,15 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dgraph-io/badger v1.6.2 // indirect
+	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
+	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
+	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
@@ -234,10 +237,10 @@ require (
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/exp v0.0.0-20211011213208-1d87cf485e27 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac // indirect
+	golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/genproto v0.0.0-20211011165927-a5fb3255271e // indirect
+	google.golang.org/genproto v0.0.0-20211027162914-98a5263abeca // indirect
 	google.golang.org/grpc v1.41.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

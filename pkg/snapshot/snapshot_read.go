@@ -12,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -82,8 +83,8 @@ func newUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasury
 // returns a function which calls the corresponding address type callback function with
 // the origin argument and type casted address.
 func callbackPerAddress(
-	edAddrF func(interface{}, *iotago.Ed25519Address) error) func(interface{}, iotago.Serializable) error {
-	return func(obj interface{}, addr iotago.Serializable) error {
+	edAddrF func(interface{}, *iotago.Ed25519Address) error) func(interface{}, serializer.Serializable) error {
+	return func(obj interface{}, addr serializer.Serializable) error {
 		switch a := addr.(type) {
 		case *iotago.Ed25519Address:
 			return edAddrF(obj, a)

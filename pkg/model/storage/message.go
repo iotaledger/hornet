@@ -6,6 +6,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -21,7 +22,7 @@ type Message struct {
 	message     *iotago.Message
 }
 
-func NewMessage(iotaMsg *iotago.Message, deSeriMode iotago.DeSerializationMode) (*Message, error) {
+func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMode) (*Message, error) {
 
 	data, err := iotaMsg.Serialize(deSeriMode)
 	if err != nil {
@@ -43,7 +44,7 @@ func NewMessage(iotaMsg *iotago.Message, deSeriMode iotago.DeSerializationMode) 
 	return msg, nil
 }
 
-func MessageFromBytes(data []byte, deSeriMode iotago.DeSerializationMode) (*Message, error) {
+func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode) (*Message, error) {
 
 	iotaMsg := &iotago.Message{}
 	if _, err := iotaMsg.Deserialize(data, deSeriMode); err != nil {
@@ -76,7 +77,7 @@ func (msg *Message) Data() []byte {
 func (msg *Message) Message() *iotago.Message {
 	msg.messageOnce.Do(func() {
 		iotaMsg := &iotago.Message{}
-		if _, err := iotaMsg.Deserialize(msg.data, iotago.DeSeriModeNoValidation); err != nil {
+		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation); err != nil {
 			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.ToHex(), err))
 		}
 
