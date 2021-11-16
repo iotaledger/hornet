@@ -14,4 +14,7 @@ const (
 	// Voting
 	ParticipationStoreKeyPrefixBallotCurrentVoteBalanceForQuestionAndAnswer     byte = 4
 	ParticipationStoreKeyPrefixBallotAccululatedVoteBalanceForQuestionAndAnswer byte = 5
+
+	// Staking
+	ParticipationStoreKeyPrefixStakingAddress byte = 6
 )

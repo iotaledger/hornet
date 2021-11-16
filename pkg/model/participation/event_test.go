@@ -42,6 +42,19 @@ func RandEventWithBallot(nameLen int, additionalInfoLen int) (*participation.Eve
 	return RandEvent(nameLen, additionalInfoLen, commence, start, end, ballot)
 }
 
+func RandValidEventWithStaking() (*participation.Event, []byte) {
+	return RandEventWithStaking(participation.EventNameMaxLength, participation.EventAdditionalInfoMaxLength)
+}
+
+func RandEventWithStaking(nameLen int, additionalInfoLen int) (*participation.Event, []byte) {
+	commence := uint32(rand.Intn(1000))
+	start := commence + uint32(rand.Intn(1000))
+	end := start + uint32(rand.Intn(1000))
+
+	staking, _ := RandStaking(participation.StakingTextMaxLength, participation.StakingSymbolMaxLength, uint32(1+rand.Intn(10000)), uint32(1+rand.Intn(10000)), participation.StakingAdditionalInfoMaxLength)
+	return RandEvent(nameLen, additionalInfoLen, commence, start, end, staking)
+}
+
 func RandEventWithoutPayload() (*participation.Event, []byte) {
 	return RandEvent(participation.EventNameMaxLength, participation.EventAdditionalInfoMaxLength, 1, 2, 3, nil)
 }
@@ -80,6 +93,7 @@ func RandEvent(nameLen int, additionalInfoLen int, commence uint32, start uint32
 
 func TestEvent_Deserialize(t *testing.T) {
 	eventWithBallot, eventWithBallotData := RandValidEventWithBallot()
+	eventWithStaking, eventWithStakingData := RandValidEventWithStaking()
 	longAdditionalInfo, longAdditionalInfoData := RandEventWithBallot(participation.EventNameMaxLength, participation.EventAdditionalInfoMaxLength+1)
 	emptyEvent, emptyEventData := RandEventWithoutPayload()
 	startBeforeCommence, startBeforeCommenceData := RandEvent(10, 10, 1, 1, 2, nil)
@@ -92,6 +106,7 @@ func TestEvent_Deserialize(t *testing.T) {
 		err    error
 	}{
 		{"ok ballot", eventWithBallotData, eventWithBallot, nil},
+		{"ok staking", eventWithStakingData, eventWithStaking, nil},
 		{"not enough data", eventWithBallotData[:len(eventWithBallotData)-1], eventWithBallot, serializer.ErrDeserializationNotEnoughData},
 		{"too long additional info", longAdditionalInfoData, longAdditionalInfo, serializer.ErrDeserializationLengthInvalid},
 		{"no payload", emptyEventData, emptyEvent, participation.ErrPayloadEmpty},
@@ -114,6 +129,7 @@ func TestEvent_Deserialize(t *testing.T) {
 
 func TestEvent_Serialize(t *testing.T) {
 	eventWithBallot, eventWithBallotData := RandValidEventWithBallot()
+	eventWithStaking, eventWithStakingData := RandValidEventWithStaking()
 	longName, longNameData := RandEventWithBallot(participation.EventNameMaxLength+1, participation.EventAdditionalInfoMaxLength)
 	longAdditionalInfo, longAdditionalInfoData := RandEventWithBallot(participation.EventNameMaxLength, participation.EventAdditionalInfoMaxLength+1)
 	emptyEvent, emptyEventData := RandEventWithoutPayload()
@@ -127,6 +143,7 @@ func TestEvent_Serialize(t *testing.T) {
 		err    error
 	}{
 		{"ok ballot", eventWithBallot, eventWithBallotData, nil},
+		{"ok staking", eventWithStaking, eventWithStakingData, nil},
 		{"too long text", longName, longNameData, participation.ErrSerializationStringLengthInvalid},
 		{"too long additional info", longAdditionalInfo, longAdditionalInfoData, participation.ErrSerializationStringLengthInvalid},
 		{"no payload", emptyEvent, emptyEventData, participation.ErrPayloadEmpty},

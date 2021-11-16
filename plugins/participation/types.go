@@ -26,3 +26,14 @@ type TrackedParticipation struct {
 type OutputStatusResponse struct {
 	Participations map[string]*TrackedParticipation `json:"participations"`
 }
+
+// AddressReward holds the amount and token symbol for a certain reward.
+type AddressReward struct {
+	Amount uint64 `json:"amount"`
+	Symbol string `json:"symbol"`
+}
+
+// AddressRewardsResponse defines the response of a GET RouteAddressBech32Status or RouteAddressEd25519Status REST API call.
+type AddressRewardsResponse struct {
+	Rewards map[string]*AddressReward `json:"rewards"`
+}

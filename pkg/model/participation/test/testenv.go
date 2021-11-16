@@ -17,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 const (
@@ -328,4 +329,10 @@ func (env *ParticipationTestEnv) AssertInvalidParticipation(eventID participatio
 	_, err := env.ParticipationManager().ParticipationForOutputID(eventID, sentParticipations.Message().GeneratedUTXO().OutputID())
 	require.Error(env.t, err)
 	require.ErrorIs(env.t, err, participation.ErrUnknownParticipation)
+}
+
+func (env *ParticipationTestEnv) AssertRewardBalance(eventID participation.EventID, address iotago.Address, balance uint64) {
+	rewards, err := env.ParticipationManager().StakingRewardForAddress(eventID, address)
+	require.NoError(env.t, err)
+	require.Exactly(env.t, balance, rewards)
 }

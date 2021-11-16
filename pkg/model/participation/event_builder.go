@@ -33,6 +33,7 @@ func (rb *EventBuilder) Payload(seri serializer.Serializable) *EventBuilder {
 	}
 	switch seri.(type) {
 	case *Ballot:
+	case *Staking:
 	case nil:
 	default:
 		rb.err = fmt.Errorf("%w: unsupported type %T", ErrUnknownPayloadType, seri)
