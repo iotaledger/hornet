@@ -4,8 +4,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -158,4 +160,37 @@ func CloseFileAndRename(fileDescriptor *os.File, sourceFilePath string, targetFi
 		return fmt.Errorf("unable to rename file: %w", err)
 	}
 	return nil
+}
+
+// DirectoryEmpty returns whether the given directory is empty.
+func DirectoryEmpty(dirPath string) (bool, error) {
+
+	// check if the directory exists
+	if _, err := os.Stat(dirPath); err != nil {
+		return false, fmt.Errorf("unable to check directory (%s): %w", dirPath, err)
+	}
+
+	// check if the directory is empty
+	if err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if dirPath == path {
+			// skip the root folder itself
+			return nil
+		}
+
+		return os.ErrExist
+	}); err != nil {
+		if !os.IsExist(err) {
+			return false, fmt.Errorf("unable to check directory (%s): %w", dirPath, err)
+		}
+
+		// directory is not empty
+		return false, nil
+	}
+
+	// directory is empty
+	return true, nil
 }
