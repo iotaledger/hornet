@@ -118,7 +118,7 @@ func sendParticipationTransaction(cfg *cfg) (*iotago.MessageID, error) {
 		return nil, err
 	}
 
-	clientCtx, clientCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	clientCtx, clientCancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer clientCancel()
 
 	balanceResponse, err := client.BalanceByEd25519Address(clientCtx, &inputAddress)
