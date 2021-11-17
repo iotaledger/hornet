@@ -299,8 +299,8 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 
 	transaction := msg.Transaction()
 	if transaction == nil {
-		// if the message was included, there must be a transaction payload
-		return fmt.Errorf("no transaction payload found: MsgID: %s", messageID.ToHex())
+		// Do not handle outputs from migrations
+		return nil
 	}
 
 	txEssence := msg.TransactionEssence()
