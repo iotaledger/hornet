@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -134,6 +135,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+	restapiv1.AddFeature(Plugin.Name)
 
 	routeGroup := deps.Echo.Group("/api/plugins/participation")
 

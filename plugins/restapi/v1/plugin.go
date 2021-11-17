@@ -434,3 +434,7 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 }
+
+func AddFeature(feature string) {
+	features = append(features, feature)
+}
