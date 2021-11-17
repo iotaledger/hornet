@@ -52,6 +52,9 @@ func (pm *ParticipationManager) EventStatus(eventID EventID, milestone ...milest
 
 	// compute the sha256 of all the question and answer status to easily compare answers
 	statusHash := sha256.New()
+	if err := binary.Write(statusHash, binary.LittleEndian, index); err != nil {
+		return nil, err
+	}
 
 	// For each participation, iterate over all questions
 	for idx, question := range event.BallotQuestions() {
