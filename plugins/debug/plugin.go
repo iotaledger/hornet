@@ -20,14 +20,6 @@ import (
 )
 
 const (
-	// ParameterMessageID is used to identify a message by it's ID.
-	ParameterMessageID = "messageID"
-
-	// ParameterMilestoneIndex is used to identify a milestone.
-	ParameterMilestoneIndex = "milestoneIndex"
-)
-
-const (
 	// RouteDebugComputeWhiteFlag is the debug route to compute the white flag confirmation for the cone of the given parents.
 	// POST computes the white flag confirmation.
 	RouteDebugComputeWhiteFlag = "/whiteflag"
@@ -58,7 +50,7 @@ const (
 
 	// RouteDebugMilestoneDiffs is the debug route for getting a milestone diff by it's milestoneIndex.
 	// GET returns the utxo diff (new outputs & spents) for the milestone index.
-	RouteDebugMilestoneDiffs = "/ms-diff/:" + ParameterMilestoneIndex
+	RouteDebugMilestoneDiffs = "/ms-diff/:" + restapipkg.ParameterMilestoneIndex
 
 	// RouteDebugRequests is the debug route for getting all pending requests.
 	// GET returns a list of all pending requests.
@@ -67,7 +59,7 @@ const (
 	// RouteDebugMessageCone is the debug route for traversing a cone of a message.
 	// it traverses the parents of a message until they reference an older milestone than the start message.
 	// GET returns the path of this traversal and the "entry points".
-	RouteDebugMessageCone = "/message-cones/:" + ParameterMessageID
+	RouteDebugMessageCone = "/message-cones/:" + restapipkg.ParameterMessageID
 )
 
 func init() {

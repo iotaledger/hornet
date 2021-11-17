@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 func receipts(_ echo.Context) (*receiptsResponse, error) {
@@ -20,7 +21,7 @@ func receipts(_ echo.Context) (*receiptsResponse, error) {
 }
 
 func receiptsByMigratedAtIndex(c echo.Context) (*receiptsResponse, error) {
-	migratedAt, err := ParseMilestoneIndexParam(c)
+	migratedAt, err := restapi.ParseMilestoneIndexParam(c)
 	if err != nil {
 		return nil, err
 	}

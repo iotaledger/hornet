@@ -41,9 +41,9 @@ func WrapInfoSnapshot(info *p2p.PeerInfoSnapshot) *PeerResponse {
 }
 
 func getPeer(c echo.Context) (*PeerResponse, error) {
-	peerID, err := peer.Decode(c.Param(ParameterPeerID))
+	peerID, err := restapi.ParsePeerIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
+		return nil, err
 	}
 
 	info := deps.PeeringManager.PeerInfoSnapshot(peerID)
@@ -55,9 +55,9 @@ func getPeer(c echo.Context) (*PeerResponse, error) {
 }
 
 func removePeer(c echo.Context) error {
-	peerID, err := peer.Decode(c.Param(ParameterPeerID))
+	peerID, err := restapi.ParsePeerIDParam(c)
 	if err != nil {
-		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid peerID, error: %s", err)
+		return err
 	}
 
 	// error is ignored because we don't care about the config here
