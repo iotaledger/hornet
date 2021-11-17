@@ -9,8 +9,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -58,7 +58,6 @@ func parseEventTypeQueryParam(c echo.Context) ([]uint32, error) {
 }
 
 func parseEventIDParam(c echo.Context) (participation.EventID, error) {
-
 	eventIDHex := strings.ToLower(c.Param(ParameterParticipationEventID))
 	if eventIDHex == "" {
 		return participation.NullEventID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterParticipationEventID)
@@ -133,14 +132,36 @@ func deleteEvent(c echo.Context) error {
 	return deps.ParticipationManager.DeleteEvent(eventID)
 }
 
-func getEventStatus(c echo.Context) (*participation.EventStatus, error) {
+func parseMilestoneIndexQueryParam(c echo.Context) (milestone.Index, error) {
+	milestoneIndexParam := c.QueryParam(restapi.ParameterMilestoneIndex)
+	if len(milestoneIndexParam) == 0 {
+		return 0, nil
+	}
 
+	intParam, err := strconv.ParseUint(milestoneIndexParam, 10, 32)
+	if err != nil {
+		return 0, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndexParam, err)
+	}
+	return milestone.Index(uint32(intParam)), nil
+}
+
+func getEventStatus(c echo.Context) (*participation.EventStatus, error) {
 	eventID, err := parseEventIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	status, err := deps.ParticipationManager.EventStatus(eventID)
+	milestoneIndex, err := parseMilestoneIndexQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	var milestoneIndexFilter []milestone.Index
+	if milestoneIndex > 0 {
+		milestoneIndexFilter = append(milestoneIndexFilter, milestoneIndex)
+	}
+
+	status, err := deps.ParticipationManager.EventStatus(eventID, milestoneIndexFilter...)
 	if err != nil {
 		if errors.Is(err, participation.ErrEventNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))
