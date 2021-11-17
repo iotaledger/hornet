@@ -62,7 +62,9 @@ func (q *Ballot) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, e
 }
 
 func (q *Ballot) MarshalJSON() ([]byte, error) {
-	j := &jsonBallot{}
+	j := &jsonBallot{
+		Type: int(BallotPayloadTypeID),
+	}
 	j.Questions = make([]*json.RawMessage, len(q.Questions))
 	for i, question := range q.Questions {
 		jsonQuestion, err := question.MarshalJSON()
@@ -77,8 +79,9 @@ func (q *Ballot) MarshalJSON() ([]byte, error) {
 }
 
 func (q *Ballot) UnmarshalJSON(bytes []byte) error {
-	j := &jsonBallot{}
-	j.Type = int(BallotPayloadTypeID)
+	j := &jsonBallot{
+		Type: int(BallotPayloadTypeID),
+	}
 	if err := json.Unmarshal(bytes, j); err != nil {
 		return err
 	}
