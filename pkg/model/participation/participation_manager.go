@@ -400,7 +400,7 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 		}
 
 		// Count the new ballot votes by increasing the current vote balance
-		if err := pm.startCountingBallotAnswers(participation, depositOutputs[0].Amount(), mutations); err != nil {
+		if err := pm.startCountingBallotAnswers(participation, index, depositOutputs[0].Amount(), mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -465,7 +465,7 @@ func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 		}
 
 		// Count the spent votes by decreasing the current vote balance
-		if err := pm.stopCountingBallotAnswers(participation, spent.Output().Amount(), mutations); err != nil {
+		if err := pm.stopCountingBallotAnswers(participation, index, spent.Output().Amount(), mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -477,19 +477,19 @@ func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 // ApplyNewConfirmedMilestoneIndex iterates over each counting ballot participation and applies the current vote balance for each question to the total vote balance
 func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
 
-	countingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
-		return e.ShouldCountParticipation(index)
+	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
+		return e.ShouldAcceptParticipation(index)
 	})
 
-	// No events counting participation, so no work to be done
-	if len(countingEvents) == 0 {
+	// No events accepting participation, so no work to be done
+	if len(acceptingEvents) == 0 {
 		return nil
 	}
 
 	mutations := pm.participationStore.Batched()
 
-	// Iterate over all known events that are currently counting
-	for _, event := range countingEvents {
+	// Iterate over all known events and increase the one that are currently counting
+	for _, event := range acceptingEvents {
 
 		eventID, err := event.ID()
 		if err != nil {
@@ -497,26 +497,42 @@ func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 			return err
 		}
 
-		increaseAnswerValueBalances := func(questionIndex uint8, answerValue uint8) error {
-			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
+		shouldCountParticipation := event.ShouldCountParticipation(index)
+
+		processAnswerValueBalances := func(questionIndex uint8, answerValue uint8) error {
+
+			// Read the accumulated value from the previous milestone, add the current vote and store accumulated for this milestone
+
+			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, index, questionIndex, answerValue)
 			if err != nil {
 				mutations.Cancel()
 				return err
 			}
 
-			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
-			if err != nil {
-				mutations.Cancel()
-				return err
+			if event.EndMilestoneIndex() > index {
+				// Event not ended yet, so copy the current for the next milestone already
+				if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(eventID, index+1, questionIndex, answerValue, currentBalance, mutations); err != nil {
+					mutations.Cancel()
+					return err
+				}
 			}
 
-			// Add current vote balance to accumulated vote balance for each answer
-			newAccumulatedBalance := accumulatedBalance + currentBalance
+			if shouldCountParticipation {
+				accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, index-1, questionIndex, answerValue)
+				if err != nil {
+					mutations.Cancel()
+					return err
+				}
 
-			if err := setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue, newAccumulatedBalance, mutations); err != nil {
-				mutations.Cancel()
-				return err
+				// Add current vote balance to accumulated vote balance for each answer
+				newAccumulatedBalance := accumulatedBalance + currentBalance
+
+				if err := setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, index, questionIndex, answerValue, newAccumulatedBalance, mutations); err != nil {
+					mutations.Cancel()
+					return err
+				}
 			}
+
 			return nil
 		}
 
@@ -526,52 +542,55 @@ func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 
 			// For each question, iterate over all answers values
 			for _, answer := range question.QuestionAnswers() {
-				if err := increaseAnswerValueBalances(questionIndex, answer.Value); err != nil {
+				if err := processAnswerValueBalances(questionIndex, answer.Value); err != nil {
 					return err
 				}
 			}
-			if err := increaseAnswerValueBalances(questionIndex, AnswerValueSkipped); err != nil {
+			if err := processAnswerValueBalances(questionIndex, AnswerValueSkipped); err != nil {
 				return err
 			}
-			if err := increaseAnswerValueBalances(questionIndex, AnswerValueInvalid); err != nil {
+			if err := processAnswerValueBalances(questionIndex, AnswerValueInvalid); err != nil {
 				return err
 			}
 		}
 
-		staking := event.Staking()
-		if staking != nil {
-			utxoManager := pm.storage.UTXOManager()
-			addressRewardsIncreases := make(map[string]uint64)
-			var innerErr error
-			pm.ForEachActiveParticipation(eventID, func(trackedParticipation *TrackedParticipation) bool {
-				output, err := utxoManager.ReadOutputByOutputIDWithoutLocking(trackedParticipation.OutputID)
-				if err != nil {
-					// We should have the output in the ledger, if not, something happened
-					innerErr = err
-					return false
-				}
+		if shouldCountParticipation {
+			// TODO: track the amount of tokens staked and the amount of rewards for this milestone
+			staking := event.Staking()
+			if staking != nil {
+				utxoManager := pm.storage.UTXOManager()
+				addressRewardsIncreases := make(map[string]uint64)
+				var innerErr error
+				pm.ForEachActiveParticipation(eventID, func(trackedParticipation *TrackedParticipation) bool {
+					output, err := utxoManager.ReadOutputByOutputIDWithoutLocking(trackedParticipation.OutputID)
+					if err != nil {
+						// We should have the output in the ledger, if not, something happened
+						innerErr = err
+						return false
+					}
 
-				// TODO: how to handle overflow?
-				increaseAmount := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
+					// TODO: how to handle overflow?
+					increaseAmount := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
 
-				addr := string(output.AddressBytes())
-				balance, found := addressRewardsIncreases[addr]
-				if !found {
-					addressRewardsIncreases[addr] = increaseAmount
+					addr := string(output.AddressBytes())
+					balance, found := addressRewardsIncreases[addr]
+					if !found {
+						addressRewardsIncreases[addr] = increaseAmount
+						return true
+					}
+					addressRewardsIncreases[addr] = balance + increaseAmount
 					return true
+				})
+				if innerErr != nil {
+					return innerErr
 				}
-				addressRewardsIncreases[addr] = balance + increaseAmount
-				return true
-			})
-			if innerErr != nil {
-				return innerErr
-			}
 
-			for addr, diff := range addressRewardsIncreases {
-				addrBytes := []byte(addr)
-				if err := pm.increaseStakingRewardForEventAndAddress(eventID, addrBytes, diff, mutations); err != nil {
-					mutations.Cancel()
-					return err
+				for addr, diff := range addressRewardsIncreases {
+					addrBytes := []byte(addr)
+					if err := pm.increaseStakingRewardForEventAndAddress(eventID, addrBytes, diff, mutations); err != nil {
+						mutations.Cancel()
+						return err
+					}
 				}
 			}
 		}

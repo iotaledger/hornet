@@ -487,9 +487,9 @@ func TestMultipleBallotVotes(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 3, 0)
-	env.AssertBallotAnswerStatus(eventID, 5_000, 5_000, 0, 0)
-	env.AssertBallotAnswerStatus(eventID, 150_000, 150_000, 0, 10)
-	env.AssertBallotAnswerStatus(eventID, 200_000, 200_000, 0, 20)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 5_000, 5_000, 0, 0)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 150_000, 150_000, 0, 10)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 200_000, 200_000, 0, 20)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote, 8, 0, 5_000_000)
@@ -503,9 +503,9 @@ func TestMultipleBallotVotes(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 0, 3)
-	env.AssertBallotAnswerStatus(eventID, 5_000, 25_000, 0, 0)
-	env.AssertBallotAnswerStatus(eventID, 150_000, 750_000, 0, 10)
-	env.AssertBallotAnswerStatus(eventID, 200_000, 1000_000, 0, 20)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 5_000, 25_000, 0, 0)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 150_000, 750_000, 0, 10)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 200_000, 1000_000, 0, 20)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote, 8, 12, 5_000_000)
@@ -546,7 +546,7 @@ func TestChangeOpinionMidVote(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 1, 0)
-	env.AssertBallotAnswerStatus(eventID, 5_000, 5_000, 0, 10)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 5_000, 5_000, 0, 10)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote1, 8, 0, 5_000_000)
@@ -565,8 +565,8 @@ func TestChangeOpinionMidVote(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 1, 1)
-	env.AssertBallotAnswerStatus(eventID, 0, 5_000, 0, 10)
-	env.AssertBallotAnswerStatus(eventID, 5_000, 5_000, 0, 20)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 0, 5_000, 0, 10)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 5_000, 5_000, 0, 20)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote1, 8, 9, 5_000_000)
@@ -579,8 +579,8 @@ func TestChangeOpinionMidVote(t *testing.T) {
 
 	// Verify current vote status
 	env.AssertEventParticipationStatus(eventID, 0, 2)
-	env.AssertBallotAnswerStatus(eventID, 0, 5_000, 0, 10)
-	env.AssertBallotAnswerStatus(eventID, 0, 5_000, 0, 20)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 0, 5_000, 0, 10)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 0, 5_000, 0, 20)
 
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID, wallet1Vote1, 8, 9, 5_000_000)
@@ -743,13 +743,13 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 14, 300_000_000) // Voted 2
 
 	// Verify end results
-	env.AssertBallotAnswerStatus(eventID1, 300_000, 300_000, 0, 0)
-	env.AssertBallotAnswerStatus(eventID1, 155_000, 775_000, 0, 10)
-	env.AssertBallotAnswerStatus(eventID1, 0, 0, 0, 20)
+	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 300_000, 300_000, 0, 0)
+	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 155_000, 775_000, 0, 10)
+	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 0, 0, 0, 20)
 
-	env.AssertBallotAnswerStatus(eventID2, 0, 0, 0, 0)
-	env.AssertBallotAnswerStatus(eventID2, 0, 0, 0, 10)
-	env.AssertBallotAnswerStatus(eventID2, 505_000, 1_620_000, 0, 20)
+	env.AssertBallotAnswerStatus(eventID2, event2.EndMilestoneIndex(), 0, 0, 0, 0)
+	env.AssertBallotAnswerStatus(eventID2, event2.EndMilestoneIndex(), 0, 0, 0, 10)
+	env.AssertBallotAnswerStatus(eventID2, event2.EndMilestoneIndex(), 505_000, 1_620_000, 0, 20)
 }
 
 func TestStakingRewards(t *testing.T) {

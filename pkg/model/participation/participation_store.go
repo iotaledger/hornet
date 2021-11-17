@@ -277,22 +277,24 @@ func (pm *ParticipationManager) ForEachPastParticipation(eventID EventID, consum
 
 // Ballot answers
 
-func currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, questionIndex uint8, answerIndex uint8) []byte {
-	m := marshalutil.New(35)
+func currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIndex uint8, answerIndex uint8) []byte {
+	m := marshalutil.New(39)
 	m.WriteByte(ParticipationStoreKeyPrefixBallotCurrentVoteBalanceForQuestionAndAnswer) // 1 byte
 	m.WriteBytes(eventID[:])                                                             // 32 bytes
+	m.WriteUint32(uint32(milestone))                                                     // 4 bytes
 	m.WriteUint8(questionIndex)                                                          // 1 byte
 	m.WriteUint8(answerIndex)                                                            // 1 byte
 	return m.Bytes()
 }
 
-func accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, questionIndex uint8, answerIndex uint8) []byte {
-	ms := marshalutil.New(35)
-	ms.WriteByte(ParticipationStoreKeyPrefixBallotAccululatedVoteBalanceForQuestionAndAnswer) // 1 byte
-	ms.WriteBytes(eventID[:])                                                                 // 32 bytes
-	ms.WriteUint8(questionIndex)                                                              // 1 byte
-	ms.WriteUint8(answerIndex)                                                                // 1 byte
-	return ms.Bytes()
+func accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIndex uint8, answerIndex uint8) []byte {
+	m := marshalutil.New(39)
+	m.WriteByte(ParticipationStoreKeyPrefixBallotAccululatedVoteBalanceForQuestionAndAnswer) // 1 byte
+	m.WriteBytes(eventID[:])                                                                 // 32 bytes
+	m.WriteUint32(uint32(milestone))                                                         // 4 bytes
+	m.WriteUint8(questionIndex)                                                              // 1 byte
+	m.WriteUint8(answerIndex)                                                                // 1 byte
+	return m.Bytes()
 }
 
 func (pm *ParticipationManager) startParticipationAtMilestone(eventID EventID, output *utxo.Output, startIndex milestone.Index, mutations kvstore.BatchedMutations) error {
@@ -367,8 +369,8 @@ func (pm *ParticipationManager) endAllParticipationsAtMilestone(eventID EventID,
 	return innerErr
 }
 
-func (pm *ParticipationManager) CurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8) (uint64, error) {
-	val, err := pm.participationStore.Get(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx))
+func (pm *ParticipationManager) CurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIdx uint8, answerIdx uint8) (uint64, error) {
+	val, err := pm.participationStore.Get(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, milestone, questionIdx, answerIdx))
 
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// No votes for this answer yet
@@ -383,8 +385,8 @@ func (pm *ParticipationManager) CurrentBallotVoteBalanceForQuestionAndAnswer(eve
 	return ms.ReadUint64()
 }
 
-func (pm *ParticipationManager) AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8) (uint64, error) {
-	val, err := pm.participationStore.Get(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx))
+func (pm *ParticipationManager) AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIdx uint8, answerIdx uint8) (uint64, error) {
+	val, err := pm.participationStore.Get(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, milestone, questionIdx, answerIdx))
 
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// No votes for this answer yet
@@ -399,19 +401,19 @@ func (pm *ParticipationManager) AccumulatedBallotVoteBalanceForQuestionAndAnswer
 	return ms.ReadUint64()
 }
 
-func setCurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8, current uint64, mutations kvstore.BatchedMutations) error {
+func setCurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIdx uint8, answerIdx uint8, current uint64, mutations kvstore.BatchedMutations) error {
 	ms := marshalutil.New(8)
 	ms.WriteUint64(current)
-	return mutations.Set(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx), ms.Bytes())
+	return mutations.Set(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, milestone, questionIdx, answerIdx), ms.Bytes())
 }
 
-func setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8, total uint64, mutations kvstore.BatchedMutations) error {
+func setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIdx uint8, answerIdx uint8, total uint64, mutations kvstore.BatchedMutations) error {
 	ms := marshalutil.New(8)
 	ms.WriteUint64(total)
-	return mutations.Set(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx), ms.Bytes())
+	return mutations.Set(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, milestone, questionIdx, answerIdx), ms.Bytes())
 }
 
-func (pm *ParticipationManager) startCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
+func (pm *ParticipationManager) startCountingBallotAnswers(vote *Participation, milestone milestone.Index, amount uint64, mutations kvstore.BatchedMutations) error {
 	event := pm.Event(vote.EventID)
 	if event == nil {
 		return nil
@@ -423,7 +425,7 @@ func (pm *ParticipationManager) startCountingBallotAnswers(vote *Participation, 
 			// We already verified, that there are exactly as many answers as questions in the ballot, so no need to check here again
 			answerValue := questions[idx].answerValueForByte(answerByte)
 
-			currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
+			currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, milestone, questionIndex, answerValue)
 			if err != nil {
 				return err
 			}
@@ -431,7 +433,7 @@ func (pm *ParticipationManager) startCountingBallotAnswers(vote *Participation, 
 			voteCount := amount / 1000
 			currentVoteBalance += voteCount
 
-			if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
+			if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, milestone, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
 				return err
 			}
 		}
@@ -439,7 +441,7 @@ func (pm *ParticipationManager) startCountingBallotAnswers(vote *Participation, 
 	return nil
 }
 
-func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
+func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, milestone milestone.Index, amount uint64, mutations kvstore.BatchedMutations) error {
 	event := pm.Event(vote.EventID)
 	if event == nil {
 		return nil
@@ -451,7 +453,7 @@ func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, a
 			// We already verified, that there are exactly as many answers as questions in the ballot, so no need to check here again
 			answerValue := questions[idx].answerValueForByte(answerByte)
 
-			currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
+			currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, milestone, questionIndex, answerValue)
 			if err != nil {
 				return err
 			}
@@ -463,7 +465,7 @@ func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, a
 			}
 			currentVoteBalance -= voteCount
 
-			if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
+			if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, milestone, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
 				return err
 			}
 		}

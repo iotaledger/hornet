@@ -29,18 +29,25 @@ type EventStatus struct {
 }
 
 // EventStatus returns the EventStatus for an event with the given eventID.
-func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, error) {
-
-	confirmedMilestoneIndex := pm.syncManager.ConfirmedMilestoneIndex()
+func (pm *ParticipationManager) EventStatus(eventID EventID, milestone ...milestone.Index) (*EventStatus, error) {
 
 	event := pm.Event(eventID)
 	if event == nil {
 		return nil, ErrEventNotFound
 	}
 
+	index := pm.syncManager.ConfirmedMilestoneIndex()
+	if index > event.EndMilestoneIndex() {
+		index = event.EndMilestoneIndex()
+	}
+
+	if len(milestone) > 0 {
+		index = milestone[0]
+	}
+
 	status := &EventStatus{
-		MilestoneIndex: confirmedMilestoneIndex,
-		Status:         event.Status(confirmedMilestoneIndex),
+		MilestoneIndex: index,
+		Status:         event.Status(index),
 	}
 
 	// compute the sha256 of all the question and answer status to easily compare answers
@@ -56,12 +63,12 @@ func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, erro
 		questionStatus := &QuestionStatus{}
 
 		balanceForAnswerValue := func(answerValue uint8) (*AnswerStatus, error) {
-			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
+			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, index, questionIndex, answerValue)
 			if err != nil {
 				return nil, err
 			}
 
-			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
+			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, index, questionIndex, answerValue)
 			if err != nil {
 				return nil, err
 			}

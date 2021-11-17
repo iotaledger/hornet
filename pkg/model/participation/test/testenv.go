@@ -303,14 +303,18 @@ func (env *ParticipationTestEnv) AssertEventParticipationStatus(eventID particip
 }
 
 func (env *ParticipationTestEnv) AssertDefaultBallotAnswerStatus(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64) {
-	env.AssertBallotAnswerStatus(eventID, currentVoteAmount, accumulatedVoteAmount, 0, defaultBallotAnswerValue)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, currentVoteAmount, accumulatedVoteAmount, 0, defaultBallotAnswerValue)
 }
 
-func (env *ParticipationTestEnv) AssertBallotAnswerStatus(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerValue uint8) {
-	status, err := env.ParticipationManager().EventStatus(eventID)
+func (env *ParticipationTestEnv) AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerValue uint8) {
+	env.AssertBallotAnswerStatus(eventID, env.ConfirmedMilestoneIndex(), currentVoteAmount, accumulatedVoteAmount, questionIndex, answerValue)
+}
+
+func (env *ParticipationTestEnv) AssertBallotAnswerStatus(eventID participation.EventID, milestone milestone.Index, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerValue uint8) {
+	status, err := env.ParticipationManager().EventStatus(eventID, milestone)
 	require.NoError(env.t, err)
 	env.PrintJSON(status)
-	require.Equal(env.t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Equal(env.t, milestone, status.MilestoneIndex)
 	require.Exactly(env.t, currentVoteAmount, status.Questions[questionIndex].StatusForAnswerValue(answerValue).Current)
 	require.Exactly(env.t, accumulatedVoteAmount, status.Questions[questionIndex].StatusForAnswerValue(answerValue).Accumulated)
 }
