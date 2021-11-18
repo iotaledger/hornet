@@ -278,23 +278,35 @@ func (pm *ParticipationManager) ForEachPastParticipation(eventID EventID, consum
 
 // Ballot answers
 
-func currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIndex uint8, answerIndex uint8) []byte {
-	m := marshalutil.New(39)
+func currentBallotVoteBalanceKeyPrefix(eventID EventID) []byte {
+	m := marshalutil.New(33)
 	m.WriteByte(ParticipationStoreKeyPrefixBallotCurrentVoteBalanceForQuestionAndAnswer) // 1 byte
 	m.WriteBytes(eventID[:])                                                             // 32 bytes
-	m.WriteUint32(uint32(milestone))                                                     // 4 bytes
-	m.WriteUint8(questionIndex)                                                          // 1 byte
-	m.WriteUint8(answerIndex)                                                            // 1 byte
+	return m.Bytes()
+}
+
+func currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIndex uint8, answerIndex uint8) []byte {
+	m := marshalutil.New(39)
+	m.WriteBytes(currentBallotVoteBalanceKeyPrefix(eventID)) // 33 bytes
+	m.WriteUint32(uint32(milestone))                         // 4 bytes
+	m.WriteUint8(questionIndex)                              // 1 byte
+	m.WriteUint8(answerIndex)                                // 1 byte
+	return m.Bytes()
+}
+
+func accumulatedBallotVoteBalanceKeyPrefix(eventID EventID) []byte {
+	m := marshalutil.New(33)
+	m.WriteByte(ParticipationStoreKeyPrefixBallotAccululatedVoteBalanceForQuestionAndAnswer) // 1 byte
+	m.WriteBytes(eventID[:])                                                                 // 32 bytes
 	return m.Bytes()
 }
 
 func accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIndex uint8, answerIndex uint8) []byte {
 	m := marshalutil.New(39)
-	m.WriteByte(ParticipationStoreKeyPrefixBallotAccululatedVoteBalanceForQuestionAndAnswer) // 1 byte
-	m.WriteBytes(eventID[:])                                                                 // 32 bytes
-	m.WriteUint32(uint32(milestone))                                                         // 4 bytes
-	m.WriteUint8(questionIndex)                                                              // 1 byte
-	m.WriteUint8(answerIndex)                                                                // 1 byte
+	m.WriteBytes(accumulatedBallotVoteBalanceKeyPrefix(eventID)) // 33 bytes
+	m.WriteUint32(uint32(milestone))                             // 4 bytes
+	m.WriteUint8(questionIndex)                                  // 1 byte
+	m.WriteUint8(answerIndex)                                    // 1 byte
 	return m.Bytes()
 }
 
@@ -476,11 +488,17 @@ func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, m
 
 // Staking
 
-func stakingKeyForEventAndAddress(eventID EventID, addressBytes []byte) []byte {
-	m := marshalutil.New(66)
+func stakingKeyForEventPrefix(eventID EventID) []byte {
+	m := marshalutil.New(33)
 	m.WriteByte(ParticipationStoreKeyPrefixStakingAddress) // 1 byte
 	m.WriteBytes(eventID[:])                               // 32 bytes
-	m.WriteBytes(addressBytes)                             // 33 bytes
+	return m.Bytes()
+}
+
+func stakingKeyForEventAndAddress(eventID EventID, addressBytes []byte) []byte {
+	m := marshalutil.New(66)
+	m.WriteBytes(stakingKeyForEventPrefix(eventID)) // 33 bytes
+	m.WriteBytes(addressBytes)                      // 33 bytes
 	return m.Bytes()
 }
 
@@ -524,11 +542,16 @@ func (pm *ParticipationManager) increaseStakingRewardForEventAndAddress(eventID 
 	return mutations.Set(stakingKeyForEventAndAddress(eventID, addressBytes), m.Bytes())
 }
 
-func totalParticipationStakingKeyForEvent(eventID EventID, milestone milestone.Index) []byte {
+func totalParticipationStakingKeyForEventPrefix(eventID EventID) []byte {
 	m := marshalutil.New(37)
 	m.WriteByte(ParticipationStoreKeyPrefixStakingTotalParticipation) // 1 byte
 	m.WriteBytes(eventID[:])                                          // 32 bytes
-	m.WriteUint32(uint32(milestone))                                  // 4 bytes
+	return m.Bytes()
+}
+
+func totalParticipationStakingKeyForEvent(eventID EventID, milestone milestone.Index) []byte {
+	m := marshalutil.New(37)
+	m.WriteBytes(totalParticipationStakingKeyForEventPrefix(eventID)) // 33 bytes
 	return m.Bytes()
 }
 

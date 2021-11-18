@@ -18,9 +18,9 @@ import (
 )
 
 var (
-	ErrParticipationCorruptedStorage    = errors.New("the participation database was not shutdown properly")
-	ErrParticipationEventAlreadyStarted = errors.New("the given participation event already started")
-	ErrParticipationEventAlreadyEnded   = errors.New("the given participation event already ended")
+	ErrParticipationCorruptedStorage               = errors.New("the participation database was not shutdown properly")
+	ErrParticipationEventStartedBeforePruningIndex = errors.New("the given participation event started before the pruning index of this node")
+	ErrParticipationEventAlreadyEnded              = errors.New("the given participation event already ended")
 )
 
 // ParticipationManager is used to track the outcome of participation in the tangle.
@@ -226,14 +226,15 @@ func (pm *ParticipationManager) StoreEvent(event *Event) (EventID, error) {
 	}
 
 	if confirmedMilestoneIndex >= event.CommenceMilestoneIndex() {
-		return NullEventID, ErrParticipationEventAlreadyStarted
+		if err := pm.calculatePastParticipationForEvent(event); err != nil {
+			return NullEventID, err
+		}
 	}
 
 	eventID, err := pm.storeEvent(event)
 	if err != nil {
 		return NullEventID, err
 	}
-
 	pm.events[eventID] = event
 
 	return eventID, err
@@ -261,6 +262,88 @@ func (pm *ParticipationManager) DeleteEvent(eventID EventID) error {
 	}
 
 	delete(pm.events, eventID)
+	return nil
+}
+
+func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {
+
+	if err := pm.participationStore.DeletePrefix(participationKeyForEventOutputsPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(participationKeyForEventSpentOutputsPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(currentBallotVoteBalanceKeyPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(accumulatedBallotVoteBalanceKeyPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(stakingKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(totalParticipationStakingKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
+
+	//TODO: delete all messages
+	return nil
+}
+
+func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event) error {
+
+	snapshotInfo := pm.storage.SnapshotInfo()
+	if snapshotInfo.PruningIndex >= event.CommenceMilestoneIndex() {
+		return ErrParticipationEventStartedBeforePruningIndex
+	}
+
+	eventID, err := event.ID()
+	if err != nil {
+		return err
+	}
+
+	// Make sure we have no data from a previous import in the storage
+	if err := pm.clearStorageForEventID(eventID); err != nil {
+		return err
+	}
+
+	events := make(map[EventID]*Event)
+	events[eventID] = event
+
+	utxoManager := pm.storage.UTXOManager()
+
+	//Lock the UTXO ledger so that the node cannot keep confirming until we are done here, else we might have gaps or process the milestones twice
+	utxoManager.WriteLockLedger()
+	defer utxoManager.WriteUnlockLedger()
+
+	currentIndex := event.CommenceMilestoneIndex()
+	for {
+		msDiff, err := utxoManager.MilestoneDiffWithoutLocking(currentIndex)
+		if err != nil {
+			return err
+		}
+
+		for _, output := range msDiff.Outputs {
+			if err := pm.applyNewUTXOForEvents(currentIndex, output, events); err != nil {
+				return err
+			}
+		}
+
+		for _, spent := range msDiff.Spents {
+			if err := pm.applySpentUTXOForEvents(currentIndex, spent, events); err != nil {
+				return err
+			}
+		}
+
+		pm.applyNewConfirmedMilestoneIndexForEvents(currentIndex, events)
+
+		if currentIndex >= pm.syncManager.ConfirmedMilestoneIndex() {
+			// We are done
+			break
+		}
+		currentIndex++
+	}
+
 	return nil
 }
 
