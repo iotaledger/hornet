@@ -177,14 +177,10 @@ func (pm *ParticipationManager) EventIDs(eventPayloadType ...uint32) []EventID {
 }
 
 // Events returns all known events
-func (pm *ParticipationManager) Events() []*Event {
+func (pm *ParticipationManager) Events() map[EventID]*Event {
 	pm.RLock()
 	defer pm.RUnlock()
-	var ref []*Event
-	for _, r := range pm.events {
-		ref = append(ref, r)
-	}
-	return ref
+	return pm.events
 }
 
 func filteredEvents(events map[EventID]*Event, filterPayloadTypes []uint32) map[EventID]*Event {
@@ -204,14 +200,14 @@ eventLoop:
 }
 
 // EventsAcceptingParticipation returns the events that are currently accepting participation, i.e. commencing or in the holding period.
-func (pm *ParticipationManager) EventsAcceptingParticipation() []*Event {
+func (pm *ParticipationManager) EventsAcceptingParticipation() map[EventID]*Event {
 	return filterEvents(pm.Events(), pm.syncManager.ConfirmedMilestoneIndex(), func(e *Event, index milestone.Index) bool {
 		return e.IsAcceptingParticipation(index)
 	})
 }
 
 // EventsCountingParticipation returns the events that are currently actively counting participation, i.e. in the holding period
-func (pm *ParticipationManager) EventsCountingParticipation() []*Event {
+func (pm *ParticipationManager) EventsCountingParticipation() map[EventID]*Event {
 	return filterEvents(pm.Events(), pm.syncManager.ConfirmedMilestoneIndex(), func(e *Event, index milestone.Index) bool {
 		return e.IsCountingParticipation(index)
 	})
@@ -286,6 +282,11 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 	if len(acceptingEvents) == 0 {
 		return nil
 	}
+
+	return pm.applyNewUTXOForEvents(index, newOutput, acceptingEvents)
+}
+
+func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, newOutput *utxo.Output, events map[EventID]*Event) error {
 	messageID := newOutput.MessageID()
 
 	cachedMsg := pm.storage.CachedMessageOrNil(messageID)
@@ -377,7 +378,7 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 		return err
 	}
 
-	validParticipations := pm.validParticipation(index, participations)
+	validParticipations := filterValidParticipationsForEvents(index, participations, events)
 
 	if len(validParticipations) == 0 {
 		// No participations for anything we are tracking
@@ -436,6 +437,11 @@ func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 		return nil
 	}
 
+	return pm.applySpentUTXOForEvents(index, spent, acceptingEvents)
+}
+
+func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, spent *utxo.Spent, events map[EventID]*Event) error {
+
 	// Check if we tracked the participation initially, event.g. saved the Message that created this UTXO
 	msg, err := pm.MessageForMessageID(spent.MessageID())
 	if err != nil {
@@ -458,7 +464,7 @@ func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 		return err
 	}
 
-	validParticipations := pm.validParticipation(index, participations)
+	validParticipations := filterValidParticipationsForEvents(index, participations, events)
 
 	if len(validParticipations) == 0 {
 		// This might happen if the participation ended, and we spend the UTXO
@@ -515,17 +521,15 @@ func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 		return nil
 	}
 
+	return pm.applyNewConfirmedMilestoneIndexForEvents(index, acceptingEvents)
+}
+
+func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index milestone.Index, events map[EventID]*Event) error {
+
 	mutations := pm.participationStore.Batched()
 
 	// Iterate over all known events and increase the one that are currently counting
-	for _, event := range acceptingEvents {
-
-		eventID, err := event.ID()
-		if err != nil {
-			mutations.Cancel()
-			return err
-		}
-
+	for eventID, event := range events {
 		shouldCountParticipation := event.ShouldCountParticipation(index)
 
 		processAnswerValueBalances := func(questionIndex uint8, answerValue uint8) error {
@@ -656,14 +660,14 @@ func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 	return mutations.Commit()
 }
 
-func (pm *ParticipationManager) validParticipation(index milestone.Index, votes []*Participation) []*Participation {
+func filterValidParticipationsForEvents(index milestone.Index, votes []*Participation, events map[EventID]*Event) []*Participation {
 
 	var validParticipations []*Participation
 	for _, vote := range votes {
 
-		// Check that we have the event for the given participation
-		event := pm.Event(vote.EventID)
-		if event == nil {
+		// Check that we want to handle the event for the given participation
+		event, found := events[vote.EventID]
+		if !found {
 			continue
 		}
 
@@ -700,11 +704,11 @@ func participationFromIndexation(indexation *iotago.Indexation) ([]*Participatio
 	return votes, nil
 }
 
-func filterEvents(events []*Event, index milestone.Index, includeFunc func(e *Event, index milestone.Index) bool) []*Event {
-	var filtered []*Event
-	for _, event := range events {
+func filterEvents(events map[EventID]*Event, index milestone.Index, includeFunc func(e *Event, index milestone.Index) bool) map[EventID]*Event {
+	filtered := make(map[EventID]*Event)
+	for id, event := range events {
 		if includeFunc(event, index) {
-			filtered = append(filtered, event)
+			filtered[id] = event
 		}
 	}
 	return filtered
