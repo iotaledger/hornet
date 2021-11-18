@@ -300,6 +300,7 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 	transaction := msg.Transaction()
 	if transaction == nil {
 		// Do not handle outputs from migrations
+		// This output was created by a migration in a milestone payload.
 		return nil
 	}
 
@@ -399,10 +400,24 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 			return err
 		}
 
-		// Count the new ballot votes by increasing the current vote balance
-		if err := pm.startCountingBallotAnswers(participation, index, depositOutputs[0].Amount(), mutations); err != nil {
-			mutations.Cancel()
-			return err
+		event := pm.Event(participation.EventID)
+		if event == nil {
+			return nil
+		}
+
+		switch event.payloadType() {
+		case BallotPayloadTypeID:
+			// Count the new ballot votes by increasing the current vote balance
+			if err := pm.startCountingBallotAnswers(participation, index, depositOutputs[0].Amount(), mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
+		case StakingPayloadTypeID:
+			// Increase the staked amount
+			if err := pm.increaseStakedAmountForStakingEvent(participation.EventID, index, depositOutputs[0].Amount(), mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
 		}
 	}
 
@@ -464,10 +479,24 @@ func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 			return err
 		}
 
-		// Count the spent votes by decreasing the current vote balance
-		if err := pm.stopCountingBallotAnswers(participation, index, spent.Output().Amount(), mutations); err != nil {
-			mutations.Cancel()
-			return err
+		event := pm.Event(participation.EventID)
+		if event == nil {
+			return nil
+		}
+
+		switch event.payloadType() {
+		case BallotPayloadTypeID:
+			// Count the spent votes by decreasing the current vote balance
+			if err := pm.stopCountingBallotAnswers(participation, index, spent.Output().Amount(), mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
+		case StakingPayloadTypeID:
+			// Decrease the staked amount
+			if err := pm.decreaseStakedAmountForStakingEvent(participation.EventID, index, spent.Output().Amount(), mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
 		}
 	}
 
@@ -554,10 +583,16 @@ func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 			}
 		}
 
-		if shouldCountParticipation {
-			// TODO: track the amount of tokens staked and the amount of rewards for this milestone
-			staking := event.Staking()
-			if staking != nil {
+		staking := event.Staking()
+		if staking != nil {
+
+			total, err := pm.totalStakingParticipationForEvent(eventID, index)
+			if err != nil {
+				mutations.Cancel()
+				return err
+			}
+
+			if shouldCountParticipation {
 				utxoManager := pm.storage.UTXOManager()
 				addressRewardsIncreases := make(map[string]uint64)
 				var innerErr error
@@ -587,10 +622,24 @@ func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.
 
 				for addr, diff := range addressRewardsIncreases {
 					addrBytes := []byte(addr)
+					total.rewarded += diff
 					if err := pm.increaseStakingRewardForEventAndAddress(eventID, addrBytes, diff, mutations); err != nil {
 						mutations.Cancel()
 						return err
 					}
+				}
+			}
+
+			if err := pm.setTotalStakingParticipationForEvent(eventID, index, total, mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
+
+			if event.EndMilestoneIndex() > index {
+				// Event not ended yet, so copy the current total for the next milestone already
+				if err := pm.setTotalStakingParticipationForEvent(eventID, index+1, total, mutations); err != nil {
+					mutations.Cancel()
+					return err
 				}
 			}
 		}

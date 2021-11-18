@@ -782,6 +782,8 @@ func TestStakingRewards(t *testing.T) {
 	env.IssueMilestone() // 5
 	env.AssertEventsCount(1, 0)
 
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 0, 0)
+
 	stakeWallet1 := env.NewParticipationHelper(env.Wallet1).
 		WholeWalletBalance().
 		AddParticipation(&participation.Participation{
@@ -812,6 +814,8 @@ func TestStakingRewards(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 0)
 
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 0)
+
 	env.IssueMilestone() // 7
 	env.AssertEventsCount(1, 1)
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 0)
@@ -823,29 +827,55 @@ func TestStakingRewards(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 396_882)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 1_397_494)
 
-	env.IssueMilestone() // 9
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 1_250_000+396_882+1_397_494)
+
+	stakeWallet4 := env.NewParticipationHelper(env.Wallet4).
+		WholeWalletBalance().
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{},
+		}).
+		Send()
+
+	env.IssueMilestone(stakeWallet4.Message().StoredMessageID()) // 9
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 2_500_000)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 793_764)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 2_794_988)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
 
-	env.IssueMilestone() // 10
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977+300_000_000, 2_500_000+793_764+2_794_988+75_000_000)
+
+	cancelStakeWallet4 := env.CancelParticipations(env.Wallet4)
+
+	env.IssueMilestone(cancelStakeWallet4.StoredMessageID()) // 10
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 3_750_000)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 1_190_646)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 4_192_482)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
+
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 3_750_000+1_190_646+4_192_482+75_000_000)
 
 	env.IssueMilestone() // 11
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 5_000_000)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 1_587_528)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 5_589_976)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
+
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 5_000_000+1_587_528+5_589_976+75_000_000)
 
 	env.IssueMilestone() // 12
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 6_250_000)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 1_984_410)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 6_987_470)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
+
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 6_250_000+1_984_410+6_987_470+75_000_000)
 
 	env.IssueMilestone() // 13
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 6_250_000)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 1_984_410)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 6_987_470)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
 
+	env.AssertStakingRewardsStatus(eventID, 12, 5_000_000+1_587_529+5_589_977, 6_250_000+1_984_410+6_987_470+75_000_000)
 }

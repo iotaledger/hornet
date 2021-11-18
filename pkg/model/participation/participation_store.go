@@ -19,6 +19,7 @@ var (
 	ErrInvalidEvent                          = errors.New("invalid event")
 	ErrInvalidPreviouslyTrackedParticipation = errors.New("a previously tracked participation changed and is now invalid")
 	ErrInvalidCurrentBallotVoteBalance       = errors.New("current ballot vote balance invalid")
+	ErrInvalidCurrentStakedAmount            = errors.New("current staked amount invalid")
 )
 
 // Events
@@ -521,4 +522,77 @@ func (pm *ParticipationManager) increaseStakingRewardForEventAndAddress(eventID 
 	m.WriteUint64(newBalance)
 
 	return mutations.Set(stakingKeyForEventAndAddress(eventID, addressBytes), m.Bytes())
+}
+
+func totalParticipationStakingKeyForEvent(eventID EventID, milestone milestone.Index) []byte {
+	m := marshalutil.New(37)
+	m.WriteByte(ParticipationStoreKeyPrefixStakingTotalParticipation) // 1 byte
+	m.WriteBytes(eventID[:])                                          // 32 bytes
+	m.WriteUint32(uint32(milestone))                                  // 4 bytes
+	return m.Bytes()
+}
+
+type totalStakingParticipation struct {
+	staked   uint64
+	rewarded uint64
+}
+
+func totalStakingParticipationFromBytes(bytes []byte) (*totalStakingParticipation, error) {
+	m := marshalutil.New(bytes)
+	staked, err := m.ReadUint64()
+	if err != nil {
+		return nil, err
+	}
+	rewarded, err := m.ReadUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	return &totalStakingParticipation{
+		staked:   staked,
+		rewarded: rewarded,
+	}, nil
+}
+
+func (t *totalStakingParticipation) valueBytes() []byte {
+	m := marshalutil.New(16)
+	m.WriteUint64(t.staked)   // 8 bytes
+	m.WriteUint64(t.rewarded) // 8 bytes
+	return m.Bytes()
+}
+
+func (pm *ParticipationManager) totalStakingParticipationForEvent(eventID EventID, milestone milestone.Index) (*totalStakingParticipation, error) {
+	value, err := pm.participationStore.Get(totalParticipationStakingKeyForEvent(eventID, milestone))
+	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return &totalStakingParticipation{staked: 0, rewarded: 0}, nil
+		}
+		return nil, err
+	}
+	return totalStakingParticipationFromBytes(value)
+}
+
+func (pm *ParticipationManager) increaseStakedAmountForStakingEvent(eventID EventID, milestone milestone.Index, stakedAmount uint64, mutations kvstore.BatchedMutations) error {
+	total, err := pm.totalStakingParticipationForEvent(eventID, milestone)
+	if err != nil {
+		return err
+	}
+	total.staked += stakedAmount
+	return mutations.Set(totalParticipationStakingKeyForEvent(eventID, milestone), total.valueBytes())
+}
+
+func (pm *ParticipationManager) decreaseStakedAmountForStakingEvent(eventID EventID, milestone milestone.Index, stakedAmount uint64, mutations kvstore.BatchedMutations) error {
+	total, err := pm.totalStakingParticipationForEvent(eventID, milestone)
+	if err != nil {
+		return err
+	}
+	if total.staked < stakedAmount {
+		return ErrInvalidCurrentStakedAmount
+	}
+	total.staked -= stakedAmount
+	return mutations.Set(totalParticipationStakingKeyForEvent(eventID, milestone), total.valueBytes())
+}
+
+func (pm *ParticipationManager) setTotalStakingParticipationForEvent(eventID EventID, milestone milestone.Index, total *totalStakingParticipation, mutations kvstore.BatchedMutations) error {
+	return mutations.Set(totalParticipationStakingKeyForEvent(eventID, milestone), total.valueBytes())
 }

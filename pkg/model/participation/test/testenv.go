@@ -319,6 +319,19 @@ func (env *ParticipationTestEnv) AssertBallotAnswerStatus(eventID participation.
 	require.Exactly(env.t, accumulatedVoteAmount, status.Questions[questionIndex].StatusForAnswerValue(answerValue).Accumulated)
 }
 
+func (env *ParticipationTestEnv) AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID participation.EventID, stakedAmount uint64, rewardedAmount uint64) {
+	env.AssertStakingRewardsStatus(eventID, env.ConfirmedMilestoneIndex(), stakedAmount, rewardedAmount)
+}
+
+func (env *ParticipationTestEnv) AssertStakingRewardsStatus(eventID participation.EventID, milestone milestone.Index, stakedAmount uint64, rewardedAmount uint64) {
+	status, err := env.ParticipationManager().EventStatus(eventID, milestone)
+	require.NoError(env.t, err)
+	env.PrintJSON(status)
+	require.Equal(env.t, milestone, status.MilestoneIndex)
+	require.Exactly(env.t, stakedAmount, status.Staking.Staked)
+	require.Exactly(env.t, rewardedAmount, status.Staking.Rewarded)
+}
+
 func (env *ParticipationTestEnv) AssertTrackedParticipation(eventID participation.EventID, sentParticipations *SentParticipations, startMilestoneIndex milestone.Index, endMilestoneIndex milestone.Index, amount uint64) {
 	trackedParticipation, err := env.ParticipationManager().ParticipationForOutputID(eventID, sentParticipations.Message().GeneratedUTXO().OutputID())
 	require.NoError(env.t, err)
