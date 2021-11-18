@@ -224,6 +224,10 @@ func (j *jsonEvent) ToSerializable() (serializer.Serializable, error) {
 		AdditionalInfo:         j.AdditionalInfo,
 	}
 
+	if j.Payload == nil {
+		return nil, ErrPayloadEmpty
+	}
+
 	jsonPayload, err := iotago.DeserializeObjectFromJSON(j.Payload, jsonPayloadSelector)
 	if err != nil {
 		return nil, err
