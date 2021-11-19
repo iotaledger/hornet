@@ -415,6 +415,7 @@ func configure() {
 	})
 }
 
+// AddFeature adds a feature for the RouteInfo endpoint.
 func AddFeature(feature string) {
 	features = append(features, feature)
 }
