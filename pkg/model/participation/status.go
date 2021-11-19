@@ -44,12 +44,12 @@ func (pm *ParticipationManager) EventStatus(eventID EventID, milestone ...milest
 	}
 
 	index := pm.syncManager.ConfirmedMilestoneIndex()
-	if index > event.EndMilestoneIndex() {
-		index = event.EndMilestoneIndex()
-	}
-
 	if len(milestone) > 0 {
 		index = milestone[0]
+	}
+
+	if index > event.EndMilestoneIndex() {
+		index = event.EndMilestoneIndex()
 	}
 
 	status := &EventStatus{
