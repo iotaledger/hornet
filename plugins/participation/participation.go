@@ -9,8 +9,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -58,7 +58,6 @@ func parseEventTypeQueryParam(c echo.Context) ([]uint32, error) {
 }
 
 func parseEventIDParam(c echo.Context) (participation.EventID, error) {
-
 	eventIDHex := strings.ToLower(c.Param(ParameterParticipationEventID))
 	if eventIDHex == "" {
 		return participation.NullEventID, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterParticipationEventID)
@@ -133,14 +132,36 @@ func deleteEvent(c echo.Context) error {
 	return deps.ParticipationManager.DeleteEvent(eventID)
 }
 
-func getEventStatus(c echo.Context) (*participation.EventStatus, error) {
+func parseMilestoneIndexQueryParam(c echo.Context) (milestone.Index, error) {
+	milestoneIndexParam := c.QueryParam(restapi.ParameterMilestoneIndex)
+	if len(milestoneIndexParam) == 0 {
+		return 0, nil
+	}
 
+	intParam, err := strconv.ParseUint(milestoneIndexParam, 10, 32)
+	if err != nil {
+		return 0, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndexParam, err)
+	}
+	return milestone.Index(uint32(intParam)), nil
+}
+
+func getEventStatus(c echo.Context) (*participation.EventStatus, error) {
 	eventID, err := parseEventIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	status, err := deps.ParticipationManager.EventStatus(eventID)
+	milestoneIndex, err := parseMilestoneIndexQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	var milestoneIndexFilter []milestone.Index
+	if milestoneIndex > 0 {
+		milestoneIndexFilter = append(milestoneIndexFilter, milestoneIndex)
+	}
+
+	status, err := deps.ParticipationManager.EventStatus(eventID, milestoneIndexFilter...)
 	if err != nil {
 		if errors.Is(err, participation.ErrEventNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))
@@ -151,28 +172,18 @@ func getEventStatus(c echo.Context) (*participation.EventStatus, error) {
 }
 
 func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
-
-	outputIDParam := strings.ToLower(c.Param(ParameterOutputID))
-
-	outputIDBytes, err := hex.DecodeString(outputIDParam)
+	outputID, err := restapi.ParseOutputIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
+		return nil, err
 	}
 
-	if len(outputIDBytes) != utxo.OutputIDLength {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
-	}
-
-	var outputID iotago.UTXOInputID
-	copy(outputID[:], outputIDBytes)
-
-	trackedParticipations, err := deps.ParticipationManager.ParticipationsForOutputID(&outputID)
+	trackedParticipations, err := deps.ParticipationManager.ParticipationsForOutputID(outputID)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(trackedParticipations) == 0 {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", hex.EncodeToString(outputIDBytes))
+		return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
 	}
 
 	response := &OutputStatusResponse{
@@ -193,47 +204,28 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 }
 
 func getRewardsByBech32Address(c echo.Context) (*AddressRewardsResponse, error) {
-
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
+	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
-	}
-
-	if hrp != deps.Bech32HRP {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", deps.Bech32HRP)
+		return nil, err
 	}
 
 	switch address := bech32Address.(type) {
 	case *iotago.Ed25519Address:
 		return ed25519Rewards(address)
 	default:
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", addressParam)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", bech32Address.String())
 	}
 }
 
 func getRewardsByEd25519Address(c echo.Context) (*AddressRewardsResponse, error) {
-
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	addressBytes, err := hex.DecodeString(addressParam)
+	address, err := restapi.ParseEd25519AddressParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+		return nil, err
 	}
-
-	if len(addressBytes) != (iotago.Ed25519AddressBytesLength) {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address length: %s", addressParam)
-	}
-
-	var address iotago.Ed25519Address
-	copy(address[:], addressBytes)
-
-	return ed25519Rewards(&address)
+	return ed25519Rewards(address)
 }
 
 func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, error) {
-
 	eventIDs := deps.ParticipationManager.EventIDs(participation.StakingPayloadTypeID)
 
 	response := &AddressRewardsResponse{

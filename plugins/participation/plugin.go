@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -27,12 +28,6 @@ import (
 const (
 	// ParameterParticipationEventID is used to identify an event by its ID.
 	ParameterParticipationEventID = "eventID"
-
-	// ParameterOutputID is used to identify an output by its ID.
-	ParameterOutputID = "outputID"
-
-	// ParameterAddress is used to identify an address.
-	ParameterAddress = "address"
 )
 
 const (
@@ -46,18 +41,18 @@ const (
 	RouteParticipationEvent = "/events/:" + ParameterParticipationEventID
 
 	// RouteParticipationEventStatus is the route to access the status of a single participation by its ID.
-	// GET returns the amount of tokens participating and accumulated votes for the ballot if the event contains a ballot.
+	// GET returns the amount of tokens participating and accumulated votes for the ballot if the event contains a ballot. Optional query parameter returns the status for the given milestone index (query parameters: "milestoneIndex").
 	RouteParticipationEventStatus = "/events/:" + ParameterParticipationEventID + "/status"
 
 	// RouteOutputStatus is the route to get the vote status for a given outputID.
 	// GET returns the messageID the participation was included, the starting and ending milestone index this participation was tracked.
-	RouteOutputStatus = "/outputs/:" + ParameterOutputID
+	RouteOutputStatus = "/outputs/:" + restapi.ParameterOutputID
 
 	// RouteAddressBech32Status is the route to get the staking rewards for the given bech32 address.
-	RouteAddressBech32Status = "/addresses/:" + ParameterAddress
+	RouteAddressBech32Status = "/addresses/:" + restapi.ParameterAddress
 
 	// RouteAddressEd25519Status is the route to get the staking rewards for the given ed25519 address.
-	RouteAddressEd25519Status = "/addresses/ed25519/:" + ParameterAddress
+	RouteAddressEd25519Status = "/addresses/ed25519/:" + restapi.ParameterAddress
 
 	// RouteAdminCreateEvent is the route the node operator can use to add events.
 	// POST creates a new event to track
@@ -134,6 +129,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+	restapiv1.AddFeature(Plugin.Name)
 
 	routeGroup := deps.Echo.Group("/api/plugins/participation")
 

@@ -13,7 +13,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
@@ -35,11 +34,9 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
-
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, err
 	}
 
 	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID)
@@ -117,16 +114,14 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 }
 
 func messageByID(c echo.Context) (*iotago.Message, error) {
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
-
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, nil
 	}
 
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedMsg.Release(true)
 
@@ -134,16 +129,14 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 }
 
 func messageBytesByID(c echo.Context) ([]byte, error) {
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
-
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, err
 	}
 
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedMsg.Release(true)
 
@@ -151,11 +144,10 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 }
 
 func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, nil
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults

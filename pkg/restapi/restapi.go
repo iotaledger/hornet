@@ -1,9 +1,39 @@
 package restapi
 
 import (
+	"encoding/hex"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/utxo"
+	iotago "github.com/iotaledger/iota.go/v2"
+)
+
+const (
+	// ParameterMessageID is used to identify a message by its ID.
+	ParameterMessageID = "messageID"
+
+	// ParameterTransactionID is used to identify a transaction by its ID.
+	ParameterTransactionID = "transactionID"
+
+	// ParameterOutputID is used to identify an output by its ID.
+	ParameterOutputID = "outputID"
+
+	// ParameterAddress is used to identify an address.
+	ParameterAddress = "address"
+
+	// ParameterMilestoneIndex is used to identify a milestone.
+	ParameterMilestoneIndex = "milestoneIndex"
+
+	// ParameterPeerID is used to identify a peer.
+	ParameterPeerID = "peerID"
 )
 
 var (
@@ -40,3 +70,101 @@ type (
 	// AllowedRoute defines a function to allow or disallow routes.
 	AllowedRoute func(echo.Context) bool
 )
+
+func ParseMessageIDParam(c echo.Context) (hornet.MessageID, error) {
+	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
+
+	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+	}
+	return messageID, nil
+}
+
+func ParseTransactionIDParam(c echo.Context) (*iotago.TransactionID, error) {
+	transactionIDHex := strings.ToLower(c.Param(ParameterTransactionID))
+
+	transactionIDBytes, err := hex.DecodeString(transactionIDHex)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid transaction ID: %s, error: %s", transactionIDHex, err)
+	}
+
+	if len(transactionIDBytes) != iotago.TransactionIDLength {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid transaction ID: %s, invalid length: %d", transactionIDHex, len(transactionIDBytes))
+	}
+
+	var transactionID iotago.TransactionID
+	copy(transactionID[:], transactionIDBytes)
+	return &transactionID, nil
+}
+
+func ParseOutputIDParam(c echo.Context) (*iotago.UTXOInputID, error) {
+	outputIDParam := strings.ToLower(c.Param(ParameterOutputID))
+
+	outputIDBytes, err := hex.DecodeString(outputIDParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
+	}
+
+	if len(outputIDBytes) != utxo.OutputIDLength {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
+	}
+
+	var outputID iotago.UTXOInputID
+	copy(outputID[:], outputIDBytes)
+	return &outputID, nil
+}
+
+func ParseBech32AddressParam(c echo.Context, prefix iotago.NetworkPrefix) (iotago.Address, error) {
+	addressParam := strings.ToLower(c.Param(ParameterAddress))
+
+	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if hrp != prefix {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", prefix)
+	}
+
+	return bech32Address, nil
+}
+
+func ParseEd25519AddressParam(c echo.Context) (*iotago.Ed25519Address, error) {
+	addressParam := strings.ToLower(c.Param(ParameterAddress))
+
+	addressBytes, err := hex.DecodeString(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if len(addressBytes) != (iotago.Ed25519AddressBytesLength) {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address length: %s", addressParam)
+	}
+
+	var address iotago.Ed25519Address
+	copy(address[:], addressBytes)
+	return &address, nil
+}
+
+func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {
+	milestoneIndex := strings.ToLower(c.Param(ParameterMilestoneIndex))
+	if milestoneIndex == "" {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", ParameterMilestoneIndex)
+	}
+
+	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 32)
+	if err != nil {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
+	}
+
+	return milestone.Index(msIndex), nil
+}
+
+func ParsePeerIDParam(c echo.Context) (peer.ID, error) {
+	peerID, err := peer.Decode(c.Param(ParameterPeerID))
+	if err != nil {
+		return "", errors.WithMessagef(ErrInvalidParameter, "invalid peerID, error: %s", err)
+	}
+	return peerID, nil
+}

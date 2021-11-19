@@ -28,6 +28,7 @@ import (
 	"github.com/gohornet/hornet/plugins/faucet"
 	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/mqtt"
+	"github.com/gohornet/hornet/plugins/participation"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
@@ -140,6 +141,7 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 		initConfig.ForceDisablePluggable(prometheus.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(debug.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(faucet.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(participation.Plugin.Identifier())
 	}
 
 	// the parameter has to be provided in the preProvide stage.

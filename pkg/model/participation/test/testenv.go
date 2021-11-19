@@ -178,7 +178,7 @@ func (env *ParticipationTestEnv) Cleanup() {
 	env.te.CleanupTestEnvironment(true)
 }
 
-func (env *ParticipationTestEnv) RegisterDefaultEvent(commenceMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) participation.EventID {
+func (env *ParticipationTestEnv) DefaultEvent(commenceMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) *participation.Event {
 
 	eventCommenceIndex := commenceMilestoneIndex
 	eventStartIndex := eventCommenceIndex + milestone.Index(startPhaseDuration)
@@ -211,13 +211,20 @@ func (env *ParticipationTestEnv) RegisterDefaultEvent(commenceMilestoneIndex mil
 	event, err := eventBuilder.Build()
 	require.NoError(env.t, err)
 
+	env.PrintJSON(event)
+
+	return event
+}
+
+func (env *ParticipationTestEnv) StoreDefaultEvent(commenceMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) participation.EventID {
+
+	event := env.DefaultEvent(commenceMilestoneIndex, startPhaseDuration, holdingDuration)
+
 	eventID, err := env.rm.StoreEvent(event)
 	require.NoError(env.t, err)
 
 	// Check the stored event is still there
 	require.NotNil(env.t, env.rm.Event(eventID))
-
-	env.PrintJSON(event)
 
 	return eventID
 }
@@ -303,16 +310,33 @@ func (env *ParticipationTestEnv) AssertEventParticipationStatus(eventID particip
 }
 
 func (env *ParticipationTestEnv) AssertDefaultBallotAnswerStatus(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64) {
-	env.AssertBallotAnswerStatus(eventID, currentVoteAmount, accumulatedVoteAmount, 0, defaultBallotAnswerValue)
+	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, currentVoteAmount, accumulatedVoteAmount, 0, defaultBallotAnswerValue)
 }
 
-func (env *ParticipationTestEnv) AssertBallotAnswerStatus(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerValue uint8) {
-	status, err := env.ParticipationManager().EventStatus(eventID)
+func (env *ParticipationTestEnv) AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID participation.EventID, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerValue uint8) {
+	env.AssertBallotAnswerStatus(eventID, env.ConfirmedMilestoneIndex(), currentVoteAmount, accumulatedVoteAmount, questionIndex, answerValue)
+}
+
+func (env *ParticipationTestEnv) AssertBallotAnswerStatus(eventID participation.EventID, milestone milestone.Index, currentVoteAmount uint64, accumulatedVoteAmount uint64, questionIndex int, answerValue uint8) {
+	status, err := env.ParticipationManager().EventStatus(eventID, milestone)
 	require.NoError(env.t, err)
 	env.PrintJSON(status)
-	require.Equal(env.t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	require.Equal(env.t, milestone, status.MilestoneIndex)
 	require.Exactly(env.t, currentVoteAmount, status.Questions[questionIndex].StatusForAnswerValue(answerValue).Current)
 	require.Exactly(env.t, accumulatedVoteAmount, status.Questions[questionIndex].StatusForAnswerValue(answerValue).Accumulated)
+}
+
+func (env *ParticipationTestEnv) AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID participation.EventID, stakedAmount uint64, rewardedAmount uint64) {
+	env.AssertStakingRewardsStatus(eventID, env.ConfirmedMilestoneIndex(), stakedAmount, rewardedAmount)
+}
+
+func (env *ParticipationTestEnv) AssertStakingRewardsStatus(eventID participation.EventID, milestone milestone.Index, stakedAmount uint64, rewardedAmount uint64) {
+	status, err := env.ParticipationManager().EventStatus(eventID, milestone)
+	require.NoError(env.t, err)
+	env.PrintJSON(status)
+	require.Equal(env.t, milestone, status.MilestoneIndex)
+	require.Exactly(env.t, stakedAmount, status.Staking.Staked)
+	require.Exactly(env.t, rewardedAmount, status.Staking.Rewarded)
 }
 
 func (env *ParticipationTestEnv) AssertTrackedParticipation(eventID participation.EventID, sentParticipations *SentParticipations, startMilestoneIndex milestone.Index, endMilestoneIndex milestone.Index, amount uint64) {

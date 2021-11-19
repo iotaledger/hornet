@@ -1,35 +1,17 @@
 package v1
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/kvstore"
-
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/restapi"
+
+	"github.com/iotaledger/hive.go/kvstore"
 )
-
-func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {
-	milestoneIndex := strings.ToLower(c.Param(ParameterMilestoneIndex))
-	if milestoneIndex == "" {
-		return 0, errors.WithMessagef(restapi.ErrInvalidParameter, "parameter \"%s\" not specified", ParameterMilestoneIndex)
-	}
-
-	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 64)
-	if err != nil {
-		return 0, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
-	}
-
-	return milestone.Index(msIndex), nil
-}
 
 func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 
-	msIndex, err := ParseMilestoneIndexParam(c)
+	msIndex, err := restapi.ParseMilestoneIndexParam(c)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +31,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 
 func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse, error) {
 
-	msIndex, err := ParseMilestoneIndexParam(c)
+	msIndex, err := restapi.ParseMilestoneIndexParam(c)
 	if err != nil {
 		return nil, err
 	}

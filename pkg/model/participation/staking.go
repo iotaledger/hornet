@@ -109,6 +109,7 @@ func (s *Staking) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, 
 
 func (s *Staking) MarshalJSON() ([]byte, error) {
 	j := &jsonStaking{
+		Type:           int(StakingPayloadTypeID),
 		Text:           s.Text,
 		Symbol:         s.Symbol,
 		Numerator:      s.Numerator,
@@ -119,7 +120,9 @@ func (s *Staking) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Staking) UnmarshalJSON(bytes []byte) error {
-	j := &jsonStaking{}
+	j := &jsonStaking{
+		Type: int(StakingPayloadTypeID),
+	}
 	if err := json.Unmarshal(bytes, j); err != nil {
 		return err
 	}
@@ -133,6 +136,7 @@ func (s *Staking) UnmarshalJSON(bytes []byte) error {
 
 // jsonStaking defines the json representation of a Staking.
 type jsonStaking struct {
+	Type           int    `json:"type"`
 	Text           string `json:"text"`
 	Symbol         string `json:"symbol"`
 	Numerator      uint32 `json:"numerator"`

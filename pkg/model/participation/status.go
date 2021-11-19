@@ -20,31 +20,51 @@ type QuestionStatus struct {
 	Answers []*AnswerStatus `json:"answers"`
 }
 
+// StakingStatus holds the status of a staking.
+type StakingStatus struct {
+	Staked   uint64 `json:"staked"`
+	Rewarded uint64 `json:"rewarded"`
+	Symbol   string `json:"symbol"`
+}
+
 // EventStatus holds the status of the event
 type EventStatus struct {
 	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
 	Status         string            `json:"status"`
 	Questions      []*QuestionStatus `json:"questions,omitempty"`
+	Staking        *StakingStatus    `json:"staking,omitempty"`
 	Checksum       string            `json:"checksum"`
 }
 
 // EventStatus returns the EventStatus for an event with the given eventID.
-func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, error) {
-
-	confirmedMilestoneIndex := pm.syncManager.ConfirmedMilestoneIndex()
-
+func (pm *ParticipationManager) EventStatus(eventID EventID, milestone ...milestone.Index) (*EventStatus, error) {
 	event := pm.Event(eventID)
 	if event == nil {
 		return nil, ErrEventNotFound
 	}
 
-	status := &EventStatus{
-		MilestoneIndex: confirmedMilestoneIndex,
-		Status:         event.Status(confirmedMilestoneIndex),
+	index := pm.syncManager.ConfirmedMilestoneIndex()
+	if len(milestone) > 0 {
+		index = milestone[0]
 	}
 
-	// compute the sha256 of all the question and answer status to easily compare answers
+	if index > event.EndMilestoneIndex() {
+		index = event.EndMilestoneIndex()
+	}
+
+	status := &EventStatus{
+		MilestoneIndex: index,
+		Status:         event.Status(index),
+	}
+
+	// compute the sha256 of all the question and answer status or the staking amount and rewards to easily compare
 	statusHash := sha256.New()
+	if _, err := statusHash.Write(eventID[:]); err != nil {
+		return nil, err
+	}
+	if err := binary.Write(statusHash, binary.LittleEndian, index); err != nil {
+		return nil, err
+	}
 
 	// For each participation, iterate over all questions
 	for idx, question := range event.BallotQuestions() {
@@ -56,12 +76,12 @@ func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, erro
 		questionStatus := &QuestionStatus{}
 
 		balanceForAnswerValue := func(answerValue uint8) (*AnswerStatus, error) {
-			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
+			currentBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(eventID, index, questionIndex, answerValue)
 			if err != nil {
 				return nil, err
 			}
 
-			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, questionIndex, answerValue)
+			accumulatedBalance, err := pm.AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID, index, questionIndex, answerValue)
 			if err != nil {
 				return nil, err
 			}
@@ -107,6 +127,28 @@ func (pm *ParticipationManager) EventStatus(eventID EventID) (*EventStatus, erro
 
 		status.Questions = append(status.Questions, questionStatus)
 	}
+
+	staking := event.Staking()
+	if staking != nil {
+		total, err := pm.totalStakingParticipationForEvent(eventID, index)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := binary.Write(statusHash, binary.LittleEndian, total.staked); err != nil {
+			return nil, err
+		}
+		if err := binary.Write(statusHash, binary.LittleEndian, total.rewarded); err != nil {
+			return nil, err
+		}
+
+		status.Staking = &StakingStatus{
+			Staked:   total.staked,
+			Rewarded: total.rewarded,
+			Symbol:   staking.Symbol,
+		}
+	}
+
 	status.Checksum = hex.EncodeToString(statusHash.Sum(nil))
 	return status, nil
 }

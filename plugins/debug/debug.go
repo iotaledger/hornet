@@ -299,7 +299,7 @@ func addressesEd25519(_ echo.Context) (*addressesResponse, error) {
 
 func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 
-	msIndex, err := v1.ParseMilestoneIndexParam(c)
+	msIndex, err := restapi.ParseMilestoneIndexParam(c)
 	if err != nil {
 		return nil, err
 	}
@@ -380,21 +380,20 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 }
 
 func messageCone(c echo.Context) (*messageConeResponse, error) {
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, err
 	}
 
 	cachedStartMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID) // meta +1
 	if cachedStartMsgMeta == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedStartMsgMeta.Release(true)
 
 	if !cachedStartMsgMeta.Metadata().IsSolid() {
-		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start message is not solid: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start message is not solid: %s", messageID.ToHex())
 	}
 
 	startMsgReferened, startMsgReferenedAt := cachedStartMsgMeta.Metadata().ReferencedWithIndex()
@@ -449,7 +448,7 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 	}
 
 	if len(entryPoints) == 0 {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "no referenced parents found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "no referenced parents found: %s", messageID.ToHex())
 	}
 
 	return &messageConeResponse{

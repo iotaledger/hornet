@@ -30,26 +30,6 @@ const (
 )
 
 const (
-	// ParameterMessageID is used to identify a message by its ID.
-	ParameterMessageID = "messageID"
-
-	// ParameterTransactionID is used to identify a transaction by its ID.
-	ParameterTransactionID = "transactionID"
-
-	// ParameterOutputID is used to identify an output by its ID.
-	ParameterOutputID = "outputID"
-
-	// ParameterAddress is used to identify an address.
-	ParameterAddress = "address"
-
-	// ParameterMilestoneIndex is used to identify a milestone.
-	ParameterMilestoneIndex = "milestoneIndex"
-
-	// ParameterPeerID is used to identify a peer.
-	ParameterPeerID = "peerID"
-)
-
-const (
 	// RouteInfo is the route for getting the node info.
 	// GET returns the node info.
 	RouteInfo = "/info"
@@ -60,19 +40,19 @@ const (
 
 	// RouteMessageData is the route for getting message data by its messageID.
 	// GET returns message data (json).
-	RouteMessageData = "/messages/:" + ParameterMessageID
+	RouteMessageData = "/messages/:" + restapipkg.ParameterMessageID
 
 	// RouteMessageMetadata is the route for getting message metadata by its messageID.
 	// GET returns message metadata (including info about "promotion/reattachment needed").
-	RouteMessageMetadata = "/messages/:" + ParameterMessageID + "/metadata"
+	RouteMessageMetadata = "/messages/:" + restapipkg.ParameterMessageID + "/metadata"
 
 	// RouteMessageBytes is the route for getting message raw data by it's messageID.
 	// GET returns raw message data (bytes).
-	RouteMessageBytes = "/messages/:" + ParameterMessageID + "/raw"
+	RouteMessageBytes = "/messages/:" + restapipkg.ParameterMessageID + "/raw"
 
 	// RouteMessageChildren is the route for getting message IDs of the children of a message, identified by its messageID.
 	// GET returns the message IDs of all children.
-	RouteMessageChildren = "/messages/:" + ParameterMessageID + "/children"
+	RouteMessageChildren = "/messages/:" + restapipkg.ParameterMessageID + "/children"
 
 	// RouteMessages is the route for getting message IDs or creating new messages.
 	// GET with query parameter (mandatory) returns all message IDs that fit these filter criteria (query parameters: "index").
@@ -81,39 +61,39 @@ const (
 
 	// RouteTransactionsIncludedMessage is the route for getting the message that was included in the ledger for a given transaction ID.
 	// GET returns message data (json).
-	RouteTransactionsIncludedMessage = "/transactions/:" + ParameterTransactionID + "/included-message"
+	RouteTransactionsIncludedMessage = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-message"
 
 	// RouteMilestone is the route for getting a milestone by it's milestoneIndex.
 	// GET returns the milestone.
-	RouteMilestone = "/milestones/:" + ParameterMilestoneIndex
+	RouteMilestone = "/milestones/:" + restapipkg.ParameterMilestoneIndex
 
 	// RouteMilestoneUTXOChanges is the route for getting all UTXO changes of a milestone by its milestoneIndex.
 	// GET returns the output IDs of all UTXO changes.
-	RouteMilestoneUTXOChanges = "/milestones/:" + ParameterMilestoneIndex + "/utxo-changes"
+	RouteMilestoneUTXOChanges = "/milestones/:" + restapipkg.ParameterMilestoneIndex + "/utxo-changes"
 
 	// RouteOutput is the route for getting outputs by their outputID (transactionHash + outputIndex).
 	// GET returns the output.
-	RouteOutput = "/outputs/:" + ParameterOutputID
+	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
 
 	// RouteAddressBech32Balance is the route for getting the total balance of all unspent outputs of an address.
 	// The address must be encoded in bech32.
 	// GET returns the balance of all unspent outputs of this address.
-	RouteAddressBech32Balance = "/addresses/:" + ParameterAddress
+	RouteAddressBech32Balance = "/addresses/:" + restapipkg.ParameterAddress
 
 	// RouteAddressEd25519Balance is the route for getting the total balance of all unspent outputs of an ed25519 address.
 	// The ed25519 address must be encoded in hex.
 	// GET returns the balance of all unspent outputs of this address.
-	RouteAddressEd25519Balance = "/addresses/ed25519/:" + ParameterAddress
+	RouteAddressEd25519Balance = "/addresses/ed25519/:" + restapipkg.ParameterAddress
 
 	// RouteAddressBech32Outputs is the route for getting all output IDs for an address.
 	// The address must be encoded in bech32.
 	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
-	RouteAddressBech32Outputs = "/addresses/:" + ParameterAddress + "/outputs"
+	RouteAddressBech32Outputs = "/addresses/:" + restapipkg.ParameterAddress + "/outputs"
 
 	// RouteAddressEd25519Outputs is the route for getting all output IDs for an ed25519 address.
 	// The ed25519 address must be encoded in hex.
 	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
-	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + ParameterAddress + "/outputs"
+	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + restapipkg.ParameterAddress + "/outputs"
 
 	// RouteTreasury is the route for getting the current treasury output.
 	RouteTreasury = "/treasury"
@@ -122,12 +102,12 @@ const (
 	RouteReceipts = "/receipts"
 
 	// RouteReceiptsMigratedAtIndex is the route for getting all receipts for a given migrated at index.
-	RouteReceiptsMigratedAtIndex = "/receipts/:" + ParameterMilestoneIndex
+	RouteReceiptsMigratedAtIndex = "/receipts/:" + restapipkg.ParameterMilestoneIndex
 
 	// RoutePeer is the route for getting peers by their peerID.
 	// GET returns the peer
 	// DELETE deletes the peer.
-	RoutePeer = "/peers/:" + ParameterPeerID
+	RoutePeer = "/peers/:" + restapipkg.ParameterPeerID
 
 	// RoutePeers is the route for getting all peers of the node.
 	// GET returns a list of all peers.
@@ -433,4 +413,9 @@ func configure() {
 
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
+}
+
+// AddFeature adds a feature for the RouteInfo endpoint.
+func AddFeature(feature string) {
+	features = append(features, feature)
 }

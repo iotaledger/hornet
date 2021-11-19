@@ -25,6 +25,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
@@ -135,6 +136,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+	restapiv1.AddFeature(Plugin.Name)
 
 	routeGroup := deps.Echo.Group("/api/plugins/faucet")
 

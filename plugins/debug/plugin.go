@@ -15,15 +15,8 @@ import (
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/restapi"
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
-)
-
-const (
-	// ParameterMessageID is used to identify a message by it's ID.
-	ParameterMessageID = "messageID"
-
-	// ParameterMilestoneIndex is used to identify a milestone.
-	ParameterMilestoneIndex = "milestoneIndex"
 )
 
 const (
@@ -57,7 +50,7 @@ const (
 
 	// RouteDebugMilestoneDiffs is the debug route for getting a milestone diff by it's milestoneIndex.
 	// GET returns the utxo diff (new outputs & spents) for the milestone index.
-	RouteDebugMilestoneDiffs = "/ms-diff/:" + ParameterMilestoneIndex
+	RouteDebugMilestoneDiffs = "/ms-diff/:" + restapipkg.ParameterMilestoneIndex
 
 	// RouteDebugRequests is the debug route for getting all pending requests.
 	// GET returns a list of all pending requests.
@@ -66,7 +59,7 @@ const (
 	// RouteDebugMessageCone is the debug route for traversing a cone of a message.
 	// it traverses the parents of a message until they reference an older milestone than the start message.
 	// GET returns the path of this traversal and the "entry points".
-	RouteDebugMessageCone = "/message-cones/:" + ParameterMessageID
+	RouteDebugMessageCone = "/message-cones/:" + restapipkg.ParameterMessageID
 )
 
 func init() {
@@ -104,6 +97,7 @@ func configure() {
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
 		Plugin.Panic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
+	restapiv1.AddFeature(Plugin.Name)
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 

@@ -19,6 +19,7 @@ var (
 	ErrInvalidEvent                          = errors.New("invalid event")
 	ErrInvalidPreviouslyTrackedParticipation = errors.New("a previously tracked participation changed and is now invalid")
 	ErrInvalidCurrentBallotVoteBalance       = errors.New("current ballot vote balance invalid")
+	ErrInvalidCurrentStakedAmount            = errors.New("current staked amount invalid")
 )
 
 // Events
@@ -84,19 +85,26 @@ func (pm *ParticipationManager) deleteEvent(eventID EventID) error {
 
 // Messages
 
-func messageKeyForMessageID(messageID hornet.MessageID) []byte {
+func messageKeyForEventPrefix(eventID EventID) []byte {
 	m := marshalutil.New(33)
 	m.WriteByte(ParticipationStoreKeyPrefixMessages) // 1 byte
-	m.WriteBytes(messageID)                          // 32 bytes
+	m.WriteBytes(eventID[:])                         // 32 bytes
 	return m.Bytes()
 }
 
-func (pm *ParticipationManager) storeMessage(message *storage.Message, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(messageKeyForMessageID(message.MessageID()), message.Data())
+func messageKeyForEventAndMessageID(eventID EventID, messageID hornet.MessageID) []byte {
+	m := marshalutil.New(65)
+	m.WriteBytes(messageKeyForEventPrefix(eventID)) // 33 bytes
+	m.WriteBytes(messageID)                         // 32 bytes
+	return m.Bytes()
 }
 
-func (pm *ParticipationManager) MessageForMessageID(messageId hornet.MessageID) (*storage.Message, error) {
-	value, err := pm.participationStore.Get(messageKeyForMessageID(messageId))
+func (pm *ParticipationManager) storeMessageForEvent(eventID EventID, message *storage.Message, mutations kvstore.BatchedMutations) error {
+	return mutations.Set(messageKeyForEventAndMessageID(eventID, message.MessageID()), message.Data())
+}
+
+func (pm *ParticipationManager) MessageForEventAndMessageID(eventID EventID, messageId hornet.MessageID) (*storage.Message, error) {
+	value, err := pm.participationStore.Get(messageKeyForEventAndMessageID(eventID, messageId))
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		return nil, nil
 	}
@@ -277,22 +285,36 @@ func (pm *ParticipationManager) ForEachPastParticipation(eventID EventID, consum
 
 // Ballot answers
 
-func currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, questionIndex uint8, answerIndex uint8) []byte {
-	m := marshalutil.New(35)
+func currentBallotVoteBalanceKeyPrefix(eventID EventID) []byte {
+	m := marshalutil.New(33)
 	m.WriteByte(ParticipationStoreKeyPrefixBallotCurrentVoteBalanceForQuestionAndAnswer) // 1 byte
 	m.WriteBytes(eventID[:])                                                             // 32 bytes
-	m.WriteUint8(questionIndex)                                                          // 1 byte
-	m.WriteUint8(answerIndex)                                                            // 1 byte
 	return m.Bytes()
 }
 
-func accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, questionIndex uint8, answerIndex uint8) []byte {
-	ms := marshalutil.New(35)
-	ms.WriteByte(ParticipationStoreKeyPrefixBallotAccululatedVoteBalanceForQuestionAndAnswer) // 1 byte
-	ms.WriteBytes(eventID[:])                                                                 // 32 bytes
-	ms.WriteUint8(questionIndex)                                                              // 1 byte
-	ms.WriteUint8(answerIndex)                                                                // 1 byte
-	return ms.Bytes()
+func currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIndex uint8, answerIndex uint8) []byte {
+	m := marshalutil.New(39)
+	m.WriteBytes(currentBallotVoteBalanceKeyPrefix(eventID)) // 33 bytes
+	m.WriteUint32(uint32(milestone))                         // 4 bytes
+	m.WriteUint8(questionIndex)                              // 1 byte
+	m.WriteUint8(answerIndex)                                // 1 byte
+	return m.Bytes()
+}
+
+func accumulatedBallotVoteBalanceKeyPrefix(eventID EventID) []byte {
+	m := marshalutil.New(33)
+	m.WriteByte(ParticipationStoreKeyPrefixBallotAccululatedVoteBalanceForQuestionAndAnswer) // 1 byte
+	m.WriteBytes(eventID[:])                                                                 // 32 bytes
+	return m.Bytes()
+}
+
+func accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIndex uint8, answerIndex uint8) []byte {
+	m := marshalutil.New(39)
+	m.WriteBytes(accumulatedBallotVoteBalanceKeyPrefix(eventID)) // 33 bytes
+	m.WriteUint32(uint32(milestone))                             // 4 bytes
+	m.WriteUint8(questionIndex)                                  // 1 byte
+	m.WriteUint8(answerIndex)                                    // 1 byte
+	return m.Bytes()
 }
 
 func (pm *ParticipationManager) startParticipationAtMilestone(eventID EventID, output *utxo.Output, startIndex milestone.Index, mutations kvstore.BatchedMutations) error {
@@ -367,8 +389,8 @@ func (pm *ParticipationManager) endAllParticipationsAtMilestone(eventID EventID,
 	return innerErr
 }
 
-func (pm *ParticipationManager) CurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8) (uint64, error) {
-	val, err := pm.participationStore.Get(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx))
+func (pm *ParticipationManager) CurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIdx uint8, answerIdx uint8) (uint64, error) {
+	val, err := pm.participationStore.Get(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, milestone, questionIdx, answerIdx))
 
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// No votes for this answer yet
@@ -383,8 +405,8 @@ func (pm *ParticipationManager) CurrentBallotVoteBalanceForQuestionAndAnswer(eve
 	return ms.ReadUint64()
 }
 
-func (pm *ParticipationManager) AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8) (uint64, error) {
-	val, err := pm.participationStore.Get(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx))
+func (pm *ParticipationManager) AccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIdx uint8, answerIdx uint8) (uint64, error) {
+	val, err := pm.participationStore.Get(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, milestone, questionIdx, answerIdx))
 
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		// No votes for this answer yet
@@ -399,73 +421,61 @@ func (pm *ParticipationManager) AccumulatedBallotVoteBalanceForQuestionAndAnswer
 	return ms.ReadUint64()
 }
 
-func setCurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8, current uint64, mutations kvstore.BatchedMutations) error {
+func setCurrentBallotVoteBalanceForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIdx uint8, answerIdx uint8, current uint64, mutations kvstore.BatchedMutations) error {
 	ms := marshalutil.New(8)
 	ms.WriteUint64(current)
-	return mutations.Set(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx), ms.Bytes())
+	return mutations.Set(currentBallotVoteBalanceKeyForQuestionAndAnswer(eventID, milestone, questionIdx, answerIdx), ms.Bytes())
 }
 
-func setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, questionIdx uint8, answerIdx uint8, total uint64, mutations kvstore.BatchedMutations) error {
+func setAccumulatedBallotVoteBalanceForQuestionAndAnswer(eventID EventID, milestone milestone.Index, questionIdx uint8, answerIdx uint8, total uint64, mutations kvstore.BatchedMutations) error {
 	ms := marshalutil.New(8)
 	ms.WriteUint64(total)
-	return mutations.Set(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, questionIdx, answerIdx), ms.Bytes())
+	return mutations.Set(accumulatedBallotVoteBalanceKeyForQuestionAndAnswer(eventID, milestone, questionIdx, answerIdx), ms.Bytes())
 }
 
-func (pm *ParticipationManager) startCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
-	event := pm.Event(vote.EventID)
-	if event == nil {
-		return nil
-	}
-	if event.payloadType() == BallotPayloadTypeID {
-		questions := event.BallotQuestions()
-		for idx, answerByte := range vote.Answers {
-			questionIndex := uint8(idx)
-			// We already verified, that there are exactly as many answers as questions in the ballot, so no need to check here again
-			answerValue := questions[idx].answerValueForByte(answerByte)
+func (pm *ParticipationManager) startCountingBallotAnswers(event *Event, vote *Participation, milestone milestone.Index, amount uint64, mutations kvstore.BatchedMutations) error {
+	questions := event.BallotQuestions()
+	for idx, answerByte := range vote.Answers {
+		questionIndex := uint8(idx)
+		// We already verified, that there are exactly as many answers as questions in the ballot, so no need to check here again
+		answerValue := questions[idx].answerValueForByte(answerByte)
 
-			currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
-			if err != nil {
-				return err
-			}
+		currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, milestone, questionIndex, answerValue)
+		if err != nil {
+			return err
+		}
 
-			voteCount := amount / 1000
-			currentVoteBalance += voteCount
+		voteCount := amount / 1000
+		currentVoteBalance += voteCount
 
-			if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
-				return err
-			}
+		if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, milestone, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, amount uint64, mutations kvstore.BatchedMutations) error {
-	event := pm.Event(vote.EventID)
-	if event == nil {
-		return nil
-	}
-	if event.payloadType() == BallotPayloadTypeID {
-		questions := event.BallotQuestions()
-		for idx, answerByte := range vote.Answers {
-			questionIndex := uint8(idx)
-			// We already verified, that there are exactly as many answers as questions in the ballot, so no need to check here again
-			answerValue := questions[idx].answerValueForByte(answerByte)
+func (pm *ParticipationManager) stopCountingBallotAnswers(event *Event, vote *Participation, milestone milestone.Index, amount uint64, mutations kvstore.BatchedMutations) error {
+	questions := event.BallotQuestions()
+	for idx, answerByte := range vote.Answers {
+		questionIndex := uint8(idx)
+		// We already verified, that there are exactly as many answers as questions in the ballot, so no need to check here again
+		answerValue := questions[idx].answerValueForByte(answerByte)
 
-			currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue)
-			if err != nil {
-				return err
-			}
+		currentVoteBalance, err := pm.CurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, milestone, questionIndex, answerValue)
+		if err != nil {
+			return err
+		}
 
-			voteCount := amount / 1000
-			if currentVoteBalance < voteCount {
-				// currentVoteBalance can't be less than 0
-				return ErrInvalidCurrentBallotVoteBalance
-			}
-			currentVoteBalance -= voteCount
+		voteCount := amount / 1000
+		if currentVoteBalance < voteCount {
+			// currentVoteBalance can't be less than 0
+			return ErrInvalidCurrentBallotVoteBalance
+		}
+		currentVoteBalance -= voteCount
 
-			if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
-				return err
-			}
+		if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, milestone, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -473,11 +483,17 @@ func (pm *ParticipationManager) stopCountingBallotAnswers(vote *Participation, a
 
 // Staking
 
-func stakingKeyForEventAndAddress(eventID EventID, addressBytes []byte) []byte {
-	m := marshalutil.New(66)
+func stakingKeyForEventPrefix(eventID EventID) []byte {
+	m := marshalutil.New(33)
 	m.WriteByte(ParticipationStoreKeyPrefixStakingAddress) // 1 byte
 	m.WriteBytes(eventID[:])                               // 32 bytes
-	m.WriteBytes(addressBytes)                             // 33 bytes
+	return m.Bytes()
+}
+
+func stakingKeyForEventAndAddress(eventID EventID, addressBytes []byte) []byte {
+	m := marshalutil.New(66)
+	m.WriteBytes(stakingKeyForEventPrefix(eventID)) // 33 bytes
+	m.WriteBytes(addressBytes)                      // 33 bytes
 	return m.Bytes()
 }
 
@@ -519,4 +535,110 @@ func (pm *ParticipationManager) increaseStakingRewardForEventAndAddress(eventID 
 	m.WriteUint64(newBalance)
 
 	return mutations.Set(stakingKeyForEventAndAddress(eventID, addressBytes), m.Bytes())
+}
+
+func totalParticipationStakingKeyForEventPrefix(eventID EventID) []byte {
+	m := marshalutil.New(33)
+	m.WriteByte(ParticipationStoreKeyPrefixStakingTotalParticipation) // 1 byte
+	m.WriteBytes(eventID[:])                                          // 32 bytes
+	return m.Bytes()
+}
+
+func totalParticipationStakingKeyForEvent(eventID EventID, milestone milestone.Index) []byte {
+	m := marshalutil.New(37)
+	m.WriteBytes(totalParticipationStakingKeyForEventPrefix(eventID)) // 33 bytes
+	m.WriteUint32(uint32(milestone))                                  // 4 bytes
+	return m.Bytes()
+}
+
+type totalStakingParticipation struct {
+	staked   uint64
+	rewarded uint64
+}
+
+func totalStakingParticipationFromBytes(bytes []byte) (*totalStakingParticipation, error) {
+	m := marshalutil.New(bytes)
+	staked, err := m.ReadUint64()
+	if err != nil {
+		return nil, err
+	}
+	rewarded, err := m.ReadUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	return &totalStakingParticipation{
+		staked:   staked,
+		rewarded: rewarded,
+	}, nil
+}
+
+func (t *totalStakingParticipation) valueBytes() []byte {
+	m := marshalutil.New(16)
+	m.WriteUint64(t.staked)   // 8 bytes
+	m.WriteUint64(t.rewarded) // 8 bytes
+	return m.Bytes()
+}
+
+func (pm *ParticipationManager) totalStakingParticipationForEvent(eventID EventID, milestone milestone.Index) (*totalStakingParticipation, error) {
+	value, err := pm.participationStore.Get(totalParticipationStakingKeyForEvent(eventID, milestone))
+	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return &totalStakingParticipation{staked: 0, rewarded: 0}, nil
+		}
+		return nil, err
+	}
+	return totalStakingParticipationFromBytes(value)
+}
+
+func (pm *ParticipationManager) increaseStakedAmountForStakingEvent(eventID EventID, milestone milestone.Index, stakedAmount uint64, mutations kvstore.BatchedMutations) error {
+	total, err := pm.totalStakingParticipationForEvent(eventID, milestone)
+	if err != nil {
+		return err
+	}
+	total.staked += stakedAmount
+	return mutations.Set(totalParticipationStakingKeyForEvent(eventID, milestone), total.valueBytes())
+}
+
+func (pm *ParticipationManager) decreaseStakedAmountForStakingEvent(eventID EventID, milestone milestone.Index, stakedAmount uint64, mutations kvstore.BatchedMutations) error {
+	total, err := pm.totalStakingParticipationForEvent(eventID, milestone)
+	if err != nil {
+		return err
+	}
+	if total.staked < stakedAmount {
+		return ErrInvalidCurrentStakedAmount
+	}
+	total.staked -= stakedAmount
+	return mutations.Set(totalParticipationStakingKeyForEvent(eventID, milestone), total.valueBytes())
+}
+
+func (pm *ParticipationManager) setTotalStakingParticipationForEvent(eventID EventID, milestone milestone.Index, total *totalStakingParticipation, mutations kvstore.BatchedMutations) error {
+	return mutations.Set(totalParticipationStakingKeyForEvent(eventID, milestone), total.valueBytes())
+}
+
+// Pruning
+
+func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {
+	if err := pm.participationStore.DeletePrefix(participationKeyForEventOutputsPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(participationKeyForEventSpentOutputsPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(currentBallotVoteBalanceKeyPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(accumulatedBallotVoteBalanceKeyPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(stakingKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(totalParticipationStakingKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(messageKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
+	return nil
 }
