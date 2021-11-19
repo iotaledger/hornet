@@ -240,7 +240,7 @@ func TestSingleBallotVote(t *testing.T) {
 	require.Equal(t, milestone.Index(10), trackedVote.EndIndex)
 
 	var messageFromParticipationStore *storage.Message
-	messageFromParticipationStore, err = env.ParticipationManager().MessageForMessageID(trackedVote.MessageID)
+	messageFromParticipationStore, err = env.ParticipationManager().MessageForEventAndMessageID(eventID, trackedVote.MessageID)
 	require.NoError(t, err)
 	require.NotNil(t, messageFromParticipationStore)
 	require.Equal(t, messageFromParticipationStore.Message(), castVote.Message().IotaMessage())

@@ -446,13 +446,13 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 
 	mutations := pm.participationStore.Batched()
 
-	// Store the message holding the participation
-	if err := pm.storeMessage(msg, mutations); err != nil {
-		mutations.Cancel()
-		return err
-	}
-
 	for _, participation := range validParticipations {
+
+		// Store the message holding the participation for this event
+		if err := pm.storeMessageForEvent(participation.EventID, msg, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
 
 		// Store the participation started at this milestone
 		if err := pm.startParticipationAtMilestone(participation.EventID, depositOutputs[0], index, mutations); err != nil {
@@ -501,10 +501,18 @@ func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 
 func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, spent *utxo.Spent, events map[EventID]*Event) error {
 
-	// Check if we tracked the participation initially, event.g. saved the Message that created this UTXO
-	msg, err := pm.MessageForMessageID(spent.MessageID())
-	if err != nil {
-		return err
+	// Fetch the message, this must have been stored for at least one of the events
+	var msg *storage.Message
+	for eID, _ := range events {
+		// Check if we tracked the participation initially, event.g. saved the Message that created this UTXO
+		messageForEvent, err := pm.MessageForEventAndMessageID(eID, spent.MessageID())
+		if err != nil {
+			return err
+		}
+		if messageForEvent != nil {
+			msg = messageForEvent
+			break
+		}
 	}
 
 	if msg == nil {

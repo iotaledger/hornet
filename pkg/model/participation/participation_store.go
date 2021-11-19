@@ -85,19 +85,26 @@ func (pm *ParticipationManager) deleteEvent(eventID EventID) error {
 
 // Messages
 
-func messageKeyForMessageID(messageID hornet.MessageID) []byte {
+func messageKeyForEventPrefix(eventID EventID) []byte {
 	m := marshalutil.New(33)
 	m.WriteByte(ParticipationStoreKeyPrefixMessages) // 1 byte
-	m.WriteBytes(messageID)                          // 32 bytes
+	m.WriteBytes(eventID[:])                         // 32 bytes
 	return m.Bytes()
 }
 
-func (pm *ParticipationManager) storeMessage(message *storage.Message, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(messageKeyForMessageID(message.MessageID()), message.Data())
+func messageKeyForEventAndMessageID(eventID EventID, messageID hornet.MessageID) []byte {
+	m := marshalutil.New(65)
+	m.WriteBytes(messageKeyForEventPrefix(eventID)) // 33 bytes
+	m.WriteBytes(messageID)                         // 32 bytes
+	return m.Bytes()
 }
 
-func (pm *ParticipationManager) MessageForMessageID(messageId hornet.MessageID) (*storage.Message, error) {
-	value, err := pm.participationStore.Get(messageKeyForMessageID(messageId))
+func (pm *ParticipationManager) storeMessageForEvent(eventID EventID, message *storage.Message, mutations kvstore.BatchedMutations) error {
+	return mutations.Set(messageKeyForEventAndMessageID(eventID, message.MessageID()), message.Data())
+}
+
+func (pm *ParticipationManager) MessageForEventAndMessageID(eventID EventID, messageId hornet.MessageID) (*storage.Message, error) {
+	value, err := pm.participationStore.Get(messageKeyForEventAndMessageID(eventID, messageId))
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
 		return nil, nil
 	}
@@ -612,7 +619,6 @@ func (pm *ParticipationManager) setTotalStakingParticipationForEvent(eventID Eve
 // Pruning
 
 func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {
-
 	if err := pm.participationStore.DeletePrefix(participationKeyForEventOutputsPrefix(eventID)); err != nil {
 		return err
 	}
@@ -631,7 +637,8 @@ func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {
 	if err := pm.participationStore.DeletePrefix(totalParticipationStakingKeyForEventPrefix(eventID)); err != nil {
 		return err
 	}
-
-	//TODO: delete all messages
+	if err := pm.participationStore.DeletePrefix(messageKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
 	return nil
 }
