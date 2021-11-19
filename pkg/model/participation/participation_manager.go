@@ -20,7 +20,6 @@ import (
 var (
 	ErrParticipationCorruptedStorage               = errors.New("the participation database was not shutdown properly")
 	ErrParticipationEventStartedBeforePruningIndex = errors.New("the given participation event started before the pruning index of this node")
-	ErrParticipationEventAlreadyEnded              = errors.New("the given participation event already ended")
 )
 
 // ParticipationManager is used to track the outcome of participation in the tangle.
@@ -223,13 +222,7 @@ func (pm *ParticipationManager) StoreEvent(event *Event) (EventID, error) {
 	pm.Lock()
 	defer pm.Unlock()
 
-	confirmedMilestoneIndex := pm.syncManager.ConfirmedMilestoneIndex()
-
-	if confirmedMilestoneIndex >= event.EndMilestoneIndex() {
-		return NullEventID, ErrParticipationEventAlreadyEnded
-	}
-
-	if confirmedMilestoneIndex >= event.CommenceMilestoneIndex() {
+	if pm.syncManager.ConfirmedMilestoneIndex() >= event.CommenceMilestoneIndex() {
 		if err := pm.calculatePastParticipationForEvent(event); err != nil {
 			return NullEventID, err
 		}
@@ -320,7 +313,7 @@ func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event)
 
 		pm.applyNewConfirmedMilestoneIndexForEvents(currentIndex, events)
 
-		if currentIndex >= pm.syncManager.ConfirmedMilestoneIndex() {
+		if currentIndex >= pm.syncManager.ConfirmedMilestoneIndex() || currentIndex >= event.EndMilestoneIndex() {
 			// We are done
 			break
 		}
