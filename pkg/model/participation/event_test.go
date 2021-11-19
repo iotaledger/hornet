@@ -6,7 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
@@ -160,4 +162,45 @@ func TestEvent_Serialize(t *testing.T) {
 			assert.EqualValues(t, tt.target, data)
 		})
 	}
+}
+
+func RandStakingEvent(nominator uint32, denominator uint32, duration uint32) *participation.Event {
+	eb := participation.NewEventBuilder(
+		RandString(100),
+		5,
+		6,
+		milestone.Index(6+duration),
+		RandString(100),
+	)
+
+	eb.Payload(&participation.Staking{
+		Text:           RandString(10),
+		Symbol:         RandString(3),
+		Numerator:      nominator,
+		Denominator:    denominator,
+		AdditionalInfo: RandString(100),
+	})
+
+	event, err := eb.Build()
+	if err != nil {
+		panic(err)
+	}
+	return event
+}
+
+func TestEventStakingCanOverflow(t *testing.T) {
+	require.False(t, RandStakingEvent(6_636, 1, 1).StakingCanOverflow())
+	require.True(t, RandStakingEvent(6_637, 1, 1).StakingCanOverflow())
+
+	require.True(t, RandStakingEvent(6_636, 1, 2).StakingCanOverflow())
+
+	require.False(t, RandStakingEvent(6_636, 10, 10).StakingCanOverflow())
+	require.True(t, RandStakingEvent(6_636, 10, 11).StakingCanOverflow())
+
+	require.False(t, RandStakingEvent(1, 1, 6_636).StakingCanOverflow())
+	require.True(t, RandStakingEvent(1, 1, 6_637).StakingCanOverflow())
+
+	require.True(t, RandStakingEvent(1, 10, 66_367).StakingCanOverflow())
+
+	require.False(t, RandStakingEvent(1, 1_000_000, 777_600).StakingCanOverflow())
 }

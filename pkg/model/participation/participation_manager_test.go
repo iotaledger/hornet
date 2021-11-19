@@ -1106,3 +1106,14 @@ func TestStakingRewardsCalculatedAfterEventEnded(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 6_987_470)
 	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
 }
+
+func TestStoreEventCanOverflow(t *testing.T) {
+	env := test.NewParticipationTestEnv(t, 5_000_000, 1_587_529, 5_589_977, 300_000_000, false)
+	defer env.Cleanup()
+
+	_, err := env.ParticipationManager().StoreEvent(RandStakingEvent(6_636, 1, 1))
+	require.NoError(t, err)
+
+	_, err = env.ParticipationManager().StoreEvent(RandStakingEvent(6_637, 1, 1))
+	require.ErrorIs(t, err, participation.ErrParticipationEventStakingCanOverflow)
+}

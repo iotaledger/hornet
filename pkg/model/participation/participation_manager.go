@@ -20,6 +20,7 @@ import (
 var (
 	ErrParticipationCorruptedStorage               = errors.New("the participation database was not shutdown properly")
 	ErrParticipationEventStartedBeforePruningIndex = errors.New("the given participation event started before the pruning index of this node")
+	ErrParticipationEventStakingCanOverflow        = errors.New("the given participation staking nominator and denominator in combination with the duration can overflow uint64")
 )
 
 // ParticipationManager is used to track the outcome of participation in the tangle.
@@ -221,6 +222,10 @@ func (pm *ParticipationManager) EventsCountingParticipation() map[EventID]*Event
 func (pm *ParticipationManager) StoreEvent(event *Event) (EventID, error) {
 	pm.Lock()
 	defer pm.Unlock()
+
+	if event.StakingCanOverflow() {
+		return NullEventID, ErrParticipationEventStakingCanOverflow
+	}
 
 	if pm.syncManager.ConfirmedMilestoneIndex() >= event.CommenceMilestoneIndex() {
 		if err := pm.calculatePastParticipationForEvent(event); err != nil {
@@ -675,7 +680,7 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 						return false
 					}
 
-					// TODO: how to handle overflow?
+					// This should not overflow, since we did worst-case overflow checks before adding the event
 					increaseAmount := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
 
 					addr := string(output.AddressBytes())

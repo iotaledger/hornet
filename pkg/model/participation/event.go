@@ -3,6 +3,7 @@ package participation
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/pkg/errors"
 
@@ -325,4 +326,25 @@ func (e *Event) ShouldCountParticipation(forIndex milestone.Index) bool {
 // IsCountingParticipation returns true if the event already started the holding phase for the given milestone index.
 func (e *Event) IsCountingParticipation(atIndex milestone.Index) bool {
 	return atIndex >= e.StartMilestoneIndex() && atIndex < e.EndMilestoneIndex()
+}
+
+func (e *Event) StakingCanOverflow() bool {
+	staking := e.Staking()
+	if staking == nil {
+		return false
+	}
+
+	// Check if numerator * total-supply can overflow uint64
+	maxNumerator := math.MaxUint64 / uint64(iotago.TokenSupply)
+	if uint64(staking.Numerator) > maxNumerator {
+		return true
+	}
+
+	// Check if total-supply * numerator/denominator * number of milestones can overflow uint64
+	maxRewardPerMilestone := uint64(iotago.TokenSupply) * uint64(staking.Numerator) / uint64(staking.Denominator)
+	maxNumberOfMilestones := math.MaxUint64 / maxRewardPerMilestone
+	if uint64(e.MilestoneIndexEnd-e.MilestoneIndexStart) > maxNumberOfMilestones {
+		return true
+	}
+	return false
 }
