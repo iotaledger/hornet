@@ -552,6 +552,7 @@ func totalParticipationStakingKeyForEventPrefix(eventID EventID) []byte {
 func totalParticipationStakingKeyForEvent(eventID EventID, milestone milestone.Index) []byte {
 	m := marshalutil.New(37)
 	m.WriteBytes(totalParticipationStakingKeyForEventPrefix(eventID)) // 33 bytes
+	m.WriteUint32(uint32(milestone))                                  // 4 bytes
 	return m.Bytes()
 }
 
