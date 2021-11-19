@@ -752,6 +752,140 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 	env.AssertBallotAnswerStatus(eventID2, event2.EndMilestoneIndex(), 505_000, 1_620_000, 0, 20)
 }
 
+func TestMultipleConcurrentEventsWithBallotCalculatedAfterEventEnded(t *testing.T) {
+	env := test.NewParticipationTestEnv(t, 5_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	defer env.Cleanup()
+
+	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	event1 := env.DefaultEvent(5, 2, 5)
+	event2 := env.DefaultEvent(7, 2, 5)
+
+	eventID1, err := event1.ID()
+	require.NoError(t, err)
+
+	eventID2, err := event2.ID()
+	require.NoError(t, err)
+
+	// Verify the configured indexes
+	require.Equal(t, milestone.Index(5), event1.CommenceMilestoneIndex())
+	require.Equal(t, milestone.Index(7), event1.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(12), event1.EndMilestoneIndex())
+
+	require.Equal(t, milestone.Index(7), event2.CommenceMilestoneIndex())
+	require.Equal(t, milestone.Index(9), event2.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(14), event2.EndMilestoneIndex())
+
+	env.IssueMilestone() // 5
+
+	wallet1Vote1 := env.NewParticipationHelper(env.Wallet1).
+		WholeWalletBalance().
+		// Participation for the commencing event1
+		AddParticipation(&participation.Participation{
+			EventID: eventID1,
+			Answers: []byte{10},
+		}).
+		// Participation too early for the upcoming event2
+		AddParticipation(&participation.Participation{
+			EventID: eventID2,
+			Answers: []byte{20},
+		}).
+		Send()
+
+	wallet2Vote1 := env.NewParticipationHelper(env.Wallet2).
+		WholeWalletBalance().
+		// Participation for the commencing event1
+		AddParticipation(&participation.Participation{
+			EventID: eventID1,
+			Answers: []byte{10},
+		}).
+		Send()
+
+	env.IssueMilestone(wallet1Vote1.Message().StoredMessageID(), wallet2Vote1.Message().StoredMessageID()) // 6
+	env.IssueMilestone()                                                                                   // 7
+
+	wallet3Vote1 := env.NewParticipationHelper(env.Wallet3).
+		WholeWalletBalance().
+		// Participation for the commencing event2
+		AddParticipation(&participation.Participation{
+			EventID: eventID2,
+			Answers: []byte{20},
+		}).
+		Send()
+
+	env.IssueMilestone(wallet3Vote1.Message().StoredMessageID()) //
+	env.IssueMilestone()                                         // 9
+
+	// Add event1 during the event
+	_, err = env.ParticipationManager().StoreEvent(event1)
+	require.NoError(t, err)
+
+	env.IssueMilestone() // 10
+
+	wallet1Vote2 := env.NewParticipationHelper(env.Wallet1).
+		WholeWalletBalance().
+		// Keep Participation for the holding event1
+		AddParticipation(&participation.Participation{
+			EventID: eventID1,
+			Answers: []byte{10},
+		}).
+		// Re-Participation holding event2
+		AddParticipation(&participation.Participation{
+			EventID: eventID2,
+			Answers: []byte{20},
+		}).
+		Send()
+
+	env.IssueMilestone(wallet1Vote2.Message().StoredMessageID()) // 11
+
+	wallet4Vote1 := env.NewParticipationHelper(env.Wallet4).
+		WholeWalletBalance().
+		// Participation for the holding event1
+		AddParticipation(&participation.Participation{
+			EventID: eventID1,
+			Answers: []byte{0},
+		}).
+		Send()
+
+	env.IssueMilestone(wallet4Vote1.Message().StoredMessageID()) // 12
+
+	wallet4Vote2 := env.NewParticipationHelper(env.Wallet4).
+		WholeWalletBalance().
+		// Participation for the holding event2
+		AddParticipation(&participation.Participation{
+			EventID: eventID2,
+			Answers: []byte{20},
+		}).
+		Send()
+
+	env.IssueMilestone(wallet4Vote2.Message().StoredMessageID()) // 13
+	env.IssueMilestone()                                         // 14
+
+	// Add event2 after the event
+	_, err = env.ParticipationManager().StoreEvent(event2)
+	require.NoError(t, err)
+
+	// Verify all votes
+	env.AssertTrackedParticipation(eventID1, wallet1Vote1, 6, 11, 5_000_000) // Voted 1
+	env.AssertInvalidParticipation(eventID2, wallet1Vote1)
+	env.AssertTrackedParticipation(eventID1, wallet1Vote2, 11, 12, 5_000_000)   // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet1Vote2, 11, 14, 5_000_000)   // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet2Vote1, 6, 12, 150_000_000)  // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet3Vote1, 8, 14, 200_000_000)  // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet4Vote1, 12, 12, 300_000_000) // Voted 0
+	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 14, 300_000_000) // Voted 2
+
+	// Verify end results
+	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 300_000, 300_000, 0, 0)
+	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 155_000, 775_000, 0, 10)
+	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 0, 0, 0, 20)
+
+	env.AssertBallotAnswerStatus(eventID2, event2.EndMilestoneIndex(), 0, 0, 0, 0)
+	env.AssertBallotAnswerStatus(eventID2, event2.EndMilestoneIndex(), 0, 0, 0, 10)
+	env.AssertBallotAnswerStatus(eventID2, event2.EndMilestoneIndex(), 505_000, 1_620_000, 0, 20)
+}
+
 func TestStakingRewards(t *testing.T) {
 	env := test.NewParticipationTestEnv(t, 5_000_000, 1_587_529, 5_589_977, 300_000_000, false)
 	defer env.Cleanup()
