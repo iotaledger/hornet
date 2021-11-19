@@ -261,36 +261,15 @@ func (pm *ParticipationManager) DeleteEvent(eventID EventID) error {
 		return ErrEventNotFound
 	}
 
+	if err := pm.clearStorageForEventID(eventID); err != nil {
+		return err
+	}
+
 	if err := pm.deleteEvent(eventID); err != nil {
 		return err
 	}
 
 	delete(pm.events, eventID)
-	return nil
-}
-
-func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {
-
-	if err := pm.participationStore.DeletePrefix(participationKeyForEventOutputsPrefix(eventID)); err != nil {
-		return err
-	}
-	if err := pm.participationStore.DeletePrefix(participationKeyForEventSpentOutputsPrefix(eventID)); err != nil {
-		return err
-	}
-	if err := pm.participationStore.DeletePrefix(currentBallotVoteBalanceKeyPrefix(eventID)); err != nil {
-		return err
-	}
-	if err := pm.participationStore.DeletePrefix(accumulatedBallotVoteBalanceKeyPrefix(eventID)); err != nil {
-		return err
-	}
-	if err := pm.participationStore.DeletePrefix(stakingKeyForEventPrefix(eventID)); err != nil {
-		return err
-	}
-	if err := pm.participationStore.DeletePrefix(totalParticipationStakingKeyForEventPrefix(eventID)); err != nil {
-		return err
-	}
-
-	//TODO: delete all messages
 	return nil
 }
 

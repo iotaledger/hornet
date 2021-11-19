@@ -620,3 +620,30 @@ func (pm *ParticipationManager) decreaseStakedAmountForStakingEvent(eventID Even
 func (pm *ParticipationManager) setTotalStakingParticipationForEvent(eventID EventID, milestone milestone.Index, total *totalStakingParticipation, mutations kvstore.BatchedMutations) error {
 	return mutations.Set(totalParticipationStakingKeyForEvent(eventID, milestone), total.valueBytes())
 }
+
+// Pruning
+
+func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {
+
+	if err := pm.participationStore.DeletePrefix(participationKeyForEventOutputsPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(participationKeyForEventSpentOutputsPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(currentBallotVoteBalanceKeyPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(accumulatedBallotVoteBalanceKeyPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(stakingKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(totalParticipationStakingKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
+
+	//TODO: delete all messages
+	return nil
+}
