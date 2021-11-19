@@ -822,6 +822,8 @@ func TestStakingRewards(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 0)
 
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 0)
+
 	env.IssueMilestone() // 8
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 1_250_000)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 396_882)
@@ -878,4 +880,95 @@ func TestStakingRewards(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
 
 	env.AssertStakingRewardsStatus(eventID, 12, 5_000_000+1_587_529+5_589_977, 6_250_000+1_984_410+6_987_470+75_000_000)
+}
+
+func TestStakingRewardsCalculatedAfterEventEnded(t *testing.T) {
+	env := test.NewParticipationTestEnv(t, 5_000_000, 1_587_529, 5_589_977, 300_000_000, false)
+	defer env.Cleanup()
+
+	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	eventBuilder := participation.NewEventBuilder("AlbinoPugCoin", 5, 7, 12, "The first DogCoin on the Tangle")
+	eventBuilder.Payload(&participation.Staking{
+		Text:           "The rarest DogCoin on earth",
+		Symbol:         "APUG",
+		Numerator:      25,
+		Denominator:    100,
+		AdditionalInfo: "Have you seen an albino Pug?",
+	})
+
+	event, err := eventBuilder.Build()
+	require.NoError(t, err)
+
+	eventID, err := event.ID()
+	require.NoError(t, err)
+
+	// Verify the configured indexes
+	require.Equal(t, milestone.Index(5), event.CommenceMilestoneIndex())
+	require.Equal(t, milestone.Index(7), event.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(12), event.EndMilestoneIndex())
+
+	env.IssueMilestone() // 5
+
+	stakeWallet1 := env.NewParticipationHelper(env.Wallet1).
+		WholeWalletBalance().
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{},
+		}).
+		Send()
+
+	stakeWallet2 := env.NewParticipationHelper(env.Wallet2).
+		WholeWalletBalance().
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{},
+		}).
+		Send()
+
+	stakeWallet3 := env.NewParticipationHelper(env.Wallet3).
+		WholeWalletBalance().
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{},
+		}).
+		Send()
+
+	env.IssueMilestone(stakeWallet1.Message().StoredMessageID(), stakeWallet2.Message().StoredMessageID(), stakeWallet3.Message().StoredMessageID()) // 6
+	env.IssueMilestone()                                                                                                                             // 7
+	env.IssueMilestone()                                                                                                                             // 8
+
+	stakeWallet4 := env.NewParticipationHelper(env.Wallet4).
+		WholeWalletBalance().
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{},
+		}).
+		Send()
+
+	env.IssueMilestone(stakeWallet4.Message().StoredMessageID()) // 9
+
+	cancelStakeWallet4 := env.CancelParticipations(env.Wallet4)
+
+	env.IssueMilestone(cancelStakeWallet4.StoredMessageID()) // 10
+	env.IssueMilestone()                                     // 11
+	env.IssueMilestone()                                     // 12
+	env.IssueMilestone()                                     // 13
+
+	// Event is already in the past, but we can still add it
+	_, err = env.ParticipationManager().StoreEvent(event)
+	require.NoError(t, err)
+
+	env.AssertStakingRewardsStatus(eventID, 5, 0, 0)
+	env.AssertStakingRewardsStatus(eventID, 6, 5_000_000+1_587_529+5_589_977, 0)
+	env.AssertStakingRewardsStatus(eventID, 8, 5_000_000+1_587_529+5_589_977, 1_250_000+396_882+1_397_494)
+	env.AssertStakingRewardsStatus(eventID, 9, 5_000_000+1_587_529+5_589_977+300_000_000, 2_500_000+793_764+2_794_988+75_000_000)
+	env.AssertStakingRewardsStatus(eventID, 10, 5_000_000+1_587_529+5_589_977, 3_750_000+1_190_646+4_192_482+75_000_000)
+	env.AssertStakingRewardsStatus(eventID, 11, 5_000_000+1_587_529+5_589_977, 5_000_000+1_587_528+5_589_976+75_000_000)
+	env.AssertStakingRewardsStatus(eventID, 12, 5_000_000+1_587_529+5_589_977, 6_250_000+1_984_410+6_987_470+75_000_000)
+	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 6_250_000)
+	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 1_984_410)
+	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 6_987_470)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
 }
