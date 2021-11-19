@@ -543,7 +543,7 @@ func (pm *ParticipationManager) increaseStakingRewardForEventAndAddress(eventID 
 }
 
 func totalParticipationStakingKeyForEventPrefix(eventID EventID) []byte {
-	m := marshalutil.New(37)
+	m := marshalutil.New(33)
 	m.WriteByte(ParticipationStoreKeyPrefixStakingTotalParticipation) // 1 byte
 	m.WriteBytes(eventID[:])                                          // 32 bytes
 	return m.Bytes()
