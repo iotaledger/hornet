@@ -107,7 +107,7 @@ func TestEventStates(t *testing.T) {
 	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
 	require.Empty(t, env.ParticipationManager().Events())
-	eventID := env.RegisterDefaultEvent(5, 1, 2)
+	eventID := env.StoreDefaultEvent(5, 1, 2)
 
 	event := env.ParticipationManager().Event(eventID)
 	require.NotNil(t, event)
@@ -153,7 +153,7 @@ func TestSingleBallotVote(t *testing.T) {
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
 	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
-	eventID := env.RegisterDefaultEvent(5, 2, 3)
+	eventID := env.StoreDefaultEvent(5, 2, 3)
 
 	event := env.ParticipationManager().Event(eventID)
 	require.NotNil(t, event)
@@ -253,7 +253,7 @@ func TestBallotVoteCancel(t *testing.T) {
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
 	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
-	eventID := env.RegisterDefaultEvent(5, 2, 5)
+	eventID := env.StoreDefaultEvent(5, 2, 5)
 
 	event := env.ParticipationManager().Event(eventID)
 	require.NotNil(t, event)
@@ -330,7 +330,7 @@ func TestBallotAddVoteBalanceBySweeping(t *testing.T) {
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
 	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
-	eventID := env.RegisterDefaultEvent(5, 2, 5)
+	eventID := env.StoreDefaultEvent(5, 2, 5)
 
 	event := env.ParticipationManager().Event(eventID)
 	require.NotNil(t, event)
@@ -383,7 +383,7 @@ func TestBallotAddVoteBalanceByMultipleOutputs(t *testing.T) {
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
 	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
-	eventID := env.RegisterDefaultEvent(5, 2, 5)
+	eventID := env.StoreDefaultEvent(5, 2, 5)
 
 	event := env.ParticipationManager().Event(eventID)
 	require.NotNil(t, event)
@@ -441,7 +441,7 @@ func TestMultipleBallotVotes(t *testing.T) {
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
 	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
-	eventID := env.RegisterDefaultEvent(5, 2, 5)
+	eventID := env.StoreDefaultEvent(5, 2, 5)
 
 	event := env.ParticipationManager().Event(eventID)
 	require.NotNil(t, event)
@@ -520,7 +520,7 @@ func TestChangeOpinionMidVote(t *testing.T) {
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
 	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
-	eventID := env.RegisterDefaultEvent(5, 2, 5)
+	eventID := env.StoreDefaultEvent(5, 2, 5)
 
 	event := env.ParticipationManager().Event(eventID)
 	require.NotNil(t, event)
@@ -594,8 +594,8 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
 	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
 
-	eventID1 := env.RegisterDefaultEvent(5, 2, 5)
-	eventID2 := env.RegisterDefaultEvent(7, 2, 5)
+	eventID1 := env.StoreDefaultEvent(5, 2, 5)
+	eventID2 := env.StoreDefaultEvent(7, 2, 5)
 
 	event1 := env.ParticipationManager().Event(eventID1)
 	require.NotNil(t, event1)

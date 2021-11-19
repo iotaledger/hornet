@@ -178,7 +178,7 @@ func (env *ParticipationTestEnv) Cleanup() {
 	env.te.CleanupTestEnvironment(true)
 }
 
-func (env *ParticipationTestEnv) RegisterDefaultEvent(commenceMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) participation.EventID {
+func (env *ParticipationTestEnv) DefaultEvent(commenceMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) *participation.Event {
 
 	eventCommenceIndex := commenceMilestoneIndex
 	eventStartIndex := eventCommenceIndex + milestone.Index(startPhaseDuration)
@@ -211,13 +211,20 @@ func (env *ParticipationTestEnv) RegisterDefaultEvent(commenceMilestoneIndex mil
 	event, err := eventBuilder.Build()
 	require.NoError(env.t, err)
 
+	env.PrintJSON(event)
+
+	return event
+}
+
+func (env *ParticipationTestEnv) StoreDefaultEvent(commenceMilestoneIndex milestone.Index, startPhaseDuration uint32, holdingDuration uint32) participation.EventID {
+
+	event := env.DefaultEvent(commenceMilestoneIndex, startPhaseDuration, holdingDuration)
+
 	eventID, err := env.rm.StoreEvent(event)
 	require.NoError(env.t, err)
 
 	// Check the stored event is still there
 	require.NotNil(env.t, env.rm.Event(eventID))
-
-	env.PrintJSON(event)
 
 	return eventID
 }
