@@ -153,7 +153,7 @@ func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {
 		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", ParameterMilestoneIndex)
 	}
 
-	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 64)
+	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 32)
 	if err != nil {
 		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
 	}
