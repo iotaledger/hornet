@@ -503,7 +503,7 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 
 	// Fetch the message, this must have been stored for at least one of the events
 	var msg *storage.Message
-	for eID, _ := range events {
+	for eID := range events {
 		// Check if we tracked the participation initially, event.g. saved the Message that created this UTXO
 		messageForEvent, err := pm.MessageForEventAndMessageID(eID, spent.MessageID())
 		if err != nil {
