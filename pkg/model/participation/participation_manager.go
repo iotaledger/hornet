@@ -317,8 +317,8 @@ func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event)
 	utxoManager := pm.storage.UTXOManager()
 
 	//Lock the UTXO ledger so that the node cannot keep confirming until we are done here, else we might have gaps or process the milestones twice
-	utxoManager.WriteLockLedger()
-	defer utxoManager.WriteUnlockLedger()
+	utxoManager.ReadLockLedger()
+	defer utxoManager.ReadUnlockLedger()
 
 	currentIndex := event.CommenceMilestoneIndex()
 	for {
