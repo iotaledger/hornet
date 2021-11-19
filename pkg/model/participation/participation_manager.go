@@ -180,7 +180,11 @@ func (pm *ParticipationManager) EventIDs(eventPayloadType ...uint32) []EventID {
 func (pm *ParticipationManager) Events() map[EventID]*Event {
 	pm.RLock()
 	defer pm.RUnlock()
-	return pm.events
+	events := make(map[EventID]*Event)
+	for id, e := range pm.events {
+		events[id] = e
+	}
+	return events
 }
 
 func filteredEvents(events map[EventID]*Event, filterPayloadTypes []uint32) map[EventID]*Event {
