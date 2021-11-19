@@ -460,8 +460,8 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 			return err
 		}
 
-		event := pm.Event(participation.EventID)
-		if event == nil {
+		event, ok := events[participation.EventID]
+		if !ok {
 			return nil
 		}
 
@@ -544,8 +544,8 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 			return err
 		}
 
-		event := pm.Event(participation.EventID)
-		if event == nil {
+		event, ok := events[participation.EventID]
+		if !ok {
 			return nil
 		}
 
