@@ -263,7 +263,9 @@ func getActiveParticipations(c echo.Context) (*ParticipationsResponse, error) {
 		return nil, err
 	}
 
-	response := &ParticipationsResponse{}
+	response := &ParticipationsResponse{
+		Participations: make(map[string]*TrackedParticipation),
+	}
 	if err := deps.ParticipationManager.ForEachActiveParticipation(eventID, func(trackedParticipation *participation.TrackedParticipation) bool {
 		t := &TrackedParticipation{
 			MessageID:           trackedParticipation.MessageID.ToHex(),
@@ -271,7 +273,7 @@ func getActiveParticipations(c echo.Context) (*ParticipationsResponse, error) {
 			StartMilestoneIndex: trackedParticipation.StartIndex,
 			EndMilestoneIndex:   trackedParticipation.EndIndex,
 		}
-		response.Participations = append(response.Participations, t)
+		response.Participations[trackedParticipation.OutputID.ToHex()] = t
 		return true
 	}); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "%w", err)
@@ -285,7 +287,9 @@ func getPastParticipations(c echo.Context) (*ParticipationsResponse, error) {
 		return nil, err
 	}
 
-	response := &ParticipationsResponse{}
+	response := &ParticipationsResponse{
+		Participations: make(map[string]*TrackedParticipation),
+	}
 	if err := deps.ParticipationManager.ForEachPastParticipation(eventID, func(trackedParticipation *participation.TrackedParticipation) bool {
 		t := &TrackedParticipation{
 			MessageID:           trackedParticipation.MessageID.ToHex(),
@@ -293,7 +297,7 @@ func getPastParticipations(c echo.Context) (*ParticipationsResponse, error) {
 			StartMilestoneIndex: trackedParticipation.StartIndex,
 			EndMilestoneIndex:   trackedParticipation.EndIndex,
 		}
-		response.Participations = append(response.Participations, t)
+		response.Participations[trackedParticipation.OutputID.ToHex()] = t
 		return true
 	}); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "%w", err)

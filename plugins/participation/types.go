@@ -40,5 +40,5 @@ type AddressRewardsResponse struct {
 
 // ParticipationsResponse defines the response of a GET RouteAdminActiveParticipations or RouteAdminPastParticipations REST API call.
 type ParticipationsResponse struct {
-	Participations []*TrackedParticipation `json:"participations"`
+	Participations map[string]*TrackedParticipation `json:"participations"`
 }
