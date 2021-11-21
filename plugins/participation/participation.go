@@ -256,3 +256,47 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 
 	return response, nil
 }
+
+func getActiveParticipations(c echo.Context) (*ParticipationsResponse, error) {
+	eventID, err := parseEventIDParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ParticipationsResponse{}
+	if err := deps.ParticipationManager.ForEachActiveParticipation(eventID, func(trackedParticipation *participation.TrackedParticipation) bool {
+		t := &TrackedParticipation{
+			MessageID:           trackedParticipation.MessageID.ToHex(),
+			Amount:              trackedParticipation.Amount,
+			StartMilestoneIndex: trackedParticipation.StartIndex,
+			EndMilestoneIndex:   trackedParticipation.EndIndex,
+		}
+		response.Participations = append(response.Participations, t)
+		return true
+	}); err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "%w", err)
+	}
+	return response, nil
+}
+
+func getPastParticipations(c echo.Context) (*ParticipationsResponse, error) {
+	eventID, err := parseEventIDParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ParticipationsResponse{}
+	if err := deps.ParticipationManager.ForEachPastParticipation(eventID, func(trackedParticipation *participation.TrackedParticipation) bool {
+		t := &TrackedParticipation{
+			MessageID:           trackedParticipation.MessageID.ToHex(),
+			Amount:              trackedParticipation.Amount,
+			StartMilestoneIndex: trackedParticipation.StartIndex,
+			EndMilestoneIndex:   trackedParticipation.EndIndex,
+		}
+		response.Participations = append(response.Participations, t)
+		return true
+	}); err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "%w", err)
+	}
+	return response, nil
+}
