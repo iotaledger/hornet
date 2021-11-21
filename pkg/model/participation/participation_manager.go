@@ -439,7 +439,7 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 
 	participations, err := participationFromIndexation(txEssenceIndexation)
 	if err != nil {
-		return err
+		return nil
 	}
 
 	validParticipations := filterValidParticipationsForEvents(index, participations, events)
