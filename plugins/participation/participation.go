@@ -276,7 +276,7 @@ func getActiveParticipations(c echo.Context) (*ParticipationsResponse, error) {
 		response.Participations[trackedParticipation.OutputID.ToHex()] = t
 		return true
 	}); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "%w", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "invalid request! Error: %s", err)
 	}
 	return response, nil
 }
@@ -300,7 +300,7 @@ func getPastParticipations(c echo.Context) (*ParticipationsResponse, error) {
 		response.Participations[trackedParticipation.OutputID.ToHex()] = t
 		return true
 	}); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "%w", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "invalid request! Error: %s", err)
 	}
 	return response, nil
 }
