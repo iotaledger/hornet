@@ -37,3 +37,8 @@ type AddressReward struct {
 type AddressRewardsResponse struct {
 	Rewards map[string]*AddressReward `json:"rewards"`
 }
+
+// ParticipationsResponse defines the response of a GET RouteAdminActiveParticipations or RouteAdminPastParticipations REST API call.
+type ParticipationsResponse struct {
+	Participations map[string]*TrackedParticipation `json:"participations"`
+}

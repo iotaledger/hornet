@@ -61,6 +61,12 @@ const (
 	// RouteAdminDeleteEvent is the route the node operator can use to remove events.
 	// DELETE removes a tracked participation.
 	RouteAdminDeleteEvent = "/admin/events/:" + ParameterParticipationEventID
+
+	// RouteAdminActiveParticipations is the route the node operator can use to get all the active participations for a certain event.
+	RouteAdminActiveParticipations = "/admin/events/:" + ParameterParticipationEventID + "/active"
+
+	// RouteAdminPastParticipations is the route the node operator can use to get all the past participations for a certain event.
+	RouteAdminPastParticipations = "/admin/events/:" + ParameterParticipationEventID + "/past"
 )
 
 func init() {
@@ -196,6 +202,22 @@ func configure() {
 
 	routeGroup.GET(RouteAddressEd25519Status, func(c echo.Context) error {
 		resp, err := getRewardsByEd25519Address(c)
+		if err != nil {
+			return err
+		}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAdminActiveParticipations, func(c echo.Context) error {
+		resp, err := getActiveParticipations(c)
+		if err != nil {
+			return err
+		}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAdminPastParticipations, func(c echo.Context) error {
+		resp, err := getPastParticipations(c)
 		if err != nil {
 			return err
 		}
