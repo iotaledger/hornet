@@ -246,6 +246,90 @@ func TestSingleBallotVote(t *testing.T) {
 	require.Equal(t, messageFromParticipationStore.Message(), castVote.Message().IotaMessage())
 }
 
+func TestInvalidVoteHandling(t *testing.T) {
+	env := test.NewParticipationTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	defer env.Cleanup()
+
+	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	eventID := env.StoreDefaultEvent(5, 2, 3)
+
+	event := env.ParticipationManager().Event(eventID)
+	require.NotNil(t, event)
+
+	// Verify the configured participation indexes
+	require.Equal(t, milestone.Index(5), event.CommenceMilestoneIndex())
+	require.Equal(t, milestone.Index(7), event.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(10), event.EndMilestoneIndex())
+
+	// Event should not be accepting votes yet
+	require.Equal(t, 0, len(env.ParticipationManager().EventsAcceptingParticipation()))
+
+	// Issue a vote and milestone
+	env.IssueDefaultBallotVoteAndMilestone(eventID, env.Wallet1) // 5
+
+	// Participations should not have been counted so far because it was not accepting votes yet
+	status, err := env.ParticipationManager().EventStatus(eventID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	env.AssertDefaultBallotAnswerStatus(eventID, 0, 0)
+
+	// Event should be accepting votes now
+	require.Equal(t, 1, len(env.ParticipationManager().EventsAcceptingParticipation()))
+
+	// Participation again
+	castVote := env.IssueDefaultBallotVoteAndMilestone(eventID, env.Wallet1) // 6
+
+	// Event should be accepting votes, but the vote should not be weighted yet, just added to the current status
+	env.AssertEventsCount(1, 0)
+
+	status, err = env.ParticipationManager().EventStatus(eventID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 0)
+
+	env.IssueMilestone() // 7
+
+	// Event should be accepting and counting votes, but the vote we did before should not be weighted yet
+	env.AssertEventsCount(1, 1)
+
+	status, err = env.ParticipationManager().EventStatus(eventID)
+	require.NoError(t, err)
+	env.PrintJSON(status)
+	require.Equal(t, env.ConfirmedMilestoneIndex(), status.MilestoneIndex)
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 0)
+
+	env.IssueMilestone() // 8
+
+	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 1_000)
+
+	// Send an invalid participation
+	invalidParticipation := env.NewMessageBuilder(test.ParticipationIndexation).
+		LatestMilestonesAsParents().
+		FromWallet(env.Wallet1).
+		ToWallet(env.Wallet1).
+		Amount(env.Wallet1.Balance()).
+		IndexationData([]byte{0x00}).
+		Build().
+		Store().
+		BookOnWallets()
+
+	env.IssueMilestone(invalidParticipation.StoredMessageID()) // 9
+
+	var trackedVote *participation.TrackedParticipation
+	trackedVote, err = env.ParticipationManager().ParticipationForOutputID(eventID, castVote.Message().GeneratedUTXO().OutputID())
+	require.NoError(t, err)
+	require.Equal(t, castVote.Message().StoredMessageID(), trackedVote.MessageID)
+	require.Equal(t, milestone.Index(6), trackedVote.StartIndex)
+	require.Equal(t, milestone.Index(9), trackedVote.EndIndex)
+
+	env.AssertDefaultBallotAnswerStatus(eventID, 0, 1_000)
+
+}
+
 func TestBallotVoteCancel(t *testing.T) {
 	env := test.NewParticipationTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()

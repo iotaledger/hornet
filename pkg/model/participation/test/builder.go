@@ -25,7 +25,7 @@ type SentParticipations struct {
 }
 
 func (env *ParticipationTestEnv) NewParticipationHelper(wallet *utils.HDWallet) *ParticipationHelper {
-	msgBuilder := env.te.NewMessageBuilder(participationIndexation).
+	msgBuilder := env.te.NewMessageBuilder(ParticipationIndexation).
 		LatestMilestonesAsParents()
 
 	return &ParticipationHelper{
