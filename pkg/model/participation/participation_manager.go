@@ -424,17 +424,23 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 		return nil
 	}
 
-	// check if all inputs come from the same address as the output
+	// check if at least 1 input come from the same address as the output
+	containsInputFromSameAddress := false
 	for _, input := range inputOutputs {
 		inputAddress, err := input.Address().Serialize(serializer.DeSeriModeNoValidation)
 		if err != nil {
 			return nil
 		}
 
-		if !bytes.Equal(outputAddress, inputAddress) {
-			// input address does not match the output address =>  not a voting transaction
-			return nil
+		if bytes.Equal(outputAddress, inputAddress) {
+			containsInputFromSameAddress = true
+			break
 		}
+	}
+
+	if !containsInputFromSameAddress {
+		// no input address match the output address =>  not a valid voting transaction
+		return nil
 	}
 
 	participations, err := participationFromIndexation(txEssenceIndexation)
