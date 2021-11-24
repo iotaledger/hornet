@@ -101,6 +101,7 @@ type dependencies struct {
 	dig.In
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 	ParticipationManager *participation.ParticipationManager
+	SyncManager          *syncmanager.SyncManager
 	Tangle               *tangle.Tangle
 	Echo                 *echo.Echo
 	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`

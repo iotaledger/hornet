@@ -283,13 +283,20 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "invalid request! Error: %s", err)
 	}
 
+	index := deps.SyncManager.ConfirmedMilestoneIndex()
+	if index > event.EndMilestoneIndex() {
+		index = event.EndMilestoneIndex()
+	}
+
 	responseHash := sha256.New()
 	responseHash.Write(eventID[:])
+	binary.Write(responseHash, binary.LittleEndian, uint32(index))
 	responseHash.Write([]byte(event.Staking().Symbol))
 
 	response := &RewardsResponse{
-		Symbol:  event.Staking().Symbol,
-		Rewards: make(map[string]uint64),
+		Symbol:         event.Staking().Symbol,
+		MilestoneIndex: index,
+		Rewards:        make(map[string]uint64),
 	}
 
 	sort.Strings(addresses)

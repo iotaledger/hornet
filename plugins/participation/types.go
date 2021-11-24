@@ -40,9 +40,10 @@ type AddressRewardsResponse struct {
 
 // RewardsResponse defines the response of a GET RouteAdminRewards REST API call and contains the rewards for each address.
 type RewardsResponse struct {
-	Symbol   string            `json:"symbol"`
-	Checksum string            `json:"checksum"`
-	Rewards  map[string]uint64 `json:"rewards"`
+	Symbol         string            `json:"symbol"`
+	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
+	Checksum       string            `json:"checksum"`
+	Rewards        map[string]uint64 `json:"rewards"`
 }
 
 // ParticipationsResponse defines the response of a GET RouteAdminActiveParticipations or RouteAdminPastParticipations REST API call.
