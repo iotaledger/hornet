@@ -12,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -90,11 +91,13 @@ func getEvents(c echo.Context) (*EventsResponse, error) {
 
 func createEvent(c echo.Context) (*CreateEventResponse, error) {
 
-	//TODO: add support for binary representation too?
-
 	event := &participation.Event{}
 	if err := c.Bind(event); err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request! Error: %s", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
+	}
+
+	if _, err := event.Serialize(serializer.DeSeriModePerformValidation); err != nil {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event payload, error: %s", err)
 	}
 
 	eventID, err := deps.ParticipationManager.StoreEvent(event)
