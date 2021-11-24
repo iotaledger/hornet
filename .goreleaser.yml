@@ -188,6 +188,11 @@ snapshot:
 changelog:
   skip: true
 
+announce:
+  twitter:
+    enabled: true
+    message_template: "{{.ProjectName}}-{{.Version}} is out! Find all details at {{ .ReleaseURL }}! #IOTA #HORNET"
+
 # Release
 release:
   prerelease: auto
