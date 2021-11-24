@@ -14,7 +14,7 @@ const (
 
 	StakingTextMaxLength           = 255
 	StakingSymbolMinLength         = 3
-	StakingSymbolMaxLength         = 5
+	StakingSymbolMaxLength         = 10
 	StakingAdditionalInfoMaxLength = 500
 )
 
