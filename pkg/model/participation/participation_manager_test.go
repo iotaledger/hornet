@@ -5,10 +5,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/model/participation/test"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hive.go/serializer"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func TestEventStateHelpers(t *testing.T) {
@@ -144,6 +147,119 @@ func TestEventStates(t *testing.T) {
 	// Event should be ended
 	require.Equal(t, 1, len(env.ParticipationManager().Events()))
 	env.AssertEventsCount(0, 0)
+}
+
+func TestIndexationPayloads(t *testing.T) {
+	env := test.NewParticipationTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
+	defer env.Cleanup()
+
+	eventID := RandEventID()
+
+	okMessage := env.NewParticipationHelper(env.Wallet1).
+		WholeWalletBalance().
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{10, 20, 30, 40},
+		}).
+		Build()
+
+	noIndexationMessage := env.NewMessageBuilder().
+		LatestMilestonesAsParents().
+		FromWallet(env.Wallet2).
+		ToWallet(env.Wallet2).
+		Amount(env.Wallet2.Balance()).
+		Build()
+
+	invalidPayloadMessage := env.NewMessageBuilder(test.ParticipationIndexation).
+		LatestMilestonesAsParents().
+		FromWallet(env.Wallet2).
+		ToWallet(env.Wallet2).
+		Amount(env.Wallet2.Balance()).
+		IndexationData([]byte{0}).
+		Build()
+
+	emptyIndexationMessage := env.NewMessageBuilder(test.ParticipationIndexation).
+		LatestMilestonesAsParents().
+		FromWallet(env.Wallet2).
+		ToWallet(env.Wallet2).
+		Amount(env.Wallet2.Balance()).
+		Build()
+
+	b := participation.NewParticipationsBuilder()
+	b.AddParticipation(&participation.Participation{
+		EventID: eventID,
+		Answers: []byte{10, 20, 30, 40},
+	})
+	participations, err := b.Build()
+	require.NoError(t, err)
+	participationsData, err := participations.Serialize(serializer.DeSeriModePerformValidation)
+	require.NoError(t, err)
+
+	wrongAddressMessage := env.NewMessageBuilder(test.ParticipationIndexation).
+		LatestMilestonesAsParents().
+		FromWallet(env.Wallet2).
+		ToWallet(env.Wallet3).
+		Amount(env.Wallet2.Balance()).
+		IndexationData(participationsData).
+		Build()
+
+	multipleOutputsMessage := env.NewMessageBuilder(test.ParticipationIndexation).
+		LatestMilestonesAsParents().
+		FromWallet(env.Wallet2).
+		ToWallet(env.Wallet3).
+		Amount(10_000_000).
+		IndexationData(participationsData).
+		Build()
+
+	builder := iotago.NewTransactionBuilder()
+	builder.AddIndexationPayload(&iotago.Indexation{
+		Index: []byte(test.ParticipationIndexation),
+		Data:  participationsData,
+	})
+	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet3.Address(), Input: env.Wallet3.Outputs()[0].UTXOInput()})
+	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet4.Address(), Input: env.Wallet4.Outputs()[0].UTXOInput()})
+	builder.AddOutput(&iotago.SigLockedSingleOutput{Address: env.Wallet4.Address(), Amount: env.Wallet3.Balance() + env.Wallet4.Balance()})
+	wallet3PrivKey, _ := env.Wallet3.KeyPair()
+	wallet4PrivKey, _ := env.Wallet4.KeyPair()
+	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: env.Wallet3.Address(), Keys: wallet3PrivKey}, iotago.AddressKeys{Address: env.Wallet4.Address(), Keys: wallet4PrivKey})
+	msgBuilder := builder.BuildAndSwapToMessageBuilder(inputAddrSigner, nil)
+	msgBuilder.Parents(hornet.MessageIDs{env.LastMilestoneMessageID()}.ToSliceOfSlices())
+
+	msg, err := msgBuilder.Build()
+	require.NoError(t, err)
+	// Skipped PoW since we are not validating it anyway
+	sweepAndParticipateMessage, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name                string
+		message             *storage.Message
+		outputExists        bool
+		participationsCount int
+	}{
+		{"ok", okMessage.StoredMessage(), true, 1},
+		{"sweep and participate", sweepAndParticipateMessage, true, 1},
+		{"no indexation", noIndexationMessage.StoredMessage(), false, 0},
+		{"invalid payload", invalidPayloadMessage.StoredMessage(), false, 0},
+		{"empty indexation", emptyIndexationMessage.StoredMessage(), false, 0},
+		{"wrong address", wrongAddressMessage.StoredMessage(), false, 0},
+		{"multiple outputs", multipleOutputsMessage.StoredMessage(), false, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			output, participations, err := env.ParticipationManager().ParticipationsFromMessage(tt.message)
+			require.NoError(t, err)
+
+			if tt.outputExists {
+				require.NotNil(t, output)
+				require.Equal(t, tt.participationsCount, len(participations))
+			} else {
+				require.Nil(t, output)
+			}
+		})
+	}
+
 }
 
 func TestSingleBallotVote(t *testing.T) {

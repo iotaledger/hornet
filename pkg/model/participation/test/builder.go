@@ -80,7 +80,7 @@ func (b *ParticipationHelper) AddParticipation(participation *participation.Part
 	return b
 }
 
-func (b *ParticipationHelper) Send() *SentParticipations {
+func (b *ParticipationHelper) Build() *testsuite.Message {
 	votes, err := b.participationsBuilder.Build()
 	require.NoError(b.env.t, err)
 
@@ -91,13 +91,15 @@ func (b *ParticipationHelper) Send() *SentParticipations {
 		FromWallet(b.wallet).
 		ToWallet(b.wallet).
 		IndexationData(participationsData).
-		Build().
-		Store().
-		BookOnWallets()
+		Build()
 
+	return msg
+}
+
+func (b *ParticipationHelper) Send() *SentParticipations {
 	return &SentParticipations{
 		builder: b,
-		message: msg,
+		message: b.Build().Store().BookOnWallets(),
 	}
 }
 

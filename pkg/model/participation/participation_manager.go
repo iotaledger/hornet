@@ -362,83 +362,13 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 
 	msg := cachedMsg.Message()
 
-	transaction := msg.Transaction()
-	if transaction == nil {
-		// Do not handle outputs from migrations
-		// This output was created by a migration in a milestone payload.
-		return nil
-	}
-
-	txEssence := msg.TransactionEssence()
-	if txEssence == nil {
-		// if the message was included, there must be a transaction payload essence
-		return fmt.Errorf("no transaction transactionEssence found: MsgID: %s", messageID.ToHex())
-	}
-
-	txEssenceIndexation := msg.TransactionEssenceIndexation()
-	if txEssenceIndexation == nil {
-		// no need to check if there is not indexation payload
-		return nil
-	}
-
-	// the index of the transaction payload must match our configured indexation
-	if !bytes.Equal(txEssenceIndexation.Index, pm.opts.indexationMessage) {
-		return nil
-	}
-
-	// collect inputs
-	inputOutputs := utxo.Outputs{}
-	for _, input := range msg.TransactionEssenceUTXOInputs() {
-		output, err := pm.storage.UTXOManager().ReadOutputByOutputIDWithoutLocking(input)
-		if err != nil {
-			return err
-		}
-		inputOutputs = append(inputOutputs, output)
-	}
-
-	// collect outputs
-	depositOutputs := utxo.Outputs{}
-	for i := 0; i < len(txEssence.Outputs); i++ {
-		output, err := utxo.NewOutput(messageID, transaction, uint16(i))
-		if err != nil {
-			return err
-		}
-		depositOutputs = append(depositOutputs, output)
-	}
-
-	// only a single output is allowed
-	if len(depositOutputs) != 1 {
-		return nil
-	}
-
-	// only OutputSigLockedSingleOutput and OutputSigLockedDustAllowanceOutput are allowed as output type
-	switch depositOutputs[0].OutputType() {
-	case iotago.OutputSigLockedDustAllowanceOutput:
-	case iotago.OutputSigLockedSingleOutput:
-	default:
-		return nil
-	}
-
-	outputAddress, err := depositOutputs[0].Address().Serialize(serializer.DeSeriModeNoValidation)
+	depositOutput, participations, err := pm.ParticipationsFromMessage(msg)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	// check if all inputs come from the same address as the output
-	for _, input := range inputOutputs {
-		inputAddress, err := input.Address().Serialize(serializer.DeSeriModeNoValidation)
-		if err != nil {
-			return nil
-		}
-
-		if !bytes.Equal(outputAddress, inputAddress) {
-			// input address does not match the output address =>  not a voting transaction
-			return nil
-		}
-	}
-
-	participations, err := participationFromIndexation(txEssenceIndexation)
-	if err != nil {
+	if depositOutput == nil {
+		// No output with participations, so ignore
 		return nil
 	}
 
@@ -460,7 +390,7 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 		}
 
 		// Store the participation started at this milestone
-		if err := pm.startParticipationAtMilestone(participation.EventID, depositOutputs[0], index, mutations); err != nil {
+		if err := pm.startParticipationAtMilestone(participation.EventID, depositOutput, index, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -473,13 +403,13 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 		switch event.payloadType() {
 		case BallotPayloadTypeID:
 			// Count the new ballot votes by increasing the current vote balance
-			if err := pm.startCountingBallotAnswers(event, participation, index, depositOutputs[0].Amount(), mutations); err != nil {
+			if err := pm.startCountingBallotAnswers(event, participation, index, depositOutput.Amount(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
 		case StakingPayloadTypeID:
 			// Increase the staked amount
-			if err := pm.increaseStakedAmountForStakingEvent(participation.EventID, index, depositOutputs[0].Amount(), mutations); err != nil {
+			if err := pm.increaseStakedAmountForStakingEvent(participation.EventID, index, depositOutput.Amount(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
@@ -774,6 +704,96 @@ func participationFromIndexation(indexation *iotago.Indexation) ([]*Participatio
 	}
 
 	return votes, nil
+}
+
+func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) (*utxo.Output, []*Participation, error) {
+	transaction := msg.Transaction()
+	if transaction == nil {
+		// Do not handle outputs from migrations
+		// This output was created by a migration in a milestone payload.
+		return nil, nil, nil
+	}
+
+	txEssence := msg.TransactionEssence()
+	if txEssence == nil {
+		// if the message was included, there must be a transaction payload essence
+		return nil, nil, fmt.Errorf("no transaction transactionEssence found: MsgID: %s", msg.MessageID().ToHex())
+	}
+
+	txEssenceIndexation := msg.TransactionEssenceIndexation()
+	if txEssenceIndexation == nil {
+		// no need to check if there is not indexation payload
+		return nil, nil, nil
+	}
+
+	// the index of the transaction payload must match our configured indexation
+	if !bytes.Equal(txEssenceIndexation.Index, pm.opts.indexationMessage) {
+		return nil, nil, nil
+	}
+
+	// collect outputs
+	depositOutputs := utxo.Outputs{}
+	for i := 0; i < len(txEssence.Outputs); i++ {
+		output, err := utxo.NewOutput(msg.MessageID(), transaction, uint16(i))
+		if err != nil {
+			return nil, nil, err
+		}
+		depositOutputs = append(depositOutputs, output)
+	}
+
+	// only a single output is allowed
+	if len(depositOutputs) != 1 {
+		return nil, nil, nil
+	}
+
+	// only OutputSigLockedSingleOutput and OutputSigLockedDustAllowanceOutput are allowed as output type
+	switch depositOutputs[0].OutputType() {
+	case iotago.OutputSigLockedDustAllowanceOutput:
+	case iotago.OutputSigLockedSingleOutput:
+	default:
+		return nil, nil, nil
+	}
+
+	outputAddress, err := depositOutputs[0].Address().Serialize(serializer.DeSeriModeNoValidation)
+	if err != nil {
+		return nil, nil, nil
+	}
+
+	// collect inputs
+	inputOutputs := utxo.Outputs{}
+	for _, input := range msg.TransactionEssenceUTXOInputs() {
+		output, err := pm.storage.UTXOManager().ReadOutputByOutputIDWithoutLocking(input)
+		if err != nil {
+			return nil, nil, err
+		}
+		inputOutputs = append(inputOutputs, output)
+	}
+
+	// check if at least 1 input comes from the same address as the output
+	containsInputFromSameAddress := false
+	for _, input := range inputOutputs {
+		inputAddress, err := input.Address().Serialize(serializer.DeSeriModeNoValidation)
+		if err != nil {
+			return nil, nil, nil
+		}
+
+		if bytes.Equal(outputAddress, inputAddress) {
+			containsInputFromSameAddress = true
+			break
+		}
+	}
+
+	if !containsInputFromSameAddress {
+		// no input address match the output address =>  not a valid voting transaction
+		return nil, nil, nil
+	}
+
+	participations, err := participationFromIndexation(txEssenceIndexation)
+	if err != nil {
+		return nil, nil, nil
+	}
+
+	return depositOutputs[0], participations, nil
 }
 
 func filterEvents(events map[EventID]*Event, index milestone.Index, includeFunc func(e *Event, index milestone.Index) bool) map[EventID]*Event {

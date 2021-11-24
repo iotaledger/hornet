@@ -295,6 +295,10 @@ func (m *Message) IotaMessage() *iotago.Message {
 	return m.message.Message()
 }
 
+func (m *Message) StoredMessage() *storage.Message {
+	return m.message
+}
+
 func (m *Message) StoredMessageID() hornet.MessageID {
 	require.NotNil(m.builder.te.TestInterface, m.storedMessageID)
 	return m.storedMessageID
