@@ -1,8 +1,11 @@
 package participation
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -253,6 +256,58 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 			Symbol: staking.Symbol,
 		}
 	}
+
+	return response, nil
+}
+
+func getRewards(c echo.Context) (*RewardsResponse, error) {
+	eventID, err := parseEventIDParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	event := deps.ParticipationManager.Event(eventID)
+
+	if event == nil || event.Staking() == nil {
+		return nil, errors.WithMessage(echo.ErrNotFound, "no staking event found")
+	}
+
+	var addresses []string
+	rewardsByAddress := make(map[string]uint64)
+	if err := deps.ParticipationManager.ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
+		addr := address.String()
+		addresses = append(addresses, addr)
+		rewardsByAddress[addr] = rewards
+		return true
+	}); err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "invalid request! Error: %s", err)
+	}
+
+	index := deps.SyncManager.ConfirmedMilestoneIndex()
+	if index > event.EndMilestoneIndex() {
+		index = event.EndMilestoneIndex()
+	}
+
+	responseHash := sha256.New()
+	responseHash.Write(eventID[:])
+	binary.Write(responseHash, binary.LittleEndian, uint32(index))
+	responseHash.Write([]byte(event.Staking().Symbol))
+
+	response := &RewardsResponse{
+		Symbol:         event.Staking().Symbol,
+		MilestoneIndex: index,
+		Rewards:        make(map[string]uint64),
+	}
+
+	sort.Strings(addresses)
+	for _, addr := range addresses {
+		responseHash.Write([]byte(addr))
+		amount := rewardsByAddress[addr]
+		binary.Write(responseHash, binary.LittleEndian, amount)
+		response.Rewards[addr] = amount
+	}
+
+	response.Checksum = hex.EncodeToString(responseHash.Sum(nil))
 
 	return response, nil
 }

@@ -20,7 +20,7 @@ const (
 	EventIDLength = blake2b.Size256
 
 	EventNameMaxLength           = 255
-	EventAdditionalInfoMaxLength = 500
+	EventAdditionalInfoMaxLength = 2000
 )
 
 // EventID is the ID of an event.
