@@ -616,6 +616,51 @@ func (pm *ParticipationManager) setTotalStakingParticipationForEvent(eventID Eve
 	return mutations.Set(totalParticipationStakingKeyForEvent(eventID, milestone), total.valueBytes())
 }
 
+type StakingRewardsConsumer func(address iotago.Address, rewards uint64) bool
+
+func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, consumer StakingRewardsConsumer, options ...IterateOption) error {
+	opt := iterateOptions(options)
+	consumerFunc := consumer
+
+	var innerErr error
+	var i int
+	prefix := stakingKeyForEventPrefix(eventID)
+	prefixLen := len(prefix)
+	if err := pm.participationStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+
+		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
+			return false
+		}
+
+		i++
+
+		addressBytes := key[prefixLen:]
+		addr, err := iotago.AddressSelector(uint32(addressBytes[0]))
+		if err != nil {
+			innerErr = err
+			return false
+		}
+		_, err = addr.Deserialize(addressBytes, serializer.DeSeriModeNoValidation)
+		if err != nil {
+			innerErr = err
+			return false
+		}
+
+		m := marshalutil.New(value)
+		balance, err := m.ReadUint64()
+		if err != nil {
+			innerErr = err
+			return false
+		}
+
+		return consumerFunc(addr.(iotago.Address), balance)
+	}); err != nil {
+		return err
+	}
+
+	return innerErr
+}
+
 // Pruning
 
 func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {

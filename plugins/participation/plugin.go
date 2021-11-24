@@ -63,10 +63,16 @@ const (
 	RouteAdminDeleteEvent = "/admin/events/:" + ParameterParticipationEventID
 
 	// RouteAdminActiveParticipations is the route the node operator can use to get all the active participations for a certain event.
+	// GET returns a list of all active participations
 	RouteAdminActiveParticipations = "/admin/events/:" + ParameterParticipationEventID + "/active"
 
 	// RouteAdminPastParticipations is the route the node operator can use to get all the past participations for a certain event.
+	// GET returns a list of all past participations
 	RouteAdminPastParticipations = "/admin/events/:" + ParameterParticipationEventID + "/past"
+
+	// RouteAdminRewards is the route the node operator can use to get the rewards for a staking event.
+	// GET retrieves the staking event rewards.
+	RouteAdminRewards = "/admin/events/:" + ParameterParticipationEventID + "/rewards"
 )
 
 func init() {
@@ -218,6 +224,14 @@ func configure() {
 
 	routeGroup.GET(RouteAdminPastParticipations, func(c echo.Context) error {
 		resp, err := getPastParticipations(c)
+		if err != nil {
+			return err
+		}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAdminRewards, func(c echo.Context) error {
+		resp, err := getRewards(c)
 		if err != nil {
 			return err
 		}
