@@ -30,7 +30,6 @@ func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.Manag
 	sk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
 	require.NoError(t, err)
 	n, err := libp2p.New(
-		ctx,
 		libp2p.Identity(sk),
 		libp2p.ConnectionManager(connmgr.NewConnManager(1, 100, 0)),
 	)
