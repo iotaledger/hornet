@@ -6,7 +6,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // MilestoneDiff represents the generated and spent outputs by a milestone's confirmation.
@@ -72,7 +72,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 
 	outputs := make(Outputs, int(outputCount))
 	for i := 0; i < int(outputCount); i++ {
-		var outputID *iotago.UTXOInputID
+		var outputID *iotago.OutputID
 		if outputID, err = ParseOutputID(marshalUtil); err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 
 	spents := make(Spents, spentCount)
 	for i := 0; i < int(spentCount); i++ {
-		var outputID *iotago.UTXOInputID
+		var outputID *iotago.OutputID
 		if outputID, err = ParseOutputID(marshalUtil); err != nil {
 			return err
 		}

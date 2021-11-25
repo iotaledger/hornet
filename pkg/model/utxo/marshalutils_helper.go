@@ -4,15 +4,15 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func ParseOutputID(ms *marshalutil.MarshalUtil) (*iotago.UTXOInputID, error) {
+func ParseOutputID(ms *marshalutil.MarshalUtil) (*iotago.OutputID, error) {
 	bytes, err := ms.ReadBytes(OutputIDLength)
 	if err != nil {
 		return nil, err
 	}
-	o := &iotago.UTXOInputID{}
+	o := &iotago.OutputID{}
 	copy(o[:], bytes)
 	return o, nil
 }
@@ -53,7 +53,7 @@ func parseAddress(ms *marshalutil.MarshalUtil) (iotago.Address, error) {
 	address := addr.(iotago.Address)
 
 	pre := ms.ReadOffset()
-	readBytes, err := address.Deserialize(ms.ReadRemainingBytes(), serializer.DeSeriModePerformValidation)
+	readBytes, err := address.Deserialize(ms.ReadRemainingBytes(), serializer.DeSeriModePerformValidation, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type OutputConsumer func(output *Output) bool
@@ -14,7 +14,7 @@ func (o *Output) unspentDatabaseKey() []byte {
 	ms := marshalutil.New(69)
 	ms.WriteByte(UTXOStoreKeyPrefixUnspent) // 1 byte
 	ms.WriteBytes(o.AddressBytes())         // 33 bytes
-	ms.WriteByte(o.outputType)              // 1 byte
+	ms.WriteByte(byte(o.OutputType()))      // 1 byte
 	ms.WriteBytes(o.outputID[:])            // 34 bytes
 	return ms.Bytes()
 }
@@ -51,7 +51,7 @@ func (u *Manager) IsOutputUnspentWithoutLocking(output *Output) (bool, error) {
 	return u.utxoStorage.Has(output.unspentDatabaseKey())
 }
 
-func (u *Manager) IsOutputUnspent(outputID *iotago.UTXOInputID) (bool, error) {
+func (u *Manager) IsOutputUnspent(outputID *iotago.OutputID) (bool, error) {
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()
 
@@ -80,7 +80,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 
 	// Filter by address
 	if opt.address != nil {
-		addrBytes, err := opt.address.Serialize(serializer.DeSeriModeNoValidation)
+		addrBytes, err := opt.address.Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 
 		// Filter by type
 		if opt.filterOutputType != nil {
-			key = byteutils.ConcatBytes(key, []byte{*opt.filterOutputType})
+			key = byteutils.ConcatBytes(key, []byte{byte(*opt.filterOutputType)})
 		}
 	} else if opt.filterOutputType != nil {
 

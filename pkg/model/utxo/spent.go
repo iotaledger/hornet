@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type SpentConsumer func(spent *Spent) bool
@@ -16,7 +16,7 @@ type SpentConsumer func(spent *Spent) bool
 type Spent struct {
 	kvStorable
 
-	outputID *iotago.UTXOInputID
+	outputID *iotago.OutputID
 	output   *Output
 
 	targetTransactionID *iotago.TransactionID
@@ -27,24 +27,24 @@ func (s *Spent) Output() *Output {
 	return s.output
 }
 
-func (s *Spent) OutputID() *iotago.UTXOInputID {
-	return s.output.outputID
+func (s *Spent) OutputID() *iotago.OutputID {
+	return s.outputID
 }
 
 func (s *Spent) MessageID() hornet.MessageID {
-	return s.output.messageID
+	return s.output.MessageID()
 }
 
 func (s *Spent) OutputType() iotago.OutputType {
-	return s.output.outputType
+	return s.output.OutputType()
 }
 
 func (s *Spent) Address() iotago.Address {
-	return s.output.address
+	return s.output.Address()
 }
 
 func (s *Spent) Amount() uint64 {
-	return s.output.amount
+	return s.output.Amount()
 }
 
 func (s *Spent) TargetTransactionID() *iotago.TransactionID {
@@ -70,7 +70,7 @@ func (o *Output) spentDatabaseKey() []byte {
 	ms := marshalutil.New(69)
 	ms.WriteByte(UTXOStoreKeyPrefixSpent) // 1 byte
 	ms.WriteBytes(o.AddressBytes())       // 33 bytes
-	ms.WriteByte(o.outputType)            // 1 byte
+	ms.WriteByte(byte(o.OutputType()))    // 1 byte
 	ms.WriteBytes(o.outputID[:])          // 34 bytes
 	return ms.Bytes()
 }
@@ -165,7 +165,7 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIter
 
 	// Filter by address
 	if opt.address != nil {
-		addrBytes, err := opt.address.Serialize(serializer.DeSeriModeNoValidation)
+		addrBytes, err := opt.address.Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
 			return err
 		}
@@ -173,7 +173,7 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIter
 
 		// Filter by output type
 		if opt.filterOutputType != nil {
-			key = byteutils.ConcatBytes(key, []byte{*opt.filterOutputType})
+			key = byteutils.ConcatBytes(key, []byte{byte(*opt.filterOutputType)})
 		}
 	} else if opt.filterOutputType != nil {
 		// Filter results instead of using prefix iteration
@@ -238,7 +238,7 @@ func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(spent.kvStorableKey())
 }
 
-func (u *Manager) readSpentForOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Spent, error) {
+func (u *Manager) readSpentForOutputIDWithoutLocking(outputID *iotago.OutputID) (*Spent, error) {
 
 	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {

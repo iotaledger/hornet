@@ -2,7 +2,6 @@ package utxo
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -11,26 +10,22 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
 	OutputIDLength = iotago.TransactionIDLength + serializer.UInt16ByteSize
 )
 
-var FakeTreasuryAddress = iotago.Ed25519Address{}
-
 type Output struct {
 	kvStorable
 
-	outputID   *iotago.UTXOInputID
-	messageID  hornet.MessageID
-	outputType iotago.OutputType
-	address    iotago.Address
-	amount     uint64
+	outputID  *iotago.OutputID
+	messageID hornet.MessageID
+	output    iotago.Output
 }
 
-func (o *Output) OutputID() *iotago.UTXOInputID {
+func (o *Output) OutputID() *iotago.OutputID {
 	return o.outputID
 }
 
@@ -39,20 +34,36 @@ func (o *Output) MessageID() hornet.MessageID {
 }
 
 func (o *Output) OutputType() iotago.OutputType {
-	return o.outputType
+	return o.output.Type()
+}
+
+func (o *Output) Output() iotago.Output {
+	return o.output
 }
 
 func (o *Output) Address() iotago.Address {
-	return o.address
+	switch output := o.output.(type) {
+	case *iotago.SimpleOutput:
+		return output.Address
+	case *iotago.ExtendedOutput:
+		return output.Address
+	case *iotago.NFTOutput:
+		return output.Address
+	case *iotago.FoundryOutput:
+		return output.Address
+	case *iotago.AliasOutput:
+		return output.AliasID.ToAddress()
+	}
+	panic("unsupported output type")
 }
 
 func (o *Output) Amount() uint64 {
-	return o.amount
+	return o.output.Deposit()
 }
 
 func (o *Output) AddressBytes() []byte {
 	// This never throws an error for current Ed25519 addresses
-	bytes, _ := o.address.Serialize(serializer.DeSeriModeNoValidation)
+	bytes, _ := o.Address().Serialize(serializer.DeSeriModeNoValidation, nil)
 	return bytes
 }
 
@@ -65,93 +76,37 @@ func (o *Output) UTXOInput() *iotago.UTXOInput {
 
 type Outputs []*Output
 
-func (o Outputs) InputToOutputMapping() (iotago.InputToOutputMapping, error) {
-
-	mapping := iotago.InputToOutputMapping{}
+func (o Outputs) InputToOutputMapping() (iotago.OutputSet, error) {
+	outputSet := make(iotago.OutputSet)
 	for _, output := range o {
-
-		switch output.OutputType() {
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			mapping[*output.outputID] = &iotago.SigLockedDustAllowanceOutput{
-				Address: output.address,
-				Amount:  output.amount,
-			}
-
-		case iotago.OutputSigLockedSingleOutput:
-			mapping[*output.outputID] = &iotago.SigLockedSingleOutput{
-				Address: output.address,
-				Amount:  output.amount,
-			}
-
-		default:
-			return nil, fmt.Errorf("unsupported output type")
-		}
-
+		outputSet[*output.outputID] = output.output
 	}
-	return mapping, nil
+	return outputSet, nil
 }
 
-func CreateOutput(outputID *iotago.UTXOInputID, messageID hornet.MessageID, outputType iotago.OutputType, address iotago.Address, amount uint64) *Output {
+func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, output iotago.Output) *Output {
 	return &Output{
-		outputID:   outputID,
-		messageID:  messageID,
-		outputType: outputType,
-		address:    address,
-		amount:     amount,
+		outputID:  outputID,
+		messageID: messageID,
+		output:    output,
 	}
 }
 
 func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, index uint16) (*Output, error) {
-
-	var output iotago.Output
-	switch unsignedTx := transaction.Essence.(type) {
-	case *iotago.TransactionEssence:
-		if len(unsignedTx.Outputs) < int(index) {
-			return nil, errors.New("deposit not found")
-		}
-		txOutput := unsignedTx.Outputs[int(index)]
-		switch out := txOutput.(type) {
-		case *iotago.SigLockedSingleOutput:
-			output = out
-		case *iotago.SigLockedDustAllowanceOutput:
-			output = out
-		default:
-			return nil, errors.New("unsupported output type")
-		}
-	default:
-		return nil, errors.New("unsupported transaction type")
-	}
-
-	var address *iotago.Ed25519Address
-	outputAddress, err := output.Target()
-	if err != nil {
-		return nil, err
-	}
-	switch a := outputAddress.(type) {
-	case *iotago.Ed25519Address:
-		address = a
-	default:
-		return nil, errors.New("unsupported deposit address")
-	}
 
 	txID, err := transaction.ID()
 	if err != nil {
 		return nil, err
 	}
 
-	bytes := make([]byte, serializer.UInt16ByteSize)
-	binary.LittleEndian.PutUint16(bytes, index)
-
-	var outputID iotago.UTXOInputID
-	copy(outputID[:iotago.TransactionIDLength], txID[:])
-	copy(outputID[iotago.TransactionIDLength:iotago.TransactionIDLength+serializer.UInt16ByteSize], bytes)
-
-	amount, err := output.Deposit()
-	if err != nil {
-		return nil, err
+	var output iotago.Output
+	if len(transaction.Essence.Outputs) < int(index) {
+		return nil, errors.New("output not found")
 	}
+	output = transaction.Essence.Outputs[int(index)]
+	outputID := iotago.OutputIDFromTransactionIDAndIndex(*txID, index)
 
-	return CreateOutput(&outputID, messageID, output.Type(), address, amount), nil
+	return CreateOutput(&outputID, messageID, output), nil
 }
 
 //- kvStorable
@@ -164,11 +119,15 @@ func (o *Output) kvStorableKey() (key []byte) {
 }
 
 func (o *Output) kvStorableValue() (value []byte) {
-	ms := marshalutil.New(74)
-	ms.WriteBytes(o.messageID)      // 32 bytes
-	ms.WriteByte(o.outputType)      // 1 byte
-	ms.WriteBytes(o.AddressBytes()) // 33 bytes
-	ms.WriteUint64(o.amount)        // 8 bytes
+	ms := marshalutil.New(32)
+	ms.WriteBytes(o.messageID) // 32 bytes
+
+	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		panic(err)
+	}
+	ms.WriteBytes(bytes)
+
 	return ms.Bytes()
 }
 
@@ -196,19 +155,14 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 		return err
 	}
 
-	// Read OutputType
-	o.outputType, err = valueUtil.ReadByte()
+	outputType, err := valueUtil.ReadUint32()
 	if err != nil {
 		return err
 	}
+	valueUtil.ReadSeek(-4)
 
-	// Read Address
-	if o.address, err = parseAddress(valueUtil); err != nil {
-		return err
-	}
-
-	// Read Amount
-	o.amount, err = valueUtil.ReadUint64()
+	output, err := iotago.OutputSelector(outputType)
+	_, err = output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return err
 	}
@@ -275,7 +229,7 @@ func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateO
 	return innerErr
 }
 
-func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Output, error) {
+func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.OutputID) (*Output, error) {
 
 	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:])
 	value, err := u.utxoStorage.Get(key)
@@ -290,7 +244,7 @@ func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.UTXOInputI
 	return output, nil
 }
 
-func (u *Manager) ReadOutputByOutputID(outputID *iotago.UTXOInputID) (*Output, error) {
+func (u *Manager) ReadOutputByOutputID(outputID *iotago.OutputID) (*Output, error) {
 
 	u.ReadLockLedger()
 	defer u.ReadUnlockLedger()

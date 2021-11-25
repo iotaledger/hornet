@@ -8,7 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // ReceiptTuple contains a receipt and the index of the milestone
@@ -29,7 +29,7 @@ func (rt *ReceiptTuple) kvStorableKey() (key []byte) {
 }
 
 func (rt *ReceiptTuple) kvStorableValue() (value []byte) {
-	receiptBytes, err := rt.Receipt.Serialize(serializer.DeSeriModeNoValidation)
+	receiptBytes, err := rt.Receipt.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -55,7 +55,7 @@ func (rt *ReceiptTuple) kvStorableLoad(_ *Manager, key []byte, value []byte) err
 	}
 
 	r := &iotago.Receipt{}
-	if _, err := r.Deserialize(value, serializer.DeSeriModeNoValidation); err != nil {
+	if _, err := r.Deserialize(value, serializer.DeSeriModeNoValidation, nil); err != nil {
 		return err
 	}
 
@@ -166,18 +166,24 @@ func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex milestone.Index,
 func ReceiptToOutputs(r *iotago.Receipt, msgID hornet.MessageID, msID *iotago.MilestoneID) ([]*Output, error) {
 	outputs := make([]*Output, len(r.Funds))
 	for outputIndex, migFundsEntry := range r.Funds {
-		entry := migFundsEntry.(*iotago.MigratedFundsEntry)
+		entry := migFundsEntry
 		utxoID := OutputIDForMigratedFunds(*msID, uint16(outputIndex))
 		// we use the milestone hash as the "origin message"
-		outputs[outputIndex] = CreateOutput(&utxoID, msgID, iotago.OutputSigLockedSingleOutput, entry.Address.(iotago.Address), entry.Deposit)
+
+		output := &iotago.SimpleOutput{
+			Address: entry.Address.(iotago.Address),
+			Amount:  entry.Deposit,
+		}
+
+		outputs[outputIndex] = CreateOutput(&utxoID, msgID, output)
 	}
 	return outputs, nil
 }
 
 // OutputIDForMigratedFunds returns the UTXO ID for a migrated funds entry given the milestone containing the receipt
 // and the index of the entry.
-func OutputIDForMigratedFunds(milestoneHash iotago.MilestoneID, outputIndex uint16) iotago.UTXOInputID {
-	var utxoID iotago.UTXOInputID
+func OutputIDForMigratedFunds(milestoneHash iotago.MilestoneID, outputIndex uint16) iotago.OutputID {
+	var utxoID iotago.OutputID
 	copy(utxoID[:], milestoneHash[:])
 	binary.LittleEndian.PutUint16(utxoID[len(utxoID)-2:], outputIndex)
 	return utxoID
@@ -186,7 +192,7 @@ func OutputIDForMigratedFunds(milestoneHash iotago.MilestoneID, outputIndex uint
 // ReceiptToTreasuryMutation converts a receipt to a treasury mutation tuple.
 func ReceiptToTreasuryMutation(r *iotago.Receipt, unspentTreasuryOutput *TreasuryOutput, newMsID *iotago.MilestoneID) (*TreasuryMutationTuple, error) {
 	newOutput := &TreasuryOutput{
-		Amount: r.Transaction.(*iotago.TreasuryTransaction).Output.(*iotago.TreasuryOutput).Amount,
+		Amount: r.Transaction.Output.Amount,
 		Spent:  false,
 	}
 	copy(newOutput.MilestoneID[:], newMsID[:])

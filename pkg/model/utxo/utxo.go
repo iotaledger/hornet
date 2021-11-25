@@ -9,14 +9,14 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
-	// Returned if the size of the given address is incorrect.
+	// ErrInvalidAddressSize is returned if the size of the given address is incorrect.
 	ErrInvalidAddressSize = errors.New("invalid address size")
 
-	// Returned if the sum of the output deposits is not equal the total supply of tokens.
+	// ErrOutputsSumNotEqualTotalSupply is returned if the sum of the output deposits is not equal the total supply of tokens.
 	ErrOutputsSumNotEqualTotalSupply = errors.New("accumulated output balance is not equal to total supply")
 )
 
@@ -240,11 +240,6 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 		return err
 	}
 
-	if err := u.applyNewBalancesWithoutLocking(newOutputs, newSpents, mutations); err != nil {
-		mutations.Cancel()
-		return err
-	}
-
 	return mutations.Commit()
 }
 
@@ -313,11 +308,6 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 		return err
 	}
 
-	if err := u.rollbackBalancesWithoutLocking(newOutputs, newSpents, mutations); err != nil {
-		mutations.Cancel()
-		return err
-	}
-
 	return mutations.Commit()
 }
 
@@ -333,7 +323,7 @@ func (u *Manager) CheckLedgerState() error {
 	var total uint64 = 0
 
 	consumerFunc := func(output *Output) bool {
-		total += output.amount
+		total += output.Amount()
 		return true
 	}
 
@@ -351,7 +341,7 @@ func (u *Manager) CheckLedgerState() error {
 		return ErrOutputsSumNotEqualTotalSupply
 	}
 
-	return u.checkBalancesLedger(treasuryOutput.Amount)
+	return nil
 }
 
 func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
@@ -367,11 +357,6 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 	}
 
 	if err := markAsUnspent(unspentOutput, mutations); err != nil {
-		mutations.Cancel()
-		return err
-	}
-
-	if err := u.storeBalanceForUnspentOutput(unspentOutput, mutations); err != nil {
 		mutations.Cancel()
 		return err
 	}
@@ -462,7 +447,7 @@ func (u *Manager) ComputeBalance(options ...UTXOIterateOption) (balance uint64, 
 	balance = 0
 	count = 0
 	consumerFunc := func(output *Output) bool {
-		balance += output.amount
+		balance += output.Amount()
 		count++
 		return true
 	}
