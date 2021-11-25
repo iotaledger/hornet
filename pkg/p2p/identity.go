@@ -280,7 +280,7 @@ func MigrateDeprecatedPeerStore(p2pStorePath string, identityPrivKey string, new
 		}
 		defer func() { _ = badgerStore.Close() }()
 
-		results, err := badgerStore.Query(query.Query{})
+		results, err := badgerStore.Query(context.Background(), query.Query{})
 		if err != nil {
 			return fmt.Errorf("unable to query deprecated peer store: %w", err)
 		}

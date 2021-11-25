@@ -133,8 +133,7 @@ Your node identity private key can now be found at "%s".
 			CorePlugin.LogInfof(`loaded existing private key for peer identity from "%s"`, privKeyFilePath)
 		}
 
-		createdHost, err := libp2p.New(context.Background(),
-			libp2p.Identity(privKey),
+		createdHost, err := libp2p.New(libp2p.Identity(privKey),
 			libp2p.ListenAddrStrings(deps.P2PBindMultiAddresses...),
 			libp2p.Peerstore(peerStoreContainer.Peerstore()),
 			libp2p.DefaultTransports,
