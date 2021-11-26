@@ -1307,6 +1307,52 @@ func TestStakingRewardsCalculatedAfterEventEnded(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
 }
 
+func TestMultipleParticipationsAreNotCounted(t *testing.T) {
+
+	env := test.NewParticipationTestEnv(t, 5_000_000, 1_587_529, 5_589_977, 300_000_000, false)
+	defer env.Cleanup()
+
+	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	eventBuilder := participation.NewEventBuilder("AlbinoPugCoin", 5, 7, 12, "The first DogCoin on the Tangle")
+	eventBuilder.Payload(&participation.Staking{
+		Text:           "The rarest DogCoin on earth",
+		Symbol:         "APUG",
+		Numerator:      25,
+		Denominator:    100,
+		AdditionalInfo: "Have you seen an albino Pug?",
+	})
+
+	event, err := eventBuilder.Build()
+	require.NoError(t, err)
+
+	eventID, err := env.ParticipationManager().StoreEvent(event)
+	require.NoError(t, err)
+
+	// Verify the configured indexes
+	require.Equal(t, milestone.Index(5), event.CommenceMilestoneIndex())
+	require.Equal(t, milestone.Index(7), event.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(12), event.EndMilestoneIndex())
+
+	env.IssueMilestone() // 5
+
+	doubleStakeWallet1 := env.NewParticipationHelper(env.Wallet1).
+		WholeWalletBalance().
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{},
+		}).
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{},
+		}).
+		Send()
+
+	env.IssueMilestone(doubleStakeWallet1.Message().StoredMessageID()) // 6
+	env.AssertInvalidParticipation(eventID, doubleStakeWallet1)
+}
+
 func TestStoreEventCanOverflow(t *testing.T) {
 	env := test.NewParticipationTestEnv(t, 5_000_000, 1_587_529, 5_589_977, 300_000_000, false)
 	defer env.Cleanup()

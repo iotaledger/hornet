@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/iotaledger/hive.go/serializer"
 )
 
@@ -18,6 +20,8 @@ var (
 		Max:            ParticipationsMaxParticipationCount,
 		ValidationMode: serializer.ArrayValidationModeNone,
 	}
+
+	ErrMultipleEventParticipation = errors.New("multiple participations for the same event")
 )
 
 // Participations holds the participation for multiple events
