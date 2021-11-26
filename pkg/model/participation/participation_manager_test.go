@@ -10,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/model/participation/test"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -1337,20 +1338,29 @@ func TestMultipleParticipationsAreNotCounted(t *testing.T) {
 
 	env.IssueMilestone() // 5
 
-	doubleStakeWallet1 := env.NewParticipationHelper(env.Wallet1).
-		WholeWalletBalance().
-		AddParticipation(&participation.Participation{
-			EventID: eventID,
-			Answers: []byte{},
-		}).
-		AddParticipation(&participation.Participation{
-			EventID: eventID,
-			Answers: []byte{},
-		}).
-		Send()
+	// Forcedly craft an indexation that participates twice in the same indexation
+	ms := marshalutil.New()
+	ms.WriteUint8(2)
+	ms.WriteBytes(eventID[:])
+	ms.WriteUint8(0)
+	ms.WriteBytes(eventID[:])
+	ms.WriteUint8(0)
 
-	env.IssueMilestone(doubleStakeWallet1.Message().StoredMessageID()) // 6
-	env.AssertInvalidParticipation(eventID, doubleStakeWallet1)
+	doubleStakeWallet1 := env.NewMessageBuilder(test.ParticipationIndexation).
+		LatestMilestonesAsParents().
+		FromWallet(env.Wallet1).
+		ToWallet(env.Wallet1).
+		Amount(env.Wallet1.Balance()).
+		IndexationData(ms.Bytes()).
+		Build().
+		Store().
+		BookOnWallets()
+
+	env.IssueMilestone(doubleStakeWallet1.StoredMessageID()) // 6
+
+	_, err = env.ParticipationManager().ParticipationForOutputID(eventID, doubleStakeWallet1.GeneratedUTXO().OutputID())
+	require.Error(t, err)
+	require.ErrorIs(t, err, participation.ErrUnknownParticipation)
 }
 
 func TestStoreEventCanOverflow(t *testing.T) {
