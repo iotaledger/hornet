@@ -10,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/model/participation/test"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -1305,6 +1306,61 @@ func TestStakingRewardsCalculatedAfterEventEnded(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 1_984_410)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 6_987_470)
 	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
+}
+
+func TestMultipleParticipationsAreNotCounted(t *testing.T) {
+
+	env := test.NewParticipationTestEnv(t, 5_000_000, 1_587_529, 5_589_977, 300_000_000, false)
+	defer env.Cleanup()
+
+	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	eventBuilder := participation.NewEventBuilder("AlbinoPugCoin", 5, 7, 12, "The first DogCoin on the Tangle")
+	eventBuilder.Payload(&participation.Staking{
+		Text:           "The rarest DogCoin on earth",
+		Symbol:         "APUG",
+		Numerator:      25,
+		Denominator:    100,
+		AdditionalInfo: "Have you seen an albino Pug?",
+	})
+
+	event, err := eventBuilder.Build()
+	require.NoError(t, err)
+
+	eventID, err := env.ParticipationManager().StoreEvent(event)
+	require.NoError(t, err)
+
+	// Verify the configured indexes
+	require.Equal(t, milestone.Index(5), event.CommenceMilestoneIndex())
+	require.Equal(t, milestone.Index(7), event.StartMilestoneIndex())
+	require.Equal(t, milestone.Index(12), event.EndMilestoneIndex())
+
+	env.IssueMilestone() // 5
+
+	// Forcedly craft an indexation that participates twice in the same indexation
+	ms := marshalutil.New()
+	ms.WriteUint8(2)
+	ms.WriteBytes(eventID[:])
+	ms.WriteUint8(0)
+	ms.WriteBytes(eventID[:])
+	ms.WriteUint8(0)
+
+	doubleStakeWallet1 := env.NewMessageBuilder(test.ParticipationIndexation).
+		LatestMilestonesAsParents().
+		FromWallet(env.Wallet1).
+		ToWallet(env.Wallet1).
+		Amount(env.Wallet1.Balance()).
+		IndexationData(ms.Bytes()).
+		Build().
+		Store().
+		BookOnWallets()
+
+	env.IssueMilestone(doubleStakeWallet1.StoredMessageID()) // 6
+
+	_, err = env.ParticipationManager().ParticipationForOutputID(eventID, doubleStakeWallet1.GeneratedUTXO().OutputID())
+	require.Error(t, err)
+	require.ErrorIs(t, err, participation.ErrUnknownParticipation)
 }
 
 func TestStoreEventCanOverflow(t *testing.T) {

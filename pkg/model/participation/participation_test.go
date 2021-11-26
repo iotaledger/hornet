@@ -13,13 +13,17 @@ import (
 )
 
 func RandParticipation(answerCount int) (*participation.Participation, []byte) {
+	return RandParticipationWithEventID(RandEventID(), answerCount)
+}
+
+func RandParticipationWithEventID(eventID participation.EventID, answerCount int) (*participation.Participation, []byte) {
 	answers := tpkg.RandBytes(answerCount)
 	if answerCount == 0 {
 		answers = []byte{} // RandBytes returns nil if empty
 	}
 
 	p := &participation.Participation{
-		EventID: RandEventID(),
+		EventID: eventID,
 		Answers: answers,
 	}
 
