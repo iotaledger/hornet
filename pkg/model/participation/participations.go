@@ -37,6 +37,23 @@ func (p *Participations) Deserialize(data []byte, deSeriMode serializer.DeSerial
 		}, participationsArrayRules, func(err error) error {
 			return fmt.Errorf("unable to deserialize participations: %w", err)
 		}).
+		AbortIf(func(err error) error {
+			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
+				seenEvents := make(map[EventID]struct{})
+				for _, s := range p.Participations {
+					switch participation := s.(type) {
+					case *Participation:
+						if _, found := seenEvents[participation.EventID]; found {
+							return ErrMultipleEventParticipation
+						}
+						seenEvents[participation.EventID] = struct{}{}
+					default:
+						return errors.New("invalid participation type")
+					}
+				}
+			}
+			return nil
+		}).
 		Done()
 }
 
@@ -46,6 +63,18 @@ func (p *Participations) Serialize(deSeriMode serializer.DeSerializationMode) ([
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
 				if err := participationsArrayRules.CheckBounds(uint(len(p.Participations))); err != nil {
 					return fmt.Errorf("unable to serialize participations: %w", err)
+				}
+				seenEvents := make(map[EventID]struct{})
+				for _, s := range p.Participations {
+					switch participation := s.(type) {
+					case *Participation:
+						if _, found := seenEvents[participation.EventID]; found {
+							return ErrMultipleEventParticipation
+						}
+						seenEvents[participation.EventID] = struct{}{}
+					default:
+						return errors.New("invalid participation type")
+					}
 				}
 			}
 			return nil
