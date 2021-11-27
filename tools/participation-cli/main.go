@@ -7,7 +7,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/participation"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -134,9 +136,51 @@ func sendParticipationTransaction(cfg *cfg) (*iotago.MessageID, error) {
 		return nil, err
 	}
 
-	msg, err := client.SubmitMessage(clientCtx, &iotago.Message{
+	nodeInfo, err := client.Info(clientCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	remotePoWEnabled := false
+	for _, feature := range nodeInfo.Features {
+		if feature == "PoW" {
+			remotePoWEnabled = true
+			break
+		}
+	}
+
+	msg := &iotago.Message{
 		Payload: txPayload,
-	})
+	}
+
+	if !remotePoWEnabled {
+		// do local PoW
+		powManager := pow.New(nil, nodeInfo.MinPowScore, 1*time.Second, "", 5*time.Second)
+
+		getTipsFunc := func() (hornet.MessageIDs, error) {
+			tipsResponse, err := client.Tips(clientCtx)
+			if err != nil {
+				return nil, err
+			}
+
+			tips, err := tipsResponse.Tips()
+			return hornet.MessageIDsFromSliceOfArrays(tips), err
+		}
+
+		tips, err := getTipsFunc()
+		if err != nil {
+			return nil, err
+		}
+
+		msg.Parents = tips.ToSliceOfArrays()
+		msg.NetworkID = iotago.NetworkIDFromString(nodeInfo.NetworkID)
+
+		if err := powManager.DoPoW(clientCtx, msg, 0, getTipsFunc); err != nil {
+			return nil, err
+		}
+	}
+
+	msg, err = client.SubmitMessage(clientCtx, msg)
 	if err != nil {
 		return nil, err
 	}
