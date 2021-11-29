@@ -1096,11 +1096,12 @@ func TestStakingRewards(t *testing.T) {
 
 	eventBuilder := participation.NewEventBuilder("AlbinoPugCoin", 5, 7, 12, "The first DogCoin on the Tangle")
 	eventBuilder.Payload(&participation.Staking{
-		Text:           "The rarest DogCoin on earth",
-		Symbol:         "APUG",
-		Numerator:      25,
-		Denominator:    100,
-		AdditionalInfo: "Have you seen an albino Pug?",
+		Text:                   "The rarest DogCoin on earth",
+		Symbol:                 "APUG",
+		Numerator:              25,
+		Denominator:            100,
+		RequiredMinimumRewards: 2_000_000,
+		AdditionalInfo:         "Have you seen an albino Pug?",
 	})
 
 	event, err := eventBuilder.Build()
@@ -1215,6 +1216,32 @@ func TestStakingRewards(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 75_000_000)
 
 	env.AssertStakingRewardsStatus(eventID, 12, 5_000_000+1_587_529+5_589_977, 6_250_000+1_984_410+6_987_470+75_000_000)
+
+	totalRewards := uint64(0)
+	addresses := make(map[string]struct{})
+	env.ParticipationManager().ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
+		totalRewards += rewards
+		addresses[address.String()] = struct{}{}
+		return true
+	}, participation.FilterRequiredMinimumRewards(true))
+
+	require.Exactly(t, totalRewards, uint64(6_250_000+6_987_470+75_000_000))
+	_, wallet1Found := addresses[env.Wallet1.Address().String()]
+	_, wallet2Found := addresses[env.Wallet2.Address().String()]
+	_, wallet3Found := addresses[env.Wallet3.Address().String()]
+	_, wallet4Found := addresses[env.Wallet4.Address().String()]
+	require.True(t, wallet1Found)
+	require.False(t, wallet2Found)
+	require.True(t, wallet3Found)
+	require.True(t, wallet4Found)
+
+	totalRewardsWithoutFilter := uint64(0)
+	env.ParticipationManager().ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
+		totalRewardsWithoutFilter += rewards
+		return true
+	}, participation.FilterRequiredMinimumRewards(false))
+	require.Exactly(t, totalRewardsWithoutFilter, uint64(6_250_000+1_984_410+6_987_470+75_000_000))
+
 }
 
 func TestStakingRewardsCalculatedAfterEventEnded(t *testing.T) {
@@ -1318,11 +1345,12 @@ func TestMultipleParticipationsAreNotCounted(t *testing.T) {
 
 	eventBuilder := participation.NewEventBuilder("AlbinoPugCoin", 5, 7, 12, "The first DogCoin on the Tangle")
 	eventBuilder.Payload(&participation.Staking{
-		Text:           "The rarest DogCoin on earth",
-		Symbol:         "APUG",
-		Numerator:      25,
-		Denominator:    100,
-		AdditionalInfo: "Have you seen an albino Pug?",
+		Text:                   "The rarest DogCoin on earth",
+		Symbol:                 "APUG",
+		Numerator:              25,
+		Denominator:            100,
+		RequiredMinimumRewards: 0,
+		AdditionalInfo:         "Have you seen an albino Pug?",
 	})
 
 	event, err := eventBuilder.Build()
