@@ -28,11 +28,12 @@ func RandValidStakingWithNumeratorDenominator(numerator uint32, denominator uint
 
 func RandStaking(textLen int, symbolLen int, numerator uint32, denominator uint32, additionalInfoLen int) (*participation.Staking, []byte) {
 	s := &participation.Staking{
-		Text:           RandString(textLen),
-		Symbol:         RandString(symbolLen),
-		Numerator:      numerator,
-		Denominator:    denominator,
-		AdditionalInfo: RandString(additionalInfoLen),
+		Text:                   RandString(textLen),
+		Symbol:                 RandString(symbolLen),
+		Numerator:              numerator,
+		Denominator:            denominator,
+		RequiredMinimumRewards: rand.Uint64(),
+		AdditionalInfo:         RandString(additionalInfoLen),
 	}
 
 	ms := marshalutil.New()
@@ -43,6 +44,7 @@ func RandStaking(textLen int, symbolLen int, numerator uint32, denominator uint3
 	ms.WriteBytes([]byte(s.Symbol))
 	ms.WriteUint32(s.Numerator)
 	ms.WriteUint32(s.Denominator)
+	ms.WriteUint64(s.RequiredMinimumRewards)
 	ms.WriteUint16(uint16(len(s.AdditionalInfo)))
 	ms.WriteBytes([]byte(s.AdditionalInfo))
 

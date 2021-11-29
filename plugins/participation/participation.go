@@ -254,9 +254,11 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 		if err != nil {
 			return nil, errors.WithMessage(echo.ErrInternalServerError, "error fetching rewards")
 		}
+
 		response.Rewards[hex.EncodeToString(eventID[:])] = &AddressReward{
-			Amount: amount,
-			Symbol: staking.Symbol,
+			Amount:         amount,
+			Symbol:         staking.Symbol,
+			MinimumReached: amount >= staking.RequiredMinimumRewards,
 		}
 	}
 
@@ -282,7 +284,7 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 		addresses = append(addresses, addr)
 		rewardsByAddress[addr] = rewards
 		return true
-	}); err != nil {
+	}, participation.FilterRequiredMinimumRewards(true)); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "invalid request! Error: %s", err)
 	}
 
@@ -299,6 +301,7 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 	response := &RewardsResponse{
 		Symbol:         event.Staking().Symbol,
 		MilestoneIndex: index,
+		TotalRewards:   0,
 		Rewards:        make(map[string]uint64),
 	}
 
@@ -308,6 +311,7 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 		amount := rewardsByAddress[addr]
 		binary.Write(responseHash, binary.LittleEndian, amount)
 		response.Rewards[addr] = amount
+		response.TotalRewards += amount
 	}
 
 	response.Checksum = hex.EncodeToString(responseHash.Sum(nil))
