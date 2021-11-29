@@ -286,11 +286,17 @@ func (f *Faucet) Info() (*FaucetInfoResponse, error) {
 }
 
 // Enqueue adds a new faucet request to the queue.
-func (f *Faucet) Enqueue(bech32 string, ed25519Addr *iotago.Ed25519Address) (*FaucetEnqueueResponse, error) {
+func (f *Faucet) Enqueue(bech32Addr string) (*FaucetEnqueueResponse, error) {
+
+	ed25519Addr, err := f.parseBech32Address(bech32Addr)
+	if err != nil {
+		return nil, err
+	}
+
 	f.Lock()
 	defer f.Unlock()
 
-	if _, exists := f.queueMap[bech32]; exists {
+	if _, exists := f.queueMap[bech32Addr]; exists {
 		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "Address is already in the queue.")
 	}
 
@@ -305,22 +311,42 @@ func (f *Faucet) Enqueue(bech32 string, ed25519Addr *iotago.Ed25519Address) (*Fa
 	}
 
 	request := &queueItem{
-		Bech32:         bech32,
+		Bech32:         bech32Addr,
 		Amount:         amount,
 		Ed25519Address: ed25519Addr,
 	}
 
 	select {
 	case f.queue <- request:
-		f.queueMap[bech32] = request
+		f.queueMap[bech32Addr] = request
 		return &FaucetEnqueueResponse{
-			Address:         bech32,
+			Address:         bech32Addr,
 			WaitingRequests: len(f.queueMap),
 		}, nil
 
 	default:
 		// queue is full
 		return nil, errors.WithMessage(echo.ErrInternalServerError, "Faucet queue is full. Please try again later!")
+	}
+}
+
+// parseBech32Address parses a bech32 address.
+func (f *Faucet) parseBech32Address(bech32Addr string) (*iotago.Ed25519Address, error) {
+
+	hrp, bech32Address, err := iotago.ParseBech32(bech32Addr)
+	if err != nil {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "Invalid bech32 address provided!")
+	}
+
+	if hrp != f.NetworkPrefix() {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "Invalid bech32 address provided! Address does not start with \"%s\".", f.NetworkPrefix())
+	}
+
+	switch address := bech32Address.(type) {
+	case *iotago.Ed25519Address:
+		return address, nil
+	default:
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "Invalid bech32 address provided! Unknown address type.")
 	}
 }
 
