@@ -29,8 +29,9 @@ type OutputStatusResponse struct {
 
 // AddressReward holds the amount and token symbol for a certain reward.
 type AddressReward struct {
-	Amount uint64 `json:"amount"`
-	Symbol string `json:"symbol"`
+	Amount         uint64 `json:"amount"`
+	Symbol         string `json:"symbol"`
+	MinimumReached bool   `json:"minimumReached"`
 }
 
 // AddressRewardsResponse defines the response of a GET RouteAddressBech32Status or RouteAddressEd25519Status REST API call.
@@ -42,6 +43,7 @@ type AddressRewardsResponse struct {
 type RewardsResponse struct {
 	Symbol         string            `json:"symbol"`
 	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
+	TotalRewards   uint64            `json:"totalRewards"`
 	Checksum       string            `json:"checksum"`
 	Rewards        map[string]uint64 `json:"rewards"`
 }

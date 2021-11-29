@@ -203,7 +203,8 @@ func (pm *ParticipationManager) ParticipationForOutputID(eventID EventID, output
 }
 
 type IterateOptions struct {
-	maxResultCount int
+	maxResultCount       int
+	filterMinimumRewards bool
 }
 
 type IterateOption func(*IterateOptions)
@@ -214,9 +215,16 @@ func MaxResultCount(count int) IterateOption {
 	}
 }
 
+func FilterRequiredMinimumRewards(filter bool) IterateOption {
+	return func(args *IterateOptions) {
+		args.filterMinimumRewards = filter
+	}
+}
+
 func iterateOptions(optionalOptions []IterateOption) *IterateOptions {
 	result := &IterateOptions{
-		maxResultCount: 0,
+		maxResultCount:       0,
+		filterMinimumRewards: false,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -619,6 +627,17 @@ func (pm *ParticipationManager) setTotalStakingParticipationForEvent(eventID Eve
 type StakingRewardsConsumer func(address iotago.Address, rewards uint64) bool
 
 func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, consumer StakingRewardsConsumer, options ...IterateOption) error {
+
+	event := pm.Event(eventID)
+	if event == nil {
+		return nil
+	}
+
+	staking := event.Staking()
+	if staking == nil {
+		return nil
+	}
+
 	opt := iterateOptions(options)
 	consumerFunc := consumer
 
@@ -631,8 +650,6 @@ func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, consumer 
 		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
 		}
-
-		i++
 
 		addressBytes := key[prefixLen:]
 		addr, err := iotago.AddressSelector(uint32(addressBytes[0]))
@@ -652,6 +669,12 @@ func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, consumer 
 			innerErr = err
 			return false
 		}
+
+		if opt.filterMinimumRewards && balance < staking.RequiredMinimumRewards {
+			return true
+		}
+
+		i++
 
 		return consumerFunc(addr.(iotago.Address), balance)
 	}); err != nil {

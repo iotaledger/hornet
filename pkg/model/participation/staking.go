@@ -29,6 +29,8 @@ type Staking struct {
 	Numerator   uint32
 	Denominator uint32
 
+	RequiredMinimumRewards uint64
+
 	AdditionalInfo string
 }
 
@@ -48,6 +50,9 @@ func (s *Staking) Deserialize(data []byte, deSeriMode serializer.DeSerialization
 		}).
 		ReadNum(&s.Denominator, func(err error) error {
 			return fmt.Errorf("unable to deserialize staking denominator: %w", err)
+		}).
+		ReadNum(&s.RequiredMinimumRewards, func(err error) error {
+			return fmt.Errorf("unable to deserialize staking required minimum rewards: %w", err)
 		}).
 		ReadString(&s.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to deserialize staking additional info: %w", err)
@@ -101,6 +106,9 @@ func (s *Staking) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, 
 		WriteNum(s.Denominator, func(err error) error {
 			return fmt.Errorf("unable to serialize staking denominator: %w", err)
 		}).
+		WriteNum(s.RequiredMinimumRewards, func(err error) error {
+			return fmt.Errorf("unable to serialize staking required minimum rewards: %w", err)
+		}).
 		WriteString(s.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to serialize staking additional info: %w", err)
 		}).
@@ -109,12 +117,13 @@ func (s *Staking) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, 
 
 func (s *Staking) MarshalJSON() ([]byte, error) {
 	j := &jsonStaking{
-		Type:           int(StakingPayloadTypeID),
-		Text:           s.Text,
-		Symbol:         s.Symbol,
-		Numerator:      s.Numerator,
-		Denominator:    s.Denominator,
-		AdditionalInfo: s.AdditionalInfo,
+		Type:                   int(StakingPayloadTypeID),
+		Text:                   s.Text,
+		Symbol:                 s.Symbol,
+		Numerator:              s.Numerator,
+		Denominator:            s.Denominator,
+		RequiredMinimumRewards: s.RequiredMinimumRewards,
+		AdditionalInfo:         s.AdditionalInfo,
 	}
 	return json.Marshal(j)
 }
@@ -136,21 +145,23 @@ func (s *Staking) UnmarshalJSON(bytes []byte) error {
 
 // jsonStaking defines the json representation of a Staking.
 type jsonStaking struct {
-	Type           int    `json:"type"`
-	Text           string `json:"text"`
-	Symbol         string `json:"symbol"`
-	Numerator      uint32 `json:"numerator"`
-	Denominator    uint32 `json:"denominator"`
-	AdditionalInfo string `json:"additionalInfo"`
+	Type                   int    `json:"type"`
+	Text                   string `json:"text"`
+	Symbol                 string `json:"symbol"`
+	Numerator              uint32 `json:"numerator"`
+	Denominator            uint32 `json:"denominator"`
+	RequiredMinimumRewards uint64 `json:"requiredMinimumRewards"`
+	AdditionalInfo         string `json:"additionalInfo"`
 }
 
 func (j *jsonStaking) ToSerializable() (serializer.Serializable, error) {
 	payload := &Staking{
-		Text:           j.Text,
-		Symbol:         j.Symbol,
-		Numerator:      j.Numerator,
-		Denominator:    j.Denominator,
-		AdditionalInfo: j.AdditionalInfo,
+		Text:                   j.Text,
+		Symbol:                 j.Symbol,
+		Numerator:              j.Numerator,
+		Denominator:            j.Denominator,
+		RequiredMinimumRewards: j.RequiredMinimumRewards,
+		AdditionalInfo:         j.AdditionalInfo,
 	}
 	return payload, nil
 }
