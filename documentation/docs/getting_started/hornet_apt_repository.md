@@ -192,7 +192,7 @@ You can find installation instructions in the  [official Go documentation](https
 4. Clone the Hornet source code from GitHub:
    
    ```bash
-   git clone https://github.com/gohornet/hornet.git && cd hornet
+   git clone https://github.com/gohornet/hornet.git && cd hornet && git checkout mainnet
    ```
 
 5. Build the Hornet:

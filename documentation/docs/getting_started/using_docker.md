@@ -27,7 +27,7 @@ Hornet Docker images (amd64/x86_64 architecture) are available at [gohornet/horn
 Once you have completed all the installation [requirements](#requirements), you can clone the repository or by running:
 
 ```sh
-git clone https://github.com/gohornet/hornet && cd hornet
+git clone https://github.com/gohornet/hornet && cd hornet && git checkout mainnet
 ```
 
 :::info
