@@ -18,7 +18,7 @@ import (
 func coordinatorFixStateFile(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [DATABASE_PATH] [COO_STATE_FILE_PATH]", ToolCoordinatorFixStateFile))
+		println(fmt.Sprintf("   %s [DATABASE_PATH] [COO_STATE_FILE_PATH]", ToolCoordinatorFixStateFile))
 		println()
 		println("   [DATABASE_PATH]       - the path to the database")
 		println("   [COO_STATE_FILE_PATH] - the path to the coordinator state file")

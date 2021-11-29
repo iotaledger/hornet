@@ -21,12 +21,12 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [NETWORK_ID_STR] [MINT_ADDRESS] [TREASURY_ALLOCATION] [OUTPUT_FILE_PATH]", ToolSnapGen))
+		println(fmt.Sprintf("   %s [NETWORK_ID_STR] [MINT_ADDRESS] [TREASURY_ALLOCATION] [OUTPUT_FILE_PATH]", ToolSnapGen))
 		println()
-		println("	[NETWORK_ID_STR]		- the network ID for which this snapshot is meant for")
-		println("	[MINT_ADDRESS]			- the initial ed25519 address all the tokens will be minted to")
-		println("	[TREASURY_ALLOCATION]	- the amount of tokens to reside within the treasury, the delta from the supply will be allocated to MINT_ADDRESS")
-		println("	[OUTPUT_FILE_PATH]		- the file path to the generated snapshot file")
+		println("   [NETWORK_ID_STR]      - the network ID for which this snapshot is meant for")
+		println("   [MINT_ADDRESS]        - the initial ed25519 address all the tokens will be minted to")
+		println("   [TREASURY_ALLOCATION] - the amount of tokens to reside within the treasury, the delta from the supply will be allocated to MINT_ADDRESS")
+		println("   [OUTPUT_FILE_PATH]    - the file path to the generated snapshot file")
 		println()
 		println(fmt.Sprintf("example: %s %s %s %s %s", ToolSnapGen, "private_tangle@1", "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92", "500000000", "snapshots/private_tangle/full_snapshot.bin"))
 	}

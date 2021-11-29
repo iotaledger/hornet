@@ -10,9 +10,9 @@ import (
 func snapshotInfo(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [SNAPSHOT_PATH]", ToolSnapInfo))
+		println(fmt.Sprintf("   %s [SNAPSHOT_PATH]", ToolSnapInfo))
 		println()
-		println("	[SNAPSHOT_PATH] - the path to the snapshot file")
+		println("   [SNAPSHOT_PATH] - the path to the snapshot file")
 		println()
 		println(fmt.Sprintf("example: %s %s", ToolSnapInfo, "./snapshot.bin"))
 	}

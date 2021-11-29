@@ -18,9 +18,9 @@ import (
 func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [P2P_DATABASE_PATH]", ToolP2PExtractIdentity))
+		println(fmt.Sprintf("   %s [P2P_DATABASE_PATH]", ToolP2PExtractIdentity))
 		println()
-		println("	[P2P_DATABASE_PATH] - the path to the p2p database folder (optional)")
+		println("   [P2P_DATABASE_PATH] - the path to the p2p database folder (optional)")
 		println()
 		println(fmt.Sprintf("example: %s %s", ToolP2PExtractIdentity, "p2pstore"))
 	}

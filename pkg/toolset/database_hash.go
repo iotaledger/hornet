@@ -171,7 +171,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [DATABASE_PATH]", ToolDatabaseLedgerHash))
+		println(fmt.Sprintf("   %s [DATABASE_PATH]", ToolDatabaseLedgerHash))
 		println()
 		println("   [DATABASE_PATH] - the path to the database")
 		println()

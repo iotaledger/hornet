@@ -19,10 +19,10 @@ import (
 func snapshotHash(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [FULL_SNAPSHOT_PATH] [DELTA_SNAPSHOT_PATH]", ToolSnapHash))
+		println(fmt.Sprintf("   %s [FULL_SNAPSHOT_PATH] [DELTA_SNAPSHOT_PATH]", ToolSnapHash))
 		println()
-		println("	[FULL_SNAPSHOT_PATH]  - the path to the full snapshot file")
-		println("	[DELTA_SNAPSHOT_PATH] - the path to the delta snapshot file (optional)")
+		println("   [FULL_SNAPSHOT_PATH]  - the path to the full snapshot file")
+		println("   [DELTA_SNAPSHOT_PATH] - the path to the delta snapshot file (optional)")
 		println()
 		println(fmt.Sprintf("example: %s %s", ToolSnapHash, "./snapshot.bin"))
 	}
