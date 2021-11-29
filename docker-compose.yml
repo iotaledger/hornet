@@ -7,8 +7,8 @@ services:
     image: hornet:dev
     ulimits:
       nofile:
-        soft: "8192"
-        hard: "8192"
+        soft: 8192
+        hard: 8192
     # Best performance via host network:
     network_mode: host
     # Else:
