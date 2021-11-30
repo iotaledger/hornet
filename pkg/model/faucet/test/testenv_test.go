@@ -19,9 +19,9 @@ func TestFaucetTestEnv(t *testing.T) {
 		randomBalance(), // wallet1Balance
 		randomBalance(), // wallet2Balance
 		randomBalance(), // wallet3Balance
-		10000000,        // faucetAmount:				10 Mi
-		1000000,         // faucetSmallAmount: 		 	 1 Mi
-		20000000,        // faucetMaxAddressBalance:	20 Mi
+		10_000_000,      // faucetAmount:				10 Mi
+		1_000_000,       // faucetSmallAmount: 		 	 1 Mi
+		20_000_000,      // faucetMaxAddressBalance:	20 Mi
 		true)
 	defer env.Cleanup()
 	require.NotNil(t, env)

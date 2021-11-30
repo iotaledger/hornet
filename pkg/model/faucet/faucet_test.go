@@ -16,13 +16,13 @@ import (
 func TestSingleRequest(t *testing.T) {
 	// requests to a single address
 
-	var faucetBalance uint64 = 1000000000         //  1 Gi
-	var wallet1Balance uint64 = 0                 //  0  i
-	var wallet2Balance uint64 = 0                 //  0  i
-	var wallet3Balance uint64 = 0                 //  0  i
-	var faucetAmount uint64 = 10000000            // 10 Mi
-	var faucetSmallAmount uint64 = 1000000        // 1  Mi
-	var faucetMaxAddressBalance uint64 = 20000000 // 20 Mi
+	var faucetBalance uint64 = 1_000_000_000        //  1 Gi
+	var wallet1Balance uint64 = 0                   //  0  i
+	var wallet2Balance uint64 = 0                   //  0  i
+	var wallet3Balance uint64 = 0                   //  0  i
+	var faucetAmount uint64 = 10_000_000            // 10 Mi
+	var faucetSmallAmount uint64 = 1_000_000        //  1 Mi
+	var faucetMaxAddressBalance uint64 = 20_000_000 // 20 Mi
 
 	env := test.NewFaucetTestEnv(t,
 		faucetBalance,
@@ -78,13 +78,13 @@ func TestSingleRequest(t *testing.T) {
 func TestMultipleRequests(t *testing.T) {
 	// requests to multiple addresses
 
-	var faucetBalance uint64 = 1000000000         //  1 Gi
-	var wallet1Balance uint64 = 0                 //  0  i
-	var wallet2Balance uint64 = 0                 //  0  i
-	var wallet3Balance uint64 = 0                 //  0  i
-	var faucetAmount uint64 = 10000000            // 10 Mi
-	var faucetSmallAmount uint64 = 1000000        // 1  Mi
-	var faucetMaxAddressBalance uint64 = 20000000 // 20 Mi
+	var faucetBalance uint64 = 1_000_000_000        //  1 Gi
+	var wallet1Balance uint64 = 0                   //  0  i
+	var wallet2Balance uint64 = 0                   //  0  i
+	var wallet3Balance uint64 = 0                   //  0  i
+	var faucetAmount uint64 = 10_000_000            // 10 Mi
+	var faucetSmallAmount uint64 = 1_000_000        //  1 Mi
+	var faucetMaxAddressBalance uint64 = 20_000_000 // 20 Mi
 
 	env := test.NewFaucetTestEnv(t,
 		faucetBalance,
@@ -162,13 +162,13 @@ func TestMultipleRequests(t *testing.T) {
 func TestDoubleSpent(t *testing.T) {
 	// reuse of the private key of the faucet (double spent)
 
-	var faucetBalance uint64 = 1000000000         //  1 Gi
-	var wallet1Balance uint64 = 0                 //  0  i
-	var wallet2Balance uint64 = 0                 //  0  i
-	var wallet3Balance uint64 = 0                 //  0  i
-	var faucetAmount uint64 = 10000000            // 10 Mi
-	var faucetSmallAmount uint64 = 1000000        // 1  Mi
-	var faucetMaxAddressBalance uint64 = 20000000 // 20 Mi
+	var faucetBalance uint64 = 1_000_000_000        //  1 Gi
+	var wallet1Balance uint64 = 0                   //  0  i
+	var wallet2Balance uint64 = 0                   //  0  i
+	var wallet3Balance uint64 = 0                   //  0  i
+	var faucetAmount uint64 = 10_000_000            // 10 Mi
+	var faucetSmallAmount uint64 = 1_000_000        //  1 Mi
+	var faucetMaxAddressBalance uint64 = 20_000_000 // 20 Mi
 
 	env := test.NewFaucetTestEnv(t,
 		faucetBalance,
@@ -239,13 +239,13 @@ func TestDoubleSpent(t *testing.T) {
 func TestBelowMaxDepth(t *testing.T) {
 	// faucet message is below max depth and never confirmed
 
-	var faucetBalance uint64 = 1000000000         //  1 Gi
-	var wallet1Balance uint64 = 0                 //  0  i
-	var wallet2Balance uint64 = 0                 //  0  i
-	var wallet3Balance uint64 = 0                 //  0  i
-	var faucetAmount uint64 = 10000000            // 10 Mi
-	var faucetSmallAmount uint64 = 1000000        // 1  Mi
-	var faucetMaxAddressBalance uint64 = 20000000 // 20 Mi
+	var faucetBalance uint64 = 1_000_000_000        //  1 Gi
+	var wallet1Balance uint64 = 0                   //  0  i
+	var wallet2Balance uint64 = 0                   //  0  i
+	var wallet3Balance uint64 = 0                   //  0  i
+	var faucetAmount uint64 = 10_000_000            // 10 Mi
+	var faucetSmallAmount uint64 = 1_000_000        //  1 Mi
+	var faucetMaxAddressBalance uint64 = 20_000_000 // 20 Mi
 
 	env := test.NewFaucetTestEnv(t,
 		faucetBalance,
@@ -299,13 +299,13 @@ func TestBelowMaxDepth(t *testing.T) {
 func TestNotEnoughFaucetFunds(t *testing.T) {
 	// check if faucet returns an error if not enough funds available
 
-	var faucetBalance uint64 = 29000000           // 29 Mi
-	var wallet1Balance uint64 = 0                 //  0  i
-	var wallet2Balance uint64 = 0                 //  0  i
-	var wallet3Balance uint64 = 0                 //  0  i
-	var faucetAmount uint64 = 10000000            // 10 Mi
-	var faucetSmallAmount uint64 = 1000000        // 1  Mi
-	var faucetMaxAddressBalance uint64 = 20000000 // 20 Mi
+	var faucetBalance uint64 = 29000000             // 29 Mi
+	var wallet1Balance uint64 = 0                   //  0  i
+	var wallet2Balance uint64 = 0                   //  0  i
+	var wallet3Balance uint64 = 0                   //  0  i
+	var faucetAmount uint64 = 10_000_000            // 10 Mi
+	var faucetSmallAmount uint64 = 1_000_000        //  1 Mi
+	var faucetMaxAddressBalance uint64 = 20_000_000 // 20 Mi
 
 	env := test.NewFaucetTestEnv(t,
 		faucetBalance,
@@ -353,13 +353,13 @@ func TestNotEnoughFaucetFunds(t *testing.T) {
 func TestCollectFaucetFunds(t *testing.T) {
 	// check if faucet collects funds if no requests left
 
-	var faucetBalance uint64 = 1000000000         //  1 Gi
-	var wallet1Balance uint64 = 0                 //  0  i
-	var wallet2Balance uint64 = 0                 //  0  i
-	var wallet3Balance uint64 = 0                 //  0  i
-	var faucetAmount uint64 = 10000000            // 10 Mi
-	var faucetSmallAmount uint64 = 1000000        // 1  Mi
-	var faucetMaxAddressBalance uint64 = 20000000 // 20 Mi
+	var faucetBalance uint64 = 1_000_000_000        //  1 Gi
+	var wallet1Balance uint64 = 0                   //  0  i
+	var wallet2Balance uint64 = 0                   //  0  i
+	var wallet3Balance uint64 = 0                   //  0  i
+	var faucetAmount uint64 = 10_000_000            // 10 Mi
+	var faucetSmallAmount uint64 = 1_000_000        //  1 Mi
+	var faucetMaxAddressBalance uint64 = 20_000_000 // 20 Mi
 
 	env := test.NewFaucetTestEnv(t,
 		faucetBalance,
