@@ -13,11 +13,11 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [FULL_SNAPSHOT_PATH] [DELTA_SNAPSHOT_PATH] [TARGET_SNAPSHOT_PATH]", ToolSnapMerge))
+		println(fmt.Sprintf("   %s [FULL_SNAPSHOT_PATH] [DELTA_SNAPSHOT_PATH] [TARGET_SNAPSHOT_PATH]", ToolSnapMerge))
 		println()
-		println("	[FULL_SNAPSHOT_PATH]	- the path to the full snapshot file")
-		println("	[DELTA_SNAPSHOT_PATH]	- the path to the delta snapshot file")
-		println("	[TARGET_SNAPSHOT_PATH]	- the path to the target/merged snapshot file")
+		println("   [FULL_SNAPSHOT_PATH]   - the path to the full snapshot file")
+		println("   [DELTA_SNAPSHOT_PATH]  - the path to the delta snapshot file")
+		println("   [TARGET_SNAPSHOT_PATH] - the path to the target/merged snapshot file")
 		println()
 		println(fmt.Sprintf("example: %s %s %s %s", ToolSnapMerge, "./full_snapshot.bin", "./delta_snapshot.bin", "./merged_snapshot.bin"))
 	}

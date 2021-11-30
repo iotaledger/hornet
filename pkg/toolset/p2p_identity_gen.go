@@ -21,10 +21,10 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [P2P_DATABASE_PATH] [P2P_PRIVATE_KEY]", ToolP2PIdentityGen))
+		println(fmt.Sprintf("   %s [P2P_DATABASE_PATH] [P2P_PRIVATE_KEY]", ToolP2PIdentityGen))
 		println()
-		println("	[P2P_DATABASE_PATH] - the path to the p2p database folder (optional)")
-		println("	[P2P_PRIVATE_KEY]   - the p2p private key (optional)")
+		println("   [P2P_DATABASE_PATH] - the path to the p2p database folder (optional)")
+		println("   [P2P_PRIVATE_KEY]   - the p2p private key (optional)")
 		println()
 		println(fmt.Sprintf("example: %s %s", ToolP2PIdentityGen, "p2pstore"))
 	}

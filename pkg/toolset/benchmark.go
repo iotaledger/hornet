@@ -30,11 +30,11 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [COUNT] [SIZE] [DB_ENGINE]", ToolBenchmarkIO))
+		println(fmt.Sprintf("   %s [COUNT] [SIZE] [DB_ENGINE]", ToolBenchmarkIO))
 		println()
-		println("	[COUNT] 	- objects count (optional)")
-		println("	[SIZE]  	- objects size  (optional)")
-		println("	[DB_ENGINE] - database engine (optional, values: pebble, rocksdb)")
+		println("   [COUNT]     - objects count (optional)")
+		println("   [SIZE]      - objects size  (optional)")
+		println("   [DB_ENGINE] - database engine (optional, values: pebble, rocksdb)")
 		println()
 		println(fmt.Sprintf("example: %s %d %d %s", ToolBenchmarkIO, 500000, 1000, "rocksdb"))
 	}
@@ -133,9 +133,9 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [THREADS]", ToolBenchmarkCPU))
+		println(fmt.Sprintf("   %s [THREADS]", ToolBenchmarkCPU))
 		println()
-		println("	[THREADS]  	- thread count (optional)")
+		println("   [THREADS] - thread count (optional)")
 		println()
 		println(fmt.Sprintf("example: %s %d", ToolBenchmarkCPU, 2))
 	}

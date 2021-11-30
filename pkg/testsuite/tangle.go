@@ -49,6 +49,24 @@ func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 	require.Equal(te.TestInterface, index, lmi)
 }
 
+// AssertLedgerBalance generates an address for the given seed and index and checks correct balance.
+func (te *TestEnvironment) AssertLedgerBalance(wallet *utils.HDWallet, expectedBalance uint64) {
+	addrBalance, _, _, err := te.storage.UTXOManager().AddressBalance(wallet.Address())
+	require.NoError(te.TestInterface, err)
+	computedAddrBalance, _, err := te.storage.UTXOManager().ComputeBalance(utxo.FilterAddress(wallet.Address()))
+	require.NoError(te.TestInterface, err)
+
+	var balanceStatus string
+	balanceStatus += fmt.Sprintf("Balance for %s:\n", wallet.Name())
+	balanceStatus += fmt.Sprintf("\tLedger:\t\t%d\n", computedAddrBalance)
+	balanceStatus += fmt.Sprintf("\tComputed:\t%d\n", computedAddrBalance)
+	balanceStatus += fmt.Sprintf("\tExpected:\t%d\n", expectedBalance)
+	fmt.Print(balanceStatus)
+
+	require.Exactly(te.TestInterface, expectedBalance, addrBalance)
+	require.Exactly(te.TestInterface, expectedBalance, computedAddrBalance)
+}
+
 // AssertWalletBalance generates an address for the given seed and index and checks correct balance.
 func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedBalance uint64) {
 	addrBalance, _, _, err := te.storage.UTXOManager().AddressBalance(wallet.Address())

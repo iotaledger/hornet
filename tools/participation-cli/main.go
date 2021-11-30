@@ -200,11 +200,11 @@ func parseCfgFromArgs() (*cfg, error) {
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [NODE_API_ADDRESS] [SENDER_PRIVATE_KEY] [PAYLOAD_FILE_PATH]", cmd))
+		println(fmt.Sprintf("   %s [NODE_API_ADDRESS] [SENDER_PRIVATE_KEY] [PAYLOAD_FILE_PATH]", cmd))
 		println()
-		println("	[NODE_API_ADDRESS]   - the API address of the node to use")
-		println("	[SENDER_PRIVATE_KEY] - the private key of the sender")
-		println("	[PAYLOAD_FILE_PATH]  - path of the participation payload json file to send")
+		println("   [NODE_API_ADDRESS]   - the API address of the node to use")
+		println("   [SENDER_PRIVATE_KEY] - the private key of the sender")
+		println("   [PAYLOAD_FILE_PATH]  - path of the participation payload json file to send")
 		println()
 	}
 
