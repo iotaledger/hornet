@@ -87,6 +87,12 @@ func (hd *HDWallet) KeyPair() (ed25519.PrivateKey, ed25519.PublicKey) {
 	return ed25519.PrivateKey(privKey), ed25519.PublicKey(pubKey)
 }
 
+func (hd *HDWallet) AddressSigner() iotago.AddressSigner {
+	privKey, pubKey := hd.KeyPair()
+	address := iotago.AddressFromEd25519PubKey(pubKey)
+	return iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&address, privKey))
+}
+
 func (hd *HDWallet) Outputs() []*utxo.Output {
 	return hd.utxo
 }

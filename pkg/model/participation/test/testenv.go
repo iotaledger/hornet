@@ -65,7 +65,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 	//Add token supply to our local HDWallet
 	genesisWallet.BookOutput(te.GenesisOutput)
 	if assertSteps {
-		te.AssertWalletBalance(genesisWallet, 2_779_530_283_277_761)
+		te.AssertWalletBalance(genesisWallet, iotago.TokenSupply)
 	}
 
 	// Fund Wallet1
@@ -117,8 +117,8 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
 		require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
 
-		//Verify balances
-		te.AssertWalletBalance(genesisWallet, 2_779_530_283_277_761-wallet1Balance-wallet2Balance-wallet3Balance-wallet4Balance)
+		// Verify balances
+		te.AssertWalletBalance(genesisWallet, iotago.TokenSupply-wallet1Balance-wallet2Balance-wallet3Balance-wallet4Balance)
 		te.AssertWalletBalance(seed1Wallet, wallet1Balance)
 		te.AssertWalletBalance(seed2Wallet, wallet2Balance)
 		te.AssertWalletBalance(seed3Wallet, wallet3Balance)
@@ -143,6 +143,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		func(index milestone.Index, spent *utxo.Spent) {
 			require.NoError(t, pm.ApplySpentUTXO(index, spent))
 		},
+		nil,
 		func(index milestone.Index) {
 			require.NoError(t, pm.ApplyNewConfirmedMilestoneIndex(index))
 		},

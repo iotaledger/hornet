@@ -50,6 +50,10 @@ type TestEnvironment struct {
 	// networkID is the network ID used for this test network.
 	networkID uint64
 
+	// belowMaxDepth is the maximum allowed delta
+	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
+	belowMaxDepth milestone.Index
+
 	// coo holds the coordinator instance.
 	coo *coordinator.Coordinator
 
@@ -86,13 +90,17 @@ type TestEnvironment struct {
 	// OnNewSpent callback that will be called for each spent UTXO. This is equivalent to the tangle.NewUTXOSpent event.
 	OnNewSpent OnNewSpentFunc
 
-	// OnNewConfirmedMilestone callback that will be called after confirming a milestone. This is equivalent to the tangle.ConfirmedMilestoneIndexChanged event.
-	OnNewConfirmedMilestone OnNewConfirmedMilestoneFunc
+	// OnMilestoneConfirmed callback that will be called at confirming a milestone. This is equivalent to the tangle.MilestoneConfirmed event.
+	OnMilestoneConfirmed OnMilestoneConfirmedFunc
+
+	// OnConfirmedMilestoneIndexChanged callback that will be called after confirming a milestone. This is equivalent to the tangle.ConfirmedMilestoneIndexChanged event.
+	OnConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc
 }
 
 type OnNewOutputFunc func(index milestone.Index, output *utxo.Output)
 type OnNewSpentFunc func(index milestone.Index, spent *utxo.Spent)
-type OnNewConfirmedMilestoneFunc func(index milestone.Index)
+type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)
+type OnConfirmedMilestoneIndexChangedFunc func(index milestone.Index)
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
@@ -105,6 +113,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(nil, targetScore, 5*time.Second, "", 30*time.Second),
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
+		belowMaxDepth:          milestone.Index(belowMaxDepth),
 		LastMilestoneMessageID: hornet.NullMessageID(),
 		serverMetrics:          &metrics.ServerMetrics{},
 	}
@@ -176,10 +185,15 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	return te
 }
 
-func (te *TestEnvironment) ConfigureUTXOCallbacks(outputFunc OnNewOutputFunc, spentFunc OnNewSpentFunc, milestoneFunc OnNewConfirmedMilestoneFunc) {
-	te.OnNewOutput = outputFunc
-	te.OnNewSpent = spentFunc
-	te.OnNewConfirmedMilestone = milestoneFunc
+func (te *TestEnvironment) ConfigureUTXOCallbacks(onNewOutputFunc OnNewOutputFunc, onNewSpentFunc OnNewSpentFunc, onMilestoneConfirmedFunc OnMilestoneConfirmedFunc, onConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc) {
+	te.OnNewOutput = onNewOutputFunc
+	te.OnNewSpent = onNewSpentFunc
+	te.OnMilestoneConfirmed = onMilestoneConfirmedFunc
+	te.OnConfirmedMilestoneIndexChanged = onConfirmedMilestoneIndexChanged
+}
+
+func (te *TestEnvironment) NetworkID() iotago.NetworkID {
+	return te.networkID
 }
 
 func (te *TestEnvironment) Storage() *storage.Storage {
@@ -192,6 +206,10 @@ func (te *TestEnvironment) UTXOManager() *utxo.Manager {
 
 func (te *TestEnvironment) SyncManager() *syncmanager.SyncManager {
 	return te.syncManager
+}
+
+func (te *TestEnvironment) BelowMaxDepth() milestone.Index {
+	return te.belowMaxDepth
 }
 
 // CleanupTestEnvironment cleans up everything at the end of the test.
