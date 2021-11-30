@@ -285,7 +285,9 @@ func (env *FaucetTestEnv) processFaucetRequests(preFlushFunc func() error) (horn
 }
 
 // RequestFunds sends requests to the faucet and waits until the next faucet message is issued.
-func (env *FaucetTestEnv) RequestFunds(wallets []*utils.HDWallet) (hornet.MessageIDs, error) {
+func (env *FaucetTestEnv) RequestFunds(wallets ...*utils.HDWallet) (hornet.MessageIDs, error) {
+
+	require.Greater(env.t, len(wallets), 0)
 
 	tips, err := env.processFaucetRequests(func() error {
 		for _, wallet := range wallets {
@@ -304,9 +306,9 @@ func (env *FaucetTestEnv) RequestFunds(wallets []*utils.HDWallet) (hornet.Messag
 
 // RequestFundsAndIssueMilestone sends requests to the faucet, waits until the next faucet message is issued and
 // issues a milestone on top of it.
-func (env *FaucetTestEnv) RequestFundsAndIssueMilestone(wallets []*utils.HDWallet) error {
+func (env *FaucetTestEnv) RequestFundsAndIssueMilestone(wallets ...*utils.HDWallet) error {
 
-	tips, err := env.RequestFunds(wallets)
+	tips, err := env.RequestFunds(wallets...)
 	if err != nil {
 		return err
 	}

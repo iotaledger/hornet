@@ -10,7 +10,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/faucet/test"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/testsuite/utils"
 )
 
 func TestSingleRequest(t *testing.T) {
@@ -49,7 +48,7 @@ func TestSingleRequest(t *testing.T) {
 	env.TestEnv.AssertLedgerBalance(env.Wallet2, wallet2Balance)
 	env.TestEnv.AssertLedgerBalance(env.Wallet3, wallet3Balance)
 
-	err := env.RequestFundsAndIssueMilestone([]*utils.HDWallet{env.Wallet1})
+	err := env.RequestFundsAndIssueMilestone(env.Wallet1)
 	require.NoError(t, err)
 
 	faucetBalance -= faucetAmount
@@ -60,7 +59,7 @@ func TestSingleRequest(t *testing.T) {
 
 	// small amount
 	for calculatedWallet1Balance < faucetMaxAddressBalance {
-		err = env.RequestFundsAndIssueMilestone([]*utils.HDWallet{env.Wallet1})
+		err = env.RequestFundsAndIssueMilestone(env.Wallet1)
 		require.NoError(t, err)
 
 		faucetBalance -= faucetSmallAmount
@@ -71,7 +70,7 @@ func TestSingleRequest(t *testing.T) {
 	}
 
 	// max reached
-	err = env.RequestFundsAndIssueMilestone([]*utils.HDWallet{env.Wallet1})
+	err = env.RequestFundsAndIssueMilestone(env.Wallet1)
 	require.Error(t, err)
 }
 
@@ -112,13 +111,13 @@ func TestMultipleRequests(t *testing.T) {
 	env.TestEnv.AssertLedgerBalance(env.Wallet3, wallet3Balance)
 
 	// multiple target addresses in single messages
-	tips1, err := env.RequestFunds([]*utils.HDWallet{env.Wallet1})
+	tips1, err := env.RequestFunds(env.Wallet1)
 	require.NoError(t, err)
 
-	tips2, err := env.RequestFunds([]*utils.HDWallet{env.Wallet2})
+	tips2, err := env.RequestFunds(env.Wallet2)
 	require.NoError(t, err)
 
-	tips3, err := env.RequestFunds([]*utils.HDWallet{env.Wallet3})
+	tips3, err := env.RequestFunds(env.Wallet3)
 	require.NoError(t, err)
 
 	var tips hornet.MessageIDs
@@ -140,7 +139,7 @@ func TestMultipleRequests(t *testing.T) {
 	// small amount
 	for calculatedWallet1Balance < faucetMaxAddressBalance {
 		// multiple target addresses in one message
-		err = env.RequestFundsAndIssueMilestone([]*utils.HDWallet{env.Wallet1, env.Wallet2, env.Wallet3})
+		err = env.RequestFundsAndIssueMilestone(env.Wallet1, env.Wallet2, env.Wallet3)
 		require.NoError(t, err)
 
 		faucetBalance -= 3 * faucetSmallAmount
@@ -155,7 +154,7 @@ func TestMultipleRequests(t *testing.T) {
 	}
 
 	// max reached
-	err = env.RequestFundsAndIssueMilestone([]*utils.HDWallet{env.Wallet1, env.Wallet2, env.Wallet3})
+	err = env.RequestFundsAndIssueMilestone(env.Wallet1, env.Wallet2, env.Wallet3)
 	require.Error(t, err)
 }
 
@@ -206,11 +205,11 @@ func TestDoubleSpent(t *testing.T) {
 		BookOnWallets()
 
 	// create the confliction message in the faucet
-	tips, err := env.RequestFunds([]*utils.HDWallet{env.Wallet1})
+	tips, err := env.RequestFunds(env.Wallet1)
 	require.NoError(t, err)
 
 	// Confirming milestone at message
-	_, _ = env.IssueMilestone(hornet.MessageIDs{message.StoredMessageID()}...)
+	_, _ = env.IssueMilestone(message.StoredMessageID())
 
 	genesisBalance += faucetAmount
 	faucetBalance -= faucetAmount                         // we stole some funds from the faucet
@@ -273,7 +272,7 @@ func TestBelowMaxDepth(t *testing.T) {
 	env.TestEnv.AssertLedgerBalance(env.Wallet3, wallet3Balance)
 
 	// create a request that doesn't get confirmed
-	_, err := env.RequestFunds([]*utils.HDWallet{env.Wallet1})
+	_, err := env.RequestFunds(env.Wallet1)
 	require.NoError(t, err)
 
 	// issue several milestones, so that the faucet message gets below max depth
@@ -330,21 +329,21 @@ func TestNotEnoughFaucetFunds(t *testing.T) {
 	env.TestEnv.AssertLedgerBalance(env.Wallet3, wallet3Balance)
 
 	// 29 Mi - 10 Mi = 19 Mi
-	err := env.RequestFundsAndIssueMilestone([]*utils.HDWallet{env.Wallet1})
+	err := env.RequestFundsAndIssueMilestone(env.Wallet1)
 	require.NoError(t, err)
 
 	faucetBalance -= faucetAmount
 	env.AssertFaucetBalance(faucetBalance)
 
 	// 19 Mi - 10 Mi = 9 Mi
-	err = env.RequestFundsAndIssueMilestone([]*utils.HDWallet{env.Wallet2})
+	err = env.RequestFundsAndIssueMilestone(env.Wallet2)
 	require.NoError(t, err)
 
 	faucetBalance -= faucetAmount
 	env.AssertFaucetBalance(faucetBalance)
 
 	// 9 Mi - 10 Mi = error
-	err = env.RequestFundsAndIssueMilestone([]*utils.HDWallet{env.Wallet3})
+	err = env.RequestFundsAndIssueMilestone(env.Wallet3)
 	require.Error(t, err)
 
 	env.AssertFaucetBalance(faucetBalance)
@@ -388,7 +387,7 @@ func TestCollectFaucetFunds(t *testing.T) {
 
 	env.AssertAddressUTXOCount(env.FaucetWallet.Address(), 1)
 
-	err := env.RequestFundsAndIssueMilestone([]*utils.HDWallet{env.Wallet1})
+	err := env.RequestFundsAndIssueMilestone(env.Wallet1)
 	require.NoError(t, err)
 
 	env.AssertAddressUTXOCount(env.FaucetWallet.Address(), 1)
@@ -409,7 +408,7 @@ func TestCollectFaucetFunds(t *testing.T) {
 		BookOnWallets()
 
 	// Confirming milestone at message
-	_, _ = env.IssueMilestone(hornet.MessageIDs{message.StoredMessageID()}...)
+	_, _ = env.IssueMilestone(message.StoredMessageID())
 
 	faucetBalance += faucetAmount
 	env.AssertFaucetBalance(faucetBalance)
