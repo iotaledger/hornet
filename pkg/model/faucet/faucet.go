@@ -864,7 +864,7 @@ func (f *Faucet) ApplyConfirmation(confirmation *whiteflag.Confirmation) error {
 		// check if message is "below max depth"
 		_, ocri, err := dag.ConeRootIndexes(f.daemon.ContextStopped(), f.storage, cachedMsgMeta.Retain(), cmi)
 		if err != nil {
-			// an error occured => readd the items to the queue and delete the pending transaction
+			// an error occurred => readd the items to the queue and delete the pending transaction
 			conflicting = true
 			f.readdRequestsWithoutLocking(pendingTx.QueuedItems)
 			f.clearPendingTransactionWithoutLocking(msgID)
