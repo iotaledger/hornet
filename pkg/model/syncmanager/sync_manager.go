@@ -15,7 +15,9 @@ const (
 )
 
 type SyncManager struct {
-	utxoManager   *utxo.Manager
+	utxoManager *utxo.Manager
+	// belowMaxDepth is the maximum allowed delta
+	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
 	belowMaxDepth milestone.Index
 
 	// milestones

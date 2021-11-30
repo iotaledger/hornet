@@ -14,6 +14,7 @@ import (
 	"go.uber.org/dig"
 	"golang.org/x/time/rate"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -23,10 +24,13 @@ import (
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
@@ -59,6 +63,9 @@ func init() {
 var (
 	Plugin *node.Plugin
 	deps   dependencies
+
+	// Closures
+	onMilestoneConfirmed *events.Closure
 )
 
 type dependencies struct {
@@ -67,6 +74,7 @@ type dependencies struct {
 	RestAPIBindAddress    string                       `name:"restAPIBindAddress"`
 	FaucetAllowedAPIRoute restapi.AllowedRoute         `name:"faucetAllowedAPIRoute"`
 	Faucet                *faucet.Faucet
+	Tangle                *tangle.Tangle
 	Echo                  *echo.Echo
 	ShutdownHandler       *shutdown.ShutdownHandler
 }
@@ -110,6 +118,7 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps faucetDeps) *faucet.Faucet {
 		return faucet.New(
+			Plugin.Daemon(),
 			deps.Storage,
 			deps.SyncManager,
 			deps.NetworkID,
@@ -211,7 +220,7 @@ func configure() {
 				}
 			} else {
 				statusCode = http.StatusInternalServerError
-				message = fmt.Sprintf("internal server error. error: %s", err)
+				message = fmt.Sprintf("internal server error. error: %s", err.Error())
 			}
 
 			return c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
@@ -219,14 +228,18 @@ func configure() {
 
 		return restapi.JSONResponse(c, http.StatusAccepted, resp)
 	})
+
+	configureEvents()
 }
 
 func run() {
 	// create a background worker that handles the enqueued faucet requests
 	if err := Plugin.Daemon().BackgroundWorker("Faucet", func(ctx context.Context) {
-		if err := deps.Faucet.RunFaucetLoop(ctx); err != nil {
+		attachEvents()
+		if err := deps.Faucet.RunFaucetLoop(ctx, nil); err != nil && common.IsCriticalError(err) != nil {
 			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("faucet plugin hit a critical error: %s", err.Error()))
 		}
+		detachEvents()
 	}, shutdown.PriorityFaucet); err != nil {
 		Plugin.Panicf("failed to start worker: %s", err)
 	}
@@ -250,4 +263,20 @@ func run() {
 			}
 		}()
 	}
+}
+
+func configureEvents() {
+	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+		if err := deps.Faucet.ApplyConfirmation(confirmation); err != nil && common.IsCriticalError(err) != nil {
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("faucet plugin hit a critical error: %s", err.Error()))
+		}
+	})
+}
+
+func attachEvents() {
+	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+}
+
+func detachEvents() {
+	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 }
