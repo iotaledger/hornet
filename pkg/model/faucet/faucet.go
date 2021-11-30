@@ -644,7 +644,7 @@ func (f *Faucet) processRequestsWithoutLocking(collectedRequestsCounter int, amo
 	unprocessedBatchedRequests := []*queueItem{}
 	nodeAlmostSynced := f.syncManager.IsNodeAlmostSynced()
 
-	for i := 0; i < len(batchedRequests); i++ {
+	for i := range batchedRequests {
 		request := batchedRequests[i]
 
 		if !nodeAlmostSynced {
