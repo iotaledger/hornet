@@ -3,14 +3,14 @@ name: Test release
 on:
   pull_request:
     paths-ignore:
-      - 'documentation/**'
+      - "documentation/**"
 
 jobs:
   Release:
     name: Test release
     runs-on: [ubuntu-latest]
     container:
-      image: gohornet/goreleaser-cgo-cross-compiler:1.16.7
+      image: gohornet/goreleaser-cgo-cross-compiler:1.17.3
       volumes: [/repo]
 
     steps:
