@@ -3,7 +3,7 @@ package utxo
 import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

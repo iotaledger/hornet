@@ -7,7 +7,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -170,7 +170,7 @@ func ReceiptToOutputs(r *iotago.Receipt, msgID hornet.MessageID, msID *iotago.Mi
 		utxoID := OutputIDForMigratedFunds(*msID, uint16(outputIndex))
 		// we use the milestone hash as the "origin message"
 
-		output := &iotago.SimpleOutput{
+		output := &iotago.ExtendedOutput{
 			Address: entry.Address.(iotago.Address),
 			Amount:  entry.Deposit,
 		}
