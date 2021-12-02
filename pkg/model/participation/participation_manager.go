@@ -254,7 +254,7 @@ func (pm *ParticipationManager) DeleteEvent(eventID EventID) error {
 	pm.Lock()
 	defer pm.Unlock()
 
-	event := pm.Event(eventID)
+	event := pm.events[eventID]
 	if event == nil {
 		return ErrEventNotFound
 	}
