@@ -2,14 +2,69 @@ package utxo
 
 const (
 	UTXOStoreKeyPrefixLedgerMilestoneIndex byte = 0
-	UTXOStoreKeyPrefixOutput               byte = 1
-	UTXOStoreKeyPrefixUnspent              byte = 2
-	UTXOStoreKeyPrefixSpent                byte = 3
-	UTXOStoreKeyPrefixMilestoneDiffs       byte = 4
-	UTXOStoreKeyPrefixBalances             byte = 5 //TODO: deprecate and drop
-	UTXOStoreKeyPrefixTreasuryOutput       byte = 6
-	UTXOStoreKeyPrefixReceipts             byte = 7
+
+	UTXOStoreKeyPrefixOutput byte = 1 //TODO: iterate over all values and map to extended outputs
+
+	UTXOStoreKeyPrefixMilestoneDiffs byte = 4
+
+	// Chrysalis Migration
+	UTXOStoreKeyPrefixTreasuryOutput byte = 6
+	UTXOStoreKeyPrefixReceipts       byte = 7
+
+	// ExtendedOutput and Alias controllers
+	UTXOStoreKeyPrefixOutputOnAddressUnspent byte = 8
+	UTXOStoreKeyPrefixOutputOnAddressSpent   byte = 9
+
+	// AliasOutputs
+	UTXOStoreKeyPrefixAliasUnspent byte = 10
+	UTXOStoreKeyPrefixAliasSpent   byte = 11
+
+	// NFTOutputs
+	UTXOStoreKeyPrefixNFTUnspent byte = 12
+	UTXOStoreKeyPrefixNFTSpent   byte = 13
+
+	// FoundryOutputs
+	UTXOStoreKeyPrefixFoundryUnspent byte = 14
+	UTXOStoreKeyPrefixFoundrySpent   byte = 15
+
+	// Feature Block lookups
+	UTXOStoreKeyPrefixIssuerLookup         byte = 16
+	UTXOStoreKeyPrefixSenderLookup         byte = 17
+	UTXOStoreKeyPrefixSenderAndIndexLookup byte = 18
 )
+
+// Deprecated keys, just used for migration purposes
+const (
+	UTXOStoreKeyPrefixUnspent byte = 2 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressUnspent and drop
+	UTXOStoreKeyPrefixSpent   byte = 3 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressSpent and drop
+
+	UTXOStoreKeyPrefixBalances byte = 5 //TODO: deprecate and drop
+)
+
+// https://hackmd.io/SDbu_YCZTuOH4QhABf6ViQ?view
+
+/*
+	Required LUTs:
+
+-   outputID (value: output)
+
+hasSpendingConstraints: dust-deposit-return, expiration-lock, time-lock
+
+- (spent/unspent) address + hasSpendingConstraints + outputType + outputID
+	* target-address (ed25519, alias, nft)
+	* state controller (ed25519, alias)
+	* governance controller (ed25519, alias)
+- 	(spent/unspent) aliasID + outputID
+-   (spent/unspent) nftID + hasSpendingConstraints + outputID
+- 	(spent/unspent) foundryID + outputID
+
+-	issuer + type + outputID
+	* issuer (ed25519, alias, nft)
+-	sender + type + outputID
+	* sender (ed25519, alias, nft)
+-	sender + index + type + outputID
+	* sender (ed25519, alias, nft)
+*/
 
 /*
 
