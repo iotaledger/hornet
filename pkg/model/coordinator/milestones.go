@@ -33,12 +33,12 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*storage.Me
 }
 
 // createMilestone creates a signed milestone message.
-func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.MessageIDs, receipt *iotago.Receipt, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte) (*storage.Message, error) {
+func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint64, parents hornet.MessageIDs, receipt *iotago.Receipt, whiteFlagMerkleRootTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte) (*storage.Message, error) {
 	milestoneIndexSigner := coo.signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
 	parentsSliceOfArray := parents.ToSliceOfArrays()
-	msPayload, err := iotago.NewMilestone(uint32(index), uint64(time.Now().Unix()), parentsSliceOfArray, whiteFlagMerkleRootTreeHash, pubKeys)
+	msPayload, err := iotago.NewMilestone(uint32(index), timestamp, parentsSliceOfArray, whiteFlagMerkleRootTreeHash, pubKeys)
 	if err != nil {
 		return nil, err
 	}

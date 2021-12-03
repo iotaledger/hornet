@@ -24,7 +24,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 
 	// import implementation
 	_ "golang.org/x/crypto/blake2b"
@@ -339,10 +339,14 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 	parents = parents.RemoveDupsAndSortByLexicalOrder()
 
+	// We have to set a timestamp for when we run the white-flag mutations due to the semantic validation.
+	// This should be exactly the same one used when issuing the milestone later on.
+	newMilestoneTimestamp := time.Now()
+
 	// compute merkle tree root
-	// we pass a background context here to not cancel the whiteflag computation!
+	// we pass a background context here to not cancel the white-flag computation!
 	// otherwise the coordinator could panic at shutdown.
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage, newMilestoneIndex, metadataMemcache, messagesMemcache, parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage, newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), metadataMemcache, messagesMemcache, parents)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}
@@ -390,7 +394,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		}
 	}
 
-	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, parents, receipt, mutations.MerkleTreeHash)
+	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents, receipt, mutations.MerkleTreeHash)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
 	}
@@ -410,7 +414,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 	coo.state.LatestMilestoneMessageID = latestMilestoneMessageID
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
-	coo.state.LatestMilestoneTime = time.Now()
+	coo.state.LatestMilestoneTime = newMilestoneTimestamp
 
 	if err := utils.WriteJSONToFile(coo.opts.stateFilePath, coo.state, 0660); err != nil {
 		return common.CriticalError(fmt.Errorf("failed to update coordinator state file: %w", err))

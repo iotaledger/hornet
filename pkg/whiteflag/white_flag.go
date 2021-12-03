@@ -15,7 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 
 	// import implementation
 	_ "golang.org/x/crypto/blake2b"
@@ -55,8 +55,6 @@ type WhiteFlagMutations struct {
 	NewOutputs map[string]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
-	// Contains the calculated Dust allowance diff.
-	dustAllowanceDiff *utxo.BalanceDiff
 	// The merkle tree root hash of all messages.
 	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
 }
@@ -69,7 +67,7 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // metadataMemcache has to be cleaned up outside.
-func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, msIndex milestone.Index, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, msIndex milestone.Index, msTimestamp uint64, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
@@ -77,7 +75,13 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		MessagesReferenced:                          make(hornet.MessageIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
 		NewSpents:                                   make(map[string]*utxo.Spent),
-		dustAllowanceDiff:                           utxo.NewBalanceDiff(),
+	}
+
+	semValCtx := &iotago.SemanticValidationContext{
+		ExtParas: &iotago.ExternalUnlockParameters{
+			ConfMsIndex: uint32(msIndex),
+			ConfUnix:    msTimestamp,
+		},
 	}
 
 	// traversal stops if no more messages pass the given condition
@@ -116,11 +120,12 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 			return err
 		}
 
+		//TODO: find replacement
 		// Verify transaction syntax
-		if err := transaction.SyntacticallyValidate(); err != nil {
-			// We do not mark as conflict here but error out, because the message should not be part of a sane tangle if the syntax is wrong
-			return err
-		}
+		//if err := transaction.SyntacticallyValidate(); err != nil {
+		//	// We do not mark as conflict here but error out, because the message should not be part of a sane tangle if the syntax is wrong
+		//	return err
+		//}
 
 		inputs := message.TransactionEssenceUTXOInputs()
 
@@ -171,17 +176,13 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		}
 
 		if conflict == storage.ConflictNone {
-			// Dust validation
-			dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, iotago.MaxDustOutputsOnAddress, func(addr iotago.Address) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
-				return dbStorage.UTXOManager().ReadDustForAddress(addr, wfConf.dustAllowanceDiff)
-			})
 
 			// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
 			mapping, err := inputOutputs.InputToOutputMapping()
 			if err != nil {
 				return err
 			}
-			if err := transaction.SemanticallyValidate(mapping, dustValidation); err != nil {
+			if err := transaction.SemanticallyValidate(semValCtx, mapping); err != nil {
 
 				if errors.Is(err, iotago.ErrMissingUTXO) {
 					conflict = storage.ConflictInputUTXONotFound
@@ -189,8 +190,6 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 					conflict = storage.ConflictInputOutputSumMismatch
 				} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
 					conflict = storage.ConflictInvalidSignature
-				} else if errors.Is(err, iotago.ErrInvalidDustAllowance) {
-					conflict = storage.ConflictInvalidDustAllowance
 				} else {
 					conflict = storage.ConflictSemanticValidationFailed
 				}
@@ -242,8 +241,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 			wfConf.NewOutputs[string(output.OutputID()[:])] = output
 		}
 
-		// Apply the new outputs and spents to the current dust allowance diff
-		return wfConf.dustAllowanceDiff.Add(depositOutputs, newSpents)
+		return nil
 	}
 
 	// we don't need to call cleanup at the end, because we pass our own metadataMemcache.
