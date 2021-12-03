@@ -4,8 +4,8 @@ import (
 	"sort"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 // KeyRange defines a public key of a milestone including the range it is valid.
