@@ -317,7 +317,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						continue
 					}
 
-					if checkPeersConnected && deps.PeeringManager.ConnectedCount(p2p.PeerRelationKnown) == 0 {
+					if checkPeersConnected && deps.PeeringManager.ConnectedCount() == 0 {
 						time.Sleep(time.Second)
 						continue
 					}
