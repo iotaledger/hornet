@@ -43,6 +43,9 @@ var params = &node.PluginParams{
 					"/api/v1/addresses*",
 					"/api/v1/treasury",
 					"/api/v1/receipts*",
+					"/api/plugins/participation/events*",
+					"/api/plugins/participation/outputs*",
+					"/api/plugins/participation/addresses*",
 				}, "the HTTP REST routes which can be called without authorization. Wildcards using * are allowed")
 			fs.StringSlice(CfgRestAPIProtectedRoutes,
 				[]string{
