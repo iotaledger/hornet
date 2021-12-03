@@ -72,7 +72,7 @@ func (b *Broadcaster) BroadcastHeartbeat(filter func(proto *Protocol) bool) {
 	}
 
 	confirmedMilestoneIndex := b.syncManager.ConfirmedMilestoneIndex() // bee differentiates between solid and confirmed milestone, for hornet it is the same.
-	connectedCount := b.peeringManager.ConnectedCount(p2p.PeerRelationKnown)
+	connectedCount := b.peeringManager.ConnectedCount()
 	syncedCount := b.service.SynchronizedCount(confirmedMilestoneIndex)
 	// TODO: overflow not handled for synced/connected
 

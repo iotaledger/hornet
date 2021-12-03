@@ -223,7 +223,7 @@ func configure() {
 			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
 				latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
 				syncedCount := deps.GossipService.SynchronizedCount(latestMilestoneIndex)
-				connectedCount := deps.PeeringManager.ConnectedCount(p2p.PeerRelationKnown)
+				connectedCount := deps.PeeringManager.ConnectedCount()
 				// TODO: overflow not handled for synced/connected
 				proto.SendHeartbeat(deps.SyncManager.ConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
 				proto.SendLatestMilestoneRequest()
