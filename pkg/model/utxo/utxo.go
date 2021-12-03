@@ -31,7 +31,7 @@ func New(store kvstore.KVStore) *Manager {
 	}
 }
 
-// ClearLedger removes all entries from the UTXO ledger (spent, unspent, diff, balances, receipts, treasury).
+// ClearLedger removes all entries from the UTXO ledger (spent, unspent, diff, receipts, treasury).
 func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
@@ -53,16 +53,52 @@ func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutput}); err != nil {
 		return err
 	}
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputSpent}); err != nil {
+		return err
+	}
+
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixMilestoneDiffs}); err != nil {
+		return err
+	}
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {
+		return err
+	}
+
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}); err != nil {
 		return err
 	}
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixMilestoneDiffs}); err != nil {
+
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixNFTUnspent}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixNFTSpent}); err != nil {
+		return err
+	}
+
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixAliasUnspent}); err != nil {
+		return err
+	}
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixAliasSpent}); err != nil {
+		return err
+	}
+
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixFoundryUnspent}); err != nil {
+		return err
+	}
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixFoundrySpent}); err != nil {
+		return err
+	}
+
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixIssuerLookup}); err != nil {
+		return err
+	}
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSenderLookup}); err != nil {
+		return err
+	}
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSenderAndIndexLookup}); err != nil {
 		return err
 	}
 
@@ -101,6 +137,11 @@ func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex milestone.Index, pru
 		}
 
 		if err := deleteSpent(spent, mutations); err != nil {
+			mutations.Cancel()
+			return err
+		}
+
+		if err := deleteSpentUnspentMarkings(spent.output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -192,7 +233,7 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 	}
 
 	for _, spent := range newSpents {
-		if err := storeSpentAndRemoveUnspent(spent, mutations); err != nil {
+		if err := storeSpentAndMarkOutputAsSpent(spent, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -258,7 +299,7 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 			return err
 		}
 
-		if err := deleteSpentAndMarkUnspent(spent, mutations); err != nil {
+		if err := deleteSpentAndMarkOutputAsUnspent(spent, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -270,7 +311,7 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 			mutations.Cancel()
 			return err
 		}
-		if err := deleteFromUnspent(output, mutations); err != nil {
+		if err := deleteSpentUnspentMarkings(output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}

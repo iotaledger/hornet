@@ -1,7 +1,6 @@
 package utxo
 
 import (
-	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -10,7 +9,9 @@ import (
 
 type OutputConsumer func(output *Output) bool
 
-func (o *Output) databaseAddressKey() []byte {
+type databaseKey []byte
+
+func (o *Output) databaseAddressKey() databaseKey {
 	switch output := o.output.(type) {
 	case *iotago.ExtendedOutput:
 		bytes, _ := output.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
@@ -30,7 +31,7 @@ func (o *Output) databaseAddressKey() []byte {
 	}
 }
 
-func (o *Output) byAddressDatabaseKey(spent bool, spendingConstraints bool) []byte {
+func (o *Output) byAddressDatabaseKey(spent bool, spendingConstraints bool) databaseKey {
 	ms := marshalutil.New(70)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixOutputOnAddressSpent) // 1 byte
@@ -44,7 +45,7 @@ func (o *Output) byAddressDatabaseKey(spent bool, spendingConstraints bool) []by
 	return ms.Bytes()
 }
 
-func (o *Output) aliasDatabaseKey(spent bool) []byte {
+func (o *Output) aliasDatabaseKey(spent bool) databaseKey {
 	ms := marshalutil.New(70)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixAliasSpent) // 1 byte
@@ -56,7 +57,7 @@ func (o *Output) aliasDatabaseKey(spent bool) []byte {
 	return ms.Bytes()
 }
 
-func (o *Output) nftDatabaseKey(spent bool) []byte {
+func (o *Output) nftDatabaseKey(spent bool) databaseKey {
 	ms := marshalutil.New(70)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixNFTSpent) // 1 byte
@@ -68,7 +69,7 @@ func (o *Output) nftDatabaseKey(spent bool) []byte {
 	return ms.Bytes()
 }
 
-func (o *Output) foundryDatabaseKey(spent bool) []byte {
+func (o *Output) foundryDatabaseKey(spent bool) databaseKey {
 	ms := marshalutil.New(70)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixFoundrySpent) // 1 byte
@@ -80,22 +81,37 @@ func (o *Output) foundryDatabaseKey(spent bool) []byte {
 	return ms.Bytes()
 }
 
-func (o *Output) unspentDatabaseKey() []byte {
+func (o *Output) unspentDatabaseKeys() []databaseKey {
 	switch output := o.output.(type) {
 	case *iotago.ExtendedOutput:
-		return o.byAddressDatabaseKey(false, output.FeatureBlocks().HasConstraints())
+		return []databaseKey{o.byAddressDatabaseKey(false, output.FeatureBlocks().HasConstraints())}
 	case *iotago.AliasOutput:
-		return o.aliasDatabaseKey(false)
+		return []databaseKey{o.aliasDatabaseKey(false)}
 	case *iotago.NFTOutput:
-		return o.nftDatabaseKey(false)
+		return []databaseKey{o.nftDatabaseKey(false)}
 	case *iotago.FoundryOutput:
-		return o.foundryDatabaseKey(false)
+		return []databaseKey{o.foundryDatabaseKey(false)}
 	default:
 		panic("Unknown output type")
 	}
 }
 
-func outputIDFromDatabaseKey(key []byte) (*iotago.OutputID, error) {
+func (o *Output) spentDatabaseKeys() []databaseKey {
+	switch output := o.output.(type) {
+	case *iotago.ExtendedOutput:
+		return []databaseKey{o.byAddressDatabaseKey(true, output.FeatureBlocks().HasConstraints())}
+	case *iotago.AliasOutput:
+		return []databaseKey{o.aliasDatabaseKey(true)}
+	case *iotago.NFTOutput:
+		return []databaseKey{o.nftDatabaseKey(true)}
+	case *iotago.FoundryOutput:
+		return []databaseKey{o.foundryDatabaseKey(true)}
+	default:
+		panic("Unknown output type")
+	}
+}
+
+func outputIDFromDatabaseKey(key databaseKey) (*iotago.OutputID, error) {
 
 	ms := marshalutil.New(key)
 	prefix, err := ms.ReadByte() // prefix
@@ -121,15 +137,53 @@ func outputIDFromDatabaseKey(key []byte) (*iotago.OutputID, error) {
 }
 
 func markAsUnspent(output *Output, mutations kvstore.BatchedMutations) error {
-	return mutations.Set(output.unspentDatabaseKey(), []byte{})
+	for _, key := range output.spentDatabaseKeys() {
+		if err := mutations.Delete(key); err != nil {
+			return err
+		}
+	}
+
+	for _, key := range output.unspentDatabaseKeys() {
+		if err := mutations.Set(key, []byte{}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func deleteFromUnspent(output *Output, mutations kvstore.BatchedMutations) error {
-	return mutations.Delete(output.unspentDatabaseKey())
+func markAsSpent(output *Output, mutations kvstore.BatchedMutations) error {
+	for _, key := range output.unspentDatabaseKeys() {
+		if err := mutations.Delete(key); err != nil {
+			return err
+		}
+	}
+
+	for _, key := range output.spentDatabaseKeys() {
+		if err := mutations.Set(key, []byte{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteSpentUnspentMarkings(output *Output, mutations kvstore.BatchedMutations) error {
+	for _, key := range output.unspentDatabaseKeys() {
+		if err := mutations.Delete(key); err != nil {
+			return err
+		}
+	}
+
+	for _, key := range output.spentDatabaseKeys() {
+		if err := mutations.Delete(key); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (u *Manager) IsOutputUnspentWithoutLocking(output *Output) (bool, error) {
-	return u.utxoStorage.Has(output.unspentDatabaseKey())
+	// Looking up the first key should be enough, since that is the main key
+	return u.utxoStorage.Has(output.unspentDatabaseKeys()[0])
 }
 
 func (u *Manager) IsOutputUnspent(outputID *iotago.OutputID) (bool, error) {
@@ -144,77 +198,16 @@ func (u *Manager) IsOutputUnspent(outputID *iotago.OutputID) (bool, error) {
 	return u.IsOutputUnspentWithoutLocking(output)
 }
 
-func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
-
-	consumerFunc := consumer
-
-	opt := iterateOptions(options)
-
-	if opt.readLockLedger {
-		u.ReadLockLedger()
-		defer u.ReadUnlockLedger()
-	}
-
-	var innerErr error
-
-	key := []byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}
-
-	// Filter by address
-	if opt.address != nil {
-		addrBytes, err := opt.address.Serialize(serializer.DeSeriModeNoValidation, nil)
-		if err != nil {
-			return err
-		}
-		key = byteutils.ConcatBytes(key, addrBytes)
-
-		// Filter by type
-		if opt.filterOutputType != nil {
-			key = byteutils.ConcatBytes(key, []byte{byte(*opt.filterOutputType)})
-		}
-	} else if opt.filterOutputType != nil {
-
-		// Filter results instead of using prefix iteration
-		consumerFunc = func(output *Output) bool {
-			if output.OutputType() == *opt.filterOutputType {
-				return consumer(output)
-			}
-			return true
-		}
-	}
-
-	var i int
-
-	if err := u.utxoStorage.IterateKeys(key, func(key kvstore.Key) bool {
-
-		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
-			return false
-		}
-
-		i++
-
-		outputID, err := outputIDFromDatabaseKey(key)
-		if err != nil {
-			innerErr = err
-			return false
-		}
-		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:])
-
-		value, err := u.utxoStorage.Get(outputKey)
-		if err != nil {
-			innerErr = err
-			return false
-		}
-
-		output := &Output{}
-		if err := output.kvStorableLoad(u, outputKey, value); err != nil {
-			innerErr = err
-			return false
-		}
-
-		return consumerFunc(output)
-	}); err != nil {
+func storeSpentAndMarkOutputAsSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
+	if err := storeSpent(spent, mutations); err != nil {
 		return err
 	}
+	return markAsSpent(spent.output, mutations)
+}
 
-	return innerErr
+func deleteSpentAndMarkOutputAsUnspent(spent *Spent, mutations kvstore.BatchedMutations) error {
+	if err := deleteSpent(spent, mutations); err != nil {
+		return err
+	}
+	return markAsUnspent(spent.output, mutations)
 }

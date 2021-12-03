@@ -12,7 +12,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -106,7 +105,7 @@ func ParseOutputIDParam(c echo.Context) (*iotago.OutputID, error) {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 
-	if len(outputIDBytes) != utxo.OutputIDLength {
+	if len(outputIDBytes) != iotago.OutputIDLength {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 

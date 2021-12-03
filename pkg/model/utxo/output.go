@@ -4,15 +4,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
-)
-
-const (
-	OutputIDLength = iotago.TransactionIDLength + serializer.UInt16ByteSize
 )
 
 type Output struct {
@@ -98,11 +93,15 @@ func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, inde
 
 //- kvStorable
 
-func (o *Output) kvStorableKey() (key []byte) {
+func outputStorageKeyForOutputID(outputID *iotago.OutputID) []byte {
 	ms := marshalutil.New(35)
 	ms.WriteByte(UTXOStoreKeyPrefixOutput) // 1 byte
-	ms.WriteBytes(o.outputID[:])           // 34 bytes
+	ms.WriteBytes(outputID[:])             // 34 bytes
 	return ms.Bytes()
+}
+
+func (o *Output) kvStorableKey() (key []byte) {
+	return outputStorageKeyForOutputID(o.outputID)
 }
 
 func (o *Output) kvStorableValue() (value []byte) {
@@ -170,56 +169,8 @@ func deleteOutput(output *Output, mutations kvstore.BatchedMutations) error {
 
 //- Manager
 
-func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
-
-	opt := iterateOptions(options)
-
-	if opt.readLockLedger {
-		u.ReadLockLedger()
-		defer u.ReadUnlockLedger()
-	}
-
-	consumerFunc := consumer
-
-	if opt.filterOutputType != nil {
-
-		filterType := *opt.filterOutputType
-
-		consumerFunc = func(output *Output) bool {
-			if output.OutputType() == filterType {
-				return consumer(output)
-			}
-			return true
-		}
-	}
-
-	var innerErr error
-	var i int
-	if err := u.utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixOutput}, func(key kvstore.Key, value kvstore.Value) bool {
-
-		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
-			return false
-		}
-
-		i++
-
-		output := &Output{}
-		if err := output.kvStorableLoad(u, key, value); err != nil {
-			innerErr = err
-			return false
-		}
-
-		return consumerFunc(output)
-	}); err != nil {
-		return err
-	}
-
-	return innerErr
-}
-
 func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.OutputID) (*Output, error) {
-
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:])
+	key := outputStorageKeyForOutputID(outputID)
 	value, err := u.utxoStorage.Get(key)
 	if err != nil {
 		return nil, err

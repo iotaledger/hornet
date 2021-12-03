@@ -113,7 +113,7 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 		outputAdded = true
 
 		var nullMessageID [iotago.MessageIDLength]byte
-		var nullOutputID [utxo.OutputIDLength]byte
+		var nullOutputID [iotago.OutputIDLength]byte
 
 		return &snapshot.Output{
 			MessageID:  nullMessageID,

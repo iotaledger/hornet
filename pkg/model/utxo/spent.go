@@ -3,24 +3,22 @@ package utxo
 import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type SpentConsumer func(spent *Spent) bool
 
-// Spent are already spent TXOs (transaction outputs) per address
+// Spent are already spent TXOs (transaction outputs)
 type Spent struct {
 	kvStorable
 
-	outputID *iotago.OutputID
-	output   *Output
-
+	outputID            *iotago.OutputID
 	targetTransactionID *iotago.TransactionID
 	confirmationIndex   milestone.Index
+
+	output *Output
 }
 
 func (s *Spent) Output() *Output {
@@ -66,23 +64,15 @@ func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirm
 	}
 }
 
-func (o *Output) spentDatabaseKey() []byte {
-	switch output := o.output.(type) {
-	case *iotago.ExtendedOutput:
-		return o.byAddressDatabaseKey(true, output.FeatureBlocks().HasConstraints())
-	case *iotago.AliasOutput:
-		return o.aliasDatabaseKey(true)
-	case *iotago.NFTOutput:
-		return o.nftDatabaseKey(true)
-	case *iotago.FoundryOutput:
-		return o.foundryDatabaseKey(true)
-	default:
-		panic("Unknown output type")
-	}
+func spentStorageKeyForOutputID(outputID *iotago.OutputID) []byte {
+	ms := marshalutil.New(35)
+	ms.WriteByte(UTXOStoreKeyPrefixOutputSpent) // 1 byte
+	ms.WriteBytes(outputID[:])                  // 34 bytes
+	return ms.Bytes()
 }
 
 func (s *Spent) kvStorableKey() (key []byte) {
-	return s.output.spentDatabaseKey()
+	return spentStorageKeyForOutputID(s.outputID)
 }
 
 func (s *Spent) kvStorableValue() (value []byte) {
@@ -95,8 +85,16 @@ func (s *Spent) kvStorableValue() (value []byte) {
 func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 
 	// Parse key
-	var err error
-	if s.outputID, err = outputIDFromDatabaseKey(key); err != nil {
+	keyUtil := marshalutil.New(key)
+
+	// Read prefix output
+	_, err := keyUtil.ReadByte()
+	if err != nil {
+		return err
+	}
+
+	// Read OutputID
+	if s.outputID, err = ParseOutputID(keyUtil); err != nil {
 		return err
 	}
 
@@ -119,121 +117,21 @@ func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 }
 
 func (u *Manager) loadOutputOfSpent(s *Spent) error {
-
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, s.outputID[:])
-	value, err := u.utxoStorage.Get(key)
+	output, err := u.ReadOutputByOutputIDWithoutLocking(s.outputID)
 	if err != nil {
 		return err
 	}
-
-	output := &Output{}
-	if err = output.kvStorableLoad(u, key, value); err != nil {
-		return err
-	}
-
 	s.output = output
-
 	return nil
 }
 
-func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIterateOption) error {
-
-	consumerFunc := consumer
-
-	opt := iterateOptions(options)
-
-	if opt.readLockLedger {
-		u.ReadLockLedger()
-		defer u.ReadUnlockLedger()
-	}
-
-	var innerErr error
-
-	key := []byte{UTXOStoreKeyPrefixOutputOnAddressSpent}
-
-	// Filter by address
-	if opt.address != nil {
-		addrBytes, err := opt.address.Serialize(serializer.DeSeriModeNoValidation, nil)
-		if err != nil {
-			return err
-		}
-		key = byteutils.ConcatBytes(key, addrBytes)
-
-		// Filter by output type
-		if opt.filterOutputType != nil {
-			key = byteutils.ConcatBytes(key, []byte{byte(*opt.filterOutputType)})
-		}
-	} else if opt.filterOutputType != nil {
-		// Filter results instead of using prefix iteration
-		consumerFunc = func(spent *Spent) bool {
-			if spent.OutputType() == *opt.filterOutputType {
-				return consumer(spent)
-			}
-			return true
-		}
-	}
-
-	var i int
-
-	if err := u.utxoStorage.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
-
-		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
-			return false
-		}
-
-		i++
-
-		spent := &Spent{}
-		if err := spent.kvStorableLoad(u, key, value); err != nil {
-			innerErr = err
-			return false
-		}
-
-		if err := u.loadOutputOfSpent(spent); err != nil {
-			innerErr = err
-			return false
-		}
-
-		return consumerFunc(spent)
-	}); err != nil {
-		return err
-	}
-
-	return innerErr
-}
-
-func storeSpentAndRemoveUnspent(spent *Spent, mutations kvstore.BatchedMutations) error {
-
-	unspentKey := spent.Output().unspentDatabaseKey()
-	spentKey := spent.kvStorableKey()
-
-	if err := mutations.Delete(unspentKey); err != nil {
-		return err
-	}
-
-	return mutations.Set(spentKey, spent.kvStorableValue())
-}
-
-func deleteSpentAndMarkUnspent(spent *Spent, mutations kvstore.BatchedMutations) error {
-	if err := deleteSpent(spent, mutations); err != nil {
-		return err
-	}
-
-	return markAsUnspent(spent.output, mutations)
-}
-
-func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
-	return mutations.Delete(spent.kvStorableKey())
-}
-
 func (u *Manager) readSpentForOutputIDWithoutLocking(outputID *iotago.OutputID) (*Spent, error) {
-
 	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		return nil, err
 	}
 
-	key := output.spentDatabaseKey()
+	key := spentStorageKeyForOutputID(outputID)
 	value, err := u.utxoStorage.Get(key)
 	if err != nil {
 		return nil, err
@@ -245,6 +143,13 @@ func (u *Manager) readSpentForOutputIDWithoutLocking(outputID *iotago.OutputID) 
 	}
 
 	spent.output = output
-
 	return spent, nil
+}
+
+func storeSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
+	return mutations.Set(spent.kvStorableKey(), spent.kvStorableValue())
+}
+
+func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
+	return mutations.Delete(spent.kvStorableKey())
 }

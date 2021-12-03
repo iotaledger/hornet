@@ -3,7 +3,8 @@ package utxo
 const (
 	UTXOStoreKeyPrefixLedgerMilestoneIndex byte = 0
 
-	UTXOStoreKeyPrefixOutput byte = 1 //TODO: iterate over all values and map to extended outputs
+	UTXOStoreKeyPrefixOutput      byte = 1 //TODO: iterate over all values and map to extended outputs
+	UTXOStoreKeyPrefixOutputSpent byte = 8
 
 	UTXOStoreKeyPrefixMilestoneDiffs byte = 4
 
@@ -12,32 +13,31 @@ const (
 	UTXOStoreKeyPrefixReceipts       byte = 7
 
 	// ExtendedOutput and Alias controllers
-	UTXOStoreKeyPrefixOutputOnAddressUnspent byte = 8
-	UTXOStoreKeyPrefixOutputOnAddressSpent   byte = 9
+	UTXOStoreKeyPrefixOutputOnAddressUnspent byte = 9
+	UTXOStoreKeyPrefixOutputOnAddressSpent   byte = 10
 
 	// AliasOutputs
-	UTXOStoreKeyPrefixAliasUnspent byte = 10
-	UTXOStoreKeyPrefixAliasSpent   byte = 11
+	UTXOStoreKeyPrefixAliasUnspent byte = 11
+	UTXOStoreKeyPrefixAliasSpent   byte = 12
 
 	// NFTOutputs
-	UTXOStoreKeyPrefixNFTUnspent byte = 12
-	UTXOStoreKeyPrefixNFTSpent   byte = 13
+	UTXOStoreKeyPrefixNFTUnspent byte = 13
+	UTXOStoreKeyPrefixNFTSpent   byte = 14
 
 	// FoundryOutputs
-	UTXOStoreKeyPrefixFoundryUnspent byte = 14
-	UTXOStoreKeyPrefixFoundrySpent   byte = 15
+	UTXOStoreKeyPrefixFoundryUnspent byte = 15
+	UTXOStoreKeyPrefixFoundrySpent   byte = 16
 
 	// Feature Block lookups
-	UTXOStoreKeyPrefixIssuerLookup         byte = 16
-	UTXOStoreKeyPrefixSenderLookup         byte = 17
-	UTXOStoreKeyPrefixSenderAndIndexLookup byte = 18
+	UTXOStoreKeyPrefixIssuerLookup         byte = 17
+	UTXOStoreKeyPrefixSenderLookup         byte = 18
+	UTXOStoreKeyPrefixSenderAndIndexLookup byte = 19
 )
 
 // Deprecated keys, just used for migration purposes
 const (
-	UTXOStoreKeyPrefixUnspent byte = 2 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressUnspent and drop
-	UTXOStoreKeyPrefixSpent   byte = 3 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressSpent and drop
-
+	UTXOStoreKeyPrefixUnspent  byte = 2 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressUnspent and drop
+	UTXOStoreKeyPrefixSpent    byte = 3 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressSpent and UTXOStoreKeyPrefixSpent, then drop
 	UTXOStoreKeyPrefixBalances byte = 5 //TODO: deprecate and drop
 )
 

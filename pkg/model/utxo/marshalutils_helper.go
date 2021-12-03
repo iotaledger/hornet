@@ -8,7 +8,7 @@ import (
 )
 
 func ParseOutputID(ms *marshalutil.MarshalUtil) (*iotago.OutputID, error) {
-	bytes, err := ms.ReadBytes(OutputIDLength)
+	bytes, err := ms.ReadBytes(iotago.OutputIDLength)
 	if err != nil {
 		return nil, err
 	}

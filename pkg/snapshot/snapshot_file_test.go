@@ -341,7 +341,7 @@ func rand32ByteHash() [iotago.TransactionIDLength]byte {
 func randLSTransactionUnspentOutputs() *snapshot.Output {
 	addr, _ := randEd25519Addr()
 
-	var outputID [utxo.OutputIDLength]byte
+	var outputID [iotago.OutputIDLength]byte
 	transactionID := rand32ByteHash()
 	copy(outputID[:], transactionID[:])
 	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
@@ -358,7 +358,7 @@ func randLSTransactionUnspentOutputs() *snapshot.Output {
 func randLSTransactionSpents() *snapshot.Spent {
 	addr, _ := randEd25519Addr()
 
-	var outputID [utxo.OutputIDLength]byte
+	var outputID [iotago.OutputIDLength]byte
 	transactionID := rand32ByteHash()
 	copy(outputID[:], transactionID[:])
 	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
