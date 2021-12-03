@@ -43,9 +43,6 @@ const (
 	// ConflictInvalidSignature the unlock block signature is invalid.
 	ConflictInvalidSignature = 5
 
-	// ConflictInvalidDustAllowance the dust allowance for the address is invalid.
-	ConflictInvalidDustAllowance = 6
-
 	// ConflictSemanticValidationFailed the semantic validation failed.
 	ConflictSemanticValidationFailed = 255
 )
