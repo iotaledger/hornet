@@ -217,8 +217,8 @@ func TestIndexationPayloads(t *testing.T) {
 		Index: []byte(test.ParticipationIndexation),
 		Data:  participationsData,
 	})
-	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet3.Address(), Input: env.Wallet3.Outputs()[0].UTXOInput()})
-	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet4.Address(), Input: env.Wallet4.Outputs()[0].UTXOInput()})
+	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet3.Address(), Input: env.Wallet3.Outputs()[0].OutputID().UTXOInput()})
+	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet4.Address(), Input: env.Wallet4.Outputs()[0].OutputID().UTXOInput()})
 	builder.AddOutput(&iotago.SigLockedSingleOutput{Address: env.Wallet4.Address(), Amount: env.Wallet3.Balance() + env.Wallet4.Balance()})
 	wallet3PrivKey, _ := env.Wallet3.KeyPair()
 	wallet4PrivKey, _ := env.Wallet4.KeyPair()

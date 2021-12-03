@@ -1,8 +1,6 @@
 package utxo
 
 import (
-	"encoding/binary"
-
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -41,24 +39,16 @@ func (o *Output) Output() iotago.Output {
 	return o.output
 }
 
+// TODO: rename to "Owner" or "Ident"
 func (o *Output) Address() iotago.Address {
 	switch output := o.output.(type) {
-	case *iotago.SimpleOutput:
-		return output.Address
-	case *iotago.ExtendedOutput:
-		return output.Address
-	case *iotago.NFTOutput:
-		return output.Address
-	case *iotago.FoundryOutput:
-		return output.Address
-	case *iotago.AliasOutput:
-		return output.AliasID.ToAddress()
+	case iotago.TransIndepIdentOutput:
+		return output.Ident()
+	case iotago.TransDepIdentOutput:
+		return output.Chain().ToAddress()
+	default:
+		panic("unsupported output type")
 	}
-	panic("unsupported output type")
-}
-
-func (o *Output) Amount() uint64 {
-	return o.output.Deposit()
 }
 
 func (o *Output) AddressBytes() []byte {
@@ -67,11 +57,8 @@ func (o *Output) AddressBytes() []byte {
 	return bytes
 }
 
-func (o *Output) UTXOInput() *iotago.UTXOInput {
-	input := &iotago.UTXOInput{}
-	copy(input.TransactionID[:], o.outputID[:iotago.TransactionIDLength])
-	input.TransactionOutputIndex = binary.LittleEndian.Uint16(o.outputID[iotago.TransactionIDLength : iotago.TransactionIDLength+serializer.UInt16ByteSize])
-	return input
+func (o *Output) Amount() uint64 {
+	return o.output.Deposit()
 }
 
 type Outputs []*Output

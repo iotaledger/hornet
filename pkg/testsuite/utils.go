@@ -167,7 +167,7 @@ func (b *MessageBuilder) Build() *Message {
 
 	for _, utxo := range outputsThatCanBeConsumed {
 
-		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: utxo.UTXOInput()})
+		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: utxo.OutputID().UTXOInput()})
 		consumedInputs = append(consumedInputs, utxo)
 		consumedAmount += utxo.Amount()
 

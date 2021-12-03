@@ -485,7 +485,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	for _, unspentOutput := range unspentOutputs {
 		outputCount++
 		remainderAmount += int64(unspentOutput.Amount())
-		txBuilder.AddInput(&iotago.ToBeSignedUTXOInput{Address: f.address, Input: unspentOutput.UTXOInput()})
+		txBuilder.AddInput(&iotago.ToBeSignedUTXOInput{Address: f.address, Input: unspentOutput.OutputID().UTXOInput()})
 	}
 
 	// add all requests as outputs
