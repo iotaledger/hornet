@@ -9,109 +9,142 @@ import (
 
 type OutputConsumer func(output *Output) bool
 
-type databaseKey []byte
+type lookupKey []byte
 
-func (o *Output) databaseAddressKey() databaseKey {
-	switch output := o.output.(type) {
-	case *iotago.ExtendedOutput:
-		bytes, _ := output.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
-		return bytes
-	case *iotago.AliasOutput:
-		return output.AliasID[:]
-	case *iotago.NFTOutput:
-		return output.NFTID[:]
-	case *iotago.FoundryOutput:
-		foundryID, err := output.ID()
-		if err != nil {
-			panic(err)
-		}
-		return foundryID[:]
-	default:
-		panic("Unknown output type")
-	}
-}
-
-func (o *Output) byAddressDatabaseKey(spent bool, spendingConstraints bool) databaseKey {
+func lookupKeyByAddress(spent bool, address iotago.Address, spendingConstraints bool, outputType iotago.OutputType, outputID *iotago.OutputID) lookupKey {
 	ms := marshalutil.New(70)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixOutputOnAddressSpent) // 1 byte
 	} else {
 		ms.WriteByte(UTXOStoreKeyPrefixOutputOnAddressUnspent) // 1 byte
 	}
-	ms.WriteBytes(o.databaseAddressKey()) // 21-33 bytes
-	ms.WriteBool(spendingConstraints)     // 1 byte
-	ms.WriteByte(byte(o.OutputType()))    // 1 byte
-	ms.WriteBytes(o.outputID[:])          // 34 bytes
+	addressBytes, _ := address.Serialize(serializer.DeSeriModeNoValidation, nil)
+	ms.WriteBytes(addressBytes)       // 21-33 bytes
+	ms.WriteBool(spendingConstraints) // 1 byte
+	ms.WriteByte(byte(outputType))    // 1 byte
+	ms.WriteBytes(outputID[:])        // 34 bytes
 	return ms.Bytes()
 }
 
-func (o *Output) aliasDatabaseKey(spent bool) databaseKey {
-	ms := marshalutil.New(70)
+func lookupKeyByAliasID(spent bool, aliasID iotago.AliasID, outputID *iotago.OutputID) lookupKey {
+	ms := marshalutil.New(55)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixAliasSpent) // 1 byte
 	} else {
 		ms.WriteByte(UTXOStoreKeyPrefixAliasUnspent) // 1 byte
 	}
-	ms.WriteBytes(o.databaseAddressKey()) // 20 bytes
-	ms.WriteBytes(o.outputID[:])          // 34 bytes
+	ms.WriteBytes(aliasID[:])  // 20 bytes
+	ms.WriteBytes(outputID[:]) // 34 bytes
 	return ms.Bytes()
 }
 
-func (o *Output) nftDatabaseKey(spent bool) databaseKey {
-	ms := marshalutil.New(70)
+func lookupKeyByNFTID(spent bool, nftID iotago.NFTID, outputID *iotago.OutputID) lookupKey {
+	ms := marshalutil.New(55)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixNFTSpent) // 1 byte
 	} else {
 		ms.WriteByte(UTXOStoreKeyPrefixNFTUnspent) // 1 byte
 	}
-	ms.WriteBytes(o.databaseAddressKey()) // 20 bytes
-	ms.WriteBytes(o.outputID[:])          // 34 bytes
+	ms.WriteBytes(nftID[:])    // 20 bytes
+	ms.WriteBytes(outputID[:]) // 34 bytes
 	return ms.Bytes()
 }
 
-func (o *Output) foundryDatabaseKey(spent bool) databaseKey {
-	ms := marshalutil.New(70)
+func lookupKeyByFoundryID(spent bool, foundryID iotago.FoundryID, outputID *iotago.OutputID) lookupKey {
+	ms := marshalutil.New(61)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixFoundrySpent) // 1 byte
 	} else {
 		ms.WriteByte(UTXOStoreKeyPrefixFoundryUnspent) // 1 byte
 	}
-	ms.WriteBytes(o.databaseAddressKey()) // 20 bytes
-	ms.WriteBytes(o.outputID[:])          // 34 bytes
+	ms.WriteBytes(foundryID[:]) // 26 bytes
+	ms.WriteBytes(outputID[:])  // 34 bytes
 	return ms.Bytes()
 }
 
-func (o *Output) unspentDatabaseKeys() []databaseKey {
+func lookupKeysForFeatureBlocks(blocks iotago.FeatureBlocks, outputType iotago.OutputType, outputID *iotago.OutputID) []lookupKey {
+
+	blockSet := blocks.MustSet()
+	var keys []lookupKey
+	if issuerBlock := blockSet.IssuerFeatureBlock(); issuerBlock != nil {
+		ms := marshalutil.New(69)
+		ms.WriteByte(UTXOStoreKeyPrefixIssuerLookup) // 1 byte
+		addressBytes, _ := issuerBlock.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+		ms.WriteBytes(addressBytes)    // 21-33 bytes
+		ms.WriteByte(byte(outputType)) // 1 byte
+		ms.WriteBytes(outputID[:])     // 34 bytes
+		keys = append(keys, ms.Bytes())
+	}
+
+	if senderBlock := blockSet.SenderFeatureBlock(); senderBlock != nil {
+		ms := marshalutil.New(69)
+		ms.WriteByte(UTXOStoreKeyPrefixSenderLookup) // 1 byte
+		addressBytes, _ := senderBlock.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+		ms.WriteBytes(addressBytes)    // 21-33 bytes
+		ms.WriteByte(byte(outputType)) // 1 byte
+		ms.WriteBytes(outputID[:])     // 34 bytes
+		keys = append(keys, ms.Bytes())
+
+		if indexationBlock := blockSet.IndexationFeatureBlock(); indexationBlock != nil {
+
+			paddedTag := func(tag []byte) []byte {
+				return append(tag, make([]byte, iotago.MaxIndexationTagLength-len(tag))...)
+			}
+
+			ms := marshalutil.New(133)
+			ms.WriteByte(UTXOStoreKeyPrefixSenderAndIndexLookup) // 1 byte
+			addressBytes, _ := senderBlock.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+			ms.WriteBytes(addressBytes)                   // 21-33 bytes
+			ms.WriteBytes(paddedTag(indexationBlock.Tag)) // 64 bytes
+			ms.WriteByte(byte(outputType))                // 1 byte
+			ms.WriteBytes(outputID[:])                    // 34 bytes
+			keys = append(keys, ms.Bytes())
+		}
+	}
+
+	return keys
+}
+
+func (o *Output) lookupKeys(spent bool) []lookupKey {
 	switch output := o.output.(type) {
 	case *iotago.ExtendedOutput:
-		return []databaseKey{o.byAddressDatabaseKey(false, output.FeatureBlocks().HasConstraints())}
+		return append([]lookupKey{
+			lookupKeyByAddress(spent, output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+		}, lookupKeysForFeatureBlocks(output.FeatureBlocks(), o.OutputType(), o.outputID)...)
 	case *iotago.AliasOutput:
-		return []databaseKey{o.aliasDatabaseKey(false)}
+		return append([]lookupKey{
+			lookupKeyByAliasID(spent, output.AliasID, o.outputID),
+			lookupKeyByAddress(spent, output.StateController, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+			lookupKeyByAddress(spent, output.GovernanceController, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+		}, lookupKeysForFeatureBlocks(output.FeatureBlocks(), o.OutputType(), o.outputID)...)
 	case *iotago.NFTOutput:
-		return []databaseKey{o.nftDatabaseKey(false)}
+		return append([]lookupKey{
+			lookupKeyByNFTID(spent, output.NFTID, o.outputID),
+			lookupKeyByAddress(spent, output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+		}, lookupKeysForFeatureBlocks(output.FeatureBlocks(), o.OutputType(), o.outputID)...)
 	case *iotago.FoundryOutput:
-		return []databaseKey{o.foundryDatabaseKey(false)}
+		foundryID, err := output.ID()
+		if err != nil {
+			panic(err)
+		}
+		return []lookupKey{
+			lookupKeyByFoundryID(spent, foundryID, o.outputID),
+			lookupKeyByAddress(spent, output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+		}
 	default:
 		panic("Unknown output type")
 	}
 }
 
-func (o *Output) spentDatabaseKeys() []databaseKey {
-	switch output := o.output.(type) {
-	case *iotago.ExtendedOutput:
-		return []databaseKey{o.byAddressDatabaseKey(true, output.FeatureBlocks().HasConstraints())}
-	case *iotago.AliasOutput:
-		return []databaseKey{o.aliasDatabaseKey(true)}
-	case *iotago.NFTOutput:
-		return []databaseKey{o.nftDatabaseKey(true)}
-	case *iotago.FoundryOutput:
-		return []databaseKey{o.foundryDatabaseKey(true)}
-	default:
-		panic("Unknown output type")
-	}
+func (o *Output) unspentDatabaseKeys() []lookupKey {
+	return o.lookupKeys(false)
 }
 
-func outputIDFromDatabaseKey(key databaseKey) (*iotago.OutputID, error) {
+func (o *Output) spentDatabaseKeys() []lookupKey {
+	return o.lookupKeys(true)
+}
+
+func outputIDFromDatabaseKey(key lookupKey) (*iotago.OutputID, error) {
 
 	ms := marshalutil.New(key)
 	prefix, err := ms.ReadByte() // prefix
