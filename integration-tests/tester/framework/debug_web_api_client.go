@@ -1,7 +1,7 @@
 package framework
 
 import (
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // NewDebugNodeAPIClient returns a new debug node API instance.

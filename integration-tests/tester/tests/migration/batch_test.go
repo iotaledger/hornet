@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // TestBatch boots up a statically peered network which runs with a white-flag mock server in order

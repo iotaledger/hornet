@@ -31,8 +31,8 @@ import (
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 const (
@@ -99,7 +99,7 @@ func provide(c *dig.Container) {
 		Plugin.LogPanic("loading faucet private key failed, err: wrong private key length")
 	}
 
-	faucetAddress := iotago.AddressFromEd25519PubKey(privateKey.Public().(ed25519.PublicKey))
+	faucetAddress := iotago.Ed25519AddressFromPubKey(privateKey.Public().(ed25519.PublicKey))
 	faucetSigner := iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&faucetAddress, privateKey))
 
 	type faucetDeps struct {

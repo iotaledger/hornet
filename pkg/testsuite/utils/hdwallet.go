@@ -89,7 +89,7 @@ func (hd *HDWallet) KeyPair() (ed25519.PrivateKey, ed25519.PublicKey) {
 
 func (hd *HDWallet) AddressSigner() iotago.AddressSigner {
 	privKey, pubKey := hd.KeyPair()
-	address := iotago.AddressFromEd25519PubKey(pubKey)
+	address := iotago.Ed25519AddressFromPubKey(pubKey)
 	return iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&address, privKey))
 }
 
@@ -110,17 +110,9 @@ func (hd *HDWallet) PrintStatus() {
 	status += fmt.Sprintf("Address: %s\n", hd.Address().Bech32(iotago.PrefixTestnet))
 	status += fmt.Sprintf("Balance: %d\n", hd.Balance())
 	status += "Outputs: \n"
-	for _, utxo := range hd.utxo {
-		var outputType string
-		switch utxo.OutputType() {
-		case iotago.OutputSigLockedSingleOutput:
-			outputType = "SingleOutput"
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			outputType = "DustAllowance"
-		default:
-			outputType = fmt.Sprintf("%d", utxo.OutputType())
-		}
-		status += fmt.Sprintf("\t%s [%s] = %d\n", utxo.OutputID().ToHex(), outputType, utxo.Amount())
+	for _, u := range hd.utxo {
+		outputType := iotago.OutputTypeToString(u.OutputType())
+		status += fmt.Sprintf("\t%s [%s] = %d\n", u.OutputID().ToHex(), outputType, u.Amount())
 	}
 	fmt.Printf("%s\n", status)
 }

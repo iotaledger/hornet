@@ -10,7 +10,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // Node represents a HORNET node inside the Docker network.

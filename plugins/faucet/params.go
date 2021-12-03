@@ -6,7 +6,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/node"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (

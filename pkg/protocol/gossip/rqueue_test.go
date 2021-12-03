@@ -9,7 +9,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func randBytes(length int) []byte {

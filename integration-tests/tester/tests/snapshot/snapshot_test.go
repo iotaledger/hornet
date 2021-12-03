@@ -10,7 +10,7 @@ import (
 
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
 	"github.com/iotaledger/iota.go/consts"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // TestSnapshot boots up a statically peered network where the nodes consume

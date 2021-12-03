@@ -16,8 +16,8 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/testsuite"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (

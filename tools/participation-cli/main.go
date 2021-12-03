@@ -11,7 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/ed25519"
 )

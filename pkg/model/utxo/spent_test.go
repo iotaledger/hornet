@@ -9,8 +9,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func EqualSpent(t *testing.T, expected *Spent, actual *Spent) {

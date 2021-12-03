@@ -11,8 +11,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type MessageBuilder struct {

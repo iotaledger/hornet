@@ -10,7 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // returns length amount random bytes
