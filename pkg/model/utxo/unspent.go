@@ -20,8 +20,11 @@ func (o *Output) databaseAddressKey() []byte {
 	case *iotago.NFTOutput:
 		return output.NFTID[:]
 	case *iotago.FoundryOutput:
-		// TODO: foundry id
-		return []byte{}
+		foundryID, err := output.ID()
+		if err != nil {
+			panic(err)
+		}
+		return foundryID[:]
 	default:
 		panic("Unknown output type")
 	}
@@ -105,13 +108,13 @@ func outputIDFromDatabaseKey(key []byte) (*iotago.OutputID, error) {
 		if _, err := parseAddress(ms); err != nil {
 			return nil, err
 		}
-		ms.ReadSeek(2) // Spending Contrainsts + Output type
+		ms.ReadSeek(ms.ReadOffset() + 2) // Spending Contrainsts + Output type
 	case UTXOStoreKeyPrefixNFTUnspent, UTXOStoreKeyPrefixNFTSpent:
-		ms.ReadSeek(iotago.NFTIDLength)
+		ms.ReadSeek(ms.ReadOffset() + iotago.NFTIDLength)
 	case UTXOStoreKeyPrefixAliasUnspent, UTXOStoreKeyPrefixAliasSpent:
-		ms.ReadSeek(iotago.AliasIDLength)
+		ms.ReadSeek(ms.ReadOffset() + iotago.AliasIDLength)
 	case UTXOStoreKeyPrefixFoundryUnspent, UTXOStoreKeyPrefixFoundrySpent:
-		ms.ReadSeek(iotago.FoundryIDLength)
+		ms.ReadSeek(ms.ReadOffset() + iotago.FoundryIDLength)
 	}
 
 	return ParseOutputID(ms)
@@ -154,7 +157,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 
 	var innerErr error
 
-	key := []byte{UTXOStoreKeyPrefixUnspent}
+	key := []byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}
 
 	// Filter by address
 	if opt.address != nil {

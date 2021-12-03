@@ -53,16 +53,13 @@ func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutput}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixUnspent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSpent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}); err != nil {
 		return err
 	}
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixMilestoneDiffs}); err != nil {
-		return err
-	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixBalances}); err != nil {
 		return err
 	}
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {

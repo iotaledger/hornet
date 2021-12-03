@@ -10,23 +10,20 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
+	"github.com/iotaledger/hive.go/testutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func TestSimpleMilestoneDiffSerialization(t *testing.T) {
-
-	outputID := &iotago.UTXOInputID{}
-	copy(outputID[:], randBytes(34))
-
+	outputID := randOutputID()
 	messageID := randMessageID()
-
-	outputType := iotago.OutputSigLockedDustAllowanceOutput
-
 	address := randomAddress()
-
 	amount := uint64(832493)
-
-	output := CreateOutput(outputID, messageID, outputType, address, amount)
+	iotaOutput := &iotago.ExtendedOutput{
+		Address: address,
+		Amount:  amount,
+	}
+	output := CreateOutput(outputID, messageID, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], randBytes(iotago.TransactionIDLength))
@@ -56,19 +53,15 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 }
 
 func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
-
-	outputID := &iotago.UTXOInputID{}
-	copy(outputID[:], randBytes(34))
-
+	outputID := randOutputID()
 	messageID := randMessageID()
-
-	outputType := iotago.OutputSigLockedDustAllowanceOutput
-
 	address := randomAddress()
-
 	amount := uint64(235234)
-
-	output := CreateOutput(outputID, messageID, outputType, address, amount)
+	iotaOutput := &iotago.ExtendedOutput{
+		Address: address,
+		Amount:  amount,
+	}
+	output := CreateOutput(outputID, messageID, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], randBytes(iotago.TransactionIDLength))
@@ -126,10 +119,14 @@ func randomAddress() *iotago.Ed25519Address {
 	return address
 }
 
-func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *Output {
-	outputID := &iotago.UTXOInputID{}
-	copy(outputID[:], randBytes(34))
+func randOutputID() *iotago.OutputID {
+	outputID := &iotago.OutputID{}
+	copy(outputID[:], testutil.RandBytes(iotago.OutputIDLength))
+	return outputID
+}
 
+func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *Output {
+	outputID := randOutputID()
 	messageID := randMessageID()
 
 	var addr iotago.Address
@@ -141,7 +138,28 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *Outp
 
 	amount := uint64(rand.Intn(2156465))
 
-	return CreateOutput(outputID, messageID, outputType, addr, amount)
+	//TODO: switch outputType
+
+	iotaOutput := &iotago.ExtendedOutput{
+		Address: addr,
+		Amount:  amount,
+	}
+
+	return CreateOutput(outputID, messageID, iotaOutput)
+}
+
+func randomOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.Address, amount uint64) *Output {
+	outputID := randOutputID()
+	messageID := randMessageID()
+
+	//TODO: switch outputType
+
+	iotaOutput := &iotago.ExtendedOutput{
+		Address: address,
+		Amount:  amount,
+	}
+
+	return CreateOutput(outputID, messageID, iotaOutput)
 }
 
 func EqualOutputs(t *testing.T, expected Outputs, actual Outputs) {
@@ -174,11 +192,11 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
 	}
 
 	spents := Spents{

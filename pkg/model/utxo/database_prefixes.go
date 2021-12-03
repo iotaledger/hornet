@@ -55,7 +55,7 @@ hasSpendingConstraints: dust-deposit-return, expiration-lock, time-lock
 	* state controller (ed25519, alias)
 	* governance controller (ed25519, alias)
 - 	(spent/unspent) aliasID + outputID
--   (spent/unspent) nftID + hasSpendingConstraints + outputID
+-   (spent/unspent) nftID + outputID
 - 	(spent/unspent) foundryID + outputID
 
 -	issuer + type + outputID

@@ -149,7 +149,7 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIter
 
 	var innerErr error
 
-	key := []byte{UTXOStoreKeyPrefixSpent}
+	key := []byte{UTXOStoreKeyPrefixOutputOnAddressSpent}
 
 	// Filter by address
 	if opt.address != nil {

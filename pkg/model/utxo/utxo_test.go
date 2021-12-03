@@ -15,11 +15,11 @@ func TestUTXOIterationWithoutFilters(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
 	}
 
 	spents := Spents{
@@ -83,11 +83,11 @@ func TestUTXOIterationWithAddressFilter(t *testing.T) {
 	address := randomAddress()
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputSigLockedSingleOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputExtended, address),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended, address),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
 	}
 
 	spents := Spents{
@@ -133,22 +133,22 @@ func TestUTXOIterationWithAddressAndTypeFilter(t *testing.T) {
 	address := randomAddress()
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputSigLockedSingleOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput, address),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputExtended, address),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputNFT, address),
+		randomOutput(iotago.OutputExtended, address),
+		randomOutput(iotago.OutputNFT, address),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputNFT, address),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputNFT, address),
+		randomOutput(iotago.OutputNFT, address),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
 	}
 
 	spents := Spents{
@@ -162,26 +162,26 @@ func TestUTXOIterationWithAddressAndTypeFilter(t *testing.T) {
 
 	// Prepare values to check
 	unspentByOutputID := make(map[string]struct{})
-	unspentDustByOutputID := make(map[string]struct{})
+	unspentNFTByOutputID := make(map[string]struct{})
 	spentByOutputID := make(map[string]struct{})
-	spentDustByOutputID := make(map[string]struct{})
+	spentNFTByOutputID := make(map[string]struct{})
 
 	// Test iteration with address and type filter
 	unspentByOutputID[string(outputs[0].OutputID()[:])] = struct{}{}
-	unspentDustByOutputID[string(outputs[4].OutputID()[:])] = struct{}{}
-	unspentDustByOutputID[string(outputs[6].OutputID()[:])] = struct{}{}
-	unspentDustByOutputID[string(outputs[8].OutputID()[:])] = struct{}{}
-	unspentDustByOutputID[string(outputs[9].OutputID()[:])] = struct{}{}
+	unspentNFTByOutputID[string(outputs[4].OutputID()[:])] = struct{}{}
+	unspentNFTByOutputID[string(outputs[6].OutputID()[:])] = struct{}{}
+	unspentNFTByOutputID[string(outputs[8].OutputID()[:])] = struct{}{}
+	unspentNFTByOutputID[string(outputs[9].OutputID()[:])] = struct{}{}
 
 	spentByOutputID[string(outputs[3].OutputID()[:])] = struct{}{}
-	spentDustByOutputID[string(outputs[2].OutputID()[:])] = struct{}{}
+	spentNFTByOutputID[string(outputs[2].OutputID()[:])] = struct{}{}
 
 	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
 		_, has := unspentByOutputID[string(output.OutputID()[:])]
 		require.True(t, has)
 		delete(unspentByOutputID, string(output.OutputID()[:]))
 		return true
-	}, FilterAddress(address), FilterOutputType(iotago.OutputSigLockedSingleOutput)))
+	}, FilterAddress(address), FilterOutputType(iotago.OutputExtended)))
 
 	require.Empty(t, unspentByOutputID)
 
@@ -190,27 +190,27 @@ func TestUTXOIterationWithAddressAndTypeFilter(t *testing.T) {
 		require.True(t, has)
 		delete(spentByOutputID, string(spent.OutputID()[:]))
 		return true
-	}, FilterAddress(address), FilterOutputType(iotago.OutputSigLockedSingleOutput)))
+	}, FilterAddress(address), FilterOutputType(iotago.OutputNFT)))
 
 	require.Empty(t, spentByOutputID)
 
 	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
-		_, has := unspentDustByOutputID[string(output.OutputID()[:])]
+		_, has := unspentNFTByOutputID[string(output.OutputID()[:])]
 		require.True(t, has)
-		delete(unspentDustByOutputID, string(output.OutputID()[:]))
+		delete(unspentNFTByOutputID, string(output.OutputID()[:]))
 		return true
-	}, FilterAddress(address), FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput)))
+	}, FilterAddress(address), FilterOutputType(iotago.OutputNFT)))
 
-	require.Empty(t, unspentDustByOutputID)
+	require.Empty(t, unspentNFTByOutputID)
 
 	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
-		_, has := spentDustByOutputID[string(spent.OutputID()[:])]
+		_, has := spentNFTByOutputID[string(spent.OutputID()[:])]
 		require.True(t, has)
-		delete(spentDustByOutputID, string(spent.OutputID()[:]))
+		delete(spentNFTByOutputID, string(spent.OutputID()[:]))
 		return true
-	}, FilterAddress(address), FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput)))
+	}, FilterAddress(address), FilterOutputType(iotago.OutputNFT)))
 
-	require.Empty(t, spentDustByOutputID)
+	require.Empty(t, spentNFTByOutputID)
 }
 
 func TestUTXOLoadMethodsWithIterateOptions(t *testing.T) {
@@ -220,62 +220,53 @@ func TestUTXOLoadMethodsWithIterateOptions(t *testing.T) {
 	address := randomAddress()
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputSigLockedSingleOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput, address),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutputOnAddressWithAmount(iotago.OutputExtended, address, 5_000_000),
+		randomOutput(iotago.OutputExtended),
+		randomOutputOnAddressWithAmount(iotago.OutputExtended, address, 150),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutputOnAddressWithAmount(iotago.OutputExtended, address, 3_125_125),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutputOnAddressWithAmount(iotago.OutputExtended, address, 89_923_223),
+		randomOutput(iotago.OutputExtended),
 	}
-	dustOutputs := Outputs{
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput, address),
+	nftOutputs := Outputs{
+		randomOutputOnAddressWithAmount(iotago.OutputNFT, address, 1_000_000),
+		randomOutput(iotago.OutputNFT),
+		randomOutputOnAddressWithAmount(iotago.OutputNFT, address, 5_500_000),
+		randomOutput(iotago.OutputNFT),
+		randomOutputOnAddressWithAmount(iotago.OutputNFT, address, 1_000_000),
 	}
-
-	//Control the address balance
-	outputs[0].amount = 5_000_000
-	outputs[2].amount = 150
-	outputs[6].amount = 3_125_125
-	outputs[9].amount = 89_923_223
-	dustOutputs[0].amount = 1_000_000
-	dustOutputs[2].amount = 5_500_000
-	dustOutputs[4].amount = 1_000_000
 
 	spents := Spents{
 		randomSpent(outputs[2]),
 		randomSpent(outputs[3]),
 	}
-	dustSpents := Spents{
-		randomSpent(dustOutputs[2]),
-		randomSpent(dustOutputs[4]),
+	nftSpents := Spents{
+		randomSpent(nftOutputs[2]),
+		randomSpent(nftOutputs[4]),
 	}
 
 	expectedBalanceOnAddress := uint64(105_548_498 - 6_500_150)
 
 	msIndex := milestone.Index(756)
 
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, append(outputs, dustOutputs...), append(spents, dustSpents...), nil, nil))
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, append(outputs, nftOutputs...), append(spents, nftSpents...), nil, nil))
 
 	// Prepare values to check
 	unspentByOutputID := make(map[string]struct{})
-	unspentDustByOutputID := make(map[string]struct{})
+	unspentNFTByOutputID := make(map[string]struct{})
 	spentByOutputID := make(map[string]struct{})
-	spentDustByOutputID := make(map[string]struct{})
+	spentNFTByOutputID := make(map[string]struct{})
 
 	for _, output := range outputs {
 		unspentByOutputID[string(output.OutputID()[:])] = struct{}{}
 	}
 
-	for _, output := range dustOutputs {
-		unspentDustByOutputID[string(output.OutputID()[:])] = struct{}{}
+	for _, output := range nftOutputs {
+		unspentNFTByOutputID[string(output.OutputID()[:])] = struct{}{}
 	}
 
 	for _, spent := range spents {
@@ -283,14 +274,10 @@ func TestUTXOLoadMethodsWithIterateOptions(t *testing.T) {
 		delete(unspentByOutputID, string(spent.OutputID()[:]))
 	}
 
-	for _, spent := range dustSpents {
-		spentDustByOutputID[string(spent.OutputID()[:])] = struct{}{}
-		delete(unspentDustByOutputID, string(spent.OutputID()[:]))
+	for _, spent := range nftSpents {
+		spentNFTByOutputID[string(spent.OutputID()[:])] = struct{}{}
+		delete(unspentNFTByOutputID, string(spent.OutputID()[:]))
 	}
-
-	balance, _, err := utxo.AddressBalanceWithoutLocking(address)
-	require.NoError(t, err)
-	require.Equal(t, expectedBalanceOnAddress, balance)
 
 	// Test no MaxResultCount
 	loadedSpents, err := utxo.SpentOutputs(FilterAddress(address))
@@ -320,21 +307,21 @@ func TestUTXOLoadMethodsWithIterateOptions(t *testing.T) {
 	require.Equal(t, 2, count)
 	require.NotEqual(t, expectedBalanceOnAddress, computedBalance)
 
-	// Test OutputType = SingleOutput
-	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputSigLockedSingleOutput))
+	// Test OutputType = Extended Output
+	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputExtended))
 	require.NoError(t, err)
 	require.Equal(t, 1, len(loadedSpents))
 
-	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputSigLockedSingleOutput))
+	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputExtended))
 	require.NoError(t, err)
 	require.Equal(t, 3, len(loadedUnspent))
 
-	// Test OutputType = DustAllowance
-	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput))
+	// Test OutputType = NFT Output
+	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputNFT))
 	require.NoError(t, err)
 	require.Equal(t, 2, len(loadedSpents))
 
-	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputSigLockedDustAllowanceOutput))
+	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputNFT))
 	require.NoError(t, err)
 	require.Equal(t, 1, len(loadedUnspent))
 }
@@ -344,11 +331,11 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputNFT),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
 	}
 
 	spents := Spents{
@@ -404,9 +391,9 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	previousOutputs := Outputs{
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedDustAllowanceOutput),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputNFT),
 	}
 
 	previousSpents := Spents{
@@ -422,10 +409,10 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	require.Equal(t, previousMsIndex, ledgerIndex)
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
-		randomOutput(iotago.OutputSigLockedSingleOutput),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
+		randomOutput(iotago.OutputExtended),
 	}
 
 	spents := Spents{
