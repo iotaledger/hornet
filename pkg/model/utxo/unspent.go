@@ -10,33 +10,111 @@ import (
 
 type OutputConsumer func(output *Output) bool
 
-func (o *Output) unspentDatabaseKey() []byte {
-	ms := marshalutil.New(69)
-	ms.WriteByte(UTXOStoreKeyPrefixUnspent) // 1 byte
-	ms.WriteBytes(o.AddressBytes())         // 33 bytes
-	ms.WriteByte(byte(o.OutputType()))      // 1 byte
-	ms.WriteBytes(o.outputID[:])            // 34 bytes
+func (o *Output) databaseAddressKey() []byte {
+	switch output := o.output.(type) {
+	case *iotago.ExtendedOutput:
+		bytes, _ := output.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+		return bytes
+	case *iotago.AliasOutput:
+		return output.AliasID[:]
+	case *iotago.NFTOutput:
+		return output.NFTID[:]
+	case *iotago.FoundryOutput:
+		// TODO: foundry id
+		return []byte{}
+	default:
+		panic("Unknown output type")
+	}
+}
+
+func (o *Output) byAddressDatabaseKey(spent bool, spendingConstraints bool) []byte {
+	ms := marshalutil.New(70)
+	if spent {
+		ms.WriteByte(UTXOStoreKeyPrefixOutputOnAddressSpent) // 1 byte
+	} else {
+		ms.WriteByte(UTXOStoreKeyPrefixOutputOnAddressUnspent) // 1 byte
+	}
+	ms.WriteBytes(o.databaseAddressKey()) // 21-33 bytes
+	ms.WriteBool(spendingConstraints)     // 1 byte
+	ms.WriteByte(byte(o.OutputType()))    // 1 byte
+	ms.WriteBytes(o.outputID[:])          // 34 bytes
 	return ms.Bytes()
 }
 
-func outputIDBytesFromUnspentDatabaseKey(key []byte) ([]byte, error) {
+func (o *Output) aliasDatabaseKey(spent bool) []byte {
+	ms := marshalutil.New(70)
+	if spent {
+		ms.WriteByte(UTXOStoreKeyPrefixAliasSpent) // 1 byte
+	} else {
+		ms.WriteByte(UTXOStoreKeyPrefixAliasUnspent) // 1 byte
+	}
+	ms.WriteBytes(o.databaseAddressKey()) // 20 bytes
+	ms.WriteBytes(o.outputID[:])          // 34 bytes
+	return ms.Bytes()
+}
+
+func (o *Output) nftDatabaseKey(spent bool) []byte {
+	ms := marshalutil.New(70)
+	if spent {
+		ms.WriteByte(UTXOStoreKeyPrefixNFTSpent) // 1 byte
+	} else {
+		ms.WriteByte(UTXOStoreKeyPrefixNFTUnspent) // 1 byte
+	}
+	ms.WriteBytes(o.databaseAddressKey()) // 20 bytes
+	ms.WriteBytes(o.outputID[:])          // 34 bytes
+	return ms.Bytes()
+}
+
+func (o *Output) foundryDatabaseKey(spent bool) []byte {
+	ms := marshalutil.New(70)
+	if spent {
+		ms.WriteByte(UTXOStoreKeyPrefixFoundrySpent) // 1 byte
+	} else {
+		ms.WriteByte(UTXOStoreKeyPrefixFoundryUnspent) // 1 byte
+	}
+	ms.WriteBytes(o.databaseAddressKey()) // 20 bytes
+	ms.WriteBytes(o.outputID[:])          // 34 bytes
+	return ms.Bytes()
+}
+
+func (o *Output) unspentDatabaseKey() []byte {
+	switch output := o.output.(type) {
+	case *iotago.ExtendedOutput:
+		return o.byAddressDatabaseKey(false, output.FeatureBlocks().HasConstraints())
+	case *iotago.AliasOutput:
+		return o.aliasDatabaseKey(false)
+	case *iotago.NFTOutput:
+		return o.nftDatabaseKey(false)
+	case *iotago.FoundryOutput:
+		return o.foundryDatabaseKey(false)
+	default:
+		panic("Unknown output type")
+	}
+}
+
+func outputIDFromDatabaseKey(key []byte) (*iotago.OutputID, error) {
 
 	ms := marshalutil.New(key)
-	_, err := ms.ReadByte() // prefix
+	prefix, err := ms.ReadByte() // prefix
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err := parseAddress(ms); err != nil {
-		return nil, err
+	switch prefix {
+	case UTXOStoreKeyPrefixOutputOnAddressUnspent, UTXOStoreKeyPrefixOutputOnAddressSpent:
+		if _, err := parseAddress(ms); err != nil {
+			return nil, err
+		}
+		ms.ReadSeek(2) // Spending Contrainsts + Output type
+	case UTXOStoreKeyPrefixNFTUnspent, UTXOStoreKeyPrefixNFTSpent:
+		ms.ReadSeek(iotago.NFTIDLength)
+	case UTXOStoreKeyPrefixAliasUnspent, UTXOStoreKeyPrefixAliasSpent:
+		ms.ReadSeek(iotago.AliasIDLength)
+	case UTXOStoreKeyPrefixFoundryUnspent, UTXOStoreKeyPrefixFoundrySpent:
+		ms.ReadSeek(iotago.FoundryIDLength)
 	}
 
-	_, err = ms.ReadByte() // output type
-	if err != nil {
-		return nil, err
-	}
-
-	return ms.ReadBytes(OutputIDLength)
+	return ParseOutputID(ms)
 }
 
 func markAsUnspent(output *Output, mutations kvstore.BatchedMutations) error {
@@ -111,12 +189,12 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 
 		i++
 
-		outputIDBytes, err := outputIDBytesFromUnspentDatabaseKey(key)
+		outputID, err := outputIDFromDatabaseKey(key)
 		if err != nil {
 			innerErr = err
 			return false
 		}
-		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputIDBytes)
+		outputKey := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:])
 
 		value, err := u.utxoStorage.Get(outputKey)
 		if err != nil {

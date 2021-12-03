@@ -67,12 +67,18 @@ func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirm
 }
 
 func (o *Output) spentDatabaseKey() []byte {
-	ms := marshalutil.New(69)
-	ms.WriteByte(UTXOStoreKeyPrefixSpent) // 1 byte
-	ms.WriteBytes(o.AddressBytes())       // 33 bytes
-	ms.WriteByte(byte(o.OutputType()))    // 1 byte
-	ms.WriteBytes(o.outputID[:])          // 34 bytes
-	return ms.Bytes()
+	switch output := o.output.(type) {
+	case *iotago.ExtendedOutput:
+		return o.byAddressDatabaseKey(true, output.FeatureBlocks().HasConstraints())
+	case *iotago.AliasOutput:
+		return o.aliasDatabaseKey(true)
+	case *iotago.NFTOutput:
+		return o.nftDatabaseKey(true)
+	case *iotago.FoundryOutput:
+		return o.foundryDatabaseKey(true)
+	default:
+		panic("Unknown output type")
+	}
 }
 
 func (s *Spent) kvStorableKey() (key []byte) {
@@ -89,26 +95,8 @@ func (s *Spent) kvStorableValue() (value []byte) {
 func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 
 	// Parse key
-	keyUtil := marshalutil.New(key)
-
-	// Read prefix
-	if _, err := keyUtil.ReadByte(); err != nil {
-		return err
-	}
-
-	// Read address
-	if _, err := parseAddress(keyUtil); err != nil {
-		return err
-	}
-
-	// Read output type
-	if _, err := keyUtil.ReadByte(); err != nil {
-		return err
-	}
-
-	// Read outputID
 	var err error
-	if s.outputID, err = ParseOutputID(keyUtil); err != nil {
+	if s.outputID, err = outputIDFromDatabaseKey(key); err != nil {
 		return err
 	}
 
