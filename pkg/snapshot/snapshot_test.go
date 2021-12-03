@@ -38,7 +38,7 @@ func randomAddress() *iotago.Ed25519Address {
 
 //nolint:unparam // maybe address will be used in the future
 func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo.Output {
-	outputID := &iotago.UTXOInputID{}
+	outputID := &iotago.OutputID{}
 	copy(outputID[:], randBytes(34))
 
 	messageID := randMessageID()
@@ -51,8 +51,11 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo
 	}
 
 	amount := uint64(rand.Intn(2156465))
-
-	return utxo.CreateOutput(outputID, messageID, outputType, addr, amount)
+	output := &iotago.ExtendedOutput{
+		Address: addr,
+		Amount:  amount,
+	}
+	return utxo.CreateOutput(outputID, messageID, output)
 }
 
 func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
@@ -126,22 +129,19 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	// Fill up the UTXO
 	var err error
 	for i := 0; i < count; i++ {
-		err = u1.AddUnspentOutput(randomOutput(iotago.OutputSigLockedSingleOutput))
+		err = u1.AddUnspentOutput(randomOutput(iotago.OutputExtended))
 		require.NoError(t, err)
 
-		err = u1.AddUnspentOutput(randomOutput(iotago.OutputSigLockedDustAllowanceOutput))
+		err = u1.AddUnspentOutput(randomOutput(iotago.OutputExtended))
 		require.NoError(t, err)
 	}
 
 	// Count the outputs in the ledger
 	var singleCount int
-	var allowanceCount int
 	err = u1.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
-		case iotago.OutputSigLockedSingleOutput:
+		case iotago.OutputExtended:
 			singleCount++
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			allowanceCount++
 		default:
 			require.Fail(t, "invalid output type")
 		}
@@ -149,7 +149,6 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, count, singleCount)
-	require.Equal(t, count, allowanceCount)
 
 	// Pass all outputs from u1 to u2 over the snapshot serialization functions
 	producer := newCMIUTXOProducer(u1)
@@ -188,13 +187,10 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 
 	// Count the outputs in the new ledger
 	singleCount = 0
-	allowanceCount = 0
 	err = u2.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
-		case iotago.OutputSigLockedSingleOutput:
+		case iotago.OutputExtended:
 			singleCount++
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			allowanceCount++
 		default:
 			require.Fail(t, "invalid output type")
 		}
@@ -202,7 +198,6 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, count, singleCount)
-	require.Equal(t, count, allowanceCount)
 }
 
 func TestMsIndexIteratorOnwards(t *testing.T) {
@@ -259,11 +254,11 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 	for msIndex, done = msIterator(); !done; msIndex, done = msIterator() {
 
 		outputs := utxo.Outputs{
-			randomOutput(iotago.OutputSigLockedSingleOutput),
-			randomOutput(iotago.OutputSigLockedSingleOutput),
-			randomOutput(iotago.OutputSigLockedDustAllowanceOutput),
-			randomOutput(iotago.OutputSigLockedSingleOutput),
-			randomOutput(iotago.OutputSigLockedSingleOutput),
+			randomOutput(iotago.OutputExtended),
+			randomOutput(iotago.OutputExtended),
+			randomOutput(iotago.OutputExtended),
+			randomOutput(iotago.OutputExtended),
+			randomOutput(iotago.OutputExtended),
 		}
 
 		spents := utxo.Spents{

@@ -249,13 +249,15 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			ed25519Addr, _ := randEd25519Addr()
 			migratedFundsEntry := &iotago.MigratedFundsEntry{Address: ed25519Addr, Deposit: rand.Uint64()}
 			copy(migratedFundsEntry.TailTransactionHash[:], randBytes(49))
+			//TODO: deSeriParas
+			deSeriParas := &iotago.DeSerializationParameters{}
 			receipt, err := iotago.NewReceiptBuilder(ms.Index).
 				AddTreasuryTransaction(&iotago.TreasuryTransaction{
 					Input:  treasuryInput,
 					Output: &iotago.TreasuryOutput{Amount: rand.Uint64()},
 				}).
 				AddEntry(migratedFundsEntry).
-				Build()
+				Build(deSeriParas)
 			if err != nil {
 				panic(err)
 			}
@@ -347,7 +349,7 @@ func randLSTransactionUnspentOutputs() *snapshot.Output {
 	return &snapshot.Output{
 		MessageID:  randMessageID().ToArray(),
 		OutputID:   outputID,
-		OutputType: byte(rand.Intn(256)),
+		OutputType: iotago.OutputType(rand.Intn(256)),
 		Address:    addr,
 		Amount:     uint64(rand.Intn(1000000) + 1),
 	}
@@ -364,7 +366,7 @@ func randLSTransactionSpents() *snapshot.Spent {
 	output := &snapshot.Output{
 		MessageID:  randMessageID().ToArray(),
 		OutputID:   outputID,
-		OutputType: byte(rand.Intn(256)),
+		OutputType: iotago.OutputType(rand.Intn(256)),
 		Address:    addr,
 		Amount:     uint64(rand.Intn(1000000) + 1),
 	}
