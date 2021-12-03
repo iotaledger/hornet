@@ -159,7 +159,11 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.milestoneManager = milestonemanager.New(te.storage, te.syncManager, keyManager, len(cooPrivateKeys))
 
 	// Initialize UTXO
-	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
+	output := &iotago.ExtendedOutput{
+		Address: genesisAddress,
+		Amount:  iotago.TokenSupply,
+	}
+	te.GenesisOutput = utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), output)
 	err = te.storage.UTXOManager().AddUnspentOutput(te.GenesisOutput)
 	require.NoError(te.TestInterface, err)
 

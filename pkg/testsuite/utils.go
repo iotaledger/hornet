@@ -28,7 +28,6 @@ type MessageBuilder struct {
 	amount uint64
 
 	fakeInputs  bool
-	dustUnlock  bool
 	outputToUse *utxo.Output
 }
 
@@ -76,11 +75,6 @@ func (b *MessageBuilder) ToWallet(wallet *utils.HDWallet) *MessageBuilder {
 
 func (b *MessageBuilder) Amount(amount uint64) *MessageBuilder {
 	b.amount = amount
-	return b
-}
-
-func (b *MessageBuilder) DustAllowance() *MessageBuilder {
-	b.dustUnlock = true
 	return b
 }
 
@@ -148,9 +142,13 @@ func (b *MessageBuilder) Build() *Message {
 	} else {
 		if b.fakeInputs {
 			// Add a fake output with enough balance to create a valid transaction
-			fakeInput := iotago.UTXOInputID{}
-			copy(fakeInput[:], randBytes(iotago.TransactionIDLength))
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInput, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
+			fakeInputID := iotago.OutputID{}
+			copy(fakeInputID[:], randBytes(iotago.TransactionIDLength))
+			fakeInput := &iotago.ExtendedOutput{
+				Address: fromAddr,
+				Amount:  b.amount,
+			}
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, hornet.NullMessageID(), fakeInput))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -176,17 +174,13 @@ func (b *MessageBuilder) Build() *Message {
 		}
 	}
 
-	if b.dustUnlock {
-		builder.AddOutput(&iotago.SigLockedDustAllowanceOutput{Address: toAddr, Amount: b.amount})
-	} else {
-		builder.AddOutput(&iotago.SigLockedSingleOutput{Address: toAddr, Amount: b.amount})
-	}
+	builder.AddOutput(&iotago.ExtendedOutput{Address: toAddr, Amount: b.amount})
 
 	var remainderAmount uint64
 	if b.amount < consumedAmount {
 		// Send remainder back to fromWallet
 		remainderAmount = consumedAmount - b.amount
-		builder.AddOutput(&iotago.SigLockedSingleOutput{Address: fromAddr, Amount: remainderAmount})
+		builder.AddOutput(&iotago.ExtendedOutput{Address: fromAddr, Amount: remainderAmount})
 	}
 
 	if len(b.indexation) > 0 {
@@ -197,7 +191,9 @@ func (b *MessageBuilder) Build() *Message {
 	inputPrivateKey, _ := b.fromWallet.KeyPair()
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: fromAddr, Keys: inputPrivateKey})
 
-	transaction, err := builder.Build(inputAddrSigner)
+	//TODO: deSeriParas
+	deSeriParas := &iotago.DeSerializationParameters{}
+	transaction, err := builder.Build(deSeriParas, inputAddrSigner)
 	require.NoError(b.te.TestInterface, err)
 
 	require.NotNil(b.te.TestInterface, b.parents)
@@ -213,24 +209,9 @@ func (b *MessageBuilder) Build() *Message {
 	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	require.NoError(b.te.TestInterface, err)
 
-	var outputType string
-	if b.dustUnlock {
-		outputType = "DustAllowance"
-	} else {
-		outputType = "SingleOutput"
-	}
-
-	log := fmt.Sprintf("Send %d iota %s from %s to %s and remaining %d iota to original wallet", b.amount, outputType, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount)
+	log := fmt.Sprintf("Send %d iota from %s to %s and remaining %d iota to original wallet", b.amount, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount)
 	if b.outputToUse != nil {
-		var usedType string
-		switch b.outputToUse.OutputType() {
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			usedType = "DustAllowance"
-		case iotago.OutputSigLockedSingleOutput:
-			usedType = "SingleOutput"
-		default:
-			usedType = fmt.Sprintf("%d", b.outputToUse.OutputType())
-		}
+		usedType := iotago.OutputTypeToString(b.outputToUse.OutputType())
 		log += fmt.Sprintf(" using UTXO: %s [%s]", b.outputToUse.OutputID().ToHex(), usedType)
 	}
 	fmt.Println(log)
@@ -240,7 +221,7 @@ func (b *MessageBuilder) Build() *Message {
 
 	// Book the outputs in the wallets
 	messageTx := message.Transaction()
-	txEssence := messageTx.Essence.(*iotago.TransactionEssence)
+	txEssence := messageTx.Essence
 	for i := range txEssence.Outputs {
 		output, err := utxo.NewOutput(message.MessageID(), messageTx, uint16(i))
 		require.NoError(b.te.TestInterface, err)
