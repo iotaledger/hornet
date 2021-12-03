@@ -65,7 +65,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 
 	require.NoError(t, manager.AddUnspentOutput(output))
 
-	// Read Output from DB and compate
+	// Read Output from DB and compare
 	readOutput, err := manager.ReadOutputByOutputID(outputID)
 	require.NoError(t, err)
 	EqualOutput(t, output, readOutput)
@@ -74,6 +74,20 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	unspent, err := manager.IsOutputUnspent(outputID)
 	require.NoError(t, err)
 	require.True(t, unspent)
+
+	// Verify that all unspent keys exist in the database
+	for _, key := range output.unspentLookupKeys() {
+		has, err := manager.utxoStorage.Has(key)
+		require.NoError(t, err)
+		require.True(t, has)
+	}
+
+	// Verify that no spent keys exist in the database
+	for _, key := range output.spentLookupKeys() {
+		has, err := manager.utxoStorage.Has(key)
+		require.NoError(t, err)
+		require.False(t, has)
+	}
 
 	// Spend it with a milestone
 	require.NoError(t, manager.ApplyConfirmation(spent.confirmationIndex, Outputs{}, Spents{spent}, nil, nil))
@@ -88,6 +102,20 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	require.NoError(t, err)
 	require.False(t, unspent)
 
+	// Verify that no unspent keys exist in the database
+	for _, key := range output.unspentLookupKeys() {
+		has, err := manager.utxoStorage.Has(key)
+		require.NoError(t, err)
+		require.False(t, has)
+	}
+
+	// Verify that all spent keys exist in the database
+	for _, key := range output.spentLookupKeys() {
+		has, err := manager.utxoStorage.Has(key)
+		require.NoError(t, err)
+		require.True(t, has)
+	}
+
 	// Rollback milestone
 	require.NoError(t, manager.RollbackConfirmation(spent.confirmationIndex, Outputs{}, Spents{spent}, nil, nil))
 
@@ -99,6 +127,20 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	// No Spent should be in the DB
 	_, err = manager.readSpentForOutputIDWithoutLocking(outputID)
 	require.ErrorIs(t, err, kvstore.ErrKeyNotFound)
+
+	// Verify that all unspent keys exist in the database
+	for _, key := range output.unspentLookupKeys() {
+		has, err := manager.utxoStorage.Has(key)
+		require.NoError(t, err)
+		require.True(t, has)
+	}
+
+	// Verify that no spent keys exist in the database
+	for _, key := range output.spentLookupKeys() {
+		has, err := manager.utxoStorage.Has(key)
+		require.NoError(t, err)
+		require.False(t, has)
+	}
 }
 
 func CreateOutputAndAssertSerialization(t *testing.T, messageID hornet.MessageID, outputID *iotago.OutputID, iotaOutput iotago.Output) *Output {
@@ -139,19 +181,39 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 	outputID := randOutputID()
 	messageID := randMessageID()
 	address := randomAddress()
+	senderAddress := randomAddress()
+	tag := randBytes(23)
 	amount := uint64(832493)
 
 	iotaOutput := &iotago.ExtendedOutput{
 		Address: address,
 		Amount:  amount,
+		Blocks: iotago.FeatureBlocks{
+			&iotago.SenderFeatureBlock{
+				Address: senderAddress,
+			},
+			&iotago.IndexationFeatureBlock{
+				Tag: tag,
+			},
+		},
 	}
 
 	output := CreateOutputAndAssertSerialization(t, messageID, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}, []byte{iotago.AddressEd25519}, address[:], []byte{0}, []byte{byte(output.OutputType())}, outputID[:]), []byte(output.spentDatabaseKeys()[0]))
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}, []byte{iotago.AddressEd25519}, address[:], []byte{0}, []byte{byte(output.OutputType())}, outputID[:]), []byte(output.unspentDatabaseKeys()[0]))
+	featureBlockKeys := []lookupKey{
+		byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderLookup}, []byte{iotago.AddressEd25519}, senderAddress[:], []byte{byte(iotago.OutputExtended)}, outputID[:]),
+		byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderAndIndexLookup}, []byte{iotago.AddressEd25519}, senderAddress[:], tag, make([]byte, 41), []byte{byte(iotago.OutputExtended)}, outputID[:]),
+	}
+	require.ElementsMatch(t, featureBlockKeys, output.featureLookupKeys())
 
+	var expectedSpentKeys []lookupKey
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}, []byte{iotago.AddressEd25519}, address[:], []byte{0}, []byte{byte(iotago.OutputExtended)}, outputID[:]))
+	require.ElementsMatch(t, expectedSpentKeys, output.spentLookupKeys())
+
+	var expectedUnspentKeys []lookupKey
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}, []byte{iotago.AddressEd25519}, address[:], []byte{0}, []byte{byte(iotago.OutputExtended)}, outputID[:]))
+	require.ElementsMatch(t, append(expectedUnspentKeys, featureBlockKeys...), output.unspentLookupKeys())
 	AssertOutputUnspentAndSpentTransitions(t, output, spent)
 }
 
@@ -160,6 +222,7 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 	outputID := randOutputID()
 	messageID := randMessageID()
 	address := randomAddress()
+	senderAddress := randomAddress()
 	amount := uint64(832493)
 
 	iotaOutput := &iotago.ExtendedOutput{
@@ -169,14 +232,27 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 			&iotago.TimelockMilestoneIndexFeatureBlock{
 				MilestoneIndex: 234,
 			},
+			&iotago.SenderFeatureBlock{
+				Address: senderAddress,
+			},
 		},
 	}
 
 	output := CreateOutputAndAssertSerialization(t, messageID, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}, []byte{iotago.AddressEd25519}, address[:], []byte{1}, []byte{byte(output.OutputType())}, outputID[:]), []byte(output.spentDatabaseKeys()[0]))
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}, []byte{iotago.AddressEd25519}, address[:], []byte{1}, []byte{byte(output.OutputType())}, outputID[:]), []byte(output.unspentDatabaseKeys()[0]))
+	featureBlockKeys := []lookupKey{
+		byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderLookup}, []byte{iotago.AddressEd25519}, senderAddress[:], []byte{byte(iotago.OutputExtended)}, outputID[:]),
+	}
+	require.ElementsMatch(t, featureBlockKeys, output.featureLookupKeys())
+
+	var expectedSpentKeys []lookupKey
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}, []byte{iotago.AddressEd25519}, address[:], []byte{1}, []byte{byte(iotago.OutputExtended)}, outputID[:]))
+	require.ElementsMatch(t, expectedSpentKeys, output.spentLookupKeys())
+
+	var expectedUnspentKeys []lookupKey
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}, []byte{iotago.AddressEd25519}, address[:], []byte{1}, []byte{byte(iotago.OutputExtended)}, outputID[:]))
+	require.ElementsMatch(t, append(expectedUnspentKeys, featureBlockKeys...), output.unspentLookupKeys())
 
 	AssertOutputUnspentAndSpentTransitions(t, output, spent)
 }
@@ -199,8 +275,60 @@ func TestNFTOutputSerialization(t *testing.T) {
 	output := CreateOutputAndAssertSerialization(t, messageID, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixNFTSpent}, nftID[:], outputID[:]), []byte(output.spentDatabaseKeys()[0]))
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixNFTUnspent}, nftID[:], outputID[:]), []byte(output.unspentDatabaseKeys()[0]))
+	var expectedSpentKeys []lookupKey
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixNFTSpent}, nftID[:], outputID[:]))
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}, []byte{iotago.AddressEd25519}, address[:], []byte{0}, []byte{byte(iotago.OutputNFT)}, outputID[:]))
+	require.ElementsMatch(t, expectedSpentKeys, output.spentLookupKeys())
+
+	var expectedUnspentKeys []lookupKey
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixNFTUnspent}, nftID[:], outputID[:]))
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}, []byte{iotago.AddressEd25519}, address[:], []byte{0}, []byte{byte(iotago.OutputNFT)}, outputID[:]))
+	require.ElementsMatch(t, expectedUnspentKeys, output.unspentLookupKeys())
+
+	AssertOutputUnspentAndSpentTransitions(t, output, spent)
+}
+
+func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
+
+	outputID := randOutputID()
+	messageID := randMessageID()
+	address := randNFTID()
+	issuerAddress := randomAddress()
+	nftID := randNFTID()
+	amount := uint64(832493)
+
+	iotaOutput := &iotago.NFTOutput{
+		Address:           address.ToAddress(),
+		Amount:            amount,
+		NFTID:             nftID,
+		ImmutableMetadata: randBytes(12),
+		Blocks: iotago.FeatureBlocks{
+			&iotago.IssuerFeatureBlock{
+				Address: issuerAddress,
+			},
+			&iotago.ExpirationMilestoneIndexFeatureBlock{
+				MilestoneIndex: 324324,
+			},
+		},
+	}
+
+	output := CreateOutputAndAssertSerialization(t, messageID, outputID, iotaOutput)
+	spent := CreateSpentAndAssertSerialization(t, output)
+
+	featureBlockKeys := []lookupKey{
+		byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixIssuerLookup}, []byte{iotago.AddressEd25519}, issuerAddress[:], []byte{byte(iotago.OutputNFT)}, outputID[:]),
+	}
+	require.ElementsMatch(t, featureBlockKeys, output.featureLookupKeys())
+
+	var expectedSpentKeys []lookupKey
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixNFTSpent}, nftID[:], outputID[:]))
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}, []byte{iotago.AddressNFT}, address[:], []byte{1}, []byte{byte(iotago.OutputNFT)}, outputID[:]))
+	require.ElementsMatch(t, expectedSpentKeys, output.spentLookupKeys())
+
+	var expectedUnspentKeys []lookupKey
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixNFTUnspent}, nftID[:], outputID[:]))
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}, []byte{iotago.AddressNFT}, address[:], []byte{1}, []byte{byte(iotago.OutputNFT)}, outputID[:]))
+	require.ElementsMatch(t, append(expectedUnspentKeys, featureBlockKeys...), output.unspentLookupKeys())
 
 	AssertOutputUnspentAndSpentTransitions(t, output, spent)
 }
@@ -210,21 +338,48 @@ func TestAliasOutputSerialization(t *testing.T) {
 	outputID := randOutputID()
 	messageID := randMessageID()
 	aliasID := randAliasID()
+	stateController := randAliasID()
+	governanceController := randomAddress()
+	issuer := randNFTID()
+	sender := randAliasID()
 	amount := uint64(832493)
 
 	iotaOutput := &iotago.AliasOutput{
 		Amount:               amount,
 		AliasID:              aliasID,
-		StateController:      randomAddress(),
-		GovernanceController: randomAddress(),
+		StateController:      stateController.ToAddress(),
+		GovernanceController: governanceController,
 		StateMetadata:        []byte{},
+		Blocks: iotago.FeatureBlocks{
+			&iotago.IssuerFeatureBlock{
+				Address: issuer.ToAddress(),
+			},
+			&iotago.SenderFeatureBlock{
+				Address: sender.ToAddress(),
+			},
+		},
 	}
 
 	output := CreateOutputAndAssertSerialization(t, messageID, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixAliasSpent}, aliasID[:], outputID[:]), []byte(output.spentDatabaseKeys()[0]))
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixAliasUnspent}, aliasID[:], outputID[:]), []byte(output.unspentDatabaseKeys()[0]))
+	featureBlockKeys := []lookupKey{
+		byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixIssuerLookup}, []byte{iotago.AddressNFT}, issuer[:], []byte{byte(iotago.OutputAlias)}, outputID[:]),
+		byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderLookup}, []byte{iotago.AddressAlias}, sender[:], []byte{byte(iotago.OutputAlias)}, outputID[:]),
+	}
+	require.ElementsMatch(t, featureBlockKeys, output.featureLookupKeys())
+
+	var expectedSpentKeys []lookupKey
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixAliasSpent}, aliasID[:], outputID[:]))
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}, []byte{iotago.AddressAlias}, stateController[:], []byte{0}, []byte{byte(iotago.OutputAlias)}, outputID[:]))
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}, []byte{iotago.AddressEd25519}, governanceController[:], []byte{0}, []byte{byte(iotago.OutputAlias)}, outputID[:]))
+	require.ElementsMatch(t, expectedSpentKeys, output.spentLookupKeys())
+
+	var expectedUnspentKeys []lookupKey
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixAliasUnspent}, aliasID[:], outputID[:]))
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}, []byte{iotago.AddressAlias}, stateController[:], []byte{0}, []byte{byte(iotago.OutputAlias)}, outputID[:]))
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}, []byte{iotago.AddressEd25519}, governanceController[:], []byte{0}, []byte{byte(iotago.OutputAlias)}, outputID[:]))
+	require.ElementsMatch(t, append(expectedUnspentKeys, featureBlockKeys...), output.unspentLookupKeys())
 
 	AssertOutputUnspentAndSpentTransitions(t, output, spent)
 }
@@ -258,8 +413,15 @@ func TestFoundryOutputSerialization(t *testing.T) {
 	foundryID, err := iotaOutput.ID()
 	require.NoError(t, err)
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixFoundrySpent}, foundryID[:], outputID[:]), []byte(output.spentDatabaseKeys()[0]))
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixFoundryUnspent}, foundryID[:], outputID[:]), []byte(output.unspentDatabaseKeys()[0]))
+	var expectedSpentKeys []lookupKey
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixFoundrySpent}, foundryID[:], outputID[:]))
+	expectedSpentKeys = append(expectedSpentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}, []byte{iotago.AddressAlias}, aliasID[:], []byte{0}, []byte{byte(iotago.OutputFoundry)}, outputID[:]))
+	require.ElementsMatch(t, expectedSpentKeys, output.spentLookupKeys())
+
+	var expectedUnspentKeys []lookupKey
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixFoundryUnspent}, foundryID[:], outputID[:]))
+	expectedUnspentKeys = append(expectedUnspentKeys, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}, []byte{iotago.AddressAlias}, aliasID[:], []byte{0}, []byte{byte(iotago.OutputFoundry)}, outputID[:]))
+	require.ElementsMatch(t, expectedUnspentKeys, output.unspentLookupKeys())
 
 	AssertOutputUnspentAndSpentTransitions(t, output, spent)
 }

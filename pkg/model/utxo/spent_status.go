@@ -108,20 +108,20 @@ func lookupKeysForFeatureBlocks(blocks iotago.FeatureBlocks, outputType iotago.O
 func (o *Output) lookupKeys(spent bool) []lookupKey {
 	switch output := o.output.(type) {
 	case *iotago.ExtendedOutput:
-		return append([]lookupKey{
+		return []lookupKey{
 			lookupKeyByAddress(spent, output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
-		}, lookupKeysForFeatureBlocks(output.FeatureBlocks(), o.OutputType(), o.outputID)...)
+		}
 	case *iotago.AliasOutput:
-		return append([]lookupKey{
+		return []lookupKey{
 			lookupKeyByAliasID(spent, output.AliasID, o.outputID),
 			lookupKeyByAddress(spent, output.StateController, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
 			lookupKeyByAddress(spent, output.GovernanceController, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
-		}, lookupKeysForFeatureBlocks(output.FeatureBlocks(), o.OutputType(), o.outputID)...)
+		}
 	case *iotago.NFTOutput:
-		return append([]lookupKey{
+		return []lookupKey{
 			lookupKeyByNFTID(spent, output.NFTID, o.outputID),
 			lookupKeyByAddress(spent, output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
-		}, lookupKeysForFeatureBlocks(output.FeatureBlocks(), o.OutputType(), o.outputID)...)
+		}
 	case *iotago.FoundryOutput:
 		foundryID, err := output.ID()
 		if err != nil {
@@ -136,12 +136,27 @@ func (o *Output) lookupKeys(spent bool) []lookupKey {
 	}
 }
 
-func (o *Output) unspentDatabaseKeys() []lookupKey {
-	return o.lookupKeys(false)
+func (o *Output) unspentLookupKeys() []lookupKey {
+	return append(o.lookupKeys(false), o.featureLookupKeys()...)
 }
 
-func (o *Output) spentDatabaseKeys() []lookupKey {
+func (o *Output) spentLookupKeys() []lookupKey {
 	return o.lookupKeys(true)
+}
+
+func (o *Output) featureLookupKeys() []lookupKey {
+	switch output := o.output.(type) {
+	case *iotago.ExtendedOutput:
+		return lookupKeysForFeatureBlocks(output.FeatureBlocks(), o.OutputType(), o.outputID)
+	case *iotago.AliasOutput:
+		return lookupKeysForFeatureBlocks(output.FeatureBlocks(), o.OutputType(), o.outputID)
+	case *iotago.NFTOutput:
+		return lookupKeysForFeatureBlocks(output.FeatureBlocks(), o.OutputType(), o.outputID)
+	case *iotago.FoundryOutput:
+		return nil
+	default:
+		panic("Unknown output type")
+	}
 }
 
 func outputIDFromDatabaseKey(key lookupKey) (*iotago.OutputID, error) {
@@ -170,13 +185,13 @@ func outputIDFromDatabaseKey(key lookupKey) (*iotago.OutputID, error) {
 }
 
 func markAsUnspent(output *Output, mutations kvstore.BatchedMutations) error {
-	for _, key := range output.spentDatabaseKeys() {
+	for _, key := range output.spentLookupKeys() {
 		if err := mutations.Delete(key); err != nil {
 			return err
 		}
 	}
 
-	for _, key := range output.unspentDatabaseKeys() {
+	for _, key := range output.unspentLookupKeys() {
 		if err := mutations.Set(key, []byte{}); err != nil {
 			return err
 		}
@@ -185,13 +200,13 @@ func markAsUnspent(output *Output, mutations kvstore.BatchedMutations) error {
 }
 
 func markAsSpent(output *Output, mutations kvstore.BatchedMutations) error {
-	for _, key := range output.unspentDatabaseKeys() {
+	for _, key := range output.unspentLookupKeys() {
 		if err := mutations.Delete(key); err != nil {
 			return err
 		}
 	}
 
-	for _, key := range output.spentDatabaseKeys() {
+	for _, key := range output.spentLookupKeys() {
 		if err := mutations.Set(key, []byte{}); err != nil {
 			return err
 		}
@@ -200,13 +215,13 @@ func markAsSpent(output *Output, mutations kvstore.BatchedMutations) error {
 }
 
 func deleteSpentUnspentMarkings(output *Output, mutations kvstore.BatchedMutations) error {
-	for _, key := range output.unspentDatabaseKeys() {
+	for _, key := range output.unspentLookupKeys() {
 		if err := mutations.Delete(key); err != nil {
 			return err
 		}
 	}
 
-	for _, key := range output.spentDatabaseKeys() {
+	for _, key := range output.spentLookupKeys() {
 		if err := mutations.Delete(key); err != nil {
 			return err
 		}
@@ -216,7 +231,7 @@ func deleteSpentUnspentMarkings(output *Output, mutations kvstore.BatchedMutatio
 
 func (u *Manager) IsOutputUnspentWithoutLocking(output *Output) (bool, error) {
 	// Looking up the first key should be enough, since that is the main key
-	return u.utxoStorage.Has(output.unspentDatabaseKeys()[0])
+	return u.utxoStorage.Has(output.unspentLookupKeys()[0])
 }
 
 func (u *Manager) IsOutputUnspent(outputID *iotago.OutputID) (bool, error) {
