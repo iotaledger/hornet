@@ -8,7 +8,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
@@ -18,7 +18,7 @@ func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
 	}
 
 	// Get the first output of that transaction (using index 0)
-	outputID := &iotago.UTXOInputID{}
+	outputID := &iotago.OutputID{}
 	copy(outputID[:], transactionID[:])
 
 	output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(outputID)

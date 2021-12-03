@@ -14,8 +14,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func publishOnTopic(topic string, payload interface{}) {
@@ -180,24 +180,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 }
 
 func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool) *outputPayload {
-
-	var rawOutput iotago.Output
-	switch output.OutputType() {
-	case iotago.OutputSigLockedSingleOutput:
-		rawOutput = &iotago.SigLockedSingleOutput{
-			Address: output.Address(),
-			Amount:  output.Amount(),
-		}
-	case iotago.OutputSigLockedDustAllowanceOutput:
-		rawOutput = &iotago.SigLockedDustAllowanceOutput{
-			Address: output.Address(),
-			Amount:  output.Amount(),
-		}
-	default:
-		return nil
-	}
-
-	rawOutputJSON, err := rawOutput.MarshalJSON()
+	rawOutputJSON, err := output.Output().MarshalJSON()
 	if err != nil {
 		return nil
 	}
@@ -289,7 +272,7 @@ func transactionIDFromTopic(topicName string) *iotago.TransactionID {
 	return nil
 }
 
-func outputIDFromTopic(topicName string) *iotago.UTXOInputID {
+func outputIDFromTopic(topicName string) *iotago.OutputID {
 	if strings.HasPrefix(topicName, "outputs/") {
 		outputIDHex := strings.Replace(topicName, "outputs/", "", 1)
 
@@ -299,7 +282,7 @@ func outputIDFromTopic(topicName string) *iotago.UTXOInputID {
 		}
 
 		if len(bytes) == iotago.TransactionIDLength+serializer.UInt16ByteSize {
-			outputID := &iotago.UTXOInputID{}
+			outputID := &iotago.OutputID{}
 			copy(outputID[:], bytes)
 			return outputID
 		}

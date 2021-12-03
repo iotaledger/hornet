@@ -8,8 +8,8 @@ import (
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 const (
@@ -100,7 +100,7 @@ func (hd *HDWallet) Outputs() []*utxo.Output {
 // Address calculates an ed25519 address by using slip10.
 func (hd *HDWallet) Address() *iotago.Ed25519Address {
 	_, pubKey := hd.KeyPair()
-	addr := iotago.AddressFromEd25519PubKey(pubKey)
+	addr := iotago.Ed25519AddressFromPubKey(pubKey)
 	return &addr
 }
 

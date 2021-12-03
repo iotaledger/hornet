@@ -12,8 +12,8 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 const (
@@ -112,7 +112,7 @@ func sendParticipationTransaction(cfg *cfg) (*iotago.MessageID, error) {
 	client := iotago.NewNodeHTTPAPIClient(cfg.nodeAPIAddress)
 
 	inputPublicKey := cfg.inputPrivateKey.Public().(ed25519.PublicKey)
-	inputAddress := iotago.AddressFromEd25519PubKey(inputPublicKey)
+	inputAddress := iotago.Ed25519AddressFromPubKey(inputPublicKey)
 	inputSigner := iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&inputAddress, cfg.inputPrivateKey))
 
 	indexationPayload, err := parseParticipationsPayload(cfg)

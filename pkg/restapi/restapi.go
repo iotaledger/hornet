@@ -13,7 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -98,7 +98,7 @@ func ParseTransactionIDParam(c echo.Context) (*iotago.TransactionID, error) {
 	return &transactionID, nil
 }
 
-func ParseOutputIDParam(c echo.Context) (*iotago.UTXOInputID, error) {
+func ParseOutputIDParam(c echo.Context) (*iotago.OutputID, error) {
 	outputIDParam := strings.ToLower(c.Param(ParameterOutputID))
 
 	outputIDBytes, err := hex.DecodeString(outputIDParam)
@@ -110,7 +110,7 @@ func ParseOutputIDParam(c echo.Context) (*iotago.UTXOInputID, error) {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 
-	var outputID iotago.UTXOInputID
+	var outputID iotago.OutputID
 	copy(outputID[:], outputIDBytes)
 	return &outputID, nil
 }

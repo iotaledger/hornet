@@ -22,7 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -74,16 +74,6 @@ const (
 	// RouteOutput is the route for getting outputs by their outputID (transactionHash + outputIndex).
 	// GET returns the output.
 	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
-
-	// RouteAddressBech32Balance is the route for getting the total balance of all unspent outputs of an address.
-	// The address must be encoded in bech32.
-	// GET returns the balance of all unspent outputs of this address.
-	RouteAddressBech32Balance = "/addresses/:" + restapipkg.ParameterAddress
-
-	// RouteAddressEd25519Balance is the route for getting the total balance of all unspent outputs of an ed25519 address.
-	// The ed25519 address must be encoded in hex.
-	// GET returns the balance of all unspent outputs of this address.
-	RouteAddressEd25519Balance = "/addresses/ed25519/:" + restapipkg.ParameterAddress
 
 	// RouteAddressBech32Outputs is the route for getting all output IDs for an address.
 	// The address must be encoded in bech32.
@@ -291,24 +281,6 @@ func configure() {
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
 		resp, err := outputByID(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressBech32Balance, func(c echo.Context) error {
-		resp, err := balanceByBech32Address(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressEd25519Balance, func(c echo.Context) error {
-		resp, err := balanceByEd25519Address(c)
 		if err != nil {
 			return err
 		}

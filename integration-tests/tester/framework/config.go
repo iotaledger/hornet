@@ -23,8 +23,8 @@ import (
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 const (
@@ -68,7 +68,7 @@ func init() {
 		panic(err)
 	}
 	GenesisSeed = prvkey
-	GenesisAddress = iotago.AddressFromEd25519PubKey(GenesisSeed.Public().(ed25519.PublicKey))
+	GenesisAddress = iotago.Ed25519AddressFromPubKey(GenesisSeed.Public().(ed25519.PublicKey))
 }
 
 // DefaultConfig returns the default NodeConfig.

@@ -14,7 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/iotaledger/hive.go/configuration"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func snapshotGen(_ *configuration.Configuration, args []string) error {
@@ -118,7 +118,7 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 		return &snapshot.Output{
 			MessageID:  nullMessageID,
 			OutputID:   nullOutputID,
-			OutputType: iotago.OutputSigLockedSingleOutput,
+			OutputType: iotago.OutputExtended,
 			Address:    &address,
 			Amount:     iotago.TokenSupply - treasury,
 		}, nil

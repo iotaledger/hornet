@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -20,7 +20,9 @@ const (
 
 // NewDebugNodeAPIClient returns a new DebugNodeAPIClient with the given BaseURL.
 func NewDebugNodeAPIClient(baseURL string, opts ...iotago.NodeHTTPAPIClientOption) *DebugNodeAPIClient {
-	return &DebugNodeAPIClient{NodeHTTPAPIClient: iotago.NewNodeHTTPAPIClient(baseURL, opts...)}
+	//TODO: deSeriParams
+	deSeriParams := &iotago.DeSerializationParameters{}
+	return &DebugNodeAPIClient{NodeHTTPAPIClient: iotago.NewNodeHTTPAPIClient(baseURL, deSeriParams, opts...)}
 }
 
 // DebugNodeAPIClient is a client for node HTTP REST APIs.

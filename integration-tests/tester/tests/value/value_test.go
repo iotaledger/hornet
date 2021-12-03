@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 // TestValue boots up a statically peered network and then checks that spending
@@ -28,10 +28,10 @@ func TestValue(t *testing.T) {
 
 	// create two targets
 	target1 := ed25519.NewKeyFromSeed(randSeed())
-	target1Addr := iotago.AddressFromEd25519PubKey(target1.Public().(ed25519.PublicKey))
+	target1Addr := iotago.Ed25519AddressFromPubKey(target1.Public().(ed25519.PublicKey))
 
 	target2 := ed25519.NewKeyFromSeed(randSeed())
-	target2Addr := iotago.AddressFromEd25519PubKey(target2.Public().(ed25519.PublicKey))
+	target2Addr := iotago.Ed25519AddressFromPubKey(target2.Public().(ed25519.PublicKey))
 
 	var target1Deposit, target2Deposit uint64 = 10_000_000, iotago.TokenSupply - 10_000_000
 

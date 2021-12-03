@@ -20,7 +20,7 @@ import (
 	"github.com/iotaledger/iota.go/merkle"
 	"github.com/iotaledger/iota.go/transaction"
 	"github.com/iotaledger/iota.go/trinary"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 
 	// import implementation
 	_ "golang.org/x/crypto/blake2b"

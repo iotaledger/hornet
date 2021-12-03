@@ -14,29 +14,12 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func NewOutputResponse(output *utxo.Output, spent bool, ledgerIndex milestone.Index) (*OutputResponse, error) {
-
-	var rawOutput iotago.Output
-	switch output.OutputType() {
-	case iotago.OutputSigLockedSingleOutput:
-		rawOutput = &iotago.SigLockedSingleOutput{
-			Address: output.Address(),
-			Amount:  output.Amount(),
-		}
-	case iotago.OutputSigLockedDustAllowanceOutput:
-		rawOutput = &iotago.SigLockedDustAllowanceOutput{
-			Address: output.Address(),
-			Amount:  output.Amount(),
-		}
-	default:
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "unsupported output type: %d", output.OutputType())
-	}
-
-	rawOutputJSON, err := rawOutput.MarshalJSON()
+	rawOutputJSON, err := output.Output().MarshalJSON()
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "marshaling output failed: %s, error: %s", output.OutputID().ToHex(), err)
 	}
@@ -82,51 +65,6 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 	}
 
 	return NewOutputResponse(output, !unspent, ledgerIndex)
-}
-
-func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, error) {
-	balance, dustAllowed, ledgerIndex, err := deps.UTXOManager.AddressBalance(address)
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading address balance failed: %s, error: %s", address, err)
-	}
-
-	return &addressBalanceResponse{
-		AddressType: address.Type(),
-		Address:     address.String(),
-		Balance:     balance,
-		DustAllowed: dustAllowed,
-		LedgerIndex: ledgerIndex,
-	}, nil
-}
-
-func balanceByBech32Address(c echo.Context) (*addressBalanceResponse, error) {
-	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
-	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
-	if err != nil {
-		return nil, err
-	}
-
-	switch address := bech32Address.(type) {
-	case *iotago.Ed25519Address:
-		return ed25519Balance(address)
-	default:
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", address.String())
-	}
-}
-
-func balanceByEd25519Address(c echo.Context) (*addressBalanceResponse, error) {
-	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
-	address, err := restapi.ParseEd25519AddressParam(c)
-	if err != nil {
-		return nil, err
-	}
-	return ed25519Balance(address)
 }
 
 func outputsResponse(address iotago.Address, includeSpent bool, filterType *iotago.OutputType) (*addressOutputsResponse, error) {
@@ -203,7 +141,9 @@ func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) 
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
 		}
 		outputType := iotago.OutputType(outputTypeInt)
-		if outputType != iotago.OutputSigLockedSingleOutput && outputType != iotago.OutputSigLockedDustAllowanceOutput {
+		switch outputType {
+		case iotago.OutputExtended, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
+		default:
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
 		}
 		filteredType = &outputType
@@ -233,7 +173,9 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
 		}
 		outputType := iotago.OutputType(outputTypeInt)
-		if outputType != iotago.OutputSigLockedSingleOutput && outputType != iotago.OutputSigLockedDustAllowanceOutput {
+		switch outputType {
+		case iotago.OutputExtended, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
+		default:
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
 		}
 		filteredType = &outputType

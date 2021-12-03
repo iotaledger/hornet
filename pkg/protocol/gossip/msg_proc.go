@@ -19,11 +19,11 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/pow"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/pow"
 )
 
 const (
@@ -297,7 +297,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -325,7 +325,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		// can't reply if serialization fails
 		return

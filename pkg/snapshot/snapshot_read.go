@@ -12,8 +12,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // returns a file header consumer, which stores the ledger milestone index up on execution in the database.
@@ -64,10 +64,13 @@ func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 		switch addr := output.Address.(type) {
 		case *iotago.Ed25519Address:
 
-			outputID := iotago.UTXOInputID(output.OutputID)
+			outputID := iotago.OutputID(output.OutputID)
 			messageID := hornet.MessageIDFromArray(output.MessageID)
-
-			return utxoManager.AddUnspentOutput(utxo.CreateOutput(&outputID, messageID, output.OutputType, addr, output.Amount))
+			iotagoOutput := &iotago.ExtendedOutput{
+				Address: addr,
+				Amount:  output.Amount,
+			}
+			return utxoManager.AddUnspentOutput(utxo.CreateOutput(&outputID, messageID, iotagoOutput))
 		default:
 			return iotago.ErrUnknownAddrType
 		}
@@ -106,9 +109,13 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 
 		createdOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
 			output := obj.(*Output)
-			outputID := iotago.UTXOInputID(output.OutputID)
+			outputID := iotago.OutputID(output.OutputID)
 			messageID := hornet.MessageIDFromArray(output.MessageID)
-			newOutputs = append(newOutputs, utxo.CreateOutput(&outputID, messageID, output.OutputType, addr, output.Amount))
+			iotagoOutput := &iotago.ExtendedOutput{
+				Address: addr,
+				Amount:  output.Amount,
+			}
+			newOutputs = append(newOutputs, utxo.CreateOutput(&outputID, messageID, iotagoOutput))
 			return nil
 		})
 
@@ -122,9 +129,13 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 		spentOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
 
 			spent := obj.(*Spent)
-			outputID := iotago.UTXOInputID(spent.OutputID)
+			outputID := iotago.OutputID(spent.OutputID)
 			messageID := hornet.MessageIDFromArray(spent.MessageID)
-			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msIndex))
+			iotagoOutput := &iotago.ExtendedOutput{
+				Address: addr,
+				Amount:  spent.Amount,
+			}
+			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, messageID, iotagoOutput), &spent.TargetTransactionID, msIndex))
 			return nil
 		})
 

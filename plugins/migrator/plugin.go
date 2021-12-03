@@ -7,7 +7,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 
 	"github.com/iotaledger/hive.go/timeutil"
 

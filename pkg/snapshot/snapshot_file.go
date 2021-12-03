@@ -14,8 +14,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/byteutils"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -98,10 +98,10 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	if _, err := b.Write(s.OutputID[:]); err != nil {
 		return nil, fmt.Errorf("unable to write output ID for ls-output: %w", err)
 	}
-	if err := b.WriteByte(s.OutputType); err != nil {
+	if err := b.WriteByte(byte(s.OutputType)); err != nil {
 		return nil, fmt.Errorf("unable to write output type for ls-output: %w", err)
 	}
-	addrData, err := s.Address.Serialize(serializer.DeSeriModePerformValidation)
+	addrData, err := s.Address.Serialize(serializer.DeSeriModePerformValidation, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize address for ls-output: %w", err)
 	}
@@ -149,9 +149,7 @@ func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
 	if md.Milestone.Receipt == nil {
 		return nil
 	}
-	to := md.Milestone.Receipt.(*iotago.Receipt).
-		Transaction.(*iotago.TreasuryTransaction).
-		Output.(*iotago.TreasuryOutput)
+	to := md.Milestone.Receipt.(*iotago.Receipt).Transaction.Output
 	msID, err := md.Milestone.ID()
 	if err != nil {
 		panic(err)
@@ -164,7 +162,7 @@ func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
 func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
 
-	msBytes, err := md.Milestone.Serialize(serializer.DeSeriModePerformValidation)
+	msBytes, err := md.Milestone.Serialize(serializer.DeSeriModePerformValidation, nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize milestone for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
@@ -584,7 +582,7 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 		return nil, fmt.Errorf("unable to read LS ms-diff ms: %w", err)
 	}
 
-	if _, err := ms.Deserialize(msBytes, serializer.DeSeriModePerformValidation); err != nil {
+	if _, err := ms.Deserialize(msBytes, serializer.DeSeriModePerformValidation, nil); err != nil {
 		return nil, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
 	}
 
@@ -648,7 +646,7 @@ func readOutput(reader io.Reader) (*Output, error) {
 	if _, err := io.ReadFull(reader, typeBuf); err != nil {
 		return nil, fmt.Errorf("unable to read LS output type: %w", err)
 	}
-	output.OutputType = typeBuf[0]
+	output.OutputType = iotago.OutputType(typeBuf[0])
 
 	// look ahead address type
 	var addrTypeBuf [serializer.SmallTypeDenotationByteSize]byte
@@ -675,7 +673,7 @@ func readOutput(reader io.Reader) (*Output, error) {
 		return nil, fmt.Errorf("unable to read LS output address: %w", err)
 	}
 
-	if _, err := addr.Deserialize(append(addrTypeBuf[:], addrDataWithoutType...), serializer.DeSeriModePerformValidation); err != nil {
+	if _, err := addr.Deserialize(append(addrTypeBuf[:], addrDataWithoutType...), serializer.DeSeriModePerformValidation, nil); err != nil {
 		return nil, fmt.Errorf("invalid LS output address: %w", err)
 	}
 	output.Address = addr

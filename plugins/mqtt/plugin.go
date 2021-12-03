@@ -21,7 +21,7 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -154,7 +154,7 @@ func configure() {
 
 		if transactionID := transactionIDFromTopic(topicName); transactionID != nil {
 			// Find the first output of the transaction
-			outputID := &iotago.UTXOInputID{}
+			outputID := &iotago.OutputID{}
 			copy(outputID[:], transactionID[:])
 
 			output, err := deps.Storage.UTXOManager().ReadOutputByOutputIDWithoutLocking(outputID)
