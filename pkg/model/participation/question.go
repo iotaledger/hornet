@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
-
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 const (
@@ -21,57 +19,68 @@ var (
 	answersArrayRules = &serializer.ArrayRules{
 		Min:            QuestionMinAnswersCount,
 		Max:            QuestionMaxAnswersCount,
-		ValidationMode: serializer.ArrayValidationModeNone,
+		ValidationMode: serializer.ArrayValidationModeNoDuplicates,
+		UniquenessSliceFunc: func(next []byte) []byte {
+			return next[:1] // Check answer value for uniqueness
+		},
+		Guards: serializer.SerializableGuard{
+			ReadGuard: func(ty uint32) (serializer.Serializable, error) {
+				return &Answer{}, nil
+			},
+			WriteGuard: func(seri serializer.Serializable) error {
+				switch seri.(type) {
+				case *Answer:
+					return nil
+				default:
+					return ErrSerializationUnknownType
+				}
+			},
+		},
 	}
-
-	ErrDuplicateAnswerValue = errors.New("duplicate answer value found")
 )
+
+type Answers []*Answer
+
+func (a Answers) ToSerializables() serializer.Serializables {
+	seris := make(serializer.Serializables, len(a))
+	for i, x := range a {
+		seris[i] = x
+	}
+	return seris
+}
+
+func (a *Answers) FromSerializables(seris serializer.Serializables) {
+	*a = make(Answers, len(seris))
+	for i, seri := range seris {
+		(*a)[i] = seri.(*Answer)
+	}
+}
 
 // Question defines a single question inside a Ballot that can have multiple Answers.
 type Question struct {
 	// Text is the text of the question.
 	Text string
 	// Answers are the possible answers to the question.
-	Answers serializer.Serializables
+	Answers Answers
 	// AdditionalInfo is an additional description text about the question.
 	AdditionalInfo string
 }
 
-func (q *Question) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (q *Question) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadString(&q.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize participation question text: %w", err)
 		}, QuestionTextMaxLength).
-		ReadSliceOfObjects(func(seri serializer.Serializables) { q.Answers = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
-			// there is no real selector, so we always return a fresh Answer
-			return &Answer{}, nil
-		}, answersArrayRules, func(err error) error {
+		ReadSliceOfObjects(&q.Answers, deSeriMode, deSeriCtx, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, answersArrayRules, func(err error) error {
 			return fmt.Errorf("unable to deserialize participation question answers: %w", err)
 		}).
 		ReadString(&q.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to deserialize participation question additional info: %w", err)
 		}, QuestionAdditionalInfoMaxLength).
-		AbortIf(func(err error) error {
-			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-				seenValues := make(map[uint8]struct{})
-				for _, s := range q.Answers {
-					switch a := s.(type) {
-					case *Answer:
-						if _, found := seenValues[a.Value]; found {
-							return ErrDuplicateAnswerValue
-						}
-						seenValues[a.Value] = struct{}{}
-					default:
-						return errors.New("invalid answer type")
-					}
-				}
-			}
-			return nil
-		}).
 		Done()
 }
 
-func (q *Question) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (q *Question) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
@@ -81,28 +90,13 @@ func (q *Question) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte,
 				if len(q.AdditionalInfo) > QuestionAdditionalInfoMaxLength {
 					return fmt.Errorf("%w: additional info too long. Max allowed %d", ErrSerializationStringLengthInvalid, QuestionAdditionalInfoMaxLength)
 				}
-				if err := answersArrayRules.CheckBounds(uint(len(q.Answers))); err != nil {
-					return fmt.Errorf("unable to serialize question answers: %w", err)
-				}
-				seenValues := make(map[uint8]struct{})
-				for _, s := range q.Answers {
-					switch a := s.(type) {
-					case *Answer:
-						if _, found := seenValues[a.Value]; found {
-							return ErrDuplicateAnswerValue
-						}
-						seenValues[a.Value] = struct{}{}
-					default:
-						return errors.New("invalid answer type")
-					}
-				}
 			}
 			return nil
 		}).
 		WriteString(q.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize participation question text: %w", err)
 		}).
-		WriteSliceOfObjects(q.Answers, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
+		WriteSliceOfObjects(&q.Answers, deSeriMode, deSeriCtx, serializer.SeriLengthPrefixTypeAsByte, answersArrayRules, func(err error) error {
 			return fmt.Errorf("unable to serialize participation question answers: %w", err)
 		}).
 		WriteString(q.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
@@ -159,7 +153,7 @@ func (j *jsonQuestion) ToSerializable() (serializer.Serializable, error) {
 		AdditionalInfo: j.AdditionalInfo,
 	}
 
-	answers := make(serializer.Serializables, len(j.Answers))
+	answers := make(Answers, len(j.Answers))
 	for i, ele := range j.Answers {
 		answer := &Answer{}
 
@@ -183,7 +177,7 @@ func (j *jsonQuestion) ToSerializable() (serializer.Serializable, error) {
 func (q *Question) QuestionAnswers() []*Answer {
 	answers := make([]*Answer, len(q.Answers))
 	for i := range q.Answers {
-		answers[i] = q.Answers[i].(*Answer)
+		answers[i] = q.Answers[i]
 	}
 	return answers
 }
@@ -194,7 +188,7 @@ func (q *Question) answerValueForByte(byteValue byte) uint8 {
 		return 0
 	}
 	for i := range q.Answers {
-		a := q.Answers[i].(*Answer)
+		a := q.Answers[i]
 		if a.Value == byteValue {
 			return a.Value
 		}

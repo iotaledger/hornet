@@ -11,8 +11,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/participation/test"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func TestEventStateHelpers(t *testing.T) {
@@ -193,7 +193,7 @@ func TestIndexationPayloads(t *testing.T) {
 	})
 	participations, err := b.Build()
 	require.NoError(t, err)
-	participationsData, err := participations.Serialize(serializer.DeSeriModePerformValidation)
+	participationsData, err := participations.Serialize(serializer.DeSeriModePerformValidation, nil)
 	require.NoError(t, err)
 
 	wrongAddressMessage := env.NewMessageBuilder(test.ParticipationIndexation).
@@ -219,11 +219,13 @@ func TestIndexationPayloads(t *testing.T) {
 	})
 	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet3.Address(), Input: env.Wallet3.Outputs()[0].OutputID().UTXOInput()})
 	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet4.Address(), Input: env.Wallet4.Outputs()[0].OutputID().UTXOInput()})
-	builder.AddOutput(&iotago.SigLockedSingleOutput{Address: env.Wallet4.Address(), Amount: env.Wallet3.Balance() + env.Wallet4.Balance()})
+	builder.AddOutput(&iotago.ExtendedOutput{Address: env.Wallet4.Address(), Amount: env.Wallet3.Balance() + env.Wallet4.Balance()})
 	wallet3PrivKey, _ := env.Wallet3.KeyPair()
 	wallet4PrivKey, _ := env.Wallet4.KeyPair()
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: env.Wallet3.Address(), Keys: wallet3PrivKey}, iotago.AddressKeys{Address: env.Wallet4.Address(), Keys: wallet4PrivKey})
-	msgBuilder := builder.BuildAndSwapToMessageBuilder(inputAddrSigner, nil)
+	//TODO: deSeriParas
+	deSeriParas := &iotago.DeSerializationParameters{}
+	msgBuilder := builder.BuildAndSwapToMessageBuilder(deSeriParas, inputAddrSigner, nil)
 	msgBuilder.Parents(hornet.MessageIDs{env.LastMilestoneMessageID()}.ToSliceOfSlices())
 
 	msg, err := msgBuilder.Build()
@@ -286,7 +288,7 @@ func TestSingleBallotVote(t *testing.T) {
 	// Issue a vote and milestone
 	env.IssueDefaultBallotVoteAndMilestone(eventID, env.Wallet1) // 5
 
-	// Participations should not have been counted so far because it was not accepting votes yet
+	// ParticipationPayload should not have been counted so far because it was not accepting votes yet
 	status, err := env.ParticipationManager().EventStatus(eventID)
 	require.NoError(t, err)
 	env.PrintJSON(status)
@@ -386,7 +388,7 @@ func TestInvalidVoteHandling(t *testing.T) {
 	// Issue a vote and milestone
 	env.IssueDefaultBallotVoteAndMilestone(eventID, env.Wallet1) // 5
 
-	// Participations should not have been counted so far because it was not accepting votes yet
+	// ParticipationPayload should not have been counted so far because it was not accepting votes yet
 	status, err := env.ParticipationManager().EventStatus(eventID)
 	require.NoError(t, err)
 	env.PrintJSON(status)

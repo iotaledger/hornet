@@ -11,9 +11,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -698,15 +698,15 @@ func filterValidParticipationsForEvents(index milestone.Index, votes []*Particip
 func participationFromIndexation(indexation *iotago.Indexation) ([]*Participation, error) {
 
 	// try to parse the votes payload
-	parsedVotes := &Participations{}
-	if _, err := parsedVotes.Deserialize(indexation.Data, serializer.DeSeriModePerformValidation); err != nil {
+	parsedVotes := &ParticipationPayload{}
+	if _, err := parsedVotes.Deserialize(indexation.Data, serializer.DeSeriModePerformValidation, nil); err != nil {
 		// votes payload can't be parsed => ignore votes
 		return nil, fmt.Errorf("no valid votes payload")
 	}
 
 	var votes []*Participation
 	for _, vote := range parsedVotes.Participations {
-		votes = append(votes, vote.(*Participation))
+		votes = append(votes, vote)
 	}
 
 	return votes, nil
@@ -752,15 +752,14 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) 
 		return nil, nil, nil
 	}
 
-	// only OutputSigLockedSingleOutput and OutputSigLockedDustAllowanceOutput are allowed as output type
+	// only OutputExtended are allowed as output type
 	switch depositOutputs[0].OutputType() {
-	case iotago.OutputSigLockedDustAllowanceOutput:
-	case iotago.OutputSigLockedSingleOutput:
+	case iotago.OutputExtended:
 	default:
 		return nil, nil, nil
 	}
 
-	outputAddress, err := depositOutputs[0].Address().Serialize(serializer.DeSeriModeNoValidation)
+	outputAddress, err := depositOutputs[0].Address().Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, nil, nil
 	}
@@ -778,7 +777,7 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) 
 	// check if at least 1 input comes from the same address as the output
 	containsInputFromSameAddress := false
 	for _, input := range inputOutputs {
-		inputAddress, err := input.Address().Serialize(serializer.DeSeriModeNoValidation)
+		inputAddress, err := input.Address().Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
 			return nil, nil, nil
 		}

@@ -9,7 +9,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 func RandValidStaking() (*participation.Staking, []byte) {
@@ -76,7 +76,7 @@ func TestStaking_Deserialize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := &participation.Staking{}
-			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation)
+			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return
@@ -112,7 +112,7 @@ func TestStaking_Serialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation)
+			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return

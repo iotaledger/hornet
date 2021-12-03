@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 const (
@@ -31,10 +31,10 @@ type Answer struct {
 	AdditionalInfo string
 }
 
-func (a *Answer) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (a *Answer) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadNum(&a.Value, func(err error) error {
-			return fmt.Errorf("unable to deserialize participation answer index: %w", err)
+			return fmt.Errorf("unable to deserialize participation answer value: %w", err)
 		}).
 		ReadString(&a.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize participation answer text: %w", err)
@@ -53,7 +53,7 @@ func (a *Answer) Deserialize(data []byte, deSeriMode serializer.DeSerializationM
 		Done()
 }
 
-func (a *Answer) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (a *Answer) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {

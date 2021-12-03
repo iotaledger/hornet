@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 // NewEventBuilder creates a new EventBuilder.
@@ -49,7 +49,7 @@ func (rb *EventBuilder) Build() (*Event, error) {
 		return nil, rb.err
 	}
 
-	if _, err := rb.event.Serialize(serializer.DeSeriModePerformValidation); err != nil {
+	if _, err := rb.event.Serialize(serializer.DeSeriModePerformValidation, nil); err != nil {
 		return nil, fmt.Errorf("unable to build participation: %w", err)
 	}
 	return rb.event, nil

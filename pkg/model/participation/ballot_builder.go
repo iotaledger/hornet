@@ -3,7 +3,7 @@ package participation
 import (
 	"fmt"
 
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 // NewBallotBuilder creates a new BallotBuilder.
@@ -26,7 +26,7 @@ func (qb *BallotBuilder) AddQuestion(entry *Question) *BallotBuilder {
 
 // Build builds the Ballot.
 func (qb *BallotBuilder) Build() (*Ballot, error) {
-	if _, err := qb.ballot.Serialize(serializer.DeSeriModePerformValidation); err != nil {
+	if _, err := qb.ballot.Serialize(serializer.DeSeriModePerformValidation, nil); err != nil {
 		return nil, fmt.Errorf("unable to build ballot: %w", err)
 	}
 	return qb.ballot, nil

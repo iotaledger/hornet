@@ -11,8 +11,8 @@ import (
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -33,6 +33,21 @@ var (
 	ErrInvalidMilestoneSequence         = errors.New("milestone are not monotonically increasing")
 	ErrPayloadEmpty                     = errors.New("payload cannot be empty")
 	ErrSerializationStringLengthInvalid = errors.New("invalid string length")
+	ErrSerializationUnknownType         = errors.New("invalid type")
+
+	eventPayloadRules = &serializer.ArrayRules{
+		Guards: serializer.SerializableGuard{
+			ReadGuard: PayloadSelector,
+			WriteGuard: func(seri serializer.Serializable) error {
+				switch seri.(type) {
+				case *Ballot, *Staking:
+					return nil
+				default:
+					return ErrUnknownPayloadType
+				}
+			},
+		},
+	}
 )
 
 // PayloadSelector implements SerializableSelectorFunc for payload types.
@@ -67,7 +82,7 @@ type Event struct {
 
 // ID returns the ID of the event.
 func (e *Event) ID() (EventID, error) {
-	data, err := e.Serialize(serializer.DeSeriModeNoValidation)
+	data, err := e.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return EventID{}, err
 	}
@@ -75,7 +90,7 @@ func (e *Event) ID() (EventID, error) {
 	return blake2b.Sum256(data), nil
 }
 
-func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadString(&e.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to deserialize event name: %w", err)
@@ -89,15 +104,7 @@ func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMo
 		ReadNum(&e.MilestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to deserialize event end milestone: %w", err)
 		}).
-		ReadPayload(func(seri serializer.Serializable) { e.Payload = seri }, deSeriMode, func(ty uint32) (serializer.Serializable, error) {
-			switch ty {
-			case BallotPayloadTypeID:
-			case StakingPayloadTypeID:
-			default:
-				return nil, fmt.Errorf("invalid event payload type ID %d: %w", ty, ErrUnknownPayloadType)
-			}
-			return PayloadSelector(ty)
-		}, func(err error) error {
+		ReadPayload(func(seri serializer.Serializable) { e.Payload = seri }, deSeriMode, deSeriCtx, eventPayloadRules.Guards.ReadGuard, func(err error) error {
 			return fmt.Errorf("unable to deserialize payload's inner payload: %w", err)
 		}).
 		ReadString(&e.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
@@ -123,7 +130,7 @@ func (e *Event) Deserialize(data []byte, deSeriMode serializer.DeSerializationMo
 		Done()
 }
 
-func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
@@ -157,7 +164,7 @@ func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, er
 		WriteNum(e.MilestoneIndexEnd, func(err error) error {
 			return fmt.Errorf("unable to serialize event end milestone: %w", err)
 		}).
-		WritePayload(e.Payload, deSeriMode, func(err error) error {
+		WritePayload(e.Payload, deSeriMode, deSeriCtx, eventPayloadRules.Guards.WriteGuard, func(err error) error {
 			return fmt.Errorf("unable to serialize event inner payload: %w", err)
 		}).
 		WriteString(e.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
@@ -278,14 +285,10 @@ func (e *Event) Ballot() *Ballot {
 }
 
 // BallotQuestions returns the questions contained in the Ballot payload if this participation contains a Ballot.
-func (e *Event) BallotQuestions() []*Question {
+func (e *Event) BallotQuestions() Questions {
 	switch payload := e.Payload.(type) {
 	case *Ballot:
-		questions := make([]*Question, len(payload.Questions))
-		for i := range payload.Questions {
-			questions[i] = payload.Questions[i].(*Question)
-		}
-		return questions
+		return payload.Questions
 	default:
 		return nil
 	}

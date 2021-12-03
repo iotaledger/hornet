@@ -11,7 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/testutil"
 )
 
@@ -78,7 +78,7 @@ func RandEvent(nameLen int, additionalInfoLen int, commence uint32, start uint32
 	ms.WriteUint32(e.MilestoneIndexStart)
 	ms.WriteUint32(e.MilestoneIndexEnd)
 	if e.Payload != nil {
-		p, err := payload.Serialize(serializer.DeSeriModePerformValidation)
+		p, err := payload.Serialize(serializer.DeSeriModePerformValidation, nil)
 		if err != nil {
 			panic(err)
 		}
@@ -118,7 +118,7 @@ func TestEvent_Deserialize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := &participation.Event{}
-			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation)
+			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return
@@ -154,7 +154,7 @@ func TestEvent_Serialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation)
+			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return
