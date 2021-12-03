@@ -37,25 +37,25 @@ func normalizeFlagSets(params map[string][]*flag.FlagSet) (map[string]*flag.Flag
 // parses the configuration and initializes the global logger.
 func loadCfg(flagSets map[string]*flag.FlagSet) error {
 	if err := nodeConfig.LoadFile(*nodeCfgFilePath); err != nil {
-		if hasFlag(flag.CommandLine, CfgConfigFilePathNodeConfig) {
-			// if a file was explicitly specified, raise the error
-			return err
+		if hasFlag(flag.CommandLine, CfgConfigFilePathNodeConfig) || !os.IsNotExist(err) {
+			// if a file was explicitly specified or the default file exists but couldn't be parsed, raise the error
+			return fmt.Errorf("loading config file failed: %w", err)
 		}
 		fmt.Printf("No config file found via '%s'. Loading default settings.", *nodeCfgFilePath)
 	}
 
 	if err := peeringConfig.LoadFile(*peeringCfgFilePath); err != nil {
-		if hasFlag(flag.CommandLine, CfgConfigFilePathPeeringConfig) {
-			// if a file was explicitly specified, raise the error
-			return err
+		if hasFlag(flag.CommandLine, CfgConfigFilePathPeeringConfig) || !os.IsNotExist(err) {
+			// if a file was explicitly specified or the default file exists but couldn't be parsed, raise the error
+			return fmt.Errorf("loading peering config file failed: %w", err)
 		}
 		fmt.Printf("No peering config file found via '%s'. Loading default settings.", *peeringCfgFilePath)
 	}
 
 	if err := profileConfig.LoadFile(*profilesCfgFilePath); err != nil {
-		if hasFlag(flag.CommandLine, CfgConfigFilePathProfilesConfig) {
-			// if a file was explicitly specified, raise the error
-			return err
+		if hasFlag(flag.CommandLine, CfgConfigFilePathProfilesConfig) || !os.IsNotExist(err) {
+			// if a file was explicitly specified or the default file exists but couldn't be parsed, raise the error
+			return fmt.Errorf("loading profiles config file failed: %w", err)
 		}
 		fmt.Printf("No profiles config file found via '%s'. Loading default settings.", *profilesCfgFilePath)
 	}
