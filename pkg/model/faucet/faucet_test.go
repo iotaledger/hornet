@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 
 	"github.com/gohornet/hornet/pkg/model/faucet/test"
 	"github.com/gohornet/hornet/pkg/model/hornet"
