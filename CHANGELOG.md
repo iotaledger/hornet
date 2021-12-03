@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0-rc1] - 03.12.2021
+
+### Added
+    - Add participation plugin (#1204, #1207, #1208, #1209, #1210, #1212, #1215, #1218, #1221)
+    - Add participation-cli tool (#1206, #1219)
+    - Add rocksdb static binaries for macOS (#1192)
+
+### Changed
+    - Refactor the JWT auth for the API (#1191)
+    - Separate UTXO database (#1201, #1205)
+    - Add JSON output to some of the tools (#1199)
+    - Only accept bech32 addresses with the correct prefix in the rest API (#1197)
+
+### Fixed
+    - Improve search missing milestones (#1196) 
+    - Optimize RocksDB level compaction (#1223)
+    - Use integer instead of strings for ulimits in docker-compose file 
+
+### Chore
+    - Updated dependencies and Go 1.17 (#1193)
+    - Updated cross compiler to latest version (#1224)
+    - Updated deps to latest versions (#1192, #1217, #1182, #1225)
+    - Use contexts to cancel instead of signal channels (#1195, 1198)
+
+### Workflows
+    - Run snyk test in a schedule instead on every PR (#1200)
+    - Updated CodeQL workflow according to generator from github (#1194)
+    - Added twitter bot notification on release (#1216)
+
 ## [1.0.6-rc1] - 04.10.2021
 
 ### Added
