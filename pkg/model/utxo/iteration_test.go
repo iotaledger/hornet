@@ -254,7 +254,7 @@ func TestUTXOIterationWithAddressFilterAndTypeFilter(t *testing.T) {
 	}))
 	require.Empty(t, anyUnspentByID)
 
-	require.NoError(t, utxo.ForEachUnspentOutputOnAddress(address, AddressFilterOptions().OutputType(iotago.OutputNFT), func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutputOnAddress(address, FilterOutputType(iotago.OutputNFT), func(output *Output) bool {
 		_, has := nftUnspentByID[output.mapKey()]
 		require.True(t, has)
 		delete(nftUnspentByID, output.mapKey())
@@ -262,7 +262,7 @@ func TestUTXOIterationWithAddressFilterAndTypeFilter(t *testing.T) {
 	}))
 	require.Empty(t, nftUnspentByID)
 
-	require.NoError(t, utxo.ForEachUnspentOutputOnAddress(address, AddressFilterOptions().OutputType(iotago.OutputAlias), func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutputOnAddress(address, FilterOutputType(iotago.OutputAlias), func(output *Output) bool {
 		_, has := aliasUnspentByID[output.mapKey()]
 		require.True(t, has)
 		delete(aliasUnspentByID, output.mapKey())
@@ -401,4 +401,124 @@ func TestUTXOLoadMethodsAddressFilterAndTypeFilter(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(loadUnspentFoundries))
 	require.Equal(t, foundryOutputID[:], loadUnspentFoundries[0].OutputID()[:])
+}
+
+func TestUTXOIssuerFilter(t *testing.T) {
+
+	utxo := New(mapdb.NewMapDB())
+
+	issuerAddress := randAddress(iotago.AddressEd25519)
+	aliasIssuerAddress := randAddress(iotago.AddressEd25519)
+
+	nftID := randNFTID()
+	nftOutputIDs := []*iotago.OutputID{
+		randOutputID(),
+		randOutputID(),
+	}
+
+	aliasIssuerOutputIDs := []*iotago.OutputID{
+		randOutputID(),
+		randOutputID(),
+	}
+	aliasIssuerAliasOutputIDs := []*iotago.OutputID{
+		aliasIssuerOutputIDs[0],
+	}
+
+	outputs := Outputs{
+		CreateOutput(aliasIssuerAliasOutputIDs[0], randMessageID(), randMilestoneIndex(), &iotago.AliasOutput{
+			Amount:               59854598,
+			AliasID:              randAliasID(),
+			StateController:      randAddress(iotago.AddressEd25519),
+			GovernanceController: randAddress(iotago.AddressEd25519),
+			StateMetadata:        []byte{},
+			Blocks: iotago.FeatureBlocks{
+				&iotago.IssuerFeatureBlock{
+					Address: aliasIssuerAddress,
+				},
+			},
+		}),
+		CreateOutput(randOutputID(), randMessageID(), randMilestoneIndex(), &iotago.AliasOutput{
+			Amount:               59854598,
+			AliasID:              randAliasID(),
+			StateController:      randAddress(iotago.AddressEd25519),
+			GovernanceController: randAddress(iotago.AddressEd25519),
+			StateMetadata:        []byte{},
+			Blocks: iotago.FeatureBlocks{
+				&iotago.IssuerFeatureBlock{
+					Address: randAddress(iotago.AddressEd25519),
+				},
+			},
+		}),
+		CreateOutput(randOutputID(), randMessageID(), randMilestoneIndex(), &iotago.NFTOutput{
+			Address:           randAddress(iotago.AddressAlias),
+			Amount:            234348,
+			NFTID:             nftID,
+			ImmutableMetadata: []byte{},
+			Blocks: iotago.FeatureBlocks{
+				&iotago.IssuerFeatureBlock{
+					Address: randAddress(iotago.AddressAlias),
+				},
+			},
+		}),
+		CreateOutput(nftOutputIDs[0], randMessageID(), randMilestoneIndex(), &iotago.NFTOutput{
+			Address:           randAddress(iotago.AddressNFT),
+			Amount:            234348,
+			NFTID:             nftID,
+			ImmutableMetadata: []byte{},
+			Blocks: iotago.FeatureBlocks{
+				&iotago.IssuerFeatureBlock{
+					Address: issuerAddress,
+				},
+			},
+		}),
+		CreateOutput(aliasIssuerOutputIDs[1], randMessageID(), randMilestoneIndex(), &iotago.NFTOutput{
+			Address:           randAddress(iotago.AddressEd25519),
+			Amount:            234348,
+			NFTID:             nftID,
+			ImmutableMetadata: []byte{},
+			Blocks: iotago.FeatureBlocks{
+				&iotago.IssuerFeatureBlock{
+					Address: aliasIssuerAddress,
+				},
+			},
+		}),
+		CreateOutput(nftOutputIDs[1], randMessageID(), randMilestoneIndex(), &iotago.NFTOutput{
+			Address:           randAddress(iotago.AddressAlias),
+			Amount:            234342348,
+			NFTID:             nftID,
+			ImmutableMetadata: []byte{},
+			Blocks: iotago.FeatureBlocks{
+				&iotago.IssuerFeatureBlock{
+					Address: issuerAddress,
+				},
+			},
+		}),
+	}
+
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(randMilestoneIndex(), outputs, nil, nil, nil))
+
+	loadUnspentNFTs, err := utxo.UnspentNFTOutputs(nil)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(loadUnspentNFTs))
+
+	var foundOutputIDs []*iotago.OutputID
+	require.NoError(t, utxo.ForEachUnspentOutputWithIssuer(issuerAddress, nil, func(output *Output) bool {
+		foundOutputIDs = append(foundOutputIDs, output.OutputID())
+		return true
+	}))
+	require.ElementsMatch(t, nftOutputIDs, foundOutputIDs)
+
+	var aliasIssuerFoundOutputIDs []*iotago.OutputID
+	require.NoError(t, utxo.ForEachUnspentOutputWithIssuer(aliasIssuerAddress, nil, func(output *Output) bool {
+		aliasIssuerFoundOutputIDs = append(aliasIssuerFoundOutputIDs, output.OutputID())
+		return true
+	}))
+	require.ElementsMatch(t, aliasIssuerOutputIDs, aliasIssuerFoundOutputIDs)
+
+	var aliasIssuerFoundAliasOutputIDs []*iotago.OutputID
+	require.NoError(t, utxo.ForEachUnspentOutputWithIssuer(aliasIssuerAddress, FilterOutputType(iotago.OutputAlias), func(output *Output) bool {
+		aliasIssuerFoundAliasOutputIDs = append(aliasIssuerFoundAliasOutputIDs, output.OutputID())
+		return true
+	}))
+	require.ElementsMatch(t, aliasIssuerAliasOutputIDs, aliasIssuerFoundAliasOutputIDs)
 }

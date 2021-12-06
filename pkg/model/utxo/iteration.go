@@ -209,27 +209,38 @@ func (u *Manager) ForEachUnspentFoundryOutput(filterFoundryID *iotago.FoundryID,
 	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func (u *Manager) ForEachUnspentOutputWithIssuer(issuer iotago.Address, consumer OutputConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachUnspentOutputWithIssuer(issuer iotago.Address, filterOptions *FilterOptions, consumer OutputConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
 	addrBytes, err := issuer.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return err
 	}
 	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixIssuerLookup}, addrBytes[:])
+	if filterOptions != nil {
+		if filterOptions.filterOutputType != nil {
+			key = byteutils.ConcatBytes(key, []byte{byte(*filterOptions.filterOutputType)})
+		}
+	}
+
 	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func (u *Manager) ForEachUnspentOutputWithSender(sender iotago.Address, consumer OutputConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachUnspentOutputWithSender(sender iotago.Address, filterOptions *FilterOptions, consumer OutputConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
 	addrBytes, err := sender.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return err
 	}
 	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderLookup}, addrBytes[:])
+	if filterOptions != nil {
+		if filterOptions.filterOutputType != nil {
+			key = byteutils.ConcatBytes(key, []byte{byte(*filterOptions.filterOutputType)})
+		}
+	}
 	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func (u *Manager) ForEachUnspentOutputWithSenderAndIndexTag(sender iotago.Address, indexTagPrefix []byte, consumer OutputConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachUnspentOutputWithSenderAndIndexTag(sender iotago.Address, indexTagPrefix []byte, filterOptions *FilterOptions, consumer OutputConsumer, options ...UTXOIterateOption) error {
 	if len(indexTagPrefix) > iotago.MaxIndexationTagLength {
 		indexTagPrefix = indexTagPrefix[:iotago.MaxIndexationTagLength]
 	}
@@ -239,6 +250,11 @@ func (u *Manager) ForEachUnspentOutputWithSenderAndIndexTag(sender iotago.Addres
 		return err
 	}
 	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderAndIndexLookup}, addrBytes[:], indexTagPrefix[:])
+	if filterOptions != nil {
+		if filterOptions.filterOutputType != nil {
+			key = byteutils.ConcatBytes(key, []byte{byte(*filterOptions.filterOutputType)})
+		}
+	}
 
 	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
@@ -248,17 +264,23 @@ type FilterOptions struct {
 	filterOutputType             *iotago.OutputType
 }
 
-func AddressFilterOptions() *FilterOptions {
-	return &FilterOptions{}
+func FilterOutputType(outputType iotago.OutputType) *FilterOptions {
+	opts := &FilterOptions{}
+	return opts.FilterOutputType(outputType)
 }
 
-func (f *FilterOptions) OutputType(outputType iotago.OutputType) *FilterOptions {
+func (f *FilterOptions) FilterOutputType(outputType iotago.OutputType) *FilterOptions {
 	oType := outputType
 	f.filterOutputType = &oType
 	return f
 }
 
-func (f *FilterOptions) HasSpendingConstraints(hasSpendingConstraints bool) *FilterOptions {
+func FilterHasSpendingConstraints(hasSpendingConstraints bool) *FilterOptions {
+	opts := &FilterOptions{}
+	return opts.FilterHasSpendingConstraints(hasSpendingConstraints)
+}
+
+func (f *FilterOptions) FilterHasSpendingConstraints(hasSpendingConstraints bool) *FilterOptions {
 	constraints := hasSpendingConstraints
 	f.filterHasSpendingConstraints = &constraints
 	return f

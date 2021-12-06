@@ -212,6 +212,13 @@ func outputIDFromDatabaseKey(key lookupKey) (*iotago.OutputID, error) {
 			return nil, err
 		}
 		ms.ReadSeek(ms.ReadOffset() + 2) // skip over spending constraints and output type
+	case UTXOStoreKeyPrefixIssuerLookup:
+		if _, err := parseAddress(ms); err != nil {
+			return nil, err
+		}
+		ms.ReadSeek(ms.ReadOffset() + 1) // skip over output type
+	default:
+		panic("unhandled prefix")
 	}
 
 	return ParseOutputID(ms)
