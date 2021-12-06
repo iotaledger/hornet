@@ -15,6 +15,8 @@ import (
 )
 
 func TestSimpleMilestoneDiffSerialization(t *testing.T) {
+	confirmationIndex := milestone.Index(255975)
+
 	outputID := randOutputID()
 	messageID := randMessageID()
 	address := randomAddress()
@@ -23,12 +25,10 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 		Address: address,
 		Amount:  amount,
 	}
-	output := CreateOutput(outputID, messageID, iotaOutput)
+	output := CreateOutput(outputID, messageID, confirmationIndex, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], randBytes(iotago.TransactionIDLength))
-
-	confirmationIndex := milestone.Index(255975)
 
 	spent := NewSpent(output, transactionID, confirmationIndex)
 
@@ -57,11 +57,12 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	messageID := randMessageID()
 	address := randomAddress()
 	amount := uint64(235234)
+	msIndex := milestone.Index(rand.Uint32())
 	iotaOutput := &iotago.ExtendedOutput{
 		Address: address,
 		Amount:  amount,
 	}
-	output := CreateOutput(outputID, messageID, iotaOutput)
+	output := CreateOutput(outputID, messageID, msIndex, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], randBytes(iotago.TransactionIDLength))
@@ -128,6 +129,7 @@ func randOutputID() *iotago.OutputID {
 func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *Output {
 	outputID := randOutputID()
 	messageID := randMessageID()
+	msIndex := milestone.Index(rand.Uint32())
 
 	var addr iotago.Address
 	if len(address) > 0 {
@@ -145,12 +147,13 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *Outp
 		Amount:  amount,
 	}
 
-	return CreateOutput(outputID, messageID, iotaOutput)
+	return CreateOutput(outputID, messageID, msIndex, iotaOutput)
 }
 
 func randomOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.Address, amount uint64) *Output {
 	outputID := randOutputID()
 	messageID := randMessageID()
+	msIndex := milestone.Index(rand.Uint32())
 
 	//TODO: switch outputType
 
@@ -159,7 +162,7 @@ func randomOutputOnAddressWithAmount(outputType iotago.OutputType, address iotag
 		Amount:  amount,
 	}
 
-	return CreateOutput(outputID, messageID, iotaOutput)
+	return CreateOutput(outputID, messageID, msIndex, iotaOutput)
 }
 
 func EqualOutputs(t *testing.T, expected Outputs, actual Outputs) {
@@ -178,11 +181,14 @@ func EqualSpents(t *testing.T, expected Spents, actual Spents) {
 	}
 }
 
-func randomSpent(output *Output) *Spent {
+func randomSpent(output *Output, index ...milestone.Index) *Spent {
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], randBytes(iotago.TransactionIDLength))
 
 	confirmationIndex := milestone.Index(rand.Intn(216589))
+	if len(index) > 0 {
+		confirmationIndex = index[0]
+	}
 
 	return NewSpent(output, transactionID, confirmationIndex)
 }

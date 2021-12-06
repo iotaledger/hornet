@@ -161,7 +161,7 @@ func (o *Output) featureLookupKeys() []lookupKey {
 
 func outputIDFromDatabaseKey(key lookupKey) (*iotago.OutputID, error) {
 
-	ms := marshalutil.New(key)
+	ms := marshalutil.New([]byte(key))
 	prefix, err := ms.ReadByte() // prefix
 	if err != nil {
 		return nil, err

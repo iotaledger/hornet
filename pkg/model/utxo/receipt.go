@@ -163,11 +163,11 @@ func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex milestone.Index,
 }
 
 // ReceiptToOutputs extracts the migrated funds to outputs.
-func ReceiptToOutputs(r *iotago.Receipt, msgID hornet.MessageID, msID *iotago.MilestoneID) ([]*Output, error) {
+func ReceiptToOutputs(r *iotago.Receipt, msgID hornet.MessageID, msID *iotago.MilestoneID, msIndex milestone.Index) ([]*Output, error) {
 	outputs := make([]*Output, len(r.Funds))
 	for outputIndex, migFundsEntry := range r.Funds {
 		entry := migFundsEntry
-		utxoID := OutputIDForMigratedFunds(*msID, uint16(outputIndex))
+		outputID := OutputIDForMigratedFunds(*msID, uint16(outputIndex))
 		// we use the milestone hash as the "origin message"
 
 		output := &iotago.ExtendedOutput{
@@ -175,7 +175,7 @@ func ReceiptToOutputs(r *iotago.Receipt, msgID hornet.MessageID, msID *iotago.Mi
 			Amount:  entry.Deposit,
 		}
 
-		outputs[outputIndex] = CreateOutput(&utxoID, msgID, output)
+		outputs[outputIndex] = CreateOutput(&outputID, msgID, msIndex, output)
 	}
 	return outputs, nil
 }

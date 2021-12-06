@@ -368,7 +368,7 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 
 	msg := cachedMsg.Message()
 
-	depositOutput, participations, err := pm.ParticipationsFromMessage(msg)
+	depositOutput, participations, err := pm.ParticipationsFromMessage(msg, index)
 	if err != nil {
 		return err
 	}
@@ -712,7 +712,7 @@ func participationFromIndexation(indexation *iotago.Indexation) ([]*Participatio
 	return votes, nil
 }
 
-func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) (*utxo.Output, []*Participation, error) {
+func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, msIndex milestone.Index) (*utxo.Output, []*Participation, error) {
 	transaction := msg.Transaction()
 	if transaction == nil {
 		// Do not handle outputs from migrations
@@ -740,7 +740,7 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) 
 	// collect outputs
 	depositOutputs := utxo.Outputs{}
 	for i := 0; i < len(txEssence.Outputs); i++ {
-		output, err := utxo.NewOutput(msg.MessageID(), transaction, uint16(i))
+		output, err := utxo.NewOutput(msg.MessageID(), msIndex, transaction, uint16(i))
 		if err != nil {
 			return nil, nil, err
 		}

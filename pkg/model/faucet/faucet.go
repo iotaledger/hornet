@@ -586,7 +586,7 @@ func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.O
 			Address: f.address,
 			Amount:  remainderAmount,
 		}
-		f.lastRemainderOutput = utxo.CreateOutput(&remainderIotaGoOutputID, msg.MessageID(), output)
+		f.lastRemainderOutput = utxo.CreateOutput(&remainderIotaGoOutputID, msg.MessageID(), 0, output)
 	} else {
 		// no funds remaining => no remainder output
 		f.lastRemainderOutput = nil

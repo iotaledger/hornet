@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -13,9 +14,10 @@ import (
 type Output struct {
 	kvStorable
 
-	outputID  *iotago.OutputID
-	messageID hornet.MessageID
-	output    iotago.Output
+	outputID          *iotago.OutputID
+	messageID         hornet.MessageID
+	confirmationIndex milestone.Index
+	output            iotago.Output
 }
 
 func (o *Output) OutputID() *iotago.OutputID {
@@ -24,6 +26,10 @@ func (o *Output) OutputID() *iotago.OutputID {
 
 func (o *Output) MessageID() hornet.MessageID {
 	return o.messageID
+}
+
+func (o *Output) MilestoneIndex() milestone.Index {
+	return o.confirmationIndex
 }
 
 func (o *Output) OutputType() iotago.OutputType {
@@ -66,15 +72,16 @@ func (o Outputs) InputToOutputMapping() (iotago.OutputSet, error) {
 	return outputSet, nil
 }
 
-func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, output iotago.Output) *Output {
+func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milestoneIndex milestone.Index, output iotago.Output) *Output {
 	return &Output{
-		outputID:  outputID,
-		messageID: messageID,
-		output:    output,
+		outputID:          outputID,
+		messageID:         messageID,
+		confirmationIndex: milestoneIndex,
+		output:            output,
 	}
 }
 
-func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	txID, err := transaction.ID()
 	if err != nil {
@@ -88,7 +95,7 @@ func NewOutput(messageID hornet.MessageID, transaction *iotago.Transaction, inde
 	output = transaction.Essence.Outputs[int(index)]
 	outputID := iotago.OutputIDFromTransactionIDAndIndex(*txID, index)
 
-	return CreateOutput(&outputID, messageID, output), nil
+	return CreateOutput(&outputID, messageID, milestoneIndex, output), nil
 }
 
 //- kvStorable
@@ -105,8 +112,9 @@ func (o *Output) kvStorableKey() (key []byte) {
 }
 
 func (o *Output) kvStorableValue() (value []byte) {
-	ms := marshalutil.New(32)
-	ms.WriteBytes(o.messageID) // 32 bytes
+	ms := marshalutil.New(36)
+	ms.WriteBytes(o.messageID)                  // 32 bytes
+	ms.WriteUint32(uint32(o.confirmationIndex)) // 4 bytes
 
 	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -138,6 +146,11 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 
 	// Read MessageID
 	if o.messageID, err = ParseMessageID(valueUtil); err != nil {
+		return err
+	}
+
+	// Read Milestone
+	if o.confirmationIndex, err = parseMilestoneIndex(valueUtil); err != nil {
 		return err
 	}
 

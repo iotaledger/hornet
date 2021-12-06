@@ -70,7 +70,9 @@ func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
 				Address: addr,
 				Amount:  output.Amount,
 			}
-			return utxoManager.AddUnspentOutput(utxo.CreateOutput(&outputID, messageID, iotagoOutput))
+			//TODO: msIndex in snapshot
+			msIndex := milestone.Index(0)
+			return utxoManager.AddUnspentOutput(utxo.CreateOutput(&outputID, messageID, msIndex, iotagoOutput))
 		default:
 			return iotago.ErrUnknownAddrType
 		}
@@ -107,6 +109,8 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 		var newOutputs []*utxo.Output
 		var newSpents []*utxo.Spent
 
+		msIndex := milestone.Index(msDiff.Milestone.Index)
+
 		createdOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
 			output := obj.(*Output)
 			outputID := iotago.OutputID(output.OutputID)
@@ -115,7 +119,7 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 				Address: addr,
 				Amount:  output.Amount,
 			}
-			newOutputs = append(newOutputs, utxo.CreateOutput(&outputID, messageID, iotagoOutput))
+			newOutputs = append(newOutputs, utxo.CreateOutput(&outputID, messageID, msIndex, iotagoOutput))
 			return nil
 		})
 
@@ -125,7 +129,6 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 			}
 		}
 
-		msIndex := milestone.Index(msDiff.Milestone.Index)
 		spentOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
 
 			spent := obj.(*Spent)
@@ -135,7 +138,8 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 				Address: addr,
 				Amount:  spent.Amount,
 			}
-			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, messageID, iotagoOutput), &spent.TargetTransactionID, msIndex))
+			//TODO: creation msIndex from snapshot
+			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, messageID, msIndex, iotagoOutput), &spent.TargetTransactionID, msIndex))
 			return nil
 		})
 
