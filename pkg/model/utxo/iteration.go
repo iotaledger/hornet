@@ -240,16 +240,16 @@ func (u *Manager) ForEachUnspentOutputWithSender(sender iotago.Address, filterOp
 	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func (u *Manager) ForEachUnspentOutputWithSenderAndIndexTag(sender iotago.Address, indexTagPrefix []byte, filterOptions *FilterOptions, consumer OutputConsumer, options ...UTXOIterateOption) error {
-	if len(indexTagPrefix) > iotago.MaxIndexationTagLength {
-		indexTagPrefix = indexTagPrefix[:iotago.MaxIndexationTagLength]
+func (u *Manager) ForEachUnspentOutputWithSenderAndIndexTag(sender iotago.Address, indexTag []byte, filterOptions *FilterOptions, consumer OutputConsumer, options ...UTXOIterateOption) error {
+	if len(indexTag) > iotago.MaxIndexationTagLength {
+		indexTag = indexTag[:iotago.MaxIndexationTagLength]
 	}
 	opt := iterateOptions(options)
 	addrBytes, err := sender.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return err
 	}
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderAndIndexLookup}, addrBytes[:], indexTagPrefix[:])
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderAndIndexLookup}, addrBytes[:], append(indexTag, make([]byte, iotago.MaxIndexationTagLength-len(indexTag))...))
 	if filterOptions != nil {
 		if filterOptions.filterOutputType != nil {
 			key = byteutils.ConcatBytes(key, []byte{byte(*filterOptions.filterOutputType)})

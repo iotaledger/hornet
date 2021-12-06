@@ -522,3 +522,131 @@ func TestUTXOIssuerFilter(t *testing.T) {
 	}))
 	require.ElementsMatch(t, aliasIssuerAliasOutputIDs, aliasIssuerFoundAliasOutputIDs)
 }
+
+func TestUTXOSenderFilter(t *testing.T) {
+
+	utxo := New(mapdb.NewMapDB())
+
+	senderAddress := randAddress(iotago.AddressEd25519)
+
+	senderOutputIDs := []*iotago.OutputID{
+		randOutputID(),
+		randOutputID(),
+		randOutputID(),
+		randOutputID(),
+		randOutputID(),
+	}
+	senderOutputIDsWithIndex := []*iotago.OutputID{
+		senderOutputIDs[3],
+		senderOutputIDs[4],
+	}
+	senderOutputIDsWithIndexNFT := []*iotago.OutputID{
+		senderOutputIDs[4],
+	}
+
+	outputs := Outputs{
+		CreateOutput(senderOutputIDs[0], randMessageID(), randMilestoneIndex(), &iotago.ExtendedOutput{
+			Amount:  59854598,
+			Address: randAddress(iotago.AddressEd25519),
+			Blocks: iotago.FeatureBlocks{
+				&iotago.SenderFeatureBlock{
+					Address: senderAddress,
+				},
+			},
+		}),
+		CreateOutput(randOutputID(), randMessageID(), randMilestoneIndex(), &iotago.ExtendedOutput{
+			Amount:  59854598,
+			Address: randAddress(iotago.AddressEd25519),
+			Blocks: iotago.FeatureBlocks{
+				&iotago.SenderFeatureBlock{
+					Address: randAddress(iotago.AddressEd25519),
+				},
+			},
+		}),
+		CreateOutput(randOutputID(), randMessageID(), randMilestoneIndex(), &iotago.ExtendedOutput{
+			Amount:  59854598,
+			Address: randAddress(iotago.AddressEd25519),
+			Blocks: iotago.FeatureBlocks{
+				&iotago.SenderFeatureBlock{
+					Address: randAddress(iotago.AddressEd25519),
+				},
+			},
+		}),
+		CreateOutput(senderOutputIDs[1], randMessageID(), randMilestoneIndex(), &iotago.ExtendedOutput{
+			Amount:  59854598,
+			Address: randAddress(iotago.AddressEd25519),
+			Blocks: iotago.FeatureBlocks{
+				&iotago.SenderFeatureBlock{
+					Address: senderAddress,
+				},
+			},
+		}),
+		CreateOutput(senderOutputIDs[2], randMessageID(), randMilestoneIndex(), &iotago.ExtendedOutput{
+			Amount:  59854598,
+			Address: randAddress(iotago.AddressEd25519),
+			Blocks: iotago.FeatureBlocks{
+				&iotago.SenderFeatureBlock{
+					Address: senderAddress,
+				},
+				&iotago.IndexationFeatureBlock{
+					Tag: []byte("TestingOther"),
+				},
+			},
+		}),
+		CreateOutput(senderOutputIDs[3], randMessageID(), randMilestoneIndex(), &iotago.ExtendedOutput{
+			Amount:  59854598,
+			Address: randAddress(iotago.AddressEd25519),
+			Blocks: iotago.FeatureBlocks{
+				&iotago.SenderFeatureBlock{
+					Address: senderAddress,
+				},
+				&iotago.IndexationFeatureBlock{
+					Tag: []byte("Testing"),
+				},
+			},
+		}),
+		CreateOutput(senderOutputIDs[4], randMessageID(), randMilestoneIndex(), &iotago.NFTOutput{
+			Address:           randAddress(iotago.AddressAlias),
+			Amount:            234342348,
+			NFTID:             randNFTID(),
+			ImmutableMetadata: []byte{},
+			Blocks: iotago.FeatureBlocks{
+				&iotago.SenderFeatureBlock{
+					Address: senderAddress,
+				},
+				&iotago.IndexationFeatureBlock{
+					Tag: []byte("Testing"),
+				},
+			},
+		}),
+	}
+
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(randMilestoneIndex(), outputs, nil, nil, nil))
+
+	loadUnspentOutputs, err := utxo.UnspentExtendedOutputs(nil)
+	require.NoError(t, err)
+	nftOutputs, err := utxo.UnspentNFTOutputs(nil)
+	require.NoError(t, err)
+	require.ElementsMatch(t, outputs, append(loadUnspentOutputs, nftOutputs...))
+
+	var foundOutputIDs []*iotago.OutputID
+	require.NoError(t, utxo.ForEachUnspentOutputWithSender(senderAddress, nil, func(output *Output) bool {
+		foundOutputIDs = append(foundOutputIDs, output.OutputID())
+		return true
+	}))
+	require.ElementsMatch(t, senderOutputIDs, foundOutputIDs)
+
+	var foundOutputIDsWithIndex []*iotago.OutputID
+	require.NoError(t, utxo.ForEachUnspentOutputWithSenderAndIndexTag(senderAddress, []byte("Testing"), nil, func(output *Output) bool {
+		foundOutputIDsWithIndex = append(foundOutputIDsWithIndex, output.OutputID())
+		return true
+	}))
+	require.ElementsMatch(t, senderOutputIDsWithIndex, foundOutputIDsWithIndex)
+
+	var foundOutputIDsWithIndexNFT []*iotago.OutputID
+	require.NoError(t, utxo.ForEachUnspentOutputWithSenderAndIndexTag(senderAddress, []byte("Testing"), FilterOutputType(iotago.OutputNFT), func(output *Output) bool {
+		foundOutputIDsWithIndexNFT = append(foundOutputIDsWithIndexNFT, output.OutputID())
+		return true
+	}))
+	require.ElementsMatch(t, senderOutputIDsWithIndexNFT, foundOutputIDsWithIndexNFT)
+}
