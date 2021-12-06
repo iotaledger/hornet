@@ -29,6 +29,10 @@ func (s *Spent) OutputID() *iotago.OutputID {
 	return s.outputID
 }
 
+func (s *Spent) mapKey() string {
+	return string(s.outputID[:])
+}
+
 func (s *Spent) MessageID() hornet.MessageID {
 	return s.output.MessageID()
 }

@@ -1,29 +1,212 @@
 package utxo
 
 import (
+	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
+	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
+
+func TestUTXOComputeBalance(t *testing.T) {
+
+	utxo := New(mapdb.NewMapDB())
+
+	initialOutput := randOutputOnAddressWithAmount(iotago.OutputExtended, randAddress(iotago.AddressEd25519), 2_134_656_365)
+	require.NoError(t, utxo.AddUnspentOutput(initialOutput))
+	require.NoError(t, utxo.AddUnspentOutput(randOutputOnAddressWithAmount(iotago.OutputAlias, randAddress(iotago.AddressAlias), 56_549_524)))
+	require.NoError(t, utxo.AddUnspentOutput(randOutputOnAddressWithAmount(iotago.OutputFoundry, randAddress(iotago.AddressAlias), 25_548_858)))
+	require.NoError(t, utxo.AddUnspentOutput(randOutputOnAddressWithAmount(iotago.OutputNFT, randAddress(iotago.AddressEd25519), 545_699_656)))
+	require.NoError(t, utxo.AddUnspentOutput(randOutputOnAddressWithAmount(iotago.OutputExtended, randAddress(iotago.AddressAlias), 626_659_696)))
+
+	msIndex := milestone.Index(756)
+
+	outputs := Outputs{
+		randOutputOnAddressWithAmount(iotago.OutputExtended, randAddress(iotago.AddressNFT), 2_134_656_365),
+	}
+
+	spents := Spents{
+		randomSpent(initialOutput, msIndex),
+	}
+
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
+
+	spent, err := utxo.SpentOutputs()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(spent))
+
+	unspentExtended, err := utxo.UnspentExtendedOutputs(nil)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(unspentExtended))
+
+	unspentNFT, err := utxo.UnspentNFTOutputs(nil)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(unspentNFT))
+
+	unspentAlias, err := utxo.UnspentAliasOutputs(nil)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(unspentAlias))
+
+	unspentFoundry, err := utxo.UnspentFoundryOutputs(nil)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(unspentFoundry))
+
+	balance, count, err := utxo.ComputeLedgerBalance()
+	require.NoError(t, err)
+	require.Equal(t, 5, count)
+	require.Equal(t, uint64(2_134_656_365+56_549_524+25_548_858+545_699_656+626_659_696), balance)
+}
 
 func TestUTXOIterationWithoutFilters(t *testing.T) {
 
 	utxo := New(mapdb.NewMapDB())
 
-	outputs := Outputs{
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
+	extendedOutputs := Outputs{
+		randOutputOnAddress(iotago.OutputExtended, randAddress(iotago.AddressEd25519)),
+		randOutputOnAddress(iotago.OutputExtended, randAddress(iotago.AddressNFT)),
+		randOutputOnAddress(iotago.OutputExtended, randAddress(iotago.AddressAlias)),
+		randOutputOnAddress(iotago.OutputExtended, randAddress(iotago.AddressEd25519)),
+		randOutputOnAddress(iotago.OutputExtended, randAddress(iotago.AddressNFT)),
+		randOutputOnAddress(iotago.OutputExtended, randAddress(iotago.AddressAlias)),
+		randOutputOnAddress(iotago.OutputExtended, randAddress(iotago.AddressEd25519)),
+	}
+	nftOutputs := Outputs{
+		randOutputOnAddress(iotago.OutputNFT, randAddress(iotago.AddressEd25519)),
+		randOutputOnAddress(iotago.OutputNFT, randAddress(iotago.AddressAlias)),
+		randOutputOnAddress(iotago.OutputNFT, randAddress(iotago.AddressNFT)),
+		randOutputOnAddress(iotago.OutputNFT, randAddress(iotago.AddressAlias)),
+	}
+	aliasOutputs := Outputs{
+		randOutputOnAddress(iotago.OutputAlias, randAddress(iotago.AddressEd25519)),
+	}
+	foundryOutputs := Outputs{
+		randOutputOnAddress(iotago.OutputFoundry, randAddress(iotago.AddressAlias)),
+		randOutputOnAddress(iotago.OutputFoundry, randAddress(iotago.AddressAlias)),
+		randOutputOnAddress(iotago.OutputFoundry, randAddress(iotago.AddressAlias)),
 	}
 
 	msIndex := milestone.Index(756)
 
+	spents := Spents{
+		randomSpent(extendedOutputs[3], msIndex),
+		randomSpent(extendedOutputs[2], msIndex),
+		randomSpent(nftOutputs[2], msIndex),
+	}
+
+	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, append(append(append(extendedOutputs, nftOutputs...), aliasOutputs...), foundryOutputs...), spents, nil, nil))
+
+	// Prepare values to check
+	outputByID := make(map[string]struct{})
+	unspentExtendedByID := make(map[string]struct{})
+	unspentNFTByID := make(map[string]struct{})
+	unspentAliasByID := make(map[string]struct{})
+	unspentFoundryByID := make(map[string]struct{})
+	spentByID := make(map[string]struct{})
+
+	for _, output := range extendedOutputs {
+		outputByID[output.mapKey()] = struct{}{}
+		unspentExtendedByID[output.mapKey()] = struct{}{}
+	}
+	for _, output := range nftOutputs {
+		outputByID[output.mapKey()] = struct{}{}
+		unspentNFTByID[output.mapKey()] = struct{}{}
+	}
+	for _, output := range aliasOutputs {
+		outputByID[output.mapKey()] = struct{}{}
+		unspentAliasByID[output.mapKey()] = struct{}{}
+	}
+	for _, output := range foundryOutputs {
+		outputByID[output.mapKey()] = struct{}{}
+		unspentFoundryByID[output.mapKey()] = struct{}{}
+	}
+	for _, spent := range spents {
+		spentByID[spent.mapKey()] = struct{}{}
+		delete(unspentExtendedByID, spent.mapKey())
+		delete(unspentNFTByID, spent.mapKey())
+		delete(unspentAliasByID, spent.mapKey())
+		delete(unspentFoundryByID, spent.mapKey())
+	}
+
+	// Test iteration without filters
+	require.NoError(t, utxo.ForEachOutput(func(output *Output) bool {
+		_, has := outputByID[output.mapKey()]
+		require.True(t, has)
+		delete(outputByID, output.mapKey())
+		return true
+	}))
+
+	require.Empty(t, outputByID)
+
+	require.NoError(t, utxo.ForEachUnspentExtendedOutput(nil, func(output *Output) bool {
+		_, has := unspentExtendedByID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentExtendedByID, output.mapKey())
+		return true
+	}))
+	require.Empty(t, unspentExtendedByID)
+
+	require.NoError(t, utxo.ForEachUnspentNFTOutput(nil, func(output *Output) bool {
+		_, has := unspentNFTByID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentNFTByID, output.mapKey())
+		return true
+	}))
+	require.Empty(t, unspentNFTByID)
+
+	require.NoError(t, utxo.ForEachUnspentAliasOutput(nil, func(output *Output) bool {
+		_, has := unspentAliasByID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentAliasByID, output.mapKey())
+		return true
+	}))
+	require.Empty(t, unspentAliasByID)
+
+	require.NoError(t, utxo.ForEachUnspentFoundryOutput(nil, func(output *Output) bool {
+		_, has := unspentFoundryByID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentFoundryByID, output.mapKey())
+		return true
+	}))
+	require.Empty(t, unspentFoundryByID)
+
+	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
+		_, has := spentByID[spent.mapKey()]
+		require.True(t, has)
+		delete(spentByID, spent.mapKey())
+		return true
+	}))
+
+	require.Empty(t, spentByID)
+}
+
+func TestUTXOIterationWithAddressFilterAndTypeFilter(t *testing.T) {
+
+	utxo := New(mapdb.NewMapDB())
+
+	address := randAddress(iotago.AddressEd25519)
+
+	outputs := Outputs{
+		randOutputOnAddressWithAmount(iotago.OutputExtended, address, 3242343),
+		randOutput(iotago.OutputExtended),
+		randOutputOnAddressWithAmount(iotago.OutputExtended, address, 5898566), // spent
+		randOutput(iotago.OutputExtended),                                      // spent
+		randOutputOnAddressWithAmount(iotago.OutputNFT, address, 23432423),
+		randOutputOnAddressWithAmount(iotago.OutputExtended, address, 78632467),
+		randOutput(iotago.OutputExtended),
+		randOutput(iotago.OutputAlias),
+		randOutput(iotago.OutputNFT),
+		randOutput(iotago.OutputNFT),
+		randOutputOnAddressWithAmount(iotago.OutputExtended, address, 98734278),
+		randOutputOnAddressWithAmount(iotago.OutputAlias, address, 98734278),
+	}
+
+	msIndex := milestone.Index(756)
 	spents := Spents{
 		randomSpent(outputs[3], msIndex),
 		randomSpent(outputs[2], msIndex),
@@ -32,295 +215,190 @@ func TestUTXOIterationWithoutFilters(t *testing.T) {
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 
 	// Prepare values to check
-	outputByOutputID := make(map[string]struct{})
-	unspentByOutputID := make(map[string]struct{})
-	spentByOutputID := make(map[string]struct{})
+	anyUnspentByID := make(map[string]struct{})
+	extendedUnspentByID := make(map[string]struct{})
+	nftUnspentByID := make(map[string]struct{})
+	aliasUnspentByID := make(map[string]struct{})
+	spentByID := make(map[string]struct{})
 
-	for _, output := range outputs {
-		outputByOutputID[string(output.OutputID()[:])] = struct{}{}
-		unspentByOutputID[string(output.OutputID()[:])] = struct{}{}
-	}
+	anyUnspentByID[outputs[0].mapKey()] = struct{}{}
+	anyUnspentByID[outputs[4].mapKey()] = struct{}{}
+	anyUnspentByID[outputs[5].mapKey()] = struct{}{}
+	anyUnspentByID[outputs[10].mapKey()] = struct{}{}
+	anyUnspentByID[outputs[11].mapKey()] = struct{}{}
 
-	for _, spent := range spents {
-		spentByOutputID[string(spent.OutputID()[:])] = struct{}{}
-		delete(unspentByOutputID, string(spent.OutputID()[:]))
-	}
+	extendedUnspentByID[outputs[0].mapKey()] = struct{}{}
+	extendedUnspentByID[outputs[5].mapKey()] = struct{}{}
+	extendedUnspentByID[outputs[10].mapKey()] = struct{}{}
 
-	// Test iteration without filters
-	require.NoError(t, utxo.ForEachOutput(func(output *Output) bool {
-		_, has := outputByOutputID[string(output.OutputID()[:])]
+	nftUnspentByID[outputs[4].mapKey()] = struct{}{}
+
+	aliasUnspentByID[outputs[11].mapKey()] = struct{}{}
+
+	spentByID[outputs[2].mapKey()] = struct{}{}
+	spentByID[outputs[3].mapKey()] = struct{}{}
+
+	require.NoError(t, utxo.ForEachUnspentExtendedOutput(address, func(output *Output) bool {
+		_, has := extendedUnspentByID[output.mapKey()]
 		require.True(t, has)
-		delete(outputByOutputID, string(output.OutputID()[:]))
+		delete(extendedUnspentByID, output.mapKey())
 		return true
 	}))
+	require.Empty(t, extendedUnspentByID)
 
-	require.Empty(t, outputByOutputID)
-
-	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
-		_, has := unspentByOutputID[string(output.OutputID()[:])]
+	require.NoError(t, utxo.ForEachUnspentOutputOnAddress(address, nil, func(output *Output) bool {
+		_, has := anyUnspentByID[output.mapKey()]
 		require.True(t, has)
-		delete(unspentByOutputID, string(output.OutputID()[:]))
+		delete(anyUnspentByID, output.mapKey())
 		return true
 	}))
+	require.Empty(t, anyUnspentByID)
 
-	require.Empty(t, unspentByOutputID)
+	require.NoError(t, utxo.ForEachUnspentOutputOnAddress(address, AddressFilterOptions().OutputType(iotago.OutputNFT), func(output *Output) bool {
+		_, has := nftUnspentByID[output.mapKey()]
+		require.True(t, has)
+		delete(nftUnspentByID, output.mapKey())
+		return true
+	}))
+	require.Empty(t, nftUnspentByID)
+
+	require.NoError(t, utxo.ForEachUnspentOutputOnAddress(address, AddressFilterOptions().OutputType(iotago.OutputAlias), func(output *Output) bool {
+		_, has := aliasUnspentByID[output.mapKey()]
+		require.True(t, has)
+		delete(aliasUnspentByID, output.mapKey())
+		return true
+	}))
+	require.Empty(t, aliasUnspentByID)
 
 	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
-		_, has := spentByOutputID[string(spent.OutputID()[:])]
+		_, has := spentByID[spent.mapKey()]
 		require.True(t, has)
-		delete(spentByOutputID, string(spent.OutputID()[:]))
+		delete(spentByID, spent.mapKey())
 		return true
 	}))
 
-	require.Empty(t, spentByOutputID)
+	require.Empty(t, spentByID)
 }
 
-func TestUTXOIterationWithAddressFilter(t *testing.T) {
+func TestUTXOLoadMethodsAddressFilterAndTypeFilter(t *testing.T) {
 
 	utxo := New(mapdb.NewMapDB())
 
-	address := randomAddress()
+	address := randAddress(iotago.AddressEd25519)
+
+	nftID := randNFTID()
+	nftOutputID := randOutputID()
+
+	aliasID := randAliasID()
+	aliasOutputID := randOutputID()
+
+	foundryOutputID := randOutputID()
+	foundryAlias := randAliasID().ToAddress()
+	foundrySupply := new(big.Int).SetUint64(rand.Uint64())
+	foundrySerialNumber := rand.Uint32()
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputExtended, address),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended, address),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
+		randOutputOnAddressWithAmount(iotago.OutputExtended, address, 3242343),
+		randOutput(iotago.OutputExtended),
+		randOutputOnAddressWithAmount(iotago.OutputExtended, address, 5898566), // spent
+		randOutput(iotago.OutputExtended),                                      // spent
+		CreateOutput(nftOutputID, randMessageID(), randMilestoneIndex(), &iotago.NFTOutput{
+			Address:           address,
+			Amount:            234348,
+			NFTID:             nftID,
+			ImmutableMetadata: []byte{},
+		}),
+		randOutputOnAddressWithAmount(iotago.OutputExtended, address, 78632467),
+		randOutput(iotago.OutputExtended),
+		randOutput(iotago.OutputAlias),
+		randOutput(iotago.OutputNFT),
+		randOutput(iotago.OutputNFT),
+		randOutputOnAddressWithAmount(iotago.OutputExtended, address, 98734278),
+		CreateOutput(aliasOutputID, randMessageID(), randMilestoneIndex(), &iotago.AliasOutput{
+			Amount:               59854598,
+			AliasID:              aliasID,
+			StateController:      address,
+			GovernanceController: address,
+			StateMetadata:        []byte{},
+		}),
+		randOutput(iotago.OutputFoundry),
+		CreateOutput(foundryOutputID, randMessageID(), randMilestoneIndex(), &iotago.FoundryOutput{
+			Address:           foundryAlias,
+			Amount:            2156548,
+			SerialNumber:      foundrySerialNumber,
+			TokenTag:          randTokenTag(),
+			CirculatingSupply: foundrySupply,
+			MaximumSupply:     foundrySupply,
+			TokenScheme:       &iotago.SimpleTokenScheme{},
+		}),
 	}
 
-	spents := Spents{
-		randomSpent(outputs[3]),
-		randomSpent(outputs[2]),
-	}
+	ms := marshalutil.New(iotago.FoundryIDLength)
+	foundryAliasBytes, err := foundryAlias.Serialize(serializer.DeSeriModeNoValidation, nil)
+	require.NoError(t, err)
+	ms.WriteBytes(foundryAliasBytes)
+	ms.WriteUint32(foundrySerialNumber)
+	ms.WriteByte(byte(iotago.TokenSchemeSimple))
+	foundryID := iotago.FoundryID{}
+	copy(foundryID[:], ms.Bytes())
 
 	msIndex := milestone.Index(756)
+	spents := Spents{
+		randomSpent(outputs[3], msIndex),
+		randomSpent(outputs[2], msIndex),
+	}
 
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
-
-	// Prepare values to check
-	unspentByOutputID := make(map[string]struct{})
-	spentByOutputID := make(map[string]struct{})
-
-	// Test iteration with address filter
-	unspentByOutputID[string(outputs[0].OutputID()[:])] = struct{}{}
-	spentByOutputID[string(outputs[2].OutputID()[:])] = struct{}{}
-
-	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
-		_, has := unspentByOutputID[string(output.OutputID()[:])]
-		require.True(t, has)
-		delete(unspentByOutputID, string(output.OutputID()[:]))
-		return true
-	}, FilterAddress(address)))
-
-	require.Empty(t, unspentByOutputID)
-
-	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
-		_, has := spentByOutputID[string(spent.OutputID()[:])]
-		require.True(t, has)
-		delete(spentByOutputID, string(spent.OutputID()[:]))
-		return true
-	}, FilterAddress(address)))
-
-	require.Empty(t, spentByOutputID)
-}
-
-func TestUTXOIterationWithAddressAndTypeFilter(t *testing.T) {
-
-	utxo := New(mapdb.NewMapDB())
-
-	address := randomAddress()
-
-	outputs := Outputs{
-		randomOutput(iotago.OutputExtended, address),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputNFT, address),
-		randomOutput(iotago.OutputExtended, address),
-		randomOutput(iotago.OutputNFT, address),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputNFT, address),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputNFT, address),
-		randomOutput(iotago.OutputNFT, address),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-	}
-
-	spents := Spents{
-		randomSpent(outputs[2]),
-		randomSpent(outputs[3]),
-	}
-
-	msIndex := milestone.Index(756)
-
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
-
-	// Prepare values to check
-	unspentByOutputID := make(map[string]struct{})
-	unspentNFTByOutputID := make(map[string]struct{})
-	spentByOutputID := make(map[string]struct{})
-	spentNFTByOutputID := make(map[string]struct{})
-
-	// Test iteration with address and type filter
-	unspentByOutputID[string(outputs[0].OutputID()[:])] = struct{}{}
-	unspentNFTByOutputID[string(outputs[4].OutputID()[:])] = struct{}{}
-	unspentNFTByOutputID[string(outputs[6].OutputID()[:])] = struct{}{}
-	unspentNFTByOutputID[string(outputs[8].OutputID()[:])] = struct{}{}
-	unspentNFTByOutputID[string(outputs[9].OutputID()[:])] = struct{}{}
-
-	spentByOutputID[string(outputs[3].OutputID()[:])] = struct{}{}
-	spentNFTByOutputID[string(outputs[2].OutputID()[:])] = struct{}{}
-
-	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
-		_, has := unspentByOutputID[string(output.OutputID()[:])]
-		require.True(t, has)
-		delete(unspentByOutputID, string(output.OutputID()[:]))
-		return true
-	}, FilterAddress(address), FilterOutputType(iotago.OutputExtended)))
-
-	require.Empty(t, unspentByOutputID)
-
-	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
-		_, has := spentByOutputID[string(spent.OutputID()[:])]
-		require.True(t, has)
-		delete(spentByOutputID, string(spent.OutputID()[:]))
-		return true
-	}, FilterAddress(address), FilterOutputType(iotago.OutputNFT)))
-
-	require.Empty(t, spentByOutputID)
-
-	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
-		_, has := unspentNFTByOutputID[string(output.OutputID()[:])]
-		require.True(t, has)
-		delete(unspentNFTByOutputID, string(output.OutputID()[:]))
-		return true
-	}, FilterAddress(address), FilterOutputType(iotago.OutputNFT)))
-
-	require.Empty(t, unspentNFTByOutputID)
-
-	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
-		_, has := spentNFTByOutputID[string(spent.OutputID()[:])]
-		require.True(t, has)
-		delete(spentNFTByOutputID, string(spent.OutputID()[:]))
-		return true
-	}, FilterAddress(address), FilterOutputType(iotago.OutputNFT)))
-
-	require.Empty(t, spentNFTByOutputID)
-}
-
-func TestUTXOLoadMethodsWithIterateOptions(t *testing.T) {
-
-	utxo := New(mapdb.NewMapDB())
-
-	address := randomAddress()
-
-	outputs := Outputs{
-		randomOutputOnAddressWithAmount(iotago.OutputExtended, address, 5_000_000),
-		randomOutput(iotago.OutputExtended),
-		randomOutputOnAddressWithAmount(iotago.OutputExtended, address, 150),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutputOnAddressWithAmount(iotago.OutputExtended, address, 3_125_125),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutputOnAddressWithAmount(iotago.OutputExtended, address, 89_923_223),
-		randomOutput(iotago.OutputExtended),
-	}
-	nftOutputs := Outputs{
-		randomOutputOnAddressWithAmount(iotago.OutputNFT, address, 1_000_000),
-		randomOutput(iotago.OutputNFT),
-		randomOutputOnAddressWithAmount(iotago.OutputNFT, address, 5_500_000),
-		randomOutput(iotago.OutputNFT),
-		randomOutputOnAddressWithAmount(iotago.OutputNFT, address, 1_000_000),
-	}
-
-	spents := Spents{
-		randomSpent(outputs[2]),
-		randomSpent(outputs[3]),
-	}
-	nftSpents := Spents{
-		randomSpent(nftOutputs[2]),
-		randomSpent(nftOutputs[4]),
-	}
-
-	expectedBalanceOnAddress := uint64(105_548_498 - 6_500_150)
-
-	msIndex := milestone.Index(756)
-
-	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, append(outputs, nftOutputs...), append(spents, nftSpents...), nil, nil))
-
-	// Prepare values to check
-	unspentByOutputID := make(map[string]struct{})
-	unspentNFTByOutputID := make(map[string]struct{})
-	spentByOutputID := make(map[string]struct{})
-	spentNFTByOutputID := make(map[string]struct{})
-
-	for _, output := range outputs {
-		unspentByOutputID[string(output.OutputID()[:])] = struct{}{}
-	}
-
-	for _, output := range nftOutputs {
-		unspentNFTByOutputID[string(output.OutputID()[:])] = struct{}{}
-	}
-
-	for _, spent := range spents {
-		spentByOutputID[string(spent.OutputID()[:])] = struct{}{}
-		delete(unspentByOutputID, string(spent.OutputID()[:]))
-	}
-
-	for _, spent := range nftSpents {
-		spentNFTByOutputID[string(spent.OutputID()[:])] = struct{}{}
-		delete(unspentNFTByOutputID, string(spent.OutputID()[:]))
-	}
 
 	// Test no MaxResultCount
-	loadedSpents, err := utxo.SpentOutputs(FilterAddress(address))
-	require.NoError(t, err)
-	require.Equal(t, 3, len(loadedSpents))
-
-	loadedUnspent, err := utxo.UnspentOutputs(FilterAddress(address))
-	require.NoError(t, err)
-	require.Equal(t, 4, len(loadedUnspent))
-
-	computedBalance, count, err := utxo.ComputeBalance(FilterAddress(address))
-	require.NoError(t, err)
-	require.Equal(t, 4, count)
-	require.Equal(t, expectedBalanceOnAddress, computedBalance)
-
-	// Test MaxResultCount
-	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), MaxResultCount(2))
+	loadedSpents, err := utxo.SpentOutputs()
 	require.NoError(t, err)
 	require.Equal(t, 2, len(loadedSpents))
 
-	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), MaxResultCount(2))
-	require.NoError(t, err)
-	require.Equal(t, 2, len(loadedUnspent))
-
-	computedBalance, count, err = utxo.ComputeBalance(FilterAddress(address), MaxResultCount(2))
-	require.NoError(t, err)
-	require.Equal(t, 2, count)
-	require.NotEqual(t, expectedBalanceOnAddress, computedBalance)
-
-	// Test OutputType = Extended Output
-	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputExtended))
+	loadedSpents, err = utxo.SpentOutputs(MaxResultCount(1))
 	require.NoError(t, err)
 	require.Equal(t, 1, len(loadedSpents))
 
-	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputExtended))
+	loadExtendedUnspent, err := utxo.UnspentExtendedOutputs(nil)
 	require.NoError(t, err)
-	require.Equal(t, 3, len(loadedUnspent))
+	require.Equal(t, 5, len(loadExtendedUnspent))
 
-	// Test OutputType = NFT Output
-	loadedSpents, err = utxo.SpentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputNFT))
+	loadExtendedUnspent, err = utxo.UnspentExtendedOutputs(nil, MaxResultCount(2))
 	require.NoError(t, err)
-	require.Equal(t, 2, len(loadedSpents))
+	require.Equal(t, 2, len(loadExtendedUnspent))
 
-	loadedUnspent, err = utxo.UnspentOutputs(FilterAddress(address), FilterOutputType(iotago.OutputNFT))
+	loadExtendedUnspent, err = utxo.UnspentExtendedOutputs(address)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(loadedUnspent))
+	require.Equal(t, 3, len(loadExtendedUnspent))
+
+	loadExtendedUnspent, err = utxo.UnspentExtendedOutputs(address, MaxResultCount(1))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(loadExtendedUnspent))
+
+	loadUnspentNFTs, err := utxo.UnspentNFTOutputs(nil)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(loadUnspentNFTs))
+
+	loadUnspentNFTs, err = utxo.UnspentNFTOutputs(&nftID)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(loadUnspentNFTs))
+	require.Equal(t, nftOutputID[:], loadUnspentNFTs[0].OutputID()[:])
+
+	loadUnspentAliases, err := utxo.UnspentAliasOutputs(nil)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(loadUnspentAliases))
+
+	loadUnspentAliases, err = utxo.UnspentAliasOutputs(&aliasID)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(loadUnspentAliases))
+	require.Equal(t, aliasOutputID[:], loadUnspentAliases[0].OutputID()[:])
+
+	loadUnspentFoundries, err := utxo.UnspentFoundryOutputs(nil)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(loadUnspentFoundries))
+
+	loadUnspentFoundries, err = utxo.UnspentFoundryOutputs(&foundryID)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(loadUnspentFoundries))
+	require.Equal(t, foundryOutputID[:], loadUnspentFoundries[0].OutputID()[:])
 }

@@ -15,19 +15,21 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputNFT),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-	}
-
-	spents := Spents{
-		randomSpent(outputs[3]),
-		randomSpent(outputs[2]),
+		randOutput(iotago.OutputExtended),
+		randOutput(iotago.OutputExtended),
+		randOutput(iotago.OutputNFT),      // spent
+		randOutput(iotago.OutputExtended), // spent
+		randOutput(iotago.OutputAlias),
+		randOutput(iotago.OutputNFT),
+		randOutput(iotago.OutputFoundry),
 	}
 
 	msIndex := milestone.Index(756)
+
+	spents := Spents{
+		randomSpent(outputs[3], msIndex),
+		randomSpent(outputs[2], msIndex),
+	}
 
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 
@@ -36,14 +38,35 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 		outputCount++
 		return true
 	}))
-	require.Equal(t, 5, outputCount)
+	require.Equal(t, 7, outputCount)
 
-	var unspentCount int
-	require.NoError(t, utxo.ForEachUnspentOutput(func(_ *Output) bool {
-		unspentCount++
+	var unspentExtendedCount int
+	require.NoError(t, utxo.ForEachUnspentExtendedOutput(nil, func(_ *Output) bool {
+		unspentExtendedCount++
 		return true
 	}))
-	require.Equal(t, 3, unspentCount)
+	require.Equal(t, 2, unspentExtendedCount)
+
+	var unspentNFTCount int
+	require.NoError(t, utxo.ForEachUnspentNFTOutput(nil, func(_ *Output) bool {
+		unspentNFTCount++
+		return true
+	}))
+	require.Equal(t, 1, unspentNFTCount)
+
+	var unspentAliasCount int
+	require.NoError(t, utxo.ForEachUnspentAliasOutput(nil, func(_ *Output) bool {
+		unspentAliasCount++
+		return true
+	}))
+	require.Equal(t, 1, unspentAliasCount)
+
+	var unspentFoundryCount int
+	require.NoError(t, utxo.ForEachUnspentFoundryOutput(nil, func(_ *Output) bool {
+		unspentFoundryCount++
+		return true
+	}))
+	require.Equal(t, 1, unspentFoundryCount)
 
 	var spentCount int
 	require.NoError(t, utxo.ForEachSpentOutput(func(_ *Spent) bool {
@@ -59,7 +82,22 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 		return true
 	}))
 
-	require.NoError(t, utxo.ForEachUnspentOutput(func(_ *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentExtendedOutput(nil, func(_ *Output) bool {
+		require.Fail(t, "should not be called")
+		return true
+	}))
+
+	require.NoError(t, utxo.ForEachUnspentNFTOutput(nil, func(_ *Output) bool {
+		require.Fail(t, "should not be called")
+		return true
+	}))
+
+	require.NoError(t, utxo.ForEachUnspentAliasOutput(nil, func(_ *Output) bool {
+		require.Fail(t, "should not be called")
+		return true
+	}))
+
+	require.NoError(t, utxo.ForEachUnspentFoundryOutput(nil, func(_ *Output) bool {
 		require.Fail(t, "should not be called")
 		return true
 	}))
@@ -75,17 +113,15 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	previousOutputs := Outputs{
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputNFT),
-	}
-
-	previousSpents := Spents{
-		randomSpent(previousOutputs[1]),
+		randOutput(iotago.OutputExtended),
+		randOutput(iotago.OutputExtended), // spent
+		randOutput(iotago.OutputNFT),      // spent on 2nd confirmation
 	}
 
 	previousMsIndex := milestone.Index(48)
-
+	previousSpents := Spents{
+		randomSpent(previousOutputs[1], previousMsIndex),
+	}
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(previousMsIndex, previousOutputs, previousSpents, nil, nil))
 
 	ledgerIndex, err := utxo.ReadLedgerIndex()
@@ -93,19 +129,16 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	require.Equal(t, previousMsIndex, ledgerIndex)
 
 	outputs := Outputs{
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
-		randomOutput(iotago.OutputExtended),
+		randOutput(iotago.OutputExtended),
+		randOutput(iotago.OutputFoundry),
+		randOutput(iotago.OutputExtended), // spent
+		randOutput(iotago.OutputAlias),
 	}
-
-	spents := Spents{
-		randomSpent(previousOutputs[2]),
-		randomSpent(outputs[2]),
-	}
-
 	msIndex := milestone.Index(49)
-
+	spents := Spents{
+		randomSpent(previousOutputs[2], msIndex),
+		randomSpent(outputs[2], msIndex),
+	}
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 
 	ledgerIndex, err = utxo.ReadLedgerIndex()
@@ -116,52 +149,76 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	outputByOutputID := make(map[string]struct{})
 	unspentByOutputID := make(map[string]struct{})
 	for _, output := range previousOutputs {
-		outputByOutputID[string(output.OutputID()[:])] = struct{}{}
-		unspentByOutputID[string(output.OutputID()[:])] = struct{}{}
+		outputByOutputID[output.mapKey()] = struct{}{}
+		unspentByOutputID[output.mapKey()] = struct{}{}
 	}
 	for _, output := range outputs {
-		outputByOutputID[string(output.OutputID()[:])] = struct{}{}
-		unspentByOutputID[string(output.OutputID()[:])] = struct{}{}
+		outputByOutputID[output.mapKey()] = struct{}{}
+		unspentByOutputID[output.mapKey()] = struct{}{}
 	}
 
 	spentByOutputID := make(map[string]struct{})
 	for _, spent := range previousSpents {
-		spentByOutputID[string(spent.OutputID()[:])] = struct{}{}
-		delete(unspentByOutputID, string(spent.OutputID()[:]))
+		spentByOutputID[spent.mapKey()] = struct{}{}
+		delete(unspentByOutputID, spent.mapKey())
 	}
 	for _, spent := range spents {
-		spentByOutputID[string(spent.OutputID()[:])] = struct{}{}
-		delete(unspentByOutputID, string(spent.OutputID()[:]))
+		spentByOutputID[spent.mapKey()] = struct{}{}
+		delete(unspentByOutputID, spent.mapKey())
 	}
 
 	var outputCount int
 	require.NoError(t, utxo.ForEachOutput(func(output *Output) bool {
 		outputCount++
-		_, has := outputByOutputID[string(output.OutputID()[:])]
+		_, has := outputByOutputID[output.mapKey()]
 		require.True(t, has)
-		delete(outputByOutputID, string(output.OutputID()[:]))
+		delete(outputByOutputID, output.mapKey())
 		return true
 	}))
 	require.Empty(t, outputByOutputID)
 	require.Equal(t, 7, outputCount)
 
 	var unspentCount int
-	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentExtendedOutput(nil, func(output *Output) bool {
 		unspentCount++
-		_, has := unspentByOutputID[string(output.OutputID()[:])]
+		_, has := unspentByOutputID[output.mapKey()]
 		require.True(t, has)
-		delete(unspentByOutputID, string(output.OutputID()[:]))
+		delete(unspentByOutputID, output.mapKey())
 		return true
 	}))
-	require.Empty(t, unspentByOutputID)
+	require.Equal(t, 2, unspentCount)
+	require.NoError(t, utxo.ForEachUnspentNFTOutput(nil, func(output *Output) bool {
+		unspentCount++
+		_, has := unspentByOutputID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentByOutputID, output.mapKey())
+		return true
+	}))
+	require.Equal(t, 2, unspentCount)
+	require.NoError(t, utxo.ForEachUnspentAliasOutput(nil, func(output *Output) bool {
+		unspentCount++
+		_, has := unspentByOutputID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentByOutputID, output.mapKey())
+		return true
+	}))
+	require.Equal(t, 3, unspentCount)
+	require.NoError(t, utxo.ForEachUnspentFoundryOutput(nil, func(output *Output) bool {
+		unspentCount++
+		_, has := unspentByOutputID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentByOutputID, output.mapKey())
+		return true
+	}))
 	require.Equal(t, 4, unspentCount)
+	require.Empty(t, unspentByOutputID)
 
 	var spentCount int
 	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
 		spentCount++
-		_, has := spentByOutputID[string(spent.OutputID()[:])]
+		_, has := spentByOutputID[spent.mapKey()]
 		require.True(t, has)
-		delete(spentByOutputID, string(spent.OutputID()[:]))
+		delete(spentByOutputID, spent.mapKey())
 		return true
 	}))
 	require.Empty(t, spentByOutputID)
@@ -179,35 +236,53 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	spentByOutputID = make(map[string]struct{})
 
 	for _, output := range previousOutputs {
-		outputByOutputID[string(output.OutputID()[:])] = struct{}{}
-		unspentByOutputID[string(output.OutputID()[:])] = struct{}{}
+		outputByOutputID[output.mapKey()] = struct{}{}
+		unspentByOutputID[output.mapKey()] = struct{}{}
 	}
 
 	for _, spent := range previousSpents {
-		spentByOutputID[string(spent.OutputID()[:])] = struct{}{}
-		delete(unspentByOutputID, string(spent.OutputID()[:]))
+		spentByOutputID[spent.mapKey()] = struct{}{}
+		delete(unspentByOutputID, spent.mapKey())
 	}
 
 	require.NoError(t, utxo.ForEachOutput(func(output *Output) bool {
-		_, has := outputByOutputID[string(output.OutputID()[:])]
+		_, has := outputByOutputID[output.mapKey()]
 		require.True(t, has)
-		delete(outputByOutputID, string(output.OutputID()[:]))
+		delete(outputByOutputID, output.mapKey())
 		return true
 	}))
 	require.Empty(t, outputByOutputID)
 
-	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
-		_, has := unspentByOutputID[string(output.OutputID()[:])]
+	require.NoError(t, utxo.ForEachUnspentExtendedOutput(nil, func(output *Output) bool {
+		_, has := unspentByOutputID[output.mapKey()]
 		require.True(t, has)
-		delete(unspentByOutputID, string(output.OutputID()[:]))
+		delete(unspentByOutputID, output.mapKey())
+		return true
+	}))
+	require.NoError(t, utxo.ForEachUnspentNFTOutput(nil, func(output *Output) bool {
+		_, has := unspentByOutputID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentByOutputID, output.mapKey())
+		return true
+	}))
+	require.NoError(t, utxo.ForEachUnspentAliasOutput(nil, func(output *Output) bool {
+		_, has := unspentByOutputID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentByOutputID, output.mapKey())
+		return true
+	}))
+	require.NoError(t, utxo.ForEachUnspentFoundryOutput(nil, func(output *Output) bool {
+		_, has := unspentByOutputID[output.mapKey()]
+		require.True(t, has)
+		delete(unspentByOutputID, output.mapKey())
 		return true
 	}))
 	require.Empty(t, unspentByOutputID)
 
 	require.NoError(t, utxo.ForEachSpentOutput(func(spent *Spent) bool {
-		_, has := spentByOutputID[string(spent.OutputID()[:])]
+		_, has := spentByOutputID[spent.mapKey()]
 		require.True(t, has)
-		delete(spentByOutputID, string(spent.OutputID()[:]))
+		delete(spentByOutputID, spent.mapKey())
 		return true
 	}))
 	require.Empty(t, spentByOutputID)

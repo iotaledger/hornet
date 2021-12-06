@@ -3,12 +3,44 @@ package utxo
 import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+type UTXOIterateOptions struct {
+	readLockLedger bool
+	maxResultCount int
+}
 
+type UTXOIterateOption func(*UTXOIterateOptions)
+
+func ReadLockLedger(lockLedger bool) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.readLockLedger = lockLedger
+	}
+}
+
+func MaxResultCount(count int) UTXOIterateOption {
+	return func(args *UTXOIterateOptions) {
+		args.maxResultCount = count
+	}
+}
+
+func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
+	result := &UTXOIterateOptions{
+		readLockLedger: true,
+		maxResultCount: 0,
+	}
+
+	for _, optionalOption := range optionalOptions {
+		optionalOption(result)
+	}
+
+	return result
+}
+
+func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
@@ -16,28 +48,12 @@ func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateO
 		defer u.ReadUnlockLedger()
 	}
 
-	consumerFunc := consumer
-
-	if opt.filterOutputType != nil {
-
-		filterType := *opt.filterOutputType
-
-		consumerFunc = func(output *Output) bool {
-			if output.OutputType() == filterType {
-				return consumer(output)
-			}
-			return true
-		}
-	}
-
 	var innerErr error
 	var i int
 	if err := u.utxoStorage.Iterate([]byte{UTXOStoreKeyPrefixOutput}, func(key kvstore.Key, value kvstore.Value) bool {
-
 		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
 		}
-
 		i++
 
 		output := &Output{}
@@ -46,7 +62,7 @@ func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateO
 			return false
 		}
 
-		return consumerFunc(output)
+		return consumer(output)
 	}); err != nil {
 		return err
 	}
@@ -55,9 +71,6 @@ func (u *Manager) ForEachOutput(consumer OutputConsumer, options ...UTXOIterateO
 }
 
 func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIterateOption) error {
-
-	consumerFunc := consumer
-
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
@@ -65,28 +78,14 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIter
 		defer u.ReadUnlockLedger()
 	}
 
-	var innerErr error
-
 	key := []byte{UTXOStoreKeyPrefixOutputSpent}
 
-	if opt.filterOutputType != nil {
-		// Filter results instead of using prefix iteration
-		consumerFunc = func(spent *Spent) bool {
-			if spent.OutputType() == *opt.filterOutputType {
-				return consumer(spent)
-			}
-			return true
-		}
-	}
-
+	var innerErr error
 	var i int
-
 	if err := u.utxoStorage.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
-
 		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
 		}
-
 		i++
 
 		spent := &Spent{}
@@ -100,7 +99,7 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIter
 			return false
 		}
 
-		return consumerFunc(spent)
+		return consumer(spent)
 	}); err != nil {
 		return err
 	}
@@ -108,52 +107,31 @@ func (u *Manager) ForEachSpentOutput(consumer SpentConsumer, options ...UTXOIter
 	return innerErr
 }
 
-func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) SpentOutputs(options ...UTXOIterateOption) (Spents, error) {
+	var spents Spents
+	consumerFunc := func(spent *Spent) bool {
+		spents = append(spents, spent)
+		return true
+	}
 
-	consumerFunc := consumer
+	if err := u.ForEachSpentOutput(consumerFunc, options...); err != nil {
+		return nil, err
+	}
+	return spents, nil
+}
 
-	opt := iterateOptions(options)
-
-	if opt.readLockLedger {
+func (u *Manager) forEachUnspentOutput(consumer OutputConsumer, keyPrefix kvstore.KeyPrefix, readLockLedger bool, maxResultCount int) error {
+	if readLockLedger {
 		u.ReadLockLedger()
 		defer u.ReadUnlockLedger()
 	}
 
 	var innerErr error
-
-	key := []byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}
-
-	// Filter by address
-	if opt.filterAddress != nil {
-		addrBytes, err := opt.filterAddress.Serialize(serializer.DeSeriModeNoValidation, nil)
-		if err != nil {
-			return err
-		}
-		key = byteutils.ConcatBytes(key, addrBytes)
-
-		// Filter by type
-		if opt.filterOutputType != nil {
-			key = byteutils.ConcatBytes(key, []byte{byte(*opt.filterOutputType)})
-		}
-	} else if opt.filterOutputType != nil {
-
-		// Filter results instead of using prefix iteration
-		consumerFunc = func(output *Output) bool {
-			if output.OutputType() == *opt.filterOutputType {
-				return consumer(output)
-			}
-			return true
-		}
-	}
-
 	var i int
-
-	if err := u.utxoStorage.IterateKeys(key, func(key kvstore.Key) bool {
-
-		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
+	if err := u.utxoStorage.IterateKeys(keyPrefix, func(key kvstore.Key) bool {
+		if (maxResultCount > 0) && (i >= maxResultCount) {
 			return false
 		}
-
 		i++
 
 		outputID, err := outputIDFromDatabaseKey(key)
@@ -175,7 +153,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 			return false
 		}
 
-		return consumerFunc(output)
+		return consumer(output)
 	}); err != nil {
 		return err
 	}
@@ -183,130 +161,244 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 	return innerErr
 }
 
-type UTXOIterateOptions struct {
-	readLockLedger           bool
-	maxResultCount           int
-	filterAddress            iotago.Address
-	filterAliasID            *iotago.AliasID
-	filterNFTID              *iotago.NFTID
-	filterFoundryID          *iotago.FoundryID
-	filterSpendingContraints *bool
-	filterOutputType         *iotago.OutputType
+func (u *Manager) ForEachUnspentExtendedOutput(filterAddress iotago.Address, consumer OutputConsumer, options ...UTXOIterateOption) error {
+	opt := iterateOptions(options)
+	key := []byte{UTXOStoreKeyPrefixExtendedOutputUnspent}
+
+	// Filter by Address
+	if filterAddress != nil {
+		addrBytes, err := filterAddress.Serialize(serializer.DeSeriModeNoValidation, nil)
+		if err != nil {
+			return err
+		}
+		key = byteutils.ConcatBytes(key, addrBytes[:])
+	}
+	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-type UTXOIterateOption func(*UTXOIterateOptions)
+func (u *Manager) ForEachUnspentNFTOutput(filterNFTID *iotago.NFTID, consumer OutputConsumer, options ...UTXOIterateOption) error {
+	opt := iterateOptions(options)
+	key := []byte{UTXOStoreKeyPrefixNFTUnspent}
 
-func ReadLockLedger(lockLedger bool) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.readLockLedger = lockLedger
+	// Filter by ID
+	if filterNFTID != nil {
+		key = byteutils.ConcatBytes(key, (*filterNFTID)[:])
 	}
+	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func MaxResultCount(count int) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.maxResultCount = count
+func (u *Manager) ForEachUnspentAliasOutput(filterAliasID *iotago.AliasID, consumer OutputConsumer, options ...UTXOIterateOption) error {
+	opt := iterateOptions(options)
+	key := []byte{UTXOStoreKeyPrefixAliasUnspent}
+
+	// Filter by ID
+	if filterAliasID != nil {
+		key = byteutils.ConcatBytes(key, (*filterAliasID)[:])
 	}
+	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func FilterAddress(address iotago.Address) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.filterAddress = address
+func (u *Manager) ForEachUnspentFoundryOutput(filterFoundryID *iotago.FoundryID, consumer OutputConsumer, options ...UTXOIterateOption) error {
+	opt := iterateOptions(options)
+	key := []byte{UTXOStoreKeyPrefixFoundryUnspent}
+
+	// Filter by ID
+	if filterFoundryID != nil {
+		key = byteutils.ConcatBytes(key, (*filterFoundryID)[:])
 	}
+	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func FilterAliasID(aliasID iotago.AliasID) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.filterAliasID = &aliasID
+func (u *Manager) ForEachUnspentOutputWithIssuer(issuer iotago.Address, consumer OutputConsumer, options ...UTXOIterateOption) error {
+	opt := iterateOptions(options)
+	addrBytes, err := issuer.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return err
 	}
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixIssuerLookup}, addrBytes[:])
+	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func FilterNFTID(nftID iotago.NFTID) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.filterNFTID = &nftID
+func (u *Manager) ForEachUnspentOutputWithSender(sender iotago.Address, consumer OutputConsumer, options ...UTXOIterateOption) error {
+	opt := iterateOptions(options)
+	addrBytes, err := sender.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return err
 	}
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderLookup}, addrBytes[:])
+	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func FilterFoundryID(foundryID iotago.FoundryID) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.filterFoundryID = &foundryID
+func (u *Manager) ForEachUnspentOutputWithSenderAndIndexTag(sender iotago.Address, indexTagPrefix []byte, consumer OutputConsumer, options ...UTXOIterateOption) error {
+	if len(indexTagPrefix) > iotago.MaxIndexationTagLength {
+		indexTagPrefix = indexTagPrefix[:iotago.MaxIndexationTagLength]
 	}
+	opt := iterateOptions(options)
+	addrBytes, err := sender.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return err
+	}
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderAndIndexLookup}, addrBytes[:], indexTagPrefix[:])
+
+	return u.forEachUnspentOutput(consumer, key, opt.readLockLedger, opt.maxResultCount)
 }
 
-func FilterSpendingContraints(spendingContraints bool) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.filterSpendingContraints = &spendingContraints
-	}
+type FilterOptions struct {
+	filterHasSpendingConstraints *bool
+	filterOutputType             *iotago.OutputType
 }
 
-func FilterOutputType(outputType iotago.OutputType) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.filterOutputType = &outputType
-	}
+func AddressFilterOptions() *FilterOptions {
+	return &FilterOptions{}
 }
 
-func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
-	result := &UTXOIterateOptions{
-		readLockLedger:           true,
-		maxResultCount:           0,
-		filterAddress:            nil,
-		filterAliasID:            nil,
-		filterNFTID:              nil,
-		filterFoundryID:          nil,
-		filterSpendingContraints: nil,
-		filterOutputType:         nil,
-	}
-
-	for _, optionalOption := range optionalOptions {
-		optionalOption(result)
-	}
-
-	return result
+func (f *FilterOptions) OutputType(outputType iotago.OutputType) *FilterOptions {
+	oType := outputType
+	f.filterOutputType = &oType
+	return f
 }
 
-func (u *Manager) SpentOutputs(options ...UTXOIterateOption) (Spents, error) {
-
-	var spents []*Spent
-
-	consumerFunc := func(spent *Spent) bool {
-		spents = append(spents, spent)
-		return true
-	}
-
-	if err := u.ForEachSpentOutput(consumerFunc, options...); err != nil {
-		return nil, err
-	}
-
-	return spents, nil
+func (f *FilterOptions) HasSpendingConstraints(hasSpendingConstraints bool) *FilterOptions {
+	constraints := hasSpendingConstraints
+	f.filterHasSpendingConstraints = &constraints
+	return f
 }
 
-func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) ([]*Output, error) {
+func (u *Manager) ForEachUnspentOutputOnAddress(address iotago.Address, filterOptions *FilterOptions, consumer OutputConsumer, options ...UTXOIterateOption) error {
+	opt := iterateOptions(options)
 
-	var outputs []*Output
+	ms := marshalutil.New(36)
+	ms.WriteByte(UTXOStoreKeyPrefixAddressLookup)
+	addrBytes, err := address.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return err
+	}
+	ms.WriteBytes(addrBytes)
+
+	consumerFunc := consumer
+	if filterOptions != nil {
+		keyPrefixIterationPossible := true
+		if filterOptions.filterHasSpendingConstraints != nil {
+			ms.WriteBool(*filterOptions.filterHasSpendingConstraints)
+		} else {
+			// If we are not filtering with spending constraints, we cannot use keyPrefix iteration
+			keyPrefixIterationPossible = false
+		}
+
+		if filterOptions.filterOutputType != nil {
+			if keyPrefixIterationPossible {
+				ms.WriteByte(byte(*filterOptions.filterOutputType))
+			} else {
+				consumerFunc = func(output *Output) bool {
+					if output.OutputType() == *filterOptions.filterOutputType {
+						return consumer(output)
+					}
+					return true
+				}
+			}
+		}
+	}
+
+	return u.forEachUnspentOutput(consumerFunc, ms.Bytes(), opt.readLockLedger, opt.maxResultCount)
+}
+
+func (u *Manager) UnspentExtendedOutputs(filterAddress iotago.Address, options ...UTXOIterateOption) (Outputs, error) {
+	var outputs Outputs
 	consumerFunc := func(output *Output) bool {
 		outputs = append(outputs, output)
 		return true
 	}
 
-	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
+	if err := u.ForEachUnspentExtendedOutput(filterAddress, consumerFunc, options...); err != nil {
 		return nil, err
 	}
-
 	return outputs, nil
 }
 
-func (u *Manager) ComputeBalance(options ...UTXOIterateOption) (balance uint64, count int, err error) {
+func (u *Manager) UnspentNFTOutputs(filterNFTID *iotago.NFTID, options ...UTXOIterateOption) (Outputs, error) {
+	var outputs Outputs
+	consumerFunc := func(output *Output) bool {
+		outputs = append(outputs, output)
+		return true
+	}
+
+	if err := u.ForEachUnspentNFTOutput(filterNFTID, consumerFunc, options...); err != nil {
+		return nil, err
+	}
+	return outputs, nil
+}
+
+func (u *Manager) UnspentAliasOutputs(filterAliasID *iotago.AliasID, options ...UTXOIterateOption) (Outputs, error) {
+	var outputs Outputs
+	consumerFunc := func(output *Output) bool {
+		outputs = append(outputs, output)
+		return true
+	}
+
+	if err := u.ForEachUnspentAliasOutput(filterAliasID, consumerFunc, options...); err != nil {
+		return nil, err
+	}
+	return outputs, nil
+}
+
+func (u *Manager) UnspentFoundryOutputs(filterFoundryID *iotago.FoundryID, options ...UTXOIterateOption) (Outputs, error) {
+	var outputs Outputs
+	consumerFunc := func(output *Output) bool {
+		outputs = append(outputs, output)
+		return true
+	}
+
+	if err := u.ForEachUnspentFoundryOutput(filterFoundryID, consumerFunc, options...); err != nil {
+		return nil, err
+	}
+	return outputs, nil
+}
+
+func (u *Manager) ComputeAddressBalance(address iotago.Address, filterOptions *FilterOptions, options ...UTXOIterateOption) (balance uint64, count int, err error) {
+	balance = 0
+	count = 0
+	consumerFunc := func(output *Output) bool {
+		count++
+		balance += output.Amount()
+		return true
+	}
+	if err := u.ForEachUnspentOutputOnAddress(address, filterOptions, consumerFunc, options...); err != nil {
+		return 0, 0, err
+	}
+	return balance, count, err
+}
+
+func (u *Manager) ComputeLedgerBalance(options ...UTXOIterateOption) (balance uint64, count int, err error) {
+	opt := iterateOptions(options)
+
+	if opt.readLockLedger {
+		u.ReadLockLedger()
+		defer u.ReadUnlockLedger()
+	}
+
+	if opt.maxResultCount != 0 {
+		panic("invalid filter options")
+	}
 
 	balance = 0
 	count = 0
 	consumerFunc := func(output *Output) bool {
-		balance += output.Amount()
 		count++
+		balance += output.Amount()
 		return true
 	}
 
-	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
+	if err := u.ForEachUnspentExtendedOutput(nil, consumerFunc); err != nil {
 		return 0, 0, err
 	}
-
+	if err := u.ForEachUnspentNFTOutput(nil, consumerFunc); err != nil {
+		return 0, 0, err
+	}
+	if err := u.ForEachUnspentAliasOutput(nil, consumerFunc); err != nil {
+		return 0, 0, err
+	}
+	if err := u.ForEachUnspentFoundryOutput(nil, consumerFunc); err != nil {
+		return 0, 0, err
+	}
 	return balance, count, nil
 }

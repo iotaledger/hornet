@@ -64,10 +64,10 @@ func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 		return err
 	}
 
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputOnAddressUnspent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixExtendedOutputUnspent}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputOnAddressSpent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixExtendedOutputSpent}); err != nil {
 		return err
 	}
 
@@ -92,6 +92,9 @@ func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 		return err
 	}
 
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixAddressLookup}); err != nil {
+		return err
+	}
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixIssuerLookup}); err != nil {
 		return err
 	}
@@ -358,14 +361,8 @@ func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outpu
 
 func (u *Manager) CheckLedgerState() error {
 
-	var total uint64 = 0
-
-	consumerFunc := func(output *Output) bool {
-		total += output.Amount()
-		return true
-	}
-
-	if err := u.ForEachUnspentOutput(consumerFunc); err != nil {
+	total, _, err := u.ComputeLedgerBalance()
+	if err != nil {
 		return err
 	}
 

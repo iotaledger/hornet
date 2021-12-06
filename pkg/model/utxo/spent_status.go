@@ -11,22 +11,20 @@ type OutputConsumer func(output *Output) bool
 
 type lookupKey []byte
 
-func lookupKeyByAddress(spent bool, address iotago.Address, spendingConstraints bool, outputType iotago.OutputType, outputID *iotago.OutputID) lookupKey {
-	ms := marshalutil.New(70)
+func lookupKeyExtendedOutputByAddress(spent bool, address iotago.Address, outputID *iotago.OutputID) lookupKey {
+	ms := marshalutil.New(68)
 	if spent {
-		ms.WriteByte(UTXOStoreKeyPrefixOutputOnAddressSpent) // 1 byte
+		ms.WriteByte(UTXOStoreKeyPrefixExtendedOutputSpent) // 1 byte
 	} else {
-		ms.WriteByte(UTXOStoreKeyPrefixOutputOnAddressUnspent) // 1 byte
+		ms.WriteByte(UTXOStoreKeyPrefixExtendedOutputUnspent) // 1 byte
 	}
 	addressBytes, _ := address.Serialize(serializer.DeSeriModeNoValidation, nil)
-	ms.WriteBytes(addressBytes)       // 21-33 bytes
-	ms.WriteBool(spendingConstraints) // 1 byte
-	ms.WriteByte(byte(outputType))    // 1 byte
-	ms.WriteBytes(outputID[:])        // 34 bytes
+	ms.WriteBytes(addressBytes) // 21-33 bytes
+	ms.WriteBytes(outputID[:])  // 34 bytes
 	return ms.Bytes()
 }
 
-func lookupKeyByAliasID(spent bool, aliasID iotago.AliasID, outputID *iotago.OutputID) lookupKey {
+func lookupKeyAliasOutputByAliasID(spent bool, aliasID iotago.AliasID, outputID *iotago.OutputID) lookupKey {
 	ms := marshalutil.New(55)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixAliasSpent) // 1 byte
@@ -38,7 +36,7 @@ func lookupKeyByAliasID(spent bool, aliasID iotago.AliasID, outputID *iotago.Out
 	return ms.Bytes()
 }
 
-func lookupKeyByNFTID(spent bool, nftID iotago.NFTID, outputID *iotago.OutputID) lookupKey {
+func lookupKeyNFTOutputyByNFTID(spent bool, nftID iotago.NFTID, outputID *iotago.OutputID) lookupKey {
 	ms := marshalutil.New(55)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixNFTSpent) // 1 byte
@@ -50,7 +48,7 @@ func lookupKeyByNFTID(spent bool, nftID iotago.NFTID, outputID *iotago.OutputID)
 	return ms.Bytes()
 }
 
-func lookupKeyByFoundryID(spent bool, foundryID iotago.FoundryID, outputID *iotago.OutputID) lookupKey {
+func lookupKeyFoundryOutputByFoundryID(spent bool, foundryID iotago.FoundryID, outputID *iotago.OutputID) lookupKey {
 	ms := marshalutil.New(61)
 	if spent {
 		ms.WriteByte(UTXOStoreKeyPrefixFoundrySpent) // 1 byte
@@ -59,6 +57,17 @@ func lookupKeyByFoundryID(spent bool, foundryID iotago.FoundryID, outputID *iota
 	}
 	ms.WriteBytes(foundryID[:]) // 26 bytes
 	ms.WriteBytes(outputID[:])  // 34 bytes
+	return ms.Bytes()
+}
+
+func lookupKeyByAddress(address iotago.Address, spendingConstraints bool, outputType iotago.OutputType, outputID *iotago.OutputID) lookupKey {
+	ms := marshalutil.New(70)
+	ms.WriteByte(UTXOStoreKeyPrefixAddressLookup) // 1 byte
+	addressBytes, _ := address.Serialize(serializer.DeSeriModeNoValidation, nil)
+	ms.WriteBytes(addressBytes)       // 21-33 bytes
+	ms.WriteBool(spendingConstraints) // 1 byte
+	ms.WriteByte(byte(outputType))    // 1 byte
+	ms.WriteBytes(outputID[:])        // 34 bytes
 	return ms.Bytes()
 }
 
@@ -109,18 +118,15 @@ func (o *Output) lookupKeys(spent bool) []lookupKey {
 	switch output := o.output.(type) {
 	case *iotago.ExtendedOutput:
 		return []lookupKey{
-			lookupKeyByAddress(spent, output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+			lookupKeyExtendedOutputByAddress(spent, output.Address, o.outputID),
 		}
 	case *iotago.AliasOutput:
 		return []lookupKey{
-			lookupKeyByAliasID(spent, output.AliasID, o.outputID),
-			lookupKeyByAddress(spent, output.StateController, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
-			lookupKeyByAddress(spent, output.GovernanceController, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+			lookupKeyAliasOutputByAliasID(spent, output.AliasID, o.outputID),
 		}
 	case *iotago.NFTOutput:
 		return []lookupKey{
-			lookupKeyByNFTID(spent, output.NFTID, o.outputID),
-			lookupKeyByAddress(spent, output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+			lookupKeyNFTOutputyByNFTID(spent, output.NFTID, o.outputID),
 		}
 	case *iotago.FoundryOutput:
 		foundryID, err := output.ID()
@@ -128,8 +134,7 @@ func (o *Output) lookupKeys(spent bool) []lookupKey {
 			panic(err)
 		}
 		return []lookupKey{
-			lookupKeyByFoundryID(spent, foundryID, o.outputID),
-			lookupKeyByAddress(spent, output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+			lookupKeyFoundryOutputByFoundryID(spent, foundryID, o.outputID),
 		}
 	default:
 		panic("Unknown output type")
@@ -137,11 +142,35 @@ func (o *Output) lookupKeys(spent bool) []lookupKey {
 }
 
 func (o *Output) unspentLookupKeys() []lookupKey {
-	return append(o.lookupKeys(false), o.featureLookupKeys()...)
+	return append(append(o.lookupKeys(false), o.addressLookupKeys()...), o.featureLookupKeys()...)
 }
 
 func (o *Output) spentLookupKeys() []lookupKey {
 	return o.lookupKeys(true)
+}
+
+func (o *Output) addressLookupKeys() []lookupKey {
+	switch output := o.output.(type) {
+	case *iotago.ExtendedOutput:
+		return []lookupKey{
+			lookupKeyByAddress(output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+		}
+	case *iotago.AliasOutput:
+		return []lookupKey{
+			lookupKeyByAddress(output.StateController, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+			lookupKeyByAddress(output.GovernanceController, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+		}
+	case *iotago.NFTOutput:
+		return []lookupKey{
+			lookupKeyByAddress(output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+		}
+	case *iotago.FoundryOutput:
+		return []lookupKey{
+			lookupKeyByAddress(output.Address, output.FeatureBlocks().HasConstraints(), o.OutputType(), o.outputID),
+		}
+	default:
+		panic("Unknown output type")
+	}
 }
 
 func (o *Output) featureLookupKeys() []lookupKey {
@@ -168,17 +197,21 @@ func outputIDFromDatabaseKey(key lookupKey) (*iotago.OutputID, error) {
 	}
 
 	switch prefix {
-	case UTXOStoreKeyPrefixOutputOnAddressUnspent, UTXOStoreKeyPrefixOutputOnAddressSpent:
+	case UTXOStoreKeyPrefixExtendedOutputUnspent, UTXOStoreKeyPrefixExtendedOutputSpent:
 		if _, err := parseAddress(ms); err != nil {
 			return nil, err
 		}
-		ms.ReadSeek(ms.ReadOffset() + 2) // Spending Contrainsts + Output type
 	case UTXOStoreKeyPrefixNFTUnspent, UTXOStoreKeyPrefixNFTSpent:
 		ms.ReadSeek(ms.ReadOffset() + iotago.NFTIDLength)
 	case UTXOStoreKeyPrefixAliasUnspent, UTXOStoreKeyPrefixAliasSpent:
 		ms.ReadSeek(ms.ReadOffset() + iotago.AliasIDLength)
 	case UTXOStoreKeyPrefixFoundryUnspent, UTXOStoreKeyPrefixFoundrySpent:
 		ms.ReadSeek(ms.ReadOffset() + iotago.FoundryIDLength)
+	case UTXOStoreKeyPrefixAddressLookup:
+		if _, err := parseAddress(ms); err != nil {
+			return nil, err
+		}
+		ms.ReadSeek(ms.ReadOffset() + 2) // skip over spending constraints and output type
 	}
 
 	return ParseOutputID(ms)

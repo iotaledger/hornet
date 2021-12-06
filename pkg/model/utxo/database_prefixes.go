@@ -12,9 +12,9 @@ const (
 	UTXOStoreKeyPrefixTreasuryOutput byte = 6
 	UTXOStoreKeyPrefixReceipts       byte = 7
 
-	// ExtendedOutput and Alias controllers
-	UTXOStoreKeyPrefixOutputOnAddressUnspent byte = 9
-	UTXOStoreKeyPrefixOutputOnAddressSpent   byte = 10
+	// ExtendedOutput
+	UTXOStoreKeyPrefixExtendedOutputUnspent byte = 9
+	UTXOStoreKeyPrefixExtendedOutputSpent   byte = 10
 
 	// AliasOutputs
 	UTXOStoreKeyPrefixAliasUnspent byte = 11
@@ -28,10 +28,11 @@ const (
 	UTXOStoreKeyPrefixFoundryUnspent byte = 15
 	UTXOStoreKeyPrefixFoundrySpent   byte = 16
 
-	// Feature Block lookups
-	UTXOStoreKeyPrefixIssuerLookup         byte = 17
-	UTXOStoreKeyPrefixSenderLookup         byte = 18
-	UTXOStoreKeyPrefixSenderAndIndexLookup byte = 19
+	// Extra Lookups
+	UTXOStoreKeyPrefixAddressLookup        byte = 17
+	UTXOStoreKeyPrefixIssuerLookup         byte = 18
+	UTXOStoreKeyPrefixSenderLookup         byte = 19
+	UTXOStoreKeyPrefixSenderAndIndexLookup byte = 20
 )
 
 // Deprecated keys, just used for migration purposes

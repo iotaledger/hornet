@@ -24,6 +24,10 @@ func (o *Output) OutputID() *iotago.OutputID {
 	return o.outputID
 }
 
+func (o *Output) mapKey() string {
+	return string(o.outputID[:])
+}
+
 func (o *Output) MessageID() hornet.MessageID {
 	return o.messageID
 }
