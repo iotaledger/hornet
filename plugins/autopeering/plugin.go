@@ -169,11 +169,13 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps autopeeringDeps) *autopeering.AutopeeringManager {
-		return autopeering.NewAutopeeringManager(Plugin.Logger(),
+		return autopeering.NewAutopeeringManager(
+			Plugin.Logger(),
 			deps.NodeConfig.String(CfgNetAutopeeringBindAddr),
 			deps.NodeConfig.Strings(CfgNetAutopeeringEntryNodes),
 			deps.NodeConfig.Bool(CfgNetAutopeeringEntryNodesPreferIPv6),
-			service.Key(deps.NetworkIDName))
+			service.Key(deps.NetworkIDName),
+		)
 	}); err != nil {
 		Plugin.Panic(err)
 	}
@@ -195,13 +197,15 @@ func configure() {
 		Plugin.Panicf("unable to obtain raw private key: %s", err)
 	}
 
-	localPeerContainer, err = autopeering.NewLocalPeerContainer(deps.AutopeeringManager.P2PServiceKey(),
+	localPeerContainer, err = autopeering.NewLocalPeerContainer(
+		deps.AutopeeringManager.P2PServiceKey(),
 		rawPrvKey[:ed25519.SeedSize],
 		deps.P2PDatabasePath,
 		deps.DatabaseEngine,
 		deps.P2PBindMultiAddresses,
 		deps.NodeConfig.String(CfgNetAutopeeringBindAddr),
-		deps.AutopeeringRunAsEntryNode)
+		deps.AutopeeringRunAsEntryNode,
+	)
 	if err != nil {
 		Plugin.Panicf("unable to initialize local peer container: %s", err)
 	}
@@ -237,15 +241,23 @@ func run() {
 func configureEvents() {
 
 	onDiscoveryPeerDiscovered = events.NewClosure(func(ev *discover.DiscoveredEvent) {
-		if peerID := autopeering.ConvertHivePubKeyToPeerIDOrLog(ev.Peer.PublicKey(), Plugin.LogWarnf); peerID != nil {
-			Plugin.LogInfof("discovered: %s / %s", ev.Peer.Address(), *peerID)
+		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
+		if err != nil {
+			Plugin.LogWarnf("unable to convert discovered autopeering peer to peerID: %s", err)
+			return
 		}
+
+		Plugin.LogInfof("discovered: %s / %s", ev.Peer.Address(), peerID.ShortString())
 	})
 
 	onDiscoveryPeerDeleted = events.NewClosure(func(ev *discover.DeletedEvent) {
-		if peerID := autopeering.ConvertHivePubKeyToPeerIDOrLog(ev.Peer.PublicKey(), Plugin.LogWarnf); peerID != nil {
-			Plugin.LogInfof("removed offline: %s / %s", ev.Peer.Address(), *peerID)
+		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
+		if err != nil {
+			Plugin.LogWarnf("unable to convert deleted autopeering peer to peerID: %s", err)
+			return
 		}
+
+		Plugin.LogInfof("removed offline: %s / %s", ev.Peer.Address(), peerID.ShortString())
 	})
 
 	onPeerDisconnected = events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
@@ -253,9 +265,9 @@ func configureEvents() {
 			return
 		}
 
+		if deps.AutopeeringManager.Selection() != nil {
 		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peerOptErr.Peer, Plugin.LogWarnf); id != nil {
-			Plugin.LogInfof("removing: %s", peerOptErr.Peer.ID)
-			if deps.AutopeeringManager.Selection() != nil {
+				Plugin.LogInfof("removing: %s", peerOptErr.Peer.ID.ShortString())
 				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 			}
 		}
@@ -265,9 +277,9 @@ func configureEvents() {
 		if oldRel != p2p.PeerRelationAutopeered {
 			return
 		}
+		if deps.AutopeeringManager.Selection() != nil {
 		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf); id != nil {
-			Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID)
-			if deps.AutopeeringManager.Selection() != nil {
+				Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID.ShortString())
 				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 			}
 		}
@@ -281,7 +293,6 @@ func configureEvents() {
 		if !ev.Status {
 			return
 		}
-		Plugin.LogInfof("[outgoing peering] adding autopeering peer %s", ev.Peer.ID())
 
 		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
 		if err != nil {
@@ -289,10 +300,12 @@ func configureEvents() {
 			return
 		}
 
+		Plugin.LogInfof("[outgoing peering] adding autopeering peer %s", addrInfo.ID.ShortString())
+
 		handleSelection(ev, addrInfo, func() {
-			Plugin.LogInfof("connecting to %s", addrInfo)
+			Plugin.LogInfof("connecting to %s", addrInfo.ID.ShortString())
 			if err := deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
-				Plugin.LogWarnf("couldn't add autopeering peer %s", err)
+				Plugin.LogWarnf("couldn't add autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
 			}
 		})
 	})
@@ -301,13 +314,14 @@ func configureEvents() {
 		if !ev.Status {
 			return
 		}
-		Plugin.LogInfof("[incoming peering] whitelisting %s", ev.Peer.ID())
 
 		addrInfo, err := autopeering.HivePeerToAddrInfo(ev.Peer, deps.AutopeeringManager.P2PServiceKey())
 		if err != nil {
 			Plugin.LogWarnf("unable to convert incoming selection autopeering peer to addr info: %s", err)
 			return
 		}
+
+		Plugin.LogInfof("[incoming peering] allow autopeering peer %s", addrInfo.ID.ShortString())
 
 		handleSelection(ev, addrInfo, func() {
 			// TODO: maybe do whitelisting instead?
@@ -319,29 +333,31 @@ func configureEvents() {
 	})
 
 	onSelectionDropped = events.NewClosure(func(ev *selection.DroppedEvent) {
-		peerID := autopeering.ConvertHivePubKeyToPeerIDOrLog(ev.Peer.PublicKey(), Plugin.LogWarnf)
-		if peerID == nil {
+		peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
+		if err != nil {
+			Plugin.LogWarnf("unable to convert dropped autopeering peer to peerID: %s", err)
 			return
 		}
 
-		Plugin.LogInfof("[dropped event] disconnecting %s", peerID)
+		Plugin.LogInfof("[dropped event] disconnecting %s / %s", ev.Peer.Address(), peerID.ShortString())
+
 		var peerRelation p2p.PeerRelation
-		deps.PeeringManager.Call(*peerID, func(p *p2p.Peer) {
+		deps.PeeringManager.Call(peerID, func(p *p2p.Peer) {
 			peerRelation = p.Relation
 		})
 
 		if len(peerRelation) == 0 {
-			Plugin.LogWarnf("didn't find autopeered peer %s for disconnecting", peerID)
+			Plugin.LogWarnf("didn't find autopeered peer %s for disconnecting", peerID.ShortString())
 			return
 		}
 
 		if peerRelation != p2p.PeerRelationAutopeered {
-			Plugin.LogWarnf("won't disconnect %s as it its relation is not '%s' but '%s'", peerID, p2p.PeerRelationAutopeered, peerRelation)
+			Plugin.LogWarnf("won't disconnect %s as it its relation is not '%s' but '%s'", peerID.ShortString(), p2p.PeerRelationAutopeered, peerRelation)
 			return
 		}
 
-		if err := deps.PeeringManager.DisconnectPeer(*peerID, errors.New("removed via autopeering selection")); err != nil {
-			Plugin.LogWarnf("couldn't disconnect selection dropped autopeer: %s", err)
+		if err := deps.PeeringManager.DisconnectPeer(peerID, errors.New("removed via autopeering selection")); err != nil {
+			Plugin.LogWarnf("couldn't disconnect selection dropped autopeer %s: %s", peerID.ShortString(), err)
 		}
 	})
 }
@@ -372,21 +388,26 @@ func handleSelection(ev *selection.PeeringEvent, addrInfo *libp2p.AddrInfo, noRe
 
 // logs a warning about a from the selector seen peer which is already autopeered.
 func handleAlreadyAutopeered(addrInfo *libp2p.AddrInfo) {
-	Plugin.LogWarnf("peer is already autopeered %s", addrInfo.ID)
+	Plugin.LogWarnf("peer is already autopeered %s", addrInfo.ID.ShortString())
 }
 
 // updates the given peers relation to discovered.
 func updatePeerRelationToDiscovered(addrInfo *libp2p.AddrInfo) {
 	if err := deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
-		Plugin.LogWarnf("couldn't update unknown peer to 'discovered' %s", err)
+		Plugin.LogWarnf("couldn't update unknown peer to 'discovered' %s: %s", addrInfo.ID.ShortString(), err)
 	}
 }
 
 // clears an already statically peered from the autopeering selector.
 func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
-	Plugin.LogInfof("peer is statically peered already %s, removing from autopeering selection protocol", ev.Peer.ID())
+	peerID, err := autopeering.HivePeerToPeerID(ev.Peer)
+	if err != nil {
+		Plugin.LogWarnf("unable to convert selection autopeering peer to peerID: %s", err)
+		return
+	}
 
 	if deps.AutopeeringManager.Selection() != nil {
+	Plugin.LogInfof("peer is statically peered already %s, removing from autopeering selection protocol", peerID.ShortString())
 		deps.AutopeeringManager.Selection().RemoveNeighbor(ev.Peer.ID())
 	}
 }
