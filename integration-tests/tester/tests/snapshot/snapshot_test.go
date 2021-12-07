@@ -34,7 +34,7 @@ func TestSnapshot(t *testing.T) {
 	require.NoError(t, err)
 	defer framework.ShutdownNetwork(t, n)
 
-	var targetOutputID iotago.UTXOInputID
+	var targetOutputID iotago.OutputID
 	for i := 0; i < len(targetOutputID); i++ {
 		targetOutputID[i] = 9
 	}
@@ -52,7 +52,7 @@ func TestSnapshot(t *testing.T) {
 			if err != nil {
 				return false
 			}
-			return output.(*iotago.SigLockedSingleOutput).Amount == finalOutputAmount
+			return output.(*iotago.ExtendedOutput).Amount == finalOutputAmount
 		}, 30*time.Second, 100*time.Millisecond)
 	}
 

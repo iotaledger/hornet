@@ -86,8 +86,7 @@ func TestMigration(t *testing.T) {
 	for _, tuple := range receiptTuples {
 		r := tuple.Receipt
 		var entriesFound int
-		for _, entry := range r.Funds {
-			migEntry := entry.(*iotago.MigratedFundsEntry)
+		for _, migEntry := range r.Funds {
 			for addr, balance := range migrations {
 				if addr == migEntry.Address.(*iotago.Ed25519Address).String() {
 					entriesFound++

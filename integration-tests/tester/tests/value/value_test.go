@@ -38,21 +38,30 @@ func TestValue(t *testing.T) {
 	genesisAddrKey := iotago.AddressKeys{Address: &framework.GenesisAddress, Keys: framework.GenesisSeed}
 	genesisInputID := &iotago.UTXOInput{TransactionID: [32]byte{}, TransactionOutputIndex: 0}
 
+	deSeriParas := &iotago.DeSerializationParameters{
+		RentStructure: &iotago.RentStructure{
+			VByteCost:    0,
+			VBFactorData: 0,
+			VBFactorKey:  0,
+		},
+		MinDustDeposit: 0,
+	}
+
 	// build and sign transaction spending the total supply
 	tx, err := iotago.NewTransactionBuilder().
 		AddInput(&iotago.ToBeSignedUTXOInput{
 			Address: &framework.GenesisAddress,
 			Input:   genesisInputID,
 		}).
-		AddOutput(&iotago.SigLockedSingleOutput{
+		AddOutput(&iotago.ExtendedOutput{
 			Address: &target1Addr,
 			Amount:  target1Deposit,
 		}).
-		AddOutput(&iotago.SigLockedSingleOutput{
+		AddOutput(&iotago.ExtendedOutput{
 			Address: &target2Addr,
 			Amount:  target2Deposit,
 		}).
-		Build(iotago.NewInMemoryAddressSigner(genesisAddrKey))
+		Build(deSeriParas, iotago.NewInMemoryAddressSigner(genesisAddrKey))
 	require.NoError(t, err)
 
 	// build message
