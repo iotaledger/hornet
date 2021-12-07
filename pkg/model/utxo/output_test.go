@@ -10,43 +10,13 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
-
-// returns length amount random bytes
-func randBytes(length int) []byte {
-	var b []byte
-	for i := 0; i < length; i++ {
-		b = append(b, byte(rand.Intn(256)))
-	}
-	return b
-}
-
-func randMessageID() hornet.MessageID {
-	return randBytes(iotago.MessageIDLength)
-}
-
-func randNFTID() iotago.NFTID {
-	nft := iotago.NFTID{}
-	copy(nft[:], randBytes(iotago.NFTIDLength))
-	return nft
-}
-
-func randAliasID() iotago.AliasID {
-	alias := iotago.AliasID{}
-	copy(alias[:], randBytes(iotago.AliasIDLength))
-	return alias
-}
-
-func randTokenTag() iotago.TokenTag {
-	tokenTag := iotago.TokenTag{}
-	copy(tokenTag[:], randBytes(iotago.TokenTagLength))
-	return tokenTag
-}
 
 func EqualOutput(t *testing.T, expected *Output, actual *Output) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
@@ -166,7 +136,7 @@ func CreateOutputAndAssertSerialization(t *testing.T, messageID hornet.MessageID
 
 func CreateSpentAndAssertSerialization(t *testing.T, output *Output) *Spent {
 	transactionID := &iotago.TransactionID{}
-	copy(transactionID[:], randBytes(iotago.TransactionIDLength))
+	copy(transactionID[:], testsuite.RandBytes(iotago.TransactionIDLength))
 
 	confirmationIndex := milestone.Index(6788362)
 
@@ -185,13 +155,13 @@ func CreateSpentAndAssertSerialization(t *testing.T, output *Output) *Spent {
 
 func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.T) {
 
-	outputID := randOutputID()
-	messageID := randMessageID()
-	address := randAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	senderAddress := randAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	tag := randBytes(23)
-	amount := uint64(832493)
-	msIndex := randMilestoneIndex()
+	outputID := testsuite.RandOutputID()
+	messageID := testsuite.RandMessageID()
+	address := testsuite.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	senderAddress := testsuite.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	tag := testsuite.RandBytes(23)
+	amount := rand.Uint64()
+	msIndex := testsuite.RandMilestoneIndex()
 
 	iotaOutput := &iotago.ExtendedOutput{
 		Address: address,
@@ -232,12 +202,12 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 
 func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) {
 
-	outputID := randOutputID()
-	messageID := randMessageID()
-	address := randAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	senderAddress := randAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	amount := uint64(832493)
-	msIndex := randMilestoneIndex()
+	outputID := testsuite.RandOutputID()
+	messageID := testsuite.RandMessageID()
+	address := testsuite.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	senderAddress := testsuite.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	amount := rand.Uint64()
+	msIndex := testsuite.RandMilestoneIndex()
 
 	iotaOutput := &iotago.ExtendedOutput{
 		Address: address,
@@ -278,18 +248,18 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 
 func TestNFTOutputSerialization(t *testing.T) {
 
-	outputID := randOutputID()
-	messageID := randMessageID()
-	address := randAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	nftID := randNFTID()
-	amount := uint64(832493)
-	msIndex := randMilestoneIndex()
+	outputID := testsuite.RandOutputID()
+	messageID := testsuite.RandMessageID()
+	address := testsuite.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	nftID := testsuite.RandNFTID()
+	amount := rand.Uint64()
+	msIndex := testsuite.RandMilestoneIndex()
 
 	iotaOutput := &iotago.NFTOutput{
 		Address:           address,
 		Amount:            amount,
 		NFTID:             nftID,
-		ImmutableMetadata: randBytes(12),
+		ImmutableMetadata: testsuite.RandBytes(12),
 	}
 
 	output := CreateOutputAndAssertSerialization(t, messageID, msIndex, outputID, iotaOutput)
@@ -316,19 +286,19 @@ func TestNFTOutputSerialization(t *testing.T) {
 
 func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 
-	outputID := randOutputID()
-	messageID := randMessageID()
-	address := randNFTID()
-	issuerAddress := randAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	nftID := randNFTID()
-	amount := uint64(832493)
-	msIndex := randMilestoneIndex()
+	outputID := testsuite.RandOutputID()
+	messageID := testsuite.RandMessageID()
+	address := testsuite.RandNFTID()
+	issuerAddress := testsuite.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	nftID := testsuite.RandNFTID()
+	amount := rand.Uint64()
+	msIndex := testsuite.RandMilestoneIndex()
 
 	iotaOutput := &iotago.NFTOutput{
 		Address:           address.ToAddress(),
 		Amount:            amount,
 		NFTID:             nftID,
-		ImmutableMetadata: randBytes(12),
+		ImmutableMetadata: testsuite.RandBytes(12),
 		Blocks: iotago.FeatureBlocks{
 			&iotago.IssuerFeatureBlock{
 				Address: issuerAddress,
@@ -365,15 +335,15 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 
 func TestAliasOutputSerialization(t *testing.T) {
 
-	outputID := randOutputID()
-	messageID := randMessageID()
-	aliasID := randAliasID()
-	stateController := randAliasID()
-	governanceController := randAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
-	issuer := randNFTID()
-	sender := randAliasID()
-	amount := uint64(832493)
-	msIndex := randMilestoneIndex()
+	outputID := testsuite.RandOutputID()
+	messageID := testsuite.RandMessageID()
+	aliasID := testsuite.RandAliasID()
+	stateController := testsuite.RandAliasID()
+	governanceController := testsuite.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	issuer := testsuite.RandNFTID()
+	sender := testsuite.RandAliasID()
+	amount := rand.Uint64()
+	msIndex := testsuite.RandMilestoneIndex()
 
 	iotaOutput := &iotago.AliasOutput{
 		Amount:               amount,
@@ -419,18 +389,18 @@ func TestAliasOutputSerialization(t *testing.T) {
 
 func TestFoundryOutputSerialization(t *testing.T) {
 
-	outputID := randOutputID()
-	messageID := randMessageID()
-	aliasID := randAliasID()
-	amount := uint64(832493)
-	msIndex := randMilestoneIndex()
+	outputID := testsuite.RandOutputID()
+	messageID := testsuite.RandMessageID()
+	aliasID := testsuite.RandAliasID()
+	amount := rand.Uint64()
+	msIndex := testsuite.RandMilestoneIndex()
 	supply := new(big.Int).SetUint64(rand.Uint64())
 
 	iotaOutput := &iotago.FoundryOutput{
 		Address:           aliasID.ToAddress(),
 		Amount:            amount,
 		SerialNumber:      rand.Uint32(),
-		TokenTag:          randTokenTag(),
+		TokenTag:          testsuite.RandTokenTag(),
 		CirculatingSupply: supply,
 		MaximumSupply:     supply,
 		TokenScheme:       &iotago.SimpleTokenScheme{},

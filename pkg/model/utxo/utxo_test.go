@@ -15,20 +15,20 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	outputs := Outputs{
-		randOutput(iotago.OutputExtended),
-		randOutput(iotago.OutputExtended),
-		randOutput(iotago.OutputNFT),      // spent
-		randOutput(iotago.OutputExtended), // spent
-		randOutput(iotago.OutputAlias),
-		randOutput(iotago.OutputNFT),
-		randOutput(iotago.OutputFoundry),
+		RandOutput(iotago.OutputExtended),
+		RandOutput(iotago.OutputExtended),
+		RandOutput(iotago.OutputNFT),      // spent
+		RandOutput(iotago.OutputExtended), // spent
+		RandOutput(iotago.OutputAlias),
+		RandOutput(iotago.OutputNFT),
+		RandOutput(iotago.OutputFoundry),
 	}
 
 	msIndex := milestone.Index(756)
 
 	spents := Spents{
-		randomSpent(outputs[3], msIndex),
-		randomSpent(outputs[2], msIndex),
+		RandSpent(outputs[3], msIndex),
+		RandSpent(outputs[2], msIndex),
 	}
 
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
@@ -113,14 +113,14 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	previousOutputs := Outputs{
-		randOutput(iotago.OutputExtended),
-		randOutput(iotago.OutputExtended), // spent
-		randOutput(iotago.OutputNFT),      // spent on 2nd confirmation
+		RandOutput(iotago.OutputExtended),
+		RandOutput(iotago.OutputExtended), // spent
+		RandOutput(iotago.OutputNFT),      // spent on 2nd confirmation
 	}
 
 	previousMsIndex := milestone.Index(48)
 	previousSpents := Spents{
-		randomSpent(previousOutputs[1], previousMsIndex),
+		RandSpent(previousOutputs[1], previousMsIndex),
 	}
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(previousMsIndex, previousOutputs, previousSpents, nil, nil))
 
@@ -129,15 +129,15 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	require.Equal(t, previousMsIndex, ledgerIndex)
 
 	outputs := Outputs{
-		randOutput(iotago.OutputExtended),
-		randOutput(iotago.OutputFoundry),
-		randOutput(iotago.OutputExtended), // spent
-		randOutput(iotago.OutputAlias),
+		RandOutput(iotago.OutputExtended),
+		RandOutput(iotago.OutputFoundry),
+		RandOutput(iotago.OutputExtended), // spent
+		RandOutput(iotago.OutputAlias),
 	}
 	msIndex := milestone.Index(49)
 	spents := Spents{
-		randomSpent(previousOutputs[2], msIndex),
-		randomSpent(outputs[2], msIndex),
+		RandSpent(previousOutputs[2], msIndex),
+		RandSpent(outputs[2], msIndex),
 	}
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
 

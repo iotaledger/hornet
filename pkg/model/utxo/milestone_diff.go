@@ -31,28 +31,28 @@ func milestoneDiffKeyForIndex(msIndex milestone.Index) []byte {
 	return m.Bytes()
 }
 
-func (ms *MilestoneDiff) kvStorableKey() []byte {
-	return milestoneDiffKeyForIndex(ms.Index)
+func (d *MilestoneDiff) kvStorableKey() []byte {
+	return milestoneDiffKeyForIndex(d.Index)
 }
 
-func (ms *MilestoneDiff) kvStorableValue() []byte {
+func (d *MilestoneDiff) kvStorableValue() []byte {
 
 	m := marshalutil.New()
 
-	m.WriteUint32(uint32(len(ms.Outputs)))
-	for _, output := range ms.Outputs {
+	m.WriteUint32(uint32(len(d.Outputs)))
+	for _, output := range d.Outputs {
 		m.WriteBytes(output.outputID[:])
 	}
 
-	m.WriteUint32(uint32(len(ms.Spents)))
-	for _, spent := range ms.Spents {
+	m.WriteUint32(uint32(len(d.Spents)))
+	for _, spent := range d.Spents {
 		m.WriteBytes(spent.output.outputID[:])
 	}
 
-	if ms.TreasuryOutput != nil {
+	if d.TreasuryOutput != nil {
 		m.WriteBool(true)
-		m.WriteBytes(ms.TreasuryOutput.MilestoneID[:])
-		m.WriteBytes(ms.SpentTreasuryOutput.MilestoneID[:])
+		m.WriteBytes(d.TreasuryOutput.MilestoneID[:])
+		m.WriteBytes(d.SpentTreasuryOutput.MilestoneID[:])
 		return m.Bytes()
 	}
 
@@ -62,7 +62,7 @@ func (ms *MilestoneDiff) kvStorableValue() []byte {
 }
 
 // note that this method relies on the data being available within other "tables".
-func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value []byte) error {
+func (d *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value []byte) error {
 	marshalUtil := marshalutil.New(value)
 
 	outputCount, err := marshalUtil.ReadUint32()
@@ -125,7 +125,7 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 			}
 		}
 
-		ms.TreasuryOutput = treasuryOutput
+		d.TreasuryOutput = treasuryOutput
 
 		spentTreasuryOutputMilestoneID, err := marshalUtil.ReadBytes(iotago.MilestoneIDLength)
 		if err != nil {
@@ -137,12 +137,12 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 			return err
 		}
 
-		ms.SpentTreasuryOutput = spentTreasuryOutput
+		d.SpentTreasuryOutput = spentTreasuryOutput
 	}
 
-	ms.Index = milestone.Index(binary.LittleEndian.Uint32(key[1:]))
-	ms.Outputs = outputs
-	ms.Spents = spents
+	d.Index = milestone.Index(binary.LittleEndian.Uint32(key[1:]))
+	d.Outputs = outputs
+	d.Spents = spents
 
 	return nil
 }
