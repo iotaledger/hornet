@@ -1,7 +1,6 @@
 package snapshot_test
 
 import (
-	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"os"
@@ -17,7 +16,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/testsuite"
-	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/ed25519"
 )
@@ -150,7 +148,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamSnapshotDataFrom(snapshotFileRead, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.unspentTreasuryOutputConsumer, tt.msDiffConsumer))
+			require.NoError(t, snapshot.StreamSnapshotDataFrom(snapshotFileRead, testsuite.DeSerializationParameters, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.unspentTreasuryOutputConsumer, tt.msDiffConsumer))
 
 			// verify that what has been written also has been read again
 			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
@@ -172,7 +170,7 @@ func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 				return nil, nil
 			}
 			count--
-			msgID := randMessageID()
+			msgID := testsuite.RandMessageID()
 			generatedSEPs = append(generatedSEPs, msgID)
 			return msgID, nil
 		}, func() hornet.MessageIDs {
@@ -190,29 +188,29 @@ func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
 		}
 }
 
-type outputRetrieverFunc func() []snapshot.Output
+type outputRetrieverFunc func() utxo.Outputs
 
 func newOutputsGenerator(count int) (snapshot.OutputProducerFunc, outputRetrieverFunc) {
-	var generatedOutputs []snapshot.Output
-	return func() (*snapshot.Output, error) {
+	var generatedOutputs utxo.Outputs
+	return func() (*utxo.Output, error) {
 			if count == 0 {
 				return nil, nil
 			}
 			count--
 			output := randLSTransactionUnspentOutputs()
-			generatedOutputs = append(generatedOutputs, *output)
+			generatedOutputs = append(generatedOutputs, output)
 			return output, nil
-		}, func() []snapshot.Output {
+		}, func() utxo.Outputs {
 			return generatedOutputs
 		}
 }
 
 func newOutputCollector() (snapshot.OutputConsumerFunc, outputRetrieverFunc) {
-	var generatedOutputs []snapshot.Output
-	return func(utxo *snapshot.Output) error {
-			generatedOutputs = append(generatedOutputs, *utxo)
+	var generatedOutputs utxo.Outputs
+	return func(o *utxo.Output) error {
+			generatedOutputs = append(generatedOutputs, o)
 			return nil
-		}, func() []snapshot.Output {
+		}, func() utxo.Outputs {
 			return generatedOutputs
 		}
 }
@@ -239,17 +237,17 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			}
 			count--
 
-			parents := iotago.MilestoneParentMessageIDs{rand32ByteHash()}
-			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint64(), parents, rand32ByteHash(), pubKeys)
+			parents := iotago.MilestoneParentMessageIDs{testsuite.RandMessageID().ToArray()}
+			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint64(), parents, testsuite.Rand32ByteHash(), pubKeys)
 			if err != nil {
 				panic(err)
 			}
 
 			treasuryInput := &iotago.TreasuryInput{}
-			copy(treasuryInput[:], randBytes(32))
-			ed25519Addr, _ := randEd25519Addr()
+			copy(treasuryInput[:], testsuite.RandBytes(32))
+			ed25519Addr := testsuite.RandAddress(iotago.AddressEd25519)
 			migratedFundsEntry := &iotago.MigratedFundsEntry{Address: ed25519Addr, Deposit: rand.Uint64()}
-			copy(migratedFundsEntry.TailTransactionHash[:], randBytes(49))
+			copy(migratedFundsEntry.TailTransactionHash[:], testsuite.RandBytes(49))
 			receipt, err := iotago.NewReceiptBuilder(ms.Index).
 				AddTreasuryTransaction(&iotago.TreasuryTransaction{
 					Input:  treasuryInput,
@@ -282,7 +280,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			}
 
 			msDiff.SpentTreasuryOutput = &utxo.TreasuryOutput{
-				MilestoneID: rand32ByteHash(),
+				MilestoneID: testsuite.Rand32ByteHash(),
 				Amount:      uint64(rand.Intn(1000)),
 				Spent:       true, // doesn't matter
 			}
@@ -318,70 +316,10 @@ func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *u
 	}
 }
 
-func randBytes(length int) []byte {
-	var b []byte
-	for i := 0; i < length; i++ {
-		b = append(b, byte(rand.Intn(256)))
-	}
-	return b
+func randLSTransactionUnspentOutputs() *utxo.Output {
+	return testsuite.RandOutput(testsuite.RandOutputType())
 }
 
-func randMessageID() hornet.MessageID {
-	return hornet.MessageID(randBytes(iotago.MessageIDLength))
-}
-
-func rand32ByteHash() [iotago.TransactionIDLength]byte {
-	var h [iotago.TransactionIDLength]byte
-	b := randBytes(32)
-	copy(h[:], b)
-	return h
-}
-
-func randLSTransactionUnspentOutputs() *snapshot.Output {
-	addr, _ := randEd25519Addr()
-
-	var outputID [iotago.OutputIDLength]byte
-	transactionID := rand32ByteHash()
-	copy(outputID[:], transactionID[:])
-	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
-
-	return &snapshot.Output{
-		MessageID:  randMessageID().ToArray(),
-		OutputID:   outputID,
-		OutputType: iotago.OutputType(rand.Intn(256)),
-		Address:    addr,
-		Amount:     uint64(rand.Intn(1000000) + 1),
-	}
-}
-
-func randLSTransactionSpents() *snapshot.Spent {
-	addr, _ := randEd25519Addr()
-
-	var outputID [iotago.OutputIDLength]byte
-	transactionID := rand32ByteHash()
-	copy(outputID[:], transactionID[:])
-	binary.LittleEndian.PutUint16(outputID[iotago.TransactionIDLength:], uint16(rand.Intn(100)))
-
-	output := &snapshot.Output{
-		MessageID:  randMessageID().ToArray(),
-		OutputID:   outputID,
-		OutputType: iotago.OutputType(rand.Intn(256)),
-		Address:    addr,
-		Amount:     uint64(rand.Intn(1000000) + 1),
-	}
-
-	return &snapshot.Spent{Output: *output, TargetTransactionID: rand32ByteHash()}
-}
-
-//nolint:unparam
-func randEd25519Addr() (*iotago.Ed25519Address, []byte) {
-	// type
-	edAddr := &iotago.Ed25519Address{}
-	addr := randBytes(iotago.Ed25519AddressBytesLength)
-	copy(edAddr[:], addr)
-	// serialized
-	var b [iotago.Ed25519AddressSerializedBytesSize]byte
-	b[0] = iotago.AddressEd25519
-	copy(b[serializer.SmallTypeDenotationByteSize:], addr)
-	return edAddr, b[:]
+func randLSTransactionSpents() *utxo.Spent {
+	return testsuite.RandSpent(testsuite.RandOutput(testsuite.RandOutputType()), testsuite.RandMilestoneIndex())
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -61,84 +60,30 @@ var snapshotNames = map[Type]string{
 	Delta: "delta",
 }
 
-// Output defines an output within a snapshot.
-type Output struct {
-	// The message ID of the message that contained the transaction where this output was created.
-	MessageID [iotago.MessageIDLength]byte `json:"message_id"`
-	// The transaction ID and the index of the output.
-	OutputID [iotago.TransactionIDLength + 2]byte `json:"output_id"`
-	// The type of the output.
-	OutputType iotago.OutputType `json:"output_type"`
-	// The underlying address to which this output deposits to.
-	Address serializer.Serializable `json:"address"`
-	// The amount of the deposit.
-	Amount uint64 `json:"amount"`
-}
-
 // LexicalOrderedOutputs are Outputs ordered in lexical order by their OutputID.
-type LexicalOrderedOutputs []*Output
+type LexicalOrderedOutputs utxo.Outputs
 
 func (l LexicalOrderedOutputs) Len() int {
 	return len(l)
 }
 
 func (l LexicalOrderedOutputs) Less(i, j int) bool {
-	return bytes.Compare(l[i].OutputID[:], l[j].OutputID[:]) < 0
+	return bytes.Compare(l[i].OutputID()[:], l[j].OutputID()[:]) < 0
 }
 
 func (l LexicalOrderedOutputs) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
 
-func (s *Output) MarshalBinary() ([]byte, error) {
-	var b bytes.Buffer
-	if _, err := b.Write(s.MessageID[:]); err != nil {
-		return nil, fmt.Errorf("unable to write message ID for ls-output: %w", err)
-	}
-	if _, err := b.Write(s.OutputID[:]); err != nil {
-		return nil, fmt.Errorf("unable to write output ID for ls-output: %w", err)
-	}
-	if err := b.WriteByte(byte(s.OutputType)); err != nil {
-		return nil, fmt.Errorf("unable to write output type for ls-output: %w", err)
-	}
-	addrData, err := s.Address.Serialize(serializer.DeSeriModePerformValidation, nil)
-	if err != nil {
-		return nil, fmt.Errorf("unable to serialize address for ls-output: %w", err)
-	}
-	if _, err = b.Write(addrData); err != nil {
-		return nil, fmt.Errorf("unable to write address for ls-output: %w", err)
-	}
-	if err = binary.Write(&b, binary.LittleEndian, s.Amount); err != nil {
-		return nil, fmt.Errorf("unable to write value for ls-output: %w", err)
-	}
-	return b.Bytes(), nil
-}
-
-// Spent defines a spent within a snapshot.
-type Spent struct {
-	Output
-	// The transaction ID the funds were spent with.
-	TargetTransactionID [iotago.TransactionIDLength]byte `json:"target_transaction_id"`
-}
-
-func (s *Spent) MarshalBinary() ([]byte, error) {
-	bytes, err := s.Output.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
-
-	return byteutils.ConcatBytes(bytes, s.TargetTransactionID[:]), nil
-}
-
 // MilestoneDiff represents the outputs which were created and consumed for the given milestone
 // and the message itself which contains the milestone.
 type MilestoneDiff struct {
 	// The milestone payload itself.
-	Milestone *iotago.Milestone `json:"milestone"`
+	Milestone *iotago.Milestone
 	// The created outputs with this milestone.
-	Created []*Output `json:"created"`
+	Created utxo.Outputs
 	// The consumed spents with this milestone.
-	Consumed []*Spent `json:"consumed"`
+	Consumed utxo.Spents
 	// The consumed treasury output with this milestone.
 	SpentTreasuryOutput *utxo.TreasuryOutput
 }
@@ -194,10 +139,7 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	}
 
 	for x, output := range md.Created {
-		outputBytes, err := output.MarshalBinary()
-		if err != nil {
-			return nil, fmt.Errorf("unable to serialize output %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
-		}
+		outputBytes := output.SnapshotBytes()
 		if _, err := b.Write(outputBytes); err != nil {
 			return nil, fmt.Errorf("unable to write output %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
@@ -208,10 +150,7 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	}
 
 	for x, spent := range md.Consumed {
-		spentBytes, err := spent.MarshalBinary()
-		if err != nil {
-			return nil, fmt.Errorf("unable to serialize spent %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
-		}
+		spentBytes := spent.SnapshotBytes()
 		if _, err := b.Write(spentBytes); err != nil {
 			return nil, fmt.Errorf("unable to write spent %d for ls-milestone-diff %d: %w", x, md.Milestone.Index, err)
 		}
@@ -232,11 +171,11 @@ type SEPConsumerFunc func(hornet.MessageID) error
 type HeaderConsumerFunc func(*ReadFileHeader) error
 
 // OutputProducerFunc yields an output to be written to a snapshot or nil if no more is available.
-type OutputProducerFunc func() (*Output, error)
+type OutputProducerFunc func() (*utxo.Output, error)
 
 // OutputConsumerFunc consumes the given output.
 // A returned error signals to cancel further reading.
-type OutputConsumerFunc func(output *Output) error
+type OutputConsumerFunc func(output *utxo.Output) error
 
 // UnspentTreasuryOutputConsumerFunc consumes the given treasury output.
 // A returned error signals to cancel further reading.
@@ -383,7 +322,7 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *
 			}
 
 			outputCount++
-			outputBytes, err := output.MarshalBinary()
+			outputBytes := output.SnapshotBytes()
 			if err != nil {
 				return nil, fmt.Errorf("unable to serialize LS output #%d: %w", outputCount, err)
 			}
@@ -503,6 +442,7 @@ func ReadSnapshotHeader(reader io.Reader) (*ReadFileHeader, error) {
 // StreamSnapshotDataFrom consumes a snapshot from the given reader.
 // OutputConsumerFunc must not be nil if the snapshot is not a delta snapshot.
 func StreamSnapshotDataFrom(reader io.Reader,
+	deSeriParas *iotago.DeSerializationParameters,
 	headerConsumer HeaderConsumerFunc,
 	sepConsumer SEPConsumerFunc,
 	outputConsumer OutputConsumerFunc,
@@ -543,7 +483,7 @@ func StreamSnapshotDataFrom(reader io.Reader,
 
 	if readHeader.Type == Full {
 		for i := uint64(0); i < readHeader.OutputCount; i++ {
-			output, err := readOutput(reader)
+			output, err := readOutput(reader, deSeriParas)
 			if err != nil {
 				return fmt.Errorf("at pos %d: %w", i, err)
 			}
@@ -555,7 +495,7 @@ func StreamSnapshotDataFrom(reader io.Reader,
 	}
 
 	for i := uint64(0); i < readHeader.MilestoneDiffCount; i++ {
-		msDiff, err := readMilestoneDiff(reader)
+		msDiff, err := readMilestoneDiff(reader, deSeriParas)
 		if err != nil {
 			return fmt.Errorf("at pos %d: %w", i, err)
 		}
@@ -568,7 +508,7 @@ func StreamSnapshotDataFrom(reader io.Reader,
 }
 
 // reads a MilestoneDiff from the given reader.
-func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
+func readMilestoneDiff(reader io.Reader, deSeriParas *iotago.DeSerializationParameters) (*MilestoneDiff, error) {
 	msDiff := &MilestoneDiff{}
 
 	var msLength uint32
@@ -582,7 +522,7 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 		return nil, fmt.Errorf("unable to read LS ms-diff ms: %w", err)
 	}
 
-	if _, err := ms.Deserialize(msBytes, serializer.DeSeriModePerformValidation, nil); err != nil {
+	if _, err := ms.Deserialize(msBytes, serializer.DeSeriModePerformValidation, deSeriParas); err != nil {
 		return nil, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
 	}
 
@@ -606,9 +546,9 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 		return nil, fmt.Errorf("unable to read LS ms-diff created count: %w", err)
 	}
 
-	msDiff.Created = make([]*Output, createdCount)
+	msDiff.Created = make(utxo.Outputs, createdCount)
 	for i := uint64(0); i < createdCount; i++ {
-		diffCreatedOutput, err := readOutput(reader)
+		diffCreatedOutput, err := readOutput(reader, deSeriParas)
 		if err != nil {
 			return nil, fmt.Errorf("(ms-diff created-output) at pos %d: %w", i, err)
 		}
@@ -619,9 +559,9 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 		return nil, fmt.Errorf("unable to read LS ms-diff consumed count: %w", err)
 	}
 
-	msDiff.Consumed = make([]*Spent, consumedCount)
+	msDiff.Consumed = make(utxo.Spents, consumedCount)
 	for i := uint64(0); i < consumedCount; i++ {
-		diffConsumedSpent, err := readSpent(reader)
+		diffConsumedSpent, err := readSpent(reader, deSeriParas, milestone.Index(ms.Index))
 		if err != nil {
 			return nil, fmt.Errorf("(ms-diff consumed-output) at pos %d: %w", i, err)
 		}
@@ -632,71 +572,12 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 }
 
 // reads an Output from the given reader.
-func readOutput(reader io.Reader) (*Output, error) {
-	output := &Output{}
-	if _, err := io.ReadFull(reader, output.MessageID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS message ID: %w", err)
-	}
-
-	if _, err := io.ReadFull(reader, output.OutputID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS output ID: %w", err)
-	}
-
-	typeBuf := make([]byte, 1)
-	if _, err := io.ReadFull(reader, typeBuf); err != nil {
-		return nil, fmt.Errorf("unable to read LS output type: %w", err)
-	}
-	output.OutputType = iotago.OutputType(typeBuf[0])
-
-	// look ahead address type
-	var addrTypeBuf [serializer.SmallTypeDenotationByteSize]byte
-	if _, err := io.ReadFull(reader, addrTypeBuf[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS output address type byte: %w", err)
-	}
-
-	addrType := addrTypeBuf[0]
-	addr, err := iotago.AddressSelector(uint32(addrType))
-	if err != nil {
-		return nil, fmt.Errorf("unable to determine address type of LS output: %w", err)
-	}
-
-	var addrDataWithoutType []byte
-	switch addr.(type) {
-	case *iotago.Ed25519Address:
-		addrDataWithoutType = make([]byte, iotago.Ed25519AddressBytesLength)
-	default:
-		panic("unknown address type")
-	}
-
-	// read the rest of the address
-	if _, err := io.ReadFull(reader, addrDataWithoutType); err != nil {
-		return nil, fmt.Errorf("unable to read LS output address: %w", err)
-	}
-
-	if _, err := addr.Deserialize(append(addrTypeBuf[:], addrDataWithoutType...), serializer.DeSeriModePerformValidation, nil); err != nil {
-		return nil, fmt.Errorf("invalid LS output address: %w", err)
-	}
-	output.Address = addr
-
-	if err := binary.Read(reader, binary.LittleEndian, &output.Amount); err != nil {
-		return nil, fmt.Errorf("unable to read LS output value: %w", err)
-	}
-
-	return output, nil
+func readOutput(reader io.Reader, deSeriParas *iotago.DeSerializationParameters) (*utxo.Output, error) {
+	return utxo.OutputFromSnapshotReader(reader, deSeriParas)
 }
 
-func readSpent(reader io.Reader) (*Spent, error) {
-	output, err := readOutput(reader)
-	if err != nil {
-		return nil, err
-	}
-
-	spent := &Spent{Output: *output}
-	if _, err := io.ReadFull(reader, spent.TargetTransactionID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS target transaction ID: %w", err)
-	}
-
-	return spent, nil
+func readSpent(reader io.Reader, deSeriParas *iotago.DeSerializationParameters, index milestone.Index) (*utxo.Spent, error) {
+	return utxo.SpentFromSnapshotReader(reader, deSeriParas, index)
 }
 
 // ReadSnapshotHeaderFromFile reads the header of the given snapshot file.

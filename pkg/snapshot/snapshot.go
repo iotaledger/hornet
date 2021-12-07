@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -74,6 +76,7 @@ type SnapshotManager struct {
 	utxoManager                          *utxo.Manager
 	networkID                            uint64
 	networkIDSource                      string
+	deSeriParas                          *iotago.DeSerializationParameters
 	snapshotFullPath                     string
 	snapshotDeltaPath                    string
 	deltaSnapshotSizeThresholdPercentage float64
@@ -110,6 +113,7 @@ func NewSnapshotManager(
 	utxoManager *utxo.Manager,
 	networkID uint64,
 	networkIDSource string,
+	deSeriParas *iotago.DeSerializationParameters,
 	snapshotFullPath string,
 	snapshotDeltaPath string,
 	deltaSnapshotSizeThresholdPercentage float64,
@@ -136,6 +140,7 @@ func NewSnapshotManager(
 		utxoManager:                          utxoManager,
 		networkID:                            networkID,
 		networkIDSource:                      networkIDSource,
+		deSeriParas:                          deSeriParas,
 		snapshotFullPath:                     snapshotFullPath,
 		snapshotDeltaPath:                    snapshotDeltaPath,
 		deltaSnapshotSizeThresholdPercentage: deltaSnapshotSizeThresholdPercentage,
@@ -342,11 +347,11 @@ func (s *SnapshotManager) CreateDeltaSnapshot(ctx context.Context, targetIndex m
 }
 
 // LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
-func (s *SnapshotManager) LoadSnapshotFromFile(ctx context.Context, snapshotType Type, networkID uint64, filePath string) (err error) {
+func (s *SnapshotManager) LoadSnapshotFromFile(ctx context.Context, snapshotType Type, filePath string) (err error) {
 	s.LogInfof("importing %s snapshot file...", snapshotNames[snapshotType])
 	ts := time.Now()
 
-	header, err := loadSnapshotFileToStorage(ctx, s.storage, snapshotType, filePath, networkID)
+	header, err := loadSnapshotFileToStorage(ctx, s.storage, snapshotType, filePath, s.deSeriParas, s.networkID)
 	if err != nil {
 		return err
 	}
@@ -534,7 +539,7 @@ func (s *SnapshotManager) ImportSnapshots(ctx context.Context) error {
 		return errors.New("no snapshot files available after snapshot download")
 	}
 
-	if err = s.LoadSnapshotFromFile(ctx, Full, s.networkID, s.snapshotFullPath); err != nil {
+	if err = s.LoadSnapshotFromFile(ctx, Full, s.snapshotFullPath); err != nil {
 		_ = s.storage.MarkDatabasesCorrupted()
 		return err
 	}
@@ -543,7 +548,7 @@ func (s *SnapshotManager) ImportSnapshots(ctx context.Context) error {
 		return nil
 	}
 
-	if err = s.LoadSnapshotFromFile(ctx, Delta, s.networkID, s.snapshotDeltaPath); err != nil {
+	if err = s.LoadSnapshotFromFile(ctx, Delta, s.snapshotDeltaPath); err != nil {
 		_ = s.storage.MarkDatabasesCorrupted()
 		return err
 	}

@@ -100,7 +100,7 @@ func newCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 
 	go func() {
 		if err := utxoManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
-			prodChan <- &Output{MessageID: output.MessageID().ToArray(), OutputID: *output.OutputID(), OutputType: output.OutputType(), Address: output.Address(), Amount: output.Amount()}
+			prodChan <- output
 			return true
 		}, utxo.ReadLockLedger(false)); err != nil {
 			errChan <- err
@@ -111,12 +111,12 @@ func newCMIUTXOProducer(utxoManager *utxo.Manager) OutputProducerFunc {
 	}()
 
 	binder := producerFromChannels(prodChan, errChan)
-	return func() (*Output, error) {
+	return func() (*utxo.Output, error) {
 		obj, err := binder()
 		if obj == nil || err != nil {
 			return nil, err
 		}
-		return obj.(*Output), nil
+		return obj.(*utxo.Output), nil
 	}
 }
 
@@ -160,8 +160,8 @@ func newMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, 
 
 // returns a milestone diff producer which first reads out milestone diffs from an existing delta
 // snapshot file and then the remaining diffs from the database up to the target index.
-func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index) (MilestoneDiffProducerFunc, error) {
-	prevDeltaFileMsDiffsProducer, err := newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath, ledgerIndex)
+func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index, deSeriParas *iotago.DeSerializationParameters) (MilestoneDiffProducerFunc, error) {
+	prevDeltaFileMsDiffsProducer, err := newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath, ledgerIndex, deSeriParas)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage 
 
 // returns a milestone diff producer which reads out the milestone diffs from an existing delta snapshot file.
 // the existing delta snapshot file is closed as soon as its milestone diffs are read.
-func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerIndex milestone.Index) (MilestoneDiffProducerFunc, error) {
+func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerIndex milestone.Index, deSeriParas *iotago.DeSerializationParameters) (MilestoneDiffProducerFunc, error) {
 	existingDeltaFile, err := os.OpenFile(snapshotDeltaPath, os.O_RDONLY, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read previous delta snapshot file for milestone diffs: %w", err)
@@ -209,6 +209,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 		defer func() { _ = existingDeltaFile.Close() }()
 
 		if err := StreamSnapshotDataFrom(existingDeltaFile,
+			deSeriParas,
 			func(header *ReadFileHeader) error {
 				// check that the ledger index matches
 				if header.LedgerMilestoneIndex != originLedgerIndex {
@@ -275,32 +276,6 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 				return
 			}
 
-			createdOutputs := make([]*Output, len(diff.Outputs))
-			consumedOutputs := make([]*Spent, len(diff.Spents))
-
-			for i, output := range diff.Outputs {
-				createdOutputs[i] = &Output{
-					MessageID:  output.MessageID().ToArray(),
-					OutputID:   *output.OutputID(),
-					OutputType: output.OutputType(),
-					Address:    output.Address(),
-					Amount:     output.Amount(),
-				}
-			}
-
-			for i, spent := range diff.Spents {
-				consumedOutputs[i] = &Spent{
-					Output: Output{
-						MessageID:  spent.MessageID().ToArray(),
-						OutputID:   *spent.OutputID(),
-						OutputType: spent.OutputType(),
-						Address:    spent.Address(),
-						Amount:     spent.Amount(),
-					},
-					TargetTransactionID: *spent.TargetTransactionID(),
-				}
-			}
-
 			ms, err := mrf(msIndex)
 			if err != nil {
 				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved: %w", msIndex, err)
@@ -317,8 +292,8 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 
 			prodChan <- &MilestoneDiff{
 				Milestone:           ms,
-				Created:             createdOutputs,
-				Consumed:            consumedOutputs,
+				Created:             diff.Outputs,
+				Consumed:            diff.Spents,
 				SpentTreasuryOutput: diff.SpentTreasuryOutput,
 			}
 		}
@@ -479,7 +454,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 		default:
 			// as the needed milestone diffs are pruned from the database, we need to use
 			// the previous delta snapshot file to extract those in conjunction with what the database has available
-			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxoManager, header.LedgerMilestoneIndex, targetIndex)
+			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxoManager, header.LedgerMilestoneIndex, targetIndex, s.deSeriParas)
 			if err != nil {
 				return err
 			}
@@ -608,7 +583,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 	// create a prepped output producer which counts how many went through
 	unspentOutputsCount := 0
 	cmiUTXOProducer := newCMIUTXOProducer(dbStorage.UTXOManager())
-	countingOutputProducer := func() (*Output, error) {
+	countingOutputProducer := func() (*utxo.Output, error) {
 		output, err := cmiUTXOProducer()
 		if output != nil {
 			unspentOutputsCount++
@@ -658,7 +633,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 // and the ledger and snapshot index are equal.
 // This function consumes disk space over memory by importing the full snapshot into a temporary database,
 // applying the delta diffs onto it and then writing out the merged state.
-func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
+func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName string, deSeriParas *iotago.DeSerializationParameters) (*MergeInfo, error) {
 
 	targetEngine, err := database.DatabaseEngine(database.EnginePebble)
 	if err != nil {
@@ -696,7 +671,7 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		return nil, err
 	}
 
-	fullSnapshotHeader, deltaSnapshotHeader, err := LoadSnapshotFilesToStorage(context.Background(), dbStorage, fullPath, deltaPath)
+	fullSnapshotHeader, deltaSnapshotHeader, err := LoadSnapshotFilesToStorage(context.Background(), dbStorage, deSeriParas, fullPath, deltaPath)
 	if err != nil {
 		return nil, err
 	}
