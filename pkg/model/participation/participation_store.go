@@ -112,7 +112,7 @@ func (pm *ParticipationManager) MessageForEventAndMessageID(eventID EventID, mes
 		return nil, err
 	}
 
-	return storage.MessageFromBytes(value, serializer.DeSeriModeNoValidation)
+	return storage.MessageFromBytes(value, serializer.DeSeriModeNoValidation, pm.deSeriParas)
 }
 
 // Outputs

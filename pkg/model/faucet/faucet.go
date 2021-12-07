@@ -94,6 +94,8 @@ type Faucet struct {
 	syncManager *syncmanager.SyncManager
 	// id of the network the faucet is running in.
 	networkID uint64
+	// Deserialization parameters including byte costs
+	deSeriParas *iotago.DeSerializationParameters
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
 	belowMaxDepth milestone.Index
@@ -254,6 +256,7 @@ func New(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	networkID uint64,
+	deSeriParas *iotago.DeSerializationParameters,
 	belowMaxDepth int,
 	utxoManager *utxo.Manager,
 	address *iotago.Ed25519Address,
@@ -272,6 +275,7 @@ func New(
 		storage:         dbStorage,
 		syncManager:     syncManager,
 		networkID:       networkID,
+		deSeriParas:     deSeriParas,
 		belowMaxDepth:   milestone.Index(belowMaxDepth),
 		utxoManager:     utxoManager,
 		address:         address,
@@ -464,7 +468,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Payload, ti
 		return nil, err
 	}
 
-	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation, f.deSeriParas)
 	if err != nil {
 		return nil, err
 	}
@@ -517,9 +521,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 		txBuilder.AddOutput(&iotago.ExtendedOutput{Address: f.address, Amount: uint64(remainderAmount)})
 	}
 
-	//TODO: deSeriParas
-	deSeriParas := &iotago.DeSerializationParameters{}
-	txPayload, err := txBuilder.Build(deSeriParas, f.addressSigner)
+	txPayload, err := txBuilder.Build(f.deSeriParas, f.addressSigner)
 	if err != nil {
 		return nil, nil, 0, err
 	}

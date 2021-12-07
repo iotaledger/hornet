@@ -150,8 +150,9 @@ type dependencies struct {
 	AppInfo                               *app.AppInfo
 	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager                  *p2p.ConfigManager
-	NetworkID                             uint64                 `name:"networkId"`
-	NetworkIDName                         string                 `name:"networkIdName"`
+	NetworkID                             uint64 `name:"networkId"`
+	NetworkIDName                         string `name:"networkIdName"`
+	DeserializationParameters             *iotago.DeSerializationParameters
 	MaxDeltaMsgYoungestConeRootIndexToCMI int                    `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
 	MaxDeltaMsgOldestConeRootIndexToCMI   int                    `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
 	BelowMaxDepth                         int                    `name:"belowMaxDepth"`

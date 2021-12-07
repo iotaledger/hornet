@@ -131,6 +131,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		te.Storage(),
 		te.SyncManager(),
 		store,
+		testsuite.DeSerializationParameters,
 		participation.WithIndexationMessage(ParticipationIndexation),
 	)
 	require.NoError(t, err)

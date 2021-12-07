@@ -24,7 +24,7 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*storage.Me
 		return nil, err
 	}
 
-	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation, coo.deSeriParas)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint64,
 		return nil, err
 	}
 
-	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation, coo.deSeriParas)
 	if err != nil {
 		return nil, err
 	}

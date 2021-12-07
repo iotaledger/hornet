@@ -5,8 +5,8 @@ import (
 )
 
 // NewDebugNodeAPIClient returns a new debug node API instance.
-func NewDebugNodeAPIClient(baseURL string, opts ...iotago.NodeHTTPAPIClientOption) *DebugNodeAPIClient {
-	return &DebugNodeAPIClient{NodeHTTPAPIClient: iotago.NewNodeHTTPAPIClient(baseURL, opts...)}
+func NewDebugNodeAPIClient(baseURL string, deSeriParas *iotago.DeSerializationParameters, opts ...iotago.NodeHTTPAPIClientOption) *DebugNodeAPIClient {
+	return &DebugNodeAPIClient{NodeHTTPAPIClient: iotago.NewNodeHTTPAPIClient(baseURL, deSeriParas, opts...)}
 }
 
 // DebugNodeAPIClient is an API wrapper over the debug node API.

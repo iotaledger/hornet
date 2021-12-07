@@ -81,6 +81,8 @@ type MessageProcessor struct {
 	peeringManager *p2p.Manager
 	// shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
+	// Deserialization parameters including byte costs
+	deSeriParas *iotago.DeSerializationParameters
 	// holds the message processor options.
 	opts Options
 
@@ -104,6 +106,7 @@ func NewMessageProcessor(
 	requestQueue RequestQueue,
 	peeringManager *p2p.Manager,
 	serverMetrics *metrics.ServerMetrics,
+	deSeriParas *iotago.DeSerializationParameters,
 	opts *Options) (*MessageProcessor, error) {
 
 	proc := &MessageProcessor{
@@ -112,6 +115,7 @@ func NewMessageProcessor(
 		requestQueue:   requestQueue,
 		peeringManager: peeringManager,
 		serverMetrics:  serverMetrics,
+		deSeriParas:    deSeriParas,
 		opts:           *opts,
 		Events: MessageProcessorEvents{
 			MessageProcessed: events.NewEvent(MessageProcessedCaller),
@@ -419,7 +423,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.processingLock.Unlock()
 
 	// build HORNET representation of the message
-	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation)
+	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation, proc.deSeriParas)
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.WithMessagef(err, "peer sent an invalid message"))

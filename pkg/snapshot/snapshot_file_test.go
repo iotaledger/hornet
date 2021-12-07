@@ -16,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/ed25519"
@@ -249,15 +250,13 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			ed25519Addr, _ := randEd25519Addr()
 			migratedFundsEntry := &iotago.MigratedFundsEntry{Address: ed25519Addr, Deposit: rand.Uint64()}
 			copy(migratedFundsEntry.TailTransactionHash[:], randBytes(49))
-			//TODO: deSeriParas
-			deSeriParas := &iotago.DeSerializationParameters{}
 			receipt, err := iotago.NewReceiptBuilder(ms.Index).
 				AddTreasuryTransaction(&iotago.TreasuryTransaction{
 					Input:  treasuryInput,
 					Output: &iotago.TreasuryOutput{Amount: rand.Uint64()},
 				}).
 				AddEntry(migratedFundsEntry).
-				Build(deSeriParas)
+				Build(testsuite.DeSerializationParameters)
 			if err != nil {
 				panic(err)
 			}

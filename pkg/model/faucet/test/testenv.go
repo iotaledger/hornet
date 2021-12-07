@@ -244,6 +244,7 @@ func NewFaucetTestEnv(t *testing.T,
 		te.Storage(),
 		te.SyncManager(),
 		te.NetworkID(),
+		testsuite.DeSerializationParameters,
 		int(te.BelowMaxDepth()),
 		te.UTXOManager(),
 		faucetWallet.Address(),
@@ -409,9 +410,9 @@ func (env *FaucetTestEnv) AssertFaucetBalance(expected uint64) {
 
 func (env *FaucetTestEnv) AssertAddressUTXOCount(address iotago.Address, expected int) {
 	utxoCount := 0
-	env.TestEnv.UTXOManager().ForEachUnspentOutput(func(output *utxo.Output) bool {
+	env.TestEnv.UTXOManager().ForEachUnspentOutputOnAddress(address, utxo.FilterOutputType(iotago.OutputExtended).FilterHasSpendingConstraints(false), func(output *utxo.Output) bool {
 		utxoCount++
 		return true
-	}, utxo.FilterAddress(address))
+	})
 	require.Equal(env.t, utxoCount, expected)
 }

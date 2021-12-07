@@ -31,6 +31,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -81,15 +82,16 @@ var (
 
 type dependencies struct {
 	dig.In
-	MessageProcessor *gossip.MessageProcessor
-	SyncManager      *syncmanager.SyncManager
-	ServerMetrics    *metrics.ServerMetrics
-	PoWHandler       *pow.Handler
-	PeeringManager   *p2p.Manager
-	TipSelector      *tipselect.TipSelector       `optional:"true"`
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	NetworkID        uint64                       `name:"networkId"`
-	Echo             *echo.Echo                   `optional:"true"`
+	MessageProcessor          *gossip.MessageProcessor
+	SyncManager               *syncmanager.SyncManager
+	ServerMetrics             *metrics.ServerMetrics
+	PoWHandler                *pow.Handler
+	PeeringManager            *p2p.Manager
+	TipSelector               *tipselect.TipSelector       `optional:"true"`
+	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+	NetworkID                 uint64                       `name:"networkId"`
+	DeserializationParameters *iotago.DeSerializationParameters
+	Echo                      *echo.Echo `optional:"true"`
 }
 
 func configure() {
@@ -130,6 +132,7 @@ func configure() {
 
 	spammerInstance = spammer.New(
 		deps.NetworkID,
+		deps.DeserializationParameters,
 		deps.NodeConfig.String(CfgSpammerMessage),
 		deps.NodeConfig.String(CfgSpammerIndex),
 		deps.NodeConfig.String(CfgSpammerIndexSemiLazy),

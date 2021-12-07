@@ -112,11 +112,12 @@ func provide(c *dig.Container) {
 
 	type participationDeps struct {
 		dig.In
-		Storage        *storage.Storage
-		SyncManager    *syncmanager.SyncManager
-		DatabasePath   string                       `name:"databasePath"`
-		DatabaseEngine database.Engine              `name:"databaseEngine"`
-		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+		Storage                   *storage.Storage
+		SyncManager               *syncmanager.SyncManager
+		DatabasePath              string                       `name:"databasePath"`
+		DatabaseEngine            database.Engine              `name:"databaseEngine"`
+		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+		DeSerializationParameters *iotago.DeSerializationParameters
 	}
 
 	if err := c.Provide(func(deps participationDeps) *participation.ParticipationManager {
@@ -130,6 +131,7 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.SyncManager,
 			participationStore,
+			deps.DeSerializationParameters,
 		)
 		if err != nil {
 			Plugin.LogPanic(err)

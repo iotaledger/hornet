@@ -39,12 +39,13 @@ func initConfigPars(c *dig.Container) {
 
 	type cfgResult struct {
 		dig.Out
-		PublicKeyRanges         coordinator.PublicKeyRanges
-		NetworkID               uint64               `name:"networkId"`
-		NetworkIDName           string               `name:"networkIdName"`
-		Bech32HRP               iotago.NetworkPrefix `name:"bech32HRP"`
-		MinPoWScore             float64              `name:"minPoWScore"`
-		MilestonePublicKeyCount int                  `name:"milestonePublicKeyCount"`
+		PublicKeyRanges           coordinator.PublicKeyRanges
+		NetworkID                 uint64               `name:"networkId"`
+		NetworkIDName             string               `name:"networkIdName"`
+		Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
+		MinPoWScore               float64              `name:"minPoWScore"`
+		MilestonePublicKeyCount   int                  `name:"milestonePublicKeyCount"`
+		DeSerializationParameters *iotago.DeSerializationParameters
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
@@ -98,6 +99,16 @@ func initConfigPars(c *dig.Container) {
 		// load from config
 		if err := deps.NodeConfig.Unmarshal(CfgProtocolPublicKeyRanges, &res.PublicKeyRanges); err != nil {
 			CorePlugin.LogPanic(err)
+		}
+
+		// TODO: create config for these parameters
+		res.DeSerializationParameters = &iotago.DeSerializationParameters{
+			RentStructure: &iotago.RentStructure{
+				VByteCost:    0,
+				VBFactorData: 0,
+				VBFactorKey:  0,
+			},
+			MinDustDeposit: 0,
 		}
 
 		return res

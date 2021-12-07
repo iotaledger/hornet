@@ -91,7 +91,7 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	require.NoError(te.TestInterface, err)
 
 	// build HORNET representation of the message
-	msg, err := storage.MessageFromBytes(milestoneMessageBytes, serializer.DeSeriModePerformValidation)
+	msg, err := storage.MessageFromBytes(milestoneMessageBytes, serializer.DeSeriModePerformValidation, testsuite.DeSerializationParameters)
 	require.NoError(te.TestInterface, err)
 
 	// parse the milestone payload

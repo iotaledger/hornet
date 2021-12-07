@@ -38,6 +38,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		te.storage,
 		te.syncManager,
 		te.networkID,
+		DeSerializationParameters,
 		inMemoryEd25519MilestoneSignerProvider,
 		nil,
 		nil,

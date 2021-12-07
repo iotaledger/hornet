@@ -104,16 +104,17 @@ func provide(c *dig.Container) {
 
 	type faucetDeps struct {
 		dig.In
-		Storage          *storage.Storage
-		SyncManager      *syncmanager.SyncManager
-		PowHandler       *pow.Handler
-		UTXOManager      *utxo.Manager
-		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-		NetworkID        uint64                       `name:"networkId"`
-		BelowMaxDepth    int                          `name:"belowMaxDepth"`
-		Bech32HRP        iotago.NetworkPrefix         `name:"bech32HRP"`
-		TipSelector      *tipselect.TipSelector
-		MessageProcessor *gossip.MessageProcessor
+		Storage                   *storage.Storage
+		SyncManager               *syncmanager.SyncManager
+		PowHandler                *pow.Handler
+		UTXOManager               *utxo.Manager
+		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+		NetworkID                 uint64                       `name:"networkId"`
+		DeSerializationParameters *iotago.DeSerializationParameters
+		BelowMaxDepth             int                  `name:"belowMaxDepth"`
+		Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
+		TipSelector               *tipselect.TipSelector
+		MessageProcessor          *gossip.MessageProcessor
 	}
 
 	if err := c.Provide(func(deps faucetDeps) *faucet.Faucet {
@@ -122,6 +123,7 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.SyncManager,
 			deps.NetworkID,
+			deps.DeSerializationParameters,
 			deps.BelowMaxDepth,
 			deps.UTXOManager,
 			&faucetAddress,

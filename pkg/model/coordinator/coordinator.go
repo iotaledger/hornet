@@ -84,6 +84,8 @@ type Coordinator struct {
 	syncManager *syncmanager.SyncManager
 	// id of the network the coordinator is running in.
 	networkID uint64
+	// Deserialization parameters including byte costs
+	deSeriParas *iotago.DeSerializationParameters
 	// used to get receipts for the WOTS migration.
 	migratorService *migrator.MigratorService
 	// used to get the treasury output.
@@ -200,13 +202,13 @@ func WithPoWWorkerCount(powWorkerCount int) Option {
 
 // WithQuorum defines a quorum, which is used to check the correct ledger state of the coordinator.
 // If no quorumGroups are given, the quorum is disabled.
-func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfig, timeout time.Duration) Option {
+func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfig, deSeriParas *iotago.DeSerializationParameters, timeout time.Duration) Option {
 	return func(opts *Options) {
 		if !quorumEnabled {
 			opts.quorum = nil
 			return
 		}
-		opts.quorum = newQuorum(quorumGroups, timeout)
+		opts.quorum = newQuorum(quorumGroups, deSeriParas, timeout)
 	}
 }
 
@@ -218,6 +220,7 @@ func New(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	networkID uint64,
+	deSeriParas *iotago.DeSerializationParameters,
 	signerProvider MilestoneSignerProvider,
 	migratorService *migrator.MigratorService,
 	utxoManager *utxo.Manager,
@@ -233,6 +236,7 @@ func New(
 		storage:          dbStorage,
 		syncManager:      syncManager,
 		networkID:        networkID,
+		deSeriParas:      deSeriParas,
 		signerProvider:   signerProvider,
 		migratorService:  migratorService,
 		utxoManager:      utxoManager,

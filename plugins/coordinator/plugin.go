@@ -29,6 +29,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
+	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
@@ -121,16 +122,17 @@ func provide(c *dig.Container) {
 
 	type coordinatorDeps struct {
 		dig.In
-		Storage                 *storage.Storage
-		SyncManager             *syncmanager.SyncManager
-		KeyManager              *keymanager.KeyManager
-		Tangle                  *tangle.Tangle
-		PoWHandler              *pow.Handler
-		MigratorService         *migrator.MigratorService `optional:"true"`
-		UTXOManager             *utxo.Manager
-		NodeConfig              *configuration.Configuration `name:"nodeConfig"`
-		NetworkID               uint64                       `name:"networkId"`
-		MilestonePublicKeyCount int                          `name:"milestonePublicKeyCount"`
+		Storage                  *storage.Storage
+		SyncManager              *syncmanager.SyncManager
+		KeyManager               *keymanager.KeyManager
+		Tangle                   *tangle.Tangle
+		PoWHandler               *pow.Handler
+		MigratorService          *migrator.MigratorService `optional:"true"`
+		UTXOManager              *utxo.Manager
+		NodeConfig               *configuration.Configuration `name:"nodeConfig"`
+		NetworkID                uint64                       `name:"networkId"`
+		DeserializationParamters *iotago.DeSerializationParameters
+		MilestonePublicKeyCount  int `name:"milestonePublicKeyCount"`
 	}
 
 	if err := c.Provide(func(deps coordinatorDeps) *coordinator.Coordinator {
@@ -164,6 +166,7 @@ func provide(c *dig.Container) {
 				deps.Storage,
 				deps.SyncManager,
 				deps.NetworkID,
+				deps.DeserializationParamters,
 				signingProvider,
 				deps.MigratorService,
 				deps.UTXOManager,
@@ -173,7 +176,7 @@ func provide(c *dig.Container) {
 				coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
 				coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
 				coordinator.WithPoWWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
-				coordinator.WithQuorum(deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
+				coordinator.WithQuorum(deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.DeserializationParamters, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
 				coordinator.WithSigningRetryAmount(deps.NodeConfig.Int(CfgCoordinatorSigningRetryAmount)),
 				coordinator.WithSigningRetryTimeout(deps.NodeConfig.Duration(CfgCoordinatorSigningRetryTimeout)),
 			)

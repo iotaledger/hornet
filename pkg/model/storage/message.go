@@ -22,10 +22,9 @@ type Message struct {
 	message     *iotago.Message
 }
 
-func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMode) (*Message, error) {
+func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMode, deSeriParas *iotago.DeSerializationParameters) (*Message, error) {
 
-	//TODO: deSeriCtx
-	data, err := iotaMsg.Serialize(deSeriMode, nil)
+	data, err := iotaMsg.Serialize(deSeriMode, deSeriParas)
 	if err != nil {
 		return nil, err
 	}
@@ -45,11 +44,10 @@ func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMo
 	return msg, nil
 }
 
-func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode) (*Message, error) {
+func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, deSeriParas *iotago.DeSerializationParameters) (*Message, error) {
 
 	iotaMsg := &iotago.Message{}
-	//TODO: deSeriCtx
-	if _, err := iotaMsg.Deserialize(data, deSeriMode, nil); err != nil {
+	if _, err := iotaMsg.Deserialize(data, deSeriMode, deSeriParas); err != nil {
 		return nil, err
 	}
 
@@ -79,7 +77,7 @@ func (msg *Message) Data() []byte {
 func (msg *Message) Message() *iotago.Message {
 	msg.messageOnce.Do(func() {
 		iotaMsg := &iotago.Message{}
-		//TODO: deSeriCtx
+		// No need to verify the message again here
 		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation, nil); err != nil {
 			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.ToHex(), err))
 		}

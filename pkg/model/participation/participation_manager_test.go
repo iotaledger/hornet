@@ -10,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/model/participation/test"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -223,15 +224,13 @@ func TestIndexationPayloads(t *testing.T) {
 	wallet3PrivKey, _ := env.Wallet3.KeyPair()
 	wallet4PrivKey, _ := env.Wallet4.KeyPair()
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: env.Wallet3.Address(), Keys: wallet3PrivKey}, iotago.AddressKeys{Address: env.Wallet4.Address(), Keys: wallet4PrivKey})
-	//TODO: deSeriParas
-	deSeriParas := &iotago.DeSerializationParameters{}
-	msgBuilder := builder.BuildAndSwapToMessageBuilder(deSeriParas, inputAddrSigner, nil)
+	msgBuilder := builder.BuildAndSwapToMessageBuilder(testsuite.DeSerializationParameters, inputAddrSigner, nil)
 	msgBuilder.Parents(hornet.MessageIDs{env.LastMilestoneMessageID()}.ToSliceOfSlices())
 
 	msg, err := msgBuilder.Build()
 	require.NoError(t, err)
 	// Skipped PoW since we are not validating it anyway
-	sweepAndParticipateMessage, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
+	sweepAndParticipateMessage, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, testsuite.DeSerializationParameters)
 	require.NoError(t, err)
 
 	tests := []struct {

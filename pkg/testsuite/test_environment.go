@@ -97,6 +97,17 @@ type TestEnvironment struct {
 	OnConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc
 }
 
+var (
+	DeSerializationParameters = &iotago.DeSerializationParameters{
+		RentStructure: &iotago.RentStructure{
+			VByteCost:    0,
+			VBFactorData: 0,
+			VBFactorKey:  0,
+		},
+		MinDustDeposit: 0,
+	}
+)
+
 type OnNewOutputFunc func(index milestone.Index, output *utxo.Output)
 type OnNewSpentFunc func(index milestone.Index, spent *utxo.Spent)
 type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)

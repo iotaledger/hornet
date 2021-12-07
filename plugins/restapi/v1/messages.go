@@ -213,8 +213,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
-		//TODO: deSeriCtx
-		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation, nil); err != nil {
+		if _, err := msg.Deserialize(bytes, serializer.DeSeriModePerformValidation, deps.DeserializationParameters); err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 	}
@@ -269,7 +268,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		}
 	}
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, deps.DeserializationParameters)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}

@@ -35,6 +35,9 @@ type ParticipationManager struct {
 	// used to sync with the nodes status.
 	syncManager *syncmanager.SyncManager
 
+	// Deserialization parameters including byte costs
+	deSeriParas *iotago.DeSerializationParameters
+
 	// holds the ParticipationManager options.
 	opts *Options
 
@@ -77,6 +80,7 @@ func NewManager(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	participationStore kvstore.KVStore,
+	deSeriParas *iotago.DeSerializationParameters,
 	opts ...Option) (*ParticipationManager, error) {
 
 	options := &Options{}
@@ -88,6 +92,7 @@ func NewManager(
 		syncManager:              syncManager,
 		participationStore:       participationStore,
 		participationStoreHealth: storage.NewStoreHealthTracker(participationStore),
+		deSeriParas:              deSeriParas,
 		opts:                     options,
 	}
 
