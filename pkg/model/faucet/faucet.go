@@ -335,7 +335,7 @@ func (f *Faucet) Enqueue(bech32Addr string) (*FaucetEnqueueResponse, error) {
 	}
 
 	amount := f.opts.amount
-	balance, _, err := f.utxoManager.ComputeBalance(utxo.FilterAddress(ed25519Addr), utxo.ReadLockLedger(false))
+	balance, _, err := f.utxoManager.ComputeAddressBalance(ed25519Addr, utxo.FilterHasSpendingConstraints(false), utxo.ReadLockLedger(false))
 	if err == nil && balance >= f.opts.amount {
 		amount = f.opts.smallAmount
 
@@ -690,7 +690,7 @@ func (f *Faucet) processRequestsWithoutLocking(collectedRequestsCounter int, amo
 func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) error {
 
 	// set initial faucet balance
-	faucetBalance, _, err := f.utxoManager.ComputeBalance(utxo.FilterAddress(f.address), utxo.ReadLockLedger(false))
+	faucetBalance, _, err := f.utxoManager.ComputeAddressBalance(f.address, nil, utxo.ReadLockLedger(false))
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("reading faucet address balance failed: %s, error: %s", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
 	}
@@ -731,7 +731,7 @@ func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) err
 					return []*utxo.Output{f.lastRemainderOutput}, f.lastRemainderOutput.Amount(), nil
 				}
 
-				unspentOutputs, err := f.utxoManager.UnspentOutputs(utxo.FilterAddress(f.address), utxo.ReadLockLedger(false), utxo.MaxResultCount(f.opts.maxOutputCount-2), utxo.FilterOutputType(iotago.OutputExtended))
+				unspentOutputs, err := f.utxoManager.UnspentOutputsOnAddress(f.address, utxo.FilterOutputType(iotago.OutputExtended).FilterHasSpendingConstraints(false), utxo.ReadLockLedger(false), utxo.MaxResultCount(f.opts.maxOutputCount-2))
 				if err != nil {
 					return nil, 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
 				}
@@ -919,7 +919,7 @@ func (f *Faucet) ApplyConfirmation(confirmation *whiteflag.Confirmation) error {
 
 	// recalculate the current faucet balance
 	// no need to lock since we are in the milestone confirmation anyway
-	faucetBalance, _, err := f.utxoManager.ComputeBalance(utxo.FilterAddress(f.address), utxo.ReadLockLedger(false))
+	faucetBalance, _, err := f.utxoManager.ComputeAddressBalance(f.address, utxo.FilterOutputType(iotago.OutputExtended).FilterHasSpendingConstraints(false), utxo.ReadLockLedger(false))
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("reading faucet address balance failed: %s, error: %s", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
 	}

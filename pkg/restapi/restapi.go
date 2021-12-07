@@ -33,6 +33,9 @@ const (
 
 	// ParameterPeerID is used to identify a peer.
 	ParameterPeerID = "peerID"
+
+	// QueryParameterOutputType is used to filter for a certain output type.
+	QueryParameterOutputType = "type"
 )
 
 var (
@@ -166,4 +169,24 @@ func ParsePeerIDParam(c echo.Context) (peer.ID, error) {
 		return "", errors.WithMessagef(ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
 	return peerID, nil
+}
+
+func ParseOutputTypeQueryParam(c echo.Context) (*iotago.OutputType, error) {
+	typeParam := strings.ToLower(c.QueryParam(QueryParameterOutputType))
+	var filteredType *iotago.OutputType
+
+	if len(typeParam) > 0 {
+		outputTypeInt, err := strconv.ParseInt(typeParam, 10, 32)
+		if err != nil {
+			return nil, errors.WithMessagef(ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
+		}
+		outputType := iotago.OutputType(outputTypeInt)
+		switch outputType {
+		case iotago.OutputExtended, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
+		default:
+			return nil, errors.WithMessagef(ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
+		}
+		filteredType = &outputType
+	}
+	return filteredType, nil
 }

@@ -3,8 +3,6 @@ package v1
 import (
 	"encoding/hex"
 	"encoding/json"
-	"strconv"
-	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -67,19 +65,15 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 	return NewOutputResponse(output, !unspent, ledgerIndex)
 }
 
-func outputsResponse(address iotago.Address, includeSpent bool, filterType *iotago.OutputType) (*addressOutputsResponse, error) {
+func outputsResponse(address iotago.Address, filterType *iotago.OutputType) (*addressOutputsResponse, error) {
 	maxResults := deps.RestAPILimitsMaxResults
 
-	opts := []utxo.UTXOIterateOption{
-		utxo.FilterAddress(address),
-		utxo.ReadLockLedger(false),
-	}
-
+	var filter *utxo.FilterOptions
 	if filterType != nil {
-		opts = append(opts, utxo.FilterOutputType(*filterType))
+		filter = utxo.FilterOutputType(*filterType)
 	}
 
-	// we need to lock the ledger here to have the same index for unspent and spent outputs.
+	// we need to lock the ledger here to have the same index for unspent outputs.
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
 
@@ -88,29 +82,12 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
 
-	unspentOutputs, err := deps.UTXOManager.UnspentOutputs(append(opts, utxo.MaxResultCount(maxResults))...)
-	if err != nil {
+	outputIDs := make([]string, 0)
+	if err := deps.UTXOManager.ForEachUnspentOutputOnAddress(address, filter, func(output *utxo.Output) bool {
+		outputIDs = append(outputIDs, output.OutputID().ToHex())
+		return true
+	}, utxo.ReadLockLedger(false), utxo.MaxResultCount(maxResults)); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
-	}
-
-	outputIDs := make([]string, len(unspentOutputs))
-	for i, unspentOutput := range unspentOutputs {
-		outputIDs[i] = unspentOutput.OutputID().ToHex()
-	}
-
-	if includeSpent && maxResults-len(outputIDs) > 0 {
-
-		spents, err := deps.UTXOManager.SpentOutputs(append(opts, utxo.MaxResultCount(maxResults-len(outputIDs)))...)
-		if err != nil {
-			return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent outputs failed: %s, error: %s", address, err)
-		}
-
-		outputIDsSpent := make([]string, len(spents))
-		for i, spent := range spents {
-			outputIDsSpent[i] = spent.OutputID().ToHex()
-		}
-
-		outputIDs = append(outputIDs, outputIDsSpent...)
 	}
 
 	return &addressOutputsResponse{
@@ -129,31 +106,16 @@ func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) 
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	// error is ignored because it returns false in case it can't be parsed
-	includeSpent, _ := strconv.ParseBool(strings.ToLower(c.QueryParam("include-spent")))
-
-	typeParam := strings.ToLower(c.QueryParam("type"))
-	var filteredType *iotago.OutputType
-
-	if len(typeParam) > 0 {
-		outputTypeInt, err := strconv.ParseInt(typeParam, 10, 32)
-		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
-		}
-		outputType := iotago.OutputType(outputTypeInt)
-		switch outputType {
-		case iotago.OutputExtended, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
-		default:
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
-		}
-		filteredType = &outputType
+	filteredType, err := restapi.ParseOutputTypeQueryParam(c)
+	if err != nil {
+		return nil, err
 	}
 
 	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
 	if err != nil {
 		return nil, err
 	}
-	return outputsResponse(bech32Address, includeSpent, filteredType)
+	return outputsResponse(bech32Address, filteredType)
 }
 
 func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error) {
@@ -162,30 +124,16 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	// error is ignored because it returns false in case it can't be parsed
-	includeSpent, _ := strconv.ParseBool(strings.ToLower(c.QueryParam("include-spent")))
-
-	var filteredType *iotago.OutputType
-	typeParam := strings.ToLower(c.QueryParam("type"))
-	if len(typeParam) > 0 {
-		outputTypeInt, err := strconv.ParseInt(typeParam, 10, 32)
-		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
-		}
-		outputType := iotago.OutputType(outputTypeInt)
-		switch outputType {
-		case iotago.OutputExtended, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
-		default:
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
-		}
-		filteredType = &outputType
+	filteredType, err := restapi.ParseOutputTypeQueryParam(c)
+	if err != nil {
+		return nil, err
 	}
 
 	address, err := restapi.ParseEd25519AddressParam(c)
 	if err != nil {
 		return nil, err
 	}
-	return outputsResponse(address, includeSpent, filteredType)
+	return outputsResponse(address, filteredType)
 }
 
 func treasury(_ echo.Context) (*treasuryResponse, error) {

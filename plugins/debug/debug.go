@@ -3,8 +3,6 @@ package debug
 import (
 	"context"
 	"encoding/hex"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -122,47 +120,23 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}, nil
 }
 
-func typeFilterFromParams(c echo.Context) ([]utxo.UTXOIterateOption, error) {
-	var opts []utxo.UTXOIterateOption
-
-	typeParam := strings.ToLower(c.QueryParam("type"))
-
-	if len(typeParam) > 0 {
-		outputTypeInt, err := strconv.ParseInt(typeParam, 10, 32)
-		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
-		}
-		outputType := iotago.OutputType(outputTypeInt)
-		switch outputType {
-		case iotago.OutputExtended, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
-		default:
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
-
-		}
-		return append(opts, utxo.FilterOutputType(outputType)), nil
-	}
-	return opts, nil
-}
-
 func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
+
+	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
 
 	outputIDs := []string{}
 	outputConsumerFunc := func(output *utxo.Output) bool {
+		if filterType != nil && output.OutputType() != *filterType {
+			return true
+		}
 		outputIDs = append(outputIDs, output.OutputID().ToHex())
 		return true
 	}
 
-	opts := []utxo.UTXOIterateOption{
-		utxo.ReadLockLedger(false),
-	}
-
-	filter, err := typeFilterFromParams(c)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, filter...)
-
-	err = deps.UTXOManager.ForEachOutput(outputConsumerFunc, opts...)
+	err = deps.UTXOManager.ForEachOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -174,6 +148,11 @@ func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
+	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
 	outputIDs := []string{}
 	outputConsumerFunc := func(output *utxo.Output) bool {
 		outputIDs = append(outputIDs, output.OutputID().ToHex())
@@ -184,13 +163,20 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		utxo.ReadLockLedger(false),
 	}
 
-	filter, err := typeFilterFromParams(c)
-	if err != nil {
-		return nil, err
+	if filterType != nil {
+		switch *filterType {
+		case iotago.OutputExtended:
+			err = deps.UTXOManager.ForEachUnspentExtendedOutput(nil, outputConsumerFunc, opts...)
+		case iotago.OutputAlias:
+			err = deps.UTXOManager.ForEachUnspentAliasOutput(nil, outputConsumerFunc, opts...)
+		case iotago.OutputNFT:
+			err = deps.UTXOManager.ForEachUnspentNFTOutput(nil, outputConsumerFunc, opts...)
+		case iotago.OutputFoundry:
+			err = deps.UTXOManager.ForEachUnspentFoundryOutput(nil, outputConsumerFunc, opts...)
+		}
+	} else {
+		err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, opts...)
 	}
-	opts = append(opts, filter...)
-
-	err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -202,24 +188,21 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
-	outputIDs := []string{}
+	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
 
+	outputIDs := []string{}
 	spentConsumerFunc := func(spent *utxo.Spent) bool {
+		if filterType != nil && spent.OutputType() != *filterType {
+			return true
+		}
 		outputIDs = append(outputIDs, spent.OutputID().ToHex())
 		return true
 	}
 
-	opts := []utxo.UTXOIterateOption{
-		utxo.ReadLockLedger(false),
-	}
-
-	filter, err := typeFilterFromParams(c)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, filter...)
-
-	err = deps.UTXOManager.ForEachSpentOutput(spentConsumerFunc, opts...)
+	err = deps.UTXOManager.ForEachSpentOutput(spentConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent outputs failed, error: %s", err)
 	}

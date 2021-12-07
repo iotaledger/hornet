@@ -324,6 +324,33 @@ func (u *Manager) ForEachUnspentOutputOnAddress(address iotago.Address, filterOp
 	return u.forEachUnspentOutput(consumerFunc, ms.Bytes(), opt.readLockLedger, opt.maxResultCount)
 }
 
+func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+	opt := iterateOptions(options)
+
+	if opt.readLockLedger {
+		u.ReadLockLedger()
+		defer u.ReadUnlockLedger()
+	}
+
+	if opt.maxResultCount != 0 {
+		panic("invalid filter options")
+	}
+
+	if err := u.ForEachUnspentExtendedOutput(nil, consumer); err != nil {
+		return err
+	}
+	if err := u.ForEachUnspentNFTOutput(nil, consumer); err != nil {
+		return err
+	}
+	if err := u.ForEachUnspentAliasOutput(nil, consumer); err != nil {
+		return err
+	}
+	if err := u.ForEachUnspentFoundryOutput(nil, consumer); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (u *Manager) UnspentExtendedOutputs(filterAddress iotago.Address, options ...UTXOIterateOption) (Outputs, error) {
 	var outputs Outputs
 	consumerFunc := func(output *Output) bool {
@@ -376,6 +403,19 @@ func (u *Manager) UnspentFoundryOutputs(filterFoundryID *iotago.FoundryID, optio
 	return outputs, nil
 }
 
+func (u *Manager) UnspentOutputsOnAddress(address iotago.Address, filterOptions *FilterOptions, options ...UTXOIterateOption) (Outputs, error) {
+	var outputs Outputs
+	consumerFunc := func(output *Output) bool {
+		outputs = append(outputs, output)
+		return true
+	}
+
+	if err := u.ForEachUnspentOutputOnAddress(address, filterOptions, consumerFunc, options...); err != nil {
+		return nil, err
+	}
+	return outputs, nil
+}
+
 func (u *Manager) ComputeAddressBalance(address iotago.Address, filterOptions *FilterOptions, options ...UTXOIterateOption) (balance uint64, count int, err error) {
 	balance = 0
 	count = 0
@@ -391,17 +431,6 @@ func (u *Manager) ComputeAddressBalance(address iotago.Address, filterOptions *F
 }
 
 func (u *Manager) ComputeLedgerBalance(options ...UTXOIterateOption) (balance uint64, count int, err error) {
-	opt := iterateOptions(options)
-
-	if opt.readLockLedger {
-		u.ReadLockLedger()
-		defer u.ReadUnlockLedger()
-	}
-
-	if opt.maxResultCount != 0 {
-		panic("invalid filter options")
-	}
-
 	balance = 0
 	count = 0
 	consumerFunc := func(output *Output) bool {
@@ -410,16 +439,7 @@ func (u *Manager) ComputeLedgerBalance(options ...UTXOIterateOption) (balance ui
 		return true
 	}
 
-	if err := u.ForEachUnspentExtendedOutput(nil, consumerFunc); err != nil {
-		return 0, 0, err
-	}
-	if err := u.ForEachUnspentNFTOutput(nil, consumerFunc); err != nil {
-		return 0, 0, err
-	}
-	if err := u.ForEachUnspentAliasOutput(nil, consumerFunc); err != nil {
-		return 0, 0, err
-	}
-	if err := u.ForEachUnspentFoundryOutput(nil, consumerFunc); err != nil {
+	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
 		return 0, 0, err
 	}
 	return balance, count, nil
