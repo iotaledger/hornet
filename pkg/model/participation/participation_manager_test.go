@@ -251,7 +251,7 @@ func TestIndexationPayloads(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			output, participations, err := env.ParticipationManager().ParticipationsFromMessage(tt.message)
+			output, participations, err := env.ParticipationManager().ParticipationsFromMessage(tt.message, 0)
 			require.NoError(t, err)
 
 			if tt.outputExists {

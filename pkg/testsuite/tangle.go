@@ -11,7 +11,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -48,7 +47,7 @@ func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 
 // AssertLedgerBalance generates an address for the given seed and index and checks correct balance.
 func (te *TestEnvironment) AssertLedgerBalance(wallet *utils.HDWallet, expectedBalance uint64) {
-	computedAddrBalance, _, err := te.storage.UTXOManager().ComputeBalance(utxo.FilterAddress(wallet.Address()))
+	computedAddrBalance, _, err := te.storage.UTXOManager().ComputeAddressBalance(wallet.Address(), nil)
 	require.NoError(te.TestInterface, err)
 
 	var balanceStatus string
@@ -62,7 +61,7 @@ func (te *TestEnvironment) AssertLedgerBalance(wallet *utils.HDWallet, expectedB
 
 // AssertWalletBalance generates an address for the given seed and index and checks correct balance.
 func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedBalance uint64) {
-	computedAddrBalance, _, err := te.storage.UTXOManager().ComputeBalance(utxo.FilterAddress(wallet.Address()))
+	computedAddrBalance, _, err := te.storage.UTXOManager().ComputeAddressBalance(wallet.Address(), nil)
 	require.NoError(te.TestInterface, err)
 
 	var balanceStatus string

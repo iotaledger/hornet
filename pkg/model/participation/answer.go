@@ -57,12 +57,6 @@ func (a *Answer) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx 
 	return serializer.NewSerializer().
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-				if len(a.Text) > AnswerTextMaxLength {
-					return fmt.Errorf("%w: text too long. Max allowed %d", ErrSerializationStringLengthInvalid, AnswerTextMaxLength)
-				}
-				if len(a.AdditionalInfo) > AnswerAdditionalInfoMaxLength {
-					return fmt.Errorf("%w: additional info too long. Max allowed %d", ErrSerializationStringLengthInvalid, AnswerAdditionalInfoMaxLength)
-				}
 				if a.Value == AnswerValueSkipped || a.Value == AnswerValueInvalid {
 					return fmt.Errorf("%w: answer is using a reserved value %d", ErrSerializationReservedValue, a.Value)
 				}
@@ -74,10 +68,10 @@ func (a *Answer) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx 
 		}).
 		WriteString(a.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize participation answer text: %w", err)
-		}).
+		}, AnswerTextMaxLength).
 		WriteString(a.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to serialize participation answer additional info: %w", err)
-		}).
+		}, AnswerAdditionalInfoMaxLength).
 		Serialize()
 }
 

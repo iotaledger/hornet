@@ -94,8 +94,8 @@ func TestQuestion_Serialize(t *testing.T) {
 		err    error
 	}{
 		{"ok", validQuestion, validQuestionData, nil},
-		{"too long text", longTextQuestion, longTextQuestionData, participation.ErrSerializationStringLengthInvalid},
-		{"too long additional info", longAdditionalInfoQuestion, longAdditionalInfoQuestionData, participation.ErrSerializationStringLengthInvalid},
+		{"too long text", longTextQuestion, longTextQuestionData, serializer.ErrStringTooLong},
+		{"too long additional info", longAdditionalInfoQuestion, longAdditionalInfoQuestionData, serializer.ErrStringTooLong},
 		{"max answers", maxAnswersQuestion, maxAnswersQuestionData, nil},
 		{"no answers", noAnswersQuestion, noAnswersQuestionData, serializer.ErrArrayValidationMinElementsNotReached},
 		{"too many answers", tooManyAnswersQuestion, tooManyAnswersQuestionData, serializer.ErrArrayValidationMaxElementsExceeded},

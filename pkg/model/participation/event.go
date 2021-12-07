@@ -143,18 +143,12 @@ func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx i
 				if e.Payload == nil {
 					return fmt.Errorf("%w: unable to serialize event, payload cannot be empty", ErrPayloadEmpty)
 				}
-				if len(e.Name) > EventNameMaxLength {
-					return fmt.Errorf("%w: unable to serialize event, name too long. Max allowed %d", ErrSerializationStringLengthInvalid, EventNameMaxLength)
-				}
-				if len(e.AdditionalInfo) > EventAdditionalInfoMaxLength {
-					return fmt.Errorf("%w: unable to serialize event, additional info too long. Max allowed %d", ErrSerializationStringLengthInvalid, EventAdditionalInfoMaxLength)
-				}
 			}
 			return nil
 		}).
 		WriteString(e.Name, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize event name: %w", err)
-		}).
+		}, EventNameMaxLength).
 		WriteNum(e.MilestoneIndexCommence, func(err error) error {
 			return fmt.Errorf("unable to serialize event commence milestone: %w", err)
 		}).
@@ -169,7 +163,7 @@ func (e *Event) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx i
 		}).
 		WriteString(e.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to serialize event additional info: %w", err)
-		}).
+		}, EventAdditionalInfoMaxLength).
 		Serialize()
 }
 

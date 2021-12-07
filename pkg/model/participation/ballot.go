@@ -72,14 +72,6 @@ func (q *Ballot) Deserialize(data []byte, deSeriMode serializer.DeSerializationM
 
 func (q *Ballot) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
-		AbortIf(func(err error) error {
-			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-				if err := questionsArrayRules.CheckBounds(uint(len(q.Questions))); err != nil {
-					return fmt.Errorf("unable to serialize participation questions: %w", err)
-				}
-			}
-			return nil
-		}).
 		WriteNum(BallotPayloadTypeID, func(err error) error {
 			return fmt.Errorf("%w: unable to serialize ballot payload ID", err)
 		}).

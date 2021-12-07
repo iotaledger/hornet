@@ -85,14 +85,8 @@ func (s *Staking) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx
 				if s.Numerator == 0 || s.Denominator == 0 {
 					return ErrInvalidNumeratorOrDenominator
 				}
-				if len(s.Text) > StakingTextMaxLength {
-					return fmt.Errorf("%w: text too long. Max allowed %d", ErrSerializationStringLengthInvalid, StakingTextMaxLength)
-				}
-				if len(s.Symbol) < StakingSymbolMinLength || len(s.Symbol) > StakingSymbolMaxLength {
+				if len(s.Symbol) < StakingSymbolMinLength {
 					return fmt.Errorf("%w: symbol length invalid. Min %d Max %d", ErrSerializationStringLengthInvalid, StakingSymbolMinLength, StakingSymbolMaxLength)
-				}
-				if len(s.AdditionalInfo) > StakingAdditionalInfoMaxLength {
-					return fmt.Errorf("%w: additional info too long. Max allowed %d", ErrSerializationStringLengthInvalid, StakingAdditionalInfoMaxLength)
 				}
 			}
 			return nil
@@ -102,10 +96,10 @@ func (s *Staking) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx
 		}).
 		WriteString(s.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize staking text: %w", err)
-		}).
+		}, StakingTextMaxLength).
 		WriteString(s.Symbol, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize staking symbol: %w", err)
-		}).
+		}, StakingSymbolMaxLength).
 		WriteNum(s.Numerator, func(err error) error {
 			return fmt.Errorf("unable to serialize staking numerator: %w", err)
 		}).
@@ -117,7 +111,7 @@ func (s *Staking) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx
 		}).
 		WriteString(s.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to serialize staking additional info: %w", err)
-		}).
+		}, StakingAdditionalInfoMaxLength).
 		Serialize()
 }
 

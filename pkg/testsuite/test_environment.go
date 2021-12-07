@@ -163,7 +163,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		Address: genesisAddress,
 		Amount:  iotago.TokenSupply,
 	}
-	te.GenesisOutput = utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), output)
+	te.GenesisOutput = utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, output)
 	err = te.storage.UTXOManager().AddUnspentOutput(te.GenesisOutput)
 	require.NoError(te.TestInterface, err)
 
@@ -214,6 +214,10 @@ func (te *TestEnvironment) SyncManager() *syncmanager.SyncManager {
 
 func (te *TestEnvironment) BelowMaxDepth() milestone.Index {
 	return te.belowMaxDepth
+}
+
+func (te *TestEnvironment) LastMilestoneIndex() milestone.Index {
+	return te.Milestones[len(te.Milestones)-1].Milestone().Index
 }
 
 // CleanupTestEnvironment cleans up everything at the end of the test.

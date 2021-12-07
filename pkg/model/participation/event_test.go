@@ -146,8 +146,8 @@ func TestEvent_Serialize(t *testing.T) {
 	}{
 		{"ok ballot", eventWithBallot, eventWithBallotData, nil},
 		{"ok staking", eventWithStaking, eventWithStakingData, nil},
-		{"too long text", longName, longNameData, participation.ErrSerializationStringLengthInvalid},
-		{"too long additional info", longAdditionalInfo, longAdditionalInfoData, participation.ErrSerializationStringLengthInvalid},
+		{"too long text", longName, longNameData, serializer.ErrStringTooLong},
+		{"too long additional info", longAdditionalInfo, longAdditionalInfoData, serializer.ErrStringTooLong},
 		{"no payload", emptyEvent, emptyEventData, participation.ErrPayloadEmpty},
 		{"invalid start", startBeforeCommence, startBeforeCommenceData, participation.ErrInvalidMilestoneSequence},
 		{"invalid end", endBeforeStart, endBeforeStartData, participation.ErrInvalidMilestoneSequence},

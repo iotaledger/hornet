@@ -80,8 +80,8 @@ func TestAnswer_Serialize(t *testing.T) {
 		err    error
 	}{
 		{"ok", randAnswer, randAnswerData, nil},
-		{"too long text", longTextAnswer, longTextAnswerData, participation.ErrSerializationStringLengthInvalid},
-		{"too long additional info", longAdditionalInfoAnswer, longAdditionalInfoAnswerData, participation.ErrSerializationStringLengthInvalid},
+		{"too long text", longTextAnswer, longTextAnswerData, serializer.ErrStringTooLong},
+		{"too long additional info", longAdditionalInfoAnswer, longAdditionalInfoAnswerData, serializer.ErrStringTooLong},
 		{"using skipped value", skippedValue, skippedValueData, participation.ErrSerializationReservedValue},
 		{"using invalid value", invalidValue, invalidValueData, participation.ErrSerializationReservedValue},
 	}

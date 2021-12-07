@@ -82,26 +82,15 @@ func (q *Question) Deserialize(data []byte, deSeriMode serializer.DeSerializatio
 
 func (q *Question) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
-		AbortIf(func(err error) error {
-			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-				if len(q.Text) > QuestionTextMaxLength {
-					return fmt.Errorf("%w: text too long. Max allowed %d", ErrSerializationStringLengthInvalid, QuestionTextMaxLength)
-				}
-				if len(q.AdditionalInfo) > QuestionAdditionalInfoMaxLength {
-					return fmt.Errorf("%w: additional info too long. Max allowed %d", ErrSerializationStringLengthInvalid, QuestionAdditionalInfoMaxLength)
-				}
-			}
-			return nil
-		}).
 		WriteString(q.Text, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
 			return fmt.Errorf("unable to serialize participation question text: %w", err)
-		}).
+		}, QuestionTextMaxLength).
 		WriteSliceOfObjects(&q.Answers, deSeriMode, deSeriCtx, serializer.SeriLengthPrefixTypeAsByte, answersArrayRules, func(err error) error {
 			return fmt.Errorf("unable to serialize participation question answers: %w", err)
 		}).
 		WriteString(q.AdditionalInfo, serializer.SeriLengthPrefixTypeAsUint16, func(err error) error {
 			return fmt.Errorf("unable to serialize participation question additional info: %w", err)
-		}).
+		}, QuestionAdditionalInfoMaxLength).
 		Serialize()
 }
 

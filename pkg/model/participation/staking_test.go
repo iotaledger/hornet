@@ -103,10 +103,10 @@ func TestStaking_Serialize(t *testing.T) {
 		err    error
 	}{
 		{"ok", staking, stakingData, nil},
-		{"too long text", longName, longNameData, participation.ErrSerializationStringLengthInvalid},
+		{"too long text", longName, longNameData, serializer.ErrStringTooLong},
 		{"too short symbol", shortSymbol, shortSymbolData, participation.ErrSerializationStringLengthInvalid},
-		{"too long symbol", longSymbol, longSymbolData, participation.ErrSerializationStringLengthInvalid},
-		{"too long additional info", longAdditionalInfo, longAdditionalInfoData, participation.ErrSerializationStringLengthInvalid},
+		{"too long symbol", longSymbol, longSymbolData, serializer.ErrStringTooLong},
+		{"too long additional info", longAdditionalInfo, longAdditionalInfoData, serializer.ErrStringTooLong},
 		{"invalid numerator", invalidNumerator, invalidNumeratorData, participation.ErrInvalidNumeratorOrDenominator},
 		{"invalid denominator", invalidDenominator, invalidDenominatorData, participation.ErrInvalidNumeratorOrDenominator},
 	}

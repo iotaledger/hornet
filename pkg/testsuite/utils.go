@@ -148,7 +148,7 @@ func (b *MessageBuilder) Build() *Message {
 				Address: fromAddr,
 				Amount:  b.amount,
 			}
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, hornet.NullMessageID(), fakeInput))
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, hornet.NullMessageID(), 0, fakeInput))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -223,7 +223,7 @@ func (b *MessageBuilder) Build() *Message {
 	messageTx := message.Transaction()
 	txEssence := messageTx.Essence
 	for i := range txEssence.Outputs {
-		output, err := utxo.NewOutput(message.MessageID(), messageTx, uint16(i))
+		output, err := utxo.NewOutput(message.MessageID(), b.te.LastMilestoneIndex()+1, messageTx, uint16(i))
 		require.NoError(b.te.TestInterface, err)
 
 		if output.Address().String() == toAddr.String() && output.Amount() == b.amount {
