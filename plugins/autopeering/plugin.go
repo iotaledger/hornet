@@ -266,7 +266,7 @@ func configureEvents() {
 		}
 
 		if deps.AutopeeringManager.Selection() != nil {
-		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peerOptErr.Peer, Plugin.LogWarnf); id != nil {
+			if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(peerOptErr.Peer, Plugin.LogWarnf); id != nil {
 				Plugin.LogInfof("removing: %s", peerOptErr.Peer.ID.ShortString())
 				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 			}
@@ -278,7 +278,7 @@ func configureEvents() {
 			return
 		}
 		if deps.AutopeeringManager.Selection() != nil {
-		if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf); id != nil {
+			if id := autopeering.ConvertPeerIDToHiveIdentityOrLog(p, Plugin.LogWarnf); id != nil {
 				Plugin.LogInfof("removing %s from autopeering selection protocol", p.ID.ShortString())
 				deps.AutopeeringManager.Selection().RemoveNeighbor(id.ID())
 			}
@@ -324,11 +324,9 @@ func configureEvents() {
 		Plugin.LogInfof("[incoming peering] allow autopeering peer %s", addrInfo.ID.ShortString())
 
 		handleSelection(ev, addrInfo, func() {
-			// TODO: maybe do whitelisting instead?
-			//Plugin.LogInfof("connecting to %s", addrInfo)
-			//if err := deps.Manager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
-			//	Plugin.LogWarnf("couldn't add autopeering peer %s", err)
-			//}
+			if err := deps.PeeringManager.AllowPeer(addrInfo.ID); err != nil {
+				Plugin.LogWarnf("couldn't allow autopeering peer %s: %s", addrInfo.ID.ShortString(), err)
+			}
 		})
 	})
 
@@ -340,6 +338,10 @@ func configureEvents() {
 		}
 
 		Plugin.LogInfof("[dropped event] disconnecting %s / %s", ev.Peer.Address(), peerID.ShortString())
+
+		if err := deps.PeeringManager.DisallowPeer(peerID); err != nil {
+			Plugin.LogWarnf("couldn't disallow autopeering peer %s: %s", peerID.ShortString(), err)
+		}
 
 		var peerRelation p2p.PeerRelation
 		deps.PeeringManager.Call(peerID, func(p *p2p.Peer) {
@@ -400,7 +402,7 @@ func clearFromAutopeeringSelector(ev *selection.PeeringEvent) {
 	}
 
 	if deps.AutopeeringManager.Selection() != nil {
-	Plugin.LogInfof("peer is statically peered already %s, removing from autopeering selection protocol", peerID.ShortString())
+		Plugin.LogInfof("peer is statically peered already %s, removing from autopeering selection protocol", peerID.ShortString())
 		deps.AutopeeringManager.Selection().RemoveNeighbor(ev.Peer.ID())
 	}
 }
