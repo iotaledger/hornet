@@ -376,7 +376,7 @@ func handleSelection(ev *selection.PeeringEvent, addrInfo *libp2p.AddrInfo, noRe
 		clearFromAutopeeringSelector(ev)
 
 	case p2p.PeerRelationUnknown:
-		updatePeerRelationToDiscovered(addrInfo)
+		clearFromAutopeeringSelector(ev)
 
 	case p2p.PeerRelationAutopeered:
 		handleAlreadyAutopeered(addrInfo)
@@ -389,13 +389,6 @@ func handleSelection(ev *selection.PeeringEvent, addrInfo *libp2p.AddrInfo, noRe
 // logs a warning about a from the selector seen peer which is already autopeered.
 func handleAlreadyAutopeered(addrInfo *libp2p.AddrInfo) {
 	Plugin.LogWarnf("peer is already autopeered %s", addrInfo.ID.ShortString())
-}
-
-// updates the given peers relation to discovered.
-func updatePeerRelationToDiscovered(addrInfo *libp2p.AddrInfo) {
-	if err := deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationAutopeered); err != nil {
-		Plugin.LogWarnf("couldn't update unknown peer to 'discovered' %s: %s", addrInfo.ID.ShortString(), err)
-	}
 }
 
 // clears an already statically peered from the autopeering selector.
