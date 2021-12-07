@@ -120,13 +120,6 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 			return err
 		}
 
-		//TODO: find replacement
-		// Verify transaction syntax
-		//if err := transaction.SyntacticallyValidate(); err != nil {
-		//	// We do not mark as conflict here but error out, because the message should not be part of a sane tangle if the syntax is wrong
-		//	return err
-		//}
-
 		inputs := message.TransactionEssenceUTXOInputs()
 
 		// go through all the inputs and validate that they are still unspent, in the ledger or were created during confirmation
@@ -176,14 +169,8 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		}
 
 		if conflict == storage.ConflictNone {
-
 			// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
-			mapping, err := inputOutputs.InputToOutputMapping()
-			if err != nil {
-				return err
-			}
-			if err := transaction.SemanticallyValidate(semValCtx, mapping); err != nil {
-
+			if err := transaction.SemanticallyValidate(semValCtx, inputOutputs.ToOutputSet()); err != nil {
 				if errors.Is(err, iotago.ErrMissingUTXO) {
 					conflict = storage.ConflictInputUTXONotFound
 				} else if errors.Is(err, iotago.ErrInputOutputSumMismatch) {
@@ -197,7 +184,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		}
 
 		// go through all deposits and generate unspent outputs
-		depositOutputs := utxo.Outputs{}
+		generatedOutputs := utxo.Outputs{}
 		if conflict == storage.ConflictNone {
 
 			transactionEssence := message.TransactionEssence()
@@ -210,7 +197,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 				if err != nil {
 					return err
 				}
-				depositOutputs = append(depositOutputs, output)
+				generatedOutputs = append(generatedOutputs, output)
 			}
 		}
 
@@ -237,7 +224,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		}
 
 		// add new outputs
-		for _, output := range depositOutputs {
+		for _, output := range generatedOutputs {
 			wfConf.NewOutputs[string(output.OutputID()[:])] = output
 		}
 

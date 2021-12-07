@@ -68,12 +68,12 @@ func (o *Output) Amount() uint64 {
 
 type Outputs []*Output
 
-func (o Outputs) InputToOutputMapping() (iotago.OutputSet, error) {
+func (o Outputs) ToOutputSet() iotago.OutputSet {
 	outputSet := make(iotago.OutputSet)
 	for _, output := range o {
 		outputSet[*output.outputID] = output.output
 	}
-	return outputSet, nil
+	return outputSet
 }
 
 func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milestoneIndex milestone.Index, output iotago.Output) *Output {
