@@ -63,7 +63,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 
 	var outputs snapshot.LexicalOrderedOutputs
 	if err := dbStorage.UTXOManager().ForEachUnspentOutput(func(output *utxo.Output) bool {
-		outputs = append(outputs, &snapshot.Output{MessageID: output.MessageID().ToArray(), OutputID: *output.OutputID(), OutputType: output.OutputType(), Address: output.Address(), Amount: output.Amount()})
+		outputs = append(outputs, output)
 		return true
 	}); err != nil {
 		return err
@@ -99,11 +99,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 
 	// write all unspent outputs in lexicographical order
 	for _, output := range outputs {
-		outputBytes, err := output.MarshalBinary()
-		if err != nil {
-			return fmt.Errorf("unable to serialize output %s: %w", hex.EncodeToString(output.OutputID[:]), err)
-		}
-
+		outputBytes := output.SnapshotBytes()
 		if err = binary.Write(lsHash, binary.LittleEndian, outputBytes); err != nil {
 			return fmt.Errorf("unable to calculate snapshot hash: %w", err)
 		}

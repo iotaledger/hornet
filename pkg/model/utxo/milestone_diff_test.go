@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/testsuite"
+	"github.com/gohornet/hornet/pkg/model/utxo/utils"
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -16,9 +16,9 @@ import (
 func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	confirmationIndex := milestone.Index(255975)
 
-	outputID := testsuite.RandOutputID()
-	messageID := RandMessageID()
-	address := testsuite.RandAddress(iotago.AddressEd25519)
+	outputID := utils.RandOutputID()
+	messageID := utils.RandMessageID()
+	address := utils.RandAddress(iotago.AddressEd25519)
 	amount := uint64(832493)
 	iotaOutput := &iotago.ExtendedOutput{
 		Address: address,
@@ -27,7 +27,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	output := CreateOutput(outputID, messageID, confirmationIndex, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
-	copy(transactionID[:], RandBytes(iotago.TransactionIDLength))
+	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
 	spent := NewSpent(output, transactionID, confirmationIndex)
 
@@ -52,11 +52,11 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 }
 
 func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
-	outputID := testsuite.RandOutputID()
-	messageID := RandMessageID()
-	address := testsuite.RandAddress(iotago.AddressEd25519)
+	outputID := utils.RandOutputID()
+	messageID := utils.RandMessageID()
+	address := utils.RandAddress(iotago.AddressEd25519)
 	amount := uint64(235234)
-	msIndex := testsuite.RandMilestoneIndex()
+	msIndex := utils.RandMilestoneIndex()
 	iotaOutput := &iotago.ExtendedOutput{
 		Address: address,
 		Amount:  amount,
@@ -64,14 +64,14 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	output := CreateOutput(outputID, messageID, msIndex, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
-	copy(transactionID[:], RandBytes(iotago.TransactionIDLength))
+	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
 	confirmationIndex := milestone.Index(255975)
 
 	spent := NewSpent(output, transactionID, confirmationIndex)
 
 	spentMilestoneID := iotago.MilestoneID{}
-	copy(spentMilestoneID[:], RandBytes(iotago.MilestoneIDLength))
+	copy(spentMilestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
 
 	spentTreasuryOutput := &TreasuryOutput{
 		MilestoneID: spentMilestoneID,
@@ -80,7 +80,7 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	}
 
 	milestoneID := iotago.MilestoneID{}
-	copy(milestoneID[:], RandBytes(iotago.MilestoneIDLength))
+	copy(milestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
 
 	treasuryOutput := &TreasuryOutput{
 		MilestoneID: milestoneID,
@@ -112,43 +112,27 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	require.Equal(t, value[109:141], spentMilestoneID[:])
 }
 
-func EqualOutputs(t *testing.T, expected Outputs, actual Outputs) {
-	require.Equal(t, len(expected), len(actual))
-
-	for i := 0; i < len(expected); i++ {
-		EqualOutput(t, expected[i], actual[i])
-	}
-}
-
-func EqualSpents(t *testing.T, expected Spents, actual Spents) {
-	require.Equal(t, len(expected), len(actual))
-
-	for i := 0; i < len(expected); i++ {
-		EqualSpent(t, expected[i], actual[i])
-	}
-}
-
 func TestMilestoneDiffSerialization(t *testing.T) {
 
 	utxo := New(mapdb.NewMapDB())
 
 	outputs := Outputs{
-		testsuite.RandOutput(iotago.OutputExtended),
-		testsuite.RandOutput(iotago.OutputExtended),
-		testsuite.RandOutput(iotago.OutputExtended),
-		testsuite.RandOutput(iotago.OutputExtended),
-		testsuite.RandOutput(iotago.OutputExtended),
+		RandUTXOOutput(iotago.OutputExtended),
+		RandUTXOOutput(iotago.OutputExtended),
+		RandUTXOOutput(iotago.OutputExtended),
+		RandUTXOOutput(iotago.OutputExtended),
+		RandUTXOOutput(iotago.OutputExtended),
 	}
 
 	msIndex := milestone.Index(756)
 
 	spents := Spents{
-		testsuite.RandSpent(outputs[3], msIndex),
-		testsuite.RandSpent(outputs[2], msIndex),
+		RandUTXOSpent(outputs[3], msIndex),
+		RandUTXOSpent(outputs[2], msIndex),
 	}
 
 	spentMilestoneID := iotago.MilestoneID{}
-	copy(spentMilestoneID[:], RandBytes(iotago.MilestoneIDLength))
+	copy(spentMilestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
 
 	spentTreasuryOutput := &TreasuryOutput{
 		MilestoneID: spentMilestoneID,
@@ -157,7 +141,7 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	}
 
 	milestoneID := iotago.MilestoneID{}
-	copy(milestoneID[:], RandBytes(iotago.MilestoneIDLength))
+	copy(milestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
 
 	treasuryOutput := &TreasuryOutput{
 		MilestoneID: milestoneID,

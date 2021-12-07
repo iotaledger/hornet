@@ -105,23 +105,17 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 
 	// unspent transaction outputs
 	outputAdded := false
-	outputProducerFunc := func() (*snapshot.Output, error) {
+	outputProducerFunc := func() (*utxo.Output, error) {
 		if outputAdded {
 			return nil, nil
 		}
 
 		outputAdded = true
 
-		var nullMessageID [iotago.MessageIDLength]byte
-		var nullOutputID [iotago.OutputIDLength]byte
-
-		return &snapshot.Output{
-			MessageID:  nullMessageID,
-			OutputID:   nullOutputID,
-			OutputType: iotago.OutputExtended,
-			Address:    &address,
-			Amount:     iotago.TokenSupply - treasury,
-		}, nil
+		return utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, &iotago.ExtendedOutput{
+			Address: &address,
+			Amount:  iotago.TokenSupply - treasury,
+		}), nil
 	}
 
 	// milestone diffs

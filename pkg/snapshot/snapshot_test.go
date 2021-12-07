@@ -11,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/model/utxo/utils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -38,37 +39,23 @@ func randomAddress() *iotago.Ed25519Address {
 
 //nolint:unparam // maybe address will be used in the future
 func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo.Output {
-	outputID := &iotago.OutputID{}
-	copy(outputID[:], randBytes(34))
-
-	messageID := randMessageID()
-
-	var addr iotago.Address
+	var output iotago.Output
 	if len(address) > 0 {
-		addr = address[0]
+		output = utils.RandOutputOnAddress(outputType, address[0])
 	} else {
-		addr = randomAddress()
+		output = utils.RandOutput(outputType)
 	}
-
-	amount := uint64(rand.Intn(2156465))
-	output := &iotago.ExtendedOutput{
-		Address: addr,
-		Amount:  amount,
-	}
-	msIndex := milestone.Index(rand.Uint32())
-	return utxo.CreateOutput(outputID, messageID, msIndex, output)
+	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), output)
 }
 
 func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
-	transactionID := &iotago.TransactionID{}
-	copy(transactionID[:], randBytes(iotago.TransactionIDLength))
 
-	confirmationIndex := milestone.Index(rand.Intn(216589))
+	confirmationIndex := utils.RandMilestoneIndex()
 	if len(msIndex) > 0 {
 		confirmationIndex = msIndex[0]
 	}
 
-	return utxo.NewSpent(output, transactionID, confirmationIndex)
+	return utxo.NewSpent(output, utils.RandTransactionID(), confirmationIndex)
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
@@ -134,7 +121,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	map2 := mapdb.NewMapDB()
 	u2 := utxo.New(map2)
 
-	count := 5000
+	count := 1000
 
 	// Fill up the UTXO
 	var err error
@@ -142,23 +129,41 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		err = u1.AddUnspentOutput(randomOutput(iotago.OutputExtended))
 		require.NoError(t, err)
 
-		err = u1.AddUnspentOutput(randomOutput(iotago.OutputExtended))
+		err = u1.AddUnspentOutput(randomOutput(iotago.OutputAlias))
+		require.NoError(t, err)
+
+		err = u1.AddUnspentOutput(randomOutput(iotago.OutputNFT))
+		require.NoError(t, err)
+
+		err = u1.AddUnspentOutput(randomOutput(iotago.OutputFoundry))
 		require.NoError(t, err)
 	}
 
 	// Count the outputs in the ledger
-	var singleCount int
+	var extendedCount int
+	var nftCount int
+	var foundryCount int
+	var aliasCount int
 	err = u1.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
 		case iotago.OutputExtended:
-			singleCount++
+			extendedCount++
+		case iotago.OutputNFT:
+			nftCount++
+		case iotago.OutputFoundry:
+			foundryCount++
+		case iotago.OutputAlias:
+			aliasCount++
 		default:
 			require.Fail(t, "invalid output type")
 		}
 		return true
 	})
 	require.NoError(t, err)
-	require.Equal(t, count, singleCount)
+	require.Equal(t, count, extendedCount)
+	require.Equal(t, count, nftCount)
+	require.Equal(t, count, foundryCount)
+	require.Equal(t, count, aliasCount)
 
 	// Pass all outputs from u1 to u2 over the snapshot serialization functions
 	producer := newCMIUTXOProducer(u1)
@@ -195,18 +200,30 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Count the outputs in the new ledger
-	singleCount = 0
+	extendedCount = 0
+	nftCount = 0
+	foundryCount = 0
+	aliasCount = 0
 	err = u2.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
 		case iotago.OutputExtended:
-			singleCount++
+			extendedCount++
+		case iotago.OutputNFT:
+			nftCount++
+		case iotago.OutputFoundry:
+			foundryCount++
+		case iotago.OutputAlias:
+			aliasCount++
 		default:
 			require.Fail(t, "invalid output type")
 		}
 		return true
 	})
 	require.NoError(t, err)
-	require.Equal(t, count, singleCount)
+	require.Equal(t, count, extendedCount)
+	require.Equal(t, count, nftCount)
+	require.Equal(t, count, foundryCount)
+	require.Equal(t, count, aliasCount)
 }
 
 func TestMsIndexIteratorOnwards(t *testing.T) {

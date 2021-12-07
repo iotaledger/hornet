@@ -1,4 +1,4 @@
-package testsuite
+package utils
 
 import (
 	"math/big"
@@ -6,8 +6,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/testutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -32,7 +30,7 @@ func RandMessageID() hornet.MessageID {
 
 func RandTransactionID() *iotago.TransactionID {
 	transactionID := &iotago.TransactionID{}
-	copy(transactionID[:], randBytes(iotago.TransactionIDLength))
+	copy(transactionID[:], RandBytes(iotago.TransactionIDLength))
 	return transactionID
 }
 
@@ -62,7 +60,7 @@ func RandAddress(addressType iotago.AddressType) iotago.Address {
 	switch addressType {
 	case iotago.AddressEd25519:
 		address := &iotago.Ed25519Address{}
-		addressBytes := randBytes(32)
+		addressBytes := RandBytes(32)
 		copy(address[:], addressBytes)
 		return address
 	case iotago.AddressNFT:
@@ -76,7 +74,7 @@ func RandAddress(addressType iotago.AddressType) iotago.Address {
 
 func RandOutputID() *iotago.OutputID {
 	outputID := &iotago.OutputID{}
-	copy(outputID[:], testutil.RandBytes(iotago.OutputIDLength))
+	copy(outputID[:], RandBytes(iotago.OutputIDLength))
 	return outputID
 }
 
@@ -84,7 +82,7 @@ func RandOutputType() iotago.OutputType {
 	return iotago.OutputType(byte(rand.Intn(3) + 3))
 }
 
-func RandOutput(outputType iotago.OutputType) *utxo.Output {
+func RandOutput(outputType iotago.OutputType) iotago.Output {
 	var addr iotago.Address
 	if outputType == iotago.OutputFoundry {
 		addr = RandAddress(iotago.AddressAlias)
@@ -94,14 +92,11 @@ func RandOutput(outputType iotago.OutputType) *utxo.Output {
 	return RandOutputOnAddress(outputType, addr)
 }
 
-func RandOutputOnAddress(outputType iotago.OutputType, address iotago.Address) *utxo.Output {
-	return RandOutputOnAddressWithAmount(outputType, address, uint64(rand.Intn(2156465)))
+func RandOutputOnAddress(outputType iotago.OutputType, address iotago.Address) iotago.Output {
+	return RandOutputOnAddressWithAmount(outputType, address, rand.Uint64())
 }
 
-func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.Address, amount uint64) *utxo.Output {
-	outputID := RandOutputID()
-	messageID := RandMessageID()
-	msIndex := RandMilestoneIndex()
+func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.Address, amount uint64) iotago.Output {
 
 	var iotaOutput iotago.Output
 
@@ -144,9 +139,5 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 		panic("unhandled output type")
 	}
 
-	return utxo.CreateOutput(outputID, messageID, msIndex, iotaOutput)
-}
-
-func RandSpent(output *utxo.Output, index milestone.Index) *utxo.Spent {
-	return utxo.NewSpent(output, RandTransactionID(), index)
+	return iotaOutput
 }

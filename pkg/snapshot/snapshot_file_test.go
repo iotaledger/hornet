@@ -1,9 +1,11 @@
 package snapshot_test
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"os"
+	"sort"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/model/utxo/utils"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -153,9 +156,19 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			// verify that what has been written also has been read again
 			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
 			if tt.originHeader.Type == snapshot.Full {
-				require.EqualValues(t, tt.outputGenRetriever(), tt.outputConRetriever())
+				EqualOutputs(t, tt.outputGenRetriever(), tt.outputConRetriever())
 			}
-			require.EqualValues(t, tt.msDiffGenRetriever(), tt.msDiffConRetriever())
+
+			msDiffGen := tt.msDiffGenRetriever()
+			msDiffCon := tt.msDiffConRetriever()
+			for i := range msDiffGen {
+				gen := msDiffGen[i]
+				con := msDiffCon[i]
+				require.EqualValues(t, gen.Milestone, con.Milestone)
+				require.EqualValues(t, gen.SpentTreasuryOutput, con.SpentTreasuryOutput)
+				EqualOutputs(t, gen.Created, con.Created)
+				EqualSpents(t, gen.Consumed, con.Consumed)
+			}
 		})
 	}
 
@@ -170,7 +183,7 @@ func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 				return nil, nil
 			}
 			count--
-			msgID := testsuite.RandMessageID()
+			msgID := utils.RandMessageID()
 			generatedSEPs = append(generatedSEPs, msgID)
 			return msgID, nil
 		}, func() hornet.MessageIDs {
@@ -237,17 +250,17 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			}
 			count--
 
-			parents := iotago.MilestoneParentMessageIDs{testsuite.RandMessageID().ToArray()}
-			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint64(), parents, testsuite.Rand32ByteHash(), pubKeys)
+			parents := iotago.MilestoneParentMessageIDs{utils.RandMessageID().ToArray()}
+			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint64(), parents, utils.Rand32ByteHash(), pubKeys)
 			if err != nil {
 				panic(err)
 			}
 
 			treasuryInput := &iotago.TreasuryInput{}
-			copy(treasuryInput[:], testsuite.RandBytes(32))
-			ed25519Addr := testsuite.RandAddress(iotago.AddressEd25519)
+			copy(treasuryInput[:], utils.RandBytes(32))
+			ed25519Addr := utils.RandAddress(iotago.AddressEd25519)
 			migratedFundsEntry := &iotago.MigratedFundsEntry{Address: ed25519Addr, Deposit: rand.Uint64()}
-			copy(migratedFundsEntry.TailTransactionHash[:], testsuite.RandBytes(49))
+			copy(migratedFundsEntry.TailTransactionHash[:], utils.RandBytes(49))
 			receipt, err := iotago.NewReceiptBuilder(ms.Index).
 				AddTreasuryTransaction(&iotago.TreasuryTransaction{
 					Input:  treasuryInput,
@@ -276,11 +289,11 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 
 			consumedCount := rand.Intn(500) + 1
 			for i := 0; i < consumedCount; i++ {
-				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents())
+				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents(milestone.Index(ms.Index)))
 			}
 
 			msDiff.SpentTreasuryOutput = &utxo.TreasuryOutput{
-				MilestoneID: testsuite.Rand32ByteHash(),
+				MilestoneID: utils.Rand32ByteHash(),
 				Amount:      uint64(rand.Intn(1000)),
 				Spent:       true, // doesn't matter
 			}
@@ -317,9 +330,57 @@ func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *u
 }
 
 func randLSTransactionUnspentOutputs() *utxo.Output {
-	return testsuite.RandOutput(testsuite.RandOutputType())
+	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), utils.RandOutput(utils.RandOutputType()))
 }
 
-func randLSTransactionSpents() *utxo.Spent {
-	return testsuite.RandSpent(testsuite.RandOutput(testsuite.RandOutputType()), testsuite.RandMilestoneIndex())
+func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
+	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex)
+}
+
+func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
+	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
+	require.Equal(t, expected.MessageID()[:], actual.MessageID()[:])
+	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
+	require.Equal(t, expected.OutputType(), actual.OutputType())
+	require.Equal(t, expected.Amount(), actual.Amount())
+	require.EqualValues(t, expected.Output(), actual.Output())
+}
+
+func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
+	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
+	require.Equal(t, expected.TargetTransactionID()[:], actual.TargetTransactionID()[:])
+	require.Equal(t, expected.ConfirmationIndex(), actual.ConfirmationIndex())
+	EqualOutput(t, expected.Output(), actual.Output())
+}
+
+func EqualOutputs(t *testing.T, expected utxo.Outputs, actual utxo.Outputs) {
+	require.Equal(t, len(expected), len(actual))
+
+	// Sort Outputs by output ID.
+	sort.Slice(expected, func(i, j int) bool {
+		return bytes.Compare(expected[i].OutputID()[:], expected[j].OutputID()[:]) == -1
+	})
+	sort.Slice(actual, func(i, j int) bool {
+		return bytes.Compare(actual[i].OutputID()[:], actual[j].OutputID()[:]) == -1
+	})
+
+	for i := 0; i < len(expected); i++ {
+		EqualOutput(t, expected[i], actual[i])
+	}
+}
+
+func EqualSpents(t *testing.T, expected utxo.Spents, actual utxo.Spents) {
+	require.Equal(t, len(expected), len(actual))
+
+	// Sort Spents by output ID.
+	sort.Slice(expected, func(i, j int) bool {
+		return bytes.Compare(expected[i].OutputID()[:], expected[j].OutputID()[:]) == -1
+	})
+	sort.Slice(actual, func(i, j int) bool {
+		return bytes.Compare(actual[i].OutputID()[:], actual[j].OutputID()[:]) == -1
+	})
+
+	for i := 0; i < len(expected); i++ {
+		EqualSpent(t, expected[i], actual[i])
+	}
 }
