@@ -416,6 +416,19 @@ func (u *Manager) UnspentOutputsOnAddress(address iotago.Address, filterOptions 
 	return outputs, nil
 }
 
+func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) (Outputs, error) {
+	var outputs Outputs
+	consumerFunc := func(output *Output) bool {
+		outputs = append(outputs, output)
+		return true
+	}
+
+	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
+		return nil, err
+	}
+	return outputs, nil
+}
+
 func (u *Manager) ComputeAddressBalance(address iotago.Address, filterOptions *FilterOptions, options ...UTXOIterateOption) (balance uint64, count int, err error) {
 	balance = 0
 	count = 0

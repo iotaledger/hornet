@@ -55,7 +55,8 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo
 		Address: addr,
 		Amount:  amount,
 	}
-	return utxo.CreateOutput(outputID, messageID, output)
+	msIndex := milestone.Index(rand.Uint32())
+	return utxo.CreateOutput(outputID, messageID, msIndex, output)
 }
 
 func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
