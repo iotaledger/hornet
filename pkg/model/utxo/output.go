@@ -164,12 +164,11 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	}
 	valueUtil.ReadSeek(-1)
 
-	output, err := iotago.OutputSelector(uint32(outputType))
-	_, err = output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, nil)
+	o.output, err = iotago.OutputSelector(uint32(outputType))
+	_, err = o.output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return err
 	}
-	o.output = output
 
 	return nil
 }
