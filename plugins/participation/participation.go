@@ -79,7 +79,7 @@ func getEvents(c echo.Context) (*EventsResponse, error) {
 
 	eventTypes, err := parseEventTypeQueryParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type parameter: %s", err)
+		return nil, err
 	}
 
 	eventIDs := deps.ParticipationManager.EventIDs(eventTypes...)
@@ -88,6 +88,7 @@ func getEvents(c echo.Context) (*EventsResponse, error) {
 	for _, id := range eventIDs {
 		hexEventIDs = append(hexEventIDs, hex.EncodeToString(id[:]))
 	}
+	sort.Strings(hexEventIDs)
 
 	return &EventsResponse{EventIDs: hexEventIDs}, nil
 }
@@ -132,10 +133,17 @@ func deleteEvent(c echo.Context) error {
 
 	eventID, err := parseEventIDParam(c)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	return deps.ParticipationManager.DeleteEvent(eventID)
+	if err = deps.ParticipationManager.DeleteEvent(eventID); err != nil {
+		if errors.Is(err, participation.ErrEventNotFound) {
+			return errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))
+		}
+		return errors.WithMessagef(echo.ErrInternalServerError, "deleting event failed: %s", err)
+	}
+
+	return nil
 }
 
 func parseMilestoneIndexQueryParam(c echo.Context) (milestone.Index, error) {
@@ -172,7 +180,7 @@ func getEventStatus(c echo.Context) (*participation.EventStatus, error) {
 		if errors.Is(err, participation.ErrEventNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))
 		}
-		return nil, err
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "get event status failed: %s", err)
 	}
 	return status, nil
 }
@@ -185,7 +193,7 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 
 	trackedParticipations, err := deps.ParticipationManager.ParticipationsForOutputID(outputID)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching participations: %s", err)
 	}
 
 	if len(trackedParticipations) == 0 {
@@ -247,12 +255,12 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 
 		staking := event.Staking()
 		if staking == nil {
-			return nil, errors.WithMessage(echo.ErrInternalServerError, "event not found")
+			return nil, errors.WithMessage(echo.ErrInternalServerError, "staking payload not found")
 		}
 
 		amount, err := deps.ParticipationManager.StakingRewardForAddress(eventID, address)
 		if err != nil {
-			return nil, errors.WithMessage(echo.ErrInternalServerError, "error fetching rewards")
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)
 		}
 
 		response.Rewards[hex.EncodeToString(eventID[:])] = &AddressReward{
@@ -285,7 +293,7 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 		rewardsByAddress[addr] = rewards
 		return true
 	}, participation.FilterRequiredMinimumRewards(true)); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "invalid request! Error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)
 	}
 
 	index := deps.SyncManager.ConfirmedMilestoneIndex()
@@ -338,7 +346,7 @@ func getActiveParticipations(c echo.Context) (*ParticipationsResponse, error) {
 		response.Participations[trackedParticipation.OutputID.ToHex()] = t
 		return true
 	}); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "invalid request! Error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching active participations: %s", err)
 	}
 	return response, nil
 }
@@ -362,7 +370,7 @@ func getPastParticipations(c echo.Context) (*ParticipationsResponse, error) {
 		response.Participations[trackedParticipation.OutputID.ToHex()] = t
 		return true
 	}); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "invalid request! Error: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching past participations: %s", err)
 	}
 	return response, nil
 }

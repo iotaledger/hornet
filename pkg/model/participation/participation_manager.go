@@ -19,6 +19,7 @@ import (
 var (
 	ErrParticipationCorruptedStorage               = errors.New("the participation database was not shutdown properly")
 	ErrParticipationEventStartedBeforePruningIndex = errors.New("the given participation event started before the pruning index of this node")
+	ErrParticipationEventBallotCanOverflow         = errors.New("the given participation duration in combination with the maximum voting weight can overflow uint64")
 	ErrParticipationEventStakingCanOverflow        = errors.New("the given participation staking nominator and denominator in combination with the duration can overflow uint64")
 )
 
@@ -214,6 +215,10 @@ func (pm *ParticipationManager) EventsCountingParticipation() map[EventID]*Event
 func (pm *ParticipationManager) StoreEvent(event *Event) (EventID, error) {
 	pm.Lock()
 	defer pm.Unlock()
+
+	if event.BallotCanOverflow() {
+		return NullEventID, ErrParticipationEventBallotCanOverflow
+	}
 
 	if event.StakingCanOverflow() {
 		return NullEventID, ErrParticipationEventStakingCanOverflow

@@ -10,6 +10,10 @@ import (
 	"github.com/iotaledger/hive.go/serializer"
 )
 
+const (
+	BallotDenominator = 1000
+)
+
 var (
 	ErrParticipationTooManyAnswers = errors.New("participation contains more answers than what a ballot can hold")
 )
