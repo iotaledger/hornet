@@ -17,8 +17,18 @@ import (
 )
 
 const (
-	MINIMUM_DUST_BALANCE     = 1000000 // 1 Mi
 	INDEXATION_PARTICIPATION = "PARTICIPATE"
+)
+
+var (
+	// TODO: Use final values
+	deSeriParas = &iotago.DeSerializationParameters{
+		RentStructure: &iotago.RentStructure{
+			VByteCost:    0,
+			VBFactorData: 1,
+			VBFactorKey:  10,
+		},
+	}
 )
 
 type cfg struct {
@@ -29,19 +39,15 @@ type cfg struct {
 
 func parseParticipationsPayload(cfg *cfg) ([]byte, error) {
 
-	participations := &participation.Participations{}
-	if err := utils.ReadJSONFromFile(cfg.payloadFilePath, participations); err != nil {
+	participationPayload := &participation.ParticipationPayload{}
+	if err := utils.ReadJSONFromFile(cfg.payloadFilePath, participationPayload); err != nil {
 		return nil, err
 	}
 
-	return participations.Serialize(serializer.DeSeriModePerformValidation)
+	return participationPayload.Serialize(serializer.DeSeriModePerformValidation, nil)
 }
 
 func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClient, inputAddress *iotago.Ed25519Address, inputSigner iotago.AddressSigner, outputAddress *iotago.Ed25519Address, outputAmount uint64, indexation *iotago.Indexation) (*iotago.Transaction, error) {
-
-	if outputAmount < MINIMUM_DUST_BALANCE {
-		return nil, fmt.Errorf("AMOUNT does not fulfill the dust requirement: %d, needed: %d", outputAmount, MINIMUM_DUST_BALANCE)
-	}
 
 	txBuilder := iotago.NewTransactionBuilder()
 
@@ -50,7 +56,7 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 		return nil, err
 	}
 
-	inputsBalance := 0
+	inputsBalance := uint64(0)
 	for _, outputIDHex := range unspentOutputs.OutputIDs {
 		input, err := outputIDHex.AsUTXOInput()
 		if err != nil {
@@ -67,49 +73,35 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 			return nil, err
 		}
 
-		if unspentOutput.Type() != iotago.OutputSigLockedSingleOutput {
+		if unspentOutput.Type() != iotago.OutputExtended {
 			continue
 		}
 
-		balance, err := unspentOutput.Deposit()
-		if err != nil {
-			return nil, err
-		}
-
-		inputsBalance += int(balance)
+		inputsBalance += unspentOutput.Deposit()
 		txBuilder.AddInput(&iotago.ToBeSignedUTXOInput{Address: inputAddress, Input: input})
-
-		if inputsBalance >= (int(outputAmount) + MINIMUM_DUST_BALANCE) {
-			// no need to collect further inputs
-			break
-		}
 	}
 
-	if inputsBalance < int(outputAmount) {
+	if inputsBalance < outputAmount {
 		return nil, fmt.Errorf("not enough balance on the inputs: %d, needed: %d", inputsBalance, outputAmount)
 	}
 
-	txBuilder.AddOutput(&iotago.SigLockedSingleOutput{Address: outputAddress, Amount: outputAmount})
-	inputsBalance -= int(outputAmount)
-
-	if inputsBalance != 0 && inputsBalance < MINIMUM_DUST_BALANCE {
-		return nil, fmt.Errorf("remainder does not fulfill the minimum balance requirement: %d, needed: %d", inputsBalance, MINIMUM_DUST_BALANCE)
-	}
+	txBuilder.AddOutput(&iotago.ExtendedOutput{Address: outputAddress, Amount: outputAmount})
+	inputsBalance -= outputAmount
 
 	if inputsBalance > 0 {
-		txBuilder.AddOutput(&iotago.SigLockedSingleOutput{Address: inputAddress, Amount: uint64(inputsBalance)})
+		txBuilder.AddOutput(&iotago.ExtendedOutput{Address: inputAddress, Amount: inputsBalance})
 	}
 
 	if indexation != nil {
 		txBuilder.AddIndexationPayload(indexation)
 	}
 
-	return txBuilder.Build(inputSigner)
+	return txBuilder.Build(deSeriParas, inputSigner)
 }
 
 func sendParticipationTransaction(cfg *cfg) (*iotago.MessageID, error) {
 
-	client := iotago.NewNodeHTTPAPIClient(cfg.nodeAPIAddress)
+	client := iotago.NewNodeHTTPAPIClient(cfg.nodeAPIAddress, deSeriParas)
 
 	inputPublicKey := cfg.inputPrivateKey.Public().(ed25519.PublicKey)
 	inputAddress := iotago.Ed25519AddressFromPubKey(inputPublicKey)
@@ -155,7 +147,7 @@ func sendParticipationTransaction(cfg *cfg) (*iotago.MessageID, error) {
 
 	if !remotePoWEnabled {
 		// do local PoW
-		powManager := pow.New(nil, nodeInfo.MinPowScore, 1*time.Second, "", 5*time.Second)
+		powManager := pow.New(nodeInfo.MinPowScore, 5*time.Second)
 
 		getTipsFunc := func() (hornet.MessageIDs, error) {
 			tipsResponse, err := client.Tips(clientCtx)
