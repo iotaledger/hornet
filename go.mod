@@ -21,8 +21,9 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20211125083540-7ba1c9edcba9
 	github.com/iotaledger/hive.go v0.0.0-20211208125510-04baae2057d6
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20211208125510-04baae2057d6
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v2 v2.0.1-0.20211018071144-edf83a5ab704
+	github.com/iotaledger/iota.go/v3 v3.0.0-20211208121234-4432a2cc7db4
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger v0.3.0
 	github.com/labstack/echo/v4 v4.6.3
@@ -105,8 +106,6 @@ require (
 	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/huin/goupnp v1.0.2 // indirect
-	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20211208125510-04baae2057d6 // indirect
-	github.com/iotaledger/iota.go/v3 v3.0.0-20211208121234-4432a2cc7db4 // indirect
 	github.com/ipfs/go-cid v0.1.0 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
