@@ -88,6 +88,7 @@ func getEvents(c echo.Context) (*EventsResponse, error) {
 	for _, id := range eventIDs {
 		hexEventIDs = append(hexEventIDs, hex.EncodeToString(id[:]))
 	}
+	sort.Strings(hexEventIDs)
 
 	return &EventsResponse{EventIDs: hexEventIDs}, nil
 }
