@@ -1,4 +1,3 @@
-// TODO: obviously move all this into its separate pkg
 package p2p
 
 import (

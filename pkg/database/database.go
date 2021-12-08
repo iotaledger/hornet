@@ -9,7 +9,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/logger"
 )
 
 type Engine string
@@ -62,7 +61,6 @@ type Events struct {
 
 // Database holds the underlying KVStore and database specific functions.
 type Database struct {
-	log                   *logger.Logger
 	databaseDir           string
 	store                 kvstore.KVStore
 	events                *Events
@@ -71,9 +69,8 @@ type Database struct {
 }
 
 // New creates a new Database instance.
-func New(log *logger.Logger, databaseDirectory string, kvStore kvstore.KVStore, events *Events, compactionSupported bool, compactionRunningFunc func() bool) *Database {
+func New(databaseDirectory string, kvStore kvstore.KVStore, events *Events, compactionSupported bool, compactionRunningFunc func() bool) *Database {
 	return &Database{
-		log:                   log,
 		databaseDir:           databaseDirectory,
 		store:                 kvStore,
 		events:                events,

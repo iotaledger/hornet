@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
 )
@@ -19,7 +20,9 @@ const (
 // ShutdownHandler waits until a shutdown signal was received or the node tried to shutdown itself,
 // and shuts down all processes gracefully.
 type ShutdownHandler struct {
-	log              *logger.Logger
+	// the logger used to log events.
+	*utils.WrappedLogger
+
 	daemon           daemon.Daemon
 	gracefulStop     chan os.Signal
 	nodeSelfShutdown chan string
@@ -29,7 +32,7 @@ type ShutdownHandler struct {
 func NewShutdownHandler(log *logger.Logger, daemon daemon.Daemon) *ShutdownHandler {
 
 	gs := &ShutdownHandler{
-		log:              log,
+		WrappedLogger:    utils.NewWrappedLogger(log),
 		daemon:           daemon,
 		gracefulStop:     make(chan os.Signal, 1),
 		nodeSelfShutdown: make(chan string),
@@ -55,9 +58,9 @@ func (gs *ShutdownHandler) Run() {
 	go func() {
 		select {
 		case <-gs.gracefulStop:
-			gs.log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing ...", waitToKillTimeInSeconds)
+			gs.LogWarnf("Received shutdown request - waiting (max %d seconds) to finish processing ...", waitToKillTimeInSeconds)
 		case msg := <-gs.nodeSelfShutdown:
-			gs.log.Warnf("Node self-shutdown: %s; waiting (max %d seconds) to finish processing ...", msg, waitToKillTimeInSeconds)
+			gs.LogWarnf("Node self-shutdown: %s; waiting (max %d seconds) to finish processing ...", msg, waitToKillTimeInSeconds)
 		}
 
 		go func() {
@@ -72,9 +75,9 @@ func (gs *ShutdownHandler) Run() {
 						processList = "(" + strings.Join(runningBackgroundWorkers, ", ") + ") "
 					}
 
-					gs.log.Warnf("Received shutdown request - waiting (max %d seconds) to finish processing %s...", waitToKillTimeInSeconds-int(secondsSinceStart), processList)
+					gs.LogWarnf("Received shutdown request - waiting (max %d seconds) to finish processing %s...", waitToKillTimeInSeconds-int(secondsSinceStart), processList)
 				} else {
-					gs.log.Fatal("Background processes did not terminate in time! Forcing shutdown ...")
+					gs.LogFatal("Background processes did not terminate in time! Forcing shutdown ...")
 				}
 			}
 		}()

@@ -102,7 +102,7 @@ func (t *Tangle) SolidQueueCheck(
 		if errors.Is(err, common.ErrOperationAborted) {
 			return false, true
 		}
-		t.log.Panic(err)
+		t.Panic(err)
 	}
 
 	tCollect := time.Now()
@@ -113,7 +113,7 @@ func (t *Tangle) SolidQueueCheck(
 			messageIDs = append(messageIDs, hornet.MessageIDFromMapKey(messageID))
 		}
 		requested := t.requester.RequestMultiple(messageIDs, milestoneIndex, true)
-		t.log.Warnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(messageIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
+		t.LogWarnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(messageIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
 		return false, false
 	}
 
@@ -122,7 +122,7 @@ func (t *Tangle) SolidQueueCheck(
 	for _, messageID := range messageIDsToSolidify {
 		cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(messageID)
 		if cachedMsgMeta == nil {
-			t.log.Panicf("solidQueueCheck: Message metadata not found: %v", messageID.ToHex())
+			t.Panicf("solidQueueCheck: Message metadata not found: %v", messageID.ToHex())
 		}
 
 		t.markMessageAsSolid(cachedMsgMeta.Retain())
@@ -133,11 +133,11 @@ func (t *Tangle) SolidQueueCheck(
 	if t.syncManager.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
 		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(ctx, messageIDsToSolidify, metadataMemcache); err != nil {
-			t.log.Debugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)
+			t.LogDebugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)
 		}
 	}
 
-	t.log.Infof("Solidifier finished: msgs: %d, collect: %v, solidity %v, propagation: %v, total: %v", msgsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
+	t.LogInfof("Solidifier finished: msgs: %d, collect: %v, solidity %v, propagation: %v, total: %v", msgsChecked, tCollect.Sub(ts).Truncate(time.Millisecond), tSolid.Sub(tCollect).Truncate(time.Millisecond), time.Since(tSolid).Truncate(time.Millisecond), time.Since(ts).Truncate(time.Millisecond))
 	return true, false
 }
 
@@ -240,15 +240,15 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	defer messagesMemcache.Cleanup(true)
 	defer metadataMemcache.Cleanup(true)
 
-	t.log.Infof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
+	t.LogInfof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
 	if becameSolid, aborted := t.SolidQueueCheck(milestoneSolidificationCtx, messagesMemcache, metadataMemcache, milestoneIndexToSolidify, hornet.MessageIDs{cachedMsToSolidify.Milestone().MessageID}); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
-			t.log.Infof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
+			t.LogInfof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
 		} else {
 			// Milestone not solid yet and missing msg were requested
 			t.Events.MilestoneSolidificationFailed.Trigger(milestoneIndexToSolidify)
-			t.log.Infof("Milestone couldn't be solidified! %d", milestoneIndexToSolidify)
+			t.LogInfof("Milestone couldn't be solidified! %d", milestoneIndexToSolidify)
 		}
 		t.setSolidifierMilestoneIndex(0)
 		return
@@ -261,15 +261,15 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		cachedClosestNextMs := t.milestoneManager.FindClosestNextMilestoneOrNil(currentConfirmedIndex) // message +1
 		cachedClosestNextMsIndex := cachedClosestNextMs.Milestone().Index
 		if cachedClosestNextMsIndex == milestoneIndexToSolidify {
-			t.log.Infof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentConfirmedIndex, cachedClosestNextMsIndex)
+			t.LogInfof("Milestones missing between (%d) and (%d). Search for missing milestones...", currentConfirmedIndex, cachedClosestNextMsIndex)
 
 			// no Milestones found in between => search an older milestone in the solid cone
 			if found, err := t.searchMissingMilestones(milestoneSolidificationCtx, currentConfirmedIndex, cachedClosestNextMsIndex, cachedMsToSolidify.Milestone().MessageID); !found {
 				if err != nil {
 					// no milestones found => this should not happen!
-					t.log.Panicf("Milestones missing between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
+					t.Panicf("Milestones missing between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
 				}
-				t.log.Infof("Aborted search for missing milestones between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
+				t.LogInfof("Aborted search for missing milestones between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
 			}
 		}
 		cachedClosestNextMs.Release() // message -1
@@ -291,7 +291,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		func(confirmation *whiteflag.Confirmation) {
 			timeStartConfirmation = time.Now()
 			if err := t.syncManager.SetConfirmedMilestoneIndex(milestoneIndexToSolidify); err != nil {
-				t.log.Panicf("SetConfirmedMilestoneIndex failed: %s", err)
+				t.Panicf("SetConfirmedMilestoneIndex failed: %s", err)
 			}
 			timeSetConfirmedMilestoneIndex = time.Now()
 			if t.syncManager.IsNodeAlmostSynced() {
@@ -320,7 +320,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 				if t.receiptService.ValidationEnabled {
 					if err := t.receiptService.ValidateWithoutLocking(rt.Receipt); err != nil {
 						if err := common.IsSoftError(err); err != nil && t.receiptService.IgnoreSoftErrors {
-							t.log.Warnf("soft error encountered during receipt validation: %s", err)
+							t.LogWarnf("soft error encountered during receipt validation: %s", err)
 							return nil
 						}
 						return err
@@ -337,10 +337,10 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		})
 
 	if err != nil {
-		t.log.Panic(err)
+		t.Panic(err)
 	}
 
-	t.log.Infof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
+	t.LogInfof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
 		confirmedMilestoneStats.Index,
 		confirmedMilestoneStats.MessagesReferenced,
 		confirmedMilestoneStats.MessagesIncludedWithTransactions,
@@ -385,7 +385,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		}
 	}
 
-	t.log.Infof("New confirmed milestone: %d%s", confirmedMilestoneStats.Index, rmpsMessage)
+	t.LogInfof("New confirmed milestone: %d%s", confirmedMilestoneStats.Index, rmpsMessage)
 
 	// Run check for next milestone
 	t.setSolidifierMilestoneIndex(0)
@@ -501,6 +501,6 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 		}
 	}
 
-	t.log.Infof("searchMissingMilestone finished, found: %v, took: %v", milestoneFound, time.Since(ts).Truncate(time.Millisecond))
+	t.LogInfof("searchMissingMilestone finished, found: %v, took: %v", milestoneFound, time.Since(ts).Truncate(time.Millisecond))
 	return milestoneFound, nil
 }

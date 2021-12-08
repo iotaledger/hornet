@@ -28,7 +28,6 @@ func newPebble(path string, metrics *metrics.DatabaseMetrics) *database.Database
 	}
 
 	return database.New(
-		CorePlugin.Logger(),
 		path,
 		pebble.New(db),
 		events,

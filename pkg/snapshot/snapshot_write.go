@@ -391,7 +391,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 	writeToDatabase bool,
 	snapshotFullPath ...string) error {
 
-	s.log.Infof("creating %s snapshot for targetIndex %d", snapshotNames[snapshotType], targetIndex)
+	s.LogInfof("creating %s snapshot for targetIndex %d", snapshotNames[snapshotType], targetIndex)
 	ts := time.Now()
 
 	s.setIsSnapshotting(true)
@@ -528,7 +528,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 		snapshotInfo.SnapshotIndex = targetIndex
 		snapshotInfo.Timestamp = targetMsTimestamp
 		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
-			s.log.Panic(err)
+			s.Panic(err)
 		}
 		timeSetSnapshotInfo = time.Now()
 		s.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)
@@ -543,7 +543,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 
 	s.Events.SnapshotMetricsUpdated.Trigger(snapshotMetrics)
 
-	s.log.Infof("created %s snapshot for target index %d, took %v", snapshotNames[snapshotType], targetIndex, time.Since(ts).Truncate(time.Millisecond))
+	s.LogInfof("created %s snapshot for target index %d, took %v", snapshotNames[snapshotType], targetIndex, time.Since(ts).Truncate(time.Millisecond))
 	return nil
 }
 

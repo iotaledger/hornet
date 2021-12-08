@@ -12,6 +12,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/typeutils"
@@ -146,12 +147,12 @@ var defaultManagerOptions = []ManagerOption{
 
 // ManagerOptions define options for a Manager.
 type ManagerOptions struct {
-	// The logger to use to log events.
-	Logger *logger.Logger
+	// The logger to use to logger events.
+	logger *logger.Logger
 	// The static reconnect interval.
-	ReconnectInterval time.Duration
+	reconnectInterval time.Duration
 	// The randomized jitter applied to the reconnect interval.
-	ReconnectIntervalJitter time.Duration
+	reconnectIntervalJitter time.Duration
 }
 
 // ManagerOption is a function setting a ManagerOptions option.
@@ -160,7 +161,7 @@ type ManagerOption func(opts *ManagerOptions)
 // WithManagerLogger enables logging within the Manager.
 func WithManagerLogger(logger *logger.Logger) ManagerOption {
 	return func(opts *ManagerOptions) {
-		opts.Logger = logger
+		opts.logger = logger
 	}
 }
 
@@ -168,8 +169,8 @@ func WithManagerLogger(logger *logger.Logger) ManagerOption {
 // to which the Manager wants to keep a connection open to.
 func WithManagerReconnectInterval(interval time.Duration, jitter time.Duration) ManagerOption {
 	return func(opts *ManagerOptions) {
-		opts.ReconnectInterval = interval
-		opts.ReconnectIntervalJitter = jitter
+		opts.reconnectInterval = interval
+		opts.reconnectIntervalJitter = jitter
 	}
 }
 
@@ -182,8 +183,8 @@ func (mo *ManagerOptions) apply(opts ...ManagerOption) {
 
 // computes the next reconnect delay.
 func (mo *ManagerOptions) reconnectDelay() time.Duration {
-	recInter := mo.ReconnectInterval
-	jitter := mo.ReconnectIntervalJitter
+	recInter := mo.reconnectInterval
+	jitter := mo.reconnectIntervalJitter
 	delayJitter := rand.Int63n(int64(jitter))
 	return recInter + time.Duration(delayJitter)
 }
@@ -226,15 +227,17 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 		forEachChan:        make(chan *foreachmsg, 10),
 		callChan:           make(chan *callmsg, 10),
 	}
-	if peeringManager.opts.Logger != nil {
-		peeringManager.registerLoggerOnEvents()
-	}
+	peeringManager.WrappedLogger = utils.NewWrappedLogger(peeringManager.opts.logger)
+	peeringManager.registerLoggerOnEvents()
 	return peeringManager
 }
 
 // Manager manages a set of known and other connected peers.
 // It also provides the functionality to reconnect to known peers.
 type Manager struct {
+	// the logger used to log events.
+	*utils.WrappedLogger
+
 	// Events happening around the Manager.
 	Events ManagerEvents
 	// the libp2p host instance from which to work with.
@@ -871,35 +874,35 @@ func (m *Manager) call(peerID peer.ID, f PeerFunc) {
 // registers the logger on the events of the Manager.
 func (m *Manager) registerLoggerOnEvents() {
 	m.Events.Connect.Attach(events.NewClosure(func(p *Peer) {
-		m.opts.Logger.Infof("connecting %s: %s", p.ID.ShortString(), p.Addrs)
+		m.LogInfof("connecting %s: %s", p.ID.ShortString(), p.Addrs)
 	}))
 	m.Events.Connected.Attach(events.NewClosure(func(p *Peer, conn network.Conn) {
-		m.opts.Logger.Infof("connected %s (%s)", p.ID.ShortString(), conn.Stat().Direction.String())
+		m.LogInfof("connected %s (%s)", p.ID.ShortString(), conn.Stat().Direction.String())
 	}))
 	m.Events.Disconnect.Attach(events.NewClosure(func(p *Peer) {
-		m.opts.Logger.Infof("disconnecting %s", p.ID.ShortString())
+		m.LogInfof("disconnecting %s", p.ID.ShortString())
 	}))
 	m.Events.Disconnected.Attach(events.NewClosure(func(peerErr *PeerOptError) {
 		msg := fmt.Sprintf("disconnected %s", peerErr.Peer.ID.ShortString())
 		if peerErr.Error != nil {
 			msg = fmt.Sprintf("%s %s", msg, peerErr.Error)
 		}
-		m.opts.Logger.Infof(msg)
+		m.LogInfof(msg)
 	}))
 	m.Events.ScheduledReconnect.Attach(events.NewClosure(func(p *Peer, dur time.Duration) {
-		m.opts.Logger.Infof("scheduled reconnect in %v to %s", dur, p.ID.ShortString())
+		m.LogInfof("scheduled reconnect in %v to %s", dur, p.ID.ShortString())
 	}))
 	m.Events.Reconnecting.Attach(events.NewClosure(func(p *Peer) {
-		m.opts.Logger.Infof("reconnecting %s", p.ID.ShortString())
+		m.LogInfof("reconnecting %s", p.ID.ShortString())
 	}))
 	m.Events.RelationUpdated.Attach(events.NewClosure(func(p *Peer, oldRel PeerRelation) {
-		m.opts.Logger.Infof("updated relation of %s from '%s' to '%s'", p.ID.ShortString(), oldRel, p.Relation)
+		m.LogInfof("updated relation of %s from '%s' to '%s'", p.ID.ShortString(), oldRel, p.Relation)
 	}))
 	m.Events.StateChange.Attach(events.NewClosure(func(mngState ManagerState) {
-		m.opts.Logger.Info(mngState)
+		m.LogInfo(mngState)
 	}))
 	m.Events.Error.Attach(events.NewClosure(func(err error) {
-		m.opts.Logger.Warn(err)
+		m.LogWarn(err)
 	}))
 }
 

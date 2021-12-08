@@ -130,7 +130,6 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.SyncManager,
 			participationStore,
-			participation.WithLogger(Plugin.Logger()),
 		)
 		if err != nil {
 			Plugin.Panic(err)

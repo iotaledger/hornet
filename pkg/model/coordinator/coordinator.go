@@ -73,6 +73,9 @@ type PublicKeyRanges []*PublicKeyRange
 
 // Coordinator is used to issue signed messages, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
+	// the logger used to log events.
+	*utils.WrappedLogger
+
 	// used to issue only one milestone at a time.
 	milestoneLock syncutils.Mutex
 	// used to access the node storage.
@@ -244,6 +247,7 @@ func New(
 			QuorumFinished:          events.NewEvent(QuorumFinishedCaller),
 		},
 	}
+	result.WrappedLogger = utils.NewWrappedLogger(options.logger)
 
 	return result, nil
 }
@@ -347,9 +351,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	if coo.opts.quorum != nil {
 		ts := time.Now()
 		err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents, func(groupName string, entry *quorumGroupEntry, err error) {
-			if coo.opts.logger != nil {
-				coo.opts.logger.Infof("coordinator quorum group encountered an error, group: %s, baseURL: %s, err: %s", groupName, entry.stats.BaseURL, err)
-			}
+			coo.LogInfof("coordinator quorum group encountered an error, group: %s, baseURL: %s, err: %s", groupName, entry.stats.BaseURL, err)
 		})
 
 		duration := time.Since(ts)
@@ -357,15 +359,11 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 		if err != nil {
 			// quorum failed => non-critical or critical error
-			if coo.opts.logger != nil {
-				coo.opts.logger.Infof("coordinator quorum failed after %v, err: %s", time.Since(ts).Truncate(time.Millisecond), err)
-			}
+			coo.LogInfof("coordinator quorum failed after %v, err: %s", time.Since(ts).Truncate(time.Millisecond), err)
 			return err
 		}
 
-		if coo.opts.logger != nil {
-			coo.opts.logger.Infof("coordinator quorum took %v", duration.Truncate(time.Millisecond))
-		}
+		coo.LogInfof("coordinator quorum took %v", duration.Truncate(time.Millisecond))
 	}
 
 	// get receipt data in case migrator is enabled

@@ -20,7 +20,6 @@ func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Databas
 	}
 
 	database := database.New(
-		CorePlugin.Logger(),
 		path,
 		rocksdb.New(rocksDatabase),
 		events,

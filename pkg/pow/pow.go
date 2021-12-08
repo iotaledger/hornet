@@ -30,7 +30,8 @@ type RefreshTipsFunc = func() (tips hornet.MessageIDs, err error)
 // Handler handles PoW requests of the node and tunnels them to powsrv.io
 // or uses local PoW if no API key was specified or the connection failed.
 type Handler struct {
-	log *logger.Logger
+	// the logger used to log events.
+	*utils.WrappedLogger
 
 	targetScore         float64
 	refreshTipsInterval time.Duration
@@ -67,7 +68,7 @@ func New(log *logger.Logger, targetScore float64, refreshTipsInterval time.Durat
 	}
 
 	return &Handler{
-		log:                 log,
+		WrappedLogger:       utils.NewWrappedLogger(log),
 		targetScore:         targetScore,
 		refreshTipsInterval: refreshTipsInterval,
 		powsrvClient:        powsrvClient,
@@ -116,9 +117,7 @@ func (h *Handler) connectPowsrv() bool {
 
 	// connect to powsrv.io
 	if err := h.powsrvClient.Init(); err != nil {
-		if h.log != nil {
-			h.log.Warnf("Error connecting to powsrv.io: %s", err)
-		}
+		h.LogWarnf("Error connecting to powsrv.io: %s", err)
 		return false
 	}
 
@@ -204,9 +203,7 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 			h.powsrvLock.Lock()
 			if !h.powsrvErrorHandled {
 				// some error occurred => disconnect from powsrv.io
-				if h.log != nil {
-					h.log.Warnf("Error during PoW via powsrv.io: %s", err)
-				}
+				h.LogWarnf("Error during PoW via powsrv.io: %s", err)
 				h.disconnectPowsrv()
 			}
 			h.powsrvLock.Unlock()

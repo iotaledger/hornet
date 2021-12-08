@@ -123,28 +123,28 @@ func (s *SnapshotManager) filterTargets(wantedNetworkID uint64, targets []*Downl
 
 	// search the latest snapshot by scanning all target headers
 	for _, target := range targets {
-		s.log.Debugf("downloading full snapshot header from %s", target.Full)
+		s.LogDebugf("downloading full snapshot header from %s", target.Full)
 
 		fullHeader, err := s.downloadHeader(target.Full)
 		if err != nil {
 			// as the full snapshot URL failed to download, we commence further with our targets
-			s.log.Debugf("downloading full snapshot header from %s failed: %s", target.Full, err)
+			s.LogDebugf("downloading full snapshot header from %s failed: %s", target.Full, err)
 			continue
 		}
 
 		var deltaHeader *ReadFileHeader
 		if len(target.Delta) > 0 {
-			s.log.Debugf("downloading delta snapshot header from %s", target.Delta)
+			s.LogDebugf("downloading delta snapshot header from %s", target.Delta)
 			deltaHeader, err = s.downloadHeader(target.Delta)
 			if err != nil {
 				// it is valid that no delta snapshot file is available on the target.
-				s.log.Debugf("downloading delta snapshot header from %s failed: %s", target.Delta, err)
+				s.LogDebugf("downloading delta snapshot header from %s failed: %s", target.Delta, err)
 			}
 		}
 
 		if err = checkTargetConsistency(wantedNetworkID, fullHeader, deltaHeader); err != nil {
 			// the snapshots on the target do not seem to be consistent
-			s.log.Infof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
+			s.LogInfof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
 			continue
 		}
 
@@ -172,18 +172,18 @@ func (s *SnapshotManager) DownloadSnapshotFiles(ctx context.Context, wantedNetwo
 
 	for _, target := range s.filterTargets(wantedNetworkID, targets) {
 
-		s.log.Infof("downloading full snapshot file from %s", target.Full)
+		s.LogInfof("downloading full snapshot file from %s", target.Full)
 		if err := s.downloadFile(ctx, fullPath, target.Full); err != nil {
-			s.log.Warn(err)
+			s.LogWarn(err)
 			// as the full snapshot URL failed to download, we commence further with our targets
 			continue
 		}
 
 		if len(target.Delta) > 0 {
-			s.log.Infof("downloading delta snapshot file from %s", target.Delta)
+			s.LogInfof("downloading delta snapshot file from %s", target.Delta)
 			if err := s.downloadFile(ctx, deltaPath, target.Delta); err != nil {
 				// it is valid that no delta snapshot file is available on the target.
-				s.log.Warn(err)
+				s.LogWarn(err)
 			}
 		}
 		return nil

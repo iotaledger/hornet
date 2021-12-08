@@ -11,7 +11,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -25,6 +24,7 @@ var (
 
 // ParticipationManager is used to track the outcome of participation in the tangle.
 type ParticipationManager struct {
+	// lock used to secure the state of the ParticipationManager.
 	syncutils.RWMutex
 
 	// used to access the node storage.
@@ -49,8 +49,7 @@ var defaultOptions = []Option{
 
 // Options define options for the ParticipationManager.
 type Options struct {
-	logger *logger.Logger
-
+	// defines the indexation payload to track
 	indexationMessage []byte
 }
 
@@ -58,13 +57,6 @@ type Options struct {
 func (so *Options) apply(opts ...Option) {
 	for _, opt := range opts {
 		opt(so)
-	}
-}
-
-// WithLogger enables logging within the ParticipationManager.
-func WithLogger(logger *logger.Logger) Option {
-	return func(opts *Options) {
-		opts.logger = logger
 	}
 }
 
