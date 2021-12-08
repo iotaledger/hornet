@@ -113,7 +113,6 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 			VBFactorData: 0,
 			VBFactorKey:  0,
 		},
-		MinDustDeposit: 0,
 	}
 
 	map1 := mapdb.NewMapDB()

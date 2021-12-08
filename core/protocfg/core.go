@@ -101,14 +101,12 @@ func initConfigPars(c *dig.Container) {
 			CorePlugin.LogPanic(err)
 		}
 
-		// TODO: create config for these parameters
 		res.DeSerializationParameters = &iotago.DeSerializationParameters{
 			RentStructure: &iotago.RentStructure{
-				VByteCost:    0,
-				VBFactorData: 0,
-				VBFactorKey:  0,
+				VByteCost:    uint64(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteCost)),
+				VBFactorData: iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorData)),
+				VBFactorKey:  iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorKey)),
 			},
-			MinDustDeposit: 0,
 		}
 
 		return res

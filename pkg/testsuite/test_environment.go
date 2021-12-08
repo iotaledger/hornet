@@ -104,7 +104,6 @@ var (
 			VBFactorData: 0,
 			VBFactorKey:  0,
 		},
-		MinDustDeposit: 0,
 	}
 )
 

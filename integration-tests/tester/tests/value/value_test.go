@@ -44,7 +44,6 @@ func TestValue(t *testing.T) {
 			VBFactorData: 0,
 			VBFactorKey:  0,
 		},
-		MinDustDeposit: 0,
 	}
 
 	// build and sign transaction spending the total supply

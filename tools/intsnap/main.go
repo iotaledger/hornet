@@ -47,7 +47,6 @@ var deSeriParas = &iotago.DeSerializationParameters{
 		VBFactorData: 0,
 		VBFactorKey:  0,
 	},
-	MinDustDeposit: 0,
 }
 
 var fullSnapshotHeader = &snapshot.FileHeader{

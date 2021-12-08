@@ -80,6 +80,9 @@
     "networkID": "chrysalis-mainnet",
     "bech32HRP": "iota",
     "minPoWScore": 4000.0,
+    "vByteCost": 0,
+    "vByteFactorData": 1,
+    "vByteFactorKey": 10,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
