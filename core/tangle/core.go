@@ -82,7 +82,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func() *metrics.ServerMetrics {
 		return &metrics.ServerMetrics{}
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	type milestoneManagerDeps struct {
@@ -100,7 +100,7 @@ func provide(c *dig.Container) {
 			deps.CoordinatorKeyManager,
 			deps.MilestonePublicKeyCount)
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	type tangleDeps struct {
@@ -136,7 +136,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			*syncedAtStartup)
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -147,15 +147,15 @@ func configure() {
 	// and the database will never be marked as corrupted.
 	if err := CorePlugin.Daemon().BackgroundWorker("Database Health", func(_ context.Context) {
 		if err := deps.Storage.MarkDatabasesCorrupted(); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 	}, shutdown.PriorityDatabaseHealth); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	databaseCorrupted, err := deps.Storage.AreDatabasesCorrupted()
 	if err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	if databaseCorrupted && !deps.DatabaseDebug {
@@ -164,7 +164,7 @@ func configure() {
 		// if it was not deleted before this check.
 		revalidateDatabase := *revalidateDatabase || deps.DatabaseAutoRevalidation
 		if !revalidateDatabase {
-			CorePlugin.Panic(`
+			CorePlugin.LogPanic(`
 HORNET was not shut down properly, the database may be corrupted.
 Please restart HORNET with one of the following flags or enable "db.autoRevalidation" in the config.
 
@@ -180,7 +180,7 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 				CorePlugin.LogInfo("database revalidation aborted")
 				os.Exit(0)
 			}
-			CorePlugin.Panicf("%s: %s", ErrDatabaseRevalidationFailed, err)
+			CorePlugin.LogPanicf("%s: %s", ErrDatabaseRevalidationFailed, err)
 		}
 		CorePlugin.LogInfo("database revalidation successful")
 	}
@@ -196,7 +196,7 @@ func run() {
 		<-ctx.Done()
 		detachHeartbeatEvents()
 	}, shutdown.PriorityHeartbeats); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := CorePlugin.Daemon().BackgroundWorker("Cleanup at shutdown", func(ctx context.Context) {
@@ -208,7 +208,7 @@ func run() {
 		CorePlugin.LogInfo("Flushing caches to database... done")
 
 	}, shutdown.PriorityFlushToDatabase); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	deps.Tangle.RunTangleProcessor()
@@ -218,7 +218,7 @@ func run() {
 		ticker := timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityStatusReport); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 }

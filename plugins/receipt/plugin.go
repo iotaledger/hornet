@@ -55,7 +55,7 @@ func provide(c *dig.Container) {
 			Client: &http.Client{Timeout: deps.NodeConfig.Duration(CfgReceiptsValidatorAPITimeout)},
 		})
 		if err != nil {
-			Plugin.Panicf("failed to initialize API: %s", err)
+			Plugin.LogPanicf("failed to initialize API: %s", err)
 		}
 		return migrator.NewValidator(
 			iotaAPI,
@@ -63,7 +63,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 
 	type serviceDeps struct {
@@ -83,7 +83,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.String(CfgReceiptsBackupPath),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -97,6 +97,6 @@ func configure() {
 	}))
 	Plugin.LogInfof("storing receipt backups in %s", deps.NodeConfig.String(CfgReceiptsBackupPath))
 	if err := deps.ReceiptService.Init(); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }

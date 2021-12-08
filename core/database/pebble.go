@@ -24,11 +24,10 @@ func newPebble(path string, metrics *metrics.DatabaseMetrics) *database.Database
 
 	db, err := database.NewPebbleDB(path, reportCompactionRunning, true)
 	if err != nil {
-		CorePlugin.Panicf("pebble database initialization failed: %s", err)
+		CorePlugin.LogPanicf("pebble database initialization failed: %s", err)
 	}
 
 	return database.New(
-		CorePlugin.Logger(),
 		path,
 		pebble.New(db),
 		events,

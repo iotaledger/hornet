@@ -24,6 +24,6 @@ func runLiveFeed() {
 		Plugin.LogInfo("Stopping Dashboard[TxUpdater] ...")
 		Plugin.LogInfo("Stopping Dashboard[TxUpdater] ... done")
 	}, shutdown.PriorityDashboard); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

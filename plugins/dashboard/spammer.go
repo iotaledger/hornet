@@ -28,6 +28,6 @@ func runSpammerMetricWorker() {
 		spammerplugin.Events.AvgSpamMetricsUpdated.Detach(onAvgSpamMetricsUpdated)
 		Plugin.LogInfo("Stopping Dashboard[SpammerMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

@@ -88,7 +88,7 @@ func initConfigPars(c *dig.Container) {
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 		dbEngine, err := database.DatabaseEngine(deps.NodeConfig.String(CfgDatabaseEngine))
 		if err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		databasePath := deps.NodeConfig.String(CfgDatabasePath)
@@ -104,7 +104,7 @@ func initConfigPars(c *dig.Container) {
 			DatabaseAutoRevalidation: deps.NodeConfig.Bool(CfgDatabaseAutoRevalidation),
 		}
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -138,23 +138,23 @@ func provide(c *dig.Container) {
 		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 			// delete old database folder
 			if err := os.RemoveAll(deps.DatabasePath); err != nil {
-				CorePlugin.Panicf("deleting database folder failed: %s", err)
+				CorePlugin.LogPanicf("deleting database folder failed: %s", err)
 			}
 		}
 
 		// Check if we need to migrate a legacy database into the split format
 		if err := SplitIntoTangleAndUTXO(deps.DatabasePath); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		targetEngine, err := database.CheckDatabaseEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine)
 		if err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		_, err = database.CheckDatabaseEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine)
 		if err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		tangleDatabaseMetrics := &metrics.DatabaseMetrics{}
@@ -180,11 +180,11 @@ func provide(c *dig.Container) {
 			}
 
 		default:
-			CorePlugin.Panicf("unknown database engine: %s, supported engines: pebble/rocksdb", targetEngine)
+			CorePlugin.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb", targetEngine)
 			return databaseOut{}
 		}
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	if err := c.Provide(func(coordinatorPublicKeyRanges coordinator.PublicKeyRanges) *keymanager.KeyManager {
@@ -192,7 +192,7 @@ func provide(c *dig.Container) {
 		for _, keyRange := range coordinatorPublicKeyRanges {
 			pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
 			if err != nil {
-				CorePlugin.Panicf("can't load public key ranges: %s", err)
+				CorePlugin.LogPanicf("can't load public key ranges: %s", err)
 			}
 
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
@@ -200,7 +200,7 @@ func provide(c *dig.Container) {
 
 		return keyManager
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	type storageDeps struct {
@@ -220,14 +220,14 @@ func provide(c *dig.Container) {
 
 		store, err := storage.New(deps.TangleDatabase.KVStore(), deps.UTXODatabase.KVStore(), deps.Profile.Caches)
 		if err != nil {
-			CorePlugin.Panicf("can't initialize storage: %s", err)
+			CorePlugin.LogPanicf("can't initialize storage: %s", err)
 		}
 		return storageOut{
 			Storage:     store,
 			UTXOManager: store.UTXOManager(),
 		}
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	type syncManagerDeps struct {
@@ -239,11 +239,11 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps syncManagerDeps) *syncmanager.SyncManager {
 		sync, err := syncmanager.New(deps.UTXOManager, deps.BelowMaxDepth)
 		if err != nil {
-			CorePlugin.Panicf("can't initialize sync manager: %s", err)
+			CorePlugin.LogPanicf("can't initialize sync manager: %s", err)
 		}
 		return sync
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -251,17 +251,17 @@ func configure() {
 
 	correctDatabasesVersion, err := deps.Storage.CheckCorrectDatabasesVersion()
 	if err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	if !correctDatabasesVersion {
 		databaseVersionUpdated, err := deps.Storage.UpdateDatabasesVersion()
 		if err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		if !databaseVersionUpdated {
-			CorePlugin.Panic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
+			CorePlugin.LogPanic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 
@@ -269,16 +269,16 @@ func configure() {
 		<-ctx.Done()
 
 		if err = deps.Storage.MarkDatabasesHealthy(); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		CorePlugin.LogInfo("Syncing databases to disk...")
 		if err = deps.Storage.FlushAndCloseStores(); err != nil {
-			CorePlugin.Panicf("Syncing databases to disk... failed: %s", err)
+			CorePlugin.LogPanicf("Syncing databases to disk... failed: %s", err)
 		}
 		CorePlugin.LogInfo("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	configureEvents()
@@ -290,7 +290,7 @@ func run() {
 		<-ctx.Done()
 		detachEvents()
 	}, shutdown.PriorityMetricsUpdater); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
 

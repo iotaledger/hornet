@@ -98,7 +98,7 @@ func initConfigPars(c *dig.Container) {
 			SnapshotsDeltaPath:   deps.NodeConfig.String(CfgSnapshotsDeltaPath),
 		}
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -134,12 +134,12 @@ func provide(c *dig.Container) {
 				Delta: "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin",
 			},
 		}); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		var downloadTargets []*snapshot.DownloadTarget
 		if err := deps.NodeConfig.Unmarshal(CfgSnapshotsDownloadURLs, &downloadTargets); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		solidEntryPointCheckThresholdPast := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
@@ -161,17 +161,17 @@ func provide(c *dig.Container) {
 		}
 
 		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
-			CorePlugin.Panicf("%s has to be specified if %s is enabled", CfgPruningMilestonesMaxMilestonesToKeep, CfgPruningMilestonesEnabled)
+			CorePlugin.LogPanicf("%s has to be specified if %s is enabled", CfgPruningMilestonesMaxMilestonesToKeep, CfgPruningMilestonesEnabled)
 		}
 
 		pruningSizeEnabled := deps.NodeConfig.Bool(CfgPruningSizeEnabled)
 		pruningTargetDatabaseSizeBytes, err := bytes.Parse(deps.NodeConfig.String(CfgPruningSizeTargetSize))
 		if err != nil {
-			CorePlugin.Panicf("parameter %s invalid", CfgPruningSizeTargetSize)
+			CorePlugin.LogPanicf("parameter %s invalid", CfgPruningSizeTargetSize)
 		}
 
 		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
-			CorePlugin.Panicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
+			CorePlugin.LogPanicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
 		}
 
 		return snapshot.NewSnapshotManager(
@@ -201,7 +201,7 @@ func provide(c *dig.Container) {
 			deps.PruningPruneReceipts,
 		)
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -210,11 +210,11 @@ func configure() {
 	if deps.DeleteAllFlag {
 		// delete old snapshot files
 		if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
-			CorePlugin.Panicf("deleting full snapshot file failed: %s", err)
+			CorePlugin.LogPanicf("deleting full snapshot file failed: %s", err)
 		}
 
 		if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
-			CorePlugin.Panicf("deleting delta snapshot file failed: %s", err)
+			CorePlugin.LogPanicf("deleting delta snapshot file failed: %s", err)
 		}
 	}
 
@@ -223,11 +223,11 @@ func configure() {
 	switch {
 	case snapshotInfo != nil && !*forceLoadingSnapshot:
 		if err := deps.SnapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 	default:
 		if err := deps.SnapshotManager.ImportSnapshots(CorePlugin.Daemon().ContextStopped()); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 	}
 
@@ -261,6 +261,6 @@ func run() {
 			}
 		}
 	}, shutdown.PrioritySnapshots); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

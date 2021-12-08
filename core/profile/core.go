@@ -49,7 +49,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(d profileDeps) *profile.Profile {
 		return loadProfile(d.NodeConfig, d.ProfilesConfig)
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -69,7 +69,7 @@ func loadProfile(nodeConfig *configuration.Configuration, profilesConfig *config
 	if profileName == AutoProfileName {
 		v, err := mem.VirtualMemory()
 		if err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		if v.Total >= 8000000000*0.95 {
@@ -81,7 +81,7 @@ func loadProfile(nodeConfig *configuration.Configuration, profilesConfig *config
 		} else if v.Total >= 1000000000*0.95 {
 			profileName = "1gb"
 		} else {
-			CorePlugin.Panic(ErrNotEnoughMemory)
+			CorePlugin.LogPanic(ErrNotEnoughMemory)
 		}
 	}
 
@@ -102,10 +102,10 @@ func loadProfile(nodeConfig *configuration.Configuration, profilesConfig *config
 	default:
 		p = &profile.Profile{}
 		if !profilesConfig.Exists(profileName) {
-			CorePlugin.Panicf("profile '%s' is not defined in the config", profileName)
+			CorePlugin.LogPanicf("profile '%s' is not defined in the config", profileName)
 		}
 		if err := profilesConfig.Unmarshal(profileName, p); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 		p.Name = profileName
 	}

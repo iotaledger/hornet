@@ -123,21 +123,20 @@ func provide(c *dig.Container) {
 
 		participationStore, err := database.StoreWithDefaultSettings(filepath.Join(deps.DatabasePath, "participation"), true, deps.DatabaseEngine)
 		if err != nil {
-			Plugin.Panic(err)
+			Plugin.LogPanic(err)
 		}
 
 		pm, err := participation.NewManager(
 			deps.Storage,
 			deps.SyncManager,
 			participationStore,
-			participation.WithLogger(Plugin.Logger()),
 		)
 		if err != nil {
-			Plugin.Panic(err)
+			Plugin.LogPanic(err)
 		}
 		return pm
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -244,11 +243,11 @@ func configure() {
 
 		Plugin.LogInfo("Syncing Participation database to disk...")
 		if err := deps.ParticipationManager.CloseDatabase(); err != nil {
-			Plugin.Panicf("Syncing Participation database to disk... failed: %s", err)
+			Plugin.LogPanicf("Syncing Participation database to disk... failed: %s", err)
 		}
 		Plugin.LogInfo("Syncing Participation database to disk... done")
 	}, shutdown.PriorityCloseDatabase); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	configureEvents()
@@ -263,7 +262,7 @@ func run() {
 		detachEvents()
 		Plugin.LogInfo("Stopping Participation ... done")
 	}, shutdown.PriorityParticipation); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
 

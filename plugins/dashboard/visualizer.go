@@ -203,6 +203,6 @@ func runVisualizer() {
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ...")
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ... done")
 	}, shutdown.PriorityDashboard); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

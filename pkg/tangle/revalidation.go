@@ -59,7 +59,7 @@ func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, p
 	// mark the database as tainted forever.
 	// this is used to signal the coordinator plugin that it should never use a revalidated database.
 	if err := t.storage.MarkDatabasesTainted(); err != nil {
-		t.log.Panic(err)
+		t.LogPanic(err)
 	}
 
 	start := time.Now()
@@ -85,7 +85,7 @@ func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, p
 		return fmt.Errorf("snapshot files (index: %d) do not fit the revalidation target (index: %d)", snapshotLedgerIndex, snapshotInfo.SnapshotIndex)
 	}
 
-	t.log.Infof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
+	t.LogInfof("reverting database state back from %d to snapshot %d (this might take a while)... ", latestMilestoneIndex, snapshotInfo.SnapshotIndex)
 
 	// deletes all ledger entries (unspent, spent, diffs, balances, treasury, receipts).
 	if err := t.cleanupLedger(pruneReceipts); err != nil {
@@ -123,16 +123,16 @@ func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, p
 		return err
 	}
 
-	t.log.Info("flushing storages...")
+	t.LogInfo("flushing storages...")
 	t.storage.FlushStorages()
-	t.log.Info("flushing storages... done!")
+	t.LogInfo("flushing storages... done!")
 
 	// apply the ledger from the last snapshot to the database
 	if err := t.applySnapshotLedger(snapshotInfo, snapshotManager); err != nil {
 		return err
 	}
 
-	t.log.Infof("reverted state back to snapshot %d, took %v", snapshotInfo.SnapshotIndex, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("reverted state back to snapshot %d, took %v", snapshotInfo.SnapshotIndex, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -142,11 +142,11 @@ func (t *Tangle) cleanupLedger(pruneReceipts bool) error {
 
 	start := time.Now()
 
-	t.log.Info("clearing ledger... ")
+	t.LogInfo("clearing ledger... ")
 	if err := t.storage.UTXOManager().ClearLedger(pruneReceipts); err != nil {
 		return err
 	}
-	t.log.Infof("clearing ledger... done. took %v", time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("clearing ledger... done. took %v", time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -170,7 +170,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 				return false
 			}
 
-			t.log.Infof("analyzed %d milestones", milestonesCounter)
+			t.LogInfof("analyzed %d milestones", milestonesCounter)
 		}
 
 		// do not delete older milestones
@@ -200,7 +200,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.log.Infof("deleting milestones...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting milestones...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteUnreferencedMessages(msIndex)
@@ -210,7 +210,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 	t.storage.FlushUnreferencedMessagesStorage()
 	t.storage.FlushMilestoneStorage()
 
-	t.log.Infof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -235,7 +235,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 				return false
 			}
 
-			t.log.Infof("analyzed %d messages", txsCounter)
+			t.LogInfof("analyzed %d messages", txsCounter)
 		}
 
 		storedTxMeta := t.storage.StoredMetadataOrNil(messageID)
@@ -260,7 +260,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 
 		return true
 	}, objectstorage.WithIteratorSkipCache(true))
-	t.log.Infof("analyzed %d messages", txsCounter)
+	t.LogInfof("analyzed %d messages", txsCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -279,7 +279,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.log.Infof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteMessage(hornet.MessageIDFromMapKey(messageID))
@@ -287,7 +287,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 
 	t.storage.FlushMessagesStorage()
 
-	t.log.Infof("deleting messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -311,7 +311,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 				return false
 			}
 
-			t.log.Infof("analyzed %d message metadata", metadataCounter)
+			t.LogInfof("analyzed %d message metadata", metadataCounter)
 		}
 
 		// delete metadata if message doesn't exist
@@ -321,7 +321,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 
 		return true
 	}, objectstorage.WithIteratorSkipCache(true))
-	t.log.Infof("analyzed %d message metadata", metadataCounter)
+	t.LogInfof("analyzed %d message metadata", metadataCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -340,7 +340,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.log.Infof("deleting message metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting message metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteMessageMetadata(hornet.MessageIDFromMapKey(messageID))
@@ -348,7 +348,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 
 	t.storage.FlushMessagesStorage()
 
-	t.log.Infof("deleting message metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting message metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -377,7 +377,7 @@ func (t *Tangle) cleanupChildren() error {
 				return false
 			}
 
-			t.log.Infof("analyzed %d children", childCounter)
+			t.LogInfof("analyzed %d children", childCounter)
 		}
 
 		childrenMapKey := messageID.ToMapKey() + childMessageID.ToMapKey()
@@ -399,7 +399,7 @@ func (t *Tangle) cleanupChildren() error {
 
 		return true
 	}, objectstorage.WithIteratorSkipCache(true))
-	t.log.Infof("analyzed %d children", childCounter)
+	t.LogInfof("analyzed %d children", childCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -418,7 +418,7 @@ func (t *Tangle) cleanupChildren() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.log.Infof("deleting children...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting children...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteChild(child.messageID, child.childMessageID)
@@ -426,7 +426,7 @@ func (t *Tangle) cleanupChildren() error {
 
 	t.storage.FlushChildrenStorage()
 
-	t.log.Infof("deleting children...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting children...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -452,7 +452,7 @@ func (t *Tangle) cleanupIndexations() error {
 				return false
 			}
 
-			t.log.Infof("analyzed %d indexations", indexationCounter)
+			t.LogInfof("analyzed %d indexations", indexationCounter)
 		}
 
 		// delete indexation if message metadata doesn't exist
@@ -462,7 +462,7 @@ func (t *Tangle) cleanupIndexations() error {
 
 		return true
 	}, objectstorage.WithIteratorSkipCache(true))
-	t.log.Infof("analyzed %d indexations", indexationCounter)
+	t.LogInfof("analyzed %d indexations", indexationCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -481,7 +481,7 @@ func (t *Tangle) cleanupIndexations() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.log.Infof("deleting indexations...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting indexations...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteIndexationByKey([]byte(indexationKey))
@@ -489,7 +489,7 @@ func (t *Tangle) cleanupIndexations() error {
 
 	t.storage.FlushIndexationStorage()
 
-	t.log.Infof("deleting indexations...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting indexations...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -513,14 +513,14 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 				return false
 			}
 
-			t.log.Infof("analyzed %d unreferenced messages", unreferencedTxsCounter)
+			t.LogInfof("analyzed %d unreferenced messages", unreferencedTxsCounter)
 		}
 
 		unreferencedMilestoneIndexes[msIndex] = struct{}{}
 
 		return true
 	}, objectstorage.WithIteratorSkipCache(true))
-	t.log.Infof("analyzed %d unreferenced messages", unreferencedTxsCounter)
+	t.LogInfof("analyzed %d unreferenced messages", unreferencedTxsCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -539,7 +539,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.log.Infof("deleting unreferenced messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting unreferenced messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteUnreferencedMessages(msIndex)
@@ -547,7 +547,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 
 	t.storage.FlushUnreferencedMessagesStorage()
 
-	t.log.Infof("deleting unreferenced messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting unreferenced messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
@@ -555,7 +555,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 // apply the ledger from the last snapshot to the database
 func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapshotManager *snapshot.SnapshotManager) error {
 
-	t.log.Info("applying snapshot balances to the ledger state...")
+	t.LogInfo("applying snapshot balances to the ledger state...")
 
 	// set the confirmed milestone index to 0.
 	// the correct milestone index will be applied during "ImportSnapshots"
@@ -563,23 +563,23 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 
 	// Restore the ledger state of the last snapshot
 	if err := snapshotManager.ImportSnapshots(t.shutdownCtx); err != nil {
-		t.log.Panic(err)
+		t.LogPanic(err)
 	}
 
 	if err := snapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
-		t.log.Panic(err)
+		t.LogPanic(err)
 	}
 
 	ledgerIndex, err := t.storage.UTXOManager().ReadLedgerIndex()
 	if err != nil {
-		t.log.Panic(err)
+		t.LogPanic(err)
 	}
 
 	if snapshotInfo.SnapshotIndex != ledgerIndex {
 		return ErrSnapshotIndexWrong
 	}
 
-	t.log.Info("applying snapshot balances to the ledger state ... done!")
+	t.LogInfo("applying snapshot balances to the ledger state ... done!")
 
 	return nil
 }

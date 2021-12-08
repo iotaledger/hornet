@@ -26,7 +26,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 
 	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		if err := t.futureConeSolidifier.SolidifyMessageAndFutureCone(t.shutdownCtx, task.Param(0).(*storage.CachedMetadata)); err != nil {
-			t.log.Debugf("SolidifyMessageAndFutureCone failed: %s", err)
+			t.LogDebugf("SolidifyMessageAndFutureCone failed: %s", err)
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
@@ -43,7 +43,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 }
 
 func (t *Tangle) RunTangleProcessor() {
-	t.log.Info("Starting TangleProcessor ...")
+	t.LogInfo("Starting TangleProcessor ...")
 
 	// set latest known milestone from database
 	latestMilestoneFromDatabase := t.storage.SearchLatestMilestoneIndexInStore()
@@ -104,7 +104,7 @@ func (t *Tangle) RunTangleProcessor() {
 		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityMetricsUpdater); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(ctx context.Context) {
@@ -113,67 +113,67 @@ func (t *Tangle) RunTangleProcessor() {
 		<-ctx.Done()
 		t.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(ctx context.Context) {
-		t.log.Info("Starting TangleProcessor[ReceiveTx] ... done")
+		t.LogInfo("Starting TangleProcessor[ReceiveTx] ... done")
 		t.messageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
 		t.Events.MessageSolid.Attach(onMessageSolid)
 		t.receiveMsgWorkerPool.Start()
 		t.startWaitGroup.Done()
 		<-ctx.Done()
-		t.log.Info("Stopping TangleProcessor[ReceiveTx] ...")
+		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ...")
 		t.messageProcessor.Events.MessageProcessed.Detach(onMsgProcessed)
 		t.Events.MessageSolid.Detach(onMessageSolid)
 		t.receiveMsgWorkerPool.StopAndWait()
-		t.log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
+		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(ctx context.Context) {
-		t.log.Info("Starting TangleProcessor[FutureConeSolidifier] ... done")
+		t.LogInfo("Starting TangleProcessor[FutureConeSolidifier] ... done")
 		t.futureConeSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
 		<-ctx.Done()
-		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ...")
+		t.LogInfo("Stopping TangleProcessor[FutureConeSolidifier] ...")
 		t.futureConeSolidifierWorkerPool.StopAndWait()
-		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ... done")
+		t.LogInfo("Stopping TangleProcessor[FutureConeSolidifier] ... done")
 	}, shutdown.PrioritySolidifierGossip); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(ctx context.Context) {
-		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
+		t.LogInfo("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
 		t.milestoneManager.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Attach(onMilestoneTimeout)
 		t.startWaitGroup.Done()
 		<-ctx.Done()
-		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
+		t.LogInfo("Stopping TangleProcessor[ProcessMilestone] ...")
 		t.StopMilestoneTimeoutTicker()
 		t.milestoneManager.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
 		t.processValidMilestoneWorkerPool.StopAndWait()
-		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
+		t.LogInfo("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(ctx context.Context) {
-		t.log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
+		t.LogInfo("Starting TangleProcessor[MilestoneSolidifier] ... done")
 		t.milestoneSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
 		<-ctx.Done()
-		t.log.Info("Stopping TangleProcessor[MilestoneSolidifier] ...")
+		t.LogInfo("Stopping TangleProcessor[MilestoneSolidifier] ...")
 		t.milestoneSolidifierWorkerPool.StopAndWait()
 		t.futureConeSolidifier.Cleanup(true)
-		t.log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
+		t.LogInfo("Stopping TangleProcessor[MilestoneSolidifier] ... done")
 	}, shutdown.PriorityMilestoneSolidifier); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 }

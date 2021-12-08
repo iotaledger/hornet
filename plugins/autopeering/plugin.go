@@ -156,7 +156,7 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 			AutopeeringRunAsEntryNode: runAsEntryNode,
 		}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -177,7 +177,7 @@ func provide(c *dig.Container) {
 			service.Key(deps.NetworkIDName),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -189,12 +189,12 @@ func configure() {
 	})
 
 	if err := autopeering.RegisterAutopeeringProtocolInMultiAddresses(); err != nil {
-		Plugin.Panicf("unable to register autopeering protocol for multi addresses: %s", err)
+		Plugin.LogPanicf("unable to register autopeering protocol for multi addresses: %s", err)
 	}
 
 	rawPrvKey, err := deps.NodePrivateKey.Raw()
 	if err != nil {
-		Plugin.Panicf("unable to obtain raw private key: %s", err)
+		Plugin.LogPanicf("unable to obtain raw private key: %s", err)
 	}
 
 	localPeerContainer, err = autopeering.NewLocalPeerContainer(
@@ -207,7 +207,7 @@ func configure() {
 		deps.AutopeeringRunAsEntryNode,
 	)
 	if err != nil {
-		Plugin.Panicf("unable to initialize local peer container: %s", err)
+		Plugin.LogPanicf("unable to initialize local peer container: %s", err)
 	}
 
 	Plugin.LogInfof("initialized local autopeering: %s@%s", localPeerContainer.Local().PublicKey(), localPeerContainer.Local().Address())
@@ -215,7 +215,7 @@ func configure() {
 	if deps.AutopeeringRunAsEntryNode {
 		entryNodeMultiAddress, err := autopeering.GetEntryNodeMultiAddress(localPeerContainer.Local())
 		if err != nil {
-			Plugin.Panicf("unable to parse entry node multiaddress: %s", err)
+			Plugin.LogPanicf("unable to parse entry node multiaddress: %s", err)
 		}
 
 		Plugin.LogInfof("\n\nentry node multiaddress: %s\n", entryNodeMultiAddress.String())
@@ -234,7 +234,7 @@ func run() {
 		deps.AutopeeringManager.Run(ctx)
 		detachEvents()
 	}, shutdown.PriorityAutopeering); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
 

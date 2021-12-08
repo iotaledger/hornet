@@ -24,7 +24,8 @@ import (
 
 type Tangle struct {
 	// the logger used to log events.
-	log *logger.Logger
+	*utils.WrappedLogger
+
 	// used to access the global daemon.
 	daemon daemon.Daemon
 	// context that is done when the node is shutting down.
@@ -125,7 +126,7 @@ func New(
 	updateSyncedAtStartup bool) *Tangle {
 
 	t := &Tangle{
-		log:                   log,
+		WrappedLogger:         utils.NewWrappedLogger(log),
 		daemon:                daemon,
 		shutdownCtx:           shutdownCtx,
 		storage:               dbStorage,

@@ -27,6 +27,6 @@ func runTipSelMetricWorker() {
 		deps.TipSelector.Events.TipSelPerformed.Detach(onTipSelPerformed)
 		Plugin.LogInfo("Stopping Dashboard[TipSelMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

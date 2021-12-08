@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
@@ -80,7 +81,10 @@ type FaucetEnqueueResponse struct {
 
 // Faucet is used to issue transaction to users that requested funds via a REST endpoint.
 type Faucet struct {
+	// lock used to secure the state of the faucet.
 	syncutils.Mutex
+	// the logger used to log events.
+	*utils.WrappedLogger
 
 	// used to access the global daemon.
 	daemon daemon.Daemon
@@ -142,8 +146,8 @@ var defaultOptions = []Option{
 
 // Options define options for the faucet.
 type Options struct {
-	logger *logger.Logger
-
+	// the logger used to log events.
+	logger            *logger.Logger
 	hrpNetworkPrefix  iotago.NetworkPrefix
 	amount            uint64
 	smallAmount       uint64
@@ -282,6 +286,7 @@ func New(
 			SoftError:     events.NewEvent(events.ErrorCaller),
 		},
 	}
+	faucet.WrappedLogger = utils.NewWrappedLogger(options.logger)
 	faucet.init()
 
 	return faucet
@@ -588,9 +593,7 @@ func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.O
 
 // logSoftError logs a soft error and triggers the event.
 func (f *Faucet) logSoftError(err error) {
-	if f.opts.logger != nil {
-		f.opts.logger.Warn(err)
-	}
+	f.LogWarn(err)
 	f.Events.SoftError.Trigger(err)
 }
 

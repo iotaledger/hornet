@@ -55,7 +55,7 @@ func provide(c *dig.Container) {
 		}
 		return pow.New(CorePlugin.Logger(), deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -69,6 +69,6 @@ func run() {
 		deps.Handler.Close()
 		CorePlugin.LogInfo("Stopping PoW Handler ... done")
 	}, shutdown.PriorityPoWHandler); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

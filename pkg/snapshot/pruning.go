@@ -166,7 +166,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		s.log.Panic("No snapshotInfo found!")
+		s.LogPanic("No snapshotInfo found!")
 	}
 
 	//lint:ignore SA5011 nil pointer is already checked before with a panic
@@ -212,7 +212,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		s.storage.SolidEntryPointsAddWithoutLocking(sep.MessageID, sep.Index)
 	}
 	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
-		s.log.Panic(err)
+		s.LogPanic(err)
 	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
@@ -220,7 +220,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 	// this way we can cleanly prune even if the pruning was aborted last time
 	snapshotInfo.EntryPointIndex = targetIndex
 	if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
-		s.log.Panic(err)
+		s.LogPanic(err)
 	}
 
 	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be CMI at startup of the node
@@ -234,7 +234,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			return 0, err
 		}
 
-		s.log.Infof("Pruning milestone (%d)...", milestoneIndex)
+		s.LogInfof("Pruning milestone (%d)...", milestoneIndex)
 
 		timeStart := time.Now()
 		txCountDeleted, msgCountChecked := s.pruneUnreferencedMessages(milestoneIndex)
@@ -243,7 +243,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		cachedMs := s.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMs == nil {
 			// Milestone not found, pruning impossible
-			s.log.Warnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
+			s.LogWarnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
 			continue
 		}
 
@@ -277,7 +277,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 
 		cachedMs.Release(true) // milestone -1
 		if err != nil {
-			s.log.Warnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
+			s.LogWarnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 			continue
 		}
 
@@ -285,7 +285,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		cachedMsMsg := s.storage.MilestoneCachedMessageOrNil(milestoneIndex) // milestone msg +1
 		if cachedMsMsg == nil {
 			// no message for milestone persisted
-			s.log.Warnf("Pruning milestone (%d) failed! Milestone message not found!", milestoneIndex)
+			s.LogWarnf("Pruning milestone (%d) failed! Milestone message not found!", milestoneIndex)
 			continue
 		}
 
@@ -295,7 +295,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		}
 
 		if err := s.pruneMilestone(milestoneIndex, migratedAtIndex...); err != nil {
-			s.log.Warnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
+			s.LogWarnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 		}
 		timePruneMilestone := time.Now()
 
@@ -307,11 +307,11 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 
 		snapshotInfo.PruningIndex = milestoneIndex
 		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
-			s.log.Panic(err)
+			s.LogPanic(err)
 		}
 		timeSetSnapshotInfo := time.Now()
 
-		s.log.Infof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(timeStart).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
+		s.LogInfof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(timeStart).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
 
 		s.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 		timePruningMilestoneIndexChanged := time.Now()
@@ -334,7 +334,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		s.storage.SolidEntryPointsAddWithoutLocking(sep.MessageID, sep.Index)
 	}
 	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
-		s.log.Panic(err)
+		s.LogPanic(err)
 	}
 	s.storage.WriteUnlockSolidEntryPoints()
 

@@ -64,7 +64,9 @@ const (
 
 // SnapshotManager handles reading and writing snapshot data.
 type SnapshotManager struct {
-	log                                  *logger.Logger
+	// the logger used to log events.
+	*utils.WrappedLogger
+
 	tangleDatabase                       *database.Database
 	utxoDatabase                         *database.Database
 	storage                              *storage.Storage
@@ -126,7 +128,7 @@ func NewSnapshotManager(
 	pruneReceipts bool) *SnapshotManager {
 
 	return &SnapshotManager{
-		log:                                  log,
+		WrappedLogger:                        utils.NewWrappedLogger(log),
 		tangleDatabase:                       tangleDatabase,
 		utxoDatabase:                         utxoDatabase,
 		storage:                              storage,
@@ -169,7 +171,7 @@ func (s *SnapshotManager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.I
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		s.log.Panic("No snapshotInfo found!")
+		s.LogPanic("No snapshotInfo found!")
 	}
 
 	if (confirmedMilestoneIndex < s.snapshotDepth+s.snapshotInterval) || (confirmedMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
@@ -197,7 +199,7 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 			cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(childMessageID) // meta +1
 			if cachedMsgMeta == nil {
 				// Ignore this message since it doesn't exist anymore
-				s.log.Warnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
+				s.LogWarnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
 				continue
 			}
 
@@ -341,7 +343,7 @@ func (s *SnapshotManager) CreateDeltaSnapshot(ctx context.Context, targetIndex m
 
 // LoadSnapshotFromFile loads a snapshot file from the given file path into the storage.
 func (s *SnapshotManager) LoadSnapshotFromFile(ctx context.Context, snapshotType Type, networkID uint64, filePath string) (err error) {
-	s.log.Infof("importing %s snapshot file...", snapshotNames[snapshotType])
+	s.LogInfof("importing %s snapshot file...", snapshotNames[snapshotType])
 	ts := time.Now()
 
 	header, err := loadSnapshotFileToStorage(ctx, s.storage, snapshotType, filePath, networkID)
@@ -353,9 +355,9 @@ func (s *SnapshotManager) LoadSnapshotFromFile(ctx context.Context, snapshotType
 		return fmt.Errorf("SetConfirmedMilestoneIndex failed: %w", err)
 	}
 
-	s.log.Infof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts).Truncate(time.Millisecond))
-	s.log.Infof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.OutputCount, header.MilestoneDiffCount)
-	s.log.Infof(`
+	s.LogInfof("imported %s snapshot file, took %v", snapshotNames[snapshotType], time.Since(ts).Truncate(time.Millisecond))
+	s.LogInfof("solid entry points: %d, outputs: %d, ms diffs: %d", header.SEPCount, header.OutputCount, header.MilestoneDiffCount)
+	s.LogInfof(`
 SnapshotInfo:
 	Type: %s
 	NetworkID: %d
@@ -436,15 +438,15 @@ func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(ctx context.Context, 
 	if s.shouldTakeSnapshot(confirmedMilestoneIndex) {
 		snapshotType, err := s.optimalSnapshotType()
 		if err != nil {
-			s.log.Warnf("%s: %s", ErrSnapshotCreationFailed, err)
+			s.LogWarnf("%s: %s", ErrSnapshotCreationFailed, err)
 			return
 		}
 
 		if err := s.createSnapshotWithoutLocking(ctx, snapshotType, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true); err != nil {
 			if errors.Is(err, ErrCritical) {
-				s.log.Panicf("%s: %s", ErrSnapshotCreationFailed, err)
+				s.LogPanicf("%s: %s", ErrSnapshotCreationFailed, err)
 			}
-			s.log.Warnf("%s: %s", ErrSnapshotCreationFailed, err)
+			s.LogWarnf("%s: %s", ErrSnapshotCreationFailed, err)
 		}
 
 		if !s.syncManager.IsNodeSynced() {
@@ -473,7 +475,7 @@ func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(ctx context.Context, 
 	}
 
 	if _, err := s.pruneDatabase(ctx, targetIndex); err != nil {
-		s.log.Debugf("pruning aborted: %v", err)
+		s.LogDebugf("pruning aborted: %v", err)
 	}
 
 	if pruningBySize {
@@ -598,13 +600,13 @@ func (s *SnapshotManager) downloadSnapshotFiles(ctx context.Context, wantedNetwo
 	if err != nil {
 		return fmt.Errorf("unable to marshal targets into formatted JSON: %w", err)
 	}
-	s.log.Infof("downloading snapshot files from one of the provided sources %s", string(targetsJSON))
+	s.LogInfof("downloading snapshot files from one of the provided sources %s", string(targetsJSON))
 
 	if err := s.DownloadSnapshotFiles(ctx, wantedNetworkID, fullPath, deltaPath, s.downloadTargets); err != nil {
 		return fmt.Errorf("unable to download snapshot files: %w", err)
 	}
 
-	s.log.Info("snapshot download finished")
+	s.LogInfo("snapshot download finished")
 	return nil
 }
 
@@ -613,13 +615,13 @@ func (s *SnapshotManager) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInf
 
 	// check that the stored snapshot corresponds to the wanted network ID
 	if snapshotInfo.NetworkID != s.networkID {
-		s.log.Panicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", s.networkID, s.networkIDSource, snapshotInfo.NetworkID)
+		s.LogPanicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", s.networkID, s.networkIDSource, snapshotInfo.NetworkID)
 	}
 
 	// if we don't enforce loading of a snapshot,
 	// we can check the ledger state of the current database and start the node.
 	if err := s.utxoManager.CheckLedgerState(); err != nil {
-		s.log.Fatal(err)
+		s.LogFatal(err)
 	}
 
 	return nil

@@ -121,13 +121,13 @@ func (p *Pluggable) LogWarnf(template string, args ...interface{}) {
 	p.Logger().Warnf(template, args...)
 }
 
-// Panic uses fmt.Sprint to construct and log a message, then panics.
-func (p *Pluggable) Panic(args ...interface{}) {
+// LogPanic uses fmt.Sprint to construct and log a message, then panics.
+func (p *Pluggable) LogPanic(args ...interface{}) {
 	p.Logger().Panic(args...)
 }
 
-// Panicf uses fmt.Sprintf to log a templated message, then panics.
-func (p *Pluggable) Panicf(template string, args ...interface{}) {
+// LogPanicf uses fmt.Sprintf to log a templated message, then panics.
+func (p *Pluggable) LogPanicf(template string, args ...interface{}) {
 	p.Logger().Panicf(template, args...)
 }
 

@@ -16,6 +16,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 
 	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
@@ -284,7 +285,8 @@ func parseEntryNode(entryNodeMultiAddrStr string, preferIPv6 bool) (entryNode *p
 
 type AutopeeringManager struct {
 	// the logger used to log events.
-	log *logger.Logger
+	*utils.WrappedLogger
+
 	// bindAddress is the bind address for autopeering.
 	bindAddress string
 	// entryNodes are the entry nodes for autopeering.
@@ -304,7 +306,7 @@ type AutopeeringManager struct {
 func NewAutopeeringManager(log *logger.Logger, bindAddress string, entryNodes []string, preferIPv6 bool, p2pServiceKey service.Key) *AutopeeringManager {
 
 	return &AutopeeringManager{
-		log:                log,
+		WrappedLogger:      utils.NewWrappedLogger(log),
 		bindAddress:        bindAddress,
 		entryNodes:         entryNodes,
 		preferIPv6:         preferIPv6,
@@ -342,7 +344,7 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 		for _, entryNodeDefinition := range entryNodesString {
 			entryNode, err := parseEntryNode(entryNodeDefinition, preferIPv6)
 			if err != nil {
-				a.log.Warnf("invalid entry node; ignoring: %s, error: %s", entryNodeDefinition, err)
+				a.LogWarnf("invalid entry node; ignoring: %s, error: %s", entryNodeDefinition, err)
 				continue
 			}
 			result = append(result, entryNode)
@@ -357,7 +359,7 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 
 	entryNodes, err := parseEntryNodes(a.entryNodes, a.preferIPv6)
 	if err != nil {
-		a.log.Warn(err)
+		a.LogWarn(err)
 	}
 
 	a.localPeerContainer = localPeerContainer
@@ -366,7 +368,7 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 	gossipServiceKeyHash.Write([]byte(a.p2pServiceKey))
 	networkID := gossipServiceKeyHash.Sum32()
 
-	a.discoveryProtocol = discover.New(localPeerContainer.Local(), protocolVersion, networkID, discover.Logger(a.log.Named("disc")), discover.MasterPeers(entryNodes))
+	a.discoveryProtocol = discover.New(localPeerContainer.Local(), protocolVersion, networkID, discover.Logger(a.LoggerNamed("disc")), discover.MasterPeers(entryNodes))
 
 	if !initSelection {
 		return
@@ -384,11 +386,11 @@ func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSe
 		return true
 	}
 
-	a.selectionProtocol = selection.New(localPeerContainer.Local(), a.discoveryProtocol, selection.Logger(a.log.Named("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
+	a.selectionProtocol = selection.New(localPeerContainer.Local(), a.discoveryProtocol, selection.Logger(a.LoggerNamed("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
 }
 
 func (a *AutopeeringManager) Run(ctx context.Context) {
-	a.log.Info("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
+	a.LogInfo("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
 
 	lPeer := a.localPeerContainer.Local()
 	peering := lPeer.Services().Get(service.PeeringKey)
@@ -396,12 +398,12 @@ func (a *AutopeeringManager) Run(ctx context.Context) {
 	// resolve the bind address
 	localAddr, err := net.ResolveUDPAddr(peering.Network(), a.bindAddress)
 	if err != nil {
-		a.log.Fatalf("error resolving %s: %s", a.bindAddress, err)
+		a.LogFatalf("error resolving %s: %s", a.bindAddress, err)
 	}
 
 	conn, err := net.ListenUDP(peering.Network(), localAddr)
 	if err != nil {
-		a.log.Fatalf("error listening: %s", err)
+		a.LogFatalf("error listening: %s", err)
 	}
 
 	handlers := []server.Handler{a.discoveryProtocol}
@@ -410,7 +412,7 @@ func (a *AutopeeringManager) Run(ctx context.Context) {
 	}
 
 	// start a server doing discovery and peering
-	srv := server.Serve(lPeer, conn, a.log.Named("srv"), handlers...)
+	srv := server.Serve(lPeer, conn, a.LoggerNamed("srv"), handlers...)
 
 	// start the discovery on that connection
 	a.discoveryProtocol.Start(srv)
@@ -420,10 +422,10 @@ func (a *AutopeeringManager) Run(ctx context.Context) {
 		a.selectionProtocol.Start(srv)
 	}
 
-	a.log.Infof("started: Address=%s/%s PublicKey=%s", localAddr.String(), localAddr.Network(), lPeer.PublicKey().String())
+	a.LogInfof("started: Address=%s/%s PublicKey=%s", localAddr.String(), localAddr.Network(), lPeer.PublicKey().String())
 
 	<-ctx.Done()
-	a.log.Info("Stopping Autopeering ...")
+	a.LogInfo("Stopping Autopeering ...")
 
 	if a.selectionProtocol != nil {
 		a.selectionProtocol.Close()
@@ -434,8 +436,8 @@ func (a *AutopeeringManager) Run(ctx context.Context) {
 	srv.Close()
 
 	if err := a.localPeerContainer.Close(); err != nil {
-		a.log.Errorf("error closing peer database: %s", err)
+		a.LogErrorf("error closing peer database: %s", err)
 	}
 
-	a.log.Info("Stopping Autopeering ... done")
+	a.LogInfo("Stopping Autopeering ... done")
 }

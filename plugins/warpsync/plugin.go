@@ -70,7 +70,7 @@ func run() {
 		<-ctx.Done()
 		detachEvents()
 	}, shutdown.PriorityWarpSync); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
 

@@ -73,7 +73,7 @@ func initConfigPars(c *dig.Container) {
 			BelowMaxDepth:                         deps.NodeConfig.Int(CfgTipSelBelowMaxDepth),
 		}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -112,7 +112,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -127,7 +127,7 @@ func run() {
 		<-ctx.Done()
 		detachEvents()
 	}, shutdown.PriorityTipselection); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(ctx context.Context) {
@@ -142,7 +142,7 @@ func run() {
 			}
 		}
 	}, shutdown.PriorityTipselection); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
 

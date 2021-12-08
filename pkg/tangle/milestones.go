@@ -19,13 +19,13 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone,
 	t.milestoneSolidifierWorkerPool.TrySubmit(msIndex, false)
 
 	if msIndex > confirmedMsIndex {
-		t.log.Infof("Valid milestone detected! Index: %d", msIndex)
+		t.LogInfof("Valid milestone detected! Index: %d", msIndex)
 		t.requester.RequestMilestoneParents(cachedMilestone.Retain()) // milestone pass +1
 	} else if requested {
 		pruningIndex := t.storage.SnapshotInfo().PruningIndex
 		if msIndex < pruningIndex {
 			// this should not happen. we requested a milestone that is below pruning index
-			t.log.Panicf("Synced too far back! Index: %d, PruningIndex: %d", msIndex, pruningIndex)
+			t.LogPanicf("Synced too far back! Index: %d, PruningIndex: %d", msIndex, pruningIndex)
 		}
 	}
 }
