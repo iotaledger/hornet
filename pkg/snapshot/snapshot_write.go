@@ -528,7 +528,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 		snapshotInfo.SnapshotIndex = targetIndex
 		snapshotInfo.Timestamp = targetMsTimestamp
 		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
-			s.Panic(err)
+			s.LogPanic(err)
 		}
 		timeSetSnapshotInfo = time.Now()
 		s.Events.SnapshotMilestoneIndexChanged.Trigger(targetIndex)

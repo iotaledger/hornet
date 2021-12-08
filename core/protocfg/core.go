@@ -60,7 +60,7 @@ func initConfigPars(c *dig.Container) {
 		if *cooPubKeyRangesFlag != "" {
 			// load from special CLI flag
 			if err := json.Unmarshal([]byte(*cooPubKeyRangesFlag), &res.PublicKeyRanges); err != nil {
-				CorePlugin.Panic(err)
+				CorePlugin.LogPanic(err)
 			}
 			return res
 		}
@@ -92,16 +92,16 @@ func initConfigPars(c *dig.Container) {
 				EndIndex:   4443860,
 			},
 		}); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		// load from config
 		if err := deps.NodeConfig.Unmarshal(CfgProtocolPublicKeyRanges, &res.PublicKeyRanges); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		return res
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }

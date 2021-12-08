@@ -102,7 +102,7 @@ func (t *Tangle) SolidQueueCheck(
 		if errors.Is(err, common.ErrOperationAborted) {
 			return false, true
 		}
-		t.Panic(err)
+		t.LogPanic(err)
 	}
 
 	tCollect := time.Now()
@@ -122,7 +122,7 @@ func (t *Tangle) SolidQueueCheck(
 	for _, messageID := range messageIDsToSolidify {
 		cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(messageID)
 		if cachedMsgMeta == nil {
-			t.Panicf("solidQueueCheck: Message metadata not found: %v", messageID.ToHex())
+			t.LogPanicf("solidQueueCheck: Message metadata not found: %v", messageID.ToHex())
 		}
 
 		t.markMessageAsSolid(cachedMsgMeta.Retain())
@@ -267,7 +267,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			if found, err := t.searchMissingMilestones(milestoneSolidificationCtx, currentConfirmedIndex, cachedClosestNextMsIndex, cachedMsToSolidify.Milestone().MessageID); !found {
 				if err != nil {
 					// no milestones found => this should not happen!
-					t.Panicf("Milestones missing between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
+					t.LogPanicf("Milestones missing between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
 				}
 				t.LogInfof("Aborted search for missing milestones between (%d) and (%d).", currentConfirmedIndex, cachedClosestNextMsIndex)
 			}
@@ -291,7 +291,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		func(confirmation *whiteflag.Confirmation) {
 			timeStartConfirmation = time.Now()
 			if err := t.syncManager.SetConfirmedMilestoneIndex(milestoneIndexToSolidify); err != nil {
-				t.Panicf("SetConfirmedMilestoneIndex failed: %s", err)
+				t.LogPanicf("SetConfirmedMilestoneIndex failed: %s", err)
 			}
 			timeSetConfirmedMilestoneIndex = time.Now()
 			if t.syncManager.IsNodeAlmostSynced() {
@@ -337,7 +337,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		})
 
 	if err != nil {
-		t.Panic(err)
+		t.LogPanic(err)
 	}
 
 	t.LogInfof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",

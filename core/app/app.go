@@ -166,7 +166,7 @@ func initConfigPars(c *dig.Container) {
 			PeeringConfigFilePath: *peeringCfgFilePath,
 		}
 	}); err != nil {
-		InitPlugin.Panic(err)
+		InitPlugin.LogPanic(err)
 	}
 }
 
@@ -179,7 +179,7 @@ func provide(c *dig.Container) {
 			LatestGitHubVersion: "",
 		}
 	}); err != nil {
-		InitPlugin.Panic(err)
+		InitPlugin.LogPanic(err)
 	}
 }
 

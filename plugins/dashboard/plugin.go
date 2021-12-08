@@ -112,7 +112,7 @@ func initConfigPars(c *dig.Container) {
 			DashboardAuthUsername: deps.NodeConfig.String(CfgDashboardAuthUsername),
 		}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -120,12 +120,12 @@ func configure() {
 
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		Plugin.Panic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	// check if RestAPIV1 plugin is disabled
 	if Plugin.Node.IsSkipped(restapiv1.Plugin) {
-		Plugin.Panic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
+		Plugin.LogPanic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	upgrader = &websocket.Upgrader{
@@ -141,7 +141,7 @@ func configure() {
 		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt))
 	if err != nil {
-		Plugin.Panicf("basic auth initialization failed: %w", err)
+		Plugin.LogPanicf("basic auth initialization failed: %w", err)
 	}
 
 	jwtAuth, err = jwt.NewJWTAuth(
@@ -151,7 +151,7 @@ func configure() {
 		deps.NodePrivateKey,
 	)
 	if err != nil {
-		Plugin.Panicf("JWT auth initialization failed: %w", err)
+		Plugin.LogPanicf("JWT auth initialization failed: %w", err)
 	}
 }
 
@@ -210,7 +210,7 @@ func run() {
 
 		Plugin.LogInfo("Stopping Dashboard[WSSend] ... done")
 	}, shutdown.PriorityDashboard); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	// run the message live feed

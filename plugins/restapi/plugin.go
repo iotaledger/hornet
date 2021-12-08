@@ -77,7 +77,7 @@ func initConfigPars(c *dig.Container) {
 			RestAPILimitsMaxResults: deps.NodeConfig.Int(CfgRestAPILimitsMaxResults),
 		}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -86,7 +86,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func() *metrics.RestAPIMetrics {
 		return &metrics.RestAPIMetrics{}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 
 	type echoDeps struct {
@@ -115,7 +115,7 @@ func provide(c *dig.Container) {
 			FaucetAllowedAPIRoute:    faucetAllowedAPIRoute,
 		}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -153,7 +153,7 @@ func run() {
 		}
 		Plugin.LogInfo("Stopping REST-API server ... done")
 	}, shutdown.PriorityRestAPI); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
 

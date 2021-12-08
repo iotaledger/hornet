@@ -16,7 +16,7 @@ func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Databas
 
 	rocksDatabase, err := database.NewRocksDB(path)
 	if err != nil {
-		CorePlugin.Panicf("rocksdb database initialization failed: %s", err)
+		CorePlugin.LogPanicf("rocksdb database initialization failed: %s", err)
 	}
 
 	database := database.New(

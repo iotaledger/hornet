@@ -95,12 +95,12 @@ type dependencies struct {
 func configure() {
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		Plugin.Panic("RestAPI plugin needs to be enabled to use the Spammer plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Spammer plugin")
 	}
 
 	// check if URTS plugin is disabled
 	if Plugin.Node.IsSkipped(urts.Plugin) {
-		Plugin.Panic("URTS plugin needs to be enabled to use the Spammer plugin")
+		Plugin.LogPanic("URTS plugin needs to be enabled to use the Spammer plugin")
 	}
 
 	setupRoutes(deps.Echo.Group(RouteSpammer))
@@ -151,7 +151,7 @@ func run() {
 		ticker := timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PrioritySpammer); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	// automatically start the spammer on node startup if the flag is set

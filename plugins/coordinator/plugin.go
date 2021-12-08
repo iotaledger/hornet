@@ -116,7 +116,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 
 	type coordinatorDeps struct {
@@ -193,11 +193,11 @@ func provide(c *dig.Container) {
 
 		coo, err := initCoordinator()
 		if err != nil {
-			Plugin.Panic(err)
+			Plugin.LogPanic(err)
 		}
 		return coo
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -205,11 +205,11 @@ func configure() {
 
 	databasesTainted, err := deps.Storage.AreDatabasesTainted()
 	if err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 
 	if databasesTainted {
-		Plugin.Panic(ErrDatabaseTainted)
+		Plugin.LogPanic(ErrDatabaseTainted)
 	}
 
 	nextCheckpointSignal = make(chan struct{})
@@ -244,7 +244,7 @@ func handleError(err error) bool {
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
-	Plugin.Panicf("coordinator plugin hit an unknown error type: %s", err)
+	Plugin.LogPanicf("coordinator plugin hit an unknown error type: %s", err)
 	return true
 }
 
@@ -263,7 +263,7 @@ func run() {
 		}, deps.Coordinator.Interval(), ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityCoordinator); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	// create a background worker that issues milestones
@@ -389,7 +389,7 @@ func run() {
 
 		detachEvents()
 	}, shutdown.PriorityCoordinator); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 }

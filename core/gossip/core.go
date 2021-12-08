@@ -77,7 +77,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func() gossip.RequestQueue {
 		return gossip.NewRequestQueue()
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	type msgProcDeps struct {
@@ -108,12 +108,12 @@ func provide(c *dig.Container) {
 				WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 			})
 		if err != nil {
-			CorePlugin.Panicf("MessageProcessor initialization failed: %s", err)
+			CorePlugin.LogPanicf("MessageProcessor initialization failed: %s", err)
 		}
 
 		return msgProc
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	type serviceDeps struct {
@@ -138,7 +138,7 @@ func provide(c *dig.Container) {
 			gossip.WithStreamWriteTimeout(deps.NodeConfig.Duration(CfgP2PGossipStreamWriteTimeout)),
 		)
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	type requesterDeps struct {
@@ -157,7 +157,7 @@ func provide(c *dig.Container) {
 			gossip.WithRequesterDiscardRequestsOlderThan(deps.NodeConfig.Duration(CfgRequestsDiscardOlderThan)),
 			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.NodeConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 
 	type broadcasterDeps struct {
@@ -176,7 +176,7 @@ func provide(c *dig.Container) {
 			deps.GossipService,
 			1000)
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -255,19 +255,19 @@ func run() {
 		deps.GossipService.Start(ctx)
 		CorePlugin.LogInfo("Stopped GossipService")
 	}, shutdown.PriorityGossipService); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := CorePlugin.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(ctx context.Context) {
 		deps.Requester.RunPendingRequestEnqueuer(ctx)
 	}, shutdown.PriorityRequestsProcessor); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := CorePlugin.Daemon().BackgroundWorker("RequestQueueDrainer", func(ctx context.Context) {
 		deps.Requester.RunRequestQueueDrainer(ctx)
 	}, shutdown.PriorityRequestsProcessor); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(ctx context.Context) {
@@ -278,7 +278,7 @@ func run() {
 		deps.Broadcaster.RunBroadcastQueueDrainer(ctx)
 		CorePlugin.LogInfo("Stopped BroadcastQueue")
 	}, shutdown.PriorityBroadcastQueue); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := CorePlugin.Daemon().BackgroundWorker("MessageProcessor", func(ctx context.Context) {
@@ -286,14 +286,14 @@ func run() {
 		deps.MessageProcessor.Run(ctx)
 		CorePlugin.LogInfo("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityHeartbeats); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
 

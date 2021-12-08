@@ -171,7 +171,7 @@ func (s *SnapshotManager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.I
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		s.Panic("No snapshotInfo found!")
+		s.LogPanic("No snapshotInfo found!")
 	}
 
 	if (confirmedMilestoneIndex < s.snapshotDepth+s.snapshotInterval) || (confirmedMilestoneIndex-s.snapshotDepth) < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
@@ -444,7 +444,7 @@ func (s *SnapshotManager) HandleNewConfirmedMilestoneEvent(ctx context.Context, 
 
 		if err := s.createSnapshotWithoutLocking(ctx, snapshotType, confirmedMilestoneIndex-s.snapshotDepth, s.snapshotTypeFilePath(snapshotType), true); err != nil {
 			if errors.Is(err, ErrCritical) {
-				s.Panicf("%s: %s", ErrSnapshotCreationFailed, err)
+				s.LogPanicf("%s: %s", ErrSnapshotCreationFailed, err)
 			}
 			s.LogWarnf("%s: %s", ErrSnapshotCreationFailed, err)
 		}
@@ -615,7 +615,7 @@ func (s *SnapshotManager) CheckCurrentSnapshot(snapshotInfo *storage.SnapshotInf
 
 	// check that the stored snapshot corresponds to the wanted network ID
 	if snapshotInfo.NetworkID != s.networkID {
-		s.Panicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", s.networkID, s.networkIDSource, snapshotInfo.NetworkID)
+		s.LogPanicf("node is configured to operate in network %d/%s but the stored snapshot data corresponds to %d", s.networkID, s.networkIDSource, snapshotInfo.NetworkID)
 	}
 
 	// if we don't enforce loading of a snapshot,

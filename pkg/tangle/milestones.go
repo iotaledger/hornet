@@ -25,7 +25,7 @@ func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone,
 		pruningIndex := t.storage.SnapshotInfo().PruningIndex
 		if msIndex < pruningIndex {
 			// this should not happen. we requested a milestone that is below pruning index
-			t.Panicf("Synced too far back! Index: %d, PruningIndex: %d", msIndex, pruningIndex)
+			t.LogPanicf("Synced too far back! Index: %d, PruningIndex: %d", msIndex, pruningIndex)
 		}
 	}
 }

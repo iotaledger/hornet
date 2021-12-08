@@ -59,7 +59,7 @@ func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, p
 	// mark the database as tainted forever.
 	// this is used to signal the coordinator plugin that it should never use a revalidated database.
 	if err := t.storage.MarkDatabasesTainted(); err != nil {
-		t.Panic(err)
+		t.LogPanic(err)
 	}
 
 	start := time.Now()
@@ -563,16 +563,16 @@ func (t *Tangle) applySnapshotLedger(snapshotInfo *storage.SnapshotInfo, snapsho
 
 	// Restore the ledger state of the last snapshot
 	if err := snapshotManager.ImportSnapshots(t.shutdownCtx); err != nil {
-		t.Panic(err)
+		t.LogPanic(err)
 	}
 
 	if err := snapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
-		t.Panic(err)
+		t.LogPanic(err)
 	}
 
 	ledgerIndex, err := t.storage.UTXOManager().ReadLedgerIndex()
 	if err != nil {
-		t.Panic(err)
+		t.LogPanic(err)
 	}
 
 	if snapshotInfo.SnapshotIndex != ledgerIndex {

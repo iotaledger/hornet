@@ -100,15 +100,15 @@ func (l *WrappedLogger) LogWarnf(template string, args ...interface{}) {
 	}
 }
 
-// Panic uses fmt.Sprint to construct and log a message, then panics.
-func (l *WrappedLogger) Panic(args ...interface{}) {
+// LogPanic uses fmt.Sprint to construct and log a message, then panics.
+func (l *WrappedLogger) LogPanic(args ...interface{}) {
 	if l.logger != nil {
 		l.logger.Panic(args...)
 	}
 }
 
-// Panicf uses fmt.Sprintf to log a templated message, then panics.
-func (l *WrappedLogger) Panicf(template string, args ...interface{}) {
+// LogPanicf uses fmt.Sprintf to log a templated message, then panics.
+func (l *WrappedLogger) LogPanicf(template string, args ...interface{}) {
 	if l.logger != nil {
 		l.logger.Panicf(template, args...)
 	}

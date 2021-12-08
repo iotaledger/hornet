@@ -83,20 +83,20 @@ func provide(c *dig.Container) {
 
 	privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("FAUCET_PRV_KEY")
 	if err != nil {
-		Plugin.Panicf("loading faucet private key failed, err: %s", err)
+		Plugin.LogPanicf("loading faucet private key failed, err: %s", err)
 	}
 
 	if len(privateKeys) == 0 {
-		Plugin.Panic("loading faucet private key failed, err: no private keys given")
+		Plugin.LogPanic("loading faucet private key failed, err: no private keys given")
 	}
 
 	if len(privateKeys) > 1 {
-		Plugin.Panic("loading faucet private key failed, err: too many private keys given")
+		Plugin.LogPanic("loading faucet private key failed, err: too many private keys given")
 	}
 
 	privateKey := privateKeys[0]
 	if len(privateKey) != ed25519.PrivateKeySize {
-		Plugin.Panic("loading faucet private key failed, err: wrong private key length")
+		Plugin.LogPanic("loading faucet private key failed, err: wrong private key length")
 	}
 
 	faucetAddress := iotago.AddressFromEd25519PubKey(privateKey.Public().(ed25519.PublicKey))
@@ -140,7 +140,7 @@ func provide(c *dig.Container) {
 			faucet.WithPowWorkerCount(deps.NodeConfig.Int(CfgFaucetPoWWorkerCount)),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -241,7 +241,7 @@ func run() {
 		}
 		detachEvents()
 	}, shutdown.PriorityFaucet); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	websiteEnabled := deps.NodeConfig.Bool(CfgFaucetWebsiteEnabled)

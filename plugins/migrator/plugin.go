@@ -73,9 +73,9 @@ func provide(c *dig.Container) {
 		maxReceiptEntries := deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries)
 		switch {
 		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
-			Plugin.Panicf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
+			Plugin.LogPanicf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
 		case maxReceiptEntries <= 0:
-			Plugin.Panicf("%s must be greather than 0", CfgMigratorReceiptMaxEntries)
+			Plugin.LogPanicf("%s must be greather than 0", CfgMigratorReceiptMaxEntries)
 		}
 
 		return migrator.NewService(
@@ -84,7 +84,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -121,6 +121,6 @@ func run() {
 		})
 		Plugin.LogInfof("Stopping %s ... done", Plugin.Name)
 	}, shutdown.PriorityMigrator); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

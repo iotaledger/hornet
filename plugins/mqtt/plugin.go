@@ -80,7 +80,7 @@ type dependencies struct {
 func configure() {
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		Plugin.Panic("RestAPI plugin needs to be enabled to use the MQTT plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the MQTT plugin")
 	}
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
@@ -314,7 +314,7 @@ func run() {
 		Plugin.LogInfo("Stopping MQTT Broker ...")
 		Plugin.LogInfo("Stopping MQTT Broker ... done")
 	}, shutdown.PriorityMetricsPublishers); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := Plugin.Daemon().BackgroundWorker("MQTT Events", func(ctx context.Context) {
@@ -364,6 +364,6 @@ func run() {
 
 		Plugin.LogInfo("Stopping MQTT Events ... done")
 	}, shutdown.PriorityMetricsPublishers); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

@@ -177,7 +177,7 @@ type dependencies struct {
 func configure() {
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		Plugin.Panic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
 	}
 
 	routeGroup := deps.Echo.Group("/api/v1")

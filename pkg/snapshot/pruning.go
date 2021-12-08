@@ -166,7 +166,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 
 	snapshotInfo := s.storage.SnapshotInfo()
 	if snapshotInfo == nil {
-		s.Panic("No snapshotInfo found!")
+		s.LogPanic("No snapshotInfo found!")
 	}
 
 	//lint:ignore SA5011 nil pointer is already checked before with a panic
@@ -212,7 +212,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		s.storage.SolidEntryPointsAddWithoutLocking(sep.MessageID, sep.Index)
 	}
 	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
-		s.Panic(err)
+		s.LogPanic(err)
 	}
 	s.storage.WriteUnlockSolidEntryPoints()
 
@@ -220,7 +220,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 	// this way we can cleanly prune even if the pruning was aborted last time
 	snapshotInfo.EntryPointIndex = targetIndex
 	if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
-		s.Panic(err)
+		s.LogPanic(err)
 	}
 
 	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be CMI at startup of the node
@@ -307,7 +307,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 
 		snapshotInfo.PruningIndex = milestoneIndex
 		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
-			s.Panic(err)
+			s.LogPanic(err)
 		}
 		timeSetSnapshotInfo := time.Now()
 
@@ -334,7 +334,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		s.storage.SolidEntryPointsAddWithoutLocking(sep.MessageID, sep.Index)
 	}
 	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
-		s.Panic(err)
+		s.LogPanic(err)
 	}
 	s.storage.WriteUnlockSolidEntryPoints()
 

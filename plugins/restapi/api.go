@@ -73,7 +73,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 		deps.NodePrivateKey,
 	)
 	if err != nil {
-		Plugin.Panicf("JWT auth initialization failed: %w", err)
+		Plugin.LogPanicf("JWT auth initialization failed: %w", err)
 	}
 
 	jwtAllow := func(c echo.Context, subject string, claims *jwt.AuthClaims) bool {

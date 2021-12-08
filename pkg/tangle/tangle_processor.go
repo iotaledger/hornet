@@ -104,7 +104,7 @@ func (t *Tangle) RunTangleProcessor() {
 		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityMetricsUpdater); err != nil {
-		t.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(ctx context.Context) {
@@ -113,7 +113,7 @@ func (t *Tangle) RunTangleProcessor() {
 		<-ctx.Done()
 		t.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater); err != nil {
-		t.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(ctx context.Context) {
@@ -129,7 +129,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.receiveMsgWorkerPool.StopAndWait()
 		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker); err != nil {
-		t.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(ctx context.Context) {
@@ -141,7 +141,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.futureConeSolidifierWorkerPool.StopAndWait()
 		t.LogInfo("Stopping TangleProcessor[FutureConeSolidifier] ... done")
 	}, shutdown.PrioritySolidifierGossip); err != nil {
-		t.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(ctx context.Context) {
@@ -160,7 +160,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.processValidMilestoneWorkerPool.StopAndWait()
 		t.LogInfo("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor); err != nil {
-		t.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(ctx context.Context) {
@@ -173,7 +173,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.futureConeSolidifier.Cleanup(true)
 		t.LogInfo("Stopping TangleProcessor[MilestoneSolidifier] ... done")
 	}, shutdown.PriorityMilestoneSolidifier); err != nil {
-		t.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 }

@@ -146,13 +146,13 @@ func writeFileServiceDiscoveryFile() {
 	}}
 	j, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
-		Plugin.Panic("unable to marshal file service discovery JSON:", err)
+		Plugin.LogPanic("unable to marshal file service discovery JSON:", err)
 		return
 	}
 
 	// this truncates an existing file
 	if err := ioutil.WriteFile(path, j, 0666); err != nil {
-		Plugin.Panic("unable to write file service discovery file:", err)
+		Plugin.LogPanic("unable to write file service discovery file:", err)
 	}
 
 	Plugin.LogInfof("Wrote 'file service discovery' content to %s", path)
@@ -213,6 +213,6 @@ func run() {
 		}
 		Plugin.LogInfo("Stopping Prometheus exporter ... done")
 	}, shutdown.PriorityPrometheus); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
