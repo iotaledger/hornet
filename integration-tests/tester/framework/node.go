@@ -42,7 +42,16 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 		return nil, err
 	}
 
-	debugNodeAPI := NewDebugNodeAPIClient(getNodeAPIBaseURL(ip))
+	deSeriParas := &iotago.DeSerializationParameters{
+		RentStructure: &iotago.RentStructure{
+			VByteCost:    0,
+			VBFactorData: 0,
+			VBFactorKey:  0,
+		},
+		MinDustDeposit: 0,
+	}
+
+	debugNodeAPI := NewDebugNodeAPIClient(getNodeAPIBaseURL(ip), deSeriParas)
 
 	return &Node{
 		Name: name,
