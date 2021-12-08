@@ -255,6 +255,16 @@ func (e *Event) payloadType() uint32 {
 	}
 }
 
+// Ballot returns the Ballot payload if this participation is for a Ballot event.
+func (e *Event) Ballot() *Ballot {
+	switch payload := e.Payload.(type) {
+	case *Ballot:
+		return payload
+	default:
+		return nil
+	}
+}
+
 // BallotQuestions returns the questions contained in the Ballot payload if this participation contains a Ballot.
 func (e *Event) BallotQuestions() []*Question {
 	switch payload := e.Payload.(type) {
@@ -269,7 +279,7 @@ func (e *Event) BallotQuestions() []*Question {
 	}
 }
 
-// Staking returns the staking payload if this participation is for a Staking event
+// Staking returns the staking payload if this participation is for a Staking event.
 func (e *Event) Staking() *Staking {
 	switch payload := e.Payload.(type) {
 	case *Staking:
@@ -279,7 +289,7 @@ func (e *Event) Staking() *Staking {
 	}
 }
 
-// Status returns a human-readable status of the event. Possible values are "upcoming", "commencing", "holding" and "ended"
+// Status returns a human-readable status of the event. Possible values are "upcoming", "commencing", "holding" and "ended".
 func (e *Event) Status(atIndex milestone.Index) string {
 	if atIndex < e.CommenceMilestoneIndex() {
 		return "upcoming"
@@ -328,6 +338,21 @@ func (e *Event) IsCountingParticipation(atIndex milestone.Index) bool {
 	return atIndex >= e.StartMilestoneIndex() && atIndex < e.EndMilestoneIndex()
 }
 
+// BallotCanOverflow returns whether a Ballot event can overflow.
+func (e *Event) BallotCanOverflow() bool {
+	ballot := e.Ballot()
+	if ballot == nil {
+		return false
+	}
+
+	// Check if total-supply / denominator * number of milestones can overflow uint64
+	maxWeightPerMilestone := uint64(iotago.TokenSupply) / uint64(BallotDenominator)
+	maxNumberOfMilestones := math.MaxUint64 / maxWeightPerMilestone
+
+	return uint64(e.MilestoneIndexEnd-e.MilestoneIndexStart) > maxNumberOfMilestones
+}
+
+// StakingCanOverflow returns whether a Staking event can overflow.
 func (e *Event) StakingCanOverflow() bool {
 	staking := e.Staking()
 	if staking == nil {
@@ -343,8 +368,6 @@ func (e *Event) StakingCanOverflow() bool {
 	// Check if total-supply * numerator/denominator * number of milestones can overflow uint64
 	maxRewardPerMilestone := uint64(iotago.TokenSupply) * uint64(staking.Numerator) / uint64(staking.Denominator)
 	maxNumberOfMilestones := math.MaxUint64 / maxRewardPerMilestone
-	if uint64(e.MilestoneIndexEnd-e.MilestoneIndexStart) > maxNumberOfMilestones {
-		return true
-	}
-	return false
+
+	return uint64(e.MilestoneIndexEnd-e.MilestoneIndexStart) > maxNumberOfMilestones
 }

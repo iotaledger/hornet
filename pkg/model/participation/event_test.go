@@ -164,6 +164,12 @@ func TestEvent_Serialize(t *testing.T) {
 	}
 }
 
+func RandBallotEventWithIndexes(commence uint32, start uint32, end uint32) *participation.Event {
+	ballot, _ := RandBallot(1 + rand.Intn(participation.BallotMaxQuestionsCount-1))
+	event, _ := RandEvent(participation.EventNameMaxLength, participation.EventAdditionalInfoMaxLength, commence, start, end, ballot)
+	return event
+}
+
 func RandStakingEvent(nominator uint32, denominator uint32, duration uint32) *participation.Event {
 	eb := participation.NewEventBuilder(
 		RandString(100),
@@ -186,6 +192,11 @@ func RandStakingEvent(nominator uint32, denominator uint32, duration uint32) *pa
 		panic(err)
 	}
 	return event
+}
+
+func TestEventBallotCanOverflow(t *testing.T) {
+	require.True(t, RandBallotEventWithIndexes(1, 5, 10000000).BallotCanOverflow())
+	require.False(t, RandBallotEventWithIndexes(1, 5, 10).BallotCanOverflow())
 }
 
 func TestEventStakingCanOverflow(t *testing.T) {

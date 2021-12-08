@@ -453,7 +453,7 @@ func (pm *ParticipationManager) startCountingBallotAnswers(event *Event, vote *P
 			return err
 		}
 
-		voteCount := amount / 1000
+		voteCount := amount / BallotDenominator
 		currentVoteBalance += voteCount
 
 		if err := setCurrentBallotVoteBalanceForQuestionAndAnswer(vote.EventID, milestone, questionIndex, answerValue, currentVoteBalance, mutations); err != nil {
@@ -475,7 +475,7 @@ func (pm *ParticipationManager) stopCountingBallotAnswers(event *Event, vote *Pa
 			return err
 		}
 
-		voteCount := amount / 1000
+		voteCount := amount / BallotDenominator
 		if currentVoteBalance < voteCount {
 			// currentVoteBalance can't be less than 0
 			return ErrInvalidCurrentBallotVoteBalance
