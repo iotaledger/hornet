@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 // configureCoordinator configures a new coordinator with clean state for the tests.

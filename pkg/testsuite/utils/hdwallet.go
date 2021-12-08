@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"fmt"
 
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 const (

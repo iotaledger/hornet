@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -24,7 +25,6 @@ import (
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 const (

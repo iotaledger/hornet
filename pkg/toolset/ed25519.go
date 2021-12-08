@@ -1,6 +1,7 @@
 package toolset
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 type keys struct {

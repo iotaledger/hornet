@@ -2,6 +2,7 @@ package value
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/rand"
 	"log"
 	"testing"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 // TestValue boots up a statically peered network and then checks that spending

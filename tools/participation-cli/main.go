@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 const (

@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"crypto/ed25519"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -30,7 +31,6 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 const (

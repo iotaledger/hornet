@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -27,7 +28,6 @@ import (
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 // TestEnvironment holds the state of the test environment.

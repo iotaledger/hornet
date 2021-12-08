@@ -2,6 +2,7 @@ package snapshot_test
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"fmt"
 	"math/rand"
 	"os"
@@ -20,7 +21,6 @@ import (
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 type test struct {

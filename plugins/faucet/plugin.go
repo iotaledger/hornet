@@ -2,6 +2,7 @@ package faucet
 
 import (
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -32,7 +33,6 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v3/ed25519"
 )
 
 const (

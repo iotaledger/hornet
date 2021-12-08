@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/gohornet/hornet/pkg/model/participation"
+	"github.com/gohornet/hornet/pkg/model/utxo/utils"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	"github.com/iotaledger/iota.go/v2/tpkg"
 )
 
 func RandParticipation(answerCount int) (*participation.Participation, []byte) {
@@ -17,7 +17,7 @@ func RandParticipation(answerCount int) (*participation.Participation, []byte) {
 }
 
 func RandParticipationWithEventID(eventID participation.EventID, answerCount int) (*participation.Participation, []byte) {
-	answers := tpkg.RandBytes(answerCount)
+	answers := utils.RandBytes(answerCount)
 	if answerCount == 0 {
 		answers = []byte{} // RandBytes returns nil if empty
 	}

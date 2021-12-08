@@ -20,7 +20,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/websocket v1.4.2
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20211125083540-7ba1c9edcba9
-	github.com/iotaledger/hive.go v0.0.0-20211207105259-9e48241c18f7
+	github.com/iotaledger/hive.go v0.0.0-20211208125510-04baae2057d6
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v2 v2.0.1-0.20211018071144-edf83a5ab704
 	github.com/ipfs/go-datastore v0.5.1
@@ -44,7 +44,7 @@ require (
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.13.0
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
-	golang.org/x/net v0.0.0-20211206223403-eba003a116a9
+	golang.org/x/net v0.0.0-20211208012354-db4efeb81f4b
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11
 )
@@ -79,6 +79,7 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
+	github.com/ethereum/go-ethereum v1.10.13 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
@@ -102,8 +103,10 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/go-version v1.3.0 // indirect
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/huin/goupnp v1.0.2 // indirect
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20211208125510-04baae2057d6 // indirect
+	github.com/iotaledger/iota.go/v3 v3.0.0-20211208121234-4432a2cc7db4 // indirect
 	github.com/ipfs/go-cid v0.1.0 // indirect
 	github.com/ipfs/go-ipfs-util v0.0.2 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
@@ -225,11 +228,11 @@ require (
 	golang.org/x/exp v0.0.0-20211129234152-8a230f1f7d7a // indirect
 	golang.org/x/mod v0.6.0-dev.0.20211013180041-c96bc1413d57 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.8-0.20211029000441-d6a9af8af023 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/genproto v0.0.0-20211129164237-f09f9a12af12 // indirect
+	google.golang.org/genproto v0.0.0-20211207154714-918901c715cf // indirect
 	google.golang.org/grpc v1.42.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
