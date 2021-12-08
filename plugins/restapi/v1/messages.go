@@ -213,7 +213,8 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
-		if _, err := msg.Deserialize(bytes, serializer.DeSeriModePerformValidation, deps.DeserializationParameters); err != nil {
+		// Do not validate here, the parents might need to be set
+		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.DeserializationParameters); err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 	}
