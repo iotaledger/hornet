@@ -163,7 +163,7 @@ func (u *Manager) forEachUnspentOutput(consumer OutputConsumer, keyPrefix kvstor
 
 func (u *Manager) ForEachUnspentExtendedOutput(filterAddress iotago.Address, consumer OutputConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
-	key := []byte{UTXOStoreKeyPrefixExtendedOutputUnspent}
+	key := []byte{UTXOStoreKeyPrefixLookupExtendedOutputs}
 
 	// Filter by Address
 	if filterAddress != nil {
@@ -178,7 +178,7 @@ func (u *Manager) ForEachUnspentExtendedOutput(filterAddress iotago.Address, con
 
 func (u *Manager) ForEachUnspentNFTOutput(filterNFTID *iotago.NFTID, consumer OutputConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
-	key := []byte{UTXOStoreKeyPrefixNFTUnspent}
+	key := []byte{UTXOStoreKeyPrefixLookupNFTOutputs}
 
 	// Filter by ID
 	if filterNFTID != nil {
@@ -189,7 +189,7 @@ func (u *Manager) ForEachUnspentNFTOutput(filterNFTID *iotago.NFTID, consumer Ou
 
 func (u *Manager) ForEachUnspentAliasOutput(filterAliasID *iotago.AliasID, consumer OutputConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
-	key := []byte{UTXOStoreKeyPrefixAliasUnspent}
+	key := []byte{UTXOStoreKeyPrefixLookupAliasOutputs}
 
 	// Filter by ID
 	if filterAliasID != nil {
@@ -200,7 +200,7 @@ func (u *Manager) ForEachUnspentAliasOutput(filterAliasID *iotago.AliasID, consu
 
 func (u *Manager) ForEachUnspentFoundryOutput(filterFoundryID *iotago.FoundryID, consumer OutputConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
-	key := []byte{UTXOStoreKeyPrefixFoundryUnspent}
+	key := []byte{UTXOStoreKeyPrefixLookupFoundryOutputs}
 
 	// Filter by ID
 	if filterFoundryID != nil {
@@ -215,7 +215,7 @@ func (u *Manager) ForEachUnspentOutputWithIssuer(issuer iotago.Address, filterOp
 	if err != nil {
 		return err
 	}
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixIssuerLookup}, addrBytes[:])
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixLookupByIssuer}, addrBytes[:])
 	if filterOptions != nil {
 		if filterOptions.filterOutputType != nil {
 			key = byteutils.ConcatBytes(key, []byte{byte(*filterOptions.filterOutputType)})
@@ -231,7 +231,7 @@ func (u *Manager) ForEachUnspentOutputWithSender(sender iotago.Address, filterOp
 	if err != nil {
 		return err
 	}
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderLookup}, addrBytes[:])
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixLookupBySender}, addrBytes[:])
 	if filterOptions != nil {
 		if filterOptions.filterOutputType != nil {
 			key = byteutils.ConcatBytes(key, []byte{byte(*filterOptions.filterOutputType)})
@@ -249,7 +249,7 @@ func (u *Manager) ForEachUnspentOutputWithSenderAndIndexTag(sender iotago.Addres
 	if err != nil {
 		return err
 	}
-	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixSenderAndIndexLookup}, addrBytes[:], append(indexTag, make([]byte, iotago.MaxIndexationTagLength-len(indexTag))...))
+	key := byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixLoolupBySenderAndIndex}, addrBytes[:], append(indexTag, make([]byte, iotago.MaxIndexationTagLength-len(indexTag))...))
 	if filterOptions != nil {
 		if filterOptions.filterOutputType != nil {
 			key = byteutils.ConcatBytes(key, []byte{byte(*filterOptions.filterOutputType)})
@@ -290,7 +290,7 @@ func (u *Manager) ForEachUnspentOutputOnAddress(address iotago.Address, filterOp
 	opt := iterateOptions(options)
 
 	ms := marshalutil.New(36)
-	ms.WriteByte(UTXOStoreKeyPrefixAddressLookup)
+	ms.WriteByte(UTXOStoreKeyPrefixLookupByAddress)
 	addrBytes, err := address.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return err

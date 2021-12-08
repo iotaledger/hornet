@@ -64,44 +64,28 @@ func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 		return err
 	}
 
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixExtendedOutputUnspent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLookupExtendedOutputs}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixExtendedOutputSpent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLookupNFTOutputs}); err != nil {
 		return err
 	}
-
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixNFTUnspent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLookupAliasOutputs}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixNFTSpent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLookupFoundryOutputs}); err != nil {
 		return err
 	}
-
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixAliasUnspent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLookupByAddress}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixAliasSpent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLookupByIssuer}); err != nil {
 		return err
 	}
-
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixFoundryUnspent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLookupBySender}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixFoundrySpent}); err != nil {
-		return err
-	}
-
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixAddressLookup}); err != nil {
-		return err
-	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixIssuerLookup}); err != nil {
-		return err
-	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSenderLookup}); err != nil {
-		return err
-	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSenderAndIndexLookup}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixLoolupBySenderAndIndex}); err != nil {
 		return err
 	}
 
@@ -144,7 +128,7 @@ func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex milestone.Index, pru
 			return err
 		}
 
-		if err := deleteSpentUnspentMarkings(spent.output, mutations); err != nil {
+		if err := deleteOutputLookups(spent.output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -314,7 +298,7 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 			mutations.Cancel()
 			return err
 		}
-		if err := deleteSpentUnspentMarkings(output, mutations); err != nil {
+		if err := deleteOutputLookups(output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}

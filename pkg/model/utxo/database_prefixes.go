@@ -3,6 +3,7 @@ package utxo
 const (
 	UTXOStoreKeyPrefixLedgerMilestoneIndex byte = 0
 
+	// Output and Spent storage
 	UTXOStoreKeyPrefixOutput      byte = 1 //TODO: iterate over all values and map to extended outputs
 	UTXOStoreKeyPrefixOutputSpent byte = 8
 
@@ -12,60 +13,23 @@ const (
 	UTXOStoreKeyPrefixTreasuryOutput byte = 6
 	UTXOStoreKeyPrefixReceipts       byte = 7
 
-	// ExtendedOutput
-	UTXOStoreKeyPrefixExtendedOutputUnspent byte = 9
-	UTXOStoreKeyPrefixExtendedOutputSpent   byte = 10
-
-	// AliasOutputs
-	UTXOStoreKeyPrefixAliasUnspent byte = 11
-	UTXOStoreKeyPrefixAliasSpent   byte = 12
-
-	// NFTOutputs
-	UTXOStoreKeyPrefixNFTUnspent byte = 13
-	UTXOStoreKeyPrefixNFTSpent   byte = 14
-
-	// FoundryOutputs
-	UTXOStoreKeyPrefixFoundryUnspent byte = 15
-	UTXOStoreKeyPrefixFoundrySpent   byte = 16
-
-	// Extra Lookups
-	UTXOStoreKeyPrefixAddressLookup        byte = 17
-	UTXOStoreKeyPrefixIssuerLookup         byte = 18
-	UTXOStoreKeyPrefixSenderLookup         byte = 19
-	UTXOStoreKeyPrefixSenderAndIndexLookup byte = 20
+	// Lookup Tables for unspent outputs
+	UTXOStoreKeyPrefixLookupExtendedOutputs  byte = 100
+	UTXOStoreKeyPrefixLookupAliasOutputs     byte = 101
+	UTXOStoreKeyPrefixLookupNFTOutputs       byte = 102
+	UTXOStoreKeyPrefixLookupFoundryOutputs   byte = 103
+	UTXOStoreKeyPrefixLookupByAddress        byte = 104
+	UTXOStoreKeyPrefixLookupByIssuer         byte = 105
+	UTXOStoreKeyPrefixLookupBySender         byte = 106
+	UTXOStoreKeyPrefixLoolupBySenderAndIndex byte = 107
 )
 
 // Deprecated keys, just used for migration purposes
 const (
-	UTXOStoreKeyPrefixUnspent  byte = 2 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressUnspent and drop
-	UTXOStoreKeyPrefixSpent    byte = 3 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressSpent and UTXOStoreKeyPrefixSpent, then drop
+	UTXOStoreKeyPrefixUnspent  byte = 2 //TODO: migrate to UTXOStoreKeyPrefixLookupExtendedOutputs and create additional lookups, then drop
+	UTXOStoreKeyPrefixSpent    byte = 3 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressSpent and UTXOStoreKeyPrefixOutputSpent, then drop
 	UTXOStoreKeyPrefixBalances byte = 5 //TODO: deprecate and drop
 )
-
-// https://hackmd.io/SDbu_YCZTuOH4QhABf6ViQ?view
-
-/*
-	Required LUTs:
-
--   outputID (value: output)
-
-hasSpendingConstraints: dust-deposit-return, expiration-lock, time-lock
-
-- (spent/unspent) address + hasSpendingConstraints + outputType + outputID
-	* target-address (ed25519, alias, nft)
-	* state controller (ed25519, alias)
-	* governance controller (ed25519, alias)
-- 	(spent/unspent) aliasID + outputID
--   (spent/unspent) nftID + outputID
-- 	(spent/unspent) foundryID + outputID
-
--	issuer + type + outputID
-	* issuer (ed25519, alias, nft)
--	sender + type + outputID
-	* sender (ed25519, alias, nft)
--	sender + index + type + outputID
-	* sender (ed25519, alias, nft)
-*/
 
 /*
 
