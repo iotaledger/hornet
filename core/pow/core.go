@@ -2,14 +2,12 @@ package pow
 
 import (
 	"context"
-	"time"
 
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -30,10 +28,6 @@ var (
 	deps       dependencies
 )
 
-const (
-	powsrvInitCooldown = 30 * time.Second
-)
-
 type dependencies struct {
 	dig.In
 	Handler *pow.Handler
@@ -49,11 +43,7 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps handlerDeps) *pow.Handler {
 		// init the pow handler with all possible settings
-		powsrvAPIKey, err := utils.LoadStringFromEnvironment("POWSRV_API_KEY")
-		if err == nil && len(powsrvAPIKey) > 12 {
-			powsrvAPIKey = powsrvAPIKey[:12]
-		}
-		return pow.New(CorePlugin.Logger(), deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval), powsrvAPIKey, powsrvInitCooldown)
+		return pow.New(deps.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval))
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}
@@ -66,7 +56,6 @@ func run() {
 		CorePlugin.LogInfo("Starting PoW Handler ... done")
 		<-ctx.Done()
 		CorePlugin.LogInfo("Stopping PoW Handler ...")
-		deps.Handler.Close()
 		CorePlugin.LogInfo("Stopping PoW Handler ... done")
 	}, shutdown.PriorityPoWHandler); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)

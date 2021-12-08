@@ -111,7 +111,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		Milestones:             make(storage.CachedMilestones, 0),
 		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
-		PoWHandler:             pow.New(nil, targetScore, 5*time.Second, "", 30*time.Second),
+		PoWHandler:             pow.New(targetScore, 5*time.Second),
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
 		belowMaxDepth:          milestone.Index(belowMaxDepth),
 		LastMilestoneMessageID: hornet.NullMessageID(),

@@ -41,7 +41,6 @@ require (
 	github.com/stretchr/testify v1.7.1-0.20210427113832-6241f9ab9942
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	github.com/wollac/iota-crypto-demo v0.0.0-20211124150533-68dd13b59838
-	gitlab.com/powsrv.io/go/client v0.0.0-20210203192329-84583796cd46
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.13.0
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
@@ -221,7 +220,6 @@ require (
 	github.com/valyala/fasttemplate v1.2.1 // indirect
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	gitlab.com/powsrv.io/go/api v0.0.0-20210201185010-da1c12ed0e27 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/exp v0.0.0-20211129234152-8a230f1f7d7a // indirect
