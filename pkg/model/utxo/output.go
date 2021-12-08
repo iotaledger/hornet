@@ -165,6 +165,9 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	valueUtil.ReadSeek(-1)
 
 	o.output, err = iotago.OutputSelector(uint32(outputType))
+	if err != nil {
+		return err
+	}
 	_, err = o.output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return err
