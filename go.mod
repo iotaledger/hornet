@@ -20,7 +20,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/websocket v1.4.2
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20211125083540-7ba1c9edcba9
-	github.com/iotaledger/hive.go v0.0.0-20211203175857-9057021317de
+	github.com/iotaledger/hive.go v0.0.0-20211207105259-9e48241c18f7
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v2 v2.0.1-0.20211018071144-edf83a5ab704
 	github.com/ipfs/go-datastore v0.5.1
@@ -45,7 +45,7 @@ require (
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.13.0
 	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
-	golang.org/x/net v0.0.0-20211201190559-0a0e4e1bb54c
+	golang.org/x/net v0.0.0-20211206223403-eba003a116a9
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11
 )
@@ -71,7 +71,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/dgraph-io/badger v1.6.2 // indirect
-	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
+	github.com/dgraph-io/badger/v2 v2.2007.4 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect

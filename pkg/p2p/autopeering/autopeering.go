@@ -173,6 +173,16 @@ func HivePeerToAddrInfo(peer *peer.Peer, serviceKey service.Key) (*peer2.AddrInf
 	return &peer2.AddrInfo{ID: libp2pID, Addrs: []multiaddr.Multiaddr{ma}}, nil
 }
 
+// HivePeerToPeerID converts data from a hive autopeering peer to a libp2p peer ID.
+func HivePeerToPeerID(peer *peer.Peer) (peer2.ID, error) {
+	libp2pID, err := ConvertHivePubKeyToPeerID(peer.PublicKey())
+	if err != nil {
+		return "", err
+	}
+
+	return libp2pID, nil
+}
+
 type LogF func(template string, args ...interface{})
 
 // ConvertHivePubKeyToPeerIDOrLog converts a hive ed25519 public key from the hive package to a libp2p peer ID.

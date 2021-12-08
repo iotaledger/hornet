@@ -32,6 +32,11 @@ var (
 	ErrCantConnectToItself = errors.New("the host can't connect to itself")
 	// ErrPeerInManagerAlready gets returned if a peer is tried to be added to the manager which is already added.
 	ErrPeerInManagerAlready = errors.New("peer is already in manager")
+	// ErrCantAllowItself gets returned if the manager is supposed to allow a connection
+	// to itself (host wise).
+	ErrCantAllowItself = errors.New("the host can't allow itself")
+	// ErrPeerInManagerAlreadyAllowed gets returned if a peer is tried to be allowed in the manager which is already allowed.
+	ErrPeerInManagerAlreadyAllowed = errors.New("peer is already allowed in manager")
 	// ErrManagerShutdown gets returned if the manager is shutting down.
 	ErrManagerShutdown = errors.New("manager is shutting down")
 )
@@ -71,6 +76,10 @@ type ManagerEvents struct {
 	Connect *events.Event
 	// Fired when the Manager is instructed to disconnect a peer.
 	Disconnect *events.Event
+	// Fired when a peer got allowed.
+	Allowed *events.Event
+	// Fired when a peer got disallowed.
+	Disallowed *events.Event
 	// Fired when a peer got connected.
 	Connected *events.Event
 	// Fired when a peer got disconnected.
@@ -92,6 +101,11 @@ type ManagerEvents struct {
 // PeerCaller gets called with a Peer.
 func PeerCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*Peer))(params[0].(*Peer))
+}
+
+// PeerIDCaller gets called with a peer.ID.
+func PeerIDCaller(handler interface{}, params ...interface{}) {
+	handler.(func(peer.ID))(params[0].(peer.ID))
 }
 
 // PeerOptError holds a Peer and optionally an error.
@@ -184,6 +198,8 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 		Events: ManagerEvents{
 			Connect:            events.NewEvent(PeerCaller),
 			Disconnect:         events.NewEvent(PeerCaller),
+			Allowed:            events.NewEvent(PeerIDCaller),
+			Disallowed:         events.NewEvent(PeerIDCaller),
 			Connected:          events.NewEvent(PeerConnCaller),
 			Disconnected:       events.NewEvent(PeerOptErrorCaller),
 			ScheduledReconnect: events.NewEvent(PeerDurationCaller),
@@ -195,11 +211,15 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 		},
 		host:               host,
 		peers:              map[peer.ID]*Peer{},
+		allowedPeers:       map[peer.ID]struct{}{},
 		opts:               mngOpts,
 		stopped:            typeutils.NewAtomicBool(),
 		connectPeerChan:    make(chan *connectpeermsg, 10),
 		disconnectPeerChan: make(chan *disconnectpeermsg, 10),
 		isConnectedReqChan: make(chan *isconnectedrequestmsg, 10),
+		allowPeerChan:      make(chan *allowpeermsg, 10),
+		disallowPeerChan:   make(chan *disallowpeermsg, 10),
+		isAllowedReqChan:   make(chan *isallowedrequestmsg, 10),
 		connectedChan:      make(chan *connectionmsg, 10),
 		disconnectedChan:   make(chan *disconnectmsg, 10),
 		reconnectChan:      make(chan *reconnectmsg, 100),
@@ -221,6 +241,8 @@ type Manager struct {
 	host host.Host
 	// holds the set of peers.
 	peers map[peer.ID]*Peer
+	// holds the set of allowed peers (autopeering).
+	allowedPeers map[peer.ID]struct{}
 	// holds the manager options.
 	opts *ManagerOptions
 	// tells whether the manager was shut down.
@@ -229,6 +251,9 @@ type Manager struct {
 	connectPeerChan    chan *connectpeermsg
 	disconnectPeerChan chan *disconnectpeermsg
 	isConnectedReqChan chan *isconnectedrequestmsg
+	allowPeerChan      chan *allowpeermsg
+	disallowPeerChan   chan *disallowpeermsg
+	isAllowedReqChan   chan *isallowedrequestmsg
 	connectedChan      chan *connectionmsg
 	disconnectedChan   chan *disconnectmsg
 	reconnectChan      chan *reconnectmsg
@@ -275,14 +300,23 @@ drainLoop:
 		case disconnectPeerMsg := <-m.disconnectPeerChan:
 			disconnectPeerMsg.back <- ErrManagerShutdown
 
-		case <-m.reconnectChan:
-
 		case isConnectedReqMsg := <-m.isConnectedReqChan:
 			isConnectedReqMsg.back <- false
+
+		case allowPeerMsg := <-m.allowPeerChan:
+			allowPeerMsg.back <- ErrManagerShutdown
+
+		case disallowPeerMsg := <-m.disallowPeerChan:
+			disallowPeerMsg.back <- ErrManagerShutdown
+
+		case isAllowedReqMsg := <-m.isAllowedReqChan:
+			isAllowedReqMsg.back <- false
 
 		case <-m.connectedChan:
 
 		case <-m.disconnectedChan:
+
+		case <-m.reconnectChan:
 
 		case forEachMsg := <-m.forEachChan:
 			forEachMsg.back <- struct{}{}
@@ -337,6 +371,39 @@ func (m *Manager) IsConnected(peerID peer.ID) bool {
 
 	back := make(chan bool)
 	m.isConnectedReqChan <- &isconnectedrequestmsg{peerID: peerID, back: back}
+	return <-back
+}
+
+// AllowPeer allows incoming connections from the given peer (autopeering).
+func (m *Manager) AllowPeer(peerID peer.ID) error {
+	if m.stopped.IsSet() {
+		return ErrManagerShutdown
+	}
+
+	back := make(chan error)
+	m.allowPeerChan <- &allowpeermsg{peerID: peerID, back: back}
+	return <-back
+}
+
+// DisallowPeer disallows incoming connections from the given peer (autopeering).
+func (m *Manager) DisallowPeer(peerID peer.ID) error {
+	if m.stopped.IsSet() {
+		return ErrManagerShutdown
+	}
+
+	back := make(chan error)
+	m.disallowPeerChan <- &disallowpeermsg{peerID: peerID, back: back}
+	return <-back
+}
+
+// IsAllowed tells whether a connection to the given peer is allowed (autopeering).
+func (m *Manager) IsAllowed(peerID peer.ID) bool {
+	if m.stopped.IsSet() {
+		return false
+	}
+
+	back := make(chan bool)
+	m.isAllowedReqChan <- &isallowedrequestmsg{peerID: peerID, back: back}
 	return <-back
 }
 
@@ -437,6 +504,21 @@ type isconnectedrequestmsg struct {
 	back   chan bool
 }
 
+type allowpeermsg struct {
+	peerID peer.ID
+	back   chan error
+}
+
+type disallowpeermsg struct {
+	peerID peer.ID
+	back   chan error
+}
+
+type isallowedrequestmsg struct {
+	peerID peer.ID
+	back   chan bool
+}
+
 type reconnectmsg struct {
 	peerID peer.ID
 }
@@ -485,6 +567,21 @@ func (m *Manager) eventLoop(ctx context.Context) {
 				m.Events.Disconnected.Trigger(&PeerOptError{Peer: p, Error: disconnectPeerMsg.reason})
 			}
 			disconnectPeerMsg.back <- err
+
+		case allowPeerMsg := <-m.allowPeerChan:
+			err := m.allowPeer(allowPeerMsg.peerID)
+			if err != nil {
+				m.Events.Error.Trigger(fmt.Errorf("error allowing %s: %w", allowPeerMsg.peerID.ShortString(), err))
+			}
+			allowPeerMsg.back <- err
+
+		case disallowPeerMsg := <-m.disallowPeerChan:
+			m.disallowPeer(disallowPeerMsg.peerID)
+			disallowPeerMsg.back <- nil
+
+		case isAllowedReqMsg := <-m.isAllowedReqChan:
+			allowed := m.isAllowed(isAllowedReqMsg.peerID)
+			isAllowedReqMsg.back <- allowed
 
 		case reconnectMsg := <-m.reconnectChan:
 			reconnect, err := m.reconnectPeer(reconnectMsg.peerID)
@@ -571,6 +668,38 @@ func (m *Manager) disconnectPeer(peerID peer.ID) (bool, error) {
 	delete(m.peers, peerID)
 	m.Events.Disconnect.Trigger(p)
 	return true, m.host.Network().ClosePeer(peerID)
+}
+
+// allows incoming connections from the given peer (autopeering).
+func (m *Manager) allowPeer(peerID peer.ID) error {
+	if _, has := m.allowedPeers[peerID]; has {
+		return ErrPeerInManagerAlreadyAllowed
+	}
+
+	if peerID == m.host.ID() {
+		return ErrCantAllowItself
+	}
+
+	m.allowedPeers[peerID] = struct{}{}
+	m.Events.Allowed.Trigger(peerID)
+
+	return nil
+}
+
+// disallows incoming connections from the given peer (autopeering).
+func (m *Manager) disallowPeer(peerID peer.ID) {
+	if _, has := m.allowedPeers[peerID]; !has {
+		return
+	}
+
+	delete(m.allowedPeers, peerID)
+	m.Events.Disallowed.Trigger(peerID)
+}
+
+// checks whether the given peer is allowed to connect (autopeering).
+func (m *Manager) isAllowed(peerID peer.ID) bool {
+	_, has := m.allowedPeers[peerID]
+	return has
 }
 
 // updates the relation to the given peer to the given new relation.
@@ -692,7 +821,12 @@ func (m *Manager) addPeerAsUnknownIfAbsent(conn network.Conn) {
 	if _, has := m.peers[conn.RemotePeer()]; !has {
 		// add unknown peer to manager
 		addrs := []multiaddr.Multiaddr{conn.RemoteMultiaddr()}
-		m.peers[conn.RemotePeer()] = NewPeer(conn.RemotePeer(), PeerRelationUnknown, addrs, "")
+
+		relation := PeerRelationUnknown
+		if m.isAllowed(conn.RemotePeer()) {
+			relation = PeerRelationAutopeered
+		}
+		m.peers[conn.RemotePeer()] = NewPeer(conn.RemotePeer(), relation, addrs, "")
 	}
 }
 

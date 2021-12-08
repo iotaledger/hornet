@@ -408,20 +408,24 @@ func (s *Service) handleInboundStream(stream network.Stream) *Protocol {
 	}
 
 	// close if the relation to the peer is unknown and no slot is available
-	var hasKnownRelation bool
+	hasUnknownRelation := true
 	s.peeringManager.Call(remotePeerID, func(peer *p2p.Peer) {
-		if peer.Relation == p2p.PeerRelationUnknown {
-			return
+		switch peer.Relation {
+		case p2p.PeerRelationAutopeered:
+			hasUnknownRelation = false
+		case p2p.PeerRelationKnown:
+			hasUnknownRelation = false
 		}
-		hasKnownRelation = true
 	})
 
 	var cancelReason StreamCancelReason
-	switch {
-	case !hasKnownRelation && s.opts.UnknownPeersLimit == 0:
-		cancelReason = StreamCancelReasonInsufficientPeerRelation
-	case !hasKnownRelation && len(s.unknownPeers) == s.opts.UnknownPeersLimit:
-		cancelReason = StreamCancelReasonNoUnknownPeerSlotAvailable
+	if hasUnknownRelation {
+		switch {
+		case s.opts.UnknownPeersLimit == 0:
+			cancelReason = StreamCancelReasonInsufficientPeerRelation
+		case len(s.unknownPeers) >= s.opts.UnknownPeersLimit:
+			cancelReason = StreamCancelReasonNoUnknownPeerSlotAvailable
+		}
 	}
 
 	if len(cancelReason) > 0 {
@@ -430,7 +434,7 @@ func (s *Service) handleInboundStream(stream network.Stream) *Protocol {
 		return nil
 	}
 
-	if !hasKnownRelation {
+	if hasUnknownRelation {
 		s.unknownPeers[remotePeerID] = struct{}{}
 	}
 
@@ -462,7 +466,7 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) (*Protocol,
 	}
 
 	if peer.Relation == p2p.PeerRelationUnknown {
-		if len(s.unknownPeers) == s.opts.UnknownPeersLimit {
+		if len(s.unknownPeers) >= s.opts.UnknownPeersLimit {
 			return nil, nil
 		}
 		s.unknownPeers[peer.ID] = struct{}{}
@@ -533,7 +537,7 @@ func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation)
 
 	// close the stream if no more unknown peer slots are available
 	if newRel == p2p.PeerRelationUnknown {
-		if len(s.unknownPeers) == s.opts.UnknownPeersLimit {
+		if len(s.unknownPeers) >= s.opts.UnknownPeersLimit {
 			_, err := s.deregisterProtocol(peer.ID)
 			return nil, err
 		}
