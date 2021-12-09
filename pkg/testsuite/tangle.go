@@ -25,12 +25,9 @@ func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMes
 	require.NotNil(te.TestInterface, cachedMsg)
 	require.False(te.TestInterface, alreadyAdded)
 
-	// Solidify msg if not a milestone
-	ms := msg.Milestone()
-	if ms == nil {
-		cachedMsg.Metadata().SetSolid(true)
-		require.True(te.TestInterface, cachedMsg.Metadata().IsSolid())
-	}
+	// Solidify msg
+	cachedMsg.Metadata().SetSolid(true)
+	require.True(te.TestInterface, cachedMsg.Metadata().IsSolid())
 
 	te.cachedMessages = append(te.cachedMessages, cachedMsg)
 

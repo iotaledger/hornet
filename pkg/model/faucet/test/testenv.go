@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -10,17 +11,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/iota.go/v2/pow"
 )
 
 const (
@@ -173,7 +177,65 @@ func NewFaucetTestEnv(t *testing.T,
 	}
 
 	storeMessageFunc := func(msg *storage.Message) error {
+
+		if msg.NetworkID() != te.NetworkID() {
+			return fmt.Errorf("msg has invalid network ID %d instead of %d", msg.NetworkID(), te.NetworkID())
+		}
+
+		score := pow.Score(msg.Data())
+		if score < MinPoWScore {
+			return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
+		}
+
+		cmi := te.SyncManager().ConfirmedMilestoneIndex()
+
+		checkParentFunc := func(messageID hornet.MessageID) error {
+			cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(messageID) // meta +1
+			if cachedMsgMeta == nil {
+				// parent not found
+				entryPointIndex, exists := te.Storage().SolidEntryPointsIndex(messageID)
+				if !exists {
+					return gossip.ErrMessageNotSolid
+				}
+
+				if (cmi - entryPointIndex) > milestone.Index(BelowMaxDepth) {
+					// the parent is below max depth
+					return gossip.ErrMessageBelowMaxDepth
+				}
+
+				// message is a SEP and not below max depth
+				return nil
+			}
+			defer cachedMsgMeta.Release(true)
+
+			if !cachedMsgMeta.Metadata().IsSolid() {
+				// if the parent is not solid, the message itself can't be solid
+				return gossip.ErrMessageNotSolid
+			}
+
+			// we pass a background context here to not prevent emitting messages at shutdown (COO etc).
+			_, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta.Retain(), cmi) // meta +
+			if err != nil {
+				return err
+			}
+
+			if (cmi - ocri) > milestone.Index(BelowMaxDepth) {
+				// the parent is below max depth
+				return gossip.ErrMessageBelowMaxDepth
+			}
+
+			return nil
+		}
+
+		for _, parentMsgID := range msg.Parents() {
+			err := checkParentFunc(parentMsgID)
+			if err != nil {
+				return err
+			}
+		}
+
 		_ = te.StoreMessage(msg) // no need to release, since we remember all the messages for later cleanup
+
 		return nil
 	}
 
