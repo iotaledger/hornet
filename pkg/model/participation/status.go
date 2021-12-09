@@ -10,7 +10,7 @@ import (
 
 // AnswerStatus holds the current and accumulated vote for an answer.
 type AnswerStatus struct {
-	// Value is the ID of the answer.
+	// Value is the value that identifies this answer.
 	Value uint8 `json:"value"`
 	// Current is the current voting weight of the answer.
 	Current uint64 `json:"current"`
@@ -38,13 +38,13 @@ type StakingStatus struct {
 type EventStatus struct {
 	// MilestoneIndex is the milestone index the status was calculated for.
 	MilestoneIndex milestone.Index `json:"milestoneIndex"`
-	// Status is the status of the event.
+	// Status is the status of the event. Valid options are: "upcoming", "commencing", "holding" and "ended".
 	Status string `json:"status"`
 	// Questions holds the answer status of the different questions of the event.
 	Questions []*QuestionStatus `json:"questions,omitempty"`
 	// Staking is the staking status of the event.
 	Staking *StakingStatus `json:"staking,omitempty"`
-	// Checksum is the SHA256 checksum of all the question and answer status or the staking amount and rewards.
+	// Checksum is the SHA256 checksum of all the question and answer status or the staking amount and rewards calculated for this MilestoneIndex.
 	Checksum string `json:"checksum"`
 }
 

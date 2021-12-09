@@ -20,7 +20,7 @@ type TrackedParticipation struct {
 	Amount uint64
 	// StartIndex is the milestone index the participation started.
 	StartIndex milestone.Index
-	// EndIndex is the milestone index the participation ended.
+	// EndIndex is the milestone index the participation ended. 0 if the participation is still active.
 	EndIndex milestone.Index
 }
 

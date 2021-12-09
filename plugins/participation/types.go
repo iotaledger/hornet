@@ -22,7 +22,7 @@ type TrackedParticipation struct {
 	Amount uint64 `json:"amount"`
 	// StartMilestoneIndex is the milestone index the participation started.
 	StartMilestoneIndex milestone.Index `json:"startMilestoneIndex"`
-	// EndMilestoneIndex is the milestone index the participation ended.
+	// EndMilestoneIndex is the milestone index the participation ended. 0 if the participation is still active.
 	EndMilestoneIndex milestone.Index `json:"endMilestoneIndex"`
 }
 
@@ -56,7 +56,7 @@ type RewardsResponse struct {
 	MilestoneIndex milestone.Index `json:"milestoneIndex"`
 	// TotalRewards is the total reward.
 	TotalRewards uint64 `json:"totalRewards"`
-	// Checksum is the SHA256 checksum of the staking amount and rewards.
+	// Checksum is the SHA256 checksum of the staking amount and rewards calculated for this MilestoneIndex.
 	Checksum string `json:"checksum"`
 	// Rewards is a map of rewards per address.
 	Rewards map[string]uint64 `json:"rewards"`
