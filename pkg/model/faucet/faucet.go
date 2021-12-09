@@ -582,6 +582,7 @@ func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.O
 		remainderIotaGoOutputID := remainderIotaGoOutput.ID()
 		f.lastRemainderOutput = utxo.CreateOutput(&remainderIotaGoOutputID, msg.MessageID(), iotago.OutputSigLockedSingleOutput, f.address, uint64(remainderAmount))
 	} else {
+		// no funds remaining => no remainder output
 		f.lastRemainderOutput = nil
 	}
 	f.Unlock()
@@ -817,6 +818,11 @@ func (f *Faucet) ApplyConfirmation(confirmation *whiteflag.Confirmation) error {
 			// transaction was confirmed => delete the requests and the pending transaction
 			f.clearRequestsWithoutLocking(pendingTx.QueuedItems)
 			f.clearPendingTransactionWithoutLocking(msgID)
+
+			if f.lastMessageID != nil && bytes.Equal(f.lastMessageID[:], msgID[:]) {
+				// the latest message got confirmed, reset the lastMessageID
+				f.lastMessageID = nil
+			}
 
 			if f.lastRemainderOutput != nil && bytes.Equal(f.lastRemainderOutput.MessageID()[:], msgID[:]) {
 				// the latest transaction got confirmed, reset the lastRemainderOutput

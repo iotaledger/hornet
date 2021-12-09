@@ -295,6 +295,69 @@ func TestBelowMaxDepth(t *testing.T) {
 	env.TestEnv.AssertLedgerBalance(env.Wallet1, calculatedWallet1Balance)
 }
 
+func TestBelowMaxDepthAfterRequest(t *testing.T) {
+	// first a faucet message is confirmed, but then the old message
+	// was used as a tip for the next faucet message
+	// which caused that it is below max depth and never confirmed
+
+	var faucetBalance uint64 = 1_000_000_000        //  1 Gi
+	var wallet1Balance uint64 = 0                   //  0  i
+	var wallet2Balance uint64 = 0                   //  0  i
+	var wallet3Balance uint64 = 0                   //  0  i
+	var faucetAmount uint64 = 10_000_000            // 10 Mi
+	var faucetSmallAmount uint64 = 1_000_000        //  1 Mi
+	var faucetMaxAddressBalance uint64 = 20_000_000 // 20 Mi
+
+	env := test.NewFaucetTestEnv(t,
+		faucetBalance,
+		wallet1Balance,
+		wallet2Balance,
+		wallet3Balance,
+		faucetAmount,
+		faucetSmallAmount,
+		faucetMaxAddressBalance,
+		false)
+	defer env.Cleanup()
+	require.NotNil(t, env)
+
+	confirmedMilestoneIndex := env.ConfirmedMilestoneIndex() // 4
+	require.Equal(t, milestone.Index(4), confirmedMilestoneIndex)
+
+	// Verify balances
+	genesisBalance := iotago.TokenSupply - faucetBalance - wallet1Balance - wallet2Balance - wallet3Balance
+
+	env.AssertFaucetBalance(faucetBalance)
+	env.TestEnv.AssertLedgerBalance(env.GenesisWallet, genesisBalance)
+	env.TestEnv.AssertLedgerBalance(env.FaucetWallet, faucetBalance)
+	env.TestEnv.AssertLedgerBalance(env.Wallet1, wallet1Balance)
+	env.TestEnv.AssertLedgerBalance(env.Wallet2, wallet2Balance)
+	env.TestEnv.AssertLedgerBalance(env.Wallet3, wallet3Balance)
+
+	err := env.RequestFundsAndIssueMilestone(env.Wallet1)
+	require.NoError(t, err)
+
+	faucetBalance -= faucetAmount
+	calculatedWallet1Balance := wallet1Balance + faucetAmount
+	env.AssertFaucetBalance(faucetBalance)
+	env.TestEnv.AssertLedgerBalance(env.FaucetWallet, faucetBalance)
+	env.TestEnv.AssertLedgerBalance(env.Wallet1, calculatedWallet1Balance)
+
+	// issue several milestones, so that the faucet message gets below max depth
+	for i := 0; i <= test.BelowMaxDepth; i++ {
+		_, _ = env.IssueMilestone()
+	}
+
+	err = env.RequestFundsAndIssueMilestone(env.Wallet1)
+	require.NoError(t, err)
+
+	faucetBalance -= faucetSmallAmount
+	calculatedWallet1Balance += faucetSmallAmount
+	env.AssertFaucetBalance(faucetBalance)
+
+	env.TestEnv.AssertLedgerBalance(env.FaucetWallet, faucetBalance)
+	env.TestEnv.AssertLedgerBalance(env.Wallet1, calculatedWallet1Balance)
+}
+
 func TestNotEnoughFaucetFunds(t *testing.T) {
 	// check if faucet returns an error if not enough funds available
 
