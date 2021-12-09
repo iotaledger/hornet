@@ -158,7 +158,7 @@ func (b *MessageBuilder) Build() *Message {
 
 	outputsBalance := uint64(0)
 	for _, utxo := range outputsThatCanBeConsumed {
-		outputsBalance += utxo.Amount()
+		outputsBalance += utxo.Deposit()
 	}
 
 	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
@@ -167,7 +167,7 @@ func (b *MessageBuilder) Build() *Message {
 
 		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: utxo.OutputID().UTXOInput()})
 		consumedInputs = append(consumedInputs, utxo)
-		consumedAmount += utxo.Amount()
+		consumedAmount += utxo.Deposit()
 
 		if consumedAmount >= b.amount {
 			break
@@ -224,12 +224,12 @@ func (b *MessageBuilder) Build() *Message {
 		output, err := utxo.NewOutput(message.MessageID(), b.te.LastMilestoneIndex()+1, 0, messageTx, uint16(i))
 		require.NoError(b.te.TestInterface, err)
 
-		if output.Address().String() == toAddr.String() && output.Amount() == b.amount {
+		if output.Address().String() == toAddr.String() && output.Deposit() == b.amount {
 			sentOutput = output
 			continue
 		}
 
-		if remainderAmount > 0 && output.Address().String() == fromAddr.String() && output.Amount() == remainderAmount {
+		if remainderAmount > 0 && output.Address().String() == fromAddr.String() && output.Deposit() == remainderAmount {
 			remainderOutput = output
 		}
 	}

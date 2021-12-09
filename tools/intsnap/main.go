@@ -61,7 +61,7 @@ var fullSnapshotHeader = &snapshot.FileHeader{
 	},
 }
 
-var originTreasurySupply = iotago.TokenSupply - fullSnapshotOutputs[0].Amount() - fullSnapshotOutputs[1].Amount()
+var originTreasurySupply = iotago.TokenSupply - fullSnapshotOutputs[0].Deposit() - fullSnapshotOutputs[1].Deposit()
 
 var fullSnapshotOutputs = utxo.Outputs{
 	utxoOutput(6, 10_000_000),
@@ -72,23 +72,23 @@ var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	{
 		Milestone: blankMilestone(3),
 		Created: utxo.Outputs{
-			utxoOutput(6, fullSnapshotOutputs[0].Amount()),
-			utxoOutput(5, fullSnapshotOutputs[1].Amount()),
+			utxoOutput(6, fullSnapshotOutputs[0].Deposit()),
+			utxoOutput(5, fullSnapshotOutputs[1].Deposit()),
 		},
 		Consumed: utxo.Spents{
-			utxoSpent(4, fullSnapshotOutputs[0].Amount(), 3),
-			utxoSpent(3, fullSnapshotOutputs[1].Amount(), 3),
+			utxoSpent(4, fullSnapshotOutputs[0].Deposit(), 3),
+			utxoSpent(3, fullSnapshotOutputs[1].Deposit(), 3),
 		},
 	},
 	{
 		Milestone: blankMilestone(2),
 		Created: utxo.Outputs{
-			utxoOutput(3, fullSnapshotOutputs[0].Amount()),
-			utxoOutput(4, fullSnapshotOutputs[1].Amount()),
+			utxoOutput(3, fullSnapshotOutputs[0].Deposit()),
+			utxoOutput(4, fullSnapshotOutputs[1].Deposit()),
 		},
 		Consumed: utxo.Spents{
-			utxoSpent(2, fullSnapshotOutputs[0].Amount(), 2),
-			utxoSpent(1, fullSnapshotOutputs[1].Amount(), 2),
+			utxoSpent(2, fullSnapshotOutputs[0].Deposit(), 2),
+			utxoSpent(1, fullSnapshotOutputs[1].Deposit(), 2),
 		},
 	},
 }
@@ -145,12 +145,12 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	{
 		Milestone: blankMilestone(4),
 		Created: utxo.Outputs{
-			utxoOutput(8, fullSnapshotOutputs[0].Amount()),
-			utxoOutput(7, fullSnapshotOutputs[1].Amount()),
+			utxoOutput(8, fullSnapshotOutputs[0].Deposit()),
+			utxoOutput(7, fullSnapshotOutputs[1].Deposit()),
 		},
 		Consumed: utxo.Spents{
-			utxoSpent(6, fullSnapshotOutputs[0].Amount(), 4),
-			utxoSpent(5, fullSnapshotOutputs[1].Amount(), 4),
+			utxoSpent(6, fullSnapshotOutputs[0].Deposit(), 4),
+			utxoSpent(5, fullSnapshotOutputs[1].Deposit(), 4),
 		},
 	},
 	{
@@ -183,11 +183,11 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 			Spent:       true,
 		},
 		Created: utxo.Outputs{
-			utxoOutput(9, fullSnapshotOutputs[0].Amount()+fullSnapshotOutputs[1].Amount()+10_000_000),
+			utxoOutput(9, fullSnapshotOutputs[0].Deposit()+fullSnapshotOutputs[1].Deposit()+10_000_000),
 		},
 		Consumed: utxo.Spents{
-			utxoSpent(8, fullSnapshotOutputs[0].Amount(), 5),
-			utxoSpent(7, fullSnapshotOutputs[1].Amount(), 4),
+			utxoSpent(8, fullSnapshotOutputs[0].Deposit(), 5),
+			utxoSpent(7, fullSnapshotOutputs[1].Deposit(), 4),
 		},
 	},
 }

@@ -219,14 +219,14 @@ func addresses(_ echo.Context) (*addressesResponse, error) {
 	outputConsumerFunc := func(output *utxo.Output) bool {
 		if addr, exists := addressMap[output.Address().String()]; exists {
 			// add balance to total balance
-			addr.Balance += output.Amount()
+			addr.Balance += output.Deposit()
 			return true
 		}
 
 		addressMap[output.Address().String()] = &address{
 			AddressType: output.Address().Type(),
 			Address:     output.Address().String(),
-			Balance:     output.Amount(),
+			Balance:     output.Deposit(),
 		}
 
 		return true
@@ -255,14 +255,14 @@ func addressesEd25519(_ echo.Context) (*addressesResponse, error) {
 
 		if addr, exists := addressMap[output.Address().String()]; exists {
 			// add balance to total balance
-			addr.Balance += output.Amount()
+			addr.Balance += output.Deposit()
 			return true
 		}
 
 		addressMap[output.Address().String()] = &address{
 			AddressType: output.Address().Type(),
 			Address:     output.Address().String(),
-			Balance:     output.Amount(),
+			Balance:     output.Deposit(),
 		}
 
 		return true

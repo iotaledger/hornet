@@ -488,7 +488,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	// collect all unspent output of the faucet address
 	for _, unspentOutput := range unspentOutputs {
 		outputCount++
-		remainderAmount += int64(unspentOutput.Amount())
+		remainderAmount += int64(unspentOutput.Deposit())
 		txBuilder.AddInput(&iotago.ToBeSignedUTXOInput{Address: f.address, Input: unspentOutput.OutputID().UTXOInput()})
 	}
 
@@ -730,7 +730,7 @@ func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) err
 					// this is done to increase the throughput of the faucet in high load situations.
 					// we can't collect unspent outputs, as long as the lastRemainderOutput was not confirmed,
 					// since it's creating transaction could also have consumed the same UTXOs.
-					return []*utxo.Output{f.lastRemainderOutput}, f.lastRemainderOutput.Amount(), nil
+					return []*utxo.Output{f.lastRemainderOutput}, f.lastRemainderOutput.Deposit(), nil
 				}
 
 				unspentOutputs, err := f.utxoManager.UnspentOutputsOnAddress(f.address, utxo.FilterOutputType(iotago.OutputExtended).FilterHasSpendingConstraints(false), utxo.ReadLockLedger(false), utxo.MaxResultCount(f.opts.maxOutputCount-2))
@@ -740,7 +740,7 @@ func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) err
 
 				var amount uint64 = 0
 				for _, unspentOutput := range unspentOutputs {
-					amount += unspentOutput.Amount()
+					amount += unspentOutput.Deposit()
 				}
 				return unspentOutputs, amount, nil
 			}

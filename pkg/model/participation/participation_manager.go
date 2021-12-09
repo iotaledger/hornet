@@ -414,13 +414,13 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 		switch event.payloadType() {
 		case BallotPayloadTypeID:
 			// Count the new ballot votes by increasing the current vote balance
-			if err := pm.startCountingBallotAnswers(event, participation, index, depositOutput.Amount(), mutations); err != nil {
+			if err := pm.startCountingBallotAnswers(event, participation, index, depositOutput.Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
 		case StakingPayloadTypeID:
 			// Increase the staked amount
-			if err := pm.increaseStakedAmountForStakingEvent(participation.EventID, index, depositOutput.Amount(), mutations); err != nil {
+			if err := pm.increaseStakedAmountForStakingEvent(participation.EventID, index, depositOutput.Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
@@ -506,13 +506,13 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 		switch event.payloadType() {
 		case BallotPayloadTypeID:
 			// Count the spent votes by decreasing the current vote balance
-			if err := pm.stopCountingBallotAnswers(event, participation, index, spent.Output().Amount(), mutations); err != nil {
+			if err := pm.stopCountingBallotAnswers(event, participation, index, spent.Output().Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
 		case StakingPayloadTypeID:
 			// Decrease the staked amount
-			if err := pm.decreaseStakedAmountForStakingEvent(participation.EventID, index, spent.Output().Amount(), mutations); err != nil {
+			if err := pm.decreaseStakedAmountForStakingEvent(participation.EventID, index, spent.Output().Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}

@@ -13,7 +13,7 @@ func EqualOutput(t *testing.T, expected *Output, actual *Output) {
 	require.Equal(t, expected.MessageID()[:], actual.MessageID()[:])
 	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
 	require.Equal(t, expected.OutputType(), actual.OutputType())
-	require.Equal(t, expected.Amount(), actual.Amount())
+	require.Equal(t, expected.Deposit(), actual.Deposit())
 	require.EqualValues(t, expected.Output(), actual.Output())
 }
 

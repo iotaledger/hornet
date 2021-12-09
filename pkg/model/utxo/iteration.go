@@ -434,7 +434,7 @@ func (u *Manager) ComputeAddressBalance(address iotago.Address, filterOptions *F
 	count = 0
 	consumerFunc := func(output *Output) bool {
 		count++
-		balance += output.Amount()
+		balance += output.Deposit()
 		return true
 	}
 	if err := u.ForEachUnspentOutputOnAddress(address, filterOptions, consumerFunc, options...); err != nil {
@@ -448,7 +448,7 @@ func (u *Manager) ComputeLedgerBalance(options ...UTXOIterateOption) (balance ui
 	count = 0
 	consumerFunc := func(output *Output) bool {
 		count++
-		balance += output.Amount()
+		balance += output.Deposit()
 		return true
 	}
 

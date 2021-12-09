@@ -330,7 +330,7 @@ func (pm *ParticipationManager) startParticipationAtMilestone(eventID EventID, o
 		EventID:    eventID,
 		OutputID:   output.OutputID(),
 		MessageID:  output.MessageID(),
-		Amount:     output.Amount(),
+		Amount:     output.Deposit(),
 		StartIndex: startIndex,
 		EndIndex:   0,
 	}

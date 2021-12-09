@@ -63,8 +63,7 @@ func (o *Output) Address() iotago.Address {
 	}
 }
 
-// TODO: remove
-func (o *Output) Amount() uint64 {
+func (o *Output) Deposit() uint64 {
 	return o.output.Deposit()
 }
 

@@ -63,7 +63,7 @@ func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.MessageID()[:], actual.MessageID()[:])
 	require.Equal(t, expected.OutputType(), actual.OutputType())
 	require.Equal(t, expected.Address().String(), actual.Address().String())
-	require.Equal(t, expected.Amount(), actual.Amount())
+	require.Equal(t, expected.Deposit(), actual.Deposit())
 }
 
 func EqualOutputs(t *testing.T, expected utxo.Outputs, actual utxo.Outputs) {

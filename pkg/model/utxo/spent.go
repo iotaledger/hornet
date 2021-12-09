@@ -45,8 +45,8 @@ func (s *Spent) Address() iotago.Address {
 	return s.output.Address()
 }
 
-func (s *Spent) Amount() uint64 {
-	return s.output.Amount()
+func (s *Spent) Deposit() uint64 {
+	return s.output.Deposit()
 }
 
 func (s *Spent) TargetTransactionID() *iotago.TransactionID {

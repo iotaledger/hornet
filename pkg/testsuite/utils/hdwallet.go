@@ -57,7 +57,7 @@ func (hd *HDWallet) Name() string {
 func (hd *HDWallet) Balance() uint64 {
 	var balance uint64
 	for _, u := range hd.utxo {
-		balance += u.Amount()
+		balance += u.Deposit()
 	}
 	return balance
 }
@@ -112,7 +112,7 @@ func (hd *HDWallet) PrintStatus() {
 	status += "Outputs: \n"
 	for _, u := range hd.utxo {
 		outputType := iotago.OutputTypeToString(u.OutputType())
-		status += fmt.Sprintf("\t%s [%s] = %d\n", u.OutputID().ToHex(), outputType, u.Amount())
+		status += fmt.Sprintf("\t%s [%s] = %d\n", u.OutputID().ToHex(), outputType, u.Deposit())
 	}
 	fmt.Printf("%s\n", status)
 }
