@@ -745,7 +745,7 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 	// collect outputs
 	depositOutputs := utxo.Outputs{}
 	for i := 0; i < len(txEssence.Outputs); i++ {
-		output, err := utxo.NewOutput(msg.MessageID(), msIndex, transaction, uint16(i))
+		output, err := utxo.NewOutput(msg.MessageID(), msIndex, 0, transaction, uint16(i))
 		if err != nil {
 			return nil, nil, err
 		}

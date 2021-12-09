@@ -193,7 +193,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 			}
 
 			for i := 0; i < len(transactionEssence.Outputs); i++ {
-				output, err := utxo.NewOutput(message.MessageID(), msIndex, transaction, uint16(i))
+				output, err := utxo.NewOutput(message.MessageID(), msIndex, msTimestamp, transaction, uint16(i))
 				if err != nil {
 					return err
 				}

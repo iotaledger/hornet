@@ -2,6 +2,7 @@ package utxo
 
 import (
 	"encoding/binary"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,7 +15,8 @@ import (
 )
 
 func TestSimpleMilestoneDiffSerialization(t *testing.T) {
-	confirmationIndex := milestone.Index(255975)
+	milestoneIndex := milestone.Index(255975)
+	milestoneTimestamp := rand.Uint64()
 
 	outputID := utils.RandOutputID()
 	messageID := utils.RandMessageID()
@@ -24,23 +26,23 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 		Address: address,
 		Amount:  amount,
 	}
-	output := CreateOutput(outputID, messageID, confirmationIndex, iotaOutput)
+	output := CreateOutput(outputID, messageID, milestoneIndex, milestoneTimestamp, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
-	spent := NewSpent(output, transactionID, confirmationIndex)
+	spent := NewSpent(output, transactionID, milestoneIndex)
 
 	diff := &MilestoneDiff{
-		Index:   confirmationIndex,
+		Index:   milestoneIndex,
 		Outputs: Outputs{output},
 		Spents:  Spents{spent},
 	}
 
-	confirmationIndexBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(confirmationIndexBytes, uint32(confirmationIndex))
+	milestoneIndexBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(milestoneIndexBytes, uint32(milestoneIndex))
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, confirmationIndexBytes), diff.kvStorableKey())
+	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, milestoneIndexBytes), diff.kvStorableKey())
 
 	value := diff.kvStorableValue()
 	require.Equal(t, len(value), 77)
@@ -57,18 +59,19 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	address := utils.RandAddress(iotago.AddressEd25519)
 	amount := uint64(235234)
 	msIndex := utils.RandMilestoneIndex()
+	msTimestamp := rand.Uint64()
 	iotaOutput := &iotago.ExtendedOutput{
 		Address: address,
 		Amount:  amount,
 	}
-	output := CreateOutput(outputID, messageID, msIndex, iotaOutput)
+	output := CreateOutput(outputID, messageID, msIndex, msTimestamp, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
-	confirmationIndex := milestone.Index(255975)
+	milestoneIndex := milestone.Index(255975)
 
-	spent := NewSpent(output, transactionID, confirmationIndex)
+	spent := NewSpent(output, transactionID, milestoneIndex)
 
 	spentMilestoneID := iotago.MilestoneID{}
 	copy(spentMilestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
@@ -89,17 +92,17 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	}
 
 	diff := &MilestoneDiff{
-		Index:               confirmationIndex,
+		Index:               milestoneIndex,
 		Outputs:             Outputs{output},
 		Spents:              Spents{spent},
 		SpentTreasuryOutput: spentTreasuryOutput,
 		TreasuryOutput:      treasuryOutput,
 	}
 
-	confirmationIndexBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(confirmationIndexBytes, uint32(confirmationIndex))
+	milestoneIndexBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(milestoneIndexBytes, uint32(milestoneIndex))
 
-	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, confirmationIndexBytes), diff.kvStorableKey())
+	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixMilestoneDiffs}, milestoneIndexBytes), diff.kvStorableKey())
 
 	value := diff.kvStorableValue()
 	require.Equal(t, len(value), 141)

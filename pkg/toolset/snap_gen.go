@@ -112,7 +112,7 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 
 		outputAdded = true
 
-		return utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, &iotago.ExtendedOutput{
+		return utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, 0, &iotago.ExtendedOutput{
 			Address: &address,
 			Amount:  iotago.TokenSupply - treasury,
 		}), nil

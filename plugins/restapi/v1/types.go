@@ -134,6 +134,10 @@ type OutputResponse struct {
 	OutputIndex uint16 `json:"outputIndex"`
 	// Whether this output is spent.
 	Spent bool `json:"isSpent"`
+	// The milestone index at which this output was booked into the ledger.
+	MilestoneIndex milestone.Index `json:"milestoneIndex"`
+	// The milestone timestamp this output was booked in the ledger.
+	MilestoneTimestamp uint32 `json:"milestoneTimestamp"`
 	// The ledger index at which this output was available at.
 	LedgerIndex milestone.Index `json:"ledgerIndex"`
 	// The output in its serialized form.

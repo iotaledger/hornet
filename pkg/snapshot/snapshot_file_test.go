@@ -330,11 +330,11 @@ func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *u
 }
 
 func randLSTransactionUnspentOutputs() *utxo.Output {
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), utils.RandOutput(utils.RandOutputType()))
+	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), utils.RandOutput(utils.RandOutputType()))
 }
 
 func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
-	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex)
+	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex)
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
@@ -349,7 +349,7 @@ func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
 	require.Equal(t, expected.TargetTransactionID()[:], actual.TargetTransactionID()[:])
-	require.Equal(t, expected.ConfirmationIndex(), actual.ConfirmationIndex())
+	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
 	EqualOutput(t, expected.Output(), actual.Output())
 }
 

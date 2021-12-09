@@ -14,10 +14,13 @@ import (
 type Output struct {
 	kvStorable
 
-	outputID          *iotago.OutputID
-	messageID         hornet.MessageID
-	confirmationIndex milestone.Index
-	output            iotago.Output
+	outputID       *iotago.OutputID
+	messageID      hornet.MessageID
+	milestoneIndex milestone.Index
+	// We are saving space by just storing uint32 instead of the uint64 from the Milestone. This is good for the next 80 years.
+	milestoneTimestamp uint32
+
+	output iotago.Output
 }
 
 func (o *Output) OutputID() *iotago.OutputID {
@@ -33,7 +36,11 @@ func (o *Output) MessageID() hornet.MessageID {
 }
 
 func (o *Output) MilestoneIndex() milestone.Index {
-	return o.confirmationIndex
+	return o.milestoneIndex
+}
+
+func (o *Output) MilestoneTimestamp() uint32 {
+	return o.milestoneTimestamp
 }
 
 func (o *Output) OutputType() iotago.OutputType {
@@ -44,7 +51,7 @@ func (o *Output) Output() iotago.Output {
 	return o.output
 }
 
-// TODO: rename to "Owner" or "Ident"
+// TODO: remove
 func (o *Output) Address() iotago.Address {
 	switch output := o.output.(type) {
 	case iotago.TransIndepIdentOutput:
@@ -56,12 +63,14 @@ func (o *Output) Address() iotago.Address {
 	}
 }
 
+// TODO: remove
 func (o *Output) AddressBytes() []byte {
 	// This never throws an error for current Ed25519 addresses
 	bytes, _ := o.Address().Serialize(serializer.DeSeriModeNoValidation, nil)
 	return bytes
 }
 
+// TODO: remove
 func (o *Output) Amount() uint64 {
 	return o.output.Deposit()
 }
@@ -76,16 +85,17 @@ func (o Outputs) ToOutputSet() iotago.OutputSet {
 	return outputSet
 }
 
-func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milestoneIndex milestone.Index, output iotago.Output) *Output {
+func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint64, output iotago.Output) *Output {
 	return &Output{
-		outputID:          outputID,
-		messageID:         messageID,
-		confirmationIndex: milestoneIndex,
-		output:            output,
+		outputID:           outputID,
+		messageID:          messageID,
+		milestoneIndex:     milestoneIndex,
+		milestoneTimestamp: uint32(milestoneTimestamp),
+		output:             output,
 	}
 }
 
-func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint64, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	txID, err := transaction.ID()
 	if err != nil {
@@ -99,7 +109,7 @@ func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, trans
 	output = transaction.Essence.Outputs[int(index)]
 	outputID := iotago.OutputIDFromTransactionIDAndIndex(*txID, index)
 
-	return CreateOutput(&outputID, messageID, milestoneIndex, output), nil
+	return CreateOutput(&outputID, messageID, milestoneIndex, milestoneTimestamp, output), nil
 }
 
 //- kvStorable
@@ -116,9 +126,10 @@ func (o *Output) kvStorableKey() (key []byte) {
 }
 
 func (o *Output) kvStorableValue() (value []byte) {
-	ms := marshalutil.New(36)
-	ms.WriteBytes(o.messageID)                  // 32 bytes
-	ms.WriteUint32(uint32(o.confirmationIndex)) // 4 bytes
+	ms := marshalutil.New(40)
+	ms.WriteBytes(o.messageID)               // 32 bytes
+	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
+	ms.WriteUint32(o.milestoneTimestamp)     // 4 bytes
 
 	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -154,7 +165,11 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	}
 
 	// Read Milestone
-	if o.confirmationIndex, err = parseMilestoneIndex(valueUtil); err != nil {
+	if o.milestoneIndex, err = parseMilestoneIndex(valueUtil); err != nil {
+		return err
+	}
+
+	if o.milestoneTimestamp, err = valueUtil.ReadUint32(); err != nil {
 		return err
 	}
 

@@ -303,7 +303,7 @@ func TestUTXOLoadMethodsAddressFilterAndTypeFilter(t *testing.T) {
 		RandUTXOOutput(iotago.OutputExtended),
 		RandUTXOOutputOnAddressWithAmount(iotago.OutputExtended, address, 5898566), // spent
 		RandUTXOOutput(iotago.OutputExtended),                                      // spent
-		CreateOutput(nftOutputID, utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.NFTOutput{
+		CreateOutput(nftOutputID, utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.NFTOutput{
 			Address:           address,
 			Amount:            234348,
 			NFTID:             nftID,
@@ -315,7 +315,7 @@ func TestUTXOLoadMethodsAddressFilterAndTypeFilter(t *testing.T) {
 		RandUTXOOutput(iotago.OutputNFT),
 		RandUTXOOutput(iotago.OutputNFT),
 		RandUTXOOutputOnAddressWithAmount(iotago.OutputExtended, address, 98734278),
-		CreateOutput(aliasOutputID, utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.AliasOutput{
+		CreateOutput(aliasOutputID, utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.AliasOutput{
 			Amount:               59854598,
 			AliasID:              aliasID,
 			StateController:      address,
@@ -323,7 +323,7 @@ func TestUTXOLoadMethodsAddressFilterAndTypeFilter(t *testing.T) {
 			StateMetadata:        []byte{},
 		}),
 		RandUTXOOutput(iotago.OutputFoundry),
-		CreateOutput(foundryOutputID, utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.FoundryOutput{
+		CreateOutput(foundryOutputID, utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.FoundryOutput{
 			Address:           foundryAlias,
 			Amount:            2156548,
 			SerialNumber:      foundrySerialNumber,
@@ -426,7 +426,7 @@ func TestUTXOIssuerFilter(t *testing.T) {
 	}
 
 	outputs := Outputs{
-		CreateOutput(aliasIssuerAliasOutputIDs[0], utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.AliasOutput{
+		CreateOutput(aliasIssuerAliasOutputIDs[0], utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.AliasOutput{
 			Amount:               59854598,
 			AliasID:              utils.RandAliasID(),
 			StateController:      utils.RandAddress(iotago.AddressEd25519),
@@ -438,7 +438,7 @@ func TestUTXOIssuerFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.AliasOutput{
+		CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.AliasOutput{
 			Amount:               59854598,
 			AliasID:              utils.RandAliasID(),
 			StateController:      utils.RandAddress(iotago.AddressEd25519),
@@ -450,7 +450,7 @@ func TestUTXOIssuerFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.NFTOutput{
+		CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.NFTOutput{
 			Address:           utils.RandAddress(iotago.AddressAlias),
 			Amount:            234348,
 			NFTID:             nftID,
@@ -461,7 +461,7 @@ func TestUTXOIssuerFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(nftOutputIDs[0], utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.NFTOutput{
+		CreateOutput(nftOutputIDs[0], utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.NFTOutput{
 			Address:           utils.RandAddress(iotago.AddressNFT),
 			Amount:            234348,
 			NFTID:             nftID,
@@ -472,7 +472,7 @@ func TestUTXOIssuerFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(aliasIssuerOutputIDs[1], utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.NFTOutput{
+		CreateOutput(aliasIssuerOutputIDs[1], utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.NFTOutput{
 			Address:           utils.RandAddress(iotago.AddressEd25519),
 			Amount:            234348,
 			NFTID:             nftID,
@@ -483,7 +483,7 @@ func TestUTXOIssuerFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(nftOutputIDs[1], utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.NFTOutput{
+		CreateOutput(nftOutputIDs[1], utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.NFTOutput{
 			Address:           utils.RandAddress(iotago.AddressAlias),
 			Amount:            234342348,
 			NFTID:             nftID,
@@ -546,7 +546,7 @@ func TestUTXOSenderFilter(t *testing.T) {
 	}
 
 	outputs := Outputs{
-		CreateOutput(senderOutputIDs[0], utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.ExtendedOutput{
+		CreateOutput(senderOutputIDs[0], utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.ExtendedOutput{
 			Amount:  59854598,
 			Address: utils.RandAddress(iotago.AddressEd25519),
 			Blocks: iotago.FeatureBlocks{
@@ -555,7 +555,7 @@ func TestUTXOSenderFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.ExtendedOutput{
+		CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.ExtendedOutput{
 			Amount:  59854598,
 			Address: utils.RandAddress(iotago.AddressEd25519),
 			Blocks: iotago.FeatureBlocks{
@@ -564,7 +564,7 @@ func TestUTXOSenderFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.ExtendedOutput{
+		CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.ExtendedOutput{
 			Amount:  59854598,
 			Address: utils.RandAddress(iotago.AddressEd25519),
 			Blocks: iotago.FeatureBlocks{
@@ -573,7 +573,7 @@ func TestUTXOSenderFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(senderOutputIDs[1], utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.ExtendedOutput{
+		CreateOutput(senderOutputIDs[1], utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.ExtendedOutput{
 			Amount:  59854598,
 			Address: utils.RandAddress(iotago.AddressEd25519),
 			Blocks: iotago.FeatureBlocks{
@@ -582,7 +582,7 @@ func TestUTXOSenderFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(senderOutputIDs[2], utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.ExtendedOutput{
+		CreateOutput(senderOutputIDs[2], utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.ExtendedOutput{
 			Amount:  59854598,
 			Address: utils.RandAddress(iotago.AddressEd25519),
 			Blocks: iotago.FeatureBlocks{
@@ -594,7 +594,7 @@ func TestUTXOSenderFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(senderOutputIDs[3], utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.ExtendedOutput{
+		CreateOutput(senderOutputIDs[3], utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.ExtendedOutput{
 			Amount:  59854598,
 			Address: utils.RandAddress(iotago.AddressEd25519),
 			Blocks: iotago.FeatureBlocks{
@@ -606,7 +606,7 @@ func TestUTXOSenderFilter(t *testing.T) {
 				},
 			},
 		}),
-		CreateOutput(senderOutputIDs[4], utils.RandMessageID(), utils.RandMilestoneIndex(), &iotago.NFTOutput{
+		CreateOutput(senderOutputIDs[4], utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), &iotago.NFTOutput{
 			Address:           utils.RandAddress(iotago.AddressAlias),
 			Amount:            234342348,
 			NFTID:             utils.RandNFTID(),

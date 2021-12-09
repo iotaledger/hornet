@@ -25,12 +25,14 @@ func NewOutputResponse(output *utxo.Output, spent bool, ledgerIndex milestone.In
 	transactionID := output.OutputID().TransactionID()
 
 	return &OutputResponse{
-		MessageID:     output.MessageID().ToHex(),
-		TransactionID: hex.EncodeToString(transactionID[:]),
-		Spent:         spent,
-		OutputIndex:   output.OutputID().Index(),
-		RawOutput:     &rawRawOutputJSON,
-		LedgerIndex:   ledgerIndex,
+		MessageID:          output.MessageID().ToHex(),
+		TransactionID:      hex.EncodeToString(transactionID[:]),
+		Spent:              spent,
+		OutputIndex:        output.OutputID().Index(),
+		RawOutput:          &rawRawOutputJSON,
+		MilestoneIndex:     output.MilestoneIndex(),
+		MilestoneTimestamp: output.MilestoneTimestamp(),
+		LedgerIndex:        ledgerIndex,
 	}, nil
 }
 

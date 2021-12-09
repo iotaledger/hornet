@@ -273,6 +273,7 @@ func utxoOutput(fill byte, amount uint64) *utxo.Output {
 		staticOutputID(fill),
 		staticMessageID(fill),
 		1,
+		0,
 		&iotago.ExtendedOutput{
 			Address: staticEd25519Address(fill),
 			Amount:  amount,

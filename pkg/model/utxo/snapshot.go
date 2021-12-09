@@ -18,7 +18,8 @@ func (o *Output) SnapshotBytes() []byte {
 	m := marshalutil.New()
 	m.WriteBytes(o.messageID)
 	m.WriteBytes(o.outputID[:])
-	m.WriteUint32(uint32(o.confirmationIndex))
+	m.WriteUint32(uint32(o.milestoneIndex))
+	m.WriteUint32(o.milestoneTimestamp)
 
 	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -46,6 +47,11 @@ func OutputFromSnapshotReader(reader io.Reader, deSeriParas *iotago.DeSerializat
 		return nil, fmt.Errorf("unable to read LS output milestone index: %w", err)
 	}
 
+	var milestoneTimestamp uint32
+	if err := binary.Read(reader, binary.LittleEndian, &milestoneTimestamp); err != nil {
+		return nil, fmt.Errorf("unable to read LS output milestone timestamp: %w", err)
+	}
+
 	var outputLen uint32
 	if err := binary.Read(reader, binary.LittleEndian, &outputLen); err != nil {
 		return nil, fmt.Errorf("unable to read LS output length: %w", err)
@@ -65,7 +71,7 @@ func OutputFromSnapshotReader(reader io.Reader, deSeriParas *iotago.DeSerializat
 		return nil, fmt.Errorf("invalid LS output address: %w", err)
 	}
 
-	return CreateOutput(&outputID, hornet.MessageIDFromArray(messageID), milestone.Index(confirmationIndex), output), nil
+	return CreateOutput(&outputID, hornet.MessageIDFromArray(messageID), milestone.Index(confirmationIndex), uint64(milestoneTimestamp), output), nil
 }
 
 func (s *Spent) SnapshotBytes() []byte {

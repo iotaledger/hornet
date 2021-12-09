@@ -16,7 +16,7 @@ type Spent struct {
 
 	outputID            *iotago.OutputID
 	targetTransactionID *iotago.TransactionID
-	confirmationIndex   milestone.Index
+	milestoneIndex      milestone.Index
 
 	output *Output
 }
@@ -53,8 +53,8 @@ func (s *Spent) TargetTransactionID() *iotago.TransactionID {
 	return s.targetTransactionID
 }
 
-func (s *Spent) ConfirmationIndex() milestone.Index {
-	return s.confirmationIndex
+func (s *Spent) MilestoneIndex() milestone.Index {
+	return s.milestoneIndex
 }
 
 type Spents []*Spent
@@ -64,7 +64,7 @@ func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirm
 		outputID:            output.outputID,
 		output:              output,
 		targetTransactionID: targetTransactionID,
-		confirmationIndex:   confirmationIndex,
+		milestoneIndex:      confirmationIndex,
 	}
 }
 
@@ -81,8 +81,8 @@ func (s *Spent) kvStorableKey() (key []byte) {
 
 func (s *Spent) kvStorableValue() (value []byte) {
 	ms := marshalutil.New(36)
-	ms.WriteBytes(s.targetTransactionID[:])     // 32 bytes
-	ms.WriteUint32(uint32(s.confirmationIndex)) // 4 bytes
+	ms.WriteBytes(s.targetTransactionID[:])  // 32 bytes
+	ms.WriteUint32(uint32(s.milestoneIndex)) // 4 bytes
 	return ms.Bytes()
 }
 
@@ -115,7 +115,7 @@ func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	if err != nil {
 		return err
 	}
-	s.confirmationIndex = milestone.Index(index)
+	s.milestoneIndex = milestone.Index(index)
 
 	return nil
 }
