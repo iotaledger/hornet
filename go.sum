@@ -828,6 +828,8 @@ github.com/iotaledger/iota.go v1.0.0 h1:tqm1FxJ/zOdzbrAaQ5BQpVF8dUy2eeGlSeWlNG8G
 github.com/iotaledger/iota.go v1.0.0/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go/v3 v3.0.0-20211208145526-2d9f24045e18 h1:ThHgl59nTw/5gKTE+D6887DiVVAGe+4JN/WB1xtPi28=
 github.com/iotaledger/iota.go/v3 v3.0.0-20211208145526-2d9f24045e18/go.mod h1:DOXp2Jpei5quNdNj/hr+pUB0jMjc0HNG24CWvVOODBs=
+github.com/iotaledger/iota.go/v3 v3.0.0-20211208200733-914ff5853384 h1:4C9f7aN5ECbzLvc5+So+b5eoHXBEPPKOKXxZRS8oFgU=
+github.com/iotaledger/iota.go/v3 v3.0.0-20211208200733-914ff5853384/go.mod h1:DOXp2Jpei5quNdNj/hr+pUB0jMjc0HNG24CWvVOODBs=
 github.com/ipfs/go-cid v0.0.1/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
 github.com/ipfs/go-cid v0.0.2/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
 github.com/ipfs/go-cid v0.0.3/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
@@ -2320,6 +2322,8 @@ google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c/go.mod h1:UODoCrxH
 google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84/go.mod h1:SzzZ/N+nwJDaO1kznhnlzqS8ocJICar6hYhVyhi++24=
 google.golang.org/genproto v0.0.0-20211207154714-918901c715cf h1:PSEM+IQFb9xdsj2CGhfqUTfsZvF8DScCVP1QZb2IiTQ=
 google.golang.org/genproto v0.0.0-20211207154714-918901c715cf/go.mod h1:5CzLGKJ67TSI2B9POpiiyGha0AjJvZIUgRMt1dSmuhc=
+google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa h1:I0YcKz0I7OAhddo7ya8kMnvprhcWM045PmkBdMO9zN0=
+google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa/go.mod h1:5CzLGKJ67TSI2B9POpiiyGha0AjJvZIUgRMt1dSmuhc=
 google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
 google.golang.org/grpc v1.12.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
 google.golang.org/grpc v1.14.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=

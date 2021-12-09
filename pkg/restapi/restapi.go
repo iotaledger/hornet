@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,6 +29,15 @@ const (
 	// ParameterAddress is used to identify an address.
 	ParameterAddress = "address"
 
+	// ParameterFoundryID is used to identify a foundry by its ID.
+	ParameterFoundryID = "foundryID"
+
+	// ParameterAliasID is used to identify an alias by its ID.
+	ParameterAliasID = "aliasID"
+
+	// ParameterNFTID is used to identify a nft by its ID.
+	ParameterNFTID = "nftID"
+
 	// ParameterMilestoneIndex is used to identify a milestone.
 	ParameterMilestoneIndex = "milestoneIndex"
 
@@ -36,6 +46,15 @@ const (
 
 	// QueryParameterOutputType is used to filter for a certain output type.
 	QueryParameterOutputType = "type"
+
+	// QueryParameterIssuer is used to filter for a certain issuer.
+	QueryParameterIssuer = "issuer"
+
+	// QueryParameterSender is used to filter for a certain sender.
+	QueryParameterSender = "sender"
+
+	// QueryParameterIndex is used to filter for a certain index.
+	QueryParameterIndex = "index"
 )
 
 var (
@@ -149,6 +168,91 @@ func ParseEd25519AddressParam(c echo.Context) (*iotago.Ed25519Address, error) {
 	return &address, nil
 }
 
+func ParseAliasAddressParam(c echo.Context) (*iotago.AliasAddress, error) {
+	addressParam := strings.ToLower(c.Param(ParameterAddress))
+
+	addressBytes, err := hex.DecodeString(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if len(addressBytes) != (iotago.AliasAddressBytesLength) {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address length: %s", addressParam)
+	}
+
+	var address iotago.AliasAddress
+	copy(address[:], addressBytes)
+	return &address, nil
+}
+
+func ParseNFTAddressParam(c echo.Context) (*iotago.NFTAddress, error) {
+	addressParam := strings.ToLower(c.Param(ParameterAddress))
+
+	addressBytes, err := hex.DecodeString(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if len(addressBytes) != (iotago.NFTAddressBytesLength) {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address length: %s", addressParam)
+	}
+
+	var address iotago.NFTAddress
+	copy(address[:], addressBytes)
+	return &address, nil
+}
+
+func ParseAliasIDParam(c echo.Context) (*iotago.AliasID, error) {
+	aliasIDParam := strings.ToLower(c.Param(ParameterAliasID))
+
+	aliasIDBytes, err := hex.DecodeString(aliasIDParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid alias ID: %s, error: %s", aliasIDParam, err)
+	}
+
+	if len(aliasIDBytes) != iotago.AliasIDLength {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid alias ID: %s, error: %s", aliasIDParam, err)
+	}
+
+	var aliasID iotago.AliasID
+	copy(aliasID[:], aliasIDBytes)
+	return &aliasID, nil
+}
+
+func ParseNFTIDParam(c echo.Context) (*iotago.NFTID, error) {
+	nftIDParam := strings.ToLower(c.Param(ParameterNFTID))
+
+	nftIDBytes, err := hex.DecodeString(nftIDParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid NFT ID: %s, error: %s", nftIDParam, err)
+	}
+
+	if len(nftIDBytes) != iotago.NFTIDLength {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid NFT ID: %s, error: %s", nftIDParam, err)
+	}
+
+	var nftID iotago.NFTID
+	copy(nftID[:], nftIDBytes)
+	return &nftID, nil
+}
+
+func ParseFoundryIDParam(c echo.Context) (*iotago.FoundryID, error) {
+	foundryIDParam := strings.ToLower(c.Param(ParameterFoundryID))
+
+	foundryIDBytes, err := hex.DecodeString(foundryIDParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid foundry ID: %s, error: %s", foundryIDParam, err)
+	}
+
+	if len(foundryIDBytes) != iotago.FoundryIDLength {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid foundry ID: %s, error: %s", foundryIDParam, err)
+	}
+
+	var foundryID iotago.FoundryID
+	copy(foundryID[:], foundryIDBytes)
+	return &foundryID, nil
+}
+
 func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {
 	milestoneIndex := strings.ToLower(c.Param(ParameterMilestoneIndex))
 	if milestoneIndex == "" {
@@ -189,4 +293,41 @@ func ParseOutputTypeQueryParam(c echo.Context) (*iotago.OutputType, error) {
 		filteredType = &outputType
 	}
 	return filteredType, nil
+}
+
+func ParseBech32AddressQueryParam(c echo.Context, prefix iotago.NetworkPrefix, paramName string) (iotago.Address, error) {
+	addressParam := strings.ToLower(c.QueryParam(paramName))
+
+	if len(addressParam) != 1 {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid %s, error: parameter count must equal 1", paramName)
+	}
+
+	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if hrp != prefix {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", prefix)
+	}
+
+	return bech32Address, nil
+}
+
+func ParseIndexQueryParam(c echo.Context) (string, []byte, error) {
+	index := c.QueryParam(QueryParameterIndex)
+
+	if index == "" {
+		return index, nil, nil
+	}
+
+	indexBytes, err := hex.DecodeString(index)
+	if err != nil {
+		return index, nil, errors.WithMessagef(ErrInvalidParameter, "query parameter %s invalid hex", QueryParameterIndex)
+	}
+
+	if len(indexBytes) > iotago.MaxIndexationTagLength {
+		return index, nil, errors.WithMessage(ErrInvalidParameter, fmt.Sprintf("query parameter %s too long, max. %d bytes but is %d", QueryParameterIndex, iotago.MaxIndexationTagLength, len(indexBytes)))
+	}
+	return index, indexBytes, nil
 }

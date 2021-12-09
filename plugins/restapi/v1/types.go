@@ -154,12 +154,8 @@ type addressBalanceResponse struct {
 	LedgerIndex milestone.Index `json:"ledgerIndex"`
 }
 
-// addressOutputsResponse defines the response of a GET outputs by address REST API call.
-type addressOutputsResponse struct {
-	// The type of the address (0=Ed25519).
-	AddressType byte `json:"addressType"`
-	// The hex encoded address.
-	Address string `json:"address"`
+// outputsResponse defines the response of a GET outputs REST API call.
+type outputsResponse struct {
 	// The maximum count of results that are returned by the node.
 	MaxResults uint32 `json:"maxResults"`
 	// The actual count of results that are returned.

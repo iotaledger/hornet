@@ -2,8 +2,6 @@ package v1
 
 import (
 	"context"
-	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -162,19 +160,13 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 }
 
 func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
-	index := c.QueryParam("index")
-
-	if index == "" {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index empty")
-	}
-
-	indexBytes, err := hex.DecodeString(index)
+	index, indexBytes, err := restapi.ParseIndexQueryParam(c)
 	if err != nil {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index invalid hex")
+		return nil, err
 	}
 
-	if len(indexBytes) > storage.IndexationIndexLength {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter index too long, max. %d bytes but is %d", storage.IndexationIndexLength, len(indexBytes)))
+	if len(indexBytes) == 0 {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index empty")
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults

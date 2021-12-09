@@ -23,7 +23,7 @@ require (
 	github.com/iotaledger/hive.go v0.0.0-20211208125510-04baae2057d6
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20211208125510-04baae2057d6
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v3 v3.0.0-20211208145526-2d9f24045e18
+	github.com/iotaledger/iota.go/v3 v3.0.0-20211208200733-914ff5853384
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger v0.3.0
 	github.com/labstack/echo/v4 v4.6.3
@@ -231,7 +231,7 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.8-0.20211029000441-d6a9af8af023 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/genproto v0.0.0-20211207154714-918901c715cf // indirect
+	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
 	google.golang.org/grpc v1.42.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
