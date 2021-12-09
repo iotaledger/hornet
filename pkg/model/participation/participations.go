@@ -24,8 +24,9 @@ var (
 	ErrMultipleEventParticipation = errors.New("multiple participations for the same event")
 )
 
-// Participations holds the participation for multiple events
+// Participations holds the participation for multiple events.
 type Participations struct {
+	// Participations holds the participation for multiple events.
 	Participations serializer.Serializables
 }
 
@@ -116,6 +117,7 @@ func (p *Participations) UnmarshalJSON(bytes []byte) error {
 
 // jsonParticipations defines the JSON representation of Participations.
 type jsonParticipations struct {
+	// Participations holds the participation for multiple events.
 	Participations []*json.RawMessage `json:"participations"`
 }
 

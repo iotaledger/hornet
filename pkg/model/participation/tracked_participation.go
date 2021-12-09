@@ -10,12 +10,18 @@ import (
 
 // TrackedParticipation holds the information the node tracked for the participation.
 type TrackedParticipation struct {
-	EventID    EventID
-	OutputID   *iotago.UTXOInputID
-	MessageID  hornet.MessageID
-	Amount     uint64
+	// EventID is the ID of the event the participation is made for.
+	EventID EventID
+	// OutputID is the ID of the output the participation was made.
+	OutputID *iotago.UTXOInputID
+	// MessageID is the ID of the message that included the transaction that created the output the participation was made.
+	MessageID hornet.MessageID
+	// Amount is the amount of tokens that were included in the output the participation was made.
+	Amount uint64
+	// StartIndex is the milestone index the participation started.
 	StartIndex milestone.Index
-	EndIndex   milestone.Index
+	// EndIndex is the milestone index the participation ended. 0 if the participation is still active.
+	EndIndex milestone.Index
 }
 
 // ParseEventID helps to parse an EventID using marshalutil.

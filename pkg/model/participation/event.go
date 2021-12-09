@@ -51,12 +51,18 @@ func PayloadSelector(payloadType uint32) (serializer.Serializable, error) {
 
 // Event
 type Event struct {
-	Name                   string
+	// Name is the name of the event.
+	Name string
+	// MilestoneIndexCommence is the milestone index the commencing period starts.
 	MilestoneIndexCommence uint32
-	MilestoneIndexStart    uint32
-	MilestoneIndexEnd      uint32
-	Payload                serializer.Serializable
-	AdditionalInfo         string
+	// MilestoneIndexStart is the milestone index the holding period starts.
+	MilestoneIndexStart uint32
+	// MilestoneIndexEnd is the milestone index the event ends.
+	MilestoneIndexEnd uint32
+	// Payload is the payload of the event (ballot/staking).
+	Payload serializer.Serializable
+	// AdditionalInfo is an additional description text about the event.
+	AdditionalInfo string
 }
 
 // ID returns the ID of the event.
@@ -208,12 +214,18 @@ func jsonPayloadSelector(ty int) (iotago.JSONSerializable, error) {
 
 // jsonEvent defines the json representation of a Event.
 type jsonEvent struct {
-	Name                   string           `json:"name"`
-	MilestoneIndexCommence uint32           `json:"milestoneIndexCommence"`
-	MilestoneIndexStart    uint32           `json:"milestoneIndexStart"`
-	MilestoneIndexEnd      uint32           `json:"milestoneIndexEnd"`
-	Payload                *json.RawMessage `json:"payload"`
-	AdditionalInfo         string           `json:"additionalInfo"`
+	// Name is the name of the event.
+	Name string `json:"name"`
+	// MilestoneIndexCommence is the milestone index the commencing period starts.
+	MilestoneIndexCommence uint32 `json:"milestoneIndexCommence"`
+	// MilestoneIndexStart is the milestone index the holding period starts.
+	MilestoneIndexStart uint32 `json:"milestoneIndexStart"`
+	// MilestoneIndexEnd is the milestone index the event ends.
+	MilestoneIndexEnd uint32 `json:"milestoneIndexEnd"`
+	// Payload is the payload of the event (ballot/staking).
+	Payload *json.RawMessage `json:"payload"`
+	// AdditionalInfo is an additional description text about the event.
+	AdditionalInfo string `json:"additionalInfo"`
 }
 
 func (j *jsonEvent) ToSerializable() (serializer.Serializable, error) {

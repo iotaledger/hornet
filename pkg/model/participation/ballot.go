@@ -25,6 +25,7 @@ var (
 
 // Ballot can be used to define a voting participation with variable questions.
 type Ballot struct {
+	// Questions are the questions of the ballot and their possible answers.
 	Questions serializer.Serializables
 }
 
@@ -95,7 +96,9 @@ func (q *Ballot) UnmarshalJSON(bytes []byte) error {
 
 // jsonBallot defines the json representation of a Ballot.
 type jsonBallot struct {
-	Type      int                `json:"type"`
+	// Type is the type of the event.
+	Type int `json:"type"`
+	// Questions are the questions of the ballot and their possible answers.
 	Questions []*json.RawMessage `json:"questions"`
 }
 

@@ -20,7 +20,9 @@ var (
 
 // Participation holds the participation for an event and the optional answer to a ballot
 type Participation struct {
+	// EventID is the ID of the event the participation is made for.
 	EventID EventID
+	// Answers holds the IDs of the answers to the questions of the ballot.
 	Answers []byte
 }
 
@@ -84,7 +86,9 @@ func (p *Participation) UnmarshalJSON(bytes []byte) error {
 
 // jsonParticipation defines the JSON representation of a Participation.
 type jsonParticipation struct {
+	// EventID is the ID of the event the participation is made for.
 	EventID string `json:"eventId"`
+	// Answers holds the IDs of the answers to the questions of the ballot.
 	Answers string `json:"answers"`
 }
 

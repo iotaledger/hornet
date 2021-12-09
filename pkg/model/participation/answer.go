@@ -23,8 +23,11 @@ var (
 
 // Answer is a possible answer to a Ballot Question
 type Answer struct {
-	Value          uint8
-	Text           string
+	// Value is the value that should be used to pick this answer. It must be unique for each answer in a given question. Reserved values are 0 and 255.
+	Value uint8
+	// Text is the text of the answer.
+	Text string
+	// AdditionalInfo is an additional description text about the answer.
 	AdditionalInfo string
 }
 
@@ -102,8 +105,11 @@ func (a *Answer) UnmarshalJSON(bytes []byte) error {
 
 // jsonAnswer defines the json representation of an Answer
 type jsonAnswer struct {
-	Value          uint8  `json:"value"`
-	Text           string `json:"text"`
+	// Value is the value that should be used to pick this answer. It must be unique for each answer in a given question. Reserved values are 0 and 255.
+	Value uint8 `json:"value"`
+	// Text is the text of the answer.
+	Text string `json:"text"`
+	// AdditionalInfo is an additional description text about the answer.
 	AdditionalInfo string `json:"additionalInfo"`
 }
 

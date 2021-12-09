@@ -10,30 +10,42 @@ import (
 
 // AnswerStatus holds the current and accumulated vote for an answer.
 type AnswerStatus struct {
-	Value       uint8  `json:"value"`
-	Current     uint64 `json:"current"`
+	// Value is the value that identifies this answer.
+	Value uint8 `json:"value"`
+	// Current is the current voting weight of the answer.
+	Current uint64 `json:"current"`
+	// Accumulated is the accumulated voting weight of the answer.
 	Accumulated uint64 `json:"accumulated"`
 }
 
 // QuestionStatus holds the answers for a question.
 type QuestionStatus struct {
+	// Answers holds the status of the answers.
 	Answers []*AnswerStatus `json:"answers"`
 }
 
 // StakingStatus holds the status of a staking.
 type StakingStatus struct {
-	Staked   uint64 `json:"staked"`
+	// Staked is the currently staked amount of tokens.
+	Staked uint64 `json:"staked"`
+	// Rewarded is the total staking reward.
 	Rewarded uint64 `json:"rewarded"`
-	Symbol   string `json:"symbol"`
+	// Symbol is the symbol of the rewarded tokens.
+	Symbol string `json:"symbol"`
 }
 
 // EventStatus holds the status of the event
 type EventStatus struct {
-	MilestoneIndex milestone.Index   `json:"milestoneIndex"`
-	Status         string            `json:"status"`
-	Questions      []*QuestionStatus `json:"questions,omitempty"`
-	Staking        *StakingStatus    `json:"staking,omitempty"`
-	Checksum       string            `json:"checksum"`
+	// MilestoneIndex is the milestone index the status was calculated for.
+	MilestoneIndex milestone.Index `json:"milestoneIndex"`
+	// Status is the status of the event. Valid options are: "upcoming", "commencing", "holding" and "ended".
+	Status string `json:"status"`
+	// Questions holds the answer status of the different questions of the event.
+	Questions []*QuestionStatus `json:"questions,omitempty"`
+	// Staking is the staking status of the event.
+	Staking *StakingStatus `json:"staking,omitempty"`
+	// Checksum is the SHA256 checksum of all the question and answer status or the staking amount and rewards calculated for this MilestoneIndex.
+	Checksum string `json:"checksum"`
 }
 
 // EventStatus returns the EventStatus for an event with the given eventID.
