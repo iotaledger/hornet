@@ -109,8 +109,15 @@ func (o *Output) unspentLookupKeys() []lookupKey {
 			lookupKeyExtendedOutputByAddress(output.Address, o.outputID),
 		}
 	case *iotago.AliasOutput:
+
+		aliasID := output.AliasID
+		if aliasID.Empty() {
+			// Use implicit AliasID
+			aliasID = iotago.AliasIDFromOutputID(*o.outputID)
+		}
+
 		return []lookupKey{
-			lookupKeyAliasOutputByAliasID(output.AliasID, o.outputID),
+			lookupKeyAliasOutputByAliasID(aliasID, o.outputID),
 		}
 	case *iotago.NFTOutput:
 		return []lookupKey{
