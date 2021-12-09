@@ -64,13 +64,6 @@ func (o *Output) Address() iotago.Address {
 }
 
 // TODO: remove
-func (o *Output) AddressBytes() []byte {
-	// This never throws an error for current Ed25519 addresses
-	bytes, _ := o.Address().Serialize(serializer.DeSeriModeNoValidation, nil)
-	return bytes
-}
-
-// TODO: remove
 func (o *Output) Amount() uint64 {
 	return o.output.Deposit()
 }

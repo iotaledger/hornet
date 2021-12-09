@@ -621,10 +621,23 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 						return false
 					}
 
+					var addressBytes []byte
+					switch iotagoOutput := output.Output().(type) {
+					case *iotago.ExtendedOutput:
+						addressBytes, err = iotagoOutput.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+						if err != nil {
+							innerErr = err
+							return false
+						}
+					default:
+						innerErr = fmt.Errorf("invalid output type: %s", iotago.OutputTypeToString(output.OutputType()))
+						return false
+					}
+
 					// This should not overflow, since we did worst-case overflow checks before adding the event
 					increaseAmount := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
 
-					addr := string(output.AddressBytes())
+					addr := string(addressBytes)
 					balance, found := addressRewardsIncreases[addr]
 					if !found {
 						addressRewardsIncreases[addr] = increaseAmount
