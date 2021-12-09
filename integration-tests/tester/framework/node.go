@@ -48,7 +48,6 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 			VBFactorData: 0,
 			VBFactorKey:  0,
 		},
-		MinDustDeposit: 0,
 	}
 
 	debugNodeAPI := NewDebugNodeAPIClient(getNodeAPIBaseURL(ip), deSeriParas)
