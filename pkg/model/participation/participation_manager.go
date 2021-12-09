@@ -21,6 +21,7 @@ var (
 	ErrParticipationEventStartedBeforePruningIndex = errors.New("the given participation event started before the pruning index of this node")
 	ErrParticipationEventBallotCanOverflow         = errors.New("the given participation duration in combination with the maximum voting weight can overflow uint64")
 	ErrParticipationEventStakingCanOverflow        = errors.New("the given participation staking nominator and denominator in combination with the duration can overflow uint64")
+	ErrParticipationEventAlreadyExists             = errors.New("the given participation event already exists")
 )
 
 // ParticipationManager is used to track the outcome of participation in the tangle.
@@ -216,6 +217,15 @@ func (pm *ParticipationManager) StoreEvent(event *Event) (EventID, error) {
 	pm.Lock()
 	defer pm.Unlock()
 
+	eventID, err := event.ID()
+	if err != nil {
+		return NullEventID, err
+	}
+
+	if _, exists := pm.events[eventID]; exists {
+		return NullEventID, ErrParticipationEventAlreadyExists
+	}
+
 	if event.BallotCanOverflow() {
 		return NullEventID, ErrParticipationEventBallotCanOverflow
 	}
@@ -230,8 +240,7 @@ func (pm *ParticipationManager) StoreEvent(event *Event) (EventID, error) {
 		}
 	}
 
-	eventID, err := pm.storeEvent(event)
-	if err != nil {
+	if _, err = pm.storeEvent(event); err != nil {
 		return NullEventID, err
 	}
 	pm.events[eventID] = event
