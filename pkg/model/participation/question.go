@@ -29,8 +29,11 @@ var (
 
 // Question defines a single question inside a Ballot that can have multiple Answers.
 type Question struct {
-	Text           string
-	Answers        serializer.Serializables
+	// Text is the text of the question.
+	Text string
+	// Answers are the possible answers to the question.
+	Answers serializer.Serializables
+	// AdditionalInfo is an additional description text about the question.
 	AdditionalInfo string
 }
 
@@ -142,9 +145,12 @@ func (q *Question) UnmarshalJSON(bytes []byte) error {
 
 // jsonQuestion defines the json representation of a Question.
 type jsonQuestion struct {
-	Text           string             `json:"text"`
-	Answers        []*json.RawMessage `json:"answers"`
-	AdditionalInfo string             `json:"additionalInfo"`
+	// Text is the text of the question.
+	Text string `json:"text"`
+	// Answers are the possible answers to the question.
+	Answers []*json.RawMessage `json:"answers"`
+	// AdditionalInfo is an additional description text about the question.
+	AdditionalInfo string `json:"additionalInfo"`
 }
 
 func (j *jsonQuestion) ToSerializable() (serializer.Serializable, error) {

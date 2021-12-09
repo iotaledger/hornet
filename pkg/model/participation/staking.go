@@ -23,14 +23,20 @@ var (
 )
 
 type Staking struct {
-	Text   string
+	// Text is the description text of the staking event.
+	Text string
+	// Symbol is the symbol of the rewarded tokens.
 	Symbol string
 
-	Numerator   uint32
+	// Numerator is used in combination with Denominator to calculate the rewards per milestone per staked tokens.
+	Numerator uint32
+	// Denominator is used in combination with Numerator to calculate the rewards per milestone per staked tokens.
 	Denominator uint32
 
+	// RequiredMinimumRewards are the minimum rewards required to be included in the staking results.
 	RequiredMinimumRewards uint64
 
+	// AdditionalInfo is an additional description text about the staking event.
 	AdditionalInfo string
 }
 
@@ -145,13 +151,20 @@ func (s *Staking) UnmarshalJSON(bytes []byte) error {
 
 // jsonStaking defines the json representation of a Staking.
 type jsonStaking struct {
-	Type                   int    `json:"type"`
-	Text                   string `json:"text"`
-	Symbol                 string `json:"symbol"`
-	Numerator              uint32 `json:"numerator"`
-	Denominator            uint32 `json:"denominator"`
+	// Type is the type of the event.
+	Type int `json:"type"`
+	// Text is the description text of the staking event.
+	Text string `json:"text"`
+	// Symbol is the symbol of the rewarded tokens.
+	Symbol string `json:"symbol"`
+	// Numerator is used in combination with Denominator to calculate the rewards per milestone per staked tokens.
+	Numerator uint32 `json:"numerator"`
+	// Denominator is used in combination with Numerator to calculate the rewards per milestone per staked tokens.
+	Denominator uint32 `json:"denominator"`
+	// RequiredMinimumRewards are the minimum rewards required to be included in the staking results.
 	RequiredMinimumRewards uint64 `json:"requiredMinimumRewards"`
-	AdditionalInfo         string `json:"additionalInfo"`
+	// AdditionalInfo is an additional description text about the staking event.
+	AdditionalInfo string `json:"additionalInfo"`
 }
 
 func (j *jsonStaking) ToSerializable() (serializer.Serializable, error) {
