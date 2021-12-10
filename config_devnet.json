@@ -16,6 +16,7 @@
       "/api/v1/addresses*",
       "/api/v1/treasury",
       "/api/v1/receipts*",
+      "/api/plugins/faucet/*",
       "/api/plugins/participation/events*",
       "/api/plugins/participation/outputs*",
       "/api/plugins/participation/addresses*"
