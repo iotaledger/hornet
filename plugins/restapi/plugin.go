@@ -3,10 +3,8 @@ package restapi
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -22,7 +20,6 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -80,7 +77,7 @@ func initConfigPars(c *dig.Container) {
 			RestAPILimitsMaxResults: deps.NodeConfig.Int(CfgRestAPILimitsMaxResults),
 		}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -89,7 +86,7 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func() *metrics.RestAPIMetrics {
 		return &metrics.RestAPIMetrics{}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 
 	type echoDeps struct {
@@ -118,83 +115,12 @@ func provide(c *dig.Container) {
 			FaucetAllowedAPIRoute:    faucetAllowedAPIRoute,
 		}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
 func configure() {
-
-	// load whitelisted networks
-	var whitelistedNetworks []*net.IPNet
-	for _, entry := range deps.NodeConfig.Strings(CfgRestAPIWhitelistedAddresses) {
-		ipNet, err := utils.ParseIPNet(entry)
-		if err != nil {
-			Plugin.LogWarnf("Invalid whitelist address: %s", entry)
-			continue
-		}
-		whitelistedNetworks = append(whitelistedNetworks, ipNet)
-	}
-
-	permittedRoutes := make(map[string]struct{})
-	// load allowed remote access to specific HTTP REST routes
-	for _, route := range deps.NodeConfig.Strings(CfgRestAPIPermittedRoutes) {
-		permittedRoutes[strings.ToLower(route)] = struct{}{}
-	}
-
-	deps.Echo.Use(middlewareFilterRoutes(whitelistedNetworks, permittedRoutes))
-
-	// set basic auth if enabled
-	if deps.NodeConfig.Bool(CfgRestAPIJWTAuthEnabled) {
-
-		salt := deps.NodeConfig.String(CfgRestAPIJWTAuthSalt)
-		if len(salt) == 0 {
-			Plugin.LogFatalf("'%s' should not be empty", CfgRestAPIJWTAuthSalt)
-		}
-
-		// API tokens do not expire.
-		var err error
-		jwtAuth, err = jwt.NewJWTAuth(salt,
-			0,
-			deps.Host.ID().String(),
-			deps.NodePrivateKey,
-		)
-		if err != nil {
-			Plugin.Panicf("JWT auth initialization failed: %w", err)
-		}
-
-		excludedRoutes := make(map[string]struct{})
-		if deps.NodeConfig.Bool(CfgRestAPIExcludeHealthCheckFromAuth) {
-			excludedRoutes[nodeAPIHealthRoute] = struct{}{}
-		}
-
-		skipper := func(c echo.Context) bool {
-			// check if the route is excluded from basic auth.
-			if _, excluded := excludedRoutes[strings.ToLower(c.Path())]; excluded {
-				return true
-			}
-			return false
-		}
-
-		allow := func(c echo.Context, subject string, claims *jwt.AuthClaims) bool {
-			// Allow all JWT created for the API
-			if claims.API {
-				return claims.VerifySubject(subject)
-			}
-
-			// Only allow Dashboard JWT for certain routes
-			if claims.Dashboard {
-				if deps.DashboardAuthUsername == "" {
-					return false
-				}
-				return claims.VerifySubject(deps.DashboardAuthUsername) && dashboardAllowedAPIRoute(c)
-			}
-
-			return false
-		}
-
-		deps.Echo.Use(jwtAuth.Middleware(skipper, allow))
-	}
-
+	deps.Echo.Use(apiMiddleware())
 	setupRoutes()
 }
 
@@ -202,7 +128,7 @@ func run() {
 
 	Plugin.LogInfo("Starting REST-API server ...")
 
-	if err := Plugin.Daemon().BackgroundWorker("REST-API server", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("REST-API server", func(ctx context.Context) {
 		Plugin.LogInfo("Starting REST-API server ... done")
 
 		bindAddr := deps.RestAPIBindAddress
@@ -215,19 +141,19 @@ func run() {
 			}
 		}()
 
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping REST-API server ...")
 
 		if server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if err := server.Shutdown(ctx); err != nil {
+			shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if err := server.Shutdown(shutdownCtx); err != nil {
 				Plugin.LogWarn(err)
 			}
-			cancel()
+			shutdownCtxCancel()
 		}
 		Plugin.LogInfo("Stopping REST-API server ... done")
 	}, shutdown.PriorityRestAPI); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
 
@@ -253,59 +179,4 @@ func setupRoutes() {
 	}
 
 	setupHealthRoute()
-}
-
-var dashboardAllowedRoutes = map[string][]string{
-	http.MethodGet: {
-		"/api/v1/addresses",
-		"/api/v1/info",
-		"/api/v1/messages",
-		"/api/v1/milestones",
-		"/api/v1/outputs",
-		"/api/v1/peers",
-		"/api/v1/transactions",
-		"/api/plugins/spammer",
-	},
-	http.MethodPost: {
-		"/api/v1/peers",
-		"/api/plugins/spammer",
-	},
-	http.MethodDelete: {
-		"/api/v1/peers",
-	},
-}
-
-var faucetAllowedRoutes = map[string][]string{
-	http.MethodGet: {
-		"/api/plugins/faucet/info",
-	},
-	http.MethodPost: {
-		"/api/plugins/faucet/enqueue",
-	},
-}
-
-func checkAllowedAPIRoute(context echo.Context, allowedRoutes map[string][]string) bool {
-
-	// Check for which route we will allow to access the API
-	routesForMethod, exists := allowedRoutes[context.Request().Method]
-	if !exists {
-		return false
-	}
-
-	path := context.Request().URL.EscapedPath()
-	for _, prefix := range routesForMethod {
-		if strings.HasPrefix(path, prefix) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func dashboardAllowedAPIRoute(context echo.Context) bool {
-	return checkAllowedAPIRoute(context, dashboardAllowedRoutes)
-}
-
-func faucetAllowedAPIRoute(context echo.Context) bool {
-	return checkAllowedAPIRoute(context, faucetAllowedRoutes)
 }

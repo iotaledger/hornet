@@ -2,6 +2,7 @@ package faucet
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"runtime"
 	"time"
@@ -14,11 +15,16 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -32,6 +38,8 @@ type TipselFunc = func() (tips hornet.MessageIDs, err error)
 var (
 	// ErrNoTipsGiven is returned when no tips were given to issue a message.
 	ErrNoTipsGiven = errors.New("no tips given")
+	// ErrNothingToProcess is returned when there is no need to sweep or send funds.
+	ErrNothingToProcess = errors.New("nothing to process")
 )
 
 // Events are the events issued by the faucet.
@@ -47,6 +55,12 @@ type queueItem struct {
 	Bech32         string
 	Amount         uint64
 	Ed25519Address *iotago.Ed25519Address
+}
+
+// pendingTransaction holds info about a sent transaction that is pending.
+type pendingTransaction struct {
+	MessageID   hornet.MessageID
+	QueuedItems []*queueItem
 }
 
 // FaucetInfoResponse defines the response of a GET RouteFaucetInfo REST API call.
@@ -67,10 +81,17 @@ type FaucetEnqueueResponse struct {
 
 // Faucet is used to issue transaction to users that requested funds via a REST endpoint.
 type Faucet struct {
+	// lock used to secure the state of the faucet.
 	syncutils.Mutex
+	// the logger used to log events.
+	*utils.WrappedLogger
 
+	// used to access the global daemon.
+	daemon daemon.Daemon
 	// used to access the node storage.
 	storage *storage.Storage
+	// used to determine the sync status of the node.
+	syncManager *syncmanager.SyncManager
 	// id of the network the faucet is running in.
 	networkID uint64
 	// belowMaxDepth is the maximum allowed delta
@@ -94,12 +115,21 @@ type Faucet struct {
 	// events of the faucet.
 	Events *Events
 
-	// the message ID of the last sent faucet message.
-	lastMessageID hornet.MessageID
-	// map with all queued requests per address.
-	queueMap map[string]*queueItem
+	// faucetBalance is the remaining balance of the faucet if all requests would be processed.
+	faucetBalance uint64
 	// queue of new requests.
 	queue chan *queueItem
+	// map with all queued requests per address (bech32).
+	queueMap map[string]*queueItem
+	// flushQueue is used to signal to stop an ongoing batching of faucet requests.
+	flushQueue chan struct{}
+	// pendingTransactionsMap is a map of sent transactions that are pending.
+	pendingTransactionsMap map[string]*pendingTransaction
+	// the message ID of the last sent faucet message.
+	lastMessageID hornet.MessageID
+	// the latest unused UTXO output that may not be confirmed yet but can be reused in new transactions.
+	// this is used to issue multiple transactions without waiting for the confirmation by milestones.
+	lastRemainderOutput *utxo.Output
 }
 
 // the default options applied to the faucet.
@@ -116,8 +146,8 @@ var defaultOptions = []Option{
 
 // Options define options for the faucet.
 type Options struct {
-	logger *logger.Logger
-
+	// the logger used to log events.
+	logger            *logger.Logger
 	hrpNetworkPrefix  iotago.NetworkPrefix
 	amount            uint64
 	smallAmount       uint64
@@ -178,6 +208,9 @@ func WithMaxOutputCount(maxOutputCount int) Option {
 		if maxOutputCount > iotago.MaxOutputsCount {
 			maxOutputCount = iotago.MaxOutputsCount
 		}
+		if maxOutputCount < 2 {
+			maxOutputCount = 2
+		}
 		opts.maxOutputCount = maxOutputCount
 	}
 }
@@ -217,7 +250,9 @@ type Option func(opts *Options)
 
 // New creates a new faucet instance.
 func New(
-	storage *storage.Storage,
+	daemon daemon.Daemon,
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
 	networkID uint64,
 	belowMaxDepth int,
 	utxoManager *utxo.Manager,
@@ -233,7 +268,9 @@ func New(
 	options.apply(opts...)
 
 	faucet := &Faucet{
-		storage:         storage,
+		daemon:          daemon,
+		storage:         dbStorage,
+		syncManager:     syncManager,
 		networkID:       networkID,
 		belowMaxDepth:   milestone.Index(belowMaxDepth),
 		utxoManager:     utxoManager,
@@ -245,19 +282,24 @@ func New(
 		opts:            options,
 
 		Events: &Events{
-			IssuedMessage: events.NewEvent(events.VoidCaller),
+			IssuedMessage: events.NewEvent(storage.MessageIDCaller),
 			SoftError:     events.NewEvent(events.ErrorCaller),
 		},
 	}
+	faucet.WrappedLogger = utils.NewWrappedLogger(options.logger)
 	faucet.init()
 
 	return faucet
 }
 
 func (f *Faucet) init() {
+	f.faucetBalance = 0
 	f.queue = make(chan *queueItem, 5000)
 	f.queueMap = make(map[string]*queueItem)
-	f.lastMessageID = hornet.NullMessageID()
+	f.flushQueue = make(chan struct{})
+	f.pendingTransactionsMap = make(map[string]*pendingTransaction)
+	f.lastMessageID = nil
+	f.lastRemainderOutput = nil
 }
 
 // NetworkPrefix returns the used network prefix.
@@ -267,23 +309,28 @@ func (f *Faucet) NetworkPrefix() iotago.NetworkPrefix {
 
 // Info returns the used faucet address and remaining balance.
 func (f *Faucet) Info() (*FaucetInfoResponse, error) {
-	balance, _, err := f.utxoManager.AddressBalanceWithoutLocking(f.address)
-	if err != nil {
-		return nil, err
-	}
-
 	return &FaucetInfoResponse{
 		Address: f.address.Bech32(f.opts.hrpNetworkPrefix),
-		Balance: balance,
+		Balance: f.faucetBalance,
 	}, nil
 }
 
 // Enqueue adds a new faucet request to the queue.
-func (f *Faucet) Enqueue(bech32 string, ed25519Addr *iotago.Ed25519Address) (*FaucetEnqueueResponse, error) {
+func (f *Faucet) Enqueue(bech32Addr string) (*FaucetEnqueueResponse, error) {
+
+	ed25519Addr, err := f.parseBech32Address(bech32Addr)
+	if err != nil {
+		return nil, err
+	}
+
+	if !f.syncManager.IsNodeAlmostSynced() {
+		return nil, errors.WithMessage(echo.ErrInternalServerError, "Faucet node is not synchronized. Please try again later!")
+	}
+
 	f.Lock()
 	defer f.Unlock()
 
-	if _, exists := f.queueMap[bech32]; exists {
+	if _, exists := f.queueMap[bech32Addr]; exists {
 		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "Address is already in the queue.")
 	}
 
@@ -293,21 +340,26 @@ func (f *Faucet) Enqueue(bech32 string, ed25519Addr *iotago.Ed25519Address) (*Fa
 		amount = f.opts.smallAmount
 
 		if balance >= f.opts.maxAddressBalance {
-			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "You already have enough coins on your address.")
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "You already have enough funds on your address.")
 		}
 	}
 
+	if amount > f.faucetBalance {
+		return nil, errors.WithMessage(echo.ErrInternalServerError, "Faucet does not have enough funds to process your request. Please try again later!")
+	}
+
 	request := &queueItem{
-		Bech32:         bech32,
+		Bech32:         bech32Addr,
 		Amount:         amount,
 		Ed25519Address: ed25519Addr,
 	}
 
 	select {
 	case f.queue <- request:
-		f.queueMap[bech32] = request
+		f.faucetBalance -= amount
+		f.queueMap[bech32Addr] = request
 		return &FaucetEnqueueResponse{
-			Address:         bech32,
+			Address:         bech32Addr,
 			WaitingRequests: len(f.queueMap),
 		}, nil
 
@@ -317,101 +369,88 @@ func (f *Faucet) Enqueue(bech32 string, ed25519Addr *iotago.Ed25519Address) (*Fa
 	}
 }
 
-// clearRequests clears the old requests from the map.
-// this is necessary to be able to send new requests to the same addresses.
-func (f *Faucet) clearRequests(batchedRequests []*queueItem) {
-	f.Lock()
-	defer f.Unlock()
+// FlushRequests stops current batching of faucet requests.
+func (f *Faucet) FlushRequests() {
+	f.flushQueue <- struct{}{}
+}
 
-	for _, request := range batchedRequests {
-		delete(f.queueMap, request.Bech32)
+// parseBech32Address parses a bech32 address.
+func (f *Faucet) parseBech32Address(bech32Addr string) (*iotago.Ed25519Address, error) {
+
+	hrp, bech32Address, err := iotago.ParseBech32(bech32Addr)
+	if err != nil {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "Invalid bech32 address provided!")
+	}
+
+	if hrp != f.NetworkPrefix() {
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "Invalid bech32 address provided! Address does not start with \"%s\".", f.NetworkPrefix())
+	}
+
+	switch address := bech32Address.(type) {
+	case *iotago.Ed25519Address:
+		return address, nil
+	default:
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "Invalid bech32 address provided! Unknown address type.")
 	}
 }
 
-// createMessage creates a new message and references the last faucet message (also reattaches if below max depth).
-func (f *Faucet) createMessage(txPayload iotago.Serializable, shutdownSignal <-chan struct{}) (*storage.Message, error) {
+// clearRequestWithoutLocking clear the old request from the map.
+// this is necessary to be able to send a new request to the same address.
+// write lock must be acquired outside.
+func (f *Faucet) clearRequestWithoutLocking(request *queueItem) {
+	delete(f.queueMap, request.Bech32)
+}
+
+// clearRequestsWithoutLocking clears the old requests from the map.
+// this is necessary to be able to send new requests to the same addresses.
+// write lock must be acquired outside.
+func (f *Faucet) clearRequestsWithoutLocking(batchedRequests []*queueItem) {
+	for _, request := range batchedRequests {
+		f.clearRequestWithoutLocking(request)
+	}
+}
+
+// readdRequestsWithoutLocking adds old requests back to the queue.
+// write lock must be acquired outside.
+func (f *Faucet) readdRequestsWithoutLocking(batchedRequests []*queueItem) {
+	for _, request := range batchedRequests {
+		select {
+		case f.queue <- request:
+		default:
+			// queue full => no way to readd it, delete it from the map as well so user are able to send a new request
+			f.clearRequestWithoutLocking(request)
+		}
+	}
+}
+
+// addPendingTransactionWithoutLocking tracks a pending transaction.
+// write lock must be acquired outside.
+func (f *Faucet) addPendingTransactionWithoutLocking(pending *pendingTransaction) {
+	f.pendingTransactionsMap[pending.MessageID.ToMapKey()] = pending
+}
+
+// clearPendingTransactionWithoutLocking removes tracking of a pending transaction.
+// write lock must be acquired outside.
+func (f *Faucet) clearPendingTransactionWithoutLocking(msgID hornet.MessageID) {
+	delete(f.pendingTransactionsMap, msgID.ToMapKey())
+}
+
+// createMessage creates a new message and references the last faucet message.
+func (f *Faucet) createMessage(ctx context.Context, txPayload serializer.Serializable, tip ...hornet.MessageID) (*storage.Message, error) {
 
 	tips, err := f.tipselFunc()
 	if err != nil {
 		return nil, err
 	}
 
-	reattachMessage := func(messageID hornet.MessageID) (*storage.Message, error) {
-		cachedMsg := f.storage.CachedMessageOrNil(f.lastMessageID)
-		if cachedMsg == nil {
-			// message unknown
-			return nil, fmt.Errorf("message not found: %s", messageID.ToHex())
+	if len(tip) > 0 {
+		// if a tip was passed, use that one
+		if len(tips) < iotago.MaxParentsInAMessage {
+			tips = append(tips, tip[0])
+		} else {
+			tips[0] = tip[0]
 		}
-		defer cachedMsg.Release(true)
-
-		tips, err := f.tipselFunc()
-		if err != nil {
-			return nil, err
-		}
-
-		iotaMsg := &iotago.Message{
-			NetworkID: f.networkID,
-			Parents:   tips.ToSliceOfArrays(),
-			Payload:   cachedMsg.Message().Message().Payload,
-		}
-
-		if err := f.powHandler.DoPoW(iotaMsg, shutdownSignal, 1); err != nil {
-			return nil, err
-		}
-
-		msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := f.sendMessageFunc(msg); err != nil {
-			return nil, err
-		}
-
-		return msg, nil
-	}
-
-	// check if the last faucet message was already confirmed.
-	// if not, check if it is already below max depth and reattach in case.
-	// we need to check for the last faucet message, because we reference the last message as a tip
-	// to be sure the tangle consumes our UTXOs in the correct order.
-	if err = func() error {
-		if bytes.Equal(f.lastMessageID, hornet.NullMessageID()) {
-			// do not reference NullMessage
-			return nil
-		}
-
-		cachedMsgMeta := f.storage.CachedMessageMetadataOrNil(f.lastMessageID)
-		if cachedMsgMeta == nil {
-			// message unknown
-			return nil
-		}
-		defer cachedMsgMeta.Release(true)
-
-		if cachedMsgMeta.Metadata().IsReferenced() {
-			// message is already confirmed, no need to reference
-			return nil
-		}
-
-		_, ocri := dag.ConeRootIndexes(f.storage, cachedMsgMeta.Retain(), f.storage.ConfirmedMilestoneIndex()) // meta +
-		if (f.storage.LatestMilestoneIndex() - ocri) > f.belowMaxDepth {
-			// the last faucet message is not confirmed yet, but it is already below max depth
-			// we need to reattach it
-			msg, err := reattachMessage(f.lastMessageID)
-			if err != nil {
-				return common.CriticalError(fmt.Errorf("faucet message was below max depth and couldn't be reattached: %w", err))
-			}
-
-			// update the lastMessasgeID because we reattached the message
-			f.lastMessageID = msg.MessageID()
-		}
-
-		tips[0] = f.lastMessageID
 		tips = tips.RemoveDupsAndSortByLexicalOrder()
-
-		return nil
-	}(); err != nil {
-		return nil, err
 	}
 
 	// create the message
@@ -421,11 +460,11 @@ func (f *Faucet) createMessage(txPayload iotago.Serializable, shutdownSignal <-c
 		Payload:   txPayload,
 	}
 
-	if err := f.powHandler.DoPoW(iotaMsg, shutdownSignal, 1); err != nil {
+	if err := f.powHandler.DoPoW(ctx, iotaMsg, 1); err != nil {
 		return nil, err
 	}
 
-	msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
 	}
@@ -453,7 +492,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	for _, req := range batchedRequests {
 		outputCount++
 
-		if outputCount >= f.opts.maxOutputCount {
+		if outputCount >= f.opts.maxOutputCount-1 {
 			// do not collect further requests
 			// the last slot is for the remainder
 			break
@@ -519,131 +558,371 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	return txPayload, remainderOutput, uint64(remainderAmount), nil
 }
 
-// sendFaucetMessage creates a faucet transaction payload and remembers the last sent messageID.
-func (f *Faucet) sendFaucetMessage(unspentOutputs []*utxo.Output, batchedRequests []*queueItem, shutdownSignal <-chan struct{}) (*utxo.Output, error) {
+// sendFaucetMessage creates a faucet transaction payload and remembers the last sent messageID and the lastRemainderOutput.
+func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.Output, batchedRequests []*queueItem, tip ...hornet.MessageID) error {
 
 	txPayload, remainderIotaGoOutput, remainderAmount, err := f.buildTransactionPayload(unspentOutputs, batchedRequests)
 	if err != nil {
-		return nil, fmt.Errorf("build transaction payload failed, error: %w", err)
+		return fmt.Errorf("build transaction payload failed, error: %w", err)
 	}
 
-	msg, err := f.createMessage(txPayload, shutdownSignal)
+	msg, err := f.createMessage(ctx, txPayload, tip...)
 	if err != nil {
-		return nil, fmt.Errorf("build faucet message failed, error: %w", err)
+		return fmt.Errorf("build faucet message failed, error: %w", err)
 	}
 
 	if err := f.sendMessageFunc(msg); err != nil {
-		return nil, fmt.Errorf("send faucet message failed, error: %w", err)
+		return fmt.Errorf("send faucet message failed, error: %w", err)
 	}
 
+	f.Lock()
 	f.lastMessageID = msg.MessageID()
-	remainderIotaGoOutputID := remainderIotaGoOutput.ID()
-	remainderOutput := utxo.CreateOutput(&remainderIotaGoOutputID, msg.MessageID(), iotago.OutputSigLockedSingleOutput, f.address, uint64(remainderAmount))
+	f.addPendingTransactionWithoutLocking(&pendingTransaction{MessageID: msg.MessageID(), QueuedItems: batchedRequests})
+	if remainderIotaGoOutput != nil {
+		remainderIotaGoOutputID := remainderIotaGoOutput.ID()
+		f.lastRemainderOutput = utxo.CreateOutput(&remainderIotaGoOutputID, msg.MessageID(), iotago.OutputSigLockedSingleOutput, f.address, uint64(remainderAmount))
+	} else {
+		// no funds remaining => no remainder output
+		f.lastRemainderOutput = nil
+	}
+	f.Unlock()
 
-	return remainderOutput, nil
+	f.Events.IssuedMessage.Trigger(msg.MessageID())
+
+	return nil
 }
 
 // logSoftError logs a soft error and triggers the event.
 func (f *Faucet) logSoftError(err error) {
-	if f.opts.logger != nil {
-		f.opts.logger.Warn(err)
-	}
+	f.LogWarn(err)
 	f.Events.SoftError.Trigger(err)
 }
 
-// RunFaucetLoop collects unspent outputs on the faucet address and batches the requests from the queue.
-func (f *Faucet) RunFaucetLoop(shutdownSignal <-chan struct{}) error {
+// collectRequests collects faucet requests until the maximum amount or a timeout is reached.
+// locking not required.
+func (f *Faucet) collectRequests(ctx context.Context) ([]*queueItem, error) {
 
-	var lastRemainderOutput *utxo.Output
+	batchedRequests := []*queueItem{}
+	collectedRequestsCounter := 0
+
+CollectValues:
+	for collectedRequestsCounter < f.opts.maxOutputCount {
+		select {
+		case <-ctx.Done():
+			// faucet was stopped
+			return nil, common.ErrOperationAborted
+
+		case <-time.After(f.opts.batchTimeout):
+			// timeout was reached => stop collecting requests
+			break CollectValues
+
+		case <-f.flushQueue:
+			// flush signal => stop collecting requests
+			for collectedRequestsCounter < f.opts.maxOutputCount {
+				// collect all pending requests
+				select {
+				case request := <-f.queue:
+					batchedRequests = append(batchedRequests, request)
+					collectedRequestsCounter++
+
+				default:
+					// no pending requests
+					break CollectValues
+				}
+			}
+			break CollectValues
+
+		case request := <-f.queue:
+			batchedRequests = append(batchedRequests, request)
+			collectedRequestsCounter++
+		}
+	}
+
+	return batchedRequests, nil
+}
+
+// processRequestsWithoutLocking processes all possible requests considering the maximum transaction size and the remaining funds of the faucet.
+// write lock must be acquired outside.
+func (f *Faucet) processRequestsWithoutLocking(collectedRequestsCounter int, amount uint64, batchedRequests []*queueItem) []*queueItem {
+	processedBatchedRequests := []*queueItem{}
+	unprocessedBatchedRequests := []*queueItem{}
+	nodeAlmostSynced := f.syncManager.IsNodeAlmostSynced()
+
+	for i := range batchedRequests {
+		request := batchedRequests[i]
+
+		if !nodeAlmostSynced {
+			// request can't be processed because the node is not synchronized => re-add it to the queue
+			unprocessedBatchedRequests = append(unprocessedBatchedRequests, request)
+			continue
+		}
+
+		if collectedRequestsCounter >= f.opts.maxOutputCount-1 {
+			// request can't be processed in this transaction => re-add it to the queue
+			unprocessedBatchedRequests = append(unprocessedBatchedRequests, request)
+			continue
+		}
+
+		if amount < request.Amount {
+			// not enough funds to process this request => ignore the request
+			f.clearRequestWithoutLocking(request)
+			continue
+		}
+
+		// request can be processed in this transaction
+		amount -= request.Amount
+		collectedRequestsCounter++
+		processedBatchedRequests = append(processedBatchedRequests, request)
+	}
+
+	f.readdRequestsWithoutLocking(unprocessedBatchedRequests)
+
+	return processedBatchedRequests
+}
+
+// RunFaucetLoop collects unspent outputs on the faucet address and batches the requests from the queue.
+func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) error {
+
+	// set initial faucet balance
+	faucetBalance, _, err := f.utxoManager.AddressBalanceWithoutLocking(f.address)
+	if err != nil {
+		return common.CriticalError(fmt.Errorf("reading faucet address balance failed: %s, error: %s", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
+	}
+	f.faucetBalance = faucetBalance
+
+	if initDoneCallback != nil {
+		initDoneCallback()
+	}
 
 	for {
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			// faucet was stopped
 			return nil
 
 		default:
-
-			// only collect unspent outputs if the lastRemainderOutput is not pending
-			shouldCollectUnspentOutputs := func() bool {
-				if lastRemainderOutput == nil {
-					return true
-				}
-
-				if _, err := f.utxoManager.ReadOutputByOutputIDWithoutLocking(lastRemainderOutput.OutputID()); err != nil {
-					return false
-				}
-
-				return true
-			}
-
-			var err error
-			unspentOutputs := []*utxo.Output{}
-			if shouldCollectUnspentOutputs() {
-				unspentOutputs, err = f.utxoManager.UnspentOutputs(utxo.FilterAddress(f.address), utxo.ReadLockLedger(false), utxo.MaxResultCount(f.opts.maxOutputCount-2), utxo.FilterOutputType(iotago.OutputSigLockedSingleOutput))
-				if err != nil {
-					return fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err)
-				}
-			} else {
-				unspentOutputs = append(unspentOutputs, lastRemainderOutput)
-			}
-
-			var amount uint64 = 0
-			found := false
-			for _, unspentOutput := range unspentOutputs {
-				amount += unspentOutput.Amount()
-				if lastRemainderOutput != nil && bytes.Equal(unspentOutput.OutputID()[:], lastRemainderOutput.OutputID()[:]) {
-					found = true
-				}
-			}
-
-			if lastRemainderOutput != nil && !found {
-				unspentOutputs = append(unspentOutputs, lastRemainderOutput)
-				amount += lastRemainderOutput.Amount()
-			}
-
-			collectedRequestsCounter := len(unspentOutputs)
-			batchWriterTimeoutChan := time.After(f.opts.batchTimeout)
-			batchedRequests := []*queueItem{}
-
-		CollectValues:
-			for collectedRequestsCounter < f.opts.maxOutputCount-1 && amount > f.opts.amount {
-				select {
-				case <-shutdownSignal:
-					// faucet was stopped
-					return nil
-
-				case <-batchWriterTimeoutChan:
-					// timeout was reached => stop collecting requests
-					break CollectValues
-
-				case request := <-f.queue:
-					batchedRequests = append(batchedRequests, request)
-					collectedRequestsCounter++
-					amount -= request.Amount
-				}
-			}
-
-			f.clearRequests(batchedRequests)
-
-			if len(unspentOutputs) < 2 && len(batchedRequests) == 0 {
-				// no need to sweep or send funds
-				continue
-			}
-
-			remainderOutput, err := f.sendFaucetMessage(unspentOutputs, batchedRequests, shutdownSignal)
+			// first collect requests
+			batchedRequests, err := f.collectRequests(ctx)
 			if err != nil {
+				if err == common.ErrOperationAborted {
+					return nil
+				}
 				if common.IsCriticalError(err) != nil {
 					// error is a critical error
 					// => stop the faucet
 					return err
 				}
-
 				f.logSoftError(err)
 				continue
 			}
 
-			lastRemainderOutput = remainderOutput
+			collectUnspentOutputsWithoutLocking := func() ([]*utxo.Output, uint64, error) {
+				if f.lastRemainderOutput != nil {
+					// the lastRemainderOutput is reused as input in the next transaction, even if it was not yet referenced by a milestone.
+					// this is done to increase the throughput of the faucet in high load situations.
+					// we can't collect unspent outputs, as long as the lastRemainderOutput was not confirmed,
+					// since it's creating transaction could also have consumed the same UTXOs.
+					return []*utxo.Output{f.lastRemainderOutput}, f.lastRemainderOutput.Amount(), nil
+				}
+
+				unspentOutputs, err := f.utxoManager.UnspentOutputs(utxo.FilterAddress(f.address), utxo.ReadLockLedger(false), utxo.MaxResultCount(f.opts.maxOutputCount-2), utxo.FilterOutputType(iotago.OutputSigLockedSingleOutput))
+				if err != nil {
+					return nil, 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
+				}
+
+				var amount uint64 = 0
+				for _, unspentOutput := range unspentOutputs {
+					amount += unspentOutput.Amount()
+				}
+				return unspentOutputs, amount, nil
+			}
+
+			processRequests := func() ([]*utxo.Output, []*queueItem, hornet.MessageIDs, error) {
+				// first we need to read lock the ledger, to be sure that there is no confirmation ongoing
+				f.utxoManager.ReadLockLedger()
+				defer f.utxoManager.ReadUnlockLedger()
+
+				// there must be a lock between collectUnspentOutputsWithoutLocking and "tipselection", otherwise the chaining may fail
+				f.Lock()
+				defer f.Unlock()
+
+				unspentOutputs, amount, err := collectUnspentOutputsWithoutLocking()
+				if err != nil {
+					return nil, nil, nil, err
+				}
+
+				if len(unspentOutputs) < 2 && len(batchedRequests) == 0 {
+					// no need to sweep or send funds
+					return nil, nil, nil, ErrNothingToProcess
+				}
+
+				// if a lastMessageID exists, we need to reference it to chain the transactions in the correct order for whiteflag.
+				// lastMessageID is reset by ApplyConfirmation in case the last faucet message is not confirmed and below max depth.
+				var tips hornet.MessageIDs
+				if f.lastMessageID != nil {
+					tip := make(hornet.MessageID, len(f.lastMessageID))
+					copy(tip, f.lastMessageID)
+					tips = append(tips, tip)
+				}
+
+				processableRequests := f.processRequestsWithoutLocking(len(unspentOutputs), amount, batchedRequests)
+
+				return unspentOutputs, processableRequests, tips, nil
+			}
+
+			unspentOutputs, processableRequests, tips, err := processRequests()
+			if err != nil {
+				if err != ErrNothingToProcess {
+					if common.IsCriticalError(err) != nil {
+						// error is a critical error
+						// => stop the faucet
+						return err
+					}
+					f.logSoftError(err)
+				}
+				continue
+			}
+
+			if err := f.sendFaucetMessage(ctx, unspentOutputs, processableRequests, tips...); err != nil {
+				if common.IsCriticalError(err) != nil {
+					// error is a critical error
+					// => stop the faucet
+					return err
+				}
+				f.readdRequestsWithoutLocking(processableRequests)
+				f.logSoftError(err)
+				continue
+			}
 		}
 	}
+}
+
+// ApplyConfirmation applies new milestone confirmations to the faucet.
+// Pending transactions are checked for their current state and either removed, readded, or left pending.
+// If a conflict is found, all remaining pending transactions are readded to the queue.
+// no need to ReadLockLedger, because this function should be called from milestone confirmation event anyway.
+func (f *Faucet) ApplyConfirmation(confirmation *whiteflag.Confirmation) error {
+	if confirmation == nil {
+		return nil
+	}
+
+	f.Lock()
+	defer f.Unlock()
+
+	conflicting := false
+	cmi := confirmation.MilestoneIndex
+
+	// check pending transactions for confirmation
+	for _, msgID := range confirmation.Mutations.MessagesIncludedWithTransactions {
+		if pendingTx, pending := f.pendingTransactionsMap[msgID.ToMapKey()]; pending {
+			// transaction was confirmed => delete the requests and the pending transaction
+			f.clearRequestsWithoutLocking(pendingTx.QueuedItems)
+			f.clearPendingTransactionWithoutLocking(msgID)
+
+			if f.lastMessageID != nil && bytes.Equal(f.lastMessageID[:], msgID[:]) {
+				// the latest message got confirmed, reset the lastMessageID
+				f.lastMessageID = nil
+			}
+
+			if f.lastRemainderOutput != nil && bytes.Equal(f.lastRemainderOutput.MessageID()[:], msgID[:]) {
+				// the latest transaction got confirmed, reset the lastRemainderOutput
+				f.lastRemainderOutput = nil
+			}
+		}
+	}
+
+	// check pending transactions for conflicts
+	for _, conflict := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
+		if pendingTx, pending := f.pendingTransactionsMap[conflict.MessageID.ToMapKey()]; pending {
+			// transaction was conflicting => readd the items to the queue and delete the pending transaction
+			conflicting = true
+			f.readdRequestsWithoutLocking(pendingTx.QueuedItems)
+			f.clearPendingTransactionWithoutLocking(conflict.MessageID)
+		}
+	}
+
+	checkPendingMessageMetadata := func(pendingTx *pendingTransaction) {
+		msgID := pendingTx.MessageID
+
+		cachedMsgMeta := f.storage.CachedMessageMetadataOrNil(msgID) // meta +1
+		if cachedMsgMeta == nil {
+			// message unknown => delete the requests and the pending transaction
+			conflicting = true
+			f.clearRequestsWithoutLocking(pendingTx.QueuedItems)
+			f.clearPendingTransactionWithoutLocking(msgID)
+			return
+		}
+		defer cachedMsgMeta.Release(true)
+
+		metadata := cachedMsgMeta.Metadata()
+		if metadata.IsReferenced() {
+			if metadata.IsConflictingTx() {
+				// transaction was conflicting => readd the items to the queue and delete the pending transaction
+				conflicting = true
+				f.readdRequestsWithoutLocking(pendingTx.QueuedItems)
+				f.clearPendingTransactionWithoutLocking(msgID)
+				return
+			}
+
+			// transaction was confirmed => delete the requests and the pending transaction
+			f.clearRequestsWithoutLocking(pendingTx.QueuedItems)
+			f.clearPendingTransactionWithoutLocking(msgID)
+			return
+		}
+
+		// check if message is "below max depth"
+		_, ocri, err := dag.ConeRootIndexes(f.daemon.ContextStopped(), f.storage, cachedMsgMeta.Retain(), cmi)
+		if err != nil {
+			// an error occurred => readd the items to the queue and delete the pending transaction
+			conflicting = true
+			f.readdRequestsWithoutLocking(pendingTx.QueuedItems)
+			f.clearPendingTransactionWithoutLocking(msgID)
+			return
+		}
+
+		if (cmi - ocri) > milestone.Index(f.belowMaxDepth) {
+			// below max depth => readd the items to the queue and delete the pending transaction
+			conflicting = true
+			f.readdRequestsWithoutLocking(pendingTx.QueuedItems)
+			f.clearPendingTransactionWithoutLocking(msgID)
+		}
+	}
+
+	// check all remaining pending transactions
+	for _, pendingTx := range f.pendingTransactionsMap {
+		checkPendingMessageMetadata(pendingTx)
+	}
+
+	if conflicting {
+		// there was a conflict in the chain
+		// => reset the lastMessageID and lastRemainderOutput to collect outputs and reissue all pending transactions
+		f.lastMessageID = nil
+		f.lastRemainderOutput = nil
+
+		for _, pendingTx := range f.pendingTransactionsMap {
+			f.readdRequestsWithoutLocking(pendingTx.QueuedItems)
+			f.clearPendingTransactionWithoutLocking(pendingTx.MessageID)
+		}
+	}
+
+	// calculate total balance of all pending requests
+	var pendingRequestsBalance uint64 = 0
+	for _, pendingRequest := range f.queueMap {
+		pendingRequestsBalance += pendingRequest.Amount
+	}
+
+	// recalculate the current faucet balance
+	// no need to lock since we are in the milestone confirmation anyway
+	faucetBalance, _, err := f.utxoManager.AddressBalanceWithoutLocking(f.address)
+	if err != nil {
+		return common.CriticalError(fmt.Errorf("reading faucet address balance failed: %s, error: %s", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
+	}
+
+	if faucetBalance < pendingRequestsBalance {
+		f.faucetBalance = 0
+		return nil
+	}
+
+	f.faucetBalance = faucetBalance - pendingRequestsBalance
+	return nil
 }

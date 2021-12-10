@@ -24,7 +24,7 @@ func info() (*infoResponse, error) {
 	}
 
 	// latest milestone index
-	latestMilestoneIndex := deps.Storage.LatestMilestoneIndex()
+	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
 
 	// latest milestone timestamp
 	var latestMilestoneTimestamp int64 = 0
@@ -35,7 +35,7 @@ func info() (*infoResponse, error) {
 	}
 
 	// confirmed milestone index
-	confirmedMilestoneIndex := deps.Storage.ConfirmedMilestoneIndex()
+	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
 
 	// pruning index
 	var pruningIndex milestone.Index

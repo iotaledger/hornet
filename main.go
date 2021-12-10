@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/plugins/faucet"
 	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/mqtt"
+	"github.com/gohornet/hornet/plugins/participation"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
@@ -61,6 +62,7 @@ func main() {
 			prometheus.Plugin,
 			debug.Plugin,
 			faucet.Plugin,
+			participation.Plugin,
 		}...),
 	)
 }

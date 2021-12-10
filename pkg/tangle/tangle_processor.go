@@ -1,6 +1,7 @@
 package tangle
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -19,13 +20,13 @@ import (
 func (t *Tangle) ConfigureTangleProcessor() {
 
 	t.receiveMsgWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.processIncomingTx(task.Param(0).(*storage.Message), task.Param(1).(*gossip.Request), task.Param(2).(*gossip.Protocol))
+		t.processIncomingTx(task.Param(0).(*storage.Message), task.Param(1).(gossip.Requests), task.Param(2).(*gossip.Protocol))
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
 	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
-		if err := t.futureConeSolidifier.SolidifyMessageAndFutureCone(task.Param(0).(*storage.CachedMetadata), nil); err != nil {
-			t.log.Debugf("SolidifyMessageAndFutureCone failed: %s", err)
+		if err := t.futureConeSolidifier.SolidifyMessageAndFutureCone(t.shutdownCtx, task.Param(0).(*storage.CachedMetadata)); err != nil {
+			t.LogDebugf("SolidifyMessageAndFutureCone failed: %s", err)
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
@@ -42,20 +43,20 @@ func (t *Tangle) ConfigureTangleProcessor() {
 }
 
 func (t *Tangle) RunTangleProcessor() {
-	t.log.Info("Starting TangleProcessor ...")
+	t.LogInfo("Starting TangleProcessor ...")
 
 	// set latest known milestone from database
 	latestMilestoneFromDatabase := t.storage.SearchLatestMilestoneIndexInStore()
-	if latestMilestoneFromDatabase < t.storage.ConfirmedMilestoneIndex() {
-		latestMilestoneFromDatabase = t.storage.ConfirmedMilestoneIndex()
+	if latestMilestoneFromDatabase < t.syncManager.ConfirmedMilestoneIndex() {
+		latestMilestoneFromDatabase = t.syncManager.ConfirmedMilestoneIndex()
 	}
 
-	t.storage.SetLatestMilestoneIndex(latestMilestoneFromDatabase, t.updateSyncedAtStartup)
+	t.syncManager.SetLatestMilestoneIndex(latestMilestoneFromDatabase, t.updateSyncedAtStartup)
 
 	t.startWaitGroup.Add(5)
 
-	onMsgProcessed := events.NewClosure(func(message *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
-		t.receiveMsgWorkerPool.Submit(message, request, proto)
+	onMsgProcessed := events.NewClosure(func(message *storage.Message, requests gossip.Requests, proto *gossip.Protocol) {
+		t.receiveMsgWorkerPool.Submit(message, requests, proto)
 	})
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
@@ -99,80 +100,80 @@ func (t *Tangle) RunTangleProcessor() {
 	})
 
 	// create a background worker that "measures" the MPS value every second
-	if err := t.daemon.BackgroundWorker("Metrics MPS Updater", func(shutdownSignal <-chan struct{}) {
-		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, shutdownSignal)
+	if err := t.daemon.BackgroundWorker("Metrics MPS Updater", func(ctx context.Context) {
+		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityMetricsUpdater); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(shutdownSignal <-chan struct{}) {
+	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(ctx context.Context) {
 		t.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		t.startWaitGroup.Done()
-		<-shutdownSignal
+		<-ctx.Done()
 		t.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 	}, shutdown.PriorityMetricsUpdater); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(shutdownSignal <-chan struct{}) {
-		t.log.Info("Starting TangleProcessor[ReceiveTx] ... done")
+	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(ctx context.Context) {
+		t.LogInfo("Starting TangleProcessor[ReceiveTx] ... done")
 		t.messageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
 		t.Events.MessageSolid.Attach(onMessageSolid)
 		t.receiveMsgWorkerPool.Start()
 		t.startWaitGroup.Done()
-		<-shutdownSignal
-		t.log.Info("Stopping TangleProcessor[ReceiveTx] ...")
+		<-ctx.Done()
+		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ...")
 		t.messageProcessor.Events.MessageProcessed.Detach(onMsgProcessed)
 		t.Events.MessageSolid.Detach(onMessageSolid)
 		t.receiveMsgWorkerPool.StopAndWait()
-		t.log.Info("Stopping TangleProcessor[ReceiveTx] ... done")
+		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, shutdown.PriorityReceiveTxWorker); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(shutdownSignal <-chan struct{}) {
-		t.log.Info("Starting TangleProcessor[FutureConeSolidifier] ... done")
+	if err := t.daemon.BackgroundWorker("TangleProcessor[FutureConeSolidifier]", func(ctx context.Context) {
+		t.LogInfo("Starting TangleProcessor[FutureConeSolidifier] ... done")
 		t.futureConeSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
-		<-shutdownSignal
-		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ...")
+		<-ctx.Done()
+		t.LogInfo("Stopping TangleProcessor[FutureConeSolidifier] ...")
 		t.futureConeSolidifierWorkerPool.StopAndWait()
-		t.log.Info("Stopping TangleProcessor[FutureConeSolidifier] ... done")
+		t.LogInfo("Stopping TangleProcessor[FutureConeSolidifier] ... done")
 	}, shutdown.PrioritySolidifierGossip); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(shutdownSignal <-chan struct{}) {
-		t.log.Info("Starting TangleProcessor[ProcessMilestone] ... done")
+	if err := t.daemon.BackgroundWorker("TangleProcessor[ProcessMilestone]", func(ctx context.Context) {
+		t.LogInfo("Starting TangleProcessor[ProcessMilestone] ... done")
 		t.processValidMilestoneWorkerPool.Start()
-		t.storage.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
+		t.milestoneManager.Events.ReceivedValidMilestone.Attach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Attach(onMilestoneTimeout)
 		t.startWaitGroup.Done()
-		<-shutdownSignal
-		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ...")
+		<-ctx.Done()
+		t.LogInfo("Stopping TangleProcessor[ProcessMilestone] ...")
 		t.StopMilestoneTimeoutTicker()
-		t.storage.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
+		t.milestoneManager.Events.ReceivedValidMilestone.Detach(onReceivedValidMilestone)
 		t.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		t.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
 		t.processValidMilestoneWorkerPool.StopAndWait()
-		t.log.Info("Stopping TangleProcessor[ProcessMilestone] ... done")
+		t.LogInfo("Stopping TangleProcessor[ProcessMilestone] ... done")
 	}, shutdown.PriorityMilestoneProcessor); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(shutdownSignal <-chan struct{}) {
-		t.log.Info("Starting TangleProcessor[MilestoneSolidifier] ... done")
+	if err := t.daemon.BackgroundWorker("TangleProcessor[MilestoneSolidifier]", func(ctx context.Context) {
+		t.LogInfo("Starting TangleProcessor[MilestoneSolidifier] ... done")
 		t.milestoneSolidifierWorkerPool.Start()
 		t.startWaitGroup.Done()
-		<-shutdownSignal
-		t.log.Info("Stopping TangleProcessor[MilestoneSolidifier] ...")
+		<-ctx.Done()
+		t.LogInfo("Stopping TangleProcessor[MilestoneSolidifier] ...")
 		t.milestoneSolidifierWorkerPool.StopAndWait()
 		t.futureConeSolidifier.Cleanup(true)
-		t.log.Info("Stopping TangleProcessor[MilestoneSolidifier] ... done")
+		t.LogInfo("Stopping TangleProcessor[MilestoneSolidifier] ... done")
 	}, shutdown.PriorityMilestoneSolidifier); err != nil {
-		t.log.Panicf("failed to start worker: %s", err)
+		t.LogPanicf("failed to start worker: %s", err)
 	}
 
 }
@@ -186,13 +187,15 @@ func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
 	return t.receiveMsgWorkerPool.GetPendingQueueSize() > (t.receiveMsgQueueSize / 2)
 }
 
-func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip.Request, proto *gossip.Protocol) {
+func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip.Requests, proto *gossip.Protocol) {
 
-	latestMilestoneIndex := t.storage.LatestMilestoneIndex()
-	isNodeSyncedWithinBelowMaxDepth := t.storage.IsNodeSyncedWithinBelowMaxDepth()
+	latestMilestoneIndex := t.syncManager.LatestMilestoneIndex()
+	isNodeSyncedWithinBelowMaxDepth := t.syncManager.IsNodeSyncedWithinBelowMaxDepth()
+
+	requested := requests.HasRequest()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
-	cachedMsg, alreadyAdded := t.storage.AddMessageToStorage(incomingMsg, latestMilestoneIndex, request != nil, !isNodeSyncedWithinBelowMaxDepth, false) // msg +1
+	cachedMsg, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // msg +1
 
 	// Release shouldn't be forced, to cache the latest messages
 	defer cachedMsg.Release(!isNodeSyncedWithinBelowMaxDepth) // msg -1
@@ -206,17 +209,19 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 
 		// since we only add the parents if there was a source request, we only
 		// request them for messages which should be part of milestone cones
-		if request != nil {
+		for _, request := range requests {
 			// add this newly received message's parents to the request queue
-			t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
+			if request.RequestType == gossip.RequestTypeMessageID {
+				t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
+			}
 		}
 
-		confirmedMilestoneIndex := t.storage.ConfirmedMilestoneIndex()
+		confirmedMilestoneIndex := t.syncManager.ConfirmedMilestoneIndex()
 		if latestMilestoneIndex == 0 {
 			latestMilestoneIndex = confirmedMilestoneIndex
 		}
 
-		if t.storage.IsNodeAlmostSynced() {
+		if t.syncManager.IsNodeAlmostSynced() {
 			// try to solidify the message and its future cone
 			t.futureConeSolidifierWorkerPool.Submit(cachedMsg.CachedMetadata()) // meta pass +1
 		}
@@ -238,15 +243,15 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, request *gossip
 	t.Events.ProcessedMessage.Trigger(incomingMsg.MessageID())
 	t.messageProcessedSyncEvent.Trigger(incomingMsg.MessageID().ToMapKey())
 
-	if request != nil {
+	for _, request := range requests {
 		// mark the received request as processed
-		t.requestQueue.Processed(incomingMsg.MessageID())
+		t.requestQueue.Processed(request)
 	}
 
 	// we check whether the request is nil, so we only trigger the solidifier when
-	// we actually handled a message stemming from a request (as otherwise the solidifier
+	// we actually handled a message coming from a request (as otherwise the solidifier
 	// is triggered too often through messages received from normal gossip)
-	if request != nil && !t.storage.IsNodeSynced() && t.requestQueue.Empty() {
+	if requested && !t.syncManager.IsNodeSynced() && t.requestQueue.Empty() {
 		// we trigger the milestone solidifier in order to solidify milestones
 		// which should be solid given that the request queue is empty
 		t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
@@ -303,8 +308,8 @@ func (t *Tangle) PrintStatus() {
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
 			t.receiveMsgWorkerPool.GetPendingQueueSize(),
-			t.storage.ConfirmedMilestoneIndex(),
-			t.storage.LatestMilestoneIndex(),
+			t.syncManager.ConfirmedMilestoneIndex(),
+			t.syncManager.LatestMilestoneIndex(),
 			t.lastIncomingMPS,
 			t.lastNewMPS,
 			t.lastOutgoingMPS,

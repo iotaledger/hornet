@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	coreDatabase "github.com/gohornet/hornet/core/database"
+
 	"github.com/pkg/errors"
 
 	"github.com/labstack/echo/v4"
@@ -22,6 +24,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -62,30 +65,34 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo          *app.AppInfo
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	Database         *database.Database
-	DatabasePath     string `name:"databasePath"`
-	Storage          *storage.Storage
-	ServerMetrics    *metrics.ServerMetrics
-	DatabaseMetrics  *metrics.DatabaseMetrics
-	StorageMetrics   *metrics.StorageMetrics
-	RestAPIMetrics   *metrics.RestAPIMetrics `optional:"true"`
-	Service          *gossip.Service
-	ReceiptService   *migrator.ReceiptService `optional:"true"`
-	Tangle           *tangle.Tangle
-	MigratorService  *migrator.MigratorService `optional:"true"`
-	Manager          *p2p.Manager
-	RequestQueue     gossip.RequestQueue
-	MessageProcessor *gossip.MessageProcessor
-	TipSelector      *tipselect.TipSelector `optional:"true"`
-	Snapshot         *snapshot.Snapshot
-	Coordinator      *coordinator.Coordinator `optional:"true"`
+	AppInfo               *app.AppInfo
+	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
+	SyncManager           *syncmanager.SyncManager
+	ServerMetrics         *metrics.ServerMetrics
+	Storage               *storage.Storage
+	StorageMetrics        *metrics.StorageMetrics
+	TangleDatabase        *database.Database       `name:"tangleDatabase"`
+	TangleDatabaseMetrics *metrics.DatabaseMetrics `name:"tangleDatabaseMetrics"`
+	UTXODatabase          *database.Database       `name:"utxoDatabase"`
+	UTXODatabaseMetrics   *metrics.DatabaseMetrics `name:"utxoDatabaseMetrics"`
+	RestAPIMetrics        *metrics.RestAPIMetrics  `optional:"true"`
+	GossipService         *gossip.Service
+	ReceiptService        *migrator.ReceiptService `optional:"true"`
+	Tangle                *tangle.Tangle
+	MigratorService       *migrator.MigratorService `optional:"true"`
+	PeeringManager        *p2p.Manager
+	RequestQueue          gossip.RequestQueue
+	MessageProcessor      *gossip.MessageProcessor
+	TipSelector           *tipselect.TipSelector `optional:"true"`
+	SnapshotManager       *snapshot.SnapshotManager
+	Coordinator           *coordinator.Coordinator `optional:"true"`
 }
 
 func configure() {
 	if deps.NodeConfig.Bool(CfgPrometheusDatabase) {
-		configureDatabase()
+		configureDatabase(coreDatabase.TangleDatabaseDirectoryName, deps.TangleDatabase, deps.TangleDatabaseMetrics)
+		configureDatabase(coreDatabase.UTXODatabaseDirectoryName, deps.UTXODatabase, deps.UTXODatabaseMetrics)
+		configureStorage(deps.Storage, deps.StorageMetrics)
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusNode) {
 		configureNode()
@@ -139,13 +146,13 @@ func writeFileServiceDiscoveryFile() {
 	}}
 	j, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
-		Plugin.Panic("unable to marshal file service discovery JSON:", err)
+		Plugin.LogPanic("unable to marshal file service discovery JSON:", err)
 		return
 	}
 
 	// this truncates an existing file
 	if err := ioutil.WriteFile(path, j, 0666); err != nil {
-		Plugin.Panic("unable to write file service discovery file:", err)
+		Plugin.LogPanic("unable to write file service discovery file:", err)
 	}
 
 	Plugin.LogInfof("Wrote 'file service discovery' content to %s", path)
@@ -158,7 +165,7 @@ func run() {
 		writeFileServiceDiscoveryFile()
 	}
 
-	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(ctx context.Context) {
 		Plugin.LogInfo("Starting Prometheus exporter ... done")
 
 		e := echo.New()
@@ -193,19 +200,19 @@ func run() {
 			}
 		}()
 
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping Prometheus exporter ...")
 
 		if server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			err := server.Shutdown(ctx)
+			shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			err := server.Shutdown(shutdownCtx)
 			if err != nil {
 				Plugin.LogWarn(err)
 			}
-			cancel()
+			shutdownCtxCancel()
 		}
 		Plugin.LogInfo("Stopping Prometheus exporter ... done")
 	}, shutdown.PriorityPrometheus); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

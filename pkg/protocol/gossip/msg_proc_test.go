@@ -16,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/testsuite"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -28,16 +29,12 @@ func TestMsgProcessorEmit(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	shutdownSignal := make(chan struct{})
-	defer close(shutdownSignal)
-
 	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
 	sk, _, _ := crypto.GenerateKeyPair(crypto.Ed25519, -1)
 	n, err := libp2p.New(
-		ctx,
 		libp2p.Identity(sk),
 		libp2p.ConnectionManager(connmgr.NewConnManager(1, 100, 0)),
 	)
@@ -46,14 +43,14 @@ func TestMsgProcessorEmit(t *testing.T) {
 	serverMetrics := &metrics.ServerMetrics{}
 
 	manager := p2p.NewManager(n)
-	go manager.Start(shutdownSignal)
+	go manager.Start(ctx)
 
 	service := gossip.NewService(protocolID, n, manager, serverMetrics)
-	go service.Start(shutdownSignal)
+	go service.Start(ctx)
 
 	networkID := iotago.NetworkIDFromString("testnet4")
 
-	processor, err := gossip.NewMessageProcessor(te.Storage(), gossip.NewRequestQueue(), manager, serverMetrics, &gossip.Options{
+	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, &gossip.Options{
 		MinPoWScore:       MinPoWScore,
 		NetworkID:         networkID,
 		BelowMaxDepth:     BelowMaxDepth,
@@ -81,7 +78,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg := &iotago.Message{}
 	assert.NoError(t, json.Unmarshal([]byte(msgData), msg))
 
-	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	assert.NoError(t, err)
 
 	// should fail because parents not solid
@@ -92,11 +89,11 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.Parents = iotago.MessageIDs{[32]byte{}}
 
 	// pow again, so we have a valid message
-	err = te.PoWHandler.DoPoW(msg, nil, 1)
+	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	assert.NoError(t, err)
 
 	// should not fail
@@ -107,11 +104,11 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.NetworkID = 1
 
 	// pow again, so we have a valid message
-	err = te.PoWHandler.DoPoW(msg, nil, 1)
+	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	assert.NoError(t, err)
 
 	// message should fail because of wrong network ID
@@ -122,11 +119,11 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.NetworkID = networkID
 
 	// pow again, so we have a valid message
-	err = te.PoWHandler.DoPoW(msg, nil, 1)
+	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	assert.NoError(t, err)
 
 	// should not fail
@@ -137,7 +134,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.Nonce = 123
 
 	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	assert.NoError(t, err)
 
 	// should fail because of wrong score

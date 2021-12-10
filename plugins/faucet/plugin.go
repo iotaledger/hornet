@@ -1,6 +1,7 @@
 package faucet
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -13,17 +14,23 @@ import (
 	"go.uber.org/dig"
 	"golang.org/x/time/rate"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/pkg/whiteflag"
+	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v2"
 	"github.com/iotaledger/iota.go/v2/ed25519"
 )
@@ -56,6 +63,9 @@ func init() {
 var (
 	Plugin *node.Plugin
 	deps   dependencies
+
+	// Closures
+	onMilestoneConfirmed *events.Closure
 )
 
 type dependencies struct {
@@ -64,6 +74,7 @@ type dependencies struct {
 	RestAPIBindAddress    string                       `name:"restAPIBindAddress"`
 	FaucetAllowedAPIRoute restapi.AllowedRoute         `name:"faucetAllowedAPIRoute"`
 	Faucet                *faucet.Faucet
+	Tangle                *tangle.Tangle
 	Echo                  *echo.Echo
 	ShutdownHandler       *shutdown.ShutdownHandler
 }
@@ -72,20 +83,20 @@ func provide(c *dig.Container) {
 
 	privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("FAUCET_PRV_KEY")
 	if err != nil {
-		Plugin.Panicf("loading faucet private key failed, err: %s", err)
+		Plugin.LogPanicf("loading faucet private key failed, err: %s", err)
 	}
 
 	if len(privateKeys) == 0 {
-		Plugin.Panic("loading faucet private key failed, err: no private keys given")
+		Plugin.LogPanic("loading faucet private key failed, err: no private keys given")
 	}
 
 	if len(privateKeys) > 1 {
-		Plugin.Panic("loading faucet private key failed, err: too many private keys given")
+		Plugin.LogPanic("loading faucet private key failed, err: too many private keys given")
 	}
 
 	privateKey := privateKeys[0]
 	if len(privateKey) != ed25519.PrivateKeySize {
-		Plugin.Panic("loading faucet private key failed, err: wrong private key length")
+		Plugin.LogPanic("loading faucet private key failed, err: wrong private key length")
 	}
 
 	faucetAddress := iotago.AddressFromEd25519PubKey(privateKey.Public().(ed25519.PublicKey))
@@ -94,8 +105,9 @@ func provide(c *dig.Container) {
 	type faucetDeps struct {
 		dig.In
 		Storage          *storage.Storage
+		SyncManager      *syncmanager.SyncManager
 		PowHandler       *pow.Handler
-		UTXO             *utxo.Manager
+		UTXOManager      *utxo.Manager
 		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 		NetworkID        uint64                       `name:"networkId"`
 		BelowMaxDepth    int                          `name:"belowMaxDepth"`
@@ -106,10 +118,12 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps faucetDeps) *faucet.Faucet {
 		return faucet.New(
+			Plugin.Daemon(),
 			deps.Storage,
+			deps.SyncManager,
 			deps.NetworkID,
 			deps.BelowMaxDepth,
-			deps.UTXO,
+			deps.UTXOManager,
 			&faucetAddress,
 			faucetSigner,
 			deps.TipSelector.SelectNonLazyTips,
@@ -126,11 +140,12 @@ func provide(c *dig.Container) {
 			faucet.WithPowWorkerCount(deps.NodeConfig.Int(CfgFaucetPoWWorkerCount)),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
 func configure() {
+	restapiv1.AddFeature(Plugin.Name)
 
 	routeGroup := deps.Echo.Group("/api/plugins/faucet")
 
@@ -205,7 +220,7 @@ func configure() {
 				}
 			} else {
 				statusCode = http.StatusInternalServerError
-				message = fmt.Sprintf("internal server error. error: %s", err)
+				message = fmt.Sprintf("internal server error. error: %s", err.Error())
 			}
 
 			return c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
@@ -213,16 +228,20 @@ func configure() {
 
 		return restapi.JSONResponse(c, http.StatusAccepted, resp)
 	})
+
+	configureEvents()
 }
 
 func run() {
 	// create a background worker that handles the enqueued faucet requests
-	if err := Plugin.Daemon().BackgroundWorker("Faucet", func(shutdownSignal <-chan struct{}) {
-		if err := deps.Faucet.RunFaucetLoop(shutdownSignal); err != nil {
+	if err := Plugin.Daemon().BackgroundWorker("Faucet", func(ctx context.Context) {
+		attachEvents()
+		if err := deps.Faucet.RunFaucetLoop(ctx, nil); err != nil && common.IsCriticalError(err) != nil {
 			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("faucet plugin hit a critical error: %s", err.Error()))
 		}
+		detachEvents()
 	}, shutdown.PriorityFaucet); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	websiteEnabled := deps.NodeConfig.Bool(CfgFaucetWebsiteEnabled)
@@ -244,4 +263,20 @@ func run() {
 			}
 		}()
 	}
+}
+
+func configureEvents() {
+	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
+		if err := deps.Faucet.ApplyConfirmation(confirmation); err != nil && common.IsCriticalError(err) != nil {
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("faucet plugin hit a critical error: %s", err.Error()))
+		}
+	})
+}
+
+func attachEvents() {
+	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+}
+
+func detachEvents() {
+	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 }

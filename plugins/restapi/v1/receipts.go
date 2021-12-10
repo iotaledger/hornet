@@ -5,11 +5,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 func receipts(_ echo.Context) (*receiptsResponse, error) {
 	receipts := make([]*utxo.ReceiptTuple, 0)
-	if err := deps.UTXO.ForEachReceiptTuple(func(rt *utxo.ReceiptTuple) bool {
+	if err := deps.UTXOManager.ForEachReceiptTuple(func(rt *utxo.ReceiptTuple) bool {
 		receipts = append(receipts, rt)
 		return true
 	}, utxo.ReadLockLedger(false)); err != nil {
@@ -20,13 +21,13 @@ func receipts(_ echo.Context) (*receiptsResponse, error) {
 }
 
 func receiptsByMigratedAtIndex(c echo.Context) (*receiptsResponse, error) {
-	migratedAt, err := ParseMilestoneIndexParam(c)
+	migratedAt, err := restapi.ParseMilestoneIndexParam(c)
 	if err != nil {
 		return nil, err
 	}
 
 	receipts := make([]*utxo.ReceiptTuple, 0)
-	if err := deps.UTXO.ForEachReceiptTupleMigratedAt(migratedAt, func(rt *utxo.ReceiptTuple) bool {
+	if err := deps.UTXOManager.ForEachReceiptTupleMigratedAt(migratedAt, func(rt *utxo.ReceiptTuple) bool {
 		receipts = append(receipts, rt)
 		return true
 	}, utxo.ReadLockLedger(false)); err != nil {

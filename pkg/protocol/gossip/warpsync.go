@@ -1,14 +1,18 @@
 package gossip
 
 import (
-	"fmt"
+	"context"
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 )
@@ -236,47 +240,59 @@ func (ws *WarpSync) reset() {
 	ws.referencedMessagesTotal = 0
 }
 
+// WarpSyncMilestoneRequester walks the cones of existing but non-solid milestones and memoizes already walked messages and milestones.
+type WarpSyncMilestoneRequester struct {
+	syncutils.Mutex
+
+	// used to access the node storage.
+	storage *storage.Storage
+	// used to determine the sync status of the node.
+	syncManager *syncmanager.SyncManager
+	// used to request messages from peers.
+	requester *Requester
+	// do not remove requests if the enqueue time is over the given threshold.
+	preventDiscard bool
+	// map of already traversed messages to to prevent traversing the same cones multiple times.
+	traversed map[string]struct{}
+}
+
 // NewWarpSyncMilestoneRequester creates a new WarpSyncMilestoneRequester instance.
-func NewWarpSyncMilestoneRequester(storage *storage.Storage, requester *Requester, preventDiscard bool) *WarpSyncMilestoneRequester {
+func NewWarpSyncMilestoneRequester(
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
+	requester *Requester,
+	preventDiscard bool) *WarpSyncMilestoneRequester {
+
 	return &WarpSyncMilestoneRequester{
-		storage:        storage,
+		storage:        dbStorage,
+		syncManager:    syncManager,
 		requester:      requester,
 		preventDiscard: preventDiscard,
 		traversed:      make(map[string]struct{}),
 	}
 }
 
-// WarpSyncMilestoneRequester walks the cones of existing but non-solid milestones and memoizes already walked messages and milestones.
-type WarpSyncMilestoneRequester struct {
-	syncutils.Mutex
-
-	storage        *storage.Storage
-	requester      *Requester
-	preventDiscard bool
-	traversed      map[string]struct{}
-}
-
 // RequestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
 // Already requested milestones or traversed messages will be ignored, to circumvent requesting
 // the same parents multiple times.
-func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(msIndex milestone.Index) {
+func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.Context, cachedMs *storage.CachedMilestone) error {
+	defer cachedMs.Release(true) // milestone -1
+
 	w.Lock()
 	defer w.Unlock()
 
-	if msIndex <= w.storage.ConfirmedMilestoneIndex() {
-		return
-	}
+	msIndex := cachedMs.Milestone().Index
 
-	cachedMs := w.storage.CachedMilestoneOrNil(msIndex) // milestone +1
-	if cachedMs == nil {
-		panic(fmt.Sprintf("milestone %d wasn't found", msIndex))
+	if msIndex <= w.syncManager.ConfirmedMilestoneIndex() {
+		return nil
 	}
 
 	milestoneMessageID := cachedMs.Milestone().MessageID
-	cachedMs.Release(true) // message -1
 
-	// error is ignored because the next milestone will repeat the process anyway
-	_ = dag.TraverseParentsOfMessage(w.storage, milestoneMessageID,
+	return dag.TraverseParentsOfMessage(
+		ctx,
+		w.storage,
+		milestoneMessageID,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -304,7 +320,7 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(msIndex mile
 		// called on solid entry points
 		// Ignore solid entry points (snapshot milestone included)
 		nil,
-		false, nil)
+		false)
 }
 
 // Cleanup cleans up traversed messages to free memory.
@@ -313,4 +329,50 @@ func (w *WarpSyncMilestoneRequester) Cleanup() {
 	defer w.Unlock()
 
 	w.traversed = make(map[string]struct{})
+}
+
+// RequestMilestoneRange requests up to N milestones nearest to the current confirmed milestone index.
+// Returns the number of milestones requested.
+func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, rangeToRequest int, onExistingMilestoneInRange func(ctx context.Context, milestone *storage.CachedMilestone) error, from ...milestone.Index) int {
+	var requested int
+
+	startingPoint := w.syncManager.ConfirmedMilestoneIndex()
+	if len(from) > 0 {
+		startingPoint = from[0]
+	}
+
+	var msIndexes []milestone.Index
+	for i := 1; i <= rangeToRequest; i++ {
+		toReq := startingPoint + milestone.Index(i)
+
+		cachedMs := w.storage.CachedMilestoneOrNil(toReq) // milestone +1
+		if cachedMs == nil {
+			// only request if we do not have the milestone
+			requested++
+			msIndexes = append(msIndexes, toReq)
+			continue
+		}
+
+		// milestone already exists
+		if onExistingMilestoneInRange != nil {
+			if err := onExistingMilestoneInRange(ctx, cachedMs.Retain()); err != nil && errors.Is(err, common.ErrOperationAborted) {
+				// do not proceed if the node was shut down
+				cachedMs.Release(true) // milestone -1
+				return 0
+			}
+		}
+
+		cachedMs.Release(true) // milestone -1
+	}
+
+	if len(msIndexes) == 0 {
+		return requested
+	}
+
+	// enqueue every milestone request to the request queue
+	for _, msIndex := range msIndexes {
+		w.requester.Request(msIndex, msIndex)
+	}
+
+	return requested
 }

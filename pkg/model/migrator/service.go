@@ -1,6 +1,7 @@
 package migrator
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -175,8 +177,8 @@ func (s *MigratorService) InitState(msIndex *uint32, utxoManager *utxo.Manager) 
 // Returning false from the error handler tells the service to terminate.
 type OnServiceErrorFunc func(err error) (terminate bool)
 
-// Start stats the MigratorService s, it stops when shutdownSignal is closed.
-func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServiceErrorFunc) {
+// Start stats the MigratorService s, it stops when the given context is done.
+func (s *MigratorService) Start(ctx context.Context, onError OnServiceErrorFunc) {
 	var startIndex uint32
 	for {
 		msIndex, migratedFunds, err := s.nextMigrations(startIndex)
@@ -202,7 +204,7 @@ func (s *MigratorService) Start(shutdownSignal <-chan struct{}, onError OnServic
 			}
 			select {
 			case s.migrations <- &migrationResult{msIndex, lastBatch, batch}:
-			case <-shutdownSignal:
+			case <-ctx.Done():
 				close(s.migrations)
 				return
 			}
@@ -271,7 +273,7 @@ func createReceipt(migratedAt uint32, final bool, funds []*iotago.MigratedFundsE
 	receipt := &iotago.Receipt{
 		MigratedAt: migratedAt,
 		Final:      final,
-		Funds:      make([]iotago.Serializable, len(funds)),
+		Funds:      make([]serializer.Serializable, len(funds)),
 	}
 	for i := range funds {
 		receipt.Funds[i] = funds[i]

@@ -2,6 +2,7 @@ package dag
 
 import (
 	"container/list"
+	"context"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -9,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 type ChildrenTraverser struct {
@@ -21,21 +23,21 @@ type ChildrenTraverser struct {
 	// discovers map with already found messages
 	discovered map[string]struct{}
 
+	ctx                   context.Context
 	iteratorOptions       []storage.IteratorOption
 	condition             Predicate
 	consumer              Consumer
 	walkAlreadyDiscovered bool
-	abortSignal           <-chan struct{}
 
 	traverserLock sync.Mutex
 }
 
 // NewChildrenTraverser create a new traverser to traverse the children (future cone)
-func NewChildrenTraverser(s *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ChildrenTraverser {
+func NewChildrenTraverser(dbStorage *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ChildrenTraverser {
 
 	t := &ChildrenTraverser{
-		storage:          s,
-		metadataMemcache: storage.NewMetadataMemcache(s),
+		storage:          dbStorage,
+		metadataMemcache: storage.NewMetadataMemcache(dbStorage),
 		stack:            list.New(),
 		discovered:       make(map[string]struct{}),
 	}
@@ -63,7 +65,7 @@ func (t *ChildrenTraverser) Cleanup(forceRelease bool) {
 // Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, abortSignal <-chan struct{}, iteratorOptions ...storage.IteratorOption) error {
+func (t *ChildrenTraverser) Traverse(ctx context.Context, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, iteratorOptions ...storage.IteratorOption) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -71,11 +73,11 @@ func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition 
 	// release lock so the traverser can be reused
 	defer t.traverserLock.Unlock()
 
+	t.ctx = ctx
 	t.iteratorOptions = iteratorOptions
 	t.condition = condition
 	t.consumer = consumer
 	t.walkAlreadyDiscovered = walkAlreadyDiscovered
-	t.abortSignal = abortSignal
 
 	// Prepare for a new traversal
 	t.reset()
@@ -98,10 +100,8 @@ func (t *ChildrenTraverser) Traverse(startMessageID hornet.MessageID, condition 
 // current element gets consumed first, afterwards it's children get traversed in random order.
 func (t *ChildrenTraverser) processStackChildren() error {
 
-	select {
-	case <-t.abortSignal:
-		return common.ErrOperationAborted
-	default:
+	if err := utils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
+		return err
 	}
 
 	// load candidate msg

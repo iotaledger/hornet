@@ -4,17 +4,17 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
-// NewMessagesMemcache creates a new MessagesMemcache instance.
-func NewMessagesMemcache(storage *Storage) *MessagesMemcache {
-	return &MessagesMemcache{
-		storage:    storage,
-		cachedMsgs: make(map[string]*CachedMessage),
-	}
-}
-
 type MessagesMemcache struct {
 	storage    *Storage
 	cachedMsgs map[string]*CachedMessage
+}
+
+// NewMessagesMemcache creates a new MessagesMemcache instance.
+func NewMessagesMemcache(dbStorage *Storage) *MessagesMemcache {
+	return &MessagesMemcache{
+		storage:    dbStorage,
+		cachedMsgs: make(map[string]*CachedMessage),
+	}
 }
 
 // Cleanup releases all the cached objects that have been used.

@@ -5,7 +5,15 @@
 <p><img src="https://raw.githubusercontent.com/gohornet/logo/master/HORNET_logo.svg?sanitize=true"></p>
 
 HORNET is a powerful, community driven IOTA fullnode software written in Go.
-It is easy to install and runs on low-end devices like the Raspberry Pi 4.
+It is easy to install and maintain.
+
+---
+
+In this repository you will find the following branches:
+
+- `develop`: default branch where all development will get merged to. This represents the next iteration of the node.
+- `shimmer`: this branch contains the latest released code targeted for the [shimmer network](https://shimmer.network)
+- `mainnet`: this branch contains the latest released code targeted for the [IOTA mainnet](https://iota.org)
 
 ---
 

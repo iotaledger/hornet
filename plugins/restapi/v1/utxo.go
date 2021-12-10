@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -46,55 +47,45 @@ func NewOutputResponse(output *utxo.Output, spent bool, ledgerIndex milestone.In
 		MessageID:     output.MessageID().ToHex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
 		Spent:         spent,
-		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+iotago.UInt16ByteSize]),
+		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+serializer.UInt16ByteSize]),
 		RawOutput:     &rawRawOutputJSON,
 		LedgerIndex:   ledgerIndex,
 	}, nil
 }
 
 func outputByID(c echo.Context) (*OutputResponse, error) {
-	outputIDParam := strings.ToLower(c.Param(ParameterOutputID))
-
-	outputIDBytes, err := hex.DecodeString(outputIDParam)
+	outputID, err := restapi.ParseOutputIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
+		return nil, err
 	}
-
-	if len(outputIDBytes) != utxo.OutputIDLength {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
-	}
-
-	var outputID iotago.UTXOInputID
-	copy(outputID[:], outputIDBytes)
 
 	// we need to lock the ledger here to have the correct index for unspent info of the output.
-	deps.UTXO.ReadLockLedger()
-	defer deps.UTXO.ReadUnlockLedger()
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
 
-	ledgerIndex, err := deps.UTXO.ReadLedgerIndexWithoutLocking()
+	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputIDParam, err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputID.ToHex(), err)
 	}
 
-	output, err := deps.UTXO.ReadOutputByOutputIDWithoutLocking(&outputID)
+	output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
-			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputIDParam)
+			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
 		}
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputIDParam, err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputID.ToHex(), err)
 	}
 
-	unspent, err := deps.UTXO.IsOutputUnspentWithoutLocking(output)
+	unspent, err := deps.UTXOManager.IsOutputUnspentWithoutLocking(output)
 	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent status failed: %s, error: %s", outputIDParam, err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent status failed: %s, error: %s", outputID.ToHex(), err)
 	}
 
 	return NewOutputResponse(output, !unspent, ledgerIndex)
 }
 
 func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, error) {
-
-	balance, dustAllowed, ledgerIndex, err := deps.UTXO.AddressBalance(address)
+	balance, dustAllowed, ledgerIndex, err := deps.UTXOManager.AddressBalance(address)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading address balance failed: %s, error: %s", address, err)
 	}
@@ -109,47 +100,33 @@ func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, er
 }
 
 func balanceByBech32Address(c echo.Context) (*addressBalanceResponse, error) {
-
-	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	_, bech32Address, err := iotago.ParseBech32(addressParam)
+	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+		return nil, err
 	}
 
 	switch address := bech32Address.(type) {
 	case *iotago.Ed25519Address:
 		return ed25519Balance(address)
 	default:
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", addressParam)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", address.String())
 	}
 }
 
 func balanceByEd25519Address(c echo.Context) (*addressBalanceResponse, error) {
-
-	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	addressBytes, err := hex.DecodeString(addressParam)
+	address, err := restapi.ParseEd25519AddressParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+		return nil, err
 	}
-
-	if len(addressBytes) != (iotago.Ed25519AddressBytesLength) {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address length: %s", addressParam)
-	}
-
-	var address iotago.Ed25519Address
-	copy(address[:], addressBytes)
-
-	return ed25519Balance(&address)
+	return ed25519Balance(address)
 }
 
 func outputsResponse(address iotago.Address, includeSpent bool, filterType *iotago.OutputType) (*addressOutputsResponse, error) {
@@ -165,15 +142,15 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 	}
 
 	// we need to lock the ledger here to have the same index for unspent and spent outputs.
-	deps.UTXO.ReadLockLedger()
-	defer deps.UTXO.ReadUnlockLedger()
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
 
-	ledgerIndex, err := deps.UTXO.ReadLedgerIndexWithoutLocking()
+	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
 
-	unspentOutputs, err := deps.UTXO.UnspentOutputs(append(opts, utxo.MaxResultCount(maxResults))...)
+	unspentOutputs, err := deps.UTXOManager.UnspentOutputs(append(opts, utxo.MaxResultCount(maxResults))...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
@@ -185,7 +162,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 
 	if includeSpent && maxResults-len(outputIDs) > 0 {
 
-		spents, err := deps.UTXO.SpentOutputs(append(opts, utxo.MaxResultCount(maxResults-len(outputIDs)))...)
+		spents, err := deps.UTXOManager.SpentOutputs(append(opts, utxo.MaxResultCount(maxResults-len(outputIDs)))...)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent outputs failed: %s, error: %s", address, err)
 		}
@@ -210,7 +187,7 @@ func outputsResponse(address iotago.Address, includeSpent bool, filterType *iota
 
 func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) {
 
-	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -232,18 +209,16 @@ func outputsIDsByBech32Address(c echo.Context) (*addressOutputsResponse, error) 
 		filteredType = &outputType
 	}
 
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-	_, bech32Address, err := iotago.ParseBech32(addressParam)
+	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+		return nil, err
 	}
-
 	return outputsResponse(bech32Address, includeSpent, filteredType)
 }
 
 func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error) {
 
-	if !deps.Storage.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -264,25 +239,16 @@ func outputsIDsByEd25519Address(c echo.Context) (*addressOutputsResponse, error)
 		filteredType = &outputType
 	}
 
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-	addressBytes, err := hex.DecodeString(addressParam)
+	address, err := restapi.ParseEd25519AddressParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+		return nil, err
 	}
-
-	if len(addressBytes) != (iotago.Ed25519AddressBytesLength) {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address length: %s", addressParam)
-	}
-
-	var address iotago.Ed25519Address
-	copy(address[:], addressBytes)
-
-	return outputsResponse(&address, includeSpent, filteredType)
+	return outputsResponse(address, includeSpent, filteredType)
 }
 
 func treasury(_ echo.Context) (*treasuryResponse, error) {
 
-	treasuryOutput, err := deps.UTXO.UnspentTreasuryOutputWithoutLocking()
+	treasuryOutput, err := deps.UTXOManager.UnspentTreasuryOutputWithoutLocking()
 	if err != nil {
 		return nil, err
 	}

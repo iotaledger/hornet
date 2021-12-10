@@ -1,6 +1,7 @@
 package migrator
 
 import (
+	"context"
 	"fmt"
 
 	flag "github.com/spf13/pflag"
@@ -72,9 +73,9 @@ func provide(c *dig.Container) {
 		maxReceiptEntries := deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries)
 		switch {
 		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
-			Plugin.Panicf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
+			Plugin.LogPanicf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
 		case maxReceiptEntries <= 0:
-			Plugin.Panicf("%s must be greather than 0", CfgMigratorReceiptMaxEntries)
+			Plugin.LogPanicf("%s must be greather than 0", CfgMigratorReceiptMaxEntries)
 		}
 
 		return migrator.NewService(
@@ -83,7 +84,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -101,9 +102,9 @@ func configure() {
 
 func run() {
 
-	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
 		Plugin.LogInfof("Starting %s ... done", Plugin.Name)
-		deps.MigratorService.Start(shutdownSignal, func(err error) bool {
+		deps.MigratorService.Start(ctx, func(err error) bool {
 
 			if err := common.IsCriticalError(err); err != nil {
 				deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err))
@@ -116,10 +117,10 @@ func run() {
 
 			// lets just log the err and halt querying for a configured period
 			Plugin.LogWarn(err)
-			return timeutil.Sleep(deps.NodeConfig.Duration(CfgMigratorQueryCooldownPeriod), shutdownSignal)
+			return timeutil.Sleep(ctx, deps.NodeConfig.Duration(CfgMigratorQueryCooldownPeriod))
 		})
 		Plugin.LogInfof("Stopping %s ... done", Plugin.Name)
 	}, shutdown.PriorityMigrator); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

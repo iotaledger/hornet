@@ -9,56 +9,63 @@ import (
 )
 
 const (
-	ToolPwdHash            = "pwd-hash"
-	ToolP2PIdentityGen     = "p2pidentity-gen"
-	ToolP2PExtractIdentity = "p2pidentity-extract"
-	ToolEd25519Key         = "ed25519-key"
-	ToolEd25519Addr        = "ed25519-addr"
-	ToolJWTApi             = "jwt-api"
-	ToolSnapGen            = "snap-gen"
-	ToolSnapMerge          = "snap-merge"
-	ToolSnapInfo           = "snap-info"
-	ToolBenchmarkIO        = "bench-io"
-	ToolBenchmarkCPU       = "bench-cpu"
-	ToolDatabaseMigration  = "db-migration"
+	ToolPwdHash                 = "pwd-hash"
+	ToolP2PIdentityGen          = "p2pidentity-gen"
+	ToolP2PExtractIdentity      = "p2pidentity-extract"
+	ToolEd25519Key              = "ed25519-key"
+	ToolEd25519Addr             = "ed25519-addr"
+	ToolJWTApi                  = "jwt-api"
+	ToolSnapGen                 = "snap-gen"
+	ToolSnapMerge               = "snap-merge"
+	ToolSnapInfo                = "snap-info"
+	ToolSnapHash                = "snap-hash"
+	ToolBenchmarkIO             = "bench-io"
+	ToolBenchmarkCPU            = "bench-cpu"
+	ToolDatabaseMigration       = "db-migration"
+	ToolDatabaseLedgerHash      = "db-hash"
+	ToolDatabaseSplit           = "db-split"
+	ToolCoordinatorFixStateFile = "coo-fix-state"
 )
 
-// HandleTools handles available tools.
-func HandleTools(nodeConfig *configuration.Configuration) {
+// ShouldHandleTools checks if tools were requested.
+func ShouldHandleTools() bool {
 	args := os.Args[1:]
 
-	toolFound := false
 	for i, arg := range args {
 		if strings.ToLower(arg) == "tool" || strings.ToLower(arg) == "tools" {
 			args = args[i:]
-			toolFound = true
-			break
+			return true
 		}
 	}
+	return false
+}
 
-	if !toolFound {
-		// 'tool' was not found
-		return
-	}
+// HandleTools handles available tools.
+func HandleTools(nodeConfig *configuration.Configuration) {
 
+	args := os.Args[1:]
 	if len(args) == 1 {
 		listTools()
 		os.Exit(1)
 	}
 
 	tools := map[string]func(*configuration.Configuration, []string) error{
-		ToolPwdHash:            hashPasswordAndSalt,
-		ToolP2PIdentityGen:     generateP2PIdentity,
-		ToolP2PExtractIdentity: extractP2PIdentity,
-		ToolEd25519Key:         generateEd25519Key,
-		ToolEd25519Addr:        generateEd25519Address,
-		ToolJWTApi:             generateJWTApiToken,
-		ToolSnapGen:            snapshotGen,
-		ToolSnapMerge:          snapshotMerge,
-		ToolSnapInfo:           snapshotInfo,
-		ToolBenchmarkIO:        benchmarkIO,
-		ToolBenchmarkCPU:       benchmarkCPU,
-		ToolDatabaseMigration:  databaseMigration,
+		ToolPwdHash:                 hashPasswordAndSalt,
+		ToolP2PIdentityGen:          generateP2PIdentity,
+		ToolP2PExtractIdentity:      extractP2PIdentity,
+		ToolEd25519Key:              generateEd25519Key,
+		ToolEd25519Addr:             generateEd25519Address,
+		ToolJWTApi:                  generateJWTApiToken,
+		ToolSnapGen:                 snapshotGen,
+		ToolSnapMerge:               snapshotMerge,
+		ToolSnapInfo:                snapshotInfo,
+		ToolSnapHash:                snapshotHash,
+		ToolBenchmarkIO:             benchmarkIO,
+		ToolBenchmarkCPU:            benchmarkCPU,
+		ToolDatabaseMigration:       databaseMigration,
+		ToolDatabaseLedgerHash:      databaseLedgerHash,
+		ToolDatabaseSplit:           databaseSplit,
+		ToolCoordinatorFixStateFile: coordinatorFixStateFile,
 	}
 
 	tool, exists := tools[strings.ToLower(args[1])]
@@ -86,7 +93,11 @@ func listTools() {
 	fmt.Printf("%-20s generates an initial snapshot for a private network\n", fmt.Sprintf("%s:", ToolSnapGen))
 	fmt.Printf("%-20s merges a full and delta snapshot into an updated full snapshot\n", fmt.Sprintf("%s:", ToolSnapMerge))
 	fmt.Printf("%-20s outputs information about a snapshot file\n", fmt.Sprintf("%s:", ToolSnapInfo))
+	fmt.Printf("%-20s calculates the sha256 hash of the ledger state inside a snapshot file\n", fmt.Sprintf("%s:", ToolSnapHash))
 	fmt.Printf("%-20s benchmarks the IO throughput\n", fmt.Sprintf("%s:", ToolBenchmarkIO))
 	fmt.Printf("%-20s benchmarks the CPU performance\n", fmt.Sprintf("%s:", ToolBenchmarkCPU))
 	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
+	fmt.Printf("%-20s calculates the sha256 hash of the ledger state of a database\n", fmt.Sprintf("%s:", ToolDatabaseLedgerHash))
+	fmt.Printf("%-20s split a legacy database into `tangle` and `utxo`\n", fmt.Sprintf("%s:", ToolDatabaseSplit))
+	fmt.Printf("%-20s applies the latest milestone in the database to the coordinator state file\n", fmt.Sprintf("%s:", ToolCoordinatorFixStateFile))
 }

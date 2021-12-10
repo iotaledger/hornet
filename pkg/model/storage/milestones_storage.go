@@ -12,6 +12,7 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -29,7 +30,7 @@ func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, er
 	return &Milestone{
 		Index:     milestoneIndexFromDatabaseKey(key),
 		MessageID: hornet.MessageIDFromSlice(data[:iotago.MessageIDLength]),
-		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MessageIDLength:iotago.MessageIDLength+iotago.UInt64ByteSize])), 0),
+		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MessageIDLength:iotago.MessageIDLength+serializer.UInt64ByteSize])), 0),
 	}, nil
 }
 
@@ -175,7 +176,7 @@ func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, iterato
 }
 
 // milestone +1
-func (s *Storage) storeMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (cachedMilestone *CachedMilestone, newlyAdded bool) {
+func (s *Storage) StoreMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (cachedMilestone *CachedMilestone, newlyAdded bool) {
 
 	cachedMs, newlyAdded := s.milestoneStorage.StoreIfAbsent(&Milestone{
 		Index:     index,

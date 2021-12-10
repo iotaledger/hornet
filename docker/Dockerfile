@@ -1,6 +1,6 @@
 # https://hub.docker.com/_/golang
-# golang 1.16.7-buster amd64
-FROM golang@sha256:448a13037d13401ad9b31fabf91d6b8a3c5c35d336cc8af760b2ab4ed85d4155 AS build
+# golang 1.17.3-bullseye amd64
+FROM golang@sha256:3b27ac95762ce1340a4824dc3cab2dc9d63f194f0899a0a9887402c1b1463f41 AS build
 
 ARG BUILD_TAGS=builtin_static,rocksdb
 
@@ -37,14 +37,16 @@ RUN GOOS=linux GOARCH=amd64 go build \
 ############################
 # Image
 ############################
-# https://github.com/GoogleContainerTools/distroless/tree/master/cc
+# https://console.cloud.google.com/gcr/images/distroless/global/cc-debian11
 # using distroless cc "nonroot" image, which includes everything in the base image (glibc, libssl and openssl)
-FROM gcr.io/distroless/cc@sha256:1a125767c4a066c5c2c70b326bcc3cff8ae4260de0b488ddcfdfe84f20a373b4
+# gcr.io/distroless/cc-debian11:nonroot-amd64
+FROM gcr.io/distroless/cc-debian11@sha256:5d5ec54878d2b9db248c4ef302af44e784afa169eb831269f7f332bcf5021516
 
 EXPOSE 15600/tcp
 EXPOSE 14626/udp
 EXPOSE 14265/tcp
 EXPOSE 8081/tcp
+EXPOSE 8091/tcp
 EXPOSE 1883/tcp
 
 # Copy the binary into distroless image
@@ -52,6 +54,7 @@ COPY --chown=nonroot:nonroot --from=build /go/bin/hornet /app/hornet
 
 # Copy the assets
 COPY ./config.json /app/config.json
+COPY ./config_devnet.json /app/config_devnet.json
 COPY ./config_comnet.json /app/config_comnet.json
 COPY ./peering.json /app/peering.json
 COPY ./profiles.json /app/profiles.json

@@ -1,6 +1,6 @@
 ---
 keywords:
-- IOTA Node 
+- IOTA Node
 - Hornet Node
 - Linux
 - Install
@@ -27,11 +27,12 @@ To do so, you will need to create `docker-compose.yml` in the same directory as 
 ├── profiles.json
 ├── docker-compose.yml      <NEWLY ADDED FILE>
 ├── mainnetdb
+├── p2pstore
 └── snapshots
     └── mainnet
 ```
 
-The docker-compose.yml file should have the following content: 
+The docker-compose.yml file should have the following content:
 
 ```plaintext
 version: '3'
@@ -46,9 +47,10 @@ services:
     volumes:
       - ./config.json:/app/config.json:ro
       - ./peering.json:/app/peering.json
-      - ./profiles.json:/app/profiles.json
-      - ./snapshots/mainnet:/app/snapshots/mainnet
+      - ./profiles.json:/app/profiles.json:ro
       - ./mainnetdb:/app/mainnetdb
+      - ./p2pstore:/app/p2pstore
+      - ./snapshots/mainnet:/app/snapshots/mainnet
 ```
 
 You can run the following command in the current directory to create and start a new Hornet container in detached mode (as daemon):

@@ -14,7 +14,6 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/utils"
 )
@@ -27,6 +26,7 @@ const (
 // WriteCounter counts the number of bytes written to it. It implements to the io.Writer interface
 // and we can pass this into io.TeeReader() which will report progress on each write cycle.
 type WriteCounter struct {
+	// context that is done when the node is shutting down.
 	shutdownCtx context.Context
 	Expected    uint64
 
@@ -47,8 +47,8 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.total += uint64(n)
 
-	if err := utils.ReturnErrIfCtxDone(wc.shutdownCtx, common.ErrOperationAborted); err != nil {
-		return n, ErrSnapshotDownloadWasAborted
+	if err := utils.ReturnErrIfCtxDone(wc.shutdownCtx, ErrSnapshotDownloadWasAborted); err != nil {
+		return n, err
 	}
 
 	wc.PrintProgress()
@@ -82,7 +82,7 @@ type DownloadTarget struct {
 	Delta string `json:"delta"`
 }
 
-func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
+func (s *SnapshotManager) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {
 
 	// check if the remote snapshot files fit the network ID and if delta fits the full snapshot.
 	checkTargetConsistency := func(wantedNetworkID uint64, fullHeader *ReadFileHeader, deltaHeader *ReadFileHeader) error {
@@ -123,28 +123,28 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 
 	// search the latest snapshot by scanning all target headers
 	for _, target := range targets {
-		s.log.Debugf("downloading full snapshot header from %s", target.Full)
+		s.LogDebugf("downloading full snapshot header from %s", target.Full)
 
 		fullHeader, err := s.downloadHeader(target.Full)
 		if err != nil {
 			// as the full snapshot URL failed to download, we commence further with our targets
-			s.log.Debugf("downloading full snapshot header from %s failed: %s", target.Full, err)
+			s.LogDebugf("downloading full snapshot header from %s failed: %s", target.Full, err)
 			continue
 		}
 
 		var deltaHeader *ReadFileHeader
 		if len(target.Delta) > 0 {
-			s.log.Debugf("downloading delta snapshot header from %s", target.Delta)
+			s.LogDebugf("downloading delta snapshot header from %s", target.Delta)
 			deltaHeader, err = s.downloadHeader(target.Delta)
 			if err != nil {
 				// it is valid that no delta snapshot file is available on the target.
-				s.log.Debugf("downloading delta snapshot header from %s failed: %s", target.Delta, err)
+				s.LogDebugf("downloading delta snapshot header from %s failed: %s", target.Delta, err)
 			}
 		}
 
 		if err = checkTargetConsistency(wantedNetworkID, fullHeader, deltaHeader); err != nil {
 			// the snapshots on the target do not seem to be consistent
-			s.log.Infof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
+			s.LogInfof("snapshot consistency check failed (full: %s, delta: %s): %s", target.Full, target.Delta, err)
 			continue
 		}
 
@@ -168,22 +168,22 @@ func (s *Snapshot) filterTargets(wantedNetworkID uint64, targets []*DownloadTarg
 }
 
 // DownloadSnapshotFiles tries to download snapshots files from the given targets.
-func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
+func (s *SnapshotManager) DownloadSnapshotFiles(ctx context.Context, wantedNetworkID uint64, fullPath string, deltaPath string, targets []*DownloadTarget) error {
 
 	for _, target := range s.filterTargets(wantedNetworkID, targets) {
 
-		s.log.Infof("downloading full snapshot file from %s", target.Full)
-		if err := s.downloadFile(fullPath, target.Full); err != nil {
-			s.log.Warn(err)
+		s.LogInfof("downloading full snapshot file from %s", target.Full)
+		if err := s.downloadFile(ctx, fullPath, target.Full); err != nil {
+			s.LogWarn(err)
 			// as the full snapshot URL failed to download, we commence further with our targets
 			continue
 		}
 
 		if len(target.Delta) > 0 {
-			s.log.Infof("downloading delta snapshot file from %s", target.Delta)
-			if err := s.downloadFile(deltaPath, target.Delta); err != nil {
+			s.LogInfof("downloading delta snapshot file from %s", target.Delta)
+			if err := s.downloadFile(ctx, deltaPath, target.Delta); err != nil {
 				// it is valid that no delta snapshot file is available on the target.
-				s.log.Warn(err)
+				s.LogWarn(err)
 			}
 		}
 		return nil
@@ -193,7 +193,7 @@ func (s *Snapshot) DownloadSnapshotFiles(wantedNetworkID uint64, fullPath string
 }
 
 // downloads a snapshot header from the given url.
-func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
+func (s *SnapshotManager) downloadHeader(url string) (*ReadFileHeader, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotHeader)
 	defer cancel()
 
@@ -216,11 +216,11 @@ func (s *Snapshot) downloadHeader(url string) (*ReadFileHeader, error) {
 }
 
 // downloads a snapshot file from the given url to the specified path.
-func (s *Snapshot) downloadFile(path string, url string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
-	defer cancel()
+func (s *SnapshotManager) downloadFile(ctx context.Context, path string, url string) error {
+	downloadCtx, downloadCtxCancel := context.WithTimeout(context.Background(), timeoutDownloadSnapshotFile)
+	defer downloadCtxCancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(downloadCtx, http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
@@ -250,7 +250,7 @@ func (s *Snapshot) downloadFile(path string, url string) error {
 	}()
 
 	// create our progress reporter and pass it to be used alongside our writer
-	counter := NewWriteCounter(s.shutdownCtx, uint64(resp.ContentLength))
+	counter := NewWriteCounter(ctx, uint64(resp.ContentLength))
 	if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
 		_ = out.Close()
 		return fmt.Errorf("download failed: %w", err)

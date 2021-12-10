@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -71,10 +73,15 @@ type PublicKeyRanges []*PublicKeyRange
 
 // Coordinator is used to issue signed messages, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
+	// the logger used to log events.
+	*utils.WrappedLogger
+
 	// used to issue only one milestone at a time.
 	milestoneLock syncutils.Mutex
 	// used to access the node storage.
 	storage *storage.Storage
+	// used to determine the sync status of the node.
+	syncManager *syncmanager.SyncManager
 	// id of the network the coordinator is running in.
 	networkID uint64
 	// used to get receipts for the WOTS migration.
@@ -207,16 +214,24 @@ func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfi
 type Option func(opts *Options)
 
 // New creates a new coordinator instance.
-func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSignerProvider,
-	migratorService *migrator.MigratorService, utxoManager *utxo.Manager, powHandler *pow.Handler,
-	sendMessageFunc SendMessageFunc, opts ...Option) (*Coordinator, error) {
+func New(
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
+	networkID uint64,
+	signerProvider MilestoneSignerProvider,
+	migratorService *migrator.MigratorService,
+	utxoManager *utxo.Manager,
+	powHandler *pow.Handler,
+	sendMessageFunc SendMessageFunc,
+	opts ...Option) (*Coordinator, error) {
 
 	options := &Options{}
 	options.apply(defaultOptions...)
 	options.apply(opts...)
 
 	result := &Coordinator{
-		storage:          storage,
+		storage:          dbStorage,
+		syncManager:      syncManager,
 		networkID:        networkID,
 		signerProvider:   signerProvider,
 		migratorService:  migratorService,
@@ -232,6 +247,7 @@ func New(storage *storage.Storage, networkID uint64, signerProvider MilestoneSig
 			QuorumFinished:          events.NewEvent(QuorumFinishedCaller),
 		},
 	}
+	result.WrappedLogger = utils.NewWrappedLogger(options.logger)
 
 	return result, nil
 }
@@ -324,7 +340,9 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	parents = parents.RemoveDupsAndSortByLexicalOrder()
 
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(coo.storage, newMilestoneIndex, metadataMemcache, messagesMemcache, parents)
+	// we pass a background context here to not cancel the whiteflag computation!
+	// otherwise the coordinator could panic at shutdown.
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage, newMilestoneIndex, metadataMemcache, messagesMemcache, parents)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}
@@ -333,9 +351,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	if coo.opts.quorum != nil {
 		ts := time.Now()
 		err := coo.opts.quorum.checkMerkleTreeHash(mutations.MerkleTreeHash, newMilestoneIndex, parents, func(groupName string, entry *quorumGroupEntry, err error) {
-			if coo.opts.logger != nil {
-				coo.opts.logger.Infof("coordinator quorum group encountered an error, group: %s, baseURL: %s, err: %s", groupName, entry.stats.BaseURL, err)
-			}
+			coo.LogInfof("coordinator quorum group encountered an error, group: %s, baseURL: %s, err: %s", groupName, entry.stats.BaseURL, err)
 		})
 
 		duration := time.Since(ts)
@@ -343,15 +359,11 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 		if err != nil {
 			// quorum failed => non-critical or critical error
-			if coo.opts.logger != nil {
-				coo.opts.logger.Infof("coordinator quorum failed after %v, err: %s", time.Since(ts).Truncate(time.Millisecond), err)
-			}
+			coo.LogInfof("coordinator quorum failed after %v, err: %s", time.Since(ts).Truncate(time.Millisecond), err)
 			return err
 		}
 
-		if coo.opts.logger != nil {
-			coo.opts.logger.Infof("coordinator quorum took %v", duration.Truncate(time.Millisecond))
-		}
+		coo.LogInfof("coordinator quorum took %v", duration.Truncate(time.Millisecond))
 	}
 
 	// get receipt data in case migrator is enabled
@@ -444,7 +456,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
-	if !coo.storage.IsNodeSynced() {
+	if !coo.syncManager.IsNodeSynced() {
 		return nil, common.SoftError(common.ErrNodeNotSynced)
 	}
 
@@ -494,7 +506,7 @@ func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.Messag
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
-	if !coo.storage.IsNodeSynced() {
+	if !coo.syncManager.IsNodeSynced() {
 		// return a non-critical error to not kill the database
 		return nil, common.SoftError(common.ErrNodeNotSynced)
 	}

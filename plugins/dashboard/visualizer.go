@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"context"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -46,7 +48,7 @@ func runVisualizer() {
 
 	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
 		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // msg -1
-			if !deps.Storage.IsNodeAlmostSynced() {
+			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
 
@@ -74,7 +76,7 @@ func runVisualizer() {
 	onMessageSolid := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
 		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 
-			if !deps.Storage.IsNodeAlmostSynced() {
+			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
 
@@ -92,7 +94,7 @@ func runVisualizer() {
 	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
 		defer cachedMilestone.Release(true) // milestone -1
 
-		if !deps.Storage.IsNodeAlmostSynced() {
+		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -108,7 +110,7 @@ func runVisualizer() {
 
 	// show checkpoints as milestones in the coordinator node
 	onIssuedCheckpointMessage := events.NewClosure(func(_ int, _ int, _ int, messageID hornet.MessageID) {
-		if !deps.Storage.IsNodeAlmostSynced() {
+		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -123,7 +125,7 @@ func runVisualizer() {
 	})
 
 	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		if !deps.Storage.IsNodeAlmostSynced() {
+		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -144,7 +146,7 @@ func runVisualizer() {
 	})
 
 	onTipAdded := events.NewClosure(func(tip *tipselect.Tip) {
-		if !deps.Storage.IsNodeAlmostSynced() {
+		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -160,7 +162,7 @@ func runVisualizer() {
 	})
 
 	onTipRemoved := events.NewClosure(func(tip *tipselect.Tip) {
-		if !deps.Storage.IsNodeAlmostSynced() {
+		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
 
@@ -175,7 +177,7 @@ func runVisualizer() {
 		)
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(ctx context.Context) {
 		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
 		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
@@ -196,11 +198,11 @@ func runVisualizer() {
 			defer deps.TipSelector.Events.TipRemoved.Detach(onTipRemoved)
 		}
 
-		<-shutdownSignal
+		<-ctx.Done()
 
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ...")
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ... done")
 	}, shutdown.PriorityDashboard); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

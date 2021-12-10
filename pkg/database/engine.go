@@ -1,13 +1,13 @@
 package database
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
@@ -38,21 +38,17 @@ func DatabaseEngine(engine string) (Engine, error) {
 func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine ...Engine) (Engine, error) {
 
 	if createDatabaseIfNotExists && len(dbEngine) == 0 {
-		return EngineRocksDB, errors.New("the database engine must be specified if the database should be newly created")
+		return EngineUnknown, errors.New("the database engine must be specified if the database should be newly created")
 	}
 
 	// check if the database exists and if it should be created
-	_, err := os.Stat(dbPath)
+	dbExists, err := DatabaseExists(dbPath)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return EngineUnknown, fmt.Errorf("unable to check database path (%s): %w", dbPath, err)
-		}
+		return EngineUnknown, err
+	}
 
-		if !createDatabaseIfNotExists {
-			return EngineUnknown, fmt.Errorf("database not found (%s)", dbPath)
-		}
-
-		// database will be newly created
+	if !dbExists && !createDatabaseIfNotExists {
+		return EngineUnknown, fmt.Errorf("database not found (%s)", dbPath)
 	}
 
 	var targetEngine Engine

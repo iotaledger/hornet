@@ -1,9 +1,9 @@
 ---
 keywords:
-- IOTA Node 
+- IOTA Node
 - Hornet Node
 - Docker
-- Install 
+- Install
 - Run
 - macOS
 - Windows
@@ -27,7 +27,7 @@ Hornet Docker images (amd64/x86_64 architecture) are available at [gohornet/horn
 Once you have completed all the installation [requirements](#requirements), you can clone the repository or by running:
 
 ```sh
-git clone https://github.com/gohornet/hornet && cd hornet
+git clone https://github.com/gohornet/hornet && cd hornet && git checkout mainnet
 ```
 
 :::info
@@ -48,10 +48,16 @@ The Docker image runs under user with user id 65532 and group id 65532. To make 
    sudo mkdir mainnetdb && sudo chown 65532:65532 mainnetdb
    ```
 
-2. Create the directory for the snapshots by running the following command:
+2. Create the directory for the peer database by running the following command:
 
    ```sh
-   sudo mkdir -p snapshots/mainnet && sudo chown 65532:65532 snapshots -R
+   sudo mkdir p2pstore && sudo chown 65532:65532 p2pstore
+   ```
+
+3. Create the directory for the snapshots by running the following command:
+
+   ```sh
+   sudo mkdir -p snapshots/mainnet && sudo chown -R 65532:65532 snapshots
    ```
 
 ## Run
@@ -68,8 +74,9 @@ We recommend that you run on host network to improve performance.  Otherwise, yo
 docker run \
   -v $(pwd)/config.json:/app/config.json:ro \
   -v $(pwd)/peering.json:/app/peering.json \
-  -v $(pwd)/profiles.json:/app/profiles.json \
+  -v $(pwd)/profiles.json:/app/profiles.json:ro \
   -v $(pwd)/mainnetdb:/app/mainnetdb \
+  -v $(pwd)/p2pstore:/app/p2pstore \
   -v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet \
   --restart always \
   --name hornet\
@@ -81,8 +88,10 @@ docker run \
 * `$(pwd)` Stands for the present working directory. All mentioned directories are mapped to the container, so the Hornet in the container persists the data directly to those directories.
 * `-v $(pwd)/config.json:/app/config.json:ro` Maps the local `config.json` file into the container in `readonly` mode.
 * `-v $(pwd)/peering.json:/app/peering.json` Maps the local `peering.json` file into the container.
-* `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet` Maps the local `snapshots` directory into the container.
+* `-v $(pwd)/profiles.json:/app/profiles.json:ro` Maps the local `profiles.json` file into the container in `readonly` mode.
 * `-v $(pwd)/mainnetdb:/app/mainnetdb` Maps the local `mainnetdb` directory into the container.
+* `-v $(pwd)/p2pstore:/app/p2pstore` Maps the local `p2pstore` directory into the container.
+* `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet` Maps the local `snapshots` directory into the container.
 * `--restart always` Instructs Docker to restart the container after Docker reboots.
 * `--name hornet` Name of the running container instance. You can refer to the given container by this name.
 * `--net=host` Instructs Docker to use the host's network, so the network is not isolated. We recommend that you run on host network for better performance.  This way, the container will also open any ports it needs on the host network, so you will not need to specify any ports.

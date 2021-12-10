@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"context"
 	"os"
 
 	"github.com/labstack/gommon/bytes"
@@ -11,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -64,8 +66,8 @@ type dependencies struct {
 	dig.In
 	Storage              *storage.Storage
 	Tangle               *tangle.Tangle
-	UTXO                 *utxo.Manager
-	Snapshot             *snapshot.Snapshot
+	UTXOManager          *utxo.Manager
+	SnapshotManager      *snapshot.SnapshotManager
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 	NetworkID            uint64                       `name:"networkId"`
 	DeleteAllFlag        bool                         `name:"deleteAll"`
@@ -96,7 +98,7 @@ func initConfigPars(c *dig.Container) {
 			SnapshotsDeltaPath:   deps.NodeConfig.String(CfgSnapshotsDeltaPath),
 		}
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -104,9 +106,11 @@ func provide(c *dig.Container) {
 
 	type snapshotDeps struct {
 		dig.In
-		Database             *database.Database
+		TangleDatabase       *database.Database `name:"tangleDatabase"`
+		UTXODatabase         *database.Database `name:"utxoDatabase"`
 		Storage              *storage.Storage
-		UTXO                 *utxo.Manager
+		SyncManager          *syncmanager.SyncManager
+		UTXOManager          *utxo.Manager
 		NodeConfig           *configuration.Configuration `name:"nodeConfig"`
 		BelowMaxDepth        int                          `name:"belowMaxDepth"`
 		NetworkID            uint64                       `name:"networkId"`
@@ -116,7 +120,7 @@ func provide(c *dig.Container) {
 		SnapshotsDeltaPath   string                       `name:"snapshotsDeltaPath"`
 	}
 
-	if err := c.Provide(func(deps snapshotDeps) *snapshot.Snapshot {
+	if err := c.Provide(func(deps snapshotDeps) *snapshot.SnapshotManager {
 
 		networkIDSource := deps.NetworkIDName
 
@@ -130,12 +134,12 @@ func provide(c *dig.Container) {
 				Delta: "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin",
 			},
 		}); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		var downloadTargets []*snapshot.DownloadTarget
 		if err := deps.NodeConfig.Unmarshal(CfgSnapshotsDownloadURLs, &downloadTargets); err != nil {
-			CorePlugin.Panic(err)
+			CorePlugin.LogPanic(err)
 		}
 
 		solidEntryPointCheckThresholdPast := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
@@ -157,24 +161,26 @@ func provide(c *dig.Container) {
 		}
 
 		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
-			CorePlugin.Panicf("%s has to be specified if %s is enabled", CfgPruningMilestonesMaxMilestonesToKeep, CfgPruningMilestonesEnabled)
+			CorePlugin.LogPanicf("%s has to be specified if %s is enabled", CfgPruningMilestonesMaxMilestonesToKeep, CfgPruningMilestonesEnabled)
 		}
 
 		pruningSizeEnabled := deps.NodeConfig.Bool(CfgPruningSizeEnabled)
 		pruningTargetDatabaseSizeBytes, err := bytes.Parse(deps.NodeConfig.String(CfgPruningSizeTargetSize))
 		if err != nil {
-			CorePlugin.Panicf("parameter %s invalid", CfgPruningSizeTargetSize)
+			CorePlugin.LogPanicf("parameter %s invalid", CfgPruningSizeTargetSize)
 		}
 
 		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
-			CorePlugin.Panicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
+			CorePlugin.LogPanicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
 		}
 
-		return snapshot.New(CorePlugin.Daemon().ContextStopped(),
+		return snapshot.NewSnapshotManager(
 			CorePlugin.Logger(),
-			deps.Database,
+			deps.TangleDatabase,
+			deps.UTXODatabase,
 			deps.Storage,
-			deps.UTXO,
+			deps.SyncManager,
+			deps.UTXOManager,
 			deps.NetworkID,
 			networkIDSource,
 			deps.SnapshotsFullPath,
@@ -195,7 +201,7 @@ func provide(c *dig.Container) {
 			deps.PruningPruneReceipts,
 		)
 	}); err != nil {
-		CorePlugin.Panic(err)
+		CorePlugin.LogPanic(err)
 	}
 }
 
@@ -204,11 +210,11 @@ func configure() {
 	if deps.DeleteAllFlag {
 		// delete old snapshot files
 		if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
-			CorePlugin.Panicf("deleting full snapshot file failed: %s", err)
+			CorePlugin.LogPanicf("deleting full snapshot file failed: %s", err)
 		}
 
 		if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
-			CorePlugin.Panicf("deleting delta snapshot file failed: %s", err)
+			CorePlugin.LogPanicf("deleting delta snapshot file failed: %s", err)
 		}
 	}
 
@@ -216,12 +222,12 @@ func configure() {
 
 	switch {
 	case snapshotInfo != nil && !*forceLoadingSnapshot:
-		if err := deps.Snapshot.CheckCurrentSnapshot(snapshotInfo); err != nil {
-			CorePlugin.Panic(err)
+		if err := deps.SnapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
+			CorePlugin.LogPanic(err)
 		}
 	default:
-		if err := deps.Snapshot.ImportSnapshots(); err != nil {
-			CorePlugin.Panic(err)
+		if err := deps.SnapshotManager.ImportSnapshots(CorePlugin.Daemon().ContextStopped()); err != nil {
+			CorePlugin.LogPanic(err)
 		}
 	}
 
@@ -237,7 +243,7 @@ func run() {
 		}
 	})
 
-	if err := CorePlugin.Daemon().BackgroundWorker("Snapshots", func(shutdownSignal <-chan struct{}) {
+	if err := CorePlugin.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
 		CorePlugin.LogInfo("Starting Snapshots ... done")
 
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
@@ -245,16 +251,16 @@ func run() {
 
 		for {
 			select {
-			case <-shutdownSignal:
+			case <-ctx.Done():
 				CorePlugin.LogInfo("Stopping Snapshots...")
 				CorePlugin.LogInfo("Stopping Snapshots... done")
 				return
 
 			case confirmedMilestoneIndex := <-newConfirmedMilestoneSignal:
-				deps.Snapshot.HandleNewConfirmedMilestoneEvent(confirmedMilestoneIndex, shutdownSignal)
+				deps.SnapshotManager.HandleNewConfirmedMilestoneEvent(ctx, confirmedMilestoneIndex)
 			}
 		}
 	}, shutdown.PrioritySnapshots); err != nil {
-		CorePlugin.Panicf("failed to start worker: %s", err)
+		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

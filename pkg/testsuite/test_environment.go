@@ -15,7 +15,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
@@ -45,30 +47,60 @@ type TestEnvironment struct {
 	// PoWHandler holds the PoWHandler instance.
 	PoWHandler *pow.Handler
 
-	// networkID is the network ID used for this test network
+	// networkID is the network ID used for this test network.
 	networkID uint64
+
+	// belowMaxDepth is the maximum allowed delta
+	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
+	belowMaxDepth milestone.Index
 
 	// coo holds the coordinator instance.
 	coo *coordinator.Coordinator
 
-	// lastMilestoneMessageID is the message ID of the last issued milestone.
-	lastMilestoneMessageID hornet.MessageID
+	// LastMilestoneMessageID is the message ID of the last issued milestone.
+	LastMilestoneMessageID hornet.MessageID
 
 	// tempDir is the directory that contains the temporary files for the test.
 	tempDir string
 
-	// store is the temporary key value store for the test.
-	store kvstore.KVStore
+	// tangleStore is the temporary key value store for the test holding the tangle.
+	tangleStore kvstore.KVStore
 
-	// storage is the tangle storage for this test
+	// utxoStore is the temporary key value store for the test holding the utxo ledger.
+	utxoStore kvstore.KVStore
+
+	// storage is the tangle storage for this test.
 	storage *storage.Storage
 
-	// serverMetrics holds metrics about the tangle
+	// syncManager is used to determine the sync status of the node in this test.
+	syncManager *syncmanager.SyncManager
+
+	// milestoneManager is used to retrieve, verify and store milestones.
+	milestoneManager *milestonemanager.MilestoneManager
+
+	// serverMetrics holds metrics about the tangle.
 	serverMetrics *metrics.ServerMetrics
 
-	// GenesisOutput marks the initial output created when bootstrapping the tangle
+	// GenesisOutput marks the initial output created when bootstrapping the tangle.
 	GenesisOutput *utxo.Output
+
+	// OnNewOutput callback that will be called for each created UTXO. This is equivalent to the tangle.NewUTXOOutput event.
+	OnNewOutput OnNewOutputFunc
+
+	// OnNewSpent callback that will be called for each spent UTXO. This is equivalent to the tangle.NewUTXOSpent event.
+	OnNewSpent OnNewSpentFunc
+
+	// OnMilestoneConfirmed callback that will be called at confirming a milestone. This is equivalent to the tangle.MilestoneConfirmed event.
+	OnMilestoneConfirmed OnMilestoneConfirmedFunc
+
+	// OnConfirmedMilestoneIndexChanged callback that will be called after confirming a milestone. This is equivalent to the tangle.ConfirmedMilestoneIndexChanged event.
+	OnConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc
 }
+
+type OnNewOutputFunc func(index milestone.Index, output *utxo.Output)
+type OnNewSpentFunc func(index milestone.Index, spent *utxo.Spent)
+type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)
+type OnConfirmedMilestoneIndexChangedFunc func(index milestone.Index)
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
@@ -79,9 +111,10 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		Milestones:             make(storage.CachedMilestones, 0),
 		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
-		PoWHandler:             pow.New(nil, targetScore, 5*time.Second, "", 30*time.Second),
+		PoWHandler:             pow.New(targetScore, 5*time.Second),
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
-		lastMilestoneMessageID: hornet.NullMessageID(),
+		belowMaxDepth:          milestone.Index(belowMaxDepth),
+		LastMilestoneMessageID: hornet.NullMessageID(),
 		serverMetrics:          &metrics.ServerMetrics{},
 	}
 
@@ -110,19 +143,27 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		keyManager.AddKeyRange(key.Public().(ed25519.PublicKey), 0, 0)
 	}
 
-	te.store = mapdb.NewMapDB()
-	te.storage, err = storage.New(logger.NewLogger("storage"), te.tempDir, te.store, TestProfileCaches, belowMaxDepth, keyManager, len(cooPrivateKeys))
+	te.tangleStore = mapdb.NewMapDB()
+	te.utxoStore = mapdb.NewMapDB()
+	te.storage, err = storage.New(te.tangleStore, te.utxoStore, TestProfileCaches)
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SEP
 	te.storage.SolidEntryPointsAddWithoutLocking(hornet.NullMessageID(), 0)
 
-	// Initialize UTXO
-	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
-	err = te.storage.UTXO().AddUnspentOutput(te.GenesisOutput)
+	// Initialize SyncManager
+	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), belowMaxDepth)
 	require.NoError(te.TestInterface, err)
 
-	err = te.storage.UTXO().StoreUnspentTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
+	// Initialize MilestoneManager
+	te.milestoneManager = milestonemanager.New(te.storage, te.syncManager, keyManager, len(cooPrivateKeys))
+
+	// Initialize UTXO
+	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
+	err = te.storage.UTXOManager().AddUnspentOutput(te.GenesisOutput)
+	require.NoError(te.TestInterface, err)
+
+	err = te.storage.UTXOManager().StoreUnspentTreasuryOutput(&utxo.TreasuryOutput{MilestoneID: [32]byte{}, Amount: 0})
 	require.NoError(te.TestInterface, err)
 
 	te.AssertTotalSupplyStillValid()
@@ -144,12 +185,31 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	return te
 }
 
+func (te *TestEnvironment) ConfigureUTXOCallbacks(onNewOutputFunc OnNewOutputFunc, onNewSpentFunc OnNewSpentFunc, onMilestoneConfirmedFunc OnMilestoneConfirmedFunc, onConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc) {
+	te.OnNewOutput = onNewOutputFunc
+	te.OnNewSpent = onNewSpentFunc
+	te.OnMilestoneConfirmed = onMilestoneConfirmedFunc
+	te.OnConfirmedMilestoneIndexChanged = onConfirmedMilestoneIndexChanged
+}
+
+func (te *TestEnvironment) NetworkID() iotago.NetworkID {
+	return te.networkID
+}
+
 func (te *TestEnvironment) Storage() *storage.Storage {
 	return te.storage
 }
 
-func (te *TestEnvironment) UTXO() *utxo.Manager {
-	return te.storage.UTXO()
+func (te *TestEnvironment) UTXOManager() *utxo.Manager {
+	return te.storage.UTXOManager()
+}
+
+func (te *TestEnvironment) SyncManager() *syncmanager.SyncManager {
+	return te.syncManager
+}
+
+func (te *TestEnvironment) BelowMaxDepth() milestone.Index {
+	return te.belowMaxDepth
 }
 
 // CleanupTestEnvironment cleans up everything at the end of the test.
@@ -163,7 +223,10 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	// this should not hang, i.e. all objects should be released
 	te.storage.ShutdownStorages()
 
-	err := te.store.Clear()
+	err := te.tangleStore.Clear()
+	require.NoError(te.TestInterface, err)
+
+	err = te.utxoStore.Clear()
 	require.NoError(te.TestInterface, err)
 
 	if removeTempDir && te.tempDir != "" {
@@ -222,7 +285,7 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 	for msIndex := 2; msIndex < milestonesCount; msIndex++ {
 		messagesPerMilestones = append(messagesPerMilestones, hornet.MessageIDs{})
 
-		cmi := te.Storage().ConfirmedMilestoneIndex()
+		cmi := te.SyncManager().ConfirmedMilestoneIndex()
 
 		msgsCount := minMessagesPerMilestone + rand.Intn(maxMessagesPerMilestone-minMessagesPerMilestone)
 		for msgCount := 0; msgCount < msgsCount; msgCount++ {

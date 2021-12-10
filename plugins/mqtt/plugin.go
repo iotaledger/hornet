@@ -1,6 +1,7 @@
 package mqtt
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/node"
@@ -65,6 +67,7 @@ var (
 type dependencies struct {
 	dig.In
 	Storage                               *storage.Storage
+	SyncManager                           *syncmanager.SyncManager
 	Tangle                                *tangle.Tangle
 	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
 	MaxDeltaMsgYoungestConeRootIndexToCMI int                          `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
@@ -77,7 +80,7 @@ type dependencies struct {
 func configure() {
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		Plugin.Panic("RestAPI plugin needs to be enabled to use the MQTT plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the MQTT plugin")
 	}
 
 	newLatestMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
@@ -131,7 +134,7 @@ func configure() {
 			outputID := &iotago.UTXOInputID{}
 			copy(outputID[:], transactionID[:])
 
-			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputID)
+			output, err := deps.Storage.UTXOManager().ReadOutputByOutputIDWithoutLocking(outputID)
 			if err != nil {
 				return
 			}
@@ -143,20 +146,20 @@ func configure() {
 		if outputID := outputIDFromTopic(topicName); outputID != nil {
 
 			// we need to lock the ledger here to have the correct index for unspent info of the output.
-			deps.Storage.UTXO().ReadLockLedger()
-			defer deps.Storage.UTXO().ReadUnlockLedger()
+			deps.Storage.UTXOManager().ReadLockLedger()
+			defer deps.Storage.UTXOManager().ReadUnlockLedger()
 
-			ledgerIndex, err := deps.Storage.UTXO().ReadLedgerIndexWithoutLocking()
+			ledgerIndex, err := deps.Storage.UTXOManager().ReadLedgerIndexWithoutLocking()
 			if err != nil {
 				return
 			}
 
-			output, err := deps.Storage.UTXO().ReadOutputByOutputIDWithoutLocking(outputID)
+			output, err := deps.Storage.UTXOManager().ReadOutputByOutputIDWithoutLocking(outputID)
 			if err != nil {
 				return
 			}
 
-			unspent, err := deps.Storage.UTXO().IsOutputUnspentWithoutLocking(output)
+			unspent, err := deps.Storage.UTXOManager().IsOutputUnspentWithoutLocking(output)
 			if err != nil {
 				return
 			}
@@ -165,7 +168,7 @@ func configure() {
 		}
 
 		if topicName == topicMilestonesLatest {
-			index := deps.Storage.LatestMilestoneIndex()
+			index := deps.SyncManager.LatestMilestoneIndex()
 			if milestone := deps.Storage.CachedMilestoneOrNil(index); milestone != nil {
 				publishLatestMilestone(milestone) // milestone pass +1
 			}
@@ -173,7 +176,7 @@ func configure() {
 		}
 
 		if topicName == topicMilestonesConfirmed {
-			index := deps.Storage.ConfirmedMilestoneIndex()
+			index := deps.SyncManager.ConfirmedMilestoneIndex()
 			if milestone := deps.Storage.CachedMilestoneOrNil(index); milestone != nil {
 				publishConfirmedMilestone(milestone) // milestone pass +1
 			}
@@ -184,10 +187,10 @@ func configure() {
 
 	var err error
 	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", deps.NodeConfig.Int(CfgMQTTWorkerCount), func(topic []byte) {
-		Plugin.LogInfof("Subscribe to topic: %s", string(topic))
+		Plugin.LogDebugf("Subscribe to topic: %s", string(topic))
 		topicSubscriptionWorkerPool.TrySubmit(topic)
 	}, func(topic []byte) {
-		Plugin.LogInfof("Unsubscribe from topic: %s", string(topic))
+		Plugin.LogDebugf("Unsubscribe from topic: %s", string(topic))
 	})
 
 	if err != nil {
@@ -241,7 +244,7 @@ func run() {
 
 	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
-			if !deps.Storage.IsNodeAlmostSynced() {
+			if !deps.SyncManager.IsNodeAlmostSynced() {
 				cachedMs.Release(true)
 				return
 			}
@@ -293,7 +296,7 @@ func run() {
 		receiptWorkerPool.TrySubmit(receipt)
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("MQTT Broker", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("MQTT Broker", func(ctx context.Context) {
 		go func() {
 			mqttBroker.Start()
 			Plugin.LogInfof("Starting MQTT Broker (port %s) ... done", mqttBroker.Config().Port)
@@ -307,14 +310,14 @@ func run() {
 			Plugin.LogInfof("You can now listen to MQTT via: https://%s:%s", mqttBroker.Config().TlsHost, mqttBroker.Config().TlsPort)
 		}
 
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping MQTT Broker ...")
 		Plugin.LogInfo("Stopping MQTT Broker ... done")
 	}, shutdown.PriorityMetricsPublishers); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := Plugin.Daemon().BackgroundWorker("MQTT Events", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("MQTT Events", func(ctx context.Context) {
 		Plugin.LogInfo("Starting MQTT Events ... done")
 
 		deps.Tangle.Events.LatestMilestoneChanged.Attach(onLatestMilestoneChanged)
@@ -337,7 +340,7 @@ func run() {
 		utxoOutputWorkerPool.Start()
 		receiptWorkerPool.Start()
 
-		<-shutdownSignal
+		<-ctx.Done()
 
 		deps.Tangle.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
 		deps.Tangle.Events.ConfirmedMilestoneChanged.Detach(onConfirmedMilestoneChanged)
@@ -361,6 +364,6 @@ func run() {
 
 		Plugin.LogInfo("Stopping MQTT Events ... done")
 	}, shutdown.PriorityMetricsPublishers); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

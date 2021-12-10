@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -12,11 +13,13 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/protocol/message"
+	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -34,18 +37,86 @@ var (
 	ErrMessageBelowMaxDepth = errors.New("msg is below max depth")
 )
 
+func MessageProcessedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(msg *storage.Message, requests Requests, proto *Protocol))(params[0].(*storage.Message), params[1].(Requests), params[2].(*Protocol))
+}
+
+// Broadcast defines a message which should be broadcasted.
+type Broadcast struct {
+	// The message data to broadcast.
+	MsgData []byte
+	// The IDs of the peers to exclude from broadcasting.
+	ExcludePeers map[peer.ID]struct{}
+}
+
+func BroadcastCaller(handler interface{}, params ...interface{}) {
+	handler.(func(b *Broadcast))(params[0].(*Broadcast))
+}
+
+// MessageProcessorEvents are the events fired by the MessageProcessor.
+type MessageProcessorEvents struct {
+	// Fired when a message was fully processed.
+	MessageProcessed *events.Event
+	// Fired when a message is meant to be broadcasted.
+	BroadcastMessage *events.Event
+}
+
+// The Options for the MessageProcessor.
+type Options struct {
+	MinPoWScore       float64
+	NetworkID         uint64
+	BelowMaxDepth     milestone.Index
+	WorkUnitCacheOpts *profile.CacheOpts
+}
+
+// MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
+type MessageProcessor struct {
+	// used to access the node storage.
+	storage *storage.Storage
+	// used to determine the sync status of the node.
+	syncManager *syncmanager.SyncManager
+	// contains requests for needed messages.
+	requestQueue RequestQueue
+	// used to manage connected peers.
+	peeringManager *p2p.Manager
+	// shared server metrics instance.
+	serverMetrics *metrics.ServerMetrics
+	// holds the message processor options.
+	opts Options
+
+	// events of the message processor.
+	Events MessageProcessorEvents
+	// cache that holds processed incomming messages.
+	workUnits *objectstorage.ObjectStorage
+	// worker pool for incomming messages.
+	wp *workerpool.WorkerPool
+
+	// mutex to secure the shutdown flag.
+	shutdownMutex syncutils.RWMutex
+	// indicates that the message processor was shut down.
+	shutdown bool
+}
+
 // NewMessageProcessor creates a new processor which parses messages.
-func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, peeringService *p2p.Manager, serverMetrics *metrics.ServerMetrics, opts *Options) (*MessageProcessor, error) {
+func NewMessageProcessor(
+	dbStorage *storage.Storage,
+	syncManager *syncmanager.SyncManager,
+	requestQueue RequestQueue,
+	peeringManager *p2p.Manager,
+	serverMetrics *metrics.ServerMetrics,
+	opts *Options) (*MessageProcessor, error) {
+
 	proc := &MessageProcessor{
-		storage: storage,
+		storage:        dbStorage,
+		syncManager:    syncManager,
+		requestQueue:   requestQueue,
+		peeringManager: peeringManager,
+		serverMetrics:  serverMetrics,
+		opts:           *opts,
 		Events: MessageProcessorEvents{
 			MessageProcessed: events.NewEvent(MessageProcessedCaller),
 			BroadcastMessage: events.NewEvent(BroadcastCaller),
 		},
-		ps:            peeringService,
-		requestQueue:  requestQueue,
-		serverMetrics: serverMetrics,
-		opts:          *opts,
 	}
 
 	wuCacheOpts := opts.WorkUnitCacheOpts
@@ -97,56 +168,10 @@ func NewMessageProcessor(storage *storage.Storage, requestQueue RequestQueue, pe
 	return proc, nil
 }
 
-func MessageProcessedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(msg *storage.Message, request *Request, proto *Protocol))(params[0].(*storage.Message), params[1].(*Request), params[2].(*Protocol))
-}
-
-// Broadcast defines a message which should be broadcasted.
-type Broadcast struct {
-	// The message data to broadcast.
-	MsgData []byte
-	// The IDs of the peers to exclude from broadcasting.
-	ExcludePeers map[peer.ID]struct{}
-}
-
-func BroadcastCaller(handler interface{}, params ...interface{}) {
-	handler.(func(b *Broadcast))(params[0].(*Broadcast))
-}
-
-// MessageProcessorEvents are the events fired by the MessageProcessor.
-type MessageProcessorEvents struct {
-	// Fired when a message was fully processed.
-	MessageProcessed *events.Event
-	// Fired when a message is meant to be broadcasted.
-	BroadcastMessage *events.Event
-}
-
-// MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
-type MessageProcessor struct {
-	storage       *storage.Storage
-	Events        MessageProcessorEvents
-	ps            *p2p.Manager
-	wp            *workerpool.WorkerPool
-	requestQueue  RequestQueue
-	workUnits     *objectstorage.ObjectStorage
-	serverMetrics *metrics.ServerMetrics
-	opts          Options
-	shutdownMutex syncutils.RWMutex
-	shutdown      bool
-}
-
-// The Options for the MessageProcessor.
-type Options struct {
-	MinPoWScore       float64
-	NetworkID         uint64
-	BelowMaxDepth     milestone.Index
-	WorkUnitCacheOpts *profile.CacheOpts
-}
-
 // Run runs the processor and blocks until the shutdown signal is triggered.
-func (proc *MessageProcessor) Run(shutdownSignal <-chan struct{}) {
+func (proc *MessageProcessor) Run(ctx context.Context) {
 	proc.wp.Start()
-	<-shutdownSignal
+	<-ctx.Done()
 	proc.Shutdown()
 }
 
@@ -181,7 +206,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
 	}
 
-	cmi := proc.storage.ConfirmedMilestoneIndex()
+	cmi := proc.syncManager.ConfirmedMilestoneIndex()
 
 	checkParentFunc := func(messageID hornet.MessageID) error {
 		cachedMsgMeta := proc.storage.CachedMessageMetadataOrNil(messageID) // meta +1
@@ -207,7 +232,12 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 			return ErrMessageNotSolid
 		}
 
-		_, ocri := dag.ConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), cmi) // meta +
+		// we pass a background context here to not prevent emitting messages at shutdown (COO etc).
+		_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), cmi) // meta +
+		if err != nil {
+			return err
+		}
+
 		if (cmi - ocri) > proc.opts.BelowMaxDepth {
 			// the parent is below max depth
 			return ErrMessageBelowMaxDepth
@@ -223,7 +253,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		}
 	}
 
-	proc.Events.MessageProcessed.Trigger(msg, (*Request)(nil), (*Protocol)(nil))
+	proc.Events.MessageProcessed.Trigger(msg, (Requests)(nil), (*Protocol)(nil))
 	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msg.Data()})
 
 	return nil
@@ -251,13 +281,13 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 		proc.serverMetrics.InvalidRequests.Inc()
 
 		// drop the connection to the peer
-		_ = proc.ps.DisconnectPeer(p.PeerID, errors.WithMessage(err, "processMilestoneRequest failed"))
+		_ = proc.peeringManager.DisconnectPeer(p.PeerID, errors.WithMessage(err, "processMilestoneRequest failed"))
 		return
 	}
 
 	// peers can request the latest milestone we know
 	if msIndex == LatestMilestoneRequestIndex {
-		msIndex = proc.storage.LatestMilestoneIndex()
+		msIndex = proc.syncManager.LatestMilestoneIndex()
 	}
 
 	cachedMessage := proc.storage.MilestoneCachedMessageOrNil(msIndex) // message +1
@@ -267,7 +297,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(iotago.DeSeriModeNoValidation)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -295,7 +325,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(iotago.DeSeriModeNoValidation)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -327,6 +357,29 @@ func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
 // if the WorkUnit is already completed, and the message was requested, this function emits a MessageProcessed event.
 // it is safe to call this function for the same WorkUnit multiple times.
 func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
+
+	processRequests := func(wu *WorkUnit, msg *storage.Message, isMilestonePayload bool) Requests {
+
+		var requests Requests
+
+		// mark the message as received
+		request := proc.requestQueue.Received(msg.MessageID())
+		if request != nil {
+			requests = append(requests, request)
+		}
+
+		if isMilestonePayload {
+			// mark the milestone as received
+			msRequest := proc.requestQueue.Received(milestone.Index(msg.Milestone().Index))
+			if msRequest != nil {
+				requests = append(requests, msRequest)
+			}
+		}
+
+		wu.requested = requests.HasRequest()
+		return requests
+	}
+
 	wu.processingLock.Lock()
 
 	switch {
@@ -340,7 +393,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		proc.serverMetrics.InvalidMessages.Inc()
 
 		// drop the connection to the peer
-		_ = proc.ps.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid message"))
+		_ = proc.peeringManager.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid message"))
 		return
 
 	case wu.Is(Hashed):
@@ -348,9 +401,10 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 		// we need to check for requests here again because there is a race condition
 		// between processing received messages and enqueuing requests.
-		if request := proc.requestQueue.Received(wu.msg.MessageID()); request != nil {
+		requests := processRequests(wu, wu.msg, wu.msg.IsMilestone())
+		if wu.requested {
 			wu.requested = true
-			proc.Events.MessageProcessed.Trigger(wu.msg, request, p)
+			proc.Events.MessageProcessed.Trigger(wu.msg, requests, p)
 		}
 
 		if proc.storage.ContainsMessage(wu.msg.MessageID()) {
@@ -365,7 +419,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.processingLock.Unlock()
 
 	// build HORNET representation of the message
-	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, iotago.DeSeriModePerformValidation)
+	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.WithMessagef(err, "peer sent an invalid message"))
@@ -379,11 +433,13 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		return
 	}
 
+	isMilestonePayload := msg.IsMilestone()
+
 	// mark the message as received
-	request := proc.requestQueue.Received(msg.MessageID())
+	requests := processRequests(wu, msg, isMilestonePayload)
 
 	// validate PoW score
-	if request == nil && pow.Score(wu.receivedMsgBytes) < proc.opts.MinPoWScore {
+	if !wu.requested && pow.Score(wu.receivedMsgBytes) < proc.opts.MinPoWScore {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a message with insufficient PoW score"))
 		return
@@ -391,8 +447,6 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 	// safe to set the msg here, because it is protected by the state "Hashing"
 	wu.msg = msg
-	wu.requested = request != nil
-
 	wu.UpdateState(Hashed)
 
 	// increase the known message count for all other peers
@@ -402,11 +456,11 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// we ignore all received messages if we didn't request them and it's not a milestone.
 	// otherwise these messages would get evicted from the cache, and it's heavier to load them
 	// from the storage than to request them again.
-	if request == nil && !proc.storage.IsNodeAlmostSynced() && !msg.IsMilestone() {
+	if !wu.requested && !proc.syncManager.IsNodeAlmostSynced() && !isMilestonePayload {
 		return
 	}
 
-	proc.Events.MessageProcessed.Trigger(msg, request, p)
+	proc.Events.MessageProcessed.Trigger(msg, requests, p)
 }
 
 func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
@@ -419,13 +473,18 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 		return
 	}
 
-	if !proc.storage.IsNodeSyncedWithinBelowMaxDepth() {
+	if !proc.syncManager.IsNodeSyncedWithinBelowMaxDepth() {
 		// no need to broadcast messages if the node is not sync within "below max depth"
 		return
 	}
 
-	_, ocri := dag.ConeRootIndexes(proc.storage, cachedMsgMeta.Retain(), proc.storage.ConfirmedMilestoneIndex())
-	if (proc.storage.LatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
+	// we pass a background context here to not prevent broadcasting messages at shutdown (COO etc).
+	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex())
+	if err != nil {
+		return
+	}
+
+	if (proc.syncManager.LatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
 		// the solid message was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}

@@ -30,11 +30,11 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [COUNT] [SIZE] [DB_ENGINE]", ToolBenchmarkIO))
+		println(fmt.Sprintf("   %s [COUNT] [SIZE] [DB_ENGINE]", ToolBenchmarkIO))
 		println()
-		println("	[COUNT] 	- objects count (optional)")
-		println("	[SIZE]  	- objects size  (optional)")
-		println("	[DB_ENGINE] - database engine (optional, values: pebble, rocksdb)")
+		println("   [COUNT]     - objects count (optional)")
+		println("   [SIZE]      - objects size  (optional)")
+		println("   [DB_ENGINE] - database engine (optional, values: pebble, rocksdb)")
 		println()
 		println(fmt.Sprintf("example: %s %d %d %s", ToolBenchmarkIO, 500000, 1000, "rocksdb"))
 	}
@@ -133,9 +133,9 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [THREADS]", ToolBenchmarkCPU))
+		println(fmt.Sprintf("   %s [THREADS]", ToolBenchmarkCPU))
 		println()
-		println("	[THREADS]  	- thread count (optional)")
+		println("   [THREADS] - thread count (optional)")
 		println()
 		println(fmt.Sprintf("example: %s %d", ToolBenchmarkCPU, 2))
 	}
@@ -156,8 +156,8 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), duration)
-	defer cancel()
+	benchmarkCtx, benchmarkCtxCancel := context.WithTimeout(context.Background(), duration)
+	defer benchmarkCtxCancel()
 
 	ts := time.Now()
 
@@ -165,10 +165,10 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 	// it returns the number of calculated hashes.
 	doBenchmarkCPU := func(ctx context.Context, numWorkers int) uint64 {
 		var (
-			done    uint32
-			counter uint64
-			wg      sync.WaitGroup
-			closing = make(chan struct{})
+			done                         uint32
+			counter                      uint64
+			wg                           sync.WaitGroup
+			closingCtx, closingCtxCancel = context.WithCancel(context.Background())
 		)
 
 		// random digest
@@ -179,7 +179,7 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 			select {
 			case <-ctx.Done():
 				atomic.StoreUint32(&done, 1)
-			case <-closing:
+			case <-closingCtx.Done():
 				return
 			}
 		}()
@@ -209,12 +209,12 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 			}()
 		}
 		wg.Wait()
-		close(closing)
+		closingCtxCancel()
 
 		return counter
 	}
 
-	hashes := doBenchmarkCPU(ctx, threads)
+	hashes := doBenchmarkCPU(benchmarkCtx, threads)
 	megahashesPerSecond := float64(hashes) / (duration.Seconds() * 1000000)
 	fmt.Printf("Average CPU speed: %0.2fMH/s (%d thread(s), took %v)\n", megahashesPerSecond, threads, duration.Truncate(time.Millisecond))
 

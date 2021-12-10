@@ -1,6 +1,7 @@
 package utxo
 
 import (
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -21,7 +22,7 @@ func NewBalanceDiff() *BalanceDiff {
 }
 
 func (d *BalanceDiff) addressKeyForAddress(address iotago.Address) (string, error) {
-	bytes, err := address.Serialize(iotago.DeSeriModeNoValidation)
+	bytes, err := address.Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		return "", err
 	}
@@ -29,7 +30,7 @@ func (d *BalanceDiff) addressKeyForAddress(address iotago.Address) (string, erro
 }
 
 func (d *BalanceDiff) addressKeyForOutput(output *Output) (string, error) {
-	bytes, err := output.Address().Serialize(iotago.DeSeriModeNoValidation)
+	bytes, err := output.Address().Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		return "", err
 	}

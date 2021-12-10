@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v2"
@@ -28,7 +27,7 @@ type Manager struct {
 
 func New(store kvstore.KVStore) *Manager {
 	return &Manager{
-		utxoStorage: store.WithRealm([]byte{common.StorePrefixUTXO}),
+		utxoStorage: store,
 	}
 }
 

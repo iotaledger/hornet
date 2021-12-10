@@ -23,14 +23,13 @@ import (
 
 const protocolID = "/iota/abcdf/1.0.0"
 
-func newNode(name string, ctx context.Context, t *testing.T, shutdownSignal chan struct{}, mngOpts []p2p.ManagerOption, srvOpts []gossip.ServiceOption) (
+func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.ManagerOption, srvOpts []gossip.ServiceOption) (
 	host.Host, *p2p.Manager, *gossip.Service, peer.AddrInfo,
 ) {
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
 	sk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
 	require.NoError(t, err)
 	n, err := libp2p.New(
-		ctx,
 		libp2p.Identity(sk),
 		libp2p.ConnectionManager(connmgr.NewConnManager(1, 100, 0)),
 	)
@@ -41,18 +40,16 @@ func newNode(name string, ctx context.Context, t *testing.T, shutdownSignal chan
 	nLogger := logger.NewLogger(fmt.Sprintf("%s/%s", name, n.ID().ShortString()))
 
 	nManager := p2p.NewManager(n, append(mngOpts, p2p.WithManagerLogger(nLogger))...)
-	go nManager.Start(shutdownSignal)
+	go nManager.Start(ctx)
 
 	service := gossip.NewService(protocolID, n, nManager, serverMetrics, append(srvOpts, gossip.WithLogger(nLogger))...)
-	go service.Start(shutdownSignal)
+	go service.Start(ctx)
 	return n, nManager, service, peer.AddrInfo{ID: n.ID(), Addrs: n.Addrs()}
 }
 
 func TestServiceEvents(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	shutdownSignal := make(chan struct{})
-	defer close(shutdownSignal)
 
 	cfg := configuration.New()
 	err := cfg.Set("logger.disableStacktrace", true)
@@ -66,8 +63,8 @@ func TestServiceEvents(t *testing.T) {
 	}
 	var srvOpts []gossip.ServiceOption
 
-	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, shutdownSignal, mngOpts, srvOpts)
-	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, shutdownSignal, mngOpts, srvOpts)
+	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, mngOpts, srvOpts)
+	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, mngOpts, srvOpts)
 
 	fmt.Println("node 1", node1.ID().ShortString())
 	fmt.Println("node 2", node2.ID().ShortString())
@@ -171,8 +168,6 @@ func connectivity(t *testing.T, source *p2p.Manager, target peer.ID, disconnecte
 func TestWithUnknownPeersLimit(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	shutdownSignal := make(chan struct{})
-	defer close(shutdownSignal)
 
 	cfg := configuration.New()
 	err := cfg.Set("logger.disableStacktrace", true)
@@ -188,9 +183,9 @@ func TestWithUnknownPeersLimit(t *testing.T) {
 		gossip.WithUnknownPeersLimit(1),
 	}
 
-	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, shutdownSignal, mngOpts, srvOpts)
-	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, shutdownSignal, mngOpts, srvOpts)
-	node3, node3Manager, node3Service, _ := newNode("node3", ctx, t, shutdownSignal, mngOpts, []gossip.ServiceOption{
+	node1, node1Manager, node1Service, node1AddrInfo := newNode("node1", ctx, t, mngOpts, srvOpts)
+	node2, node2Manager, node2Service, node2AddrInfo := newNode("node2", ctx, t, mngOpts, srvOpts)
+	node3, node3Manager, node3Service, _ := newNode("node3", ctx, t, mngOpts, []gossip.ServiceOption{
 		gossip.WithUnknownPeersLimit(2),
 	})
 

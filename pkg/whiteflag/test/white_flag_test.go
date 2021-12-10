@@ -12,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
+	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 var (
@@ -37,7 +38,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_283_277_761)
+	te.AssertWalletBalance(seed1Wallet, iotago.TokenSupply)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
@@ -47,7 +48,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 		Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
-		Amount(2_779_530_283_277_761).
+		Amount(iotago.TokenSupply).
 		Build().
 		Store().
 		BookOnWallets()
@@ -55,25 +56,36 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
+	// Confirming milestone at message A
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageA.StoredMessageID()}, true)
+	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
+	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
+
+	// Verify balances
+	te.AssertWalletBalance(seed1Wallet, 0)
+	te.AssertWalletBalance(seed2Wallet, iotago.TokenSupply)
+
 	// Issue some transactions
 	messageB := te.NewMessageBuilder("B").
-		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[1].Milestone().MessageID}).
+		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[2].Milestone().MessageID}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed1Wallet).
-		Amount(2_779_530_283_277_761).
+		Amount(iotago.TokenSupply).
 		Build().
 		Store().
 		BookOnWallets()
 
 	// Confirming milestone at message C (message D and E are not included)
-	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageB.StoredMessageID()}, true)
-	require.Equal(t, 2+1, confStats.MessagesReferenced) // 2 + milestone itself
-	require.Equal(t, 2, confStats.MessagesIncludedWithTransactions)
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageB.StoredMessageID()}, true)
+	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
+	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
 	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
 
 	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_283_277_761)
+	te.AssertWalletBalance(seed1Wallet, iotago.TokenSupply)
 	te.AssertWalletBalance(seed2Wallet, 0)
 }
 
@@ -91,13 +103,13 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_283_277_761)
+	te.AssertWalletBalance(seed1Wallet, iotago.TokenSupply)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
 	// Issue some transactions
-	// Valid transfer from seed1 (2_779_530_283_277_761) with remainder seed1 (2_779_530_282_277_761) to seed2 (1_000_000)
+	// Valid transfer from seed1 (iotago.TokenSupply) with remainder seed1 (2_779_530_282_277_761) to seed2 (1_000_000)
 	messageA := te.NewMessageBuilder("A").
 		Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).
 		FromWallet(seed1Wallet).
@@ -376,7 +388,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	te.AssertMessageConflictReason(messageE.StoredMessageID(), storage.ConflictInvalidDustAllowance)
 
 	// Verify that the dust allowance is still unspent
-	unspent, err := te.UTXO().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
+	unspent, err := te.UTXOManager().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
 	require.NoError(t, err)
 	require.True(t, unspent)
 
@@ -407,7 +419,7 @@ func TestWhiteFlagWithDust(t *testing.T) {
 	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
 
 	// Verify that the dust allowance spent
-	unspent, err = te.UTXO().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
+	unspent, err = te.UTXOManager().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
 	require.NoError(t, err)
 	require.False(t, unspent)
 
@@ -434,7 +446,7 @@ func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Issue some transactions
-	// Valid transfer from seed1 (2_779_530_283_277_761) to seed2 (1_000_000)
+	// Valid transfer from seed1 (iotago.TokenSupply) to seed2 (1_000_000)
 	messageA := te.NewMessageBuilder("A").
 		Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).
 		FromWallet(seed1Wallet).

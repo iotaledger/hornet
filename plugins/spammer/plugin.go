@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
@@ -81,10 +82,10 @@ var (
 type dependencies struct {
 	dig.In
 	MessageProcessor *gossip.MessageProcessor
-	Storage          *storage.Storage
+	SyncManager      *syncmanager.SyncManager
 	ServerMetrics    *metrics.ServerMetrics
 	PoWHandler       *pow.Handler
-	Manager          *p2p.Manager
+	PeeringManager   *p2p.Manager
 	TipSelector      *tipselect.TipSelector       `optional:"true"`
 	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 	NetworkID        uint64                       `name:"networkId"`
@@ -94,12 +95,12 @@ type dependencies struct {
 func configure() {
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		Plugin.Panic("RestAPI plugin needs to be enabled to use the Spammer plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Spammer plugin")
 	}
 
 	// check if URTS plugin is disabled
 	if Plugin.Node.IsSkipped(urts.Plugin) {
-		Plugin.Panic("URTS plugin needs to be enabled to use the Spammer plugin")
+		Plugin.LogPanic("URTS plugin needs to be enabled to use the Spammer plugin")
 	}
 
 	setupRoutes(deps.Echo.Group(RouteSpammer))
@@ -146,11 +147,11 @@ func run() {
 	}
 
 	// create a background worker that "measures" the spammer averages values every second
-	if err := Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(shutdownSignal <-chan struct{}) {
-		ticker := timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, shutdownSignal)
+	if err := Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(ctx context.Context) {
+		ticker := timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PrioritySpammer); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	// automatically start the spammer on node startup if the flag is set
@@ -223,7 +224,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 		rateLimitAbortSignal = make(chan struct{})
 
 		// create a background worker that fills rateLimitChannel every second
-		if err := Plugin.Daemon().BackgroundWorker("Spammer rate limit channel", func(shutdownSignal <-chan struct{}) {
+		if err := Plugin.Daemon().BackgroundWorker("Spammer rate limit channel", func(ctx context.Context) {
 			spammerWaitGroup.Add(1)
 			defer spammerWaitGroup.Done()
 
@@ -239,11 +240,11 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 			for {
 				timeStart := time.Now()
 
-				ctx, cancel := context.WithTimeout(context.Background(), timeout)
+				rateLimitCtx, rateLimitCtxCancel := context.WithTimeout(context.Background(), timeout)
 
 				if currentProcessID != processID.Load() {
 					close(rateLimitAbortSignal)
-					cancel()
+					rateLimitCtxCancel()
 					break rateLimitLoop
 				}
 
@@ -255,21 +256,21 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 				time.Sleep(interval - lastIntervalError)
 
 				select {
-				case <-shutdownSignal:
+				case <-ctx.Done():
 					// received shutdown signal
 					close(rateLimitAbortSignal)
-					cancel()
+					rateLimitCtxCancel()
 					break rateLimitLoop
 
 				case rateLimitChannel <- struct{}{}:
 					// wait until a worker is free
 
-				case <-ctx.Done():
+				case <-rateLimitCtx.Done():
 					// timeout if the channel is not free in time
 					// maybe the consumer was shut down
 				}
 
-				cancel()
+				rateLimitCtxCancel()
 				lastDuration = time.Since(timeStart)
 			}
 
@@ -280,7 +281,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 
 	spammerCnt := atomic.NewInt32(0)
 	for i := 0; i < spammerWorkerCount; i++ {
-		if err := Plugin.Daemon().BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(shutdownSignal <-chan struct{}) {
+		if err := Plugin.Daemon().BackgroundWorker(fmt.Sprintf("Spammer_%d", i), func(ctx context.Context) {
 			spammerWaitGroup.Add(1)
 			defer spammerWaitGroup.Done()
 
@@ -292,7 +293,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 		spammerLoop:
 			for {
 				select {
-				case <-shutdownSignal:
+				case <-ctx.Done():
 					break spammerLoop
 
 				default:
@@ -305,23 +306,23 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						select {
 						case <-rateLimitAbortSignal:
 							break spammerLoop
-						case <-shutdownSignal:
+						case <-ctx.Done():
 							break spammerLoop
 						case <-rateLimitChannel:
 						}
 					}
 
-					if !deps.Storage.IsNodeAlmostSynced() {
+					if !deps.SyncManager.IsNodeAlmostSynced() {
 						time.Sleep(time.Second)
 						continue
 					}
 
-					if checkPeersConnected && deps.Manager.ConnectedCount(p2p.PeerRelationKnown) == 0 {
+					if checkPeersConnected && deps.PeeringManager.ConnectedCount() == 0 {
 						time.Sleep(time.Second)
 						continue
 					}
 
-					if err := waitForLowerCPUUsage(cpuMaxUsage, shutdownSignal); err != nil {
+					if err := waitForLowerCPUUsage(ctx, cpuMaxUsage); err != nil {
 						if !errors.Is(err, common.ErrOperationAborted) {
 							Plugin.LogWarn(err)
 						}
@@ -333,7 +334,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						spammerStartTime = time.Now()
 					}
 
-					durationGTTA, durationPOW, err := spammerInstance.DoSpam(shutdownSignal)
+					durationGTTA, durationPOW, err := spammerInstance.DoSpam(ctx)
 					if err != nil {
 						continue
 					}

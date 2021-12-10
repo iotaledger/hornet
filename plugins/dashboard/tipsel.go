@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"context"
+
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/urts"
@@ -18,13 +20,13 @@ func runTipSelMetricWorker() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeTipSelMetric, Data: metrics})
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("Dashboard[TipSelMetricUpdater]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[TipSelMetricUpdater]", func(ctx context.Context) {
 		deps.TipSelector.Events.TipSelPerformed.Attach(onTipSelPerformed)
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[TipSelMetricUpdater] ...")
 		deps.TipSelector.Events.TipSelPerformed.Detach(onTipSelPerformed)
 		Plugin.LogInfo("Stopping Dashboard[TipSelMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

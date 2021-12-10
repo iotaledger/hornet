@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -49,44 +50,60 @@ func WithRequesterPendingRequestReEnqueueInterval(dur time.Duration) RequesterOp
 	}
 }
 
+// Requester handles requesting packets.
+type Requester struct {
+	storage *storage.Storage
+	service *Service
+	rQueue  RequestQueue
+	opts    *RequesterOptions
+
+	running     bool
+	backPFuncs  []RequestBackPressureFunc
+	drainSignal chan struct{}
+}
+
 // NewRequester creates a new Requester.
-func NewRequester(service *Service, rQueue RequestQueue, storage *storage.Storage, opts ...RequesterOption) *Requester {
+func NewRequester(
+	dbStorage *storage.Storage,
+	service *Service,
+	rQueue RequestQueue,
+	opts ...RequesterOption) *Requester {
 
 	reqOpts := &RequesterOptions{}
 	reqOpts.apply(defaultRequesterOpts...)
 	reqOpts.apply(opts...)
 
 	return &Requester{
+		storage:     dbStorage,
 		service:     service,
 		rQueue:      rQueue,
-		storage:     storage,
 		opts:        reqOpts,
 		drainSignal: make(chan struct{}, 2),
 	}
 }
 
-// Requester handles requesting packets.
-type Requester struct {
-	running     bool
-	service     *Service
-	rQueue      RequestQueue
-	storage     *storage.Storage
-	opts        *RequesterOptions
-	backPFuncs  []RequestBackPressureFunc
-	drainSignal chan struct{}
-}
-
 // RunRequestQueueDrainer runs the RequestQueue drainer.
-func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
+func (r *Requester) RunRequestQueueDrainer(ctx context.Context) {
 	r.running = true
 	for {
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			return
 		case <-r.drainSignal:
 
 			// drain request queue
 			for request := r.rQueue.Next(); request != nil; request = r.rQueue.Next() {
+
+				sendRequest := func(request *Request, proto *Protocol) {
+					switch request.RequestType {
+					case RequestTypeMessageID:
+						proto.SendMessageRequest(request.MessageID)
+					case RequestTypeMilestoneIndex:
+						proto.SendMilestoneRequest(request.MilestoneIndex)
+					default:
+						panic(ErrUnknownRequestType)
+					}
+				}
 
 				requested := false
 				r.service.ForEach(func(proto *Protocol) bool {
@@ -96,7 +113,7 @@ func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
 						return true
 					}
 
-					proto.SendMessageRequest(request.MessageID)
+					sendRequest(request, proto)
 					requested = true
 					return false
 				})
@@ -111,7 +128,7 @@ func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
 							return true
 						}
 
-						proto.SendMessageRequest(request.MessageID)
+						sendRequest(request, proto)
 						return true
 					})
 				}
@@ -121,13 +138,13 @@ func (r *Requester) RunRequestQueueDrainer(shutdownSignal <-chan struct{}) {
 }
 
 // RunPendingRequestEnqueuer runs the loop to periodically re-request pending requests from the RequestQueue.
-func (r *Requester) RunPendingRequestEnqueuer(shutdownSignal <-chan struct{}) {
+func (r *Requester) RunPendingRequestEnqueuer(ctx context.Context) {
 	r.running = true
 	reEnqueueTicker := time.NewTicker(r.opts.PendingRequestReEnqueueInterval)
 reEnqueueLoop:
 	for {
 		select {
-		case <-shutdownSignal:
+		case <-ctx.Done():
 			return
 		case <-reEnqueueTicker.C:
 
@@ -186,16 +203,32 @@ func (r *Requester) AddBackPressureFunc(pressureFunc RequestBackPressureFunc) {
 
 // Request enqueues a request to the request queue for the given message if it isn't a solid entry point
 // and is not contained in the database already.
-func (r *Requester) Request(messageID hornet.MessageID, msIndex milestone.Index, preventDiscard ...bool) bool {
-	if r.storage.SolidEntryPointsContain(messageID) {
-		return false
+func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDiscard ...bool) bool {
+
+	var request *Request
+
+	switch value := data.(type) {
+	case hornet.MessageID:
+		messageID := value
+		if r.storage.SolidEntryPointsContain(messageID) {
+			return false
+		}
+		if r.storage.ContainsMessage(messageID) {
+			return false
+		}
+		request = NewMessageIDRequest(messageID, msIndex)
+
+	case milestone.Index:
+		msIndex := value
+		if r.storage.ContainsMilestone(msIndex) {
+			return false
+		}
+		request = NewMilestoneIndexRequest(msIndex)
+
+	default:
+		panic(ErrUnknownRequestType)
 	}
 
-	if r.storage.ContainsMessage(messageID) {
-		return false
-	}
-
-	request := &Request{MessageID: messageID, MilestoneIndex: msIndex}
 	if len(preventDiscard) > 0 {
 		request.PreventDiscard = preventDiscard[0]
 	}

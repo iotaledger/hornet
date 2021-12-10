@@ -4,6 +4,7 @@ import (
 	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -12,7 +13,7 @@ type OutputConsumer func(output *Output) bool
 func (o *Output) unspentDatabaseKey() []byte {
 	ms := marshalutil.New(69)
 	ms.WriteByte(UTXOStoreKeyPrefixUnspent) // 1 byte
-	ms.WriteBytes(o.addressBytes())         // 33 bytes
+	ms.WriteBytes(o.AddressBytes())         // 33 bytes
 	ms.WriteByte(o.outputType)              // 1 byte
 	ms.WriteBytes(o.outputID[:])            // 34 bytes
 	return ms.Bytes()
@@ -79,7 +80,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 
 	// Filter by address
 	if opt.address != nil {
-		addrBytes, err := opt.address.Serialize(iotago.DeSeriModeNoValidation)
+		addrBytes, err := opt.address.Serialize(serializer.DeSeriModeNoValidation)
 		if err != nil {
 			return err
 		}

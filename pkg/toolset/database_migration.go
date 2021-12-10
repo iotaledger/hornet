@@ -18,7 +18,7 @@ import (
 func databaseMigration(_ *configuration.Configuration, args []string) error {
 	printUsage := func() {
 		println("Usage:")
-		println(fmt.Sprintf("	%s [SOURCE_DATABASE_PATH] [TARGET_DATABASE_PATH] [TARGET_DATABASE_ENGINE]", ToolDatabaseMigration))
+		println(fmt.Sprintf("   %s [SOURCE_DATABASE_PATH] [TARGET_DATABASE_PATH] [TARGET_DATABASE_ENGINE]", ToolDatabaseMigration))
 		println()
 		println("   [SOURCE_DATABASE_PATH]   - the path to the source database")
 		println("   [TARGET_DATABASE_PATH]   - the path to the target database")

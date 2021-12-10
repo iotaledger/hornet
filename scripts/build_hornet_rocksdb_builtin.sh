@@ -5,4 +5,4 @@
 
 commit_hash=$(git rev-parse --short HEAD)
 
-go build -ldflags="-s -w -X github.com/gohornet/hornet/core/app.Version=$commit_hash" -tags rocksdb,builtin_static
+CGO_ENABLED=1 go build -ldflags="-s -w -X github.com/gohornet/hornet/core/app.Version=$commit_hash" -tags rocksdb,builtin_static

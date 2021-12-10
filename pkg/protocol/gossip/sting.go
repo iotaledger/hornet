@@ -10,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/protocol/tlv"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -153,7 +154,7 @@ func NewMilestoneRequestMsg(requestedMilestoneIndex milestone.Index) ([]byte, er
 
 // ExtractRequestedMilestoneIndex extracts the requested milestone index from the given source.
 func ExtractRequestedMilestoneIndex(source []byte) (milestone.Index, error) {
-	if len(source) != iotago.UInt32ByteSize {
+	if len(source) != serializer.UInt32ByteSize {
 		return 0, ErrInvalidSourceLength
 	}
 

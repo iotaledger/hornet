@@ -6,7 +6,6 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/model/migrator"
-	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -56,7 +55,7 @@ func provide(c *dig.Container) {
 			Client: &http.Client{Timeout: deps.NodeConfig.Duration(CfgReceiptsValidatorAPITimeout)},
 		})
 		if err != nil {
-			Plugin.Panicf("failed to initialize API: %s", err)
+			Plugin.LogPanicf("failed to initialize API: %s", err)
 		}
 		return migrator.NewValidator(
 			iotaAPI,
@@ -64,27 +63,27 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 
 	type serviceDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		Validator  *migrator.Validator
-		UTXO       *utxo.Manager
-		Storage    *storage.Storage
+		NodeConfig  *configuration.Configuration `name:"nodeConfig"`
+		Validator   *migrator.Validator
+		UTXOManager *utxo.Manager
 	}
 
 	if err := c.Provide(func(deps serviceDeps) *migrator.ReceiptService {
 		return migrator.NewReceiptService(
-			deps.Validator, deps.UTXO,
+			deps.Validator,
+			deps.UTXOManager,
 			deps.NodeConfig.Bool(CfgReceiptsValidatorValidate),
 			deps.NodeConfig.Bool(CfgReceiptsBackupEnabled),
 			deps.NodeConfig.Bool(CfgReceiptsValidatorIgnoreSoftErrors),
 			deps.NodeConfig.String(CfgReceiptsBackupPath),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -98,6 +97,6 @@ func configure() {
 	}))
 	Plugin.LogInfof("storing receipt backups in %s", deps.NodeConfig.String(CfgReceiptsBackupPath))
 	if err := deps.ReceiptService.Init(); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }

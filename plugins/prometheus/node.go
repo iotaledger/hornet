@@ -124,8 +124,8 @@ func collectInfo() {
 		referencedRate.Set(lastConfirmedMilestoneMetric.ReferencedRate)
 	}
 
-	milestones.WithLabelValues("latest").Set(float64(deps.Storage.LatestMilestoneIndex()))
-	milestones.WithLabelValues("confirmed").Set(float64(deps.Storage.ConfirmedMilestoneIndex()))
+	milestones.WithLabelValues("latest").Set(float64(deps.SyncManager.LatestMilestoneIndex()))
+	milestones.WithLabelValues("confirmed").Set(float64(deps.SyncManager.ConfirmedMilestoneIndex()))
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	milestones.WithLabelValues("snapshot").Set(0)

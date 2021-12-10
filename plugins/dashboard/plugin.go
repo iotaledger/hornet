@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"context"
 	"net/http"
 	"runtime"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -75,12 +77,14 @@ var (
 
 type dependencies struct {
 	dig.In
-	Database                 *database.Database
+	TangleDatabase           *database.Database `name:"tangleDatabase"`
+	UTXODatabase             *database.Database `name:"utxoDatabase"`
 	Storage                  *storage.Storage
+	SyncManager              *syncmanager.SyncManager
 	Tangle                   *tangle.Tangle
 	ServerMetrics            *metrics.ServerMetrics
 	RequestQueue             gossip.RequestQueue
-	Manager                  *p2p.Manager
+	PeeringManager           *p2p.Manager
 	MessageProcessor         *gossip.MessageProcessor
 	TipSelector              *tipselect.TipSelector       `optional:"true"`
 	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
@@ -108,7 +112,7 @@ func initConfigPars(c *dig.Container) {
 			DashboardAuthUsername: deps.NodeConfig.String(CfgDashboardAuthUsername),
 		}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -116,12 +120,12 @@ func configure() {
 
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		Plugin.Panic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	// check if RestAPIV1 plugin is disabled
 	if Plugin.Node.IsSkipped(restapiv1.Plugin) {
-		Plugin.Panic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
+		Plugin.LogPanic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	upgrader = &websocket.Upgrader{
@@ -137,7 +141,7 @@ func configure() {
 		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
 		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt))
 	if err != nil {
-		Plugin.Panicf("basic auth initialization failed: %w", err)
+		Plugin.LogPanicf("basic auth initialization failed: %w", err)
 	}
 
 	jwtAuth, err = jwt.NewJWTAuth(
@@ -147,7 +151,7 @@ func configure() {
 		deps.NodePrivateKey,
 	)
 	if err != nil {
-		Plugin.Panicf("JWT auth initialization failed: %w", err)
+		Plugin.LogPanicf("JWT auth initialization failed: %w", err)
 	}
 }
 
@@ -191,13 +195,13 @@ func run() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeConfirmedMsMetrics, Data: []*tangle.ConfirmedMilestoneMetric{metric}})
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(shutdownSignal <-chan struct{}) {
-		go hub.Run(shutdownSignal)
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(ctx context.Context) {
+		go hub.Run(ctx)
 		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[WSSend] ...")
 		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
@@ -206,7 +210,7 @@ func run() {
 
 		Plugin.LogInfo("Stopping Dashboard[WSSend] ... done")
 	}, shutdown.PriorityDashboard); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	// run the message live feed
@@ -328,7 +332,7 @@ type Cache struct {
 }
 
 func peerMetrics() []*restapiv1.PeerResponse {
-	peerInfos := deps.Manager.PeerInfoSnapshots()
+	peerInfos := deps.PeeringManager.PeerInfoSnapshots()
 	results := make([]*restapiv1.PeerResponse, len(peerInfos))
 	for i, info := range peerInfos {
 		results[i] = restapiv1.WrapInfoSnapshot(info)
@@ -337,14 +341,14 @@ func peerMetrics() []*restapiv1.PeerResponse {
 }
 
 func currentSyncStatus() *SyncStatus {
-	return &SyncStatus{CMI: deps.Storage.ConfirmedMilestoneIndex(), LMI: deps.Storage.LatestMilestoneIndex()}
+	return &SyncStatus{CMI: deps.SyncManager.ConfirmedMilestoneIndex(), LMI: deps.SyncManager.LatestMilestoneIndex()}
 }
 
 func currentPublicNodeStatus() *PublicNodeStatus {
 	status := &PublicNodeStatus{}
 
 	status.IsHealthy = deps.Tangle.IsNodeHealthy()
-	status.IsSynced = deps.Storage.IsNodeAlmostSynced()
+	status.IsSynced = deps.SyncManager.IsNodeAlmostSynced()
 
 	snapshotInfo := deps.Storage.SnapshotInfo()
 	if snapshotInfo != nil {
@@ -374,7 +378,7 @@ func currentNodeStatus() *NodeStatus {
 	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
 	status.NodeID = deps.Host.ID().String()
 
-	status.ConnectedPeersCount = deps.Manager.ConnectedCount()
+	status.ConnectedPeersCount = deps.PeeringManager.ConnectedCount()
 	status.CurrentRequestedMs = requestedMilestone
 	status.RequestQueueQueued = queued
 	status.RequestQueuePending = pending

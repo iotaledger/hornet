@@ -21,12 +21,11 @@ import (
 	"github.com/iotaledger/hive.go/logger"
 )
 
-func newNode(ctx context.Context, t require.TestingT) host.Host {
+func newNode(t require.TestingT) host.Host {
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
 	sk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
 	require.NoError(t, err)
 	h, err := libp2p.New(
-		ctx,
 		libp2p.Identity(sk),
 		libp2p.ConnectionManager(connmgr.NewConnManager(1, 100, 0)),
 	)
@@ -37,8 +36,6 @@ func newNode(ctx context.Context, t require.TestingT) host.Host {
 func TestManager(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	shutdownSignal := make(chan struct{})
-	defer close(shutdownSignal)
 
 	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 
@@ -49,28 +46,28 @@ func TestManager(t *testing.T) {
 	// no need to check the error, since the global logger could already be initialized
 	_ = logger.InitGlobalLogger(cfg)
 
-	node1 := newNode(ctx, t)
+	node1 := newNode(t)
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
 	node1Manager := p2p.NewManager(node1, p2p.WithManagerLogger(node1Logger), reconnectOpt)
-	go node1Manager.Start(shutdownSignal)
+	go node1Manager.Start(ctx)
 	node1AddrInfo := &peer.AddrInfo{ID: node1.ID(), Addrs: node1.Addrs()[:1]}
 
-	node2 := newNode(ctx, t)
+	node2 := newNode(t)
 	node2Logger := logger.NewLogger(fmt.Sprintf("node2/%s", node2.ID().ShortString()))
 	node2Manager := p2p.NewManager(node2, p2p.WithManagerLogger(node2Logger), reconnectOpt)
-	go node2Manager.Start(shutdownSignal)
+	go node2Manager.Start(ctx)
 	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()[:1]}
 
-	node3 := newNode(ctx, t)
+	node3 := newNode(t)
 	node3Logger := logger.NewLogger(fmt.Sprintf("node3/%s", node3.ID().ShortString()))
 	node3Manager := p2p.NewManager(node3, p2p.WithManagerLogger(node3Logger), reconnectOpt)
-	go node3Manager.Start(shutdownSignal)
+	go node3Manager.Start(ctx)
 	node3AddrInfo := &peer.AddrInfo{ID: node3.ID(), Addrs: node3.Addrs()[:1]}
 
-	node4 := newNode(ctx, t)
+	node4 := newNode(t)
 	node4Logger := logger.NewLogger(fmt.Sprintf("node4/%s", node4.ID().ShortString()))
 	node4Manager := p2p.NewManager(node4, p2p.WithManagerLogger(node4Logger), reconnectOpt)
-	go node4Manager.Start(shutdownSignal)
+	go node4Manager.Start(ctx)
 	node4AddrInfo := &peer.AddrInfo{ID: node4.ID(), Addrs: node4.Addrs()[:1]}
 
 	//fmt.Println("node 1", node1.ID())
@@ -208,8 +205,6 @@ func connections(t *testing.T, node host.Host, targets peer.IDSlice) {
 func TestManagerEvents(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	shutdownSignal := make(chan struct{})
-	defer close(shutdownSignal)
 
 	cfg := configuration.New()
 	err := cfg.Set("logger.disableStacktrace", true)
@@ -220,17 +215,17 @@ func TestManagerEvents(t *testing.T) {
 
 	reconnectOpt := p2p.WithManagerReconnectInterval(1*time.Second, 500*time.Millisecond)
 
-	node1 := newNode(ctx, t)
+	node1 := newNode(t)
 	node1Logger := logger.NewLogger(fmt.Sprintf("node1/%s", node1.ID().ShortString()))
 	node1Manager := p2p.NewManager(node1, p2p.WithManagerLogger(node1Logger), reconnectOpt)
-	go node1Manager.Start(shutdownSignal)
+	go node1Manager.Start(ctx)
 	node1AddrInfo := &peer.AddrInfo{ID: node1.ID(), Addrs: node1.Addrs()}
 	_ = node1AddrInfo
 
-	node2 := newNode(ctx, t)
+	node2 := newNode(t)
 	node2Logger := logger.NewLogger(fmt.Sprintf("node2/%s", node2.ID().ShortString()))
 	node2Manager := p2p.NewManager(node2, p2p.WithManagerLogger(node2Logger), reconnectOpt)
-	go node2Manager.Start(shutdownSignal)
+	go node2Manager.Start(ctx)
 	node2AddrInfo := &peer.AddrInfo{ID: node2.ID(), Addrs: node2.Addrs()}
 
 	var connectCalled, connectedCalled bool
@@ -312,11 +307,9 @@ func TestManagerEvents(t *testing.T) {
 func BenchmarkManager_ForEach(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	shutdownSignal := make(chan struct{})
-	defer close(shutdownSignal)
-	node1 := newNode(ctx, b)
+	node1 := newNode(b)
 	node1Manager := p2p.NewManager(node1)
-	go node1Manager.Start(shutdownSignal)
+	go node1Manager.Start(ctx)
 	time.Sleep(1 * time.Second)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

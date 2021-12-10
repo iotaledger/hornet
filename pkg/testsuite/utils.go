@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 
@@ -10,12 +11,14 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 type MessageBuilder struct {
-	te         *TestEnvironment
-	indexation string
+	te             *TestEnvironment
+	indexation     string
+	indexationData []byte
 
 	parents hornet.MessageIDs
 
@@ -41,11 +44,19 @@ type Message struct {
 	storedMessageID hornet.MessageID
 }
 
-func (te *TestEnvironment) NewMessageBuilder(indexation string) *MessageBuilder {
+func (te *TestEnvironment) NewMessageBuilder(optionalIndexation ...string) *MessageBuilder {
+	indexation := ""
+	if len(optionalIndexation) > 0 {
+		indexation = optionalIndexation[0]
+	}
 	return &MessageBuilder{
 		te:         te,
 		indexation: indexation,
 	}
+}
+
+func (b *MessageBuilder) LatestMilestonesAsParents() *MessageBuilder {
+	return b.Parents(hornet.MessageIDs{b.te.Milestones[len(b.te.Milestones)-1].Milestone().MessageID, b.te.Milestones[len(b.te.Milestones)-2].Milestone().MessageID})
 }
 
 func (b *MessageBuilder) Parents(parents hornet.MessageIDs) *MessageBuilder {
@@ -83,6 +94,11 @@ func (b *MessageBuilder) UsingOutput(output *utxo.Output) *MessageBuilder {
 	return b
 }
 
+func (b *MessageBuilder) IndexationData(data []byte) *MessageBuilder {
+	b.indexationData = data
+	return b
+}
+
 func (b *MessageBuilder) BuildIndexation() *Message {
 
 	require.NotEmpty(b.te.TestInterface, b.indexation)
@@ -94,13 +110,16 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 		parents = append(parents, parent[:])
 	}
 
-	msg, err := iotago.NewMessageBuilder().Parents(parents).Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil}).Build()
+	msg, err := iotago.NewMessageBuilder().
+		Parents(parents).
+		Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData}).
+		Build()
 	require.NoError(b.te.TestInterface, err)
 
-	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
+	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	require.NoError(b.te.TestInterface, err)
 
 	return &Message{
@@ -111,7 +130,7 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 
 func (b *MessageBuilder) Build() *Message {
 
-	require.True(b.te.TestInterface, b.amount > 0)
+	require.Greaterf(b.te.TestInterface, b.amount, uint64(0), "trying to send a transaction with no value")
 
 	builder := iotago.NewTransactionBuilder()
 
@@ -137,7 +156,14 @@ func (b *MessageBuilder) Build() *Message {
 		}
 	}
 
-	require.NotEmpty(b.te.TestInterface, outputsThatCanBeConsumed)
+	require.NotEmptyf(b.te.TestInterface, outputsThatCanBeConsumed, "no outputs available on the wallet")
+
+	outputsBalance := uint64(0)
+	for _, utxo := range outputsThatCanBeConsumed {
+		outputsBalance += utxo.Amount()
+	}
+
+	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
 
 	for _, utxo := range outputsThatCanBeConsumed {
 
@@ -163,8 +189,9 @@ func (b *MessageBuilder) Build() *Message {
 		builder.AddOutput(&iotago.SigLockedSingleOutput{Address: fromAddr, Amount: remainderAmount})
 	}
 
-	require.NotEmpty(b.te.TestInterface, b.indexation)
-	builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: nil})
+	if len(b.indexation) > 0 {
+		builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData})
+	}
 
 	// Sign transaction
 	inputPrivateKey, _ := b.fromWallet.KeyPair()
@@ -175,13 +202,15 @@ func (b *MessageBuilder) Build() *Message {
 
 	require.NotNil(b.te.TestInterface, b.parents)
 
-	msg, err := iotago.NewMessageBuilder().Parents(b.parents.ToSliceOfSlices()).Payload(transaction).Build()
+	msg, err := iotago.NewMessageBuilder().
+		Parents(b.parents.ToSliceOfSlices()).
+		Payload(transaction).Build()
 	require.NoError(b.te.TestInterface, err)
 
-	err = b.te.PoWHandler.DoPoW(msg, nil, 1)
+	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	require.NoError(b.te.TestInterface, err)
 
 	var outputType string
@@ -255,6 +284,19 @@ func (m *Message) BookOnWallets() *Message {
 func (m *Message) GeneratedUTXO() *utxo.Output {
 	require.NotNil(m.builder.te.TestInterface, m.sentOutput)
 	return m.sentOutput
+}
+
+func (m *Message) RemainderUTXO() *utxo.Output {
+	require.NotNil(m.builder.te.TestInterface, m.remainderOutput)
+	return m.remainderOutput
+}
+
+func (m *Message) IotaMessage() *iotago.Message {
+	return m.message.Message()
+}
+
+func (m *Message) StoredMessage() *storage.Message {
+	return m.message
 }
 
 func (m *Message) StoredMessageID() hornet.MessageID {

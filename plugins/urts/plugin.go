@@ -1,12 +1,16 @@
 package urts
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -42,9 +46,10 @@ var (
 
 type dependencies struct {
 	dig.In
-	TipSelector *tipselect.TipSelector
-	Storage     *storage.Storage
-	Tangle      *tangle.Tangle
+	TipSelector     *tipselect.TipSelector
+	SyncManager     *syncmanager.SyncManager
+	Tangle          *tangle.Tangle
+	ShutdownHandler *shutdown.ShutdownHandler
 }
 
 func initConfigPars(c *dig.Container) {
@@ -68,7 +73,7 @@ func initConfigPars(c *dig.Container) {
 			BelowMaxDepth:                         deps.NodeConfig.Int(CfgTipSelBelowMaxDepth),
 		}
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -77,6 +82,7 @@ func provide(c *dig.Container) {
 	type tipselDeps struct {
 		dig.In
 		Storage                               *storage.Storage
+		SyncManager                           *syncmanager.SyncManager
 		ServerMetrics                         *metrics.ServerMetrics
 		NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
 		MaxDeltaMsgYoungestConeRootIndexToCMI int                          `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
@@ -86,7 +92,9 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps tipselDeps) *tipselect.TipSelector {
 		return tipselect.New(
+			Plugin.Daemon().ContextStopped(),
 			deps.Storage,
+			deps.SyncManager,
 			deps.ServerMetrics,
 
 			deps.MaxDeltaMsgYoungestConeRootIndexToCMI,
@@ -104,7 +112,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
 		)
 	}); err != nil {
-		Plugin.Panic(err)
+		Plugin.LogPanic(err)
 	}
 }
 
@@ -114,18 +122,18 @@ func configure() {
 
 func run() {
 
-	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(ctx context.Context) {
 		attachEvents()
-		<-shutdownSignal
+		<-ctx.Done()
 		detachEvents()
 	}, shutdown.PriorityTipselection); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Cleanup]", func(ctx context.Context) {
 		for {
 			select {
-			case <-shutdownSignal:
+			case <-ctx.Done():
 				return
 			case <-time.After(time.Second):
 				ts := time.Now()
@@ -134,7 +142,7 @@ func run() {
 			}
 		}
 	}, shutdown.PriorityTipselection); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }
 
@@ -142,7 +150,7 @@ func configureEvents() {
 	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
 		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
 			// do not add tips during syncing, because it is not needed at all
-			if !deps.Storage.IsNodeAlmostSynced() {
+			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
 
@@ -152,12 +160,15 @@ func configureEvents() {
 
 	onMilestoneConfirmed = events.NewClosure(func(_ *whiteflag.Confirmation) {
 		// do not update tip scores during syncing, because it is not needed at all
-		if !deps.Storage.IsNodeAlmostSynced() {
+		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
 
 		ts := time.Now()
-		removedTipCount := deps.TipSelector.UpdateScores()
+		removedTipCount, err := deps.TipSelector.UpdateScores()
+		if err != nil && err != common.ErrOperationAborted {
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("urts tipselection plugin hit a critical error while updating scores: %s", err))
+		}
 		Plugin.LogDebugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 	})
 }

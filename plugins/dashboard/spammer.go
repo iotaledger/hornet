@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"context"
+
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
 	spammerplugin "github.com/gohornet/hornet/plugins/spammer"
@@ -17,15 +19,15 @@ func runSpammerMetricWorker() {
 		hub.BroadcastMsg(&Msg{Type: MsgTypeAvgSpamMetrics, Data: metrics})
 	})
 
-	if err := Plugin.Daemon().BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(shutdownSignal <-chan struct{}) {
+	if err := Plugin.Daemon().BackgroundWorker("Dashboard[SpammerMetricUpdater]", func(ctx context.Context) {
 		spammerplugin.Events.SpamPerformed.Attach(onSpamPerformed)
 		spammerplugin.Events.AvgSpamMetricsUpdated.Attach(onAvgSpamMetricsUpdated)
-		<-shutdownSignal
+		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[SpammerMetricUpdater] ...")
 		spammerplugin.Events.SpamPerformed.Detach(onSpamPerformed)
 		spammerplugin.Events.AvgSpamMetricsUpdated.Detach(onAvgSpamMetricsUpdated)
 		Plugin.LogInfo("Stopping Dashboard[SpammerMetricUpdater] ... done")
 	}, shutdown.PriorityDashboard); err != nil {
-		Plugin.Panicf("failed to start worker: %s", err)
+		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

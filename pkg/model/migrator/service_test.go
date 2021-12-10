@@ -1,6 +1,7 @@
 package migrator_test
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"os"
@@ -108,16 +109,16 @@ func newTestService(t *testing.T, msIndex uint32, maxEntries int) (*migrator.Mig
 		require.NoError(t, err)
 	}
 
-	closing := make(chan struct{})
+	ctx, ctxCancel := context.WithCancel(context.Background())
 	started := make(chan struct{})
 	go func() {
 		close(started)
-		s.Start(closing, nil)
+		s.Start(ctx, nil)
 	}()
 
 	<-started
 	return s, func() {
-		close(closing)
+		ctxCancel()
 		// we don't need to check the error, maybe the file doesn't exist
 		_ = os.Remove(stateFileName)
 	}

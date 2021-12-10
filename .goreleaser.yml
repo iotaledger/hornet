@@ -72,9 +72,19 @@ archives:
       - README.md
       - LICENSE
       - config.json
+      - config_devnet.json
       - config_comnet.json
       - peering.json
       - profiles.json
+      - private_tangle/config_private_tangle.json
+      - private_tangle/create_snapshot_private_tangle.sh
+      - private_tangle/migration_bootstrap.sh
+      - private_tangle/private_tangle_keys.md
+      - private_tangle/run_2nd.sh
+      - private_tangle/run_3rd.sh
+      - private_tangle/run_4th.sh
+      - private_tangle/run_coo_bootstrap.sh
+      - private_tangle/run_coo.sh
 
 # DEB and RPM packages
 nfpms:
@@ -96,6 +106,10 @@ nfpms:
 
       - src: "config.json"
         dst: "/var/lib/hornet/config.json"
+        type: config
+
+      - src: "config_devnet.json"
+        dst: "/var/lib/hornet/config_devnet.json"
         type: config
 
       - src: "config_comnet.json"
@@ -173,6 +187,11 @@ snapshot:
 # Changelog
 changelog:
   skip: true
+
+announce:
+  twitter:
+    enabled: true
+    message_template: "{{.ProjectName}}-{{.Version}} is out! Find all details at {{ .ReleaseURL }}! #IOTA #HORNET"
 
 # Release
 release:

@@ -14,7 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/byteutils"
-	"github.com/iotaledger/hive.go/kvstore/pebble"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -26,8 +26,8 @@ const (
 
 	// The offset of counters within a snapshot file:
 	// version + type + timestamp + network-id + sep-ms-index + ledger-ms-index
-	countersOffset = iotago.OneByte + iotago.OneByte + iotago.UInt64ByteSize + iotago.UInt64ByteSize +
-		iotago.UInt32ByteSize + iotago.UInt32ByteSize
+	countersOffset = serializer.OneByte + serializer.OneByte + serializer.UInt64ByteSize + serializer.UInt64ByteSize +
+		serializer.UInt32ByteSize + serializer.UInt32ByteSize
 )
 
 var (
@@ -70,9 +70,24 @@ type Output struct {
 	// The type of the output.
 	OutputType iotago.OutputType `json:"output_type"`
 	// The underlying address to which this output deposits to.
-	Address iotago.Serializable `json:"address"`
+	Address serializer.Serializable `json:"address"`
 	// The amount of the deposit.
 	Amount uint64 `json:"amount"`
+}
+
+// LexicalOrderedOutputs are Outputs ordered in lexical order by their OutputID.
+type LexicalOrderedOutputs []*Output
+
+func (l LexicalOrderedOutputs) Len() int {
+	return len(l)
+}
+
+func (l LexicalOrderedOutputs) Less(i, j int) bool {
+	return bytes.Compare(l[i].OutputID[:], l[j].OutputID[:]) < 0
+}
+
+func (l LexicalOrderedOutputs) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
 }
 
 func (s *Output) MarshalBinary() ([]byte, error) {
@@ -86,7 +101,7 @@ func (s *Output) MarshalBinary() ([]byte, error) {
 	if err := b.WriteByte(s.OutputType); err != nil {
 		return nil, fmt.Errorf("unable to write output type for ls-output: %w", err)
 	}
-	addrData, err := s.Address.Serialize(iotago.DeSeriModePerformValidation)
+	addrData, err := s.Address.Serialize(serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize address for ls-output: %w", err)
 	}
@@ -149,7 +164,7 @@ func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
 func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	var b bytes.Buffer
 
-	msBytes, err := md.Milestone.Serialize(iotago.DeSeriModePerformValidation)
+	msBytes, err := md.Milestone.Serialize(serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize milestone for ls-milestone-diff %d: %w", md.Milestone.Index, err)
 	}
@@ -321,9 +336,9 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *
 	}
 
 	// write count placeholders
-	placeholderSpace := iotago.UInt64ByteSize * 3
+	placeholderSpace := serializer.UInt64ByteSize * 3
 	if header.Type == Delta {
-		placeholderSpace -= iotago.UInt64ByteSize
+		placeholderSpace -= serializer.UInt64ByteSize
 	}
 	if _, err := writeSeeker.Write(make([]byte, placeholderSpace)); err != nil {
 		return nil, fmt.Errorf("unable to write LS counter placeholders: %w", err)
@@ -569,7 +584,7 @@ func readMilestoneDiff(reader io.Reader) (*MilestoneDiff, error) {
 		return nil, fmt.Errorf("unable to read LS ms-diff ms: %w", err)
 	}
 
-	if _, err := ms.Deserialize(msBytes, iotago.DeSeriModePerformValidation); err != nil {
+	if _, err := ms.Deserialize(msBytes, serializer.DeSeriModePerformValidation); err != nil {
 		return nil, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
 	}
 
@@ -636,7 +651,7 @@ func readOutput(reader io.Reader) (*Output, error) {
 	output.OutputType = typeBuf[0]
 
 	// look ahead address type
-	var addrTypeBuf [iotago.SmallTypeDenotationByteSize]byte
+	var addrTypeBuf [serializer.SmallTypeDenotationByteSize]byte
 	if _, err := io.ReadFull(reader, addrTypeBuf[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS output address type byte: %w", err)
 	}
@@ -660,7 +675,7 @@ func readOutput(reader io.Reader) (*Output, error) {
 		return nil, fmt.Errorf("unable to read LS output address: %w", err)
 	}
 
-	if _, err := addr.Deserialize(append(addrTypeBuf[:], addrDataWithoutType...), iotago.DeSeriModePerformValidation); err != nil {
+	if _, err := addr.Deserialize(append(addrTypeBuf[:], addrDataWithoutType...), serializer.DeSeriModePerformValidation); err != nil {
 		return nil, fmt.Errorf("invalid LS output address: %w", err)
 	}
 	output.Address = addr
@@ -695,157 +710,4 @@ func ReadSnapshotHeaderFromFile(filePath string) (*ReadFileHeader, error) {
 	defer func() { _ = file.Close() }()
 
 	return ReadSnapshotHeader(file)
-}
-
-// MergeInfo holds information about a merge of a full and delta snapshot.
-type MergeInfo struct {
-	// The header of the full snapshot.
-	FullSnapshotHeader *ReadFileHeader
-	// The header of the delta snapshot.
-	DeltaSnapshotHeader *ReadFileHeader
-	// The header of the merged snapshot.
-	MergedSnapshotHeader *FileHeader
-	// The total output count of the ledger.
-	UnspentOutputsCount uint64
-	// The total count of solid entry points.
-	SEPsCount int
-}
-
-// MergeSnapshotsFiles merges the given full and delta snapshots to create an updated full snapshot.
-// The result is a full snapshot file containing the ledger outputs corresponding to the
-// snapshot index of the specified delta snapshot. The target file does not include any milestone diffs
-// and the ledger and snapshot index are equal.
-// This function consumes disk space over memory by importing the full snapshot into a temporary database,
-// applying the delta diffs onto it and then writing out the merged state.
-func MergeSnapshotsFiles(tempDBPath string, fullPath string, deltaPath string, targetFileName string) (*MergeInfo, error) {
-
-	// check that the delta snapshot file's ledger index equals the snapshot index of the full one
-	fullHeader, err := ReadSnapshotHeaderFromFile(fullPath)
-	if err != nil {
-		return nil, err
-	}
-
-	deltaHeader, err := ReadSnapshotHeaderFromFile(deltaPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if deltaHeader.LedgerMilestoneIndex != fullHeader.SEPMilestoneIndex {
-		return nil, fmt.Errorf("%w: delta snapshot's ledger index %d does not correspond to full snapshot's SEPs index %d",
-			ErrSnapshotsNotMergeable, deltaHeader.LedgerMilestoneIndex, fullHeader.SEPMilestoneIndex)
-	}
-
-	// spawn temporary database to built up the wanted merged state in
-	pebbleDB, err := pebble.CreateDB(tempDBPath)
-	if err != nil {
-		return nil, err
-	}
-	kvStore := pebble.New(pebbleDB)
-
-	defer func() {
-		// clean up temp db
-		kvStore.Shutdown()
-		_ = kvStore.Close()
-		_ = os.RemoveAll(tempDBPath)
-	}()
-
-	fullSnapshotFile, err := os.Open(fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open full snapshot file: %w", err)
-	}
-	defer func() { _ = fullSnapshotFile.Close() }()
-
-	// build up retracted ledger state
-	mergeUTXOManager := utxo.New(kvStore)
-	if err := StreamSnapshotDataFrom(fullSnapshotFile,
-		func(header *ReadFileHeader) error {
-			return mergeUTXOManager.StoreLedgerIndex(header.LedgerMilestoneIndex)
-		},
-		func(id hornet.MessageID) error {
-			return nil
-		}, newOutputConsumer(mergeUTXOManager), newUnspentTreasuryOutputConsumer(mergeUTXOManager), newMsDiffConsumer(mergeUTXOManager),
-	); err != nil {
-		return nil, fmt.Errorf("unable to import full snapshot data into temp database: %w", err)
-	}
-
-	deltaSnapshotFile, err := os.Open(deltaPath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open delta snapshot file: %w", err)
-	}
-	defer func() { _ = deltaSnapshotFile.Close() }()
-
-	// build up ledger state to delta snapshot index
-	deltaSnapSEPs := make(hornet.MessageIDs, 0)
-	if err := StreamSnapshotDataFrom(deltaSnapshotFile,
-		func(header *ReadFileHeader) error {
-			return mergeUTXOManager.StoreLedgerIndex(header.LedgerMilestoneIndex)
-		}, func(msgID hornet.MessageID) error {
-			deltaSnapSEPs = append(deltaSnapSEPs, msgID)
-			return nil
-		}, nil, nil, newMsDiffConsumer(mergeUTXOManager),
-	); err != nil {
-		return nil, fmt.Errorf("unable to import delta snapshot data into temp database: %w", err)
-	}
-
-	// write out merged state to full snapshot file
-	targetSnapshotFile, err := os.Create(targetFileName)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open target snapshot file: %w", err)
-	}
-	defer func() { _ = targetSnapshotFile.Close() }()
-
-	var sepsIndex int
-	sepsIter := func() (hornet.MessageID, error) {
-		if sepsIndex == len(deltaSnapSEPs) {
-			return nil, nil
-		}
-		sep := deltaSnapSEPs[sepsIndex]
-		sepsIndex++
-		return sep, nil
-	}
-
-	// create a prepped output producer which counts how many went through
-	var unspentOutputsCount uint64
-	cmiUTXOProducer := newCMIUTXOProducer(mergeUTXOManager)
-	countingOutputProducer := func() (*Output, error) {
-		output, err := cmiUTXOProducer()
-		if output != nil {
-			unspentOutputsCount++
-		}
-		return output, err
-	}
-
-	unspentTreasuryOutput, err := mergeUTXOManager.UnspentTreasuryOutputWithoutLocking()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get final unspent treasury output: %w", err)
-	}
-
-	mergedSnapshotFileHeader := &FileHeader{
-		Version:           SupportedFormatVersion,
-		Type:              Full,
-		NetworkID:         deltaHeader.NetworkID,
-		SEPMilestoneIndex: deltaHeader.SEPMilestoneIndex,
-		// the SEP index on the delta snapshot is the built up state of applying
-		// all ms diffs to the origin state of the full snapshot
-		LedgerMilestoneIndex: deltaHeader.SEPMilestoneIndex,
-		TreasuryOutput:       unspentTreasuryOutput,
-	}
-
-	if _, err := StreamSnapshotDataTo(
-		targetSnapshotFile, uint64(time.Now().Unix()), mergedSnapshotFileHeader,
-		sepsIter, countingOutputProducer,
-		func() (*MilestoneDiff, error) {
-			// we won't have any ms diffs within this merged full snapshot file
-			return nil, nil
-		}); err != nil {
-		return nil, fmt.Errorf("unable to write merged full snapshot data to target file %s: %w", targetFileName, err)
-	}
-
-	return &MergeInfo{
-		FullSnapshotHeader:   fullHeader,
-		DeltaSnapshotHeader:  deltaHeader,
-		MergedSnapshotHeader: mergedSnapshotFileHeader,
-		UnspentOutputsCount:  unspentOutputsCount,
-		SEPsCount:            len(deltaSnapSEPs),
-	}, nil
 }

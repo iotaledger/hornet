@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -14,6 +15,21 @@ type MessageID []byte
 
 // MessageIDs is a slice of MessageID.
 type MessageIDs []MessageID
+
+// LexicalOrderedOutputs are MessageIDs ordered in lexical order.
+type LexicalOrderedMessageIDs MessageIDs
+
+func (l LexicalOrderedMessageIDs) Len() int {
+	return len(l)
+}
+
+func (l LexicalOrderedMessageIDs) Less(i, j int) bool {
+	return bytes.Compare(l[i], l[j]) < 0
+}
+
+func (l LexicalOrderedMessageIDs) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
 
 // ToHex converts the MessageID to its hex representation.
 func (m MessageID) ToHex() string {
@@ -112,7 +128,7 @@ func (m MessageIDs) ToSliceOfArrays() iotago.MessageIDs {
 // RemoveDupsAndSortByLexicalOrder returns a new slice of MessageIDs sorted by lexical order and without duplicates.
 func (m MessageIDs) RemoveDupsAndSortByLexicalOrder() MessageIDs {
 	// sort the messages lexicographically
-	sorted := make(iotago.LexicalOrderedByteSlices, len(m))
+	sorted := make(serializer.LexicalOrderedByteSlices, len(m))
 	for i, id := range m {
 		sorted[i] = id
 	}

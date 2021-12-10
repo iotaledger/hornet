@@ -1,25 +1,37 @@
 package autopeering
 
 import (
+	"context"
 	"fmt"
+	"hash/fnv"
+	"net"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
 	peer2 "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mr-tron/base58/base58"
 	"github.com/multiformats/go-multiaddr"
-	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/iotaledger/hive.go/crypto/ed25519"
-	"github.com/iotaledger/hive.go/identity"
-
+	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
+	"github.com/iotaledger/hive.go/autopeering/selection"
+	"github.com/iotaledger/hive.go/autopeering/server"
+	"github.com/iotaledger/hive.go/crypto/ed25519"
+	"github.com/iotaledger/hive.go/identity"
+	"github.com/iotaledger/hive.go/iputils"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/netutil"
 )
 
 const (
+	// Version of the discovery protocol
+	protocolVersion = 1
 	// ProtocolCode is the protocol code for autopeering within a multi address.
 	ProtocolCode = 1337
 	// the min size of a base58 encoded public key.
@@ -162,6 +174,16 @@ func HivePeerToAddrInfo(peer *peer.Peer, serviceKey service.Key) (*peer2.AddrInf
 	return &peer2.AddrInfo{ID: libp2pID, Addrs: []multiaddr.Multiaddr{ma}}, nil
 }
 
+// HivePeerToPeerID converts data from a hive autopeering peer to a libp2p peer ID.
+func HivePeerToPeerID(peer *peer.Peer) (peer2.ID, error) {
+	libp2pID, err := ConvertHivePubKeyToPeerID(peer.PublicKey())
+	if err != nil {
+		return "", err
+	}
+
+	return libp2pID, nil
+}
+
 type LogF func(template string, args ...interface{})
 
 // ConvertHivePubKeyToPeerIDOrLog converts a hive ed25519 public key from the hive package to a libp2p peer ID.
@@ -225,4 +247,197 @@ func ConvertLibP2PPrivateKeyToHive(key *crypto.Ed25519PrivateKey) (*ed25519.Priv
 	}
 
 	return &hivePrivKey, nil
+}
+
+// parses an entry node multi address string.
+// example: /ip4/127.0.0.1/udp/14626/autopeering/HmKTkSd9F6nnERBvVbr55FvL1hM5WfcLvsc9bc3hWxWc
+func parseEntryNode(entryNodeMultiAddrStr string, preferIPv6 bool) (entryNode *peer.Peer, err error) {
+	if entryNodeMultiAddrStr == "" {
+		return nil, nil
+	}
+
+	entryNodeMultiAddr, err := multiaddr.NewMultiaddr(entryNodeMultiAddrStr)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse entry node multi address: %w", err)
+	}
+
+	pubKey, err := ExtractPubKeyFromMultiAddr(entryNodeMultiAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	host, port, err := ExtractHostAndPortFromMultiAddr(entryNodeMultiAddr, multiaddr.P_UDP)
+	if err != nil {
+		return nil, err
+	}
+
+	ipAddresses, err := iputils.GetIPAddressesFromHost(host)
+	if err != nil {
+		return nil, fmt.Errorf("unable to look up IP addresses for %s: %w", host, err)
+	}
+
+	services := service.New()
+	services.Update(service.PeeringKey, "udp", port)
+
+	ip := ipAddresses.GetPreferredAddress(preferIPv6)
+	return peer.NewPeer(identity.New(*pubKey), ip, services), nil
+}
+
+type AutopeeringManager struct {
+	// the logger used to log events.
+	*utils.WrappedLogger
+
+	// bindAddress is the bind address for autopeering.
+	bindAddress string
+	// entryNodes are the entry nodes for autopeering.
+	entryNodes []string
+	// preferIPv6 indicates whether to prefer IPv6 over IPv4.
+	preferIPv6 bool
+	// p2pServiceKey is the service key used for the p2pService.
+	p2pServiceKey service.Key
+	// localPeerContainer is the container for the local autopeering peer and database.
+	localPeerContainer *LocalPeerContainer
+	// discoveryProtocol is the peer discovery protocol.
+	discoveryProtocol *discover.Protocol
+	// selectionProtocol is the peer selection protocol.
+	selectionProtocol *selection.Protocol
+}
+
+func NewAutopeeringManager(log *logger.Logger, bindAddress string, entryNodes []string, preferIPv6 bool, p2pServiceKey service.Key) *AutopeeringManager {
+
+	return &AutopeeringManager{
+		WrappedLogger:      utils.NewWrappedLogger(log),
+		bindAddress:        bindAddress,
+		entryNodes:         entryNodes,
+		preferIPv6:         preferIPv6,
+		p2pServiceKey:      p2pServiceKey,
+		localPeerContainer: nil,
+		discoveryProtocol:  nil,
+		selectionProtocol:  nil,
+	}
+
+}
+
+// P2PServiceKey is the peering service key.
+func (a *AutopeeringManager) P2PServiceKey() service.Key {
+	return a.p2pServiceKey
+}
+
+// LocalPeerContainer returns the container for the local autopeering peer and database.
+func (a *AutopeeringManager) LocalPeerContainer() *LocalPeerContainer {
+	return a.localPeerContainer
+}
+
+// Selection returns the peer selection protocol.
+func (a *AutopeeringManager) Selection() *selection.Protocol {
+	return a.selectionProtocol
+}
+
+// Discovery returns the peer discovery protocol.
+func (a *AutopeeringManager) Discovery() *discover.Protocol {
+	return a.discoveryProtocol
+}
+
+func (a *AutopeeringManager) Init(localPeerContainer *LocalPeerContainer, initSelection bool) {
+
+	parseEntryNodes := func(entryNodesString []string, preferIPv6 bool) (result []*peer.Peer, err error) {
+		for _, entryNodeDefinition := range entryNodesString {
+			entryNode, err := parseEntryNode(entryNodeDefinition, preferIPv6)
+			if err != nil {
+				a.LogWarnf("invalid entry node; ignoring: %s, error: %s", entryNodeDefinition, err)
+				continue
+			}
+			result = append(result, entryNode)
+		}
+
+		if len(result) == 0 {
+			return nil, errors.New("no valid entry nodes found")
+		}
+
+		return result, nil
+	}
+
+	entryNodes, err := parseEntryNodes(a.entryNodes, a.preferIPv6)
+	if err != nil {
+		a.LogWarn(err)
+	}
+
+	a.localPeerContainer = localPeerContainer
+
+	gossipServiceKeyHash := fnv.New32a()
+	gossipServiceKeyHash.Write([]byte(a.p2pServiceKey))
+	networkID := gossipServiceKeyHash.Sum32()
+
+	a.discoveryProtocol = discover.New(localPeerContainer.Local(), protocolVersion, networkID, discover.Logger(a.LoggerNamed("disc")), discover.MasterPeers(entryNodes))
+
+	if !initSelection {
+		return
+	}
+
+	isValidPeer := func(p *peer.Peer) bool {
+		p2pPeering := p.Services().Get(a.p2pServiceKey)
+		if p2pPeering == nil {
+			return false
+		}
+
+		if p2pPeering.Network() != "tcp" || !netutil.IsValidPort(p2pPeering.Port()) {
+			return false
+		}
+		return true
+	}
+
+	a.selectionProtocol = selection.New(localPeerContainer.Local(), a.discoveryProtocol, selection.Logger(a.LoggerNamed("sel")), selection.NeighborValidator(selection.ValidatorFunc(isValidPeer)))
+}
+
+func (a *AutopeeringManager) Run(ctx context.Context) {
+	a.LogInfo("\n\nWARNING: The autopeering plugin will disclose your public IP address to possibly all nodes and entry points. Please disable this plugin if you do not want this to happen!\n")
+
+	lPeer := a.localPeerContainer.Local()
+	peering := lPeer.Services().Get(service.PeeringKey)
+
+	// resolve the bind address
+	localAddr, err := net.ResolveUDPAddr(peering.Network(), a.bindAddress)
+	if err != nil {
+		a.LogFatalf("error resolving %s: %s", a.bindAddress, err)
+	}
+
+	conn, err := net.ListenUDP(peering.Network(), localAddr)
+	if err != nil {
+		a.LogFatalf("error listening: %s", err)
+	}
+
+	handlers := []server.Handler{a.discoveryProtocol}
+	if a.selectionProtocol != nil {
+		handlers = append(handlers, a.selectionProtocol)
+	}
+
+	// start a server doing discovery and peering
+	srv := server.Serve(lPeer, conn, a.LoggerNamed("srv"), handlers...)
+
+	// start the discovery on that connection
+	a.discoveryProtocol.Start(srv)
+
+	if a.selectionProtocol != nil {
+		// start the peering on that connection
+		a.selectionProtocol.Start(srv)
+	}
+
+	a.LogInfof("started: Address=%s/%s PublicKey=%s", localAddr.String(), localAddr.Network(), lPeer.PublicKey().String())
+
+	<-ctx.Done()
+	a.LogInfo("Stopping Autopeering ...")
+
+	if a.selectionProtocol != nil {
+		a.selectionProtocol.Close()
+	}
+	a.discoveryProtocol.Close()
+
+	// underlying connection is closed by the server
+	srv.Close()
+
+	if err := a.localPeerContainer.Close(); err != nil {
+		a.LogErrorf("error closing peer database: %s", err)
+	}
+
+	a.LogInfo("Stopping Autopeering ... done")
 }

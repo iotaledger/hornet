@@ -1,6 +1,6 @@
 ---
 keywords:
-- IOTA Node 
+- IOTA Node
 - Hornet Node
 - Linux
 - macOS
@@ -46,6 +46,7 @@ Hornet exposes different functionality on different ports:
 - 14626 UDP - Autopeering port (optional)
 - 14265 TCP - REST HTTP API port (optional)
 - 8081 TCP - Dashboard (optional)
+- 8091 TCP - Faucet website (optional)
 - 1883 TCP - MQTT (optional)
 
 The mentioned ports are important for flawless node operation. The REST HTTP API port is optional and is only needed if

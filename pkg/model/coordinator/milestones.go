@@ -1,11 +1,13 @@
 package coordinator
 
 import (
+	"context"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -17,11 +19,12 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*storage.Me
 		Payload:   nil,
 	}
 
-	if err := coo.powHandler.DoPoW(iotaMsg, nil, coo.opts.powWorkerCount); err != nil {
+	// we pass a background context here to not create invalid checkpoints at node shutdown.
+	if err := coo.powHandler.DoPoW(context.Background(), iotaMsg, coo.opts.powWorkerCount); err != nil {
 		return nil, err
 	}
 
-	msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
 	}
@@ -57,11 +60,13 @@ func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.Me
 		return nil, err
 	}
 
-	if err := coo.powHandler.DoPoW(iotaMsg, nil, coo.opts.powWorkerCount); err != nil {
+	// we pass a background context here to not create invalid milestones at node shutdown.
+	// otherwise the coordinator could panic at shutdown.
+	if err := coo.powHandler.DoPoW(context.Background(), iotaMsg, coo.opts.powWorkerCount); err != nil {
 		return nil, err
 	}
 
-	msg, err := storage.NewMessage(iotaMsg, iotago.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
 	}
@@ -79,14 +84,14 @@ func (coo *Coordinator) createSigningFuncWithRetries(signingFunc iotago.Mileston
 			sigs, err = signingFunc(pubKeys, msEssence)
 			if err != nil {
 				if i+1 != coo.opts.signingRetryAmount {
-					coo.opts.logger.Warnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
+					coo.LogWarnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
 					time.Sleep(coo.opts.signingRetryTimeout)
 				}
 				continue
 			}
 			return sigs, nil
 		}
-		coo.opts.logger.Warnf("signing failed after %d attempts: %s ", coo.opts.signingRetryAmount, err)
+		coo.LogWarnf("signing failed after %d attempts: %s ", coo.opts.signingRetryAmount, err)
 		return
 	}
 }

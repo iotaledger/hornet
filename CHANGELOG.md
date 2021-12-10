@@ -2,6 +2,115 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 10.12.2021
+
+### Added
+    - Add participation plugin (#1204, #1207, #1208, #1209, #1210, #1212, #1215, #1218, #1221, #1231, #1232, #1233, 1234)
+    - Add participation-cli tool (#1206, #1219)
+    - Add rocksdb static binaries for macOS (#1192)
+    - Add config_devnet.json (#1183)
+    - Add snap-hash tool to calculate the ledger state hash of a snapshot (#1184)
+    - Add db-hash tool to calculate the ledger state hash of a database (#1184)
+    - Add coo-fix-state tool (#1185)
+    - Add p2pstore to docker docs (#1177)
+
+### Changed
+    - Refactor the JWT auth for the API (#1191)
+    - Separate UTXO database (#1201, #1205)
+    - Only accept bech32 addresses with the correct prefix in the rest API (#1197)
+    - Use target milestone timestamp for snapshots timestamps (#1184)
+    - Expose the enabled HTTP plugins (Faucet, Debug, Participation) as features in the info endpoint (#1208)
+    - Change MQTT topic subscription log to debug level (#1195)
+    - Add JSON output to some of the tools (#1199)
+
+### Fixed
+    - Optimize RocksDB level compaction (#1223)
+    - Improve search missing milestones (#1196) 
+    - Ignore autopeering peers in unknownPeersLimit (#1227)
+    - Include autopeered and unknown peers in connected count of heartbeat messages (#1179)
+    - Fix/faucet conflicting tx (#1222, #1235)
+    - Fix warpsync milestone deadlock (re-verify known milestone payloads) (#1186)
+    - Use integer instead of strings for ulimits in docker-compose file
+    - Fix mqtt port in private tangle scripts (#1186)
+
+### Removed
+    - Remove config_chrysalis_testnet.json (#1183)
+    - Remove powsrv.io integration (#1229) 
+
+### Chore
+    - Updated dependencies and Go 1.17 (#1193)
+    - Updated cross compiler to latest version (#1224)
+    - Updated deps to latest versions (#1192, #1217, #1182, #1225)
+
+### Cleanups
+    - Use contexts to cancel instead of signal channels (#1195, #1198)
+    - Rename Snapshot to SnapshotManager (#1184)
+    - Rename UTXO to to UTXOManager (#1184)
+    - Rename Manager to to PeeringManager (#1184)
+    - Rename Service to GossipService (#1184)
+    - Move autopeering logic to AutopeeringManager (#1178)
+    - Move sync status logic to SyncManager (#1184)
+    - Move DatabaseSize function from storage to database  (#1184)
+    - Move Milestone validation logic to MilestoneManager (#1184)
+    - Refactor snapshot package (#1184)
+    - Add WrappedLogger (#1228)
+
+### Workflows
+    - Run snyk test in a schedule instead on every PR (#1200)
+    - Updated CodeQL workflow according to generator from github (#1194)
+    - Enable Dependabot (#1194)
+    - Added twitter bot notification on release (#1216)
+
+### Config file changes
+
+`config.json`
+```diff
+    "jwtAuth": {
+-      "enabled": false,
+      "salt": "HORNET"
+    },
+-    "excludeHealthCheckFromAuth": false,
+-    "permittedRoutes": [
++    "publicRoutes": [
+      "/health",
+      "/mqtt",
+      "/api/v1/info",
+      "/api/v1/tips",
+-      "/api/v1/messages/:messageID",
+-      "/api/v1/messages/:messageID/metadata",
+-      "/api/v1/messages/:messageID/raw",
+-      "/api/v1/messages/:messageID/children",
+-      "/api/v1/messages",
++      "/api/v1/messages*",
+-      "/api/v1/transactions/:transactionID/included-message",
++      "/api/v1/transactions*",
+-      "/api/v1/milestones/:milestoneIndex",
+-      "/api/v1/milestones/:milestoneIndex/utxo-changes",
++      "/api/v1/milestones*",
+-      "/api/v1/outputs/:outputID",
++      "/api/v1/outputs*",
+-      "/api/v1/addresses/:address",
+-      "/api/v1/addresses/:address/outputs",
+-      "/api/v1/addresses/ed25519/:address",
+-      "/api/v1/addresses/ed25519/:address/outputs",
++      "/api/v1/addresses*",
+      "/api/v1/treasury"
++      "/api/v1/receipts*",
++      "/api/plugins/faucet/*",
++      "/api/plugins/participation/events*",
++      "/api/plugins/participation/outputs*",
++      "/api/plugins/participation/addresses*"
+    ],
++    "protectedRoutes": [
++      "/api/v1/*",
++      "/api/plugins/*"
++    ],
+-    "whitelistedAddresses": [
+-      "127.0.0.1",
+-      "::1"
+-    ],
+```
+
 ## [1.0.5] - 02.09.2021
 
 ### Added

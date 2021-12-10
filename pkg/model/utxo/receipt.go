@@ -7,6 +7,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -28,7 +29,7 @@ func (rt *ReceiptTuple) kvStorableKey() (key []byte) {
 }
 
 func (rt *ReceiptTuple) kvStorableValue() (value []byte) {
-	receiptBytes, err := rt.Receipt.Serialize(iotago.DeSeriModeNoValidation)
+	receiptBytes, err := rt.Receipt.Serialize(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +55,7 @@ func (rt *ReceiptTuple) kvStorableLoad(_ *Manager, key []byte, value []byte) err
 	}
 
 	r := &iotago.Receipt{}
-	if _, err := r.Deserialize(value, iotago.DeSeriModeNoValidation); err != nil {
+	if _, err := r.Deserialize(value, serializer.DeSeriModeNoValidation); err != nil {
 		return err
 	}
 

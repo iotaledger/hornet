@@ -13,7 +13,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
@@ -21,6 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/objectstorage"
+	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
@@ -30,15 +30,13 @@ var (
 
 func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
-	if !deps.Storage.IsNodeAlmostSynced() {
+	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
-
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, err
 	}
 
 	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID)
@@ -81,8 +79,14 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		messageMetadataResponse.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
-		cmi := deps.Storage.ConfirmedMilestoneIndex()
-		ycri, ocri := dag.ConeRootIndexes(deps.Storage, cachedMsgMeta.Retain(), cmi)
+		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
+		ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi)
+		if err != nil {
+			if errors.Is(err, common.ErrOperationAborted) {
+				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
+			}
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+		}
 
 		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 		shouldPromote := false
@@ -110,16 +114,14 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 }
 
 func messageByID(c echo.Context) (*iotago.Message, error) {
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
-
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, nil
 	}
 
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedMsg.Release(true)
 
@@ -127,16 +129,14 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 }
 
 func messageBytesByID(c echo.Context) ([]byte, error) {
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
-
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, err
 	}
 
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageIDHex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
 	defer cachedMsg.Release(true)
 
@@ -144,11 +144,10 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 }
 
 func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, nil
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults
@@ -191,7 +190,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
-	if !deps.Storage.IsNodeAlmostSynced() {
+	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
@@ -214,7 +213,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
-		if _, err := msg.Deserialize(bytes, iotago.DeSeriModeNoValidation); err != nil {
+		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation); err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 	}
@@ -260,13 +259,16 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 				return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
 			}
 
-			if err := deps.PoWHandler.DoPoW(msg, nil, powWorkerCount, refreshTipsFunc); err != nil {
+			mergedCtx, mergedCtxCancel := utils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
+			defer mergedCtxCancel()
+
+			if err := deps.PoWHandler.DoPoW(mergedCtx, msg, powWorkerCount, refreshTipsFunc); err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	message, err := storage.NewMessage(msg, iotago.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}

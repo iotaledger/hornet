@@ -104,13 +104,13 @@ func (n *Node) LogWarnf(template string, args ...interface{}) {
 	n.log.Warnf(template, args...)
 }
 
-// Panic uses fmt.Sprint to construct and log a message, then panics.
-func (n *Node) Panic(args ...interface{}) {
+// LogPanic uses fmt.Sprint to construct and log a message, then panics.
+func (n *Node) LogPanic(args ...interface{}) {
 	n.log.Panic(args...)
 }
 
-// Panicf uses fmt.Sprintf to log a templated message, then panics.
-func (n *Node) Panicf(template string, args ...interface{}) {
+// LogPanicf uses fmt.Sprintf to log a templated message, then panics.
+func (n *Node) LogPanicf(template string, args ...interface{}) {
 	n.log.Panicf(template, args...)
 }
 
