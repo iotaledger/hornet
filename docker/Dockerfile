@@ -1,6 +1,5 @@
 # https://hub.docker.com/_/golang
-# golang 1.17.3-bullseye amd64
-FROM golang@sha256:3b27ac95762ce1340a4824dc3cab2dc9d63f194f0899a0a9887402c1b1463f41 AS build
+FROM golang:1.17.3-bullseye AS build
 
 ARG BUILD_TAGS=builtin_static,rocksdb
 
@@ -29,7 +28,7 @@ RUN go mod verify
 COPY . .
 
 # Build the binary
-RUN GOOS=linux GOARCH=amd64 go build \
+RUN go build \
       -tags="$BUILD_TAGS" \
       -ldflags='-w -s' -a \
       -o /go/bin/hornet
@@ -39,8 +38,7 @@ RUN GOOS=linux GOARCH=amd64 go build \
 ############################
 # https://console.cloud.google.com/gcr/images/distroless/global/cc-debian11
 # using distroless cc "nonroot" image, which includes everything in the base image (glibc, libssl and openssl)
-# gcr.io/distroless/cc-debian11:nonroot-amd64
-FROM gcr.io/distroless/cc-debian11@sha256:5d5ec54878d2b9db248c4ef302af44e784afa169eb831269f7f332bcf5021516
+FROM gcr.io/distroless/cc-debian11:nonroot
 
 EXPOSE 15600/tcp
 EXPOSE 14626/udp
