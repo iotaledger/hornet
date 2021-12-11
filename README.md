@@ -36,7 +36,7 @@ _Table of contents_
 
 ## Documentation
 
-Hornet documentation can be found here: https://hornet.docs.iota.org/
+Hornet documentation can be found here: https://wiki.iota.org/hornet/welcome
 
 ## Contributing
 
