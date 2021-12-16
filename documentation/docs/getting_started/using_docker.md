@@ -81,6 +81,7 @@ docker run \
   --restart always \
   --name hornet\
   --net=host \
+  --ulimit nofile=8192:8192 \
   -d \
   hornet:latest
 ```
@@ -95,10 +96,11 @@ docker run \
 * `--restart always` Instructs Docker to restart the container after Docker reboots.
 * `--name hornet` Name of the running container instance. You can refer to the given container by this name.
 * `--net=host` Instructs Docker to use the host's network, so the network is not isolated. We recommend that you run on host network for better performance.  This way, the container will also open any ports it needs on the host network, so you will not need to specify any ports.
+* `--ulimit nofile=8192:8192` increases the ulimits inside the container. This is important when running with large databases.
 * `-d` Instructs Docker to run the container instance in a detached mode (daemon).
 
 
-You can run `docker stop -t 200 hornet` to gracefully end the process.
+You can run `docker stop -t 300 hornet` to gracefully end the process.
 
 ## Create Username and Password for the Hornet Dashboard
 
@@ -166,20 +168,20 @@ docker start hornet
 You can restart an existing Hornet container by running:
 
 ```bash
-docker restart -t 200 hornet
+docker restart -t 300 hornet
 ```
 
-* `-t 200` Instructs Docker to wait for a grace period before shutting down.
+* `-t 300` Instructs Docker to wait for a grace period before shutting down.
 
 ### Stopping Hornet
 
 You can stop an existing Hornet container by running:
 
 ```bash
-docker stop -t 200 hornet
+docker stop -t 300 hornet
 ```
 
-* `-t 200` Instructs Docker to wait for a grace period before shutting down.
+* `-t 300` Instructs Docker to wait for a grace period before shutting down.
 
 ### Displaying Log Output
 

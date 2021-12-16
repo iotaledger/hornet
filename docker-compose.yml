@@ -9,6 +9,7 @@ services:
       nofile:
         soft: 8192
         hard: 8192
+    stop_grace_period: 5m
     # Best performance via host network:
     network_mode: host
     # Else:
