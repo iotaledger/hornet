@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 22.12.2021
+
+### Changed
+    - Update tangle bay entry nodes (#1249)
+    
+### Fixed
+    - Increase the maxWebsocketMessageSize to account for longer dashboard  usernames. (#1251)
+
+### Chore
+    - Update dashboard (#1252)
+
+### Config file changes
+
+`config.json`
+```diff
+  "p2p": {
+    "autopeering": {
+      "entryNodes": [
+        ...
+-        "/dns/entry-mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC"
++        "/dns/entry-0.mainnet.tanglebay.com/udp/14626/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC",
++        "/dns/entry-1.mainnet.tanglebay.com/udp/14636/autopeering/CATsx21mFVvQQPXeDineGs9DDeKvoBBQdzcmR6ffCkVA"
+      ],
+    }
+```
+   
 ## [1.1.1] - 22.12.2021
 
 ### Changed
