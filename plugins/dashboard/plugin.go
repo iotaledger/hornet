@@ -129,9 +129,12 @@ func configure() {
 	}
 
 	upgrader = &websocket.Upgrader{
-		HandshakeTimeout:  webSocketWriteTimeout,
-		CheckOrigin:       func(r *http.Request) bool { return true }, // allow any origin for websocket connections
-		EnableCompression: true,
+		HandshakeTimeout: webSocketWriteTimeout,
+		CheckOrigin:      func(r *http.Request) bool { return true }, // allow any origin for websocket connections
+		// Disable compression due to incompatibilities with latest Safari browsers:
+		// https://github.com/tilt-dev/tilt/issues/4746
+		// https://github.com/gorilla/websocket/issues/731
+		EnableCompression: false,
 	}
 
 	hub = websockethub.NewHub(Plugin.Logger(), upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)

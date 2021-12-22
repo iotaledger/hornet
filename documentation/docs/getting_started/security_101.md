@@ -25,7 +25,7 @@ You should consider doing the following before running a node on your device:
 * [Blocking unnecessary ports](#blocking-unnecessary-ports).
 
 ### Securing SSH logins
-If you log into your device through SSH, you should take measures to protect it from unauthorized access. Many guides have been written about this subject. For more information, see [10 Steps to Secure Open SSH](https://blog.devolutions.net/2017/4/10-steps-to-secure-open-ssh). In addition to that, you can also leverage tools such as [Fail2ban](https://www.fail2ban.org/wiki/index.php/Main_Page) to further tighten your nodes security.
+If you log into your device through SSH, you should take measures to protect it from unauthorized access. Many guides have been written about this subject. For more information, see [10 Steps to Secure Open SSH](https://blog.devolutions.net/2017/04/10-steps-to-secure-open-ssh). In addition to that, you can also leverage tools such as [Fail2ban](https://www.fail2ban.org/wiki/index.php/Main_Page) to further tighten your nodes security.
 
 ### Blocking Unnecessary Ports
 Attackers can abuse any open ports on your device. To secure your device against attacks on unused open ports, you should close all ports except those that are in use.

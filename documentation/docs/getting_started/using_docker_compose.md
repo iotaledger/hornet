@@ -42,6 +42,11 @@ services:
     image: gohornet/hornet:latest
     network_mode: host
     restart: always
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 8192
+    stop_grace_period: 5m
     cap_drop:
       - ALL
     volumes:
@@ -80,5 +85,5 @@ You can add `-d` to run detached.
 To gracefully stop the container, you can run the following command:
 
 ```sh
-docker-compose down -t 200
+docker-compose down
 ```

@@ -146,7 +146,7 @@ func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
 	assert.Len(t, hps.trackedMessages, 0)
 }
 
-func TestHeaviestSelector_SelectTipsCheckTresholds(t *testing.T) {
+func TestHeaviestSelector_SelectTipsCheckThresholds(t *testing.T) {
 	te, hps := initTest(t)
 	defer te.CleanupTestEnvironment(true)
 

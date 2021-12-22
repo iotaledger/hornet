@@ -15,8 +15,11 @@ type OnUnsubscribeHandler func(topic []byte)
 type topicManager struct {
 	mem topics.TopicsProvider
 
-	subscribedTopics     map[string]int
-	subscribedTopicsLock sync.RWMutex
+	subscribedTopics        map[string]int
+	subscribedTopicsLock    sync.RWMutex
+	subscribedTopicsDeleted int
+
+	cleanupThreshold int
 
 	onSubscribe   OnSubscribeHandler
 	onUnsubscribe OnUnsubscribeHandler
@@ -49,13 +52,13 @@ func (t *topicManager) Unsubscribe(topic []byte, subscriber interface{}) error {
 
 	err := t.mem.Unsubscribe(topic, subscriber)
 
-	//Ignore error here, always unsubscribe to be safe
+	// ignore error here, always unsubscribe to be safe
 
 	topicName := string(topic)
 	count, has := t.subscribedTopics[topicName]
 	if has {
-		if count <= 0 {
-			delete(t.subscribedTopics, topicName)
+		if count <= 1 {
+			t.deleteTopic(topicName)
 		} else {
 			t.subscribedTopics[topicName] = count - 1
 		}
@@ -82,6 +85,14 @@ func (t *topicManager) Close() error {
 	return t.mem.Close()
 }
 
+// Size returns the size of the underlying map of the topics manager.
+func (t *topicManager) Size() int {
+	t.subscribedTopicsLock.RLock()
+	defer t.subscribedTopicsLock.RUnlock()
+
+	return len(t.subscribedTopics)
+}
+
 func (t *topicManager) hasSubscribers(topicName string) bool {
 	t.subscribedTopicsLock.RLock()
 	defer t.subscribedTopicsLock.RUnlock()
@@ -90,13 +101,35 @@ func (t *topicManager) hasSubscribers(topicName string) bool {
 	return has && count > 0
 }
 
-func newTopicManager(onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler) *topicManager {
+// cleanupWithoutLocking recreates the subscribedTopics map to release memory for the garbage collector.
+func (t *topicManager) cleanupWithoutLocking() {
+	subscribedTopics := make(map[string]int)
+	for topicName, count := range t.subscribedTopics {
+		subscribedTopics[topicName] = count
+	}
+	t.subscribedTopics = subscribedTopics
+	t.subscribedTopicsDeleted = 0
+}
+
+// deleteTopic deletes a topic from the manager.
+func (t *topicManager) deleteTopic(topicName string) {
+	delete(t.subscribedTopics, topicName)
+
+	// increase the deletion counter to trigger garbage collection
+	t.subscribedTopicsDeleted++
+	if t.cleanupThreshold != 0 && t.subscribedTopicsDeleted >= t.cleanupThreshold {
+		t.cleanupWithoutLocking()
+	}
+}
+
+func newTopicManager(onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler, cleanupThreshold int) *topicManager {
 
 	mgr := &topicManager{
 		mem:              topics.NewMemProvider(),
 		subscribedTopics: make(map[string]int),
 		onSubscribe:      onSubscribe,
 		onUnsubscribe:    onUnsubscribe,
+		cleanupThreshold: cleanupThreshold,
 	}
 
 	// The normal MQTT broker uses the `mem` topic manager internally, so first unregister the default one.

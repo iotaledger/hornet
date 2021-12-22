@@ -29,21 +29,21 @@ hornet -h --full
 
 ## 1. REST API
 
-| Name                       | Description                                                                                      | Type             |
-| :------------------------- | :----------------------------------------------------------------------------------------------- | :--------------- |
-| bindAddress                | The bind address on which the REST API listens on                                                | string           |
-| [jwtAuth](#jwt-auth)       | Config for JWT auth                                                                              | object           |
-| publicRoutes               | the HTTP REST routes which can be called without authorization. Wildcards using * are allowed.   | array of strings |
-| protectedRoutes            | the HTTP REST routes which need to be called with authorization. Wildcards using * are allowed.  | array of strings |
-| powEnabled                 | Whether the node does PoW if messages are received via API                                       | bool             |
-| powWorkerCount             | The amount of workers used for calculating PoW when issuing messages via API                     | integer          |
-| [limits](#limits)          | Configuration for api limits                                                                     | object           |
+| Name                 | Description                                                                                     | Type             |
+| :------------------- | :---------------------------------------------------------------------------------------------- | :--------------- |
+| bindAddress          | The bind address on which the REST API listens on                                               | string           |
+| [jwtAuth](#jwt-auth) | Config for JWT auth                                                                             | object           |
+| publicRoutes         | the HTTP REST routes which can be called without authorization. Wildcards using * are allowed.  | array of strings |
+| protectedRoutes      | the HTTP REST routes which need to be called with authorization. Wildcards using * are allowed. | array of strings |
+| powEnabled           | Whether the node does PoW if messages are received via API                                      | bool             |
+| powWorkerCount       | The amount of workers used for calculating PoW when issuing messages via API                    | integer          |
+| [limits](#limits)    | Configuration for api limits                                                                    | object           |
 
 ### JWT Auth
 
-| Name    | Description                                                                                                                             | Type   |
-| :------ | :-------------------------------------------------------------------------------------------------------------------------------------- | :----- |
-| salt    | Salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value | string |
+| Name | Description                                                                                                                             | Type   |
+| :--- | :-------------------------------------------------------------------------------------------------------------------------------------- | :----- |
+| salt | Salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value | string |
 
 
 ### Limits
@@ -795,6 +795,7 @@ Example:
 | restAPIMetrics                                | Include restAPI metrics                                      | bool   |
 | migrationMetrics                              | Include migration metrics                                    | bool   |
 | coordinatorMetrics                            | Include coordinator metrics                                  | bool   |
+| mqttBrokerMetrics                             | Include MQTT broker metrics                                  | bool   |
 | debugMetrics                                  | Include debug metrics                                        | bool   |
 | goMetrics                                     | Include go metrics                                           | bool   |
 | processMetrics                                | Include process metrics                                      | bool   |
@@ -825,6 +826,7 @@ Example:
     "restAPIMetrics": true,
     "migrationMetrics": true,
     "coordinatorMetrics": true,
+    "mqttBrokerMetrics": true,
     "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,

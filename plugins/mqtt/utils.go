@@ -25,7 +25,7 @@ func publishOnTopic(topic string, payload interface{}) {
 		return
 	}
 
-	mqttBroker.Send(topic, jsonPayload)
+	deps.MQTTBroker.Send(topic, jsonPayload)
 }
 
 func publishConfirmedMilestone(cachedMs *storage.CachedMilestone) {
@@ -39,7 +39,7 @@ func publishLatestMilestone(cachedMs *storage.CachedMilestone) {
 }
 
 func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
-	if mqttBroker.HasSubscribers(topic) {
+	if deps.MQTTBroker.HasSubscribers(topic) {
 		publishOnTopic(topic, &milestonePayload{
 			Index: uint32(milestone.Index),
 			Time:  milestone.Timestamp.Unix(),
@@ -48,7 +48,7 @@ func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
 }
 
 func publishReceipt(r *iotago.Receipt) {
-	if mqttBroker.HasSubscribers(topicReceipts) {
+	if deps.MQTTBroker.HasSubscribers(topicReceipts) {
 		publishOnTopic(topicReceipts, r)
 	}
 }
@@ -56,25 +56,25 @@ func publishReceipt(r *iotago.Receipt) {
 func publishMessage(cachedMessage *storage.CachedMessage) {
 	defer cachedMessage.Release(true)
 
-	if mqttBroker.HasSubscribers(topicMessages) {
-		mqttBroker.Send(topicMessages, cachedMessage.Message().Data())
+	if deps.MQTTBroker.HasSubscribers(topicMessages) {
+		deps.MQTTBroker.Send(topicMessages, cachedMessage.Message().Data())
 	}
 
 	indexation := cachedMessage.Message().Indexation()
 	if indexation != nil {
 		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", hex.EncodeToString(indexation.Index))
-		if mqttBroker.HasSubscribers(indexationTopic) {
-			mqttBroker.Send(indexationTopic, cachedMessage.Message().Data())
+		if deps.MQTTBroker.HasSubscribers(indexationTopic) {
+			deps.MQTTBroker.Send(indexationTopic, cachedMessage.Message().Data())
 		}
 	}
 }
 
 func publishTransactionIncludedMessage(transactionID *iotago.TransactionID, messageID hornet.MessageID) {
 	transactionTopic := strings.ReplaceAll(topicTransactionsIncludedMessage, "{transactionId}", hex.EncodeToString(transactionID[:]))
-	if mqttBroker.HasSubscribers(transactionTopic) {
+	if deps.MQTTBroker.HasSubscribers(transactionTopic) {
 		cachedMessage := deps.Storage.CachedMessageOrNil(messageID)
 		if cachedMessage != nil {
-			mqttBroker.Send(transactionTopic, cachedMessage.Message().Data())
+			deps.MQTTBroker.Send(transactionTopic, cachedMessage.Message().Data())
 			cachedMessage.Release(true)
 		}
 	}
@@ -87,9 +87,9 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 
 	messageID := metadata.MessageID().ToHex()
 	singleMessageTopic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageID)
-	hasSingleMessageTopicSubscriber := mqttBroker.HasSubscribers(singleMessageTopic)
+	hasSingleMessageTopicSubscriber := deps.MQTTBroker.HasSubscribers(singleMessageTopic)
 
-	hasAllMessagesTopicSubscriber := mqttBroker.HasSubscribers(topicMessagesReferenced)
+	hasAllMessagesTopicSubscriber := deps.MQTTBroker.HasSubscribers(topicMessagesReferenced)
 
 	if hasSingleMessageTopicSubscriber || hasAllMessagesTopicSubscriber {
 
@@ -171,10 +171,10 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		}
 
 		if hasSingleMessageTopicSubscriber {
-			mqttBroker.Send(singleMessageTopic, jsonPayload)
+			deps.MQTTBroker.Send(singleMessageTopic, jsonPayload)
 		}
 		if hasAllMessagesTopicSubscriber {
-			mqttBroker.Send(topicMessagesReferenced, jsonPayload)
+			deps.MQTTBroker.Send(topicMessagesReferenced, jsonPayload)
 		}
 	}
 }
@@ -217,13 +217,13 @@ func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bo
 func publishOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool) {
 
 	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
-	outputsTopicHasSubscribers := mqttBroker.HasSubscribers(outputsTopic)
+	outputsTopicHasSubscribers := deps.MQTTBroker.HasSubscribers(outputsTopic)
 
 	addressBech32Topic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(deps.Bech32HRP))
-	addressBech32TopicHasSubscribers := mqttBroker.HasSubscribers(addressBech32Topic)
+	addressBech32TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressBech32Topic)
 
 	addressEd25519Topic := strings.ReplaceAll(topicAddressesEd25519Output, "{address}", output.Address().String())
-	addressEd25519TopicHasSubscribers := mqttBroker.HasSubscribers(addressEd25519Topic)
+	addressEd25519TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressEd25519Topic)
 
 	if outputsTopicHasSubscribers || addressEd25519TopicHasSubscribers || addressBech32TopicHasSubscribers {
 		if payload := payloadForOutput(ledgerIndex, output, spent); payload != nil {
@@ -236,15 +236,15 @@ func publishOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool)
 			}
 
 			if outputsTopicHasSubscribers {
-				mqttBroker.Send(outputsTopic, jsonPayload)
+				deps.MQTTBroker.Send(outputsTopic, jsonPayload)
 			}
 
 			if addressBech32TopicHasSubscribers {
-				mqttBroker.Send(addressBech32Topic, jsonPayload)
+				deps.MQTTBroker.Send(addressBech32Topic, jsonPayload)
 			}
 
 			if addressEd25519TopicHasSubscribers {
-				mqttBroker.Send(addressEd25519Topic, jsonPayload)
+				deps.MQTTBroker.Send(addressEd25519Topic, jsonPayload)
 			}
 		}
 	}
