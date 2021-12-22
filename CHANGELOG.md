@@ -11,6 +11,18 @@ All notable changes to this project will be documented in this file.
     - Fixed WebSocket disconnecting on Safari browsers (#1243)
     - Fixed MQTT memory leak (#1246)
 
+### Config file changes
+
+`config.json`
+```diff
+    "prometheus": {
+       ...
+       "coordinatorMetrics": true,
++       "mqttBrokerMetrics": true,
+       "debugMetrics": false,
+       ...
+    },
+```
 
 ## [1.1.0] - 10.12.2021
 
