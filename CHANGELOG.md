@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 22.12.2021
+
+### Changed
+    - Added ulimit and stop_grace_period to docker-compose.yml and documentation (#1242)
+
+### Fixed
+    - Fixed WebSocket disconnecting on Safari browsers (#1243)
+    - Fixed MQTT memory leak (#1246)
+
+
 ## [1.1.0] - 10.12.2021
 
 ### Added
