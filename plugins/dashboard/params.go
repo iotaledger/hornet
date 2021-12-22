@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"fmt"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -23,6 +24,8 @@ const (
 	CfgDashboardAuthPasswordHash = "dashboard.auth.passwordHash"
 	// the auth salt used for hashing the password
 	CfgDashboardAuthPasswordSalt = "dashboard.auth.passwordSalt"
+
+	maxDashboardAuthUsernameSize = 25
 )
 
 var params = &node.PluginParams{
@@ -33,7 +36,7 @@ var params = &node.PluginParams{
 			fs.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be accessed from")
 			fs.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
 			fs.Duration(CfgDashboardAuthSessionTimeout, 72*time.Hour, "how long the auth session should last before expiring")
-			fs.String(CfgDashboardAuthUsername, "admin", "the auth username")
+			fs.String(CfgDashboardAuthUsername, "admin", fmt.Sprintf("the auth username (max %d chars)", maxDashboardAuthUsernameSize))
 			fs.String(CfgDashboardAuthPasswordHash, "0000000000000000000000000000000000000000000000000000000000000000", "the auth password+salt as a scrypt hash")
 			fs.String(CfgDashboardAuthPasswordSalt, "0000000000000000000000000000000000000000000000000000000000000000", "the auth salt used for hashing the password")
 			return fs

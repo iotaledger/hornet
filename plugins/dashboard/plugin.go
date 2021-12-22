@@ -53,12 +53,13 @@ func init() {
 }
 
 const (
-	broadcastQueueSize      = 20000
-	clientSendChannelSize   = 1000
-	maxWebsocketMessageSize = 400
+	broadcastQueueSize    = 20000
+	clientSendChannelSize = 1000
 )
 
 var (
+	maxWebsocketMessageSize int64 = 400 + maxDashboardAuthUsernameSize + 10 // 10 buffer due to variable JWT lengths
+
 	Plugin *node.Plugin
 	deps   dependencies
 
@@ -108,8 +109,17 @@ func initConfigPars(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
+
+		username := deps.NodeConfig.String(CfgDashboardAuthUsername)
+		if len(username) == 0 {
+			Plugin.LogPanicf("%s cannot be empty", CfgDashboardAuthUsername)
+		}
+		if len(username) > maxDashboardAuthUsernameSize {
+			Plugin.LogPanicf("%s has a max length of %d", CfgDashboardAuthUsername, maxDashboardAuthUsernameSize)
+		}
+
 		return cfgResult{
-			DashboardAuthUsername: deps.NodeConfig.String(CfgDashboardAuthUsername),
+			DashboardAuthUsername: username,
 		}
 	}); err != nil {
 		Plugin.LogPanic(err)
