@@ -16,7 +16,7 @@ type Broker struct {
 }
 
 // NewBroker creates a new broker.
-func NewBroker(bindAddress string, wsPort int, wsPath string, workerCount int, onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler) (*Broker, error) {
+func NewBroker(bindAddress string, wsPort int, wsPath string, workerCount int, onSubscribe OnSubscribeHandler, onUnsubscribe OnUnsubscribeHandler, cleanupThreshold int) (*Broker, error) {
 
 	host, port, err := net.SplitHostPort(bindAddress)
 	if err != nil {
@@ -36,7 +36,7 @@ func NewBroker(bindAddress string, wsPort int, wsPath string, workerCount int, o
 		return nil, fmt.Errorf("configure broker config error: %w", err)
 	}
 
-	t := newTopicManager(onSubscribe, onUnsubscribe)
+	t := newTopicManager(onSubscribe, onUnsubscribe, cleanupThreshold)
 
 	b, err := broker.NewBroker(c)
 	if err != nil {
@@ -73,4 +73,9 @@ func (b *Broker) Send(topic string, payload []byte) {
 	packet.Payload = payload
 
 	b.broker.PublishMessage(packet)
+}
+
+// TopicsManagerSize returns the size of the underlying map of the topics manager.
+func (b *Broker) TopicsManagerSize() int {
+	return b.topicManager.Size()
 }

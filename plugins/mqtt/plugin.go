@@ -60,8 +60,6 @@ var (
 	topicSubscriptionWorkerPool *workerpool.WorkerPool
 
 	wasSyncBefore = false
-
-	mqttBroker *mqttpkg.Broker
 )
 
 type dependencies struct {
@@ -75,6 +73,30 @@ type dependencies struct {
 	BelowMaxDepth                         int                          `name:"belowMaxDepth"`
 	Bech32HRP                             iotago.NetworkPrefix         `name:"bech32HRP"`
 	Echo                                  *echo.Echo                   `optional:"true"`
+	MQTTBroker                            *mqttpkg.Broker
+}
+
+func provide(c *dig.Container) {
+
+	type brokerDeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps brokerDeps) *mqttpkg.Broker {
+		mqttBroker, err := mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", deps.NodeConfig.Int(CfgMQTTWorkerCount), func(topic []byte) {
+			Plugin.LogDebugf("Subscribe to topic: %s", string(topic))
+			topicSubscriptionWorkerPool.TrySubmit(topic)
+		}, func(topic []byte) {
+			Plugin.LogDebugf("Unsubscribe from topic: %s", string(topic))
+		}, deps.NodeConfig.Int(CfgMQTTTopicCleanupThreshold))
+		if err != nil {
+			Plugin.LogFatalf("MQTT broker init failed! %s", err)
+		}
+		return mqttBroker
+	}); err != nil {
+		Plugin.LogPanic(err)
+	}
 }
 
 func configure() {
@@ -185,25 +207,13 @@ func configure() {
 
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
-	var err error
-	mqttBroker, err = mqttpkg.NewBroker(deps.NodeConfig.String(CfgMQTTBindAddress), deps.NodeConfig.Int(CfgMQTTWSPort), "/ws", deps.NodeConfig.Int(CfgMQTTWorkerCount), func(topic []byte) {
-		Plugin.LogDebugf("Subscribe to topic: %s", string(topic))
-		topicSubscriptionWorkerPool.TrySubmit(topic)
-	}, func(topic []byte) {
-		Plugin.LogDebugf("Unsubscribe from topic: %s", string(topic))
-	})
-
-	if err != nil {
-		Plugin.LogFatalf("MQTT broker init failed! %s", err)
-	}
-
 	setupWebSocketRoute()
 }
 
 func setupWebSocketRoute() {
 
 	// Configure MQTT WebSocket route
-	mqttWSUrl, err := url.Parse(fmt.Sprintf("http://%s:%s", mqttBroker.Config().Host, mqttBroker.Config().WsPort))
+	mqttWSUrl, err := url.Parse(fmt.Sprintf("http://%s:%s", deps.MQTTBroker.Config().Host, deps.MQTTBroker.Config().WsPort))
 	if err != nil {
 		Plugin.LogFatalf("MQTT WebSocket init failed! %s", err)
 	}
@@ -218,7 +228,7 @@ func setupWebSocketRoute() {
 		}),
 		// We need to forward any calls to the MQTT route to the ws endpoint of our broker
 		Rewrite: map[string]string{
-			RouteMQTT: mqttBroker.Config().WsPath,
+			RouteMQTT: deps.MQTTBroker.Config().WsPath,
 		},
 	}
 
@@ -227,7 +237,7 @@ func setupWebSocketRoute() {
 
 func run() {
 
-	Plugin.LogInfof("Starting MQTT Broker (port %s) ...", mqttBroker.Config().Port)
+	Plugin.LogInfof("Starting MQTT Broker (port %s) ...", deps.MQTTBroker.Config().Port)
 
 	onLatestMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
 		if !wasSyncBefore {
@@ -298,16 +308,16 @@ func run() {
 
 	if err := Plugin.Daemon().BackgroundWorker("MQTT Broker", func(ctx context.Context) {
 		go func() {
-			mqttBroker.Start()
-			Plugin.LogInfof("Starting MQTT Broker (port %s) ... done", mqttBroker.Config().Port)
+			deps.MQTTBroker.Start()
+			Plugin.LogInfof("Starting MQTT Broker (port %s) ... done", deps.MQTTBroker.Config().Port)
 		}()
 
-		if mqttBroker.Config().Port != "" {
-			Plugin.LogInfof("You can now listen to MQTT via: http://%s:%s", mqttBroker.Config().Host, mqttBroker.Config().Port)
+		if deps.MQTTBroker.Config().Port != "" {
+			Plugin.LogInfof("You can now listen to MQTT via: http://%s:%s", deps.MQTTBroker.Config().Host, deps.MQTTBroker.Config().Port)
 		}
 
-		if mqttBroker.Config().TlsPort != "" {
-			Plugin.LogInfof("You can now listen to MQTT via: https://%s:%s", mqttBroker.Config().TlsHost, mqttBroker.Config().TlsPort)
+		if deps.MQTTBroker.Config().TlsPort != "" {
+			Plugin.LogInfof("You can now listen to MQTT via: https://%s:%s", deps.MQTTBroker.Config().TlsHost, deps.MQTTBroker.Config().TlsPort)
 		}
 
 		<-ctx.Done()
