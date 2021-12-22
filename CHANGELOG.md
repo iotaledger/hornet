@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
     - Update tangle bay entry nodes (#1249)
     
 ### Fixed
-    - Increase the maxWebsocketMessageSize to account for longer dashboard  usernames. (#1251)
+    - Increase the maxWebsocketMessageSize to account for longer dashboard usernames. (#1251)
 
 ### Chore
     - Update dashboard (#1252)
