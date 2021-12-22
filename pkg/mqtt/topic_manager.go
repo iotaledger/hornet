@@ -57,7 +57,7 @@ func (t *topicManager) Unsubscribe(topic []byte, subscriber interface{}) error {
 	topicName := string(topic)
 	count, has := t.subscribedTopics[topicName]
 	if has {
-		if count <= 0 {
+		if count <= 1 {
 			t.deleteTopic(topicName)
 		} else {
 			t.subscribedTopics[topicName] = count - 1
