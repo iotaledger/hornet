@@ -196,7 +196,7 @@
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
       "entryNodes": [
-        "/dns/entry-comnet.tanglebay.com/udp/14636/autopeering/iot4By1FD4pFLrGJ6AAe7YEeSu9RbW9xnPUmxMdQenC",
+        "/dns/entry-0.comnet.tanglebay.com/udp/14636/autopeering/3Qn5DUTK8jofwhDLcCeLMV4H63B2m6KJfBBxYGa3oKz6",
         "/dns/comnet.positronium.io/udp/14626/autopeering/CiL1Np3Uihmsa2ZpdEtcHPkwSL8qCs9yNktjWx5dyy2S"
       ],
       "entryNodesPreferIPv6": false,
