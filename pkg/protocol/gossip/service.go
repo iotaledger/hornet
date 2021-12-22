@@ -593,7 +593,7 @@ func (s *Service) registerLoggerOnEvents() {
 		s.LogInfof("canceled inbound protocol stream from %s: %s", remotePeer, reason)
 	}))
 	s.Events.Error.Attach(events.NewClosure(func(err error) {
-		s.LogError(err)
+		s.LogWarn(err)
 	}))
 }
 

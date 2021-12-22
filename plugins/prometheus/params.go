@@ -29,6 +29,8 @@ const (
 	CfgPrometheusMigration = "prometheus.migrationMetrics"
 	// include coordinator metrics.
 	CfgPrometheusCoordinator = "prometheus.coordinatorMetrics"
+	// include MQTT broker metrics.
+	CfgPrometheusMQTTBroker = "prometheus.mqttBrokerMetrics"
 	// include debug metrics.
 	CfgPrometheusDebug = "prometheus.debugMetrics"
 	// include go metrics.
@@ -54,6 +56,7 @@ var params = &node.PluginParams{
 			fs.Bool(CfgPrometheusRestAPI, true, "include restAPI metrics")
 			fs.Bool(CfgPrometheusMigration, true, "include migration metrics")
 			fs.Bool(CfgPrometheusCoordinator, true, "include coordinator metrics")
+			fs.Bool(CfgPrometheusMQTTBroker, true, "include MQTT broker metrics")
 			fs.Bool(CfgPrometheusDebug, false, "include debug metrics")
 			fs.Bool(CfgPrometheusGoMetrics, false, "include go metrics")
 			fs.Bool(CfgPrometheusProcessMetrics, false, "include process metrics")
