@@ -100,7 +100,7 @@ Example:
 | Name           | Description                                           | Type   |
 | :------------- | :---------------------------------------------------- | :----- |
 | sessionTimeout | How long the auth session should last before expiring | string |
-| username       | The auth username                                     | string |
+| username       | The auth username (max 25 chars)                      | string |
 | passwordHash   | The auth password+salt as a scrypt hash               | string |
 | passwordSalt   | The auth salt used for hashing the password           | string |
 
