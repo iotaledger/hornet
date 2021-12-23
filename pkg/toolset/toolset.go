@@ -23,6 +23,7 @@ const (
 	ToolBenchmarkCPU            = "bench-cpu"
 	ToolDatabaseMigration       = "db-migration"
 	ToolDatabaseLedgerHash      = "db-hash"
+	ToolDatabaseHealth          = "db-health"
 	ToolDatabaseSplit           = "db-split"
 	ToolCoordinatorFixStateFile = "coo-fix-state"
 )
@@ -64,6 +65,7 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 		ToolBenchmarkCPU:            benchmarkCPU,
 		ToolDatabaseMigration:       databaseMigration,
 		ToolDatabaseLedgerHash:      databaseLedgerHash,
+		ToolDatabaseHealth:          databaseHealth,
 		ToolDatabaseSplit:           databaseSplit,
 		ToolCoordinatorFixStateFile: coordinatorFixStateFile,
 	}
@@ -98,6 +100,7 @@ func listTools() {
 	fmt.Printf("%-20s benchmarks the CPU performance\n", fmt.Sprintf("%s:", ToolBenchmarkCPU))
 	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
 	fmt.Printf("%-20s calculates the sha256 hash of the ledger state of a database\n", fmt.Sprintf("%s:", ToolDatabaseLedgerHash))
+	fmt.Printf("%-20s checks the health status of the database\n", fmt.Sprintf("%s:", ToolDatabaseHealth))
 	fmt.Printf("%-20s split a legacy database into `tangle` and `utxo`\n", fmt.Sprintf("%s:", ToolDatabaseSplit))
 	fmt.Printf("%-20s applies the latest milestone in the database to the coordinator state file\n", fmt.Sprintf("%s:", ToolCoordinatorFixStateFile))
 }
