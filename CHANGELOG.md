@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 29.12.2021
+
+### Added
+    - Add new db-health tool (#1255)
+
+### Config file changes
+
+`config.json`
+```diff
+  "protocol": {
+    ...
+    "publicKeyRanges": [
+      ...
+      {
+          "key": "7bac2209b576ea2235539358c7df8ca4d2f2fc35a663c760449e65eba9f8a6e7",
+-         "start": 2111060,
++         "start": 2108160,
+          "end": 3666260
+      },
+      ...
+    ]
+  },
+```
+
 ## [1.1.2] - 22.12.2021
 
 ### Changed
