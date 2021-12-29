@@ -62,6 +62,21 @@ func (s *StoreHealthTracker) IsTainted() (bool, error) {
 	return contains, nil
 }
 
+// DatabaseVersion returns the database version.
+func (s *StoreHealthTracker) DatabaseVersion() (int, error) {
+
+	value, err := s.store.Get([]byte("dbVersion"))
+	if err != nil {
+		return 0, errors.Wrap(NewDatabaseError(err), "failed to read database version")
+	}
+
+	if len(value) < 1 {
+		return 0, errors.Wrap(NewDatabaseError(err), "failed to read database version")
+	}
+
+	return int(value[0]), nil
+}
+
 func (s *StoreHealthTracker) setDatabaseVersion(version byte) error {
 
 	_, err := s.store.Get([]byte("dbVersion"))
