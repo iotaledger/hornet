@@ -33,7 +33,7 @@ require (
 	github.com/libp2p/go-libp2p-peerstore v0.4.1-0.20211202121045-c07b052352f8
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multiaddr v0.4.1
-	github.com/pelletier/go-toml/v2 v2.0.0-beta.4
+	github.com/pelletier/go-toml/v2 v2.0.0-beta.6
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
