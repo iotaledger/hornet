@@ -14,7 +14,7 @@ image: /img/logo/HornetLogo.png
 
 This is a small tutorial on how to run your own private [Chrysalis](https://chrysalis.iota.org/) tangle.
 
-You will need to set up [a Coordinator](https://legacy.docs.iota.org/docs/getting-started/1.1/the-tangle/the-coordinator) and at least one additional [node](getting_started.md) and distribute some tokens to an address that you can manage using a wallet. You will do this by running some scripts from the _private_tangle_ folder that you can find in the HORNET repository.
+You will need to set up [a Coordinator](https://wiki.iota.org/learn/about-iota/an-introduction-to-iota#the-coordinator) and at least one additional [node](getting_started.md) and distribute some tokens to an address that you can manage using a wallet. You will do this by running some scripts from the _private_tangle_ folder that you can find in the HORNET repository.
 
 ## Preparations
 
