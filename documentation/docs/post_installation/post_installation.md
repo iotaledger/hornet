@@ -22,7 +22,7 @@ The most important configuration files are:
 * `peering.json`: includes all connection details to your static peers (neighbors).
 
 :::info
-Hornet version 0.5.x targets legacy IOTA 1.0 network. Hornet version 1.x.x targets IOTA 1.5 network, also known as [Chrysalis](https://chrysalis.docs.iota.org/), which is the focus of this documentation.
+Hornet version 0.5.x targets legacy IOTA 1.0 network. Hornet version 1.x.x targets IOTA 1.5 network, also known as [Chrysalis](https://wiki.iota.org/chrysalis-docs/welcome), which is the focus of this documentation.
 :::
 
 Depending on the installation path you selected, default configuration files may also be part of the installation process. Therefore, you may see the following configuration files in your deployment directory:
@@ -156,4 +156,4 @@ We suggest that you provide your HTTP REST API behind a reverse proxy, such as [
 
 Please see some of our additional security recommendations in the [Security 101 section](../getting_started/security_101.md).
 
-Feel free to explore more details regarding different API calls at the [IOTA client library documentation](https://chrysalis.docs.iota.org/libraries/client).
+Feel free to explore more details regarding different API calls at the [IOTA client library documentation](https://wiki.iota.org/chrysalis-docs/libraries/client).
