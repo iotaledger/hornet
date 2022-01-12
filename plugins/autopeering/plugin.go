@@ -354,7 +354,7 @@ func configureEvents() {
 		}
 
 		if peerRelation != p2p.PeerRelationAutopeered {
-			Plugin.LogWarnf("won't disconnect %s as it its relation is not '%s' but '%s'", peerID.ShortString(), p2p.PeerRelationAutopeered, peerRelation)
+			Plugin.LogWarnf("won't disconnect %s as its relation is not '%s' but '%s'", peerID.ShortString(), p2p.PeerRelationAutopeered, peerRelation)
 			return
 		}
 
