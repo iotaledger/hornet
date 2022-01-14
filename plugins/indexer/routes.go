@@ -134,22 +134,12 @@ func outputsByAddressResponse(address iotago.Address, filterType *iotago.OutputT
 		filter = utxo.FilterOutputType(*filterType)
 	}
 
-	// we need to lock the ledger here to have the same index for unspent outputs.
-	deps.UTXOManager.ReadLockLedger()
-	defer deps.UTXOManager.ReadUnlockLedger()
-
-	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+	ledgerIndex, err := deps.Indexer.LedgerIndex()
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
 	}
 
 	outputIDs := make([]string, 0)
-	if err := deps.UTXOManager.ForEachUnspentOutputOnAddress(address, filter, func(output *utxo.Output) bool {
-		outputIDs = append(outputIDs, output.OutputID().ToHex())
-		return true
-	}, utxo.ReadLockLedger(false), utxo.MaxResultCount(maxResults)); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
-	}
 
 	return &outputsResponse{
 		MaxResults:  uint32(maxResults),
@@ -345,23 +335,19 @@ func aliasByID(c echo.Context) (*outputsResponse, error) {
 		return nil, err
 	}
 
-	// we need to lock the ledger here to have the correct index for unspent info of the output.
-	deps.UTXOManager.ReadLockLedger()
-	defer deps.UTXOManager.ReadUnlockLedger()
-
-	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+	ledgerIndex, err := deps.Indexer.LedgerIndex()
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading alias failed: %s, error: %s", aliasID.String(), err)
 	}
 
 	outputIDs := make([]string, 0)
-	if err := deps.UTXOManager.ForEachUnspentAliasOutput(aliasID, func(output *utxo.Output) bool {
-		outputIDs = append(outputIDs, output.OutputID().ToHex())
-		return true
-	}, utxo.ReadLockLedger(false), utxo.MaxResultCount(maxResults)); err != nil {
+	outputID, err := deps.Indexer.AliasOutput(aliasID)
+	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading alias failed: %s", err)
 	}
-
+	if outputID != nil {
+		outputIDs = append(outputIDs, outputID.ToHex())
+	}
 	return &outputsResponse{
 		MaxResults:  uint32(maxResults),
 		Count:       uint32(len(outputIDs)),
@@ -378,21 +364,18 @@ func nftByID(c echo.Context) (*outputsResponse, error) {
 		return nil, err
 	}
 
-	// we need to lock the ledger here to have the correct index for unspent info of the output.
-	deps.UTXOManager.ReadLockLedger()
-	defer deps.UTXOManager.ReadUnlockLedger()
-
-	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+	ledgerIndex, err := deps.Indexer.LedgerIndex()
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFT failed: %s, error: %s", nftID.String(), err)
 	}
 
 	outputIDs := make([]string, 0)
-	if err := deps.UTXOManager.ForEachUnspentNFTOutput(nftID, func(output *utxo.Output) bool {
-		outputIDs = append(outputIDs, output.OutputID().ToHex())
-		return true
-	}, utxo.ReadLockLedger(false), utxo.MaxResultCount(maxResults)); err != nil {
+	outputID, err := deps.Indexer.NFTOutput(nftID)
+	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFT failed: %s", err)
+	}
+	if outputID != nil {
+		outputIDs = append(outputIDs, outputID.ToHex())
 	}
 
 	return &outputsResponse{
@@ -411,21 +394,18 @@ func foundryByID(c echo.Context) (*outputsResponse, error) {
 		return nil, err
 	}
 
-	// we need to lock the ledger here to have the correct index for unspent info of the output.
-	deps.UTXOManager.ReadLockLedger()
-	defer deps.UTXOManager.ReadUnlockLedger()
-
-	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+	ledgerIndex, err := deps.Indexer.LedgerIndex()
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundry failed: %s, error: %s", foundryID.String(), err)
 	}
 
 	outputIDs := make([]string, 0)
-	if err := deps.UTXOManager.ForEachUnspentFoundryOutput(foundryID, func(output *utxo.Output) bool {
-		outputIDs = append(outputIDs, output.OutputID().ToHex())
-		return true
-	}, utxo.ReadLockLedger(false), utxo.MaxResultCount(maxResults)); err != nil {
+	outputID, err := deps.Indexer.FoundryOutput(foundryID)
+	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundry failed: %s", err)
+	}
+	if outputID != nil {
+		outputIDs = append(outputIDs, outputID.ToHex())
 	}
 
 	return &outputsResponse{

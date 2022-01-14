@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -72,11 +73,8 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps indexerDeps) *indexer.Indexer {
-
-		//TODO: create SQLite db and pass to the indexer
-		//dbPath := filepath.Join(deps.DatabasePath, "indexer")
-
-		idx, err := indexer.NewIndexer()
+		dbPath := filepath.Join(deps.DatabasePath, "indexer")
+		idx, err := indexer.NewIndexer(dbPath)
 		if err != nil {
 			Plugin.LogPanic(err)
 		}
@@ -123,8 +121,8 @@ func run() {
 func configureEvents() {
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		if err := deps.Indexer.ApplyNewConfirmation(confirmation); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("indexer plugin hit a critical error while applying new confirmation: %s", err.Error()))
+		if err := deps.Indexer.ApplyWhiteflagConfirmation(confirmation); err != nil {
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("indexer plugin hit a critical error while applying whiteflag confirmation: %s", err.Error()))
 		}
 	})
 }
