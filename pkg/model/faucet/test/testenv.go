@@ -24,7 +24,7 @@ import (
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/iotaledger/iota.go/v2/pow"
+	"github.com/iotaledger/iota.go/v3/pow"
 )
 
 const (
