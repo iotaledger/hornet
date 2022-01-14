@@ -17,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/faucet"
+	"github.com/gohornet/hornet/plugins/indexer"
 	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/mqtt"
 	"github.com/gohornet/hornet/plugins/participation"
@@ -63,6 +64,7 @@ func main() {
 			debug.Plugin,
 			faucet.Plugin,
 			participation.Plugin,
+			indexer.Plugin,
 		}...),
 	)
 }

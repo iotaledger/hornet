@@ -2,7 +2,6 @@ package v1
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -23,10 +22,6 @@ import (
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
-)
-
-const (
-	waitForNodeSyncedTimeout = 2000 * time.Millisecond
 )
 
 const (
@@ -71,45 +66,9 @@ const (
 	// GET returns the output IDs of all UTXO changes.
 	RouteMilestoneUTXOChanges = "/milestones/:" + restapipkg.ParameterMilestoneIndex + "/utxo-changes"
 
-	// RouteOutputs is the route for getting outputs filtered by the given parameters.
-	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "issuer", "sender", "index").
-	RouteOutputs = "/outputs"
-
 	// RouteOutput is the route for getting outputs by their outputID (transactionHash + outputIndex).
 	// GET returns the output.
 	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
-
-	// RouteAddressBech32Outputs is the route for getting all output IDs for an address.
-	// The address must be encoded in bech32.
-	// GET returns the outputIDs for all outputs of this address.
-	RouteAddressBech32Outputs = "/addresses/:" + restapipkg.ParameterAddress + "/outputs"
-
-	// RouteAddressEd25519Outputs is the route for getting all output IDs for an ed25519 address.
-	// The ed25519 address must be encoded in hex.
-	// GET returns the outputIDs for all outputs of this address.
-	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + restapipkg.ParameterAddress + "/outputs"
-
-	// RouteAddressAliasOutputs is the route for getting all output IDs for an alias address.
-	// The alias address must be encoded in hex.
-	// GET returns the outputIDs for all outputs of this address.
-	RouteAddressAliasOutputs = "/addresses/alias/:" + restapipkg.ParameterAddress + "/outputs"
-
-	// RouteAddressNFTOutputs is the route for getting all output IDs for a nft address.
-	// The nft address must be encoded in hex.
-	// GET returns the outputIDs for all outputs of this address.
-	RouteAddressNFTOutputs = "/addresses/nft/:" + restapipkg.ParameterAddress + "/outputs"
-
-	// RouteAlias is the route for getting aliases by their aliasID.
-	// GET returns the outputIDs.
-	RouteAlias = "/aliases/:" + restapipkg.ParameterAliasID
-
-	// RouteNFT is the route for getting NFT by their nftID.
-	// GET returns the outputIDs.
-	RouteNFT = "/nft/:" + restapipkg.ParameterNFTID
-
-	// RouteFoundry is the route for getting foundries by their foundryID.
-	// GET returns the outputIDs.
-	RouteFoundry = "/foundries/:" + restapipkg.ParameterFoundryID
 
 	// RouteTreasury is the route for getting the current treasury output.
 	RouteTreasury = "/treasury"
@@ -306,80 +265,8 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteOutputs, func(c echo.Context) error {
-		resp, err := outputs(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
 		resp, err := outputByID(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressBech32Outputs, func(c echo.Context) error {
-		resp, err := outputsIDsByBech32Address(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressEd25519Outputs, func(c echo.Context) error {
-		resp, err := outputsIDsByEd25519Address(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressAliasOutputs, func(c echo.Context) error {
-		resp, err := outputsIDsByAliasAddress(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressNFTOutputs, func(c echo.Context) error {
-		resp, err := outputsIDsByNFTAddress(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAlias, func(c echo.Context) error {
-		resp, err := aliasByID(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteNFT, func(c echo.Context) error {
-		resp, err := nftByID(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteFoundry, func(c echo.Context) error {
-		resp, err := foundryByID(c)
 		if err != nil {
 			return err
 		}

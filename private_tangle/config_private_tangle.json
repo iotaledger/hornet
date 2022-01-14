@@ -162,6 +162,7 @@
     "profile": "auto",
     "disablePlugins": [],
     "enablePlugins": [
+      "Indexer",
       "Spammer",
       "Debug",
       "Prometheus"
