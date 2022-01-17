@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pkg/errors"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -13,6 +14,10 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/kvstore/utils"
 	iotago "github.com/iotaledger/iota.go/v3"
+)
+
+var (
+	ErrNotFound = errors.New("output not found for given filter")
 )
 
 type Indexer struct {
@@ -75,7 +80,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 
-		address, err := newAddressBytes(iotaOutput.Address)
+		address, err := addressBytesForAddress(iotaOutput.Address)
 		if err != nil {
 			return err
 		}
@@ -87,7 +92,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		copy(extended.OutputID, output.OutputID()[:])
 
 		if senderBlock := features.SenderFeatureBlock(); senderBlock != nil {
-			extended.Sender, err = newAddressBytes(senderBlock.Address)
+			extended.Sender, err = addressBytesForAddress(senderBlock.Address)
 			if err != nil {
 				return err
 			}
@@ -143,25 +148,25 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 		copy(alias.OutputID, output.OutputID()[:])
 
-		alias.StateController, err = newAddressBytes(iotaOutput.StateController)
+		alias.StateController, err = addressBytesForAddress(iotaOutput.StateController)
 		if err != nil {
 			return err
 		}
 
-		alias.GovernanceController, err = newAddressBytes(iotaOutput.GovernanceController)
+		alias.GovernanceController, err = addressBytesForAddress(iotaOutput.GovernanceController)
 		if err != nil {
 			return err
 		}
 
 		if issuerBlock := features.IssuerFeatureBlock(); issuerBlock != nil {
-			alias.Issuer, err = newAddressBytes(issuerBlock.Address)
+			alias.Issuer, err = addressBytesForAddress(issuerBlock.Address)
 			if err != nil {
 				return err
 			}
 		}
 
 		if senderBlock := features.SenderFeatureBlock(); senderBlock != nil {
-			alias.Sender, err = newAddressBytes(senderBlock.Address)
+			alias.Sender, err = addressBytesForAddress(senderBlock.Address)
 			if err != nil {
 				return err
 			}
@@ -186,14 +191,14 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		copy(nft.OutputID, output.OutputID()[:])
 
 		if issuerBlock := features.IssuerFeatureBlock(); issuerBlock != nil {
-			nft.Issuer, err = newAddressBytes(issuerBlock.Address)
+			nft.Issuer, err = addressBytesForAddress(issuerBlock.Address)
 			if err != nil {
 				return err
 			}
 		}
 
 		if senderBlock := features.SenderFeatureBlock(); senderBlock != nil {
-			nft.Sender, err = newAddressBytes(senderBlock.Address)
+			nft.Sender, err = addressBytesForAddress(senderBlock.Address)
 			if err != nil {
 				return err
 			}
@@ -236,18 +241,17 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 
-		// If this is not an AliasAddress something went terribly wrong before
-		aliasAddr := iotaOutput.Address.(*iotago.AliasAddress)
-		aliasID := aliasAddr.AliasID()
-
+		address, err := addressBytesForAddress(iotaOutput.Address)
+		if err != nil {
+			return err
+		}
 		foundry := &foundry{
 			FoundryID: foundryID[:],
 			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
 			Amount:    iotaOutput.Amount,
-			AliasID:   make(aliasIDBytes, iotago.AliasIDLength),
+			Address:   address,
 		}
 		copy(foundry.OutputID, output.OutputID()[:])
-		copy(foundry.AliasID, aliasID[:])
 
 		if err := tx.Create(foundry).Error; err != nil {
 			return err
@@ -315,6 +319,9 @@ func (i *Indexer) ApplyWhiteflagConfirmation(confirmation *whiteflag.Confirmatio
 func (i *Indexer) LedgerIndex() (milestone.Index, error) {
 	status := &status{}
 	if err := i.db.Take(&status).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return 0, ErrNotFound
+		}
 		return 0, err
 	}
 	return status.LedgerIndex, nil

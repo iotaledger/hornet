@@ -47,6 +47,9 @@ const (
 	// QueryParameterOutputType is used to filter for a certain output type.
 	QueryParameterOutputType = "type"
 
+	// QueryParameterAddress is used to filter for a certain address.
+	QueryParameterAddress = "address"
+
 	// QueryParameterIssuer is used to filter for a certain issuer.
 	QueryParameterIssuer = "issuer"
 
@@ -298,10 +301,6 @@ func ParseOutputTypeQueryParam(c echo.Context) (*iotago.OutputType, error) {
 func ParseBech32AddressQueryParam(c echo.Context, prefix iotago.NetworkPrefix, paramName string) (iotago.Address, error) {
 	addressParam := strings.ToLower(c.QueryParam(paramName))
 
-	if len(addressParam) != 1 {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid %s, error: parameter count must equal 1", paramName)
-	}
-
 	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
@@ -330,4 +329,8 @@ func ParseIndexQueryParam(c echo.Context) (string, []byte, error) {
 		return index, nil, errors.WithMessage(ErrInvalidParameter, fmt.Sprintf("query parameter %s too long, max. %d bytes but is %d", QueryParameterIndex, iotago.MaxIndexationTagLength, len(indexBytes)))
 	}
 	return index, indexBytes, nil
+}
+
+func ParseBoolQueryParam(c echo.Context, paramName string) (bool, error) {
+	return strconv.ParseBool(c.QueryParam(paramName))
 }

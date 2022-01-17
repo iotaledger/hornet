@@ -1,60 +1,72 @@
 package indexer
 
 import (
-	"net/http"
-
+	"github.com/gohornet/hornet/pkg/indexer"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-
-	iotago "github.com/iotaledger/iota.go/v3"
-
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/restapi"
+	"net/http"
 )
 
 const (
 
 	// RouteOutputs is the route for getting outputs filtered by the given parameters.
-	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "issuer", "sender", "index").
+	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "address", "requiresDustReturn", "issuer", "sender", "tag").
 	RouteOutputs = "/outputs"
 
-	// RouteAddressBech32Outputs is the route for getting all output IDs for an address.
-	// The address must be encoded in bech32.
-	// GET returns the outputIDs for all outputs of this address.
-	RouteAddressBech32Outputs = "/addresses/:" + restapi.ParameterAddress + "/outputs"
+	// RouteAliases is the route for getting aliases filtered by the given parameters.
+	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "stateController", "governanceController", "issuer", "sender").
+	RouteAliases = "/aliases"
 
-	// RouteAddressEd25519Outputs is the route for getting all output IDs for an ed25519 address.
-	// The ed25519 address must be encoded in hex.
-	// GET returns the outputIDs for all outputs of this address.
-	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + restapi.ParameterAddress + "/outputs"
-
-	// RouteAddressAliasOutputs is the route for getting all output IDs for an alias address.
-	// The alias address must be encoded in hex.
-	// GET returns the outputIDs for all outputs of this address.
-	RouteAddressAliasOutputs = "/addresses/alias/:" + restapi.ParameterAddress + "/outputs"
-
-	// RouteAddressNFTOutputs is the route for getting all output IDs for a nft address.
-	// The nft address must be encoded in hex.
-	// GET returns the outputIDs for all outputs of this address.
-	RouteAddressNFTOutputs = "/addresses/nft/:" + restapi.ParameterAddress + "/outputs"
-
-	// RouteAlias is the route for getting aliases by their aliasID.
+	// RouteAliasByID is the route for getting aliases by their aliasID.
 	// GET returns the outputIDs.
-	RouteAlias = "/aliases/:" + restapi.ParameterAliasID
+	RouteAliasByID = "/aliases/:" + restapi.ParameterAliasID
 
-	// RouteNFT is the route for getting NFT by their nftID.
-	// GET returns the outputIDs.
-	RouteNFT = "/nft/:" + restapi.ParameterNFTID
+	// RouteNFT is the route for getting NFT filtered by the given parameters.
+	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "address", "requiresDustReturn", "issuer", "sender", "tag").
+	RouteNFT = "/nft"
 
-	// RouteFoundry is the route for getting foundries by their foundryID.
+	// RouteNFTByID is the route for getting NFT by their nftID.
 	// GET returns the outputIDs.
-	RouteFoundry = "/foundries/:" + restapi.ParameterFoundryID
+	RouteNFTByID = "/nft/:" + restapi.ParameterNFTID
+
+	// RouteFoundries is the route for getting foundries filtered by the given parameters.
+	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "address").
+	RouteFoundries = "/foundries"
+
+	// RouteFoundryByID is the route for getting foundries by their foundryID.
+	// GET returns the outputIDs.
+	RouteFoundryByID = "/foundries/:" + restapi.ParameterFoundryID
 )
+
+const (
+	// QueryParameterRequiresDustReturn is used to filter for outputs requiring a dust return.
+	QueryParameterRequiresDustReturn = "requiresDustReturn"
+
+	// QueryParameterStateController is used to filter for a certain state controller address.
+	QueryParameterStateController = "stateController"
+
+	// QueryParameterGovernanceController is used to filter for a certain governance controller address.
+	QueryParameterGovernanceController = "governanceController"
+)
+
+func nodeSyncedMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) (err error) {
+			if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+				return errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
+			}
+			return next(c)
+		}
+	}
+}
 
 func configureRoutes(routeGroup *echo.Group) {
 
+	routeGroup.Use(nodeSyncedMiddleware())
+
 	routeGroup.GET(RouteOutputs, func(c echo.Context) error {
-		resp, err := outputs(c)
+		resp, err := outputsWithFilter(c)
 		if err != nil {
 			return err
 		}
@@ -62,8 +74,8 @@ func configureRoutes(routeGroup *echo.Group) {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteAddressBech32Outputs, func(c echo.Context) error {
-		resp, err := outputsIDsByBech32Address(c)
+	routeGroup.GET(RouteAliases, func(c echo.Context) error {
+		resp, err := aliasesWithFilter(c)
 		if err != nil {
 			return err
 		}
@@ -71,34 +83,7 @@ func configureRoutes(routeGroup *echo.Group) {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteAddressEd25519Outputs, func(c echo.Context) error {
-		resp, err := outputsIDsByEd25519Address(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressAliasOutputs, func(c echo.Context) error {
-		resp, err := outputsIDsByAliasAddress(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressNFTOutputs, func(c echo.Context) error {
-		resp, err := outputsIDsByNFTAddress(c)
-		if err != nil {
-			return err
-		}
-
-		return restapi.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAlias, func(c echo.Context) error {
+	routeGroup.GET(RouteAliasByID, func(c echo.Context) error {
 		resp, err := aliasByID(c)
 		if err != nil {
 			return err
@@ -108,6 +93,15 @@ func configureRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteNFT, func(c echo.Context) error {
+		resp, err := nftWithFilter(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteNFTByID, func(c echo.Context) error {
 		resp, err := nftByID(c)
 		if err != nil {
 			return err
@@ -116,7 +110,16 @@ func configureRoutes(routeGroup *echo.Group) {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteFoundry, func(c echo.Context) error {
+	routeGroup.GET(RouteFoundries, func(c echo.Context) error {
+		resp, err := foundriesWithFilter(c)
+		if err != nil {
+			return err
+		}
+
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteFoundryByID, func(c echo.Context) error {
 		resp, err := foundryByID(c)
 		if err != nil {
 			return err
@@ -126,113 +129,24 @@ func configureRoutes(routeGroup *echo.Group) {
 	})
 }
 
-func outputsByAddressResponse(address iotago.Address, filterType *iotago.OutputType) (*outputsResponse, error) {
+func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	maxResults := deps.RestAPILimitsMaxResults
+	filters := []indexer.ExtendedOutputFilterOption{indexer.ExtendedOutputMaxResults(maxResults)}
 
-	var filter *utxo.FilterOptions
-	if filterType != nil {
-		filter = utxo.FilterOutputType(*filterType)
-	}
-
-	ledgerIndex, err := deps.Indexer.LedgerIndex()
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed: %s, error: %s", address, err)
-	}
-
-	outputIDs := make([]string, 0)
-
-	return &outputsResponse{
-		MaxResults:  uint32(maxResults),
-		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs,
-		LedgerIndex: ledgerIndex,
-	}, nil
-}
-
-func outputsIDsByBech32Address(c echo.Context) (*outputsResponse, error) {
-
-	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
-	filteredType, err := restapi.ParseOutputTypeQueryParam(c)
-	if err != nil {
-		return nil, err
-	}
-
-	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
-	if err != nil {
-		return nil, err
-	}
-	return outputsByAddressResponse(bech32Address, filteredType)
-}
-
-func outputsIDsByEd25519Address(c echo.Context) (*outputsResponse, error) {
-
-	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
-	filteredType, err := restapi.ParseOutputTypeQueryParam(c)
-	if err != nil {
-		return nil, err
-	}
-
-	address, err := restapi.ParseEd25519AddressParam(c)
-	if err != nil {
-		return nil, err
-	}
-	return outputsByAddressResponse(address, filteredType)
-}
-
-func outputsIDsByAliasAddress(c echo.Context) (*outputsResponse, error) {
-
-	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
-	filteredType, err := restapi.ParseOutputTypeQueryParam(c)
-	if err != nil {
-		return nil, err
-	}
-
-	address, err := restapi.ParseAliasAddressParam(c)
-	if err != nil {
-		return nil, err
-	}
-	return outputsByAddressResponse(address, filteredType)
-}
-
-func outputsIDsByNFTAddress(c echo.Context) (*outputsResponse, error) {
-
-	if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-	}
-
-	filteredType, err := restapi.ParseOutputTypeQueryParam(c)
-	if err != nil {
-		return nil, err
-	}
-
-	address, err := restapi.ParseNFTAddressParam(c)
-	if err != nil {
-		return nil, err
-	}
-	return outputsByAddressResponse(address, filteredType)
-}
-
-func outputs(c echo.Context) (*outputsResponse, error) {
-	filterType, err := restapi.ParseOutputTypeQueryParam(c)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(c.QueryParam(restapi.QueryParameterIssuer)) > 0 {
-		issuer, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterIssuer)
+	if len(c.QueryParam(restapi.QueryParameterAddress)) > 0 {
+		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
-		return outputsByIssuerResponse(issuer, filterType)
+		filters = append(filters, indexer.ExtendedOutputUnlockableByAddress(address))
+	}
+
+	if len(c.QueryParam(QueryParameterRequiresDustReturn)) > 0 {
+		requiresDust, err := restapi.ParseBoolQueryParam(c, QueryParameterRequiresDustReturn)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputRequiresDustReturn(requiresDust))
 	}
 
 	if len(c.QueryParam(restapi.QueryParameterSender)) > 0 {
@@ -240,89 +154,31 @@ func outputs(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
+		filters = append(filters, indexer.ExtendedOutputSender(sender))
+	}
 
+	if len(c.QueryParam(restapi.QueryParameterIndex)) > 0 {
 		_, indexBytes, err := restapi.ParseIndexQueryParam(c)
 		if err != nil {
 			return nil, err
 		}
-		return outputsBySenderAndIndexResponse(sender, indexBytes, filterType)
+		filters = append(filters, indexer.ExtendedOutputTag(indexBytes))
 	}
 
-	return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "no %s or %s query parameter provided", restapi.QueryParameterIssuer, restapi.QueryParameterSender)
-}
-
-func outputsByIssuerResponse(issuer iotago.Address, filterType *iotago.OutputType) (*outputsResponse, error) {
-	maxResults := deps.RestAPILimitsMaxResults
-
-	var filter *utxo.FilterOptions
-	if filterType != nil {
-		filter = utxo.FilterOutputType(*filterType)
-	}
-
-	// we need to lock the ledger here to have the same index for unspent outputs.
-	deps.UTXOManager.ReadLockLedger()
-	defer deps.UTXOManager.ReadUnlockLedger()
-
-	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+	ledgerIndex, err := deps.Indexer.LedgerIndex()
 	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs by issuer failed: %s", err)
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs failed: %s", err)
 	}
 
-	outputIDs := make([]string, 0)
-	if err := deps.UTXOManager.ForEachUnspentOutputWithIssuer(issuer, filter, func(output *utxo.Output) bool {
-		outputIDs = append(outputIDs, output.OutputID().ToHex())
-		return true
-	}, utxo.ReadLockLedger(false), utxo.MaxResultCount(maxResults)); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs by issuer failed: %s", err)
+	outputIDs, err := deps.Indexer.ExtendedOutputsWithFilters(filters...)
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs failed: %s", err)
 	}
 
 	return &outputsResponse{
 		MaxResults:  uint32(maxResults),
 		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs,
-		LedgerIndex: ledgerIndex,
-	}, nil
-}
-
-func outputsBySenderAndIndexResponse(sender iotago.Address, index []byte, filterType *iotago.OutputType) (*outputsResponse, error) {
-	maxResults := deps.RestAPILimitsMaxResults
-
-	var filter *utxo.FilterOptions
-	if filterType != nil {
-		filter = utxo.FilterOutputType(*filterType)
-	}
-
-	// we need to lock the ledger here to have the same index for unspent outputs.
-	deps.UTXOManager.ReadLockLedger()
-	defer deps.UTXOManager.ReadUnlockLedger()
-
-	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs by sender failed: %s", err)
-	}
-
-	outputIDs := make([]string, 0)
-
-	if len(index) > 0 {
-		if err := deps.UTXOManager.ForEachUnspentOutputWithSenderAndIndexTag(sender, index, filter, func(output *utxo.Output) bool {
-			outputIDs = append(outputIDs, output.OutputID().ToHex())
-			return true
-		}, utxo.ReadLockLedger(false), utxo.MaxResultCount(maxResults)); err != nil {
-			return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs by sender and tag failed: %s", err)
-		}
-	} else {
-		if err := deps.UTXOManager.ForEachUnspentOutputWithSender(sender, filter, func(output *utxo.Output) bool {
-			outputIDs = append(outputIDs, output.OutputID().ToHex())
-			return true
-		}, utxo.ReadLockLedger(false), utxo.MaxResultCount(maxResults)); err != nil {
-			return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs by sender failed: %s", err)
-		}
-	}
-
-	return &outputsResponse{
-		MaxResults:  uint32(maxResults),
-		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs,
+		OutputIDs:   outputIDs.ToHex(),
 		LedgerIndex: ledgerIndex,
 	}, nil
 }
@@ -340,18 +196,72 @@ func aliasByID(c echo.Context) (*outputsResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading alias failed: %s, error: %s", aliasID.String(), err)
 	}
 
-	outputIDs := make([]string, 0)
 	outputID, err := deps.Indexer.AliasOutput(aliasID)
 	if err != nil {
+		if errors.Is(err, indexer.ErrNotFound) {
+			return nil, errors.WithMessage(echo.ErrNotFound, "alias not found")
+		}
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading alias failed: %s", err)
 	}
-	if outputID != nil {
-		outputIDs = append(outputIDs, outputID.ToHex())
+
+	return &outputsResponse{
+		MaxResults:  uint32(maxResults),
+		Count:       1,
+		OutputIDs:   []string{outputID.ToHex()},
+		LedgerIndex: ledgerIndex,
+	}, nil
+}
+
+func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
+	maxResults := deps.RestAPILimitsMaxResults
+	filters := []indexer.AliasFilterOption{indexer.AliasMaxResults(maxResults)}
+
+	if len(c.QueryParam(QueryParameterStateController)) > 0 {
+		stateController, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterStateController)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasStateController(stateController))
 	}
+
+	if len(c.QueryParam(QueryParameterGovernanceController)) > 0 {
+		governanceController, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterGovernanceController)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasGovernanceController(governanceController))
+	}
+
+	if len(c.QueryParam(restapi.QueryParameterIssuer)) > 0 {
+		issuer, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterIssuer)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasIssuer(issuer))
+	}
+
+	if len(c.QueryParam(restapi.QueryParameterSender)) > 0 {
+		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterSender)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasSender(sender))
+	}
+
+	ledgerIndex, err := deps.Indexer.LedgerIndex()
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading aliases failed: %s", err)
+	}
+
+	outputIDs, err := deps.Indexer.AliasOutputsWithFilters(filters...)
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading aliases failed: %s", err)
+	}
+
 	return &outputsResponse{
 		MaxResults:  uint32(maxResults),
 		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs,
+		OutputIDs:   outputIDs.ToHex(),
 		LedgerIndex: ledgerIndex,
 	}, nil
 }
@@ -369,19 +279,80 @@ func nftByID(c echo.Context) (*outputsResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFT failed: %s, error: %s", nftID.String(), err)
 	}
 
-	outputIDs := make([]string, 0)
 	outputID, err := deps.Indexer.NFTOutput(nftID)
 	if err != nil {
+		if errors.Is(err, indexer.ErrNotFound) {
+			return nil, errors.WithMessage(echo.ErrNotFound, "NFT not found")
+		}
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFT failed: %s", err)
 	}
-	if outputID != nil {
-		outputIDs = append(outputIDs, outputID.ToHex())
+
+	return &outputsResponse{
+		MaxResults:  uint32(maxResults),
+		Count:       1,
+		OutputIDs:   []string{outputID.ToHex()},
+		LedgerIndex: ledgerIndex,
+	}, nil
+}
+
+func nftWithFilter(c echo.Context) (*outputsResponse, error) {
+	maxResults := deps.RestAPILimitsMaxResults
+	filters := []indexer.NFTFilterOption{indexer.NFTMaxResults(maxResults)}
+
+	if len(c.QueryParam(restapi.QueryParameterAddress)) > 0 {
+		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterAddress)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTUnlockableByAddress(address))
+	}
+
+	if len(c.QueryParam(QueryParameterRequiresDustReturn)) > 0 {
+		requiresDust, err := restapi.ParseBoolQueryParam(c, QueryParameterRequiresDustReturn)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTRequiresDustReturn(requiresDust))
+	}
+
+	if len(c.QueryParam(restapi.QueryParameterIssuer)) > 0 {
+		issuer, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterIssuer)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTIssuer(issuer))
+	}
+
+	if len(c.QueryParam(restapi.QueryParameterSender)) > 0 {
+		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterSender)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTSender(sender))
+	}
+
+	if len(c.QueryParam(restapi.QueryParameterIndex)) > 0 {
+		_, indexBytes, err := restapi.ParseIndexQueryParam(c)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTTag(indexBytes))
+	}
+
+	ledgerIndex, err := deps.Indexer.LedgerIndex()
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFTs failed: %s", err)
+	}
+
+	outputIDs, err := deps.Indexer.NFTOutputsWithFilters(filters...)
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFTs failed: %s", err)
 	}
 
 	return &outputsResponse{
 		MaxResults:  uint32(maxResults),
 		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs,
+		OutputIDs:   outputIDs.ToHex(),
 		LedgerIndex: ledgerIndex,
 	}, nil
 }
@@ -399,19 +370,48 @@ func foundryByID(c echo.Context) (*outputsResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundry failed: %s, error: %s", foundryID.String(), err)
 	}
 
-	outputIDs := make([]string, 0)
 	outputID, err := deps.Indexer.FoundryOutput(foundryID)
 	if err != nil {
+		if errors.Is(err, indexer.ErrNotFound) {
+			return nil, errors.WithMessage(echo.ErrNotFound, "foundry not found")
+		}
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundry failed: %s", err)
 	}
-	if outputID != nil {
-		outputIDs = append(outputIDs, outputID.ToHex())
+
+	return &outputsResponse{
+		MaxResults:  uint32(maxResults),
+		Count:       1,
+		OutputIDs:   []string{outputID.ToHex()},
+		LedgerIndex: ledgerIndex,
+	}, nil
+}
+
+func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
+	maxResults := deps.RestAPILimitsMaxResults
+	filters := []indexer.FoundryFilterOption{indexer.FoundryMaxResults(maxResults)}
+
+	if len(c.QueryParam(restapi.QueryParameterAddress)) > 0 {
+		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterAddress)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.FoundryUnlockableByAddress(address))
+	}
+
+	ledgerIndex, err := deps.Indexer.LedgerIndex()
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundries failed: %s", err)
+	}
+
+	outputIDs, err := deps.Indexer.FoundryOutputsWithFilters(filters...)
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundries failed: %s", err)
 	}
 
 	return &outputsResponse{
 		MaxResults:  uint32(maxResults),
 		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs,
+		OutputIDs:   outputIDs.ToHex(),
 		LedgerIndex: ledgerIndex,
 	}, nil
 }
