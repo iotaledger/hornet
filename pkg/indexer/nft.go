@@ -3,9 +3,6 @@ package indexer
 import (
 	"time"
 
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
-	
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -87,29 +84,29 @@ func nftFilterOptions(optionalOptions []NFTFilterOption) *NFTFilterOptions {
 	return result
 }
 
-func (i *Indexer) NFTOutput(nftID *iotago.NFTID) (iotago.OutputID, error) {
-	result := &queryResult{}
-	if err := i.db.Take(&nft{}, nftID[:]).
-		Find(&result).
-		Limit(1).
-		Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return NullOutputID, ErrNotFound
-		}
-		return NullOutputID, err
+func (i *Indexer) NFTOutput(nftID *iotago.NFTID) (iotago.OutputID, milestone.Index, error) {
+	query := i.db.Model(&nft{}).
+		Where("nft_id = ?", nftID[:]).
+		Limit(1)
+
+	outputIDs, ledgerIndex, err := i.combineOutputIDFilteredQuery(query)
+	if err != nil {
+		return NullOutputID, 0, err
 	}
-	return result.OutputID.ID(), nil
+	if len(outputIDs) == 0 {
+		return NullOutputID, 0, ErrNotFound
+	}
+	return outputIDs[0], ledgerIndex, nil
 }
 
-func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) (iotago.OutputIDs, error) {
-	var results queryResults
+func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) (iotago.OutputIDs, milestone.Index, error) {
 	opts := nftFilterOptions(filters)
-	query := i.db.Model(&extendedOutput{})
+	query := i.db.Model(&nft{})
 
 	if opts.unlockableByAddress != nil {
 		addr, err := addressBytesForAddress(*opts.unlockableByAddress)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		query = query.Where("address = ?", addr[:])
 	}
@@ -125,7 +122,7 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) (iotago.Outp
 	if opts.issuer != nil {
 		addr, err := addressBytesForAddress(*opts.issuer)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		query = query.Where("issuer = ?", addr[:])
 	}
@@ -133,7 +130,7 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) (iotago.Outp
 	if opts.sender != nil {
 		addr, err := addressBytesForAddress(*opts.sender)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		query = query.Where("sender = ?", addr[:])
 	}
@@ -146,8 +143,5 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) (iotago.Outp
 		query = query.Limit(opts.maxResults)
 	}
 
-	if err := query.Find(&results).Error; err != nil {
-		return nil, err
-	}
-	return results.IDs(), nil
+	return i.combineOutputIDFilteredQuery(query)
 }

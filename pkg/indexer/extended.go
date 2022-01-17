@@ -2,6 +2,8 @@ package indexer
 
 import (
 	"time"
+	
+	"gorm.io/gorm"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -75,15 +77,15 @@ func extendedOutputFilterOptions(optionalOptions []ExtendedOutputFilterOption) *
 	return result
 }
 
-func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOption) (iotago.OutputIDs, error) {
-	var results queryResults
+func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOption) (iotago.OutputIDs, milestone.Index, error) {
+
 	opts := extendedOutputFilterOptions(filters)
 	query := i.db.Model(&extendedOutput{})
 
 	if opts.unlockableByAddress != nil {
 		addr, err := addressBytesForAddress(*opts.unlockableByAddress)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		query = query.Where("address = ?", addr[:])
 	}
@@ -99,7 +101,7 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 	if opts.sender != nil {
 		addr, err := addressBytesForAddress(*opts.sender)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		query = query.Where("sender = ?", addr[:])
 	}
@@ -112,8 +114,24 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 		query = query.Limit(opts.maxResults)
 	}
 
-	if err := query.Find(&results).Error; err != nil {
-		return nil, err
+	return i.combineOutputIDFilteredQuery(query)
+}
+
+func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB) (iotago.OutputIDs, milestone.Index, error) {
+
+	// This combines the query with a second query that checks for the current ledger_index.
+	// This way we do not need to lock anything and we know the index matches the results.
+	//TODO: measure performance for big datasets
+	ledgerIndexQuery := i.db.Model(&status{}).Select("ledger_index")
+	joinedQuery := i.db.Table("(?), (?)", query.Select("output_id"), ledgerIndexQuery)
+
+	var results queryResults
+	if err := joinedQuery.Find(&results).Error; err != nil {
+		return nil, 0, err
 	}
-	return results.IDs(), nil
+	ledgerIndex := milestone.Index(0)
+	if len(results) > 0 {
+		ledgerIndex = results[0].LedgerIndex
+	}
+	return results.IDs(), ledgerIndex, nil
 }

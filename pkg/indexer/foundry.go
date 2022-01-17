@@ -1,9 +1,7 @@
 package indexer
 
 import (
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
-
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -45,29 +43,29 @@ func foundryFilterOptions(optionalOptions []FoundryFilterOption) *FoundryFilterO
 	return result
 }
 
-func (i *Indexer) FoundryOutput(foundryID *iotago.FoundryID) (iotago.OutputID, error) {
-	result := &queryResult{}
-	if err := i.db.Take(&foundry{}, foundryID[:]).
-		Limit(1).
-		Find(&result).
-		Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return NullOutputID, ErrNotFound
-		}
-		return NullOutputID, err
+func (i *Indexer) FoundryOutput(foundryID *iotago.FoundryID) (iotago.OutputID, milestone.Index, error) {
+	query := i.db.Model(&foundry{}).
+		Where("foundry_id = ?", foundryID[:]).
+		Limit(1)
+
+	outputIDs, ledgerIndex, err := i.combineOutputIDFilteredQuery(query)
+	if err != nil {
+		return NullOutputID, 0, err
 	}
-	return result.OutputID.ID(), nil
+	if len(outputIDs) == 0 {
+		return NullOutputID, 0, ErrNotFound
+	}
+	return outputIDs[0], ledgerIndex, nil
 }
 
-func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) (iotago.OutputIDs, error) {
-	var results queryResults
+func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) (iotago.OutputIDs, milestone.Index, error) {
 	opts := foundryFilterOptions(filters)
 	query := i.db.Model(&foundry{})
 
 	if opts.unlockableByAddress != nil {
 		addr, err := addressBytesForAddress(*opts.unlockableByAddress)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		query = query.Where("address = ?", addr[:])
 	}
@@ -76,8 +74,5 @@ func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) (iot
 		query = query.Limit(opts.maxResults)
 	}
 
-	if err := query.Find(&results).Error; err != nil {
-		return nil, err
-	}
-	return results.IDs(), nil
+	return i.combineOutputIDFilteredQuery(query)
 }

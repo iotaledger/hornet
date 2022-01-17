@@ -165,12 +165,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.ExtendedOutputTag(indexBytes))
 	}
 
-	ledgerIndex, err := deps.Indexer.LedgerIndex()
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs failed: %s", err)
-	}
-
-	outputIDs, err := deps.Indexer.ExtendedOutputsWithFilters(filters...)
+	outputIDs, ledgerIndex, err := deps.Indexer.ExtendedOutputsWithFilters(filters...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs failed: %s", err)
 	}
@@ -191,12 +186,7 @@ func aliasByID(c echo.Context) (*outputsResponse, error) {
 		return nil, err
 	}
 
-	ledgerIndex, err := deps.Indexer.LedgerIndex()
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading alias failed: %s, error: %s", aliasID.String(), err)
-	}
-
-	outputID, err := deps.Indexer.AliasOutput(aliasID)
+	outputID, ledgerIndex, err := deps.Indexer.AliasOutput(aliasID)
 	if err != nil {
 		if errors.Is(err, indexer.ErrNotFound) {
 			return nil, errors.WithMessage(echo.ErrNotFound, "alias not found")
@@ -248,12 +238,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.AliasSender(sender))
 	}
 
-	ledgerIndex, err := deps.Indexer.LedgerIndex()
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading aliases failed: %s", err)
-	}
-
-	outputIDs, err := deps.Indexer.AliasOutputsWithFilters(filters...)
+	outputIDs, ledgerIndex, err := deps.Indexer.AliasOutputsWithFilters(filters...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading aliases failed: %s", err)
 	}
@@ -274,12 +259,7 @@ func nftByID(c echo.Context) (*outputsResponse, error) {
 		return nil, err
 	}
 
-	ledgerIndex, err := deps.Indexer.LedgerIndex()
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFT failed: %s, error: %s", nftID.String(), err)
-	}
-
-	outputID, err := deps.Indexer.NFTOutput(nftID)
+	outputID, ledgerIndex, err := deps.Indexer.NFTOutput(nftID)
 	if err != nil {
 		if errors.Is(err, indexer.ErrNotFound) {
 			return nil, errors.WithMessage(echo.ErrNotFound, "NFT not found")
@@ -339,12 +319,7 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTTag(indexBytes))
 	}
 
-	ledgerIndex, err := deps.Indexer.LedgerIndex()
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFTs failed: %s", err)
-	}
-
-	outputIDs, err := deps.Indexer.NFTOutputsWithFilters(filters...)
+	outputIDs, ledgerIndex, err := deps.Indexer.NFTOutputsWithFilters(filters...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFTs failed: %s", err)
 	}
@@ -365,12 +340,7 @@ func foundryByID(c echo.Context) (*outputsResponse, error) {
 		return nil, err
 	}
 
-	ledgerIndex, err := deps.Indexer.LedgerIndex()
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundry failed: %s, error: %s", foundryID.String(), err)
-	}
-
-	outputID, err := deps.Indexer.FoundryOutput(foundryID)
+	outputID, ledgerIndex, err := deps.Indexer.FoundryOutput(foundryID)
 	if err != nil {
 		if errors.Is(err, indexer.ErrNotFound) {
 			return nil, errors.WithMessage(echo.ErrNotFound, "foundry not found")
@@ -398,12 +368,7 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.FoundryUnlockableByAddress(address))
 	}
 
-	ledgerIndex, err := deps.Indexer.LedgerIndex()
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundries failed: %s", err)
-	}
-
-	outputIDs, err := deps.Indexer.FoundryOutputsWithFilters(filters...)
+	outputIDs, ledgerIndex, err := deps.Indexer.FoundryOutputsWithFilters(filters...)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundries failed: %s", err)
 	}

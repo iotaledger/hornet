@@ -24,7 +24,8 @@ type status struct {
 }
 
 type queryResult struct {
-	OutputID outputIDBytes
+	OutputID    outputIDBytes
+	LedgerIndex milestone.Index
 }
 
 func (o outputIDBytes) ID() iotago.OutputID {
