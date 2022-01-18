@@ -16,6 +16,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -29,6 +30,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	indexerPlugin "github.com/gohornet/hornet/plugins/indexer"
 	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -108,6 +110,7 @@ func provide(c *dig.Container) {
 		SyncManager               *syncmanager.SyncManager
 		PowHandler                *pow.Handler
 		UTXOManager               *utxo.Manager
+		Indexer                   *indexer.Indexer
 		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
 		NetworkID                 uint64                       `name:"networkId"`
 		DeSerializationParameters *iotago.DeSerializationParameters
@@ -126,6 +129,7 @@ func provide(c *dig.Container) {
 			deps.DeSerializationParameters,
 			deps.BelowMaxDepth,
 			deps.UTXOManager,
+			deps.Indexer,
 			&faucetAddress,
 			faucetSigner,
 			deps.TipSelector.SelectNonLazyTips,
@@ -147,6 +151,16 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
+	// check if RestAPIV1 plugin is disabled
+	if Plugin.Node.IsSkipped(restapiv1.Plugin) {
+		Plugin.LogPanic("RestAPIV1 plugin needs to be enabled to use the Faucet plugin")
+	}
+
+	// check if Indexer plugin is disabled
+	if Plugin.Node.IsSkipped(indexerPlugin.Plugin) {
+		Plugin.LogPanic("Indexer plugin needs to be enabled to use the Faucet plugin")
+	}
+
 	restapiv1.AddFeature(Plugin.Name)
 
 	routeGroup := deps.Echo.Group("/api/plugins/faucet")

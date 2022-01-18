@@ -12,6 +12,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -101,6 +102,8 @@ type Faucet struct {
 	belowMaxDepth milestone.Index
 	// used to get the outputs.
 	utxoManager *utxo.Manager
+	// used to access the outputs for the faucet's address.
+	indexer *indexer.Indexer
 	// the address of the faucet.
 	address *iotago.Ed25519Address
 	// used to sign the faucet transactions.
@@ -259,6 +262,7 @@ func New(
 	deSeriParas *iotago.DeSerializationParameters,
 	belowMaxDepth int,
 	utxoManager *utxo.Manager,
+	indexer *indexer.Indexer,
 	address *iotago.Ed25519Address,
 	addressSigner iotago.AddressSigner,
 	tipselFunc TipselFunc,
@@ -278,6 +282,7 @@ func New(
 		deSeriParas:     deSeriParas,
 		belowMaxDepth:   milestone.Index(belowMaxDepth),
 		utxoManager:     utxoManager,
+		indexer:         indexer,
 		address:         address,
 		addressSigner:   addressSigner,
 		tipselFunc:      tipselFunc,
@@ -319,6 +324,23 @@ func (f *Faucet) Info() (*FaucetInfoResponse, error) {
 	}, nil
 }
 
+func (f *Faucet) computeFaucetBalance() (uint64, error) {
+	unspentOutputIDs, _, err := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(f.address), indexer.ExtendedOutputRequiresDustReturn(false))
+	if err != nil {
+		return 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
+	}
+
+	var amount uint64 = 0
+	for _, unspentOutputID := range unspentOutputIDs {
+		unspentOutput, err := f.utxoManager.ReadOutputByOutputIDWithoutLocking(&unspentOutputID)
+		if err != nil {
+			return 0, common.CriticalError(fmt.Errorf("reading unspent output failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
+		}
+		amount += unspentOutput.Deposit()
+	}
+	return amount, nil
+}
+
 // Enqueue adds a new faucet request to the queue.
 func (f *Faucet) Enqueue(bech32Addr string) (*FaucetEnqueueResponse, error) {
 
@@ -339,7 +361,7 @@ func (f *Faucet) Enqueue(bech32Addr string) (*FaucetEnqueueResponse, error) {
 	}
 
 	amount := f.opts.amount
-	balance, _, err := f.utxoManager.ComputeAddressBalance(ed25519Addr, utxo.FilterHasSpendingConstraints(false), utxo.ReadLockLedger(false))
+	balance, err := f.computeFaucetBalance()
 	if err == nil && balance >= f.opts.amount {
 		amount = f.opts.smallAmount
 
@@ -692,7 +714,7 @@ func (f *Faucet) processRequestsWithoutLocking(collectedRequestsCounter int, amo
 func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) error {
 
 	// set initial faucet balance
-	faucetBalance, _, err := f.utxoManager.ComputeAddressBalance(f.address, nil, utxo.ReadLockLedger(false))
+	faucetBalance, err := f.computeFaucetBalance()
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("reading faucet address balance failed: %s, error: %s", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
 	}
@@ -733,14 +755,22 @@ func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) err
 					return []*utxo.Output{f.lastRemainderOutput}, f.lastRemainderOutput.Deposit(), nil
 				}
 
-				unspentOutputs, err := f.utxoManager.UnspentOutputsOnAddress(f.address, utxo.FilterOutputType(iotago.OutputExtended).FilterHasSpendingConstraints(false), utxo.ReadLockLedger(false), utxo.MaxResultCount(f.opts.maxOutputCount-2))
+				unspentOutputIDs, _, err := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(f.address), indexer.ExtendedOutputRequiresDustReturn(false))
 				if err != nil {
 					return nil, 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
 				}
 
 				var amount uint64 = 0
-				for _, unspentOutput := range unspentOutputs {
+				var unspentOutputs utxo.Outputs
+				for _, unspentOutputID := range unspentOutputIDs {
+
+					unspentOutput, err := f.utxoManager.ReadOutputByOutputIDWithoutLocking(&unspentOutputID)
+					if err != nil {
+						return nil, 0, common.CriticalError(fmt.Errorf("reading unspent output failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
+					}
+
 					amount += unspentOutput.Deposit()
+					unspentOutputs = append(unspentOutputs, unspentOutput)
 				}
 				return unspentOutputs, amount, nil
 			}
@@ -921,7 +951,7 @@ func (f *Faucet) ApplyConfirmation(confirmation *whiteflag.Confirmation) error {
 
 	// recalculate the current faucet balance
 	// no need to lock since we are in the milestone confirmation anyway
-	faucetBalance, _, err := f.utxoManager.ComputeAddressBalance(f.address, utxo.FilterOutputType(iotago.OutputExtended).FilterHasSpendingConstraints(false), utxo.ReadLockLedger(false))
+	faucetBalance, err := f.computeFaucetBalance()
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("reading faucet address balance failed: %s, error: %s", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
 	}

@@ -2,7 +2,7 @@ package indexer
 
 import (
 	"time"
-	
+
 	"gorm.io/gorm"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
