@@ -11,31 +11,35 @@ import (
 const (
 
 	// RouteOutputs is the route for getting outputs filtered by the given parameters.
-	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "address", "requiresDustReturn", "issuer", "sender", "tag").
+	// GET with query parameter returns all outputIDs that fit these filter criteria (query parameters: "address", "requiresDustReturn", "sender", "tag").
+	// Returns an empty list if no results are found.
 	RouteOutputs = "/outputs"
 
 	// RouteAliases is the route for getting aliases filtered by the given parameters.
-	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "stateController", "governanceController", "issuer", "sender").
+	// GET with query parameter  returns all outputIDs that fit these filter criteria (query parameters: "stateController", "governanceController", "issuer", "sender").
+	// Returns an empty list if no results are found.
 	RouteAliases = "/aliases"
 
 	// RouteAliasByID is the route for getting aliases by their aliasID.
-	// GET returns the outputIDs.
+	// GET returns the outputIDs or 404 if no record is found.
 	RouteAliasByID = "/aliases/:" + restapi.ParameterAliasID
 
 	// RouteNFT is the route for getting NFT filtered by the given parameters.
-	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "address", "requiresDustReturn", "issuer", "sender", "tag").
+	// GET with query parameter returns all outputIDs that fit these filter criteria (query parameters: "address", "requiresDustReturn", "issuer", "sender", "tag").
+	// Returns an empty list if no results are found.
 	RouteNFT = "/nft"
 
 	// RouteNFTByID is the route for getting NFT by their nftID.
-	// GET returns the outputIDs.
+	// GET returns the outputIDs or 404 if no record is found.
 	RouteNFTByID = "/nft/:" + restapi.ParameterNFTID
 
 	// RouteFoundries is the route for getting foundries filtered by the given parameters.
-	// GET with query parameter (mandatory) returns all output IDs that fit these filter criteria (query parameters: "address").
+	// GET with query parameter returns all outputIDs that fit these filter criteria (query parameters: "address").
+	// Returns an empty list if no results are found.
 	RouteFoundries = "/foundries"
 
 	// RouteFoundryByID is the route for getting foundries by their foundryID.
-	// GET returns the outputIDs.
+	// GET returns the outputIDs or 404 if no record is found.
 	RouteFoundryByID = "/foundries/:" + restapi.ParameterFoundryID
 )
 

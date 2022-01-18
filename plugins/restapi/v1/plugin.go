@@ -98,6 +98,8 @@ const (
 	RouteControlSnapshotsCreate = "/control/snapshots/create"
 )
 
+//TODO: rename to v2
+
 func init() {
 	Plugin = &node.Plugin{
 		Status: node.StatusEnabled,

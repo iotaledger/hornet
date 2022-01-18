@@ -90,6 +90,8 @@ func configure() {
 	routeGroup := deps.Echo.Group("/api/plugins/indexer")
 	configureRoutes(routeGroup)
 
+	//TODO: compare ledgerIndex with UTXO and if it does not match, drop tables and iterate over unspent outputs
+
 	if err := Plugin.Node.Daemon().BackgroundWorker("Close Participation database", func(ctx context.Context) {
 		<-ctx.Done()
 
