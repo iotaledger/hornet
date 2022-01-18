@@ -145,24 +145,6 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteDebugAddresses, func(c echo.Context) error {
-		resp, err := addresses(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugAddressesEd25519, func(c echo.Context) error {
-		resp, err := addressesEd25519(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
 	routeGroup.GET(RouteDebugMilestoneDiffs, func(c echo.Context) error {
 		resp, err := milestoneDiff(c)
 		if err != nil {
