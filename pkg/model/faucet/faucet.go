@@ -326,7 +326,6 @@ func (f *Faucet) Info() (*FaucetInfoResponse, error) {
 
 func (f *Faucet) computeAddressBalance(address iotago.Address) (uint64, error) {
 	unspentOutputIDs, _, err := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(address), indexer.ExtendedOutputRequiresDustReturn(false))
-	println(unspentOutputIDs)
 	if err != nil {
 		return 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
 	}

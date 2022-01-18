@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/configuration"
@@ -90,7 +91,7 @@ func configure() {
 	routeGroup := deps.Echo.Group("/api/plugins/indexer")
 	configureRoutes(routeGroup)
 
-	//TODO: compare ledgerIndex with UTXO and if it does not match, drop tables and iterate over unspent outputs
+	initializeIndexer()
 
 	if err := Plugin.Node.Daemon().BackgroundWorker("Close Participation database", func(ctx context.Context) {
 		<-ctx.Done()
@@ -135,4 +136,45 @@ func attachEvents() {
 
 func detachEvents() {
 	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+}
+
+func initializeIndexer() {
+	//Compare Indexer ledgerIndex with UTXO ledgerIndex and if it does not match, drop tables and import unspent outputs
+	needsInitialImport := false
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
+	utxoLedgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+	if err != nil {
+		Plugin.LogPanicf("Reading UTXO ledger index failed: %s", err)
+	}
+	indexerLedgerIndex, err := deps.Indexer.LedgerIndex()
+	if err != nil {
+		if errors.Is(err, indexer.ErrNotFound) {
+			needsInitialImport = true
+		} else {
+			Plugin.LogPanicf("Reading Indexer ledger index failed: %s", err)
+		}
+	} else {
+		if utxoLedgerIndex != indexerLedgerIndex {
+			Plugin.LogInfof("Re-indexing UTXO ledger with index: %d", utxoLedgerIndex)
+			deps.Indexer.Clear()
+			needsInitialImport = true
+		}
+	}
+
+	if needsInitialImport {
+		importer := deps.Indexer.ImportTransaction()
+		if err := deps.UTXOManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
+			if err := importer.AddOutput(output); err != nil {
+				Plugin.LogPanicf("Importing Indexer data failed: %s", err)
+			}
+			return true
+		}); err != nil {
+			Plugin.LogPanicf("Importing Indexer data failed: %s", err)
+		}
+		if err := importer.Finalize(utxoLedgerIndex); err != nil {
+			Plugin.LogPanicf("Importing Indexer data failed: %s", err)
+		}
+	}
 }

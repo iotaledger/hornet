@@ -18,6 +18,14 @@ import (
 
 var (
 	ErrNotFound = errors.New("output not found for given filter")
+
+	tables = []interface{}{
+		&status{},
+		&extendedOutput{},
+		&nft{},
+		&foundry{},
+		&alias{},
+	}
 )
 
 type Indexer struct {
@@ -38,11 +46,9 @@ func NewIndexer(dbPath string) (*Indexer, error) {
 	}
 
 	// Create the tables and indexes if needed
-	db.AutoMigrate(&status{})
-	db.AutoMigrate(&extendedOutput{})
-	db.AutoMigrate(&nft{})
-	db.AutoMigrate(&foundry{})
-	db.AutoMigrate(&alias{})
+	if err := db.AutoMigrate(tables...); err != nil {
+		return nil, err
+	}
 
 	return &Indexer{
 		db: db,
@@ -327,6 +333,21 @@ func (i *Indexer) LedgerIndex() (milestone.Index, error) {
 	return status.LedgerIndex, nil
 }
 
+func (i *Indexer) Clear() error {
+	// Drop all tables
+	for _, table := range tables {
+		if err := i.db.Migrator().DropTable(table); err != nil {
+			return err
+		}
+	}
+	// Re-create tables
+	return i.db.AutoMigrate(tables...)
+}
+
 func (i *Indexer) CloseDatabase() error {
-	return nil
+	sqlDB, err := i.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
 }
