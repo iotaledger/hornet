@@ -4,11 +4,11 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 
-	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/iotaledger/hive.go/byteutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
