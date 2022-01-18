@@ -47,13 +47,14 @@ func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 
 // AssertLedgerBalance generates an address for the given seed and index and checks correct balance.
 func (te *TestEnvironment) AssertLedgerBalance(wallet *utils.HDWallet, expectedBalance uint64) {
-	computedAddrBalance, _, err := te.storage.UTXOManager().ComputeAddressBalanceWithoutConstraints(wallet.Address())
+	computedAddrBalance, outputCount, err := te.storage.UTXOManager().ComputeAddressBalanceWithoutConstraints(wallet.Address())
 	require.NoError(te.TestInterface, err)
 
 	var balanceStatus string
 	balanceStatus += fmt.Sprintf("Balance for %s:\n", wallet.Name())
 	balanceStatus += fmt.Sprintf("\tComputed:\t%d\n", computedAddrBalance)
 	balanceStatus += fmt.Sprintf("\tExpected:\t%d\n", expectedBalance)
+	balanceStatus += fmt.Sprintf("\tOutputCount:\t%d\n", outputCount)
 	fmt.Print(balanceStatus)
 
 	require.Exactly(te.TestInterface, expectedBalance, computedAddrBalance)

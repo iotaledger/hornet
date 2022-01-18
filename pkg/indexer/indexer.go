@@ -305,15 +305,22 @@ func (i *Indexer) ApplyConfirmation(msIndex milestone.Index, newOutputs utxo.Out
 }
 
 func (i *Indexer) ApplyWhiteflagConfirmation(confirmation *whiteflag.Confirmation) error {
+	mutationOutputs := confirmation.Mutations.NewOutputs
+
+	var newSpents utxo.Spents
+	for spentID, spent := range confirmation.Mutations.NewSpents {
+		newSpents = append(newSpents, spent)
+		if _, has := mutationOutputs[spentID]; has {
+			// We only care about the end-result of the confirmation, so outputs that were already spent in the same milestone can be ignored
+			delete(mutationOutputs, spentID)
+		}
+	}
+
 	var newOutputs utxo.Outputs
-	for _, output := range confirmation.Mutations.NewOutputs {
+	for _, output := range mutationOutputs {
 		newOutputs = append(newOutputs, output)
 	}
 
-	var newSpents utxo.Spents
-	for _, spent := range confirmation.Mutations.NewSpents {
-		newSpents = append(newSpents, spent)
-	}
 	return i.ApplyConfirmation(confirmation.MilestoneIndex, newOutputs, newSpents)
 }
 
