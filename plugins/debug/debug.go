@@ -18,7 +18,6 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsResponse, error) {
@@ -154,7 +153,7 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}
 
 	outputIDs := []string{}
-	outputConsumerFunc := func(output *utxo.Output) bool {
+	appendConsumerFunc := func(output *utxo.Output) bool {
 		outputIDs = append(outputIDs, output.OutputID().ToHex())
 		return true
 	}
@@ -163,20 +162,19 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		utxo.ReadLockLedger(false),
 	}
 
+	outputConsumerFunc := appendConsumerFunc
+
 	if filterType != nil {
-		switch *filterType {
-		case iotago.OutputExtended:
-			err = deps.UTXOManager.ForEachUnspentExtendedOutput(nil, outputConsumerFunc, opts...)
-		case iotago.OutputAlias:
-			err = deps.UTXOManager.ForEachUnspentAliasOutput(nil, outputConsumerFunc, opts...)
-		case iotago.OutputNFT:
-			err = deps.UTXOManager.ForEachUnspentNFTOutput(nil, outputConsumerFunc, opts...)
-		case iotago.OutputFoundry:
-			err = deps.UTXOManager.ForEachUnspentFoundryOutput(nil, outputConsumerFunc, opts...)
+		outputConsumerFunc = func(output *utxo.Output) bool {
+			if output.OutputType() == *filterType {
+				return appendConsumerFunc(output)
+			}
+			return true
 		}
-	} else {
-		err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, opts...)
 	}
+
+	err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, opts...)
+
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
