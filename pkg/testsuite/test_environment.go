@@ -60,8 +60,8 @@ type TestEnvironment struct {
 	// LastMilestoneMessageID is the message ID of the last issued milestone.
 	LastMilestoneMessageID hornet.MessageID
 
-	// tempDir is the directory that contains the temporary files for the test.
-	tempDir string
+	// TempDir is the directory that contains the temporary files for the test.
+	TempDir string
 
 	// tangleStore is the temporary key value store for the test holding the tangle.
 	tangleStore kvstore.KVStore
@@ -142,7 +142,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 
 	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", te.TestInterface.Name()))
 	require.NoError(te.TestInterface, err)
-	te.tempDir = tempDir
+	te.TempDir = tempDir
 
 	te.TestInterface.Logf("Testdir: %s", tempDir)
 
@@ -247,8 +247,8 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	err = te.utxoStore.Clear()
 	require.NoError(te.TestInterface, err)
 
-	if removeTempDir && te.tempDir != "" {
-		_ = os.RemoveAll(te.tempDir)
+	if removeTempDir && te.TempDir != "" {
+		_ = os.RemoveAll(te.TempDir)
 	}
 }
 

@@ -44,7 +44,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		nil,
 		te.PoWHandler,
 		storeMessageFunc,
-		coordinator.WithStateFilePath(fmt.Sprintf("%s/coordinator.state", te.tempDir)),
+		coordinator.WithStateFilePath(fmt.Sprintf("%s/coordinator.state", te.TempDir)),
 		coordinator.WithMilestoneInterval(time.Duration(10)*time.Second),
 	)
 	require.NoError(te.TestInterface, err)
@@ -162,7 +162,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 	if createConfirmationGraph {
 		dotFileContent := te.generateDotFileFromConfirmation(wfConf)
 		if te.showConfirmationGraphs {
-			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.tempDir, te.TestInterface.Name(), confirmedMilestoneStats.Index)
+			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.TempDir, te.TestInterface.Name(), confirmedMilestoneStats.Index)
 			utils.ShowDotFile(te.TestInterface, dotFileContent, dotFilePath)
 		} else {
 			fmt.Println(dotFileContent)
