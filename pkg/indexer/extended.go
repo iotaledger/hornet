@@ -84,10 +84,9 @@ func extendedOutputFilterOptions(optionalOptions []ExtendedOutputFilterOption) *
 	return result
 }
 func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOption) *IndexerResult {
-
 	opts := extendedOutputFilterOptions(filters)
-
 	query := i.db.Model(&extendedOutput{})
+
 	if opts.unlockableByAddress != nil {
 		addr, err := addressBytesForAddress(*opts.unlockableByAddress)
 		if err != nil {

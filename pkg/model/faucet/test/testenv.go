@@ -12,6 +12,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -48,6 +49,7 @@ var (
 type FaucetTestEnv struct {
 	t       *testing.T
 	TestEnv *testsuite.TestEnvironment
+	Indexer *indexer.Indexer
 
 	GenesisWallet *utils.HDWallet
 	FaucetWallet  *utils.HDWallet
@@ -239,6 +241,18 @@ func NewFaucetTestEnv(t *testing.T,
 		return nil
 	}
 
+	indexer, err := indexer.NewIndexer(te.TempDir)
+	require.NoError(t, err)
+
+	indexerImport := indexer.ImportTransaction()
+	te.UTXOManager().ForEachUnspentOutput(func(output *utxo.Output) bool {
+		require.NoError(t, indexerImport.AddOutput(output))
+		return true
+	})
+	ledgerIndex, err := te.UTXOManager().ReadLedgerIndex()
+	require.NoError(t, err)
+	require.NoError(t, indexerImport.Finalize(ledgerIndex))
+
 	f := faucet.New(
 		defaultDaemon,
 		te.Storage(),
@@ -247,6 +261,7 @@ func NewFaucetTestEnv(t *testing.T,
 		testsuite.DeSerializationParameters,
 		int(te.BelowMaxDepth()),
 		te.UTXOManager(),
+		indexer,
 		faucetWallet.Address(),
 		faucetWallet.AddressSigner(),
 		tipselFunc,
@@ -281,6 +296,7 @@ func NewFaucetTestEnv(t *testing.T,
 		nil,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
+			require.NoError(t, indexer.ApplyWhiteflagConfirmation(confirmation))
 			require.NoError(t, f.ApplyConfirmation(confirmation))
 		},
 		nil,
@@ -289,6 +305,7 @@ func NewFaucetTestEnv(t *testing.T,
 	return &FaucetTestEnv{
 		t:               t,
 		TestEnv:         te,
+		Indexer:         indexer,
 		GenesisWallet:   genesisWallet,
 		FaucetWallet:    faucetWallet,
 		Wallet1:         seed1Wallet,
@@ -307,6 +324,7 @@ func (env *FaucetTestEnv) Cleanup() {
 	if env.faucetCtxCancel != nil {
 		env.faucetCtxCancel()
 	}
+	require.NoError(env.t, env.Indexer.CloseDatabase())
 	env.TestEnv.CleanupTestEnvironment(true)
 }
 
@@ -405,14 +423,11 @@ func (env *FaucetTestEnv) IssueMilestone(onTips ...hornet.MessageID) (*whiteflag
 func (env *FaucetTestEnv) AssertFaucetBalance(expected uint64) {
 	faucetInfo, err := env.Faucet.Info()
 	require.NoError(env.t, err)
-	require.Equal(env.t, expected, faucetInfo.Balance)
+	require.Exactly(env.t, expected, faucetInfo.Balance)
 }
 
 func (env *FaucetTestEnv) AssertAddressUTXOCount(address iotago.Address, expected int) {
-	utxoCount := 0
-	env.TestEnv.UTXOManager().ForEachUnspentOutputOnAddress(address, utxo.FilterOutputType(iotago.OutputExtended).FilterHasSpendingConstraints(false), func(output *utxo.Output) bool {
-		utxoCount++
-		return true
-	})
-	require.Equal(env.t, utxoCount, expected)
+	result := env.Indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(address), indexer.ExtendedOutputRequiresDustReturn(false))
+	require.NoError(env.t, result.Error)
+	require.Equal(env.t, len(result.OutputIDs), expected)
 }
