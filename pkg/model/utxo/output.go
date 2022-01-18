@@ -51,6 +51,21 @@ func (o *Output) Output() iotago.Output {
 	return o.output
 }
 
+func (o *Output) hasSpendingConstraint() bool {
+	switch output := o.output.(type) {
+	case *iotago.ExtendedOutput:
+		return output.FeatureBlocks().HasConstraints()
+	case *iotago.AliasOutput:
+		return output.FeatureBlocks().HasConstraints()
+	case *iotago.NFTOutput:
+		return output.FeatureBlocks().HasConstraints()
+	case *iotago.FoundryOutput:
+		return output.FeatureBlocks().HasConstraints()
+	default:
+		panic("Unknown output type")
+	}
+}
+
 // TODO: remove
 func (o *Output) Address() iotago.Address {
 	switch output := o.output.(type) {

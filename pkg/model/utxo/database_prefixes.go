@@ -7,21 +7,15 @@ const (
 	UTXOStoreKeyPrefixOutput      byte = 1 //TODO: iterate over all values and map to extended outputs
 	UTXOStoreKeyPrefixOutputSpent byte = 8
 
+	// Track unspent Outputs
+	UTXOStoreKeyPrefixOutputUnspent byte = 9
+
+	// Milestone diffs
 	UTXOStoreKeyPrefixMilestoneDiffs byte = 4
 
 	// Chrysalis Migration
 	UTXOStoreKeyPrefixTreasuryOutput byte = 6
 	UTXOStoreKeyPrefixReceipts       byte = 7
-
-	// Lookup Tables for unspent outputs
-	UTXOStoreKeyPrefixLookupExtendedOutputs  byte = 100
-	UTXOStoreKeyPrefixLookupAliasOutputs     byte = 101
-	UTXOStoreKeyPrefixLookupNFTOutputs       byte = 102
-	UTXOStoreKeyPrefixLookupFoundryOutputs   byte = 103
-	UTXOStoreKeyPrefixLookupByAddress        byte = 104
-	UTXOStoreKeyPrefixLookupByIssuer         byte = 105
-	UTXOStoreKeyPrefixLookupBySender         byte = 106
-	UTXOStoreKeyPrefixLoolupBySenderAndIndex byte = 107
 )
 
 // Deprecated keys, just used for migration purposes
