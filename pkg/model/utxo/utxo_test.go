@@ -40,33 +40,12 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	}))
 	require.Equal(t, 7, outputCount)
 
-	var unspentExtendedCount int
-	require.NoError(t, utxo.ForEachUnspentExtendedOutput(nil, func(_ *Output) bool {
-		unspentExtendedCount++
+	var unspentCount int
+	require.NoError(t, utxo.ForEachUnspentOutput(func(_ *Output) bool {
+		unspentCount++
 		return true
 	}))
-	require.Equal(t, 2, unspentExtendedCount)
-
-	var unspentNFTCount int
-	require.NoError(t, utxo.ForEachUnspentNFTOutput(nil, func(_ *Output) bool {
-		unspentNFTCount++
-		return true
-	}))
-	require.Equal(t, 1, unspentNFTCount)
-
-	var unspentAliasCount int
-	require.NoError(t, utxo.ForEachUnspentAliasOutput(nil, func(_ *Output) bool {
-		unspentAliasCount++
-		return true
-	}))
-	require.Equal(t, 1, unspentAliasCount)
-
-	var unspentFoundryCount int
-	require.NoError(t, utxo.ForEachUnspentFoundryOutput(nil, func(_ *Output) bool {
-		unspentFoundryCount++
-		return true
-	}))
-	require.Equal(t, 1, unspentFoundryCount)
+	require.Equal(t, 5, unspentCount)
 
 	var spentCount int
 	require.NoError(t, utxo.ForEachSpentOutput(func(_ *Spent) bool {
@@ -82,22 +61,7 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 		return true
 	}))
 
-	require.NoError(t, utxo.ForEachUnspentExtendedOutput(nil, func(_ *Output) bool {
-		require.Fail(t, "should not be called")
-		return true
-	}))
-
-	require.NoError(t, utxo.ForEachUnspentNFTOutput(nil, func(_ *Output) bool {
-		require.Fail(t, "should not be called")
-		return true
-	}))
-
-	require.NoError(t, utxo.ForEachUnspentAliasOutput(nil, func(_ *Output) bool {
-		require.Fail(t, "should not be called")
-		return true
-	}))
-
-	require.NoError(t, utxo.ForEachUnspentFoundryOutput(nil, func(_ *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutput(func(_ *Output) bool {
 		require.Fail(t, "should not be called")
 		return true
 	}))
@@ -179,31 +143,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	require.Equal(t, 7, outputCount)
 
 	var unspentCount int
-	require.NoError(t, utxo.ForEachUnspentExtendedOutput(nil, func(output *Output) bool {
-		unspentCount++
-		_, has := unspentByOutputID[output.mapKey()]
-		require.True(t, has)
-		delete(unspentByOutputID, output.mapKey())
-		return true
-	}))
-	require.Equal(t, 2, unspentCount)
-	require.NoError(t, utxo.ForEachUnspentNFTOutput(nil, func(output *Output) bool {
-		unspentCount++
-		_, has := unspentByOutputID[output.mapKey()]
-		require.True(t, has)
-		delete(unspentByOutputID, output.mapKey())
-		return true
-	}))
-	require.Equal(t, 2, unspentCount)
-	require.NoError(t, utxo.ForEachUnspentAliasOutput(nil, func(output *Output) bool {
-		unspentCount++
-		_, has := unspentByOutputID[output.mapKey()]
-		require.True(t, has)
-		delete(unspentByOutputID, output.mapKey())
-		return true
-	}))
-	require.Equal(t, 3, unspentCount)
-	require.NoError(t, utxo.ForEachUnspentFoundryOutput(nil, func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
 		unspentCount++
 		_, has := unspentByOutputID[output.mapKey()]
 		require.True(t, has)
@@ -253,25 +193,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	}))
 	require.Empty(t, outputByOutputID)
 
-	require.NoError(t, utxo.ForEachUnspentExtendedOutput(nil, func(output *Output) bool {
-		_, has := unspentByOutputID[output.mapKey()]
-		require.True(t, has)
-		delete(unspentByOutputID, output.mapKey())
-		return true
-	}))
-	require.NoError(t, utxo.ForEachUnspentNFTOutput(nil, func(output *Output) bool {
-		_, has := unspentByOutputID[output.mapKey()]
-		require.True(t, has)
-		delete(unspentByOutputID, output.mapKey())
-		return true
-	}))
-	require.NoError(t, utxo.ForEachUnspentAliasOutput(nil, func(output *Output) bool {
-		_, has := unspentByOutputID[output.mapKey()]
-		require.True(t, has)
-		delete(unspentByOutputID, output.mapKey())
-		return true
-	}))
-	require.NoError(t, utxo.ForEachUnspentFoundryOutput(nil, func(output *Output) bool {
+	require.NoError(t, utxo.ForEachUnspentOutput(func(output *Output) bool {
 		_, has := unspentByOutputID[output.mapKey()]
 		require.True(t, has)
 		delete(unspentByOutputID, output.mapKey())

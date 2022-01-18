@@ -19,12 +19,6 @@ func ReadLockLedger(lockLedger bool) UTXOIterateOption {
 	}
 }
 
-func MaxResultCount(count int) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.maxResultCount = count
-	}
-}
-
 func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
 	result := &UTXOIterateOptions{
 		readLockLedger: true,
