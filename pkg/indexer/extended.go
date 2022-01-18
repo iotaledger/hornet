@@ -119,16 +119,21 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 
 func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB) (iotago.OutputIDs, milestone.Index, error) {
 
+	query = query.Select("output_id").Order("output_id asc")
+
 	// This combines the query with a second query that checks for the current ledger_index.
 	// This way we do not need to lock anything and we know the index matches the results.
 	//TODO: measure performance for big datasets
 	ledgerIndexQuery := i.db.Model(&status{}).Select("ledger_index")
-	joinedQuery := i.db.Table("(?), (?)", query.Select("output_id"), ledgerIndexQuery)
+	joinedQuery := i.db.Table("(?), (?)", query, ledgerIndexQuery)
 
 	var results queryResults
-	if err := joinedQuery.Find(&results).Error; err != nil {
+
+	result := joinedQuery.Find(&results)
+	if err := result.Error; err != nil {
 		return nil, 0, err
 	}
+
 	ledgerIndex := milestone.Index(0)
 	if len(results) > 0 {
 		ledgerIndex = results[0].LedgerIndex
