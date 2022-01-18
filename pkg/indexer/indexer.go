@@ -56,24 +56,15 @@ func NewIndexer(dbPath string) (*Indexer, error) {
 }
 
 func processSpent(spent *utxo.Spent, tx *gorm.DB) error {
-	switch iotaOutput := spent.Output().Output().(type) {
-	case *iotago.ExtendedOutput:
-		return tx.Delete(&extendedOutput{}, spent.OutputID()[:]).Error
-	case *iotago.AliasOutput:
-		aliasID := iotaOutput.AliasID
-		if aliasID.Empty() {
-			// Use implicit AliasID
-			aliasID = iotago.AliasIDFromOutputID(*spent.OutputID())
-		}
-		return tx.Delete(&alias{}, aliasID[:]).Error
-	case *iotago.NFTOutput:
-		return tx.Delete(&nft{}, iotaOutput.NFTID[:]).Error
-	case *iotago.FoundryOutput:
-		foundryID, err := iotaOutput.ID()
-		if err != nil {
-			return err
-		}
-		return tx.Delete(&foundry{}, foundryID[:]).Error
+	switch spent.OutputType() {
+	case iotago.OutputExtended:
+		return tx.Where("output_id = ?", spent.OutputID()[:]).Delete(&extendedOutput{}).Error
+	case iotago.OutputAlias:
+		return tx.Where("output_id = ?", spent.OutputID()[:]).Delete(&alias{}).Error
+	case iotago.OutputNFT:
+		return tx.Where("output_id = ?", spent.OutputID()[:]).Delete(&nft{}).Error
+	case iotago.OutputFoundry:
+		return tx.Where("output_id = ?", spent.OutputID()[:]).Delete(&foundry{}).Error
 	}
 	return nil
 }
