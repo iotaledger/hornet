@@ -6,15 +6,17 @@ import (
 )
 
 type foundry struct {
-	FoundryID foundryIDBytes `gorm:"primaryKey;not null"`
-	OutputID  outputIDBytes  `gorm:"unique;not null"`
-	Amount    uint64         `gorm:"not null"`
-	Address   addressBytes   `gorm:"not null;index:foundries_address"`
+	FoundryID      foundryIDBytes `gorm:"primaryKey;not null"`
+	OutputID       outputIDBytes  `gorm:"unique;not null"`
+	Amount         uint64         `gorm:"not null"`
+	Address        addressBytes   `gorm:"not null;index:foundries_address"`
+	MilestoneIndex milestone.Index
 }
 
 type FoundryFilterOptions struct {
 	unlockableByAddress *iotago.Address
-	maxResults          int
+	pageSize            int
+	offset              []byte
 }
 
 type FoundryFilterOption func(*FoundryFilterOptions)
@@ -25,16 +27,23 @@ func FoundryUnlockableByAddress(address iotago.Address) FoundryFilterOption {
 	}
 }
 
-func FoundryMaxResults(maxResults int) FoundryFilterOption {
+func FoundryPageSize(pageSize int) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
-		args.maxResults = maxResults
+		args.pageSize = pageSize
+	}
+}
+
+func FoundryOffset(offset []byte) FoundryFilterOption {
+	return func(args *FoundryFilterOptions) {
+		args.offset = offset
 	}
 }
 
 func foundryFilterOptions(optionalOptions []FoundryFilterOption) *FoundryFilterOptions {
 	result := &FoundryFilterOptions{
 		unlockableByAddress: nil,
-		maxResults:          0,
+		pageSize:            0,
+		offset:              nil,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -43,36 +52,25 @@ func foundryFilterOptions(optionalOptions []FoundryFilterOption) *FoundryFilterO
 	return result
 }
 
-func (i *Indexer) FoundryOutput(foundryID *iotago.FoundryID) (iotago.OutputID, milestone.Index, error) {
+func (i *Indexer) FoundryOutput(foundryID *iotago.FoundryID) *IndexerResult {
 	query := i.db.Model(&foundry{}).
 		Where("foundry_id = ?", foundryID[:]).
 		Limit(1)
 
-	outputIDs, ledgerIndex, err := i.combineOutputIDFilteredQuery(query)
-	if err != nil {
-		return NullOutputID, 0, err
-	}
-	if len(outputIDs) == 0 {
-		return NullOutputID, 0, ErrNotFound
-	}
-	return outputIDs[0], ledgerIndex, nil
+	return i.combineOutputIDFilteredQuery(query, 0, nil)
 }
 
-func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) (iotago.OutputIDs, milestone.Index, error) {
+func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) *IndexerResult {
 	opts := foundryFilterOptions(filters)
 	query := i.db.Model(&foundry{})
 
 	if opts.unlockableByAddress != nil {
 		addr, err := addressBytesForAddress(*opts.unlockableByAddress)
 		if err != nil {
-			return nil, 0, err
+			return errorResult(err)
 		}
 		query = query.Where("address = ?", addr[:])
 	}
 
-	if opts.maxResults > 0 {
-		query = query.Limit(opts.maxResults)
-	}
-
-	return i.combineOutputIDFilteredQuery(query)
+	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)
 }

@@ -1,11 +1,15 @@
 package indexer
 
 import (
-	"github.com/gohornet/hornet/pkg/indexer"
-	"github.com/gohornet/hornet/pkg/restapi"
+	"encoding/hex"
+	"net/http"
+	"strconv"
+
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"net/http"
+
+	"github.com/gohornet/hornet/pkg/indexer"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 const (
@@ -52,6 +56,12 @@ const (
 
 	// QueryParameterGovernanceController is used to filter for a certain governance controller address.
 	QueryParameterGovernanceController = "governanceController"
+
+	// QueryParameterPageSize is used to define the page size for the results.
+	QueryParameterPageSize = "pageSize"
+
+	// QueryParameterOffset is used to pass the outputID we want to start the results from.
+	QueryParameterOffset = "offset"
 )
 
 func nodeSyncedMiddleware() echo.MiddlewareFunc {
@@ -66,7 +76,6 @@ func nodeSyncedMiddleware() echo.MiddlewareFunc {
 }
 
 func configureRoutes(routeGroup *echo.Group) {
-
 	routeGroup.Use(nodeSyncedMiddleware())
 
 	routeGroup.GET(RouteOutputs, func(c echo.Context) error {
@@ -134,8 +143,7 @@ func configureRoutes(routeGroup *echo.Group) {
 }
 
 func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
-	maxResults := deps.RestAPILimitsMaxResults
-	filters := []indexer.ExtendedOutputFilterOption{indexer.ExtendedOutputMaxResults(maxResults)}
+	filters := []indexer.ExtendedOutputFilterOption{indexer.ExtendedOutputPageSize(pageSizeFromContext(c))}
 
 	if len(c.QueryParam(restapi.QueryParameterAddress)) > 0 {
 		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterAddress)
@@ -169,46 +177,26 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.ExtendedOutputTag(indexBytes))
 	}
 
-	outputIDs, ledgerIndex, err := deps.Indexer.ExtendedOutputsWithFilters(filters...)
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputs failed: %s", err)
+	if len(c.QueryParam(QueryParameterOffset)) > 0 {
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputOffset(offset))
 	}
-
-	return &outputsResponse{
-		MaxResults:  uint32(maxResults),
-		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs.ToHex(),
-		LedgerIndex: ledgerIndex,
-	}, nil
+	return outputsResponseFromResult(deps.Indexer.ExtendedOutputsWithFilters(filters...))
 }
 
 func aliasByID(c echo.Context) (*outputsResponse, error) {
-	maxResults := deps.RestAPILimitsMaxResults
-
 	aliasID, err := restapi.ParseAliasIDParam(c)
 	if err != nil {
 		return nil, err
 	}
-
-	outputID, ledgerIndex, err := deps.Indexer.AliasOutput(aliasID)
-	if err != nil {
-		if errors.Is(err, indexer.ErrNotFound) {
-			return nil, errors.WithMessage(echo.ErrNotFound, "alias not found")
-		}
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading alias failed: %s", err)
-	}
-
-	return &outputsResponse{
-		MaxResults:  uint32(maxResults),
-		Count:       1,
-		OutputIDs:   []string{outputID.ToHex()},
-		LedgerIndex: ledgerIndex,
-	}, nil
+	return singleOutputResponseFromResult(deps.Indexer.AliasOutput(aliasID))
 }
 
 func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
-	maxResults := deps.RestAPILimitsMaxResults
-	filters := []indexer.AliasFilterOption{indexer.AliasMaxResults(maxResults)}
+	filters := []indexer.AliasFilterOption{indexer.AliasPageSize(pageSizeFromContext(c))}
 
 	if len(c.QueryParam(QueryParameterStateController)) > 0 {
 		stateController, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterStateController)
@@ -242,46 +230,26 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.AliasSender(sender))
 	}
 
-	outputIDs, ledgerIndex, err := deps.Indexer.AliasOutputsWithFilters(filters...)
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading aliases failed: %s", err)
+	if len(c.QueryParam(QueryParameterOffset)) > 0 {
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasOffset(offset))
 	}
-
-	return &outputsResponse{
-		MaxResults:  uint32(maxResults),
-		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs.ToHex(),
-		LedgerIndex: ledgerIndex,
-	}, nil
+	return outputsResponseFromResult(deps.Indexer.AliasOutputsWithFilters(filters...))
 }
 
 func nftByID(c echo.Context) (*outputsResponse, error) {
-	maxResults := deps.RestAPILimitsMaxResults
-
 	nftID, err := restapi.ParseNFTIDParam(c)
 	if err != nil {
 		return nil, err
 	}
-
-	outputID, ledgerIndex, err := deps.Indexer.NFTOutput(nftID)
-	if err != nil {
-		if errors.Is(err, indexer.ErrNotFound) {
-			return nil, errors.WithMessage(echo.ErrNotFound, "NFT not found")
-		}
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFT failed: %s", err)
-	}
-
-	return &outputsResponse{
-		MaxResults:  uint32(maxResults),
-		Count:       1,
-		OutputIDs:   []string{outputID.ToHex()},
-		LedgerIndex: ledgerIndex,
-	}, nil
+	return singleOutputResponseFromResult(deps.Indexer.NFTOutput(nftID))
 }
 
 func nftWithFilter(c echo.Context) (*outputsResponse, error) {
-	maxResults := deps.RestAPILimitsMaxResults
-	filters := []indexer.NFTFilterOption{indexer.NFTMaxResults(maxResults)}
+	filters := []indexer.NFTFilterOption{indexer.NFTPageSize(pageSizeFromContext(c))}
 
 	if len(c.QueryParam(restapi.QueryParameterAddress)) > 0 {
 		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterAddress)
@@ -323,46 +291,26 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTTag(indexBytes))
 	}
 
-	outputIDs, ledgerIndex, err := deps.Indexer.NFTOutputsWithFilters(filters...)
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading NFTs failed: %s", err)
+	if len(c.QueryParam(QueryParameterOffset)) > 0 {
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTOffset(offset))
 	}
-
-	return &outputsResponse{
-		MaxResults:  uint32(maxResults),
-		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs.ToHex(),
-		LedgerIndex: ledgerIndex,
-	}, nil
+	return outputsResponseFromResult(deps.Indexer.NFTOutputsWithFilters(filters...))
 }
 
 func foundryByID(c echo.Context) (*outputsResponse, error) {
-	maxResults := deps.RestAPILimitsMaxResults
-
 	foundryID, err := restapi.ParseFoundryIDParam(c)
 	if err != nil {
 		return nil, err
 	}
-
-	outputID, ledgerIndex, err := deps.Indexer.FoundryOutput(foundryID)
-	if err != nil {
-		if errors.Is(err, indexer.ErrNotFound) {
-			return nil, errors.WithMessage(echo.ErrNotFound, "foundry not found")
-		}
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundry failed: %s", err)
-	}
-
-	return &outputsResponse{
-		MaxResults:  uint32(maxResults),
-		Count:       1,
-		OutputIDs:   []string{outputID.ToHex()},
-		LedgerIndex: ledgerIndex,
-	}, nil
+	return singleOutputResponseFromResult(deps.Indexer.FoundryOutput(foundryID))
 }
 
 func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
-	maxResults := deps.RestAPILimitsMaxResults
-	filters := []indexer.FoundryFilterOption{indexer.FoundryMaxResults(maxResults)}
+	filters := []indexer.FoundryFilterOption{indexer.FoundryPageSize(pageSizeFromContext(c))}
 
 	if len(c.QueryParam(restapi.QueryParameterAddress)) > 0 {
 		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterAddress)
@@ -371,16 +319,55 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 		}
 		filters = append(filters, indexer.FoundryUnlockableByAddress(address))
 	}
+	if len(c.QueryParam(QueryParameterOffset)) > 0 {
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.FoundryOffset(offset))
+	}
+	return outputsResponseFromResult(deps.Indexer.FoundryOutputsWithFilters(filters...))
+}
 
-	outputIDs, ledgerIndex, err := deps.Indexer.FoundryOutputsWithFilters(filters...)
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading foundries failed: %s", err)
+func singleOutputResponseFromResult(result *indexer.IndexerResult) (*outputsResponse, error) {
+	if result.Error != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputIDs failed: %s", result.Error)
+	}
+	if len(result.OutputIDs) == 0 {
+		return nil, errors.WithMessage(echo.ErrNotFound, "record not found")
+	}
+	return outputsResponseFromResult(result)
+}
+
+func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse, error) {
+	if result.Error != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputIDs failed: %s", result.Error)
+	}
+
+	pageSize := result.PageSize
+	if pageSize == 0 {
+		pageSize = len(result.OutputIDs)
 	}
 
 	return &outputsResponse{
-		MaxResults:  uint32(maxResults),
-		Count:       uint32(len(outputIDs)),
-		OutputIDs:   outputIDs.ToHex(),
-		LedgerIndex: ledgerIndex,
+		PageSize:    uint32(pageSize),
+		Count:       uint32(len(result.OutputIDs)),
+		OutputIDs:   result.OutputIDs.ToHex(),
+		NextOffset:  hex.EncodeToString(result.NextOffset),
+		LedgerIndex: result.LedgerIndex,
 	}, nil
+}
+
+func pageSizeFromContext(c echo.Context) int {
+	pageSize := deps.RestAPILimitsMaxResults
+	if len(c.QueryParam(QueryParameterPageSize)) > 0 {
+		i, err := strconv.Atoi(c.QueryParam(QueryParameterPageSize))
+		if err != nil {
+			return pageSize
+		}
+		if i > 0 && i < pageSize {
+			pageSize = i
+		}
+	}
+	return pageSize
 }

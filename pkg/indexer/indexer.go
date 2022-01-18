@@ -82,9 +82,10 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 		extended := &extendedOutput{
-			OutputID: make(outputIDBytes, iotago.OutputIDLength),
-			Address:  address,
-			Amount:   iotaOutput.Amount,
+			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
+			Address:        address,
+			Amount:         iotaOutput.Amount,
+			MilestoneIndex: output.MilestoneIndex(),
 		}
 		copy(extended.OutputID, output.OutputID()[:])
 
@@ -139,9 +140,10 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		alias := &alias{
-			OutputID: make(outputIDBytes, iotago.OutputIDLength),
-			AliasID:  aliasID[:],
-			Amount:   iotaOutput.Amount,
+			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
+			AliasID:        aliasID[:],
+			Amount:         iotaOutput.Amount,
+			MilestoneIndex: output.MilestoneIndex(),
 		}
 		copy(alias.OutputID, output.OutputID()[:])
 
@@ -180,9 +182,10 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		nft := &nft{
-			NFTID:    make(nftIDBytes, iotago.NFTIDLength),
-			OutputID: make(outputIDBytes, iotago.OutputIDLength),
-			Amount:   iotaOutput.Amount,
+			NFTID:          make(nftIDBytes, iotago.NFTIDLength),
+			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
+			Amount:         iotaOutput.Amount,
+			MilestoneIndex: output.MilestoneIndex(),
 		}
 		copy(nft.NFTID, iotaOutput.NFTID[:])
 		copy(nft.OutputID, output.OutputID()[:])
@@ -243,10 +246,11 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 		foundry := &foundry{
-			FoundryID: foundryID[:],
-			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
-			Amount:    iotaOutput.Amount,
-			Address:   address,
+			FoundryID:      foundryID[:],
+			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
+			Amount:         iotaOutput.Amount,
+			Address:        address,
+			MilestoneIndex: output.MilestoneIndex(),
 		}
 		copy(foundry.OutputID, output.OutputID()[:])
 

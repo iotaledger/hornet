@@ -331,6 +331,16 @@ func ParseIndexQueryParam(c echo.Context) (string, []byte, error) {
 	return index, indexBytes, nil
 }
 
+func ParseHexQueryParam(c echo.Context, paramName string) ([]byte, error) {
+	param := c.QueryParam(paramName)
+
+	paramBytes, err := hex.DecodeString(param)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid param: %s, error: %s", paramName, err)
+	}
+	return paramBytes, nil
+}
+
 func ParseBoolQueryParam(c echo.Context, paramName string) (bool, error) {
 	return strconv.ParseBool(c.QueryParam(paramName))
 }

@@ -20,6 +20,7 @@ type nft struct {
 	TimelockTime        *time.Time
 	ExpirationMilestone *milestone.Index
 	ExpirationTime      *time.Time
+	MilestoneIndex      milestone.Index
 }
 
 type NFTFilterOptions struct {
@@ -28,7 +29,8 @@ type NFTFilterOptions struct {
 	issuer              *iotago.Address
 	sender              *iotago.Address
 	tag                 []byte
-	maxResults          int
+	pageSize            int
+	offset              []byte
 }
 
 type NFTFilterOption func(*NFTFilterOptions)
@@ -63,9 +65,15 @@ func NFTTag(tag []byte) NFTFilterOption {
 	}
 }
 
-func NFTMaxResults(maxResults int) NFTFilterOption {
+func NFTPageSize(pageSize int) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
-		args.maxResults = maxResults
+		args.pageSize = pageSize
+	}
+}
+
+func NFTOffset(offset []byte) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.offset = offset
 	}
 }
 
@@ -75,7 +83,8 @@ func nftFilterOptions(optionalOptions []NFTFilterOption) *NFTFilterOptions {
 		requiresDustReturn:  nil,
 		sender:              nil,
 		tag:                 nil,
-		maxResults:          0,
+		pageSize:            0,
+		offset:              nil,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -84,29 +93,22 @@ func nftFilterOptions(optionalOptions []NFTFilterOption) *NFTFilterOptions {
 	return result
 }
 
-func (i *Indexer) NFTOutput(nftID *iotago.NFTID) (iotago.OutputID, milestone.Index, error) {
+func (i *Indexer) NFTOutput(nftID *iotago.NFTID) *IndexerResult {
 	query := i.db.Model(&nft{}).
 		Where("nft_id = ?", nftID[:]).
 		Limit(1)
 
-	outputIDs, ledgerIndex, err := i.combineOutputIDFilteredQuery(query)
-	if err != nil {
-		return NullOutputID, 0, err
-	}
-	if len(outputIDs) == 0 {
-		return NullOutputID, 0, ErrNotFound
-	}
-	return outputIDs[0], ledgerIndex, nil
+	return i.combineOutputIDFilteredQuery(query, 0, nil)
 }
 
-func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) (iotago.OutputIDs, milestone.Index, error) {
+func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResult {
 	opts := nftFilterOptions(filters)
 	query := i.db.Model(&nft{})
 
 	if opts.unlockableByAddress != nil {
 		addr, err := addressBytesForAddress(*opts.unlockableByAddress)
 		if err != nil {
-			return nil, 0, err
+			return errorResult(err)
 		}
 		query = query.Where("address = ?", addr[:])
 	}
@@ -122,7 +124,7 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) (iotago.Outp
 	if opts.issuer != nil {
 		addr, err := addressBytesForAddress(*opts.issuer)
 		if err != nil {
-			return nil, 0, err
+			return errorResult(err)
 		}
 		query = query.Where("issuer = ?", addr[:])
 	}
@@ -130,7 +132,7 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) (iotago.Outp
 	if opts.sender != nil {
 		addr, err := addressBytesForAddress(*opts.sender)
 		if err != nil {
-			return nil, 0, err
+			return errorResult(err)
 		}
 		query = query.Where("sender = ?", addr[:])
 	}
@@ -139,9 +141,5 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) (iotago.Outp
 		query = query.Where("tag = ?", opts.tag)
 	}
 
-	if opts.maxResults > 0 {
-		query = query.Limit(opts.maxResults)
-	}
-
-	return i.combineOutputIDFilteredQuery(query)
+	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)
 }

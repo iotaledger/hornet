@@ -325,13 +325,13 @@ func (f *Faucet) Info() (*FaucetInfoResponse, error) {
 }
 
 func (f *Faucet) computeAddressBalance(address iotago.Address) (uint64, error) {
-	unspentOutputIDs, _, err := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(address), indexer.ExtendedOutputRequiresDustReturn(false))
-	if err != nil {
-		return 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
+	result := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(address), indexer.ExtendedOutputRequiresDustReturn(false))
+	if result.Error != nil {
+		return 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), result.Error))
 	}
 
 	var amount uint64 = 0
-	for _, unspentOutputID := range unspentOutputIDs {
+	for _, unspentOutputID := range result.OutputIDs {
 		unspentOutput, err := f.utxoManager.ReadOutputByOutputIDWithoutLocking(&unspentOutputID)
 		if err != nil {
 			return 0, common.CriticalError(fmt.Errorf("reading unspent output failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
@@ -755,14 +755,14 @@ func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) err
 					return []*utxo.Output{f.lastRemainderOutput}, f.lastRemainderOutput.Deposit(), nil
 				}
 
-				unspentOutputIDs, _, err := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(f.address), indexer.ExtendedOutputRequiresDustReturn(false))
-				if err != nil {
-					return nil, 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
+				result := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(f.address), indexer.ExtendedOutputRequiresDustReturn(false))
+				if result.Error != nil {
+					return nil, 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), result.Error))
 				}
 
 				var amount uint64 = 0
 				var unspentOutputs utxo.Outputs
-				for _, unspentOutputID := range unspentOutputIDs {
+				for _, unspentOutputID := range result.OutputIDs {
 
 					unspentOutput, err := f.utxoManager.ReadOutputByOutputIDWithoutLocking(&unspentOutputID)
 					if err != nil {

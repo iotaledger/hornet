@@ -13,6 +13,7 @@ type alias struct {
 	GovernanceController addressBytes  `gorm:"not null;index:alias_governance_controller"`
 	Issuer               addressBytes  `gorm:"index:alias_issuer"`
 	Sender               addressBytes  `gorm:"index:alias_sender"`
+	MilestoneIndex       milestone.Index
 }
 
 type AliasFilterOptions struct {
@@ -20,7 +21,8 @@ type AliasFilterOptions struct {
 	governanceController *iotago.Address
 	issuer               *iotago.Address
 	sender               *iotago.Address
-	maxResults           int
+	pageSize             int
+	offset               []byte
 }
 
 type AliasFilterOption func(*AliasFilterOptions)
@@ -49,9 +51,15 @@ func AliasIssuer(address iotago.Address) AliasFilterOption {
 	}
 }
 
-func AliasMaxResults(maxResults int) AliasFilterOption {
+func AliasPageSize(pageSize int) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
-		args.maxResults = maxResults
+		args.pageSize = pageSize
+	}
+}
+
+func AliasOffset(offset []byte) AliasFilterOption {
+	return func(args *AliasFilterOptions) {
+		args.offset = offset
 	}
 }
 
@@ -61,7 +69,8 @@ func aliasFilterOptions(optionalOptions []AliasFilterOption) *AliasFilterOptions
 		governanceController: nil,
 		issuer:               nil,
 		sender:               nil,
-		maxResults:           0,
+		pageSize:             0,
+		offset:               nil,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -71,29 +80,22 @@ func aliasFilterOptions(optionalOptions []AliasFilterOption) *AliasFilterOptions
 	return result
 }
 
-func (i *Indexer) AliasOutput(aliasID *iotago.AliasID) (iotago.OutputID, milestone.Index, error) {
+func (i *Indexer) AliasOutput(aliasID *iotago.AliasID) *IndexerResult {
 	query := i.db.Model(&alias{}).
 		Where("alias_id = ?", aliasID[:]).
 		Limit(1)
 
-	outputIDs, ledgerIndex, err := i.combineOutputIDFilteredQuery(query)
-	if err != nil {
-		return NullOutputID, 0, err
-	}
-	if len(outputIDs) == 0 {
-		return NullOutputID, 0, ErrNotFound
-	}
-	return outputIDs[0], ledgerIndex, nil
+	return i.combineOutputIDFilteredQuery(query, 0, nil)
 }
 
-func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) (iotago.OutputIDs, milestone.Index, error) {
+func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) *IndexerResult {
 	opts := aliasFilterOptions(filter)
 	query := i.db.Model(&alias{})
 
 	if opts.stateController != nil {
 		addr, err := addressBytesForAddress(*opts.stateController)
 		if err != nil {
-			return nil, 0, err
+			return errorResult(err)
 		}
 		query = query.Where("state_controller = ?", addr[:])
 	}
@@ -101,7 +103,7 @@ func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) (iotago.O
 	if opts.governanceController != nil {
 		addr, err := addressBytesForAddress(*opts.governanceController)
 		if err != nil {
-			return nil, 0, err
+			return errorResult(err)
 		}
 		query = query.Where("governance_controller = ?", addr[:])
 	}
@@ -109,7 +111,7 @@ func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) (iotago.O
 	if opts.sender != nil {
 		addr, err := addressBytesForAddress(*opts.sender)
 		if err != nil {
-			return nil, 0, err
+			return errorResult(err)
 		}
 		query = query.Where("sender = ?", addr[:])
 	}
@@ -117,14 +119,10 @@ func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) (iotago.O
 	if opts.issuer != nil {
 		addr, err := addressBytesForAddress(*opts.issuer)
 		if err != nil {
-			return nil, 0, err
+			return errorResult(err)
 		}
 		query = query.Where("issuer = ?", addr[:])
 	}
 
-	if opts.maxResults > 0 {
-		query = query.Limit(opts.maxResults)
-	}
-
-	return i.combineOutputIDFilteredQuery(query)
+	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)
 }
