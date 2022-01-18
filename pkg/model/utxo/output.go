@@ -66,8 +66,7 @@ func (o *Output) hasSpendingConstraint() bool {
 	}
 }
 
-// TODO: remove
-func (o *Output) Address() iotago.Address {
+func (o *Output) address() iotago.Address {
 	switch output := o.output.(type) {
 	case iotago.TransIndepIdentOutput:
 		return output.Ident()

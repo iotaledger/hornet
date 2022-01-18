@@ -41,10 +41,6 @@ func (s *Spent) OutputType() iotago.OutputType {
 	return s.output.OutputType()
 }
 
-func (s *Spent) Address() iotago.Address {
-	return s.output.Address()
-}
-
 func (s *Spent) Deposit() uint64 {
 	return s.output.Deposit()
 }

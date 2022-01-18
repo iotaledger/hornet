@@ -224,13 +224,18 @@ func (b *MessageBuilder) Build() *Message {
 		output, err := utxo.NewOutput(message.MessageID(), b.te.LastMilestoneIndex()+1, 0, messageTx, uint16(i))
 		require.NoError(b.te.TestInterface, err)
 
-		if output.Address().String() == toAddr.String() && output.Deposit() == b.amount {
-			sentOutput = output
-			continue
-		}
+		switch iotaOutput := output.Output().(type) {
+		case *iotago.ExtendedOutput:
+			if iotaOutput.Address.String() == toAddr.String() && output.Deposit() == b.amount {
+				sentOutput = output
+				continue
+			}
 
-		if remainderAmount > 0 && output.Address().String() == fromAddr.String() && output.Deposit() == remainderAmount {
-			remainderOutput = output
+			if remainderAmount > 0 && iotaOutput.Address.String() == fromAddr.String() && output.Deposit() == remainderAmount {
+				remainderOutput = output
+			}
+		default:
+			continue
 		}
 	}
 

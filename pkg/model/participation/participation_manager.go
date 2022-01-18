@@ -771,13 +771,15 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 	}
 
 	// only OutputExtended are allowed as output type
-	switch depositOutputs[0].OutputType() {
-	case iotago.OutputExtended:
+	var depositOutput *iotago.ExtendedOutput
+	switch o := depositOutputs[0].Output().(type) {
+	case *iotago.ExtendedOutput:
+		depositOutput = o
 	default:
 		return nil, nil, nil
 	}
 
-	outputAddress, err := depositOutputs[0].Address().Serialize(serializer.DeSeriModeNoValidation, nil)
+	outputAddress, err := depositOutput.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, nil, nil
 	}
@@ -795,14 +797,19 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 	// check if at least 1 input comes from the same address as the output
 	containsInputFromSameAddress := false
 	for _, input := range inputOutputs {
-		inputAddress, err := input.Address().Serialize(serializer.DeSeriModeNoValidation, nil)
-		if err != nil {
-			return nil, nil, nil
-		}
+		switch output := input.Output().(type) {
+		case *iotago.ExtendedOutput:
+			inputAddress, err := output.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+			if err != nil {
+				return nil, nil, nil
+			}
 
-		if bytes.Equal(outputAddress, inputAddress) {
-			containsInputFromSameAddress = true
-			break
+			if bytes.Equal(outputAddress, inputAddress) {
+				containsInputFromSameAddress = true
+				break
+			}
+		default:
+			continue
 		}
 	}
 
