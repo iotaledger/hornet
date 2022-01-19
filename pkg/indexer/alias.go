@@ -9,7 +9,7 @@ type alias struct {
 	AliasID              aliasIDBytes  `gorm:"primaryKey;notnull"`
 	OutputID             outputIDBytes `gorm:"unique;notnull"`
 	Amount               uint64        `gorm:"notnull"`
-	StateController      addressBytes  `gorm:"notnull;index:alias_state_controller""`
+	StateController      addressBytes  `gorm:"not null;index:alias_state_controller"`
 	GovernanceController addressBytes  `gorm:"notnull;index:alias_governance_controller"`
 	Issuer               addressBytes  `gorm:"index:alias_issuer"`
 	Sender               addressBytes  `gorm:"index:alias_sender"`
