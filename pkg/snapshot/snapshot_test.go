@@ -62,7 +62,28 @@ func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
 	require.Equal(t, expected.MessageID()[:], actual.MessageID()[:])
 	require.Equal(t, expected.OutputType(), actual.OutputType())
-	require.Equal(t, expected.Address().String(), actual.Address().String())
+
+	var expectedIdent iotago.Address
+	switch output := expected.Output().(type) {
+	case iotago.TransIndepIdentOutput:
+		expectedIdent = output.Ident()
+	case iotago.TransDepIdentOutput:
+		expectedIdent = output.Chain().ToAddress()
+	default:
+		require.Fail(t, "unsupported output type")
+	}
+
+	var actualIdent iotago.Address
+	switch output := actual.Output().(type) {
+	case iotago.TransIndepIdentOutput:
+		actualIdent = output.Ident()
+	case iotago.TransDepIdentOutput:
+		actualIdent = output.Chain().ToAddress()
+	default:
+		require.Fail(t, "unsupported output type")
+	}
+
+	require.True(t, expectedIdent.Equal(actualIdent))
 	require.Equal(t, expected.Deposit(), actual.Deposit())
 }
 
