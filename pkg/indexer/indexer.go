@@ -181,9 +181,14 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 
+		address, err := addressBytesForAddress(iotaOutput.Address)
+		if err != nil {
+			return err
+		}
 		nft := &nft{
 			NFTID:          make(nftIDBytes, iotago.NFTIDLength),
 			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
+			Address:        address,
 			Amount:         iotaOutput.Amount,
 			MilestoneIndex: output.MilestoneIndex(),
 		}
