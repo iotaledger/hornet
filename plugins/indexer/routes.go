@@ -57,8 +57,8 @@ const (
 	// QueryParameterGovernanceController is used to filter for a certain governance controller address.
 	QueryParameterGovernanceController = "governanceController"
 
-	// QueryParameterPageSize is used to define the page size for the results.
-	QueryParameterPageSize = "pageSize"
+	// QueryParameterLimit is used to define the page size for the results.
+	QueryParameterLimit = "limit"
 
 	// QueryParameterOffset is used to pass the outputID we want to start the results from.
 	QueryParameterOffset = "offset"
@@ -84,7 +84,7 @@ func configureRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return c.JSON(http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAliases, func(c echo.Context) error {
@@ -93,7 +93,7 @@ func configureRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return c.JSON(http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAliasByID, func(c echo.Context) error {
@@ -102,7 +102,7 @@ func configureRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return c.JSON(http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteNFT, func(c echo.Context) error {
@@ -111,7 +111,7 @@ func configureRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return c.JSON(http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteNFTByID, func(c echo.Context) error {
@@ -120,7 +120,7 @@ func configureRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return c.JSON(http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteFoundries, func(c echo.Context) error {
@@ -129,7 +129,7 @@ func configureRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return c.JSON(http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteFoundryByID, func(c echo.Context) error {
@@ -138,7 +138,7 @@ func configureRoutes(routeGroup *echo.Group) {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return c.JSON(http.StatusOK, resp)
 	})
 }
 
@@ -344,24 +344,21 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputIDs failed: %s", result.Error)
 	}
 
-	pageSize := result.PageSize
-	if pageSize == 0 {
-		pageSize = len(result.OutputIDs)
-	}
-
 	return &outputsResponse{
-		PageSize:    uint32(pageSize),
-		Count:       uint32(len(result.OutputIDs)),
-		OutputIDs:   result.OutputIDs.ToHex(),
-		NextOffset:  hex.EncodeToString(result.NextOffset),
-		LedgerIndex: result.LedgerIndex,
+		Limit:  uint32(result.PageSize),
+		Offset: hex.EncodeToString(result.NextOffset),
+		Count:  uint32(len(result.OutputIDs)),
+		Data: dataEnvelope{
+			OutputIDs:   result.OutputIDs.ToHex(),
+			LedgerIndex: result.LedgerIndex,
+		},
 	}, nil
 }
 
 func pageSizeFromContext(c echo.Context) int {
 	pageSize := deps.RestAPILimitsMaxResults
-	if len(c.QueryParam(QueryParameterPageSize)) > 0 {
-		i, err := strconv.Atoi(c.QueryParam(QueryParameterPageSize))
+	if len(c.QueryParam(QueryParameterLimit)) > 0 {
+		i, err := strconv.Atoi(c.QueryParam(QueryParameterLimit))
 		if err != nil {
 			return pageSize
 		}
