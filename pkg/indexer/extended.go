@@ -8,9 +8,9 @@ import (
 )
 
 type extendedOutput struct {
-	OutputID            outputIDBytes `gorm:"primaryKey;not null"`
-	Address             addressBytes  `gorm:"not null;index:extended_address"`
-	Amount              uint64        `gorm:"not null"`
+	OutputID            outputIDBytes `gorm:"primaryKey;notnull"`
+	Address             addressBytes  `gorm:"notnull;index:extended_address"`
+	Amount              uint64        `gorm:"notnull"`
 	Sender              addressBytes  `gorm:"index:extended_sender_tag"`
 	Tag                 []byte        `gorm:"index:extended_sender_tag"`
 	DustReturn          *uint64

@@ -8,10 +8,10 @@ import (
 )
 
 type nft struct {
-	NFTID               nftIDBytes    `gorm:"primaryKey;not null"`
-	OutputID            outputIDBytes `gorm:"unique;not null"`
-	Address             addressBytes  `gorm:"not null;index:nft_address"`
-	Amount              uint64        `gorm:"not null"`
+	NFTID               nftIDBytes    `gorm:"primaryKey;notnull"`
+	OutputID            outputIDBytes `gorm:"unique;notnull"`
+	Address             addressBytes  `gorm:"notnull;index:nft_address"`
+	Amount              uint64        `gorm:"notnull"`
 	Issuer              addressBytes  `gorm:"index:nft_issuer"`
 	Sender              addressBytes  `gorm:"index:nft_sender_tag"`
 	Tag                 []byte        `gorm:"index:nft_sender_tag"`

@@ -24,7 +24,7 @@ type aliasIDBytes []byte
 type foundryIDBytes []byte
 
 type status struct {
-	ID          uint `gorm:"primaryKey;not null"`
+	ID          uint `gorm:"primaryKey;notnull"`
 	LedgerIndex milestone.Index
 }
 

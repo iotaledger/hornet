@@ -6,10 +6,10 @@ import (
 )
 
 type foundry struct {
-	FoundryID      foundryIDBytes `gorm:"primaryKey;not null"`
-	OutputID       outputIDBytes  `gorm:"unique;not null"`
-	Amount         uint64         `gorm:"not null"`
-	Address        addressBytes   `gorm:"not null;index:foundries_address"`
+	FoundryID      foundryIDBytes `gorm:"primaryKey;notnull"`
+	OutputID       outputIDBytes  `gorm:"unique;notnull"`
+	Amount         uint64         `gorm:"notnull"`
+	Address        addressBytes   `gorm:"notnull;index:foundries_address"`
 	MilestoneIndex milestone.Index
 }
 
