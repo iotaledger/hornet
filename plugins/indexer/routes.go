@@ -345,13 +345,11 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 	}
 
 	return &outputsResponse{
-		Limit:  uint32(result.PageSize),
-		Offset: hex.EncodeToString(result.NextOffset),
-		Count:  uint32(len(result.OutputIDs)),
-		Data: dataEnvelope{
-			OutputIDs:   result.OutputIDs.ToHex(),
-			LedgerIndex: result.LedgerIndex,
-		},
+		LedgerIndex: result.LedgerIndex,
+		Limit:       uint32(result.PageSize),
+		Offset:      hex.EncodeToString(result.NextOffset),
+		Count:       uint32(len(result.OutputIDs)),
+		OutputIDs:   result.OutputIDs.ToHex(),
 	}, nil
 }
 
