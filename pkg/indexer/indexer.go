@@ -140,11 +140,12 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		alias := &alias{
+			AliasID:        make(aliasIDBytes, iotago.AliasIDLength),
 			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
-			AliasID:        aliasID[:],
 			Amount:         iotaOutput.Amount,
 			MilestoneIndex: output.MilestoneIndex(),
 		}
+		copy(alias.AliasID, aliasID[:])
 		copy(alias.OutputID, output.OutputID()[:])
 
 		alias.StateController, err = addressBytesForAddress(iotaOutput.StateController)
@@ -181,6 +182,13 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 
+		nftID := iotaOutput.NFTID
+		if nftID.Empty() {
+			// Use implicit NFTID
+			nftAddr := iotago.NFTAddressFromOutputID(*output.OutputID())
+			nftID = nftAddr.NFTID()
+		}
+
 		address, err := addressBytesForAddress(iotaOutput.Address)
 		if err != nil {
 			return err
@@ -192,7 +200,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			Amount:         iotaOutput.Amount,
 			MilestoneIndex: output.MilestoneIndex(),
 		}
-		copy(nft.NFTID, iotaOutput.NFTID[:])
+		copy(nft.NFTID, nftID[:])
 		copy(nft.OutputID, output.OutputID()[:])
 
 		if issuerBlock := features.IssuerFeatureBlock(); issuerBlock != nil {
