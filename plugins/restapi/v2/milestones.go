@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import (
 	"github.com/labstack/echo/v4"

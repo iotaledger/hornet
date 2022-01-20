@@ -31,7 +31,7 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	indexerPlugin "github.com/gohornet/hornet/plugins/indexer"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -151,9 +151,9 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	// check if RestAPIV1 plugin is disabled
-	if Plugin.Node.IsSkipped(restapiv1.Plugin) {
-		Plugin.LogPanic("RestAPIV1 plugin needs to be enabled to use the Faucet plugin")
+	// check if RestAPIV2 plugin is disabled
+	if Plugin.Node.IsSkipped(restapiv2.Plugin) {
+		Plugin.LogPanic("RestAPIV2 plugin needs to be enabled to use the Faucet plugin")
 	}
 
 	// check if Indexer plugin is disabled
@@ -161,7 +161,7 @@ func configure() {
 		Plugin.LogPanic("Indexer plugin needs to be enabled to use the Faucet plugin")
 	}
 
-	restapiv1.AddFeature(Plugin.Name)
+	restapiv2.AddFeature(Plugin.Name)
 
 	routeGroup := deps.Echo.Group("/api/plugins/faucet")
 

@@ -64,18 +64,18 @@ Example:
     "publicRoutes": [
       "/health",
       "/mqtt",
-      "/api/v1/info",
-      "/api/v1/tips",
-      "/api/v1/messages*",
-      "/api/v1/transactions*",
-      "/api/v1/milestones*",
-      "/api/v1/outputs*",
-      "/api/v1/addresses*",
-      "/api/v1/treasury",
-      "/api/v1/receipts*"
+      "/api/v2/info",
+      "/api/v2/tips",
+      "/api/v2/messages*",
+      "/api/v2/transactions*",
+      "/api/v2/milestones*",
+      "/api/v2/outputs*",
+      "/api/v2/addresses*",
+      "/api/v2/treasury",
+      "/api/v2/receipts*"
     ],
     "protectedRoutes": [
-      "/api/v1/*",
+      "/api/v2/*",
       "/api/plugins/*"
     ],
     "powEnabled": true,

@@ -7,7 +7,7 @@
     "publicRoutes": [
       "/health",
       "/mqtt",
-      "/api/v1/*",
+      "/api/v2/*",
       "/api/plugins/*"
     ],
     "protectedRoutes": [

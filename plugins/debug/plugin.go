@@ -15,7 +15,7 @@ import (
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/restapi"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -97,7 +97,7 @@ func configure() {
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
-	restapiv1.AddFeature(Plugin.Name)
+	restapiv2.AddFeature(Plugin.Name)
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 

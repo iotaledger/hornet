@@ -25,7 +25,7 @@ import (
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/versioncheck"
@@ -50,7 +50,7 @@ func main() {
 			profiling.Plugin,
 			versioncheck.Plugin,
 			restapi.Plugin,
-			restapiv1.Plugin,
+			restapiv2.Plugin,
 			autopeering.Plugin,
 			warpsync.Plugin,
 			urts.Plugin,

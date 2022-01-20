@@ -32,7 +32,7 @@ import (
 	"github.com/gohornet/hornet/plugins/participation"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
@@ -130,7 +130,7 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 		initConfig.ForceDisablePluggable(gossip.CorePlugin.Identifier())
 		initConfig.ForceDisablePluggable(tangle.CorePlugin.Identifier())
 		initConfig.ForceDisablePluggable(snapshot.CorePlugin.Identifier())
-		initConfig.ForceDisablePluggable(restapiv1.Plugin.Identifier())
+		initConfig.ForceDisablePluggable(restapiv2.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(warpsync.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(urts.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(dashboard.Plugin.Identifier())

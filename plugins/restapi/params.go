@@ -34,22 +34,22 @@ var params = &node.PluginParams{
 				[]string{
 					"/health",
 					"/mqtt",
-					"/api/v1/info",
-					"/api/v1/tips",
-					"/api/v1/messages*",
-					"/api/v1/transactions*",
-					"/api/v1/milestones*",
-					"/api/v1/outputs*",
-					"/api/v1/addresses*",
-					"/api/v1/treasury",
-					"/api/v1/receipts*",
+					"/api/v2/info",
+					"/api/v2/tips",
+					"/api/v2/messages*",
+					"/api/v2/transactions*",
+					"/api/v2/milestones*",
+					"/api/v2/outputs*",
+					"/api/v2/addresses*",
+					"/api/v2/treasury",
+					"/api/v2/receipts*",
 					"/api/plugins/participation/events*",
 					"/api/plugins/participation/outputs*",
 					"/api/plugins/participation/addresses*",
 				}, "the HTTP REST routes which can be called without authorization. Wildcards using * are allowed")
 			fs.StringSlice(CfgRestAPIProtectedRoutes,
 				[]string{
-					"/api/v1/*",
+					"/api/v2/*",
 					"/api/plugins/*",
 				}, "the HTTP REST routes which need to be called with authorization. Wildcards using * are allowed")
 			fs.String(CfgRestAPIJWTAuthSalt, "HORNET", "salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value")

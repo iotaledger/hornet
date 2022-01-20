@@ -308,7 +308,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 		PublicRoutes: []string{
 			"/health",
 			"/mqtt",
-			"/api/v1/*",
+			"/api/v2/*",
 			"/api/plugins/*",
 		},
 		ProtectedRoutes: []string{},

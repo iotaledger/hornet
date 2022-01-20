@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import (
 	"net/http"
@@ -97,13 +97,11 @@ const (
 	RouteControlSnapshotsCreate = "/control/snapshots/create"
 )
 
-//TODO: rename to v2
-
 func init() {
 	Plugin = &node.Plugin{
 		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
-			Name:      "RestAPIV1",
+			Name:      "RestAPIV2",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Configure: configure,
 		},
@@ -154,10 +152,10 @@ type dependencies struct {
 func configure() {
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the RestAPIV2 plugin")
 	}
 
-	routeGroup := deps.Echo.Group("/api/v1")
+	routeGroup := deps.Echo.Group("/api/v2")
 
 	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
 	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)

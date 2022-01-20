@@ -16,7 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
@@ -225,11 +225,11 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 	}
 
-	outputs := make([]*v1.OutputResponse, len(diff.Outputs))
-	spents := make([]*v1.OutputResponse, len(diff.Spents))
+	outputs := make([]*restapiv2.OutputResponse, len(diff.Outputs))
+	spents := make([]*restapiv2.OutputResponse, len(diff.Spents))
 
 	for i, output := range diff.Outputs {
-		o, err := v1.NewOutputResponse(output, false, diff.Index)
+		o, err := restapiv2.NewOutputResponse(output, false, diff.Index)
 		if err != nil {
 			return nil, err
 		}
@@ -237,7 +237,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}
 
 	for i, spent := range diff.Spents {
-		o, err := v1.NewOutputResponse(spent.Output(), true, diff.Index)
+		o, err := restapiv2.NewOutputResponse(spent.Output(), true, diff.Index)
 		if err != nil {
 			return nil, err
 		}
