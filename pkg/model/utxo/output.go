@@ -55,7 +55,7 @@ func (o *Output) hasSpendingConstraint() bool {
 	switch output := o.output.(type) {
 	case iotago.UnlockConditionOutput:
 		conditions := output.UnlockConditions().MustSet()
-		return conditions.DustDepositReturn() != nil || conditions.HasExpirationConditions() || conditions.Timelock() != nil
+		return conditions.HasDustDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
 	default:
 		panic("Unknown output type")
 	}
