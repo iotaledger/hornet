@@ -47,7 +47,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	EqualOutput(t, output, readOutput)
 
 	// Verify that it is unspent
-	unspent, err := manager.IsOutputUnspent(outputID)
+	unspent, err := manager.IsOutputIDUnspentWithoutLocking(outputID)
 	require.NoError(t, err)
 	require.True(t, unspent)
 
@@ -60,12 +60,12 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	require.NoError(t, manager.ApplyConfirmation(spent.milestoneIndex, Outputs{}, Spents{spent}, nil, nil))
 
 	// Read Spent from DB and compare
-	readSpent, err := manager.readSpentForOutputIDWithoutLocking(outputID)
+	readSpent, err := manager.ReadSpentForOutputIDWithoutLocking(outputID)
 	require.NoError(t, err)
 	EqualSpent(t, spent, readSpent)
 
 	// Verify that it is spent
-	unspent, err = manager.IsOutputUnspent(outputID)
+	unspent, err = manager.IsOutputIDUnspentWithoutLocking(outputID)
 	require.NoError(t, err)
 	require.False(t, unspent)
 
@@ -78,12 +78,12 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	require.NoError(t, manager.RollbackConfirmation(spent.milestoneIndex, Outputs{}, Spents{spent}, nil, nil))
 
 	// Verify that it is unspent
-	unspent, err = manager.IsOutputUnspent(outputID)
+	unspent, err = manager.IsOutputIDUnspentWithoutLocking(outputID)
 	require.NoError(t, err)
 	require.True(t, unspent)
 
 	// No Spent should be in the DB
-	_, err = manager.readSpentForOutputIDWithoutLocking(outputID)
+	_, err = manager.ReadSpentForOutputIDWithoutLocking(outputID)
 	require.ErrorIs(t, err, kvstore.ErrKeyNotFound)
 
 	// Verify that all unspent keys exist in the database

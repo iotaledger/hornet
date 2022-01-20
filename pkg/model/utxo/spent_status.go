@@ -43,20 +43,12 @@ func deleteOutputLookups(output *Output, mutations kvstore.BatchedMutations) err
 	return mutations.Delete(output.unspentLookupKey())
 }
 
-func (u *Manager) IsOutputUnspentWithoutLocking(output *Output) (bool, error) {
-	return u.utxoStorage.Has(output.unspentLookupKey())
+func (u *Manager) IsOutputIDUnspentWithoutLocking(outputID *iotago.OutputID) (bool, error) {
+	return u.utxoStorage.Has(lookupKeyUnspentOutput(outputID))
 }
 
-func (u *Manager) IsOutputUnspent(outputID *iotago.OutputID) (bool, error) {
-	u.ReadLockLedger()
-	defer u.ReadUnlockLedger()
-
-	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
-	if err != nil {
-		return false, err
-	}
-
-	return u.IsOutputUnspentWithoutLocking(output)
+func (u *Manager) IsOutputUnspentWithoutLocking(output *Output) (bool, error) {
+	return u.utxoStorage.Has(output.unspentLookupKey())
 }
 
 func storeSpentAndMarkOutputAsSpent(spent *Spent, mutations kvstore.BatchedMutations) error {

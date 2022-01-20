@@ -97,7 +97,7 @@ func (d *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value [
 			return err
 		}
 
-		spent, err := utxoManager.readSpentForOutputIDWithoutLocking(outputID)
+		spent, err := utxoManager.ReadSpentForOutputIDWithoutLocking(outputID)
 		if err != nil {
 			return err
 		}

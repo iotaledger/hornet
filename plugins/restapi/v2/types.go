@@ -124,7 +124,10 @@ type OutputResponse struct {
 	OutputIndex uint16 `json:"outputIndex"`
 	// Whether this output is spent.
 	Spent bool `json:"isSpent"`
-	//TODO: expose the spent milestoneIndex and targetTransactionID
+	// The milestone index at which this output was spent.
+	SpentMilestoneIndex milestone.Index `json:"spentMilestoneIndex,omitempty"`
+	// The transaction this output was spent with.
+	SpentTransactionID string `json:"spentTransactionId,omitempty"`
 	// The milestone index at which this output was booked into the ledger.
 	MilestoneIndex milestone.Index `json:"milestoneIndex"`
 	// The milestone timestamp this output was booked in the ledger.

@@ -125,7 +125,7 @@ func (u *Manager) loadOutputOfSpent(s *Spent) error {
 	return nil
 }
 
-func (u *Manager) readSpentForOutputIDWithoutLocking(outputID *iotago.OutputID) (*Spent, error) {
+func (u *Manager) ReadSpentForOutputIDWithoutLocking(outputID *iotago.OutputID) (*Spent, error) {
 	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		return nil, err

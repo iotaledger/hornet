@@ -229,7 +229,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	spents := make([]*restapiv2.OutputResponse, len(diff.Spents))
 
 	for i, output := range diff.Outputs {
-		o, err := restapiv2.NewOutputResponse(output, false, diff.Index)
+		o, err := restapiv2.NewOutputResponse(output, diff.Index)
 		if err != nil {
 			return nil, err
 		}
@@ -237,7 +237,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}
 
 	for i, spent := range diff.Spents {
-		o, err := restapiv2.NewOutputResponse(spent.Output(), true, diff.Index)
+		o, err := restapiv2.NewSpentResponse(spent, diff.Index)
 		if err != nil {
 			return nil, err
 		}
