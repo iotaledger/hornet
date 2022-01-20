@@ -171,8 +171,10 @@ func ReceiptToOutputs(r *iotago.Receipt, msgID hornet.MessageID, msID *iotago.Mi
 		// we use the milestone hash as the "origin message"
 
 		output := &iotago.ExtendedOutput{
-			Address: entry.Address,
-			Amount:  entry.Deposit,
+			Amount: entry.Deposit,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{Address: entry.Address},
+			},
 		}
 
 		outputs[outputIndex] = CreateOutput(&outputID, msgID, msIndex, msTimestamp, output)

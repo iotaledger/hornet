@@ -180,7 +180,8 @@ func (u *Manager) ComputeAddressBalanceWithoutConstraints(address iotago.Address
 	count = 0
 
 	consumerFunc := func(output *Output) bool {
-		if output.address().Equal(address) && !output.hasSpendingConstraint() {
+		ownerAddress := output.address()
+		if ownerAddress != nil && address.Equal(ownerAddress) && !output.hasSpendingConstraint() {
 			count++
 			balance += output.Deposit()
 		}

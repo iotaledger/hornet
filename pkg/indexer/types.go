@@ -13,6 +13,10 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+const (
+	OffsetLength = 38
+)
+
 var (
 	NullOutputID = iotago.OutputID{}
 )
@@ -88,7 +92,7 @@ func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB, pageSize int, off
 	query = query.Select("output_id", "milestone_index").Order("milestone_index asc, output_id asc")
 	if pageSize > 0 {
 		if offset != nil {
-			if len(offset) != 38 {
+			if len(offset) != OffsetLength {
 				return errorResult(errors.Errorf("Invalid offset length: %d", len(offset)))
 			}
 			msIndex := binary.LittleEndian.Uint32(offset[:4])

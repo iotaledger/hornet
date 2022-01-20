@@ -536,11 +536,21 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 		}
 		remainderAmount -= int64(amount)
 
-		txBuilder.AddOutput(&iotago.ExtendedOutput{Address: req.Ed25519Address, Amount: amount})
+		txBuilder.AddOutput(&iotago.ExtendedOutput{
+			Amount: amount,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{Address: req.Ed25519Address},
+			},
+		})
 	}
 
 	if remainderAmount > 0 {
-		txBuilder.AddOutput(&iotago.ExtendedOutput{Address: f.address, Amount: uint64(remainderAmount)})
+		txBuilder.AddOutput(&iotago.ExtendedOutput{
+			Amount: uint64(remainderAmount),
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{Address: f.address},
+			},
+		})
 	}
 
 	txPayload, err := txBuilder.Build(f.deSeriParas, f.addressSigner)
@@ -566,7 +576,11 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	var outputIndex uint16 = 0
 	for _, output := range txPayload.Essence.Outputs {
 		extendedOutput := output.(*iotago.ExtendedOutput)
-		ed25519Addr := extendedOutput.Address.(*iotago.Ed25519Address)
+		conditions, err := extendedOutput.UnlockConditions().Set()
+		if err != nil {
+			return nil, nil, 0, err
+		}
+		ed25519Addr := conditions.Address().Address.(*iotago.Ed25519Address)
 
 		if bytes.Equal(ed25519Addr[:], f.address[:]) {
 			// found the remainder address in the outputs
@@ -607,8 +621,10 @@ func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.O
 	if remainderIotaGoOutput != nil {
 		remainderIotaGoOutputID := remainderIotaGoOutput.ID()
 		output := &iotago.ExtendedOutput{
-			Address: f.address,
-			Amount:  remainderAmount,
+			Amount: remainderAmount,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{Address: f.address},
+			},
 		}
 		f.lastRemainderOutput = utxo.CreateOutput(&remainderIotaGoOutputID, msg.MessageID(), 0, 0, output)
 	} else {

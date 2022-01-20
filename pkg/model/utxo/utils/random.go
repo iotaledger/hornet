@@ -103,16 +103,26 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 	switch outputType {
 	case iotago.OutputExtended:
 		iotaOutput = &iotago.ExtendedOutput{
-			Address: address,
-			Amount:  amount,
+			Amount: amount,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{
+					Address: address,
+				},
+			},
 		}
 	case iotago.OutputAlias:
 		iotaOutput = &iotago.AliasOutput{
-			Amount:               amount,
-			AliasID:              RandAliasID(),
-			StateController:      address,
-			GovernanceController: address,
-			StateMetadata:        []byte{},
+			Amount:        amount,
+			AliasID:       RandAliasID(),
+			StateMetadata: []byte{},
+			Conditions: iotago.UnlockConditions{
+				&iotago.StateControllerAddressUnlockCondition{
+					Address: address,
+				},
+				&iotago.GovernorAddressUnlockCondition{
+					Address: address,
+				},
+			},
 		}
 	case iotago.OutputFoundry:
 		if address.Type() != iotago.AddressAlias {
@@ -120,20 +130,28 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 		}
 		supply := new(big.Int).SetUint64(rand.Uint64())
 		iotaOutput = &iotago.FoundryOutput{
-			Address:           address,
 			Amount:            amount,
 			SerialNumber:      0,
 			TokenTag:          RandTokenTag(),
 			CirculatingSupply: supply,
 			MaximumSupply:     supply,
 			TokenScheme:       &iotago.SimpleTokenScheme{},
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{
+					Address: address,
+				},
+			},
 		}
 	case iotago.OutputNFT:
 		iotaOutput = &iotago.NFTOutput{
-			Address:           address,
 			Amount:            amount,
 			NFTID:             RandNFTID(),
 			ImmutableMetadata: []byte{},
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{
+					Address: address,
+				},
+			},
 		}
 	default:
 		panic("unhandled output type")

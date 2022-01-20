@@ -6,23 +6,23 @@ import (
 )
 
 type alias struct {
-	AliasID              aliasIDBytes  `gorm:"primaryKey;notnull"`
-	OutputID             outputIDBytes `gorm:"unique;notnull"`
-	Amount               uint64        `gorm:"notnull"`
-	StateController      addressBytes  `gorm:"not null;index:alias_state_controller"`
-	GovernanceController addressBytes  `gorm:"notnull;index:alias_governance_controller"`
-	Issuer               addressBytes  `gorm:"index:alias_issuer"`
-	Sender               addressBytes  `gorm:"index:alias_sender"`
-	MilestoneIndex       milestone.Index
+	AliasID         aliasIDBytes  `gorm:"primaryKey;notnull"`
+	OutputID        outputIDBytes `gorm:"unique;notnull"`
+	Amount          uint64        `gorm:"notnull"`
+	StateController addressBytes  `gorm:"not null;index:alias_state_controller"`
+	Governor        addressBytes  `gorm:"notnull;index:alias_governor"`
+	Issuer          addressBytes  `gorm:"index:alias_issuer"`
+	Sender          addressBytes  `gorm:"index:alias_sender"`
+	MilestoneIndex  milestone.Index
 }
 
 type AliasFilterOptions struct {
-	stateController      *iotago.Address
-	governanceController *iotago.Address
-	issuer               *iotago.Address
-	sender               *iotago.Address
-	pageSize             int
-	offset               []byte
+	stateController *iotago.Address
+	governor        *iotago.Address
+	issuer          *iotago.Address
+	sender          *iotago.Address
+	pageSize        int
+	offset          []byte
 }
 
 type AliasFilterOption func(*AliasFilterOptions)
@@ -33,9 +33,9 @@ func AliasStateController(address iotago.Address) AliasFilterOption {
 	}
 }
 
-func AliasGovernanceController(address iotago.Address) AliasFilterOption {
+func AliasGovernor(address iotago.Address) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
-		args.governanceController = &address
+		args.governor = &address
 	}
 }
 
@@ -65,12 +65,12 @@ func AliasOffset(offset []byte) AliasFilterOption {
 
 func aliasFilterOptions(optionalOptions []AliasFilterOption) *AliasFilterOptions {
 	result := &AliasFilterOptions{
-		stateController:      nil,
-		governanceController: nil,
-		issuer:               nil,
-		sender:               nil,
-		pageSize:             0,
-		offset:               nil,
+		stateController: nil,
+		governor:        nil,
+		issuer:          nil,
+		sender:          nil,
+		pageSize:        0,
+		offset:          nil,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -100,12 +100,12 @@ func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) *IndexerR
 		query = query.Where("state_controller = ?", addr[:])
 	}
 
-	if opts.governanceController != nil {
-		addr, err := addressBytesForAddress(*opts.governanceController)
+	if opts.governor != nil {
+		addr, err := addressBytesForAddress(*opts.governor)
 		if err != nil {
 			return errorResult(err)
 		}
-		query = query.Where("governance_controller = ?", addr[:])
+		query = query.Where("governor = ?", addr[:])
 	}
 
 	if opts.sender != nil {

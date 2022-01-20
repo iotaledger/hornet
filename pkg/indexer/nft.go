@@ -8,19 +8,21 @@ import (
 )
 
 type nft struct {
-	NFTID               nftIDBytes    `gorm:"primaryKey;notnull"`
-	OutputID            outputIDBytes `gorm:"unique;notnull"`
-	Address             addressBytes  `gorm:"notnull;index:nft_address"`
-	Amount              uint64        `gorm:"notnull"`
-	Issuer              addressBytes  `gorm:"index:nft_issuer"`
-	Sender              addressBytes  `gorm:"index:nft_sender_tag"`
-	Tag                 []byte        `gorm:"index:nft_sender_tag"`
-	DustReturn          *uint64
-	TimelockMilestone   *milestone.Index
-	TimelockTime        *time.Time
-	ExpirationMilestone *milestone.Index
-	ExpirationTime      *time.Time
-	MilestoneIndex      milestone.Index
+	NFTID                   nftIDBytes    `gorm:"primaryKey;notnull"`
+	OutputID                outputIDBytes `gorm:"unique;notnull"`
+	Amount                  uint64        `gorm:"notnull"`
+	Issuer                  addressBytes  `gorm:"index:nft_issuer"`
+	Sender                  addressBytes  `gorm:"index:nft_sender_tag"`
+	Tag                     []byte        `gorm:"index:nft_sender_tag"`
+	Address                 addressBytes  `gorm:"notnull;index:nft_address"`
+	DustReturn              *uint64
+	DustReturnAddress       addressBytes
+	TimelockMilestone       *milestone.Index
+	TimelockTime            *time.Time
+	ExpirationMilestone     *milestone.Index
+	ExpirationTime          *time.Time
+	ExpirationReturnAddress addressBytes
+	MilestoneIndex          milestone.Index
 }
 
 type NFTFilterOptions struct {

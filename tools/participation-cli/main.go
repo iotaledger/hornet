@@ -85,11 +85,21 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 		return nil, fmt.Errorf("not enough balance on the inputs: %d, needed: %d", inputsBalance, outputAmount)
 	}
 
-	txBuilder.AddOutput(&iotago.ExtendedOutput{Address: outputAddress, Amount: outputAmount})
+	txBuilder.AddOutput(&iotago.ExtendedOutput{
+		Amount: outputAmount,
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{Address: outputAddress},
+		},
+	})
 	inputsBalance -= outputAmount
 
 	if inputsBalance > 0 {
-		txBuilder.AddOutput(&iotago.ExtendedOutput{Address: inputAddress, Amount: inputsBalance})
+		txBuilder.AddOutput(&iotago.ExtendedOutput{
+			Amount: inputsBalance,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{Address: inputAddress},
+			},
+		})
 	}
 
 	if taggedData != nil {

@@ -77,13 +77,13 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 
-		address, err := addressBytesForAddress(iotaOutput.Address)
+		conditions, err := iotaOutput.UnlockConditions().Set()
 		if err != nil {
 			return err
 		}
+
 		extended := &extendedOutput{
 			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
-			Address:        address,
 			Amount:         iotaOutput.Amount,
 			MilestoneIndex: output.MilestoneIndex(),
 		}
@@ -96,33 +96,51 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			}
 		}
 
-		if tagBlock := features.IndexationFeatureBlock(); tagBlock != nil {
+		if tagBlock := features.TagFeatureBlock(); tagBlock != nil {
 			copy(extended.Tag, tagBlock.Tag)
 		}
 
-		if dustReturn := features.DustDepositReturnFeatureBlock(); dustReturn != nil {
+		if addressUnlock := conditions.Address(); addressUnlock != nil {
+			extended.Address, err = addressBytesForAddress(addressUnlock.Address)
+			if err != nil {
+				return err
+			}
+		}
+
+		if dustReturn := conditions.DustDepositReturn(); dustReturn != nil {
 			extended.DustReturn = &dustReturn.Amount
+			extended.DustReturnAddress, err = addressBytesForAddress(dustReturn.ReturnAddress)
+			if err != nil {
+				return err
+			}
 		}
 
-		if timelockMs := features.TimelockMilestoneIndexFeatureBlock(); timelockMs != nil {
-			idx := milestone.Index(timelockMs.MilestoneIndex)
-			extended.TimelockMilestone = &idx
+		if timelock := conditions.Timelock(); timelock != nil {
+			if timelock.MilestoneIndex > 0 {
+				idx := milestone.Index(timelock.MilestoneIndex)
+				extended.TimelockMilestone = &idx
+			}
+			if timelock.UnixTime > 0 {
+				time := time.Unix(int64(timelock.UnixTime), 0)
+				extended.TimelockTime = &time
+			}
 		}
 
-		if timelockTs := features.TimelockUnixFeatureBlock(); timelockTs != nil {
-			time := time.Unix(int64(timelockTs.UnixTime), 0)
-			extended.TimelockTime = &time
+		if expiration := conditions.Expiration(); expiration != nil {
+			if expiration.MilestoneIndex > 0 {
+				idx := milestone.Index(expiration.MilestoneIndex)
+				extended.ExpirationMilestone = &idx
+			}
+			if expiration.UnixTime > 0 {
+				time := time.Unix(int64(expiration.UnixTime), 0)
+				extended.ExpirationTime = &time
+			}
+			extended.ExpirationReturnAddress, err = addressBytesForAddress(expiration.ReturnAddress)
+			if err != nil {
+				return err
+			}
 		}
 
-		if expirationMs := features.ExpirationMilestoneIndexFeatureBlock(); expirationMs != nil {
-			idx := milestone.Index(expirationMs.MilestoneIndex)
-			extended.ExpirationMilestone = &idx
-		}
-
-		if expirationTs := features.ExpirationUnixFeatureBlock(); expirationTs != nil {
-			time := time.Unix(int64(expirationTs.UnixTime), 0)
-			extended.ExpirationTime = &time
-		}
 		if err := tx.Create(extended).Error; err != nil {
 			return err
 		}
@@ -139,6 +157,11 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 
+		conditions, err := iotaOutput.UnlockConditions().Set()
+		if err != nil {
+			return err
+		}
+
 		alias := &alias{
 			AliasID:        make(aliasIDBytes, iotago.AliasIDLength),
 			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
@@ -147,16 +170,6 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 		copy(alias.AliasID, aliasID[:])
 		copy(alias.OutputID, output.OutputID()[:])
-
-		alias.StateController, err = addressBytesForAddress(iotaOutput.StateController)
-		if err != nil {
-			return err
-		}
-
-		alias.GovernanceController, err = addressBytesForAddress(iotaOutput.GovernanceController)
-		if err != nil {
-			return err
-		}
 
 		if issuerBlock := features.IssuerFeatureBlock(); issuerBlock != nil {
 			alias.Issuer, err = addressBytesForAddress(issuerBlock.Address)
@@ -172,12 +185,31 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			}
 		}
 
+		if stateController := conditions.StateControllerAddress(); stateController != nil {
+			alias.StateController, err = addressBytesForAddress(stateController.Address)
+			if err != nil {
+				return err
+			}
+		}
+
+		if governor := conditions.GovernorAddress(); governor != nil {
+			alias.Governor, err = addressBytesForAddress(governor.Address)
+			if err != nil {
+				return err
+			}
+		}
+
 		if err := tx.Create(alias).Error; err != nil {
 			return err
 		}
 
 	case *iotago.NFTOutput:
 		features, err := iotaOutput.FeatureBlocks().Set()
+		if err != nil {
+			return err
+		}
+
+		conditions, err := iotaOutput.UnlockConditions().Set()
 		if err != nil {
 			return err
 		}
@@ -189,14 +221,9 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			nftID = nftAddr.NFTID()
 		}
 
-		address, err := addressBytesForAddress(iotaOutput.Address)
-		if err != nil {
-			return err
-		}
 		nft := &nft{
 			NFTID:          make(nftIDBytes, iotago.NFTIDLength),
 			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
-			Address:        address,
 			Amount:         iotaOutput.Amount,
 			MilestoneIndex: output.MilestoneIndex(),
 		}
@@ -217,55 +244,80 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			}
 		}
 
-		if tagBlock := features.IndexationFeatureBlock(); tagBlock != nil {
+		if tagBlock := features.TagFeatureBlock(); tagBlock != nil {
 			copy(nft.Tag, tagBlock.Tag)
 		}
 
-		if dustReturn := features.DustDepositReturnFeatureBlock(); dustReturn != nil {
+		if addressUnlock := conditions.Address(); addressUnlock != nil {
+			nft.Address, err = addressBytesForAddress(addressUnlock.Address)
+			if err != nil {
+				return err
+			}
+		}
+
+		if dustReturn := conditions.DustDepositReturn(); dustReturn != nil {
 			nft.DustReturn = &dustReturn.Amount
+			nft.DustReturnAddress, err = addressBytesForAddress(dustReturn.ReturnAddress)
+			if err != nil {
+				return err
+			}
 		}
 
-		if timelockMs := features.TimelockMilestoneIndexFeatureBlock(); timelockMs != nil {
-			idx := milestone.Index(timelockMs.MilestoneIndex)
-			nft.TimelockMilestone = &idx
+		if timelock := conditions.Timelock(); timelock != nil {
+			if timelock.MilestoneIndex > 0 {
+				idx := milestone.Index(timelock.MilestoneIndex)
+				nft.TimelockMilestone = &idx
+			}
+			if timelock.UnixTime > 0 {
+				time := time.Unix(int64(timelock.UnixTime), 0)
+				nft.TimelockTime = &time
+			}
 		}
 
-		if timelockTs := features.TimelockUnixFeatureBlock(); timelockTs != nil {
-			time := time.Unix(int64(timelockTs.UnixTime), 0)
-			nft.TimelockTime = &time
+		if expiration := conditions.Expiration(); expiration != nil {
+			if expiration.MilestoneIndex > 0 {
+				idx := milestone.Index(expiration.MilestoneIndex)
+				nft.ExpirationMilestone = &idx
+			}
+			if expiration.UnixTime > 0 {
+				time := time.Unix(int64(expiration.UnixTime), 0)
+				nft.ExpirationTime = &time
+			}
+			nft.ExpirationReturnAddress, err = addressBytesForAddress(expiration.ReturnAddress)
+			if err != nil {
+				return err
+			}
 		}
 
-		if expirationMs := features.ExpirationMilestoneIndexFeatureBlock(); expirationMs != nil {
-			idx := milestone.Index(expirationMs.MilestoneIndex)
-			nft.ExpirationMilestone = &idx
-		}
-
-		if expirationTs := features.ExpirationUnixFeatureBlock(); expirationTs != nil {
-			time := time.Unix(int64(expirationTs.UnixTime), 0)
-			nft.ExpirationTime = &time
-		}
 		if err := tx.Create(nft).Error; err != nil {
 			return err
 		}
 
 	case *iotago.FoundryOutput:
+		conditions, err := iotaOutput.UnlockConditions().Set()
+		if err != nil {
+			return err
+		}
+
 		foundryID, err := iotaOutput.ID()
 		if err != nil {
 			return err
 		}
 
-		address, err := addressBytesForAddress(iotaOutput.Address)
-		if err != nil {
-			return err
-		}
 		foundry := &foundry{
 			FoundryID:      foundryID[:],
 			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
 			Amount:         iotaOutput.Amount,
-			Address:        address,
 			MilestoneIndex: output.MilestoneIndex(),
 		}
 		copy(foundry.OutputID, output.OutputID()[:])
+
+		if addressUnlock := conditions.Address(); addressUnlock != nil {
+			foundry.Address, err = addressBytesForAddress(addressUnlock.Address)
+			if err != nil {
+				return err
+			}
+		}
 
 		if err := tx.Create(foundry).Error; err != nil {
 			return err

@@ -220,7 +220,7 @@ func TestTaggedDataPayloads(t *testing.T) {
 	})
 	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet3.Address(), Input: env.Wallet3.Outputs()[0].OutputID().UTXOInput()})
 	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet4.Address(), Input: env.Wallet4.Outputs()[0].OutputID().UTXOInput()})
-	builder.AddOutput(&iotago.ExtendedOutput{Address: env.Wallet4.Address(), Amount: env.Wallet3.Balance() + env.Wallet4.Balance()})
+	builder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: env.Wallet4.Address()}}, Amount: env.Wallet3.Balance() + env.Wallet4.Balance()})
 	wallet3PrivKey, _ := env.Wallet3.KeyPair()
 	wallet4PrivKey, _ := env.Wallet4.KeyPair()
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: env.Wallet3.Address(), Keys: wallet3PrivKey}, iotago.AddressKeys{Address: env.Wallet4.Address(), Keys: wallet4PrivKey})

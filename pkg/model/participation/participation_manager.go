@@ -624,7 +624,12 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 					var addressBytes []byte
 					switch iotagoOutput := output.Output().(type) {
 					case *iotago.ExtendedOutput:
-						addressBytes, err = iotagoOutput.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+						conditions, err := iotagoOutput.UnlockConditions().Set()
+						if err != nil {
+							innerErr = err
+							return false
+						}
+						addressBytes, err = conditions.Address().Address.Serialize(serializer.DeSeriModeNoValidation, nil)
 						if err != nil {
 							innerErr = err
 							return false
@@ -730,6 +735,25 @@ func participationFromTaggedData(taggedData *iotago.TaggedData) ([]*Participatio
 	return votes, nil
 }
 
+func serializedAddressFromOutput(output *iotago.ExtendedOutput) []byte {
+	unlockConditions, err := output.UnlockConditions().Set()
+	if err != nil {
+		return nil
+	}
+
+	addressUnlockCondition := unlockConditions.Address()
+	if addressUnlockCondition == nil {
+		//TODO: check if this can even happen
+		return nil
+	}
+
+	outputAddress, err := addressUnlockCondition.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return nil
+	}
+	return outputAddress
+}
+
 func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, msIndex milestone.Index) (*utxo.Output, []*Participation, error) {
 	transaction := msg.Transaction()
 	if transaction == nil {
@@ -779,8 +803,8 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 		return nil, nil, nil
 	}
 
-	outputAddress, err := depositOutput.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
-	if err != nil {
+	outputAddress := serializedAddressFromOutput(depositOutput)
+	if outputAddress == nil {
 		return nil, nil, nil
 	}
 
@@ -799,8 +823,8 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 	for _, input := range inputOutputs {
 		switch output := input.Output().(type) {
 		case *iotago.ExtendedOutput:
-			inputAddress, err := output.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
-			if err != nil {
+			inputAddress := serializedAddressFromOutput(output)
+			if inputAddress == nil {
 				return nil, nil, nil
 			}
 

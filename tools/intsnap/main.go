@@ -275,8 +275,12 @@ func utxoOutput(fill byte, amount uint64) *utxo.Output {
 		1,
 		0,
 		&iotago.ExtendedOutput{
-			Address: staticEd25519Address(fill),
-			Amount:  amount,
+			Amount: amount,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{
+					Address: staticEd25519Address(fill),
+				},
+			},
 		},
 	)
 }

@@ -145,8 +145,12 @@ func (b *MessageBuilder) Build() *Message {
 			fakeInputID := iotago.OutputID{}
 			copy(fakeInputID[:], randBytes(iotago.TransactionIDLength))
 			fakeInput := &iotago.ExtendedOutput{
-				Address: fromAddr,
-				Amount:  b.amount,
+				Amount: b.amount,
+				Conditions: iotago.UnlockConditions{
+					&iotago.AddressUnlockCondition{
+						Address: fromAddr,
+					},
+				},
 			}
 			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, hornet.NullMessageID(), 0, 0, fakeInput))
 		} else {
@@ -157,30 +161,30 @@ func (b *MessageBuilder) Build() *Message {
 	require.NotEmptyf(b.te.TestInterface, outputsThatCanBeConsumed, "no outputs available on the wallet")
 
 	outputsBalance := uint64(0)
-	for _, utxo := range outputsThatCanBeConsumed {
-		outputsBalance += utxo.Deposit()
+	for _, output := range outputsThatCanBeConsumed {
+		outputsBalance += output.Deposit()
 	}
 
 	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
 
-	for _, utxo := range outputsThatCanBeConsumed {
+	for _, output := range outputsThatCanBeConsumed {
 
-		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: utxo.OutputID().UTXOInput()})
-		consumedInputs = append(consumedInputs, utxo)
-		consumedAmount += utxo.Deposit()
+		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: output.OutputID().UTXOInput()})
+		consumedInputs = append(consumedInputs, output)
+		consumedAmount += output.Deposit()
 
 		if consumedAmount >= b.amount {
 			break
 		}
 	}
 
-	builder.AddOutput(&iotago.ExtendedOutput{Address: toAddr, Amount: b.amount})
+	builder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: toAddr}}, Amount: b.amount})
 
 	var remainderAmount uint64
 	if b.amount < consumedAmount {
 		// Send remainder back to fromWallet
 		remainderAmount = consumedAmount - b.amount
-		builder.AddOutput(&iotago.ExtendedOutput{Address: fromAddr, Amount: remainderAmount})
+		builder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: fromAddr}}, Amount: remainderAmount})
 	}
 
 	if len(b.tag) > 0 {
@@ -226,12 +230,13 @@ func (b *MessageBuilder) Build() *Message {
 
 		switch iotaOutput := output.Output().(type) {
 		case *iotago.ExtendedOutput:
-			if iotaOutput.Address.String() == toAddr.String() && output.Deposit() == b.amount {
+			conditions := iotaOutput.UnlockConditions().MustSet()
+			if conditions.Address().Address.Equal(toAddr) && output.Deposit() == b.amount {
 				sentOutput = output
 				continue
 			}
 
-			if remainderAmount > 0 && iotaOutput.Address.String() == fromAddr.String() && output.Deposit() == remainderAmount {
+			if remainderAmount > 0 && conditions.Address().Address.Equal(fromAddr) && output.Deposit() == remainderAmount {
 				remainderOutput = output
 			}
 		default:

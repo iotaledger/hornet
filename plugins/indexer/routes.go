@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"encoding/hex"
+	iotago "github.com/iotaledger/iota.go/v3"
 	"net/http"
 	"strconv"
 
@@ -20,7 +21,7 @@ const (
 	RouteOutputs = "/outputs"
 
 	// RouteAliases is the route for getting aliases filtered by the given parameters.
-	// GET with query parameter  returns all outputIDs that fit these filter criteria (query parameters: "stateController", "governanceController", "issuer", "sender").
+	// GET with query parameter  returns all outputIDs that fit these filter criteria (query parameters: "stateController", "governor", "issuer", "sender").
 	// Returns an empty list if no results are found.
 	RouteAliases = "/aliases"
 
@@ -48,14 +49,27 @@ const (
 )
 
 const (
+
+	// QueryParameterAddress is used to filter for a certain address.
+	QueryParameterAddress = "address"
+
+	// QueryParameterIssuer is used to filter for a certain issuer.
+	QueryParameterIssuer = "issuer"
+
+	// QueryParameterSender is used to filter for a certain sender.
+	QueryParameterSender = "sender"
+
+	// QueryParameterTag is used to filter for a certain tags.
+	QueryParameterTag = "tag"
+
 	// QueryParameterRequiresDustReturn is used to filter for outputs requiring a dust return.
 	QueryParameterRequiresDustReturn = "requiresDustReturn"
 
 	// QueryParameterStateController is used to filter for a certain state controller address.
 	QueryParameterStateController = "stateController"
 
-	// QueryParameterGovernanceController is used to filter for a certain governance controller address.
-	QueryParameterGovernanceController = "governanceController"
+	// QueryParameterGovernor is used to filter for a certain governance controller address.
+	QueryParameterGovernor = "governor"
 
 	// QueryParameterLimit is used to define the page size for the results.
 	QueryParameterLimit = "limit"
@@ -145,8 +159,8 @@ func configureRoutes(routeGroup *echo.Group) {
 func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.ExtendedOutputFilterOption{indexer.ExtendedOutputPageSize(pageSizeFromContext(c))}
 
-	if len(c.QueryParam(restapi.QueryParameterAddress)) > 0 {
-		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterAddress)
+	if len(c.QueryParam(QueryParameterAddress)) > 0 {
+		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -161,16 +175,16 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.ExtendedOutputRequiresDustReturn(requiresDust))
 	}
 
-	if len(c.QueryParam(restapi.QueryParameterSender)) > 0 {
-		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterSender)
+	if len(c.QueryParam(QueryParameterSender)) > 0 {
+		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
 		if err != nil {
 			return nil, err
 		}
 		filters = append(filters, indexer.ExtendedOutputSender(sender))
 	}
 
-	if len(c.QueryParam(restapi.QueryParameterIndex)) > 0 {
-		_, indexBytes, err := restapi.ParseIndexQueryParam(c)
+	if len(c.QueryParam(QueryParameterTag)) > 0 {
+		indexBytes, err := restapi.ParseHexQueryParam(c, QueryParameterTag, iotago.MaxTagLength)
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +192,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset)
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, 38)
 		if err != nil {
 			return nil, err
 		}
@@ -206,24 +220,24 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.AliasStateController(stateController))
 	}
 
-	if len(c.QueryParam(QueryParameterGovernanceController)) > 0 {
-		governanceController, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterGovernanceController)
+	if len(c.QueryParam(QueryParameterGovernor)) > 0 {
+		governor, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterGovernor)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.AliasGovernanceController(governanceController))
+		filters = append(filters, indexer.AliasGovernor(governor))
 	}
 
-	if len(c.QueryParam(restapi.QueryParameterIssuer)) > 0 {
-		issuer, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterIssuer)
+	if len(c.QueryParam(QueryParameterIssuer)) > 0 {
+		issuer, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterIssuer)
 		if err != nil {
 			return nil, err
 		}
 		filters = append(filters, indexer.AliasIssuer(issuer))
 	}
 
-	if len(c.QueryParam(restapi.QueryParameterSender)) > 0 {
-		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterSender)
+	if len(c.QueryParam(QueryParameterSender)) > 0 {
+		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
 		if err != nil {
 			return nil, err
 		}
@@ -231,7 +245,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset)
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
 		if err != nil {
 			return nil, err
 		}
@@ -251,8 +265,8 @@ func nftByID(c echo.Context) (*outputsResponse, error) {
 func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.NFTFilterOption{indexer.NFTPageSize(pageSizeFromContext(c))}
 
-	if len(c.QueryParam(restapi.QueryParameterAddress)) > 0 {
-		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterAddress)
+	if len(c.QueryParam(QueryParameterAddress)) > 0 {
+		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -267,24 +281,24 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTRequiresDustReturn(requiresDust))
 	}
 
-	if len(c.QueryParam(restapi.QueryParameterIssuer)) > 0 {
-		issuer, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterIssuer)
+	if len(c.QueryParam(QueryParameterIssuer)) > 0 {
+		issuer, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterIssuer)
 		if err != nil {
 			return nil, err
 		}
 		filters = append(filters, indexer.NFTIssuer(issuer))
 	}
 
-	if len(c.QueryParam(restapi.QueryParameterSender)) > 0 {
-		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterSender)
+	if len(c.QueryParam(QueryParameterSender)) > 0 {
+		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
 		if err != nil {
 			return nil, err
 		}
 		filters = append(filters, indexer.NFTSender(sender))
 	}
 
-	if len(c.QueryParam(restapi.QueryParameterIndex)) > 0 {
-		_, indexBytes, err := restapi.ParseIndexQueryParam(c)
+	if len(c.QueryParam(QueryParameterTag)) > 0 {
+		indexBytes, err := restapi.ParseHexQueryParam(c, QueryParameterTag, iotago.MaxTagLength)
 		if err != nil {
 			return nil, err
 		}
@@ -292,7 +306,7 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset)
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
 		if err != nil {
 			return nil, err
 		}
@@ -312,15 +326,15 @@ func foundryByID(c echo.Context) (*outputsResponse, error) {
 func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.FoundryFilterOption{indexer.FoundryPageSize(pageSizeFromContext(c))}
 
-	if len(c.QueryParam(restapi.QueryParameterAddress)) > 0 {
-		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, restapi.QueryParameterAddress)
+	if len(c.QueryParam(QueryParameterAddress)) > 0 {
+		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
 		filters = append(filters, indexer.FoundryUnlockableByAddress(address))
 	}
 	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset)
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
 		if err != nil {
 			return nil, err
 		}

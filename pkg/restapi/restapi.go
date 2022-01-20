@@ -46,18 +46,6 @@ const (
 
 	// QueryParameterOutputType is used to filter for a certain output type.
 	QueryParameterOutputType = "type"
-
-	// QueryParameterAddress is used to filter for a certain address.
-	QueryParameterAddress = "address"
-
-	// QueryParameterIssuer is used to filter for a certain issuer.
-	QueryParameterIssuer = "issuer"
-
-	// QueryParameterSender is used to filter for a certain sender.
-	QueryParameterSender = "sender"
-
-	// QueryParameterIndex is used to filter for a certain index.
-	QueryParameterIndex = "index"
 )
 
 var (
@@ -313,30 +301,15 @@ func ParseBech32AddressQueryParam(c echo.Context, prefix iotago.NetworkPrefix, p
 	return bech32Address, nil
 }
 
-func ParseIndexQueryParam(c echo.Context) (string, []byte, error) {
-	index := c.QueryParam(QueryParameterIndex)
-
-	if index == "" {
-		return index, nil, nil
-	}
-
-	indexBytes, err := hex.DecodeString(index)
-	if err != nil {
-		return index, nil, errors.WithMessagef(ErrInvalidParameter, "query parameter %s invalid hex", QueryParameterIndex)
-	}
-
-	if len(indexBytes) > iotago.MaxIndexationTagLength {
-		return index, nil, errors.WithMessage(ErrInvalidParameter, fmt.Sprintf("query parameter %s too long, max. %d bytes but is %d", QueryParameterIndex, iotago.MaxIndexationTagLength, len(indexBytes)))
-	}
-	return index, indexBytes, nil
-}
-
-func ParseHexQueryParam(c echo.Context, paramName string) ([]byte, error) {
+func ParseHexQueryParam(c echo.Context, paramName string, maxLen int) ([]byte, error) {
 	param := c.QueryParam(paramName)
 
 	paramBytes, err := hex.DecodeString(param)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid param: %s, error: %s", paramName, err)
+	}
+	if len(paramBytes) > maxLen {
+		return nil, errors.WithMessage(ErrInvalidParameter, fmt.Sprintf("query parameter %s too long, max. %d bytes but is %d", paramName, maxLen, len(paramBytes)))
 	}
 	return paramBytes, nil
 }

@@ -139,14 +139,18 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 	msTimestmap := rand.Uint64()
 
 	iotaOutput := &iotago.ExtendedOutput{
-		Address: address,
-		Amount:  amount,
+		Amount: amount,
 		Blocks: iotago.FeatureBlocks{
 			&iotago.SenderFeatureBlock{
 				Address: senderAddress,
 			},
-			&iotago.IndexationFeatureBlock{
+			&iotago.TagFeatureBlock{
 				Tag: tag,
+			},
+		},
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{
+				Address: address,
 			},
 		},
 	}
@@ -169,14 +173,18 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 	msTimestamp := rand.Uint64()
 
 	iotaOutput := &iotago.ExtendedOutput{
-		Address: address,
-		Amount:  amount,
+		Amount: amount,
 		Blocks: iotago.FeatureBlocks{
-			&iotago.TimelockMilestoneIndexFeatureBlock{
-				MilestoneIndex: 234,
-			},
 			&iotago.SenderFeatureBlock{
 				Address: senderAddress,
+			},
+		},
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{
+				Address: address,
+			},
+			&iotago.TimelockUnlockCondition{
+				MilestoneIndex: 234,
 			},
 		},
 	}
@@ -199,10 +207,14 @@ func TestNFTOutputSerialization(t *testing.T) {
 	msTimestamp := rand.Uint64()
 
 	iotaOutput := &iotago.NFTOutput{
-		Address:           address,
 		Amount:            amount,
 		NFTID:             nftID,
 		ImmutableMetadata: utils.RandBytes(12),
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{
+				Address: address,
+			},
+		},
 	}
 
 	output := CreateOutputAndAssertSerialization(t, messageID, msIndex, msTimestamp, outputID, iotaOutput)
@@ -224,7 +236,6 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 	msTimestamp := rand.Uint64()
 
 	iotaOutput := &iotago.NFTOutput{
-		Address:           address.ToAddress(),
 		Amount:            amount,
 		NFTID:             nftID,
 		ImmutableMetadata: utils.RandBytes(12),
@@ -232,8 +243,14 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 			&iotago.IssuerFeatureBlock{
 				Address: issuerAddress,
 			},
-			&iotago.ExpirationMilestoneIndexFeatureBlock{
+		},
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{
+				Address: address.ToAddress(),
+			},
+			&iotago.ExpirationUnlockCondition{
 				MilestoneIndex: 324324,
+				ReturnAddress:  issuerAddress,
 			},
 		},
 	}
@@ -251,7 +268,7 @@ func TestAliasOutputSerialization(t *testing.T) {
 	messageID := utils.RandMessageID()
 	aliasID := utils.RandAliasID()
 	stateController := utils.RandAliasID()
-	governanceController := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
+	governor := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	issuer := utils.RandNFTID()
 	sender := utils.RandAliasID()
 	amount := rand.Uint64()
@@ -259,17 +276,23 @@ func TestAliasOutputSerialization(t *testing.T) {
 	msTimestamp := rand.Uint64()
 
 	iotaOutput := &iotago.AliasOutput{
-		Amount:               amount,
-		AliasID:              aliasID,
-		StateController:      stateController.ToAddress(),
-		GovernanceController: governanceController,
-		StateMetadata:        []byte{},
+		Amount:        amount,
+		AliasID:       aliasID,
+		StateMetadata: []byte{},
 		Blocks: iotago.FeatureBlocks{
 			&iotago.IssuerFeatureBlock{
 				Address: issuer.ToAddress(),
 			},
 			&iotago.SenderFeatureBlock{
 				Address: sender.ToAddress(),
+			},
+		},
+		Conditions: iotago.UnlockConditions{
+			&iotago.StateControllerAddressUnlockCondition{
+				Address: stateController.ToAddress(),
+			},
+			&iotago.GovernorAddressUnlockCondition{
+				Address: governor,
 			},
 		},
 	}
@@ -292,13 +315,17 @@ func TestFoundryOutputSerialization(t *testing.T) {
 	supply := new(big.Int).SetUint64(rand.Uint64())
 
 	iotaOutput := &iotago.FoundryOutput{
-		Address:           aliasID.ToAddress(),
 		Amount:            amount,
 		SerialNumber:      rand.Uint32(),
 		TokenTag:          utils.RandTokenTag(),
 		CirculatingSupply: supply,
 		MaximumSupply:     supply,
 		TokenScheme:       &iotago.SimpleTokenScheme{},
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{
+				Address: aliasID.ToAddress(),
+			},
+		},
 	}
 
 	output := CreateOutputAndAssertSerialization(t, messageID, msIndex, msTimestamp, outputID, iotaOutput)

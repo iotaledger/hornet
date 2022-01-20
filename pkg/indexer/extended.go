@@ -8,17 +8,19 @@ import (
 )
 
 type extendedOutput struct {
-	OutputID            outputIDBytes `gorm:"primaryKey;notnull"`
-	Address             addressBytes  `gorm:"notnull;index:extended_address"`
-	Amount              uint64        `gorm:"notnull"`
-	Sender              addressBytes  `gorm:"index:extended_sender_tag"`
-	Tag                 []byte        `gorm:"index:extended_sender_tag"`
-	DustReturn          *uint64
-	TimelockMilestone   *milestone.Index
-	TimelockTime        *time.Time
-	ExpirationMilestone *milestone.Index
-	ExpirationTime      *time.Time
-	MilestoneIndex      milestone.Index
+	OutputID                outputIDBytes `gorm:"primaryKey;notnull"`
+	Amount                  uint64        `gorm:"notnull"`
+	Sender                  addressBytes  `gorm:"index:extended_sender_tag"`
+	Tag                     []byte        `gorm:"index:extended_sender_tag"`
+	Address                 addressBytes  `gorm:"notnull;index:extended_address"`
+	DustReturn              *uint64
+	DustReturnAddress       addressBytes
+	TimelockMilestone       *milestone.Index
+	TimelockTime            *time.Time
+	ExpirationMilestone     *milestone.Index
+	ExpirationTime          *time.Time
+	ExpirationReturnAddress addressBytes
+	MilestoneIndex          milestone.Index
 }
 
 type ExtendedOutputFilterOptions struct {

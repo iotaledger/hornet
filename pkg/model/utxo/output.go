@@ -53,14 +53,9 @@ func (o *Output) Output() iotago.Output {
 
 func (o *Output) hasSpendingConstraint() bool {
 	switch output := o.output.(type) {
-	case *iotago.ExtendedOutput:
-		return output.FeatureBlocks().HasConstraints()
-	case *iotago.AliasOutput:
-		return output.FeatureBlocks().HasConstraints()
-	case *iotago.NFTOutput:
-		return output.FeatureBlocks().HasConstraints()
-	case *iotago.FoundryOutput:
-		return output.FeatureBlocks().HasConstraints()
+	case iotago.UnlockConditionOutput:
+		conditions := output.UnlockConditions().MustSet()
+		return conditions.DustDepositReturn() != nil || conditions.HasExpirationConditions() || conditions.Timelock() != nil
 	default:
 		panic("Unknown output type")
 	}
@@ -68,10 +63,10 @@ func (o *Output) hasSpendingConstraint() bool {
 
 func (o *Output) address() iotago.Address {
 	switch output := o.output.(type) {
-	case iotago.TransIndepIdentOutput:
-		return output.Ident()
-	case iotago.TransDepIdentOutput:
-		return output.Chain().ToAddress()
+	case *iotago.AliasOutput:
+		return nil
+	case iotago.UnlockConditionOutput:
+		return output.UnlockConditions().MustSet().Address().Address
 	default:
 		panic("unsupported output type")
 	}
