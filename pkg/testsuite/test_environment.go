@@ -170,8 +170,12 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 
 	// Initialize UTXO
 	output := &iotago.ExtendedOutput{
-		Address: genesisAddress,
-		Amount:  iotago.TokenSupply,
+		Amount: iotago.TokenSupply,
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{
+				Address: genesisAddress,
+			},
+		},
 	}
 	te.GenesisOutput = utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, 0, output)
 	err = te.storage.UTXOManager().AddUnspentOutput(te.GenesisOutput)
@@ -253,7 +257,7 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 }
 
 func (te *TestEnvironment) NewTestMessage(index int, parents hornet.MessageIDs) *storage.MessageMetadata {
-	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildIndexation().Store()
+	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
 	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
 	defer cachedMsgMeta.Release(true)
 	return cachedMsgMeta.Metadata()

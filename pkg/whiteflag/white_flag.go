@@ -80,7 +80,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 	semValCtx := &iotago.SemanticValidationContext{
 		ExtParas: &iotago.ExternalUnlockParameters{
 			ConfMsIndex: uint32(msIndex),
-			ConfUnix:    msTimestamp,
+			ConfUnix:    uint32(msTimestamp),
 		},
 	}
 

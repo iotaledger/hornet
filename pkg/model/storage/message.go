@@ -125,10 +125,10 @@ func (msg *Message) IsTransaction() bool {
 	return false
 }
 
-func (msg *Message) Indexation() *iotago.Indexation {
+func (msg *Message) TaggedData() *iotago.TaggedData {
 
 	switch payload := msg.Message().Payload.(type) {
-	case *iotago.Indexation:
+	case *iotago.TaggedData:
 		return payload
 	default:
 		return nil
@@ -151,11 +151,11 @@ func (msg *Message) TransactionEssence() *iotago.TransactionEssence {
 	return nil
 }
 
-func (msg *Message) TransactionEssenceIndexation() *iotago.Indexation {
+func (msg *Message) TransactionEssenceTaggedData() *iotago.TaggedData {
 
 	if essence := msg.TransactionEssence(); essence != nil {
 		switch payload := essence.Payload.(type) {
-		case *iotago.Indexation:
+		case *iotago.TaggedData:
 			return payload
 		default:
 			return nil

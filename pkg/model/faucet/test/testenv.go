@@ -29,10 +29,10 @@ import (
 )
 
 const (
-	faucetMaxOutputCount    = iotago.MaxOutputsCount
-	faucetIndexationMessage = "FAUCET"
-	faucetPowWorkerCount    = 0
-	faucetBatchTimeout      = 2 * time.Second
+	faucetMaxOutputCount = iotago.MaxOutputsCount
+	faucetTagMessage     = "FAUCET"
+	faucetPowWorkerCount = 0
+	faucetBatchTimeout   = 2 * time.Second
 )
 
 var (
@@ -272,7 +272,7 @@ func NewFaucetTestEnv(t *testing.T,
 		faucet.WithSmallAmount(faucetSmallAmount),
 		faucet.WithMaxAddressBalance(faucetMaxAddressBalance),
 		faucet.WithMaxOutputCount(faucetMaxOutputCount),
-		faucet.WithIndexationMessage(faucetIndexationMessage),
+		faucet.WithTagMessage(faucetTagMessage),
 		faucet.WithBatchTimeout(faucetBatchTimeout),
 		faucet.WithPowWorkerCount(faucetPowWorkerCount),
 	)

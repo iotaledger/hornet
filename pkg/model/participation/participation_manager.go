@@ -49,13 +49,13 @@ type ParticipationManager struct {
 
 // the default options applied to the ParticipationManager.
 var defaultOptions = []Option{
-	WithIndexationMessage("PARTICIPATE"),
+	WithTagMessage("PARTICIPATE"),
 }
 
 // Options define options for the ParticipationManager.
 type Options struct {
-	// defines the indexation payload to track
-	indexationMessage []byte
+	// defines the tag payload to track
+	tagMessage []byte
 }
 
 // applies the given Option.
@@ -65,10 +65,10 @@ func (so *Options) apply(opts ...Option) {
 	}
 }
 
-// WithIndexationMessage defines the ParticipationManager indexation payload to track.
-func WithIndexationMessage(indexationMessage string) Option {
+// WithTagMessage defines the ParticipationManager tag payload to track.
+func WithTagMessage(tagMessage string) Option {
 	return func(opts *Options) {
-		opts.indexationMessage = []byte(indexationMessage)
+		opts.tagMessage = []byte(tagMessage)
 	}
 }
 
@@ -345,7 +345,7 @@ func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event)
 // 	- Inputs must all come from the same address. Multiple inputs are allowed.
 // 	- Has a singular output going to the same address as all input addresses.
 // 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
-// 	- The Indexation must match the configured Indexation.
+// 	- The TaggedData must match the configured TaggedData.
 //  - The participation data must be parseable.
 func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
 
@@ -466,13 +466,13 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 		return nil
 	}
 
-	txEssenceIndexation := msg.TransactionEssenceIndexation()
-	if txEssenceIndexation == nil {
-		// We tracked this participation before, and now we don't have its indexation, so something happened
+	txEssenceTaggedData := msg.TransactionEssenceTaggedData()
+	if txEssenceTaggedData == nil {
+		// We tracked this participation before, and now we don't have its taggedData, so something happened
 		return ErrInvalidPreviouslyTrackedParticipation
 	}
 
-	participations, err := participationFromIndexation(txEssenceIndexation)
+	participations, err := participationFromTaggedData(txEssenceTaggedData)
 	if err != nil {
 		return err
 	}
@@ -713,11 +713,11 @@ func filterValidParticipationsForEvents(index milestone.Index, votes []*Particip
 	return validParticipations
 }
 
-func participationFromIndexation(indexation *iotago.Indexation) ([]*Participation, error) {
+func participationFromTaggedData(taggedData *iotago.TaggedData) ([]*Participation, error) {
 
 	// try to parse the votes payload
 	parsedVotes := &ParticipationPayload{}
-	if _, err := parsedVotes.Deserialize(indexation.Data, serializer.DeSeriModePerformValidation, nil); err != nil {
+	if _, err := parsedVotes.Deserialize(taggedData.Data, serializer.DeSeriModePerformValidation, nil); err != nil {
 		// votes payload can't be parsed => ignore votes
 		return nil, fmt.Errorf("no valid votes payload")
 	}
@@ -744,14 +744,14 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 		return nil, nil, fmt.Errorf("no transaction transactionEssence found: MsgID: %s", msg.MessageID().ToHex())
 	}
 
-	txEssenceIndexation := msg.TransactionEssenceIndexation()
-	if txEssenceIndexation == nil {
-		// no need to check if there is not indexation payload
+	txEssenceTaggedData := msg.TransactionEssenceTaggedData()
+	if txEssenceTaggedData == nil {
+		// no need to check if there is not taggedData payload
 		return nil, nil, nil
 	}
 
-	// the index of the transaction payload must match our configured indexation
-	if !bytes.Equal(txEssenceIndexation.Index, pm.opts.indexationMessage) {
+	// the tag of the transaction payload must match our configured tag
+	if !bytes.Equal(txEssenceTaggedData.Tag, pm.opts.tagMessage) {
 		return nil, nil, nil
 	}
 
@@ -818,7 +818,7 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 		return nil, nil, nil
 	}
 
-	participations, err := participationFromIndexation(txEssenceIndexation)
+	participations, err := participationFromTaggedData(txEssenceTaggedData)
 	if err != nil {
 		return nil, nil, nil
 	}

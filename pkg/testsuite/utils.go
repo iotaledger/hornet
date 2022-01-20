@@ -16,9 +16,9 @@ import (
 )
 
 type MessageBuilder struct {
-	te             *TestEnvironment
-	indexation     string
-	indexationData []byte
+	te      *TestEnvironment
+	tag     string
+	tagData []byte
 
 	parents hornet.MessageIDs
 
@@ -43,14 +43,14 @@ type Message struct {
 	storedMessageID hornet.MessageID
 }
 
-func (te *TestEnvironment) NewMessageBuilder(optionalIndexation ...string) *MessageBuilder {
-	indexation := ""
-	if len(optionalIndexation) > 0 {
-		indexation = optionalIndexation[0]
+func (te *TestEnvironment) NewMessageBuilder(optionalTag ...string) *MessageBuilder {
+	tag := ""
+	if len(optionalTag) > 0 {
+		tag = optionalTag[0]
 	}
 	return &MessageBuilder{
-		te:         te,
-		indexation: indexation,
+		te:  te,
+		tag: tag,
 	}
 }
 
@@ -88,14 +88,14 @@ func (b *MessageBuilder) UsingOutput(output *utxo.Output) *MessageBuilder {
 	return b
 }
 
-func (b *MessageBuilder) IndexationData(data []byte) *MessageBuilder {
-	b.indexationData = data
+func (b *MessageBuilder) TagData(data []byte) *MessageBuilder {
+	b.tagData = data
 	return b
 }
 
-func (b *MessageBuilder) BuildIndexation() *Message {
+func (b *MessageBuilder) BuildTaggedData() *Message {
 
-	require.NotEmpty(b.te.TestInterface, b.indexation)
+	require.NotEmpty(b.te.TestInterface, b.tag)
 
 	parents := [][]byte{}
 	require.NotNil(b.te.TestInterface, b.parents)
@@ -106,7 +106,7 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 
 	msg, err := iotago.NewMessageBuilder().
 		Parents(parents).
-		Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData}).
+		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
 	require.NoError(b.te.TestInterface, err)
 
@@ -183,8 +183,8 @@ func (b *MessageBuilder) Build() *Message {
 		builder.AddOutput(&iotago.ExtendedOutput{Address: fromAddr, Amount: remainderAmount})
 	}
 
-	if len(b.indexation) > 0 {
-		builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData})
+	if len(b.tag) > 0 {
+		builder.AddTaggedDataPayload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData})
 	}
 
 	// Sign transaction

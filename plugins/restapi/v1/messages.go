@@ -159,27 +159,6 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}, nil
 }
 
-func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
-	index, indexBytes, err := restapi.ParseIndexQueryParam(c)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(indexBytes) == 0 {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index empty")
-	}
-
-	maxResults := deps.RestAPILimitsMaxResults
-	indexMessageIDs := deps.Storage.IndexMessageIDs(indexBytes, objectstorage.WithIteratorMaxIterations(maxResults))
-
-	return &messageIDsByIndexResponse{
-		Index:      index,
-		MaxResults: uint32(maxResults),
-		Count:      uint32(len(indexMessageIDs)),
-		MessageIDs: indexMessageIDs.ToHex(),
-	}, nil
-}
-
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {

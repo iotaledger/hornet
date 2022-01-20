@@ -92,18 +92,6 @@ type childrenResponse struct {
 	Children []string `json:"childrenMessageIds"`
 }
 
-// messageIDsByIndexResponse defines the response of a GET messages REST API call.
-type messageIDsByIndexResponse struct {
-	// The index of the messages.
-	Index string `json:"index"`
-	// The maximum count of results that are returned by the node.
-	MaxResults uint32 `json:"maxResults"`
-	// The actual count of results that are returned.
-	Count uint32 `json:"count"`
-	// The hex encoded message IDs of the found messages with this index.
-	MessageIDs []string `json:"messageIds"`
-}
-
 // milestoneResponse defines the response of a GET milestones REST API call.
 type milestoneResponse struct {
 	// The index of the milestone.

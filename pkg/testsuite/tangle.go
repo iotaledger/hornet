@@ -148,7 +148,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		message := cachedMessage.Message()
 		meta := cachedMessage.Metadata()
 
-		shortIndex := utils.ShortenedIndex(cachedMessage.Retain())
+		shortIndex := utils.ShortenedTag(cachedMessage.Retain())
 
 		if index := indexOf(message.MessageID()); index != -1 {
 			dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortIndex, index, shortIndex)
@@ -162,7 +162,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 
 			cachedMessageParent := te.storage.CachedMessageOrNil(parent)
 			require.NotNil(te.TestInterface, cachedMessageParent)
-			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedIndex(cachedMessageParent.Retain()), i+1)
+			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedTag(cachedMessageParent.Retain()), i+1)
 			cachedMessageParent.Release(true)
 		}
 

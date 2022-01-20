@@ -141,7 +141,7 @@ func provide(c *dig.Container) {
 			faucet.WithSmallAmount(uint64(deps.NodeConfig.Int64(CfgFaucetSmallAmount))),
 			faucet.WithMaxAddressBalance(uint64(deps.NodeConfig.Int64(CfgFaucetMaxAddressBalance))),
 			faucet.WithMaxOutputCount(deps.NodeConfig.Int(CfgFaucetMaxOutputCount)),
-			faucet.WithIndexationMessage(deps.NodeConfig.String(CfgFaucetIndexationMessage)),
+			faucet.WithTagMessage(deps.NodeConfig.String(CfgFaucetTagMessage)),
 			faucet.WithBatchTimeout(deps.NodeConfig.Duration(CfgFaucetBatchTimeout)),
 			faucet.WithPowWorkerCount(deps.NodeConfig.Int(CfgFaucetPoWWorkerCount)),
 		)

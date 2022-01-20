@@ -277,11 +277,11 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	genesisWallet.BookOutput(te.GenesisOutput)
 
 	// Issue some transactions
-	messageA := te.NewMessageBuilder("A").Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).BuildIndexation().Store()
-	messageB := te.NewMessageBuilder("B").Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[0].Milestone().MessageID}).BuildIndexation().Store()
-	messageC := te.NewMessageBuilder("C").Parents(hornet.MessageIDs{te.Milestones[2].Milestone().MessageID, te.Milestones[0].Milestone().MessageID}).BuildIndexation().Store()
-	messageD := te.NewMessageBuilder("D").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageC.StoredMessageID()}).BuildIndexation().Store()
-	messageE := te.NewMessageBuilder("E").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageA.StoredMessageID()}).BuildIndexation().Store()
+	messageA := te.NewMessageBuilder("A").Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).BuildTaggedData().Store()
+	messageB := te.NewMessageBuilder("B").Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[0].Milestone().MessageID}).BuildTaggedData().Store()
+	messageC := te.NewMessageBuilder("C").Parents(hornet.MessageIDs{te.Milestones[2].Milestone().MessageID, te.Milestones[0].Milestone().MessageID}).BuildTaggedData().Store()
+	messageD := te.NewMessageBuilder("D").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageC.StoredMessageID()}).BuildTaggedData().Store()
+	messageE := te.NewMessageBuilder("E").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageA.StoredMessageID()}).BuildTaggedData().Store()
 
 	// Confirming milestone include all msg up to message E. This should only include A, B and E
 	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageE.StoredMessageID()}, true)
@@ -291,7 +291,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	require.Equal(t, 3+1, confStats.MessagesExcludedWithoutTransactions) // 1 is for the milestone itself
 
 	// Issue another message
-	messageF := te.NewMessageBuilder("F").Parents(hornet.MessageIDs{messageD.StoredMessageID(), messageE.StoredMessageID()}).BuildIndexation().Store()
+	messageF := te.NewMessageBuilder("F").Parents(hornet.MessageIDs{messageD.StoredMessageID(), messageE.StoredMessageID()}).BuildTaggedData().Store()
 
 	// Confirming milestone at message F. This should confirm D, C and F
 	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageF.StoredMessageID()}, true)

@@ -139,12 +139,6 @@ func (s *SnapshotManager) pruneMessages(messageIDsToDeleteMap map[string]struct{
 			// We don't need to iterate through the children that reference this message,
 			// since we will never start the walk from this message anymore (we only walk the future cone)
 			// and the references will be deleted together with the children messages when they are pruned.
-
-			indexationPayload := storage.CheckIfIndexation(msg)
-			if indexationPayload != nil {
-				// delete indexation if the message contains an indexation payload
-				s.storage.DeleteIndexation(indexationPayload.Index, msgID)
-			}
 		})
 
 		s.storage.DeleteMessage(msgID)

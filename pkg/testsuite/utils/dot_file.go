@@ -18,9 +18,9 @@ func ShortenedHash(hash hornet.MessageID) string {
 	return hexHash[0:4] + "..." + hexHash[len(hexHash)-4:]
 }
 
-// ShortenedIndex returns a shortened index or milestone index for the given message.
+// ShortenedTag returns a shortened tag or milestone index for the given message.
 // this is used for the dot file.
-func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
+func ShortenedTag(cachedMessage *storage.CachedMessage) string {
 	defer cachedMessage.Release(true)
 
 	ms := cachedMessage.Message().Milestone()
@@ -28,20 +28,26 @@ func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
 		return fmt.Sprintf("%d", ms.Index)
 	}
 
-	indexation := storage.CheckIfIndexation(cachedMessage.Message())
-
-	index := indexation.Index
-	if len(index) > 4 {
-		index = index[:4]
+	taggedData := cachedMessage.Message().TransactionEssenceTaggedData()
+	if taggedData == nil {
+		taggedData = cachedMessage.Message().TaggedData()
 	}
-	indexHex := hex.EncodeToString(index)
+	if taggedData == nil {
+		panic("no taggedData found")
+	}
+
+	tag := taggedData.Tag
+	if len(tag) > 4 {
+		tag = tag[:4]
+	}
+	tagHex := hex.EncodeToString(tag)
 
 	if cachedMessage.Metadata().IsConflictingTx() {
 		conflict := cachedMessage.Metadata().Conflict()
-		return fmt.Sprintf("%s (%d)", indexHex, conflict)
+		return fmt.Sprintf("%s (%d)", tagHex, conflict)
 	}
 
-	return indexHex
+	return tagHex
 }
 
 // ShowDotFile creates a png file with dot and shows it in an external application.

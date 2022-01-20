@@ -50,7 +50,6 @@ const (
 	RouteMessageChildren = "/messages/:" + restapipkg.ParameterMessageID + "/children"
 
 	// RouteMessages is the route for getting message IDs or creating new messages.
-	// GET with query parameter (mandatory) returns all message IDs that fit these filter criteria (query parameters: "index").
 	// POST creates a single new message and returns the new message ID.
 	RouteMessages = "/messages"
 
@@ -215,15 +214,6 @@ func configure() {
 
 	routeGroup.GET(RouteMessageChildren, func(c echo.Context) error {
 		resp, err := childrenIDsByID(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteMessages, func(c echo.Context) error {
-		resp, err := messageIDsByIndex(c)
 		if err != nil {
 			return err
 		}

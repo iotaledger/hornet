@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	ParticipationIndexation        = "TEST"
+	ParticipationTag               = "TEST"
 	defaultBallotAnswerValue uint8 = 10
 )
 
@@ -132,7 +132,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		te.SyncManager(),
 		store,
 		testsuite.DeSerializationParameters,
-		participation.WithIndexationMessage(ParticipationIndexation),
+		participation.WithTagMessage(ParticipationTag),
 	)
 	require.NoError(t, err)
 
@@ -239,8 +239,8 @@ func (env *ParticipationTestEnv) CancelParticipations(wallet *utils.HDWallet) *t
 	return env.Transfer(wallet, wallet, wallet.Balance())
 }
 
-func (env *ParticipationTestEnv) NewMessageBuilder(optionalIndexation ...string) *testsuite.MessageBuilder {
-	return env.te.NewMessageBuilder(optionalIndexation...)
+func (env *ParticipationTestEnv) NewMessageBuilder(optionalTag ...string) *testsuite.MessageBuilder {
+	return env.te.NewMessageBuilder(optionalTag...)
 }
 
 func (env *ParticipationTestEnv) Transfer(fromWallet *utils.HDWallet, toWallet *utils.HDWallet, amount uint64) *testsuite.Message {

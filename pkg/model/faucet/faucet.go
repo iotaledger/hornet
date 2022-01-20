@@ -144,7 +144,7 @@ var defaultOptions = []Option{
 	WithSmallAmount(1000000),        // 1 Mi
 	WithMaxAddressBalance(20000000), // 20 Mi
 	WithMaxOutputCount(iotago.MaxOutputsCount),
-	WithIndexationMessage("HORNET FAUCET"),
+	WithTagMessage("HORNET FAUCET"),
 	WithBatchTimeout(2 * time.Second),
 	WithPowWorkerCount(0),
 }
@@ -158,7 +158,7 @@ type Options struct {
 	smallAmount       uint64
 	maxAddressBalance uint64
 	maxOutputCount    int
-	indexationMessage []byte
+	tagMessage        []byte
 	batchTimeout      time.Duration
 	powWorkerCount    int
 }
@@ -220,10 +220,10 @@ func WithMaxOutputCount(maxOutputCount int) Option {
 	}
 }
 
-// WithIndexationMessage defines the faucet transaction indexation payload.
-func WithIndexationMessage(indexationMessage string) Option {
+// WithTagMessage defines the faucet transaction tag payload.
+func WithTagMessage(tagMessage string) Option {
 	return func(opts *Options) {
-		opts.indexationMessage = []byte(indexationMessage)
+		opts.tagMessage = []byte(tagMessage)
 	}
 }
 
@@ -502,7 +502,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Payload, ti
 func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedRequests []*queueItem) (*iotago.Transaction, *iotago.UTXOInput, uint64, error) {
 
 	txBuilder := iotago.NewTransactionBuilder()
-	txBuilder.AddIndexationPayload(&iotago.Indexation{Index: f.opts.indexationMessage, Data: nil})
+	txBuilder.AddTaggedDataPayload(&iotago.TaggedData{Tag: f.opts.tagMessage, Data: nil})
 
 	outputCount := 0
 	var remainderAmount int64 = 0

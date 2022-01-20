@@ -8,7 +8,6 @@ type Profile struct {
 type Caches struct {
 	Addresses              *CacheOpts `koanf:"addresses"`
 	Children               *CacheOpts `koanf:"children"`
-	Indexations            *CacheOpts `koanf:"indexations"`
 	Milestones             *CacheOpts `koanf:"milestones"`
 	Messages               *CacheOpts `koanf:"messages"`
 	IncomingMessagesFilter *CacheOpts `koanf:"incomingMessagesFilter"`

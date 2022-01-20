@@ -25,8 +25,8 @@ type Spammer struct {
 	// Deserialization parameters including byte costs
 	deSeriParas     *iotago.DeSerializationParameters
 	message         string
-	index           string
-	indexSemiLazy   string
+	tag             string
+	tagSemiLazy     string
 	tipselFunc      SpammerTipselFunc
 	powHandler      *pow.Handler
 	sendMessageFunc SendMessageFunc
@@ -37,8 +37,8 @@ type Spammer struct {
 func New(networkID uint64,
 	deSeriParas *iotago.DeSerializationParameters,
 	message string,
-	index string,
-	indexSemiLazy string,
+	tag string,
+	tagSemiLazy string,
 	tipselFunc SpammerTipselFunc,
 	powHandler *pow.Handler,
 	sendMessageFunc SendMessageFunc,
@@ -48,8 +48,8 @@ func New(networkID uint64,
 		networkID:       networkID,
 		deSeriParas:     deSeriParas,
 		message:         message,
-		index:           index,
-		indexSemiLazy:   indexSemiLazy,
+		tag:             tag,
+		tagSemiLazy:     tagSemiLazy,
 		tipselFunc:      tipselFunc,
 		powHandler:      powHandler,
 		sendMessageFunc: sendMessageFunc,
@@ -66,14 +66,14 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	}
 	durationGTTA := time.Since(timeStart)
 
-	indexation := s.index
+	tag := s.tag
 	if isSemiLazy {
-		indexation = s.indexSemiLazy
+		tag = s.tagSemiLazy
 	}
 
-	index := []byte(indexation)
-	if len(index) > storage.IndexationIndexLength {
-		index = index[:storage.IndexationIndexLength]
+	tagBytes := []byte(tag)
+	if len(tagBytes) > iotago.MaxTagLength {
+		tagBytes = tagBytes[:iotago.MaxTagLength]
 	}
 
 	txCount := int(s.serverMetrics.SentSpamMessages.Load()) + 1
@@ -87,7 +87,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	iotaMsg := &iotago.Message{
 		NetworkID: s.networkID,
 		Parents:   tips.ToSliceOfArrays(),
-		Payload:   &iotago.Indexation{Index: index, Data: []byte(messageString)},
+		Payload:   &iotago.TaggedData{Tag: tagBytes, Data: []byte(messageString)},
 	}
 
 	timeStart = time.Now()

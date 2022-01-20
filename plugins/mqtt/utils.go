@@ -60,11 +60,11 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 		deps.MQTTBroker.Send(topicMessages, cachedMessage.Message().Data())
 	}
 
-	indexation := cachedMessage.Message().Indexation()
-	if indexation != nil {
-		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", hex.EncodeToString(indexation.Index))
-		if deps.MQTTBroker.HasSubscribers(indexationTopic) {
-			deps.MQTTBroker.Send(indexationTopic, cachedMessage.Message().Data())
+	taggedData := cachedMessage.Message().TaggedData()
+	if taggedData != nil && len(taggedData.Tag) > 0 {
+		taggedDataTopic := strings.ReplaceAll(topicMessagesTaggedData, "{tag}", hex.EncodeToString(taggedData.Tag))
+		if deps.MQTTBroker.HasSubscribers(taggedDataTopic) {
+			deps.MQTTBroker.Send(taggedDataTopic, cachedMessage.Message().Data())
 		}
 	}
 }

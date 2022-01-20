@@ -151,7 +151,7 @@ func TestEventStates(t *testing.T) {
 	env.AssertEventsCount(0, 0)
 }
 
-func TestIndexationPayloads(t *testing.T) {
+func TestTaggedDataPayloads(t *testing.T) {
 	env := test.NewParticipationTestEnv(t, 1_000_000, 150_000_000, 200_000_000, 300_000_000, false)
 	defer env.Cleanup()
 
@@ -165,22 +165,22 @@ func TestIndexationPayloads(t *testing.T) {
 		}).
 		Build()
 
-	noIndexationMessage := env.NewMessageBuilder().
+	noTaggedDataMessage := env.NewMessageBuilder().
 		LatestMilestonesAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet2).
 		Amount(env.Wallet2.Balance()).
 		Build()
 
-	invalidPayloadMessage := env.NewMessageBuilder(test.ParticipationIndexation).
+	invalidPayloadMessage := env.NewMessageBuilder(test.ParticipationTag).
 		LatestMilestonesAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet2).
 		Amount(env.Wallet2.Balance()).
-		IndexationData([]byte{0}).
+		TagData([]byte{0}).
 		Build()
 
-	emptyIndexationMessage := env.NewMessageBuilder(test.ParticipationIndexation).
+	emptyTaggedDataMessage := env.NewMessageBuilder(test.ParticipationTag).
 		LatestMilestonesAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet2).
@@ -197,26 +197,26 @@ func TestIndexationPayloads(t *testing.T) {
 	participationsData, err := participations.Serialize(serializer.DeSeriModePerformValidation, nil)
 	require.NoError(t, err)
 
-	wrongAddressMessage := env.NewMessageBuilder(test.ParticipationIndexation).
+	wrongAddressMessage := env.NewMessageBuilder(test.ParticipationTag).
 		LatestMilestonesAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet3).
 		Amount(env.Wallet2.Balance()).
-		IndexationData(participationsData).
+		TagData(participationsData).
 		Build()
 
-	multipleOutputsMessage := env.NewMessageBuilder(test.ParticipationIndexation).
+	multipleOutputsMessage := env.NewMessageBuilder(test.ParticipationTag).
 		LatestMilestonesAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet3).
 		Amount(10_000_000).
-		IndexationData(participationsData).
+		TagData(participationsData).
 		Build()
 
 	builder := iotago.NewTransactionBuilder()
-	builder.AddIndexationPayload(&iotago.Indexation{
-		Index: []byte(test.ParticipationIndexation),
-		Data:  participationsData,
+	builder.AddTaggedDataPayload(&iotago.TaggedData{
+		Tag:  []byte(test.ParticipationTag),
+		Data: participationsData,
 	})
 	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet3.Address(), Input: env.Wallet3.Outputs()[0].OutputID().UTXOInput()})
 	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet4.Address(), Input: env.Wallet4.Outputs()[0].OutputID().UTXOInput()})
@@ -241,9 +241,9 @@ func TestIndexationPayloads(t *testing.T) {
 	}{
 		{"ok", okMessage.StoredMessage(), true, 1},
 		{"sweep and participate", sweepAndParticipateMessage, true, 1},
-		{"no indexation", noIndexationMessage.StoredMessage(), false, 0},
+		{"no tag", noTaggedDataMessage.StoredMessage(), false, 0},
 		{"invalid payload", invalidPayloadMessage.StoredMessage(), false, 0},
-		{"empty indexation", emptyIndexationMessage.StoredMessage(), false, 0},
+		{"empty tag", emptyTaggedDataMessage.StoredMessage(), false, 0},
 		{"wrong address", wrongAddressMessage.StoredMessage(), false, 0},
 		{"multiple outputs", multipleOutputsMessage.StoredMessage(), false, 0},
 	}
@@ -425,12 +425,12 @@ func TestInvalidVoteHandling(t *testing.T) {
 	env.AssertDefaultBallotAnswerStatus(eventID, 1_000, 1_000)
 
 	// Send an invalid participation
-	invalidParticipation := env.NewMessageBuilder(test.ParticipationIndexation).
+	invalidParticipation := env.NewMessageBuilder(test.ParticipationTag).
 		LatestMilestonesAsParents().
 		FromWallet(env.Wallet1).
 		ToWallet(env.Wallet1).
 		Amount(env.Wallet1.Balance()).
-		IndexationData([]byte{0x00}).
+		TagData([]byte{0x00}).
 		Build().
 		Store().
 		BookOnWallets()
@@ -1367,7 +1367,7 @@ func TestMultipleParticipationsAreNotCounted(t *testing.T) {
 
 	env.IssueMilestone() // 5
 
-	// Forcedly craft an indexation that participates twice in the same indexation
+	// Forcedly craft a taggedData that participates twice in the same tag
 	ms := marshalutil.New()
 	ms.WriteUint8(2)
 	ms.WriteBytes(eventID[:])
@@ -1375,12 +1375,12 @@ func TestMultipleParticipationsAreNotCounted(t *testing.T) {
 	ms.WriteBytes(eventID[:])
 	ms.WriteUint8(0)
 
-	doubleStakeWallet1 := env.NewMessageBuilder(test.ParticipationIndexation).
+	doubleStakeWallet1 := env.NewMessageBuilder(test.ParticipationTag).
 		LatestMilestonesAsParents().
 		FromWallet(env.Wallet1).
 		ToWallet(env.Wallet1).
 		Amount(env.Wallet1.Balance()).
-		IndexationData(ms.Bytes()).
+		TagData(ms.Bytes()).
 		Build().
 		Store().
 		BookOnWallets()

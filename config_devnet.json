@@ -231,7 +231,7 @@
     "smallAmount": 1000000,
     "maxAddressBalance": 20000000,
     "maxOutputCount": 127,
-    "indexationMessage": "HORNET FAUCET",
+    "tagMessage": "HORNET FAUCET",
     "batchTimeout": "2s",
     "powWorkerCount": 0,
     "website": {

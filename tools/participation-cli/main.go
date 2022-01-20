@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	INDEXATION_PARTICIPATION = "PARTICIPATE"
+	TAG_PARTICIPATION = "PARTICIPATE"
 )
 
 var (
@@ -37,7 +37,7 @@ type cfg struct {
 	payloadFilePath string
 }
 
-func parseParticipationsPayload(cfg *cfg) ([]byte, error) {
+func parseParticipationPayload(cfg *cfg) ([]byte, error) {
 
 	participationPayload := &participation.ParticipationPayload{}
 	if err := utils.ReadJSONFromFile(cfg.payloadFilePath, participationPayload); err != nil {
@@ -47,7 +47,7 @@ func parseParticipationsPayload(cfg *cfg) ([]byte, error) {
 	return participationPayload.Serialize(serializer.DeSeriModePerformValidation, nil)
 }
 
-func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClient, inputAddress *iotago.Ed25519Address, inputSigner iotago.AddressSigner, outputAddress *iotago.Ed25519Address, outputAmount uint64, indexation *iotago.Indexation) (*iotago.Transaction, error) {
+func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClient, inputAddress *iotago.Ed25519Address, inputSigner iotago.AddressSigner, outputAddress *iotago.Ed25519Address, outputAmount uint64, taggedData *iotago.TaggedData) (*iotago.Transaction, error) {
 
 	txBuilder := iotago.NewTransactionBuilder()
 
@@ -92,8 +92,8 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 		txBuilder.AddOutput(&iotago.ExtendedOutput{Address: inputAddress, Amount: inputsBalance})
 	}
 
-	if indexation != nil {
-		txBuilder.AddIndexationPayload(indexation)
+	if taggedData != nil {
+		txBuilder.AddTaggedDataPayload(taggedData)
 	}
 
 	return txBuilder.Build(deSeriParas, inputSigner)
@@ -107,7 +107,7 @@ func sendParticipationTransaction(cfg *cfg) (*iotago.MessageID, error) {
 	inputAddress := iotago.Ed25519AddressFromPubKey(inputPublicKey)
 	inputSigner := iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&inputAddress, cfg.inputPrivateKey))
 
-	indexationPayload, err := parseParticipationsPayload(cfg)
+	participationPayload, err := parseParticipationPayload(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +120,9 @@ func sendParticipationTransaction(cfg *cfg) (*iotago.MessageID, error) {
 		return nil, err
 	}
 
-	txPayload, err := buildTransactionPayload(clientCtx, client, &inputAddress, inputSigner, &inputAddress, balanceResponse.Balance, &iotago.Indexation{
-		Index: []byte(INDEXATION_PARTICIPATION),
-		Data:  indexationPayload,
+	txPayload, err := buildTransactionPayload(clientCtx, client, &inputAddress, inputSigner, &inputAddress, balanceResponse.Balance, &iotago.TaggedData{
+		Tag:  []byte(TAG_PARTICIPATION),
+		Data: participationPayload,
 	})
 	if err != nil {
 		return nil, err
