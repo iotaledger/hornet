@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"strconv"
 
-	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/restapi"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (

@@ -2,7 +2,6 @@ package utxo
 
 import (
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/marshalutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -112,16 +111,18 @@ func (u *Manager) SpentOutputs(options ...UTXOIterateOption) (Spents, error) {
 	return spents, nil
 }
 
-func (u *Manager) forEachUnspentOutput(consumer OutputConsumer, keyPrefix kvstore.KeyPrefix, readLockLedger bool, maxResultCount int) error {
-	if readLockLedger {
+func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+	opt := iterateOptions(options)
+
+	if opt.readLockLedger {
 		u.ReadLockLedger()
 		defer u.ReadUnlockLedger()
 	}
 
 	var innerErr error
 	var i int
-	if err := u.utxoStorage.IterateKeys(keyPrefix, func(key kvstore.Key) bool {
-		if (maxResultCount > 0) && (i >= maxResultCount) {
+	if err := u.utxoStorage.IterateKeys([]byte{UTXOStoreKeyPrefixOutputUnspent}, func(key kvstore.Key) bool {
+		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
 		}
 		i++
@@ -151,15 +152,6 @@ func (u *Manager) forEachUnspentOutput(consumer OutputConsumer, keyPrefix kvstor
 	}
 
 	return innerErr
-}
-
-func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
-	opt := iterateOptions(options)
-
-	ms := marshalutil.New(35)
-	ms.WriteByte(UTXOStoreKeyPrefixOutputUnspent)
-
-	return u.forEachUnspentOutput(consumer, ms.Bytes(), opt.readLockLedger, opt.maxResultCount)
 }
 
 func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) (Outputs, error) {
