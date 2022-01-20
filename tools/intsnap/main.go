@@ -83,8 +83,8 @@ var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	{
 		Milestone: blankMilestone(2),
 		Created: utxo.Outputs{
-			utxoOutput(3, fullSnapshotOutputs[0].Deposit()),
-			utxoOutput(4, fullSnapshotOutputs[1].Deposit()),
+			utxoOutput(4, fullSnapshotOutputs[0].Deposit()),
+			utxoOutput(3, fullSnapshotOutputs[1].Deposit()),
 		},
 		Consumed: utxo.Spents{
 			utxoSpent(2, fullSnapshotOutputs[0].Deposit(), 2),
