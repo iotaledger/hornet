@@ -4,10 +4,10 @@ const (
 	UTXOStoreKeyPrefixLedgerMilestoneIndex byte = 0
 
 	// Output and Spent storage
-	UTXOStoreKeyPrefixOutput      byte = 1 //TODO: iterate over all values and map to extended outputs
-	UTXOStoreKeyPrefixOutputSpent byte = 8
+	UTXOStoreKeyPrefixOutput byte = 1 //TODO: iterate over all values and map to extended outputs
 
-	// Track unspent Outputs
+	// Track spent/unspent Outputs
+	UTXOStoreKeyPrefixOutputSpent   byte = 8
 	UTXOStoreKeyPrefixOutputUnspent byte = 9
 
 	// Milestone diffs
@@ -20,8 +20,8 @@ const (
 
 // Deprecated keys, just used for migration purposes
 const (
-	UTXOStoreKeyPrefixUnspent  byte = 2 //TODO: migrate to UTXOStoreKeyPrefixLookupExtendedOutputs and create additional lookups, then drop
-	UTXOStoreKeyPrefixSpent    byte = 3 //TODO: migrate to UTXOStoreKeyPrefixOutputOnAddressSpent and UTXOStoreKeyPrefixOutputSpent, then drop
+	UTXOStoreKeyPrefixUnspent  byte = 2 //TODO: migrate to UTXOStoreKeyPrefixOutputUnspent, then drop
+	UTXOStoreKeyPrefixSpent    byte = 3 //TODO: migrate to UTXOStoreKeyPrefixOutputSpent, then drop
 	UTXOStoreKeyPrefixBalances byte = 5 //TODO: deprecate and drop
 )
 
