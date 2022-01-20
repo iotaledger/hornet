@@ -113,6 +113,7 @@ var (
 	powEnabled     bool
 	powWorkerCount int
 	features       []string
+	plugins        []string
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
@@ -165,6 +166,7 @@ func configure() {
 	if powEnabled {
 		features = append(features, "PoW")
 	}
+	plugins = []string{}
 
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
 		resp, err := info()
@@ -345,7 +347,12 @@ func configure() {
 	})
 }
 
-// AddFeature adds a feature for the RouteInfo endpoint.
+// AddFeature adds a feature to the RouteInfo endpoint.
 func AddFeature(feature string) {
 	features = append(features, feature)
+}
+
+// AddPlugin adds a plugin route to the RouteInfo endpoint.
+func AddPlugin(pluginRoute string) {
+	plugins = append(plugins, pluginRoute)
 }

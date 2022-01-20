@@ -59,6 +59,7 @@ func info() (*infoResponse, error) {
 		ConfirmedMilestoneIndex:     confirmedMilestoneIndex,
 		PruningIndex:                pruningIndex,
 		Features:                    features,
+		Plugins:                     plugins,
 	}, nil
 }
 

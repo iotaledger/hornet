@@ -161,7 +161,7 @@ func configure() {
 		Plugin.LogPanic("Indexer plugin needs to be enabled to use the Faucet plugin")
 	}
 
-	restapiv2.AddFeature(Plugin.Name)
+	restapiv2.AddPlugin("faucet")
 
 	routeGroup := deps.Echo.Group("/api/plugins/faucet")
 

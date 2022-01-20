@@ -86,9 +86,9 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	restapiv2.AddFeature(Plugin.Name)
+	restapiv2.AddPlugin("indexer/v1")
 
-	routeGroup := deps.Echo.Group("/api/plugins/indexer")
+	routeGroup := deps.Echo.Group("/api/plugins/indexer/v1")
 	configureRoutes(routeGroup)
 
 	initializeIndexer()

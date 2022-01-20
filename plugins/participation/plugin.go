@@ -143,7 +143,7 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	restapiv2.AddFeature(Plugin.Name)
+	restapiv2.AddPlugin("participation")
 
 	routeGroup := deps.Echo.Group("/api/plugins/participation")
 

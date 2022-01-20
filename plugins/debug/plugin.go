@@ -97,7 +97,7 @@ func configure() {
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
-	restapiv2.AddFeature(Plugin.Name)
+	restapiv2.AddPlugin("debug")
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 
