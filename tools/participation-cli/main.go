@@ -79,6 +79,11 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 
 		inputsBalance += unspentOutput.Deposit()
 		txBuilder.AddInput(&iotago.ToBeSignedUTXOInput{Address: inputAddress, Input: input})
+
+		if inputsBalance >= outputAmount {
+			// no need to collect further inputs
+			break
+		}
 	}
 
 	if inputsBalance < outputAmount {
