@@ -218,7 +218,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 
 		// save the inputs as spent
 		for i, input := range inputOutputs {
-			spent := utxo.NewSpent(input, transactionID, msIndex)
+			spent := utxo.NewSpent(input, transactionID, msIndex, msTimestamp)
 			wfConf.NewSpents[string(input.OutputID()[:])] = spent
 			newSpents[i] = spent
 		}

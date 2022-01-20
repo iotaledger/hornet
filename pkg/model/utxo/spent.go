@@ -17,6 +17,8 @@ type Spent struct {
 	outputID            *iotago.OutputID
 	targetTransactionID *iotago.TransactionID
 	milestoneIndex      milestone.Index
+	// We are saving space by just storing uint32 instead of the uint64 from the Milestone. This is good for the next 80 years.
+	milestoneTimestamp uint32
 
 	output *Output
 }
@@ -53,14 +55,19 @@ func (s *Spent) MilestoneIndex() milestone.Index {
 	return s.milestoneIndex
 }
 
+func (s *Spent) MilestoneTimestamp() uint32 {
+	return s.milestoneTimestamp
+}
+
 type Spents []*Spent
 
-func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirmationIndex milestone.Index) *Spent {
+func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirmationIndex milestone.Index, confirmationTimestamp uint64) *Spent {
 	return &Spent{
 		outputID:            output.outputID,
 		output:              output,
 		targetTransactionID: targetTransactionID,
 		milestoneIndex:      confirmationIndex,
+		milestoneTimestamp:  uint32(confirmationTimestamp),
 	}
 }
 
@@ -76,9 +83,10 @@ func (s *Spent) kvStorableKey() (key []byte) {
 }
 
 func (s *Spent) kvStorableValue() (value []byte) {
-	ms := marshalutil.New(36)
-	ms.WriteBytes(s.targetTransactionID[:])  // 32 bytes
-	ms.WriteUint32(uint32(s.milestoneIndex)) // 4 bytes
+	ms := marshalutil.New(40)
+	ms.WriteBytes(s.targetTransactionID[:])      // 32 bytes
+	ms.WriteUint32(uint32(s.milestoneIndex))     // 4 bytes
+	ms.WriteUint32(uint32(s.milestoneTimestamp)) // 4 bytes
 	return ms.Bytes()
 }
 
@@ -112,6 +120,11 @@ func (s *Spent) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 		return err
 	}
 	s.milestoneIndex = milestone.Index(index)
+
+	// Read milestone timestamp
+	if s.milestoneTimestamp, err = valueUtil.ReadUint32(); err != nil {
+		return err
+	}
 
 	return nil
 }

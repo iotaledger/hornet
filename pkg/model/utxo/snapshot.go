@@ -81,7 +81,7 @@ func (s *Spent) SnapshotBytes() []byte {
 	return m.Bytes()
 }
 
-func SpentFromSnapshotReader(reader io.Reader, deSeriParas *iotago.DeSerializationParameters, index milestone.Index) (*Spent, error) {
+func SpentFromSnapshotReader(reader io.Reader, deSeriParas *iotago.DeSerializationParameters, msIndex milestone.Index, msTimestamp uint64) (*Spent, error) {
 	output, err := OutputFromSnapshotReader(reader, deSeriParas)
 	if err != nil {
 		return nil, err
@@ -92,5 +92,5 @@ func SpentFromSnapshotReader(reader io.Reader, deSeriParas *iotago.DeSerializati
 		return nil, fmt.Errorf("unable to read LS target transaction ID: %w", err)
 	}
 
-	return NewSpent(output, transactionID, index), nil
+	return NewSpent(output, transactionID, msIndex, msTimestamp), nil
 }

@@ -1,6 +1,7 @@
 package utxo
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,13 +24,14 @@ func TestUTXOComputeBalance(t *testing.T) {
 	require.NoError(t, utxo.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputExtended, utils.RandAddress(iotago.AddressAlias), 626_659_696)))
 
 	msIndex := milestone.Index(756)
+	msTimestamp := rand.Uint64()
 
 	outputs := Outputs{
 		RandUTXOOutputOnAddressWithAmount(iotago.OutputExtended, utils.RandAddress(iotago.AddressNFT), 2_134_656_365),
 	}
 
 	spents := Spents{
-		RandUTXOSpent(initialOutput, msIndex),
+		RandUTXOSpent(initialOutput, msIndex, msTimestamp),
 	}
 
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))
@@ -71,11 +73,12 @@ func TestUTXOIteration(t *testing.T) {
 	}
 
 	msIndex := milestone.Index(756)
+	msTimestamp := rand.Uint64()
 
 	spents := Spents{
-		RandUTXOSpent(outputs[3], msIndex),
-		RandUTXOSpent(outputs[2], msIndex),
-		RandUTXOSpent(outputs[9], msIndex),
+		RandUTXOSpent(outputs[3], msIndex, msTimestamp),
+		RandUTXOSpent(outputs[2], msIndex, msTimestamp),
+		RandUTXOSpent(outputs[9], msIndex, msTimestamp),
 	}
 
 	require.NoError(t, utxo.ApplyConfirmationWithoutLocking(msIndex, outputs, spents, nil, nil))

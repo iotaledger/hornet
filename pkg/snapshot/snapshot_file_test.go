@@ -334,7 +334,7 @@ func randLSTransactionUnspentOutputs() *utxo.Output {
 }
 
 func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
-	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex)
+	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex, rand.Uint64())
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {

@@ -287,5 +287,5 @@ func utxoOutput(fill byte, amount uint64) *utxo.Output {
 
 func utxoSpent(fill byte, amount uint64, msIndex milestone.Index) *utxo.Spent {
 	txID := static32ByteID(fill)
-	return utxo.NewSpent(utxoOutput(fill, amount), &txID, msIndex)
+	return utxo.NewSpent(utxoOutput(fill, amount), &txID, msIndex, 0)
 }

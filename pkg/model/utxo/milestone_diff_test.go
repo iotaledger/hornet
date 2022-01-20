@@ -35,7 +35,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
-	spent := NewSpent(output, transactionID, milestoneIndex)
+	spent := NewSpent(output, transactionID, milestoneIndex, milestoneTimestamp)
 
 	diff := &MilestoneDiff{
 		Index:   milestoneIndex,
@@ -78,8 +78,9 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
 	milestoneIndex := milestone.Index(255975)
+	milestoneTimestamp := rand.Uint64()
 
-	spent := NewSpent(output, transactionID, milestoneIndex)
+	spent := NewSpent(output, transactionID, milestoneIndex, milestoneTimestamp)
 
 	spentMilestoneID := iotago.MilestoneID{}
 	copy(spentMilestoneID[:], utils.RandBytes(iotago.MilestoneIDLength))
@@ -136,10 +137,11 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	}
 
 	msIndex := milestone.Index(756)
+	msTimestamp := rand.Uint64()
 
 	spents := Spents{
-		RandUTXOSpent(outputs[3], msIndex),
-		RandUTXOSpent(outputs[2], msIndex),
+		RandUTXOSpent(outputs[3], msIndex, msTimestamp),
+		RandUTXOSpent(outputs[2], msIndex, msTimestamp),
 	}
 
 	spentMilestoneID := iotago.MilestoneID{}

@@ -55,7 +55,7 @@ func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
 		confirmationIndex = msIndex[0]
 	}
 
-	return utxo.NewSpent(output, utils.RandTransactionID(), confirmationIndex)
+	return utxo.NewSpent(output, utils.RandTransactionID(), confirmationIndex, rand.Uint64())
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {

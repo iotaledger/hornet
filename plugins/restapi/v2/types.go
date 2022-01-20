@@ -128,6 +128,8 @@ type OutputResponse struct {
 	SpentMilestoneIndex milestone.Index `json:"spentMilestoneIndex,omitempty"`
 	// The transaction this output was spent with.
 	SpentTransactionID string `json:"spentTransactionId,omitempty"`
+	// The milestone timestamp this output was spent.
+	SpentMilestoneTimestamp uint32 `json:"spentMilestoneTimestamp,omitempty"`
 	// The milestone index at which this output was booked into the ledger.
 	MilestoneIndex milestone.Index `json:"milestoneIndex"`
 	// The milestone timestamp this output was booked in the ledger.

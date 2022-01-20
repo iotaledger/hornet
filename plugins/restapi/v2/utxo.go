@@ -43,6 +43,7 @@ func NewSpentResponse(spent *utxo.Spent, ledgerIndex milestone.Index) (*OutputRe
 	response.Spent = true
 	response.SpentMilestoneIndex = spent.MilestoneIndex()
 	response.SpentTransactionID = hex.EncodeToString(spent.TargetTransactionID()[:])
+	response.SpentMilestoneTimestamp = spent.MilestoneTimestamp()
 	return response, nil
 }
 
