@@ -2,10 +2,10 @@ package indexer
 
 import (
 	"encoding/hex"
-	iotago "github.com/iotaledger/iota.go/v3"
 	"net/http"
 	"strconv"
 
+	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 

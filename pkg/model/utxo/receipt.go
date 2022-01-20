@@ -185,10 +185,10 @@ func ReceiptToOutputs(r *iotago.Receipt, msgID hornet.MessageID, msID *iotago.Mi
 // OutputIDForMigratedFunds returns the UTXO ID for a migrated funds entry given the milestone containing the receipt
 // and the index of the entry.
 func OutputIDForMigratedFunds(milestoneHash iotago.MilestoneID, outputIndex uint16) iotago.OutputID {
-	var utxoID iotago.OutputID
-	copy(utxoID[:], milestoneHash[:])
-	binary.LittleEndian.PutUint16(utxoID[len(utxoID)-2:], outputIndex)
-	return utxoID
+	var outputID iotago.OutputID
+	copy(outputID[:], milestoneHash[:])
+	binary.LittleEndian.PutUint16(outputID[len(outputID)-2:], outputIndex)
+	return outputID
 }
 
 // ReceiptToTreasuryMutation converts a receipt to a treasury mutation tuple.

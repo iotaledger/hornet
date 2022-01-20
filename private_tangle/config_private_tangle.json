@@ -59,6 +59,9 @@
     "networkID": "private_tangle1",
     "bech32HRP": "atoi",
     "minPoWScore": 100.0,
+    "vByteCost": 0,
+    "vByteFactorData": 1,
+    "vByteFactorKey": 10,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
