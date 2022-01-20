@@ -624,12 +624,7 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 					var addressBytes []byte
 					switch iotagoOutput := output.Output().(type) {
 					case *iotago.ExtendedOutput:
-						conditions, err := iotagoOutput.UnlockConditions().Set()
-						if err != nil {
-							innerErr = err
-							return false
-						}
-						addressBytes, err = conditions.Address().Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+						addressBytes, err = serializedAddressFromOutput(iotagoOutput)
 						if err != nil {
 							innerErr = err
 							return false
@@ -735,23 +730,17 @@ func participationFromTaggedData(taggedData *iotago.TaggedData) ([]*Participatio
 	return votes, nil
 }
 
-func serializedAddressFromOutput(output *iotago.ExtendedOutput) []byte {
+func serializedAddressFromOutput(output *iotago.ExtendedOutput) ([]byte, error) {
 	unlockConditions, err := output.UnlockConditions().Set()
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	addressUnlockCondition := unlockConditions.Address()
-	if addressUnlockCondition == nil {
-		//TODO: check if this can even happen
-		return nil
-	}
-
-	outputAddress, err := addressUnlockCondition.Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+	outputAddress, err := unlockConditions.Address().Address.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return outputAddress
+	return outputAddress, nil
 }
 
 func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, msIndex milestone.Index) (*utxo.Output, []*Participation, error) {
@@ -803,8 +792,8 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 		return nil, nil, nil
 	}
 
-	outputAddress := serializedAddressFromOutput(depositOutput)
-	if outputAddress == nil {
+	outputAddress, err := serializedAddressFromOutput(depositOutput)
+	if err != nil {
 		return nil, nil, nil
 	}
 
@@ -823,8 +812,8 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 	for _, input := range inputOutputs {
 		switch output := input.Output().(type) {
 		case *iotago.ExtendedOutput:
-			inputAddress := serializedAddressFromOutput(output)
-			if inputAddress == nil {
+			inputAddress, err := serializedAddressFromOutput(output)
+			if err != nil {
 				return nil, nil, nil
 			}
 
