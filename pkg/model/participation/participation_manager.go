@@ -794,7 +794,7 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 		return nil, nil, nil
 	}
 
-	// only OutputExtended are allowed as output type
+	// only ExtendedOutput are allowed as output type
 	var depositOutput *iotago.ExtendedOutput
 	switch o := depositOutputs[0].Output().(type) {
 	case *iotago.ExtendedOutput:
