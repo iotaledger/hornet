@@ -49,6 +49,12 @@ func parseParticipationPayload(cfg *cfg) ([]byte, error) {
 
 func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClient, inputAddress *iotago.Ed25519Address, inputSigner iotago.AddressSigner, outputAddress *iotago.Ed25519Address, outputAmount uint64, taggedData *iotago.TaggedData) (*iotago.Transaction, error) {
 
+	minDustDeposit := deSeriParas.RentStructure.MinDustDeposit(inputAddress)
+
+	if outputAmount < minDustDeposit {
+		return nil, fmt.Errorf("AMOUNT does not fulfill the dust requirement: %d, needed: %d", outputAmount, minDustDeposit)
+	}
+
 	txBuilder := iotago.NewTransactionBuilder()
 
 	unspentOutputs, err := client.OutputIDsByEd25519Address(ctx, inputAddress, false)
@@ -80,7 +86,7 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 		inputsBalance += unspentOutput.Deposit()
 		txBuilder.AddInput(&iotago.ToBeSignedUTXOInput{Address: inputAddress, Input: input})
 
-		if inputsBalance >= outputAmount {
+		if inputsBalance >= (outputAmount + minDustDeposit) {
 			// no need to collect further inputs
 			break
 		}
@@ -97,6 +103,10 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 		},
 	})
 	inputsBalance -= outputAmount
+
+	if inputsBalance != 0 && inputsBalance < minDustDeposit {
+		return nil, fmt.Errorf("remainder does not fulfill the minimum balance requirement: %d, needed: %d", inputsBalance, minDustDeposit)
+	}
 
 	if inputsBalance > 0 {
 		txBuilder.AddOutput(&iotago.ExtendedOutput{
