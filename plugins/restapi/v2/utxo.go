@@ -63,6 +63,9 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 	}
 
 	isUnspent, err := deps.UTXOManager.IsOutputIDUnspentWithoutLocking(outputID)
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output spent status failed: %s, error: %s", outputID.ToHex(), err)
+	}
 
 	if isUnspent {
 		output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(outputID)

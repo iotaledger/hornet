@@ -692,7 +692,7 @@ Example:
 |:-------------|:-----------------------------------------------------------------------------------| :------ |
 | message      | The message to embed within the spam messages                                      | string  |
 | tag          | The tag of the message                                                             | string  |
-| tagSemiLazy  | The tag of the message if the semi-lazy pool is used (uses "index" if empty)       | string  |
+| tagSemiLazy  | The tag of the message if the semi-lazy pool is used (uses "tag" if empty)         | string  |
 | cpuMaxUsage  | Workers remains idle for a while when cpu usage gets over this limit (0 = disable) | float   |
 | mpsRateLimit | The rate limit for the spammer (0 = no limit)                                      | float   |
 | workers      | The amount of parallel running spammers                                            | integer |

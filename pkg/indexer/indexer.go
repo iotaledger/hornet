@@ -97,6 +97,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		if tagBlock := features.TagFeatureBlock(); tagBlock != nil {
+			extended.Tag = make([]byte, len(tagBlock.Tag))
 			copy(extended.Tag, tagBlock.Tag)
 		}
 
@@ -245,6 +246,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		if tagBlock := features.TagFeatureBlock(); tagBlock != nil {
+			nft.Tag = make([]byte, len(tagBlock.Tag))
 			copy(nft.Tag, tagBlock.Tag)
 		}
 
