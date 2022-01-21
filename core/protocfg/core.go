@@ -56,6 +56,13 @@ func initConfigPars(c *dig.Container) {
 			Bech32HRP:               iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
 			MinPoWScore:             deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
 			MilestonePublicKeyCount: deps.NodeConfig.Int(CfgProtocolMilestonePublicKeyCount),
+			DeSerializationParameters: &iotago.DeSerializationParameters{
+				RentStructure: &iotago.RentStructure{
+					VByteCost:    uint64(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteCost)),
+					VBFactorData: iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorData)),
+					VBFactorKey:  iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorKey)),
+				},
+			},
 		}
 
 		if *cooPubKeyRangesFlag != "" {
@@ -99,14 +106,6 @@ func initConfigPars(c *dig.Container) {
 		// load from config
 		if err := deps.NodeConfig.Unmarshal(CfgProtocolPublicKeyRanges, &res.PublicKeyRanges); err != nil {
 			CorePlugin.LogPanic(err)
-		}
-
-		res.DeSerializationParameters = &iotago.DeSerializationParameters{
-			RentStructure: &iotago.RentStructure{
-				VByteCost:    uint64(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteCost)),
-				VBFactorData: iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorData)),
-				VBFactorKey:  iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorKey)),
-			},
 		}
 
 		return res
