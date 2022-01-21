@@ -54,21 +54,6 @@ func (q queryResults) IDs() iotago.OutputIDs {
 	return outputIDs
 }
 
-func (a addressBytes) Address() (iotago.Address, error) {
-	if len(a) != iotago.NFTAddressBytesLength || len(a) != iotago.AliasAddressBytesLength || len(a) != iotago.Ed25519AddressBytesLength {
-		return nil, errors.New("invalid address length")
-	}
-	addr, err := iotago.AddressSelector(uint32(a[0]))
-	if err != nil {
-		return nil, err
-	}
-	_, err = addr.Deserialize(a, serializer.DeSeriModeNoValidation, nil)
-	if err != nil {
-		return nil, err
-	}
-	return addr, nil
-}
-
 func addressBytesForAddress(addr iotago.Address) (addressBytes, error) {
 	return addr.Serialize(serializer.DeSeriModeNoValidation, nil)
 }

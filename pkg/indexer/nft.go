@@ -83,6 +83,7 @@ func nftFilterOptions(optionalOptions []NFTFilterOption) *NFTFilterOptions {
 	result := &NFTFilterOptions{
 		unlockableByAddress: nil,
 		requiresDustReturn:  nil,
+		issuer:              nil,
 		sender:              nil,
 		tag:                 nil,
 		pageSize:            0,
@@ -117,9 +118,9 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResu
 
 	if opts.requiresDustReturn != nil {
 		if *opts.requiresDustReturn {
-			query = query.Where("dust_return > 0")
+			query = query.Where("dust_return IS NOT NULL")
 		} else {
-			query = query.Where("dust_return = 0")
+			query = query.Where("dust_return IS NULL")
 		}
 	}
 
