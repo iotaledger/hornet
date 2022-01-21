@@ -20,7 +20,7 @@ type extendedOutput struct {
 	ExpirationMilestone     *milestone.Index
 	ExpirationTime          *time.Time
 	ExpirationReturnAddress addressBytes
-	MilestoneIndex          milestone.Index
+	MilestoneIndex          milestone.Index `gorm:"notnull"`
 }
 
 type ExtendedOutputFilterOptions struct {
