@@ -39,7 +39,7 @@ func TestMigration(t *testing.T) {
 
 	n, err := f.CreateStaticNetwork("test_migration", &framework.IntegrationNetworkConfig{
 		SpawnWhiteFlagMockServer:  true,
-		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock_config.json"),
+		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock", "wfmock_config.json"),
 	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.NodeConfig) {
 		switch {
 		case index == 0:

@@ -33,7 +33,7 @@ func TestBatch(t *testing.T) {
 
 	n, err := f.CreateStaticNetwork("test_migration_batch", &framework.IntegrationNetworkConfig{
 		SpawnWhiteFlagMockServer:  true,
-		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock_config_batch.json"),
+		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock_batch", "wfmock_config_batch.json"),
 	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.NodeConfig) {
 		switch {
 		case index == 0:
@@ -45,7 +45,7 @@ func TestBatch(t *testing.T) {
 
 		cfg.Receipts.IgnoreSoftErrors = false
 		cfg.Receipts.Validate = true
-		cfg.Receipts.APIAddress = "http://wfmock:14265"
+		cfg.Receipts.APIAddress = "http://wfmock_batch:14265"
 		cfg.Receipts.APITimeout = 5 * time.Second
 		cfg.Receipts.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
 		cfg.Receipts.CoordinatorMerkleTreeDepth = 8

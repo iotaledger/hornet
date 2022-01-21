@@ -33,6 +33,7 @@ const (
 
 	GenesisAddressPublicKeyHex = "f7868ab6bb55800b77b8b74191ad8285a9bf428ace579d541fda47661803ff44"
 	GenesisAddressHex          = "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92"
+	GensisAddressBech32        = "atoi1qp5jpvtk7cf7c7l9ne50c684jl4n8ya0srm5clpak7qes9ratu0eysflmsz"
 
 	autopeeringMaxTries = 50
 
@@ -110,9 +111,9 @@ type WhiteFlagMockServerConfig struct {
 }
 
 // DefaultWhiteFlagMockServerConfig returns the default WhiteFlagMockServerConfig.
-func DefaultWhiteFlagMockServerConfig(configFileName string) *WhiteFlagMockServerConfig {
+func DefaultWhiteFlagMockServerConfig(name string, configFileName string) *WhiteFlagMockServerConfig {
 	return &WhiteFlagMockServerConfig{
-		Name: "wfmock",
+		Name: name,
 		Envs: []string{
 			fmt.Sprintf("WHITE_FLAG_MOCK_CONFIG=%s/%s", assetsDir, configFileName),
 		},
