@@ -64,43 +64,46 @@ var fullSnapshotHeader = &snapshot.FileHeader{
 var originTreasurySupply = iotago.TokenSupply - fullSnapshotOutputs[0].Deposit() - fullSnapshotOutputs[1].Deposit()
 
 var fullSnapshotOutputs = utxo.Outputs{
-	utxoOutput(6, 10_000_000),
-	utxoOutput(5, 20_000_000),
+	utxoOutput(6, 10_000_000, 3),
+	utxoOutput(5, 20_000_000, 3),
 }
 
 var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	{
 		Milestone: blankMilestone(3),
 		Created: utxo.Outputs{
-			utxoOutput(6, fullSnapshotOutputs[0].Deposit()),
-			utxoOutput(5, fullSnapshotOutputs[1].Deposit()),
+			utxoOutput(6, fullSnapshotOutputs[0].Deposit(), 3),
+			utxoOutput(5, fullSnapshotOutputs[1].Deposit(), 3),
 		},
 		Consumed: utxo.Spents{
-			utxoSpent(4, fullSnapshotOutputs[0].Deposit(), 3),
-			utxoSpent(3, fullSnapshotOutputs[1].Deposit(), 3),
+			utxoSpent(4, fullSnapshotOutputs[0].Deposit(), 2, 3),
+			utxoSpent(3, fullSnapshotOutputs[1].Deposit(), 2, 3),
 		},
 	},
 	{
 		Milestone: blankMilestone(2),
 		Created: utxo.Outputs{
-			utxoOutput(4, fullSnapshotOutputs[0].Deposit()),
-			utxoOutput(3, fullSnapshotOutputs[1].Deposit()),
+			utxoOutput(4, fullSnapshotOutputs[0].Deposit(), 2),
+			utxoOutput(3, fullSnapshotOutputs[1].Deposit(), 2),
 		},
 		Consumed: utxo.Spents{
-			utxoSpent(2, fullSnapshotOutputs[0].Deposit(), 2),
-			utxoSpent(1, fullSnapshotOutputs[1].Deposit(), 2),
+			utxoSpent(2, fullSnapshotOutputs[0].Deposit(), 1, 2),
+			utxoSpent(1, fullSnapshotOutputs[1].Deposit(), 1, 2),
 		},
 	},
 }
 
 func writeFullSnapshot() {
-	full, err := os.Create("full_snapshot.bin")
+	full, err := os.Create("test_full_snapshot.bin")
 	must(err)
 	defer func() { _ = full.Close() }()
 
 	var seps, sepsMax = 0, 10
 	fullSnapSEPProd := func() (hornet.MessageID, error) {
 		seps++
+		if seps == 1 {
+			return hornet.NullMessageID(), nil
+		}
 		if seps > sepsMax {
 			return nil, nil
 		}
@@ -145,12 +148,12 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	{
 		Milestone: blankMilestone(4),
 		Created: utxo.Outputs{
-			utxoOutput(8, fullSnapshotOutputs[0].Deposit()),
-			utxoOutput(7, fullSnapshotOutputs[1].Deposit()),
+			utxoOutput(8, fullSnapshotOutputs[0].Deposit(), 4),
+			utxoOutput(7, fullSnapshotOutputs[1].Deposit(), 4),
 		},
 		Consumed: utxo.Spents{
-			utxoSpent(6, fullSnapshotOutputs[0].Deposit(), 4),
-			utxoSpent(5, fullSnapshotOutputs[1].Deposit(), 4),
+			utxoSpent(6, fullSnapshotOutputs[0].Deposit(), 3, 4),
+			utxoSpent(5, fullSnapshotOutputs[1].Deposit(), 3, 4),
 		},
 	},
 	{
@@ -183,17 +186,17 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 			Spent:       true,
 		},
 		Created: utxo.Outputs{
-			utxoOutput(9, fullSnapshotOutputs[0].Deposit()+fullSnapshotOutputs[1].Deposit()+10_000_000),
+			utxoOutput(9, fullSnapshotOutputs[0].Deposit()+fullSnapshotOutputs[1].Deposit()+10_000_000, 5),
 		},
 		Consumed: utxo.Spents{
-			utxoSpent(8, fullSnapshotOutputs[0].Deposit(), 5),
-			utxoSpent(7, fullSnapshotOutputs[1].Deposit(), 4),
+			utxoSpent(8, fullSnapshotOutputs[0].Deposit(), 4, 5),
+			utxoSpent(7, fullSnapshotOutputs[1].Deposit(), 4, 5),
 		},
 	},
 }
 
 func writeDeltaSnapshot() {
-	delta, err := os.Create("delta_snapshot.bin")
+	delta, err := os.Create("test_delta_snapshot.bin")
 	must(err)
 	defer func() { _ = delta.Close() }()
 
@@ -268,11 +271,11 @@ func staticEd25519Address(fill byte) iotago.Address {
 	return &addr
 }
 
-func utxoOutput(fill byte, amount uint64) *utxo.Output {
+func utxoOutput(fill byte, amount uint64, msIndex milestone.Index) *utxo.Output {
 	return utxo.CreateOutput(
 		staticOutputID(fill),
 		staticMessageID(fill),
-		1,
+		msIndex,
 		0,
 		&iotago.ExtendedOutput{
 			Amount: amount,
@@ -285,7 +288,7 @@ func utxoOutput(fill byte, amount uint64) *utxo.Output {
 	)
 }
 
-func utxoSpent(fill byte, amount uint64, msIndex milestone.Index) *utxo.Spent {
+func utxoSpent(fill byte, amount uint64, msIndexCreated milestone.Index, msIndexSpent milestone.Index) *utxo.Spent {
 	txID := static32ByteID(fill)
-	return utxo.NewSpent(utxoOutput(fill, amount), &txID, msIndex, 0)
+	return utxo.NewSpent(utxoOutput(fill, amount, msIndexCreated), &txID, msIndexSpent, 0)
 }

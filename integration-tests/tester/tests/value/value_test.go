@@ -53,12 +53,20 @@ func TestValue(t *testing.T) {
 			Input:   genesisInputID,
 		}).
 		AddOutput(&iotago.ExtendedOutput{
-			Address: &target1Addr,
-			Amount:  target1Deposit,
+			Amount: target1Deposit,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{
+					Address: &target1Addr,
+				},
+			},
 		}).
 		AddOutput(&iotago.ExtendedOutput{
-			Address: &target2Addr,
-			Amount:  target2Deposit,
+			Amount: target2Deposit,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{
+					Address: &target2Addr,
+				},
+			},
 		}).
 		Build(deSeriParas, iotago.NewInMemoryAddressSigner(genesisAddrKey))
 	require.NoError(t, err)
