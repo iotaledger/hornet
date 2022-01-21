@@ -338,7 +338,7 @@ func DefaultPluginConfig() PluginConfig {
 	disabled := make([]string, len(disabledPluginsPeer))
 	copy(disabled, disabledPluginsPeer)
 	return PluginConfig{
-		Enabled:  []string{},
+		Enabled:  []string{"Indexer"},
 		Disabled: disabled,
 	}
 }
@@ -485,6 +485,8 @@ type ProtocolConfig struct {
 	PublicKeyRanges []coopkg.PublicKeyRange
 	// The network ID on which this node operates on.
 	NetworkIDName string
+	// The HRP which should be used for Bech32 addresses.
+	Bech32HRP iotago.NetworkPrefix
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -499,6 +501,7 @@ func (protoConfig *ProtocolConfig) CLIFlags() []string {
 		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, protoConfig.MinPoWScore),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolPublicKeyRangesJSON, string(keyRangesJSON)),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolNetworkIDName, protoConfig.NetworkIDName),
+		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolBech32HRP, protoConfig.Bech32HRP),
 	}
 }
 
@@ -519,6 +522,7 @@ func DefaultProtocolConfig() ProtocolConfig {
 			},
 		},
 		NetworkIDName: "alphanet1",
+		Bech32HRP:     iotago.PrefixTestnet,
 	}
 }
 

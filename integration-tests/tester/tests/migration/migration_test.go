@@ -101,9 +101,9 @@ func TestMigration(t *testing.T) {
 	// check that indeed the funds were correctly minted
 	log.Println("checking that migrated funds are available...")
 	for addr, tuple := range migrations {
-		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(context.Background(), iotago.MustParseEd25519AddressFromHexString(addr))
+		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), iotago.MustParseEd25519AddressFromHexString(addr))
 		require.NoError(t, err)
-		require.EqualValues(t, tuple.amount, balance.Balance)
+		require.EqualValues(t, tuple.amount, balance)
 	}
 }
 

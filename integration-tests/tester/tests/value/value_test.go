@@ -38,6 +38,7 @@ func TestValue(t *testing.T) {
 	genesisAddrKey := iotago.AddressKeys{Address: &framework.GenesisAddress, Keys: framework.GenesisSeed}
 	genesisInputID := &iotago.UTXOInput{TransactionID: [32]byte{}, TransactionOutputIndex: 0}
 
+	//TODO: this should be read from the node
 	deSeriParas := &iotago.DeSerializationParameters{
 		RentStructure: &iotago.RentStructure{
 			VByteCost:    0,
@@ -97,17 +98,17 @@ func TestValue(t *testing.T) {
 	}, 30*time.Second, 100*time.Millisecond)
 
 	// check that indeed the balances are available
-	res, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(context.Background(), &framework.GenesisAddress)
+	balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), &framework.GenesisAddress)
 	require.NoError(t, err)
-	require.Zero(t, res.Balance)
+	require.Zero(t, balance)
 
-	res, err = n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(context.Background(), &target1Addr)
+	balance, err = n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), &target1Addr)
 	require.NoError(t, err)
-	require.EqualValues(t, target1Deposit, res.Balance)
+	require.EqualValues(t, target1Deposit, balance)
 
-	res, err = n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(context.Background(), &target2Addr)
+	balance, err = n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), &target2Addr)
 	require.NoError(t, err)
-	require.EqualValues(t, target2Deposit, res.Balance)
+	require.EqualValues(t, target2Deposit, balance)
 
 	// the genesis output should be spent
 	outputRes, err := n.Coordinator().DebugNodeAPIClient.OutputByID(context.Background(), genesisInputID.ID())
