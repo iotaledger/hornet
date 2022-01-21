@@ -148,6 +148,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		func(index milestone.Index) {
 			require.NoError(t, pm.ApplyNewConfirmedMilestoneIndex(index))
 		},
+		nil,
 	)
 
 	return &ParticipationTestEnv{

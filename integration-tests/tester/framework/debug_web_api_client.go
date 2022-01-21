@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	iotago "github.com/iotaledger/iota.go/v3"
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (

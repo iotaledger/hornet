@@ -296,10 +296,12 @@ func NewFaucetTestEnv(t *testing.T,
 		nil,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
-			require.NoError(t, indexer.ApplyWhiteflagConfirmation(confirmation))
 			require.NoError(t, f.ApplyConfirmation(confirmation))
 		},
 		nil,
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+			require.NoError(t, indexer.UpdatedLedger(index, newOutputs, newSpents))
+		},
 	)
 
 	return &FaucetTestEnv{

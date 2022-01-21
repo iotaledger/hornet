@@ -11,7 +11,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/kvstore/utils"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -332,7 +331,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 	return nil
 }
 
-func (i *Indexer) ApplyConfirmation(msIndex milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) error {
+func (i *Indexer) UpdatedLedger(msIndex milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) error {
 
 	tx := i.db.Begin()
 	defer func() {
@@ -345,7 +344,9 @@ func (i *Indexer) ApplyConfirmation(msIndex milestone.Index, newOutputs utxo.Out
 		return err
 	}
 
+	spentOutputs := make(map[string]struct{})
 	for _, spent := range newSpents {
+		spentOutputs[string(spent.OutputID()[:])] = struct{}{}
 		if err := processSpent(spent, tx); err != nil {
 			tx.Rollback()
 			return err
@@ -353,6 +354,10 @@ func (i *Indexer) ApplyConfirmation(msIndex milestone.Index, newOutputs utxo.Out
 	}
 
 	for _, output := range newOutputs {
+		if _, wasSpentInSameMilestone := spentOutputs[string(output.OutputID()[:])]; wasSpentInSameMilestone {
+			// We only care about the end-result of the confirmation, so outputs that were already spent in the same milestone can be ignored
+			continue
+		}
 		if err := processOutput(output, tx); err != nil {
 			tx.Rollback()
 			return err
@@ -369,24 +374,6 @@ func (i *Indexer) ApplyConfirmation(msIndex milestone.Index, newOutputs utxo.Out
 	}).Create(&status)
 
 	return tx.Commit().Error
-}
-
-func (i *Indexer) ApplyWhiteflagConfirmation(confirmation *whiteflag.Confirmation) error {
-	mutationOutputs := confirmation.Mutations.NewOutputs
-
-	var newSpents utxo.Spents
-	for spentID, spent := range confirmation.Mutations.NewSpents {
-		newSpents = append(newSpents, spent)
-		// We only care about the end-result of the confirmation, so outputs that were already spent in the same milestone can be ignored
-		delete(mutationOutputs, spentID)
-	}
-
-	var newOutputs utxo.Outputs
-	for _, output := range mutationOutputs {
-		newOutputs = append(newOutputs, output)
-	}
-
-	return i.ApplyConfirmation(confirmation.MilestoneIndex, newOutputs, newSpents)
 }
 
 func (i *Indexer) LedgerIndex() (milestone.Index, error) {

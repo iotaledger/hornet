@@ -31,6 +31,10 @@ func MPSMetricsCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*MPSMetrics))(params[0].(*MPSMetrics))
 }
 
+func LedgerUpdatedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(milestone.Index, utxo.Outputs, utxo.Spents))(params[0].(milestone.Index), params[1].(utxo.Outputs), params[2].(utxo.Spents))
+}
+
 func UTXOOutputCaller(handler interface{}, params ...interface{}) {
 	handler.(func(milestone.Index, *utxo.Output))(params[0].(milestone.Index), params[1].(*utxo.Output))
 }
@@ -60,6 +64,7 @@ type Events struct {
 	ConfirmationMetricsUpdated     *events.Event
 	MilestoneSolidificationFailed  *events.Event
 	MilestoneTimeout               *events.Event
+	LedgerUpdated                  *events.Event
 	NewUTXOOutput                  *events.Event
 	NewUTXOSpent                   *events.Event
 	NewReceipt                     *events.Event

@@ -87,6 +87,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
 		},
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {},
 		func(index milestone.Index, output *utxo.Output) {},
 		func(index milestone.Index, spent *utxo.Spent) {},
 		nil,
@@ -138,6 +139,11 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 			}
 			if te.OnConfirmedMilestoneIndexChanged != nil {
 				te.OnConfirmedMilestoneIndexChanged(confirmation.MilestoneIndex)
+			}
+		},
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+			if te.OnLedgerUpdatedFunc != nil {
+				te.OnLedgerUpdatedFunc(index, newOutputs, newSpents)
 			}
 		},
 		func(index milestone.Index, output *utxo.Output) {

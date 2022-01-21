@@ -28,6 +28,7 @@ type ConfirmationMetrics struct {
 	DurationWhiteflag                                time.Duration
 	DurationReceipts                                 time.Duration
 	DurationConfirmation                             time.Duration
+	DurationLedgerUpdated                            time.Duration
 	DurationApplyIncludedWithTransactions            time.Duration
 	DurationApplyExcludedWithoutTransactions         time.Duration
 	DurationApplyMilestone                           time.Duration
@@ -57,6 +58,7 @@ func ConfirmMilestone(
 	milestoneMessageID hornet.MessageID,
 	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64),
 	onMilestoneConfirmed func(confirmation *Confirmation),
+	onLedgerUpdated func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents),
 	forEachNewOutput func(index milestone.Index, output *utxo.Output),
 	forEachNewSpent func(index milestone.Index, spent *utxo.Spent),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, *ConfirmationMetrics, error) {
@@ -166,6 +168,9 @@ func ConfirmMilestone(
 	}
 	timeConfirmation := time.Now()
 
+	onLedgerUpdated(milestoneIndex, newOutputs, newSpents)
+	timeLedgerUpdated := time.Now()
+
 	// load the message for the given id
 	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
 		cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(messageID) // meta +1
@@ -272,7 +277,8 @@ func ConfirmMilestone(
 		DurationWhiteflag:                                timeWhiteflag.Sub(timeStart),
 		DurationReceipts:                                 timeReceipts.Sub(timeWhiteflag),
 		DurationConfirmation:                             timeConfirmation.Sub(timeReceipts),
-		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeConfirmation),
+		DurationLedgerUpdated:                            timeLedgerUpdated.Sub(timeConfirmation),
+		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeLedgerUpdated),
 		DurationApplyExcludedWithoutTransactions:         timeApplyExcludedWithoutTransactions.Sub(timeApplyIncludedWithTransactions),
 		DurationApplyMilestone:                           timeApplyMilestone.Sub(timeApplyExcludedWithoutTransactions),
 		DurationApplyExcludedWithConflictingTransactions: timeApplyExcludedWithConflictingTransactions.Sub(timeApplyMilestone),

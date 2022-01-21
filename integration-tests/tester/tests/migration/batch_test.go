@@ -18,10 +18,10 @@ import (
 // to validate that the migrated funds entry limit is respected correctly.
 func TestBatch(t *testing.T) {
 	const (
-		initialTreasuryTokens = 10_000_000_000
-		migratedFundsCount    = 127 + 128 + 1
-		migrationTokens       = 1_000_000
-		totalMigrationTokens  = migratedFundsCount * migrationTokens
+		initialTreasuryTokens uint64 = 10_000_000_000
+		migratedFundsCount           = 127 + 128 + 1
+		migrationTokens       uint64 = 1_000_000
+		totalMigrationTokens         = migratedFundsCount * migrationTokens
 	)
 
 	// receipts per migrated at index

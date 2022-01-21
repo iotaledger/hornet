@@ -15,13 +15,13 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 
 	"github.com/gohornet/hornet/pkg/indexer"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 )
 
@@ -46,7 +46,7 @@ var (
 	Plugin *node.Plugin
 	deps   dependencies
 
-	onMilestoneConfirmed *events.Closure
+	onLedgerUpdated *events.Closure
 )
 
 type dependencies struct {
@@ -123,19 +123,19 @@ func run() {
 
 func configureEvents() {
 
-	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		if err := deps.Indexer.ApplyWhiteflagConfirmation(confirmation); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("indexer plugin hit a critical error while applying whiteflag confirmation: %s", err.Error()))
+	onLedgerUpdated = events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+		if err := deps.Indexer.UpdatedLedger(index, newOutputs, newSpents); err != nil {
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("indexer plugin hit a critical error while updating ledger: %s", err.Error()))
 		}
 	})
 }
 
 func attachEvents() {
-	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	deps.Tangle.Events.LedgerUpdated.Attach(onLedgerUpdated)
 }
 
 func detachEvents() {
-	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+	deps.Tangle.Events.LedgerUpdated.Detach(onLedgerUpdated)
 }
 
 func initializeIndexer() {
