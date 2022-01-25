@@ -66,7 +66,7 @@ func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -102,11 +102,6 @@ func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex milestone.Index, pru
 		}
 
 		if err := deleteSpent(spent, mutations); err != nil {
-			mutations.Cancel()
-			return err
-		}
-
-		if err := deleteOutputLookups(spent.output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}

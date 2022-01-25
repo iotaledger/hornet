@@ -120,33 +120,6 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 }
 
 func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
-
-	filterType, err := restapi.ParseOutputTypeQueryParam(c)
-	if err != nil {
-		return nil, err
-	}
-
-	outputIDs := []string{}
-	outputConsumerFunc := func(output *utxo.Output) bool {
-		if filterType != nil && output.OutputType() != *filterType {
-			return true
-		}
-		outputIDs = append(outputIDs, output.OutputID().ToHex())
-		return true
-	}
-
-	err = deps.UTXOManager.ForEachOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
-	}
-
-	return &outputIDsResponse{
-		OutputIDs: outputIDs,
-	}, nil
-}
-
-func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
-
 	filterType, err := restapi.ParseOutputTypeQueryParam(c)
 	if err != nil {
 		return nil, err
@@ -156,10 +129,6 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	appendConsumerFunc := func(output *utxo.Output) bool {
 		outputIDs = append(outputIDs, output.OutputID().ToHex())
 		return true
-	}
-
-	opts := []utxo.UTXOIterateOption{
-		utxo.ReadLockLedger(false),
 	}
 
 	outputConsumerFunc := appendConsumerFunc
@@ -173,7 +142,40 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 		}
 	}
 
-	err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, opts...)
+	err = deps.UTXOManager.ForEachOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
+	if err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
+	}
+
+	return &outputIDsResponse{
+		OutputIDs: outputIDs,
+	}, nil
+}
+
+func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
+	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	outputIDs := []string{}
+	appendConsumerFunc := func(output *utxo.Output) bool {
+		outputIDs = append(outputIDs, output.OutputID().ToHex())
+		return true
+	}
+
+	outputConsumerFunc := appendConsumerFunc
+
+	if filterType != nil {
+		outputConsumerFunc = func(output *utxo.Output) bool {
+			if output.OutputType() == *filterType {
+				return appendConsumerFunc(output)
+			}
+			return true
+		}
+	}
+
+	err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -184,19 +186,26 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 }
 
 func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
-
 	filterType, err := restapi.ParseOutputTypeQueryParam(c)
 	if err != nil {
 		return nil, err
 	}
 
 	outputIDs := []string{}
-	spentConsumerFunc := func(spent *utxo.Spent) bool {
-		if filterType != nil && spent.OutputType() != *filterType {
-			return true
-		}
+	appendConsumerFunc := func(spent *utxo.Spent) bool {
 		outputIDs = append(outputIDs, spent.OutputID().ToHex())
 		return true
+	}
+
+	spentConsumerFunc := appendConsumerFunc
+
+	if filterType != nil {
+		spentConsumerFunc = func(spent *utxo.Spent) bool {
+			if spent.OutputType() == *filterType {
+				return appendConsumerFunc(spent)
+			}
+			return true
+		}
 	}
 
 	err = deps.UTXOManager.ForEachSpentOutput(spentConsumerFunc, utxo.ReadLockLedger(false))

@@ -184,11 +184,11 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterTag)) > 0 {
-		indexBytes, err := restapi.ParseHexQueryParam(c, QueryParameterTag, iotago.MaxTagLength)
+		tagBytes, err := restapi.ParseHexQueryParam(c, QueryParameterTag, iotago.MaxTagLength)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTag(indexBytes))
+		filters = append(filters, indexer.ExtendedOutputTag(tagBytes))
 	}
 
 	if len(c.QueryParam(QueryParameterOffset)) > 0 {
@@ -298,11 +298,11 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterTag)) > 0 {
-		indexBytes, err := restapi.ParseHexQueryParam(c, QueryParameterTag, iotago.MaxTagLength)
+		tagBytes, err := restapi.ParseHexQueryParam(c, QueryParameterTag, iotago.MaxTagLength)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTTag(indexBytes))
+		filters = append(filters, indexer.NFTTag(tagBytes))
 	}
 
 	if len(c.QueryParam(QueryParameterOffset)) > 0 {
