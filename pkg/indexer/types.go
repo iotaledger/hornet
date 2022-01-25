@@ -3,6 +3,8 @@ package indexer
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -33,9 +35,9 @@ type status struct {
 }
 
 type queryResult struct {
-	OutputID       outputIDBytes
-	MilestoneIndex milestone.Index
-	LedgerIndex    milestone.Index
+	OutputID    outputIDBytes
+	CreatedAt   time.Time
+	LedgerIndex milestone.Index
 }
 
 func (o outputIDBytes) ID() iotago.OutputID {
@@ -72,16 +74,20 @@ func errorResult(err error) *IndexerResult {
 	}
 }
 
+func unixTime(fromValue uint32) time.Time {
+	return time.Unix(int64(fromValue), 0)
+}
+
 func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB, pageSize int, offset []byte) *IndexerResult {
 
-	query = query.Select("output_id", "milestone_index").Order("milestone_index asc, output_id asc")
+	query = query.Select("output_id", "created_at").Order("created_at asc, output_id asc")
 	if pageSize > 0 {
 		if offset != nil {
 			if len(offset) != OffsetLength {
 				return errorResult(errors.Errorf("Invalid offset length: %d", len(offset)))
 			}
-			msIndex := binary.LittleEndian.Uint32(offset[:4])
-			query = query.Where("milestone_index >= ?", msIndex).Where("output_id >= hex(?)", hex.EncodeToString(offset[4:]))
+			createdAt := unixTime(binary.LittleEndian.Uint32(offset[:4]))
+			query = query.Select("output_id", "created_at", "hex(output_id) AS hex_output_id").Where("created_at >= ?", createdAt).Where("hex_output_id >= ?", strings.ToUpper(hex.EncodeToString(offset[4:])))
 		}
 		query = query.Limit(pageSize + 1)
 	}
@@ -109,7 +115,7 @@ func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB, pageSize int, off
 		lastResult := results[len(results)-1]
 		results = results[:len(results)-1]
 		msIndex := make([]byte, 4)
-		binary.LittleEndian.PutUint32(msIndex, uint32(lastResult.MilestoneIndex))
+		binary.LittleEndian.PutUint32(msIndex, uint32(lastResult.CreatedAt.Unix()))
 		nextOffset = byteutils.ConcatBytes(msIndex, lastResult.OutputID[:])
 	}
 

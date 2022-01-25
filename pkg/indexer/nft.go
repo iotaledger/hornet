@@ -22,7 +22,7 @@ type nft struct {
 	ExpirationMilestone     *milestone.Index
 	ExpirationTime          *time.Time
 	ExpirationReturnAddress addressBytes
-	MilestoneIndex          milestone.Index `gorm:"notnull"`
+	CreatedAt               time.Time `gorm:"notnull"`
 }
 
 type NFTFilterOptions struct {

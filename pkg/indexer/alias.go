@@ -1,19 +1,20 @@
 package indexer
 
 import (
-	"github.com/gohornet/hornet/pkg/model/milestone"
+	"time"
+
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type alias struct {
-	AliasID         aliasIDBytes    `gorm:"primaryKey;notnull"`
-	OutputID        outputIDBytes   `gorm:"unique;notnull"`
-	Amount          uint64          `gorm:"notnull"`
-	StateController addressBytes    `gorm:"notnull;index:alias_state_controller"`
-	Governor        addressBytes    `gorm:"notnull;index:alias_governor"`
-	Issuer          addressBytes    `gorm:"index:alias_issuer"`
-	Sender          addressBytes    `gorm:"index:alias_sender"`
-	MilestoneIndex  milestone.Index `gorm:"notnull"`
+	AliasID         aliasIDBytes  `gorm:"primaryKey;notnull"`
+	OutputID        outputIDBytes `gorm:"unique;notnull"`
+	Amount          uint64        `gorm:"notnull"`
+	StateController addressBytes  `gorm:"notnull;index:alias_state_controller"`
+	Governor        addressBytes  `gorm:"notnull;index:alias_governor"`
+	Issuer          addressBytes  `gorm:"index:alias_issuer"`
+	Sender          addressBytes  `gorm:"index:alias_sender"`
+	CreatedAt       time.Time     `gorm:"notnull"`
 }
 
 type AliasFilterOptions struct {

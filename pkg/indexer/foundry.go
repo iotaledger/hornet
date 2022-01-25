@@ -1,16 +1,17 @@
 package indexer
 
 import (
-	"github.com/gohornet/hornet/pkg/model/milestone"
+	"time"
+
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type foundry struct {
-	FoundryID      foundryIDBytes  `gorm:"primaryKey;notnull"`
-	OutputID       outputIDBytes   `gorm:"unique;notnull"`
-	Amount         uint64          `gorm:"notnull"`
-	Address        addressBytes    `gorm:"notnull;index:foundries_address"`
-	MilestoneIndex milestone.Index `gorm:"notnull"`
+	FoundryID foundryIDBytes `gorm:"primaryKey;notnull"`
+	OutputID  outputIDBytes  `gorm:"unique;notnull"`
+	Amount    uint64         `gorm:"notnull"`
+	Address   addressBytes   `gorm:"notnull;index:foundries_address"`
+	CreatedAt time.Time      `gorm:"notnull"`
 }
 
 type FoundryFilterOptions struct {
