@@ -1,13 +1,11 @@
 package indexer
 
 import (
-	"path/filepath"
-	"time"
-
 	"github.com/pkg/errors"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"path/filepath"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -82,9 +80,9 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		extended := &extendedOutput{
-			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
-			Amount:         iotaOutput.Amount,
-			MilestoneIndex: output.MilestoneIndex(),
+			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
+			Amount:    iotaOutput.Amount,
+			CreatedAt: unixTime(output.MilestoneTimestamp()),
 		}
 		copy(extended.OutputID, output.OutputID()[:])
 
@@ -121,7 +119,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 				extended.TimelockMilestone = &idx
 			}
 			if timelock.UnixTime > 0 {
-				time := time.Unix(int64(timelock.UnixTime), 0)
+				time := unixTime(timelock.UnixTime)
 				extended.TimelockTime = &time
 			}
 		}
@@ -132,7 +130,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 				extended.ExpirationMilestone = &idx
 			}
 			if expiration.UnixTime > 0 {
-				time := time.Unix(int64(expiration.UnixTime), 0)
+				time := unixTime(expiration.UnixTime)
 				extended.ExpirationTime = &time
 			}
 			extended.ExpirationReturnAddress, err = addressBytesForAddress(expiration.ReturnAddress)
@@ -163,10 +161,10 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		alias := &alias{
-			AliasID:        make(aliasIDBytes, iotago.AliasIDLength),
-			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
-			Amount:         iotaOutput.Amount,
-			MilestoneIndex: output.MilestoneIndex(),
+			AliasID:   make(aliasIDBytes, iotago.AliasIDLength),
+			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
+			Amount:    iotaOutput.Amount,
+			CreatedAt: unixTime(output.MilestoneTimestamp()),
 		}
 		copy(alias.AliasID, aliasID[:])
 		copy(alias.OutputID, output.OutputID()[:])
@@ -222,10 +220,10 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		nft := &nft{
-			NFTID:          make(nftIDBytes, iotago.NFTIDLength),
-			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
-			Amount:         iotaOutput.Amount,
-			MilestoneIndex: output.MilestoneIndex(),
+			NFTID:     make(nftIDBytes, iotago.NFTIDLength),
+			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
+			Amount:    iotaOutput.Amount,
+			CreatedAt: unixTime(output.MilestoneTimestamp()),
 		}
 		copy(nft.NFTID, nftID[:])
 		copy(nft.OutputID, output.OutputID()[:])
@@ -270,7 +268,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 				nft.TimelockMilestone = &idx
 			}
 			if timelock.UnixTime > 0 {
-				time := time.Unix(int64(timelock.UnixTime), 0)
+				time := unixTime(timelock.UnixTime)
 				nft.TimelockTime = &time
 			}
 		}
@@ -281,7 +279,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 				nft.ExpirationMilestone = &idx
 			}
 			if expiration.UnixTime > 0 {
-				time := time.Unix(int64(expiration.UnixTime), 0)
+				time := unixTime(expiration.UnixTime)
 				nft.ExpirationTime = &time
 			}
 			nft.ExpirationReturnAddress, err = addressBytesForAddress(expiration.ReturnAddress)
@@ -306,10 +304,10 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		foundry := &foundry{
-			FoundryID:      foundryID[:],
-			OutputID:       make(outputIDBytes, iotago.OutputIDLength),
-			Amount:         iotaOutput.Amount,
-			MilestoneIndex: output.MilestoneIndex(),
+			FoundryID: foundryID[:],
+			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
+			Amount:    iotaOutput.Amount,
+			CreatedAt: unixTime(output.MilestoneTimestamp()),
 		}
 		copy(foundry.OutputID, output.OutputID()[:])
 
