@@ -202,6 +202,7 @@ func publishOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool)
 	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
 	outputsTopicHasSubscribers := deps.MQTTBroker.HasSubscribers(outputsTopic)
 
+	// TODO: Re-Add address topics if Indexer is enabled
 	//addressBech32Topic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(deps.Bech32HRP))
 	//addressBech32TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressBech32Topic)
 	//
