@@ -125,15 +125,15 @@ type OutputResponse struct {
 	// Whether this output is spent.
 	Spent bool `json:"isSpent"`
 	// The milestone index at which this output was spent.
-	SpentMilestoneIndex milestone.Index `json:"spentMilestoneIndex,omitempty"`
-	// The transaction this output was spent with.
-	SpentTransactionID string `json:"spentTransactionId,omitempty"`
+	MilestoneIndexSpent milestone.Index `json:"milestoneIndexSpent,omitempty"`
 	// The milestone timestamp this output was spent.
-	SpentMilestoneTimestamp uint32 `json:"spentMilestoneTimestamp,omitempty"`
+	MilestoneTimestampSpent uint32 `json:"milestoneTimestampSpent,omitempty"`
+	// The transaction this output was spent with.
+	TransactionIDSpent string `json:"transactionIdSpent,omitempty"`
 	// The milestone index at which this output was booked into the ledger.
-	MilestoneIndex milestone.Index `json:"milestoneIndex"`
+	MilestoneIndexBooked milestone.Index `json:"milestoneIndexBooked"`
 	// The milestone timestamp this output was booked in the ledger.
-	MilestoneTimestamp uint32 `json:"milestoneTimestamp"`
+	MilestoneTimestampBooked uint32 `json:"milestoneTimestampBooked"`
 	// The ledger index at which this output was available at.
 	LedgerIndex milestone.Index `json:"ledgerIndex"`
 	// The output in its serialized form.

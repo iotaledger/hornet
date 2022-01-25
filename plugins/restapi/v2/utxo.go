@@ -24,14 +24,14 @@ func NewOutputResponse(output *utxo.Output, ledgerIndex milestone.Index) (*Outpu
 	transactionID := output.OutputID().TransactionID()
 
 	return &OutputResponse{
-		MessageID:          output.MessageID().ToHex(),
-		TransactionID:      hex.EncodeToString(transactionID[:]),
-		Spent:              false,
-		OutputIndex:        output.OutputID().Index(),
-		RawOutput:          &rawRawOutputJSON,
-		MilestoneIndex:     output.MilestoneIndex(),
-		MilestoneTimestamp: output.MilestoneTimestamp(),
-		LedgerIndex:        ledgerIndex,
+		MessageID:                output.MessageID().ToHex(),
+		TransactionID:            hex.EncodeToString(transactionID[:]),
+		Spent:                    false,
+		OutputIndex:              output.OutputID().Index(),
+		RawOutput:                &rawRawOutputJSON,
+		MilestoneIndexBooked:     output.MilestoneIndex(),
+		MilestoneTimestampBooked: output.MilestoneTimestamp(),
+		LedgerIndex:              ledgerIndex,
 	}, nil
 }
 
@@ -41,9 +41,9 @@ func NewSpentResponse(spent *utxo.Spent, ledgerIndex milestone.Index) (*OutputRe
 		return nil, err
 	}
 	response.Spent = true
-	response.SpentMilestoneIndex = spent.MilestoneIndex()
-	response.SpentTransactionID = hex.EncodeToString(spent.TargetTransactionID()[:])
-	response.SpentMilestoneTimestamp = spent.MilestoneTimestamp()
+	response.MilestoneIndexSpent = spent.MilestoneIndex()
+	response.TransactionIDSpent = hex.EncodeToString(spent.TargetTransactionID()[:])
+	response.MilestoneTimestampSpent = spent.MilestoneTimestamp()
 	return response, nil
 }
 
