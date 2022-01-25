@@ -2,7 +2,6 @@ package utxo
 
 import (
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type UTXOIterateOptions struct {
@@ -165,24 +164,6 @@ func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) (Outputs, error) 
 		return nil, err
 	}
 	return outputs, nil
-}
-
-func (u *Manager) ComputeAddressBalanceWithoutConstraints(address iotago.Address, options ...UTXOIterateOption) (balance uint64, count int, err error) {
-	balance = 0
-	count = 0
-
-	consumerFunc := func(output *Output) bool {
-		ownerAddress := output.address()
-		if ownerAddress != nil && address.Equal(ownerAddress) && !output.hasSpendingConstraint() {
-			count++
-			balance += output.Deposit()
-		}
-		return true
-	}
-	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
-		return 0, 0, err
-	}
-	return balance, count, err
 }
 
 func (u *Manager) ComputeLedgerBalance(options ...UTXOIterateOption) (balance uint64, count int, err error) {

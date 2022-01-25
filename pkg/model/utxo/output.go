@@ -51,27 +51,6 @@ func (o *Output) Output() iotago.Output {
 	return o.output
 }
 
-func (o *Output) hasSpendingConstraint() bool {
-	switch output := o.output.(type) {
-	case iotago.UnlockConditionOutput:
-		conditions := output.UnlockConditions().MustSet()
-		return conditions.HasDustDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
-	default:
-		panic("Unknown output type")
-	}
-}
-
-func (o *Output) address() iotago.Address {
-	switch output := o.output.(type) {
-	case *iotago.AliasOutput:
-		return nil
-	case iotago.UnlockConditionOutput:
-		return output.UnlockConditions().MustSet().Address().Address
-	default:
-		panic("unsupported output type")
-	}
-}
-
 func (o *Output) Deposit() uint64 {
 	return o.output.Deposit()
 }
