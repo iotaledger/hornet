@@ -93,7 +93,7 @@ func configure() {
 
 	initializeIndexer()
 
-	if err := Plugin.Node.Daemon().BackgroundWorker("Close Participation database", func(ctx context.Context) {
+	if err := Plugin.Node.Daemon().BackgroundWorker("Close Indexer database", func(ctx context.Context) {
 		<-ctx.Done()
 
 		Plugin.LogInfo("Syncing Indexer database to disk...")
