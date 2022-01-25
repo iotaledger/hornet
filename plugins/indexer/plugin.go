@@ -139,7 +139,7 @@ func detachEvents() {
 }
 
 func initializeIndexer() {
-	//Compare Indexer ledgerIndex with UTXO ledgerIndex and if it does not match, drop tables and import unspent outputs
+	// compare Indexer ledgerIndex with UTXO ledgerIndex and if it does not match, drop tables and import unspent outputs
 	needsInitialImport := false
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
