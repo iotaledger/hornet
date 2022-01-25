@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [2.0.0-alpha1] - Unreleased
 
 ### Changed
-    - Everything
+    - Everything, since we are all stardust. 
 
 
 ## [1.1.3] - 29.12.2021
