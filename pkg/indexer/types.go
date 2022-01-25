@@ -3,6 +3,7 @@ package indexer
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"strings"
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -81,7 +82,7 @@ func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB, pageSize int, off
 				return errorResult(errors.Errorf("Invalid offset length: %d", len(offset)))
 			}
 			msIndex := binary.LittleEndian.Uint32(offset[:4])
-			query = query.Where("milestone_index >= ?", msIndex).Where("output_id >= hex(?)", hex.EncodeToString(offset[4:]))
+			query = query.Select("output_id", "milestone_index", "hex(output_id) AS hex_output_id").Where("milestone_index >= ?", msIndex).Where("hex_output_id >= ?", strings.ToUpper(hex.EncodeToString(offset[4:])))
 		}
 		query = query.Limit(pageSize + 1)
 	}
