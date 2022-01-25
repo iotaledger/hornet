@@ -174,7 +174,6 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 	}
 
 	err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, opts...)
-
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}

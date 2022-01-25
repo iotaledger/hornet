@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
@@ -56,7 +55,6 @@ type dependencies struct {
 	SyncManager             *syncmanager.SyncManager
 	UTXOManager             *utxo.Manager
 	Tangle                  *tangle.Tangle
-	Echo                    *echo.Echo
 	Bech32HRP               iotago.NetworkPrefix `name:"bech32HRP"`
 	RestAPILimitsMaxResults int                  `name:"restAPILimitsMaxResults"`
 	ShutdownHandler         *shutdown.ShutdownHandler
@@ -86,9 +84,8 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	restapiv2.AddPlugin("indexer/v1")
 
-	routeGroup := deps.Echo.Group("/api/plugins/indexer/v1")
+	routeGroup := restapiv2.AddPlugin("indexer/v1")
 	configureRoutes(routeGroup)
 
 	initializeIndexer()

@@ -124,26 +124,26 @@ var dashboardAllowedRoutes = map[string][]string{
 		"/api/v2/outputs",
 		"/api/v2/peers",
 		"/api/v2/transactions",
-		"/api/plugins/spammer",
-		"/api/plugins/participation/events",
+		"/api/plugins/spammer/v1",
+		"/api/plugins/participation/v1/events",
 	},
 	http.MethodPost: {
 		"/api/v2/peers",
-		"/api/plugins/spammer",
-		"/api/plugins/participation/admin/events",
+		"/api/plugins/spammer/v1",
+		"/api/plugins/participation/v1/admin/events",
 	},
 	http.MethodDelete: {
 		"/api/v2/peers",
-		"/api/plugins/participation/admin/events",
+		"/api/plugins/participation/v1/admin/events",
 	},
 }
 
 var faucetAllowedRoutes = map[string][]string{
 	http.MethodGet: {
-		"/api/plugins/faucet/info",
+		"/api/plugins/faucet/v1/info",
 	},
 	http.MethodPost: {
-		"/api/plugins/faucet/enqueue",
+		"/api/plugins/faucet/v1/enqueue",
 	},
 }
 

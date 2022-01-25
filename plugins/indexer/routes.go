@@ -21,7 +21,7 @@ const (
 	RouteOutputs = "/outputs"
 
 	// RouteAliases is the route for getting aliases filtered by the given parameters.
-	// GET with query parameter  returns all outputIDs that fit these filter criteria (query parameters: "stateController", "governor", "issuer", "sender").
+	// GET with query parameter returns all outputIDs that fit these filter criteria (query parameters: "stateController", "governor", "issuer", "sender").
 	// Returns an empty list if no results are found.
 	RouteAliases = "/aliases"
 
@@ -59,7 +59,7 @@ const (
 	// QueryParameterSender is used to filter for a certain sender.
 	QueryParameterSender = "sender"
 
-	// QueryParameterTag is used to filter for a certain tags.
+	// QueryParameterTag is used to filter for a certain tag.
 	QueryParameterTag = "tag"
 
 	// QueryParameterRequiresDustReturn is used to filter for outputs requiring a dust return.

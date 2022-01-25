@@ -77,7 +77,6 @@ type dependencies struct {
 	FaucetAllowedAPIRoute restapi.AllowedRoute         `name:"faucetAllowedAPIRoute"`
 	Faucet                *faucet.Faucet
 	Tangle                *tangle.Tangle
-	Echo                  *echo.Echo
 	ShutdownHandler       *shutdown.ShutdownHandler
 }
 
@@ -161,13 +160,11 @@ func configure() {
 		Plugin.LogPanic("Indexer plugin needs to be enabled to use the Faucet plugin")
 	}
 
-	restapiv2.AddPlugin("faucet")
-
-	routeGroup := deps.Echo.Group("/api/plugins/faucet")
+	routeGroup := restapiv2.AddPlugin("faucet/v1")
 
 	allowedRoutes := map[string][]string{
 		http.MethodGet: {
-			"/api/plugins/faucet/info",
+			"/api/plugins/faucet/v1/info",
 		},
 	}
 

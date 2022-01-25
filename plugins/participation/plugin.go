@@ -103,7 +103,6 @@ type dependencies struct {
 	ParticipationManager *participation.ParticipationManager
 	SyncManager          *syncmanager.SyncManager
 	Tangle               *tangle.Tangle
-	Echo                 *echo.Echo
 	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
 	ShutdownHandler      *shutdown.ShutdownHandler
 }
@@ -143,9 +142,8 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	restapiv2.AddPlugin("participation")
 
-	routeGroup := deps.Echo.Group("/api/plugins/participation")
+	routeGroup := restapiv2.AddPlugin("participation/v1")
 
 	routeGroup.GET(RouteParticipationEvents, func(c echo.Context) error {
 		resp, err := getEvents(c)

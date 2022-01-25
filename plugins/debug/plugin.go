@@ -89,7 +89,6 @@ type dependencies struct {
 	RequestQueue gossip.RequestQueue
 	UTXOManager  *utxo.Manager
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-	Echo         *echo.Echo                   `optional:"true"`
 }
 
 func configure() {
@@ -97,11 +96,10 @@ func configure() {
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
-	restapiv2.AddPlugin("debug")
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 
-	routeGroup := deps.Echo.Group("/api/plugins/debug")
+	routeGroup := restapiv2.AddPlugin("debug/v1")
 
 	routeGroup.POST(RouteDebugComputeWhiteFlag, func(c echo.Context) error {
 		resp, err := computeWhiteFlagMutations(c)

@@ -15,7 +15,7 @@ import (
 const (
 	// NodeAPIRouteDebugComputeWhiteFlag is the debug route to compute the white flag confirmation for the cone of the given parents.
 	// POST computes the white flag confirmation.
-	NodeAPIRouteDebugComputeWhiteFlag = "/api/plugins/debug/whiteflag"
+	NodeAPIRouteDebugComputeWhiteFlag = "/api/plugins/debug/v1/whiteflag"
 )
 
 // NewDebugNodeAPIClient returns a new DebugNodeAPIClient with the given BaseURL.

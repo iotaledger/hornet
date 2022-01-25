@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -112,8 +113,8 @@ var (
 	Plugin         *node.Plugin
 	powEnabled     bool
 	powWorkerCount int
-	features       []string
-	plugins        []string
+	features       = []string{}
+	plugins        = []string{}
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
@@ -162,11 +163,9 @@ func configure() {
 	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)
 
 	// Check for features
-	features = []string{}
 	if powEnabled {
-		features = append(features, "PoW")
+		AddFeature("PoW")
 	}
-	plugins = []string{}
 
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
 		resp, err := info()
@@ -352,7 +351,8 @@ func AddFeature(feature string) {
 	features = append(features, feature)
 }
 
-// AddPlugin adds a plugin route to the RouteInfo endpoint.
-func AddPlugin(pluginRoute string) {
+// AddPlugin adds a plugin route to the RouteInfo endpoint and returns the route for this plugin.
+func AddPlugin(pluginRoute string) *echo.Group {
 	plugins = append(plugins, pluginRoute)
+	return deps.Echo.Group(fmt.Sprintf("/api/plugins/%s", pluginRoute))
 }
