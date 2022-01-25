@@ -104,7 +104,7 @@ func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, miles
 	}
 
 	var output iotago.Output
-	if len(transaction.Essence.Outputs) < int(index) {
+	if len(transaction.Essence.Outputs) <= int(index) {
 		return nil, errors.New("output not found")
 	}
 	output = transaction.Essence.Outputs[int(index)]

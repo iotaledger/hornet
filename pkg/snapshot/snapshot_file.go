@@ -323,9 +323,6 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *
 
 			outputCount++
 			outputBytes := output.SnapshotBytes()
-			if err != nil {
-				return nil, fmt.Errorf("unable to serialize LS output #%d: %w", outputCount, err)
-			}
 			if _, err := writeSeeker.Write(outputBytes); err != nil {
 				return nil, fmt.Errorf("unable to write LS output #%d: %w", outputCount, err)
 			}

@@ -57,6 +57,10 @@ func OutputFromSnapshotReader(reader io.Reader, deSeriParas *iotago.DeSerializat
 		return nil, fmt.Errorf("unable to read LS output length: %w", err)
 	}
 
+	if outputLen == 0 {
+		return nil, fmt.Errorf("unable to read LS output: output length: %d", outputLen)
+	}
+
 	outputBytes := make([]byte, outputLen)
 	if _, err := io.ReadFull(reader, outputBytes); err != nil {
 		return nil, fmt.Errorf("unable to read LS output bytes: %w", err)
