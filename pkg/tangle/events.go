@@ -5,7 +5,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/events"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type MPSMetrics struct {
@@ -29,6 +29,10 @@ func ConfirmedMilestoneCaller(handler interface{}, params ...interface{}) {
 
 func MPSMetricsCaller(handler interface{}, params ...interface{}) {
 	handler.(func(*MPSMetrics))(params[0].(*MPSMetrics))
+}
+
+func LedgerUpdatedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(milestone.Index, utxo.Outputs, utxo.Spents))(params[0].(milestone.Index), params[1].(utxo.Outputs), params[2].(utxo.Spents))
 }
 
 func UTXOOutputCaller(handler interface{}, params ...interface{}) {
@@ -60,6 +64,7 @@ type Events struct {
 	ConfirmationMetricsUpdated     *events.Event
 	MilestoneSolidificationFailed  *events.Event
 	MilestoneTimeout               *events.Event
+	LedgerUpdated                  *events.Event
 	NewUTXOOutput                  *events.Event
 	NewUTXOSpent                   *events.Event
 	NewReceipt                     *events.Event

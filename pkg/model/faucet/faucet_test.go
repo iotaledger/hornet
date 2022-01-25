@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 
 	"github.com/gohornet/hornet/pkg/model/faucet/test"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -130,6 +130,10 @@ func TestMultipleRequests(t *testing.T) {
 	calculatedWallet1Balance := wallet1Balance + faucetAmount
 	calculatedWallet2Balance := wallet2Balance + faucetAmount
 	calculatedWallet3Balance := wallet3Balance + faucetAmount
+	env.AssertAddressUTXOCount(env.Wallet1.Address(), 1)
+	env.AssertAddressUTXOCount(env.Wallet2.Address(), 1)
+	env.AssertAddressUTXOCount(env.Wallet3.Address(), 1)
+	env.AssertAddressUTXOCount(env.FaucetWallet.Address(), 1)
 	env.AssertFaucetBalance(faucetBalance)
 	env.TestEnv.AssertLedgerBalance(env.FaucetWallet, faucetBalance)
 	env.TestEnv.AssertLedgerBalance(env.Wallet1, calculatedWallet1Balance)

@@ -32,7 +32,6 @@ type Storage struct {
 
 	// object storages
 	childrenStorage             *objectstorage.ObjectStorage
-	indexationStorage           *objectstorage.ObjectStorage
 	messagesStorage             *objectstorage.ObjectStorage
 	metadataStorage             *objectstorage.ObjectStorage
 	milestoneStorage            *objectstorage.ObjectStorage
@@ -108,15 +107,6 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 				MaxConsumerHoldTime:   "0ms",
 			},
 		},
-		Indexations: &profile.CacheOpts{
-			CacheTime:                  "0ms",
-			ReleaseExecutorWorkerCount: 10,
-			LeakDetectionOptions: &profile.LeakDetectionOpts{
-				Enabled:               false,
-				MaxConsumersPerObject: 10,
-				MaxConsumerHoldTime:   "0ms",
-			},
-		},
 		Milestones: &profile.CacheOpts{
 			CacheTime:                  "0ms",
 			ReleaseExecutorWorkerCount: 10,
@@ -179,10 +169,6 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 		return err
 	}
 
-	if err := s.configureIndexationStorage(tangleStore, cachesOpts.Indexations); err != nil {
-		return err
-	}
-
 	s.configureSnapshotStore(tangleStore)
 
 	return nil
@@ -211,7 +197,6 @@ func (s *Storage) FlushStorages() {
 	s.FlushMilestoneStorage()
 	s.FlushMessagesStorage()
 	s.FlushChildrenStorage()
-	s.FlushIndexationStorage()
 	s.FlushUnreferencedMessagesStorage()
 }
 
@@ -221,6 +206,5 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownMilestoneStorage()
 	s.ShutdownMessagesStorage()
 	s.ShutdownChildrenStorage()
-	s.ShutdownIndexationStorage()
 	s.ShutdownUnreferencedMessagesStorage()
 }

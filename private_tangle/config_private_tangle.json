@@ -7,7 +7,7 @@
     "publicRoutes": [
       "/health",
       "/mqtt",
-      "/api/v1/*",
+      "/api/v2/*",
       "/api/plugins/*"
     ],
     "protectedRoutes": [
@@ -59,6 +59,9 @@
     "networkID": "private_tangle1",
     "bech32HRP": "atoi",
     "minPoWScore": 100.0,
+    "vByteCost": 0,
+    "vByteFactorData": 1,
+    "vByteFactorKey": 10,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
@@ -162,6 +165,7 @@
     "profile": "auto",
     "disablePlugins": [],
     "enablePlugins": [
+      "Indexer",
       "Spammer",
       "Debug",
       "Prometheus"
@@ -216,7 +220,7 @@
     "smallAmount": 1000000,
     "maxAddressBalance": 20000000,
     "maxOutputCount": 127,
-    "indexationMessage": "HORNET FAUCET",
+    "tagMessage": "HORNET FAUCET",
     "batchTimeout": "2s",
     "powWorkerCount": 0,
     "website": {

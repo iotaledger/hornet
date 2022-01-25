@@ -1,8 +1,8 @@
-package v1
+package v2
 
 import (
+	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -22,11 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
-	iotago "github.com/iotaledger/iota.go/v2"
-)
-
-const (
-	waitForNodeSyncedTimeout = 2000 * time.Millisecond
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -55,7 +51,6 @@ const (
 	RouteMessageChildren = "/messages/:" + restapipkg.ParameterMessageID + "/children"
 
 	// RouteMessages is the route for getting message IDs or creating new messages.
-	// GET with query parameter (mandatory) returns all message IDs that fit these filter criteria (query parameters: "index").
 	// POST creates a single new message and returns the new message ID.
 	RouteMessages = "/messages"
 
@@ -74,26 +69,6 @@ const (
 	// RouteOutput is the route for getting outputs by their outputID (transactionHash + outputIndex).
 	// GET returns the output.
 	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
-
-	// RouteAddressBech32Balance is the route for getting the total balance of all unspent outputs of an address.
-	// The address must be encoded in bech32.
-	// GET returns the balance of all unspent outputs of this address.
-	RouteAddressBech32Balance = "/addresses/:" + restapipkg.ParameterAddress
-
-	// RouteAddressEd25519Balance is the route for getting the total balance of all unspent outputs of an ed25519 address.
-	// The ed25519 address must be encoded in hex.
-	// GET returns the balance of all unspent outputs of this address.
-	RouteAddressEd25519Balance = "/addresses/ed25519/:" + restapipkg.ParameterAddress
-
-	// RouteAddressBech32Outputs is the route for getting all output IDs for an address.
-	// The address must be encoded in bech32.
-	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
-	RouteAddressBech32Outputs = "/addresses/:" + restapipkg.ParameterAddress + "/outputs"
-
-	// RouteAddressEd25519Outputs is the route for getting all output IDs for an ed25519 address.
-	// The ed25519 address must be encoded in hex.
-	// GET returns the outputIDs for all outputs of this address (optional query parameters: "include-spent").
-	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + restapipkg.ParameterAddress + "/outputs"
 
 	// RouteTreasury is the route for getting the current treasury output.
 	RouteTreasury = "/treasury"
@@ -127,7 +102,7 @@ func init() {
 	Plugin = &node.Plugin{
 		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
-			Name:      "RestAPIV1",
+			Name:      "RestAPIV2",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Configure: configure,
 		},
@@ -138,7 +113,8 @@ var (
 	Plugin         *node.Plugin
 	powEnabled     bool
 	powWorkerCount int
-	features       []string
+	features       = []string{}
+	plugins        = []string{}
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
@@ -160,8 +136,9 @@ type dependencies struct {
 	AppInfo                               *app.AppInfo
 	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager                  *p2p.ConfigManager
-	NetworkID                             uint64                 `name:"networkId"`
-	NetworkIDName                         string                 `name:"networkIdName"`
+	NetworkID                             uint64 `name:"networkId"`
+	NetworkIDName                         string `name:"networkIdName"`
+	DeserializationParameters             *iotago.DeSerializationParameters
 	MaxDeltaMsgYoungestConeRootIndexToCMI int                    `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
 	MaxDeltaMsgOldestConeRootIndexToCMI   int                    `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
 	BelowMaxDepth                         int                    `name:"belowMaxDepth"`
@@ -177,18 +154,17 @@ type dependencies struct {
 func configure() {
 	// check if RestAPI plugin is disabled
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
-		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the RestAPIV1 plugin")
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the RestAPIV2 plugin")
 	}
 
-	routeGroup := deps.Echo.Group("/api/v1")
+	routeGroup := deps.Echo.Group("/api/v2")
 
 	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
 	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)
 
 	// Check for features
-	features = []string{}
 	if powEnabled {
-		features = append(features, "PoW")
+		AddFeature("PoW")
 	}
 
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
@@ -244,15 +220,6 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteMessages, func(c echo.Context) error {
-		resp, err := messageIDsByIndex(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
 	routeGroup.POST(RouteMessages, func(c echo.Context) error {
 		resp, err := sendMessage(c)
 		if err != nil {
@@ -291,42 +258,6 @@ func configure() {
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
 		resp, err := outputByID(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressBech32Balance, func(c echo.Context) error {
-		resp, err := balanceByBech32Address(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressEd25519Balance, func(c echo.Context) error {
-		resp, err := balanceByEd25519Address(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressBech32Outputs, func(c echo.Context) error {
-		resp, err := outputsIDsByBech32Address(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteAddressEd25519Outputs, func(c echo.Context) error {
-		resp, err := outputsIDsByEd25519Address(c)
 		if err != nil {
 			return err
 		}
@@ -415,7 +346,13 @@ func configure() {
 	})
 }
 
-// AddFeature adds a feature for the RouteInfo endpoint.
+// AddFeature adds a feature to the RouteInfo endpoint.
 func AddFeature(feature string) {
 	features = append(features, feature)
+}
+
+// AddPlugin adds a plugin route to the RouteInfo endpoint and returns the route for this plugin.
+func AddPlugin(pluginRoute string) *echo.Group {
+	plugins = append(plugins, pluginRoute)
+	return deps.Echo.Group(fmt.Sprintf("/api/plugins/%s", pluginRoute))
 }

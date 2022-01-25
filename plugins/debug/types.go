@@ -2,13 +2,15 @@ package debug
 
 import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 )
 
 // computeWhiteFlagMutationsRequest defines the request for a POST debugComputeWhiteFlagMutations REST API call.
 type computeWhiteFlagMutationsRequest struct {
 	// The index of the milestone.
 	Index milestone.Index `json:"index"`
+	// The timestamp of the milestone.
+	Timestamp uint64 `json:"timestamp"`
 	// The hex encoded message IDs of the parents the milestone references.
 	Parents []string `json:"parentMessageIds"`
 }
@@ -46,9 +48,9 @@ type milestoneDiffResponse struct {
 	// The index of the milestone.
 	MilestoneIndex milestone.Index `json:"index"`
 	// The newly created outputs by this milestone diff.
-	Outputs []*v1.OutputResponse `json:"outputs"`
+	Outputs []*restapiv2.OutputResponse `json:"outputs"`
 	// The used outputs (spents) by this milestone diff.
-	Spents []*v1.OutputResponse `json:"spents"`
+	Spents []*restapiv2.OutputResponse `json:"spents"`
 }
 
 // request defines an request response.

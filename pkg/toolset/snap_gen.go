@@ -14,7 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/iotaledger/hive.go/configuration"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func snapshotGen(_ *configuration.Configuration, args []string) error {
@@ -105,23 +105,19 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 
 	// unspent transaction outputs
 	outputAdded := false
-	outputProducerFunc := func() (*snapshot.Output, error) {
+	outputProducerFunc := func() (*utxo.Output, error) {
 		if outputAdded {
 			return nil, nil
 		}
 
 		outputAdded = true
 
-		var nullMessageID [iotago.MessageIDLength]byte
-		var nullOutputID [utxo.OutputIDLength]byte
-
-		return &snapshot.Output{
-			MessageID:  nullMessageID,
-			OutputID:   nullOutputID,
-			OutputType: iotago.OutputSigLockedSingleOutput,
-			Address:    &address,
-			Amount:     iotago.TokenSupply - treasury,
-		}, nil
+		return utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, 0, &iotago.ExtendedOutput{
+			Amount: iotago.TokenSupply - treasury,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{Address: &address},
+			},
+		}), nil
 	}
 
 	// milestone diffs

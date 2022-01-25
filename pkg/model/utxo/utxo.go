@@ -9,14 +9,14 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
-	// Returned if the size of the given address is incorrect.
+	// ErrInvalidAddressSize is returned if the size of the given address is incorrect.
 	ErrInvalidAddressSize = errors.New("invalid address size")
 
-	// Returned if the sum of the output deposits is not equal the total supply of tokens.
+	// ErrOutputsSumNotEqualTotalSupply is returned if the sum of the output deposits is not equal the total supply of tokens.
 	ErrOutputsSumNotEqualTotalSupply = errors.New("accumulated output balance is not equal to total supply")
 )
 
@@ -31,7 +31,7 @@ func New(store kvstore.KVStore) *Manager {
 	}
 }
 
-// ClearLedger removes all entries from the UTXO ledger (spent, unspent, diff, balances, receipts, treasury).
+// ClearLedger removes all entries from the UTXO ledger (spent, unspent, diff, receipts, treasury).
 func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
@@ -53,16 +53,14 @@ func (u *Manager) ClearLedger(pruneReceipts bool) (err error) {
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutput}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixUnspent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputSpent}); err != nil {
 		return err
 	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixSpent}); err != nil {
+	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixOutputUnspent}); err != nil {
 		return err
 	}
+
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixMilestoneDiffs}); err != nil {
-		return err
-	}
-	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixBalances}); err != nil {
 		return err
 	}
 	if err = u.utxoStorage.DeletePrefix([]byte{UTXOStoreKeyPrefixTreasuryOutput}); err != nil {
@@ -195,7 +193,7 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 	}
 
 	for _, spent := range newSpents {
-		if err := storeSpentAndRemoveUnspent(spent, mutations); err != nil {
+		if err := storeSpentAndMarkOutputAsSpent(spent, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -240,11 +238,6 @@ func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOu
 		return err
 	}
 
-	if err := u.applyNewBalancesWithoutLocking(newOutputs, newSpents, mutations); err != nil {
-		mutations.Cancel()
-		return err
-	}
-
 	return mutations.Commit()
 }
 
@@ -266,7 +259,7 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 			return err
 		}
 
-		if err := deleteSpentAndMarkUnspent(spent, mutations); err != nil {
+		if err := deleteSpentAndMarkOutputAsUnspent(spent, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -278,7 +271,7 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 			mutations.Cancel()
 			return err
 		}
-		if err := deleteFromUnspent(output, mutations); err != nil {
+		if err := deleteOutputLookups(output, mutations); err != nil {
 			mutations.Cancel()
 			return err
 		}
@@ -313,11 +306,6 @@ func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, ne
 		return err
 	}
 
-	if err := u.rollbackBalancesWithoutLocking(newOutputs, newSpents, mutations); err != nil {
-		mutations.Cancel()
-		return err
-	}
-
 	return mutations.Commit()
 }
 
@@ -330,14 +318,8 @@ func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outpu
 
 func (u *Manager) CheckLedgerState() error {
 
-	var total uint64 = 0
-
-	consumerFunc := func(output *Output) bool {
-		total += output.amount
-		return true
-	}
-
-	if err := u.ForEachUnspentOutput(consumerFunc); err != nil {
+	total, _, err := u.ComputeLedgerBalance()
+	if err != nil {
 		return err
 	}
 
@@ -351,7 +333,7 @@ func (u *Manager) CheckLedgerState() error {
 		return ErrOutputsSumNotEqualTotalSupply
 	}
 
-	return u.checkBalancesLedger(treasuryOutput.Amount)
+	return nil
 }
 
 func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
@@ -371,105 +353,5 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 		return err
 	}
 
-	if err := u.storeBalanceForUnspentOutput(unspentOutput, mutations); err != nil {
-		mutations.Cancel()
-		return err
-	}
-
 	return mutations.Commit()
-}
-
-type UTXOIterateOptions struct {
-	address          iotago.Address
-	readLockLedger   bool
-	maxResultCount   int
-	filterOutputType *iotago.OutputType
-}
-
-type UTXOIterateOption func(*UTXOIterateOptions)
-
-func FilterAddress(address iotago.Address) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.address = address
-	}
-}
-
-func ReadLockLedger(lockLedger bool) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.readLockLedger = lockLedger
-	}
-}
-
-func MaxResultCount(count int) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.maxResultCount = count
-	}
-}
-
-func FilterOutputType(outputType iotago.OutputType) UTXOIterateOption {
-	return func(args *UTXOIterateOptions) {
-		args.filterOutputType = &outputType
-	}
-}
-
-func iterateOptions(optionalOptions []UTXOIterateOption) *UTXOIterateOptions {
-	result := &UTXOIterateOptions{
-		address:          nil,
-		readLockLedger:   true,
-		maxResultCount:   0,
-		filterOutputType: nil,
-	}
-
-	for _, optionalOption := range optionalOptions {
-		optionalOption(result)
-	}
-	return result
-}
-
-func (u *Manager) SpentOutputs(options ...UTXOIterateOption) (Spents, error) {
-
-	var spents []*Spent
-
-	consumerFunc := func(spent *Spent) bool {
-		spents = append(spents, spent)
-		return true
-	}
-
-	if err := u.ForEachSpentOutput(consumerFunc, options...); err != nil {
-		return nil, err
-	}
-
-	return spents, nil
-}
-
-func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) ([]*Output, error) {
-
-	var outputs []*Output
-	consumerFunc := func(output *Output) bool {
-		outputs = append(outputs, output)
-		return true
-	}
-
-	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
-		return nil, err
-	}
-
-	return outputs, nil
-}
-
-func (u *Manager) ComputeBalance(options ...UTXOIterateOption) (balance uint64, count int, err error) {
-
-	balance = 0
-	count = 0
-	consumerFunc := func(output *Output) bool {
-		balance += output.amount
-		count++
-		return true
-	}
-
-	if err := u.ForEachUnspentOutput(consumerFunc, options...); err != nil {
-		return 0, 0, err
-	}
-
-	return balance, count, nil
 }

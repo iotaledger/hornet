@@ -15,8 +15,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // EventIDFromHex creates a EventID from a hex string representation.
@@ -100,7 +100,7 @@ func createEvent(c echo.Context) (*CreateEventResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
-	if _, err := event.Serialize(serializer.DeSeriModePerformValidation); err != nil {
+	if _, err := event.Serialize(serializer.DeSeriModePerformValidation, nil); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event payload, error: %s", err)
 	}
 

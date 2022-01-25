@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -23,8 +24,7 @@ import (
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -33,6 +33,7 @@ const (
 
 	GenesisAddressPublicKeyHex = "f7868ab6bb55800b77b8b74191ad8285a9bf428ace579d541fda47661803ff44"
 	GenesisAddressHex          = "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92"
+	GenesisAddressBech32       = "atoi1qp5jpvtk7cf7c7l9ne50c684jl4n8ya0srm5clpak7qes9ratu0eysflmsz"
 
 	autopeeringMaxTries = 50
 
@@ -68,7 +69,7 @@ func init() {
 		panic(err)
 	}
 	GenesisSeed = prvkey
-	GenesisAddress = iotago.AddressFromEd25519PubKey(GenesisSeed.Public().(ed25519.PublicKey))
+	GenesisAddress = iotago.Ed25519AddressFromPubKey(GenesisSeed.Public().(ed25519.PublicKey))
 }
 
 // DefaultConfig returns the default NodeConfig.
@@ -110,9 +111,9 @@ type WhiteFlagMockServerConfig struct {
 }
 
 // DefaultWhiteFlagMockServerConfig returns the default WhiteFlagMockServerConfig.
-func DefaultWhiteFlagMockServerConfig(configFileName string) *WhiteFlagMockServerConfig {
+func DefaultWhiteFlagMockServerConfig(name string, configFileName string) *WhiteFlagMockServerConfig {
 	return &WhiteFlagMockServerConfig{
-		Name: "wfmock",
+		Name: name,
 		Envs: []string{
 			fmt.Sprintf("WHITE_FLAG_MOCK_CONFIG=%s/%s", assetsDir, configFileName),
 		},
@@ -308,7 +309,7 @@ func DefaultRestAPIConfig() RestAPIConfig {
 		PublicRoutes: []string{
 			"/health",
 			"/mqtt",
-			"/api/v1/*",
+			"/api/v2/*",
 			"/api/plugins/*",
 		},
 		ProtectedRoutes: []string{},
@@ -337,7 +338,7 @@ func DefaultPluginConfig() PluginConfig {
 	disabled := make([]string, len(disabledPluginsPeer))
 	copy(disabled, disabledPluginsPeer)
 	return PluginConfig{
-		Enabled:  []string{},
+		Enabled:  []string{"Indexer"},
 		Disabled: disabled,
 	}
 }
@@ -484,6 +485,8 @@ type ProtocolConfig struct {
 	PublicKeyRanges []coopkg.PublicKeyRange
 	// The network ID on which this node operates on.
 	NetworkIDName string
+	// The HRP which should be used for Bech32 addresses.
+	Bech32HRP iotago.NetworkPrefix
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -498,6 +501,7 @@ func (protoConfig *ProtocolConfig) CLIFlags() []string {
 		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, protoConfig.MinPoWScore),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolPublicKeyRangesJSON, string(keyRangesJSON)),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolNetworkIDName, protoConfig.NetworkIDName),
+		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolBech32HRP, protoConfig.Bech32HRP),
 	}
 }
 
@@ -518,6 +522,7 @@ func DefaultProtocolConfig() ProtocolConfig {
 			},
 		},
 		NetworkIDName: "alphanet1",
+		Bech32HRP:     iotago.PrefixTestnet,
 	}
 }
 

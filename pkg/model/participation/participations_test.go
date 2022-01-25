@@ -9,13 +9,13 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
-func RandParticipations(participationCount int) (*participation.Participations, []byte) {
+func RandParticipations(participationCount int) (*participation.ParticipationPayload, []byte) {
 
-	p := &participation.Participations{
-		Participations: serializer.Serializables{},
+	p := &participation.ParticipationPayload{
+		Participations: participation.Participations{},
 	}
 
 	var pBytes [][]byte
@@ -34,10 +34,10 @@ func RandParticipations(participationCount int) (*participation.Participations, 
 	return p, ms.Bytes()
 }
 
-func multipleSameEventParticipations(participationCount int) (*participation.Participations, []byte) {
+func multipleSameEventParticipations(participationCount int) (*participation.ParticipationPayload, []byte) {
 
-	p := &participation.Participations{
-		Participations: serializer.Serializables{},
+	p := &participation.ParticipationPayload{
+		Participations: participation.Participations{},
 	}
 
 	eventID := RandEventID()
@@ -68,20 +68,20 @@ func TestParticipations_Deserialize(t *testing.T) {
 	tests := []struct {
 		name   string
 		data   []byte
-		target *participation.Participations
+		target *participation.ParticipationPayload
 		err    error
 	}{
 		{"ok", validParticipationsData, validParticipations, nil},
 		{"not enough data", validParticipationsData[:len(validParticipationsData)-1], validParticipations, serializer.ErrDeserializationNotEnoughData},
 		{"max participations", maxParticipationsData, maxParticipations, nil},
 		{"empty participations", emptyParticipationsData, emptyParticipations, serializer.ErrArrayValidationMinElementsNotReached},
-		{"double participations", doubleParticipationsData, doubleParticipations, participation.ErrMultipleEventParticipation},
-		{"multiple participations", multipleParticipationsData, multipleParticipations, participation.ErrMultipleEventParticipation},
+		{"double participations", doubleParticipationsData, doubleParticipations, serializer.ErrArrayValidationViolatesUniqueness},
+		{"multiple participations", multipleParticipationsData, multipleParticipations, serializer.ErrArrayValidationViolatesUniqueness},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u := &participation.Participations{}
-			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation)
+			u := &participation.ParticipationPayload{}
+			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return
@@ -102,7 +102,7 @@ func TestParticipations_Serialize(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		source *participation.Participations
+		source *participation.ParticipationPayload
 		target []byte
 		err    error
 	}{
@@ -110,12 +110,12 @@ func TestParticipations_Serialize(t *testing.T) {
 		{"max participations", maxParticipations, maxParticipationsData, nil},
 		{"empty participations", emptyParticipations, emptyParticipationsData, serializer.ErrArrayValidationMinElementsNotReached},
 		{"too many participations", tooManyParticipations, tooManyParticipationsData, serializer.ErrArrayValidationMaxElementsExceeded},
-		{"double participations", doubleParticipations, doubleParticipationsData, participation.ErrMultipleEventParticipation},
-		{"multiple participations", multipleParticipations, multipleParticipationsData, participation.ErrMultipleEventParticipation},
+		{"double participations", doubleParticipations, doubleParticipationsData, serializer.ErrArrayValidationViolatesUniqueness},
+		{"multiple participations", multipleParticipations, multipleParticipationsData, serializer.ErrArrayValidationViolatesUniqueness},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation)
+			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return

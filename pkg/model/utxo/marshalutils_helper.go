@@ -2,17 +2,18 @@ package utxo
 
 import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func ParseOutputID(ms *marshalutil.MarshalUtil) (*iotago.UTXOInputID, error) {
-	bytes, err := ms.ReadBytes(OutputIDLength)
+func ParseOutputID(ms *marshalutil.MarshalUtil) (*iotago.OutputID, error) {
+	bytes, err := ms.ReadBytes(iotago.OutputIDLength)
 	if err != nil {
 		return nil, err
 	}
-	o := &iotago.UTXOInputID{}
+	o := &iotago.OutputID{}
 	copy(o[:], bytes)
 	return o, nil
 }
@@ -35,6 +36,14 @@ func ParseMessageID(ms *marshalutil.MarshalUtil) (hornet.MessageID, error) {
 	return hornet.MessageIDFromSlice(bytes), nil
 }
 
+func parseMilestoneIndex(ms *marshalutil.MarshalUtil) (milestone.Index, error) {
+	index, err := ms.ReadUint32()
+	if err != nil {
+		return 0, err
+	}
+	return milestone.Index(index), nil
+}
+
 func parseAddress(ms *marshalutil.MarshalUtil) (iotago.Address, error) {
 
 	addrType, err := ms.ReadByte()
@@ -53,7 +62,7 @@ func parseAddress(ms *marshalutil.MarshalUtil) (iotago.Address, error) {
 	address := addr.(iotago.Address)
 
 	pre := ms.ReadOffset()
-	readBytes, err := address.Deserialize(ms.ReadRemainingBytes(), serializer.DeSeriModePerformValidation)
+	readBytes, err := address.Deserialize(ms.ReadRemainingBytes(), serializer.DeSeriModePerformValidation, nil)
 	if err != nil {
 		return nil, err
 	}

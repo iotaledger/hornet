@@ -11,7 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type ConfirmedMilestoneStats struct {
@@ -28,6 +28,7 @@ type ConfirmationMetrics struct {
 	DurationWhiteflag                                time.Duration
 	DurationReceipts                                 time.Duration
 	DurationConfirmation                             time.Duration
+	DurationLedgerUpdated                            time.Duration
 	DurationApplyIncludedWithTransactions            time.Duration
 	DurationApplyExcludedWithoutTransactions         time.Duration
 	DurationApplyMilestone                           time.Duration
@@ -57,6 +58,7 @@ func ConfirmMilestone(
 	milestoneMessageID hornet.MessageID,
 	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64),
 	onMilestoneConfirmed func(confirmation *Confirmation),
+	onLedgerUpdated func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents),
 	forEachNewOutput func(index milestone.Index, output *utxo.Output),
 	forEachNewSpent func(index milestone.Index, spent *utxo.Spent),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, *ConfirmationMetrics, error) {
@@ -86,7 +88,7 @@ func ConfirmMilestone(
 
 	// we pass a background context here to not cancel the whiteflag computation!
 	// otherwise the node could panic at shutdown.
-	mutations, err := ComputeWhiteFlagMutations(context.Background(), dbStorage, milestoneIndex, metadataMemcache, messagesMemcache, message.Parents())
+	mutations, err := ComputeWhiteFlagMutations(context.Background(), dbStorage, milestoneIndex, ms.Timestamp, metadataMemcache, messagesMemcache, message.Parents())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
@@ -142,7 +144,7 @@ func ConfirmMilestone(
 			return nil, nil, fmt.Errorf("invalid receipt contained within milestone: %w", err)
 		}
 
-		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, message.MessageID(), msID)
+		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, message.MessageID(), msID, milestoneIndex, ms.Timestamp)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to extract migrated outputs from receipt: %w", err)
 		}
@@ -165,6 +167,9 @@ func ConfirmMilestone(
 		return nil, nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed: %w", err)
 	}
 	timeConfirmation := time.Now()
+
+	onLedgerUpdated(milestoneIndex, newOutputs, newSpents)
+	timeLedgerUpdated := time.Now()
 
 	// load the message for the given id
 	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
@@ -272,7 +277,8 @@ func ConfirmMilestone(
 		DurationWhiteflag:                                timeWhiteflag.Sub(timeStart),
 		DurationReceipts:                                 timeReceipts.Sub(timeWhiteflag),
 		DurationConfirmation:                             timeConfirmation.Sub(timeReceipts),
-		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeConfirmation),
+		DurationLedgerUpdated:                            timeLedgerUpdated.Sub(timeConfirmation),
+		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeLedgerUpdated),
 		DurationApplyExcludedWithoutTransactions:         timeApplyExcludedWithoutTransactions.Sub(timeApplyIncludedWithTransactions),
 		DurationApplyMilestone:                           timeApplyMilestone.Sub(timeApplyExcludedWithoutTransactions),
 		DurationApplyExcludedWithConflictingTransactions: timeApplyExcludedWithConflictingTransactions.Sub(timeApplyMilestone),

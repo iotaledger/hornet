@@ -11,14 +11,13 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
 	"github.com/iotaledger/hive.go/testutil"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func RandOutputID() *iotago.UTXOInputID {
-	outputID := &iotago.UTXOInputID{}
-	copy(outputID[:], testutil.RandBytes(iotago.TransactionIDLength+serializer.UInt16ByteSize))
+func RandOutputID() *iotago.OutputID {
+	outputID := &iotago.OutputID{}
+	copy(outputID[:], testutil.RandBytes(iotago.OutputIDLength))
 	return outputID
 }
 

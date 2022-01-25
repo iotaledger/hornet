@@ -19,10 +19,10 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -103,7 +103,6 @@ type dependencies struct {
 	ParticipationManager *participation.ParticipationManager
 	SyncManager          *syncmanager.SyncManager
 	Tangle               *tangle.Tangle
-	Echo                 *echo.Echo
 	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
 	ShutdownHandler      *shutdown.ShutdownHandler
 }
@@ -112,11 +111,12 @@ func provide(c *dig.Container) {
 
 	type participationDeps struct {
 		dig.In
-		Storage        *storage.Storage
-		SyncManager    *syncmanager.SyncManager
-		DatabasePath   string                       `name:"databasePath"`
-		DatabaseEngine database.Engine              `name:"databaseEngine"`
-		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+		Storage                   *storage.Storage
+		SyncManager               *syncmanager.SyncManager
+		DatabasePath              string                       `name:"databasePath"`
+		DatabaseEngine            database.Engine              `name:"databaseEngine"`
+		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+		DeSerializationParameters *iotago.DeSerializationParameters
 	}
 
 	if err := c.Provide(func(deps participationDeps) *participation.ParticipationManager {
@@ -130,6 +130,7 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.SyncManager,
 			participationStore,
+			deps.DeSerializationParameters,
 		)
 		if err != nil {
 			Plugin.LogPanic(err)
@@ -141,9 +142,8 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	restapiv1.AddFeature(Plugin.Name)
 
-	routeGroup := deps.Echo.Group("/api/plugins/participation")
+	routeGroup := restapiv2.AddPlugin("participation/v1")
 
 	routeGroup.GET(RouteParticipationEvents, func(c echo.Context) error {
 		resp, err := getEvents(c)

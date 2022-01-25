@@ -113,11 +113,6 @@ func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, p
 		return err
 	}
 
-	// deletes all indexations where the message metadata doesn't exist in the database anymore.
-	if err := t.cleanupIndexations(); err != nil {
-		return err
-	}
-
 	// deletes all unreferenced messages that are left in the database (we do not need them since we deleted all unreferenced messages).
 	if err := t.cleanupUnreferencedMsgs(); err != nil {
 		return err
@@ -427,69 +422,6 @@ func (t *Tangle) cleanupChildren() error {
 	t.storage.FlushChildrenStorage()
 
 	t.LogInfof("deleting children...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
-
-	return nil
-}
-
-// deletes all indexations where the message metadata doesn't exist in the database anymore.
-func (t *Tangle) cleanupIndexations() error {
-
-	start := time.Now()
-
-	indexationsToDelete := make(map[string]struct{})
-
-	lastStatusTime := time.Now()
-	var indexationCounter int64
-	t.storage.ForEachIndexation(func(indexation *storage.CachedIndexation) bool {
-		defer indexation.Release(true)
-
-		indexationCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
-				return false
-			}
-
-			t.LogInfof("analyzed %d indexations", indexationCounter)
-		}
-
-		// delete indexation if message metadata doesn't exist
-		if !t.storage.MessageMetadataExistsInStore(indexation.Indexation().MessageID()) {
-			indexationsToDelete[string(indexation.Key())] = struct{}{}
-		}
-
-		return true
-	}, objectstorage.WithIteratorSkipCache(true))
-	t.LogInfof("analyzed %d indexations", indexationCounter)
-
-	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
-		return err
-	}
-
-	total := len(indexationsToDelete)
-	var deletionCounter int64
-	for indexationKey := range indexationsToDelete {
-		deletionCounter++
-
-		if time.Since(lastStatusTime) >= printStatusInterval {
-			lastStatusTime = time.Now()
-
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
-				return err
-			}
-
-			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.LogInfof("deleting indexations...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
-		}
-
-		t.storage.DeleteIndexationByKey([]byte(indexationKey))
-	}
-
-	t.storage.FlushIndexationStorage()
-
-	t.LogInfof("deleting indexations...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }

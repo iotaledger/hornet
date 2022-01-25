@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 // configureCoordinator configures a new coordinator with clean state for the tests.
@@ -38,12 +38,13 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		te.storage,
 		te.syncManager,
 		te.networkID,
+		DeSerializationParameters,
 		inMemoryEd25519MilestoneSignerProvider,
 		nil,
 		nil,
 		te.PoWHandler,
 		storeMessageFunc,
-		coordinator.WithStateFilePath(fmt.Sprintf("%s/coordinator.state", te.tempDir)),
+		coordinator.WithStateFilePath(fmt.Sprintf("%s/coordinator.state", te.TempDir)),
 		coordinator.WithMilestoneInterval(time.Duration(10)*time.Second),
 	)
 	require.NoError(te.TestInterface, err)
@@ -86,6 +87,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
 		},
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {},
 		func(index milestone.Index, output *utxo.Output) {},
 		func(index milestone.Index, spent *utxo.Spent) {},
 		nil,
@@ -139,6 +141,11 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 				te.OnConfirmedMilestoneIndexChanged(confirmation.MilestoneIndex)
 			}
 		},
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+			if te.OnLedgerUpdatedFunc != nil {
+				te.OnLedgerUpdatedFunc(index, newOutputs, newSpents)
+			}
+		},
 		func(index milestone.Index, output *utxo.Output) {
 			if te.OnNewOutput != nil {
 				te.OnNewOutput(index, output)
@@ -161,7 +168,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 	if createConfirmationGraph {
 		dotFileContent := te.generateDotFileFromConfirmation(wfConf)
 		if te.showConfirmationGraphs {
-			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.tempDir, te.TestInterface.Name(), confirmedMilestoneStats.Index)
+			dotFilePath := fmt.Sprintf("%s/%s_%d.png", te.TempDir, te.TestInterface.Name(), confirmedMilestoneStats.Index)
 			utils.ShowDotFile(te.TestInterface, dotFileContent, dotFilePath)
 		} else {
 			fmt.Println(dotFileContent)

@@ -2,6 +2,7 @@ package value
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/rand"
 	"log"
 	"testing"
@@ -11,8 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // TestValue boots up a statically peered network and then checks that spending
@@ -28,15 +28,24 @@ func TestValue(t *testing.T) {
 
 	// create two targets
 	target1 := ed25519.NewKeyFromSeed(randSeed())
-	target1Addr := iotago.AddressFromEd25519PubKey(target1.Public().(ed25519.PublicKey))
+	target1Addr := iotago.Ed25519AddressFromPubKey(target1.Public().(ed25519.PublicKey))
 
 	target2 := ed25519.NewKeyFromSeed(randSeed())
-	target2Addr := iotago.AddressFromEd25519PubKey(target2.Public().(ed25519.PublicKey))
+	target2Addr := iotago.Ed25519AddressFromPubKey(target2.Public().(ed25519.PublicKey))
 
 	var target1Deposit, target2Deposit uint64 = 10_000_000, iotago.TokenSupply - 10_000_000
 
 	genesisAddrKey := iotago.AddressKeys{Address: &framework.GenesisAddress, Keys: framework.GenesisSeed}
 	genesisInputID := &iotago.UTXOInput{TransactionID: [32]byte{}, TransactionOutputIndex: 0}
+
+	//TODO: this should be read from the node
+	deSeriParas := &iotago.DeSerializationParameters{
+		RentStructure: &iotago.RentStructure{
+			VByteCost:    0,
+			VBFactorData: 0,
+			VBFactorKey:  0,
+		},
+	}
 
 	// build and sign transaction spending the total supply
 	tx, err := iotago.NewTransactionBuilder().
@@ -44,15 +53,23 @@ func TestValue(t *testing.T) {
 			Address: &framework.GenesisAddress,
 			Input:   genesisInputID,
 		}).
-		AddOutput(&iotago.SigLockedSingleOutput{
-			Address: &target1Addr,
-			Amount:  target1Deposit,
+		AddOutput(&iotago.ExtendedOutput{
+			Amount: target1Deposit,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{
+					Address: &target1Addr,
+				},
+			},
 		}).
-		AddOutput(&iotago.SigLockedSingleOutput{
-			Address: &target2Addr,
-			Amount:  target2Deposit,
+		AddOutput(&iotago.ExtendedOutput{
+			Amount: target2Deposit,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{
+					Address: &target2Addr,
+				},
+			},
 		}).
-		Build(iotago.NewInMemoryAddressSigner(genesisAddrKey))
+		Build(deSeriParas, iotago.NewInMemoryAddressSigner(genesisAddrKey))
 	require.NoError(t, err)
 
 	// build message
@@ -81,17 +98,17 @@ func TestValue(t *testing.T) {
 	}, 30*time.Second, 100*time.Millisecond)
 
 	// check that indeed the balances are available
-	res, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(context.Background(), &framework.GenesisAddress)
+	balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), &framework.GenesisAddress)
 	require.NoError(t, err)
-	require.Zero(t, res.Balance)
+	require.Zero(t, balance)
 
-	res, err = n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(context.Background(), &target1Addr)
+	balance, err = n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), &target1Addr)
 	require.NoError(t, err)
-	require.EqualValues(t, target1Deposit, res.Balance)
+	require.EqualValues(t, target1Deposit, balance)
 
-	res, err = n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(context.Background(), &target2Addr)
+	balance, err = n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), &target2Addr)
 	require.NoError(t, err)
-	require.EqualValues(t, target2Deposit, res.Balance)
+	require.EqualValues(t, target2Deposit, balance)
 
 	// the genesis output should be spent
 	outputRes, err := n.Coordinator().DebugNodeAPIClient.OutputByID(context.Background(), genesisInputID.ID())

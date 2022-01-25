@@ -17,11 +17,11 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
-	ParticipationIndexation        = "TEST"
+	ParticipationTag               = "TEST"
 	defaultBallotAnswerValue uint8 = 10
 )
 
@@ -131,7 +131,8 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		te.Storage(),
 		te.SyncManager(),
 		store,
-		participation.WithIndexationMessage(ParticipationIndexation),
+		testsuite.DeSerializationParameters,
+		participation.WithTagMessage(ParticipationTag),
 	)
 	require.NoError(t, err)
 
@@ -147,6 +148,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		func(index milestone.Index) {
 			require.NoError(t, pm.ApplyNewConfirmedMilestoneIndex(index))
 		},
+		nil,
 	)
 
 	return &ParticipationTestEnv{
@@ -238,8 +240,8 @@ func (env *ParticipationTestEnv) CancelParticipations(wallet *utils.HDWallet) *t
 	return env.Transfer(wallet, wallet, wallet.Balance())
 }
 
-func (env *ParticipationTestEnv) NewMessageBuilder(optionalIndexation ...string) *testsuite.MessageBuilder {
-	return env.te.NewMessageBuilder(optionalIndexation...)
+func (env *ParticipationTestEnv) NewMessageBuilder(optionalTag ...string) *testsuite.MessageBuilder {
+	return env.te.NewMessageBuilder(optionalTag...)
 }
 
 func (env *ParticipationTestEnv) Transfer(fromWallet *utils.HDWallet, toWallet *utils.HDWallet, amount uint64) *testsuite.Message {

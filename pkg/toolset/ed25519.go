@@ -1,6 +1,7 @@
 package toolset
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -10,8 +11,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type keys struct {
@@ -23,7 +23,7 @@ type keys struct {
 
 func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp iotago.NetworkPrefix, outputJSON bool) {
 
-	addr := iotago.AddressFromEd25519PubKey(pubKey)
+	addr := iotago.Ed25519AddressFromPubKey(pubKey)
 
 	k := keys{
 		PublicKey:      hex.EncodeToString(pubKey),

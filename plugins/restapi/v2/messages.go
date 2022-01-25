@@ -1,9 +1,7 @@
-package v1
+package v2
 
 import (
 	"context"
-	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -20,8 +18,8 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -161,33 +159,6 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}, nil
 }
 
-func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
-	index := c.QueryParam("index")
-
-	if index == "" {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index empty")
-	}
-
-	indexBytes, err := hex.DecodeString(index)
-	if err != nil {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "query parameter index invalid hex")
-	}
-
-	if len(indexBytes) > storage.IndexationIndexLength {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter index too long, max. %d bytes but is %d", storage.IndexationIndexLength, len(indexBytes)))
-	}
-
-	maxResults := deps.RestAPILimitsMaxResults
-	indexMessageIDs := deps.Storage.IndexMessageIDs(indexBytes, objectstorage.WithIteratorMaxIterations(maxResults))
-
-	return &messageIDsByIndexResponse{
-		Index:      index,
-		MaxResults: uint32(maxResults),
-		Count:      uint32(len(indexMessageIDs)),
-		MessageIDs: indexMessageIDs.ToHex(),
-	}, nil
-}
-
 func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
@@ -213,7 +184,8 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
-		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation); err != nil {
+		// Do not validate here, the parents might need to be set
+		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.DeserializationParameters); err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 	}
@@ -268,7 +240,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		}
 	}
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, deps.DeserializationParameters)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}

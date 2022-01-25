@@ -133,15 +133,6 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			Indexations: &profile.CacheOpts{
-				CacheTime:                  "10s",
-				ReleaseExecutorWorkerCount: 10,
-				LeakDetectionOptions: &profile.LeakDetectionOpts{
-					Enabled:               false,
-					MaxConsumersPerObject: 20,
-					MaxConsumerHoldTime:   "100s",
-				},
-			},
 			Milestones: &profile.CacheOpts{
 				CacheTime:                  "10s",
 				ReleaseExecutorWorkerCount: 10,
@@ -194,15 +185,6 @@ var (
 			},
 			Children: &profile.CacheOpts{
 				CacheTime:                  "15s",
-				ReleaseExecutorWorkerCount: 10,
-				LeakDetectionOptions: &profile.LeakDetectionOpts{
-					Enabled:               false,
-					MaxConsumersPerObject: 20,
-					MaxConsumerHoldTime:   "100s",
-				},
-			},
-			Indexations: &profile.CacheOpts{
-				CacheTime:                  "5s",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:               false,
@@ -269,15 +251,6 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			Indexations: &profile.CacheOpts{
-				CacheTime:                  "200ms",
-				ReleaseExecutorWorkerCount: 10,
-				LeakDetectionOptions: &profile.LeakDetectionOpts{
-					Enabled:               false,
-					MaxConsumersPerObject: 20,
-					MaxConsumerHoldTime:   "100s",
-				},
-			},
 			Milestones: &profile.CacheOpts{
 				CacheTime:                  "2.5s",
 				ReleaseExecutorWorkerCount: 10,
@@ -330,15 +303,6 @@ var (
 			},
 			Children: &profile.CacheOpts{
 				CacheTime:                  "1.5s",
-				ReleaseExecutorWorkerCount: 10,
-				LeakDetectionOptions: &profile.LeakDetectionOpts{
-					Enabled:               false,
-					MaxConsumersPerObject: 20,
-					MaxConsumerHoldTime:   "100s",
-				},
-			},
-			Indexations: &profile.CacheOpts{
-				CacheTime:                  "100ms",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
 					Enabled:               false,

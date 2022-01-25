@@ -3,8 +3,6 @@ package debug
 import (
 	"context"
 	"encoding/hex"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -18,9 +16,8 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	v1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/kvstore"
-	iotago "github.com/iotaledger/iota.go/v2"
 )
 
 func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsResponse, error) {
@@ -109,7 +106,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 
 	// at this point all parents are solid
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), deps.Storage, request.Index, metadataMemcache, messagesMemcache, parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), deps.Storage, request.Index, request.Timestamp, metadataMemcache, messagesMemcache, parents)
 	if err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "failed to compute white flag mutations: %s", err)
@@ -122,44 +119,30 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}, nil
 }
 
-func typeFilterFromParams(c echo.Context) ([]utxo.UTXOIterateOption, error) {
-	var opts []utxo.UTXOIterateOption
-
-	typeParam := strings.ToLower(c.QueryParam("type"))
-
-	if len(typeParam) > 0 {
-		outputTypeInt, err := strconv.ParseInt(typeParam, 10, 32)
-		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
-		}
-		outputType := iotago.OutputType(outputTypeInt)
-		if outputType != iotago.OutputSigLockedSingleOutput && outputType != iotago.OutputSigLockedDustAllowanceOutput {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
-		}
-		return append(opts, utxo.FilterOutputType(outputType)), nil
-	}
-	return opts, nil
-}
-
 func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
+	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
 
 	outputIDs := []string{}
-	outputConsumerFunc := func(output *utxo.Output) bool {
+	appendConsumerFunc := func(output *utxo.Output) bool {
 		outputIDs = append(outputIDs, output.OutputID().ToHex())
 		return true
 	}
 
-	opts := []utxo.UTXOIterateOption{
-		utxo.ReadLockLedger(false),
+	outputConsumerFunc := appendConsumerFunc
+
+	if filterType != nil {
+		outputConsumerFunc = func(output *utxo.Output) bool {
+			if output.OutputType() == *filterType {
+				return appendConsumerFunc(output)
+			}
+			return true
+		}
 	}
 
-	filter, err := typeFilterFromParams(c)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, filter...)
-
-	err = deps.UTXOManager.ForEachOutput(outputConsumerFunc, opts...)
+	err = deps.UTXOManager.ForEachOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -170,24 +153,29 @@ func outputsIDs(c echo.Context) (*outputIDsResponse, error) {
 }
 
 func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
+	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
 
 	outputIDs := []string{}
-	outputConsumerFunc := func(output *utxo.Output) bool {
+	appendConsumerFunc := func(output *utxo.Output) bool {
 		outputIDs = append(outputIDs, output.OutputID().ToHex())
 		return true
 	}
 
-	opts := []utxo.UTXOIterateOption{
-		utxo.ReadLockLedger(false),
+	outputConsumerFunc := appendConsumerFunc
+
+	if filterType != nil {
+		outputConsumerFunc = func(output *utxo.Output) bool {
+			if output.OutputType() == *filterType {
+				return appendConsumerFunc(output)
+			}
+			return true
+		}
 	}
 
-	filter, err := typeFilterFromParams(c)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, filter...)
-
-	err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, opts...)
+	err = deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading unspent outputs failed, error: %s", err)
 	}
@@ -198,102 +186,35 @@ func unspentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 }
 
 func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
+	filterType, err := restapi.ParseOutputTypeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
 
 	outputIDs := []string{}
-
-	spentConsumerFunc := func(spent *utxo.Spent) bool {
+	appendConsumerFunc := func(spent *utxo.Spent) bool {
 		outputIDs = append(outputIDs, spent.OutputID().ToHex())
 		return true
 	}
 
-	opts := []utxo.UTXOIterateOption{
-		utxo.ReadLockLedger(false),
+	spentConsumerFunc := appendConsumerFunc
+
+	if filterType != nil {
+		spentConsumerFunc = func(spent *utxo.Spent) bool {
+			if spent.OutputType() == *filterType {
+				return appendConsumerFunc(spent)
+			}
+			return true
+		}
 	}
 
-	filter, err := typeFilterFromParams(c)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, filter...)
-
-	err = deps.UTXOManager.ForEachSpentOutput(spentConsumerFunc, opts...)
+	err = deps.UTXOManager.ForEachSpentOutput(spentConsumerFunc, utxo.ReadLockLedger(false))
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent outputs failed, error: %s", err)
 	}
 
 	return &outputIDsResponse{
 		OutputIDs: outputIDs,
-	}, nil
-}
-
-func addresses(_ echo.Context) (*addressesResponse, error) {
-
-	addressMap := map[string]*address{}
-
-	outputConsumerFunc := func(output *utxo.Output) bool {
-		if addr, exists := addressMap[output.Address().String()]; exists {
-			// add balance to total balance
-			addr.Balance += output.Amount()
-			return true
-		}
-
-		addressMap[output.Address().String()] = &address{
-			AddressType: output.Address().Type(),
-			Address:     output.Address().String(),
-			Balance:     output.Amount(),
-		}
-
-		return true
-	}
-
-	err := deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading addresses failed, error: %s", err)
-	}
-
-	addresses := make([]*address, 0, len(addressMap))
-	for _, addr := range addressMap {
-		addresses = append(addresses, addr)
-	}
-
-	return &addressesResponse{
-		Addresses: addresses,
-	}, nil
-}
-
-func addressesEd25519(_ echo.Context) (*addressesResponse, error) {
-
-	addressMap := map[string]*address{}
-
-	outputConsumerFunc := func(output *utxo.Output) bool {
-
-		if addr, exists := addressMap[output.Address().String()]; exists {
-			// add balance to total balance
-			addr.Balance += output.Amount()
-			return true
-		}
-
-		addressMap[output.Address().String()] = &address{
-			AddressType: output.Address().Type(),
-			Address:     output.Address().String(),
-			Balance:     output.Amount(),
-		}
-
-		return true
-	}
-
-	err := deps.UTXOManager.ForEachUnspentOutput(outputConsumerFunc, utxo.ReadLockLedger(false))
-	if err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading addresses failed, error: %s", err)
-	}
-
-	addresses := make([]*address, 0, len(addressMap))
-	for _, addr := range addressMap {
-		addresses = append(addresses, addr)
-	}
-
-	return &addressesResponse{
-		Addresses: addresses,
 	}, nil
 }
 
@@ -312,11 +233,11 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "can't load milestone diff for index: %d, error: %s", msIndex, err)
 	}
 
-	outputs := make([]*v1.OutputResponse, len(diff.Outputs))
-	spents := make([]*v1.OutputResponse, len(diff.Spents))
+	outputs := make([]*restapiv2.OutputResponse, len(diff.Outputs))
+	spents := make([]*restapiv2.OutputResponse, len(diff.Spents))
 
 	for i, output := range diff.Outputs {
-		o, err := v1.NewOutputResponse(output, false, diff.Index)
+		o, err := restapiv2.NewOutputResponse(output, diff.Index)
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +245,7 @@ func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 	}
 
 	for i, spent := range diff.Spents {
-		o, err := v1.NewOutputResponse(spent.Output(), true, diff.Index)
+		o, err := restapiv2.NewSpentResponse(spent, diff.Index)
 		if err != nil {
 			return nil, err
 		}

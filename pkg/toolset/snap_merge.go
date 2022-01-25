@@ -31,7 +31,7 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 	fmt.Println("merging snapshot files...")
 
 	var fullPath, deltaPath, targetPath = args[0], args[1], args[2]
-	mergeInfo, err := snapshot.MergeSnapshotsFiles(fullPath, deltaPath, targetPath)
+	mergeInfo, err := snapshot.MergeSnapshotsFiles(fullPath, deltaPath, targetPath, nil)
 	if err != nil {
 		return err
 	}

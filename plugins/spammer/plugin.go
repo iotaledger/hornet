@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 	"go.uber.org/dig"
@@ -26,11 +25,13 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/restapi"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -81,15 +82,15 @@ var (
 
 type dependencies struct {
 	dig.In
-	MessageProcessor *gossip.MessageProcessor
-	SyncManager      *syncmanager.SyncManager
-	ServerMetrics    *metrics.ServerMetrics
-	PoWHandler       *pow.Handler
-	PeeringManager   *p2p.Manager
-	TipSelector      *tipselect.TipSelector       `optional:"true"`
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	NetworkID        uint64                       `name:"networkId"`
-	Echo             *echo.Echo                   `optional:"true"`
+	MessageProcessor          *gossip.MessageProcessor
+	SyncManager               *syncmanager.SyncManager
+	ServerMetrics             *metrics.ServerMetrics
+	PoWHandler                *pow.Handler
+	PeeringManager            *p2p.Manager
+	TipSelector               *tipselect.TipSelector       `optional:"true"`
+	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+	NetworkID                 uint64                       `name:"networkId"`
+	DeserializationParameters *iotago.DeSerializationParameters
 }
 
 func configure() {
@@ -103,7 +104,8 @@ func configure() {
 		Plugin.LogPanic("URTS plugin needs to be enabled to use the Spammer plugin")
 	}
 
-	setupRoutes(deps.Echo.Group(RouteSpammer))
+	routeGroup := restapiv2.AddPlugin("spammer/v1")
+	setupRoutes(routeGroup)
 
 	spammerAvgHeap = utils.NewTimeHeap()
 
@@ -130,9 +132,10 @@ func configure() {
 
 	spammerInstance = spammer.New(
 		deps.NetworkID,
+		deps.DeserializationParameters,
 		deps.NodeConfig.String(CfgSpammerMessage),
-		deps.NodeConfig.String(CfgSpammerIndex),
-		deps.NodeConfig.String(CfgSpammerIndexSemiLazy),
+		deps.NodeConfig.String(CfgSpammerTag),
+		deps.NodeConfig.String(CfgSpammerTagSemiLazy),
 		deps.TipSelector.SelectSpammerTips,
 		deps.PoWHandler,
 		sendMessage,

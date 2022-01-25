@@ -14,8 +14,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func publishOnTopic(topic string, payload interface{}) {
@@ -60,11 +60,11 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 		deps.MQTTBroker.Send(topicMessages, cachedMessage.Message().Data())
 	}
 
-	indexation := cachedMessage.Message().Indexation()
-	if indexation != nil {
-		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", hex.EncodeToString(indexation.Index))
-		if deps.MQTTBroker.HasSubscribers(indexationTopic) {
-			deps.MQTTBroker.Send(indexationTopic, cachedMessage.Message().Data())
+	taggedData := cachedMessage.Message().TaggedData()
+	if taggedData != nil && len(taggedData.Tag) > 0 {
+		taggedDataTopic := strings.ReplaceAll(topicMessagesTaggedData, "{tag}", hex.EncodeToString(taggedData.Tag))
+		if deps.MQTTBroker.HasSubscribers(taggedDataTopic) {
+			deps.MQTTBroker.Send(taggedDataTopic, cachedMessage.Message().Data())
 		}
 	}
 }
@@ -180,24 +180,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 }
 
 func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool) *outputPayload {
-
-	var rawOutput iotago.Output
-	switch output.OutputType() {
-	case iotago.OutputSigLockedSingleOutput:
-		rawOutput = &iotago.SigLockedSingleOutput{
-			Address: output.Address(),
-			Amount:  output.Amount(),
-		}
-	case iotago.OutputSigLockedDustAllowanceOutput:
-		rawOutput = &iotago.SigLockedDustAllowanceOutput{
-			Address: output.Address(),
-			Amount:  output.Amount(),
-		}
-	default:
-		return nil
-	}
-
-	rawOutputJSON, err := rawOutput.MarshalJSON()
+	rawOutputJSON, err := output.Output().MarshalJSON()
 	if err != nil {
 		return nil
 	}
@@ -219,13 +202,14 @@ func publishOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool)
 	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
 	outputsTopicHasSubscribers := deps.MQTTBroker.HasSubscribers(outputsTopic)
 
-	addressBech32Topic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(deps.Bech32HRP))
-	addressBech32TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressBech32Topic)
+	// TODO: Re-Add address topics if Indexer is enabled
+	//addressBech32Topic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(deps.Bech32HRP))
+	//addressBech32TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressBech32Topic)
+	//
+	//addressEd25519Topic := strings.ReplaceAll(topicAddressesEd25519Output, "{address}", output.Address().String())
+	//addressEd25519TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressEd25519Topic)
 
-	addressEd25519Topic := strings.ReplaceAll(topicAddressesEd25519Output, "{address}", output.Address().String())
-	addressEd25519TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressEd25519Topic)
-
-	if outputsTopicHasSubscribers || addressEd25519TopicHasSubscribers || addressBech32TopicHasSubscribers {
+	if outputsTopicHasSubscribers { //} || addressEd25519TopicHasSubscribers || addressBech32TopicHasSubscribers {
 		if payload := payloadForOutput(ledgerIndex, output, spent); payload != nil {
 
 			// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
@@ -239,13 +223,13 @@ func publishOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool)
 				deps.MQTTBroker.Send(outputsTopic, jsonPayload)
 			}
 
-			if addressBech32TopicHasSubscribers {
-				deps.MQTTBroker.Send(addressBech32Topic, jsonPayload)
-			}
-
-			if addressEd25519TopicHasSubscribers {
-				deps.MQTTBroker.Send(addressEd25519Topic, jsonPayload)
-			}
+			//if addressBech32TopicHasSubscribers {
+			//	deps.MQTTBroker.Send(addressBech32Topic, jsonPayload)
+			//}
+			//
+			//if addressEd25519TopicHasSubscribers {
+			//	deps.MQTTBroker.Send(addressEd25519Topic, jsonPayload)
+			//}
 		}
 	}
 
@@ -289,7 +273,7 @@ func transactionIDFromTopic(topicName string) *iotago.TransactionID {
 	return nil
 }
 
-func outputIDFromTopic(topicName string) *iotago.UTXOInputID {
+func outputIDFromTopic(topicName string) *iotago.OutputID {
 	if strings.HasPrefix(topicName, "outputs/") {
 		outputIDHex := strings.Replace(topicName, "outputs/", "", 1)
 
@@ -299,7 +283,7 @@ func outputIDFromTopic(topicName string) *iotago.UTXOInputID {
 		}
 
 		if len(bytes) == iotago.TransactionIDLength+serializer.UInt16ByteSize {
-			outputID := &iotago.UTXOInputID{}
+			outputID := &iotago.OutputID{}
 			copy(outputID[:], bytes)
 			return outputID
 		}

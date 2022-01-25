@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"crypto/ed25519"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -26,8 +27,7 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/logger"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // TestEnvironment holds the state of the test environment.
@@ -60,8 +60,8 @@ type TestEnvironment struct {
 	// LastMilestoneMessageID is the message ID of the last issued milestone.
 	LastMilestoneMessageID hornet.MessageID
 
-	// tempDir is the directory that contains the temporary files for the test.
-	tempDir string
+	// TempDir is the directory that contains the temporary files for the test.
+	TempDir string
 
 	// tangleStore is the temporary key value store for the test holding the tangle.
 	tangleStore kvstore.KVStore
@@ -95,12 +95,26 @@ type TestEnvironment struct {
 
 	// OnConfirmedMilestoneIndexChanged callback that will be called after confirming a milestone. This is equivalent to the tangle.ConfirmedMilestoneIndexChanged event.
 	OnConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc
+
+	// OnLedgerUpdatedFunc callback that will be called after the ledger gets updating during confirmation. This is equivalent to the tangle.LedgerUpdated event.
+	OnLedgerUpdatedFunc OnLedgerUpdatedFunc
 }
+
+var (
+	DeSerializationParameters = &iotago.DeSerializationParameters{
+		RentStructure: &iotago.RentStructure{
+			VByteCost:    0,
+			VBFactorData: 0,
+			VBFactorKey:  0,
+		},
+	}
+)
 
 type OnNewOutputFunc func(index milestone.Index, output *utxo.Output)
 type OnNewSpentFunc func(index milestone.Index, spent *utxo.Spent)
 type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)
 type OnConfirmedMilestoneIndexChangedFunc func(index milestone.Index)
+type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents)
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
@@ -132,7 +146,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 
 	tempDir, err := ioutil.TempDir("", fmt.Sprintf("test_%s", te.TestInterface.Name()))
 	require.NoError(te.TestInterface, err)
-	te.tempDir = tempDir
+	te.TempDir = tempDir
 
 	te.TestInterface.Logf("Testdir: %s", tempDir)
 
@@ -159,7 +173,15 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.milestoneManager = milestonemanager.New(te.storage, te.syncManager, keyManager, len(cooPrivateKeys))
 
 	// Initialize UTXO
-	te.GenesisOutput = utxo.CreateOutput(&iotago.UTXOInputID{}, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, genesisAddress, iotago.TokenSupply)
+	output := &iotago.ExtendedOutput{
+		Amount: iotago.TokenSupply,
+		Conditions: iotago.UnlockConditions{
+			&iotago.AddressUnlockCondition{
+				Address: genesisAddress,
+			},
+		},
+	}
+	te.GenesisOutput = utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, 0, output)
 	err = te.storage.UTXOManager().AddUnspentOutput(te.GenesisOutput)
 	require.NoError(te.TestInterface, err)
 
@@ -185,11 +207,12 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	return te
 }
 
-func (te *TestEnvironment) ConfigureUTXOCallbacks(onNewOutputFunc OnNewOutputFunc, onNewSpentFunc OnNewSpentFunc, onMilestoneConfirmedFunc OnMilestoneConfirmedFunc, onConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc) {
+func (te *TestEnvironment) ConfigureUTXOCallbacks(onNewOutputFunc OnNewOutputFunc, onNewSpentFunc OnNewSpentFunc, onMilestoneConfirmedFunc OnMilestoneConfirmedFunc, onConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc, onLedgerUpdatedFunc OnLedgerUpdatedFunc) {
 	te.OnNewOutput = onNewOutputFunc
 	te.OnNewSpent = onNewSpentFunc
 	te.OnMilestoneConfirmed = onMilestoneConfirmedFunc
 	te.OnConfirmedMilestoneIndexChanged = onConfirmedMilestoneIndexChanged
+	te.OnLedgerUpdatedFunc = onLedgerUpdatedFunc
 }
 
 func (te *TestEnvironment) NetworkID() iotago.NetworkID {
@@ -212,6 +235,10 @@ func (te *TestEnvironment) BelowMaxDepth() milestone.Index {
 	return te.belowMaxDepth
 }
 
+func (te *TestEnvironment) LastMilestoneIndex() milestone.Index {
+	return te.Milestones[len(te.Milestones)-1].Milestone().Index
+}
+
 // CleanupTestEnvironment cleans up everything at the end of the test.
 func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	te.cachedMessages.Release(true)
@@ -229,13 +256,13 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	err = te.utxoStore.Clear()
 	require.NoError(te.TestInterface, err)
 
-	if removeTempDir && te.tempDir != "" {
-		_ = os.RemoveAll(te.tempDir)
+	if removeTempDir && te.TempDir != "" {
+		_ = os.RemoveAll(te.TempDir)
 	}
 }
 
 func (te *TestEnvironment) NewTestMessage(index int, parents hornet.MessageIDs) *storage.MessageMetadata {
-	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildIndexation().Store()
+	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
 	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
 	defer cachedMsgMeta.Release(true)
 	return cachedMsgMeta.Metadata()

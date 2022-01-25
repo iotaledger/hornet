@@ -6,8 +6,8 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/objectstorage"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type Message struct {
@@ -22,9 +22,9 @@ type Message struct {
 	message     *iotago.Message
 }
 
-func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMode) (*Message, error) {
+func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMode, deSeriParas *iotago.DeSerializationParameters) (*Message, error) {
 
-	data, err := iotaMsg.Serialize(deSeriMode)
+	data, err := iotaMsg.Serialize(deSeriMode, deSeriParas)
 	if err != nil {
 		return nil, err
 	}
@@ -44,10 +44,10 @@ func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMo
 	return msg, nil
 }
 
-func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode) (*Message, error) {
+func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, deSeriParas *iotago.DeSerializationParameters) (*Message, error) {
 
 	iotaMsg := &iotago.Message{}
-	if _, err := iotaMsg.Deserialize(data, deSeriMode); err != nil {
+	if _, err := iotaMsg.Deserialize(data, deSeriMode, deSeriParas); err != nil {
 		return nil, err
 	}
 
@@ -77,7 +77,8 @@ func (msg *Message) Data() []byte {
 func (msg *Message) Message() *iotago.Message {
 	msg.messageOnce.Do(func() {
 		iotaMsg := &iotago.Message{}
-		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation); err != nil {
+		// No need to verify the message again here
+		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation, nil); err != nil {
 			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.ToHex(), err))
 		}
 
@@ -124,10 +125,10 @@ func (msg *Message) IsTransaction() bool {
 	return false
 }
 
-func (msg *Message) Indexation() *iotago.Indexation {
+func (msg *Message) TaggedData() *iotago.TaggedData {
 
 	switch payload := msg.Message().Payload.(type) {
-	case *iotago.Indexation:
+	case *iotago.TaggedData:
 		return payload
 	default:
 		return nil
@@ -135,7 +136,6 @@ func (msg *Message) Indexation() *iotago.Indexation {
 }
 
 func (msg *Message) Transaction() *iotago.Transaction {
-
 	switch payload := msg.Message().Payload.(type) {
 	case *iotago.Transaction:
 		return payload
@@ -145,23 +145,17 @@ func (msg *Message) Transaction() *iotago.Transaction {
 }
 
 func (msg *Message) TransactionEssence() *iotago.TransactionEssence {
-
 	if transaction := msg.Transaction(); transaction != nil {
-		switch essence := transaction.Essence.(type) {
-		case *iotago.TransactionEssence:
-			return essence
-		default:
-			return nil
-		}
+		return transaction.Essence
 	}
 	return nil
 }
 
-func (msg *Message) TransactionEssenceIndexation() *iotago.Indexation {
+func (msg *Message) TransactionEssenceTaggedData() *iotago.TaggedData {
 
 	if essence := msg.TransactionEssence(); essence != nil {
 		switch payload := essence.Payload.(type) {
-		case *iotago.Indexation:
+		case *iotago.TaggedData:
 			return payload
 		default:
 			return nil
@@ -170,9 +164,9 @@ func (msg *Message) TransactionEssenceIndexation() *iotago.Indexation {
 	return nil
 }
 
-func (msg *Message) TransactionEssenceUTXOInputs() []*iotago.UTXOInputID {
+func (msg *Message) TransactionEssenceUTXOInputs() []*iotago.OutputID {
 
-	var inputs []*iotago.UTXOInputID
+	var inputs []*iotago.OutputID
 	if essence := msg.TransactionEssence(); essence != nil {
 		for _, input := range essence.Inputs {
 			switch utxoInput := input.(type) {

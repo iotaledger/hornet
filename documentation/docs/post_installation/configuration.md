@@ -64,18 +64,18 @@ Example:
     "publicRoutes": [
       "/health",
       "/mqtt",
-      "/api/v1/info",
-      "/api/v1/tips",
-      "/api/v1/messages*",
-      "/api/v1/transactions*",
-      "/api/v1/milestones*",
-      "/api/v1/outputs*",
-      "/api/v1/addresses*",
-      "/api/v1/treasury",
-      "/api/v1/receipts*"
+      "/api/v2/info",
+      "/api/v2/tips",
+      "/api/v2/messages*",
+      "/api/v2/transactions*",
+      "/api/v2/milestones*",
+      "/api/v2/outputs*",
+      "/api/v2/addresses*",
+      "/api/v2/treasury",
+      "/api/v2/receipts*"
     ],
     "protectedRoutes": [
-      "/api/v1/*",
+      "/api/v2/*",
       "/api/plugins/*"
     ],
     "powEnabled": true,
@@ -688,23 +688,23 @@ Example:
 
 ## 18. Spammer
 
-| Name          | Description                                                                         | Type    |
-| :------------ | :---------------------------------------------------------------------------------- | :------ |
-| message       | The message to embed within the spam messages                                       | string  |
-| index         | The indexation of the message                                                       | string  |
-| indexSemiLazy | The indexation of the message if the semi-lazy pool is used (uses "index" if empty) | string  |
-| cpuMaxUsage   | Workers remains idle for a while when cpu usage gets over this limit (0 = disable)  | float   |
-| mpsRateLimit  | The rate limit for the spammer (0 = no limit)                                       | float   |
-| workers       | The amount of parallel running spammers                                             | integer |
-| autostart     | Automatically start the spammer on node startup                                     | bool    |
+| Name         | Description                                                                        | Type    |
+|:-------------|:-----------------------------------------------------------------------------------| :------ |
+| message      | The message to embed within the spam messages                                      | string  |
+| tag          | The tag of the message                                                             | string  |
+| tagSemiLazy  | The tag of the message if the semi-lazy pool is used (uses "tag" if empty)         | string  |
+| cpuMaxUsage  | Workers remains idle for a while when cpu usage gets over this limit (0 = disable) | float   |
+| mpsRateLimit | The rate limit for the spammer (0 = no limit)                                      | float   |
+| workers      | The amount of parallel running spammers                                            | integer |
+| autostart    | Automatically start the spammer on node startup                                    | bool    |
 
 Example:
 
 ```json
   "spammer": {
     "message": "IOTA - A new dawn",
-    "index": "HORNET Spammer",
-    "indexSemiLazy": "HORNET Spammer Semi-Lazy",
+    "tag": "HORNET Spammer",
+    "tagSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
     "mpsRateLimit": 0.0,
     "workers": 0,
@@ -715,12 +715,12 @@ Example:
 ## 19. Faucet
 
 | Name                | Description                                                                                                                  | Type    |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------------------- | :------ |
+|:--------------------|:-----------------------------------------------------------------------------------------------------------------------------| :------ |
 | amount              | The amount of funds the requester receives                                                                                   | integer |
 | smallAmount         | The amount of funds the requester receives if the target address has more funds than the faucet amount and less than maximum | integer |
 | maxAddressBalance   | The maximum allowed amount of funds on the target address                                                                    | integer |
 | maxOutputCount      | The maximum output count per faucet message                                                                                  | integer |
-| indexationMessage   | The faucet transaction indexation payload                                                                                    | string  |
+| tagMessage          | The faucet transaction tag payload                                                                                           | string  |
 | batchTimeout        | The maximum duration for collecting faucet batches                                                                           | string  |
 | powWorkerCount      | The amount of workers used for calculating PoW when issuing faucet messages                                                  | integer |
 | [website](#website) | Configuration for the faucet website                                                                                         | object  |
@@ -740,7 +740,7 @@ Example:
     "smallAmount": 1000000,
     "maxAddressBalance": 20000000,
     "maxOutputCount": 127,
-    "indexationMessage": "HORNET FAUCET",
+    "tagMessage": "HORNET FAUCET",
     "batchTimeout": "2s",
     "powWorkerCount": 0,
     "website": {

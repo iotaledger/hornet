@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func main() {
@@ -40,6 +41,14 @@ func blankMilestone(index uint32) *iotago.Milestone {
 	}
 }
 
+var deSeriParas = &iotago.DeSerializationParameters{
+	RentStructure: &iotago.RentStructure{
+		VByteCost:    0,
+		VBFactorData: 0,
+		VBFactorKey:  0,
+	},
+}
+
 var fullSnapshotHeader = &snapshot.FileHeader{
 	Version:              snapshot.SupportedFormatVersion,
 	Type:                 snapshot.Full,
@@ -52,118 +61,49 @@ var fullSnapshotHeader = &snapshot.FileHeader{
 	},
 }
 
-var originTreasurySupply = iotago.TokenSupply - fullSnapshotOutputs[0].Amount - fullSnapshotOutputs[1].Amount
+var originTreasurySupply = iotago.TokenSupply - fullSnapshotOutputs[0].Deposit() - fullSnapshotOutputs[1].Deposit()
 
-var fullSnapshotOutputs = []*snapshot.Output{
-	{
-		MessageID:  static32ByteID(6),
-		OutputID:   static34ByteID(6),
-		OutputType: iotago.OutputSigLockedSingleOutput,
-		Address:    staticEd25519Address(6),
-		Amount:     10_000_000,
-	},
-	{
-		MessageID:  static32ByteID(5),
-		OutputID:   static34ByteID(5),
-		OutputType: iotago.OutputSigLockedSingleOutput,
-		Address:    staticEd25519Address(5),
-		Amount:     20_000_000,
-	},
+var fullSnapshotOutputs = utxo.Outputs{
+	utxoOutput(6, 10_000_000, 3),
+	utxoOutput(5, 20_000_000, 3),
 }
 
 var fullSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	{
 		Milestone: blankMilestone(3),
-		Created: []*snapshot.Output{
-			{
-				MessageID:  static32ByteID(6),
-				OutputID:   static34ByteID(6),
-				OutputType: iotago.OutputSigLockedSingleOutput,
-				Address:    staticEd25519Address(6),
-				Amount:     fullSnapshotOutputs[0].Amount,
-			},
-			{
-				MessageID:  static32ByteID(5),
-				OutputID:   static34ByteID(5),
-				OutputType: iotago.OutputSigLockedSingleOutput,
-				Address:    staticEd25519Address(5),
-				Amount:     fullSnapshotOutputs[1].Amount,
-			},
+		Created: utxo.Outputs{
+			utxoOutput(6, fullSnapshotOutputs[0].Deposit(), 3),
+			utxoOutput(5, fullSnapshotOutputs[1].Deposit(), 3),
 		},
-		Consumed: []*snapshot.Spent{
-			{
-				Output: snapshot.Output{
-					MessageID:  static32ByteID(4),
-					OutputID:   static34ByteID(4),
-					OutputType: iotago.OutputSigLockedSingleOutput,
-					Address:    staticEd25519Address(4),
-					Amount:     fullSnapshotOutputs[0].Amount,
-				},
-				TargetTransactionID: static32ByteID(4),
-			},
-			{
-				Output: snapshot.Output{
-					MessageID:  static32ByteID(3),
-					OutputID:   static34ByteID(3),
-					OutputType: iotago.OutputSigLockedSingleOutput,
-					Address:    staticEd25519Address(3),
-					Amount:     fullSnapshotOutputs[1].Amount,
-				},
-				TargetTransactionID: static32ByteID(3),
-			},
+		Consumed: utxo.Spents{
+			utxoSpent(4, fullSnapshotOutputs[0].Deposit(), 2, 3),
+			utxoSpent(3, fullSnapshotOutputs[1].Deposit(), 2, 3),
 		},
 	},
 	{
 		Milestone: blankMilestone(2),
-		Created: []*snapshot.Output{
-			{
-				MessageID:  static32ByteID(4),
-				OutputID:   static34ByteID(4),
-				OutputType: iotago.OutputSigLockedSingleOutput,
-				Address:    staticEd25519Address(4),
-				Amount:     fullSnapshotOutputs[0].Amount,
-			},
-			{
-				MessageID:  static32ByteID(3),
-				OutputID:   static34ByteID(3),
-				OutputType: iotago.OutputSigLockedSingleOutput,
-				Address:    staticEd25519Address(3),
-				Amount:     fullSnapshotOutputs[1].Amount,
-			},
+		Created: utxo.Outputs{
+			utxoOutput(4, fullSnapshotOutputs[0].Deposit(), 2),
+			utxoOutput(3, fullSnapshotOutputs[1].Deposit(), 2),
 		},
-		Consumed: []*snapshot.Spent{
-			{
-				Output: snapshot.Output{
-					MessageID:  static32ByteID(2),
-					OutputID:   static34ByteID(2),
-					OutputType: iotago.OutputSigLockedSingleOutput,
-					Address:    staticEd25519Address(2),
-					Amount:     fullSnapshotOutputs[0].Amount,
-				},
-				TargetTransactionID: static32ByteID(2),
-			},
-			{
-				Output: snapshot.Output{
-					MessageID:  static32ByteID(1),
-					OutputID:   static34ByteID(1),
-					OutputType: iotago.OutputSigLockedSingleOutput,
-					Address:    staticEd25519Address(1),
-					Amount:     fullSnapshotOutputs[1].Amount,
-				},
-				TargetTransactionID: static32ByteID(1),
-			},
+		Consumed: utxo.Spents{
+			utxoSpent(2, fullSnapshotOutputs[0].Deposit(), 1, 2),
+			utxoSpent(1, fullSnapshotOutputs[1].Deposit(), 1, 2),
 		},
 	},
 }
 
 func writeFullSnapshot() {
-	full, err := os.Create("full_snapshot.bin")
+	full, err := os.Create("test_full_snapshot.bin")
 	must(err)
 	defer func() { _ = full.Close() }()
 
 	var seps, sepsMax = 0, 10
 	fullSnapSEPProd := func() (hornet.MessageID, error) {
 		seps++
+		if seps == 1 {
+			return hornet.NullMessageID(), nil
+		}
 		if seps > sepsMax {
 			return nil, nil
 		}
@@ -171,7 +111,7 @@ func writeFullSnapshot() {
 	}
 
 	var currentOutput int
-	fullSnapOutputProd := func() (*snapshot.Output, error) {
+	fullSnapOutputProd := func() (*utxo.Output, error) {
 		if currentOutput == len(fullSnapshotOutputs) {
 			return nil, nil
 		}
@@ -207,43 +147,13 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 	fullSnapshotMsDiffs[0],
 	{
 		Milestone: blankMilestone(4),
-		Created: []*snapshot.Output{
-			{
-				MessageID:  static32ByteID(8),
-				OutputID:   static34ByteID(8),
-				OutputType: iotago.OutputSigLockedSingleOutput,
-				Address:    staticEd25519Address(8),
-				Amount:     fullSnapshotOutputs[0].Amount,
-			},
-			{
-				MessageID:  static32ByteID(7),
-				OutputID:   static34ByteID(7),
-				OutputType: iotago.OutputSigLockedSingleOutput,
-				Address:    staticEd25519Address(7),
-				Amount:     fullSnapshotOutputs[1].Amount,
-			},
+		Created: utxo.Outputs{
+			utxoOutput(8, fullSnapshotOutputs[0].Deposit(), 4),
+			utxoOutput(7, fullSnapshotOutputs[1].Deposit(), 4),
 		},
-		Consumed: []*snapshot.Spent{
-			{
-				Output: snapshot.Output{
-					MessageID:  static32ByteID(6),
-					OutputID:   static34ByteID(6),
-					OutputType: iotago.OutputSigLockedSingleOutput,
-					Address:    staticEd25519Address(6),
-					Amount:     fullSnapshotOutputs[0].Amount,
-				},
-				TargetTransactionID: static32ByteID(6),
-			},
-			{
-				Output: snapshot.Output{
-					MessageID:  static32ByteID(5),
-					OutputID:   static34ByteID(5),
-					OutputType: iotago.OutputSigLockedSingleOutput,
-					Address:    staticEd25519Address(5),
-					Amount:     fullSnapshotOutputs[1].Amount,
-				},
-				TargetTransactionID: static32ByteID(5),
-			},
+		Consumed: utxo.Spents{
+			utxoSpent(6, fullSnapshotOutputs[0].Deposit(), 3, 4),
+			utxoSpent(5, fullSnapshotOutputs[1].Deposit(), 3, 4),
 		},
 	},
 	{
@@ -263,7 +173,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 					Address:             &iotago.Ed25519Address{},
 					Deposit:             10_000_000,
 				}).
-				Build()
+				Build(deSeriParas)
 			if err != nil {
 				panic(err)
 			}
@@ -275,42 +185,18 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 			Amount:      originTreasurySupply,
 			Spent:       true,
 		},
-		Created: []*snapshot.Output{
-			{
-				MessageID:  static32ByteID(9),
-				OutputID:   static34ByteID(9),
-				OutputType: iotago.OutputSigLockedSingleOutput,
-				Address:    staticEd25519Address(9),
-				Amount:     fullSnapshotOutputs[0].Amount + fullSnapshotOutputs[1].Amount + 10_000_000,
-			},
+		Created: utxo.Outputs{
+			utxoOutput(9, fullSnapshotOutputs[0].Deposit()+fullSnapshotOutputs[1].Deposit()+10_000_000, 5),
 		},
-		Consumed: []*snapshot.Spent{
-			{
-				Output: snapshot.Output{
-					MessageID:  static32ByteID(8),
-					OutputID:   static34ByteID(8),
-					OutputType: iotago.OutputSigLockedSingleOutput,
-					Address:    staticEd25519Address(8),
-					Amount:     fullSnapshotOutputs[0].Amount,
-				},
-				TargetTransactionID: static32ByteID(7),
-			},
-			{
-				Output: snapshot.Output{
-					MessageID:  static32ByteID(7),
-					OutputID:   static34ByteID(7),
-					OutputType: iotago.OutputSigLockedSingleOutput,
-					Address:    staticEd25519Address(7),
-					Amount:     fullSnapshotOutputs[1].Amount,
-				},
-				TargetTransactionID: static32ByteID(7),
-			},
+		Consumed: utxo.Spents{
+			utxoSpent(8, fullSnapshotOutputs[0].Deposit(), 4, 5),
+			utxoSpent(7, fullSnapshotOutputs[1].Deposit(), 4, 5),
 		},
 	},
 }
 
 func writeDeltaSnapshot() {
-	delta, err := os.Create("delta_snapshot.bin")
+	delta, err := os.Create("test_delta_snapshot.bin")
 	must(err)
 	defer func() { _ = delta.Close() }()
 
@@ -366,17 +252,43 @@ func static32ByteID(fill byte) [32]byte {
 	return b
 }
 
-func static34ByteID(fill byte) [34]byte {
-	var b [34]byte
+func staticMessageID(fill byte) hornet.MessageID {
+	return hornet.MessageIDFromArray(static32ByteID(fill))
+}
+
+func staticOutputID(fill byte) *iotago.OutputID {
+	b := &iotago.OutputID{}
 	for i := 0; i < len(b); i++ {
 		b[i] = fill
 	}
 	return b
 }
 
-func staticEd25519Address(fill byte) *iotago.Ed25519Address {
+func staticEd25519Address(fill byte) iotago.Address {
 	b := static32ByteID(fill)
 	var addr iotago.Ed25519Address
 	copy(addr[:], b[:])
 	return &addr
+}
+
+func utxoOutput(fill byte, amount uint64, msIndex milestone.Index) *utxo.Output {
+	return utxo.CreateOutput(
+		staticOutputID(fill),
+		staticMessageID(fill),
+		msIndex,
+		0,
+		&iotago.ExtendedOutput{
+			Amount: amount,
+			Conditions: iotago.UnlockConditions{
+				&iotago.AddressUnlockCondition{
+					Address: staticEd25519Address(fill),
+				},
+			},
+		},
+	)
+}
+
+func utxoSpent(fill byte, amount uint64, msIndexCreated milestone.Index, msIndexSpent milestone.Index) *utxo.Spent {
+	txID := static32ByteID(fill)
+	return utxo.NewSpent(utxoOutput(fill, amount, msIndexCreated), &txID, msIndexSpent, 0)
 }

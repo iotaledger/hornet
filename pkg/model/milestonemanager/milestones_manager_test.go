@@ -13,8 +13,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -91,7 +91,7 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	require.NoError(te.TestInterface, err)
 
 	// build HORNET representation of the message
-	msg, err := storage.MessageFromBytes(milestoneMessageBytes, serializer.DeSeriModePerformValidation)
+	msg, err := storage.MessageFromBytes(milestoneMessageBytes, serializer.DeSeriModePerformValidation, testsuite.DeSerializationParameters)
 	require.NoError(te.TestInterface, err)
 
 	// parse the milestone payload

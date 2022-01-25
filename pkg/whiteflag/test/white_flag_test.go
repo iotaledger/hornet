@@ -2,7 +2,6 @@ package test
 
 import (
 	"encoding/hex"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,7 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -266,352 +265,6 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te.AssertWalletBalance(seed4Wallet, 0)
 }
 
-func TestWhiteFlagWithDust(t *testing.T) {
-
-	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
-	seed2Wallet := utils.NewHDWallet("Seed2", seed2, 0)
-	seed3Wallet := utils.NewHDWallet("Seed3", seed3, 0)
-
-	genesisAddress := seed1Wallet.Address()
-
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
-	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
-
-	//Add token supply to our local HDWallet
-	seed1Wallet.BookOutput(te.GenesisOutput)
-
-	seed1Wallet.PrintStatus()
-	seed2Wallet.PrintStatus()
-
-	// Issue some transactions
-	// Valid transfer from seed1 (1_000_000) to seed2
-	messageA := te.NewMessageBuilder("A").
-		Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).
-		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
-		Amount(1_000_000).
-		Build().
-		Store().
-		BookOnWallets()
-
-	seed1Wallet.PrintStatus()
-	seed2Wallet.PrintStatus()
-
-	// Invalid Dust transfer from seed1 (999_999) to seed2
-	messageB := te.NewMessageBuilder("B").
-		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[0].Milestone().MessageID}).
-		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
-		Amount(999_999).
-		Build().
-		Store()
-
-	seed1Wallet.PrintStatus()
-	seed2Wallet.PrintStatus()
-
-	// Confirming milestone at message B
-	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageB.StoredMessageID()}, true)
-
-	require.Equal(t, 2+1, confStats.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
-
-	// Verify the messages have the expected conflict reason
-	te.AssertMessageConflictReason(messageB.StoredMessageID(), storage.ConflictInvalidDustAllowance)
-
-	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761)
-	te.AssertWalletBalance(seed2Wallet, 1_000_000)
-
-	// Dust allowance from seed1 to seed2 with 1_000_000
-	messageC := te.NewMessageBuilder("C").
-		Parents(hornet.MessageIDs{te.Milestones[1].Milestone().MessageID, messageB.StoredMessageID()}).
-		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
-		Amount(1_000_000).
-		DustAllowance().
-		Build().
-		Store().
-		BookOnWallets()
-
-	// Store the dust allowance output we created, so we can try to spend it
-	seed2WalletDustAllowanceOutput := messageC.GeneratedUTXO()
-
-	// Send Dust from seed1 to seed2 with 1
-	messageD := te.NewMessageBuilder("D").
-		Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageC.StoredMessageID()}).
-		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
-		Amount(1).
-		Build().
-		Store().
-		BookOnWallets()
-
-	seed1Wallet.PrintStatus()
-	seed2Wallet.PrintStatus()
-
-	// Confirming milestone at message D
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageD.StoredMessageID()}, true)
-
-	require.Equal(t, 2+1, confStats.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, 2, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
-
-	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_281_277_760)
-	te.AssertWalletBalance(seed2Wallet, 2_000_001)
-
-	// Spend dust allowance from seed2 (2_000_001) to seed3 (0) (failure: invalid dust allowance)
-	messageE := te.NewMessageBuilder("E").
-		Parents(hornet.MessageIDs{te.Milestones[3].Milestone().MessageID, te.Milestones[2].Milestone().MessageID}).
-		FromWallet(seed2Wallet).
-		ToWallet(seed3Wallet).
-		Amount(1_000_000).
-		UsingOutput(seed2WalletDustAllowanceOutput).
-		Build().
-		Store()
-
-	seed2Wallet.PrintStatus()
-	seed3Wallet.PrintStatus()
-
-	// Confirming milestone at message E
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageE.StoredMessageID()}, true)
-
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, 0, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
-
-	// Verify the messages have the expected conflict reason
-	te.AssertMessageConflictReason(messageE.StoredMessageID(), storage.ConflictInvalidDustAllowance)
-
-	// Verify that the dust allowance is still unspent
-	unspent, err := te.UTXOManager().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
-	require.NoError(t, err)
-	require.True(t, unspent)
-
-	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_281_277_760)
-	te.AssertWalletBalance(seed2Wallet, 2_000_001)
-	te.AssertWalletBalance(seed3Wallet, 0)
-
-	// Spend all outputs, including dust allowance, from seed2 (2_000_001) to seed3 (0)
-	messageF := te.NewMessageBuilder("F").
-		Parents(hornet.MessageIDs{te.Milestones[3].Milestone().MessageID, te.Milestones[4].Milestone().MessageID}).
-		FromWallet(seed2Wallet).
-		ToWallet(seed3Wallet).
-		Amount(2_000_001).
-		Build().
-		Store().
-		BookOnWallets()
-
-	seed2Wallet.PrintStatus()
-	seed3Wallet.PrintStatus()
-
-	// Confirming milestone at message F
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageF.StoredMessageID()}, true)
-
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
-
-	// Verify that the dust allowance spent
-	unspent, err = te.UTXOManager().IsOutputUnspentWithoutLocking(seed2WalletDustAllowanceOutput)
-	require.NoError(t, err)
-	require.False(t, unspent)
-
-	// Verify balances
-	te.AssertWalletBalance(seed2Wallet, 0)
-	te.AssertWalletBalance(seed3Wallet, 2_000_001)
-
-}
-
-func TestWhiteFlagDustAllowanceWithLotsOfDust(t *testing.T) {
-
-	seed1Wallet := utils.NewHDWallet("Seed1", seed1, 0)
-	seed2Wallet := utils.NewHDWallet("Seed2", seed2, 0)
-
-	genesisAddress := seed1Wallet.Address()
-
-	te := testsuite.SetupTestEnvironment(t, genesisAddress, 2, BelowMaxDepth, MinPoWScore, showConfirmationGraphs)
-	defer te.CleanupTestEnvironment(!showConfirmationGraphs)
-
-	//Add token supply to our local HDWallet
-	seed1Wallet.BookOutput(te.GenesisOutput)
-
-	seed1Wallet.PrintStatus()
-	seed2Wallet.PrintStatus()
-
-	// Issue some transactions
-	// Valid transfer from seed1 (iotago.TokenSupply) to seed2 (1_000_000)
-	messageA := te.NewMessageBuilder("A").
-		Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).
-		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
-		Amount(1_000_000).
-		Build().
-		Store().
-		BookOnWallets()
-
-	seed1Wallet.PrintStatus()
-	seed2Wallet.PrintStatus()
-
-	// Dust allowance from seed2 to seed2 with 1_000_000
-	messageB := te.NewMessageBuilder("B").
-		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[1].Milestone().MessageID}).
-		FromWallet(seed2Wallet).
-		ToWallet(seed2Wallet).
-		Amount(1_000_000).
-		DustAllowance().
-		Build().
-		Store().
-		BookOnWallets()
-
-	seed1Wallet.PrintStatus()
-	seed2Wallet.PrintStatus()
-
-	// Confirming milestone at message B
-	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageB.StoredMessageID()}, true)
-
-	require.Equal(t, 2+1, confStats.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, 2, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
-
-	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761)
-	te.AssertWalletBalance(seed2Wallet, 1_000_000)
-
-	// Generate lots of dust messages
-	lastDustMessage := messageA
-	var totalDustTxCount int
-	var dustTxCount int
-	for i := 0; i < 10; i++ {
-		// Dust from seed1 to seed2 with 1
-		lastDustMessage = te.NewMessageBuilder(fmt.Sprintf("C%d", i)).
-			Parents(hornet.MessageIDs{lastDustMessage.StoredMessageID(), te.Milestones[2].Milestone().MessageID}).
-			FromWallet(seed1Wallet).
-			ToWallet(seed2Wallet).
-			Amount(1).
-			Build().
-			Store().
-			BookOnWallets()
-		dustTxCount++
-	}
-
-	require.NotNil(t, lastDustMessage)
-
-	// Confirming milestone at last Dust message
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{lastDustMessage.StoredMessageID()}, true)
-
-	require.Equal(t, dustTxCount+1, confStats.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, dustTxCount, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
-
-	totalDustTxCount += dustTxCount
-
-	require.Equal(t, 10, totalDustTxCount)
-
-	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(totalDustTxCount))
-	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(totalDustTxCount))
-
-	// Dust from seed1 to seed2 with 1 (failure: dust allowance)
-	messageD := te.NewMessageBuilder("D").
-		Parents(hornet.MessageIDs{lastDustMessage.StoredMessageID(), te.Milestones[3].Milestone().MessageID}).
-		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
-		Amount(1).
-		Build().
-		Store()
-
-	// Confirming milestone at message D
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageD.StoredMessageID()}, true)
-
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, 0, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
-
-	// Verify the messages have the expected conflict reason
-	te.AssertMessageConflictReason(messageD.StoredMessageID(), storage.ConflictInvalidDustAllowance)
-
-	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(totalDustTxCount))
-	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(totalDustTxCount))
-
-	// More Dust allowance from seed1 to seed2 with 1_000_000
-	messageE := te.NewMessageBuilder("E").
-		Parents(hornet.MessageIDs{messageD.StoredMessageID(), te.Milestones[3].Milestone().MessageID}).
-		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
-		Amount(10_000_000).
-		DustAllowance().
-		Build().
-		Store().
-		BookOnWallets()
-
-	// Generate lots of dust messages from seed1 to seed2
-	lastDustMessage = messageE
-	dustTxCount = 0
-	for i := 0; i < 100-totalDustTxCount; i++ {
-		// Dust from seed1 to seed2 with 1
-		lastDustMessage = te.NewMessageBuilder(fmt.Sprintf("F%d", i)).
-			Parents(hornet.MessageIDs{lastDustMessage.StoredMessageID(), te.Milestones[3].Milestone().MessageID}).
-			FromWallet(seed1Wallet).
-			ToWallet(seed2Wallet).
-			Amount(1).
-			Build().
-			Store().
-			BookOnWallets()
-		dustTxCount++
-	}
-
-	totalDustTxCount += dustTxCount
-
-	require.Equal(t, 100, totalDustTxCount)
-
-	// Confirming milestone at message F
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{lastDustMessage.StoredMessageID()}, true)
-
-	require.Equal(t, 1+dustTxCount+1, confStats.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, 1+dustTxCount, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
-
-	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(totalDustTxCount)-10_000_000)
-	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(totalDustTxCount)+10_000_000)
-
-	// Dust from seed1 to seed2 with 1 (failure: dust allowance)
-	messageG := te.NewMessageBuilder("G").
-		Parents(hornet.MessageIDs{lastDustMessage.StoredMessageID(), te.Milestones[4].Milestone().MessageID}).
-		FromWallet(seed1Wallet).
-		ToWallet(seed2Wallet).
-		Amount(1).
-		Build().
-		Store()
-
-	// Confirming milestone at message G
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageG.StoredMessageID()}, true)
-
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + milestone itself
-	require.Equal(t, 0, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
-
-	// Verify the messages have the expected conflict reason
-	te.AssertMessageConflictReason(messageG.StoredMessageID(), storage.ConflictInvalidDustAllowance)
-
-	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, 2_779_530_282_277_761-uint64(totalDustTxCount)-10_000_000)
-	te.AssertWalletBalance(seed2Wallet, 1_000_000+uint64(totalDustTxCount)+10_000_000)
-}
-
 func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 
 	genesisWallet := utils.NewHDWallet("Seed1", seed1, 0)
@@ -624,11 +277,11 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	genesisWallet.BookOutput(te.GenesisOutput)
 
 	// Issue some transactions
-	messageA := te.NewMessageBuilder("A").Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).BuildIndexation().Store()
-	messageB := te.NewMessageBuilder("B").Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[0].Milestone().MessageID}).BuildIndexation().Store()
-	messageC := te.NewMessageBuilder("C").Parents(hornet.MessageIDs{te.Milestones[2].Milestone().MessageID, te.Milestones[0].Milestone().MessageID}).BuildIndexation().Store()
-	messageD := te.NewMessageBuilder("D").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageC.StoredMessageID()}).BuildIndexation().Store()
-	messageE := te.NewMessageBuilder("E").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageA.StoredMessageID()}).BuildIndexation().Store()
+	messageA := te.NewMessageBuilder("A").Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).BuildTaggedData().Store()
+	messageB := te.NewMessageBuilder("B").Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[0].Milestone().MessageID}).BuildTaggedData().Store()
+	messageC := te.NewMessageBuilder("C").Parents(hornet.MessageIDs{te.Milestones[2].Milestone().MessageID, te.Milestones[0].Milestone().MessageID}).BuildTaggedData().Store()
+	messageD := te.NewMessageBuilder("D").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageC.StoredMessageID()}).BuildTaggedData().Store()
+	messageE := te.NewMessageBuilder("E").Parents(hornet.MessageIDs{messageB.StoredMessageID(), messageA.StoredMessageID()}).BuildTaggedData().Store()
 
 	// Confirming milestone include all msg up to message E. This should only include A, B and E
 	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageE.StoredMessageID()}, true)
@@ -638,7 +291,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	require.Equal(t, 3+1, confStats.MessagesExcludedWithoutTransactions) // 1 is for the milestone itself
 
 	// Issue another message
-	messageF := te.NewMessageBuilder("F").Parents(hornet.MessageIDs{messageD.StoredMessageID(), messageE.StoredMessageID()}).BuildIndexation().Store()
+	messageF := te.NewMessageBuilder("F").Parents(hornet.MessageIDs{messageD.StoredMessageID(), messageE.StoredMessageID()}).BuildTaggedData().Store()
 
 	// Confirming milestone at message F. This should confirm D, C and F
 	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{messageF.StoredMessageID()}, true)

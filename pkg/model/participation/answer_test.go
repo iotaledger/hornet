@@ -9,7 +9,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 func RandValidAnswer() (*participation.Answer, []byte) {
@@ -55,7 +55,7 @@ func TestAnswer_Deserialize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := &participation.Answer{}
-			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation)
+			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return
@@ -80,14 +80,14 @@ func TestAnswer_Serialize(t *testing.T) {
 		err    error
 	}{
 		{"ok", randAnswer, randAnswerData, nil},
-		{"too long text", longTextAnswer, longTextAnswerData, participation.ErrSerializationStringLengthInvalid},
-		{"too long additional info", longAdditionalInfoAnswer, longAdditionalInfoAnswerData, participation.ErrSerializationStringLengthInvalid},
+		{"too long text", longTextAnswer, longTextAnswerData, serializer.ErrStringTooLong},
+		{"too long additional info", longAdditionalInfoAnswer, longAdditionalInfoAnswerData, serializer.ErrStringTooLong},
 		{"using skipped value", skippedValue, skippedValueData, participation.ErrSerializationReservedValue},
 		{"using invalid value", invalidValue, invalidValueData, participation.ErrSerializationReservedValue},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation)
+			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return

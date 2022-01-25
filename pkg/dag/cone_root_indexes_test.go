@@ -11,7 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -61,7 +61,7 @@ func TestConeRootIndexes(t *testing.T) {
 
 	// Use Null hash and last milestone hash as parents
 	parents := hornet.MessageIDs{latestMilestone.Milestone().MessageID, hornet.NullMessageID()}
-	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildIndexation().Store()
+	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
 
 	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID())
 	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta, cmi)

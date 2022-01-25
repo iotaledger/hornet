@@ -32,7 +32,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/websockethub"
@@ -133,9 +133,9 @@ func configure() {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
 	}
 
-	// check if RestAPIV1 plugin is disabled
-	if Plugin.Node.IsSkipped(restapiv1.Plugin) {
-		Plugin.LogPanic("RestAPIV1 plugin needs to be enabled to use the Dashboard plugin")
+	// check if RestAPIV2 plugin is disabled
+	if Plugin.Node.IsSkipped(restapiv2.Plugin) {
+		Plugin.LogPanic("RestAPIV2 plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	upgrader = &websocket.Upgrader{
@@ -344,11 +344,11 @@ type Cache struct {
 	Size int `json:"size"`
 }
 
-func peerMetrics() []*restapiv1.PeerResponse {
+func peerMetrics() []*restapiv2.PeerResponse {
 	peerInfos := deps.PeeringManager.PeerInfoSnapshots()
-	results := make([]*restapiv1.PeerResponse, len(peerInfos))
+	results := make([]*restapiv2.PeerResponse, len(peerInfos))
 	for i, info := range peerInfos {
-		results[i] = restapiv1.WrapInfoSnapshot(info)
+		results[i] = restapiv2.WrapInfoSnapshot(info)
 	}
 	return results
 }

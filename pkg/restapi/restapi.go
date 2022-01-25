@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,8 +13,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/utxo"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -29,11 +29,23 @@ const (
 	// ParameterAddress is used to identify an address.
 	ParameterAddress = "address"
 
+	// ParameterFoundryID is used to identify a foundry by its ID.
+	ParameterFoundryID = "foundryID"
+
+	// ParameterAliasID is used to identify an alias by its ID.
+	ParameterAliasID = "aliasID"
+
+	// ParameterNFTID is used to identify a nft by its ID.
+	ParameterNFTID = "nftID"
+
 	// ParameterMilestoneIndex is used to identify a milestone.
 	ParameterMilestoneIndex = "milestoneIndex"
 
 	// ParameterPeerID is used to identify a peer.
 	ParameterPeerID = "peerID"
+
+	// QueryParameterOutputType is used to filter for a certain output type.
+	QueryParameterOutputType = "type"
 )
 
 var (
@@ -98,7 +110,7 @@ func ParseTransactionIDParam(c echo.Context) (*iotago.TransactionID, error) {
 	return &transactionID, nil
 }
 
-func ParseOutputIDParam(c echo.Context) (*iotago.UTXOInputID, error) {
+func ParseOutputIDParam(c echo.Context) (*iotago.OutputID, error) {
 	outputIDParam := strings.ToLower(c.Param(ParameterOutputID))
 
 	outputIDBytes, err := hex.DecodeString(outputIDParam)
@@ -106,11 +118,11 @@ func ParseOutputIDParam(c echo.Context) (*iotago.UTXOInputID, error) {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 
-	if len(outputIDBytes) != utxo.OutputIDLength {
+	if len(outputIDBytes) != iotago.OutputIDLength {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 
-	var outputID iotago.UTXOInputID
+	var outputID iotago.OutputID
 	copy(outputID[:], outputIDBytes)
 	return &outputID, nil
 }
@@ -147,6 +159,91 @@ func ParseEd25519AddressParam(c echo.Context) (*iotago.Ed25519Address, error) {
 	return &address, nil
 }
 
+func ParseAliasAddressParam(c echo.Context) (*iotago.AliasAddress, error) {
+	addressParam := strings.ToLower(c.Param(ParameterAddress))
+
+	addressBytes, err := hex.DecodeString(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if len(addressBytes) != (iotago.AliasAddressBytesLength) {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address length: %s", addressParam)
+	}
+
+	var address iotago.AliasAddress
+	copy(address[:], addressBytes)
+	return &address, nil
+}
+
+func ParseNFTAddressParam(c echo.Context) (*iotago.NFTAddress, error) {
+	addressParam := strings.ToLower(c.Param(ParameterAddress))
+
+	addressBytes, err := hex.DecodeString(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if len(addressBytes) != (iotago.NFTAddressBytesLength) {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address length: %s", addressParam)
+	}
+
+	var address iotago.NFTAddress
+	copy(address[:], addressBytes)
+	return &address, nil
+}
+
+func ParseAliasIDParam(c echo.Context) (*iotago.AliasID, error) {
+	aliasIDParam := strings.ToLower(c.Param(ParameterAliasID))
+
+	aliasIDBytes, err := hex.DecodeString(aliasIDParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid alias ID: %s, error: %s", aliasIDParam, err)
+	}
+
+	if len(aliasIDBytes) != iotago.AliasIDLength {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid alias ID: %s, error: %s", aliasIDParam, err)
+	}
+
+	var aliasID iotago.AliasID
+	copy(aliasID[:], aliasIDBytes)
+	return &aliasID, nil
+}
+
+func ParseNFTIDParam(c echo.Context) (*iotago.NFTID, error) {
+	nftIDParam := strings.ToLower(c.Param(ParameterNFTID))
+
+	nftIDBytes, err := hex.DecodeString(nftIDParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid NFT ID: %s, error: %s", nftIDParam, err)
+	}
+
+	if len(nftIDBytes) != iotago.NFTIDLength {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid NFT ID: %s, error: %s", nftIDParam, err)
+	}
+
+	var nftID iotago.NFTID
+	copy(nftID[:], nftIDBytes)
+	return &nftID, nil
+}
+
+func ParseFoundryIDParam(c echo.Context) (*iotago.FoundryID, error) {
+	foundryIDParam := strings.ToLower(c.Param(ParameterFoundryID))
+
+	foundryIDBytes, err := hex.DecodeString(foundryIDParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid foundry ID: %s, error: %s", foundryIDParam, err)
+	}
+
+	if len(foundryIDBytes) != iotago.FoundryIDLength {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid foundry ID: %s, error: %s", foundryIDParam, err)
+	}
+
+	var foundryID iotago.FoundryID
+	copy(foundryID[:], foundryIDBytes)
+	return &foundryID, nil
+}
+
 func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {
 	milestoneIndex := strings.ToLower(c.Param(ParameterMilestoneIndex))
 	if milestoneIndex == "" {
@@ -167,4 +264,56 @@ func ParsePeerIDParam(c echo.Context) (peer.ID, error) {
 		return "", errors.WithMessagef(ErrInvalidParameter, "invalid peerID, error: %s", err)
 	}
 	return peerID, nil
+}
+
+func ParseOutputTypeQueryParam(c echo.Context) (*iotago.OutputType, error) {
+	typeParam := strings.ToLower(c.QueryParam(QueryParameterOutputType))
+	var filteredType *iotago.OutputType
+
+	if len(typeParam) > 0 {
+		outputTypeInt, err := strconv.ParseInt(typeParam, 10, 32)
+		if err != nil {
+			return nil, errors.WithMessagef(ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
+		}
+		outputType := iotago.OutputType(outputTypeInt)
+		switch outputType {
+		case iotago.OutputExtended, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
+		default:
+			return nil, errors.WithMessagef(ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
+		}
+		filteredType = &outputType
+	}
+	return filteredType, nil
+}
+
+func ParseBech32AddressQueryParam(c echo.Context, prefix iotago.NetworkPrefix, paramName string) (iotago.Address, error) {
+	addressParam := strings.ToLower(c.QueryParam(paramName))
+
+	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
+	}
+
+	if hrp != prefix {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", prefix)
+	}
+
+	return bech32Address, nil
+}
+
+func ParseHexQueryParam(c echo.Context, paramName string, maxLen int) ([]byte, error) {
+	param := c.QueryParam(paramName)
+
+	paramBytes, err := hex.DecodeString(param)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid param: %s, error: %s", paramName, err)
+	}
+	if len(paramBytes) > maxLen {
+		return nil, errors.WithMessage(ErrInvalidParameter, fmt.Sprintf("query parameter %s too long, max. %d bytes but is %d", paramName, maxLen, len(paramBytes)))
+	}
+	return paramBytes, nil
+}
+
+func ParseBoolQueryParam(c echo.Context, paramName string) (bool, error) {
+	return strconv.ParseBool(c.QueryParam(paramName))
 }

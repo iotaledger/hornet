@@ -12,8 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // returns a file header consumer, which stores the ledger milestone index up on execution in the database.
@@ -60,17 +59,8 @@ func newSEPsConsumer(dbStorage *storage.Storage, header *ReadFileHeader) SEPCons
 
 // returns an output consumer storing them into the database.
 func newOutputConsumer(utxoManager *utxo.Manager) OutputConsumerFunc {
-	return func(output *Output) error {
-		switch addr := output.Address.(type) {
-		case *iotago.Ed25519Address:
-
-			outputID := iotago.UTXOInputID(output.OutputID)
-			messageID := hornet.MessageIDFromArray(output.MessageID)
-
-			return utxoManager.AddUnspentOutput(utxo.CreateOutput(&outputID, messageID, output.OutputType, addr, output.Amount))
-		default:
-			return iotago.ErrUnknownAddrType
-		}
+	return func(output *utxo.Output) error {
+		return utxoManager.AddUnspentOutput(output)
 	}
 }
 
@@ -80,20 +70,6 @@ func newUnspentTreasuryOutputConsumer(utxoManager *utxo.Manager) UnspentTreasury
 	return utxoManager.StoreUnspentTreasuryOutput
 }
 
-// returns a function which calls the corresponding address type callback function with
-// the origin argument and type casted address.
-func callbackPerAddress(
-	edAddrF func(interface{}, *iotago.Ed25519Address) error) func(interface{}, serializer.Serializable) error {
-	return func(obj interface{}, addr serializer.Serializable) error {
-		switch a := addr.(type) {
-		case *iotago.Ed25519Address:
-			return edAddrF(obj, a)
-		default:
-			return iotago.ErrUnknownAddrType
-		}
-	}
-}
-
 // creates a milestone diff consumer storing them into the database.
 // if the ledger index within the database equals the produced milestone diff's index,
 // then its changes are roll-backed, otherwise, if the index is higher than the ledger index,
@@ -101,39 +77,7 @@ func callbackPerAddress(
 // the caller needs to make sure to set the ledger index accordingly beforehand.
 func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 	return func(msDiff *MilestoneDiff) error {
-		var newOutputs []*utxo.Output
-		var newSpents []*utxo.Spent
-
-		createdOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
-			output := obj.(*Output)
-			outputID := iotago.UTXOInputID(output.OutputID)
-			messageID := hornet.MessageIDFromArray(output.MessageID)
-			newOutputs = append(newOutputs, utxo.CreateOutput(&outputID, messageID, output.OutputType, addr, output.Amount))
-			return nil
-		})
-
-		for _, output := range msDiff.Created {
-			if err := createdOutputAggr(output, output.Address); err != nil {
-				return err
-			}
-		}
-
 		msIndex := milestone.Index(msDiff.Milestone.Index)
-		spentOutputAggr := callbackPerAddress(func(obj interface{}, addr *iotago.Ed25519Address) error {
-
-			spent := obj.(*Spent)
-			outputID := iotago.UTXOInputID(spent.OutputID)
-			messageID := hornet.MessageIDFromArray(spent.MessageID)
-			newSpents = append(newSpents, utxo.NewSpent(utxo.CreateOutput(&outputID, messageID, spent.OutputType, addr, spent.Amount), &spent.TargetTransactionID, msIndex))
-			return nil
-		})
-
-		for _, spent := range msDiff.Consumed {
-			if err := spentOutputAggr(spent, spent.Address); err != nil {
-				return err
-			}
-		}
-
 		ledgerIndex, err := utxoManager.ReadLedgerIndex()
 		if err != nil {
 			return err
@@ -154,9 +98,9 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 
 		switch {
 		case ledgerIndex == msIndex:
-			return utxoManager.RollbackConfirmation(msIndex, newOutputs, newSpents, treasuryMut, rt)
+			return utxoManager.RollbackConfirmation(msIndex, msDiff.Created, msDiff.Consumed, treasuryMut, rt)
 		case ledgerIndex+1 == msIndex:
-			return utxoManager.ApplyConfirmation(msIndex, newOutputs, newSpents, treasuryMut, rt)
+			return utxoManager.ApplyConfirmation(msIndex, msDiff.Created, msDiff.Consumed, treasuryMut, rt)
 		default:
 			return ErrWrongMilestoneDiffIndex
 		}
@@ -169,6 +113,7 @@ func loadSnapshotFileToStorage(
 	dbStorage *storage.Storage,
 	snapshotType Type,
 	filePath string,
+	deSeriParas *iotago.DeSerializationParameters,
 	networkID ...uint64) (header *ReadFileHeader, err error) {
 
 	dbStorage.WriteLockSolidEntryPoints()
@@ -199,7 +144,7 @@ func loadSnapshotFileToStorage(
 	}
 	msDiffConsumer := newMsDiffConsumer(dbStorage.UTXOManager())
 
-	if err = StreamSnapshotDataFrom(lsFile, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
+	if err = StreamSnapshotDataFrom(lsFile, deSeriParas, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
 		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
 
@@ -225,7 +170,7 @@ func loadSnapshotFileToStorage(
 }
 
 // LoadSnapshotFilesToStorage loads the snapshot files from the given file paths into the storage.
-func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, fullPath string, deltaPath ...string) (*ReadFileHeader, *ReadFileHeader, error) {
+func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, deSeriParas *iotago.DeSerializationParameters, fullPath string, deltaPath ...string) (*ReadFileHeader, *ReadFileHeader, error) {
 
 	if len(deltaPath) > 0 && deltaPath[0] != "" {
 
@@ -247,13 +192,13 @@ func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage,
 	}
 
 	var fullSnapshotHeader, deltaSnapshotHeader *ReadFileHeader
-	fullSnapshotHeader, err := loadSnapshotFileToStorage(ctx, dbStorage, Full, fullPath)
+	fullSnapshotHeader, err := loadSnapshotFileToStorage(ctx, dbStorage, Full, fullPath, deSeriParas)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if len(deltaPath) > 0 && deltaPath[0] != "" {
-		deltaSnapshotHeader, err = loadSnapshotFileToStorage(ctx, dbStorage, Delta, deltaPath[0])
+		deltaSnapshotHeader, err = loadSnapshotFileToStorage(ctx, dbStorage, Delta, deltaPath[0], deSeriParas)
 		if err != nil {
 			return nil, nil, err
 		}

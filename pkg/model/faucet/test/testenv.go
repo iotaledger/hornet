@@ -12,6 +12,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
+	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -23,15 +24,15 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/pow"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/pow"
 )
 
 const (
-	faucetMaxOutputCount    = iotago.MaxOutputsCount
-	faucetIndexationMessage = "FAUCET"
-	faucetPowWorkerCount    = 0
-	faucetBatchTimeout      = 2 * time.Second
+	faucetMaxOutputCount = iotago.MaxOutputsCount
+	faucetTagMessage     = "FAUCET"
+	faucetPowWorkerCount = 0
+	faucetBatchTimeout   = 2 * time.Second
 )
 
 var (
@@ -48,6 +49,7 @@ var (
 type FaucetTestEnv struct {
 	t       *testing.T
 	TestEnv *testsuite.TestEnvironment
+	Indexer *indexer.Indexer
 
 	GenesisWallet *utils.HDWallet
 	FaucetWallet  *utils.HDWallet
@@ -239,13 +241,27 @@ func NewFaucetTestEnv(t *testing.T,
 		return nil
 	}
 
+	indexer, err := indexer.NewIndexer(te.TempDir)
+	require.NoError(t, err)
+
+	indexerImport := indexer.ImportTransaction()
+	te.UTXOManager().ForEachUnspentOutput(func(output *utxo.Output) bool {
+		require.NoError(t, indexerImport.AddOutput(output))
+		return true
+	})
+	ledgerIndex, err := te.UTXOManager().ReadLedgerIndex()
+	require.NoError(t, err)
+	require.NoError(t, indexerImport.Finalize(ledgerIndex))
+
 	f := faucet.New(
 		defaultDaemon,
 		te.Storage(),
 		te.SyncManager(),
 		te.NetworkID(),
+		testsuite.DeSerializationParameters,
 		int(te.BelowMaxDepth()),
 		te.UTXOManager(),
+		indexer,
 		faucetWallet.Address(),
 		faucetWallet.AddressSigner(),
 		tipselFunc,
@@ -256,7 +272,7 @@ func NewFaucetTestEnv(t *testing.T,
 		faucet.WithSmallAmount(faucetSmallAmount),
 		faucet.WithMaxAddressBalance(faucetMaxAddressBalance),
 		faucet.WithMaxOutputCount(faucetMaxOutputCount),
-		faucet.WithIndexationMessage(faucetIndexationMessage),
+		faucet.WithTagMessage(faucetTagMessage),
 		faucet.WithBatchTimeout(faucetBatchTimeout),
 		faucet.WithPowWorkerCount(faucetPowWorkerCount),
 	)
@@ -283,11 +299,15 @@ func NewFaucetTestEnv(t *testing.T,
 			require.NoError(t, f.ApplyConfirmation(confirmation))
 		},
 		nil,
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+			require.NoError(t, indexer.UpdatedLedger(index, newOutputs, newSpents))
+		},
 	)
 
 	return &FaucetTestEnv{
 		t:               t,
 		TestEnv:         te,
+		Indexer:         indexer,
 		GenesisWallet:   genesisWallet,
 		FaucetWallet:    faucetWallet,
 		Wallet1:         seed1Wallet,
@@ -306,6 +326,7 @@ func (env *FaucetTestEnv) Cleanup() {
 	if env.faucetCtxCancel != nil {
 		env.faucetCtxCancel()
 	}
+	require.NoError(env.t, env.Indexer.CloseDatabase())
 	env.TestEnv.CleanupTestEnvironment(true)
 }
 
@@ -404,14 +425,11 @@ func (env *FaucetTestEnv) IssueMilestone(onTips ...hornet.MessageID) (*whiteflag
 func (env *FaucetTestEnv) AssertFaucetBalance(expected uint64) {
 	faucetInfo, err := env.Faucet.Info()
 	require.NoError(env.t, err)
-	require.Equal(env.t, expected, faucetInfo.Balance)
+	require.Exactly(env.t, expected, faucetInfo.Balance)
 }
 
 func (env *FaucetTestEnv) AssertAddressUTXOCount(address iotago.Address, expected int) {
-	utxoCount := 0
-	env.TestEnv.UTXOManager().ForEachUnspentOutput(func(output *utxo.Output) bool {
-		utxoCount++
-		return true
-	}, utxo.FilterAddress(address))
-	require.Equal(env.t, utxoCount, expected)
+	result := env.Indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(address), indexer.ExtendedOutputRequiresDustReturn(false))
+	require.NoError(env.t, result.Error)
+	require.Equal(env.t, expected, len(result.OutputIDs))
 }

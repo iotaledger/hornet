@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
-
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 const (
@@ -18,76 +16,67 @@ var (
 	participationsArrayRules = &serializer.ArrayRules{
 		Min:            ParticipationsMinParticipationCount,
 		Max:            ParticipationsMaxParticipationCount,
-		ValidationMode: serializer.ArrayValidationModeNone,
+		ValidationMode: serializer.ArrayValidationModeNoDuplicates,
+		UniquenessSliceFunc: func(next []byte) []byte {
+			return next[:EventIDLength] // Verify that the EventIDs are unique
+		},
+		Guards: serializer.SerializableGuard{
+			ReadGuard: func(ty uint32) (serializer.Serializable, error) {
+				return &Participation{}, nil
+			},
+			WriteGuard: func(seri serializer.Serializable) error {
+				switch seri.(type) {
+				case *Participation:
+					return nil
+				default:
+					return ErrSerializationUnknownType
+				}
+			},
+		},
 	}
-
-	ErrMultipleEventParticipation = errors.New("multiple participations for the same event")
 )
 
-// Participations holds the participation for multiple events.
-type Participations struct {
-	// Participations holds the participation for multiple events.
-	Participations serializer.Serializables
+type Participations []*Participation
+
+func (s Participations) ToSerializables() serializer.Serializables {
+	seris := make(serializer.Serializables, len(s))
+	for i, x := range s {
+		seris[i] = x
+	}
+	return seris
 }
 
-func (p *Participations) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (s *Participations) FromSerializables(seris serializer.Serializables) {
+	*s = make(Participations, len(seris))
+	for i, seri := range seris {
+		(*s)[i] = seri.(*Participation)
+	}
+}
+
+// ParticipationPayload holds the participation for multiple events
+type ParticipationPayload struct {
+	// Participations holds the participation for multiple events.
+	Participations Participations
+}
+
+func (p *ParticipationPayload) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
 	return serializer.NewDeserializer(data).
-		ReadSliceOfObjects(func(seri serializer.Serializables) { p.Participations = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
-			// there is no real selector, so we always return a fresh Participation
-			return &Participation{}, nil
-		}, participationsArrayRules, func(err error) error {
+		ReadSliceOfObjects(&p.Participations, deSeriMode, deSeriCtx, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, participationsArrayRules, func(err error) error {
 			return fmt.Errorf("unable to deserialize participations: %w", err)
-		}).
-		AbortIf(func(err error) error {
-			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-				seenEvents := make(map[EventID]struct{})
-				for _, s := range p.Participations {
-					switch participation := s.(type) {
-					case *Participation:
-						if _, found := seenEvents[participation.EventID]; found {
-							return ErrMultipleEventParticipation
-						}
-						seenEvents[participation.EventID] = struct{}{}
-					default:
-						return errors.New("invalid participation type")
-					}
-				}
-			}
-			return nil
 		}).
 		Done()
 }
 
-func (p *Participations) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (p *ParticipationPayload) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
-		AbortIf(func(err error) error {
-			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-				if err := participationsArrayRules.CheckBounds(uint(len(p.Participations))); err != nil {
-					return fmt.Errorf("unable to serialize participations: %w", err)
-				}
-				seenEvents := make(map[EventID]struct{})
-				for _, s := range p.Participations {
-					switch participation := s.(type) {
-					case *Participation:
-						if _, found := seenEvents[participation.EventID]; found {
-							return ErrMultipleEventParticipation
-						}
-						seenEvents[participation.EventID] = struct{}{}
-					default:
-						return errors.New("invalid participation type")
-					}
-				}
-			}
-			return nil
-		}).
-		WriteSliceOfObjects(p.Participations, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
+		WriteSliceOfObjects(&p.Participations, deSeriMode, deSeriCtx, serializer.SeriLengthPrefixTypeAsByte, participationsArrayRules, func(err error) error {
 			return fmt.Errorf("unable to serialize participations: %w", err)
 		}).
 		Serialize()
 }
 
-func (p *Participations) MarshalJSON() ([]byte, error) {
-	j := &jsonParticipations{}
+func (p *ParticipationPayload) MarshalJSON() ([]byte, error) {
+	j := &jsonParticipationPayload{}
 
 	j.Participations = make([]*json.RawMessage, len(p.Participations))
 	for i, participation := range p.Participations {
@@ -102,8 +91,8 @@ func (p *Participations) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j)
 }
 
-func (p *Participations) UnmarshalJSON(bytes []byte) error {
-	j := &jsonParticipations{}
+func (p *ParticipationPayload) UnmarshalJSON(bytes []byte) error {
+	j := &jsonParticipationPayload{}
 	if err := json.Unmarshal(bytes, j); err != nil {
 		return err
 	}
@@ -111,20 +100,20 @@ func (p *Participations) UnmarshalJSON(bytes []byte) error {
 	if err != nil {
 		return err
 	}
-	*p = *seri.(*Participations)
+	*p = *seri.(*ParticipationPayload)
 	return nil
 }
 
-// jsonParticipations defines the JSON representation of Participations.
-type jsonParticipations struct {
+// jsonParticipationPayload defines the JSON representation of ParticipationPayload.
+type jsonParticipationPayload struct {
 	// Participations holds the participation for multiple events.
 	Participations []*json.RawMessage `json:"participations"`
 }
 
-func (j *jsonParticipations) ToSerializable() (serializer.Serializable, error) {
-	payload := &Participations{}
+func (j *jsonParticipationPayload) ToSerializable() (serializer.Serializable, error) {
+	payload := &ParticipationPayload{}
 
-	participations := make(serializer.Serializables, len(j.Participations))
+	participations := make(Participations, len(j.Participations))
 	for i, ele := range j.Participations {
 		participation := &Participation{}
 

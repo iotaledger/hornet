@@ -12,9 +12,9 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/iota.go/encoding/t5b1"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -155,8 +155,7 @@ func (rs *ReceiptService) validateNonFinalReceipt(r *iotago.Receipt, wfEntries [
 // adds the entries within the receipt to the given map by their tail tx hash.
 // it returns an error in case an entry for a given tail tx already exists.
 func addReceiptEntriesToMap(r *iotago.Receipt, m map[string]*iotago.MigratedFundsEntry) error {
-	for _, seri := range r.Funds {
-		migFundEntry := seri.(*iotago.MigratedFundsEntry)
+	for _, migFundEntry := range r.Funds {
 		k := string(migFundEntry.TailTransactionHash[:])
 		if _, has := m[k]; has {
 			return fmt.Errorf("multiple receipts contain the same tail tx hash: %d/final(%v)", r.MigratedAt, r.Final)
@@ -229,12 +228,12 @@ func compareAgainstEntries(entries map[string]*iotago.MigratedFundsEntry, target
 		return fmt.Errorf("%w: target entry %s not in entries set", ErrInvalidReceiptServiceState, trytes)
 	}
 
-	entryBytes, err := entry.Serialize(serializer.DeSeriModePerformValidation)
+	entryBytes, err := entry.Serialize(serializer.DeSeriModePerformValidation, nil)
 	if err != nil {
 		return fmt.Errorf("unable to deserialize entry: %w", err)
 	}
 
-	targetEntryBytes, err := targetEntry.Serialize(serializer.DeSeriModePerformValidation)
+	targetEntryBytes, err := targetEntry.Serialize(serializer.DeSeriModePerformValidation, nil)
 	if err != nil {
 		return fmt.Errorf("unable to deserialize target entry: %w", err)
 	}

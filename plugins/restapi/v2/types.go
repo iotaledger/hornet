@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import (
 	"encoding/json"
@@ -39,6 +39,8 @@ type infoResponse struct {
 	PruningIndex milestone.Index `json:"pruningIndex"`
 	// The features this node exposes.
 	Features []string `json:"features"`
+	// The plugins this node exposes.
+	Plugins []string `json:"plugins"`
 }
 
 // tipsResponse defines the response of a GET tips REST API call.
@@ -92,18 +94,6 @@ type childrenResponse struct {
 	Children []string `json:"childrenMessageIds"`
 }
 
-// messageIDsByIndexResponse defines the response of a GET messages REST API call.
-type messageIDsByIndexResponse struct {
-	// The index of the messages.
-	Index string `json:"index"`
-	// The maximum count of results that are returned by the node.
-	MaxResults uint32 `json:"maxResults"`
-	// The actual count of results that are returned.
-	Count uint32 `json:"count"`
-	// The hex encoded message IDs of the found messages with this index.
-	MessageIDs []string `json:"messageIds"`
-}
-
 // milestoneResponse defines the response of a GET milestones REST API call.
 type milestoneResponse struct {
 	// The index of the milestone.
@@ -134,6 +124,16 @@ type OutputResponse struct {
 	OutputIndex uint16 `json:"outputIndex"`
 	// Whether this output is spent.
 	Spent bool `json:"isSpent"`
+	// The milestone index at which this output was spent.
+	MilestoneIndexSpent milestone.Index `json:"milestoneIndexSpent,omitempty"`
+	// The milestone timestamp this output was spent.
+	MilestoneTimestampSpent uint32 `json:"milestoneTimestampSpent,omitempty"`
+	// The transaction this output was spent with.
+	TransactionIDSpent string `json:"transactionIdSpent,omitempty"`
+	// The milestone index at which this output was booked into the ledger.
+	MilestoneIndexBooked milestone.Index `json:"milestoneIndexBooked"`
+	// The milestone timestamp this output was booked in the ledger.
+	MilestoneTimestampBooked uint32 `json:"milestoneTimestampBooked"`
 	// The ledger index at which this output was available at.
 	LedgerIndex milestone.Index `json:"ledgerIndex"`
 	// The output in its serialized form.
@@ -151,22 +151,6 @@ type addressBalanceResponse struct {
 	// Indicates if dust is allowed on this address.
 	DustAllowed bool `json:"dustAllowed"`
 	// The ledger index at which this balance was queried at.
-	LedgerIndex milestone.Index `json:"ledgerIndex"`
-}
-
-// addressOutputsResponse defines the response of a GET outputs by address REST API call.
-type addressOutputsResponse struct {
-	// The type of the address (0=Ed25519).
-	AddressType byte `json:"addressType"`
-	// The hex encoded address.
-	Address string `json:"address"`
-	// The maximum count of results that are returned by the node.
-	MaxResults uint32 `json:"maxResults"`
-	// The actual count of results that are returned.
-	Count uint32 `json:"count"`
-	// The output IDs (transaction hash + output index) of the outputs on this address.
-	OutputIDs []string `json:"outputIds"`
-	// The ledger index at which these outputs where available at.
 	LedgerIndex milestone.Index `json:"ledgerIndex"`
 }
 

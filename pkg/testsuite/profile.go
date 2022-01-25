@@ -21,15 +21,6 @@ var TestProfileCaches = &profile.Caches{
 			MaxConsumerHoldTime:   "100s",
 		},
 	},
-	Indexations: &profile.CacheOpts{
-		CacheTime:                  "200ms",
-		ReleaseExecutorWorkerCount: 10,
-		LeakDetectionOptions: &profile.LeakDetectionOpts{
-			Enabled:               false,
-			MaxConsumersPerObject: 20,
-			MaxConsumerHoldTime:   "100s",
-		},
-	},
 	Milestones: &profile.CacheOpts{
 		CacheTime:                  "2.5s",
 		ReleaseExecutorWorkerCount: 10,

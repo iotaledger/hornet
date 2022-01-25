@@ -10,9 +10,9 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/pow"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/pow"
 )
 
 const (
@@ -64,7 +64,7 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 	}
 
 	getPoWData := func(msg *iotago.Message) (powData []byte, err error) {
-		msgData, err := msg.Serialize(serializer.DeSeriModeNoValidation)
+		msgData, err := msg.Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
 			return nil, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
 		}

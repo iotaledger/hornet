@@ -24,7 +24,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 
 	// import implementation
 	_ "golang.org/x/crypto/blake2b"
@@ -84,6 +84,8 @@ type Coordinator struct {
 	syncManager *syncmanager.SyncManager
 	// id of the network the coordinator is running in.
 	networkID uint64
+	// Deserialization parameters including byte costs
+	deSeriParas *iotago.DeSerializationParameters
 	// used to get receipts for the WOTS migration.
 	migratorService *migrator.MigratorService
 	// used to get the treasury output.
@@ -200,13 +202,13 @@ func WithPoWWorkerCount(powWorkerCount int) Option {
 
 // WithQuorum defines a quorum, which is used to check the correct ledger state of the coordinator.
 // If no quorumGroups are given, the quorum is disabled.
-func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfig, timeout time.Duration) Option {
+func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfig, deSeriParas *iotago.DeSerializationParameters, timeout time.Duration) Option {
 	return func(opts *Options) {
 		if !quorumEnabled {
 			opts.quorum = nil
 			return
 		}
-		opts.quorum = newQuorum(quorumGroups, timeout)
+		opts.quorum = newQuorum(quorumGroups, deSeriParas, timeout)
 	}
 }
 
@@ -218,6 +220,7 @@ func New(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	networkID uint64,
+	deSeriParas *iotago.DeSerializationParameters,
 	signerProvider MilestoneSignerProvider,
 	migratorService *migrator.MigratorService,
 	utxoManager *utxo.Manager,
@@ -233,6 +236,7 @@ func New(
 		storage:          dbStorage,
 		syncManager:      syncManager,
 		networkID:        networkID,
+		deSeriParas:      deSeriParas,
 		signerProvider:   signerProvider,
 		migratorService:  migratorService,
 		utxoManager:      utxoManager,
@@ -339,10 +343,14 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 	parents = parents.RemoveDupsAndSortByLexicalOrder()
 
+	// We have to set a timestamp for when we run the white-flag mutations due to the semantic validation.
+	// This should be exactly the same one used when issuing the milestone later on.
+	newMilestoneTimestamp := time.Now()
+
 	// compute merkle tree root
-	// we pass a background context here to not cancel the whiteflag computation!
+	// we pass a background context here to not cancel the white-flag computation!
 	// otherwise the coordinator could panic at shutdown.
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage, newMilestoneIndex, metadataMemcache, messagesMemcache, parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage, newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), metadataMemcache, messagesMemcache, parents)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}
@@ -390,7 +398,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		}
 	}
 
-	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, parents, receipt, mutations.MerkleTreeHash)
+	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents, receipt, mutations.MerkleTreeHash)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
 	}
@@ -410,7 +418,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 	coo.state.LatestMilestoneMessageID = latestMilestoneMessageID
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
-	coo.state.LatestMilestoneTime = time.Now()
+	coo.state.LatestMilestoneTime = newMilestoneTimestamp
 
 	if err := utils.WriteJSONToFile(coo.opts.stateFilePath, coo.state, 0660); err != nil {
 		return common.CriticalError(fmt.Errorf("failed to update coordinator state file: %w", err))

@@ -1,11 +1,10 @@
 package utils
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 
 	"github.com/pkg/errors"
-
-	"github.com/iotaledger/iota.go/v2/ed25519"
 )
 
 var (

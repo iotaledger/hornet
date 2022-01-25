@@ -12,7 +12,7 @@ go run ../main.go -c config_private_tangle.json \
 --dashboard.bindAddress="localhost:8081" \
 --db.path="privatedb" \
 --node.disablePlugins="Autopeering" \
---node.enablePlugins="Spammer,Coordinator,MQTT,Debug,Prometheus,Faucet" \
+--node.enablePlugins="Spammer,Coordinator,MQTT,Debug,Prometheus,Faucet,Indexer" \
 --snapshots.fullPath="snapshots/private_tangle1/full_snapshot.bin" \
 --snapshots.deltaPath="snapshots/private_tangle1/delta_snapshot.bin" \
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15600" \

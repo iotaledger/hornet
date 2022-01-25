@@ -9,8 +9,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -42,7 +42,7 @@ func (pm *ParticipationManager) loadEvents() (map[EventID]*Event, error) {
 		copy(eventID[:], key[1:]) // Skip the prefix
 
 		event := &Event{}
-		_, innerErr = event.Deserialize(value, serializer.DeSeriModeNoValidation)
+		_, innerErr = event.Deserialize(value, serializer.DeSeriModeNoValidation, nil)
 		if innerErr != nil {
 			return false
 		}
@@ -62,7 +62,7 @@ func (pm *ParticipationManager) loadEvents() (map[EventID]*Event, error) {
 
 func (pm *ParticipationManager) storeEvent(event *Event) (EventID, error) {
 
-	eventBytes, err := event.Serialize(serializer.DeSeriModePerformValidation)
+	eventBytes, err := event.Serialize(serializer.DeSeriModePerformValidation, nil)
 	if err != nil {
 		return NullEventID, err
 	}
@@ -112,7 +112,7 @@ func (pm *ParticipationManager) MessageForEventAndMessageID(eventID EventID, mes
 		return nil, err
 	}
 
-	return storage.MessageFromBytes(value, serializer.DeSeriModeNoValidation)
+	return storage.MessageFromBytes(value, serializer.DeSeriModeNoValidation, pm.deSeriParas)
 }
 
 // Outputs
@@ -124,7 +124,7 @@ func participationKeyForEventOutputsPrefix(eventID EventID) []byte {
 	return m.Bytes()
 }
 
-func participationKeyForEventAndOutputID(eventID EventID, outputID *iotago.UTXOInputID) []byte {
+func participationKeyForEventAndOutputID(eventID EventID, outputID *iotago.OutputID) []byte {
 	m := marshalutil.New(67)
 	m.WriteBytes(participationKeyForEventOutputsPrefix(eventID)) // 32 bytes
 	m.WriteBytes(outputID[:])                                    // 34 bytes
@@ -138,14 +138,14 @@ func participationKeyForEventSpentOutputsPrefix(eventID EventID) []byte {
 	return m.Bytes()
 }
 
-func participationKeyForEventAndSpentOutputID(eventID EventID, outputID *iotago.UTXOInputID) []byte {
+func participationKeyForEventAndSpentOutputID(eventID EventID, outputID *iotago.OutputID) []byte {
 	m := marshalutil.New(67)
 	m.WriteBytes(participationKeyForEventSpentOutputsPrefix(eventID)) // 33 bytes
 	m.WriteBytes(outputID[:])                                         // 34 bytes
 	return m.Bytes()
 }
 
-func (pm *ParticipationManager) ParticipationsForOutputID(outputID *iotago.UTXOInputID) ([]*TrackedParticipation, error) {
+func (pm *ParticipationManager) ParticipationsForOutputID(outputID *iotago.OutputID) ([]*TrackedParticipation, error) {
 	eventIDs := pm.EventIDs()
 	trackedParticipations := []*TrackedParticipation{}
 	for _, eventID := range eventIDs {
@@ -161,8 +161,8 @@ func (pm *ParticipationManager) ParticipationsForOutputID(outputID *iotago.UTXOI
 	return trackedParticipations, nil
 }
 
-func (pm *ParticipationManager) ParticipationForOutputID(eventID EventID, outputID *iotago.UTXOInputID) (*TrackedParticipation, error) {
-	readOutput := func(eventID EventID, outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
+func (pm *ParticipationManager) ParticipationForOutputID(eventID EventID, outputID *iotago.OutputID) (*TrackedParticipation, error) {
+	readOutput := func(eventID EventID, outputID *iotago.OutputID) (kvstore.Key, kvstore.Value, error) {
 		key := participationKeyForEventAndOutputID(eventID, outputID)
 		value, err := pm.participationStore.Get(key)
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -174,7 +174,7 @@ func (pm *ParticipationManager) ParticipationForOutputID(eventID EventID, output
 		return key, value, nil
 	}
 
-	readSpent := func(eventID EventID, outputID *iotago.UTXOInputID) (kvstore.Key, kvstore.Value, error) {
+	readSpent := func(eventID EventID, outputID *iotago.OutputID) (kvstore.Key, kvstore.Value, error) {
 		key := participationKeyForEventAndSpentOutputID(eventID, outputID)
 		value, err := pm.participationStore.Get(key)
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -330,7 +330,7 @@ func (pm *ParticipationManager) startParticipationAtMilestone(eventID EventID, o
 		EventID:    eventID,
 		OutputID:   output.OutputID(),
 		MessageID:  output.MessageID(),
-		Amount:     output.Amount(),
+		Amount:     output.Deposit(),
 		StartIndex: startIndex,
 		EndIndex:   0,
 	}
@@ -507,7 +507,7 @@ func stakingKeyForEventAndAddress(eventID EventID, addressBytes []byte) []byte {
 
 func (pm *ParticipationManager) StakingRewardForAddress(eventID EventID, address iotago.Address) (uint64, error) {
 
-	addressBytes, err := address.Serialize(serializer.DeSeriModeNoValidation)
+	addressBytes, err := address.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -657,7 +657,7 @@ func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, consumer 
 			innerErr = err
 			return false
 		}
-		_, err = addr.Deserialize(addressBytes, serializer.DeSeriModeNoValidation)
+		_, err = addr.Deserialize(addressBytes, serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
 			innerErr = err
 			return false

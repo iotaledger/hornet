@@ -117,33 +117,33 @@ func apiMiddleware() echo.MiddlewareFunc {
 
 var dashboardAllowedRoutes = map[string][]string{
 	http.MethodGet: {
-		"/api/v1/addresses",
-		"/api/v1/info",
-		"/api/v1/messages",
-		"/api/v1/milestones",
-		"/api/v1/outputs",
-		"/api/v1/peers",
-		"/api/v1/transactions",
-		"/api/plugins/spammer",
-		"/api/plugins/participation/events",
+		"/api/v2/addresses",
+		"/api/v2/info",
+		"/api/v2/messages",
+		"/api/v2/milestones",
+		"/api/v2/outputs",
+		"/api/v2/peers",
+		"/api/v2/transactions",
+		"/api/plugins/spammer/v1",
+		"/api/plugins/participation/v1/events",
 	},
 	http.MethodPost: {
-		"/api/v1/peers",
-		"/api/plugins/spammer",
-		"/api/plugins/participation/admin/events",
+		"/api/v2/peers",
+		"/api/plugins/spammer/v1",
+		"/api/plugins/participation/v1/admin/events",
 	},
 	http.MethodDelete: {
-		"/api/v1/peers",
-		"/api/plugins/participation/admin/events",
+		"/api/v2/peers",
+		"/api/plugins/participation/v1/admin/events",
 	},
 }
 
 var faucetAllowedRoutes = map[string][]string{
 	http.MethodGet: {
-		"/api/plugins/faucet/info",
+		"/api/plugins/faucet/v1/info",
 	},
 	http.MethodPost: {
-		"/api/plugins/faucet/enqueue",
+		"/api/plugins/faucet/v1/enqueue",
 	},
 }
 

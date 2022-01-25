@@ -11,9 +11,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/kvstore"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -35,6 +35,9 @@ type ParticipationManager struct {
 	// used to sync with the nodes status.
 	syncManager *syncmanager.SyncManager
 
+	// Deserialization parameters including byte costs
+	deSeriParas *iotago.DeSerializationParameters
+
 	// holds the ParticipationManager options.
 	opts *Options
 
@@ -46,13 +49,13 @@ type ParticipationManager struct {
 
 // the default options applied to the ParticipationManager.
 var defaultOptions = []Option{
-	WithIndexationMessage("PARTICIPATE"),
+	WithTagMessage("PARTICIPATE"),
 }
 
 // Options define options for the ParticipationManager.
 type Options struct {
-	// defines the indexation payload to track
-	indexationMessage []byte
+	// defines the tag payload to track
+	tagMessage []byte
 }
 
 // applies the given Option.
@@ -62,10 +65,10 @@ func (so *Options) apply(opts ...Option) {
 	}
 }
 
-// WithIndexationMessage defines the ParticipationManager indexation payload to track.
-func WithIndexationMessage(indexationMessage string) Option {
+// WithTagMessage defines the ParticipationManager tag payload to track.
+func WithTagMessage(tagMessage string) Option {
 	return func(opts *Options) {
-		opts.indexationMessage = []byte(indexationMessage)
+		opts.tagMessage = []byte(tagMessage)
 	}
 }
 
@@ -77,6 +80,7 @@ func NewManager(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	participationStore kvstore.KVStore,
+	deSeriParas *iotago.DeSerializationParameters,
 	opts ...Option) (*ParticipationManager, error) {
 
 	options := &Options{}
@@ -88,6 +92,7 @@ func NewManager(
 		syncManager:              syncManager,
 		participationStore:       participationStore,
 		participationStoreHealth: storage.NewStoreHealthTracker(participationStore),
+		deSeriParas:              deSeriParas,
 		opts:                     options,
 	}
 
@@ -340,7 +345,7 @@ func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event)
 // 	- Inputs must all come from the same address. Multiple inputs are allowed.
 // 	- Has a singular output going to the same address as all input addresses.
 // 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
-// 	- The Indexation must match the configured Indexation.
+// 	- The TaggedData must match the configured TaggedData.
 //  - The participation data must be parseable.
 func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
 
@@ -368,7 +373,7 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 
 	msg := cachedMsg.Message()
 
-	depositOutput, participations, err := pm.ParticipationsFromMessage(msg)
+	depositOutput, participations, err := pm.ParticipationsFromMessage(msg, index)
 	if err != nil {
 		return err
 	}
@@ -409,13 +414,13 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 		switch event.payloadType() {
 		case BallotPayloadTypeID:
 			// Count the new ballot votes by increasing the current vote balance
-			if err := pm.startCountingBallotAnswers(event, participation, index, depositOutput.Amount(), mutations); err != nil {
+			if err := pm.startCountingBallotAnswers(event, participation, index, depositOutput.Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
 		case StakingPayloadTypeID:
 			// Increase the staked amount
-			if err := pm.increaseStakedAmountForStakingEvent(participation.EventID, index, depositOutput.Amount(), mutations); err != nil {
+			if err := pm.increaseStakedAmountForStakingEvent(participation.EventID, index, depositOutput.Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
@@ -461,13 +466,13 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 		return nil
 	}
 
-	txEssenceIndexation := msg.TransactionEssenceIndexation()
-	if txEssenceIndexation == nil {
-		// We tracked this participation before, and now we don't have its indexation, so something happened
+	txEssenceTaggedData := msg.TransactionEssenceTaggedData()
+	if txEssenceTaggedData == nil {
+		// We tracked this participation before, and now we don't have its taggedData, so something happened
 		return ErrInvalidPreviouslyTrackedParticipation
 	}
 
-	participations, err := participationFromIndexation(txEssenceIndexation)
+	participations, err := participationFromTaggedData(txEssenceTaggedData)
 	if err != nil {
 		return err
 	}
@@ -501,13 +506,13 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 		switch event.payloadType() {
 		case BallotPayloadTypeID:
 			// Count the spent votes by decreasing the current vote balance
-			if err := pm.stopCountingBallotAnswers(event, participation, index, spent.Output().Amount(), mutations); err != nil {
+			if err := pm.stopCountingBallotAnswers(event, participation, index, spent.Output().Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
 		case StakingPayloadTypeID:
 			// Decrease the staked amount
-			if err := pm.decreaseStakedAmountForStakingEvent(participation.EventID, index, spent.Output().Amount(), mutations); err != nil {
+			if err := pm.decreaseStakedAmountForStakingEvent(participation.EventID, index, spent.Output().Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
@@ -616,10 +621,23 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 						return false
 					}
 
+					var addressBytes []byte
+					switch iotagoOutput := output.Output().(type) {
+					case *iotago.ExtendedOutput:
+						addressBytes, err = serializedAddressFromOutput(iotagoOutput)
+						if err != nil {
+							innerErr = err
+							return false
+						}
+					default:
+						innerErr = fmt.Errorf("invalid output type: %s", iotago.OutputTypeToString(output.OutputType()))
+						return false
+					}
+
 					// This should not overflow, since we did worst-case overflow checks before adding the event
 					increaseAmount := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
 
-					addr := string(output.AddressBytes())
+					addr := string(addressBytes)
 					balance, found := addressRewardsIncreases[addr]
 					if !found {
 						addressRewardsIncreases[addr] = increaseAmount
@@ -695,24 +713,37 @@ func filterValidParticipationsForEvents(index milestone.Index, votes []*Particip
 	return validParticipations
 }
 
-func participationFromIndexation(indexation *iotago.Indexation) ([]*Participation, error) {
+func participationFromTaggedData(taggedData *iotago.TaggedData) ([]*Participation, error) {
 
 	// try to parse the votes payload
-	parsedVotes := &Participations{}
-	if _, err := parsedVotes.Deserialize(indexation.Data, serializer.DeSeriModePerformValidation); err != nil {
+	parsedVotes := &ParticipationPayload{}
+	if _, err := parsedVotes.Deserialize(taggedData.Data, serializer.DeSeriModePerformValidation, nil); err != nil {
 		// votes payload can't be parsed => ignore votes
 		return nil, fmt.Errorf("no valid votes payload")
 	}
 
 	var votes []*Participation
 	for _, vote := range parsedVotes.Participations {
-		votes = append(votes, vote.(*Participation))
+		votes = append(votes, vote)
 	}
 
 	return votes, nil
 }
 
-func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) (*utxo.Output, []*Participation, error) {
+func serializedAddressFromOutput(output *iotago.ExtendedOutput) ([]byte, error) {
+	unlockConditions, err := output.UnlockConditions().Set()
+	if err != nil {
+		return nil, err
+	}
+
+	outputAddress, err := unlockConditions.Address().Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return nil, err
+	}
+	return outputAddress, nil
+}
+
+func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, msIndex milestone.Index) (*utxo.Output, []*Participation, error) {
 	transaction := msg.Transaction()
 	if transaction == nil {
 		// Do not handle outputs from migrations
@@ -726,21 +757,21 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) 
 		return nil, nil, fmt.Errorf("no transaction transactionEssence found: MsgID: %s", msg.MessageID().ToHex())
 	}
 
-	txEssenceIndexation := msg.TransactionEssenceIndexation()
-	if txEssenceIndexation == nil {
-		// no need to check if there is not indexation payload
+	txEssenceTaggedData := msg.TransactionEssenceTaggedData()
+	if txEssenceTaggedData == nil {
+		// no need to check if there is not taggedData payload
 		return nil, nil, nil
 	}
 
-	// the index of the transaction payload must match our configured indexation
-	if !bytes.Equal(txEssenceIndexation.Index, pm.opts.indexationMessage) {
+	// the tag of the transaction payload must match our configured tag
+	if !bytes.Equal(txEssenceTaggedData.Tag, pm.opts.tagMessage) {
 		return nil, nil, nil
 	}
 
 	// collect outputs
 	depositOutputs := utxo.Outputs{}
 	for i := 0; i < len(txEssence.Outputs); i++ {
-		output, err := utxo.NewOutput(msg.MessageID(), transaction, uint16(i))
+		output, err := utxo.NewOutput(msg.MessageID(), msIndex, 0, transaction, uint16(i))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -752,15 +783,16 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) 
 		return nil, nil, nil
 	}
 
-	// only OutputSigLockedSingleOutput and OutputSigLockedDustAllowanceOutput are allowed as output type
-	switch depositOutputs[0].OutputType() {
-	case iotago.OutputSigLockedDustAllowanceOutput:
-	case iotago.OutputSigLockedSingleOutput:
+	// only ExtendedOutput are allowed as output type
+	var depositOutput *iotago.ExtendedOutput
+	switch o := depositOutputs[0].Output().(type) {
+	case *iotago.ExtendedOutput:
+		depositOutput = o
 	default:
 		return nil, nil, nil
 	}
 
-	outputAddress, err := depositOutputs[0].Address().Serialize(serializer.DeSeriModeNoValidation)
+	outputAddress, err := serializedAddressFromOutput(depositOutput)
 	if err != nil {
 		return nil, nil, nil
 	}
@@ -778,14 +810,19 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) 
 	// check if at least 1 input comes from the same address as the output
 	containsInputFromSameAddress := false
 	for _, input := range inputOutputs {
-		inputAddress, err := input.Address().Serialize(serializer.DeSeriModeNoValidation)
-		if err != nil {
-			return nil, nil, nil
-		}
+		switch output := input.Output().(type) {
+		case *iotago.ExtendedOutput:
+			inputAddress, err := serializedAddressFromOutput(output)
+			if err != nil {
+				return nil, nil, nil
+			}
 
-		if bytes.Equal(outputAddress, inputAddress) {
-			containsInputFromSameAddress = true
-			break
+			if bytes.Equal(outputAddress, inputAddress) {
+				containsInputFromSameAddress = true
+				break
+			}
+		default:
+			continue
 		}
 	}
 
@@ -794,7 +831,7 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message) 
 		return nil, nil, nil
 	}
 
-	participations, err := participationFromIndexation(txEssenceIndexation)
+	participations, err := participationFromTaggedData(txEssenceTaggedData)
 	if err != nil {
 		return nil, nil, nil
 	}

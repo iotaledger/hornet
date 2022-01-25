@@ -26,7 +26,6 @@ func configureCaches() {
 
 func collectCaches() {
 	cacheSizes.WithLabelValues("children").Set(float64(deps.Storage.ChildrenStorageSize()))
-	cacheSizes.WithLabelValues("indexations").Set(float64(deps.Storage.IndexationStorageSize()))
 	cacheSizes.WithLabelValues("messages").Set(float64(deps.Storage.MessageStorageSize()))
 	cacheSizes.WithLabelValues("messages_metadata").Set(float64(deps.Storage.MessageMetadataStorageSize()))
 	cacheSizes.WithLabelValues("milestones").Set(float64(deps.Storage.MilestoneStorageSize()))

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 const (
@@ -20,43 +20,62 @@ var (
 		Min:            BallotMinQuestionsCount,
 		Max:            BallotMaxQuestionsCount,
 		ValidationMode: serializer.ArrayValidationModeNone,
+		Guards: serializer.SerializableGuard{
+			ReadGuard: func(ty uint32) (serializer.Serializable, error) {
+				return &Question{}, nil
+			},
+			WriteGuard: func(seri serializer.Serializable) error {
+				switch seri.(type) {
+				case *Question:
+					return nil
+				default:
+					return ErrSerializationUnknownType
+				}
+			},
+		},
 	}
 )
+
+type Questions []*Question
+
+func (q Questions) ToSerializables() serializer.Serializables {
+	seris := make(serializer.Serializables, len(q))
+	for i, x := range q {
+		seris[i] = x
+	}
+	return seris
+}
+
+func (q *Questions) FromSerializables(seris serializer.Serializables) {
+	*q = make(Questions, len(seris))
+	for i, seri := range seris {
+		(*q)[i] = seri.(*Question)
+	}
+}
 
 // Ballot can be used to define a voting participation with variable questions.
 type Ballot struct {
 	// Questions are the questions of the ballot and their possible answers.
-	Questions serializer.Serializables
+	Questions Questions
 }
 
-func (q *Ballot) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (q *Ballot) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
 	return serializer.NewDeserializer(data).
 		Skip(serializer.TypeDenotationByteSize, func(err error) error {
 			return fmt.Errorf("unable to skip ballot payload ID during deserialization: %w", err)
 		}).
-		ReadSliceOfObjects(func(seri serializer.Serializables) { q.Questions = seri }, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, func(_ uint32) (serializer.Serializable, error) {
-			// there is no real selector, so we always return a fresh Question
-			return &Question{}, nil
-		}, questionsArrayRules, func(err error) error {
+		ReadSliceOfObjects(&q.Questions, deSeriMode, deSeriCtx, serializer.SeriLengthPrefixTypeAsByte, serializer.TypeDenotationNone, questionsArrayRules, func(err error) error {
 			return fmt.Errorf("unable to deserialize participation questions: %w", err)
 		}).
 		Done()
 }
 
-func (q *Ballot) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (q *Ballot) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
-		AbortIf(func(err error) error {
-			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {
-				if err := questionsArrayRules.CheckBounds(uint(len(q.Questions))); err != nil {
-					return fmt.Errorf("unable to serialize participation questions: %w", err)
-				}
-			}
-			return nil
-		}).
 		WriteNum(BallotPayloadTypeID, func(err error) error {
 			return fmt.Errorf("%w: unable to serialize ballot payload ID", err)
 		}).
-		WriteSliceOfObjects(q.Questions, deSeriMode, serializer.SeriLengthPrefixTypeAsByte, nil, func(err error) error {
+		WriteSliceOfObjects(&q.Questions, deSeriMode, deSeriCtx, serializer.SeriLengthPrefixTypeAsByte, questionsArrayRules, func(err error) error {
 			return fmt.Errorf("unable to serialize participation questions: %w", err)
 		}).
 		Serialize()
@@ -105,7 +124,7 @@ type jsonBallot struct {
 func (j *jsonBallot) ToSerializable() (serializer.Serializable, error) {
 	payload := &Ballot{}
 
-	questions := make(serializer.Serializables, len(j.Questions))
+	questions := make(Questions, len(j.Questions))
 	for i, ele := range j.Questions {
 		question := &Question{}
 

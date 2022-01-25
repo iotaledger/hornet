@@ -7,6 +7,7 @@ const (
 	StorePrefixChildren             byte = 4
 	StorePrefixSnapshot             byte = 5
 	StorePrefixUnreferencedMessages byte = 6
-	StorePrefixIndexation           byte = 7
 	StorePrefixHealth               byte = 255
 )
+
+//TODO: when migrating drop StorePrefixIndexation byte = 7

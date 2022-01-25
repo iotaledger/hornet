@@ -9,7 +9,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/iotaledger/hive.go/configuration"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -39,12 +39,13 @@ func initConfigPars(c *dig.Container) {
 
 	type cfgResult struct {
 		dig.Out
-		PublicKeyRanges         coordinator.PublicKeyRanges
-		NetworkID               uint64               `name:"networkId"`
-		NetworkIDName           string               `name:"networkIdName"`
-		Bech32HRP               iotago.NetworkPrefix `name:"bech32HRP"`
-		MinPoWScore             float64              `name:"minPoWScore"`
-		MilestonePublicKeyCount int                  `name:"milestonePublicKeyCount"`
+		PublicKeyRanges           coordinator.PublicKeyRanges
+		NetworkID                 uint64               `name:"networkId"`
+		NetworkIDName             string               `name:"networkIdName"`
+		Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
+		MinPoWScore               float64              `name:"minPoWScore"`
+		MilestonePublicKeyCount   int                  `name:"milestonePublicKeyCount"`
+		DeSerializationParameters *iotago.DeSerializationParameters
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
@@ -55,6 +56,13 @@ func initConfigPars(c *dig.Container) {
 			Bech32HRP:               iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
 			MinPoWScore:             deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
 			MilestonePublicKeyCount: deps.NodeConfig.Int(CfgProtocolMilestonePublicKeyCount),
+			DeSerializationParameters: &iotago.DeSerializationParameters{
+				RentStructure: &iotago.RentStructure{
+					VByteCost:    uint64(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteCost)),
+					VBFactorData: iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorData)),
+					VBFactorKey:  iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorKey)),
+				},
+			},
 		}
 
 		if *cooPubKeyRangesFlag != "" {

@@ -11,17 +11,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // TestBatch boots up a statically peered network which runs with a white-flag mock server in order
 // to validate that the migrated funds entry limit is respected correctly.
 func TestBatch(t *testing.T) {
 	const (
-		initialTreasuryTokens = 10_000_000_000
-		migratedFundsCount    = 127 + 128 + 1
-		migrationTokens       = 1_000_000
-		totalMigrationTokens  = migratedFundsCount * migrationTokens
+		initialTreasuryTokens uint64 = 10_000_000_000
+		migratedFundsCount           = 127 + 128 + 1
+		migrationTokens       uint64 = 1_000_000
+		totalMigrationTokens         = migratedFundsCount * migrationTokens
 	)
 
 	// receipts per migrated at index
@@ -33,7 +33,7 @@ func TestBatch(t *testing.T) {
 
 	n, err := f.CreateStaticNetwork("test_migration_batch", &framework.IntegrationNetworkConfig{
 		SpawnWhiteFlagMockServer:  true,
-		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock_config_batch.json"),
+		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock_batch", "wfmock_config_batch.json"),
 	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.NodeConfig) {
 		switch {
 		case index == 0:
@@ -45,7 +45,7 @@ func TestBatch(t *testing.T) {
 
 		cfg.Receipts.IgnoreSoftErrors = false
 		cfg.Receipts.Validate = true
-		cfg.Receipts.APIAddress = "http://wfmock:14265"
+		cfg.Receipts.APIAddress = "http://wfmock_batch:14265"
 		cfg.Receipts.APITimeout = 5 * time.Second
 		cfg.Receipts.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
 		cfg.Receipts.CoordinatorMerkleTreeDepth = 8
@@ -86,8 +86,8 @@ func TestBatch(t *testing.T) {
 	for i := 0; i < migratedFundsCount; i++ {
 		var addr iotago.Ed25519Address
 		binary.LittleEndian.PutUint32(addr[:], uint32(i))
-		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByEd25519Address(context.Background(), &addr)
+		balance, err := n.Coordinator().DebugNodeAPIClient.BalanceByAddress(context.Background(), &addr)
 		require.NoError(t, err)
-		require.EqualValues(t, migrationTokens, balance.Balance)
+		require.EqualValues(t, migrationTokens, balance)
 	}
 }

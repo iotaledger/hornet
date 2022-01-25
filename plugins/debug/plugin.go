@@ -15,7 +15,7 @@ import (
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/restapi"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -89,7 +89,6 @@ type dependencies struct {
 	RequestQueue gossip.RequestQueue
 	UTXOManager  *utxo.Manager
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-	Echo         *echo.Echo                   `optional:"true"`
 }
 
 func configure() {
@@ -97,11 +96,10 @@ func configure() {
 	if Plugin.Node.IsSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
-	restapiv1.AddFeature(Plugin.Name)
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 
-	routeGroup := deps.Echo.Group("/api/plugins/debug")
+	routeGroup := restapiv2.AddPlugin("debug/v1")
 
 	routeGroup.POST(RouteDebugComputeWhiteFlag, func(c echo.Context) error {
 		resp, err := computeWhiteFlagMutations(c)
@@ -138,24 +136,6 @@ func configure() {
 
 	routeGroup.GET(RouteDebugOutputsSpent, func(c echo.Context) error {
 		resp, err := spentOutputsIDs(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugAddresses, func(c echo.Context) error {
-		resp, err := addresses(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteDebugAddressesEd25519, func(c echo.Context) error {
-		resp, err := addressesEd25519(c)
 		if err != nil {
 			return err
 		}

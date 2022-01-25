@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import (
 	"strings"
@@ -59,6 +59,7 @@ func info() (*infoResponse, error) {
 		ConfirmedMilestoneIndex:     confirmedMilestoneIndex,
 		PruningIndex:                pruningIndex,
 		Features:                    features,
+		Plugins:                     plugins,
 	}, nil
 }
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/participation"
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite"
@@ -25,7 +25,7 @@ type SentParticipations struct {
 }
 
 func (env *ParticipationTestEnv) NewParticipationHelper(wallet *utils.HDWallet) *ParticipationHelper {
-	msgBuilder := env.te.NewMessageBuilder(ParticipationIndexation).
+	msgBuilder := env.te.NewMessageBuilder(ParticipationTag).
 		LatestMilestonesAsParents()
 
 	return &ParticipationHelper{
@@ -84,13 +84,13 @@ func (b *ParticipationHelper) Build() *testsuite.Message {
 	votes, err := b.participationsBuilder.Build()
 	require.NoError(b.env.t, err)
 
-	participationsData, err := votes.Serialize(serializer.DeSeriModePerformValidation)
+	participationsData, err := votes.Serialize(serializer.DeSeriModePerformValidation, nil)
 	require.NoError(b.env.t, err)
 
 	msg := b.msgBuilder.
 		FromWallet(b.wallet).
 		ToWallet(b.wallet).
-		IndexationData(participationsData).
+		TagData(participationsData).
 		Build()
 
 	return msg

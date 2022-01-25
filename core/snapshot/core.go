@@ -20,6 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -106,18 +107,19 @@ func provide(c *dig.Container) {
 
 	type snapshotDeps struct {
 		dig.In
-		TangleDatabase       *database.Database `name:"tangleDatabase"`
-		UTXODatabase         *database.Database `name:"utxoDatabase"`
-		Storage              *storage.Storage
-		SyncManager          *syncmanager.SyncManager
-		UTXOManager          *utxo.Manager
-		NodeConfig           *configuration.Configuration `name:"nodeConfig"`
-		BelowMaxDepth        int                          `name:"belowMaxDepth"`
-		NetworkID            uint64                       `name:"networkId"`
-		NetworkIDName        string                       `name:"networkIdName"`
-		PruningPruneReceipts bool                         `name:"pruneReceipts"`
-		SnapshotsFullPath    string                       `name:"snapshotsFullPath"`
-		SnapshotsDeltaPath   string                       `name:"snapshotsDeltaPath"`
+		TangleDatabase            *database.Database `name:"tangleDatabase"`
+		UTXODatabase              *database.Database `name:"utxoDatabase"`
+		Storage                   *storage.Storage
+		SyncManager               *syncmanager.SyncManager
+		UTXOManager               *utxo.Manager
+		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+		BelowMaxDepth             int                          `name:"belowMaxDepth"`
+		NetworkID                 uint64                       `name:"networkId"`
+		NetworkIDName             string                       `name:"networkIdName"`
+		DeserializationParameters *iotago.DeSerializationParameters
+		PruningPruneReceipts      bool   `name:"pruneReceipts"`
+		SnapshotsFullPath         string `name:"snapshotsFullPath"`
+		SnapshotsDeltaPath        string `name:"snapshotsDeltaPath"`
 	}
 
 	if err := c.Provide(func(deps snapshotDeps) *snapshot.SnapshotManager {
@@ -183,6 +185,7 @@ func provide(c *dig.Container) {
 			deps.UTXOManager,
 			deps.NetworkID,
 			networkIDSource,
+			deps.DeserializationParameters,
 			deps.SnapshotsFullPath,
 			deps.SnapshotsDeltaPath,
 			deps.NodeConfig.Float64(CfgSnapshotsDeltaSizeThresholdPercentage),

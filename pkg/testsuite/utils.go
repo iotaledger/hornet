@@ -11,14 +11,14 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type MessageBuilder struct {
-	te             *TestEnvironment
-	indexation     string
-	indexationData []byte
+	te      *TestEnvironment
+	tag     string
+	tagData []byte
 
 	parents hornet.MessageIDs
 
@@ -28,7 +28,6 @@ type MessageBuilder struct {
 	amount uint64
 
 	fakeInputs  bool
-	dustUnlock  bool
 	outputToUse *utxo.Output
 }
 
@@ -44,14 +43,14 @@ type Message struct {
 	storedMessageID hornet.MessageID
 }
 
-func (te *TestEnvironment) NewMessageBuilder(optionalIndexation ...string) *MessageBuilder {
-	indexation := ""
-	if len(optionalIndexation) > 0 {
-		indexation = optionalIndexation[0]
+func (te *TestEnvironment) NewMessageBuilder(optionalTag ...string) *MessageBuilder {
+	tag := ""
+	if len(optionalTag) > 0 {
+		tag = optionalTag[0]
 	}
 	return &MessageBuilder{
-		te:         te,
-		indexation: indexation,
+		te:  te,
+		tag: tag,
 	}
 }
 
@@ -79,11 +78,6 @@ func (b *MessageBuilder) Amount(amount uint64) *MessageBuilder {
 	return b
 }
 
-func (b *MessageBuilder) DustAllowance() *MessageBuilder {
-	b.dustUnlock = true
-	return b
-}
-
 func (b *MessageBuilder) FakeInputs() *MessageBuilder {
 	b.fakeInputs = true
 	return b
@@ -94,14 +88,14 @@ func (b *MessageBuilder) UsingOutput(output *utxo.Output) *MessageBuilder {
 	return b
 }
 
-func (b *MessageBuilder) IndexationData(data []byte) *MessageBuilder {
-	b.indexationData = data
+func (b *MessageBuilder) TagData(data []byte) *MessageBuilder {
+	b.tagData = data
 	return b
 }
 
-func (b *MessageBuilder) BuildIndexation() *Message {
+func (b *MessageBuilder) BuildTaggedData() *Message {
 
-	require.NotEmpty(b.te.TestInterface, b.indexation)
+	require.NotEmpty(b.te.TestInterface, b.tag)
 
 	parents := [][]byte{}
 	require.NotNil(b.te.TestInterface, b.parents)
@@ -112,14 +106,14 @@ func (b *MessageBuilder) BuildIndexation() *Message {
 
 	msg, err := iotago.NewMessageBuilder().
 		Parents(parents).
-		Payload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData}).
+		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
 	require.NoError(b.te.TestInterface, err)
 
 	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, DeSerializationParameters)
 	require.NoError(b.te.TestInterface, err)
 
 	return &Message{
@@ -148,9 +142,17 @@ func (b *MessageBuilder) Build() *Message {
 	} else {
 		if b.fakeInputs {
 			// Add a fake output with enough balance to create a valid transaction
-			fakeInput := iotago.UTXOInputID{}
-			copy(fakeInput[:], randBytes(iotago.TransactionIDLength))
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInput, hornet.NullMessageID(), iotago.OutputSigLockedSingleOutput, fromAddr, b.amount))
+			fakeInputID := iotago.OutputID{}
+			copy(fakeInputID[:], randBytes(iotago.TransactionIDLength))
+			fakeInput := &iotago.ExtendedOutput{
+				Amount: b.amount,
+				Conditions: iotago.UnlockConditions{
+					&iotago.AddressUnlockCondition{
+						Address: fromAddr,
+					},
+				},
+			}
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, hornet.NullMessageID(), 0, 0, fakeInput))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -159,45 +161,41 @@ func (b *MessageBuilder) Build() *Message {
 	require.NotEmptyf(b.te.TestInterface, outputsThatCanBeConsumed, "no outputs available on the wallet")
 
 	outputsBalance := uint64(0)
-	for _, utxo := range outputsThatCanBeConsumed {
-		outputsBalance += utxo.Amount()
+	for _, output := range outputsThatCanBeConsumed {
+		outputsBalance += output.Deposit()
 	}
 
 	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
 
-	for _, utxo := range outputsThatCanBeConsumed {
+	for _, output := range outputsThatCanBeConsumed {
 
-		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: utxo.UTXOInput()})
-		consumedInputs = append(consumedInputs, utxo)
-		consumedAmount += utxo.Amount()
+		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: output.OutputID().UTXOInput()})
+		consumedInputs = append(consumedInputs, output)
+		consumedAmount += output.Deposit()
 
 		if consumedAmount >= b.amount {
 			break
 		}
 	}
 
-	if b.dustUnlock {
-		builder.AddOutput(&iotago.SigLockedDustAllowanceOutput{Address: toAddr, Amount: b.amount})
-	} else {
-		builder.AddOutput(&iotago.SigLockedSingleOutput{Address: toAddr, Amount: b.amount})
-	}
+	builder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: toAddr}}, Amount: b.amount})
 
 	var remainderAmount uint64
 	if b.amount < consumedAmount {
 		// Send remainder back to fromWallet
 		remainderAmount = consumedAmount - b.amount
-		builder.AddOutput(&iotago.SigLockedSingleOutput{Address: fromAddr, Amount: remainderAmount})
+		builder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: fromAddr}}, Amount: remainderAmount})
 	}
 
-	if len(b.indexation) > 0 {
-		builder.AddIndexationPayload(&iotago.Indexation{Index: []byte(b.indexation), Data: b.indexationData})
+	if len(b.tag) > 0 {
+		builder.AddTaggedDataPayload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData})
 	}
 
 	// Sign transaction
 	inputPrivateKey, _ := b.fromWallet.KeyPair()
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: fromAddr, Keys: inputPrivateKey})
 
-	transaction, err := builder.Build(inputAddrSigner)
+	transaction, err := builder.Build(DeSerializationParameters, inputAddrSigner)
 	require.NoError(b.te.TestInterface, err)
 
 	require.NotNil(b.te.TestInterface, b.parents)
@@ -210,27 +208,12 @@ func (b *MessageBuilder) Build() *Message {
 	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, DeSerializationParameters)
 	require.NoError(b.te.TestInterface, err)
 
-	var outputType string
-	if b.dustUnlock {
-		outputType = "DustAllowance"
-	} else {
-		outputType = "SingleOutput"
-	}
-
-	log := fmt.Sprintf("Send %d iota %s from %s to %s and remaining %d iota to original wallet", b.amount, outputType, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount)
+	log := fmt.Sprintf("Send %d iota from %s to %s and remaining %d iota to original wallet", b.amount, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount)
 	if b.outputToUse != nil {
-		var usedType string
-		switch b.outputToUse.OutputType() {
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			usedType = "DustAllowance"
-		case iotago.OutputSigLockedSingleOutput:
-			usedType = "SingleOutput"
-		default:
-			usedType = fmt.Sprintf("%d", b.outputToUse.OutputType())
-		}
+		usedType := iotago.OutputTypeToString(b.outputToUse.OutputType())
 		log += fmt.Sprintf(" using UTXO: %s [%s]", b.outputToUse.OutputID().ToHex(), usedType)
 	}
 	fmt.Println(log)
@@ -240,18 +223,24 @@ func (b *MessageBuilder) Build() *Message {
 
 	// Book the outputs in the wallets
 	messageTx := message.Transaction()
-	txEssence := messageTx.Essence.(*iotago.TransactionEssence)
+	txEssence := messageTx.Essence
 	for i := range txEssence.Outputs {
-		output, err := utxo.NewOutput(message.MessageID(), messageTx, uint16(i))
+		output, err := utxo.NewOutput(message.MessageID(), b.te.LastMilestoneIndex()+1, 0, messageTx, uint16(i))
 		require.NoError(b.te.TestInterface, err)
 
-		if output.Address().String() == toAddr.String() && output.Amount() == b.amount {
-			sentOutput = output
-			continue
-		}
+		switch iotaOutput := output.Output().(type) {
+		case *iotago.ExtendedOutput:
+			conditions := iotaOutput.UnlockConditions().MustSet()
+			if conditions.Address().Address.Equal(toAddr) && output.Deposit() == b.amount {
+				sentOutput = output
+				continue
+			}
 
-		if remainderAmount > 0 && output.Address().String() == fromAddr.String() && output.Amount() == remainderAmount {
-			remainderOutput = output
+			if remainderAmount > 0 && conditions.Address().Address.Equal(fromAddr) && output.Deposit() == remainderAmount {
+				remainderOutput = output
+			}
+		default:
+			continue
 		}
 	}
 

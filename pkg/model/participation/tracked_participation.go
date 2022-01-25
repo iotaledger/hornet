@@ -5,7 +5,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/marshalutil"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // TrackedParticipation holds the information the node tracked for the participation.
@@ -13,7 +13,7 @@ type TrackedParticipation struct {
 	// EventID is the ID of the event the participation is made for.
 	EventID EventID
 	// OutputID is the ID of the output the participation was made.
-	OutputID *iotago.UTXOInputID
+	OutputID *iotago.OutputID
 	// MessageID is the ID of the message that included the transaction that created the output the participation was made.
 	MessageID hornet.MessageID
 	// Amount is the amount of tokens that were included in the output the participation was made.

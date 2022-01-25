@@ -2,14 +2,14 @@ package utils
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"fmt"
 
 	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
 
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -57,7 +57,7 @@ func (hd *HDWallet) Name() string {
 func (hd *HDWallet) Balance() uint64 {
 	var balance uint64
 	for _, u := range hd.utxo {
-		balance += u.Amount()
+		balance += u.Deposit()
 	}
 	return balance
 }
@@ -89,7 +89,7 @@ func (hd *HDWallet) KeyPair() (ed25519.PrivateKey, ed25519.PublicKey) {
 
 func (hd *HDWallet) AddressSigner() iotago.AddressSigner {
 	privKey, pubKey := hd.KeyPair()
-	address := iotago.AddressFromEd25519PubKey(pubKey)
+	address := iotago.Ed25519AddressFromPubKey(pubKey)
 	return iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&address, privKey))
 }
 
@@ -100,7 +100,7 @@ func (hd *HDWallet) Outputs() []*utxo.Output {
 // Address calculates an ed25519 address by using slip10.
 func (hd *HDWallet) Address() *iotago.Ed25519Address {
 	_, pubKey := hd.KeyPair()
-	addr := iotago.AddressFromEd25519PubKey(pubKey)
+	addr := iotago.Ed25519AddressFromPubKey(pubKey)
 	return &addr
 }
 
@@ -110,17 +110,9 @@ func (hd *HDWallet) PrintStatus() {
 	status += fmt.Sprintf("Address: %s\n", hd.Address().Bech32(iotago.PrefixTestnet))
 	status += fmt.Sprintf("Balance: %d\n", hd.Balance())
 	status += "Outputs: \n"
-	for _, utxo := range hd.utxo {
-		var outputType string
-		switch utxo.OutputType() {
-		case iotago.OutputSigLockedSingleOutput:
-			outputType = "SingleOutput"
-		case iotago.OutputSigLockedDustAllowanceOutput:
-			outputType = "DustAllowance"
-		default:
-			outputType = fmt.Sprintf("%d", utxo.OutputType())
-		}
-		status += fmt.Sprintf("\t%s [%s] = %d\n", utxo.OutputID().ToHex(), outputType, utxo.Amount())
+	for _, u := range hd.utxo {
+		outputType := iotago.OutputTypeToString(u.OutputType())
+		status += fmt.Sprintf("\t%s [%s] = %d\n", u.OutputID().ToHex(), outputType, u.Deposit())
 	}
 	fmt.Printf("%s\n", status)
 }

@@ -7,22 +7,22 @@
     "publicRoutes": [
       "/health",
       "/mqtt",
-      "/api/v1/info",
-      "/api/v1/tips",
-      "/api/v1/messages*",
-      "/api/v1/transactions*",
-      "/api/v1/milestones*",
-      "/api/v1/outputs*",
-      "/api/v1/addresses*",
-      "/api/v1/treasury",
-      "/api/v1/receipts*",
-      "/api/plugins/faucet/*",
-      "/api/plugins/participation/events*",
-      "/api/plugins/participation/outputs*",
-      "/api/plugins/participation/addresses*"
+      "/api/v2/info",
+      "/api/v2/tips",
+      "/api/v2/messages*",
+      "/api/v2/transactions*",
+      "/api/v2/milestones*",
+      "/api/v2/outputs*",
+      "/api/v2/addresses*",
+      "/api/v2/treasury",
+      "/api/v2/receipts*",
+      "/api/plugins/faucet/v1/*",
+      "/api/plugins/participation/v1/events*",
+      "/api/plugins/participation/v1/outputs*",
+      "/api/plugins/participation/v1/addresses*"
     ],
     "protectedRoutes": [
-      "/api/v1/*",
+      "/api/v2/*",
       "/api/plugins/*"
     ],
     "powEnabled": true,
@@ -77,6 +77,9 @@
     "networkID": "chrysalis-devnet",
     "bech32HRP": "atoi",
     "minPoWScore": 2000.0,
+    "vByteCost": 0,
+    "vByteFactorData": 1,
+    "vByteFactorKey": 10,
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {
@@ -228,7 +231,7 @@
     "smallAmount": 1000000,
     "maxAddressBalance": 20000000,
     "maxOutputCount": 127,
-    "indexationMessage": "HORNET FAUCET",
+    "tagMessage": "HORNET FAUCET",
     "batchTimeout": "2s",
     "powWorkerCount": 0,
     "website": {

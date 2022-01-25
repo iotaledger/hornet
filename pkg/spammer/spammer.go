@@ -9,8 +9,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/iotaledger/hive.go/serializer"
-	iotago "github.com/iotaledger/iota.go/v2"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // SendMessageFunc is a function which sends a message to the network.
@@ -21,10 +21,12 @@ type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.MessageIDs, err er
 
 // Spammer is used to issue messages to the IOTA network to create load on the tangle.
 type Spammer struct {
-	networkID       uint64
+	networkID uint64
+	// Deserialization parameters including byte costs
+	deSeriParas     *iotago.DeSerializationParameters
 	message         string
-	index           string
-	indexSemiLazy   string
+	tag             string
+	tagSemiLazy     string
 	tipselFunc      SpammerTipselFunc
 	powHandler      *pow.Handler
 	sendMessageFunc SendMessageFunc
@@ -32,13 +34,22 @@ type Spammer struct {
 }
 
 // New creates a new spammer instance.
-func New(networkID uint64, message string, index string, indexSemiLazy string, tipselFunc SpammerTipselFunc, powHandler *pow.Handler, sendMessageFunc SendMessageFunc, serverMetrics *metrics.ServerMetrics) *Spammer {
+func New(networkID uint64,
+	deSeriParas *iotago.DeSerializationParameters,
+	message string,
+	tag string,
+	tagSemiLazy string,
+	tipselFunc SpammerTipselFunc,
+	powHandler *pow.Handler,
+	sendMessageFunc SendMessageFunc,
+	serverMetrics *metrics.ServerMetrics) *Spammer {
 
 	return &Spammer{
 		networkID:       networkID,
+		deSeriParas:     deSeriParas,
 		message:         message,
-		index:           index,
-		indexSemiLazy:   indexSemiLazy,
+		tag:             tag,
+		tagSemiLazy:     tagSemiLazy,
 		tipselFunc:      tipselFunc,
 		powHandler:      powHandler,
 		sendMessageFunc: sendMessageFunc,
@@ -55,14 +66,14 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	}
 	durationGTTA := time.Since(timeStart)
 
-	indexation := s.index
+	tag := s.tag
 	if isSemiLazy {
-		indexation = s.indexSemiLazy
+		tag = s.tagSemiLazy
 	}
 
-	index := []byte(indexation)
-	if len(index) > storage.IndexationIndexLength {
-		index = index[:storage.IndexationIndexLength]
+	tagBytes := []byte(tag)
+	if len(tagBytes) > iotago.MaxTagLength {
+		tagBytes = tagBytes[:iotago.MaxTagLength]
 	}
 
 	txCount := int(s.serverMetrics.SentSpamMessages.Load()) + 1
@@ -76,7 +87,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	iotaMsg := &iotago.Message{
 		NetworkID: s.networkID,
 		Parents:   tips.ToSliceOfArrays(),
-		Payload:   &iotago.Indexation{Index: index, Data: []byte(messageString)},
+		Payload:   &iotago.TaggedData{Tag: tagBytes, Data: []byte(messageString)},
 	}
 
 	timeStart = time.Now()
@@ -89,7 +100,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	}
 	durationPOW := time.Since(timeStart)
 
-	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation)
+	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation, s.deSeriParas)
 	if err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}

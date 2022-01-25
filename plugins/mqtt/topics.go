@@ -7,7 +7,7 @@ const (
 
 	topicMessages           = "messages"
 	topicMessagesReferenced = "messages/referenced"
-	topicMessagesIndexation = "messages/indexation/{index}"
+	topicMessagesTaggedData = "messages/data/{tag}"
 	topicMessagesMetadata   = "messages/{messageId}/metadata"
 
 	topicTransactionsIncludedMessage = "transactions/{transactionId}/included-message"

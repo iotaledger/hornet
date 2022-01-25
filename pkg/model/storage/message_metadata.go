@@ -10,7 +10,7 @@ import (
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/syncutils"
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -42,9 +42,6 @@ const (
 
 	// ConflictInvalidSignature the unlock block signature is invalid.
 	ConflictInvalidSignature = 5
-
-	// ConflictInvalidDustAllowance the dust allowance for the address is invalid.
-	ConflictInvalidDustAllowance = 6
 
 	// ConflictSemanticValidationFailed the semantic validation failed.
 	ConflictSemanticValidationFailed = 255

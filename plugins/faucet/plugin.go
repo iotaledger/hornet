@@ -2,6 +2,7 @@ package faucet
 
 import (
 	"context"
+	"crypto/ed25519"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -28,11 +30,11 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	restapiv1 "github.com/gohornet/hornet/plugins/restapi/v1"
+	indexerPlugin "github.com/gohornet/hornet/plugins/indexer"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
-	iotago "github.com/iotaledger/iota.go/v2"
-	"github.com/iotaledger/iota.go/v2/ed25519"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -75,7 +77,6 @@ type dependencies struct {
 	FaucetAllowedAPIRoute restapi.AllowedRoute         `name:"faucetAllowedAPIRoute"`
 	Faucet                *faucet.Faucet
 	Tangle                *tangle.Tangle
-	Echo                  *echo.Echo
 	ShutdownHandler       *shutdown.ShutdownHandler
 }
 
@@ -99,21 +100,23 @@ func provide(c *dig.Container) {
 		Plugin.LogPanic("loading faucet private key failed, err: wrong private key length")
 	}
 
-	faucetAddress := iotago.AddressFromEd25519PubKey(privateKey.Public().(ed25519.PublicKey))
+	faucetAddress := iotago.Ed25519AddressFromPubKey(privateKey.Public().(ed25519.PublicKey))
 	faucetSigner := iotago.NewInMemoryAddressSigner(iotago.NewAddressKeysForEd25519Address(&faucetAddress, privateKey))
 
 	type faucetDeps struct {
 		dig.In
-		Storage          *storage.Storage
-		SyncManager      *syncmanager.SyncManager
-		PowHandler       *pow.Handler
-		UTXOManager      *utxo.Manager
-		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-		NetworkID        uint64                       `name:"networkId"`
-		BelowMaxDepth    int                          `name:"belowMaxDepth"`
-		Bech32HRP        iotago.NetworkPrefix         `name:"bech32HRP"`
-		TipSelector      *tipselect.TipSelector
-		MessageProcessor *gossip.MessageProcessor
+		Storage                   *storage.Storage
+		SyncManager               *syncmanager.SyncManager
+		PowHandler                *pow.Handler
+		UTXOManager               *utxo.Manager
+		Indexer                   *indexer.Indexer
+		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+		NetworkID                 uint64                       `name:"networkId"`
+		DeSerializationParameters *iotago.DeSerializationParameters
+		BelowMaxDepth             int                  `name:"belowMaxDepth"`
+		Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
+		TipSelector               *tipselect.TipSelector
+		MessageProcessor          *gossip.MessageProcessor
 	}
 
 	if err := c.Provide(func(deps faucetDeps) *faucet.Faucet {
@@ -122,8 +125,10 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.SyncManager,
 			deps.NetworkID,
+			deps.DeSerializationParameters,
 			deps.BelowMaxDepth,
 			deps.UTXOManager,
+			deps.Indexer,
 			&faucetAddress,
 			faucetSigner,
 			deps.TipSelector.SelectNonLazyTips,
@@ -135,7 +140,7 @@ func provide(c *dig.Container) {
 			faucet.WithSmallAmount(uint64(deps.NodeConfig.Int64(CfgFaucetSmallAmount))),
 			faucet.WithMaxAddressBalance(uint64(deps.NodeConfig.Int64(CfgFaucetMaxAddressBalance))),
 			faucet.WithMaxOutputCount(deps.NodeConfig.Int(CfgFaucetMaxOutputCount)),
-			faucet.WithIndexationMessage(deps.NodeConfig.String(CfgFaucetIndexationMessage)),
+			faucet.WithTagMessage(deps.NodeConfig.String(CfgFaucetTagMessage)),
 			faucet.WithBatchTimeout(deps.NodeConfig.Duration(CfgFaucetBatchTimeout)),
 			faucet.WithPowWorkerCount(deps.NodeConfig.Int(CfgFaucetPoWWorkerCount)),
 		)
@@ -145,13 +150,21 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	restapiv1.AddFeature(Plugin.Name)
+	// check if RestAPIV2 plugin is disabled
+	if Plugin.Node.IsSkipped(restapiv2.Plugin) {
+		Plugin.LogPanic("RestAPIV2 plugin needs to be enabled to use the Faucet plugin")
+	}
 
-	routeGroup := deps.Echo.Group("/api/plugins/faucet")
+	// check if Indexer plugin is disabled
+	if Plugin.Node.IsSkipped(indexerPlugin.Plugin) {
+		Plugin.LogPanic("Indexer plugin needs to be enabled to use the Faucet plugin")
+	}
+
+	routeGroup := restapiv2.AddPlugin("faucet/v1")
 
 	allowedRoutes := map[string][]string{
 		http.MethodGet: {
-			"/api/plugins/faucet/info",
+			"/api/plugins/faucet/v1/info",
 		},
 	}
 

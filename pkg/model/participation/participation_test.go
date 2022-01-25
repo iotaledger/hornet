@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/gohornet/hornet/pkg/model/participation"
+	"github.com/gohornet/hornet/pkg/model/utxo/utils"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer"
-	"github.com/iotaledger/iota.go/v2/tpkg"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 func RandParticipation(answerCount int) (*participation.Participation, []byte) {
@@ -17,7 +17,7 @@ func RandParticipation(answerCount int) (*participation.Participation, []byte) {
 }
 
 func RandParticipationWithEventID(eventID participation.EventID, answerCount int) (*participation.Participation, []byte) {
-	answers := tpkg.RandBytes(answerCount)
+	answers := utils.RandBytes(answerCount)
 	if answerCount == 0 {
 		answers = []byte{} // RandBytes returns nil if empty
 	}
@@ -56,7 +56,7 @@ func TestParticipation_Deserialize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := &participation.Participation{}
-			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation)
+			bytesRead, err := u.Deserialize(tt.data, serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return
@@ -86,7 +86,7 @@ func TestParticipation_Serialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation)
+			data, err := tt.source.Serialize(serializer.DeSeriModePerformValidation, nil)
 			if tt.err != nil {
 				assert.True(t, errors.Is(err, tt.err))
 				return

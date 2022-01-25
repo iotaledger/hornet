@@ -25,6 +25,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -82,16 +83,17 @@ func provide(c *dig.Container) {
 
 	type msgProcDeps struct {
 		dig.In
-		Storage        *storage.Storage
-		SyncManager    *syncmanager.SyncManager
-		ServerMetrics  *metrics.ServerMetrics
-		RequestQueue   gossip.RequestQueue
-		PeeringManager *p2p.Manager
-		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-		NetworkID      uint64                       `name:"networkId"`
-		BelowMaxDepth  int                          `name:"belowMaxDepth"`
-		MinPoWScore    float64                      `name:"minPoWScore"`
-		Profile        *profile.Profile
+		Storage                   *storage.Storage
+		SyncManager               *syncmanager.SyncManager
+		ServerMetrics             *metrics.ServerMetrics
+		RequestQueue              gossip.RequestQueue
+		PeeringManager            *p2p.Manager
+		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+		NetworkID                 uint64                       `name:"networkId"`
+		DeserializationParameters *iotago.DeSerializationParameters
+		BelowMaxDepth             int     `name:"belowMaxDepth"`
+		MinPoWScore               float64 `name:"minPoWScore"`
+		Profile                   *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgProcDeps) *gossip.MessageProcessor {
@@ -101,6 +103,7 @@ func provide(c *dig.Container) {
 			deps.RequestQueue,
 			deps.PeeringManager,
 			deps.ServerMetrics,
+			deps.DeserializationParameters,
 			&gossip.Options{
 				MinPoWScore:       deps.MinPoWScore,
 				NetworkID:         deps.NetworkID,

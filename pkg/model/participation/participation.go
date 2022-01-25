@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/serializer"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 const (
@@ -26,7 +26,7 @@ type Participation struct {
 	Answers []byte
 }
 
-func (p *Participation) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode) (int, error) {
+func (p *Participation) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
 	return serializer.NewDeserializer(data).
 		ReadArrayOf32Bytes(&p.EventID, func(err error) error {
 			return fmt.Errorf("unable to deserialize eventID in participation: %w", err)
@@ -45,7 +45,7 @@ func (p *Participation) Deserialize(data []byte, deSeriMode serializer.DeSeriali
 		Done()
 }
 
-func (p *Participation) Serialize(deSeriMode serializer.DeSerializationMode) ([]byte, error) {
+func (p *Participation) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
 	return serializer.NewSerializer().
 		AbortIf(func(err error) error {
 			if deSeriMode.HasMode(serializer.DeSeriModePerformValidation) {

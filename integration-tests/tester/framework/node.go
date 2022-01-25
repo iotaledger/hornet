@@ -10,7 +10,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 
-	iotago "github.com/iotaledger/iota.go/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // Node represents a HORNET node inside the Docker network.
@@ -42,7 +42,15 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 		return nil, err
 	}
 
-	debugNodeAPI := NewDebugNodeAPIClient(getNodeAPIBaseURL(ip))
+	deSeriParas := &iotago.DeSerializationParameters{
+		RentStructure: &iotago.RentStructure{
+			VByteCost:    0,
+			VBFactorData: 0,
+			VBFactorKey:  0,
+		},
+	}
+
+	debugNodeAPI := NewDebugNodeAPIClient(getNodeAPIBaseURL(ip), deSeriParas)
 
 	return &Node{
 		Name: name,
@@ -104,9 +112,9 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 
 				txCount := atomic.AddInt32(&spammed, 1)
 				data := fmt.Sprintf("Count: %06d, Timestamp: %s", txCount, time.Now().Format(time.RFC3339))
-				iotaMsg := &iotago.Message{Payload: &iotago.Indexation{
-					Index: []byte("SPAM"),
-					Data:  []byte(data)},
+				iotaMsg := &iotago.Message{Payload: &iotago.TaggedData{
+					Tag:  []byte("SPAM"),
+					Data: []byte(data)},
 				}
 
 				if _, err := p.DebugNodeAPIClient.SubmitMessage(context.Background(), iotaMsg); err != nil {

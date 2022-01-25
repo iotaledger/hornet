@@ -11,7 +11,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
@@ -48,38 +47,31 @@ func (te *TestEnvironment) VerifyLMI(index milestone.Index) {
 
 // AssertLedgerBalance generates an address for the given seed and index and checks correct balance.
 func (te *TestEnvironment) AssertLedgerBalance(wallet *utils.HDWallet, expectedBalance uint64) {
-	addrBalance, _, _, err := te.storage.UTXOManager().AddressBalance(wallet.Address())
-	require.NoError(te.TestInterface, err)
-	computedAddrBalance, _, err := te.storage.UTXOManager().ComputeBalance(utxo.FilterAddress(wallet.Address()))
+	computedAddrBalance, outputCount, err := te.ComputeAddressBalanceWithoutConstraints(wallet.Address())
 	require.NoError(te.TestInterface, err)
 
 	var balanceStatus string
 	balanceStatus += fmt.Sprintf("Balance for %s:\n", wallet.Name())
-	balanceStatus += fmt.Sprintf("\tLedger:\t\t%d\n", computedAddrBalance)
 	balanceStatus += fmt.Sprintf("\tComputed:\t%d\n", computedAddrBalance)
 	balanceStatus += fmt.Sprintf("\tExpected:\t%d\n", expectedBalance)
+	balanceStatus += fmt.Sprintf("\tOutputCount:\t%d\n", outputCount)
 	fmt.Print(balanceStatus)
 
-	require.Exactly(te.TestInterface, expectedBalance, addrBalance)
 	require.Exactly(te.TestInterface, expectedBalance, computedAddrBalance)
 }
 
 // AssertWalletBalance generates an address for the given seed and index and checks correct balance.
 func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedBalance uint64) {
-	addrBalance, _, _, err := te.storage.UTXOManager().AddressBalance(wallet.Address())
-	require.NoError(te.TestInterface, err)
-	computedAddrBalance, _, err := te.storage.UTXOManager().ComputeBalance(utxo.FilterAddress(wallet.Address()))
+	computedAddrBalance, _, err := te.ComputeAddressBalanceWithoutConstraints(wallet.Address())
 	require.NoError(te.TestInterface, err)
 
 	var balanceStatus string
 	balanceStatus += fmt.Sprintf("Balance for %s:\n", wallet.Name())
-	balanceStatus += fmt.Sprintf("\tLedger:\t\t%d\n", computedAddrBalance)
 	balanceStatus += fmt.Sprintf("\tComputed:\t%d\n", computedAddrBalance)
 	balanceStatus += fmt.Sprintf("\tWallet:\t\t%d\n", wallet.Balance())
 	balanceStatus += fmt.Sprintf("\tExpected:\t%d\n", expectedBalance)
 	fmt.Print(balanceStatus)
 
-	require.Exactly(te.TestInterface, expectedBalance, addrBalance)
 	require.Exactly(te.TestInterface, expectedBalance, computedAddrBalance)
 	require.Exactly(te.TestInterface, expectedBalance, wallet.Balance())
 }
@@ -156,7 +148,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		message := cachedMessage.Message()
 		meta := cachedMessage.Metadata()
 
-		shortIndex := utils.ShortenedIndex(cachedMessage.Retain())
+		shortIndex := utils.ShortenedTag(cachedMessage.Retain())
 
 		if index := indexOf(message.MessageID()); index != -1 {
 			dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortIndex, index, shortIndex)
@@ -170,7 +162,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 
 			cachedMessageParent := te.storage.CachedMessageOrNil(parent)
 			require.NotNil(te.TestInterface, cachedMessageParent)
-			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedIndex(cachedMessageParent.Retain()), i+1)
+			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedTag(cachedMessageParent.Retain()), i+1)
 			cachedMessageParent.Release(true)
 		}
 

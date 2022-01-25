@@ -109,7 +109,7 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 
 	// Protect this routes with JWT even if the API is not protected
 	jwtAuthRoutes := []string{
-		"/api/v1/peers",
+		"/api/v2/peers",
 		"/api/plugins",
 	}
 
