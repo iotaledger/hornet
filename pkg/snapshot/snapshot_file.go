@@ -19,7 +19,7 @@ import (
 
 const (
 	// The supported snapshot file version.
-	SupportedFormatVersion byte = 1
+	SupportedFormatVersion byte = 2
 	// The length of a solid entry point hash.
 	SolidEntryPointHashLength = iotago.MessageIDLength
 
