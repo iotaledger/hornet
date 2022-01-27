@@ -11,6 +11,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
 const (
@@ -18,13 +19,13 @@ const (
 )
 
 // NewDebugNodeAPIClient returns a new debug node API instance.
-func NewDebugNodeAPIClient(baseURL string, deSeriParas *iotago.DeSerializationParameters, opts ...iotago.NodeHTTPAPIClientOption) *DebugNodeAPIClient {
-	return &DebugNodeAPIClient{NodeHTTPAPIClient: iotago.NewNodeHTTPAPIClient(baseURL, deSeriParas, opts...)}
+func NewDebugNodeAPIClient(baseURL string, deSeriParas *iotago.DeSerializationParameters, opts ...nodeclient.NodeHTTPAPIClientOption) *DebugNodeAPIClient {
+	return &DebugNodeAPIClient{NodeHTTPAPIClient: nodeclient.NewNodeHTTPAPIClient(baseURL, deSeriParas, opts...)}
 }
 
 // DebugNodeAPIClient is an API wrapper over the debug node API.
 type DebugNodeAPIClient struct {
-	*iotago.NodeHTTPAPIClient
+	*nodeclient.NodeHTTPAPIClient
 }
 
 // BaseURL returns the baseURL of the API.
@@ -38,11 +39,11 @@ func (api *DebugNodeAPIClient) BaseURL() string {
 
 var (
 	httpCodeToErr = map[int]error{
-		http.StatusBadRequest:          iotago.ErrHTTPBadRequest,
-		http.StatusInternalServerError: iotago.ErrHTTPInternalServerError,
-		http.StatusNotFound:            iotago.ErrHTTPNotFound,
-		http.StatusUnauthorized:        iotago.ErrHTTPUnauthorized,
-		http.StatusNotImplemented:      iotago.ErrHTTPNotImplemented,
+		http.StatusBadRequest:          nodeclient.ErrHTTPBadRequest,
+		http.StatusInternalServerError: nodeclient.ErrHTTPInternalServerError,
+		http.StatusNotFound:            nodeclient.ErrHTTPNotFound,
+		http.StatusUnauthorized:        nodeclient.ErrHTTPUnauthorized,
+		http.StatusNotImplemented:      nodeclient.ErrHTTPNotImplemented,
 	}
 )
 
@@ -151,14 +152,14 @@ func interpretBody(res *http.Response, decodeTo interface{}) error {
 		return err
 	}
 
-	errRes := &iotago.HTTPErrorResponseEnvelope{}
+	errRes := &nodeclient.HTTPErrorResponseEnvelope{}
 	if err := json.Unmarshal(resBody, errRes); err != nil {
 		return fmt.Errorf("unable to read error from response body: %w", err)
 	}
 
 	err, ok := httpCodeToErr[res.StatusCode]
 	if !ok {
-		err = iotago.ErrHTTPUnknownError
+		err = nodeclient.ErrHTTPUnknownError
 	}
 
 	return fmt.Errorf("%w: url %s, error message: %s", err, res.Request.URL.String(), errRes.Error.Message)
