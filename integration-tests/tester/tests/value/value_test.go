@@ -13,6 +13,7 @@ import (
 
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/builder"
 )
 
 // TestValue boots up a statically peered network and then checks that spending
@@ -48,8 +49,8 @@ func TestValue(t *testing.T) {
 	}
 
 	// build and sign transaction spending the total supply
-	tx, err := iotago.NewTransactionBuilder().
-		AddInput(&iotago.ToBeSignedUTXOInput{
+	tx, err := builder.NewTransactionBuilder().
+		AddInput(&builder.ToBeSignedUTXOInput{
 			Address: &framework.GenesisAddress,
 			Input:   genesisInputID,
 		}).
@@ -73,7 +74,7 @@ func TestValue(t *testing.T) {
 	require.NoError(t, err)
 
 	// build message
-	msg, err := iotago.NewMessageBuilder().Payload(tx).Build()
+	msg, err := builder.NewMessageBuilder().Payload(tx).Build()
 	require.NoError(t, err)
 
 	// broadcast to a node

@@ -28,6 +28,7 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/builder"
 )
 
 // SendMessageFunc is a function which sends a message to the network.
@@ -501,7 +502,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Payload, ti
 // buildTransactionPayload creates a signed transaction payload with all UTXO and batched requests.
 func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedRequests []*queueItem) (*iotago.Transaction, *iotago.UTXOInput, uint64, error) {
 
-	txBuilder := iotago.NewTransactionBuilder()
+	txBuilder := builder.NewTransactionBuilder()
 	txBuilder.AddTaggedDataPayload(&iotago.TaggedData{Tag: f.opts.tagMessage, Data: nil})
 
 	outputCount := 0
@@ -511,7 +512,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	for _, unspentOutput := range unspentOutputs {
 		outputCount++
 		remainderAmount += int64(unspentOutput.Deposit())
-		txBuilder.AddInput(&iotago.ToBeSignedUTXOInput{Address: f.address, Input: unspentOutput.OutputID().UTXOInput()})
+		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: f.address, Input: unspentOutput.OutputID().UTXOInput()})
 	}
 
 	// add all requests as outputs

@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/builder"
 )
 
 type MessageBuilder struct {
@@ -104,7 +105,7 @@ func (b *MessageBuilder) BuildTaggedData() *Message {
 		parents = append(parents, parent[:])
 	}
 
-	msg, err := iotago.NewMessageBuilder().
+	msg, err := builder.NewMessageBuilder().
 		Parents(parents).
 		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
@@ -126,7 +127,7 @@ func (b *MessageBuilder) Build() *Message {
 
 	require.Greaterf(b.te.TestInterface, b.amount, uint64(0), "trying to send a transaction with no value")
 
-	builder := iotago.NewTransactionBuilder()
+	txBuilder := builder.NewTransactionBuilder()
 
 	fromAddr := b.fromWallet.Address()
 	toAddr := b.toWallet.Address()
@@ -169,7 +170,7 @@ func (b *MessageBuilder) Build() *Message {
 
 	for _, output := range outputsThatCanBeConsumed {
 
-		builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: fromAddr, Input: output.OutputID().UTXOInput()})
+		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: fromAddr, Input: output.OutputID().UTXOInput()})
 		consumedInputs = append(consumedInputs, output)
 		consumedAmount += output.Deposit()
 
@@ -178,29 +179,29 @@ func (b *MessageBuilder) Build() *Message {
 		}
 	}
 
-	builder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: toAddr}}, Amount: b.amount})
+	txBuilder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: toAddr}}, Amount: b.amount})
 
 	var remainderAmount uint64
 	if b.amount < consumedAmount {
 		// Send remainder back to fromWallet
 		remainderAmount = consumedAmount - b.amount
-		builder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: fromAddr}}, Amount: remainderAmount})
+		txBuilder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: fromAddr}}, Amount: remainderAmount})
 	}
 
 	if len(b.tag) > 0 {
-		builder.AddTaggedDataPayload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData})
+		txBuilder.AddTaggedDataPayload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData})
 	}
 
 	// Sign transaction
 	inputPrivateKey, _ := b.fromWallet.KeyPair()
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: fromAddr, Keys: inputPrivateKey})
 
-	transaction, err := builder.Build(DeSerializationParameters, inputAddrSigner)
+	transaction, err := txBuilder.Build(DeSerializationParameters, inputAddrSigner)
 	require.NoError(b.te.TestInterface, err)
 
 	require.NotNil(b.te.TestInterface, b.parents)
 
-	msg, err := iotago.NewMessageBuilder().
+	msg, err := builder.NewMessageBuilder().
 		Parents(b.parents.ToSliceOfSlices()).
 		Payload(transaction).Build()
 	require.NoError(b.te.TestInterface, err)
@@ -213,8 +214,7 @@ func (b *MessageBuilder) Build() *Message {
 
 	log := fmt.Sprintf("Send %d iota from %s to %s and remaining %d iota to original wallet", b.amount, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount)
 	if b.outputToUse != nil {
-		usedType := iotago.OutputTypeToString(b.outputToUse.OutputType())
-		log += fmt.Sprintf(" using UTXO: %s [%s]", b.outputToUse.OutputID().ToHex(), usedType)
+		log += fmt.Sprintf(" using UTXO: %s [%s]", b.outputToUse.OutputID().ToHex(), b.outputToUse.OutputType().String())
 	}
 	fmt.Println(log)
 

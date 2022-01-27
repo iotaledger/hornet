@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
 // Node represents a HORNET node inside the Docker network.
@@ -30,7 +31,7 @@ type Node struct {
 	// The DockerContainer that this peer is running in
 	*DockerContainer
 	// The Peers of the peer.
-	peers []*iotago.PeerResponse
+	peers []*nodeclient.PeerResponse
 }
 
 // newNode creates a new instance of Node with the given information.
@@ -85,8 +86,8 @@ func (p *Node) TotalPeers() int {
 }
 
 // SetPeers sets the peers of the peer accordingly.
-func (p *Node) SetPeers(peers []*iotago.PeerResponse) {
-	p.peers = make([]*iotago.PeerResponse, len(peers))
+func (p *Node) SetPeers(peers []*nodeclient.PeerResponse) {
+	p.peers = make([]*nodeclient.PeerResponse, len(peers))
 	copy(p.peers, peers)
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/builder"
 )
 
 func TestEventStateHelpers(t *testing.T) {
@@ -213,18 +214,18 @@ func TestTaggedDataPayloads(t *testing.T) {
 		TagData(participationsData).
 		Build()
 
-	builder := iotago.NewTransactionBuilder()
-	builder.AddTaggedDataPayload(&iotago.TaggedData{
+	txBuilder := builder.NewTransactionBuilder()
+	txBuilder.AddTaggedDataPayload(&iotago.TaggedData{
 		Tag:  []byte(test.ParticipationTag),
 		Data: participationsData,
 	})
-	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet3.Address(), Input: env.Wallet3.Outputs()[0].OutputID().UTXOInput()})
-	builder.AddInput(&iotago.ToBeSignedUTXOInput{Address: env.Wallet4.Address(), Input: env.Wallet4.Outputs()[0].OutputID().UTXOInput()})
-	builder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: env.Wallet4.Address()}}, Amount: env.Wallet3.Balance() + env.Wallet4.Balance()})
+	txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: env.Wallet3.Address(), Input: env.Wallet3.Outputs()[0].OutputID().UTXOInput()})
+	txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: env.Wallet4.Address(), Input: env.Wallet4.Outputs()[0].OutputID().UTXOInput()})
+	txBuilder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: env.Wallet4.Address()}}, Amount: env.Wallet3.Balance() + env.Wallet4.Balance()})
 	wallet3PrivKey, _ := env.Wallet3.KeyPair()
 	wallet4PrivKey, _ := env.Wallet4.KeyPair()
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: env.Wallet3.Address(), Keys: wallet3PrivKey}, iotago.AddressKeys{Address: env.Wallet4.Address(), Keys: wallet4PrivKey})
-	msgBuilder := builder.BuildAndSwapToMessageBuilder(testsuite.DeSerializationParameters, inputAddrSigner, nil)
+	msgBuilder := txBuilder.BuildAndSwapToMessageBuilder(testsuite.DeSerializationParameters, inputAddrSigner, nil)
 	msgBuilder.Parents(hornet.MessageIDs{env.LastMilestoneMessageID()}.ToSliceOfSlices())
 
 	msg, err := msgBuilder.Build()
