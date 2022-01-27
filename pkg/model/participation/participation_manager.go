@@ -630,7 +630,7 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 							return false
 						}
 					default:
-						innerErr = fmt.Errorf("invalid output type: %s", iotago.OutputTypeToString(output.OutputType()))
+						innerErr = fmt.Errorf("invalid output type: %s", output.OutputType().String())
 						return false
 					}
 

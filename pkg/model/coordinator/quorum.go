@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/syncutils"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
 var (
@@ -95,8 +96,8 @@ func newQuorum(quorumGroups map[string][]*QuorumClientConfig, deSeriParas *iotag
 			groups[groupName][i] = &quorumGroupEntry{
 				api: NewDebugNodeAPIClient(client.BaseURL,
 					deSeriParas,
-					iotago.WithNodeHTTPAPIClientHTTPClient(&http.Client{Timeout: timeout}),
-					iotago.WithNodeHTTPAPIClientUserInfo(userInfo),
+					nodeclient.WithNodeHTTPAPIClientHTTPClient(&http.Client{Timeout: timeout}),
+					nodeclient.WithNodeHTTPAPIClientUserInfo(userInfo),
 				),
 				stats: &QuorumClientStatistic{
 					Group:   groupName,

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/nodeclient"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -19,13 +20,13 @@ const (
 )
 
 // NewDebugNodeAPIClient returns a new DebugNodeAPIClient with the given BaseURL.
-func NewDebugNodeAPIClient(baseURL string, deSeriParas *iotago.DeSerializationParameters, opts ...iotago.NodeHTTPAPIClientOption) *DebugNodeAPIClient {
-	return &DebugNodeAPIClient{NodeHTTPAPIClient: iotago.NewNodeHTTPAPIClient(baseURL, deSeriParas, opts...)}
+func NewDebugNodeAPIClient(baseURL string, deSeriParas *iotago.DeSerializationParameters, opts ...nodeclient.NodeHTTPAPIClientOption) *DebugNodeAPIClient {
+	return &DebugNodeAPIClient{NodeHTTPAPIClient: nodeclient.NewNodeHTTPAPIClient(baseURL, deSeriParas, opts...)}
 }
 
 // DebugNodeAPIClient is a client for node HTTP REST APIs.
 type DebugNodeAPIClient struct {
-	*iotago.NodeHTTPAPIClient
+	*nodeclient.NodeHTTPAPIClient
 }
 
 // computeWhiteFlagMutationsRequest defines the request for a POST debugComputeWhiteFlagMutations REST API call.

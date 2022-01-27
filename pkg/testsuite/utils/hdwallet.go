@@ -111,8 +111,7 @@ func (hd *HDWallet) PrintStatus() {
 	status += fmt.Sprintf("Balance: %d\n", hd.Balance())
 	status += "Outputs: \n"
 	for _, u := range hd.utxo {
-		outputType := iotago.OutputTypeToString(u.OutputType())
-		status += fmt.Sprintf("\t%s [%s] = %d\n", u.OutputID().ToHex(), outputType, u.Deposit())
+		status += fmt.Sprintf("\t%s [%s] = %d\n", u.OutputID().ToHex(), u.OutputType().String(), u.Deposit())
 	}
 	fmt.Printf("%s\n", status)
 }
