@@ -1,40 +1,37 @@
 package toolset
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/mr-tron/base58"
-
-	"github.com/iotaledger/hive.go/configuration"
+	flag "github.com/spf13/pflag"
 
 	p2pCore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/p2p"
+	"github.com/iotaledger/hive.go/configuration"
 )
 
 func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [P2P_DATABASE_PATH]", ToolP2PExtractIdentity))
-		println()
-		println("   [P2P_DATABASE_PATH] - the path to the p2p database folder (optional)")
-		println()
-		println(fmt.Sprintf("example: %s %s", ToolP2PExtractIdentity, "p2pstore"))
+
+	fs := flag.NewFlagSet("", flag.ExitOnError)
+	p2pDatabasePath := fs.String("p2pDatabasePath", "", "the path to the p2p database folder (optional)")
+	outputJSON := fs.Bool("json", false, "format output as JSON")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolP2PExtractIdentity)
+		fs.PrintDefaults()
 	}
 
-	if len(args) > 1 {
-		printUsage()
-		return fmt.Errorf("too many arguments for '%s'", ToolP2PExtractIdentity)
+	if err := fs.Parse(args); err != nil {
+		return err
 	}
 
-	p2pDatabasePath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if len(args) > 0 {
-		p2pDatabasePath = args[0]
+	dbPath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
+	if p2pDatabasePath != nil && len(*p2pDatabasePath) > 0 {
+		dbPath = *p2pDatabasePath
 	}
-	privKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PrivKeyFileName)
+	privKeyFilePath := filepath.Join(dbPath, p2p.PrivKeyFileName)
 
 	_, err := os.Stat(privKeyFilePath)
 	switch {
@@ -54,25 +51,5 @@ func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) 
 		return fmt.Errorf("reading private key file for peer identity failed: %w", err)
 	}
 
-	peerID, err := peer.IDFromPublicKey(privKey.GetPublic())
-	if err != nil {
-		return fmt.Errorf("unable to get peer identity from public key: %w", err)
-	}
-
-	privKeyBytes, err := privKey.Raw()
-	if err != nil {
-		return fmt.Errorf("unable to get raw private key bytes: %w", err)
-	}
-
-	pubKeyBytes, err := privKey.GetPublic().Raw()
-	if err != nil {
-		return fmt.Errorf("unable to get raw public key bytes: %w", err)
-	}
-
-	fmt.Println("Your p2p private key (hex):   ", hex.EncodeToString(privKeyBytes))
-	fmt.Println("Your p2p public key (hex):    ", hex.EncodeToString(pubKeyBytes))
-	fmt.Println("Your p2p public key (base58): ", base58.Encode(pubKeyBytes))
-	fmt.Println("Your p2p PeerID:              ", peerID.String())
-
-	return nil
+	return printP2PIdentity(privKey, privKey.GetPublic(), *outputJSON)
 }
