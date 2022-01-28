@@ -54,9 +54,9 @@ type Events struct {
 
 // queueItem is an item for the faucet requests queue.
 type queueItem struct {
-	Bech32         string
-	Amount         uint64
-	Ed25519Address *iotago.Ed25519Address
+	Bech32  string
+	Amount  uint64
+	Address iotago.Address
 }
 
 // pendingTransaction holds info about a sent transaction that is pending.
@@ -106,7 +106,7 @@ type Faucet struct {
 	// used to access the outputs for the faucet's address.
 	indexer *indexer.Indexer
 	// the address of the faucet.
-	address *iotago.Ed25519Address
+	address iotago.Address
 	// used to sign the faucet transactions.
 	addressSigner iotago.AddressSigner
 	// used to get valid tips for new faucet messages.
@@ -264,7 +264,7 @@ func New(
 	belowMaxDepth int,
 	utxoManager *utxo.Manager,
 	indexer *indexer.Indexer,
-	address *iotago.Ed25519Address,
+	address iotago.Address,
 	addressSigner iotago.AddressSigner,
 	tipselFunc TipselFunc,
 	powHandler *pow.Handler,
@@ -345,7 +345,7 @@ func (f *Faucet) computeAddressBalance(address iotago.Address) (uint64, error) {
 // Enqueue adds a new faucet request to the queue.
 func (f *Faucet) Enqueue(bech32Addr string) (*FaucetEnqueueResponse, error) {
 
-	ed25519Addr, err := f.parseBech32Address(bech32Addr)
+	addr, err := f.parseBech32Address(bech32Addr)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +362,7 @@ func (f *Faucet) Enqueue(bech32Addr string) (*FaucetEnqueueResponse, error) {
 	}
 
 	amount := f.opts.amount
-	balance, err := f.computeAddressBalance(ed25519Addr)
+	balance, err := f.computeAddressBalance(addr)
 	if err == nil && balance >= f.opts.amount {
 		amount = f.opts.smallAmount
 
@@ -376,9 +376,9 @@ func (f *Faucet) Enqueue(bech32Addr string) (*FaucetEnqueueResponse, error) {
 	}
 
 	request := &queueItem{
-		Bech32:         bech32Addr,
-		Amount:         amount,
-		Ed25519Address: ed25519Addr,
+		Bech32:  bech32Addr,
+		Amount:  amount,
+		Address: addr,
 	}
 
 	select {
@@ -402,7 +402,7 @@ func (f *Faucet) FlushRequests() {
 }
 
 // parseBech32Address parses a bech32 address.
-func (f *Faucet) parseBech32Address(bech32Addr string) (*iotago.Ed25519Address, error) {
+func (f *Faucet) parseBech32Address(bech32Addr string) (iotago.Address, error) {
 
 	hrp, bech32Address, err := iotago.ParseBech32(bech32Addr)
 	if err != nil {
@@ -413,12 +413,7 @@ func (f *Faucet) parseBech32Address(bech32Addr string) (*iotago.Ed25519Address, 
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "Invalid bech32 address provided! Address does not start with \"%s\".", f.NetworkPrefix())
 	}
 
-	switch address := bech32Address.(type) {
-	case *iotago.Ed25519Address:
-		return address, nil
-	default:
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "Invalid bech32 address provided! Unknown address type.")
-	}
+	return bech32Address, nil
 }
 
 // clearRequestWithoutLocking clear the old request from the map.
@@ -540,7 +535,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 		txBuilder.AddOutput(&iotago.ExtendedOutput{
 			Amount: amount,
 			Conditions: iotago.UnlockConditions{
-				&iotago.AddressUnlockCondition{Address: req.Ed25519Address},
+				&iotago.AddressUnlockCondition{Address: req.Address},
 			},
 		})
 	}
@@ -581,9 +576,9 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 		if err != nil {
 			return nil, nil, 0, err
 		}
-		ed25519Addr := conditions.Address().Address.(*iotago.Ed25519Address)
+		addr := conditions.Address().Address
 
-		if bytes.Equal(ed25519Addr[:], f.address[:]) {
+		if f.address.Equal(addr) {
 			// found the remainder address in the outputs
 			found = true
 			remainderOutput.TransactionOutputIndex = outputIndex
