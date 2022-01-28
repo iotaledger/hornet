@@ -62,8 +62,8 @@ const (
 	// QueryParameterTag is used to filter for a certain tag.
 	QueryParameterTag = "tag"
 
-	// QueryParameterRequiresDustReturn is used to filter for outputs requiring a dust return.
-	QueryParameterRequiresDustReturn = "requiresDustReturn"
+	// QueryParameterHasDustReturnCondition is used to filter for outputs requiring a dust return.
+	QueryParameterHasDustReturnCondition = "hasDustReturnCondition"
 
 	// QueryParameterDustReturnAddress is used to filter for outputs with a certain dust return address.
 	QueryParameterDustReturnAddress = "dustReturnAddress"
@@ -176,12 +176,12 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.ExtendedOutputUnlockableByAddress(addr))
 	}
 
-	if len(c.QueryParam(QueryParameterRequiresDustReturn)) > 0 {
-		requiresDust, err := restapi.ParseBoolQueryParam(c, QueryParameterRequiresDustReturn)
+	if len(c.QueryParam(QueryParameterHasDustReturnCondition)) > 0 {
+		requiresDust, err := restapi.ParseBoolQueryParam(c, QueryParameterHasDustReturnCondition)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputRequiresDustReturn(requiresDust))
+		filters = append(filters, indexer.ExtendedOutputHasDustReturnCondition(requiresDust))
 	}
 
 	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {
@@ -316,12 +316,12 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTUnlockableByAddress(addr))
 	}
 
-	if len(c.QueryParam(QueryParameterRequiresDustReturn)) > 0 {
-		requiresDust, err := restapi.ParseBoolQueryParam(c, QueryParameterRequiresDustReturn)
+	if len(c.QueryParam(QueryParameterHasDustReturnCondition)) > 0 {
+		requiresDust, err := restapi.ParseBoolQueryParam(c, QueryParameterHasDustReturnCondition)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTRequiresDustReturn(requiresDust))
+		filters = append(filters, indexer.NFTHasDustReturnCondition(requiresDust))
 	}
 
 	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {

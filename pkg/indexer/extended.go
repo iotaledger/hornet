@@ -24,8 +24,6 @@ type extendedOutput struct {
 }
 
 type ExtendedOutputFilterOptions struct {
-	unlockableByAddress     *iotago.Address
-	requiresDustReturn      *bool
 	dustReturnAddress       *iotago.Address
 	expirationReturnAddress *iotago.Address
 	sender                  *iotago.Address
@@ -33,6 +31,8 @@ type ExtendedOutputFilterOptions struct {
 	pageSize                int
 	offset                  []byte
 	createdAfter            *time.Time
+	unlockableByAddress       *iotago.Address
+	hasDustReturnCondition    *bool
 }
 
 type ExtendedOutputFilterOption func(*ExtendedOutputFilterOptions)
@@ -43,9 +43,9 @@ func ExtendedOutputUnlockableByAddress(address iotago.Address) ExtendedOutputFil
 	}
 }
 
-func ExtendedOutputRequiresDustReturn(requiresDustReturn bool) ExtendedOutputFilterOption {
+func ExtendedOutputHasDustReturnCondition(value bool) ExtendedOutputFilterOption {
 	return func(args *ExtendedOutputFilterOptions) {
-		args.requiresDustReturn = &requiresDustReturn
+		args.hasDustReturnCondition = &value
 	}
 }
 
@@ -92,17 +92,7 @@ func ExtendedOutputCreatedAfter(time time.Time) ExtendedOutputFilterOption {
 }
 
 func extendedOutputFilterOptions(optionalOptions []ExtendedOutputFilterOption) *ExtendedOutputFilterOptions {
-	result := &ExtendedOutputFilterOptions{
-		unlockableByAddress:     nil,
-		requiresDustReturn:      nil,
-		dustReturnAddress:       nil,
-		expirationReturnAddress: nil,
-		sender:                  nil,
-		tag:                     nil,
-		pageSize:                0,
-		offset:                  nil,
-		createdAfter:            nil,
-	}
+	result := &ExtendedOutputFilterOptions{}
 
 	for _, optionalOption := range optionalOptions {
 		optionalOption(result)
@@ -121,8 +111,8 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 		query = query.Where("address = ?", addr[:])
 	}
 
-	if opts.requiresDustReturn != nil {
-		if *opts.requiresDustReturn {
+	if opts.hasDustReturnCondition != nil {
+		if *opts.hasDustReturnCondition {
 			query = query.Where("dust_return IS NOT NULL")
 		} else {
 			query = query.Where("dust_return IS NULL")

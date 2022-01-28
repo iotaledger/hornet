@@ -26,8 +26,6 @@ type nft struct {
 }
 
 type NFTFilterOptions struct {
-	unlockableByAddress     *iotago.Address
-	requiresDustReturn      *bool
 	dustReturnAddress       *iotago.Address
 	expirationReturnAddress *iotago.Address
 	issuer                  *iotago.Address
@@ -36,6 +34,8 @@ type NFTFilterOptions struct {
 	pageSize                int
 	offset                  []byte
 	createdAfter            *time.Time
+	unlockableByAddress       *iotago.Address
+	hasDustReturnCondition    *bool
 }
 
 type NFTFilterOption func(*NFTFilterOptions)
@@ -46,9 +46,9 @@ func NFTUnlockableByAddress(address iotago.Address) NFTFilterOption {
 	}
 }
 
-func NFTRequiresDustReturn(requiresDustReturn bool) NFTFilterOption {
+func NFTHasDustReturnCondition(requiresDustReturn bool) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
-		args.requiresDustReturn = &requiresDustReturn
+		args.hasDustReturnCondition = &requiresDustReturn
 	}
 }
 
@@ -101,18 +101,7 @@ func NFTCreatedAfter(time time.Time) NFTFilterOption {
 }
 
 func nftFilterOptions(optionalOptions []NFTFilterOption) *NFTFilterOptions {
-	result := &NFTFilterOptions{
-		unlockableByAddress:     nil,
-		requiresDustReturn:      nil,
-		dustReturnAddress:       nil,
-		expirationReturnAddress: nil,
-		issuer:                  nil,
-		sender:                  nil,
-		tag:                     nil,
-		pageSize:                0,
-		offset:                  nil,
-		createdAfter:            nil,
-	}
+	result := &NFTFilterOptions{}
 
 	for _, optionalOption := range optionalOptions {
 		optionalOption(result)
@@ -140,8 +129,8 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResu
 		query = query.Where("address = ?", addr[:])
 	}
 
-	if opts.requiresDustReturn != nil {
-		if *opts.requiresDustReturn {
+	if opts.hasDustReturnCondition != nil {
+		if *opts.hasDustReturnCondition {
 			query = query.Where("dust_return IS NOT NULL")
 		} else {
 			query = query.Where("dust_return IS NULL")
