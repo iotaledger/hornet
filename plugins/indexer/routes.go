@@ -82,6 +82,9 @@ const (
 
 	// QueryParameterOffset is used to pass the outputID we want to start the results from.
 	QueryParameterOffset = "offset"
+
+	// QueryParameterCreatedAfter is used to filter for outputs that were created after the given time.
+	QueryParameterCreatedAfter = "createdAfter"
 )
 
 func nodeSyncedMiddleware() echo.MiddlewareFunc {
@@ -220,6 +223,15 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		}
 		filters = append(filters, indexer.ExtendedOutputOffset(offset))
 	}
+
+	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputCreatedAfter(timestamp))
+	}
+
 	return outputsResponseFromResult(deps.Indexer.ExtendedOutputsWithFilters(filters...))
 }
 
@@ -273,6 +285,15 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 		}
 		filters = append(filters, indexer.AliasOffset(offset))
 	}
+
+	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasCreatedAfter(timestamp))
+	}
+
 	return outputsResponseFromResult(deps.Indexer.AliasOutputsWithFilters(filters...))
 }
 
@@ -350,6 +371,15 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 		}
 		filters = append(filters, indexer.NFTOffset(offset))
 	}
+
+	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTCreatedAfter(timestamp))
+	}
+
 	return outputsResponseFromResult(deps.Indexer.NFTOutputsWithFilters(filters...))
 }
 
@@ -371,6 +401,7 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 		}
 		filters = append(filters, indexer.FoundryUnlockableByAddress(address))
 	}
+
 	if len(c.QueryParam(QueryParameterOffset)) > 0 {
 		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
 		if err != nil {
@@ -378,6 +409,15 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 		}
 		filters = append(filters, indexer.FoundryOffset(offset))
 	}
+
+	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.FoundryCreatedAfter(timestamp))
+	}
+
 	return outputsResponseFromResult(deps.Indexer.FoundryOutputsWithFilters(filters...))
 }
 

@@ -32,6 +32,7 @@ type ExtendedOutputFilterOptions struct {
 	tag                     []byte
 	pageSize                int
 	offset                  []byte
+	createdAfter            *time.Time
 }
 
 type ExtendedOutputFilterOption func(*ExtendedOutputFilterOptions)
@@ -84,6 +85,12 @@ func ExtendedOutputOffset(offset []byte) ExtendedOutputFilterOption {
 	}
 }
 
+func ExtendedOutputCreatedAfter(time time.Time) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.createdAfter = &time
+	}
+}
+
 func extendedOutputFilterOptions(optionalOptions []ExtendedOutputFilterOption) *ExtendedOutputFilterOptions {
 	result := &ExtendedOutputFilterOptions{
 		unlockableByAddress:     nil,
@@ -94,6 +101,7 @@ func extendedOutputFilterOptions(optionalOptions []ExtendedOutputFilterOption) *
 		tag:                     nil,
 		pageSize:                0,
 		offset:                  nil,
+		createdAfter:            nil,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -147,6 +155,10 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 
 	if opts.tag != nil && len(opts.tag) > 0 {
 		query = query.Where("tag = ?", opts.tag)
+	}
+
+	if opts.createdAfter != nil {
+		query = query.Where("created_at > ?", *opts.createdAfter)
 	}
 
 	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)

@@ -35,6 +35,7 @@ type NFTFilterOptions struct {
 	tag                     []byte
 	pageSize                int
 	offset                  []byte
+	createdAfter            *time.Time
 }
 
 type NFTFilterOption func(*NFTFilterOptions)
@@ -93,6 +94,12 @@ func NFTOffset(offset []byte) NFTFilterOption {
 	}
 }
 
+func NFTCreatedAfter(time time.Time) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.createdAfter = &time
+	}
+}
+
 func nftFilterOptions(optionalOptions []NFTFilterOption) *NFTFilterOptions {
 	result := &NFTFilterOptions{
 		unlockableByAddress:     nil,
@@ -104,6 +111,7 @@ func nftFilterOptions(optionalOptions []NFTFilterOption) *NFTFilterOptions {
 		tag:                     nil,
 		pageSize:                0,
 		offset:                  nil,
+		createdAfter:            nil,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -174,6 +182,10 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResu
 
 	if opts.tag != nil && len(opts.tag) > 0 {
 		query = query.Where("tag = ?", opts.tag)
+	}
+
+	if opts.createdAfter != nil {
+		query = query.Where("created_at > ?", *opts.createdAfter)
 	}
 
 	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)

@@ -18,6 +18,7 @@ type FoundryFilterOptions struct {
 	unlockableByAddress *iotago.Address
 	pageSize            int
 	offset              []byte
+	createdAfter        *time.Time
 }
 
 type FoundryFilterOption func(*FoundryFilterOptions)
@@ -40,11 +41,18 @@ func FoundryOffset(offset []byte) FoundryFilterOption {
 	}
 }
 
+func FoundryCreatedAfter(time time.Time) FoundryFilterOption {
+	return func(args *FoundryFilterOptions) {
+		args.createdAfter = &time
+	}
+}
+
 func foundryFilterOptions(optionalOptions []FoundryFilterOption) *FoundryFilterOptions {
 	result := &FoundryFilterOptions{
 		unlockableByAddress: nil,
 		pageSize:            0,
 		offset:              nil,
+		createdAfter:        nil,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -71,6 +79,10 @@ func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) *Ind
 			return errorResult(err)
 		}
 		query = query.Where("address = ?", addr[:])
+	}
+
+	if opts.createdAfter != nil {
+		query = query.Where("created_at > ?", *opts.createdAfter)
 	}
 
 	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)

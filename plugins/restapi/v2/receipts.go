@@ -21,7 +21,7 @@ func receipts(_ echo.Context) (*receiptsResponse, error) {
 }
 
 func receiptsByMigratedAtIndex(c echo.Context) (*receiptsResponse, error) {
-	migratedAt, err := restapi.ParseMilestoneIndexParam(c)
+	migratedAt, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}
