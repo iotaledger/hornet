@@ -24,12 +24,14 @@ type extendedOutput struct {
 }
 
 type ExtendedOutputFilterOptions struct {
-	unlockableByAddress *iotago.Address
-	requiresDustReturn  *bool
-	sender              *iotago.Address
-	tag                 []byte
-	pageSize            int
-	offset              []byte
+	unlockableByAddress     *iotago.Address
+	requiresDustReturn      *bool
+	dustReturnAddress       *iotago.Address
+	expirationReturnAddress *iotago.Address
+	sender                  *iotago.Address
+	tag                     []byte
+	pageSize                int
+	offset                  []byte
 }
 
 type ExtendedOutputFilterOption func(*ExtendedOutputFilterOptions)
@@ -43,6 +45,18 @@ func ExtendedOutputUnlockableByAddress(address iotago.Address) ExtendedOutputFil
 func ExtendedOutputRequiresDustReturn(requiresDustReturn bool) ExtendedOutputFilterOption {
 	return func(args *ExtendedOutputFilterOptions) {
 		args.requiresDustReturn = &requiresDustReturn
+	}
+}
+
+func ExtendedOutputDustReturnAddress(address iotago.Address) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.dustReturnAddress = &address
+	}
+}
+
+func ExtendedOutputExpirationReturnAddress(address iotago.Address) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.expirationReturnAddress = &address
 	}
 }
 
@@ -72,12 +86,14 @@ func ExtendedOutputOffset(offset []byte) ExtendedOutputFilterOption {
 
 func extendedOutputFilterOptions(optionalOptions []ExtendedOutputFilterOption) *ExtendedOutputFilterOptions {
 	result := &ExtendedOutputFilterOptions{
-		unlockableByAddress: nil,
-		requiresDustReturn:  nil,
-		sender:              nil,
-		tag:                 nil,
-		pageSize:            0,
-		offset:              nil,
+		unlockableByAddress:     nil,
+		requiresDustReturn:      nil,
+		dustReturnAddress:       nil,
+		expirationReturnAddress: nil,
+		sender:                  nil,
+		tag:                     nil,
+		pageSize:                0,
+		offset:                  nil,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -103,6 +119,22 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 		} else {
 			query = query.Where("dust_return IS NULL")
 		}
+	}
+
+	if opts.dustReturnAddress != nil {
+		addr, err := addressBytesForAddress(*opts.dustReturnAddress)
+		if err != nil {
+			return errorResult(err)
+		}
+		query = query.Where("dust_return_address = ?", addr[:])
+	}
+
+	if opts.expirationReturnAddress != nil {
+		addr, err := addressBytesForAddress(*opts.expirationReturnAddress)
+		if err != nil {
+			return errorResult(err)
+		}
+		query = query.Where("expiration_return_address = ?", addr[:])
 	}
 
 	if opts.sender != nil {

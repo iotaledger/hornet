@@ -26,13 +26,15 @@ type nft struct {
 }
 
 type NFTFilterOptions struct {
-	unlockableByAddress *iotago.Address
-	requiresDustReturn  *bool
-	issuer              *iotago.Address
-	sender              *iotago.Address
-	tag                 []byte
-	pageSize            int
-	offset              []byte
+	unlockableByAddress     *iotago.Address
+	requiresDustReturn      *bool
+	dustReturnAddress       *iotago.Address
+	expirationReturnAddress *iotago.Address
+	issuer                  *iotago.Address
+	sender                  *iotago.Address
+	tag                     []byte
+	pageSize                int
+	offset                  []byte
 }
 
 type NFTFilterOption func(*NFTFilterOptions)
@@ -46,6 +48,18 @@ func NFTUnlockableByAddress(address iotago.Address) NFTFilterOption {
 func NFTRequiresDustReturn(requiresDustReturn bool) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
 		args.requiresDustReturn = &requiresDustReturn
+	}
+}
+
+func NFTDustReturnAddress(address iotago.Address) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.dustReturnAddress = &address
+	}
+}
+
+func NFTExpirationReturnAddress(address iotago.Address) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.expirationReturnAddress = &address
 	}
 }
 
@@ -81,13 +95,15 @@ func NFTOffset(offset []byte) NFTFilterOption {
 
 func nftFilterOptions(optionalOptions []NFTFilterOption) *NFTFilterOptions {
 	result := &NFTFilterOptions{
-		unlockableByAddress: nil,
-		requiresDustReturn:  nil,
-		issuer:              nil,
-		sender:              nil,
-		tag:                 nil,
-		pageSize:            0,
-		offset:              nil,
+		unlockableByAddress:     nil,
+		requiresDustReturn:      nil,
+		dustReturnAddress:       nil,
+		expirationReturnAddress: nil,
+		issuer:                  nil,
+		sender:                  nil,
+		tag:                     nil,
+		pageSize:                0,
+		offset:                  nil,
 	}
 
 	for _, optionalOption := range optionalOptions {
@@ -122,6 +138,22 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResu
 		} else {
 			query = query.Where("dust_return IS NULL")
 		}
+	}
+
+	if opts.dustReturnAddress != nil {
+		addr, err := addressBytesForAddress(*opts.dustReturnAddress)
+		if err != nil {
+			return errorResult(err)
+		}
+		query = query.Where("dust_return_address = ?", addr[:])
+	}
+
+	if opts.expirationReturnAddress != nil {
+		addr, err := addressBytesForAddress(*opts.expirationReturnAddress)
+		if err != nil {
+			return errorResult(err)
+		}
+		query = query.Where("expiration_return_address = ?", addr[:])
 	}
 
 	if opts.issuer != nil {

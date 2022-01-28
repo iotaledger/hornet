@@ -65,6 +65,12 @@ const (
 	// QueryParameterRequiresDustReturn is used to filter for outputs requiring a dust return.
 	QueryParameterRequiresDustReturn = "requiresDustReturn"
 
+	// QueryParameterDustReturnAddress is used to filter for outputs with a certain dust return address.
+	QueryParameterDustReturnAddress = "dustReturnAddress"
+
+	// QueryParameterExpirationReturnAddress is used to filter for outputs with a certain expiration return address.
+	QueryParameterExpirationReturnAddress = "expirationReturnAddress"
+
 	// QueryParameterStateController is used to filter for a certain state controller address.
 	QueryParameterStateController = "stateController"
 
@@ -160,11 +166,11 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.ExtendedOutputFilterOption{indexer.ExtendedOutputPageSize(pageSizeFromContext(c))}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
-		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputUnlockableByAddress(address))
+		filters = append(filters, indexer.ExtendedOutputUnlockableByAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterRequiresDustReturn)) > 0 {
@@ -175,12 +181,28 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.ExtendedOutputRequiresDustReturn(requiresDust))
 	}
 
-	if len(c.QueryParam(QueryParameterSender)) > 0 {
-		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
+	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterDustReturnAddress)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputSender(sender))
+		filters = append(filters, indexer.ExtendedOutputDustReturnAddress(addr))
+	}
+
+	if len(c.QueryParam(QueryParameterExpirationReturnAddress)) > 0 {
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterExpirationReturnAddress)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputExpirationReturnAddress(addr))
+	}
+
+	if len(c.QueryParam(QueryParameterSender)) > 0 {
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputSender(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterTag)) > 0 {
@@ -266,11 +288,11 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.NFTFilterOption{indexer.NFTPageSize(pageSizeFromContext(c))}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
-		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTUnlockableByAddress(address))
+		filters = append(filters, indexer.NFTUnlockableByAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterRequiresDustReturn)) > 0 {
@@ -281,20 +303,36 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTRequiresDustReturn(requiresDust))
 	}
 
-	if len(c.QueryParam(QueryParameterIssuer)) > 0 {
-		issuer, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterIssuer)
+	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterDustReturnAddress)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTIssuer(issuer))
+		filters = append(filters, indexer.NFTDustReturnAddress(addr))
+	}
+
+	if len(c.QueryParam(QueryParameterExpirationReturnAddress)) > 0 {
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterExpirationReturnAddress)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTExpirationReturnAddress(addr))
+	}
+
+	if len(c.QueryParam(QueryParameterIssuer)) > 0 {
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterIssuer)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTIssuer(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterSender)) > 0 {
-		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTSender(sender))
+		filters = append(filters, indexer.NFTSender(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterTag)) > 0 {
