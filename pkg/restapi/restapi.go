@@ -259,8 +259,22 @@ func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index
 	return milestone.Index(msIndex), nil
 }
 
-func ParseUnixTimestampParam(c echo.Context, paramName string) (time.Time, error) {
-	tsString := strings.ToLower(c.Param(paramName))
+func ParseMilestoneIndexQueryParam(c echo.Context, paramName string) (milestone.Index, error) {
+	milestoneIndex := strings.ToLower(c.QueryParam(paramName))
+	if milestoneIndex == "" {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
+	}
+
+	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 32)
+	if err != nil {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
+	}
+
+	return milestone.Index(msIndex), nil
+}
+
+func ParseUnixTimestampQueryParam(c echo.Context, paramName string) (time.Time, error) {
+	tsString := strings.ToLower(c.QueryParam(paramName))
 	if tsString == "" {
 		return time.Time{}, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
 	}

@@ -26,15 +26,25 @@ type nft struct {
 }
 
 type NFTFilterOptions struct {
-	dustReturnAddress       *iotago.Address
-	expirationReturnAddress *iotago.Address
-	issuer                  *iotago.Address
-	sender                  *iotago.Address
-	tag                     []byte
-	pageSize                int
-	offset                  []byte
 	unlockableByAddress       *iotago.Address
 	hasDustReturnCondition    *bool
+	dustReturnAddress         *iotago.Address
+	hasExpirationCondition    *bool
+	expirationReturnAddress   *iotago.Address
+	expiresBefore             *time.Time
+	expiresAfter              *time.Time
+	expiresBeforeMilestone    *milestone.Index
+	expiresAfterMilestone     *milestone.Index
+	hasTimelockCondition      *bool
+	timelockedBefore          *time.Time
+	timelockedAfter           *time.Time
+	timelockedBeforeMilestone *milestone.Index
+	timelockedAfterMilestone  *milestone.Index
+	issuer                    *iotago.Address
+	sender                    *iotago.Address
+	tag                       []byte
+	pageSize                  int
+	offset                    []byte
 	createdBefore             *time.Time
 	createdAfter              *time.Time
 }
@@ -62,6 +72,66 @@ func NFTDustReturnAddress(address iotago.Address) NFTFilterOption {
 func NFTExpirationReturnAddress(address iotago.Address) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
 		args.expirationReturnAddress = &address
+	}
+}
+
+func NFTHasExpirationCondition(value bool) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.hasExpirationCondition = &value
+	}
+}
+
+func NFTExpiresBefore(time time.Time) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.expiresBefore = &time
+	}
+}
+
+func NFTExpiresAfter(time time.Time) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.expiresAfter = &time
+	}
+}
+
+func NFTExpiresBeforeMilestone(index milestone.Index) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.expiresBeforeMilestone = &index
+	}
+}
+
+func NFTExpiresAfterMilestone(index milestone.Index) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.expiresAfterMilestone = &index
+	}
+}
+
+func NFTHasTimelockCondition(value bool) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.hasExpirationCondition = &value
+	}
+}
+
+func NFTTimelockedBefore(time time.Time) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.timelockedBefore = &time
+	}
+}
+
+func NFTTimelockedAfter(time time.Time) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.timelockedAfter = &time
+	}
+}
+
+func NFTTimelockedBeforeMilestone(index milestone.Index) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.timelockedBeforeMilestone = &index
+	}
+}
+
+func NFTTimelockedAfterMilestone(index milestone.Index) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.timelockedAfterMilestone = &index
 	}
 }
 
@@ -152,12 +222,60 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResu
 		query = query.Where("dust_return_address = ?", addr[:])
 	}
 
+	if opts.hasExpirationCondition != nil {
+		if *opts.hasExpirationCondition {
+			query = query.Where("expiration_return_address IS NOT NULL")
+		} else {
+			query = query.Where("expiration_return_address IS NULL")
+		}
+	}
+
 	if opts.expirationReturnAddress != nil {
 		addr, err := addressBytesForAddress(*opts.expirationReturnAddress)
 		if err != nil {
 			return errorResult(err)
 		}
 		query = query.Where("expiration_return_address = ?", addr[:])
+	}
+
+	if opts.expiresBefore != nil {
+		query = query.Where("expiration_time > ?", *opts.expiresBefore)
+	}
+
+	if opts.expiresAfter != nil {
+		query = query.Where("expiration_time < ?", *opts.expiresAfter)
+	}
+
+	if opts.expiresBeforeMilestone != nil {
+		query = query.Where("expiration_milestone > ?", *opts.expiresBeforeMilestone)
+	}
+
+	if opts.expiresAfterMilestone != nil {
+		query = query.Where("expiration_milestone < ?", *opts.expiresAfterMilestone)
+	}
+
+	if opts.hasTimelockCondition != nil {
+		if *opts.hasTimelockCondition {
+			query = query.Where("(timelock_time IS NOT NULL OR timelock_milestone IS NOT NULL)")
+		} else {
+			query = query.Where("timelock_time IS NULL").Where("timelock_milestone IS NULL")
+		}
+	}
+
+	if opts.timelockedBefore != nil {
+		query = query.Where("timelock_time > ?", *opts.timelockedBefore)
+	}
+
+	if opts.timelockedAfter != nil {
+		query = query.Where("timelock_time < ?", *opts.timelockedAfter)
+	}
+
+	if opts.timelockedBeforeMilestone != nil {
+		query = query.Where("timelock_milestone > ?", *opts.timelockedBeforeMilestone)
+	}
+
+	if opts.timelockedAfterMilestone != nil {
+		query = query.Where("timelock_milestone < ?", *opts.timelockedAfterMilestone)
 	}
 
 	if opts.issuer != nil {

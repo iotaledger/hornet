@@ -2,11 +2,10 @@ package indexer
 
 import (
 	"encoding/hex"
-	"net/http"
-	"strconv"
-
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	"net/http"
+	"strconv"
 
 	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/restapi"
@@ -16,12 +15,17 @@ import (
 const (
 
 	// RouteOutputs is the route for getting outputs filtered by the given parameters.
-	// GET with query parameter returns all outputIDs that fit these filter criteria (query parameters: "address", "requiresDustReturn", "sender", "tag").
+	// GET with query parameter returns all outputIDs that fit these filter criteria.
+	// Query parameters: "address", "hasDustReturnCondition", "dustReturnAddress", "hasExpirationCondition",
+	//					 "expiresBefore", "expiresAfter", "expiresBeforeMilestone", "expiresAfterMilestone",
+	//					 "hasTimelockCondition", "timelockedBefore", "timelockedAfter", "timelockedBeforeMilestone",
+	//					 "timelockedAfterMilestone", "sender", "tag", "createdBefore", "createdAfter"
 	// Returns an empty list if no results are found.
 	RouteOutputs = "/outputs"
 
 	// RouteAliases is the route for getting aliases filtered by the given parameters.
-	// GET with query parameter returns all outputIDs that fit these filter criteria (query parameters: "stateController", "governor", "issuer", "sender").
+	// GET with query parameter returns all outputIDs that fit these filter criteria.
+	// Query parameters: "stateController", "governor", "issuer", "sender", "createdBefore", "createdAfter"
 	// Returns an empty list if no results are found.
 	RouteAliases = "/aliases"
 
@@ -30,7 +34,10 @@ const (
 	RouteAliasByID = "/aliases/:" + restapi.ParameterAliasID
 
 	// RouteNFT is the route for getting NFT filtered by the given parameters.
-	// GET with query parameter returns all outputIDs that fit these filter criteria (query parameters: "address", "requiresDustReturn", "issuer", "sender", "tag").
+	// Query parameters: "address", "hasDustReturnCondition", "dustReturnAddress", "hasExpirationCondition",
+	//					 "expiresBefore", "expiresAfter", "expiresBeforeMilestone", "expiresAfterMilestone",
+	//					 "hasTimelockCondition", "timelockedBefore", "timelockedAfter", "timelockedBeforeMilestone",
+	//					 "timelockedAfterMilestone", "issuer", "sender", "tag", "createdBefore", "createdAfter"
 	// Returns an empty list if no results are found.
 	RouteNFT = "/nft"
 
@@ -39,7 +46,8 @@ const (
 	RouteNFTByID = "/nft/:" + restapi.ParameterNFTID
 
 	// RouteFoundries is the route for getting foundries filtered by the given parameters.
-	// GET with query parameter returns all outputIDs that fit these filter criteria (query parameters: "address").
+	// GET with query parameter returns all outputIDs that fit these filter criteria.
+	// Query parameters: "address", "createdBefore", "createdAfter"
 	// Returns an empty list if no results are found.
 	RouteFoundries = "/foundries"
 
@@ -62,14 +70,44 @@ const (
 	// QueryParameterTag is used to filter for a certain tag.
 	QueryParameterTag = "tag"
 
-	// QueryParameterHasDustReturnCondition is used to filter for outputs requiring a dust return.
+	// QueryParameterHasDustReturnCondition is used to filter for outputs having a dust return unlock condition.
 	QueryParameterHasDustReturnCondition = "hasDustReturnCondition"
 
 	// QueryParameterDustReturnAddress is used to filter for outputs with a certain dust return address.
 	QueryParameterDustReturnAddress = "dustReturnAddress"
 
+	//QueryParameterHasExpirationCondition is used to filter for outputs having an expiration unlock condition.
+	QueryParameterHasExpirationCondition = "hasExpirationCondition"
+
+	// QueryParameterExpiresBefore is used to filter for outputs that expire before a certain unix time.
+	QueryParameterExpiresBefore = "expiresBefore"
+
+	// QueryParameterExpiresAfter is used to filter for outputs that expire after a certain unix time.
+	QueryParameterExpiresAfter = "expiresAfter"
+
+	// QueryParameterExpiresBeforeMilestone is used to filter for outputs that expire before a certain milestone index.
+	QueryParameterExpiresBeforeMilestone = "expiresBeforeMilestone"
+
+	// QueryParameterExpiresAfterMilestone is used to filter for outputs that expire after a certain milestone index.
+	QueryParameterExpiresAfterMilestone = "expiresAfterMilestone"
+
 	// QueryParameterExpirationReturnAddress is used to filter for outputs with a certain expiration return address.
 	QueryParameterExpirationReturnAddress = "expirationReturnAddress"
+
+	//QueryParameterHasTimelockCondition is used to filter for outputs having a timelock unlock condition.
+	QueryParameterHasTimelockCondition = "hasTimelockCondition"
+
+	// QueryParameterTimelockedBefore is used to filter for outputs that are timelocked before a certain unix time.
+	QueryParameterTimelockedBefore = "timelockedBefore"
+
+	// QueryParameterTimelockedAfter is used to filter for outputs that are timelocked after a certain unix time.
+	QueryParameterTimelockedAfter = "timelockedAfter"
+
+	// QueryParameterTimelockedBeforeMilestone is used to filter for outputs that are timelocked before a certain milestone index.
+	QueryParameterTimelockedBeforeMilestone = "timelockedBeforeMilestone"
+
+	// QueryParameterTimelockedAfterMilestone is used to filter for outputs that are timelocked before a certain milestone index.
+	QueryParameterTimelockedAfterMilestone = "timelockedAfterMilestone"
 
 	// QueryParameterStateController is used to filter for a certain state controller address.
 	QueryParameterStateController = "stateController"
@@ -180,11 +218,11 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterHasDustReturnCondition)) > 0 {
-		requiresDust, err := restapi.ParseBoolQueryParam(c, QueryParameterHasDustReturnCondition)
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasDustReturnCondition)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputHasDustReturnCondition(requiresDust))
+		filters = append(filters, indexer.ExtendedOutputHasDustReturnCondition(value))
 	}
 
 	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {
@@ -195,12 +233,92 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.ExtendedOutputDustReturnAddress(addr))
 	}
 
+	if len(c.QueryParam(QueryParameterHasExpirationCondition)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasExpirationCondition)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputHasExpirationCondition(value))
+	}
+
 	if len(c.QueryParam(QueryParameterExpirationReturnAddress)) > 0 {
 		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterExpirationReturnAddress)
 		if err != nil {
 			return nil, err
 		}
 		filters = append(filters, indexer.ExtendedOutputExpirationReturnAddress(addr))
+	}
+
+	if len(c.QueryParam(QueryParameterExpiresBefore)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterExpiresBefore)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputExpiresBefore(timestamp))
+	}
+
+	if len(c.QueryParam(QueryParameterExpiresAfter)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterExpiresAfter)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputExpiresAfter(timestamp))
+	}
+
+	if len(c.QueryParam(QueryParameterExpiresBeforeMilestone)) > 0 {
+		msIndex, err := restapi.ParseMilestoneIndexQueryParam(c, QueryParameterExpiresBeforeMilestone)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputExpiresBeforeMilestone(msIndex))
+	}
+
+	if len(c.QueryParam(QueryParameterExpiresAfterMilestone)) > 0 {
+		msIndex, err := restapi.ParseMilestoneIndexQueryParam(c, QueryParameterExpiresAfterMilestone)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputExpiresAfterMilestone(msIndex))
+	}
+
+	if len(c.QueryParam(QueryParameterHasTimelockCondition)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasTimelockCondition)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputHasTimelockCondition(value))
+	}
+
+	if len(c.QueryParam(QueryParameterTimelockedBefore)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterTimelockedBefore)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputTimelockedBefore(timestamp))
+	}
+
+	if len(c.QueryParam(QueryParameterTimelockedAfter)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterTimelockedAfter)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputTimelockedAfter(timestamp))
+	}
+
+	if len(c.QueryParam(QueryParameterTimelockedBeforeMilestone)) > 0 {
+		msIndex, err := restapi.ParseMilestoneIndexQueryParam(c, QueryParameterTimelockedBeforeMilestone)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputTimelockedBeforeMilestone(msIndex))
+	}
+
+	if len(c.QueryParam(QueryParameterTimelockedAfterMilestone)) > 0 {
+		msIndex, err := restapi.ParseMilestoneIndexQueryParam(c, QueryParameterTimelockedAfterMilestone)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputTimelockedAfterMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterSender)) > 0 {
@@ -228,7 +346,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
-		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedBefore)
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterCreatedBefore)
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +354,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
-		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterCreatedAfter)
 		if err != nil {
 			return nil, err
 		}
@@ -298,7 +416,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
-		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedBefore)
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterCreatedBefore)
 		if err != nil {
 			return nil, err
 		}
@@ -306,7 +424,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
-		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterCreatedAfter)
 		if err != nil {
 			return nil, err
 		}
@@ -336,11 +454,11 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterHasDustReturnCondition)) > 0 {
-		requiresDust, err := restapi.ParseBoolQueryParam(c, QueryParameterHasDustReturnCondition)
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasDustReturnCondition)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTHasDustReturnCondition(requiresDust))
+		filters = append(filters, indexer.NFTHasDustReturnCondition(value))
 	}
 
 	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {
@@ -351,12 +469,92 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTDustReturnAddress(addr))
 	}
 
+	if len(c.QueryParam(QueryParameterHasExpirationCondition)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasExpirationCondition)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTHasExpirationCondition(value))
+	}
+
 	if len(c.QueryParam(QueryParameterExpirationReturnAddress)) > 0 {
 		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterExpirationReturnAddress)
 		if err != nil {
 			return nil, err
 		}
 		filters = append(filters, indexer.NFTExpirationReturnAddress(addr))
+	}
+
+	if len(c.QueryParam(QueryParameterExpiresBefore)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterExpiresBefore)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTExpiresBefore(timestamp))
+	}
+
+	if len(c.QueryParam(QueryParameterExpiresAfter)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterExpiresAfter)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTExpiresAfter(timestamp))
+	}
+
+	if len(c.QueryParam(QueryParameterExpiresBeforeMilestone)) > 0 {
+		msIndex, err := restapi.ParseMilestoneIndexQueryParam(c, QueryParameterExpiresBeforeMilestone)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTExpiresBeforeMilestone(msIndex))
+	}
+
+	if len(c.QueryParam(QueryParameterExpiresAfterMilestone)) > 0 {
+		msIndex, err := restapi.ParseMilestoneIndexQueryParam(c, QueryParameterExpiresAfterMilestone)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTExpiresAfterMilestone(msIndex))
+	}
+
+	if len(c.QueryParam(QueryParameterHasTimelockCondition)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasTimelockCondition)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTHasTimelockCondition(value))
+	}
+
+	if len(c.QueryParam(QueryParameterTimelockedBefore)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterTimelockedBefore)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTTimelockedBefore(timestamp))
+	}
+
+	if len(c.QueryParam(QueryParameterTimelockedAfter)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterTimelockedAfter)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTTimelockedAfter(timestamp))
+	}
+
+	if len(c.QueryParam(QueryParameterTimelockedBeforeMilestone)) > 0 {
+		msIndex, err := restapi.ParseMilestoneIndexQueryParam(c, QueryParameterTimelockedBeforeMilestone)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTTimelockedBeforeMilestone(msIndex))
+	}
+
+	if len(c.QueryParam(QueryParameterTimelockedAfterMilestone)) > 0 {
+		msIndex, err := restapi.ParseMilestoneIndexQueryParam(c, QueryParameterTimelockedAfterMilestone)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTTimelockedAfterMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterIssuer)) > 0 {
@@ -392,7 +590,7 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
-		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedBefore)
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterCreatedBefore)
 		if err != nil {
 			return nil, err
 		}
@@ -400,7 +598,7 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
-		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterCreatedAfter)
 		if err != nil {
 			return nil, err
 		}
@@ -438,7 +636,7 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
-		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedBefore)
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterCreatedBefore)
 		if err != nil {
 			return nil, err
 		}
@@ -446,7 +644,7 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
-		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
+		timestamp, err := restapi.ParseUnixTimestampQueryParam(c, QueryParameterCreatedAfter)
 		if err != nil {
 			return nil, err
 		}

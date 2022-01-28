@@ -24,14 +24,24 @@ type extendedOutput struct {
 }
 
 type ExtendedOutputFilterOptions struct {
-	dustReturnAddress       *iotago.Address
-	expirationReturnAddress *iotago.Address
-	sender                  *iotago.Address
-	tag                     []byte
-	pageSize                int
-	offset                  []byte
 	unlockableByAddress       *iotago.Address
 	hasDustReturnCondition    *bool
+	dustReturnAddress         *iotago.Address
+	hasExpirationCondition    *bool
+	expirationReturnAddress   *iotago.Address
+	expiresBefore             *time.Time
+	expiresAfter              *time.Time
+	expiresBeforeMilestone    *milestone.Index
+	expiresAfterMilestone     *milestone.Index
+	hasTimelockCondition      *bool
+	timelockedBefore          *time.Time
+	timelockedAfter           *time.Time
+	timelockedBeforeMilestone *milestone.Index
+	timelockedAfterMilestone  *milestone.Index
+	sender                    *iotago.Address
+	tag                       []byte
+	pageSize                  int
+	offset                    []byte
 	createdBefore             *time.Time
 	createdAfter              *time.Time
 }
@@ -53,6 +63,66 @@ func ExtendedOutputHasDustReturnCondition(value bool) ExtendedOutputFilterOption
 func ExtendedOutputDustReturnAddress(address iotago.Address) ExtendedOutputFilterOption {
 	return func(args *ExtendedOutputFilterOptions) {
 		args.dustReturnAddress = &address
+	}
+}
+
+func ExtendedOutputHasExpirationCondition(value bool) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.hasExpirationCondition = &value
+	}
+}
+
+func ExtendedOutputExpiresBefore(time time.Time) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.expiresBefore = &time
+	}
+}
+
+func ExtendedOutputExpiresAfter(time time.Time) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.expiresAfter = &time
+	}
+}
+
+func ExtendedOutputExpiresBeforeMilestone(index milestone.Index) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.expiresBeforeMilestone = &index
+	}
+}
+
+func ExtendedOutputExpiresAfterMilestone(index milestone.Index) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.expiresAfterMilestone = &index
+	}
+}
+
+func ExtendedOutputHasTimelockCondition(value bool) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.hasExpirationCondition = &value
+	}
+}
+
+func ExtendedOutputTimelockedBefore(time time.Time) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.timelockedBefore = &time
+	}
+}
+
+func ExtendedOutputTimelockedAfter(time time.Time) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.timelockedAfter = &time
+	}
+}
+
+func ExtendedOutputTimelockedBeforeMilestone(index milestone.Index) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.timelockedBeforeMilestone = &index
+	}
+}
+
+func ExtendedOutputTimelockedAfterMilestone(index milestone.Index) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.timelockedAfterMilestone = &index
 	}
 }
 
@@ -134,12 +204,60 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 		query = query.Where("dust_return_address = ?", addr[:])
 	}
 
+	if opts.hasExpirationCondition != nil {
+		if *opts.hasExpirationCondition {
+			query = query.Where("expiration_return_address IS NOT NULL")
+		} else {
+			query = query.Where("expiration_return_address IS NULL")
+		}
+	}
+
 	if opts.expirationReturnAddress != nil {
 		addr, err := addressBytesForAddress(*opts.expirationReturnAddress)
 		if err != nil {
 			return errorResult(err)
 		}
 		query = query.Where("expiration_return_address = ?", addr[:])
+	}
+
+	if opts.expiresBefore != nil {
+		query = query.Where("expiration_time > ?", *opts.expiresBefore)
+	}
+
+	if opts.expiresAfter != nil {
+		query = query.Where("expiration_time < ?", *opts.expiresAfter)
+	}
+
+	if opts.expiresBeforeMilestone != nil {
+		query = query.Where("expiration_milestone > ?", *opts.expiresBeforeMilestone)
+	}
+
+	if opts.expiresAfterMilestone != nil {
+		query = query.Where("expiration_milestone < ?", *opts.expiresAfterMilestone)
+	}
+
+	if opts.hasTimelockCondition != nil {
+		if *opts.hasTimelockCondition {
+			query = query.Where("(timelock_time IS NOT NULL OR timelock_milestone IS NOT NULL)")
+		} else {
+			query = query.Where("timelock_time IS NULL").Where("timelock_milestone IS NULL")
+		}
+	}
+
+	if opts.timelockedBefore != nil {
+		query = query.Where("timelock_time > ?", *opts.timelockedBefore)
+	}
+
+	if opts.timelockedAfter != nil {
+		query = query.Where("timelock_time < ?", *opts.timelockedAfter)
+	}
+
+	if opts.timelockedBeforeMilestone != nil {
+		query = query.Where("timelock_milestone > ?", *opts.timelockedBeforeMilestone)
+	}
+
+	if opts.timelockedAfterMilestone != nil {
+		query = query.Where("timelock_milestone < ?", *opts.timelockedAfterMilestone)
 	}
 
 	if opts.sender != nil {
