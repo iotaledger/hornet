@@ -36,12 +36,12 @@ func normalizeFlagSets(params map[string][]*flag.FlagSet) (map[string]*flag.Flag
 
 // parses the configuration and initializes the global logger.
 func loadCfg(flagSets map[string]*flag.FlagSet) error {
-	if err := nodeConfig.LoadFile(*nodeCfgFilePath); err != nil {
-		if hasFlag(flag.CommandLine, CfgConfigFilePathNodeConfig) || !os.IsNotExist(err) {
-			// if a file was explicitly specified or the default file exists but couldn't be parsed, raise the error
+
+	if hasFlag(flag.CommandLine, CfgConfigFilePathNodeConfig) {
+		// node config file is only loaded if the flag was specified
+		if err := nodeConfig.LoadFile(*nodeCfgFilePath); err != nil {
 			return fmt.Errorf("loading config file failed: %w", err)
 		}
-		fmt.Printf("No config file found via '%s'. Loading default settings.", *nodeCfgFilePath)
 	}
 
 	if err := peeringConfig.LoadFile(*peeringCfgFilePath); err != nil {
