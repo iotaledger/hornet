@@ -31,3 +31,4 @@ services:
       - ./mainnetdb:/app/mainnetdb
       - ./p2pstore:/app/p2pstore
       - ./snapshots/mainnet:/app/snapshots/mainnet
+    command: ["-c", "config.json"]
