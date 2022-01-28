@@ -83,6 +83,9 @@ const (
 	// QueryParameterOffset is used to pass the outputID we want to start the results from.
 	QueryParameterOffset = "offset"
 
+	// QueryParameterCreatedBefore is used to filter for outputs that were created before the given time.
+	QueryParameterCreatedBefore = "createdBefore"
+
 	// QueryParameterCreatedAfter is used to filter for outputs that were created after the given time.
 	QueryParameterCreatedAfter = "createdAfter"
 )
@@ -224,6 +227,14 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.ExtendedOutputOffset(offset))
 	}
 
+	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedBefore)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.ExtendedOutputCreatedBefore(timestamp))
+	}
+
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
 		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
 		if err != nil {
@@ -284,6 +295,14 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 			return nil, err
 		}
 		filters = append(filters, indexer.AliasOffset(offset))
+	}
+
+	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedBefore)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasCreatedBefore(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
@@ -372,6 +391,14 @@ func nftWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTOffset(offset))
 	}
 
+	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedBefore)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTCreatedBefore(timestamp))
+	}
+
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
 		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedAfter)
 		if err != nil {
@@ -408,6 +435,14 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 			return nil, err
 		}
 		filters = append(filters, indexer.FoundryOffset(offset))
+	}
+
+	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
+		timestamp, err := restapi.ParseUnixTimestampParam(c, QueryParameterCreatedBefore)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.FoundryCreatedBefore(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {

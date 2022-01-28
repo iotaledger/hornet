@@ -33,9 +33,10 @@ type NFTFilterOptions struct {
 	tag                     []byte
 	pageSize                int
 	offset                  []byte
-	createdAfter            *time.Time
 	unlockableByAddress       *iotago.Address
 	hasDustReturnCondition    *bool
+	createdBefore             *time.Time
+	createdAfter              *time.Time
 }
 
 type NFTFilterOption func(*NFTFilterOptions)
@@ -91,6 +92,12 @@ func NFTPageSize(pageSize int) NFTFilterOption {
 func NFTOffset(offset []byte) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
 		args.offset = offset
+	}
+}
+
+func NFTCreatedBefore(time time.Time) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.createdBefore = &time
 	}
 }
 
@@ -171,6 +178,10 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResu
 
 	if opts.tag != nil && len(opts.tag) > 0 {
 		query = query.Where("tag = ?", opts.tag)
+	}
+
+	if opts.createdBefore != nil {
+		query = query.Where("created_at < ?", *opts.createdBefore)
 	}
 
 	if opts.createdAfter != nil {

@@ -30,9 +30,10 @@ type ExtendedOutputFilterOptions struct {
 	tag                     []byte
 	pageSize                int
 	offset                  []byte
-	createdAfter            *time.Time
 	unlockableByAddress       *iotago.Address
 	hasDustReturnCondition    *bool
+	createdBefore             *time.Time
+	createdAfter              *time.Time
 }
 
 type ExtendedOutputFilterOption func(*ExtendedOutputFilterOptions)
@@ -82,6 +83,12 @@ func ExtendedOutputPageSize(pageSize int) ExtendedOutputFilterOption {
 func ExtendedOutputOffset(offset []byte) ExtendedOutputFilterOption {
 	return func(args *ExtendedOutputFilterOptions) {
 		args.offset = offset
+	}
+}
+
+func ExtendedOutputCreatedBefore(time time.Time) ExtendedOutputFilterOption {
+	return func(args *ExtendedOutputFilterOptions) {
+		args.createdBefore = &time
 	}
 }
 
@@ -145,6 +152,10 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 
 	if opts.tag != nil && len(opts.tag) > 0 {
 		query = query.Where("tag = ?", opts.tag)
+	}
+
+	if opts.createdBefore != nil {
+		query = query.Where("created_at < ?", *opts.createdBefore)
 	}
 
 	if opts.createdAfter != nil {

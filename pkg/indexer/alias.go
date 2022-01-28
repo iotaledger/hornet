@@ -24,6 +24,7 @@ type AliasFilterOptions struct {
 	sender          *iotago.Address
 	pageSize        int
 	offset          []byte
+	createdBefore   *time.Time
 	createdAfter    *time.Time
 }
 
@@ -65,6 +66,12 @@ func AliasOffset(offset []byte) AliasFilterOption {
 	}
 }
 
+func AliasCreatedBefore(time time.Time) AliasFilterOption {
+	return func(args *AliasFilterOptions) {
+		args.createdBefore = &time
+	}
+}
+
 func AliasCreatedAfter(time time.Time) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
 		args.createdAfter = &time
@@ -72,15 +79,7 @@ func AliasCreatedAfter(time time.Time) AliasFilterOption {
 }
 
 func aliasFilterOptions(optionalOptions []AliasFilterOption) *AliasFilterOptions {
-	result := &AliasFilterOptions{
-		stateController: nil,
-		governor:        nil,
-		issuer:          nil,
-		sender:          nil,
-		pageSize:        0,
-		offset:          nil,
-		createdAfter:    nil,
-	}
+	result := &AliasFilterOptions{}
 
 	for _, optionalOption := range optionalOptions {
 		optionalOption(result)
@@ -131,6 +130,10 @@ func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) *IndexerR
 			return errorResult(err)
 		}
 		query = query.Where("issuer = ?", addr[:])
+	}
+
+	if opts.createdBefore != nil {
+		query = query.Where("created_at < ?", *opts.createdBefore)
 	}
 
 	if opts.createdAfter != nil {
