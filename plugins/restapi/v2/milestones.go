@@ -11,7 +11,7 @@ import (
 
 func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 
-	msIndex, err := restapi.ParseMilestoneIndexParam(c)
+	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 
 func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse, error) {
 
-	msIndex, err := restapi.ParseMilestoneIndexParam(c)
+	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}

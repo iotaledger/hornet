@@ -220,7 +220,7 @@ func spentOutputsIDs(c echo.Context) (*outputIDsResponse, error) {
 
 func milestoneDiff(c echo.Context) (*milestoneDiffResponse, error) {
 
-	msIndex, err := restapi.ParseMilestoneIndexParam(c)
+	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}

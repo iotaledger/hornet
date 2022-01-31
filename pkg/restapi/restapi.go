@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -244,10 +245,10 @@ func ParseFoundryIDParam(c echo.Context) (*iotago.FoundryID, error) {
 	return &foundryID, nil
 }
 
-func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {
-	milestoneIndex := strings.ToLower(c.Param(ParameterMilestoneIndex))
+func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index, error) {
+	milestoneIndex := strings.ToLower(c.Param(paramName))
 	if milestoneIndex == "" {
-		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", ParameterMilestoneIndex)
+		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
 	}
 
 	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 32)
@@ -256,6 +257,34 @@ func ParseMilestoneIndexParam(c echo.Context) (milestone.Index, error) {
 	}
 
 	return milestone.Index(msIndex), nil
+}
+
+func ParseMilestoneIndexQueryParam(c echo.Context, paramName string) (milestone.Index, error) {
+	milestoneIndex := strings.ToLower(c.QueryParam(paramName))
+	if milestoneIndex == "" {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
+	}
+
+	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 32)
+	if err != nil {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
+	}
+
+	return milestone.Index(msIndex), nil
+}
+
+func ParseUnixTimestampQueryParam(c echo.Context, paramName string) (time.Time, error) {
+	tsString := strings.ToLower(c.QueryParam(paramName))
+	if tsString == "" {
+		return time.Time{}, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
+	}
+
+	timestamp, err := strconv.ParseUint(tsString, 10, 32)
+	if err != nil {
+		return time.Time{}, errors.WithMessagef(ErrInvalidParameter, "invalid timestamp: %s, error: %s", tsString, err)
+	}
+
+	return time.Unix(int64(timestamp), 0), nil
 }
 
 func ParsePeerIDParam(c echo.Context) (peer.ID, error) {
