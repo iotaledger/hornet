@@ -107,7 +107,7 @@ func NFTExpiresAfterMilestone(index milestone.Index) NFTFilterOption {
 
 func NFTHasTimelockCondition(value bool) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
-		args.hasExpirationCondition = &value
+		args.hasTimelockCondition = &value
 	}
 }
 
