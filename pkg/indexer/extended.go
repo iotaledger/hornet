@@ -98,7 +98,7 @@ func ExtendedOutputExpiresAfterMilestone(index milestone.Index) ExtendedOutputFi
 
 func ExtendedOutputHasTimelockCondition(value bool) ExtendedOutputFilterOption {
 	return func(args *ExtendedOutputFilterOptions) {
-		args.hasExpirationCondition = &value
+		args.hasTimelockCondition = &value
 	}
 }
 
