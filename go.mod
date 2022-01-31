@@ -23,7 +23,7 @@ require (
 	github.com/iotaledger/hive.go v0.0.0-20211208125510-04baae2057d6
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220119141545-2dab9f1c12a5
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v3 v3.0.0-20220127125330-b2206004a9ca
+	github.com/iotaledger/iota.go/v3 v3.0.0-20220131152343-3eddb537a34c
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger v0.3.0
 	github.com/labstack/echo/v4 v4.6.3
@@ -44,8 +44,8 @@ require (
 	github.com/wollac/iota-crypto-demo v0.0.0-20211124150533-68dd13b59838
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.13.0
-	golang.org/x/crypto v0.0.0-20220126234351-aa10faf2a1f8
-	golang.org/x/net v0.0.0-20220127074510-2fabfed7e28f
+	golang.org/x/crypto v0.0.0-20220128200615-198e4374d7ed
+	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11
 	gorm.io/driver/sqlite v1.2.6
@@ -232,7 +232,7 @@ require (
 	golang.org/x/exp v0.0.0-20211129234152-8a230f1f7d7a // indirect
 	golang.org/x/mod v0.6.0-dev.0.20211013180041-c96bc1413d57 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
+	golang.org/x/sys v0.0.0-20220128215802-99c3d69c2c27 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.8-0.20211029000441-d6a9af8af023 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
