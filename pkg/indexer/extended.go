@@ -221,19 +221,19 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 	}
 
 	if opts.expiresBefore != nil {
-		query = query.Where("expiration_time > ?", *opts.expiresBefore)
+		query = query.Where("expiration_time < ?", *opts.expiresBefore)
 	}
 
 	if opts.expiresAfter != nil {
-		query = query.Where("expiration_time < ?", *opts.expiresAfter)
+		query = query.Where("expiration_time > ?", *opts.expiresAfter)
 	}
 
 	if opts.expiresBeforeMilestone != nil {
-		query = query.Where("expiration_milestone > ?", *opts.expiresBeforeMilestone)
+		query = query.Where("expiration_milestone < ?", *opts.expiresBeforeMilestone)
 	}
 
 	if opts.expiresAfterMilestone != nil {
-		query = query.Where("expiration_milestone < ?", *opts.expiresAfterMilestone)
+		query = query.Where("expiration_milestone > ?", *opts.expiresAfterMilestone)
 	}
 
 	if opts.hasTimelockCondition != nil {
@@ -245,19 +245,19 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 	}
 
 	if opts.timelockedBefore != nil {
-		query = query.Where("timelock_time > ?", *opts.timelockedBefore)
+		query = query.Where("timelock_time < ?", *opts.timelockedBefore)
 	}
 
 	if opts.timelockedAfter != nil {
-		query = query.Where("timelock_time < ?", *opts.timelockedAfter)
+		query = query.Where("timelock_time > ?", *opts.timelockedAfter)
 	}
 
 	if opts.timelockedBeforeMilestone != nil {
-		query = query.Where("timelock_milestone > ?", *opts.timelockedBeforeMilestone)
+		query = query.Where("timelock_milestone < ?", *opts.timelockedBeforeMilestone)
 	}
 
 	if opts.timelockedAfterMilestone != nil {
-		query = query.Where("timelock_milestone < ?", *opts.timelockedAfterMilestone)
+		query = query.Where("timelock_milestone > ?", *opts.timelockedAfterMilestone)
 	}
 
 	if opts.sender != nil {
