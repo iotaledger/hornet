@@ -106,7 +106,7 @@ const (
 	// QueryParameterTimelockedBeforeMilestone is used to filter for outputs that are timelocked before a certain milestone index.
 	QueryParameterTimelockedBeforeMilestone = "timelockedBeforeMilestone"
 
-	// QueryParameterTimelockedAfterMilestone is used to filter for outputs that are timelocked before a certain milestone index.
+	// QueryParameterTimelockedAfterMilestone is used to filter for outputs that are timelocked after a certain milestone index.
 	QueryParameterTimelockedAfterMilestone = "timelockedAfterMilestone"
 
 	// QueryParameterStateController is used to filter for a certain state controller address.
