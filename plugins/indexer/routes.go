@@ -33,17 +33,17 @@ const (
 	// GET returns the outputIDs or 404 if no record is found.
 	RouteAliasByID = "/aliases/:" + restapi.ParameterAliasID
 
-	// RouteNFT is the route for getting NFT filtered by the given parameters.
+	// RouteNFTs is the route for getting NFT filtered by the given parameters.
 	// Query parameters: "address", "hasDustReturnCondition", "dustReturnAddress", "hasExpirationCondition",
 	//					 "expiresBefore", "expiresAfter", "expiresBeforeMilestone", "expiresAfterMilestone",
 	//					 "hasTimelockCondition", "timelockedBefore", "timelockedAfter", "timelockedBeforeMilestone",
 	//					 "timelockedAfterMilestone", "issuer", "sender", "tag", "createdBefore", "createdAfter"
 	// Returns an empty list if no results are found.
-	RouteNFT = "/nft"
+	RouteNFTs = "/nfts"
 
 	// RouteNFTByID is the route for getting NFT by their nftID.
 	// GET returns the outputIDs or 404 if no record is found.
-	RouteNFTByID = "/nft/:" + restapi.ParameterNFTID
+	RouteNFTByID = "/nfts/:" + restapi.ParameterNFTID
 
 	// RouteFoundries is the route for getting foundries filtered by the given parameters.
 	// GET with query parameter returns all outputIDs that fit these filter criteria.
@@ -169,8 +169,8 @@ func configureRoutes(routeGroup *echo.Group) {
 		return c.JSON(http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteNFT, func(c echo.Context) error {
-		resp, err := nftWithFilter(c)
+	routeGroup.GET(RouteNFTs, func(c echo.Context) error {
+		resp, err := nftsWithFilter(c)
 		if err != nil {
 			return err
 		}
@@ -442,7 +442,7 @@ func nftByID(c echo.Context) (*outputsResponse, error) {
 	return singleOutputResponseFromResult(deps.Indexer.NFTOutput(nftID))
 }
 
-func nftWithFilter(c echo.Context) (*outputsResponse, error) {
+func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.NFTFilterOption{indexer.NFTPageSize(pageSizeFromContext(c))}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
