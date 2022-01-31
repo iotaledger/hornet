@@ -76,7 +76,7 @@ const (
 	// QueryParameterDustReturnAddress is used to filter for outputs with a certain dust return address.
 	QueryParameterDustReturnAddress = "dustReturnAddress"
 
-	//QueryParameterHasExpirationCondition is used to filter for outputs having an expiration unlock condition.
+	// QueryParameterHasExpirationCondition is used to filter for outputs having an expiration unlock condition.
 	QueryParameterHasExpirationCondition = "hasExpirationCondition"
 
 	// QueryParameterExpiresBefore is used to filter for outputs that expire before a certain unix time.
@@ -94,7 +94,7 @@ const (
 	// QueryParameterExpirationReturnAddress is used to filter for outputs with a certain expiration return address.
 	QueryParameterExpirationReturnAddress = "expirationReturnAddress"
 
-	//QueryParameterHasTimelockCondition is used to filter for outputs having a timelock unlock condition.
+	// QueryParameterHasTimelockCondition is used to filter for outputs having a timelock unlock condition.
 	QueryParameterHasTimelockCondition = "hasTimelockCondition"
 
 	// QueryParameterTimelockedBefore is used to filter for outputs that are timelocked before a certain unix time.
