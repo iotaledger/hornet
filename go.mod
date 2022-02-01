@@ -36,7 +36,7 @@ require (
 	github.com/multiformats/go-multiaddr v0.4.1
 	github.com/pelletier/go-toml/v2 v2.0.0-beta.6
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.12.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1-0.20210427113832-6241f9ab9942
