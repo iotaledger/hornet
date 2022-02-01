@@ -438,7 +438,7 @@ func ReadSnapshotHeader(reader io.Reader) (*ReadFileHeader, error) {
 
 // StreamSnapshotDataFrom consumes a snapshot from the given reader.
 // OutputConsumerFunc must not be nil if the snapshot is not a delta snapshot.
-func StreamSnapshotDataFrom(reader io.Reader,
+func StreamSnapshotDataFrom(reader io.ReadSeeker,
 	deSeriParas *iotago.DeSerializationParameters,
 	headerConsumer HeaderConsumerFunc,
 	sepConsumer SEPConsumerFunc,
@@ -505,7 +505,7 @@ func StreamSnapshotDataFrom(reader io.Reader,
 }
 
 // reads a MilestoneDiff from the given reader.
-func readMilestoneDiff(reader io.Reader, deSeriParas *iotago.DeSerializationParameters) (*MilestoneDiff, error) {
+func readMilestoneDiff(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters) (*MilestoneDiff, error) {
 	msDiff := &MilestoneDiff{}
 
 	var msLength uint32
@@ -569,11 +569,11 @@ func readMilestoneDiff(reader io.Reader, deSeriParas *iotago.DeSerializationPara
 }
 
 // reads an Output from the given reader.
-func readOutput(reader io.Reader, deSeriParas *iotago.DeSerializationParameters) (*utxo.Output, error) {
+func readOutput(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters) (*utxo.Output, error) {
 	return utxo.OutputFromSnapshotReader(reader, deSeriParas)
 }
 
-func readSpent(reader io.Reader, deSeriParas *iotago.DeSerializationParameters, msIndex milestone.Index, msTimestamp uint64) (*utxo.Spent, error) {
+func readSpent(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters, msIndex milestone.Index, msTimestamp uint64) (*utxo.Spent, error) {
 	return utxo.SpentFromSnapshotReader(reader, deSeriParas, msIndex, msTimestamp)
 }
 

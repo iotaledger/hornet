@@ -25,13 +25,12 @@ func (o *Output) SnapshotBytes() []byte {
 	if err != nil {
 		panic(err)
 	}
-	m.WriteUint32(uint32(len(bytes)))
 	m.WriteBytes(bytes)
 
 	return m.Bytes()
 }
 
-func OutputFromSnapshotReader(reader io.Reader, deSeriParas *iotago.DeSerializationParameters) (*Output, error) {
+func OutputFromSnapshotReader(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters) (*Output, error) {
 	messageID := iotago.MessageID{}
 	if _, err := io.ReadFull(reader, messageID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS message ID: %w", err)
@@ -52,27 +51,30 @@ func OutputFromSnapshotReader(reader io.Reader, deSeriParas *iotago.DeSerializat
 		return nil, fmt.Errorf("unable to read LS output milestone timestamp: %w", err)
 	}
 
-	var outputLen uint32
-	if err := binary.Read(reader, binary.LittleEndian, &outputLen); err != nil {
-		return nil, fmt.Errorf("unable to read LS output length: %w", err)
-	}
-
-	if outputLen == 0 {
-		return nil, fmt.Errorf("unable to read LS output: output length: %d", outputLen)
-	}
-
-	outputBytes := make([]byte, outputLen)
-	if _, err := io.ReadFull(reader, outputBytes); err != nil {
+	buffer := make([]byte, iotago.MessageBinSerializedMaxSize)
+	bufferLen, err := reader.Read(buffer)
+	if err != nil {
 		return nil, fmt.Errorf("unable to read LS output bytes: %w", err)
 	}
 
-	output, err := iotago.OutputSelector(uint32(outputBytes[0]))
+	if bufferLen == 0 {
+		return nil, fmt.Errorf("unable to read LS output: buffer length: %d", bufferLen)
+	}
+
+	output, err := iotago.OutputSelector(uint32(buffer[0]))
 	if err != nil {
 		return nil, fmt.Errorf("unable to determine output type of LS output: %w", err)
 	}
 
-	if _, err := output.Deserialize(outputBytes, serializer.DeSeriModePerformValidation, deSeriParas); err != nil {
+	outputLen, err := output.Deserialize(buffer, serializer.DeSeriModePerformValidation, deSeriParas)
+	if err != nil {
 		return nil, fmt.Errorf("invalid LS output address: %w", err)
+	}
+
+	// Seek back the bytes we did not consume during serialization
+	_, err = reader.Seek(int64(-bufferLen+outputLen), io.SeekCurrent)
+	if err != nil {
+		return nil, fmt.Errorf("invalid LS output length: %w", err)
 	}
 
 	return CreateOutput(&outputID, hornet.MessageIDFromArray(messageID), milestone.Index(confirmationIndex), uint64(milestoneTimestamp), output), nil
@@ -85,7 +87,7 @@ func (s *Spent) SnapshotBytes() []byte {
 	return m.Bytes()
 }
 
-func SpentFromSnapshotReader(reader io.Reader, deSeriParas *iotago.DeSerializationParameters, msIndex milestone.Index, msTimestamp uint64) (*Spent, error) {
+func SpentFromSnapshotReader(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters, msIndex milestone.Index, msTimestamp uint64) (*Spent, error) {
 	output, err := OutputFromSnapshotReader(reader, deSeriParas)
 	if err != nil {
 		return nil, err

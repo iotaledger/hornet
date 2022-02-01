@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/model/utxo/utils"
@@ -17,27 +16,6 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// returns length amount random bytes
-func randBytes(length int) []byte {
-	var b []byte
-	for i := 0; i < length; i++ {
-		b = append(b, byte(rand.Intn(256)))
-	}
-	return b
-}
-
-func randMessageID() hornet.MessageID {
-	return hornet.MessageID(randBytes(iotago.MessageIDLength))
-}
-
-func randomAddress() *iotago.Ed25519Address {
-	address := &iotago.Ed25519Address{}
-	addressBytes := randBytes(32)
-	copy(address[:], addressBytes)
-	return address
-}
-
-//nolint:unparam // maybe address will be used in the future
 func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo.Output {
 	var output iotago.Output
 	if len(address) > 0 {
@@ -49,12 +27,10 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo
 }
 
 func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
-
 	confirmationIndex := utils.RandMilestoneIndex()
 	if len(msIndex) > 0 {
 		confirmationIndex = msIndex[0]
 	}
-
 	return utxo.NewSpent(output, utils.RandTransactionID(), confirmationIndex, rand.Uint64())
 }
 
@@ -201,7 +177,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		outputBytes := output.SnapshotBytes()
 
 		// Unmarshal the output again
-		newOutput, err := readOutput(bytes.NewBuffer(outputBytes), deSeriParas)
+		newOutput, err := readOutput(bytes.NewReader(outputBytes), deSeriParas)
 		require.NoError(t, err)
 
 		err = consumer(newOutput)
