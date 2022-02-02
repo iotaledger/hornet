@@ -44,7 +44,7 @@ type NFTFilterOptions struct {
 	sender                    *iotago.Address
 	tag                       []byte
 	pageSize                  int
-	cursor                    []byte
+	cursor                    *string
 	createdBefore             *time.Time
 	createdAfter              *time.Time
 }
@@ -159,9 +159,9 @@ func NFTPageSize(pageSize int) NFTFilterOption {
 	}
 }
 
-func NFTCursor(cursor []byte) NFTFilterOption {
+func NFTCursor(cursor string) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
-		args.cursor = cursor
+		args.cursor = &cursor
 	}
 }
 

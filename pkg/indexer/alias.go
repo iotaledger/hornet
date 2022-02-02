@@ -23,7 +23,7 @@ type AliasFilterOptions struct {
 	issuer          *iotago.Address
 	sender          *iotago.Address
 	pageSize        int
-	cursor          []byte
+	cursor          *string
 	createdBefore   *time.Time
 	createdAfter    *time.Time
 }
@@ -60,9 +60,9 @@ func AliasPageSize(pageSize int) AliasFilterOption {
 	}
 }
 
-func AliasCursor(cursor []byte) AliasFilterOption {
+func AliasCursor(cursor string) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
-		args.cursor = cursor
+		args.cursor = &cursor
 	}
 }
 

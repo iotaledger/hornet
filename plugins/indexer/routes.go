@@ -1,11 +1,13 @@
 package indexer
 
 import (
-	"encoding/hex"
-	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/restapi"
@@ -338,11 +340,11 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterCursor, 38)
+		cursor, pageSize, err := parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputCursor(offset))
+		filters = append(filters, indexer.ExtendedOutputCursor(cursor), indexer.ExtendedOutputPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -408,11 +410,11 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterCursor, indexer.OffsetLength)
+		cursor, pageSize, err := parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.AliasCursor(offset))
+		filters = append(filters, indexer.AliasCursor(cursor), indexer.AliasPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -582,11 +584,11 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterCursor, indexer.OffsetLength)
+		cursor, pageSize, err := parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTCursor(offset))
+		filters = append(filters, indexer.NFTCursor(cursor), indexer.NFTPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -628,11 +630,11 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterCursor, indexer.OffsetLength)
+		cursor, pageSize, err := parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.FoundryCursor(offset))
+		filters = append(filters, indexer.FoundryCursor(cursor), indexer.FoundryPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -669,12 +671,43 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputIDs failed: %s", result.Error)
 	}
 
+	var cursor *string
+	if result.Cursor != nil {
+		encodedCursor := fmt.Sprintf("%s.%d", *result.Cursor, result.PageSize)
+		cursor = &encodedCursor
+	}
+
 	return &outputsResponse{
 		LedgerIndex: result.LedgerIndex,
 		PageSize:    uint32(result.PageSize),
-		Cursor:      hex.EncodeToString(result.Cursor),
+		Cursor:      cursor,
 		Items:       result.OutputIDs.ToHex(),
 	}, nil
+}
+
+func parseCursorQueryParameter(c echo.Context) (string, int, error) {
+	param := c.QueryParam(QueryParameterCursor)
+
+	components := strings.Split(param, ".")
+	if len(components) != 2 {
+		return "", 0, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter %s has wrong format", QueryParameterCursor))
+	}
+
+	if len(components[0]) != indexer.CursorLength {
+		return "", 0, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter %s has wrong format", QueryParameterCursor))
+	}
+
+	size, err := strconv.ParseUint(components[1], 10, 32)
+	if err != nil {
+		return "", 0, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter %s has wrong format", QueryParameterCursor))
+	}
+
+	pageSize := int(size)
+	if pageSize > deps.RestAPILimitsMaxResults {
+		pageSize = deps.RestAPILimitsMaxResults
+	}
+
+	return components[0], pageSize, nil
 }
 
 func pageSizeFromContext(c echo.Context) int {

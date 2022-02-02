@@ -17,7 +17,7 @@ type foundry struct {
 type FoundryFilterOptions struct {
 	unlockableByAddress *iotago.Address
 	pageSize            int
-	cursor              []byte
+	cursor              *string
 	createdBefore       *time.Time
 	createdAfter        *time.Time
 }
@@ -36,9 +36,9 @@ func FoundryPageSize(pageSize int) FoundryFilterOption {
 	}
 }
 
-func FoundryCursor(cursor []byte) FoundryFilterOption {
+func FoundryCursor(cursor string) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
-		args.cursor = cursor
+		args.cursor = &cursor
 	}
 }
 

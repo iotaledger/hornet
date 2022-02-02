@@ -41,7 +41,7 @@ type ExtendedOutputFilterOptions struct {
 	sender                    *iotago.Address
 	tag                       []byte
 	pageSize                  int
-	cursor                    []byte
+	cursor                    *string
 	createdBefore             *time.Time
 	createdAfter              *time.Time
 }
@@ -150,9 +150,9 @@ func ExtendedOutputPageSize(pageSize int) ExtendedOutputFilterOption {
 	}
 }
 
-func ExtendedOutputCursor(cursor []byte) ExtendedOutputFilterOption {
+func ExtendedOutputCursor(cursor string) ExtendedOutputFilterOption {
 	return func(args *ExtendedOutputFilterOptions) {
-		args.cursor = cursor
+		args.cursor = &cursor
 	}
 }
 
