@@ -96,8 +96,8 @@ func newQuorum(quorumGroups map[string][]*QuorumClientConfig, deSeriParas *iotag
 			groups[groupName][i] = &quorumGroupEntry{
 				api: NewDebugNodeAPIClient(client.BaseURL,
 					deSeriParas,
-					nodeclient.WithNodeHTTPAPIClientHTTPClient(&http.Client{Timeout: timeout}),
-					nodeclient.WithNodeHTTPAPIClientUserInfo(userInfo),
+					nodeclient.WithHTTPClient(&http.Client{Timeout: timeout}),
+					nodeclient.WithUserInfo(userInfo),
 				),
 				stats: &QuorumClientStatistic{
 					Group:   groupName,

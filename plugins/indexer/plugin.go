@@ -11,6 +11,7 @@ import (
 
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/workerpool"
 	iotago "github.com/iotaledger/iota.go/v3"
 
 	"github.com/gohornet/hornet/pkg/indexer"
@@ -26,6 +27,9 @@ import (
 
 const (
 	waitForNodeSyncedTimeout = 2000 * time.Millisecond
+
+	workerCount     = 1
+	workerQueueSize = 10000
 )
 
 func init() {
@@ -45,7 +49,8 @@ var (
 	Plugin *node.Plugin
 	deps   dependencies
 
-	onLedgerUpdated *events.Closure
+	onLedgerUpdated           *events.Closure
+	onLedgerUpdatedWorkerPool *workerpool.WorkerPool
 )
 
 type dependencies struct {
@@ -102,7 +107,14 @@ func configure() {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
-	configureEvents()
+	onLedgerUpdatedWorkerPool = workerpool.New(func(task workerpool.Task) {
+		updateIndexer(task.Param(0).(milestone.Index), task.Param(1).(utxo.Outputs), task.Param(2).(utxo.Spents))
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
+
+	onLedgerUpdated = events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+		onLedgerUpdatedWorkerPool.Submit(index, newOutputs, newSpents)
+	})
 }
 
 func run() {
@@ -110,21 +122,14 @@ func run() {
 	if err := Plugin.Daemon().BackgroundWorker("Indexer", func(ctx context.Context) {
 		Plugin.LogInfo("Starting Indexer ... done")
 		attachEvents()
+		onLedgerUpdatedWorkerPool.Start()
 		<-ctx.Done()
 		detachEvents()
+		onLedgerUpdatedWorkerPool.StopAndWait()
 		Plugin.LogInfo("Stopping Indexer ... done")
 	}, shutdown.PriorityIndexer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
-}
-
-func configureEvents() {
-
-	onLedgerUpdated = events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
-		if err := deps.Indexer.UpdatedLedger(index, newOutputs, newSpents); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("indexer plugin hit a critical error while updating ledger: %s", err.Error()))
-		}
-	})
 }
 
 func attachEvents() {
@@ -133,6 +138,12 @@ func attachEvents() {
 
 func detachEvents() {
 	deps.Tangle.Events.LedgerUpdated.Detach(onLedgerUpdated)
+}
+
+func updateIndexer(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+	if err := deps.Indexer.UpdatedLedger(index, newOutputs, newSpents); err != nil {
+		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("indexer plugin hit a critical error while updating ledger: %s", err.Error()))
+	}
 }
 
 func initializeIndexer() {

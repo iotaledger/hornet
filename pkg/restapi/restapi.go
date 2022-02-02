@@ -59,7 +59,7 @@ var (
 
 // JSONResponse wraps the result into a "data" field and sends the JSON response with status code.
 func JSONResponse(c echo.Context, statusCode int, result interface{}) error {
-	return c.JSON(statusCode, &HTTPOkResponseEnvelope{Data: result})
+	return c.JSON(statusCode, result)
 }
 
 // HTTPErrorResponse defines the error struct for the HTTPErrorResponseEnvelope.
@@ -71,12 +71,6 @@ type HTTPErrorResponse struct {
 // HTTPErrorResponseEnvelope defines the error response schema for node API responses.
 type HTTPErrorResponseEnvelope struct {
 	Error HTTPErrorResponse `json:"error"`
-}
-
-// HTTPOkResponseEnvelope defines the ok response schema for node API responses.
-type HTTPOkResponseEnvelope struct {
-	// The response is encapsulated in the Data field.
-	Data interface{} `json:"data"`
 }
 
 type (

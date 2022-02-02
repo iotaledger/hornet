@@ -1,11 +1,13 @@
 package indexer
 
 import (
-	"encoding/hex"
-	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/restapi"
@@ -115,11 +117,11 @@ const (
 	// QueryParameterGovernor is used to filter for a certain governance controller address.
 	QueryParameterGovernor = "governor"
 
-	// QueryParameterLimit is used to define the page size for the results.
-	QueryParameterLimit = "limit"
+	// QueryParameterPageSize is used to define the page size for the results.
+	QueryParameterPageSize = "pageSize"
 
-	// QueryParameterOffset is used to pass the outputID we want to start the results from.
-	QueryParameterOffset = "offset"
+	// QueryParameterCursor is used to pass the offset we want to start the next results from.
+	QueryParameterCursor = "cursor"
 
 	// QueryParameterCreatedBefore is used to filter for outputs that were created before the given time.
 	QueryParameterCreatedBefore = "createdBefore"
@@ -337,12 +339,12 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.ExtendedOutputTag(tagBytes))
 	}
 
-	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, 38)
+	if len(c.QueryParam(QueryParameterCursor)) > 0 {
+		cursor, pageSize, err := parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputOffset(offset))
+		filters = append(filters, indexer.ExtendedOutputCursor(cursor), indexer.ExtendedOutputPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -407,12 +409,12 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.AliasSender(sender))
 	}
 
-	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
+	if len(c.QueryParam(QueryParameterCursor)) > 0 {
+		cursor, pageSize, err := parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.AliasOffset(offset))
+		filters = append(filters, indexer.AliasCursor(cursor), indexer.AliasPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -581,12 +583,12 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTTag(tagBytes))
 	}
 
-	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
+	if len(c.QueryParam(QueryParameterCursor)) > 0 {
+		cursor, pageSize, err := parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTOffset(offset))
+		filters = append(filters, indexer.NFTCursor(cursor), indexer.NFTPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -627,12 +629,12 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.FoundryUnlockableByAddress(address))
 	}
 
-	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
+	if len(c.QueryParam(QueryParameterCursor)) > 0 {
+		cursor, pageSize, err := parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.FoundryOffset(offset))
+		filters = append(filters, indexer.FoundryCursor(cursor), indexer.FoundryPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -669,19 +671,50 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading outputIDs failed: %s", result.Error)
 	}
 
+	var cursor *string
+	if result.Cursor != nil {
+		// Add the pageSize to the cursor we expose in the API
+		cursorWithPageSize := fmt.Sprintf("%s.%d", *result.Cursor, result.PageSize)
+		cursor = &cursorWithPageSize
+	}
+
 	return &outputsResponse{
 		LedgerIndex: result.LedgerIndex,
-		Limit:       uint32(result.PageSize),
-		Offset:      hex.EncodeToString(result.NextOffset),
-		Count:       uint32(len(result.OutputIDs)),
-		OutputIDs:   result.OutputIDs.ToHex(),
+		PageSize:    uint32(result.PageSize),
+		Cursor:      cursor,
+		Items:       result.OutputIDs.ToHex(),
 	}, nil
+}
+
+func parseCursorQueryParameter(c echo.Context) (string, int, error) {
+	cursorWithPageSize := c.QueryParam(QueryParameterCursor)
+
+	components := strings.Split(cursorWithPageSize, ".")
+	if len(components) != 2 {
+		return "", 0, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter %s has wrong format", QueryParameterCursor))
+	}
+
+	if len(components[0]) != indexer.CursorLength {
+		return "", 0, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter %s has wrong format", QueryParameterCursor))
+	}
+
+	size, err := strconv.ParseUint(components[1], 10, 32)
+	if err != nil {
+		return "", 0, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter %s has wrong format", QueryParameterCursor))
+	}
+
+	pageSize := int(size)
+	if pageSize > deps.RestAPILimitsMaxResults {
+		pageSize = deps.RestAPILimitsMaxResults
+	}
+
+	return components[0], pageSize, nil
 }
 
 func pageSizeFromContext(c echo.Context) int {
 	pageSize := deps.RestAPILimitsMaxResults
-	if len(c.QueryParam(QueryParameterLimit)) > 0 {
-		i, err := strconv.Atoi(c.QueryParam(QueryParameterLimit))
+	if len(c.QueryParam(QueryParameterPageSize)) > 0 {
+		i, err := strconv.Atoi(c.QueryParam(QueryParameterPageSize))
 		if err != nil {
 			return pageSize
 		}

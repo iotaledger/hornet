@@ -7,28 +7,23 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// infoResponse defines the response of a GET info REST API call.
-type infoResponse struct {
-	// The name of the node software.
-	Name string `json:"name"`
-	// The semver version of the node software.
-	Version string `json:"version"`
-	// Whether the node is healthy.
-	IsHealthy bool `json:"isHealthy"`
-	// The ID of the network.
-	NetworkID string `json:"networkId"`
+type protocolParameters struct {
+	// The Name of the network from which the networkId is derived.
+	NetworkName string `json:"networkName"`
 	// The Bech32 HRP used.
 	Bech32HRP string `json:"bech32HRP"`
 	// The minimum pow score of the network.
 	MinPoWScore float64 `json:"minPoWScore"`
-	// The current rate of new messages per second.
-	MessagesPerSecond float64 `json:"messagesPerSecond"`
-	// The current rate of referenced messages per second.
-	ReferencedMessagesPerSecond float64 `json:"referencedMessagesPerSecond"`
-	// The ratio of referenced messages in relation to new messages of the last confirmed milestone.
-	ReferencedRate float64 `json:"referencedRate"`
+	// The rent structure according to TIP-19
+	RentStructure *iotago.RentStructure `json:"rentStructure"`
+}
+
+type nodeStatus struct {
+	// Whether the node is healthy.
+	IsHealthy bool `json:"isHealthy"`
 	// The timestamp of the latest known milestone.
 	LatestMilestoneTimestamp int64 `json:"latestMilestoneTimestamp"`
 	// The latest known milestone index.
@@ -37,6 +32,29 @@ type infoResponse struct {
 	ConfirmedMilestoneIndex milestone.Index `json:"confirmedMilestoneIndex"`
 	// The milestone index at which the last pruning commenced.
 	PruningIndex milestone.Index `json:"pruningIndex"`
+}
+
+type nodeMetrics struct {
+	// The current rate of new messages per second.
+	MessagesPerSecond float64 `json:"messagesPerSecond"`
+	// The current rate of referenced messages per second.
+	ReferencedMessagesPerSecond float64 `json:"referencedMessagesPerSecond"`
+	// The ratio of referenced messages in relation to new messages of the last confirmed milestone.
+	ReferencedRate float64 `json:"referencedRate"`
+}
+
+// infoResponse defines the response of a GET info REST API call.
+type infoResponse struct {
+	// The name of the node software.
+	Name string `json:"name"`
+	// The semver version of the node software.
+	Version string `json:"version"`
+	// The current status of this node.
+	Status nodeStatus `json:"status"`
+	// The metrics of this node.
+	Metrics nodeMetrics `json:"metrics"`
+	// The protocol parameters used by this node.
+	Protocol protocolParameters `json:"protocol"`
 	// The features this node exposes.
 	Features []string `json:"features"`
 	// The plugins this node exposes.

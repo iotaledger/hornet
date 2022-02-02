@@ -41,7 +41,7 @@ type ExtendedOutputFilterOptions struct {
 	sender                    *iotago.Address
 	tag                       []byte
 	pageSize                  int
-	offset                    []byte
+	cursor                    *string
 	createdBefore             *time.Time
 	createdAfter              *time.Time
 }
@@ -150,9 +150,9 @@ func ExtendedOutputPageSize(pageSize int) ExtendedOutputFilterOption {
 	}
 }
 
-func ExtendedOutputOffset(offset []byte) ExtendedOutputFilterOption {
+func ExtendedOutputCursor(cursor string) ExtendedOutputFilterOption {
 	return func(args *ExtendedOutputFilterOptions) {
-		args.offset = offset
+		args.cursor = &cursor
 	}
 }
 
@@ -280,5 +280,5 @@ func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOpti
 		query = query.Where("created_at > ?", *opts.createdAfter)
 	}
 
-	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)
+	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.cursor)
 }

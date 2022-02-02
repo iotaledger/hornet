@@ -45,21 +45,28 @@ func info() (*infoResponse, error) {
 	}
 
 	return &infoResponse{
-		Name:                        deps.AppInfo.Name,
-		Version:                     deps.AppInfo.Version,
-		IsHealthy:                   deps.Tangle.IsNodeHealthy(),
-		NetworkID:                   deps.NetworkIDName,
-		Bech32HRP:                   string(deps.Bech32HRP),
-		MinPoWScore:                 deps.MinPoWScore,
-		MessagesPerSecond:           messagesPerSecond,
-		ReferencedMessagesPerSecond: referencedMessagesPerSecond,
-		ReferencedRate:              referencedRate,
-		LatestMilestoneTimestamp:    latestMilestoneTimestamp,
-		LatestMilestoneIndex:        latestMilestoneIndex,
-		ConfirmedMilestoneIndex:     confirmedMilestoneIndex,
-		PruningIndex:                pruningIndex,
-		Features:                    features,
-		Plugins:                     plugins,
+		Name:    deps.AppInfo.Name,
+		Version: deps.AppInfo.Version,
+		Status: nodeStatus{
+			IsHealthy:                deps.Tangle.IsNodeHealthy(),
+			LatestMilestoneTimestamp: latestMilestoneTimestamp,
+			LatestMilestoneIndex:     latestMilestoneIndex,
+			ConfirmedMilestoneIndex:  confirmedMilestoneIndex,
+			PruningIndex:             pruningIndex,
+		},
+		Protocol: protocolParameters{
+			NetworkName:   deps.NetworkIDName,
+			Bech32HRP:     string(deps.Bech32HRP),
+			MinPoWScore:   deps.MinPoWScore,
+			RentStructure: deps.DeserializationParameters.RentStructure,
+		},
+		Metrics: nodeMetrics{
+			MessagesPerSecond:           messagesPerSecond,
+			ReferencedMessagesPerSecond: referencedMessagesPerSecond,
+			ReferencedRate:              referencedRate,
+		},
+		Features: features,
+		Plugins:  plugins,
 	}, nil
 }
 
