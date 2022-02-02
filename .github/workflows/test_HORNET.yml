@@ -4,6 +4,10 @@ on:
   pull_request:
     paths-ignore:
       - 'documentation/**'
+      - 'nfpm/**'
+      - 'private_tangle/**'
+      - 'scripts/**'
+      - 'tools/**'
 
 jobs:
   test:
