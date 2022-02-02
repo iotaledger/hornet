@@ -48,9 +48,9 @@ type infoResponse struct {
 	// The name of the node software.
 	Name string `json:"name"`
 	// The semver version of the node software.
-	Version string     `json:"version"`
+	Version string `json:"version"`
 	// The current status of this node.
-	Status  nodeStatus `json:"status"`
+	Status nodeStatus `json:"status"`
 	// The metrics of this node.
 	Metrics nodeMetrics `json:"metrics"`
 	// The protocol parameters used by this node.
