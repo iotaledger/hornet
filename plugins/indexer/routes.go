@@ -673,8 +673,9 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 
 	var cursor *string
 	if result.Cursor != nil {
-		encodedCursor := fmt.Sprintf("%s.%d", *result.Cursor, result.PageSize)
-		cursor = &encodedCursor
+		// Add the pageSize to the cursor we expose in the API
+		cursorWithPageSize := fmt.Sprintf("%s.%d", *result.Cursor, result.PageSize)
+		cursor = &cursorWithPageSize
 	}
 
 	return &outputsResponse{
@@ -686,9 +687,9 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 }
 
 func parseCursorQueryParameter(c echo.Context) (string, int, error) {
-	param := c.QueryParam(QueryParameterCursor)
+	cursorWithPageSize := c.QueryParam(QueryParameterCursor)
 
-	components := strings.Split(param, ".")
+	components := strings.Split(cursorWithPageSize, ".")
 	if len(components) != 2 {
 		return "", 0, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter %s has wrong format", QueryParameterCursor))
 	}
