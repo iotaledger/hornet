@@ -113,7 +113,7 @@ func configure() {
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	onLedgerUpdated = events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
-		onLedgerUpdatedWorkerPool.TrySubmit(index, newOutputs, newSpents)
+		onLedgerUpdatedWorkerPool.Submit(index, newOutputs, newSpents)
 	})
 }
 
