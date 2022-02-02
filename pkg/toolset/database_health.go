@@ -1,6 +1,7 @@
 package toolset
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -18,6 +19,7 @@ func databaseHealth(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePath := fs.String(FlagToolDatabasePath, "", "the path to the database folder that should be checked")
+	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseHealth)
@@ -37,7 +39,7 @@ func databaseHealth(_ *configuration.Configuration, args []string) error {
 		os.Exit(2)
 	}
 
-	checkDatabaseHealth := func(path string, name string) error {
+	checkDatabaseHealth := func(path string, name string, outputJSON bool) error {
 
 		dbExists, err := database.DatabaseExists(path)
 		if err != nil {
@@ -62,24 +64,56 @@ func databaseHealth(_ *configuration.Configuration, args []string) error {
 			return err
 		}
 
-		isCorrupted, err := healthTracker.IsCorrupted()
+		corrupted, err := healthTracker.IsCorrupted()
 		if err != nil {
 			return err
 		}
 
-		isTainted, err := healthTracker.IsTainted()
+		tainted, err := healthTracker.IsTainted()
 		if err != nil {
 			return err
 		}
 
-		print(fmt.Sprintf("Database: '%s', Version: %d, IsCorrupted: %t, IsTainted: %t\n", name, dbVersion, isCorrupted, isTainted))
+		if outputJSON {
+
+			result := struct {
+				Database string `json:"database"`
+				Version  int    `json:"version"`
+				Healthy  bool   `json:"healthy"`
+				Tainted  bool   `json:"tainted"`
+			}{
+				Database: name,
+				Version:  dbVersion,
+				Healthy:  !corrupted,
+				Tainted:  tainted,
+			}
+
+			output, err := json.MarshalIndent(result, "", "  ")
+			if err != nil {
+				fmt.Printf("Error: %s\n", err)
+			}
+			fmt.Println(string(output))
+			return nil
+		}
+
+		fmt.Printf(`    >
+        - Database:       %s
+        - Version:        %d
+        - Healthy:        %s
+        - Tainted:        %s`+"\n\n",
+			name,
+			dbVersion,
+			yesOrNo(!corrupted),
+			yesOrNo(tainted),
+		)
+
 		return nil
 	}
 
 	dbPath := *databasePath
 	dbName := path.Base(dbPath)
 
-	if err := checkDatabaseHealth(dbPath, dbName); err != nil {
+	if err := checkDatabaseHealth(dbPath, dbName, *outputJSON); err != nil {
 		return err
 	}
 
