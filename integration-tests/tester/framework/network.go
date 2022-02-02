@@ -76,7 +76,7 @@ func (n *Network) AwaitAllSync(ctx context.Context) error {
 			if err != nil {
 				continue
 			}
-			if info.IsHealthy {
+			if info.Status.IsHealthy {
 				break
 			}
 		}
