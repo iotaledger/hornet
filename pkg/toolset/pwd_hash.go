@@ -72,25 +72,21 @@ func readPasswordFromStdin() ([]byte, error) {
 func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	passwordFlag := fs.String("password", "", fmt.Sprintf("password to hash (optional). Can also be passed as %s environment variable.", passwordEnvKey))
-	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+	passwordFlag := fs.String(FlagToolPassword, "", fmt.Sprintf("password to hash (optional). Can also be passed as %s environment variable.", passwordEnvKey))
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolPwdHash)
 		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s",
+			ToolPwdHash,
+			FlagToolPassword,
+			"[PASSWORD]",
+		))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
-	}
-
-	// Check if all parameters were parsed
-	if fs.NArg() != 0 {
-		fs.Usage()
-		os.Exit(2)
 	}
 
 	var password []byte
@@ -120,7 +116,7 @@ func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 		return fmt.Errorf("deriving password key failed: %w", err)
 	}
 
-	if *outputJSON {
+	if *outputJSONFlag {
 
 		result := struct {
 			Password string `json:"passwordHash"`

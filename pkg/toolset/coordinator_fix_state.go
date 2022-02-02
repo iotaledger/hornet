@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	coreDatabase "github.com/gohornet/hornet/core/database"
@@ -28,14 +27,20 @@ func coordinatorFixStateFile(_ *configuration.Configuration, args []string) erro
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolCoordinatorFixStateFile)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s", ToolCoordinatorFixStateFile, FlagToolDatabasePath, "mainnetdb", FlagToolCoordinatorFixStateCooStateFilePath, "./coordinator.state"))
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
+			ToolCoordinatorFixStateFile,
+			FlagToolDatabasePath,
+			"mainnetdb",
+			FlagToolCoordinatorFixStateCooStateFilePath,
+			"coordinator.state"))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
+	}
+
+	if len(*databasePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
 	}
 
 	databasePath := *databasePathFlag

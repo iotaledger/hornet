@@ -5,6 +5,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
+
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -14,6 +17,10 @@ const (
 	FlagToolSnapshotPathFull  = "snapshotPathFull"
 	FlagToolSnapshotPathDelta = "snapshotPathDelta"
 	FlagToolOutputJSON        = "json"
+	FlagToolPrivateKey        = "privateKey"
+	FlagToolPublicKey         = "publicKey"
+	FlagToolHRP               = "hrp"
+	FlagToolPassword          = "password"
 
 	FlagToolDescriptionOutputJSON = "format output as JSON"
 )
@@ -87,6 +94,11 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 	}
 
 	if err := tool(nodeConfig, args[2:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			// help text was requested
+			os.Exit(0)
+		}
+
 		fmt.Printf("\nerror: %s\n", err)
 		os.Exit(1)
 	}
@@ -119,4 +131,26 @@ func yesOrNo(value bool) string {
 		return "YES"
 	}
 	return "NO"
+}
+
+func parseFlagSet(fs *flag.FlagSet, args []string, minArgsCount ...int) error {
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if len(minArgsCount) > 0 {
+		// minimum amount of args must be checked
+		if len(args) < minArgsCount[0] {
+			fs.Usage()
+			return errors.New("not enough arguments")
+		}
+	}
+
+	// Check if all parameters were parsed
+	if fs.NArg() != 0 {
+		return errors.New("too much arguments")
+	}
+
+	return nil
 }

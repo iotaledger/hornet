@@ -10,7 +10,6 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mr-tron/base58"
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -21,32 +20,32 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 )
 
-const (
-	FlagToolP2PGenerateIdentityPrivateKey = "privateKey"
-)
-
 func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	p2pDatabasePath := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
-	p2pPrivateKey := fs.String(FlagToolP2PGenerateIdentityPrivateKey, "", "the p2p private key (optional)")
-	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
+	privateKeyFlag := fs.String(FlagToolPrivateKey, "", "the p2p private key (optional)")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolP2PIdentityGen)
 		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
+			ToolP2PIdentityGen,
+			FlagToolDatabasePath,
+			"p2pstore",
+			FlagToolPrivateKey,
+			"[PRIVATE_KEY]",
+		))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
 	dbPath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if p2pDatabasePath != nil && len(*p2pDatabasePath) > 0 {
-		dbPath = *p2pDatabasePath
+	if databasePathFlag != nil && len(*databasePathFlag) > 0 {
+		dbPath = *databasePathFlag
 	}
 
 	privKeyFilePath := filepath.Join(dbPath, p2p.PrivKeyFileName)
@@ -71,16 +70,16 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 	var privateKey crypto.PrivKey
 	var publicKey crypto.PubKey
 
-	if p2pPrivateKey != nil && len(*p2pPrivateKey) > 0 {
-		hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(*p2pPrivateKey)
+	if privateKeyFlag != nil && len(*privateKeyFlag) > 0 {
+		hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(*privateKeyFlag)
 		if err != nil {
-			return fmt.Errorf("invalid private key given '%s': %w", *p2pPrivateKey, err)
+			return fmt.Errorf("invalid private key given '%s': %w", *privateKeyFlag, err)
 		}
 
 		stdPrvKey := stded25519.PrivateKey(hivePrivKey)
 		privateKey, publicKey, err = crypto.KeyPairFromStdKey(&stdPrvKey)
 		if err != nil {
-			return fmt.Errorf("unable to convert given private key '%s': %w", *p2pPrivateKey, err)
+			return fmt.Errorf("unable to convert given private key '%s': %w", *privateKeyFlag, err)
 		}
 	} else {
 		// create identity
@@ -94,7 +93,7 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 		return fmt.Errorf("writing private key file for peer identity failed: %w", err)
 	}
 
-	return printP2PIdentity(privateKey, publicKey, *outputJSON)
+	return printP2PIdentity(privateKey, publicKey, *outputJSONFlag)
 }
 
 func printP2PIdentity(privateKey crypto.PrivKey, publicKey crypto.PubKey, outputJSON bool) error {

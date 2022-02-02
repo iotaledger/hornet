@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/utils"
@@ -56,25 +55,24 @@ func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp 
 func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
-	hrp := fs.String("hrp", string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
+	hrpFlag := fs.String(FlagToolHRP, string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolEd25519Key)
 		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s",
+			ToolEd25519Key,
+			FlagToolHRP,
+			string(iotago.PrefixTestnet)))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
-	// Check if all parameters were parsed
-	if fs.NArg() != 0 {
-		fs.Usage()
-		os.Exit(2)
+	if len(*hrpFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolHRP)
 	}
 
 	pubKey, privKey, err := ed25519.GenerateKey(nil)
@@ -82,42 +80,44 @@ func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	printEd25519Info(pubKey, privKey, iotago.NetworkPrefix(*hrp), *outputJSON)
+	printEd25519Info(pubKey, privKey, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
 	return nil
 }
 
 func generateEd25519Address(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	publicKey := fs.String("publicKey", "", "an ed25519 public key")
-	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
-	hrp := fs.String("hrp", string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
+	hrpFlag := fs.String(FlagToolHRP, string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
+	publicKeyFlag := fs.String(FlagToolPublicKey, "", "an ed25519 public key")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolEd25519Addr)
 		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
+			ToolEd25519Addr,
+			FlagToolHRP,
+			string(iotago.PrefixTestnet),
+			FlagToolPublicKey,
+			"[PUB_KEY]",
+		))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
-	// Check if all parameters were parsed
-	if len(args) == 0 || fs.NArg() != 0 {
-		fs.Usage()
-		os.Exit(2)
+	if len(*hrpFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolHRP)
 	}
 
 	// parse pubkey
-	pubKey, err := utils.ParseEd25519PublicKeyFromString(*publicKey)
+	pubKey, err := utils.ParseEd25519PublicKeyFromString(*publicKeyFlag)
 	if err != nil {
-		return fmt.Errorf("can't decode publicKey: %w", err)
+		return fmt.Errorf("can't decode '%s': %w", FlagToolPublicKey, err)
 	}
 
-	printEd25519Info(pubKey, nil, iotago.NetworkPrefix(*hrp), *outputJSON)
+	printEd25519Info(pubKey, nil, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
 
 	return nil
 }

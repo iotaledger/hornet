@@ -215,19 +215,23 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, "mainnetdb", "the path to the database")
-	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseLedgerHash)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %s", ToolDatabaseLedgerHash, FlagToolDatabasePath, "mainnetdb"))
+		println(fmt.Sprintf("\nexample: %s --%s %s",
+			ToolDatabaseLedgerHash,
+			FlagToolDatabasePath,
+			"mainnetdb"))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
+	}
+
+	if len(*databasePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
 	}
 
 	databasePath := *databasePathFlag
@@ -262,5 +266,5 @@ func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	return calculateDatabaseLedgerHash(dbStorage, *outputJSON)
+	return calculateDatabaseLedgerHash(dbStorage, *outputJSONFlag)
 }

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/database"
@@ -42,13 +41,17 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolBenchmarkIO)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %d --%s %d --%s %s", ToolBenchmarkIO, FlagToolBenchmarkIoObjectsCount, 500000, FlagToolBenchmarkIoObjectsSize, 1000, FlagToolBenchmarkIoDatabaseEngine, database.EngineRocksDB))
+		println(fmt.Sprintf("\nexample: %s --%s %d --%s %d --%s %s",
+			ToolBenchmarkIO,
+			FlagToolBenchmarkIoObjectsCount,
+			500000,
+			FlagToolBenchmarkIoObjectsSize,
+			1000,
+			FlagToolBenchmarkIoDatabaseEngine,
+			database.EngineRocksDB))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
@@ -126,13 +129,14 @@ func benchmarkCPU(_ *configuration.Configuration, args []string) error {
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolBenchmarkCPU)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %d --%s 1m0s", ToolBenchmarkCPU, FlagToolBenchmarkCpuThreads, 2, FlagToolBenchmarkCpuDuration))
+		println(fmt.Sprintf("\nexample: %s --%s %d --%s 1m0s",
+			ToolBenchmarkCPU,
+			FlagToolBenchmarkCpuThreads,
+			2,
+			FlagToolBenchmarkCpuDuration))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 

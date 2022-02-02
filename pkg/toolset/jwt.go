@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
@@ -21,25 +20,20 @@ import (
 func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePath := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
-	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolJWTApi)
 		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s",
+			ToolJWTApi,
+			FlagToolDatabasePath,
+			"p2pstore"))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
-	}
-
-	// Check if all parameters were parsed
-	if fs.NArg() != 0 {
-		fs.Usage()
-		os.Exit(2)
 	}
 
 	salt := nodeConfig.String(restapi.CfgRestAPIJWTAuthSalt)
@@ -48,8 +42,8 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 	}
 
 	p2pDatabasePath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if len(*databasePath) > 0 {
-		p2pDatabasePath = *databasePath
+	if len(*databasePathFlag) > 0 {
+		p2pDatabasePath = *databasePathFlag
 	}
 	privKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PrivKeyFileName)
 
@@ -91,7 +85,7 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 		return fmt.Errorf("issuing JWT token failed: %w", err)
 	}
 
-	if *outputJSON {
+	if *outputJSONFlag {
 
 		result := struct {
 			JWT string `json:"jwt"`

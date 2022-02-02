@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -34,17 +33,22 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapGen)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s", ToolSnapGen, FlagToolSnapGenNetworkID, "private_tangle@1", FlagToolSnapGenMintAddress, "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92", FlagToolSnapGenTreasuryAllocation, "500000000", FlagToolSnapGenOutputFilePath, "snapshots/private_tangle/full_snapshot.bin"))
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s",
+			ToolSnapGen,
+			FlagToolSnapGenNetworkID,
+			"private_tangle@1",
+			FlagToolSnapGenMintAddress,
+			"[MINT_ADDRESS]",
+			FlagToolSnapGenTreasuryAllocation,
+			"500000000",
+			FlagToolSnapGenOutputFilePath,
+			"snapshots/private_tangle/full_snapshot.bin"))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
-	// check network ID
 	if len(*networkIDFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapGenNetworkID)
 	}
@@ -52,6 +56,9 @@ func snapshotGen(_ *configuration.Configuration, args []string) error {
 	networkID := iotago.NetworkIDFromString(*networkIDFlag)
 
 	// check mint address
+	if len(*mintAddressFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolSnapGenMintAddress)
+	}
 	addressBytes, err := hex.DecodeString(*mintAddressFlag)
 	if err != nil {
 		return fmt.Errorf("can't decode '%s': %w'", FlagToolSnapGenMintAddress, err)

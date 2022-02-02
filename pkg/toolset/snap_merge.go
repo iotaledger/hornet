@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -25,7 +24,7 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 	snapshotPathFullFlag := fs.String(FlagToolSnapshotPathFull, "", "the path to the full snapshot file")
 	snapshotPathDeltaFlag := fs.String(FlagToolSnapshotPathDelta, "", "the path to the delta snapshot file")
 	snapshotPathTargetFlag := fs.String(FlagToolSnapshotMergeSnapshotPathTarget, "", "the path to the target/merged snapshot file")
-	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapMerge)
@@ -33,32 +32,30 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s",
 			ToolSnapMerge,
 			FlagToolSnapshotPathFull,
-			"./snapshots/mainnet/full_snapshot.bin",
+			"snapshots/mainnet/full_snapshot.bin",
 			FlagToolSnapshotPathDelta,
-			"./snapshots/mainnet/delta_snapshot.bin",
+			"snapshots/mainnet/delta_snapshot.bin",
 			FlagToolSnapshotMergeSnapshotPathTarget,
-			"./merged_snapshot.bin"))
+			"merged_snapshot.bin"))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
-	var fullPath, deltaPath, targetPath = *snapshotPathFullFlag, *snapshotPathDeltaFlag, *snapshotPathTargetFlag
-	if len(fullPath) == 0 {
+	if len(*snapshotPathFullFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPathFull)
 	}
-	if len(deltaPath) == 0 {
+	if len(*snapshotPathDeltaFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPathDelta)
 	}
-	if len(targetPath) == 0 {
+	if len(*snapshotPathTargetFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotMergeSnapshotPathTarget)
 	}
 
-	if !*outputJSON {
+	var fullPath, deltaPath, targetPath = *snapshotPathFullFlag, *snapshotPathDeltaFlag, *snapshotPathTargetFlag
+
+	if !*outputJSONFlag {
 		fmt.Println("merging snapshot files...")
 	}
 
@@ -69,15 +66,15 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	if !*outputJSON {
+	if !*outputJSONFlag {
 		fmt.Printf("metadata:\n")
 	}
 
-	printSnapshotHeaderInfo("full", fullPath, mergeInfo.FullSnapshotHeader, *outputJSON)
-	printSnapshotHeaderInfo("delta", deltaPath, mergeInfo.DeltaSnapshotHeader, *outputJSON)
-	printSnapshotHeaderInfo("merged", targetPath, mergeInfo.MergedSnapshotHeader, *outputJSON)
+	printSnapshotHeaderInfo("full", fullPath, mergeInfo.FullSnapshotHeader, *outputJSONFlag)
+	printSnapshotHeaderInfo("delta", deltaPath, mergeInfo.DeltaSnapshotHeader, *outputJSONFlag)
+	printSnapshotHeaderInfo("merged", targetPath, mergeInfo.MergedSnapshotHeader, *outputJSONFlag)
 
-	if !*outputJSON {
+	if !*outputJSONFlag {
 		fmt.Printf("successfully created merged full snapshot '%s', took %v\n", targetPath, time.Since(ts).Truncate(time.Millisecond))
 	}
 

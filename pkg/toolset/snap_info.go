@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/snapshot"
@@ -14,19 +13,23 @@ import (
 func snapshotInfo(_ *configuration.Configuration, args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	snapshotPathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the snapshot file")
-	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapInfo)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %s", ToolSnapInfo, FlagToolSnapshotPath, "./snapshots/mainnet/full_snapshot.bin"))
+		println(fmt.Sprintf("\nexample: %s --%s %s",
+			ToolSnapInfo,
+			FlagToolSnapshotPath,
+			"snapshots/mainnet/full_snapshot.bin"))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
+	}
+
+	if len(*snapshotPathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPath)
 	}
 
 	filePath := *snapshotPathFlag
@@ -35,6 +38,6 @@ func snapshotInfo(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	printSnapshotHeaderInfo("", filePath, readFileHeader, *outputJSON)
+	printSnapshotHeaderInfo("", filePath, readFileHeader, *outputJSONFlag)
 	return nil
 }

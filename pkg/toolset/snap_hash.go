@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	coreDatabase "github.com/gohornet/hornet/core/database"
@@ -26,19 +25,25 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	fullSnapshotPathFlag := fs.String(FlagToolSnapshotHashFullSnapshotPath, "snapshots/mainnet/full_snapshot.bin", "the path to the full snapshot file")
 	deltaSnapshotPathFlag := fs.String(FlagToolSnapshotHashDeltaSnapshotPath, "snapshots/mainnet/delta_snapshot.bin", "the path to the delta snapshot file (optional)")
-	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapHash)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s", ToolSnapHash, FlagToolSnapshotHashFullSnapshotPath, "./snapshots/mainnet/full_snapshot.bin", FlagToolSnapshotHashDeltaSnapshotPath, "snapshots/mainnet/delta_snapshot.bin"))
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
+			ToolSnapHash,
+			FlagToolSnapshotHashFullSnapshotPath,
+			"snapshots/mainnet/full_snapshot.bin",
+			FlagToolSnapshotHashDeltaSnapshotPath,
+			"snapshots/mainnet/delta_snapshot.bin"))
 	}
 
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil
-		}
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
+	}
+
+	if len(*fullSnapshotPathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolSnapshotHashFullSnapshotPath)
 	}
 
 	fullPath := *fullSnapshotPathFlag
@@ -85,5 +90,5 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	return calculateDatabaseLedgerHash(dbStorage, *outputJSON)
+	return calculateDatabaseLedgerHash(dbStorage, *outputJSONFlag)
 }
