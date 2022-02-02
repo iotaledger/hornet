@@ -64,12 +64,15 @@ func fixVersion(version string) string {
 	if !strings.Contains(ver, "-rc.") {
 		ver = strings.Replace(ver, "-rc", "-rc.", 1)
 	}
+	if !strings.Contains(ver, "-alpha.") {
+		ver = strings.Replace(ver, "-alpha", "-alpha.", 1)
+	}
 	return ver
 }
 
 func includeVersionInCheck(version string) bool {
 	isPrerelease := func(ver string) bool {
-		return strings.Contains(ver, "-rc")
+		return strings.Contains(ver, "-rc") || strings.Contains(ver, "-alpha")
 	}
 
 	if isPrerelease(deps.AppInfo.Version) {
