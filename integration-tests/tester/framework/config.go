@@ -39,12 +39,9 @@ const (
 
 	containerNodeImage           = "hornet:dev"
 	containerWhiteFlagMockServer = "wfmock:latest"
-	containerPumbaImage          = "gaiaadm/pumba:0.7.4"
-	containerIPRouteImage        = "gaiadocker/iproute2"
 
-	containerNameTester      = "/tester"
-	containerNameReplica     = "replica_"
-	containerNameSuffixPumba = "_pumba" //nolint:deadcode,varcheck
+	containerNameTester  = "/tester"
+	containerNameReplica = "replica_"
 
 	logsDir = "/tmp/logs/"
 

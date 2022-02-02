@@ -8,7 +8,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 )
@@ -79,39 +78,6 @@ func (d *DockerContainer) CreateWhiteFlagMockContainer(cfg *WhiteFlagMockServerC
 
 	hostCfg := &container.HostConfig{Binds: cfg.Binds}
 	return d.CreateContainer(cfg.Name, containerConfig, hostCfg)
-}
-
-// CreatePumbaContainer creates a new container with Pumba configuration.
-func (d *DockerContainer) CreatePumbaContainer(name string, containerName string, targetIPs []string) error {
-	hostConfig := &container.HostConfig{
-		Binds: strslice.StrSlice{"/var/run/docker.sock:/var/run/docker.sock:ro"},
-	}
-
-	cmd := strslice.StrSlice{
-		"--log-level=debug",
-		"netem",
-		"--duration=100m",
-	}
-
-	for _, ip := range targetIPs {
-		targetFlag := "--target=" + ip
-		cmd = append(cmd, targetFlag)
-	}
-
-	slice := strslice.StrSlice{
-		fmt.Sprintf("--tc-image=%s", containerIPRouteImage),
-		"loss",
-		"--percent=100",
-		containerName,
-	}
-	cmd = append(cmd, slice...)
-
-	containerConfig := &container.Config{
-		Image: containerPumbaImage,
-		Cmd:   cmd,
-	}
-
-	return d.CreateContainer(name, containerConfig, hostConfig)
 }
 
 // CreateContainer creates a new container with the given configuration.

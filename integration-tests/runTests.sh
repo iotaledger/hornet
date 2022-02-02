@@ -6,8 +6,6 @@ echo "Build HORNET image"
 docker build -f ../docker/Dockerfile -t hornet:dev ../.
 
 echo "Pull additional Docker images"
-docker pull gaiaadm/pumba:0.7.4
-docker pull gaiadocker/iproute2:latest
 docker build github.com/iotaledger/chrysalis-tools#:wfmock -t wfmock:latest
 
 echo "Run integration tests"
