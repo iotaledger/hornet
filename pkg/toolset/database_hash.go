@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
@@ -44,7 +46,10 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	}
 
 	ts := time.Now()
-	fmt.Println("calculating ledger state hash...")
+
+	if !outputJSON {
+		fmt.Println("calculating ledger state hash...")
+	}
 
 	ledgerIndex, err := dbStorage.UTXOManager().ReadLedgerIndex()
 	if err != nil {
@@ -123,25 +128,67 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 
 	snapshotHashSumWithSEPs := lsHash.Sum(nil)
 
-	yesOrNo := func(value bool) string {
-		if value {
-			return "YES"
+	if outputJSON {
+
+		type treasuryStruct struct {
+			MilestoneID string `json:"milestoneID"`
+			Tokens      uint64 `json:"tokens"`
 		}
-		return "NO"
+
+		var treasury *treasuryStruct
+		if treasuryOutput != nil {
+			treasury = &treasuryStruct{
+				MilestoneID: hex.EncodeToString(treasuryOutput.MilestoneID[:]),
+				Tokens:      treasuryOutput.Amount,
+			}
+		}
+
+		result := struct {
+			Healthy                bool            `json:"healthy"`
+			Tainted                bool            `json:"tainted"`
+			SnapshotTime           time.Time       `json:"snapshotTime"`
+			NetworkID              uint64          `json:"networkID"`
+			Treasury               *treasuryStruct `json:"treasury"`
+			LedgerIndex            milestone.Index `json:"ledgerIndex"`
+			SnapshotIndex          milestone.Index `json:"snapshotIndex"`
+			UTXOsCount             int             `json:"UTXOsCount"`
+			SEPsCount              int             `json:"SEPsCount"`
+			LedgerStateHash        string          `json:"ledgerStateHash"`
+			LedgerStateHashWithSEP string          `json:"ledgerStateHashWithSEP"`
+		}{
+			Healthy:                !corrupted,
+			Tainted:                tainted,
+			SnapshotTime:           snapshotInfo.Timestamp,
+			NetworkID:              snapshotInfo.NetworkID,
+			Treasury:               treasury,
+			LedgerIndex:            ledgerIndex,
+			SnapshotIndex:          snapshotInfo.SnapshotIndex,
+			UTXOsCount:             len(outputs),
+			SEPsCount:              len(solidEntryPoints),
+			LedgerStateHash:        hex.EncodeToString(snapshotHashSumWithoutSEPs),
+			LedgerStateHashWithSEP: hex.EncodeToString(snapshotHashSumWithSEPs),
+		}
+
+		output, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			fmt.Printf("Error: %s\n", err)
+		}
+		fmt.Println(string(output))
+		return nil
 	}
 
-	fmt.Printf(`>
-	- Healthy %s
-	- Tainted %s
-	- Snapshot time %v
-	- Network ID %d
-	- Treasury %s
-	- Ledger index %d
-	- Snapshot index %d
-	- UTXOs count %d
-	- SEPs count %d
-	- Ledger state hash (w/o  solid entry points): %s
-	- Ledger state hash (with solid entry points): %s`+"\n\n",
+	fmt.Printf(`    >
+        - Healthy:        %s
+        - Tainted:        %s
+        - Snapshot time:  %v
+        - Network ID:     %d
+        - Treasury:       %s
+        - Ledger index:   %d
+        - Snapshot index: %d
+        - UTXOs count:    %d
+        - SEPs count:     %d
+        - Ledger state hash (w/o  solid entry points): %s
+        - Ledger state hash (with solid entry points): %s`+"\n\n",
 		yesOrNo(!corrupted),
 		yesOrNo(tainted),
 		snapshotInfo.Timestamp,
@@ -168,6 +215,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, "mainnetdb", "the path to the database")
+	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseLedgerHash)
@@ -214,5 +262,5 @@ func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	return calculateDatabaseLedgerHash(dbStorage)
+	return calculateDatabaseLedgerHash(dbStorage, *outputJSON)
 }

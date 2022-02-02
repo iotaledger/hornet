@@ -85,5 +85,5 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	return calculateDatabaseLedgerHash(dbStorage)
+	return calculateDatabaseLedgerHash(dbStorage, *outputJSON)
 }
