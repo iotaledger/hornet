@@ -7,11 +7,9 @@ type outputsResponse struct {
 	// The ledger index at which these outputs where available at.
 	LedgerIndex milestone.Index `json:"ledgerIndex"`
 	// The maximum count of results that are returned by the node.
-	Limit uint32 `json:"limit,omitempty"`
-	// The actual count of results that are returned.
-	Count uint32 `json:"count"`
+	PageSize uint32 `json:"pageSize"`
 	// The cursor to use for getting the next results.
 	Cursor string `json:"cursor,omitempty"`
 	// The output IDs (transaction hash + output index) of the outputs on this address.
-	OutputIDs []string `json:"data"`
+	Items []string `json:"items"`
 }

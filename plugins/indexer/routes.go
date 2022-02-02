@@ -115,8 +115,8 @@ const (
 	// QueryParameterGovernor is used to filter for a certain governance controller address.
 	QueryParameterGovernor = "governor"
 
-	// QueryParameterLimit is used to define the page size for the results.
-	QueryParameterLimit = "limit"
+	// QueryParameterPageSize is used to define the page size for the results.
+	QueryParameterPageSize = "pageSize"
 
 	// QueryParameterCursor is used to pass the offset we want to start the next results from.
 	QueryParameterCursor = "cursor"
@@ -671,17 +671,16 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 
 	return &outputsResponse{
 		LedgerIndex: result.LedgerIndex,
-		Limit:       uint32(result.PageSize),
-		Count:       uint32(len(result.OutputIDs)),
-		OutputIDs:   result.OutputIDs.ToHex(),
+		PageSize:    uint32(result.PageSize),
 		Cursor:      hex.EncodeToString(result.Cursor),
+		Items:       result.OutputIDs.ToHex(),
 	}, nil
 }
 
 func pageSizeFromContext(c echo.Context) int {
 	pageSize := deps.RestAPILimitsMaxResults
-	if len(c.QueryParam(QueryParameterLimit)) > 0 {
-		i, err := strconv.Atoi(c.QueryParam(QueryParameterLimit))
+	if len(c.QueryParam(QueryParameterPageSize)) > 0 {
+		i, err := strconv.Atoi(c.QueryParam(QueryParameterPageSize))
 		if err != nil {
 			return pageSize
 		}
