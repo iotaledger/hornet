@@ -179,6 +179,7 @@ changelog:
   skip: true
 
 announce:
+  skip: "{{ if .Prerelease }}true{{ end }}"
   twitter:
     enabled: true
     message_template: "{{.ProjectName}}-{{.Version}} is out! Find all details at {{ .ReleaseURL }}! #IOTA #HORNET"
