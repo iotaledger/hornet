@@ -17,7 +17,7 @@ type foundry struct {
 type FoundryFilterOptions struct {
 	unlockableByAddress *iotago.Address
 	pageSize            int
-	offset              []byte
+	cursor              []byte
 	createdBefore       *time.Time
 	createdAfter        *time.Time
 }
@@ -36,9 +36,9 @@ func FoundryPageSize(pageSize int) FoundryFilterOption {
 	}
 }
 
-func FoundryOffset(offset []byte) FoundryFilterOption {
+func FoundryCursor(cursor []byte) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
-		args.offset = offset
+		args.cursor = cursor
 	}
 }
 
@@ -91,5 +91,5 @@ func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) *Ind
 		query = query.Where("created_at > ?", *opts.createdAfter)
 	}
 
-	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)
+	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.cursor)
 }

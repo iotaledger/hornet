@@ -64,7 +64,7 @@ type IndexerResult struct {
 	OutputIDs   iotago.OutputIDs
 	LedgerIndex milestone.Index
 	PageSize    int
-	NextOffset  []byte
+	Cursor      []byte
 	Error       error
 }
 
@@ -84,7 +84,7 @@ func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB, pageSize int, off
 	if pageSize > 0 {
 		if offset != nil {
 			if len(offset) != OffsetLength {
-				return errorResult(errors.Errorf("Invalid offset length: %d", len(offset)))
+				return errorResult(errors.Errorf("Invalid cursor length: %d", len(offset)))
 			}
 			createdAt := unixTime(binary.LittleEndian.Uint32(offset[:4]))
 			query = query.Select("output_id", "created_at", "hex(output_id) AS hex_output_id").Where("created_at >= ?", createdAt).Where("hex_output_id >= ?", strings.ToUpper(hex.EncodeToString(offset[4:])))
@@ -123,7 +123,7 @@ func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB, pageSize int, off
 		OutputIDs:   results.IDs(),
 		LedgerIndex: ledgerIndex,
 		PageSize:    pageSize,
-		NextOffset:  nextOffset,
+		Cursor:      nextOffset,
 		Error:       nil,
 	}
 }

@@ -23,7 +23,7 @@ type AliasFilterOptions struct {
 	issuer          *iotago.Address
 	sender          *iotago.Address
 	pageSize        int
-	offset          []byte
+	cursor          []byte
 	createdBefore   *time.Time
 	createdAfter    *time.Time
 }
@@ -60,9 +60,9 @@ func AliasPageSize(pageSize int) AliasFilterOption {
 	}
 }
 
-func AliasOffset(offset []byte) AliasFilterOption {
+func AliasCursor(cursor []byte) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
-		args.offset = offset
+		args.cursor = cursor
 	}
 }
 
@@ -140,5 +140,5 @@ func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) *IndexerR
 		query = query.Where("created_at > ?", *opts.createdAfter)
 	}
 
-	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)
+	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.cursor)
 }

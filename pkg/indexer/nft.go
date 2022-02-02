@@ -44,7 +44,7 @@ type NFTFilterOptions struct {
 	sender                    *iotago.Address
 	tag                       []byte
 	pageSize                  int
-	offset                    []byte
+	cursor                    []byte
 	createdBefore             *time.Time
 	createdAfter              *time.Time
 }
@@ -159,9 +159,9 @@ func NFTPageSize(pageSize int) NFTFilterOption {
 	}
 }
 
-func NFTOffset(offset []byte) NFTFilterOption {
+func NFTCursor(cursor []byte) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
-		args.offset = offset
+		args.cursor = cursor
 	}
 }
 
@@ -306,5 +306,5 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResu
 		query = query.Where("created_at > ?", *opts.createdAfter)
 	}
 
-	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.offset)
+	return i.combineOutputIDFilteredQuery(query, opts.pageSize, opts.cursor)
 }

@@ -118,8 +118,8 @@ const (
 	// QueryParameterLimit is used to define the page size for the results.
 	QueryParameterLimit = "limit"
 
-	// QueryParameterOffset is used to pass the outputID we want to start the results from.
-	QueryParameterOffset = "offset"
+	// QueryParameterCursor is used to pass the offset we want to start the next results from.
+	QueryParameterCursor = "cursor"
 
 	// QueryParameterCreatedBefore is used to filter for outputs that were created before the given time.
 	QueryParameterCreatedBefore = "createdBefore"
@@ -337,12 +337,12 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.ExtendedOutputTag(tagBytes))
 	}
 
-	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, 38)
+	if len(c.QueryParam(QueryParameterCursor)) > 0 {
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterCursor, 38)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputOffset(offset))
+		filters = append(filters, indexer.ExtendedOutputCursor(offset))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -407,12 +407,12 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.AliasSender(sender))
 	}
 
-	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
+	if len(c.QueryParam(QueryParameterCursor)) > 0 {
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterCursor, indexer.OffsetLength)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.AliasOffset(offset))
+		filters = append(filters, indexer.AliasCursor(offset))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -581,12 +581,12 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTTag(tagBytes))
 	}
 
-	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
+	if len(c.QueryParam(QueryParameterCursor)) > 0 {
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterCursor, indexer.OffsetLength)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTOffset(offset))
+		filters = append(filters, indexer.NFTCursor(offset))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -627,12 +627,12 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.FoundryUnlockableByAddress(address))
 	}
 
-	if len(c.QueryParam(QueryParameterOffset)) > 0 {
-		offset, err := restapi.ParseHexQueryParam(c, QueryParameterOffset, indexer.OffsetLength)
+	if len(c.QueryParam(QueryParameterCursor)) > 0 {
+		offset, err := restapi.ParseHexQueryParam(c, QueryParameterCursor, indexer.OffsetLength)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.FoundryOffset(offset))
+		filters = append(filters, indexer.FoundryCursor(offset))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -672,9 +672,9 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 	return &outputsResponse{
 		LedgerIndex: result.LedgerIndex,
 		Limit:       uint32(result.PageSize),
-		Offset:      hex.EncodeToString(result.NextOffset),
 		Count:       uint32(len(result.OutputIDs)),
 		OutputIDs:   result.OutputIDs.ToHex(),
+		Cursor:      hex.EncodeToString(result.Cursor),
 	}, nil
 }
 
