@@ -4,10 +4,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -17,52 +17,62 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func snapshotGen(_ *configuration.Configuration, args []string) error {
+const (
+	FlagToolSnapGenNetworkID          = "networkID"
+	FlagToolSnapGenMintAddress        = "mintAddress"
+	FlagToolSnapGenTreasuryAllocation = "treasuryAllocation"
+	FlagToolSnapGenOutputFilePath     = "outputFilePath"
+)
 
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [NETWORK_ID_STR] [MINT_ADDRESS] [TREASURY_ALLOCATION] [OUTPUT_FILE_PATH]", ToolSnapGen))
-		println()
-		println("   [NETWORK_ID_STR]      - the network ID for which this snapshot is meant for")
-		println("   [MINT_ADDRESS]        - the initial ed25519 address all the tokens will be minted to")
-		println("   [TREASURY_ALLOCATION] - the amount of tokens to reside within the treasury, the delta from the supply will be allocated to MINT_ADDRESS")
-		println("   [OUTPUT_FILE_PATH]    - the file path to the generated snapshot file")
-		println()
-		println(fmt.Sprintf("example: %s %s %s %s %s", ToolSnapGen, "private_tangle@1", "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92", "500000000", "snapshots/private_tangle/full_snapshot.bin"))
+func snapshotGen(_ *configuration.Configuration, args []string) error {
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	networkIDFlag := fs.String(FlagToolSnapGenNetworkID, "", "the network ID for which this snapshot is meant for")
+	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial ed25519 address all the tokens will be minted to")
+	treasuryAllocationFlag := fs.Uint64(FlagToolSnapGenTreasuryAllocation, 0, "the amount of tokens to reside within the treasury, the delta from the supply will be allocated to 'mintAddress'")
+	outputFilePathFlag := fs.String(FlagToolSnapGenOutputFilePath, "", "the file path to the generated snapshot file")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapGen)
+		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s", ToolSnapGen, FlagToolSnapGenNetworkID, "private_tangle@1", FlagToolSnapGenMintAddress, "6920b176f613ec7be59e68fc68f597eb3393af80f74c7c3db78198147d5f1f92", FlagToolSnapGenTreasuryAllocation, "500000000", FlagToolSnapGenOutputFilePath, "snapshots/private_tangle/full_snapshot.bin"))
 	}
 
-	// check arguments
-	if len(args) != 4 {
-		printUsage()
-		return fmt.Errorf("wrong argument count for '%s'", ToolSnapGen)
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
 	}
 
 	// check network ID
-	networkID := iotago.NetworkIDFromString(args[0])
+	if len(*networkIDFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolSnapGenNetworkID)
+	}
+
+	networkID := iotago.NetworkIDFromString(*networkIDFlag)
 
 	// check mint address
-	mintAddress := args[1]
-	addressBytes, err := hex.DecodeString(mintAddress)
+	addressBytes, err := hex.DecodeString(*mintAddressFlag)
 	if err != nil {
-		return fmt.Errorf("can't decode MINT_ADDRESS: %w", err)
+		return fmt.Errorf("can't decode '%s': %w'", FlagToolSnapGenMintAddress, err)
 	}
 	if len(addressBytes) != iotago.Ed25519AddressBytesLength {
-		return fmt.Errorf("incorrect MINT_ADDRESS length: %d != %d (%s)", len(addressBytes), iotago.Ed25519AddressBytesLength, mintAddress)
+		return fmt.Errorf("incorrect '%s' length: %d != %d (%s)", FlagToolSnapGenMintAddress, len(addressBytes), iotago.Ed25519AddressBytesLength, *mintAddressFlag)
 	}
 
 	var address iotago.Ed25519Address
 	copy(address[:], addressBytes)
 
-	// check treasury
-	treasury, err := strconv.ParseUint(args[2], 10, 64)
-	if err != nil {
-		return fmt.Errorf("unable to decode TREASURY_ALLOCATION: %w", err)
-	}
+	treasury := *treasuryAllocationFlag
 
 	// check filepath
-	outputFilePath := args[3]
+	if len(*outputFilePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolSnapGenOutputFilePath)
+	}
+
+	outputFilePath := *outputFilePathFlag
 	if _, err := os.Stat(outputFilePath); err == nil || !os.IsNotExist(err) {
-		return errors.New("OUTPUT_FILE_PATH already exists")
+		return fmt.Errorf("'%s' already exists", FlagToolSnapGenOutputFilePath)
 	}
 
 	// build temp file path
