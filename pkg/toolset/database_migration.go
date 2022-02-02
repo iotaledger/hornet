@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
+	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
@@ -15,35 +17,43 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
+const (
+	FlagToolDatabaseMigrationDatabasePathSource   = "databasePathSource"
+	FlagToolDatabaseMigrationDatabasePathTarget   = "databasePathTarget"
+	FlagToolDatabaseMigrationDatabaseEngineTarget = "databaseEngineTarget"
+)
+
 func databaseMigration(_ *configuration.Configuration, args []string) error {
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [SOURCE_DATABASE_PATH] [TARGET_DATABASE_PATH] [TARGET_DATABASE_ENGINE]", ToolDatabaseMigration))
-		println()
-		println("   [SOURCE_DATABASE_PATH]   - the path to the source database")
-		println("   [TARGET_DATABASE_PATH]   - the path to the target database")
-		println("   [TARGET_DATABASE_ENGINE] - the engine of the target database (values: pebble, rocksdb)")
-		println()
-		println(fmt.Sprintf("example: %s %s %s %s", ToolDatabaseMigration, "mainnetdb", "mainnetdb_new", "rocksdb"))
+
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	databasePathSource := fs.String(FlagToolDatabaseMigrationDatabasePathSource, "", "the path to the source database")
+	databasePathTarget := fs.String(FlagToolDatabaseMigrationDatabasePathTarget, "", "the path to the target database")
+	databaseEngineTarget := fs.String(FlagToolDatabaseMigrationDatabaseEngineTarget, "", "the engine of the target database (values: pebble, rocksdb)")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseMigration)
+		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s", ToolDatabaseMigration, FlagToolDatabaseMigrationDatabasePathSource, "mainnetdb", FlagToolDatabaseMigrationDatabasePathTarget, "mainnetdb_new", FlagToolDatabaseMigrationDatabaseEngineTarget, "rocksdb"))
 	}
 
-	// check arguments
-	if len(args) != 3 {
-		printUsage()
-		return fmt.Errorf("wrong argument count for '%s'", ToolDatabaseMigration)
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
 	}
 
-	sourcePath := args[0]
+	sourcePath := *databasePathSource
 	if _, err := os.Stat(sourcePath); err != nil || os.IsNotExist(err) {
-		return fmt.Errorf("SOURCE_DATABASE_PATH (%s) does not exist", sourcePath)
+		return fmt.Errorf("'%s' (%s) does not exist", FlagToolDatabaseMigrationDatabasePathSource, sourcePath)
 	}
 
-	targetPath := args[1]
+	targetPath := *databasePathTarget
 	if _, err := os.Stat(targetPath); err == nil || !os.IsNotExist(err) {
-		return fmt.Errorf("TARGET_DATABASE_PATH (%s) already exist", targetPath)
+		return fmt.Errorf("'%s' (%s) already exist", FlagToolDatabaseMigrationDatabasePathTarget, targetPath)
 	}
 
-	dbEngineTarget := strings.ToLower(args[2])
+	dbEngineTarget := strings.ToLower(*databaseEngineTarget)
 	engineTarget, err := database.DatabaseEngine(dbEngineTarget)
 	if err != nil {
 		return err
