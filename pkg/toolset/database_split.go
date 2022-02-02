@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/core/database"
@@ -12,7 +13,7 @@ import (
 
 func databaseSplit(_ *configuration.Configuration, args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePath := fs.String("database", "", "the path to the database folder that should be split")
 
 	fs.Usage = func() {
@@ -21,6 +22,9 @@ func databaseSplit(_ *configuration.Configuration, args []string) error {
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 

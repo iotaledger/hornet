@@ -32,9 +32,8 @@ const (
 func ShouldHandleTools() bool {
 	args := os.Args[1:]
 
-	for i, arg := range args {
+	for _, arg := range args {
 		if strings.ToLower(arg) == "tool" || strings.ToLower(arg) == "tools" {
-			args = args[i:]
 			return true
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/utils"
@@ -54,7 +55,7 @@ func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp 
 
 func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	outputJSON := fs.Bool("json", false, "format output as JSON")
 	hrp := fs.String("hrp", string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
 
@@ -64,6 +65,9 @@ func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 
@@ -84,7 +88,7 @@ func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 
 func generateEd25519Address(_ *configuration.Configuration, args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	publicKey := fs.String("publicKey", "", "an ed25519 public key")
 	outputJSON := fs.Bool("json", false, "format output as JSON")
 	hrp := fs.String("hrp", string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
@@ -95,6 +99,9 @@ func generateEd25519Address(_ *configuration.Configuration, args []string) error
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 

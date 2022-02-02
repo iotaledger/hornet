@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	p2pCore "github.com/gohornet/hornet/core/p2p"
@@ -14,7 +15,7 @@ import (
 
 func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	p2pDatabasePath := fs.String("p2pDatabasePath", "", "the path to the p2p database folder (optional)")
 	outputJSON := fs.Bool("json", false, "format output as JSON")
 
@@ -24,6 +25,9 @@ func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) 
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 

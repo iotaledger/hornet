@@ -9,9 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	flag "github.com/spf13/pflag"
-
 	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
 
 	"github.com/iotaledger/hive.go/configuration"
@@ -72,7 +71,7 @@ func readPasswordFromStdin() ([]byte, error) {
 
 func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	passwordFlag := fs.String("password", "", fmt.Sprintf("password to hash (optional). Can also be passed as %s environment variable.", passwordEnvKey))
 	outputJSON := fs.Bool("json", false, "format output as JSON")
 
@@ -82,6 +81,9 @@ func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 
@@ -97,7 +99,7 @@ func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 		// Password passed over the environment
 		password = p
 	} else if len(*passwordFlag) > 0 {
-		// Password passed ofer flag
+		// Password passed over flag
 		password = []byte(*passwordFlag)
 	} else {
 		// Read from stdin

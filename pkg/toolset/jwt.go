@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/configuration"
@@ -19,7 +20,7 @@ import (
 
 func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	outputJSON := fs.Bool("json", false, "format output as JSON")
 	databasePath := fs.String("database", "", "the path to the p2p database folder (optional)")
 
@@ -29,6 +30,9 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 

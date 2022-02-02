@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/database"
@@ -15,7 +16,7 @@ import (
 
 func databaseHealth(_ *configuration.Configuration, args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePath := fs.String("database", "", "the path to the database folder that should be checked")
 
 	fs.Usage = func() {
@@ -24,6 +25,9 @@ func databaseHealth(_ *configuration.Configuration, args []string) error {
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 

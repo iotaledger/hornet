@@ -93,6 +93,10 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 		// Just parse the configFilesFlagSet and ignore errors
 		fs := flag.NewFlagSet("", flag.ContinueOnError)
 		fs.AddFlagSet(configFilesFlagSet)
+
+		// ignore the default usage print if tools are handled
+		fs.Usage = func() {}
+
 		fs.Parse(os.Args[1:])
 
 		if err = loadCfg(configFlagSets); err != nil {

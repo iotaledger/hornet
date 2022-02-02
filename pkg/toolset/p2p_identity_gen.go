@@ -10,18 +10,20 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mr-tron/base58"
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
+
+	"github.com/libp2p/go-libp2p-core/crypto"
 
 	p2pCore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
-	"github.com/libp2p/go-libp2p-core/crypto"
 )
 
 func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	p2pDatabasePath := fs.String("p2pDatabasePath", "", "the path to the p2p database folder (optional)")
 	p2pPrivateKey := fs.String("p2pPrivateKey", "", "the p2p private key (optional)")
 	outputJSON := fs.Bool("json", false, "format output as JSON")
@@ -32,6 +34,9 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 	}
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 
