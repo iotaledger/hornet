@@ -17,19 +17,18 @@ import (
 )
 
 const (
-	FlagToolCoordinatorFixStateDatabasePath     = "databasePath"
 	FlagToolCoordinatorFixStateCooStateFilePath = "cooStateFilePath"
 )
 
 func coordinatorFixStateFile(_ *configuration.Configuration, args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePathFlag := fs.String(FlagToolCoordinatorFixStateDatabasePath, "mainnetdb", "the path to the database")
+	databasePathFlag := fs.String(FlagToolDatabasePath, "mainnetdb", "the path to the database")
 	cooStateFilePathFlag := fs.String(FlagToolCoordinatorFixStateCooStateFilePath, "coordinator.state", "the path to the coordinator state file")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolCoordinatorFixStateFile)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s", ToolCoordinatorFixStateFile, FlagToolCoordinatorFixStateDatabasePath, "mainnetdb", FlagToolCoordinatorFixStateCooStateFilePath, "./coordinator.state"))
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s", ToolCoordinatorFixStateFile, FlagToolDatabasePath, "mainnetdb", FlagToolCoordinatorFixStateCooStateFilePath, "./coordinator.state"))
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -41,7 +40,7 @@ func coordinatorFixStateFile(_ *configuration.Configuration, args []string) erro
 
 	databasePath := *databasePathFlag
 	if _, err := os.Stat(databasePath); err != nil || os.IsNotExist(err) {
-		return fmt.Errorf("'%s' (%s) does not exist", FlagToolCoordinatorFixStateDatabasePath, databasePath)
+		return fmt.Errorf("'%s' (%s) does not exist", FlagToolDatabasePath, databasePath)
 	}
 
 	coordinatorStateFilePath := *cooStateFilePathFlag

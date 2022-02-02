@@ -17,7 +17,7 @@ func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) 
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	p2pDatabasePath := fs.String("p2pDatabasePath", "", "the path to the p2p database folder (optional)")
-	outputJSON := fs.Bool("json", false, "format output as JSON")
+	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolP2PExtractIdentity)

@@ -14,7 +14,7 @@ import (
 func databaseSplit(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePath := fs.String("database", "", "the path to the database folder that should be split")
+	databasePath := fs.String(FlagToolDatabasePath, "", "the path to the database folder that should be split")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseSplit)

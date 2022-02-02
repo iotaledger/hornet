@@ -9,6 +9,16 @@ import (
 )
 
 const (
+	FlagToolDatabasePath      = "databasePath"
+	FlagToolSnapshotPath      = "snapshotPath"
+	FlagToolSnapshotPathFull  = "snapshotPathFull"
+	FlagToolSnapshotPathDelta = "snapshotPathDelta"
+	FlagToolOutputJSON        = "json"
+
+	FlagToolDescriptionOutputJSON = "format output as JSON"
+)
+
+const (
 	ToolPwdHash                 = "pwd-hash"
 	ToolP2PIdentityGen          = "p2pidentity-gen"
 	ToolP2PExtractIdentity      = "p2pidentity-extract"
@@ -102,4 +112,11 @@ func listTools() {
 	fmt.Printf("%-20s checks the health status of the database\n", fmt.Sprintf("%s:", ToolDatabaseHealth))
 	fmt.Printf("%-20s split a legacy database into `tangle` and `utxo`\n", fmt.Sprintf("%s:", ToolDatabaseSplit))
 	fmt.Printf("%-20s applies the latest milestone in the database to the coordinator state file\n", fmt.Sprintf("%s:", ToolCoordinatorFixStateFile))
+}
+
+func yesOrNo(value bool) string {
+	if value {
+		return "YES"
+	}
+	return "NO"
 }

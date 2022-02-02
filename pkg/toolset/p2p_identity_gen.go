@@ -21,12 +21,16 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 )
 
+const (
+	FlagToolP2PGenerateIdentityPrivateKey = "privateKey"
+)
+
 func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	p2pDatabasePath := fs.String("p2pDatabasePath", "", "the path to the p2p database folder (optional)")
-	p2pPrivateKey := fs.String("p2pPrivateKey", "", "the p2p private key (optional)")
-	outputJSON := fs.Bool("json", false, "format output as JSON")
+	p2pDatabasePath := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
+	p2pPrivateKey := fs.String(FlagToolP2PGenerateIdentityPrivateKey, "", "the p2p private key (optional)")
+	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolP2PIdentityGen)
@@ -70,13 +74,13 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 	if p2pPrivateKey != nil && len(*p2pPrivateKey) > 0 {
 		hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(*p2pPrivateKey)
 		if err != nil {
-			return fmt.Errorf("invalid private key given '%s': %w", args[1], err)
+			return fmt.Errorf("invalid private key given '%s': %w", *p2pPrivateKey, err)
 		}
 
 		stdPrvKey := stded25519.PrivateKey(hivePrivKey)
 		privateKey, publicKey, err = crypto.KeyPairFromStdKey(&stdPrvKey)
 		if err != nil {
-			return fmt.Errorf("unable to convert given private key '%s': %w", args[1], err)
+			return fmt.Errorf("unable to convert given private key '%s': %w", *p2pPrivateKey, err)
 		}
 	} else {
 		// create identity

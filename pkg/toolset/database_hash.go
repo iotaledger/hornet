@@ -22,11 +22,7 @@ import (
 	"github.com/iotaledger/hive.go/configuration"
 )
 
-const (
-	FlagToolDatabaseLedgerHashDatabasePath = "databasePath"
-)
-
-func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
+func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) error {
 
 	correctVersion, err := dbStorage.CheckCorrectDatabasesVersion()
 	if err != nil {
@@ -171,12 +167,12 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 
 func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePathFlag := fs.String(FlagToolDatabaseLedgerHashDatabasePath, "mainnetdb", "the path to the database")
+	databasePathFlag := fs.String(FlagToolDatabasePath, "mainnetdb", "the path to the database")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseLedgerHash)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %s", ToolDatabaseLedgerHash, FlagToolDatabaseLedgerHashDatabasePath, "mainnetdb"))
+		println(fmt.Sprintf("\nexample: %s --%s %s", ToolDatabaseLedgerHash, FlagToolDatabasePath, "mainnetdb"))
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -188,7 +184,7 @@ func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
 
 	databasePath := *databasePathFlag
 	if _, err := os.Stat(databasePath); err != nil || os.IsNotExist(err) {
-		return fmt.Errorf("'%s' (%s) does not exist", FlagToolDatabaseLedgerHashDatabasePath, databasePath)
+		return fmt.Errorf("'%s' (%s) does not exist", FlagToolDatabasePath, databasePath)
 	}
 
 	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.TangleDatabaseDirectoryName), false)

@@ -17,7 +17,7 @@ import (
 func databaseHealth(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePath := fs.String("database", "", "the path to the database folder that should be checked")
+	databasePath := fs.String(FlagToolDatabasePath, "", "the path to the database folder that should be checked")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseHealth)

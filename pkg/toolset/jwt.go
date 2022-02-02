@@ -21,8 +21,8 @@ import (
 func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	outputJSON := fs.Bool("json", false, "format output as JSON")
-	databasePath := fs.String("database", "", "the path to the p2p database folder (optional)")
+	databasePath := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
+	outputJSON := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolJWTApi)
