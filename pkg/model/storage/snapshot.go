@@ -31,16 +31,18 @@ func (s *Storage) loadSnapshotInfo() error {
 	}
 
 	s.snapshot = info
-	if info != nil {
-		println(fmt.Sprintf(`SnapshotInfo:
-	NetworkID: %d
-	SnapshotIndex: %d
-	EntryPointIndex: %d
-	PruningIndex: %d
-	Timestamp: %v`, info.NetworkID, info.SnapshotIndex, info.EntryPointIndex, info.PruningIndex, info.Timestamp.Truncate(time.Second)))
-	}
-
 	return nil
+}
+
+func (s *Storage) PrintSnapshotInfo() {
+	if s.snapshot != nil {
+		println(fmt.Sprintf(`SnapshotInfo:
+    NetworkID: %d
+    SnapshotIndex: %d
+    EntryPointIndex: %d
+    PruningIndex: %d
+    Timestamp: %v`, s.snapshot.NetworkID, s.snapshot.SnapshotIndex, s.snapshot.EntryPointIndex, s.snapshot.PruningIndex, s.snapshot.Timestamp.Truncate(time.Second)))
+	}
 }
 
 func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
