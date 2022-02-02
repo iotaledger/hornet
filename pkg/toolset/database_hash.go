@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 
 	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
@@ -19,6 +20,10 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/iotaledger/hive.go/configuration"
+)
+
+const (
+	FlagToolDatabaseLedgerHashDatabasePath = "databasePath"
 )
 
 func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
@@ -165,29 +170,25 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage) error {
 }
 
 func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [DATABASE_PATH]", ToolDatabaseLedgerHash))
-		println()
-		println("   [DATABASE_PATH] - the path to the database")
-		println()
-		println(fmt.Sprintf("example: %s %s", ToolDatabaseLedgerHash, "mainnetdb"))
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	databasePathFlag := fs.String(FlagToolDatabaseLedgerHashDatabasePath, "mainnetdb", "the path to the database")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseLedgerHash)
+		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s", ToolDatabaseLedgerHash, FlagToolDatabaseLedgerHashDatabasePath, "mainnetdb"))
 	}
 
-	if len(args) > 1 {
-		printUsage()
-		return fmt.Errorf("wrong argument count for '%s'", ToolDatabaseLedgerHash)
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
 	}
 
-	// check arguments
-	if len(args) == 0 {
-		printUsage()
-		return errors.New("DATABASE_PATH is missing")
-	}
-
-	databasePath := args[0]
+	databasePath := *databasePathFlag
 	if _, err := os.Stat(databasePath); err != nil || os.IsNotExist(err) {
-		return fmt.Errorf("DATABASE_PATH (%s) does not exist", databasePath)
+		return fmt.Errorf("'%s' (%s) does not exist", FlagToolDatabaseLedgerHashDatabasePath, databasePath)
 	}
 
 	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.TangleDatabaseDirectoryName), false)
