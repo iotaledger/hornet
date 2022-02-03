@@ -5,40 +5,48 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 
 	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
-func coordinatorFixStateFile(_ *configuration.Configuration, args []string) error {
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [DATABASE_PATH] [COO_STATE_FILE_PATH]", ToolCoordinatorFixStateFile))
-		println()
-		println("   [DATABASE_PATH]       - the path to the database")
-		println("   [COO_STATE_FILE_PATH] - the path to the coordinator state file")
-		println()
-		println(fmt.Sprintf("example: %s %s %s", ToolCoordinatorFixStateFile, "mainnetdb", "./coordinator.state"))
+func coordinatorFixStateFile(args []string) error {
+
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	databasePathFlag := fs.String(FlagToolDatabasePath, DefaultValueMainnetDatabasePath, "the path to the database")
+	cooStateFilePathFlag := fs.String(FlagToolCoordinatorFixStateCooStateFilePath, DefaultValueCoordinatorStateFilePath, "the path to the coordinator state file")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolCoordinatorFixStateFile)
+		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
+			ToolCoordinatorFixStateFile,
+			FlagToolDatabasePath,
+			DefaultValueMainnetDatabasePath,
+			FlagToolCoordinatorFixStateCooStateFilePath,
+			DefaultValueCoordinatorStateFilePath))
 	}
 
-	if len(args) != 2 {
-		printUsage()
-		return fmt.Errorf("wrong argument count for '%s'", ToolCoordinatorFixStateFile)
+	if err := parseFlagSet(fs, args); err != nil {
+		return err
 	}
 
-	databasePath := args[0]
+	if len(*databasePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
+	}
+
+	databasePath := *databasePathFlag
 	if _, err := os.Stat(databasePath); err != nil || os.IsNotExist(err) {
-		return fmt.Errorf("DATABASE_PATH (%s) does not exist", databasePath)
+		return fmt.Errorf("'%s' (%s) does not exist", FlagToolDatabasePath, databasePath)
 	}
 
-	coordinatorStateFilePath := args[1]
+	coordinatorStateFilePath := *cooStateFilePathFlag
 	if coordinatorStateFilePath == "" {
-		return errors.New("COO_STATE_FILE_PATH is missing")
+		return fmt.Errorf("'%s' is missing", FlagToolCoordinatorFixStateCooStateFilePath)
 	}
 
 	tangleStore, err := database.StoreWithDefaultSettings(filepath.Join(databasePath, coreDatabase.TangleDatabaseDirectoryName), false)
@@ -84,7 +92,7 @@ func coordinatorFixStateFile(_ *configuration.Configuration, args []string) erro
 
 	_, err = os.Stat(coordinatorStateFilePath)
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("unable to check COO_STATE_FILE_PATH (%s), error: %w", coordinatorStateFilePath, err)
+		return fmt.Errorf("unable to check '%s' (%s), error: %w", FlagToolCoordinatorFixStateCooStateFilePath, coordinatorStateFilePath, err)
 	}
 
 	if err == nil {

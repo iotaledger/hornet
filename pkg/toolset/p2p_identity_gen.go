@@ -3,7 +3,6 @@ package toolset
 import (
 	stded25519 "crypto/ed25519"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,38 +11,44 @@ import (
 	"github.com/mr-tron/base58"
 	flag "github.com/spf13/pflag"
 
-	p2pCore "github.com/gohornet/hornet/core/p2p"
+	"github.com/libp2p/go-libp2p-core/crypto"
+
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/libp2p/go-libp2p-core/crypto"
 )
 
-func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
+func generateP2PIdentity(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
-	p2pDatabasePath := fs.String("p2pDatabasePath", "", "the path to the p2p database folder (optional)")
-	p2pPrivateKey := fs.String("p2pPrivateKey", "", "the p2p private key (optional)")
-	outputJSON := fs.Bool("json", false, "format output as JSON")
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	databasePathFlag := fs.String(FlagToolOutputPath, DefaultValueP2PDatabasePath, "the path to the output folder")
+	privateKeyFlag := fs.String(FlagToolPrivateKey, "", "the p2p private key")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolP2PIdentityGen)
 		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
+			ToolP2PIdentityGen,
+			FlagToolDatabasePath,
+			DefaultValueP2PDatabasePath,
+			FlagToolPrivateKey,
+			"[PRIVATE_KEY]",
+		))
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
-	dbPath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if p2pDatabasePath != nil && len(*p2pDatabasePath) > 0 {
-		dbPath = *p2pDatabasePath
+	if len(*databasePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
 	}
 
-	privKeyFilePath := filepath.Join(dbPath, p2p.PrivKeyFileName)
+	databasePath := *databasePathFlag
+	privKeyFilePath := filepath.Join(databasePath, p2p.PrivKeyFileName)
 
-	if err := os.MkdirAll(dbPath, 0700); err != nil {
-		return fmt.Errorf("could not create peer store database dir '%s': %w", dbPath, err)
+	if err := os.MkdirAll(databasePath, 0700); err != nil {
+		return fmt.Errorf("could not create peer store database dir '%s': %w", databasePath, err)
 	}
 
 	_, err := os.Stat(privKeyFilePath)
@@ -62,16 +67,16 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 	var privateKey crypto.PrivKey
 	var publicKey crypto.PubKey
 
-	if p2pPrivateKey != nil && len(*p2pPrivateKey) > 0 {
-		hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(*p2pPrivateKey)
+	if privateKeyFlag != nil && len(*privateKeyFlag) > 0 {
+		hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(*privateKeyFlag)
 		if err != nil {
-			return fmt.Errorf("invalid private key given '%s': %w", args[1], err)
+			return fmt.Errorf("invalid private key given '%s': %w", *privateKeyFlag, err)
 		}
 
 		stdPrvKey := stded25519.PrivateKey(hivePrivKey)
 		privateKey, publicKey, err = crypto.KeyPairFromStdKey(&stdPrvKey)
 		if err != nil {
-			return fmt.Errorf("unable to convert given private key '%s': %w", args[1], err)
+			return fmt.Errorf("unable to convert given private key '%s': %w", *privateKeyFlag, err)
 		}
 	} else {
 		// create identity
@@ -85,7 +90,7 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 		return fmt.Errorf("writing private key file for peer identity failed: %w", err)
 	}
 
-	return printP2PIdentity(privateKey, publicKey, *outputJSON)
+	return printP2PIdentity(privateKey, publicKey, *outputJSONFlag)
 }
 
 func printP2PIdentity(privateKey crypto.PrivKey, publicKey crypto.PubKey, outputJSON bool) error {
@@ -120,12 +125,7 @@ func printP2PIdentity(privateKey crypto.PrivKey, publicKey crypto.PubKey, output
 	}
 
 	if outputJSON {
-		output, err := json.MarshalIndent(identity, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(output))
-		return nil
+		return printJSON(identity)
 	}
 
 	fmt.Println("Your p2p private key (hex):   ", identity.PrivateKey)

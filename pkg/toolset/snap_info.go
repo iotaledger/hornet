@@ -2,32 +2,41 @@ package toolset
 
 import (
 	"fmt"
+	"os"
+
+	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
-func snapshotInfo(_ *configuration.Configuration, args []string) error {
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [SNAPSHOT_PATH]", ToolSnapInfo))
-		println()
-		println("   [SNAPSHOT_PATH] - the path to the snapshot file")
-		println()
-		println(fmt.Sprintf("example: %s %s", ToolSnapInfo, "./snapshot.bin"))
+func snapshotInfo(args []string) error {
+
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	snapshotPathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the snapshot file")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapInfo)
+		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s",
+			ToolSnapInfo,
+			FlagToolSnapshotPath,
+			"snapshots/mainnet/full_snapshot.bin"))
 	}
 
-	if len(args) != 1 {
-		printUsage()
-		return fmt.Errorf("wrong argument count for '%s'", ToolSnapInfo)
+	if err := parseFlagSet(fs, args); err != nil {
+		return err
 	}
 
-	filePath := args[0]
+	if len(*snapshotPathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPath)
+	}
+
+	filePath := *snapshotPathFlag
 	readFileHeader, err := snapshot.ReadSnapshotHeaderFromFile(filePath)
 	if err != nil {
 		return err
 	}
 
-	printSnapshotHeaderInfo("", filePath, readFileHeader)
-	return nil
+	return printSnapshotHeaderInfo("", filePath, readFileHeader, *outputJSONFlag)
 }
