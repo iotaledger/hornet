@@ -7,41 +7,48 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/mr-tron/base58"
+	flag "github.com/spf13/pflag"
 
-	p2pCore "github.com/gohornet/hornet/core/p2p"
+	"github.com/libp2p/go-libp2p-core/crypto"
+
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
-func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
+func generateP2PIdentity(args []string) error {
 
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [P2P_DATABASE_PATH] [P2P_PRIVATE_KEY]", ToolP2PIdentityGen))
-		println()
-		println("   [P2P_DATABASE_PATH] - the path to the p2p database folder (optional)")
-		println("   [P2P_PRIVATE_KEY]   - the p2p private key (optional)")
-		println()
-		println(fmt.Sprintf("example: %s %s", ToolP2PIdentityGen, "p2pstore"))
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	databasePathFlag := fs.String(FlagToolOutputPath, DefaultValueP2PDatabasePath, "the path to the output folder")
+	privateKeyFlag := fs.String(FlagToolPrivateKey, "", "the p2p private key")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolP2PIdentityGen)
+		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
+			ToolP2PIdentityGen,
+			FlagToolDatabasePath,
+			DefaultValueP2PDatabasePath,
+			FlagToolPrivateKey,
+			"[PRIVATE_KEY]",
+		))
 	}
 
-	if len(args) > 2 {
-		printUsage()
-		return fmt.Errorf("too many arguments for '%s'", ToolP2PIdentityGen)
+	if err := parseFlagSet(fs, args); err != nil {
+		return err
 	}
 
-	p2pDatabasePath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if len(args) > 0 {
-		p2pDatabasePath = args[0]
+	if len(*databasePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
 	}
-	privKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PrivKeyFileName)
 
-	if err := os.MkdirAll(p2pDatabasePath, 0700); err != nil {
-		return fmt.Errorf("could not create peer store database dir '%s': %w", p2pDatabasePath, err)
+	databasePath := *databasePathFlag
+	privKeyFilePath := filepath.Join(databasePath, p2p.PrivKeyFileName)
+
+	if err := os.MkdirAll(databasePath, 0700); err != nil {
+		return fmt.Errorf("could not create peer store database dir '%s': %w", databasePath, err)
 	}
 
 	_, err := os.Stat(privKeyFilePath)
@@ -60,16 +67,16 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 	var privateKey crypto.PrivKey
 	var publicKey crypto.PubKey
 
-	if len(args) > 1 {
-		hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(args[1])
+	if privateKeyFlag != nil && len(*privateKeyFlag) > 0 {
+		hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(*privateKeyFlag)
 		if err != nil {
-			return fmt.Errorf("invalid private key given '%s': %w", args[1], err)
+			return fmt.Errorf("invalid private key given '%s': %w", *privateKeyFlag, err)
 		}
 
 		stdPrvKey := stded25519.PrivateKey(hivePrivKey)
 		privateKey, publicKey, err = crypto.KeyPairFromStdKey(&stdPrvKey)
 		if err != nil {
-			return fmt.Errorf("unable to convert given private key '%s': %w", args[1], err)
+			return fmt.Errorf("unable to convert given private key '%s': %w", *privateKeyFlag, err)
 		}
 	} else {
 		// create identity
@@ -79,10 +86,20 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 		}
 	}
 
-	// obtain Peer ID from public key
-	peerID, err := peer.IDFromPublicKey(publicKey)
-	if err != nil {
-		return fmt.Errorf("unable to get peer identity from public key: %w", err)
+	if err := p2p.WriteEd25519PrivateKeyToPEMFile(privKeyFilePath, privateKey); err != nil {
+		return fmt.Errorf("writing private key file for peer identity failed: %w", err)
+	}
+
+	return printP2PIdentity(privateKey, publicKey, *outputJSONFlag)
+}
+
+func printP2PIdentity(privateKey crypto.PrivKey, publicKey crypto.PubKey, outputJSON bool) error {
+
+	type P2PIdentity struct {
+		PrivateKey      string `json:"privateKey"`
+		PublicKey       string `json:"publicKey"`
+		PublicKeyBase58 string `json:"publicKeyBase58"`
+		PeerID          string `json:"peerId"`
 	}
 
 	privKeyBytes, err := privateKey.Raw()
@@ -95,14 +112,25 @@ func generateP2PIdentity(nodeConfig *configuration.Configuration, args []string)
 		return fmt.Errorf("unable to get raw public key bytes: %w", err)
 	}
 
-	if err := p2p.WriteEd25519PrivateKeyToPEMFile(privKeyFilePath, privateKey); err != nil {
-		return fmt.Errorf("writing private key file for peer identity failed: %w", err)
+	peerID, err := peer.IDFromPublicKey(publicKey)
+	if err != nil {
+		return fmt.Errorf("unable to get peer identity from public key: %w", err)
 	}
 
-	fmt.Println("Your p2p private key (hex):   ", hex.EncodeToString(privKeyBytes))
-	fmt.Println("Your p2p public key (hex):    ", hex.EncodeToString(pubKeyBytes))
-	fmt.Println("Your p2p public key (base58): ", base58.Encode(pubKeyBytes))
-	fmt.Println("Your p2p PeerID:              ", peerID.String())
+	identity := P2PIdentity{
+		PrivateKey:      hex.EncodeToString(privKeyBytes),
+		PublicKey:       hex.EncodeToString(pubKeyBytes),
+		PublicKeyBase58: base58.Encode(pubKeyBytes),
+		PeerID:          peerID.String(),
+	}
 
+	if outputJSON {
+		return printJSON(identity)
+	}
+
+	fmt.Println("Your p2p private key (hex):   ", identity.PrivateKey)
+	fmt.Println("Your p2p public key (hex):    ", identity.PublicKey)
+	fmt.Println("Your p2p public key (base58): ", identity.PublicKeyBase58)
+	fmt.Println("Your p2p PeerID:              ", identity.PeerID)
 	return nil
 }

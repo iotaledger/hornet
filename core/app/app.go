@@ -84,21 +84,8 @@ var (
 
 func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.InitConfig, error) {
 
-	configFlagSets, err := normalizeFlagSets(params)
-	if err != nil {
-		return nil, err
-	}
-
 	if toolset.ShouldHandleTools() {
-		// Just parse the configFilesFlagSet and ignore errors
-		fs := flag.NewFlagSet("", flag.ContinueOnError)
-		fs.AddFlagSet(configFilesFlagSet)
-		fs.Parse(os.Args[1:])
-
-		if err = loadCfg(configFlagSets); err != nil {
-			return nil, err
-		}
-		toolset.HandleTools(nodeConfig)
+		toolset.HandleTools()
 		// HandleTools will call os.Exit
 	}
 
@@ -110,6 +97,11 @@ Run '%s tools' to list all available tools.
 Command line flags:
 `, os.Args[0], Name, Version, os.Args[0])
 		flag.PrintDefaults()
+	}
+
+	configFlagSets, err := normalizeFlagSets(params)
+	if err != nil {
+		return nil, err
 	}
 
 	var flagSetsToParse = configFlagSets

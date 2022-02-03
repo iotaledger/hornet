@@ -222,6 +222,9 @@ func provide(c *dig.Container) {
 		if err != nil {
 			CorePlugin.LogPanicf("can't initialize storage: %s", err)
 		}
+
+		store.PrintSnapshotInfo()
+
 		return storageOut{
 			Storage:     store,
 			UTXOManager: store.UTXOManager(),
