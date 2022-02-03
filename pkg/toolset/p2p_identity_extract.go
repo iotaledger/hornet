@@ -7,12 +7,10 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	p2pCore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
-func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
+func extractP2PIdentity(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
@@ -31,11 +29,12 @@ func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) 
 		return err
 	}
 
-	dbPath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if databasePathFlag != nil && len(*databasePathFlag) > 0 {
-		dbPath = *databasePathFlag
+	if len(*databasePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
 	}
-	privKeyFilePath := filepath.Join(dbPath, p2p.PrivKeyFileName)
+
+	databasePath := *databasePathFlag
+	privKeyFilePath := filepath.Join(databasePath, p2p.PrivKeyFileName)
 
 	_, err := os.Stat(privKeyFilePath)
 	switch {

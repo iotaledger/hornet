@@ -12,11 +12,10 @@ import (
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
-func databaseMigration(_ *configuration.Configuration, args []string) error {
+func databaseMigration(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")

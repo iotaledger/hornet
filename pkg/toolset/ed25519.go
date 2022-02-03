@@ -9,7 +9,6 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -48,7 +47,7 @@ func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp 
 	return nil
 }
 
-func generateEd25519Key(_ *configuration.Configuration, args []string) error {
+func generateEd25519Key(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	hrpFlag := fs.String(FlagToolHRP, string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
@@ -79,7 +78,7 @@ func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 	return printEd25519Info(pubKey, privKey, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
 }
 
-func generateEd25519Address(_ *configuration.Configuration, args []string) error {
+func generateEd25519Address(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	hrpFlag := fs.String(FlagToolHRP, string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")

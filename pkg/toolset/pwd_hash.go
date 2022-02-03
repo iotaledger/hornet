@@ -12,8 +12,6 @@ import (
 	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
 
-	"github.com/iotaledger/hive.go/configuration"
-
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/utils"
 )
@@ -68,7 +66,7 @@ func readPasswordFromStdin() ([]byte, error) {
 	return password, nil
 }
 
-func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
+func hashPasswordAndSalt(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	passwordFlag := fs.String(FlagToolPassword, "", fmt.Sprintf("password to hash (optional). Can also be passed as %s environment variable.", passwordEnvKey))

@@ -7,10 +7,9 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/core/database"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
-func databaseSplit(_ *configuration.Configuration, args []string) error {
+func databaseSplit(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the database folder that should be split")

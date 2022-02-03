@@ -12,14 +12,13 @@ import (
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
 const (
 	FlagToolCoordinatorFixStateCooStateFilePath = "cooStateFilePath"
 )
 
-func coordinatorFixStateFile(_ *configuration.Configuration, args []string) error {
+func coordinatorFixStateFile(args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, "mainnetdb", "the path to the database")
 	cooStateFilePathFlag := fs.String(FlagToolCoordinatorFixStateCooStateFilePath, "coordinator.state", "the path to the coordinator state file")

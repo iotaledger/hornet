@@ -17,7 +17,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
@@ -32,7 +31,7 @@ const (
 	printStatusInterval = 2 * time.Second
 )
 
-func benchmarkIO(_ *configuration.Configuration, args []string) error {
+func benchmarkIO(args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	objectsCountFlag := fs.Int(FlagToolBenchmarkIoObjectsCount, 500000, "objects count")
 	objectsSizeFlag := fs.Int(FlagToolBenchmarkIoObjectsSize, 1000, "objects size in bytes")
@@ -121,7 +120,7 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 	return nil
 }
 
-func benchmarkCPU(_ *configuration.Configuration, args []string) error {
+func benchmarkCPU(args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	cpuThreadsFlag := fs.Int(FlagToolBenchmarkCpuThreads, runtime.NumCPU(), "thread count")
 	durationFlag := fs.Duration(FlagToolBenchmarkCpuDuration, 1*time.Minute, "duration")

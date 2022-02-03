@@ -12,7 +12,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -23,7 +22,8 @@ const (
 	FlagToolSnapGenOutputFilePath     = "outputFilePath"
 )
 
-func snapshotGen(_ *configuration.Configuration, args []string) error {
+func snapshotGen(args []string) error {
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	networkIDFlag := fs.String(FlagToolSnapGenNetworkID, "", "the network ID for which this snapshot is meant for")
 	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial ed25519 address all the tokens will be minted to")

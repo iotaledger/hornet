@@ -7,10 +7,10 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
-func snapshotInfo(_ *configuration.Configuration, args []string) error {
+func snapshotInfo(args []string) error {
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	snapshotPathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the snapshot file")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)

@@ -9,11 +9,9 @@ import (
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/storage"
-
-	"github.com/iotaledger/hive.go/configuration"
 )
 
-func databaseHealth(_ *configuration.Configuration, args []string) error {
+func databaseHealth(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the database folder that should be checked")

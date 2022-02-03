@@ -20,7 +20,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
 func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) error {
@@ -206,7 +205,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	return nil
 }
 
-func databaseLedgerHash(_ *configuration.Configuration, args []string) error {
+func databaseLedgerHash(args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, "mainnetdb", "the path to the database")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)

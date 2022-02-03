@@ -8,43 +8,47 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/configuration"
-
-	p2pCore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/plugins/restapi"
 )
 
-func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string) error {
+const (
+	FlagToolAPIJWTAuthSalt = "salt"
+)
+
+func generateJWTApiToken(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
+	databasePathFlag := fs.String(FlagToolDatabasePath, "p2pstore", "the path to the p2p database folder")
+	apiJWTSaltFlag := fs.String(FlagToolAPIJWTAuthSalt, "HORNET", "salt used inside the JWT tokens for the REST API")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolJWTApi)
 		fs.PrintDefaults()
-		println(fmt.Sprintf("\nexample: %s --%s %s",
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
 			ToolJWTApi,
 			FlagToolDatabasePath,
-			"p2pstore"))
+			"p2pstore",
+			FlagToolAPIJWTAuthSalt,
+			"HORNET"))
 	}
 
 	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
-	salt := nodeConfig.String(restapi.CfgRestAPIJWTAuthSalt)
-	if len(salt) == 0 {
-		return fmt.Errorf("'%s' should not be empty", restapi.CfgRestAPIJWTAuthSalt)
+	if len(*databasePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
+	}
+	if len(*apiJWTSaltFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolAPIJWTAuthSalt)
 	}
 
-	p2pDatabasePath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if len(*databasePathFlag) > 0 {
-		p2pDatabasePath = *databasePathFlag
-	}
-	privKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PrivKeyFileName)
+	databasePath := *databasePathFlag
+	privKeyFilePath := filepath.Join(databasePath, p2p.PrivKeyFileName)
+
+	salt := *apiJWTSaltFlag
 
 	_, err := os.Stat(privKeyFilePath)
 	switch {

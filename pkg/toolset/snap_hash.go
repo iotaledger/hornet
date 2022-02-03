@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
 const (
@@ -21,7 +20,8 @@ const (
 	FlagToolSnapshotHashDeltaSnapshotPath = "deltaSnapshotPath"
 )
 
-func snapshotHash(_ *configuration.Configuration, args []string) error {
+func snapshotHash(args []string) error {
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	fullSnapshotPathFlag := fs.String(FlagToolSnapshotHashFullSnapshotPath, "snapshots/mainnet/full_snapshot.bin", "the path to the full snapshot file")
 	deltaSnapshotPathFlag := fs.String(FlagToolSnapshotHashDeltaSnapshotPath, "snapshots/mainnet/delta_snapshot.bin", "the path to the delta snapshot file (optional)")

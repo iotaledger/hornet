@@ -8,8 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
-
-	"github.com/iotaledger/hive.go/configuration"
 )
 
 const (
@@ -65,7 +63,7 @@ func ShouldHandleTools() bool {
 }
 
 // HandleTools handles available tools.
-func HandleTools(nodeConfig *configuration.Configuration) {
+func HandleTools() {
 
 	args := os.Args[1:]
 	if len(args) == 1 {
@@ -73,7 +71,7 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 		os.Exit(1)
 	}
 
-	tools := map[string]func(*configuration.Configuration, []string) error{
+	tools := map[string]func([]string) error{
 		ToolPwdHash:                 hashPasswordAndSalt,
 		ToolP2PIdentityGen:          generateP2PIdentity,
 		ToolP2PExtractIdentity:      extractP2PIdentity,
@@ -100,7 +98,7 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 		os.Exit(1)
 	}
 
-	if err := tool(nodeConfig, args[2:]); err != nil {
+	if err := tool(args[2:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			// help text was requested
 			os.Exit(0)

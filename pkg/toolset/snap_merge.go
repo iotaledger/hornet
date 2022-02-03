@@ -10,14 +10,13 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
 const (
 	FlagToolSnapshotMergeSnapshotPathTarget = "snapshotPathTarget"
 )
 
-func snapshotMerge(_ *configuration.Configuration, args []string) error {
+func snapshotMerge(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	snapshotPathFullFlag := fs.String(FlagToolSnapshotPathFull, "", "the path to the full snapshot file")
