@@ -359,7 +359,7 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 	return response, nil
 }
 
-func getOutputsByBech32Address(c echo.Context) (*ParticipationsResponse, error) {
+func getOutputsByBech32Address(c echo.Context) (*AddressOutputsResponse, error) {
 	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
 	if err != nil {
 		return nil, err
@@ -373,7 +373,7 @@ func getOutputsByBech32Address(c echo.Context) (*ParticipationsResponse, error) 
 	}
 }
 
-func getOutputsByEd25519Address(c echo.Context) (*ParticipationsResponse, error) {
+func getOutputsByEd25519Address(c echo.Context) (*AddressOutputsResponse, error) {
 	address, err := restapi.ParseEd25519AddressParam(c)
 	if err != nil {
 		return nil, err
@@ -381,11 +381,11 @@ func getOutputsByEd25519Address(c echo.Context) (*ParticipationsResponse, error)
 	return ed25519Outputs(address)
 }
 
-func ed25519Outputs(address *iotago.Ed25519Address) (*ParticipationsResponse, error) {
+func ed25519Outputs(address *iotago.Ed25519Address) (*AddressOutputsResponse, error) {
 	eventIDs := deps.ParticipationManager.EventIDs(participation.StakingPayloadTypeID)
 
-	response := &ParticipationsResponse{
-		Participations: make(map[string]*TrackedParticipation),
+	response := &AddressOutputsResponse{
+		Outputs: make(map[string]*OutputStatusResponse),
 	}
 
 	for _, eventID := range eventIDs {
@@ -399,14 +399,22 @@ func ed25519Outputs(address *iotago.Ed25519Address) (*ParticipationsResponse, er
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching outputs: %s", err)
 		}
-		for _, participation := range participations {
+		for _, trackedParticipation := range participations {
+
 			t := &TrackedParticipation{
-				MessageID:           participation.MessageID.ToHex(),
-				Amount:              participation.Amount,
-				StartMilestoneIndex: participation.StartIndex,
-				EndMilestoneIndex:   participation.EndIndex,
+				MessageID:           trackedParticipation.MessageID.ToHex(),
+				Amount:              trackedParticipation.Amount,
+				StartMilestoneIndex: trackedParticipation.StartIndex,
+				EndMilestoneIndex:   trackedParticipation.EndIndex,
 			}
-			response.Participations[participation.OutputID.ToHex()] = t
+			outputResponse := response.Outputs[hex.EncodeToString(trackedParticipation.OutputID[:])]
+			if outputResponse == nil {
+				outputResponse = &OutputStatusResponse{
+					Participations: make(map[string]*TrackedParticipation),
+				}
+				response.Outputs[hex.EncodeToString(trackedParticipation.OutputID[:])] = outputResponse
+			}
+			outputResponse.Participations[hex.EncodeToString(trackedParticipation.EventID[:])] = t
 		}
 	}
 

@@ -48,6 +48,12 @@ type AddressRewardsResponse struct {
 	Rewards map[string]*AddressReward `json:"rewards"`
 }
 
+// AddressOutputsResponse defines the response of a GET RouteAddressBech32Outputs or RouteAddressEd25519Outputs REST API call.
+type AddressOutputsResponse struct {
+	// Outputs is a map of output status per outputID.
+	Outputs map[string]*OutputStatusResponse `json:"outputs"`
+}
+
 // RewardsResponse defines the response of a GET RouteAdminRewards REST API call and contains the rewards for each address.
 type RewardsResponse struct {
 	// Symbol is the symbol of the rewarded tokens.
