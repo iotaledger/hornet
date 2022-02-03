@@ -7,43 +7,42 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 
 	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
-func snapshotHash(_ *configuration.Configuration, args []string) error {
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [FULL_SNAPSHOT_PATH] [DELTA_SNAPSHOT_PATH]", ToolSnapHash))
-		println()
-		println("   [FULL_SNAPSHOT_PATH]  - the path to the full snapshot file")
-		println("   [DELTA_SNAPSHOT_PATH] - the path to the delta snapshot file (optional)")
-		println()
-		println(fmt.Sprintf("example: %s %s", ToolSnapHash, "./snapshot.bin"))
+func snapshotHash(args []string) error {
+
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fullSnapshotPathFlag := fs.String(FlagToolSnapshotPathFull, "snapshots/mainnet/full_snapshot.bin", "the path to the full snapshot file")
+	deltaSnapshotPathFlag := fs.String(FlagToolSnapshotPathDelta, "snapshots/mainnet/delta_snapshot.bin", "the path to the delta snapshot file (optional)")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapHash)
+		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
+			ToolSnapHash,
+			FlagToolSnapshotPathFull,
+			"snapshots/mainnet/full_snapshot.bin",
+			FlagToolSnapshotPathDelta,
+			"snapshots/mainnet/delta_snapshot.bin"))
 	}
 
-	if len(args) > 2 {
-		printUsage()
-		return fmt.Errorf("wrong argument count for '%s'", ToolSnapHash)
+	if err := parseFlagSet(fs, args); err != nil {
+		return err
 	}
 
-	// check arguments
-	if len(args) == 0 {
-		printUsage()
-		return errors.New("FULL_SNAPSHOT_PATH is missing")
+	if len(*fullSnapshotPathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPathFull)
 	}
 
-	fullPath := args[0]
-	deltaPath := ""
-
-	if len(args) == 2 {
-		deltaPath = args[1]
-	}
+	fullPath := *fullSnapshotPathFlag
+	deltaPath := *deltaSnapshotPathFlag
 
 	targetEngine, err := database.DatabaseEngine(database.EnginePebble)
 	if err != nil {
@@ -86,5 +85,5 @@ func snapshotHash(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	return calculateDatabaseLedgerHash(dbStorage)
+	return calculateDatabaseLedgerHash(dbStorage, *outputJSONFlag)
 }

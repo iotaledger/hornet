@@ -7,31 +7,34 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	p2pCore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
-func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) error {
+func extractP2PIdentity(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
-	p2pDatabasePath := fs.String("p2pDatabasePath", "", "the path to the p2p database folder (optional)")
-	outputJSON := fs.Bool("json", false, "format output as JSON")
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	databasePathFlag := fs.String(FlagToolDatabasePath, DefaultValueP2PDatabasePath, "the path to the p2p database folder")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolP2PExtractIdentity)
 		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s",
+			ToolP2PExtractIdentity,
+			FlagToolDatabasePath,
+			DefaultValueP2PDatabasePath))
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
-	dbPath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if p2pDatabasePath != nil && len(*p2pDatabasePath) > 0 {
-		dbPath = *p2pDatabasePath
+	if len(*databasePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
 	}
-	privKeyFilePath := filepath.Join(dbPath, p2p.PrivKeyFileName)
+
+	databasePath := *databasePathFlag
+	privKeyFilePath := filepath.Join(databasePath, p2p.PrivKeyFileName)
 
 	_, err := os.Stat(privKeyFilePath)
 	switch {
@@ -51,5 +54,5 @@ func extractP2PIdentity(nodeConfig *configuration.Configuration, args []string) 
 		return fmt.Errorf("reading private key file for peer identity failed: %w", err)
 	}
 
-	return printP2PIdentity(privKey, privKey.GetPublic(), *outputJSON)
+	return printP2PIdentity(privKey, privKey.GetPublic(), *outputJSONFlag)
 }

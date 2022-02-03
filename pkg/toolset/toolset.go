@@ -1,11 +1,53 @@
 package toolset
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/iotaledger/hive.go/configuration"
+	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
+
+	"github.com/gohornet/hornet/pkg/database"
+)
+
+const (
+	FlagToolDatabaseEngine       = "databaseEngine"
+	FlagToolDatabaseEngineTarget = "targetDatabaseEngine"
+
+	FlagToolDatabasePath       = "databasePath"
+	FlagToolDatabasePathSource = "sourceDatabasePath"
+	FlagToolDatabasePathTarget = "targetDatabasePath"
+
+	FlagToolSnapshotPath       = "snapshotPath"
+	FlagToolSnapshotPathFull   = "fullSnapshotPath"
+	FlagToolSnapshotPathDelta  = "deltaSnapshotPath"
+	FlagToolSnapshotPathTarget = "targetSnapshotPath"
+
+	FlagToolOutputPath = "outputPath"
+
+	FlagToolPrivateKey = "privateKey"
+	FlagToolPublicKey  = "publicKey"
+
+	FlagToolHRP       = "hrp"
+	FlagToolNetworkID = "networkID"
+	FlagToolPassword  = "password"
+	FlagToolSalt      = "salt"
+
+	FlagToolOutputJSON            = "json"
+	FlagToolDescriptionOutputJSON = "format output as JSON"
+
+	FlagToolBenchmarkCount    = "count"
+	FlagToolBenchmarkSize     = "size"
+	FlagToolBenchmarkThreads  = "threads"
+	FlagToolBenchmarkDuration = "duration"
+
+	FlagToolCoordinatorFixStateCooStateFilePath = "stateFilePath"
+
+	FlagToolSnapGenMintAddress        = "mintAddress"
+	FlagToolSnapGenTreasuryAllocation = "treasuryAllocation"
 )
 
 const (
@@ -28,13 +70,27 @@ const (
 	ToolCoordinatorFixStateFile = "coo-fix-state"
 )
 
+const (
+	DefaultValueAPIJWTTokenSalt          = "HORNET"
+	DefaultValueMainnetDatabasePath      = "mainnetdb"
+	DefaultValueP2PDatabasePath          = "p2pstore"
+	DefaultValueCoordinatorStateFilePath = "coordinator.state"
+	DefaultValueDatabaseEngine           = database.EngineRocksDB
+)
+
+const (
+	passwordEnvKey = "HORNET_TOOL_PASSWORD"
+
+	// printStatusInterval is the interval for printing status messages
+	printStatusInterval = 2 * time.Second
+)
+
 // ShouldHandleTools checks if tools were requested.
 func ShouldHandleTools() bool {
 	args := os.Args[1:]
 
-	for i, arg := range args {
+	for _, arg := range args {
 		if strings.ToLower(arg) == "tool" || strings.ToLower(arg) == "tools" {
-			args = args[i:]
 			return true
 		}
 	}
@@ -42,7 +98,7 @@ func ShouldHandleTools() bool {
 }
 
 // HandleTools handles available tools.
-func HandleTools(nodeConfig *configuration.Configuration) {
+func HandleTools() {
 
 	args := os.Args[1:]
 	if len(args) == 1 {
@@ -50,7 +106,7 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 		os.Exit(1)
 	}
 
-	tools := map[string]func(*configuration.Configuration, []string) error{
+	tools := map[string]func([]string) error{
 		ToolPwdHash:                 hashPasswordAndSalt,
 		ToolP2PIdentityGen:          generateP2PIdentity,
 		ToolP2PExtractIdentity:      extractP2PIdentity,
@@ -77,7 +133,12 @@ func HandleTools(nodeConfig *configuration.Configuration) {
 		os.Exit(1)
 	}
 
-	if err := tool(nodeConfig, args[2:]); err != nil {
+	if err := tool(args[2:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			// help text was requested
+			os.Exit(0)
+		}
+
 		fmt.Printf("\nerror: %s\n", err)
 		os.Exit(1)
 	}
@@ -103,4 +164,43 @@ func listTools() {
 	fmt.Printf("%-20s checks the health status of the database\n", fmt.Sprintf("%s:", ToolDatabaseHealth))
 	fmt.Printf("%-20s split a legacy database into `tangle` and `utxo`\n", fmt.Sprintf("%s:", ToolDatabaseSplit))
 	fmt.Printf("%-20s applies the latest milestone in the database to the coordinator state file\n", fmt.Sprintf("%s:", ToolCoordinatorFixStateFile))
+}
+
+func yesOrNo(value bool) string {
+	if value {
+		return "YES"
+	}
+	return "NO"
+}
+
+func parseFlagSet(fs *flag.FlagSet, args []string, minArgsCount ...int) error {
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if len(minArgsCount) > 0 {
+		// minimum amount of args must be checked
+		if len(args) < minArgsCount[0] {
+			fs.Usage()
+			return errors.New("not enough arguments")
+		}
+	}
+
+	// Check if all parameters were parsed
+	if fs.NArg() != 0 {
+		return errors.New("too much arguments")
+	}
+
+	return nil
+}
+
+func printJSON(obj interface{}) error {
+	output, err := json.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(output))
+	return nil
 }

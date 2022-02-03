@@ -3,28 +3,21 @@ package toolset
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
-	flag "github.com/spf13/pflag"
-
 	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 	"golang.org/x/term"
-
-	"github.com/iotaledger/hive.go/configuration"
 
 	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
-const (
-	passwordEnvKey = "HORNET_TOOL_PASSWORD"
-)
-
 func readPasswordFromEnv() ([]byte, error) {
+
 	passwordEnv, err := utils.LoadStringFromEnvironment(passwordEnvKey)
 	if err != nil {
 		return nil, err
@@ -33,6 +26,7 @@ func readPasswordFromEnv() ([]byte, error) {
 }
 
 func readPasswordFromStdin() ([]byte, error) {
+
 	var password []byte
 
 	// get terminal state to be able to restore it in case of an interrupt
@@ -70,25 +64,24 @@ func readPasswordFromStdin() ([]byte, error) {
 	return password, nil
 }
 
-func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
+func hashPasswordAndSalt(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
-	passwordFlag := fs.String("password", "", fmt.Sprintf("password to hash (optional). Can also be passed as %s environment variable.", passwordEnvKey))
-	outputJSON := fs.Bool("json", false, "format output as JSON")
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	passwordFlag := fs.String(FlagToolPassword, "", fmt.Sprintf("password to hash. Can also be passed as %s environment variable.", passwordEnvKey))
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolPwdHash)
 		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s",
+			ToolPwdHash,
+			FlagToolPassword,
+			"[PASSWORD]",
+		))
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
-	}
-
-	// Check if all parameters were parsed
-	if fs.NArg() != 0 {
-		fs.Usage()
-		os.Exit(2)
 	}
 
 	var password []byte
@@ -97,7 +90,7 @@ func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 		// Password passed over the environment
 		password = p
 	} else if len(*passwordFlag) > 0 {
-		// Password passed ofer flag
+		// Password passed over flag
 		password = []byte(*passwordFlag)
 	} else {
 		// Read from stdin
@@ -118,7 +111,7 @@ func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 		return fmt.Errorf("deriving password key failed: %w", err)
 	}
 
-	if *outputJSON {
+	if *outputJSONFlag {
 
 		result := struct {
 			Password string `json:"passwordHash"`
@@ -128,12 +121,7 @@ func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 			Salt:     hex.EncodeToString(passwordSalt),
 		}
 
-		output, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-		}
-		fmt.Println(string(output))
-		return nil
+		return printJSON(result)
 	}
 
 	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %x\n", passwordKey, passwordSalt)

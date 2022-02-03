@@ -1,7 +1,6 @@
 package toolset
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,45 +8,43 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/configuration"
-
-	p2pCore "github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/plugins/restapi"
 )
 
-func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string) error {
+func generateJWTApiToken(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ExitOnError)
-	outputJSON := fs.Bool("json", false, "format output as JSON")
-	databasePath := fs.String("database", "", "the path to the p2p database folder (optional)")
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	databasePathFlag := fs.String(FlagToolDatabasePath, DefaultValueP2PDatabasePath, "the path to the p2p database folder")
+	apiJWTSaltFlag := fs.String(FlagToolSalt, DefaultValueAPIJWTTokenSalt, "salt used inside the JWT tokens for the REST API")
+	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolJWTApi)
 		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
+			ToolJWTApi,
+			FlagToolDatabasePath,
+			DefaultValueP2PDatabasePath,
+			FlagToolSalt,
+			DefaultValueAPIJWTTokenSalt))
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := parseFlagSet(fs, args); err != nil {
 		return err
 	}
 
-	// Check if all parameters were parsed
-	if fs.NArg() != 0 {
-		fs.Usage()
-		os.Exit(2)
+	if len(*databasePathFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
+	}
+	if len(*apiJWTSaltFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolSalt)
 	}
 
-	salt := nodeConfig.String(restapi.CfgRestAPIJWTAuthSalt)
-	if len(salt) == 0 {
-		return fmt.Errorf("'%s' should not be empty", restapi.CfgRestAPIJWTAuthSalt)
-	}
+	databasePath := *databasePathFlag
+	privKeyFilePath := filepath.Join(databasePath, p2p.PrivKeyFileName)
 
-	p2pDatabasePath := nodeConfig.String(p2pCore.CfgP2PDatabasePath)
-	if len(*databasePath) > 0 {
-		p2pDatabasePath = *databasePath
-	}
-	privKeyFilePath := filepath.Join(p2pDatabasePath, p2p.PrivKeyFileName)
+	salt := *apiJWTSaltFlag
 
 	_, err := os.Stat(privKeyFilePath)
 	switch {
@@ -87,7 +84,7 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 		return fmt.Errorf("issuing JWT token failed: %w", err)
 	}
 
-	if *outputJSON {
+	if *outputJSONFlag {
 
 		result := struct {
 			JWT string `json:"jwt"`
@@ -95,12 +92,7 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 			JWT: jwtToken,
 		}
 
-		output, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-		}
-		fmt.Println(string(output))
-		return nil
+		return printJSON(result)
 	}
 
 	fmt.Println("Your API JWT token: ", jwtToken)

@@ -7,66 +7,46 @@ import (
 	"math"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/dustin/go-humanize"
+	flag "github.com/spf13/pflag"
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
-const (
-	// printStatusInterval is the interval for printing status messages
-	printStatusInterval = 2 * time.Second
-)
+func benchmarkIO(args []string) error {
 
-func benchmarkIO(_ *configuration.Configuration, args []string) error {
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	objectsCountFlag := fs.Int(FlagToolBenchmarkCount, 500000, "objects count")
+	objectsSizeFlag := fs.Int(FlagToolBenchmarkSize, 1000, "objects size in bytes")
+	databaseEngineFlag := fs.String(FlagToolDatabaseEngine, DefaultValueDatabaseEngine, "database engine (optional, values: pebble, rocksdb)")
 
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [COUNT] [SIZE] [DB_ENGINE]", ToolBenchmarkIO))
-		println()
-		println("   [COUNT]     - objects count (optional)")
-		println("   [SIZE]      - objects size  (optional)")
-		println("   [DB_ENGINE] - database engine (optional, values: pebble, rocksdb)")
-		println()
-		println(fmt.Sprintf("example: %s %d %d %s", ToolBenchmarkIO, 500000, 1000, "rocksdb"))
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolBenchmarkIO)
+		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %d --%s %d --%s %s",
+			ToolBenchmarkIO,
+			FlagToolBenchmarkCount,
+			500000,
+			FlagToolBenchmarkSize,
+			1000,
+			FlagToolDatabaseEngine,
+			DefaultValueDatabaseEngine))
 	}
 
-	objectCnt := 500000
-	size := 1000
-	dbEngine := database.EngineRocksDB
-
-	if len(args) > 3 {
-		printUsage()
-		return fmt.Errorf("too many arguments for '%s'", ToolBenchmarkIO)
+	if err := parseFlagSet(fs, args); err != nil {
+		return err
 	}
 
-	if len(args) >= 1 {
-		var err error
-		objectCnt, err = strconv.Atoi(args[0])
-		if err != nil {
-			return fmt.Errorf("can't parse COUNT: %w", err)
-		}
-	}
-
-	if len(args) >= 2 {
-		var err error
-		size, err = strconv.Atoi(args[1])
-		if err != nil {
-			return fmt.Errorf("can't parse SIZE: %w", err)
-		}
-	}
-
-	if len(args) == 3 {
-		dbEngine = strings.ToLower(args[2])
-	}
+	objectCnt := *objectsCountFlag
+	size := *objectsSizeFlag
+	dbEngine := strings.ToLower(*databaseEngineFlag)
 
 	engine, err := database.DatabaseEngine(dbEngine)
 	if err != nil {
@@ -130,31 +110,28 @@ func benchmarkIO(_ *configuration.Configuration, args []string) error {
 	return nil
 }
 
-func benchmarkCPU(_ *configuration.Configuration, args []string) error {
-	printUsage := func() {
-		println("Usage:")
-		println(fmt.Sprintf("   %s [THREADS]", ToolBenchmarkCPU))
-		println()
-		println("   [THREADS] - thread count (optional)")
-		println()
-		println(fmt.Sprintf("example: %s %d", ToolBenchmarkCPU, 2))
+func benchmarkCPU(args []string) error {
+
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	cpuThreadsFlag := fs.Int(FlagToolBenchmarkThreads, runtime.NumCPU(), "thread count")
+	durationFlag := fs.Duration(FlagToolBenchmarkDuration, 1*time.Minute, "duration")
+
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolBenchmarkCPU)
+		fs.PrintDefaults()
+		println(fmt.Sprintf("\nexample: %s --%s %d --%s 1m0s",
+			ToolBenchmarkCPU,
+			FlagToolBenchmarkThreads,
+			2,
+			FlagToolBenchmarkDuration))
 	}
 
-	threads := runtime.NumCPU()
-	duration := 1 * time.Minute
-
-	if len(args) > 1 {
-		printUsage()
-		return fmt.Errorf("too many arguments for '%s'", ToolBenchmarkCPU)
+	if err := parseFlagSet(fs, args); err != nil {
+		return err
 	}
 
-	if len(args) == 1 {
-		var err error
-		threads, err = strconv.Atoi(args[0])
-		if err != nil {
-			return fmt.Errorf("can't parse THREADS: %w", err)
-		}
-	}
+	threads := *cpuThreadsFlag
+	duration := *durationFlag
 
 	benchmarkCtx, benchmarkCtxCancel := context.WithTimeout(context.Background(), duration)
 	defer benchmarkCtxCancel()
