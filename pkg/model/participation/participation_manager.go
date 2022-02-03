@@ -605,41 +605,8 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 			}
 
 			if shouldCountParticipation {
-				utxoManager := pm.storage.UTXOManager()
-				addressRewardsIncreases := make(map[string]uint64)
-				var innerErr error
-				pm.ForEachActiveParticipation(eventID, func(trackedParticipation *TrackedParticipation) bool {
-					output, err := utxoManager.ReadOutputByOutputIDWithoutLocking(trackedParticipation.OutputID)
-					if err != nil {
-						// We should have the output in the ledger, if not, something happened
-						innerErr = err
-						return false
-					}
-
-					// This should not overflow, since we did worst-case overflow checks before adding the event
-					increaseAmount := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
-
-					addr := string(output.AddressBytes())
-					balance, found := addressRewardsIncreases[addr]
-					if !found {
-						addressRewardsIncreases[addr] = increaseAmount
-						return true
-					}
-					addressRewardsIncreases[addr] = balance + increaseAmount
-					return true
-				})
-				if innerErr != nil {
-					return innerErr
-				}
-
-				for addr, diff := range addressRewardsIncreases {
-					addrBytes := []byte(addr)
-					total.rewarded += diff
-					if err := pm.increaseStakingRewardForEventAndAddress(eventID, addrBytes, diff, mutations); err != nil {
-						mutations.Cancel()
-						return err
-					}
-				}
+				increaseAmount := total.staked * uint64(staking.Numerator) / uint64(staking.Denominator)
+				total.rewarded += increaseAmount
 			}
 
 			if err := pm.setTotalStakingParticipationForEvent(eventID, index, total, mutations); err != nil {

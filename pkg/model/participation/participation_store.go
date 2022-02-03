@@ -145,6 +145,66 @@ func participationKeyForEventAndSpentOutputID(eventID EventID, outputID *iotago.
 	return m.Bytes()
 }
 
+func participationKeyForEventPrefix(eventID EventID) []byte {
+	m := marshalutil.New(33)
+	m.WriteByte(ParticipationStoreKeyPrefixTrackedOutputByAddress) // 1 byte
+	m.WriteBytes(eventID[:])                                       // 32 bytes
+	return m.Bytes()
+}
+
+func participationKeyForEventAndAddressPrefix(eventID EventID, addressBytes []byte) []byte {
+	m := marshalutil.New(66)
+	m.WriteByte(ParticipationStoreKeyPrefixTrackedOutputByAddress) // 1 byte
+	m.WriteBytes(eventID[:])                                       // 32 bytes
+	m.WriteBytes(addressBytes)                                     // 33 bytes
+	return m.Bytes()
+}
+
+func participationKeyForEventAndAddressOutputID(eventID EventID, addressBytes []byte, outputID *iotago.UTXOInputID) []byte {
+	m := marshalutil.New(100)
+	m.WriteBytes(participationKeyForEventAndAddressPrefix(eventID, addressBytes)) // 66 bytes
+	m.WriteBytes(outputID[:])                                                     // 34 bytes
+	return m.Bytes()
+}
+
+func (pm *ParticipationManager) ParticipationsForAddress(eventID EventID, address iotago.Address) ([]*TrackedParticipation, error) {
+
+	addressBytes, err := address.Serialize(serializer.DeSeriModeNoValidation)
+	if err != nil {
+		return nil, err
+	}
+
+	trackedParticipations := []*TrackedParticipation{}
+
+	var innerErr error
+	prefix := participationKeyForEventAndAddressPrefix(eventID, addressBytes)
+	prefixLen := len(prefix)
+	if err := pm.participationStore.IterateKeys(prefix, func(key kvstore.Key) bool {
+		outputID := &iotago.UTXOInputID{}
+		copy(outputID[:], key[prefixLen:])
+
+		participation, err := pm.ParticipationForOutputID(eventID, outputID)
+		if err != nil {
+			if errors.Is(err, ErrUnknownParticipation) {
+				return true
+			}
+			innerErr = err
+			return false
+		}
+		trackedParticipations = append(trackedParticipations, participation)
+
+		return true
+	}); err != nil {
+		return nil, err
+	}
+
+	if innerErr != nil {
+		return nil, innerErr
+	}
+
+	return trackedParticipations, nil
+}
+
 func (pm *ParticipationManager) ParticipationsForOutputID(outputID *iotago.UTXOInputID) ([]*TrackedParticipation, error) {
 	eventIDs := pm.EventIDs()
 	trackedParticipations := []*TrackedParticipation{}
@@ -334,7 +394,10 @@ func (pm *ParticipationManager) startParticipationAtMilestone(eventID EventID, o
 		StartIndex: startIndex,
 		EndIndex:   0,
 	}
-	return mutations.Set(participationKeyForEventAndOutputID(eventID, output.OutputID()), trackedVote.ValueBytes())
+	if err := mutations.Set(participationKeyForEventAndOutputID(eventID, output.OutputID()), trackedVote.ValueBytes()); err != nil {
+		return err
+	}
+	return mutations.Set(participationKeyForEventAndAddressOutputID(eventID, output.AddressBytes(), output.OutputID()), []byte{})
 }
 
 func (pm *ParticipationManager) endParticipationAtMilestone(eventID EventID, output *utxo.Output, endIndex milestone.Index, mutations kvstore.BatchedMutations) error {
@@ -491,58 +554,71 @@ func (pm *ParticipationManager) stopCountingBallotAnswers(event *Event, vote *Pa
 
 // Staking
 
-func stakingKeyForEventPrefix(eventID EventID) []byte {
-	m := marshalutil.New(33)
-	m.WriteByte(ParticipationStoreKeyPrefixStakingAddress) // 1 byte
-	m.WriteBytes(eventID[:])                               // 32 bytes
-	return m.Bytes()
-}
+func (pm *ParticipationManager) rewardsForTrackedParticipation(trackedParticipation *TrackedParticipation, atIndex milestone.Index) (uint64, error) {
 
-func stakingKeyForEventAndAddress(eventID EventID, addressBytes []byte) []byte {
-	m := marshalutil.New(66)
-	m.WriteBytes(stakingKeyForEventPrefix(eventID)) // 33 bytes
-	m.WriteBytes(addressBytes)                      // 33 bytes
-	return m.Bytes()
+	event := pm.Event(trackedParticipation.EventID)
+	if event == nil {
+		return 0, ErrEventNotFound
+	}
+
+	if event.StartMilestoneIndex() >= atIndex {
+		// Event not yet started, so skip
+		return 0, nil
+	}
+
+	if trackedParticipation.StartIndex > atIndex {
+		// Participation not started for this index yet
+		return 0, nil
+	}
+
+	staking := event.Staking()
+	if staking == nil {
+		return 0, ErrInvalidEvent
+	}
+
+	eventMilestoneCountingStart := event.StartMilestoneIndex() + 1
+
+	var milestonesToCount uint64
+	var milestonesToSubtract uint64
+
+	if trackedParticipation.EndIndex == 0 {
+		// Participation has not ended yet or is ending in the current milestone, so count including the current milestone
+		milestonesToCount = uint64(atIndex + 1 - trackedParticipation.StartIndex)
+	} else {
+		// Participation ended
+		milestonesToCount = uint64(trackedParticipation.EndIndex - trackedParticipation.StartIndex)
+
+		if trackedParticipation.EndIndex == event.EndMilestoneIndex() {
+			// We need to count the last index of the event
+			milestonesToCount++
+		}
+	}
+
+	if trackedParticipation.StartIndex < eventMilestoneCountingStart {
+		// Substract the commencing milestones, minus the start itself
+		milestonesToSubtract = uint64(eventMilestoneCountingStart - trackedParticipation.StartIndex)
+	}
+
+	rewardsPerMilestone := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
+	rewardsForParticipation := rewardsPerMilestone * (milestonesToCount - milestonesToSubtract)
+	return rewardsForParticipation, nil
 }
 
 func (pm *ParticipationManager) StakingRewardForAddress(eventID EventID, address iotago.Address) (uint64, error) {
-
-	addressBytes, err := address.Serialize(serializer.DeSeriModeNoValidation)
+	var rewards uint64
+	confirmedMilestoneIndex := pm.syncManager.ConfirmedMilestoneIndex()
+	trackedParticipations, err := pm.ParticipationsForAddress(eventID, address)
 	if err != nil {
 		return 0, err
 	}
-
-	return pm.stakingRewardForEventAndAddress(eventID, addressBytes)
-}
-
-func (pm *ParticipationManager) stakingRewardForEventAndAddress(eventID EventID, addressBytes []byte) (uint64, error) {
-	key := stakingKeyForEventAndAddress(eventID, addressBytes)
-	value, err := pm.participationStore.Get(key)
-	if err != nil {
-		if errors.Is(err, kvstore.ErrKeyNotFound) {
-			return 0, nil
+	for _, trackedParticipation := range trackedParticipations {
+		amount, err := pm.rewardsForTrackedParticipation(trackedParticipation, confirmedMilestoneIndex)
+		if err != nil {
+			return 0, err
 		}
-		return 0, err
+		rewards += amount
 	}
-	m := marshalutil.New(value)
-	balance, err := m.ReadUint64()
-	if err != nil {
-		return 0, err
-	}
-	return balance, err
-}
-
-func (pm *ParticipationManager) increaseStakingRewardForEventAndAddress(eventID EventID, addressBytes []byte, amountToIncrease uint64, mutations kvstore.BatchedMutations) error {
-	balance, err := pm.stakingRewardForEventAndAddress(eventID, addressBytes)
-	if err != nil {
-		return err
-	}
-
-	newBalance := balance + amountToIncrease
-	m := marshalutil.New(8)
-	m.WriteUint64(newBalance)
-
-	return mutations.Set(stakingKeyForEventAndAddress(eventID, addressBytes), m.Bytes())
+	return rewards, nil
 }
 
 func totalParticipationStakingKeyForEventPrefix(eventID EventID) []byte {
@@ -643,9 +719,9 @@ func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, consumer 
 
 	var innerErr error
 	var i int
-	prefix := stakingKeyForEventPrefix(eventID)
+	prefix := participationKeyForEventPrefix(eventID)
 	prefixLen := len(prefix)
-	if err := pm.participationStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+	if err := pm.participationStore.IterateKeys(prefix, func(key kvstore.Key) bool {
 
 		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
 			return false
@@ -663,8 +739,7 @@ func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, consumer 
 			return false
 		}
 
-		m := marshalutil.New(value)
-		balance, err := m.ReadUint64()
+		balance, err := pm.StakingRewardForAddress(eventID, addr.(iotago.Address))
 		if err != nil {
 			innerErr = err
 			return false
@@ -693,13 +768,13 @@ func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {
 	if err := pm.participationStore.DeletePrefix(participationKeyForEventSpentOutputsPrefix(eventID)); err != nil {
 		return err
 	}
+	if err := pm.participationStore.DeletePrefix(participationKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
 	if err := pm.participationStore.DeletePrefix(currentBallotVoteBalanceKeyPrefix(eventID)); err != nil {
 		return err
 	}
 	if err := pm.participationStore.DeletePrefix(accumulatedBallotVoteBalanceKeyPrefix(eventID)); err != nil {
-		return err
-	}
-	if err := pm.participationStore.DeletePrefix(stakingKeyForEventPrefix(eventID)); err != nil {
 		return err
 	}
 	if err := pm.participationStore.DeletePrefix(totalParticipationStakingKeyForEventPrefix(eventID)); err != nil {
