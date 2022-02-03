@@ -359,6 +359,60 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 	return response, nil
 }
 
+func getOutputsByBech32Address(c echo.Context) (*ParticipationsResponse, error) {
+	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
+	if err != nil {
+		return nil, err
+	}
+
+	switch address := bech32Address.(type) {
+	case *iotago.Ed25519Address:
+		return ed25519Outputs(address)
+	default:
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", bech32Address.String())
+	}
+}
+
+func getOutputsByEd25519Address(c echo.Context) (*ParticipationsResponse, error) {
+	address, err := restapi.ParseEd25519AddressParam(c)
+	if err != nil {
+		return nil, err
+	}
+	return ed25519Outputs(address)
+}
+
+func ed25519Outputs(address *iotago.Ed25519Address) (*ParticipationsResponse, error) {
+	eventIDs := deps.ParticipationManager.EventIDs(participation.StakingPayloadTypeID)
+
+	response := &ParticipationsResponse{
+		Participations: make(map[string]*TrackedParticipation),
+	}
+
+	for _, eventID := range eventIDs {
+
+		event := deps.ParticipationManager.Event(eventID)
+		if event == nil {
+			return nil, errors.WithMessage(echo.ErrInternalServerError, "event not found")
+		}
+
+		participations, err := deps.ParticipationManager.ParticipationsForAddress(eventID, address)
+		if err != nil {
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching outputs: %s", err)
+		}
+		for _, participation := range participations {
+			t := &TrackedParticipation{
+				MessageID:           participation.MessageID.ToHex(),
+				Amount:              participation.Amount,
+				StartMilestoneIndex: participation.StartIndex,
+				EndMilestoneIndex:   participation.EndIndex,
+			}
+			response.Participations[participation.OutputID.ToHex()] = t
+		}
+	}
+
+	return response, nil
+}
+
 func getActiveParticipations(c echo.Context) (*ParticipationsResponse, error) {
 	eventID, err := parseEventIDParam(c)
 	if err != nil {

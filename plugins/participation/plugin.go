@@ -51,8 +51,14 @@ const (
 	// RouteAddressBech32Status is the route to get the staking rewards for the given bech32 address.
 	RouteAddressBech32Status = "/addresses/:" + restapi.ParameterAddress
 
+	// RouteAddressBech32Outputs is the route to get the outputs for a given address.
+	RouteAddressBech32Outputs = "/addresses/:" + restapi.ParameterAddress + "/outputs"
+
 	// RouteAddressEd25519Status is the route to get the staking rewards for the given ed25519 address.
 	RouteAddressEd25519Status = "/addresses/ed25519/:" + restapi.ParameterAddress
+
+	// RouteAddressEd25519Outputs is the route to get the outputs for a given address.
+	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + restapi.ParameterAddress + "/outputs"
 
 	// RouteAdminCreateEvent is the route the node operator can use to add events.
 	// POST creates a new event to track
@@ -207,8 +213,24 @@ func configure() {
 		return restapi.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	routeGroup.GET(RouteAddressBech32Outputs, func(c echo.Context) error {
+		resp, err := getOutputsByBech32Address(c)
+		if err != nil {
+			return err
+		}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
 	routeGroup.GET(RouteAddressEd25519Status, func(c echo.Context) error {
 		resp, err := getRewardsByEd25519Address(c)
+		if err != nil {
+			return err
+		}
+		return restapi.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAddressEd25519Outputs, func(c echo.Context) error {
+		resp, err := getOutputsByEd25519Address(c)
 		if err != nil {
 			return err
 		}
