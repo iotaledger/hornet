@@ -309,20 +309,21 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
 
+
+	index := deps.SyncManager.ConfirmedMilestoneIndex()
+	if index > event.EndMilestoneIndex() {
+		index = event.EndMilestoneIndex()
+	}
+
 	var addresses []string
 	rewardsByAddress := make(map[string]uint64)
-	if err := deps.ParticipationManager.ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
+	if err := deps.ParticipationManager.ForEachStakingAddress(eventID, index, func(address iotago.Address, rewards uint64) bool {
 		addr := address.String()
 		addresses = append(addresses, addr)
 		rewardsByAddress[addr] = rewards
 		return true
 	}, participation.FilterRequiredMinimumRewards(true)); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)
-	}
-
-	index := deps.SyncManager.ConfirmedMilestoneIndex()
-	if index > event.EndMilestoneIndex() {
-		index = event.EndMilestoneIndex()
 	}
 
 	responseHash := sha256.New()

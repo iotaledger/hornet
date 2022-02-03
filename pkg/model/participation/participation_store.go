@@ -571,6 +571,11 @@ func (pm *ParticipationManager) rewardsForTrackedParticipation(trackedParticipat
 		return 0, nil
 	}
 
+	if trackedParticipation.EndIndex > 0 && trackedParticipation.EndIndex <= event.StartMilestoneIndex() {
+		// Participation ended before event started
+		return 0, nil
+	}
+
 	staking := event.Staking()
 	if staking == nil {
 		return 0, ErrInvalidEvent
@@ -702,7 +707,7 @@ func (pm *ParticipationManager) setTotalStakingParticipationForEvent(eventID Eve
 
 type StakingRewardsConsumer func(address iotago.Address, rewards uint64) bool
 
-func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, consumer StakingRewardsConsumer, options ...IterateOption) error {
+func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, msIndex milestone.Index, consumer StakingRewardsConsumer, options ...IterateOption) error {
 
 	event := pm.Event(eventID)
 	if event == nil {
@@ -733,13 +738,22 @@ func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, consumer 
 			innerErr = err
 			return false
 		}
-		_, err = addr.Deserialize(addressBytes, serializer.DeSeriModeNoValidation)
+		addrLen, err := addr.Deserialize(addressBytes, serializer.DeSeriModeNoValidation)
 		if err != nil {
 			innerErr = err
 			return false
 		}
 
-		balance, err := pm.StakingRewardForAddress(eventID, addr.(iotago.Address))
+		outputID := &iotago.UTXOInputID{}
+		copy(outputID[:], key[prefixLen+addrLen:])
+
+		participation, err := pm.ParticipationForOutputID(eventID, outputID)
+		if err != nil {
+			innerErr = err
+			return false
+		}
+
+		balance, err := pm.rewardsForTrackedParticipation(participation, msIndex)
 		if err != nil {
 			innerErr = err
 			return false

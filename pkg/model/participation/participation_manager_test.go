@@ -1,6 +1,7 @@
 package participation_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -1144,19 +1145,31 @@ func TestStakingRewards(t *testing.T) {
 		}).
 		Send()
 
-	env.IssueMilestone(stakeWallet1.Message().StoredMessageID(), stakeWallet2.Message().StoredMessageID(), stakeWallet3.Message().StoredMessageID()) // 6
+	preStakeWallet4 := env.NewParticipationHelper(env.Wallet4).
+		WholeWalletBalance().
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{},
+		}).
+		Send()
+
+	env.IssueMilestone(stakeWallet1.Message().StoredMessageID(), stakeWallet2.Message().StoredMessageID(), stakeWallet3.Message().StoredMessageID(), preStakeWallet4.Message().StoredMessageID()) // 6
 	env.AssertEventsCount(1, 0)
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 0)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 0)
 
-	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 0)
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977+300_000_000, 0)
 
-	env.IssueMilestone() // 7
+	cancelPreStakeWallet4 := env.CancelParticipations(env.Wallet4)
+
+	env.IssueMilestone(cancelPreStakeWallet4.StoredMessageID()) // 7
 	env.AssertEventsCount(1, 1)
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 0)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 0)
 
 	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 0)
 
@@ -1164,6 +1177,7 @@ func TestStakingRewards(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 1_250_000)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 396_882)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 1_397_494)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 0)
 
 	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 1_250_000+396_882+1_397_494)
 
@@ -1219,7 +1233,7 @@ func TestStakingRewards(t *testing.T) {
 
 	totalRewards := uint64(0)
 	addresses := make(map[string]struct{})
-	env.ParticipationManager().ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
+	env.ParticipationManager().ForEachStakingAddress(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, rewards uint64) bool {
 		totalRewards += rewards
 		addresses[address.String()] = struct{}{}
 		return true
@@ -1236,7 +1250,7 @@ func TestStakingRewards(t *testing.T) {
 	require.True(t, wallet4Found)
 
 	totalRewardsWithoutFilter := uint64(0)
-	env.ParticipationManager().ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
+	env.ParticipationManager().ForEachStakingAddress(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, rewards uint64) bool {
 		totalRewardsWithoutFilter += rewards
 		return true
 	}, participation.FilterRequiredMinimumRewards(false))
