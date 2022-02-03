@@ -605,8 +605,11 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 			}
 
 			if shouldCountParticipation {
-				increaseAmount := total.staked * uint64(staking.Numerator) / uint64(staking.Denominator)
-				total.rewarded += increaseAmount
+				pm.ForEachActiveParticipation(eventID, func(trackedParticipation *TrackedParticipation) bool {
+					increaseAmount := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
+					total.rewarded += increaseAmount
+					return true
+				})
 			}
 
 			if err := pm.setTotalStakingParticipationForEvent(eventID, index, total, mutations); err != nil {
