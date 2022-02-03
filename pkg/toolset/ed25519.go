@@ -12,16 +12,16 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-type keys struct {
-	PublicKey      string `json:"publicKey"`
-	PrivateKey     string `json:"privateKey,omitempty"`
-	Ed25519Address string `json:"ed25519"`
-	Bech32Address  string `json:"bech32"`
-}
-
 func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp iotago.NetworkPrefix, outputJSON bool) error {
 
 	addr := iotago.Ed25519AddressFromPubKey(pubKey)
+
+	type keys struct {
+		PublicKey      string `json:"publicKey"`
+		PrivateKey     string `json:"privateKey,omitempty"`
+		Ed25519Address string `json:"ed25519"`
+		Bech32Address  string `json:"bech32"`
+	}
 
 	k := keys{
 		PublicKey:      hex.EncodeToString(pubKey),

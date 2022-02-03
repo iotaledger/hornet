@@ -20,34 +20,24 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
-const (
-	FlagToolBenchmarkIoObjectsCount   = "count"
-	FlagToolBenchmarkIoObjectsSize    = "size"
-	FlagToolBenchmarkIoDatabaseEngine = "databaseEngine"
-	FlagToolBenchmarkCpuThreads       = "threads"
-	FlagToolBenchmarkCpuDuration      = "duration"
-
-	// printStatusInterval is the interval for printing status messages
-	printStatusInterval = 2 * time.Second
-)
-
 func benchmarkIO(args []string) error {
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	objectsCountFlag := fs.Int(FlagToolBenchmarkIoObjectsCount, 500000, "objects count")
-	objectsSizeFlag := fs.Int(FlagToolBenchmarkIoObjectsSize, 1000, "objects size in bytes")
-	databaseEngineFlag := fs.String(FlagToolBenchmarkIoDatabaseEngine, database.EngineRocksDB, "database engine (optional, values: pebble, rocksdb)")
+	objectsCountFlag := fs.Int(FlagToolBenchmarkCount, 500000, "objects count")
+	objectsSizeFlag := fs.Int(FlagToolBenchmarkSize, 1000, "objects size in bytes")
+	databaseEngineFlag := fs.String(FlagToolDatabaseEngine, DefaultValueDatabaseEngine, "database engine (optional, values: pebble, rocksdb)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolBenchmarkIO)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %d --%s %d --%s %s",
 			ToolBenchmarkIO,
-			FlagToolBenchmarkIoObjectsCount,
+			FlagToolBenchmarkCount,
 			500000,
-			FlagToolBenchmarkIoObjectsSize,
+			FlagToolBenchmarkSize,
 			1000,
-			FlagToolBenchmarkIoDatabaseEngine,
-			database.EngineRocksDB))
+			FlagToolDatabaseEngine,
+			DefaultValueDatabaseEngine))
 	}
 
 	if err := parseFlagSet(fs, args); err != nil {
@@ -121,18 +111,19 @@ func benchmarkIO(args []string) error {
 }
 
 func benchmarkCPU(args []string) error {
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	cpuThreadsFlag := fs.Int(FlagToolBenchmarkCpuThreads, runtime.NumCPU(), "thread count")
-	durationFlag := fs.Duration(FlagToolBenchmarkCpuDuration, 1*time.Minute, "duration")
+	cpuThreadsFlag := fs.Int(FlagToolBenchmarkThreads, runtime.NumCPU(), "thread count")
+	durationFlag := fs.Duration(FlagToolBenchmarkDuration, 1*time.Minute, "duration")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolBenchmarkCPU)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %d --%s 1m0s",
 			ToolBenchmarkCPU,
-			FlagToolBenchmarkCpuThreads,
+			FlagToolBenchmarkThreads,
 			2,
-			FlagToolBenchmarkCpuDuration))
+			FlagToolBenchmarkDuration))
 	}
 
 	if err := parseFlagSet(fs, args); err != nil {

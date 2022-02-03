@@ -206,8 +206,9 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 }
 
 func databaseLedgerHash(args []string) error {
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePathFlag := fs.String(FlagToolDatabasePath, "mainnetdb", "the path to the database")
+	databasePathFlag := fs.String(FlagToolDatabasePath, DefaultValueMainnetDatabasePath, "the path to the database")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
@@ -216,7 +217,7 @@ func databaseLedgerHash(args []string) error {
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolDatabaseLedgerHash,
 			FlagToolDatabasePath,
-			"mainnetdb"))
+			DefaultValueMainnetDatabasePath))
 	}
 
 	if err := parseFlagSet(fs, args); err != nil {

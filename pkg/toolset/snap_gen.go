@@ -15,33 +15,26 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-const (
-	FlagToolSnapGenNetworkID          = "networkID"
-	FlagToolSnapGenMintAddress        = "mintAddress"
-	FlagToolSnapGenTreasuryAllocation = "treasuryAllocation"
-	FlagToolSnapGenOutputFilePath     = "outputFilePath"
-)
-
 func snapshotGen(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	networkIDFlag := fs.String(FlagToolSnapGenNetworkID, "", "the network ID for which this snapshot is meant for")
+	networkIDFlag := fs.String(FlagToolNetworkID, "", "the network ID for which this snapshot is meant for")
 	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial ed25519 address all the tokens will be minted to")
 	treasuryAllocationFlag := fs.Uint64(FlagToolSnapGenTreasuryAllocation, 0, "the amount of tokens to reside within the treasury, the delta from the supply will be allocated to 'mintAddress'")
-	outputFilePathFlag := fs.String(FlagToolSnapGenOutputFilePath, "", "the file path to the generated snapshot file")
+	outputFilePathFlag := fs.String(FlagToolOutputPath, "", "the file path to the generated snapshot file")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolSnapGen)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s",
 			ToolSnapGen,
-			FlagToolSnapGenNetworkID,
+			FlagToolNetworkID,
 			"private_tangle@1",
 			FlagToolSnapGenMintAddress,
 			"[MINT_ADDRESS]",
 			FlagToolSnapGenTreasuryAllocation,
 			"500000000",
-			FlagToolSnapGenOutputFilePath,
+			FlagToolOutputPath,
 			"snapshots/private_tangle/full_snapshot.bin"))
 	}
 
@@ -50,7 +43,7 @@ func snapshotGen(args []string) error {
 	}
 
 	if len(*networkIDFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolSnapGenNetworkID)
+		return fmt.Errorf("'%s' not specified", FlagToolNetworkID)
 	}
 
 	networkID := iotago.NetworkIDFromString(*networkIDFlag)
@@ -74,12 +67,12 @@ func snapshotGen(args []string) error {
 
 	// check filepath
 	if len(*outputFilePathFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolSnapGenOutputFilePath)
+		return fmt.Errorf("'%s' not specified", FlagToolOutputPath)
 	}
 
 	outputFilePath := *outputFilePathFlag
 	if _, err := os.Stat(outputFilePath); err == nil || !os.IsNotExist(err) {
-		return fmt.Errorf("'%s' already exists", FlagToolSnapGenOutputFilePath)
+		return fmt.Errorf("'%s' already exists", FlagToolOutputPath)
 	}
 
 	// build temp file path

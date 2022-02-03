@@ -12,16 +12,12 @@ import (
 	"github.com/gohornet/hornet/pkg/snapshot"
 )
 
-const (
-	FlagToolSnapshotMergeSnapshotPathTarget = "snapshotPathTarget"
-)
-
 func snapshotMerge(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	snapshotPathFullFlag := fs.String(FlagToolSnapshotPathFull, "", "the path to the full snapshot file")
 	snapshotPathDeltaFlag := fs.String(FlagToolSnapshotPathDelta, "", "the path to the delta snapshot file")
-	snapshotPathTargetFlag := fs.String(FlagToolSnapshotMergeSnapshotPathTarget, "", "the path to the target/merged snapshot file")
+	snapshotPathTargetFlag := fs.String(FlagToolSnapshotPathTarget, "", "the path to the target/merged snapshot file")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
@@ -33,7 +29,7 @@ func snapshotMerge(args []string) error {
 			"snapshots/mainnet/full_snapshot.bin",
 			FlagToolSnapshotPathDelta,
 			"snapshots/mainnet/delta_snapshot.bin",
-			FlagToolSnapshotMergeSnapshotPathTarget,
+			FlagToolSnapshotPathTarget,
 			"merged_snapshot.bin"))
 	}
 
@@ -48,7 +44,7 @@ func snapshotMerge(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPathDelta)
 	}
 	if len(*snapshotPathTargetFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolSnapshotMergeSnapshotPathTarget)
+		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPathTarget)
 	}
 
 	var fullPath, deltaPath, targetPath = *snapshotPathFullFlag, *snapshotPathDeltaFlag, *snapshotPathTargetFlag

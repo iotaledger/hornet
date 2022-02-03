@@ -5,29 +5,49 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
+
+	"github.com/gohornet/hornet/pkg/database"
 )
 
 const (
-	FlagToolDatabasePath         = "databasePath"
-	FlagToolDatabasePathSource   = "sourceDatabasePath"
-	FlagToolDatabasePathTarget   = "targetDatabasePath"
+	FlagToolDatabaseEngine       = "databaseEngine"
 	FlagToolDatabaseEngineTarget = "targetDatabaseEngine"
 
-	FlagToolSnapshotPath      = "snapshotPath"
-	FlagToolSnapshotPathFull  = "fullSnapshotPath"
-	FlagToolSnapshotPathDelta = "deltaSnapshotPath"
+	FlagToolDatabasePath       = "databasePath"
+	FlagToolDatabasePathSource = "sourceDatabasePath"
+	FlagToolDatabasePathTarget = "targetDatabasePath"
+
+	FlagToolSnapshotPath       = "snapshotPath"
+	FlagToolSnapshotPathFull   = "fullSnapshotPath"
+	FlagToolSnapshotPathDelta  = "deltaSnapshotPath"
+	FlagToolSnapshotPathTarget = "targetSnapshotPath"
+
+	FlagToolOutputPath = "outputPath"
 
 	FlagToolPrivateKey = "privateKey"
 	FlagToolPublicKey  = "publicKey"
 
-	FlagToolHRP      = "hrp"
-	FlagToolPassword = "password"
+	FlagToolHRP       = "hrp"
+	FlagToolNetworkID = "networkID"
+	FlagToolPassword  = "password"
+	FlagToolSalt      = "salt"
 
 	FlagToolOutputJSON            = "json"
 	FlagToolDescriptionOutputJSON = "format output as JSON"
+
+	FlagToolBenchmarkCount    = "count"
+	FlagToolBenchmarkSize     = "size"
+	FlagToolBenchmarkThreads  = "threads"
+	FlagToolBenchmarkDuration = "duration"
+
+	FlagToolCoordinatorFixStateCooStateFilePath = "stateFilePath"
+
+	FlagToolSnapGenMintAddress        = "mintAddress"
+	FlagToolSnapGenTreasuryAllocation = "treasuryAllocation"
 )
 
 const (
@@ -48,6 +68,21 @@ const (
 	ToolDatabaseHealth          = "db-health"
 	ToolDatabaseSplit           = "db-split"
 	ToolCoordinatorFixStateFile = "coo-fix-state"
+)
+
+const (
+	DefaultValueAPIJWTTokenSalt          = "HORNET"
+	DefaultValueMainnetDatabasePath      = "mainnetdb"
+	DefaultValueP2PDatabasePath          = "p2pstore"
+	DefaultValueCoordinatorStateFilePath = "coordinator.state"
+	DefaultValueDatabaseEngine           = database.EngineRocksDB
+)
+
+const (
+	passwordEnvKey = "HORNET_TOOL_PASSWORD"
+
+	// printStatusInterval is the interval for printing status messages
+	printStatusInterval = 2 * time.Second
 )
 
 // ShouldHandleTools checks if tools were requested.

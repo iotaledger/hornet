@@ -20,7 +20,7 @@ func databaseSplit(args []string) error {
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolDatabaseSplit,
 			FlagToolDatabasePath,
-			"mainnetdb"))
+			DefaultValueMainnetDatabasePath))
 	}
 
 	if err := parseFlagSet(fs, args); err != nil {

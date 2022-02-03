@@ -20,8 +20,8 @@ import (
 func generateP2PIdentity(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
-	privateKeyFlag := fs.String(FlagToolPrivateKey, "", "the p2p private key (optional)")
+	databasePathFlag := fs.String(FlagToolOutputPath, DefaultValueP2PDatabasePath, "the path to the output folder")
+	privateKeyFlag := fs.String(FlagToolPrivateKey, "", "the p2p private key")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
@@ -30,7 +30,7 @@ func generateP2PIdentity(args []string) error {
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
 			ToolP2PIdentityGen,
 			FlagToolDatabasePath,
-			"p2pstore",
+			DefaultValueP2PDatabasePath,
 			FlagToolPrivateKey,
 			"[PRIVATE_KEY]",
 		))

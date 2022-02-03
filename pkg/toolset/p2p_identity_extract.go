@@ -13,7 +13,7 @@ import (
 func extractP2PIdentity(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the p2p database folder (optional)")
+	databasePathFlag := fs.String(FlagToolDatabasePath, DefaultValueP2PDatabasePath, "the path to the p2p database folder")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
@@ -22,7 +22,7 @@ func extractP2PIdentity(args []string) error {
 		println(fmt.Sprintf("\nexample: %s --%s %s",
 			ToolP2PExtractIdentity,
 			FlagToolDatabasePath,
-			"p2pstore"))
+			DefaultValueP2PDatabasePath))
 	}
 
 	if err := parseFlagSet(fs, args); err != nil {

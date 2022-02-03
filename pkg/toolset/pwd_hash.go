@@ -16,11 +16,8 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
-const (
-	passwordEnvKey = "HORNET_TOOL_PASSWORD"
-)
-
 func readPasswordFromEnv() ([]byte, error) {
+
 	passwordEnv, err := utils.LoadStringFromEnvironment(passwordEnvKey)
 	if err != nil {
 		return nil, err
@@ -29,6 +26,7 @@ func readPasswordFromEnv() ([]byte, error) {
 }
 
 func readPasswordFromStdin() ([]byte, error) {
+
 	var password []byte
 
 	// get terminal state to be able to restore it in case of an interrupt
@@ -69,7 +67,7 @@ func readPasswordFromStdin() ([]byte, error) {
 func hashPasswordAndSalt(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	passwordFlag := fs.String(FlagToolPassword, "", fmt.Sprintf("password to hash (optional). Can also be passed as %s environment variable.", passwordEnvKey))
+	passwordFlag := fs.String(FlagToolPassword, "", fmt.Sprintf("password to hash. Can also be passed as %s environment variable.", passwordEnvKey))
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {

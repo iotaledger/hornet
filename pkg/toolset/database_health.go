@@ -14,7 +14,7 @@ import (
 func databaseHealth(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePathFlag := fs.String(FlagToolDatabasePath, "", "the path to the database folder that should be checked")
+	databasePathFlag := fs.String(FlagToolDatabasePath, "mainnetdb/tangle", "the path to the database folder that should be checked")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {

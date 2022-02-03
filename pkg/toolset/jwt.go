@@ -12,15 +12,11 @@ import (
 	"github.com/gohornet/hornet/pkg/p2p"
 )
 
-const (
-	FlagToolAPIJWTAuthSalt = "salt"
-)
-
 func generateJWTApiToken(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePathFlag := fs.String(FlagToolDatabasePath, "p2pstore", "the path to the p2p database folder")
-	apiJWTSaltFlag := fs.String(FlagToolAPIJWTAuthSalt, "HORNET", "salt used inside the JWT tokens for the REST API")
+	databasePathFlag := fs.String(FlagToolDatabasePath, DefaultValueP2PDatabasePath, "the path to the p2p database folder")
+	apiJWTSaltFlag := fs.String(FlagToolSalt, DefaultValueAPIJWTTokenSalt, "salt used inside the JWT tokens for the REST API")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
@@ -29,9 +25,9 @@ func generateJWTApiToken(args []string) error {
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s",
 			ToolJWTApi,
 			FlagToolDatabasePath,
-			"p2pstore",
-			FlagToolAPIJWTAuthSalt,
-			"HORNET"))
+			DefaultValueP2PDatabasePath,
+			FlagToolSalt,
+			DefaultValueAPIJWTTokenSalt))
 	}
 
 	if err := parseFlagSet(fs, args); err != nil {
@@ -42,7 +38,7 @@ func generateJWTApiToken(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolDatabasePath)
 	}
 	if len(*apiJWTSaltFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolAPIJWTAuthSalt)
+		return fmt.Errorf("'%s' not specified", FlagToolSalt)
 	}
 
 	databasePath := *databasePathFlag

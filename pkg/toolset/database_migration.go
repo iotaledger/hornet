@@ -20,7 +20,7 @@ func databaseMigration(args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
 	databasePathTargetFlag := fs.String(FlagToolDatabasePathTarget, "", "the path to the target database")
-	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, "", "the engine of the target database (values: pebble, rocksdb)")
+	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, DefaultValueDatabaseEngine, "the engine of the target database (values: pebble, rocksdb)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseMigration)
@@ -28,11 +28,11 @@ func databaseMigration(args []string) error {
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s",
 			ToolDatabaseMigration,
 			FlagToolDatabasePathSource,
-			"mainnetdb",
+			DefaultValueMainnetDatabasePath,
 			FlagToolDatabasePathTarget,
 			"mainnetdb_new",
 			FlagToolDatabaseEngineTarget,
-			"rocksdb"))
+			DefaultValueDatabaseEngine))
 	}
 
 	if err := parseFlagSet(fs, args); err != nil {
