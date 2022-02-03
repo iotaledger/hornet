@@ -16,29 +16,23 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
-const (
-	FlagToolDatabaseMigrationDatabasePathSource   = "databasePathSource"
-	FlagToolDatabaseMigrationDatabasePathTarget   = "databasePathTarget"
-	FlagToolDatabaseMigrationDatabaseEngineTarget = "databaseEngineTarget"
-)
-
 func databaseMigration(_ *configuration.Configuration, args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	databasePathSourceFlag := fs.String(FlagToolDatabaseMigrationDatabasePathSource, "", "the path to the source database")
-	databasePathTargetFlag := fs.String(FlagToolDatabaseMigrationDatabasePathTarget, "", "the path to the target database")
-	databaseEngineTargetFlag := fs.String(FlagToolDatabaseMigrationDatabaseEngineTarget, "", "the engine of the target database (values: pebble, rocksdb)")
+	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
+	databasePathTargetFlag := fs.String(FlagToolDatabasePathTarget, "", "the path to the target database")
+	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, "", "the engine of the target database (values: pebble, rocksdb)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseMigration)
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s",
 			ToolDatabaseMigration,
-			FlagToolDatabaseMigrationDatabasePathSource,
+			FlagToolDatabasePathSource,
 			"mainnetdb",
-			FlagToolDatabaseMigrationDatabasePathTarget,
+			FlagToolDatabasePathTarget,
 			"mainnetdb_new",
-			FlagToolDatabaseMigrationDatabaseEngineTarget,
+			FlagToolDatabaseEngineTarget,
 			"rocksdb"))
 	}
 
@@ -47,23 +41,23 @@ func databaseMigration(_ *configuration.Configuration, args []string) error {
 	}
 
 	if len(*databasePathSourceFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolDatabaseMigrationDatabasePathSource)
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePathSource)
 	}
 	if len(*databasePathTargetFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolDatabaseMigrationDatabasePathTarget)
+		return fmt.Errorf("'%s' not specified", FlagToolDatabasePathTarget)
 	}
 	if len(*databaseEngineTargetFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolDatabaseMigrationDatabaseEngineTarget)
+		return fmt.Errorf("'%s' not specified", FlagToolDatabaseEngineTarget)
 	}
 
 	sourcePath := *databasePathSourceFlag
 	if _, err := os.Stat(sourcePath); err != nil || os.IsNotExist(err) {
-		return fmt.Errorf("'%s' (%s) does not exist", FlagToolDatabaseMigrationDatabasePathSource, sourcePath)
+		return fmt.Errorf("'%s' (%s) does not exist", FlagToolDatabasePathSource, sourcePath)
 	}
 
 	targetPath := *databasePathTargetFlag
 	if _, err := os.Stat(targetPath); err == nil || !os.IsNotExist(err) {
-		return fmt.Errorf("'%s' (%s) already exist", FlagToolDatabaseMigrationDatabasePathTarget, targetPath)
+		return fmt.Errorf("'%s' (%s) already exist", FlagToolDatabasePathTarget, targetPath)
 	}
 
 	dbEngineTarget := strings.ToLower(*databaseEngineTargetFlag)

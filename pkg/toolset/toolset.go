@@ -13,16 +13,22 @@ import (
 )
 
 const (
-	FlagToolDatabasePath      = "databasePath"
-	FlagToolSnapshotPath      = "snapshotPath"
-	FlagToolSnapshotPathFull  = "snapshotPathFull"
-	FlagToolSnapshotPathDelta = "snapshotPathDelta"
-	FlagToolOutputJSON        = "json"
-	FlagToolPrivateKey        = "privateKey"
-	FlagToolPublicKey         = "publicKey"
-	FlagToolHRP               = "hrp"
-	FlagToolPassword          = "password"
+	FlagToolDatabasePath         = "databasePath"
+	FlagToolDatabasePathSource   = "sourceDatabasePath"
+	FlagToolDatabasePathTarget   = "targetDatabasePath"
+	FlagToolDatabaseEngineTarget = "targetDatabaseEngine"
 
+	FlagToolSnapshotPath      = "snapshotPath"
+	FlagToolSnapshotPathFull  = "fullSnapshotPath"
+	FlagToolSnapshotPathDelta = "deltaSnapshotPath"
+
+	FlagToolPrivateKey = "privateKey"
+	FlagToolPublicKey  = "publicKey"
+
+	FlagToolHRP      = "hrp"
+	FlagToolPassword = "password"
+
+	FlagToolOutputJSON            = "json"
 	FlagToolDescriptionOutputJSON = "format output as JSON"
 )
 
