@@ -705,9 +705,9 @@ func (pm *ParticipationManager) setTotalStakingParticipationForEvent(eventID Eve
 	return mutations.Set(totalParticipationStakingKeyForEvent(eventID, milestone), total.valueBytes())
 }
 
-type StakingRewardsConsumer func(address iotago.Address, rewards uint64) bool
+type StakingRewardsConsumer func(address iotago.Address, participation *TrackedParticipation, rewards uint64) bool
 
-func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, msIndex milestone.Index, consumer StakingRewardsConsumer, options ...IterateOption) error {
+func (pm *ParticipationManager) ForEachAddressStakingParticipation(eventID EventID, msIndex milestone.Index, consumer StakingRewardsConsumer, options ...IterateOption) error {
 
 	event := pm.Event(eventID)
 	if event == nil {
@@ -765,7 +765,7 @@ func (pm *ParticipationManager) ForEachStakingAddress(eventID EventID, msIndex m
 
 		i++
 
-		return consumerFunc(addr.(iotago.Address), balance)
+		return consumerFunc(addr.(iotago.Address), participation, balance)
 	}); err != nil {
 		return err
 	}

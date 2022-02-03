@@ -324,10 +324,10 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 
 	var addresses []string
 	rewardsByAddress := make(map[string]uint64)
-	if err := deps.ParticipationManager.ForEachStakingAddress(eventID, milestoneIndex, func(address iotago.Address, rewards uint64) bool {
+	if err := deps.ParticipationManager.ForEachAddressStakingParticipation(eventID, milestoneIndex, func(address iotago.Address, _ *participation.TrackedParticipation, rewards uint64) bool {
 		addr := address.String()
 		addresses = append(addresses, addr)
-		rewardsByAddress[addr] = rewards
+		rewardsByAddress[addr] += rewards
 		return true
 	}, participation.FilterRequiredMinimumRewards(true)); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)

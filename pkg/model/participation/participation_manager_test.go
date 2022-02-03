@@ -1,7 +1,6 @@
 package participation_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -1233,7 +1232,7 @@ func TestStakingRewards(t *testing.T) {
 
 	totalRewards := uint64(0)
 	addresses := make(map[string]struct{})
-	env.ParticipationManager().ForEachStakingAddress(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, rewards uint64) bool {
+	env.ParticipationManager().ForEachAddressStakingParticipation(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, _ *participation.TrackedParticipation, rewards uint64) bool {
 		totalRewards += rewards
 		addresses[address.String()] = struct{}{}
 		return true
@@ -1250,7 +1249,7 @@ func TestStakingRewards(t *testing.T) {
 	require.True(t, wallet4Found)
 
 	totalRewardsWithoutFilter := uint64(0)
-	env.ParticipationManager().ForEachStakingAddress(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, rewards uint64) bool {
+	env.ParticipationManager().ForEachAddressStakingParticipation(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, _ *participation.TrackedParticipation, rewards uint64) bool {
 		totalRewardsWithoutFilter += rewards
 		return true
 	}, participation.FilterRequiredMinimumRewards(false))
