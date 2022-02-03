@@ -2,7 +2,6 @@ package toolset
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -70,9 +69,9 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 		fmt.Printf("metadata:\n")
 	}
 
-	printSnapshotHeaderInfo("full", fullPath, mergeInfo.FullSnapshotHeader, *outputJSONFlag)
-	printSnapshotHeaderInfo("delta", deltaPath, mergeInfo.DeltaSnapshotHeader, *outputJSONFlag)
-	printSnapshotHeaderInfo("merged", targetPath, mergeInfo.MergedSnapshotHeader, *outputJSONFlag)
+	_ = printSnapshotHeaderInfo("full", fullPath, mergeInfo.FullSnapshotHeader, *outputJSONFlag)
+	_ = printSnapshotHeaderInfo("delta", deltaPath, mergeInfo.DeltaSnapshotHeader, *outputJSONFlag)
+	_ = printSnapshotHeaderInfo("merged", targetPath, mergeInfo.MergedSnapshotHeader, *outputJSONFlag)
 
 	if !*outputJSONFlag {
 		fmt.Printf("successfully created merged full snapshot '%s', took %v\n", targetPath, time.Since(ts).Truncate(time.Millisecond))
@@ -82,7 +81,7 @@ func snapshotMerge(_ *configuration.Configuration, args []string) error {
 }
 
 // prints information about the given snapshot file header.
-func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFileHeader, outputJSON bool) {
+func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFileHeader, outputJSON bool) error {
 
 	if outputJSON {
 
@@ -123,12 +122,7 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 			MilestoneDiffsCount: header.MilestoneDiffCount,
 		}
 
-		output, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-		}
-		fmt.Println(string(output))
-		return
+		return printJSON(result)
 	}
 
 	snapshotNameString := ""
@@ -163,4 +157,6 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 		header.SEPCount,
 		header.MilestoneDiffCount,
 	)
+
+	return nil
 }

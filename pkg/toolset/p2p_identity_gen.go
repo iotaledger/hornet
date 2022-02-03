@@ -3,7 +3,6 @@ package toolset
 import (
 	stded25519 "crypto/ed25519"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -128,12 +127,7 @@ func printP2PIdentity(privateKey crypto.PrivKey, publicKey crypto.PubKey, output
 	}
 
 	if outputJSON {
-		output, err := json.MarshalIndent(identity, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(output))
-		return nil
+		return printJSON(identity)
 	}
 
 	fmt.Println("Your p2p private key (hex):   ", identity.PrivateKey)

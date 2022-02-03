@@ -38,6 +38,5 @@ func snapshotInfo(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	printSnapshotHeaderInfo("", filePath, readFileHeader, *outputJSONFlag)
-	return nil
+	return printSnapshotHeaderInfo("", filePath, readFileHeader, *outputJSONFlag)
 }

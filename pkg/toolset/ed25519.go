@@ -3,7 +3,6 @@ package toolset
 import (
 	"crypto/ed25519"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -21,7 +20,7 @@ type keys struct {
 	Bech32Address  string `json:"bech32"`
 }
 
-func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp iotago.NetworkPrefix, outputJSON bool) {
+func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp iotago.NetworkPrefix, outputJSON bool) error {
 
 	addr := iotago.Ed25519AddressFromPubKey(pubKey)
 
@@ -36,12 +35,7 @@ func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp 
 	}
 
 	if outputJSON {
-		output, err := json.MarshalIndent(k, "", "  ")
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-		}
-		fmt.Println(string(output))
-		return
+		return printJSON(k)
 	}
 
 	if len(k.PrivateKey) > 0 {
@@ -50,6 +44,8 @@ func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp 
 	fmt.Println("Your ed25519 public key:  ", k.PublicKey)
 	fmt.Println("Your ed25519 address:     ", k.Ed25519Address)
 	fmt.Println("Your bech32 address:      ", k.Bech32Address)
+
+	return nil
 }
 
 func generateEd25519Key(_ *configuration.Configuration, args []string) error {
@@ -80,8 +76,7 @@ func generateEd25519Key(_ *configuration.Configuration, args []string) error {
 		return err
 	}
 
-	printEd25519Info(pubKey, privKey, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
-	return nil
+	return printEd25519Info(pubKey, privKey, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
 }
 
 func generateEd25519Address(_ *configuration.Configuration, args []string) error {
@@ -117,7 +112,5 @@ func generateEd25519Address(_ *configuration.Configuration, args []string) error
 		return fmt.Errorf("can't decode '%s': %w", FlagToolPublicKey, err)
 	}
 
-	printEd25519Info(pubKey, nil, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
-
-	return nil
+	return printEd25519Info(pubKey, nil, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
 }

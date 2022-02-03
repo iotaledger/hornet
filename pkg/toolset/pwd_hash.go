@@ -3,7 +3,6 @@ package toolset
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -126,12 +125,7 @@ func hashPasswordAndSalt(_ *configuration.Configuration, args []string) error {
 			Salt:     hex.EncodeToString(passwordSalt),
 		}
 
-		output, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-		}
-		fmt.Println(string(output))
-		return nil
+		return printJSON(result)
 	}
 
 	fmt.Printf("\nSuccess!\nYour hash: %x\nYour salt: %x\n", passwordKey, passwordSalt)

@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -169,12 +168,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			LedgerStateHashWithSEP: hex.EncodeToString(snapshotHashSumWithSEPs),
 		}
 
-		output, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-		}
-		fmt.Println(string(output))
-		return nil
+		return printJSON(result)
 	}
 
 	fmt.Printf(`    >

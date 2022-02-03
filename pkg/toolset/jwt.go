@@ -1,7 +1,6 @@
 package toolset
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -93,12 +92,7 @@ func generateJWTApiToken(nodeConfig *configuration.Configuration, args []string)
 			JWT: jwtToken,
 		}
 
-		output, err := json.MarshalIndent(result, "", "  ")
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-		}
-		fmt.Println(string(output))
-		return nil
+		return printJSON(result)
 	}
 
 	fmt.Println("Your API JWT token: ", jwtToken)

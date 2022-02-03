@@ -1,6 +1,7 @@
 package toolset
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -152,5 +153,15 @@ func parseFlagSet(fs *flag.FlagSet, args []string, minArgsCount ...int) error {
 		return errors.New("too much arguments")
 	}
 
+	return nil
+}
+
+func printJSON(obj interface{}) error {
+	output, err := json.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(output))
 	return nil
 }
