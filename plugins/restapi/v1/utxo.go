@@ -95,7 +95,7 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 		return NewOutputResponse(output, ledgerIndex)
 	}
 
-	spent, err := deps.UTXOManager.ReadSpentForOutput(output)
+	spent, err := deps.UTXOManager.ReadSpentForOutputWithoutLocking(output)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())

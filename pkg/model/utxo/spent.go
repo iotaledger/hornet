@@ -245,23 +245,10 @@ func (u *Manager) ReadSpentForOutputIDWithoutLocking(outputID *iotago.UTXOInputI
 		return nil, err
 	}
 
-	key := output.spentDatabaseKey()
-	value, err := u.utxoStorage.Get(key)
-	if err != nil {
-		return nil, err
-	}
-
-	spent := &Spent{}
-	if err := spent.kvStorableLoad(u, key, value); err != nil {
-		return nil, err
-	}
-
-	spent.output = output
-
-	return spent, nil
+	return u.ReadSpentForOutputWithoutLocking(output)
 }
 
-func (u *Manager) ReadSpentForOutput(output *Output) (*Spent, error) {
+func (u *Manager) ReadSpentForOutputWithoutLocking(output *Output) (*Spent, error) {
 
 	key := output.spentDatabaseKey()
 	value, err := u.utxoStorage.Get(key)
