@@ -238,12 +238,17 @@ func deleteSpent(spent *Spent, mutations kvstore.BatchedMutations) error {
 	return mutations.Delete(spent.kvStorableKey())
 }
 
-func (u *Manager) readSpentForOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Spent, error) {
+func (u *Manager) ReadSpentForOutputIDWithoutLocking(outputID *iotago.UTXOInputID) (*Spent, error) {
 
 	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		return nil, err
 	}
+
+	return u.ReadSpentForOutputWithoutLocking(output)
+}
+
+func (u *Manager) ReadSpentForOutputWithoutLocking(output *Output) (*Spent, error) {
 
 	key := output.spentDatabaseKey()
 	value, err := u.utxoStorage.Get(key)

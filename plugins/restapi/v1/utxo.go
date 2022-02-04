@@ -18,8 +18,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-func NewOutputResponse(output *utxo.Output, spent bool, ledgerIndex milestone.Index) (*OutputResponse, error) {
-
+func NewOutputResponse(output *utxo.Output, ledgerIndex milestone.Index) (*OutputResponse, error) {
 	var rawOutput iotago.Output
 	switch output.OutputType() {
 	case iotago.OutputSigLockedSingleOutput:
@@ -46,11 +45,22 @@ func NewOutputResponse(output *utxo.Output, spent bool, ledgerIndex milestone.In
 	return &OutputResponse{
 		MessageID:     output.MessageID().ToHex(),
 		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
-		Spent:         spent,
+		Spent:         false,
 		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+serializer.UInt16ByteSize]),
 		RawOutput:     &rawRawOutputJSON,
 		LedgerIndex:   ledgerIndex,
 	}, nil
+}
+
+func NewSpentResponse(spent *utxo.Spent, ledgerIndex milestone.Index) (*OutputResponse, error) {
+	response, err := NewOutputResponse(spent.Output(), ledgerIndex)
+	if err != nil {
+		return nil, err
+	}
+	response.Spent = true
+	response.MilestoneIndexSpent = spent.ConfirmationIndex()
+	response.TransactionIDSpent = hex.EncodeToString(spent.TargetTransactionID()[:])
+	return response, nil
 }
 
 func outputByID(c echo.Context) (*OutputResponse, error) {
@@ -76,12 +86,23 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputID.ToHex(), err)
 	}
 
-	unspent, err := deps.UTXOManager.IsOutputUnspentWithoutLocking(output)
+	isUnspent, err := deps.UTXOManager.IsOutputUnspentWithoutLocking(output)
 	if err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading spent status failed: %s, error: %s", outputID.ToHex(), err)
 	}
 
-	return NewOutputResponse(output, !unspent, ledgerIndex)
+	if isUnspent {
+		return NewOutputResponse(output, ledgerIndex)
+	}
+
+	spent, err := deps.UTXOManager.ReadSpentForOutputWithoutLocking(output)
+	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
+		}
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputID.ToHex(), err)
+	}
+	return NewSpentResponse(spent, ledgerIndex)
 }
 
 func ed25519Balance(address *iotago.Ed25519Address) (*addressBalanceResponse, error) {
