@@ -56,7 +56,7 @@ func TestSpentSerialization(t *testing.T) {
 
 	require.NoError(t, utxo.ApplyConfirmation(confirmationIndex, Outputs{output}, Spents{spent}, nil, nil))
 
-	readSpent, err := utxo.readSpentForOutputIDWithoutLocking(outputID)
+	readSpent, err := utxo.ReadSpentForOutputIDWithoutLocking(outputID)
 	require.NoError(t, err)
 
 	EqualSpent(t, spent, readSpent)
