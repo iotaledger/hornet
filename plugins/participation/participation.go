@@ -326,10 +326,12 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 	rewardsByAddress := make(map[string]uint64)
 	if err := deps.ParticipationManager.ForEachAddressStakingParticipation(eventID, milestoneIndex, func(address iotago.Address, _ *participation.TrackedParticipation, rewards uint64) bool {
 		addr := address.String()
-		addresses = append(addresses, addr)
+		if _, has := rewardsByAddress[addr]; !has {
+			addresses = append(addresses, addr)
+		}
 		rewardsByAddress[addr] += rewards
 		return true
-	}, participation.FilterRequiredMinimumRewards(true)); err != nil {
+	}); err != nil {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)
 	}
 
@@ -347,8 +349,11 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 
 	sort.Strings(addresses)
 	for _, addr := range addresses {
-		responseHash.Write([]byte(addr))
 		amount := rewardsByAddress[addr]
+		if amount < event.Staking().RequiredMinimumRewards {
+			continue
+		}
+		responseHash.Write([]byte(addr))
 		binary.Write(responseHash, binary.LittleEndian, amount)
 		response.Rewards[addr] = amount
 		response.TotalRewards += amount

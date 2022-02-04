@@ -262,92 +262,35 @@ func (pm *ParticipationManager) ParticipationForOutputID(eventID EventID, output
 	return TrackedParticipationFromBytes(key, value)
 }
 
-type IterateOptions struct {
-	maxResultCount       int
-	filterMinimumRewards bool
-}
-
-type IterateOption func(*IterateOptions)
-
-func MaxResultCount(count int) IterateOption {
-	return func(args *IterateOptions) {
-		args.maxResultCount = count
-	}
-}
-
-func FilterRequiredMinimumRewards(filter bool) IterateOption {
-	return func(args *IterateOptions) {
-		args.filterMinimumRewards = filter
-	}
-}
-
-func iterateOptions(optionalOptions []IterateOption) *IterateOptions {
-	result := &IterateOptions{
-		maxResultCount:       0,
-		filterMinimumRewards: false,
-	}
-
-	for _, optionalOption := range optionalOptions {
-		optionalOption(result)
-	}
-	return result
-}
-
 type TrackedParticipationConsumer func(trackedParticipation *TrackedParticipation) bool
 
-func (pm *ParticipationManager) ForEachActiveParticipation(eventID EventID, consumer TrackedParticipationConsumer, options ...IterateOption) error {
-	opt := iterateOptions(options)
-	consumerFunc := consumer
-
+func (pm *ParticipationManager) ForEachActiveParticipation(eventID EventID, consumer TrackedParticipationConsumer) error {
 	var innerErr error
-	var i int
 	if err := pm.participationStore.Iterate(participationKeyForEventOutputsPrefix(eventID), func(key kvstore.Key, value kvstore.Value) bool {
-
-		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
-			return false
-		}
-
-		i++
-
 		participation, err := TrackedParticipationFromBytes(key, value)
 		if err != nil {
 			innerErr = err
 			return false
 		}
-
-		return consumerFunc(participation)
+		return consumer(participation)
 	}); err != nil {
 		return err
 	}
-
 	return innerErr
 }
 
-func (pm *ParticipationManager) ForEachPastParticipation(eventID EventID, consumer TrackedParticipationConsumer, options ...IterateOption) error {
-	opt := iterateOptions(options)
-	consumerFunc := consumer
-
+func (pm *ParticipationManager) ForEachPastParticipation(eventID EventID, consumer TrackedParticipationConsumer) error {
 	var innerErr error
-	var i int
 	if err := pm.participationStore.Iterate(participationKeyForEventSpentOutputsPrefix(eventID), func(key kvstore.Key, value kvstore.Value) bool {
-
-		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
-			return false
-		}
-
-		i++
-
 		participation, err := TrackedParticipationFromBytes(key, value)
 		if err != nil {
 			innerErr = err
 			return false
 		}
-
-		return consumerFunc(participation)
+		return consumer(participation)
 	}); err != nil {
 		return err
 	}
-
 	return innerErr
 }
 
@@ -586,8 +529,8 @@ func (pm *ParticipationManager) rewardsForTrackedParticipation(trackedParticipat
 	var milestonesToCount uint64
 	var milestonesToSubtract uint64
 
-	if trackedParticipation.EndIndex == 0 {
-		// Participation has not ended yet or is ending in the current milestone, so count including the current milestone
+	if trackedParticipation.EndIndex == 0 || atIndex < trackedParticipation.EndIndex {
+		// Participation has not ended yet or we are asking for the past of an ended participation, so count including the atIndex milestone
 		milestonesToCount = uint64(atIndex + 1 - trackedParticipation.StartIndex)
 	} else {
 		// Participation ended
@@ -707,8 +650,7 @@ func (pm *ParticipationManager) setTotalStakingParticipationForEvent(eventID Eve
 
 type StakingRewardsConsumer func(address iotago.Address, participation *TrackedParticipation, rewards uint64) bool
 
-func (pm *ParticipationManager) ForEachAddressStakingParticipation(eventID EventID, msIndex milestone.Index, consumer StakingRewardsConsumer, options ...IterateOption) error {
-
+func (pm *ParticipationManager) ForEachAddressStakingParticipation(eventID EventID, msIndex milestone.Index, consumer StakingRewardsConsumer) error {
 	event := pm.Event(eventID)
 	if event == nil {
 		return nil
@@ -719,18 +661,10 @@ func (pm *ParticipationManager) ForEachAddressStakingParticipation(eventID Event
 		return nil
 	}
 
-	opt := iterateOptions(options)
-	consumerFunc := consumer
-
 	var innerErr error
-	var i int
 	prefix := participationKeyForEventPrefix(eventID)
 	prefixLen := len(prefix)
 	if err := pm.participationStore.IterateKeys(prefix, func(key kvstore.Key) bool {
-
-		if (opt.maxResultCount > 0) && (i >= opt.maxResultCount) {
-			return false
-		}
 
 		addressBytes := key[prefixLen:]
 		addr, err := iotago.AddressSelector(uint32(addressBytes[0]))
@@ -759,13 +693,7 @@ func (pm *ParticipationManager) ForEachAddressStakingParticipation(eventID Event
 			return false
 		}
 
-		if opt.filterMinimumRewards && balance < staking.RequiredMinimumRewards {
-			return true
-		}
-
-		i++
-
-		return consumerFunc(addr.(iotago.Address), participation, balance)
+		return consumer(addr.(iotago.Address), participation, balance)
 	}); err != nil {
 		return err
 	}

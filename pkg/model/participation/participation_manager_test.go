@@ -1231,12 +1231,20 @@ func TestStakingRewards(t *testing.T) {
 	env.AssertStakingRewardsStatus(eventID, 12, 5_000_000+1_587_529+5_589_977, 6_250_000+1_984_410+6_987_470+75_000_000)
 
 	totalRewards := uint64(0)
-	addresses := make(map[string]struct{})
+	addresses := make(map[string]uint64)
 	env.ParticipationManager().ForEachAddressStakingParticipation(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, _ *participation.TrackedParticipation, rewards uint64) bool {
 		totalRewards += rewards
-		addresses[address.String()] = struct{}{}
+		addresses[address.String()] += rewards
 		return true
-	}, participation.FilterRequiredMinimumRewards(true))
+	})
+
+	// Filter out minimum rewards
+	for addr, amount := range addresses {
+		if amount < event.Staking().RequiredMinimumRewards {
+			totalRewards -= amount
+			delete(addresses, addr)
+		}
+	}
 
 	require.Exactly(t, totalRewards, uint64(6_250_000+6_987_470+75_000_000))
 	_, wallet1Found := addresses[env.Wallet1.Address().String()]
@@ -1252,9 +1260,8 @@ func TestStakingRewards(t *testing.T) {
 	env.ParticipationManager().ForEachAddressStakingParticipation(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, _ *participation.TrackedParticipation, rewards uint64) bool {
 		totalRewardsWithoutFilter += rewards
 		return true
-	}, participation.FilterRequiredMinimumRewards(false))
+	})
 	require.Exactly(t, totalRewardsWithoutFilter, uint64(6_250_000+1_984_410+6_987_470+75_000_000))
-
 }
 
 func TestStakingRewardsCalculatedAfterEventEnded(t *testing.T) {
