@@ -92,17 +92,10 @@ func outputByID(c echo.Context) (*OutputResponse, error) {
 	}
 
 	if isUnspent {
-		output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(outputID)
-		if err != nil {
-			if errors.Is(err, kvstore.ErrKeyNotFound) {
-				return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
-			}
-			return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading output failed: %s, error: %s", outputID.ToHex(), err)
-		}
 		return NewOutputResponse(output, ledgerIndex)
 	}
 
-	spent, err := deps.UTXOManager.ReadSpentForOutputIDWithoutLocking(outputID)
+	spent, err := deps.UTXOManager.ReadSpentForOutput(output)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())

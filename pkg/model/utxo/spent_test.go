@@ -61,7 +61,7 @@ func TestSpentSerialization(t *testing.T) {
 
 	EqualSpent(t, spent, readSpent)
 
-	unspent, err := utxo.IsOutputUnspent(outputID)
+	unspent, err := utxo.IsOutputIDUnspentWithoutLocking(outputID)
 	require.NoError(t, err)
 	require.False(t, unspent)
 }

@@ -47,20 +47,17 @@ func deleteFromUnspent(output *Output, mutations kvstore.BatchedMutations) error
 	return mutations.Delete(output.unspentDatabaseKey())
 }
 
-func (u *Manager) IsOutputUnspentWithoutLocking(output *Output) (bool, error) {
-	return u.utxoStorage.Has(output.unspentDatabaseKey())
-}
-
-func (u *Manager) IsOutputUnspent(outputID *iotago.UTXOInputID) (bool, error) {
-	u.ReadLockLedger()
-	defer u.ReadUnlockLedger()
-
+func (u *Manager) IsOutputIDUnspentWithoutLocking(outputID *iotago.UTXOInputID) (bool, error) {
 	output, err := u.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		return false, err
 	}
 
 	return u.IsOutputUnspentWithoutLocking(output)
+}
+
+func (u *Manager) IsOutputUnspentWithoutLocking(output *Output) (bool, error) {
+	return u.utxoStorage.Has(output.unspentDatabaseKey())
 }
 
 func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
