@@ -239,27 +239,47 @@ func getRewardsByBech32Address(c echo.Context) (*AddressRewardsResponse, error) 
 		return nil, err
 	}
 
+	milestoneIndex, err := parseMilestoneIndexQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if milestoneIndex == 0 {
+		milestoneIndex = deps.SyncManager.ConfirmedMilestoneIndex()
+	}
+
 	switch address := bech32Address.(type) {
 	case *iotago.Ed25519Address:
-		return ed25519Rewards(address)
+		return ed25519Rewards(address, milestoneIndex)
 	default:
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", bech32Address.String())
 	}
 }
 
 func getRewardsByEd25519Address(c echo.Context) (*AddressRewardsResponse, error) {
+
+	milestoneIndex, err := parseMilestoneIndexQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if milestoneIndex == 0 {
+		milestoneIndex = deps.SyncManager.ConfirmedMilestoneIndex()
+	}
+
 	address, err := restapi.ParseEd25519AddressParam(c)
 	if err != nil {
 		return nil, err
 	}
-	return ed25519Rewards(address)
+	return ed25519Rewards(address, milestoneIndex)
 }
 
-func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, error) {
+func ed25519Rewards(address *iotago.Ed25519Address, msIndex milestone.Index) (*AddressRewardsResponse, error) {
 	eventIDs := deps.ParticipationManager.EventIDs(participation.StakingPayloadTypeID)
 
 	response := &AddressRewardsResponse{
-		Rewards: make(map[string]*AddressReward),
+		Rewards:        make(map[string]*AddressReward),
+		MilestoneIndex: msIndex,
 	}
 
 	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
@@ -278,7 +298,7 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 			return nil, errors.WithMessage(echo.ErrInternalServerError, "staking payload not found")
 		}
 
-		amount, err := deps.ParticipationManager.StakingRewardForAddress(eventID, address)
+		amount, err := deps.ParticipationManager.StakingRewardForAddress(eventID, address, msIndex)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)
 		}

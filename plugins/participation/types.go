@@ -46,6 +46,8 @@ type AddressReward struct {
 type AddressRewardsResponse struct {
 	// Rewards is a map of rewards per event.
 	Rewards map[string]*AddressReward `json:"rewards"`
+	// MilestoneIndex is the milestone index the rewards were calculated for.
+	MilestoneIndex milestone.Index `json:"milestoneIndex"`
 }
 
 // AddressOutputsResponse defines the response of a GET RouteAddressBech32Outputs or RouteAddressEd25519Outputs REST API call.

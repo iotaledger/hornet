@@ -553,15 +553,14 @@ func (pm *ParticipationManager) rewardsForTrackedParticipation(trackedParticipat
 	return rewardsForParticipation, nil
 }
 
-func (pm *ParticipationManager) StakingRewardForAddress(eventID EventID, address iotago.Address) (uint64, error) {
+func (pm *ParticipationManager) StakingRewardForAddress(eventID EventID, address iotago.Address, msIndex milestone.Index) (uint64, error) {
 	var rewards uint64
-	confirmedMilestoneIndex := pm.syncManager.ConfirmedMilestoneIndex()
 	trackedParticipations, err := pm.ParticipationsForAddress(eventID, address)
 	if err != nil {
 		return 0, err
 	}
 	for _, trackedParticipation := range trackedParticipations {
-		amount, err := pm.rewardsForTrackedParticipation(trackedParticipation, confirmedMilestoneIndex)
+		amount, err := pm.rewardsForTrackedParticipation(trackedParticipation, msIndex)
 		if err != nil {
 			return 0, err
 		}

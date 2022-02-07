@@ -361,7 +361,7 @@ func (env *ParticipationTestEnv) AssertInvalidParticipation(eventID participatio
 }
 
 func (env *ParticipationTestEnv) AssertRewardBalance(eventID participation.EventID, address iotago.Address, balance uint64) {
-	rewards, err := env.ParticipationManager().StakingRewardForAddress(eventID, address)
+	rewards, err := env.ParticipationManager().StakingRewardForAddress(eventID, address, env.ConfirmedMilestoneIndex())
 	require.NoError(env.t, err)
 	require.Exactly(env.t, balance, rewards)
 }
