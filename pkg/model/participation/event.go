@@ -378,8 +378,12 @@ func (e *Event) StakingCanOverflow() bool {
 	}
 
 	// Check if total-supply * numerator/denominator * number of milestones can overflow uint64
-	maxRewardPerMilestone := uint64(iotago.TokenSupply) * uint64(staking.Numerator) / uint64(staking.Denominator)
+	maxRewardPerMilestone := staking.rewardsPerMilestone(iotago.TokenSupply)
 	maxNumberOfMilestones := math.MaxUint64 / maxRewardPerMilestone
 
 	return uint64(e.MilestoneIndexEnd-e.MilestoneIndexStart) > maxNumberOfMilestones
+}
+
+func (s *Staking) rewardsPerMilestone(amount uint64) uint64 {
+	return amount * uint64(s.Numerator) / uint64(s.Denominator)
 }

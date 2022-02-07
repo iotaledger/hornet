@@ -19,4 +19,5 @@ const (
 	// Staking
 	//ParticipationStoreKeyPrefixStakingAddress            byte = 6
 	ParticipationStoreKeyPrefixStakingTotalParticipation byte = 7
+	ParticipationStoreKeyPrefixStakingCurrentRewards     byte = 9
 )

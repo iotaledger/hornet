@@ -403,19 +403,25 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 
 		event, ok := events[participation.EventID]
 		if !ok {
+			mutations.Cancel()
 			return nil
 		}
 
-		switch event.payloadType() {
-		case BallotPayloadTypeID:
+		switch payload := event.Payload.(type) {
+		case *Ballot:
 			// Count the new ballot votes by increasing the current vote balance
 			if err := pm.startCountingBallotAnswers(event, participation, index, depositOutput.Amount(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
-		case StakingPayloadTypeID:
+		case *Staking:
 			// Increase the staked amount
 			if err := pm.increaseStakedAmountForStakingEvent(participation.EventID, index, depositOutput.Amount(), mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
+			// Increase the staking rewards
+			if err := pm.increaseCurrentRewardsPerMilestoneForStakingEvent(participation.EventID, index, payload.rewardsPerMilestone(depositOutput.Amount()), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
@@ -495,19 +501,25 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 
 		event, ok := events[participation.EventID]
 		if !ok {
+			mutations.Cancel()
 			return nil
 		}
 
-		switch event.payloadType() {
-		case BallotPayloadTypeID:
+		switch payload := event.Payload.(type) {
+		case *Ballot:
 			// Count the spent votes by decreasing the current vote balance
 			if err := pm.stopCountingBallotAnswers(event, participation, index, spent.Output().Amount(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
-		case StakingPayloadTypeID:
+		case *Staking:
 			// Decrease the staked amount
 			if err := pm.decreaseStakedAmountForStakingEvent(participation.EventID, index, spent.Output().Amount(), mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
+			// Decrease the staking rewards
+			if err := pm.decreaseCurrentRewardsPerMilestoneForStakingEvent(participation.EventID, index, payload.rewardsPerMilestone(spent.Output().Amount()), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
@@ -598,6 +610,20 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 		staking := event.Staking()
 		if staking != nil {
 
+			currentRewardsPerMilestone, err := pm.currentRewardsPerMilestoneForStakingEvent(eventID, index)
+			if err != nil {
+				mutations.Cancel()
+				return err
+			}
+
+			if event.EndMilestoneIndex() > index {
+				// Event not ended yet, so copy the current rewards for the next milestone already
+				if err := pm.setCurrentRewardsPerMilestoneForStakingEvent(eventID, index+1, currentRewardsPerMilestone, mutations); err != nil {
+					mutations.Cancel()
+					return err
+				}
+			}
+
 			total, err := pm.totalStakingParticipationForEvent(eventID, index)
 			if err != nil {
 				mutations.Cancel()
@@ -605,9 +631,7 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 			}
 
 			if shouldCountParticipation {
-				// TODO: this approach will yield just an estimated rewards
-				increaseAmount := total.staked * uint64(staking.Numerator) / uint64(staking.Denominator)
-				total.rewarded += increaseAmount
+				total.rewarded += currentRewardsPerMilestone
 			}
 
 			if err := pm.setTotalStakingParticipationForEvent(eventID, index, total, mutations); err != nil {

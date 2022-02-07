@@ -20,6 +20,7 @@ var (
 	ErrInvalidPreviouslyTrackedParticipation = errors.New("a previously tracked participation changed and is now invalid")
 	ErrInvalidCurrentBallotVoteBalance       = errors.New("current ballot vote balance invalid")
 	ErrInvalidCurrentStakedAmount            = errors.New("current staked amount invalid")
+	ErrInvalidCurrentRewardsAmount           = errors.New("current rewards amount invalid")
 )
 
 // Events
@@ -547,7 +548,7 @@ func (pm *ParticipationManager) rewardsForTrackedParticipation(trackedParticipat
 		milestonesToSubtract = uint64(eventMilestoneCountingStart - trackedParticipation.StartIndex)
 	}
 
-	rewardsPerMilestone := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
+	rewardsPerMilestone := staking.rewardsPerMilestone(trackedParticipation.Amount)
 	rewardsForParticipation := rewardsPerMilestone * (milestonesToCount - milestonesToSubtract)
 	return rewardsForParticipation, nil
 }
@@ -567,6 +568,20 @@ func (pm *ParticipationManager) StakingRewardForAddress(eventID EventID, address
 		rewards += amount
 	}
 	return rewards, nil
+}
+
+func currentRewardsKeyForEventPrefix(eventID EventID) []byte {
+	m := marshalutil.New(33)
+	m.WriteByte(ParticipationStoreKeyPrefixStakingCurrentRewards) // 1 byte
+	m.WriteBytes(eventID[:])                                      // 32 bytes
+	return m.Bytes()
+}
+
+func currentRewardsPerMilestoneKeyForEvent(eventID EventID, milestone milestone.Index) []byte {
+	m := marshalutil.New(37)
+	m.WriteBytes(currentRewardsKeyForEventPrefix(eventID)) // 33 bytes
+	m.WriteUint32(uint32(milestone))                       // 4 bytes
+	return m.Bytes()
 }
 
 func totalParticipationStakingKeyForEventPrefix(eventID EventID) []byte {
@@ -610,6 +625,45 @@ func (t *totalStakingParticipation) valueBytes() []byte {
 	m.WriteUint64(t.staked)   // 8 bytes
 	m.WriteUint64(t.rewarded) // 8 bytes
 	return m.Bytes()
+}
+
+func (pm *ParticipationManager) currentRewardsPerMilestoneForStakingEvent(eventID EventID, milestone milestone.Index) (uint64, error) {
+	value, err := pm.participationStore.Get(currentRewardsPerMilestoneKeyForEvent(eventID, milestone))
+	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	m := marshalutil.New(value)
+	return m.ReadUint64()
+}
+
+func (pm *ParticipationManager) increaseCurrentRewardsPerMilestoneForStakingEvent(eventID EventID, milestone milestone.Index, rewards uint64, mutations kvstore.BatchedMutations) error {
+	current, err := pm.currentRewardsPerMilestoneForStakingEvent(eventID, milestone)
+	if err != nil {
+		return err
+	}
+	current += rewards
+	return pm.setCurrentRewardsPerMilestoneForStakingEvent(eventID, milestone, current, mutations)
+}
+
+func (pm *ParticipationManager) decreaseCurrentRewardsPerMilestoneForStakingEvent(eventID EventID, milestone milestone.Index, rewards uint64, mutations kvstore.BatchedMutations) error {
+	current, err := pm.currentRewardsPerMilestoneForStakingEvent(eventID, milestone)
+	if err != nil {
+		return err
+	}
+	if current < rewards {
+		return ErrInvalidCurrentRewardsAmount
+	}
+	current -= rewards
+	return pm.setCurrentRewardsPerMilestoneForStakingEvent(eventID, milestone, current, mutations)
+}
+
+func (pm *ParticipationManager) setCurrentRewardsPerMilestoneForStakingEvent(eventID EventID, milestone milestone.Index, rewards uint64, mutations kvstore.BatchedMutations) error {
+	m := marshalutil.New(8)
+	m.WriteUint64(rewards)
+	return mutations.Set(currentRewardsPerMilestoneKeyForEvent(eventID, milestone), m.Bytes())
 }
 
 func (pm *ParticipationManager) totalStakingParticipationForEvent(eventID EventID, milestone milestone.Index) (*totalStakingParticipation, error) {
@@ -720,6 +774,9 @@ func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {
 		return err
 	}
 	if err := pm.participationStore.DeletePrefix(totalParticipationStakingKeyForEventPrefix(eventID)); err != nil {
+		return err
+	}
+	if err := pm.participationStore.DeletePrefix(currentRewardsKeyForEventPrefix(eventID)); err != nil {
 		return err
 	}
 	if err := pm.participationStore.DeletePrefix(messageKeyForEventPrefix(eventID)); err != nil {
