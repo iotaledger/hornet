@@ -650,7 +650,7 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 
 		// End all participation if event is ending this milestone
 		if event.EndMilestoneIndex() == index {
-			if err := pm.endAllParticipationsAtMilestone(eventID, index, mutations); err != nil {
+			if err := pm.endAllParticipationsAtMilestone(eventID, index+1, mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}

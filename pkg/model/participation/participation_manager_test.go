@@ -354,7 +354,7 @@ func TestSingleBallotVote(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, castVote.Message().StoredMessageID(), trackedVote.MessageID)
 	require.Equal(t, milestone.Index(6), trackedVote.StartIndex)
-	require.Equal(t, milestone.Index(10), trackedVote.EndIndex)
+	require.Equal(t, milestone.Index(11), trackedVote.EndIndex)
 
 	var messageFromParticipationStore *storage.Message
 	messageFromParticipationStore, err = env.ParticipationManager().MessageForEventAndMessageID(eventID, trackedVote.MessageID)
@@ -521,7 +521,7 @@ func TestBallotVoteCancel(t *testing.T) {
 	// Verify the vote history after the participation ended
 	env.AssertTrackedParticipation(eventID, castVote1, 6, 7, 1_000_000)
 	env.AssertTrackedParticipation(eventID, castVote2, 8, 9, 1_000_000)
-	env.AssertTrackedParticipation(eventID, castVote3, 11, 12, 1_000_000)
+	env.AssertTrackedParticipation(eventID, castVote3, 11, 13, 1_000_000)
 }
 
 func TestBallotAddVoteBalanceBySweeping(t *testing.T) {
@@ -709,9 +709,9 @@ func TestMultipleBallotVotes(t *testing.T) {
 	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 200_000, 1000_000, 0, 20)
 
 	// Verify all votes
-	env.AssertTrackedParticipation(eventID, wallet1Vote, 8, 12, 5_000_000)
-	env.AssertTrackedParticipation(eventID, wallet2Vote, 8, 12, 150_000_000)
-	env.AssertTrackedParticipation(eventID, wallet3Vote, 8, 12, 200_000_000)
+	env.AssertTrackedParticipation(eventID, wallet1Vote, 8, 13, 5_000_000)
+	env.AssertTrackedParticipation(eventID, wallet2Vote, 8, 13, 150_000_000)
+	env.AssertTrackedParticipation(eventID, wallet3Vote, 8, 13, 200_000_000)
 }
 
 func TestChangeOpinionMidVote(t *testing.T) {
@@ -936,12 +936,12 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID1, wallet1Vote1, 6, 11, 5_000_000) // Voted 1
 	env.AssertInvalidParticipation(eventID2, wallet1Vote1)
-	env.AssertTrackedParticipation(eventID1, wallet1Vote2, 11, 12, 5_000_000)   // Voted 1
-	env.AssertTrackedParticipation(eventID2, wallet1Vote2, 11, 14, 5_000_000)   // Voted 2
-	env.AssertTrackedParticipation(eventID1, wallet2Vote1, 6, 12, 150_000_000)  // Voted 1
-	env.AssertTrackedParticipation(eventID2, wallet3Vote1, 8, 14, 200_000_000)  // Voted 2
-	env.AssertTrackedParticipation(eventID1, wallet4Vote1, 12, 12, 300_000_000) // Voted 0
-	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 14, 300_000_000) // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet1Vote2, 11, 13, 5_000_000)   // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet1Vote2, 11, 15, 5_000_000)   // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet2Vote1, 6, 13, 150_000_000)  // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet3Vote1, 8, 15, 200_000_000)  // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet4Vote1, 12, 13, 300_000_000) // Voted 0
+	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 15, 300_000_000) // Voted 2
 
 	// Verify end results
 	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 300_000, 300_000, 0, 0)
@@ -1070,12 +1070,12 @@ func TestMultipleConcurrentEventsWithBallotCalculatedAfterEventEnded(t *testing.
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID1, wallet1Vote1, 6, 11, 5_000_000) // Voted 1
 	env.AssertInvalidParticipation(eventID2, wallet1Vote1)
-	env.AssertTrackedParticipation(eventID1, wallet1Vote2, 11, 12, 5_000_000)   // Voted 1
-	env.AssertTrackedParticipation(eventID2, wallet1Vote2, 11, 14, 5_000_000)   // Voted 2
-	env.AssertTrackedParticipation(eventID1, wallet2Vote1, 6, 12, 150_000_000)  // Voted 1
-	env.AssertTrackedParticipation(eventID2, wallet3Vote1, 8, 14, 200_000_000)  // Voted 2
-	env.AssertTrackedParticipation(eventID1, wallet4Vote1, 12, 12, 300_000_000) // Voted 0
-	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 14, 300_000_000) // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet1Vote2, 11, 13, 5_000_000)   // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet1Vote2, 11, 15, 5_000_000)   // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet2Vote1, 6, 13, 150_000_000)  // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet3Vote1, 8, 15, 200_000_000)  // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet4Vote1, 12, 13, 300_000_000) // Voted 0
+	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 15, 300_000_000) // Voted 2
 
 	// Verify end results
 	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 300_000, 300_000, 0, 0)

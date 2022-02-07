@@ -536,11 +536,6 @@ func (pm *ParticipationManager) rewardsForTrackedParticipation(trackedParticipat
 	} else {
 		// Participation ended
 		milestonesToCount = uint64(trackedParticipation.EndIndex - trackedParticipation.StartIndex)
-
-		if trackedParticipation.EndIndex == event.EndMilestoneIndex() {
-			// We need to count the last index of the event
-			milestonesToCount++
-		}
 	}
 
 	if trackedParticipation.StartIndex < eventMilestoneCountingStart {
