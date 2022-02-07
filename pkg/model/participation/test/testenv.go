@@ -365,3 +365,7 @@ func (env *ParticipationTestEnv) AssertRewardBalance(eventID participation.Event
 	require.NoError(env.t, err)
 	require.Exactly(env.t, balance, rewards)
 }
+
+func (env *ParticipationTestEnv) AssertWalletBalance(wallet *utils.HDWallet, expectedBalance uint64) {
+	env.te.AssertWalletBalance(wallet, expectedBalance)
+}
