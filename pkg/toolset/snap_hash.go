@@ -44,7 +44,7 @@ func snapshotHash(args []string) error {
 	fullPath := *fullSnapshotPathFlag
 	deltaPath := *deltaSnapshotPathFlag
 
-	targetEngine, err := database.DatabaseEngine(database.EnginePebble)
+	targetEngine, err := database.DatabaseEngine(string(database.EnginePebble))
 	if err != nil {
 		return err
 	}

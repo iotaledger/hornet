@@ -66,34 +66,32 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo               *app.AppInfo
-	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
-	SyncManager           *syncmanager.SyncManager
-	ServerMetrics         *metrics.ServerMetrics
-	Storage               *storage.Storage
-	StorageMetrics        *metrics.StorageMetrics
-	TangleDatabase        *database.Database       `name:"tangleDatabase"`
-	TangleDatabaseMetrics *metrics.DatabaseMetrics `name:"tangleDatabaseMetrics"`
-	UTXODatabase          *database.Database       `name:"utxoDatabase"`
-	UTXODatabaseMetrics   *metrics.DatabaseMetrics `name:"utxoDatabaseMetrics"`
-	RestAPIMetrics        *metrics.RestAPIMetrics  `optional:"true"`
-	GossipService         *gossip.Service
-	ReceiptService        *migrator.ReceiptService `optional:"true"`
-	Tangle                *tangle.Tangle
-	MigratorService       *migrator.MigratorService `optional:"true"`
-	PeeringManager        *p2p.Manager
-	RequestQueue          gossip.RequestQueue
-	MessageProcessor      *gossip.MessageProcessor
-	TipSelector           *tipselect.TipSelector `optional:"true"`
-	SnapshotManager       *snapshot.SnapshotManager
-	Coordinator           *coordinator.Coordinator `optional:"true"`
-	MQTTBroker            *mqtt.Broker             `optional:"true"`
+	AppInfo          *app.AppInfo
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	SyncManager      *syncmanager.SyncManager
+	ServerMetrics    *metrics.ServerMetrics
+	Storage          *storage.Storage
+	StorageMetrics   *metrics.StorageMetrics
+	TangleDatabase   *database.Database      `name:"tangleDatabase"`
+	UTXODatabase     *database.Database      `name:"utxoDatabase"`
+	RestAPIMetrics   *metrics.RestAPIMetrics `optional:"true"`
+	GossipService    *gossip.Service
+	ReceiptService   *migrator.ReceiptService `optional:"true"`
+	Tangle           *tangle.Tangle
+	MigratorService  *migrator.MigratorService `optional:"true"`
+	PeeringManager   *p2p.Manager
+	RequestQueue     gossip.RequestQueue
+	MessageProcessor *gossip.MessageProcessor
+	TipSelector      *tipselect.TipSelector `optional:"true"`
+	SnapshotManager  *snapshot.SnapshotManager
+	Coordinator      *coordinator.Coordinator `optional:"true"`
+	MQTTBroker       *mqtt.Broker             `optional:"true"`
 }
 
 func configure() {
 	if deps.NodeConfig.Bool(CfgPrometheusDatabase) {
-		configureDatabase(coreDatabase.TangleDatabaseDirectoryName, deps.TangleDatabase, deps.TangleDatabaseMetrics)
-		configureDatabase(coreDatabase.UTXODatabaseDirectoryName, deps.UTXODatabase, deps.UTXODatabaseMetrics)
+		configureDatabase(coreDatabase.TangleDatabaseDirectoryName, deps.TangleDatabase)
+		configureDatabase(coreDatabase.UTXODatabaseDirectoryName, deps.UTXODatabase)
 		configureStorage(deps.Storage, deps.StorageMetrics)
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusNode) {

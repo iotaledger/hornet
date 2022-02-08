@@ -635,7 +635,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 // applying the delta diffs onto it and then writing out the merged state.
 func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName string, deSeriParas *iotago.DeSerializationParameters) (*MergeInfo, error) {
 
-	targetEngine, err := database.DatabaseEngine(database.EnginePebble)
+	targetEngine, err := database.DatabaseEngine(string(database.EnginePebble))
 	if err != nil {
 		return nil, err
 	}

@@ -71,11 +71,11 @@ func (m *storageMetrics) collect() {
 	}
 }
 
-func configureDatabase(name string, db *database.Database, metrics *metrics.DatabaseMetrics) {
+func configureDatabase(name string, db *database.Database) {
 
 	m := &databaseMetrics{
 		database:        db,
-		databaseMetrics: metrics,
+		databaseMetrics: db.Metrics(),
 	}
 
 	m.databaseSizeBytes = prometheus.NewGauge(
