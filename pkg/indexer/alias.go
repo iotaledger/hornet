@@ -7,14 +7,14 @@ import (
 )
 
 type alias struct {
-	AliasID         aliasIDBytes  `gorm:"primaryKey;notnull"`
-	OutputID        outputIDBytes `gorm:"unique;notnull"`
-	Amount          uint64        `gorm:"notnull"`
-	StateController addressBytes  `gorm:"notnull;index:alias_state_controller"`
-	Governor        addressBytes  `gorm:"notnull;index:alias_governor"`
-	Issuer          addressBytes  `gorm:"index:alias_issuer"`
-	Sender          addressBytes  `gorm:"index:alias_sender"`
-	CreatedAt       time.Time     `gorm:"notnull"`
+	AliasID          aliasIDBytes  `gorm:"primaryKey;notnull"`
+	OutputID         outputIDBytes `gorm:"unique;notnull"`
+	NativeTokenCount int           `gorm:"notnull"`
+	StateController  addressBytes  `gorm:"notnull;index:alias_state_controller"`
+	Governor         addressBytes  `gorm:"notnull;index:alias_governor"`
+	Issuer           addressBytes  `gorm:"index:alias_issuer"`
+	Sender           addressBytes  `gorm:"index:alias_sender"`
+	CreatedAt        time.Time     `gorm:"notnull"`
 }
 
 type AliasFilterOptions struct {

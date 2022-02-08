@@ -9,7 +9,7 @@ import (
 
 type basicOutput struct {
 	OutputID                outputIDBytes `gorm:"primaryKey;notnull"`
-	Amount                  uint64        `gorm:"notnull"`
+	NativeTokenCount        int           `gorm:"notnull"`
 	Sender                  addressBytes  `gorm:"index:basic_outputs_sender_tag"`
 	Tag                     []byte        `gorm:"index:basic_outputs_sender_tag"`
 	Address                 addressBytes  `gorm:"notnull;index:basic_outputs_address"`

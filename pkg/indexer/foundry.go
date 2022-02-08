@@ -7,11 +7,11 @@ import (
 )
 
 type foundry struct {
-	FoundryID foundryIDBytes `gorm:"primaryKey;notnull"`
-	OutputID  outputIDBytes  `gorm:"unique;notnull"`
-	Amount    uint64         `gorm:"notnull"`
-	Address   addressBytes   `gorm:"notnull;index:foundries_address"`
-	CreatedAt time.Time      `gorm:"notnull"`
+	FoundryID        foundryIDBytes `gorm:"primaryKey;notnull"`
+	OutputID         outputIDBytes  `gorm:"unique;notnull"`
+	NativeTokenCount int            `gorm:"notnull"`
+	Address          addressBytes   `gorm:"notnull;index:foundries_address"`
+	CreatedAt        time.Time      `gorm:"notnull"`
 }
 
 type FoundryFilterOptions struct {

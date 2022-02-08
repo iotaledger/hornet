@@ -80,9 +80,9 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		basic := &basicOutput{
-			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
-			Amount:    iotaOutput.Amount,
-			CreatedAt: unixTime(output.MilestoneTimestamp()),
+			OutputID:         make(outputIDBytes, iotago.OutputIDLength),
+			NativeTokenCount: len(iotaOutput.NativeTokens),
+			CreatedAt:        unixTime(output.MilestoneTimestamp()),
 		}
 		copy(basic.OutputID, output.OutputID()[:])
 
@@ -161,10 +161,10 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		alias := &alias{
-			AliasID:   make(aliasIDBytes, iotago.AliasIDLength),
-			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
-			Amount:    iotaOutput.Amount,
-			CreatedAt: unixTime(output.MilestoneTimestamp()),
+			AliasID:          make(aliasIDBytes, iotago.AliasIDLength),
+			OutputID:         make(outputIDBytes, iotago.OutputIDLength),
+			NativeTokenCount: len(iotaOutput.NativeTokens),
+			CreatedAt:        unixTime(output.MilestoneTimestamp()),
 		}
 		copy(alias.AliasID, aliasID[:])
 		copy(alias.OutputID, output.OutputID()[:])
@@ -220,10 +220,10 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		nft := &nft{
-			NFTID:     make(nftIDBytes, iotago.NFTIDLength),
-			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
-			Amount:    iotaOutput.Amount,
-			CreatedAt: unixTime(output.MilestoneTimestamp()),
+			NFTID:            make(nftIDBytes, iotago.NFTIDLength),
+			OutputID:         make(outputIDBytes, iotago.OutputIDLength),
+			NativeTokenCount: len(iotaOutput.NativeTokens),
+			CreatedAt:        unixTime(output.MilestoneTimestamp()),
 		}
 		copy(nft.NFTID, nftID[:])
 		copy(nft.OutputID, output.OutputID()[:])
@@ -304,10 +304,10 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 
 		foundry := &foundry{
-			FoundryID: foundryID[:],
-			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
-			Amount:    iotaOutput.Amount,
-			CreatedAt: unixTime(output.MilestoneTimestamp()),
+			FoundryID:        foundryID[:],
+			OutputID:         make(outputIDBytes, iotago.OutputIDLength),
+			NativeTokenCount: len(iotaOutput.NativeTokens),
+			CreatedAt:        unixTime(output.MilestoneTimestamp()),
 		}
 		copy(foundry.OutputID, output.OutputID()[:])
 
