@@ -38,6 +38,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		te.storage,
 		te.syncManager,
 		te.networkID,
+		te.protocolVersion,
 		DeSerializationParameters,
 		inMemoryEd25519MilestoneSignerProvider,
 		nil,
@@ -81,7 +82,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		metadataMemcache.Cleanup(true)
 	}()
 
-	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, messagesMemcache, metadataMemcache, ms.Milestone().MessageID,
+	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(te.storage, te.networkID, te.serverMetrics, messagesMemcache, metadataMemcache, ms.Milestone().MessageID,
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
 			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
@@ -128,7 +129,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 	}()
 
 	var wfConf *whiteflag.Confirmation
-	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(te.storage, te.serverMetrics, messagesMemcache, metadataMemcache, ms.Milestone().MessageID,
+	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(te.storage, te.networkID, te.serverMetrics, messagesMemcache, metadataMemcache, ms.Milestone().MessageID,
 		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
 		func(confirmation *whiteflag.Confirmation) {
 			wfConf = confirmation

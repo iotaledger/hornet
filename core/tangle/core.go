@@ -115,7 +115,7 @@ func provide(c *dig.Container) {
 		ServerMetrics    *metrics.ServerMetrics
 		ReceiptService   *migrator.ReceiptService     `optional:"true"`
 		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-		NetworkId        uint64                       `name:"networkId"`
+		NetworkID        uint64                       `name:"networkId"`
 		BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	}
 
@@ -133,7 +133,7 @@ func provide(c *dig.Container) {
 			deps.ServerMetrics,
 			deps.Requester,
 			deps.ReceiptService,
-			deps.NetworkId,
+			deps.NetworkID,
 			deps.BelowMaxDepth,
 			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			*syncedAtStartup)

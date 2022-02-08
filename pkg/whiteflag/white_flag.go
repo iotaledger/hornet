@@ -121,7 +121,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		}
 
 		if transaction.Essence.NetworkID != networkId {
-			conflict = storage.ConflictInvalidNetworkId
+			conflict = storage.ConflictInvalidNetworkID
 		}
 
 		// go through all the inputs and validate that they are still unspent, in the ledger or were created during confirmation
