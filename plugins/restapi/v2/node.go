@@ -55,10 +55,11 @@ func info() (*infoResponse, error) {
 			PruningIndex:             pruningIndex,
 		},
 		Protocol: protocolParameters{
-			NetworkName:   deps.NetworkIDName,
-			Bech32HRP:     string(deps.Bech32HRP),
-			MinPoWScore:   deps.MinPoWScore,
-			RentStructure: deps.DeserializationParameters.RentStructure,
+			NetworkName:     deps.NetworkIDName,
+			ProtocolVersion: deps.ProtocolVersion,
+			Bech32HRP:       string(deps.Bech32HRP),
+			MinPoWScore:     deps.MinPoWScore,
+			RentStructure:   deps.DeserializationParameters.RentStructure,
 		},
 		Metrics: nodeMetrics{
 			MessagesPerSecond:           messagesPerSecond,

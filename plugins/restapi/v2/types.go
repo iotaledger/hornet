@@ -13,6 +13,8 @@ import (
 type protocolParameters struct {
 	// The Name of the network from which the networkId is derived.
 	NetworkName string `json:"networkName"`
+	// The protocol version this node supports
+	ProtocolVersion byte `json:"protocolVersion"`
 	// The Bech32 HRP used.
 	Bech32HRP string `json:"bech32HRP"`
 	// The minimum pow score of the network.
