@@ -43,6 +43,9 @@ const (
 	// ConflictInvalidSignature the unlock block signature is invalid.
 	ConflictInvalidSignature = 5
 
+	// ConflictInvalidNetworkId the networkId in the essence does not match this nodes configuration.
+	ConflictInvalidNetworkId = 6
+
 	// ConflictSemanticValidationFailed the semantic validation failed.
 	ConflictSemanticValidationFailed = 255
 )

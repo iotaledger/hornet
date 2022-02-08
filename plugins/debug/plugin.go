@@ -89,6 +89,7 @@ type dependencies struct {
 	RequestQueue gossip.RequestQueue
 	UTXOManager  *utxo.Manager
 	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
+	NetworkId    uint64                       `name:"networkId"`
 }
 
 func configure() {
