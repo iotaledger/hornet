@@ -80,7 +80,7 @@ var (
 	lastCheckpointMessageID hornet.MessageID
 	lastMilestoneMessageID  hornet.MessageID
 
-	// Closures
+	// closures
 	onMessageSolid                   *events.Closure
 	onConfirmedMilestoneIndexChanged *events.Closure
 	onIssuedCheckpoint               *events.Closure

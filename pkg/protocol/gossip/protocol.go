@@ -30,8 +30,6 @@ type ProtocolEvents struct {
 	// This exists solely because protocol.Protocol in hive.go doesn't
 	// emit events anymore for sent messages, as it is solely a parser.
 	Sent []*events.Event
-	// Fired when the protocol stream has been closed.
-	Closed *events.Event
 	// Fired when an error occurs on the protocol.
 	Errors *events.Event
 }
@@ -55,7 +53,6 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 			// we need this because protocol.Protocol doesn't emit
 			// events for sent messages anymore.
 			Sent:   sentEvents,
-			Closed: events.NewEvent(events.VoidCaller),
 			Errors: events.NewEvent(events.ErrorCaller),
 		},
 		Stream:        stream,

@@ -64,7 +64,7 @@ var (
 	Plugin *node.Plugin
 	deps   dependencies
 
-	// Closures
+	// closures
 	onMilestoneConfirmed *events.Closure
 )
 
