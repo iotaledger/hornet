@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	MinPoWScore   = 100.0
-	BelowMaxDepth = 15
+	MinPoWScore     = 100.0
+	BelowMaxDepth   = 15
+	ProtocolVersion = 99
 )
 
 func TestMsgProcessorEmit(t *testing.T) {
@@ -48,18 +49,16 @@ func TestMsgProcessorEmit(t *testing.T) {
 	service := gossip.NewService(protocolID, n, manager, serverMetrics)
 	go service.Start(ctx)
 
-	networkID := iotago.NetworkIDFromString("testnet4")
-
 	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, testsuite.DeSerializationParameters, &gossip.Options{
 		MinPoWScore:       MinPoWScore,
-		NetworkID:         networkID,
+		ProtocolVersion:   ProtocolVersion,
 		BelowMaxDepth:     BelowMaxDepth,
 		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingMessagesFilter,
 	})
 	require.NoError(t, err)
 
 	msgData := `{
-		  "networkId": "9466822412763346725",
+		  "protocolVersion": 99,
 		  "parentMessageIds": [
 			"42e53f6bc0ecaf69f0f32dfbd838a0f96396c09b92e53225784ee9d269671939",
 			"77cfab5b59a894bd5992b303e93c126191257c025136c610dd351b06863a9ee3",
@@ -100,8 +99,8 @@ func TestMsgProcessorEmit(t *testing.T) {
 	err = processor.Emit(message)
 	assert.NoError(t, err)
 
-	// set wrong network ID
-	msg.NetworkID = 1
+	// set wrong protocol version
+	msg.ProtocolVersion = 1
 
 	// pow again, so we have a valid message
 	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
@@ -115,8 +114,8 @@ func TestMsgProcessorEmit(t *testing.T) {
 	err = processor.Emit(message)
 	assert.Error(t, err)
 
-	// set valid network ID again
-	msg.NetworkID = networkID
+	// set valid protocol version again
+	msg.ProtocolVersion = ProtocolVersion
 
 	// pow again, so we have a valid message
 	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)

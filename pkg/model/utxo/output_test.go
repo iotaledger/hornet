@@ -209,9 +209,13 @@ func TestNFTOutputSerialization(t *testing.T) {
 	msTimestamp := rand.Uint64()
 
 	iotaOutput := &iotago.NFTOutput{
-		Amount:            amount,
-		NFTID:             nftID,
-		ImmutableMetadata: utils.RandBytes(12),
+		Amount: amount,
+		NFTID:  nftID,
+		ImmutableBlocks: iotago.FeatureBlocks{
+			&iotago.MetadataFeatureBlock{
+				Data: utils.RandBytes(12),
+			},
+		},
 		Conditions: iotago.UnlockConditions{
 			&iotago.AddressUnlockCondition{
 				Address: address,
@@ -238,12 +242,16 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 	msTimestamp := rand.Uint64()
 
 	iotaOutput := &iotago.NFTOutput{
-		Amount:            amount,
-		NFTID:             nftID,
-		ImmutableMetadata: utils.RandBytes(12),
+		Amount: amount,
+		NFTID:  nftID,
 		Blocks: iotago.FeatureBlocks{
 			&iotago.IssuerFeatureBlock{
 				Address: issuerAddress,
+			},
+		},
+		ImmutableBlocks: iotago.FeatureBlocks{
+			&iotago.MetadataFeatureBlock{
+				Data: utils.RandBytes(12),
 			},
 		},
 		Conditions: iotago.UnlockConditions{

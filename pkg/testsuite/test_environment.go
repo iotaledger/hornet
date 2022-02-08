@@ -222,6 +222,10 @@ func (te *TestEnvironment) NetworkID() iotago.NetworkID {
 	return te.networkID
 }
 
+func (te *TestEnvironment) ProtocolVersion() byte {
+	return te.protocolVersion
+}
+
 func (te *TestEnvironment) Storage() *storage.Storage {
 	return te.storage
 }
