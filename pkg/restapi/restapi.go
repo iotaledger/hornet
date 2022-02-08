@@ -267,6 +267,24 @@ func ParseMilestoneIndexQueryParam(c echo.Context, paramName string) (milestone.
 	return milestone.Index(msIndex), nil
 }
 
+func ParseUnsignedIntegerQueryParam(c echo.Context, paramName string, maxValue uint) (uint, error) {
+	intString := strings.ToLower(c.QueryParam(paramName))
+	if intString == "" {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
+	}
+
+	value, err := strconv.ParseUint(intString, 10, 32)
+	if err != nil {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid value: %s, error: %s", intString, err)
+	}
+
+	if uint(value) > maxValue {
+		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid value: %s, higher than the max number %d", intString, maxValue)
+	}
+
+	return uint(value), nil
+}
+
 func ParseUnixTimestampQueryParam(c echo.Context, paramName string) (time.Time, error) {
 	tsString := strings.ToLower(c.QueryParam(paramName))
 	if tsString == "" {

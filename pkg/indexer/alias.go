@@ -18,17 +18,38 @@ type alias struct {
 }
 
 type AliasFilterOptions struct {
-	stateController *iotago.Address
-	governor        *iotago.Address
-	issuer          *iotago.Address
-	sender          *iotago.Address
-	pageSize        int
-	cursor          *string
-	createdBefore   *time.Time
-	createdAfter    *time.Time
+	hasNativeTokens     *bool
+	minNativeTokenCount *uint
+	maxNativeTokenCount *uint
+	stateController     *iotago.Address
+	governor            *iotago.Address
+	issuer              *iotago.Address
+	sender              *iotago.Address
+	pageSize            int
+	cursor              *string
+	createdBefore       *time.Time
+	createdAfter        *time.Time
 }
 
 type AliasFilterOption func(*AliasFilterOptions)
+
+func AliasHasNativeTokens(value bool) AliasFilterOption {
+	return func(args *AliasFilterOptions) {
+		args.hasNativeTokens = &value
+	}
+}
+
+func AliasMinNativeTokenCount(value uint) AliasFilterOption {
+	return func(args *AliasFilterOptions) {
+		args.minNativeTokenCount = &value
+	}
+}
+
+func AliasMaxNativeTokenCount(value uint) AliasFilterOption {
+	return func(args *AliasFilterOptions) {
+		args.maxNativeTokenCount = &value
+	}
+}
 
 func AliasStateController(address iotago.Address) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
@@ -99,6 +120,22 @@ func (i *Indexer) AliasOutput(aliasID *iotago.AliasID) *IndexerResult {
 func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) *IndexerResult {
 	opts := aliasFilterOptions(filter)
 	query := i.db.Model(&alias{})
+
+	if opts.hasNativeTokens != nil {
+		if *opts.hasNativeTokens {
+			query = query.Where("native_token_count > 0")
+		} else {
+			query = query.Where("native_token_count == 0")
+		}
+	}
+
+	if opts.minNativeTokenCount != nil {
+		query = query.Where("native_token_count >= ?", *opts.minNativeTokenCount)
+	}
+
+	if opts.maxNativeTokenCount != nil {
+		query = query.Where("native_token_count <= ?", *opts.maxNativeTokenCount)
+	}
 
 	if opts.stateController != nil {
 		addr, err := addressBytesForAddress(*opts.stateController)

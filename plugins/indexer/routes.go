@@ -131,6 +131,15 @@ const (
 
 	// QueryParameterCreatedAfter is used to filter for outputs that were created after the given time.
 	QueryParameterCreatedAfter = "createdAfter"
+
+	// QueryParameterHasNativeTokens is used to filter for outputs that have native tokens.
+	QueryParameterHasNativeTokens = "hasNativeTokens"
+
+	// QueryParameterMinNativeTokenCount is used to filter for outputs that have at least an amount of native tokens.
+	QueryParameterMinNativeTokenCount = "minNativeTokenCount"
+
+	// QueryParameterMaxNativeTokenCount is used to filter for outputs that have at the most an amount of native tokens.
+	QueryParameterMaxNativeTokenCount = "maxNativeTokenCount"
 )
 
 func nodeSyncedMiddleware() echo.MiddlewareFunc {
@@ -213,6 +222,30 @@ func configureRoutes(routeGroup *echo.Group) {
 
 func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.BasicOutputFilterOption{indexer.BasicOutputPageSize(pageSizeFromContext(c))}
+
+	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.BasicOutputHasNativeTokens(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.BasicOutputMinNativeTokenCount(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.BasicOutputMaxNativeTokenCount(value))
+	}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
 		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
@@ -380,6 +413,30 @@ func aliasByID(c echo.Context) (*outputsResponse, error) {
 func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.AliasFilterOption{indexer.AliasPageSize(pageSizeFromContext(c))}
 
+	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasHasNativeTokens(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasMinNativeTokenCount(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasMaxNativeTokenCount(value))
+	}
+
 	if len(c.QueryParam(QueryParameterStateController)) > 0 {
 		stateController, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterStateController)
 		if err != nil {
@@ -449,6 +506,30 @@ func nftByID(c echo.Context) (*outputsResponse, error) {
 
 func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.NFTFilterOption{indexer.NFTPageSize(pageSizeFromContext(c))}
+
+	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTHasNativeTokens(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTMinNativeTokenCount(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTMaxNativeTokenCount(value))
+	}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
 		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
@@ -623,6 +704,30 @@ func foundryByID(c echo.Context) (*outputsResponse, error) {
 
 func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.FoundryFilterOption{indexer.FoundryPageSize(pageSizeFromContext(c))}
+
+	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.FoundryHasNativeTokens(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.FoundryMinNativeTokenCount(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.FoundryMaxNativeTokenCount(value))
+	}
 
 	if len(c.QueryParam(QueryParameterAliasAddress)) > 0 {
 		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAliasAddress)

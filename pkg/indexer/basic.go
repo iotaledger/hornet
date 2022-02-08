@@ -24,6 +24,9 @@ type basicOutput struct {
 }
 
 type BasicOutputFilterOptions struct {
+	hasNativeTokens           *bool
+	minNativeTokenCount       *uint
+	maxNativeTokenCount       *uint
 	unlockableByAddress       *iotago.Address
 	hasDustReturnCondition    *bool
 	dustReturnAddress         *iotago.Address
@@ -47,6 +50,24 @@ type BasicOutputFilterOptions struct {
 }
 
 type BasicOutputFilterOption func(*BasicOutputFilterOptions)
+
+func BasicOutputHasNativeTokens(value bool) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
+		args.hasNativeTokens = &value
+	}
+}
+
+func BasicOutputMinNativeTokenCount(value uint) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
+		args.minNativeTokenCount = &value
+	}
+}
+
+func BasicOutputMaxNativeTokenCount(value uint) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
+		args.maxNativeTokenCount = &value
+	}
+}
 
 func BasicOutputUnlockableByAddress(address iotago.Address) BasicOutputFilterOption {
 	return func(args *BasicOutputFilterOptions) {
@@ -179,6 +200,22 @@ func basicOutputFilterOptions(optionalOptions []BasicOutputFilterOption) *BasicO
 func (i *Indexer) BasicOutputsWithFilters(filters ...BasicOutputFilterOption) *IndexerResult {
 	opts := basicOutputFilterOptions(filters)
 	query := i.db.Model(&basicOutput{})
+
+	if opts.hasNativeTokens != nil {
+		if *opts.hasNativeTokens {
+			query = query.Where("native_token_count > 0")
+		} else {
+			query = query.Where("native_token_count == 0")
+		}
+	}
+
+	if opts.minNativeTokenCount != nil {
+		query = query.Where("native_token_count >= ?", *opts.minNativeTokenCount)
+	}
+
+	if opts.maxNativeTokenCount != nil {
+		query = query.Where("native_token_count <= ?", *opts.maxNativeTokenCount)
+	}
 
 	if opts.unlockableByAddress != nil {
 		addr, err := addressBytesForAddress(*opts.unlockableByAddress)

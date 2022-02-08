@@ -15,14 +15,35 @@ type foundry struct {
 }
 
 type FoundryFilterOptions struct {
-	aliasAddress  *iotago.AliasAddress
-	pageSize      int
-	cursor        *string
-	createdBefore *time.Time
-	createdAfter  *time.Time
+	hasNativeTokens     *bool
+	minNativeTokenCount *uint
+	maxNativeTokenCount *uint
+	aliasAddress        *iotago.AliasAddress
+	pageSize            int
+	cursor              *string
+	createdBefore       *time.Time
+	createdAfter        *time.Time
 }
 
 type FoundryFilterOption func(*FoundryFilterOptions)
+
+func FoundryHasNativeTokens(value bool) FoundryFilterOption {
+	return func(args *FoundryFilterOptions) {
+		args.hasNativeTokens = &value
+	}
+}
+
+func FoundryMinNativeTokenCount(value uint) FoundryFilterOption {
+	return func(args *FoundryFilterOptions) {
+		args.minNativeTokenCount = &value
+	}
+}
+
+func FoundryMaxNativeTokenCount(value uint) FoundryFilterOption {
+	return func(args *FoundryFilterOptions) {
+		args.maxNativeTokenCount = &value
+	}
+}
 
 func FoundryWithAliasAddress(address *iotago.AliasAddress) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
@@ -74,6 +95,22 @@ func (i *Indexer) FoundryOutput(foundryID *iotago.FoundryID) *IndexerResult {
 func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) *IndexerResult {
 	opts := foundryFilterOptions(filters)
 	query := i.db.Model(&foundry{})
+
+	if opts.hasNativeTokens != nil {
+		if *opts.hasNativeTokens {
+			query = query.Where("native_token_count > 0")
+		} else {
+			query = query.Where("native_token_count == 0")
+		}
+	}
+
+	if opts.minNativeTokenCount != nil {
+		query = query.Where("native_token_count >= ?", *opts.minNativeTokenCount)
+	}
+
+	if opts.maxNativeTokenCount != nil {
+		query = query.Where("native_token_count <= ?", *opts.maxNativeTokenCount)
+	}
 
 	if opts.aliasAddress != nil {
 		addr, err := addressBytesForAddress(opts.aliasAddress)
