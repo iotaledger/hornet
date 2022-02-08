@@ -79,35 +79,35 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 
-		extended := &basicOutput{
+		basic := &basicOutput{
 			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
 			Amount:    iotaOutput.Amount,
 			CreatedAt: unixTime(output.MilestoneTimestamp()),
 		}
-		copy(extended.OutputID, output.OutputID()[:])
+		copy(basic.OutputID, output.OutputID()[:])
 
 		if senderBlock := features.SenderFeatureBlock(); senderBlock != nil {
-			extended.Sender, err = addressBytesForAddress(senderBlock.Address)
+			basic.Sender, err = addressBytesForAddress(senderBlock.Address)
 			if err != nil {
 				return err
 			}
 		}
 
 		if tagBlock := features.TagFeatureBlock(); tagBlock != nil {
-			extended.Tag = make([]byte, len(tagBlock.Tag))
-			copy(extended.Tag, tagBlock.Tag)
+			basic.Tag = make([]byte, len(tagBlock.Tag))
+			copy(basic.Tag, tagBlock.Tag)
 		}
 
 		if addressUnlock := conditions.Address(); addressUnlock != nil {
-			extended.Address, err = addressBytesForAddress(addressUnlock.Address)
+			basic.Address, err = addressBytesForAddress(addressUnlock.Address)
 			if err != nil {
 				return err
 			}
 		}
 
 		if dustReturn := conditions.DustDepositReturn(); dustReturn != nil {
-			extended.DustReturn = &dustReturn.Amount
-			extended.DustReturnAddress, err = addressBytesForAddress(dustReturn.ReturnAddress)
+			basic.DustReturn = &dustReturn.Amount
+			basic.DustReturnAddress, err = addressBytesForAddress(dustReturn.ReturnAddress)
 			if err != nil {
 				return err
 			}
@@ -116,30 +116,30 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		if timelock := conditions.Timelock(); timelock != nil {
 			if timelock.MilestoneIndex > 0 {
 				idx := milestone.Index(timelock.MilestoneIndex)
-				extended.TimelockMilestone = &idx
+				basic.TimelockMilestone = &idx
 			}
 			if timelock.UnixTime > 0 {
 				time := unixTime(timelock.UnixTime)
-				extended.TimelockTime = &time
+				basic.TimelockTime = &time
 			}
 		}
 
 		if expiration := conditions.Expiration(); expiration != nil {
 			if expiration.MilestoneIndex > 0 {
 				idx := milestone.Index(expiration.MilestoneIndex)
-				extended.ExpirationMilestone = &idx
+				basic.ExpirationMilestone = &idx
 			}
 			if expiration.UnixTime > 0 {
 				time := unixTime(expiration.UnixTime)
-				extended.ExpirationTime = &time
+				basic.ExpirationTime = &time
 			}
-			extended.ExpirationReturnAddress, err = addressBytesForAddress(expiration.ReturnAddress)
+			basic.ExpirationReturnAddress, err = addressBytesForAddress(expiration.ReturnAddress)
 			if err != nil {
 				return err
 			}
 		}
 
-		if err := tx.Create(extended).Error; err != nil {
+		if err := tx.Create(basic).Error; err != nil {
 			return err
 		}
 

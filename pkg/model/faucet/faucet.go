@@ -575,8 +575,8 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	found := false
 	var outputIndex uint16 = 0
 	for _, output := range txPayload.Essence.Outputs {
-		extendedOutput := output.(*iotago.BasicOutput)
-		conditions, err := extendedOutput.UnlockConditions().Set()
+		basicOutput := output.(*iotago.BasicOutput)
+		conditions, err := basicOutput.UnlockConditions().Set()
 		if err != nil {
 			return nil, nil, 0, err
 		}
