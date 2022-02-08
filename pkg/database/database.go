@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/kvstore"
@@ -14,9 +15,10 @@ import (
 type Engine string
 
 const (
-	EngineUnknown = "unknown"
-	EngineRocksDB = "rocksdb"
-	EnginePebble  = "pebble"
+	EngineUnknown Engine = "unknown"
+	EngineRocksDB Engine = "rocksdb"
+	EnginePebble  Engine = "pebble"
+	EngineMapDB   Engine = "mapdb"
 )
 
 var (
@@ -63,16 +65,20 @@ type Events struct {
 type Database struct {
 	databaseDir           string
 	store                 kvstore.KVStore
+	engine                Engine
+	metrics               *metrics.DatabaseMetrics
 	events                *Events
 	compactionSupported   bool
 	compactionRunningFunc func() bool
 }
 
 // New creates a new Database instance.
-func New(databaseDirectory string, kvStore kvstore.KVStore, events *Events, compactionSupported bool, compactionRunningFunc func() bool) *Database {
+func New(databaseDirectory string, kvStore kvstore.KVStore, engine Engine, metrics *metrics.DatabaseMetrics, events *Events, compactionSupported bool, compactionRunningFunc func() bool) *Database {
 	return &Database{
 		databaseDir:           databaseDirectory,
 		store:                 kvStore,
+		engine:                engine,
+		metrics:               metrics,
 		events:                events,
 		compactionSupported:   compactionSupported,
 		compactionRunningFunc: compactionRunningFunc,
@@ -82,6 +88,16 @@ func New(databaseDirectory string, kvStore kvstore.KVStore, events *Events, comp
 // KVStore returns the underlying KVStore.
 func (db *Database) KVStore() kvstore.KVStore {
 	return db.store
+}
+
+// Engine returns the database engine.
+func (db *Database) Engine() Engine {
+	return db.engine
+}
+
+// Metrics returns the database metrics.
+func (db *Database) Metrics() *metrics.DatabaseMetrics {
+	return db.metrics
 }
 
 // Events returns the events of the database.
@@ -96,10 +112,17 @@ func (db *Database) CompactionSupported() bool {
 
 // CompactionRunning returns whether a compaction is running.
 func (db *Database) CompactionRunning() bool {
+	if db.compactionRunningFunc == nil {
+		return false
+	}
 	return db.compactionRunningFunc()
 }
 
 // Size returns the size of the database.
 func (db *Database) Size() (int64, error) {
+	if db.engine == EngineMapDB {
+		// in-memory database does not support this method.
+		return 0, nil
+	}
 	return utils.FolderSize(db.databaseDir)
 }

@@ -22,6 +22,8 @@ func newRocksDB(path string, metrics *metrics.DatabaseMetrics) *database.Databas
 	database := database.New(
 		path,
 		rocksdb.New(rocksDatabase),
+		database.EngineRocksDB,
+		metrics,
 		events,
 		true,
 		func() bool {

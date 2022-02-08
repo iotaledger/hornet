@@ -7,7 +7,6 @@ import (
 	"math"
 	"os"
 	"runtime"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -25,7 +24,7 @@ func benchmarkIO(args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	objectsCountFlag := fs.Int(FlagToolBenchmarkCount, 500000, "objects count")
 	objectsSizeFlag := fs.Int(FlagToolBenchmarkSize, 1000, "objects size in bytes")
-	databaseEngineFlag := fs.String(FlagToolDatabaseEngine, DefaultValueDatabaseEngine, "database engine (optional, values: pebble, rocksdb)")
+	databaseEngineFlag := fs.String(FlagToolDatabaseEngine, string(DefaultValueDatabaseEngine), "database engine (optional, values: pebble, rocksdb)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolBenchmarkIO)
@@ -46,9 +45,8 @@ func benchmarkIO(args []string) error {
 
 	objectCnt := *objectsCountFlag
 	size := *objectsSizeFlag
-	dbEngine := strings.ToLower(*databaseEngineFlag)
 
-	engine, err := database.DatabaseEngine(dbEngine)
+	dbEngine, err := database.DatabaseEngine(*databaseEngineFlag, database.EnginePebble, database.EngineRocksDB)
 	if err != nil {
 		return err
 	}
@@ -60,7 +58,7 @@ func benchmarkIO(args []string) error {
 
 	defer func() { _ = os.RemoveAll(tempDir) }()
 
-	store, err := database.StoreWithDefaultSettings(tempDir, true, engine)
+	store, err := database.StoreWithDefaultSettings(tempDir, true, dbEngine)
 	if err != nil {
 		return fmt.Errorf("database initialization failed: %w", err)
 	}
