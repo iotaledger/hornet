@@ -84,6 +84,8 @@ type Coordinator struct {
 	syncManager *syncmanager.SyncManager
 	// id of the network the coordinator is running in.
 	networkID uint64
+	// version of the protocol the coordinator is running with.
+	protocolVersion byte
 	// Deserialization parameters including byte costs
 	deSeriParas *iotago.DeSerializationParameters
 	// used to get receipts for the WOTS migration.
@@ -220,6 +222,7 @@ func New(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	networkID uint64,
+	protocolVersion byte,
 	deSeriParas *iotago.DeSerializationParameters,
 	signerProvider MilestoneSignerProvider,
 	migratorService *migrator.MigratorService,
@@ -236,6 +239,7 @@ func New(
 		storage:          dbStorage,
 		syncManager:      syncManager,
 		networkID:        networkID,
+		protocolVersion:  protocolVersion,
 		deSeriParas:      deSeriParas,
 		signerProvider:   signerProvider,
 		migratorService:  migratorService,

@@ -131,6 +131,7 @@ func provide(c *dig.Container) {
 		UTXOManager              *utxo.Manager
 		NodeConfig               *configuration.Configuration `name:"nodeConfig"`
 		NetworkID                uint64                       `name:"networkId"`
+		ProtocolVersion          byte                         `name:"protocolVersion"`
 		DeserializationParamters *iotago.DeSerializationParameters
 		MilestonePublicKeyCount  int `name:"milestonePublicKeyCount"`
 	}
@@ -166,6 +167,7 @@ func provide(c *dig.Container) {
 				deps.Storage,
 				deps.SyncManager,
 				deps.NetworkID,
+				deps.ProtocolVersion,
 				deps.DeserializationParamters,
 				signingProvider,
 				deps.MigratorService,

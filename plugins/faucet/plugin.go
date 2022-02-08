@@ -112,6 +112,7 @@ func provide(c *dig.Container) {
 		Indexer                   *indexer.Indexer
 		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
 		NetworkID                 uint64                       `name:"networkId"`
+		ProtocolVersion           byte                         `name:"protocolVersion"`
 		DeSerializationParameters *iotago.DeSerializationParameters
 		BelowMaxDepth             int                  `name:"belowMaxDepth"`
 		Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
@@ -125,6 +126,7 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.SyncManager,
 			deps.NetworkID,
+			deps.ProtocolVersion,
 			deps.DeSerializationParameters,
 			deps.BelowMaxDepth,
 			deps.UTXOManager,

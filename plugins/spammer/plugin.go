@@ -89,7 +89,7 @@ type dependencies struct {
 	PeeringManager            *p2p.Manager
 	TipSelector               *tipselect.TipSelector       `optional:"true"`
 	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
-	NetworkID                 uint64                       `name:"networkId"`
+	ProtocolVersion           byte                         `name:"protocolVersion"`
 	DeserializationParameters *iotago.DeSerializationParameters
 }
 
@@ -131,7 +131,7 @@ func configure() {
 	isRunning = false
 
 	spammerInstance = spammer.New(
-		deps.NetworkID,
+		deps.ProtocolVersion,
 		deps.DeserializationParameters,
 		deps.NodeConfig.String(CfgSpammerMessage),
 		deps.NodeConfig.String(CfgSpammerTag),

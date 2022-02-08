@@ -14,9 +14,8 @@ import (
 // createCheckpoint creates a checkpoint message.
 func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*storage.Message, error) {
 	iotaMsg := &iotago.Message{
-		NetworkID: coo.networkID,
-		Parents:   parents.ToSliceOfArrays(),
-		Payload:   nil,
+		Parents: parents.ToSliceOfArrays(),
+		Payload: nil,
 	}
 
 	// we pass a background context here to not create invalid checkpoints at node shutdown.
@@ -47,9 +46,9 @@ func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint64,
 	}
 
 	iotaMsg := &iotago.Message{
-		NetworkID: coo.networkID,
-		Parents:   parentsSliceOfArray,
-		Payload:   msPayload,
+		ProtocolVersion: coo.protocolVersion,
+		Parents:         parentsSliceOfArray,
+		Payload:         msPayload,
 	}
 
 	if err := msPayload.Sign(coo.createSigningFuncWithRetries(milestoneIndexSigner.SigningFunc())); err != nil {
