@@ -532,7 +532,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 		}
 		remainderAmount -= int64(amount)
 
-		txBuilder.AddOutput(&iotago.ExtendedOutput{
+		txBuilder.AddOutput(&iotago.BasicOutput{
 			Amount: amount,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: req.Address},
@@ -541,7 +541,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	}
 
 	if remainderAmount > 0 {
-		txBuilder.AddOutput(&iotago.ExtendedOutput{
+		txBuilder.AddOutput(&iotago.BasicOutput{
 			Amount: uint64(remainderAmount),
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: f.address},
@@ -571,7 +571,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	found := false
 	var outputIndex uint16 = 0
 	for _, output := range txPayload.Essence.Outputs {
-		extendedOutput := output.(*iotago.ExtendedOutput)
+		extendedOutput := output.(*iotago.BasicOutput)
 		conditions, err := extendedOutput.UnlockConditions().Set()
 		if err != nil {
 			return nil, nil, 0, err
@@ -616,7 +616,7 @@ func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.O
 	f.addPendingTransactionWithoutLocking(&pendingTransaction{MessageID: msg.MessageID(), QueuedItems: batchedRequests})
 	if remainderIotaGoOutput != nil {
 		remainderIotaGoOutputID := remainderIotaGoOutput.ID()
-		output := &iotago.ExtendedOutput{
+		output := &iotago.BasicOutput{
 			Amount: remainderAmount,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: f.address},

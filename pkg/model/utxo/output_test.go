@@ -140,7 +140,7 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 	msIndex := utils.RandMilestoneIndex()
 	msTimestmap := rand.Uint64()
 
-	iotaOutput := &iotago.ExtendedOutput{
+	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
 		Blocks: iotago.FeatureBlocks{
 			&iotago.SenderFeatureBlock{
@@ -174,7 +174,7 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 	msIndex := utils.RandMilestoneIndex()
 	msTimestamp := rand.Uint64()
 
-	iotaOutput := &iotago.ExtendedOutput{
+	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
 		Blocks: iotago.FeatureBlocks{
 			&iotago.SenderFeatureBlock{

@@ -54,7 +54,7 @@ func TestValue(t *testing.T) {
 			Address: &framework.GenesisAddress,
 			Input:   genesisInputID,
 		}).
-		AddOutput(&iotago.ExtendedOutput{
+		AddOutput(&iotago.BasicOutput{
 			Amount: target1Deposit,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{
@@ -62,7 +62,7 @@ func TestValue(t *testing.T) {
 				},
 			},
 		}).
-		AddOutput(&iotago.ExtendedOutput{
+		AddOutput(&iotago.BasicOutput{
 			Amount: target2Deposit,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{

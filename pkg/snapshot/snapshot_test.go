@@ -122,7 +122,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	// Fill up the UTXO
 	var err error
 	for i := 0; i < count; i++ {
-		err = u1.AddUnspentOutput(randomOutput(iotago.OutputExtended))
+		err = u1.AddUnspentOutput(randomOutput(iotago.OutputBasic))
 		require.NoError(t, err)
 
 		err = u1.AddUnspentOutput(randomOutput(iotago.OutputAlias))
@@ -142,7 +142,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	var aliasCount int
 	err = u1.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
-		case iotago.OutputExtended:
+		case iotago.OutputBasic:
 			extendedCount++
 		case iotago.OutputNFT:
 			nftCount++
@@ -202,7 +202,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	aliasCount = 0
 	err = u2.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
-		case iotago.OutputExtended:
+		case iotago.OutputBasic:
 			extendedCount++
 		case iotago.OutputNFT:
 			nftCount++
@@ -276,11 +276,11 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 	for msIndex, done = msIterator(); !done; msIndex, done = msIterator() {
 
 		outputs := utxo.Outputs{
-			randomOutput(iotago.OutputExtended),
-			randomOutput(iotago.OutputExtended),
-			randomOutput(iotago.OutputExtended),
-			randomOutput(iotago.OutputExtended),
-			randomOutput(iotago.OutputExtended),
+			randomOutput(iotago.OutputBasic),
+			randomOutput(iotago.OutputBasic),
+			randomOutput(iotago.OutputBasic),
+			randomOutput(iotago.OutputBasic),
+			randomOutput(iotago.OutputBasic),
 		}
 
 		spents := utxo.Spents{

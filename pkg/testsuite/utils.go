@@ -145,7 +145,7 @@ func (b *MessageBuilder) Build() *Message {
 			// Add a fake output with enough balance to create a valid transaction
 			fakeInputID := iotago.OutputID{}
 			copy(fakeInputID[:], randBytes(iotago.TransactionIDLength))
-			fakeInput := &iotago.ExtendedOutput{
+			fakeInput := &iotago.BasicOutput{
 				Amount: b.amount,
 				Conditions: iotago.UnlockConditions{
 					&iotago.AddressUnlockCondition{
@@ -169,7 +169,6 @@ func (b *MessageBuilder) Build() *Message {
 	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
 
 	for _, output := range outputsThatCanBeConsumed {
-
 		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: fromAddr, Input: output.OutputID().UTXOInput()})
 		consumedInputs = append(consumedInputs, output)
 		consumedAmount += output.Deposit()
@@ -179,13 +178,13 @@ func (b *MessageBuilder) Build() *Message {
 		}
 	}
 
-	txBuilder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: toAddr}}, Amount: b.amount})
+	txBuilder.AddOutput(&iotago.BasicOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: toAddr}}, Amount: b.amount})
 
 	var remainderAmount uint64
 	if b.amount < consumedAmount {
 		// Send remainder back to fromWallet
 		remainderAmount = consumedAmount - b.amount
-		txBuilder.AddOutput(&iotago.ExtendedOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: fromAddr}}, Amount: remainderAmount})
+		txBuilder.AddOutput(&iotago.BasicOutput{Conditions: iotago.UnlockConditions{&iotago.AddressUnlockCondition{Address: fromAddr}}, Amount: remainderAmount})
 	}
 
 	if len(b.tag) > 0 {
@@ -229,7 +228,7 @@ func (b *MessageBuilder) Build() *Message {
 		require.NoError(b.te.TestInterface, err)
 
 		switch iotaOutput := output.Output().(type) {
-		case *iotago.ExtendedOutput:
+		case *iotago.BasicOutput:
 			conditions := iotaOutput.UnlockConditions().MustSet()
 			if conditions.Address().Address.Equal(toAddr) && output.Deposit() == b.amount {
 				sentOutput = output

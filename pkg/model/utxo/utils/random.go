@@ -101,8 +101,8 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 	var iotaOutput iotago.Output
 
 	switch outputType {
-	case iotago.OutputExtended:
-		iotaOutput = &iotago.ExtendedOutput{
+	case iotago.OutputBasic:
+		iotaOutput = &iotago.BasicOutput{
 			Amount: amount,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{

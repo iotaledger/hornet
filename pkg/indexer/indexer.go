@@ -54,7 +54,7 @@ func NewIndexer(dbPath string) (*Indexer, error) {
 
 func processSpent(spent *utxo.Spent, tx *gorm.DB) error {
 	switch spent.OutputType() {
-	case iotago.OutputExtended:
+	case iotago.OutputBasic:
 		return tx.Where("output_id = ?", spent.OutputID()[:]).Delete(&extendedOutput{}).Error
 	case iotago.OutputAlias:
 		return tx.Where("output_id = ?", spent.OutputID()[:]).Delete(&alias{}).Error
@@ -68,7 +68,7 @@ func processSpent(spent *utxo.Spent, tx *gorm.DB) error {
 
 func processOutput(output *utxo.Output, tx *gorm.DB) error {
 	switch iotaOutput := output.Output().(type) {
-	case *iotago.ExtendedOutput:
+	case *iotago.BasicOutput:
 		features, err := iotaOutput.FeatureBlocks().Set()
 		if err != nil {
 			return err

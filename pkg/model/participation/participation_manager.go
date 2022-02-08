@@ -623,7 +623,7 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 
 					var addressBytes []byte
 					switch iotagoOutput := output.Output().(type) {
-					case *iotago.ExtendedOutput:
+					case *iotago.BasicOutput:
 						addressBytes, err = serializedAddressFromOutput(iotagoOutput)
 						if err != nil {
 							innerErr = err
@@ -730,7 +730,7 @@ func participationFromTaggedData(taggedData *iotago.TaggedData) ([]*Participatio
 	return votes, nil
 }
 
-func serializedAddressFromOutput(output *iotago.ExtendedOutput) ([]byte, error) {
+func serializedAddressFromOutput(output *iotago.BasicOutput) ([]byte, error) {
 	unlockConditions, err := output.UnlockConditions().Set()
 	if err != nil {
 		return nil, err
@@ -784,9 +784,9 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 	}
 
 	// only ExtendedOutput are allowed as output type
-	var depositOutput *iotago.ExtendedOutput
+	var depositOutput *iotago.BasicOutput
 	switch o := depositOutputs[0].Output().(type) {
-	case *iotago.ExtendedOutput:
+	case *iotago.BasicOutput:
 		depositOutput = o
 	default:
 		return nil, nil, nil
@@ -811,7 +811,7 @@ func (pm *ParticipationManager) ParticipationsFromMessage(msg *storage.Message, 
 	containsInputFromSameAddress := false
 	for _, input := range inputOutputs {
 		switch output := input.Output().(type) {
-		case *iotago.ExtendedOutput:
+		case *iotago.BasicOutput:
 			inputAddress, err := serializedAddressFromOutput(output)
 			if err != nil {
 				return nil, nil, nil

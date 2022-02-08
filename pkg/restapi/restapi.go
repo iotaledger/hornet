@@ -300,7 +300,7 @@ func ParseOutputTypeQueryParam(c echo.Context) (*iotago.OutputType, error) {
 		}
 		outputType := iotago.OutputType(outputTypeInt)
 		switch outputType {
-		case iotago.OutputExtended, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
+		case iotago.OutputBasic, iotago.OutputAlias, iotago.OutputNFT, iotago.OutputFoundry:
 		default:
 			return nil, errors.WithMessagef(ErrInvalidParameter, "invalid type: %s, error: unknown output type", typeParam)
 		}

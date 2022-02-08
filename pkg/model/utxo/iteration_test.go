@@ -16,18 +16,18 @@ func TestUTXOComputeBalance(t *testing.T) {
 
 	utxo := New(mapdb.NewMapDB())
 
-	initialOutput := RandUTXOOutputOnAddressWithAmount(iotago.OutputExtended, utils.RandAddress(iotago.AddressEd25519), 2_134_656_365)
+	initialOutput := RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, utils.RandAddress(iotago.AddressEd25519), 2_134_656_365)
 	require.NoError(t, utxo.AddUnspentOutput(initialOutput))
 	require.NoError(t, utxo.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputAlias, utils.RandAddress(iotago.AddressAlias), 56_549_524)))
 	require.NoError(t, utxo.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputFoundry, utils.RandAddress(iotago.AddressAlias), 25_548_858)))
 	require.NoError(t, utxo.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputNFT, utils.RandAddress(iotago.AddressEd25519), 545_699_656)))
-	require.NoError(t, utxo.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputExtended, utils.RandAddress(iotago.AddressAlias), 626_659_696)))
+	require.NoError(t, utxo.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, utils.RandAddress(iotago.AddressAlias), 626_659_696)))
 
 	msIndex := milestone.Index(756)
 	msTimestamp := rand.Uint64()
 
 	outputs := Outputs{
-		RandUTXOOutputOnAddressWithAmount(iotago.OutputExtended, utils.RandAddress(iotago.AddressNFT), 2_134_656_365),
+		RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, utils.RandAddress(iotago.AddressNFT), 2_134_656_365),
 	}
 
 	spents := Spents{
@@ -55,13 +55,13 @@ func TestUTXOIteration(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	outputs := Outputs{
-		RandUTXOOutputOnAddress(iotago.OutputExtended, utils.RandAddress(iotago.AddressEd25519)),
-		RandUTXOOutputOnAddress(iotago.OutputExtended, utils.RandAddress(iotago.AddressNFT)),
-		RandUTXOOutputOnAddress(iotago.OutputExtended, utils.RandAddress(iotago.AddressAlias)),
-		RandUTXOOutputOnAddress(iotago.OutputExtended, utils.RandAddress(iotago.AddressEd25519)),
-		RandUTXOOutputOnAddress(iotago.OutputExtended, utils.RandAddress(iotago.AddressNFT)),
-		RandUTXOOutputOnAddress(iotago.OutputExtended, utils.RandAddress(iotago.AddressAlias)),
-		RandUTXOOutputOnAddress(iotago.OutputExtended, utils.RandAddress(iotago.AddressEd25519)),
+		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressEd25519)),
+		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressNFT)),
+		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressAlias)),
+		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressEd25519)),
+		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressNFT)),
+		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressAlias)),
+		RandUTXOOutputOnAddress(iotago.OutputBasic, utils.RandAddress(iotago.AddressEd25519)),
 		RandUTXOOutputOnAddress(iotago.OutputNFT, utils.RandAddress(iotago.AddressEd25519)),
 		RandUTXOOutputOnAddress(iotago.OutputNFT, utils.RandAddress(iotago.AddressAlias)),
 		RandUTXOOutputOnAddress(iotago.OutputNFT, utils.RandAddress(iotago.AddressNFT)),
