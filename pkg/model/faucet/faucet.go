@@ -330,7 +330,7 @@ func (f *Faucet) Info() (*FaucetInfoResponse, error) {
 }
 
 func (f *Faucet) computeAddressBalance(address iotago.Address) (uint64, error) {
-	result := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(address), indexer.ExtendedOutputHasDustReturnCondition(false))
+	result := f.indexer.BasicOutputsWithFilters(indexer.BasicOutputUnlockableByAddress(address), indexer.BasicOutputHasDustReturnCondition(false))
 	if result.Error != nil {
 		return 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), result.Error))
 	}
@@ -771,7 +771,7 @@ func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) err
 					return []*utxo.Output{f.lastRemainderOutput}, f.lastRemainderOutput.Deposit(), nil
 				}
 
-				result := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(f.address), indexer.ExtendedOutputHasDustReturnCondition(false))
+				result := f.indexer.BasicOutputsWithFilters(indexer.BasicOutputUnlockableByAddress(f.address), indexer.BasicOutputHasDustReturnCondition(false))
 				if result.Error != nil {
 					return nil, 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), result.Error))
 				}

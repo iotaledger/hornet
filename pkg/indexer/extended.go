@@ -7,12 +7,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-type extendedOutput struct {
+type basicOutput struct {
 	OutputID                outputIDBytes `gorm:"primaryKey;notnull"`
 	Amount                  uint64        `gorm:"notnull"`
-	Sender                  addressBytes  `gorm:"index:extended_sender_tag"`
-	Tag                     []byte        `gorm:"index:extended_sender_tag"`
-	Address                 addressBytes  `gorm:"notnull;index:extended_address"`
+	Sender                  addressBytes  `gorm:"index:basic_outputs_sender_tag"`
+	Tag                     []byte        `gorm:"index:basic_outputs_sender_tag"`
+	Address                 addressBytes  `gorm:"notnull;index:basic_outputs_address"`
 	DustReturn              *uint64
 	DustReturnAddress       addressBytes
 	TimelockMilestone       *milestone.Index
@@ -23,7 +23,7 @@ type extendedOutput struct {
 	CreatedAt               time.Time `gorm:"notnull"`
 }
 
-type ExtendedOutputFilterOptions struct {
+type BasicOutputFilterOptions struct {
 	unlockableByAddress       *iotago.Address
 	hasDustReturnCondition    *bool
 	dustReturnAddress         *iotago.Address
@@ -46,139 +46,139 @@ type ExtendedOutputFilterOptions struct {
 	createdAfter              *time.Time
 }
 
-type ExtendedOutputFilterOption func(*ExtendedOutputFilterOptions)
+type BasicOutputFilterOption func(*BasicOutputFilterOptions)
 
-func ExtendedOutputUnlockableByAddress(address iotago.Address) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputUnlockableByAddress(address iotago.Address) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.unlockableByAddress = &address
 	}
 }
 
-func ExtendedOutputHasDustReturnCondition(value bool) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputHasDustReturnCondition(value bool) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.hasDustReturnCondition = &value
 	}
 }
 
-func ExtendedOutputDustReturnAddress(address iotago.Address) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputDustReturnAddress(address iotago.Address) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.dustReturnAddress = &address
 	}
 }
 
-func ExtendedOutputHasExpirationCondition(value bool) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputHasExpirationCondition(value bool) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.hasExpirationCondition = &value
 	}
 }
 
-func ExtendedOutputExpiresBefore(time time.Time) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputExpiresBefore(time time.Time) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.expiresBefore = &time
 	}
 }
 
-func ExtendedOutputExpiresAfter(time time.Time) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputExpiresAfter(time time.Time) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.expiresAfter = &time
 	}
 }
 
-func ExtendedOutputExpiresBeforeMilestone(index milestone.Index) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputExpiresBeforeMilestone(index milestone.Index) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.expiresBeforeMilestone = &index
 	}
 }
 
-func ExtendedOutputExpiresAfterMilestone(index milestone.Index) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputExpiresAfterMilestone(index milestone.Index) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.expiresAfterMilestone = &index
 	}
 }
 
-func ExtendedOutputHasTimelockCondition(value bool) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputHasTimelockCondition(value bool) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.hasTimelockCondition = &value
 	}
 }
 
-func ExtendedOutputTimelockedBefore(time time.Time) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputTimelockedBefore(time time.Time) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.timelockedBefore = &time
 	}
 }
 
-func ExtendedOutputTimelockedAfter(time time.Time) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputTimelockedAfter(time time.Time) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.timelockedAfter = &time
 	}
 }
 
-func ExtendedOutputTimelockedBeforeMilestone(index milestone.Index) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputTimelockedBeforeMilestone(index milestone.Index) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.timelockedBeforeMilestone = &index
 	}
 }
 
-func ExtendedOutputTimelockedAfterMilestone(index milestone.Index) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputTimelockedAfterMilestone(index milestone.Index) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.timelockedAfterMilestone = &index
 	}
 }
 
-func ExtendedOutputExpirationReturnAddress(address iotago.Address) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputExpirationReturnAddress(address iotago.Address) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.expirationReturnAddress = &address
 	}
 }
 
-func ExtendedOutputSender(address iotago.Address) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputSender(address iotago.Address) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.sender = &address
 	}
 }
 
-func ExtendedOutputTag(tag []byte) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputTag(tag []byte) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.tag = tag
 	}
 }
 
-func ExtendedOutputPageSize(pageSize int) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputPageSize(pageSize int) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.pageSize = pageSize
 	}
 }
 
-func ExtendedOutputCursor(cursor string) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputCursor(cursor string) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.cursor = &cursor
 	}
 }
 
-func ExtendedOutputCreatedBefore(time time.Time) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputCreatedBefore(time time.Time) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.createdBefore = &time
 	}
 }
 
-func ExtendedOutputCreatedAfter(time time.Time) ExtendedOutputFilterOption {
-	return func(args *ExtendedOutputFilterOptions) {
+func BasicOutputCreatedAfter(time time.Time) BasicOutputFilterOption {
+	return func(args *BasicOutputFilterOptions) {
 		args.createdAfter = &time
 	}
 }
 
-func extendedOutputFilterOptions(optionalOptions []ExtendedOutputFilterOption) *ExtendedOutputFilterOptions {
-	result := &ExtendedOutputFilterOptions{}
+func basicOutputFilterOptions(optionalOptions []BasicOutputFilterOption) *BasicOutputFilterOptions {
+	result := &BasicOutputFilterOptions{}
 
 	for _, optionalOption := range optionalOptions {
 		optionalOption(result)
 	}
 	return result
 }
-func (i *Indexer) ExtendedOutputsWithFilters(filters ...ExtendedOutputFilterOption) *IndexerResult {
-	opts := extendedOutputFilterOptions(filters)
-	query := i.db.Model(&extendedOutput{})
+func (i *Indexer) BasicOutputsWithFilters(filters ...BasicOutputFilterOption) *IndexerResult {
+	opts := basicOutputFilterOptions(filters)
+	query := i.db.Model(&basicOutput{})
 
 	if opts.unlockableByAddress != nil {
 		addr, err := addressBytesForAddress(*opts.unlockableByAddress)

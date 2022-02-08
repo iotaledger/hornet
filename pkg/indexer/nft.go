@@ -11,10 +11,10 @@ type nft struct {
 	NFTID                   nftIDBytes    `gorm:"primaryKey;notnull"`
 	OutputID                outputIDBytes `gorm:"unique;notnull"`
 	Amount                  uint64        `gorm:"notnull"`
-	Issuer                  addressBytes  `gorm:"index:nft_issuer"`
-	Sender                  addressBytes  `gorm:"index:nft_sender_tag"`
-	Tag                     []byte        `gorm:"index:nft_sender_tag"`
-	Address                 addressBytes  `gorm:"notnull;index:nft_address"`
+	Issuer                  addressBytes  `gorm:"index:nfts_issuer"`
+	Sender                  addressBytes  `gorm:"index:nfts_sender_tag"`
+	Tag                     []byte        `gorm:"index:nfts_sender_tag"`
+	Address                 addressBytes  `gorm:"notnull;index:nfts_address"`
 	DustReturn              *uint64
 	DustReturnAddress       addressBytes
 	TimelockMilestone       *milestone.Index

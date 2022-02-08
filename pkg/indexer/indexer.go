@@ -18,7 +18,7 @@ var (
 
 	tables = []interface{}{
 		&status{},
-		&extendedOutput{},
+		&basicOutput{},
 		&nft{},
 		&foundry{},
 		&alias{},
@@ -55,7 +55,7 @@ func NewIndexer(dbPath string) (*Indexer, error) {
 func processSpent(spent *utxo.Spent, tx *gorm.DB) error {
 	switch spent.OutputType() {
 	case iotago.OutputBasic:
-		return tx.Where("output_id = ?", spent.OutputID()[:]).Delete(&extendedOutput{}).Error
+		return tx.Where("output_id = ?", spent.OutputID()[:]).Delete(&basicOutput{}).Error
 	case iotago.OutputAlias:
 		return tx.Where("output_id = ?", spent.OutputID()[:]).Delete(&alias{}).Error
 	case iotago.OutputNFT:
@@ -79,7 +79,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			return err
 		}
 
-		extended := &extendedOutput{
+		extended := &basicOutput{
 			OutputID:  make(outputIDBytes, iotago.OutputIDLength),
 			Amount:    iotaOutput.Amount,
 			CreatedAt: unixTime(output.MilestoneTimestamp()),

@@ -209,14 +209,14 @@ func configureRoutes(routeGroup *echo.Group) {
 }
 
 func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
-	filters := []indexer.ExtendedOutputFilterOption{indexer.ExtendedOutputPageSize(pageSizeFromContext(c))}
+	filters := []indexer.BasicOutputFilterOption{indexer.BasicOutputPageSize(pageSizeFromContext(c))}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
 		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputUnlockableByAddress(addr))
+		filters = append(filters, indexer.BasicOutputUnlockableByAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterHasDustReturnCondition)) > 0 {
@@ -224,7 +224,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputHasDustReturnCondition(value))
+		filters = append(filters, indexer.BasicOutputHasDustReturnCondition(value))
 	}
 
 	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {
@@ -232,7 +232,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputDustReturnAddress(addr))
+		filters = append(filters, indexer.BasicOutputDustReturnAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterHasExpirationCondition)) > 0 {
@@ -240,7 +240,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputHasExpirationCondition(value))
+		filters = append(filters, indexer.BasicOutputHasExpirationCondition(value))
 	}
 
 	if len(c.QueryParam(QueryParameterExpirationReturnAddress)) > 0 {
@@ -248,7 +248,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpirationReturnAddress(addr))
+		filters = append(filters, indexer.BasicOutputExpirationReturnAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterExpiresBefore)) > 0 {
@@ -256,7 +256,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpiresBefore(timestamp))
+		filters = append(filters, indexer.BasicOutputExpiresBefore(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterExpiresAfter)) > 0 {
@@ -264,7 +264,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpiresAfter(timestamp))
+		filters = append(filters, indexer.BasicOutputExpiresAfter(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterExpiresBeforeMilestone)) > 0 {
@@ -272,7 +272,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpiresBeforeMilestone(msIndex))
+		filters = append(filters, indexer.BasicOutputExpiresBeforeMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterExpiresAfterMilestone)) > 0 {
@@ -280,7 +280,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpiresAfterMilestone(msIndex))
+		filters = append(filters, indexer.BasicOutputExpiresAfterMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterHasTimelockCondition)) > 0 {
@@ -288,7 +288,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputHasTimelockCondition(value))
+		filters = append(filters, indexer.BasicOutputHasTimelockCondition(value))
 	}
 
 	if len(c.QueryParam(QueryParameterTimelockedBefore)) > 0 {
@@ -296,7 +296,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTimelockedBefore(timestamp))
+		filters = append(filters, indexer.BasicOutputTimelockedBefore(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterTimelockedAfter)) > 0 {
@@ -304,7 +304,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTimelockedAfter(timestamp))
+		filters = append(filters, indexer.BasicOutputTimelockedAfter(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterTimelockedBeforeMilestone)) > 0 {
@@ -312,7 +312,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTimelockedBeforeMilestone(msIndex))
+		filters = append(filters, indexer.BasicOutputTimelockedBeforeMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterTimelockedAfterMilestone)) > 0 {
@@ -320,7 +320,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTimelockedAfterMilestone(msIndex))
+		filters = append(filters, indexer.BasicOutputTimelockedAfterMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterSender)) > 0 {
@@ -328,7 +328,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputSender(addr))
+		filters = append(filters, indexer.BasicOutputSender(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterTag)) > 0 {
@@ -336,7 +336,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTag(tagBytes))
+		filters = append(filters, indexer.BasicOutputTag(tagBytes))
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
@@ -344,7 +344,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputCursor(cursor), indexer.ExtendedOutputPageSize(pageSize))
+		filters = append(filters, indexer.BasicOutputCursor(cursor), indexer.BasicOutputPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -352,7 +352,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputCreatedBefore(timestamp))
+		filters = append(filters, indexer.BasicOutputCreatedBefore(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
@@ -360,10 +360,10 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputCreatedAfter(timestamp))
+		filters = append(filters, indexer.BasicOutputCreatedAfter(timestamp))
 	}
 
-	return outputsResponseFromResult(deps.Indexer.ExtendedOutputsWithFilters(filters...))
+	return outputsResponseFromResult(deps.Indexer.BasicOutputsWithFilters(filters...))
 }
 
 func aliasByID(c echo.Context) (*outputsResponse, error) {

@@ -430,7 +430,7 @@ func (env *FaucetTestEnv) AssertFaucetBalance(expected uint64) {
 }
 
 func (env *FaucetTestEnv) AssertAddressUTXOCount(address iotago.Address, expected int) {
-	result := env.Indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(address), indexer.ExtendedOutputHasDustReturnCondition(false))
+	result := env.Indexer.BasicOutputsWithFilters(indexer.BasicOutputUnlockableByAddress(address), indexer.BasicOutputHasDustReturnCondition(false))
 	require.NoError(env.t, result.Error)
 	require.Equal(env.t, expected, len(result.OutputIDs))
 }
