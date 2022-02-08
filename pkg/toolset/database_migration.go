@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/dustin/go-humanize"
@@ -20,7 +19,7 @@ func databaseMigration(args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
 	databasePathTargetFlag := fs.String(FlagToolDatabasePathTarget, "", "the path to the target database")
-	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, DefaultValueDatabaseEngine, "the engine of the target database (values: pebble, rocksdb)")
+	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, string(DefaultValueDatabaseEngine), "the engine of the target database (values: pebble, rocksdb)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseMigration)
@@ -59,8 +58,7 @@ func databaseMigration(args []string) error {
 		return fmt.Errorf("'%s' (%s) already exist", FlagToolDatabasePathTarget, targetPath)
 	}
 
-	dbEngineTarget := strings.ToLower(*databaseEngineTargetFlag)
-	engineTarget, err := database.DatabaseEngine(dbEngineTarget)
+	targetEngine, err := database.DatabaseEngine(*databaseEngineTargetFlag, database.EnginePebble, database.EngineRocksDB)
 	if err != nil {
 		return err
 	}
@@ -71,7 +69,7 @@ func databaseMigration(args []string) error {
 	}
 	defer func() { _ = storeSource.Close() }()
 
-	storeTarget, err := database.StoreWithDefaultSettings(targetPath, true, engineTarget)
+	storeTarget, err := database.StoreWithDefaultSettings(targetPath, true, targetEngine)
 	if err != nil {
 		return fmt.Errorf("target database initialization failed: %w", err)
 	}

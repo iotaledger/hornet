@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
 	"github.com/iotaledger/hive.go/kvstore/rocksdb"
 )
@@ -19,16 +21,35 @@ type databaseInfo struct {
 
 // DatabaseEngine parses a string and returns an engine.
 // Returns an error if the engine is unknown.
-func DatabaseEngine(engine string) (Engine, error) {
+func DatabaseEngine(engineStr string, allowedEngines ...Engine) (Engine, error) {
+
+	engine := Engine(strings.ToLower(engineStr))
+
+	if len(allowedEngines) > 0 {
+		supportedEngines := ""
+		for i, allowedEngine := range allowedEngines {
+			if i != 0 {
+				supportedEngines += "/"
+			}
+			supportedEngines += string(allowedEngine)
+
+			if engine == allowedEngine {
+				return engine, nil
+			}
+		}
+
+		return "", fmt.Errorf("unknown database engine: %s, supported engines: %s", engine, supportedEngines)
+	}
 
 	switch engine {
 	case EngineRocksDB:
 	case EnginePebble:
+	case EngineMapDB:
 	default:
-		return "", fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb", engine)
+		return "", fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", engine)
 	}
 
-	return Engine(engine), nil
+	return engine, nil
 }
 
 // CheckDatabaseEngine checks if the correct database engine is used.
@@ -36,6 +57,11 @@ func DatabaseEngine(engine string) (Engine, error) {
 // checks if an existing "database info file" contains the correct engine.
 // Otherwise the files in the database folder are not compatible.
 func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine ...Engine) (Engine, error) {
+
+	if len(dbEngine) >= 0 && dbEngine[0] == EngineMapDB {
+		// no need to create or access a "database info file" in case of mapdb (in-memory)
+		return EngineMapDB, nil
+	}
 
 	if createDatabaseIfNotExists && len(dbEngine) == 0 {
 		return EngineUnknown, errors.New("the database engine must be specified if the database should be newly created")
@@ -144,7 +170,10 @@ func StoreWithDefaultSettings(path string, createDatabaseIfNotExists bool, dbEng
 		}
 		return rocksdb.New(db), nil
 
+	case EngineMapDB:
+		return mapdb.NewMapDB(), nil
+
 	default:
-		return nil, fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb", dbEngine)
+		return nil, fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", dbEngine)
 	}
 }

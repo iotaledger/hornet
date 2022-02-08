@@ -126,35 +126,47 @@ func provide(c *dig.Container) {
 
 		StorageMetrics *metrics.StorageMetrics
 
-		TangleDatabase        *database.Database       `name:"tangleDatabase"`
-		TangleDatabaseMetrics *metrics.DatabaseMetrics `name:"tangleDatabaseMetrics"`
-
-		UTXODatabase        *database.Database       `name:"utxoDatabase"`
-		UTXODatabaseMetrics *metrics.DatabaseMetrics `name:"utxoDatabaseMetrics"`
+		TangleDatabase *database.Database `name:"tangleDatabase"`
+		UTXODatabase   *database.Database `name:"utxoDatabase"`
 	}
 
 	if err := c.Provide(func(deps databaseDeps) databaseOut {
 
-		if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
-			// delete old database folder
-			if err := os.RemoveAll(deps.DatabasePath); err != nil {
-				CorePlugin.LogPanicf("deleting database folder failed: %s", err)
+		checkDatabase := func() database.Engine {
+
+			if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
+				// delete old database folder
+				if err := os.RemoveAll(deps.DatabasePath); err != nil {
+					CorePlugin.LogPanicf("deleting database folder failed: %s", err)
+				}
 			}
+
+			// Check if we need to migrate a legacy database into the split format
+			if err := SplitIntoTangleAndUTXO(deps.DatabasePath); err != nil {
+				CorePlugin.LogPanic(err)
+			}
+
+			tangleTargetEngine, err := database.CheckDatabaseEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine)
+			if err != nil {
+				CorePlugin.LogPanic(err)
+			}
+
+			utxoTargetEngine, err := database.CheckDatabaseEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine)
+			if err != nil {
+				CorePlugin.LogPanic(err)
+			}
+
+			if tangleTargetEngine != utxoTargetEngine {
+				CorePlugin.LogPanicf("Tangle database engine does not match UTXO database engine (%s != %s)", tangleTargetEngine, utxoTargetEngine)
+			}
+
+			return tangleTargetEngine
 		}
 
-		// Check if we need to migrate a legacy database into the split format
-		if err := SplitIntoTangleAndUTXO(deps.DatabasePath); err != nil {
-			CorePlugin.LogPanic(err)
-		}
-
-		targetEngine, err := database.CheckDatabaseEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine)
-		if err != nil {
-			CorePlugin.LogPanic(err)
-		}
-
-		_, err = database.CheckDatabaseEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine)
-		if err != nil {
-			CorePlugin.LogPanic(err)
+		targetEngine := deps.DatabaseEngine
+		if targetEngine != database.EngineMapDB {
+			// we only need to check the database engine if we don't use an in-memory database
+			targetEngine = checkDatabase()
 		}
 
 		tangleDatabaseMetrics := &metrics.DatabaseMetrics{}
@@ -163,24 +175,27 @@ func provide(c *dig.Container) {
 		switch targetEngine {
 		case database.EnginePebble:
 			return databaseOut{
-				StorageMetrics:        &metrics.StorageMetrics{},
-				TangleDatabase:        newPebble(deps.TangleDatabasePath, tangleDatabaseMetrics),
-				TangleDatabaseMetrics: tangleDatabaseMetrics,
-				UTXODatabase:          newPebble(deps.UTXODatabasePath, utxoDatabaseMetrics),
-				UTXODatabaseMetrics:   utxoDatabaseMetrics,
+				StorageMetrics: &metrics.StorageMetrics{},
+				TangleDatabase: newPebble(deps.TangleDatabasePath, tangleDatabaseMetrics),
+				UTXODatabase:   newPebble(deps.UTXODatabasePath, utxoDatabaseMetrics),
 			}
 
 		case database.EngineRocksDB:
 			return databaseOut{
-				StorageMetrics:        &metrics.StorageMetrics{},
-				TangleDatabase:        newRocksDB(deps.TangleDatabasePath, tangleDatabaseMetrics),
-				TangleDatabaseMetrics: tangleDatabaseMetrics,
-				UTXODatabase:          newRocksDB(deps.UTXODatabasePath, utxoDatabaseMetrics),
-				UTXODatabaseMetrics:   utxoDatabaseMetrics,
+				StorageMetrics: &metrics.StorageMetrics{},
+				TangleDatabase: newRocksDB(deps.TangleDatabasePath, tangleDatabaseMetrics),
+				UTXODatabase:   newRocksDB(deps.UTXODatabasePath, utxoDatabaseMetrics),
+			}
+
+		case database.EngineMapDB:
+			return databaseOut{
+				StorageMetrics: &metrics.StorageMetrics{},
+				TangleDatabase: newMapDB(tangleDatabaseMetrics),
+				UTXODatabase:   newMapDB(utxoDatabaseMetrics),
 			}
 
 		default:
-			CorePlugin.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb", targetEngine)
+			CorePlugin.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", targetEngine)
 			return databaseOut{}
 		}
 	}); err != nil {

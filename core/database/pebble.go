@@ -30,6 +30,8 @@ func newPebble(path string, metrics *metrics.DatabaseMetrics) *database.Database
 	return database.New(
 		path,
 		pebble.New(db),
+		database.EnginePebble,
+		metrics,
 		events,
 		true,
 		func() bool {
