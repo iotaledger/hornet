@@ -87,8 +87,8 @@ func (msg *Message) Message() *iotago.Message {
 	return msg.message
 }
 
-func (msg *Message) NetworkID() uint64 {
-	return msg.Message().NetworkID
+func (msg *Message) ProtocolVersion() byte {
+	return msg.Message().ProtocolVersion
 }
 
 func (msg *Message) Parents() hornet.MessageIDs {

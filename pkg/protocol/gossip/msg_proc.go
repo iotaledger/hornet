@@ -64,7 +64,7 @@ type MessageProcessorEvents struct {
 // The Options for the MessageProcessor.
 type Options struct {
 	MinPoWScore       float64
-	NetworkID         uint64
+	ProtocolVersion   byte
 	BelowMaxDepth     milestone.Index
 	WorkUnitCacheOpts *profile.CacheOpts
 }
@@ -201,8 +201,8 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 // this message would be seen as invalid gossip by other peers.
 func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
-	if msg.NetworkID() != proc.opts.NetworkID {
-		return fmt.Errorf("msg has invalid network ID %d instead of %d", msg.NetworkID(), proc.opts.NetworkID)
+	if msg.ProtocolVersion() != proc.opts.ProtocolVersion {
+		return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), proc.opts.ProtocolVersion)
 	}
 
 	score := pow.Score(msg.Data())
@@ -431,9 +431,9 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	}
 
 	// check the network ID of the message
-	if msg.NetworkID() != proc.opts.NetworkID {
+	if msg.ProtocolVersion() != proc.opts.ProtocolVersion {
 		wu.UpdateState(Invalid)
-		wu.punish(errors.New("peer sent a message with an invalid network ID"))
+		wu.punish(errors.New("peer sent a message with an invalid protocol version"))
 		return
 	}
 
