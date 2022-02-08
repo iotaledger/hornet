@@ -42,6 +42,7 @@ func initConfigPars(c *dig.Container) {
 		PublicKeyRanges           coordinator.PublicKeyRanges
 		NetworkID                 uint64               `name:"networkId"`
 		NetworkIDName             string               `name:"networkIdName"`
+		ProtocolVersion           byte                 `name:"protocolVersion"`
 		Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
 		MinPoWScore               float64              `name:"minPoWScore"`
 		MilestonePublicKeyCount   int                  `name:"milestonePublicKeyCount"`
@@ -53,6 +54,7 @@ func initConfigPars(c *dig.Container) {
 		res := cfgResult{
 			NetworkID:               iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
 			NetworkIDName:           deps.NodeConfig.String(CfgProtocolNetworkIDName),
+			ProtocolVersion:         0, //TODO: use iota.go constant
 			Bech32HRP:               iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
 			MinPoWScore:             deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
 			MilestonePublicKeyCount: deps.NodeConfig.Int(CfgProtocolMilestonePublicKeyCount),
