@@ -312,7 +312,7 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		copy(foundry.OutputID, output.OutputID()[:])
 
 		if addressUnlock := conditions.Address(); addressUnlock != nil {
-			foundry.Address, err = addressBytesForAddress(addressUnlock.Address)
+			foundry.AliasAddress, err = addressBytesForAddress(addressUnlock.Address)
 			if err != nil {
 				return err
 			}

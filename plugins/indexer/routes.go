@@ -63,6 +63,9 @@ const (
 	// QueryParameterAddress is used to filter for a certain address.
 	QueryParameterAddress = "address"
 
+	// QueryParameterAliasAddress is used to filter for a certain alias address.
+	QueryParameterAliasAddress = "aliasAddress"
+
 	// QueryParameterIssuer is used to filter for a certain issuer.
 	QueryParameterIssuer = "issuer"
 
@@ -621,12 +624,15 @@ func foundryByID(c echo.Context) (*outputsResponse, error) {
 func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.FoundryFilterOption{indexer.FoundryPageSize(pageSizeFromContext(c))}
 
-	if len(c.QueryParam(QueryParameterAddress)) > 0 {
-		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
+	if len(c.QueryParam(QueryParameterAliasAddress)) > 0 {
+		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAliasAddress)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.FoundryUnlockableByAddress(address))
+		if address.Type() != iotago.AddressAlias {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, not an alias address", address.Bech32(deps.Bech32HRP))
+		}
+		filters = append(filters, indexer.FoundryWithAliasAddress(address.(*iotago.AliasAddress)))
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {

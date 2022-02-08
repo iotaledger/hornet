@@ -10,23 +10,23 @@ type foundry struct {
 	FoundryID        foundryIDBytes `gorm:"primaryKey;notnull"`
 	OutputID         outputIDBytes  `gorm:"unique;notnull"`
 	NativeTokenCount int            `gorm:"notnull"`
-	Address          addressBytes   `gorm:"notnull;index:foundries_address"`
+	AliasAddress     addressBytes   `gorm:"notnull;index:foundries_alias_address"`
 	CreatedAt        time.Time      `gorm:"notnull"`
 }
 
 type FoundryFilterOptions struct {
-	unlockableByAddress *iotago.Address
-	pageSize            int
-	cursor              *string
-	createdBefore       *time.Time
-	createdAfter        *time.Time
+	aliasAddress  *iotago.AliasAddress
+	pageSize      int
+	cursor        *string
+	createdBefore *time.Time
+	createdAfter  *time.Time
 }
 
 type FoundryFilterOption func(*FoundryFilterOptions)
 
-func FoundryUnlockableByAddress(address iotago.Address) FoundryFilterOption {
+func FoundryWithAliasAddress(address *iotago.AliasAddress) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
-		args.unlockableByAddress = &address
+		args.aliasAddress = address
 	}
 }
 
@@ -75,12 +75,12 @@ func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) *Ind
 	opts := foundryFilterOptions(filters)
 	query := i.db.Model(&foundry{})
 
-	if opts.unlockableByAddress != nil {
-		addr, err := addressBytesForAddress(*opts.unlockableByAddress)
+	if opts.aliasAddress != nil {
+		addr, err := addressBytesForAddress(opts.aliasAddress)
 		if err != nil {
 			return errorResult(err)
 		}
-		query = query.Where("address = ?", addr[:])
+		query = query.Where("alias_address = ?", addr[:])
 	}
 
 	if opts.createdBefore != nil {
