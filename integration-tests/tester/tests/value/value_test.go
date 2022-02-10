@@ -49,7 +49,7 @@ func TestValue(t *testing.T) {
 	}
 
 	// build and sign transaction spending the total supply
-	tx, err := builder.NewTransactionBuilder(1234).
+	tx, err := builder.NewTransactionBuilder(iotago.NetworkIDFromString(n.Coordinator().Config.Protocol.NetworkIDName)).
 		AddInput(&builder.ToBeSignedUTXOInput{
 			Address:  &framework.GenesisAddress,
 			OutputID: genesisInputID.ID(),
