@@ -49,10 +49,18 @@ func TestValue(t *testing.T) {
 	}
 
 	// build and sign transaction spending the total supply
-	tx, err := builder.NewTransactionBuilder().
+	tx, err := builder.NewTransactionBuilder(1234).
 		AddInput(&builder.ToBeSignedUTXOInput{
-			Address: &framework.GenesisAddress,
-			Input:   genesisInputID,
+			Address:  &framework.GenesisAddress,
+			OutputID: genesisInputID.ID(),
+			Output: &iotago.BasicOutput{
+				Amount: iotago.TokenSupply,
+				Conditions: iotago.UnlockConditions{
+					&iotago.AddressUnlockCondition{
+						Address: &framework.GenesisAddress,
+					},
+				},
+			},
 		}).
 		AddOutput(&iotago.BasicOutput{
 			Amount: target1Deposit,

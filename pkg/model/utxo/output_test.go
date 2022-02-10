@@ -244,14 +244,12 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 	iotaOutput := &iotago.NFTOutput{
 		Amount: amount,
 		NFTID:  nftID,
-		Blocks: iotago.FeatureBlocks{
-			&iotago.IssuerFeatureBlock{
-				Address: issuerAddress,
-			},
-		},
 		ImmutableBlocks: iotago.FeatureBlocks{
 			&iotago.MetadataFeatureBlock{
 				Data: utils.RandBytes(12),
+			},
+			&iotago.IssuerFeatureBlock{
+				Address: issuerAddress,
 			},
 		},
 		Conditions: iotago.UnlockConditions{
@@ -290,11 +288,13 @@ func TestAliasOutputSerialization(t *testing.T) {
 		AliasID:       aliasID,
 		StateMetadata: []byte{},
 		Blocks: iotago.FeatureBlocks{
-			&iotago.IssuerFeatureBlock{
-				Address: issuer.ToAddress(),
-			},
 			&iotago.SenderFeatureBlock{
 				Address: sender.ToAddress(),
+			},
+		},
+		ImmutableBlocks: iotago.FeatureBlocks{
+			&iotago.IssuerFeatureBlock{
+				Address: issuer.ToAddress(),
 			},
 		},
 		Conditions: iotago.UnlockConditions{
@@ -332,8 +332,8 @@ func TestFoundryOutputSerialization(t *testing.T) {
 		MaximumSupply:     supply,
 		TokenScheme:       &iotago.SimpleTokenScheme{},
 		Conditions: iotago.UnlockConditions{
-			&iotago.AddressUnlockCondition{
-				Address: aliasID.ToAddress(),
+			&iotago.ImmutableAliasUnlockCondition{
+				Address: aliasID.ToAddress().(*iotago.AliasAddress),
 			},
 		},
 	}

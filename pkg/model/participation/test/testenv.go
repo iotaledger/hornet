@@ -164,6 +164,10 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 	}
 }
 
+func (env *ParticipationTestEnv) NetworkID() iotago.NetworkID {
+	return env.te.NetworkID()
+}
+
 func (env *ParticipationTestEnv) ParticipationManager() *participation.ParticipationManager {
 	return env.rm
 }

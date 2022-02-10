@@ -127,7 +127,7 @@ func (b *MessageBuilder) Build() *Message {
 
 	require.Greaterf(b.te.TestInterface, b.amount, uint64(0), "trying to send a transaction with no value")
 
-	txBuilder := builder.NewTransactionBuilder()
+	txBuilder := builder.NewTransactionBuilder(b.te.networkID)
 
 	fromAddr := b.fromWallet.Address()
 	toAddr := b.toWallet.Address()
@@ -169,7 +169,7 @@ func (b *MessageBuilder) Build() *Message {
 	require.GreaterOrEqualf(b.te.TestInterface, outputsBalance, b.amount, "not enough balance in the selected outputs to send the requested amount")
 
 	for _, output := range outputsThatCanBeConsumed {
-		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: fromAddr, Input: output.OutputID().UTXOInput()})
+		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: fromAddr, OutputID: *output.OutputID(), Output: output.Output()})
 		consumedInputs = append(consumedInputs, output)
 		consumedAmount += output.Deposit()
 

@@ -501,7 +501,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Payload, ti
 // buildTransactionPayload creates a signed transaction payload with all UTXO and batched requests.
 func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedRequests []*queueItem) (*iotago.Transaction, *iotago.UTXOInput, uint64, error) {
 
-	txBuilder := builder.NewTransactionBuilder()
+	txBuilder := builder.NewTransactionBuilder(f.networkID)
 	txBuilder.AddTaggedDataPayload(&iotago.TaggedData{Tag: f.opts.tagMessage, Data: nil})
 
 	outputCount := 0
@@ -511,7 +511,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	for _, unspentOutput := range unspentOutputs {
 		outputCount++
 		remainderAmount += int64(unspentOutput.Deposit())
-		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: f.address, Input: unspentOutput.OutputID().UTXOInput()})
+		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: f.address, OutputID: *unspentOutput.OutputID(), Output: unspentOutput.Output()})
 	}
 
 	// add all requests as outputs

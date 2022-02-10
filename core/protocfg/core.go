@@ -54,7 +54,7 @@ func initConfigPars(c *dig.Container) {
 		res := cfgResult{
 			NetworkID:               iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
 			NetworkIDName:           deps.NodeConfig.String(CfgProtocolNetworkIDName),
-			ProtocolVersion:         0, //TODO: use iota.go constant
+			ProtocolVersion:         iotago.ProtocolVersion, //TODO: remove this cfg and use the constant everywhere
 			Bech32HRP:               iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
 			MinPoWScore:             deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
 			MilestonePublicKeyCount: deps.NodeConfig.Int(CfgProtocolMilestonePublicKeyCount),
