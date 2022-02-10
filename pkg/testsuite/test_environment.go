@@ -50,9 +50,6 @@ type TestEnvironment struct {
 	// networkID is the network ID used for this test network.
 	networkID uint64
 
-	// protocolVersion is the protocol network this test uses.
-	protocolVersion byte
-
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
 	belowMaxDepth milestone.Index
@@ -220,10 +217,6 @@ func (te *TestEnvironment) ConfigureUTXOCallbacks(onNewOutputFunc OnNewOutputFun
 
 func (te *TestEnvironment) NetworkID() iotago.NetworkID {
 	return te.networkID
-}
-
-func (te *TestEnvironment) ProtocolVersion() byte {
-	return te.protocolVersion
 }
 
 func (te *TestEnvironment) Storage() *storage.Storage {

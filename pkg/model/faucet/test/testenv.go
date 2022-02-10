@@ -180,8 +180,8 @@ func NewFaucetTestEnv(t *testing.T,
 
 	storeMessageFunc := func(msg *storage.Message) error {
 
-		if msg.ProtocolVersion() != te.ProtocolVersion() {
-			return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), te.ProtocolVersion())
+		if msg.ProtocolVersion() != iotago.ProtocolVersion {
+			return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), iotago.ProtocolVersion)
 		}
 
 		score := pow.Score(msg.Data())
@@ -258,7 +258,6 @@ func NewFaucetTestEnv(t *testing.T,
 		te.Storage(),
 		te.SyncManager(),
 		te.NetworkID(),
-		te.ProtocolVersion(),
 		testsuite.DeSerializationParameters,
 		int(te.BelowMaxDepth()),
 		te.UTXOManager(),

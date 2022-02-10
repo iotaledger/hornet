@@ -137,7 +137,6 @@ type dependencies struct {
 	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager                  *p2p.ConfigManager
 	NetworkID                             uint64 `name:"networkId"`
-	ProtocolVersion                       byte   `name:"protocolVersion"`
 	NetworkIDName                         string `name:"networkIdName"`
 	DeserializationParameters             *iotago.DeSerializationParameters
 	MaxDeltaMsgYoungestConeRootIndexToCMI int                    `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`

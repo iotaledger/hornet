@@ -196,7 +196,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	if msg.ProtocolVersion == 0 {
-		msg.ProtocolVersion = deps.ProtocolVersion
+		msg.ProtocolVersion = iotago.ProtocolVersion
 	}
 
 	switch payload := msg.Payload.(type) {

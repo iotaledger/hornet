@@ -96,8 +96,6 @@ type Faucet struct {
 	syncManager *syncmanager.SyncManager
 	// id of the network the faucet is running in.
 	networkID uint64
-	// version of the protocol the faucet is using.
-	protocolVersion byte
 	// Deserialization parameters including byte costs
 	deSeriParas *iotago.DeSerializationParameters
 	// belowMaxDepth is the maximum allowed delta
@@ -262,7 +260,6 @@ func New(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	networkID uint64,
-	protocolVersion byte,
 	deSeriParas *iotago.DeSerializationParameters,
 	belowMaxDepth int,
 	utxoManager *utxo.Manager,
@@ -283,7 +280,6 @@ func New(
 		storage:         dbStorage,
 		syncManager:     syncManager,
 		networkID:       networkID,
-		protocolVersion: protocolVersion,
 		deSeriParas:     deSeriParas,
 		belowMaxDepth:   milestone.Index(belowMaxDepth),
 		utxoManager:     utxoManager,
@@ -481,7 +477,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Payload, ti
 
 	// create the message
 	iotaMsg := &iotago.Message{
-		ProtocolVersion: f.protocolVersion,
+		ProtocolVersion: iotago.ProtocolVersion,
 		Parents:         tips.ToSliceOfArrays(),
 		Payload:         txPayload,
 	}

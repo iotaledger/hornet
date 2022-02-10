@@ -21,7 +21,6 @@ type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.MessageIDs, err er
 
 // Spammer is used to issue messages to the IOTA network to create load on the tangle.
 type Spammer struct {
-	protocolVersion byte
 	// Deserialization parameters including byte costs
 	deSeriParas     *iotago.DeSerializationParameters
 	message         string
@@ -34,8 +33,7 @@ type Spammer struct {
 }
 
 // New creates a new spammer instance.
-func New(protocolVersion byte,
-	deSeriParas *iotago.DeSerializationParameters,
+func New(deSeriParas *iotago.DeSerializationParameters,
 	message string,
 	tag string,
 	tagSemiLazy string,
@@ -45,7 +43,6 @@ func New(protocolVersion byte,
 	serverMetrics *metrics.ServerMetrics) *Spammer {
 
 	return &Spammer{
-		protocolVersion: protocolVersion,
 		deSeriParas:     deSeriParas,
 		message:         message,
 		tag:             tag,
@@ -85,7 +82,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	messageString += fmt.Sprintf("\nTipselection: %v", durationGTTA.Truncate(time.Microsecond))
 
 	iotaMsg := &iotago.Message{
-		ProtocolVersion: s.protocolVersion,
+		ProtocolVersion: iotago.ProtocolVersion,
 		Parents:         tips.ToSliceOfArrays(),
 		Payload:         &iotago.TaggedData{Tag: tagBytes, Data: []byte(messageString)},
 	}

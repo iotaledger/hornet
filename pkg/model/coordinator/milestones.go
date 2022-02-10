@@ -46,7 +46,7 @@ func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint64,
 	}
 
 	iotaMsg := &iotago.Message{
-		ProtocolVersion: coo.protocolVersion,
+		ProtocolVersion: iotago.ProtocolVersion,
 		Parents:         parentsSliceOfArray,
 		Payload:         msPayload,
 	}
