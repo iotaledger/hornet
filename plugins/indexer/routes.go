@@ -63,6 +63,9 @@ const (
 	// QueryParameterAddress is used to filter for a certain address.
 	QueryParameterAddress = "address"
 
+	// QueryParameterAliasAddress is used to filter for a certain alias address.
+	QueryParameterAliasAddress = "aliasAddress"
+
 	// QueryParameterIssuer is used to filter for a certain issuer.
 	QueryParameterIssuer = "issuer"
 
@@ -128,6 +131,15 @@ const (
 
 	// QueryParameterCreatedAfter is used to filter for outputs that were created after the given time.
 	QueryParameterCreatedAfter = "createdAfter"
+
+	// QueryParameterHasNativeTokens is used to filter for outputs that have native tokens.
+	QueryParameterHasNativeTokens = "hasNativeTokens"
+
+	// QueryParameterMinNativeTokenCount is used to filter for outputs that have at least an amount of native tokens.
+	QueryParameterMinNativeTokenCount = "minNativeTokenCount"
+
+	// QueryParameterMaxNativeTokenCount is used to filter for outputs that have at the most an amount of native tokens.
+	QueryParameterMaxNativeTokenCount = "maxNativeTokenCount"
 )
 
 func nodeSyncedMiddleware() echo.MiddlewareFunc {
@@ -209,14 +221,38 @@ func configureRoutes(routeGroup *echo.Group) {
 }
 
 func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
-	filters := []indexer.ExtendedOutputFilterOption{indexer.ExtendedOutputPageSize(pageSizeFromContext(c))}
+	filters := []indexer.BasicOutputFilterOption{indexer.BasicOutputPageSize(pageSizeFromContext(c))}
+
+	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.BasicOutputHasNativeTokens(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.BasicOutputMinNativeTokenCount(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.BasicOutputMaxNativeTokenCount(value))
+	}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
 		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputUnlockableByAddress(addr))
+		filters = append(filters, indexer.BasicOutputUnlockableByAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterHasDustReturnCondition)) > 0 {
@@ -224,7 +260,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputHasDustReturnCondition(value))
+		filters = append(filters, indexer.BasicOutputHasDustReturnCondition(value))
 	}
 
 	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {
@@ -232,7 +268,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputDustReturnAddress(addr))
+		filters = append(filters, indexer.BasicOutputDustReturnAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterHasExpirationCondition)) > 0 {
@@ -240,7 +276,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputHasExpirationCondition(value))
+		filters = append(filters, indexer.BasicOutputHasExpirationCondition(value))
 	}
 
 	if len(c.QueryParam(QueryParameterExpirationReturnAddress)) > 0 {
@@ -248,7 +284,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpirationReturnAddress(addr))
+		filters = append(filters, indexer.BasicOutputExpirationReturnAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterExpiresBefore)) > 0 {
@@ -256,7 +292,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpiresBefore(timestamp))
+		filters = append(filters, indexer.BasicOutputExpiresBefore(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterExpiresAfter)) > 0 {
@@ -264,7 +300,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpiresAfter(timestamp))
+		filters = append(filters, indexer.BasicOutputExpiresAfter(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterExpiresBeforeMilestone)) > 0 {
@@ -272,7 +308,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpiresBeforeMilestone(msIndex))
+		filters = append(filters, indexer.BasicOutputExpiresBeforeMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterExpiresAfterMilestone)) > 0 {
@@ -280,7 +316,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputExpiresAfterMilestone(msIndex))
+		filters = append(filters, indexer.BasicOutputExpiresAfterMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterHasTimelockCondition)) > 0 {
@@ -288,7 +324,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputHasTimelockCondition(value))
+		filters = append(filters, indexer.BasicOutputHasTimelockCondition(value))
 	}
 
 	if len(c.QueryParam(QueryParameterTimelockedBefore)) > 0 {
@@ -296,7 +332,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTimelockedBefore(timestamp))
+		filters = append(filters, indexer.BasicOutputTimelockedBefore(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterTimelockedAfter)) > 0 {
@@ -304,7 +340,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTimelockedAfter(timestamp))
+		filters = append(filters, indexer.BasicOutputTimelockedAfter(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterTimelockedBeforeMilestone)) > 0 {
@@ -312,7 +348,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTimelockedBeforeMilestone(msIndex))
+		filters = append(filters, indexer.BasicOutputTimelockedBeforeMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterTimelockedAfterMilestone)) > 0 {
@@ -320,7 +356,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTimelockedAfterMilestone(msIndex))
+		filters = append(filters, indexer.BasicOutputTimelockedAfterMilestone(msIndex))
 	}
 
 	if len(c.QueryParam(QueryParameterSender)) > 0 {
@@ -328,7 +364,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputSender(addr))
+		filters = append(filters, indexer.BasicOutputSender(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterTag)) > 0 {
@@ -336,7 +372,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputTag(tagBytes))
+		filters = append(filters, indexer.BasicOutputTag(tagBytes))
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
@@ -344,7 +380,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputCursor(cursor), indexer.ExtendedOutputPageSize(pageSize))
+		filters = append(filters, indexer.BasicOutputCursor(cursor), indexer.BasicOutputPageSize(pageSize))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedBefore)) > 0 {
@@ -352,7 +388,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputCreatedBefore(timestamp))
+		filters = append(filters, indexer.BasicOutputCreatedBefore(timestamp))
 	}
 
 	if len(c.QueryParam(QueryParameterCreatedAfter)) > 0 {
@@ -360,10 +396,10 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.ExtendedOutputCreatedAfter(timestamp))
+		filters = append(filters, indexer.BasicOutputCreatedAfter(timestamp))
 	}
 
-	return outputsResponseFromResult(deps.Indexer.ExtendedOutputsWithFilters(filters...))
+	return outputsResponseFromResult(deps.Indexer.BasicOutputsWithFilters(filters...))
 }
 
 func aliasByID(c echo.Context) (*outputsResponse, error) {
@@ -376,6 +412,30 @@ func aliasByID(c echo.Context) (*outputsResponse, error) {
 
 func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.AliasFilterOption{indexer.AliasPageSize(pageSizeFromContext(c))}
+
+	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasHasNativeTokens(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasMinNativeTokenCount(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.AliasMaxNativeTokenCount(value))
+	}
 
 	if len(c.QueryParam(QueryParameterStateController)) > 0 {
 		stateController, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterStateController)
@@ -446,6 +506,30 @@ func nftByID(c echo.Context) (*outputsResponse, error) {
 
 func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.NFTFilterOption{indexer.NFTPageSize(pageSizeFromContext(c))}
+
+	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTHasNativeTokens(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTMinNativeTokenCount(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.NFTMaxNativeTokenCount(value))
+	}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
 		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
@@ -621,12 +705,39 @@ func foundryByID(c echo.Context) (*outputsResponse, error) {
 func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	filters := []indexer.FoundryFilterOption{indexer.FoundryPageSize(pageSizeFromContext(c))}
 
-	if len(c.QueryParam(QueryParameterAddress)) > 0 {
-		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
+	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.FoundryUnlockableByAddress(address))
+		filters = append(filters, indexer.FoundryHasNativeTokens(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.FoundryMinNativeTokenCount(value))
+	}
+
+	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, indexer.FoundryMaxNativeTokenCount(value))
+	}
+
+	if len(c.QueryParam(QueryParameterAliasAddress)) > 0 {
+		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAliasAddress)
+		if err != nil {
+			return nil, err
+		}
+		if address.Type() != iotago.AddressAlias {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, not an alias address", address.Bech32(deps.Bech32HRP))
+		}
+		filters = append(filters, indexer.FoundryWithAliasAddress(address.(*iotago.AliasAddress)))
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
@@ -686,7 +797,7 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 	}, nil
 }
 
-func parseCursorQueryParameter(c echo.Context) (string, int, error) {
+func parseCursorQueryParameter(c echo.Context) (string, uint32, error) {
 	cursorWithPageSize := c.QueryParam(QueryParameterCursor)
 
 	components := strings.Split(cursorWithPageSize, ".")
@@ -703,24 +814,22 @@ func parseCursorQueryParameter(c echo.Context) (string, int, error) {
 		return "", 0, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter %s has wrong format", QueryParameterCursor))
 	}
 
-	pageSize := int(size)
-	if pageSize > deps.RestAPILimitsMaxResults {
-		pageSize = deps.RestAPILimitsMaxResults
+	pageSize := uint32(size)
+	if pageSize > uint32(deps.RestAPILimitsMaxResults) {
+		pageSize = uint32(deps.RestAPILimitsMaxResults)
 	}
 
 	return components[0], pageSize, nil
 }
 
-func pageSizeFromContext(c echo.Context) int {
-	pageSize := deps.RestAPILimitsMaxResults
+func pageSizeFromContext(c echo.Context) uint32 {
+	pageSize := uint32(deps.RestAPILimitsMaxResults)
 	if len(c.QueryParam(QueryParameterPageSize)) > 0 {
-		i, err := strconv.Atoi(c.QueryParam(QueryParameterPageSize))
+		i, err := restapi.ParseUint32QueryParam(c, QueryParameterPageSize, pageSize)
 		if err != nil {
 			return pageSize
 		}
-		if i > 0 && i < pageSize {
-			pageSize = i
-		}
+		pageSize = i
 	}
 	return pageSize
 }

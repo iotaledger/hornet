@@ -16,10 +16,10 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	outputs := Outputs{
-		RandUTXOOutput(iotago.OutputExtended),
-		RandUTXOOutput(iotago.OutputExtended),
-		RandUTXOOutput(iotago.OutputNFT),      // spent
-		RandUTXOOutput(iotago.OutputExtended), // spent
+		RandUTXOOutput(iotago.OutputBasic),
+		RandUTXOOutput(iotago.OutputBasic),
+		RandUTXOOutput(iotago.OutputNFT),   // spent
+		RandUTXOOutput(iotago.OutputBasic), // spent
 		RandUTXOOutput(iotago.OutputAlias),
 		RandUTXOOutput(iotago.OutputNFT),
 		RandUTXOOutput(iotago.OutputFoundry),
@@ -79,9 +79,9 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	previousOutputs := Outputs{
-		RandUTXOOutput(iotago.OutputExtended),
-		RandUTXOOutput(iotago.OutputExtended), // spent
-		RandUTXOOutput(iotago.OutputNFT),      // spent on 2nd confirmation
+		RandUTXOOutput(iotago.OutputBasic),
+		RandUTXOOutput(iotago.OutputBasic), // spent
+		RandUTXOOutput(iotago.OutputNFT),   // spent on 2nd confirmation
 	}
 
 	previousMsIndex := milestone.Index(48)
@@ -96,9 +96,9 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	require.Equal(t, previousMsIndex, ledgerIndex)
 
 	outputs := Outputs{
-		RandUTXOOutput(iotago.OutputExtended),
+		RandUTXOOutput(iotago.OutputBasic),
 		RandUTXOOutput(iotago.OutputFoundry),
-		RandUTXOOutput(iotago.OutputExtended), // spent
+		RandUTXOOutput(iotago.OutputBasic), // spent
 		RandUTXOOutput(iotago.OutputAlias),
 	}
 	msIndex := milestone.Index(49)

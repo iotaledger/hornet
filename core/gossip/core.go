@@ -106,6 +106,7 @@ func provide(c *dig.Container) {
 			deps.DeserializationParameters,
 			&gossip.Options{
 				MinPoWScore:       deps.MinPoWScore,
+				ProtocolVersion:   iotago.ProtocolVersion,
 				NetworkID:         deps.NetworkID,
 				BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 				WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,

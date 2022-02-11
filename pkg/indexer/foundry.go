@@ -7,16 +7,19 @@ import (
 )
 
 type foundry struct {
-	FoundryID foundryIDBytes `gorm:"primaryKey;notnull"`
-	OutputID  outputIDBytes  `gorm:"unique;notnull"`
-	Amount    uint64         `gorm:"notnull"`
-	Address   addressBytes   `gorm:"notnull;index:foundries_address"`
-	CreatedAt time.Time      `gorm:"notnull"`
+	FoundryID        foundryIDBytes `gorm:"primaryKey;notnull"`
+	OutputID         outputIDBytes  `gorm:"unique;notnull"`
+	NativeTokenCount int            `gorm:"notnull"`
+	AliasAddress     addressBytes   `gorm:"notnull;index:foundries_alias_address"`
+	CreatedAt        time.Time      `gorm:"notnull"`
 }
 
 type FoundryFilterOptions struct {
-	unlockableByAddress *iotago.Address
-	pageSize            int
+	hasNativeTokens     *bool
+	minNativeTokenCount *uint32
+	maxNativeTokenCount *uint32
+	aliasAddress        *iotago.AliasAddress
+	pageSize            uint32
 	cursor              *string
 	createdBefore       *time.Time
 	createdAfter        *time.Time
@@ -24,13 +27,31 @@ type FoundryFilterOptions struct {
 
 type FoundryFilterOption func(*FoundryFilterOptions)
 
-func FoundryUnlockableByAddress(address iotago.Address) FoundryFilterOption {
+func FoundryHasNativeTokens(value bool) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
-		args.unlockableByAddress = &address
+		args.hasNativeTokens = &value
 	}
 }
 
-func FoundryPageSize(pageSize int) FoundryFilterOption {
+func FoundryMinNativeTokenCount(value uint32) FoundryFilterOption {
+	return func(args *FoundryFilterOptions) {
+		args.minNativeTokenCount = &value
+	}
+}
+
+func FoundryMaxNativeTokenCount(value uint32) FoundryFilterOption {
+	return func(args *FoundryFilterOptions) {
+		args.maxNativeTokenCount = &value
+	}
+}
+
+func FoundryWithAliasAddress(address *iotago.AliasAddress) FoundryFilterOption {
+	return func(args *FoundryFilterOptions) {
+		args.aliasAddress = address
+	}
+}
+
+func FoundryPageSize(pageSize uint32) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
 		args.pageSize = pageSize
 	}
@@ -75,12 +96,28 @@ func (i *Indexer) FoundryOutputsWithFilters(filters ...FoundryFilterOption) *Ind
 	opts := foundryFilterOptions(filters)
 	query := i.db.Model(&foundry{})
 
-	if opts.unlockableByAddress != nil {
-		addr, err := addressBytesForAddress(*opts.unlockableByAddress)
+	if opts.hasNativeTokens != nil {
+		if *opts.hasNativeTokens {
+			query = query.Where("native_token_count > 0")
+		} else {
+			query = query.Where("native_token_count == 0")
+		}
+	}
+
+	if opts.minNativeTokenCount != nil {
+		query = query.Where("native_token_count >= ?", *opts.minNativeTokenCount)
+	}
+
+	if opts.maxNativeTokenCount != nil {
+		query = query.Where("native_token_count <= ?", *opts.maxNativeTokenCount)
+	}
+
+	if opts.aliasAddress != nil {
+		addr, err := addressBytesForAddress(opts.aliasAddress)
 		if err != nil {
 			return errorResult(err)
 		}
-		query = query.Where("address = ?", addr[:])
+		query = query.Where("alias_address = ?", addr[:])
 	}
 
 	if opts.createdBefore != nil {

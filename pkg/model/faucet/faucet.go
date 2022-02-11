@@ -326,7 +326,7 @@ func (f *Faucet) Info() (*FaucetInfoResponse, error) {
 }
 
 func (f *Faucet) computeAddressBalance(address iotago.Address) (uint64, error) {
-	result := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(address), indexer.ExtendedOutputHasDustReturnCondition(false))
+	result := f.indexer.BasicOutputsWithFilters(indexer.BasicOutputUnlockableByAddress(address), indexer.BasicOutputHasDustReturnCondition(false))
 	if result.Error != nil {
 		return 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), result.Error))
 	}
@@ -477,9 +477,9 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Payload, ti
 
 	// create the message
 	iotaMsg := &iotago.Message{
-		NetworkID: f.networkID,
-		Parents:   tips.ToSliceOfArrays(),
-		Payload:   txPayload,
+		ProtocolVersion: iotago.ProtocolVersion,
+		Parents:         tips.ToSliceOfArrays(),
+		Payload:         txPayload,
 	}
 
 	if err := f.powHandler.DoPoW(ctx, iotaMsg, 1); err != nil {
@@ -497,7 +497,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Payload, ti
 // buildTransactionPayload creates a signed transaction payload with all UTXO and batched requests.
 func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedRequests []*queueItem) (*iotago.Transaction, *iotago.UTXOInput, uint64, error) {
 
-	txBuilder := builder.NewTransactionBuilder()
+	txBuilder := builder.NewTransactionBuilder(f.networkID)
 	txBuilder.AddTaggedDataPayload(&iotago.TaggedData{Tag: f.opts.tagMessage, Data: nil})
 
 	outputCount := 0
@@ -507,7 +507,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	for _, unspentOutput := range unspentOutputs {
 		outputCount++
 		remainderAmount += int64(unspentOutput.Deposit())
-		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: f.address, Input: unspentOutput.OutputID().UTXOInput()})
+		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: f.address, OutputID: *unspentOutput.OutputID(), Output: unspentOutput.Output()})
 	}
 
 	// add all requests as outputs
@@ -532,7 +532,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 		}
 		remainderAmount -= int64(amount)
 
-		txBuilder.AddOutput(&iotago.ExtendedOutput{
+		txBuilder.AddOutput(&iotago.BasicOutput{
 			Amount: amount,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: req.Address},
@@ -541,7 +541,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	}
 
 	if remainderAmount > 0 {
-		txBuilder.AddOutput(&iotago.ExtendedOutput{
+		txBuilder.AddOutput(&iotago.BasicOutput{
 			Amount: uint64(remainderAmount),
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: f.address},
@@ -571,8 +571,8 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	found := false
 	var outputIndex uint16 = 0
 	for _, output := range txPayload.Essence.Outputs {
-		extendedOutput := output.(*iotago.ExtendedOutput)
-		conditions, err := extendedOutput.UnlockConditions().Set()
+		basicOutput := output.(*iotago.BasicOutput)
+		conditions, err := basicOutput.UnlockConditions().Set()
 		if err != nil {
 			return nil, nil, 0, err
 		}
@@ -616,7 +616,7 @@ func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.O
 	f.addPendingTransactionWithoutLocking(&pendingTransaction{MessageID: msg.MessageID(), QueuedItems: batchedRequests})
 	if remainderIotaGoOutput != nil {
 		remainderIotaGoOutputID := remainderIotaGoOutput.ID()
-		output := &iotago.ExtendedOutput{
+		output := &iotago.BasicOutput{
 			Amount: remainderAmount,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: f.address},
@@ -767,7 +767,7 @@ func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) err
 					return []*utxo.Output{f.lastRemainderOutput}, f.lastRemainderOutput.Deposit(), nil
 				}
 
-				result := f.indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(f.address), indexer.ExtendedOutputHasDustReturnCondition(false))
+				result := f.indexer.BasicOutputsWithFilters(indexer.BasicOutputUnlockableByAddress(f.address), indexer.BasicOutputHasDustReturnCondition(false))
 				if result.Error != nil {
 					return nil, 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), result.Error))
 				}

@@ -7,28 +7,49 @@ import (
 )
 
 type alias struct {
-	AliasID         aliasIDBytes  `gorm:"primaryKey;notnull"`
-	OutputID        outputIDBytes `gorm:"unique;notnull"`
-	Amount          uint64        `gorm:"notnull"`
-	StateController addressBytes  `gorm:"notnull;index:alias_state_controller"`
-	Governor        addressBytes  `gorm:"notnull;index:alias_governor"`
-	Issuer          addressBytes  `gorm:"index:alias_issuer"`
-	Sender          addressBytes  `gorm:"index:alias_sender"`
-	CreatedAt       time.Time     `gorm:"notnull"`
+	AliasID          aliasIDBytes  `gorm:"primaryKey;notnull"`
+	OutputID         outputIDBytes `gorm:"unique;notnull"`
+	NativeTokenCount int           `gorm:"notnull"`
+	StateController  addressBytes  `gorm:"notnull;index:alias_state_controller"`
+	Governor         addressBytes  `gorm:"notnull;index:alias_governor"`
+	Issuer           addressBytes  `gorm:"index:alias_issuer"`
+	Sender           addressBytes  `gorm:"index:alias_sender"`
+	CreatedAt        time.Time     `gorm:"notnull"`
 }
 
 type AliasFilterOptions struct {
-	stateController *iotago.Address
-	governor        *iotago.Address
-	issuer          *iotago.Address
-	sender          *iotago.Address
-	pageSize        int
-	cursor          *string
-	createdBefore   *time.Time
-	createdAfter    *time.Time
+	hasNativeTokens     *bool
+	minNativeTokenCount *uint32
+	maxNativeTokenCount *uint32
+	stateController     *iotago.Address
+	governor            *iotago.Address
+	issuer              *iotago.Address
+	sender              *iotago.Address
+	pageSize            uint32
+	cursor              *string
+	createdBefore       *time.Time
+	createdAfter        *time.Time
 }
 
 type AliasFilterOption func(*AliasFilterOptions)
+
+func AliasHasNativeTokens(value bool) AliasFilterOption {
+	return func(args *AliasFilterOptions) {
+		args.hasNativeTokens = &value
+	}
+}
+
+func AliasMinNativeTokenCount(value uint32) AliasFilterOption {
+	return func(args *AliasFilterOptions) {
+		args.minNativeTokenCount = &value
+	}
+}
+
+func AliasMaxNativeTokenCount(value uint32) AliasFilterOption {
+	return func(args *AliasFilterOptions) {
+		args.maxNativeTokenCount = &value
+	}
+}
 
 func AliasStateController(address iotago.Address) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
@@ -54,7 +75,7 @@ func AliasIssuer(address iotago.Address) AliasFilterOption {
 	}
 }
 
-func AliasPageSize(pageSize int) AliasFilterOption {
+func AliasPageSize(pageSize uint32) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
 		args.pageSize = pageSize
 	}
@@ -99,6 +120,22 @@ func (i *Indexer) AliasOutput(aliasID *iotago.AliasID) *IndexerResult {
 func (i *Indexer) AliasOutputsWithFilters(filter ...AliasFilterOption) *IndexerResult {
 	opts := aliasFilterOptions(filter)
 	query := i.db.Model(&alias{})
+
+	if opts.hasNativeTokens != nil {
+		if *opts.hasNativeTokens {
+			query = query.Where("native_token_count > 0")
+		} else {
+			query = query.Where("native_token_count == 0")
+		}
+	}
+
+	if opts.minNativeTokenCount != nil {
+		query = query.Where("native_token_count >= ?", *opts.minNativeTokenCount)
+	}
+
+	if opts.maxNativeTokenCount != nil {
+		query = query.Where("native_token_count <= ?", *opts.maxNativeTokenCount)
+	}
 
 	if opts.stateController != nil {
 		addr, err := addressBytesForAddress(*opts.stateController)

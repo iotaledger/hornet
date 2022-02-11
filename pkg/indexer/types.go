@@ -60,7 +60,7 @@ func addressBytesForAddress(addr iotago.Address) (addressBytes, error) {
 type IndexerResult struct {
 	OutputIDs   iotago.OutputIDs
 	LedgerIndex milestone.Index
-	PageSize    int
+	PageSize    uint32
 	Cursor      *string
 	Error       error
 }
@@ -75,11 +75,11 @@ func unixTime(fromValue uint32) time.Time {
 	return time.Unix(int64(fromValue), 0)
 }
 
-func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB, pageSize int, cursor *string) *IndexerResult {
+func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB, pageSize uint32, cursor *string) *IndexerResult {
 
 	query = query.Select("output_id").Order("created_at asc, output_id asc")
 	if pageSize > 0 {
-		query = query.Select("output_id", "printf('%08X', strftime('%s', `created_at`)) || hex(output_id) as cursor").Limit(pageSize + 1)
+		query = query.Select("output_id", "printf('%08X', strftime('%s', `created_at`)) || hex(output_id) as cursor").Limit(int(pageSize + 1))
 
 		if cursor != nil {
 			if len(*cursor) != CursorLength {
@@ -108,7 +108,7 @@ func (i *Indexer) combineOutputIDFilteredQuery(query *gorm.DB, pageSize int, cur
 	}
 
 	var nextCursor *string
-	if pageSize > 0 && len(results) > pageSize {
+	if pageSize > 0 && uint32(len(results)) > pageSize {
 		lastResult := results[len(results)-1]
 		results = results[:len(results)-1]
 		c := strings.ToLower(lastResult.Cursor)

@@ -277,7 +277,7 @@ func utxoOutput(fill byte, amount uint64, msIndex milestone.Index) *utxo.Output 
 		staticMessageID(fill),
 		msIndex,
 		0,
-		&iotago.ExtendedOutput{
+		&iotago.BasicOutput{
 			Amount: amount,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{

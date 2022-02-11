@@ -79,7 +79,7 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 			return nil, err
 		}
 
-		if unspentOutput.Type() != iotago.OutputExtended {
+		if unspentOutput.Type() != iotago.OutputBasic {
 			continue
 		}
 
@@ -96,7 +96,7 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 		return nil, fmt.Errorf("not enough balance on the inputs: %d, needed: %d", inputsBalance, outputAmount)
 	}
 
-	txBuilder.AddOutput(&iotago.ExtendedOutput{
+	txBuilder.AddOutput(&iotago.BasicOutput{
 		Amount: outputAmount,
 		Conditions: iotago.UnlockConditions{
 			&iotago.AddressUnlockCondition{Address: outputAddress},
@@ -109,7 +109,7 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 	}
 
 	if inputsBalance > 0 {
-		txBuilder.AddOutput(&iotago.ExtendedOutput{
+		txBuilder.AddOutput(&iotago.BasicOutput{
 			Amount: inputsBalance,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: inputAddress},

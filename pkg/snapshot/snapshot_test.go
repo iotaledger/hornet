@@ -122,7 +122,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	// Fill up the UTXO
 	var err error
 	for i := 0; i < count; i++ {
-		err = u1.AddUnspentOutput(randomOutput(iotago.OutputExtended))
+		err = u1.AddUnspentOutput(randomOutput(iotago.OutputBasic))
 		require.NoError(t, err)
 
 		err = u1.AddUnspentOutput(randomOutput(iotago.OutputAlias))
@@ -136,14 +136,14 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	}
 
 	// Count the outputs in the ledger
-	var extendedCount int
+	var basicCount int
 	var nftCount int
 	var foundryCount int
 	var aliasCount int
 	err = u1.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
-		case iotago.OutputExtended:
-			extendedCount++
+		case iotago.OutputBasic:
+			basicCount++
 		case iotago.OutputNFT:
 			nftCount++
 		case iotago.OutputFoundry:
@@ -156,7 +156,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		return true
 	})
 	require.NoError(t, err)
-	require.Equal(t, count, extendedCount)
+	require.Equal(t, count, basicCount)
 	require.Equal(t, count, nftCount)
 	require.Equal(t, count, foundryCount)
 	require.Equal(t, count, aliasCount)
@@ -196,14 +196,14 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Count the outputs in the new ledger
-	extendedCount = 0
+	basicCount = 0
 	nftCount = 0
 	foundryCount = 0
 	aliasCount = 0
 	err = u2.ForEachOutput(func(output *utxo.Output) bool {
 		switch output.OutputType() {
-		case iotago.OutputExtended:
-			extendedCount++
+		case iotago.OutputBasic:
+			basicCount++
 		case iotago.OutputNFT:
 			nftCount++
 		case iotago.OutputFoundry:
@@ -216,7 +216,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		return true
 	})
 	require.NoError(t, err)
-	require.Equal(t, count, extendedCount)
+	require.Equal(t, count, basicCount)
 	require.Equal(t, count, nftCount)
 	require.Equal(t, count, foundryCount)
 	require.Equal(t, count, aliasCount)
@@ -276,11 +276,11 @@ func TestSnapshotMsDiffProducerAndConsumer(t *testing.T) {
 	for msIndex, done = msIterator(); !done; msIndex, done = msIterator() {
 
 		outputs := utxo.Outputs{
-			randomOutput(iotago.OutputExtended),
-			randomOutput(iotago.OutputExtended),
-			randomOutput(iotago.OutputExtended),
-			randomOutput(iotago.OutputExtended),
-			randomOutput(iotago.OutputExtended),
+			randomOutput(iotago.OutputBasic),
+			randomOutput(iotago.OutputBasic),
+			randomOutput(iotago.OutputBasic),
+			randomOutput(iotago.OutputBasic),
+			randomOutput(iotago.OutputBasic),
 		}
 
 		spents := utxo.Spents{

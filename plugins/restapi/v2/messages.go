@@ -190,13 +190,16 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		}
 	}
 
-	if msg.NetworkID == 0 && msg.Nonce != 0 {
-		// Message was PoWed without the correct networkId being set, so reject it
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: PoW done but networkId missing")
+	if msg.ProtocolVersion != iotago.ProtocolVersion {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: protocolVersion invalid")
 	}
 
-	if msg.NetworkID == 0 {
-		msg.NetworkID = deps.NetworkID
+	switch payload := msg.Payload.(type) {
+	case *iotago.Transaction:
+		if payload.Essence.NetworkID != deps.NetworkID {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
+		}
+	default:
 	}
 
 	var refreshTipsFunc pow.RefreshTipsFunc

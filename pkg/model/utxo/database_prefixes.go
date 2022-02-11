@@ -4,7 +4,7 @@ const (
 	UTXOStoreKeyPrefixLedgerMilestoneIndex byte = 0
 
 	// Output and Spent storage
-	UTXOStoreKeyPrefixOutput byte = 1 //TODO: iterate over all values and map to extended outputs
+	UTXOStoreKeyPrefixOutput byte = 1 //TODO: iterate over all values and map to basic outputs
 
 	// Track spent/unspent Outputs
 	UTXOStoreKeyPrefixOutputSpent   byte = 8

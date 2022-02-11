@@ -1,4 +1,3 @@
-#!/bin/bash
 del /f /q /s "snapshots\private_tangle1\full_snapshot.bin"
 del /f /q /s "snapshots\private_tangle1\delta_snapshot.bin"
 del /f /q /s "snapshots\private_tangle2\full_snapshot.bin"

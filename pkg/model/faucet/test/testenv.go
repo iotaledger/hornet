@@ -180,8 +180,8 @@ func NewFaucetTestEnv(t *testing.T,
 
 	storeMessageFunc := func(msg *storage.Message) error {
 
-		if msg.NetworkID() != te.NetworkID() {
-			return fmt.Errorf("msg has invalid network ID %d instead of %d", msg.NetworkID(), te.NetworkID())
+		if msg.ProtocolVersion() != iotago.ProtocolVersion {
+			return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), iotago.ProtocolVersion)
 		}
 
 		score := pow.Score(msg.Data())
@@ -429,7 +429,7 @@ func (env *FaucetTestEnv) AssertFaucetBalance(expected uint64) {
 }
 
 func (env *FaucetTestEnv) AssertAddressUTXOCount(address iotago.Address, expected int) {
-	result := env.Indexer.ExtendedOutputsWithFilters(indexer.ExtendedOutputUnlockableByAddress(address), indexer.ExtendedOutputHasDustReturnCondition(false))
+	result := env.Indexer.BasicOutputsWithFilters(indexer.BasicOutputUnlockableByAddress(address), indexer.BasicOutputHasDustReturnCondition(false))
 	require.NoError(env.t, result.Error)
 	require.Equal(env.t, expected, len(result.OutputIDs))
 }

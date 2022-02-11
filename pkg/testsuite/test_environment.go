@@ -173,7 +173,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.milestoneManager = milestonemanager.New(te.storage, te.syncManager, keyManager, len(cooPrivateKeys))
 
 	// Initialize UTXO
-	output := &iotago.ExtendedOutput{
+	output := &iotago.BasicOutput{
 		Amount: iotago.TokenSupply,
 		Conditions: iotago.UnlockConditions{
 			&iotago.AddressUnlockCondition{

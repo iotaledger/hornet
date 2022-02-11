@@ -140,7 +140,7 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 	msIndex := utils.RandMilestoneIndex()
 	msTimestmap := rand.Uint64()
 
-	iotaOutput := &iotago.ExtendedOutput{
+	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
 		Blocks: iotago.FeatureBlocks{
 			&iotago.SenderFeatureBlock{
@@ -174,7 +174,7 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 	msIndex := utils.RandMilestoneIndex()
 	msTimestamp := rand.Uint64()
 
-	iotaOutput := &iotago.ExtendedOutput{
+	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
 		Blocks: iotago.FeatureBlocks{
 			&iotago.SenderFeatureBlock{
@@ -209,9 +209,13 @@ func TestNFTOutputSerialization(t *testing.T) {
 	msTimestamp := rand.Uint64()
 
 	iotaOutput := &iotago.NFTOutput{
-		Amount:            amount,
-		NFTID:             nftID,
-		ImmutableMetadata: utils.RandBytes(12),
+		Amount: amount,
+		NFTID:  nftID,
+		ImmutableBlocks: iotago.FeatureBlocks{
+			&iotago.MetadataFeatureBlock{
+				Data: utils.RandBytes(12),
+			},
+		},
 		Conditions: iotago.UnlockConditions{
 			&iotago.AddressUnlockCondition{
 				Address: address,
@@ -238,10 +242,12 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 	msTimestamp := rand.Uint64()
 
 	iotaOutput := &iotago.NFTOutput{
-		Amount:            amount,
-		NFTID:             nftID,
-		ImmutableMetadata: utils.RandBytes(12),
-		Blocks: iotago.FeatureBlocks{
+		Amount: amount,
+		NFTID:  nftID,
+		ImmutableBlocks: iotago.FeatureBlocks{
+			&iotago.MetadataFeatureBlock{
+				Data: utils.RandBytes(12),
+			},
 			&iotago.IssuerFeatureBlock{
 				Address: issuerAddress,
 			},
@@ -282,11 +288,13 @@ func TestAliasOutputSerialization(t *testing.T) {
 		AliasID:       aliasID,
 		StateMetadata: []byte{},
 		Blocks: iotago.FeatureBlocks{
-			&iotago.IssuerFeatureBlock{
-				Address: issuer.ToAddress(),
-			},
 			&iotago.SenderFeatureBlock{
 				Address: sender.ToAddress(),
+			},
+		},
+		ImmutableBlocks: iotago.FeatureBlocks{
+			&iotago.IssuerFeatureBlock{
+				Address: issuer.ToAddress(),
 			},
 		},
 		Conditions: iotago.UnlockConditions{
@@ -324,8 +332,8 @@ func TestFoundryOutputSerialization(t *testing.T) {
 		MaximumSupply:     supply,
 		TokenScheme:       &iotago.SimpleTokenScheme{},
 		Conditions: iotago.UnlockConditions{
-			&iotago.AddressUnlockCondition{
-				Address: aliasID.ToAddress(),
+			&iotago.ImmutableAliasUnlockCondition{
+				Address: aliasID.ToAddress().(*iotago.AliasAddress),
 			},
 		},
 	}

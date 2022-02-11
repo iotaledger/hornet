@@ -22,7 +22,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	messageID := utils.RandMessageID()
 	address := utils.RandAddress(iotago.AddressEd25519)
 	amount := uint64(832493)
-	iotaOutput := &iotago.ExtendedOutput{
+	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
 		Conditions: iotago.UnlockConditions{
 			&iotago.AddressUnlockCondition{
@@ -64,7 +64,7 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	amount := uint64(235234)
 	msIndex := utils.RandMilestoneIndex()
 	msTimestamp := rand.Uint64()
-	iotaOutput := &iotago.ExtendedOutput{
+	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
 		Conditions: iotago.UnlockConditions{
 			&iotago.AddressUnlockCondition{
@@ -129,11 +129,11 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	utxo := New(mapdb.NewMapDB())
 
 	outputs := Outputs{
-		RandUTXOOutput(iotago.OutputExtended),
-		RandUTXOOutput(iotago.OutputExtended),
-		RandUTXOOutput(iotago.OutputExtended),
-		RandUTXOOutput(iotago.OutputExtended),
-		RandUTXOOutput(iotago.OutputExtended),
+		RandUTXOOutput(iotago.OutputBasic),
+		RandUTXOOutput(iotago.OutputBasic),
+		RandUTXOOutput(iotago.OutputBasic),
+		RandUTXOOutput(iotago.OutputBasic),
+		RandUTXOOutput(iotago.OutputBasic),
 	}
 
 	msIndex := milestone.Index(756)

@@ -10,11 +10,11 @@ import (
 type nft struct {
 	NFTID                   nftIDBytes    `gorm:"primaryKey;notnull"`
 	OutputID                outputIDBytes `gorm:"unique;notnull"`
-	Amount                  uint64        `gorm:"notnull"`
-	Issuer                  addressBytes  `gorm:"index:nft_issuer"`
-	Sender                  addressBytes  `gorm:"index:nft_sender_tag"`
-	Tag                     []byte        `gorm:"index:nft_sender_tag"`
-	Address                 addressBytes  `gorm:"notnull;index:nft_address"`
+	NativeTokenCount        int           `gorm:"notnull"`
+	Issuer                  addressBytes  `gorm:"index:nfts_issuer"`
+	Sender                  addressBytes  `gorm:"index:nfts_sender_tag"`
+	Tag                     []byte        `gorm:"index:nfts_sender_tag"`
+	Address                 addressBytes  `gorm:"notnull;index:nfts_address"`
 	DustReturn              *uint64
 	DustReturnAddress       addressBytes
 	TimelockMilestone       *milestone.Index
@@ -26,6 +26,9 @@ type nft struct {
 }
 
 type NFTFilterOptions struct {
+	hasNativeTokens           *bool
+	minNativeTokenCount       *uint32
+	maxNativeTokenCount       *uint32
 	unlockableByAddress       *iotago.Address
 	hasDustReturnCondition    *bool
 	dustReturnAddress         *iotago.Address
@@ -43,13 +46,31 @@ type NFTFilterOptions struct {
 	issuer                    *iotago.Address
 	sender                    *iotago.Address
 	tag                       []byte
-	pageSize                  int
+	pageSize                  uint32
 	cursor                    *string
 	createdBefore             *time.Time
 	createdAfter              *time.Time
 }
 
 type NFTFilterOption func(*NFTFilterOptions)
+
+func NFTHasNativeTokens(value bool) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.hasNativeTokens = &value
+	}
+}
+
+func NFTMinNativeTokenCount(value uint32) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.minNativeTokenCount = &value
+	}
+}
+
+func NFTMaxNativeTokenCount(value uint32) NFTFilterOption {
+	return func(args *NFTFilterOptions) {
+		args.maxNativeTokenCount = &value
+	}
+}
 
 func NFTUnlockableByAddress(address iotago.Address) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
@@ -153,7 +174,7 @@ func NFTTag(tag []byte) NFTFilterOption {
 	}
 }
 
-func NFTPageSize(pageSize int) NFTFilterOption {
+func NFTPageSize(pageSize uint32) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
 		args.pageSize = pageSize
 	}
@@ -197,6 +218,22 @@ func (i *Indexer) NFTOutput(nftID *iotago.NFTID) *IndexerResult {
 func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResult {
 	opts := nftFilterOptions(filters)
 	query := i.db.Model(&nft{})
+
+	if opts.hasNativeTokens != nil {
+		if *opts.hasNativeTokens {
+			query = query.Where("native_token_count > 0")
+		} else {
+			query = query.Where("native_token_count == 0")
+		}
+	}
+
+	if opts.minNativeTokenCount != nil {
+		query = query.Where("native_token_count >= ?", *opts.minNativeTokenCount)
+	}
+
+	if opts.maxNativeTokenCount != nil {
+		query = query.Where("native_token_count <= ?", *opts.maxNativeTokenCount)
+	}
 
 	if opts.unlockableByAddress != nil {
 		addr, err := addressBytesForAddress(*opts.unlockableByAddress)

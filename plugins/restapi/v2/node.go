@@ -10,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 //nolint:unparam // even if the error is never used, the structure of all routes should be the same
@@ -55,10 +56,11 @@ func info() (*infoResponse, error) {
 			PruningIndex:             pruningIndex,
 		},
 		Protocol: protocolParameters{
-			NetworkName:   deps.NetworkIDName,
-			Bech32HRP:     string(deps.Bech32HRP),
-			MinPoWScore:   deps.MinPoWScore,
-			RentStructure: deps.DeserializationParameters.RentStructure,
+			NetworkName:     deps.NetworkIDName,
+			ProtocolVersion: iotago.ProtocolVersion,
+			Bech32HRP:       string(deps.Bech32HRP),
+			MinPoWScore:     deps.MinPoWScore,
+			RentStructure:   deps.DeserializationParameters.RentStructure,
 		},
 		Metrics: nodeMetrics{
 			MessagesPerSecond:           messagesPerSecond,

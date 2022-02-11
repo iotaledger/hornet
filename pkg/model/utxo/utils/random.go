@@ -101,8 +101,8 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 	var iotaOutput iotago.Output
 
 	switch outputType {
-	case iotago.OutputExtended:
-		iotaOutput = &iotago.ExtendedOutput{
+	case iotago.OutputBasic:
+		iotaOutput = &iotago.BasicOutput{
 			Amount: amount,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{
@@ -137,16 +137,15 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 			MaximumSupply:     supply,
 			TokenScheme:       &iotago.SimpleTokenScheme{},
 			Conditions: iotago.UnlockConditions{
-				&iotago.AddressUnlockCondition{
-					Address: address,
+				&iotago.ImmutableAliasUnlockCondition{
+					Address: address.(*iotago.AliasAddress),
 				},
 			},
 		}
 	case iotago.OutputNFT:
 		iotaOutput = &iotago.NFTOutput{
-			Amount:            amount,
-			NFTID:             RandNFTID(),
-			ImmutableMetadata: []byte{},
+			Amount: amount,
+			NFTID:  RandNFTID(),
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{
 					Address: address,

@@ -67,7 +67,7 @@ type WhiteFlagMutations struct {
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
 // metadataMemcache has to be cleaned up outside.
-func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, msIndex milestone.Index, msTimestamp uint64, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, networkId uint64, msIndex milestone.Index, msTimestamp uint64, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
@@ -120,65 +120,70 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 			return err
 		}
 
-		inputs := message.TransactionEssenceUTXOInputs()
+		if transaction.Essence.NetworkID != networkId {
+			conflict = storage.ConflictInvalidNetworkID
+		}
 
 		// go through all the inputs and validate that they are still unspent, in the ledger or were created during confirmation
 		inputOutputs := utxo.Outputs{}
-		for _, input := range inputs {
+		if conflict == storage.ConflictNone {
+			inputs := message.TransactionEssenceUTXOInputs()
+			for _, input := range inputs {
 
-			// check if this input was already spent during the confirmation
-			_, hasSpent := wfConf.NewSpents[string(input[:])]
-			if hasSpent {
-				// UTXO already spent, so mark as conflict
-				conflict = storage.ConflictInputUTXOAlreadySpentInThisMilestone
-				break
-			}
-
-			// check if this input was newly created during the confirmation
-			output, hasOutput := wfConf.NewOutputs[string(input[:])]
-			if hasOutput {
-				// UTXO is in the current ledger mutation, so use it
-				inputOutputs = append(inputOutputs, output)
-				continue
-			}
-
-			// check current ledger for this input
-			output, err = dbStorage.UTXOManager().ReadOutputByOutputIDWithoutLocking(input)
-			if err != nil {
-				if errors.Is(err, kvstore.ErrKeyNotFound) {
-					// input not found, so mark as invalid tx
-					conflict = storage.ConflictInputUTXONotFound
+				// check if this input was already spent during the confirmation
+				_, hasSpent := wfConf.NewSpents[string(input[:])]
+				if hasSpent {
+					// UTXO already spent, so mark as conflict
+					conflict = storage.ConflictInputUTXOAlreadySpentInThisMilestone
 					break
 				}
-				return err
+
+				// check if this input was newly created during the confirmation
+				output, hasOutput := wfConf.NewOutputs[string(input[:])]
+				if hasOutput {
+					// UTXO is in the current ledger mutation, so use it
+					inputOutputs = append(inputOutputs, output)
+					continue
+				}
+
+				// check current ledger for this input
+				output, err = dbStorage.UTXOManager().ReadOutputByOutputIDWithoutLocking(input)
+				if err != nil {
+					if errors.Is(err, kvstore.ErrKeyNotFound) {
+						// input not found, so mark as invalid tx
+						conflict = storage.ConflictInputUTXONotFound
+						break
+					}
+					return err
+				}
+
+				// check if this output is unspent
+				unspent, err := dbStorage.UTXOManager().IsOutputUnspentWithoutLocking(output)
+				if err != nil {
+					return err
+				}
+
+				if !unspent {
+					// output is already spent, so mark as conflict
+					conflict = storage.ConflictInputUTXOAlreadySpent
+					break
+				}
+
+				inputOutputs = append(inputOutputs, output)
 			}
 
-			// check if this output is unspent
-			unspent, err := dbStorage.UTXOManager().IsOutputUnspentWithoutLocking(output)
-			if err != nil {
-				return err
-			}
-
-			if !unspent {
-				// output is already spent, so mark as conflict
-				conflict = storage.ConflictInputUTXOAlreadySpent
-				break
-			}
-
-			inputOutputs = append(inputOutputs, output)
-		}
-
-		if conflict == storage.ConflictNone {
-			// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
-			if err := transaction.SemanticallyValidate(semValCtx, inputOutputs.ToOutputSet()); err != nil {
-				if errors.Is(err, iotago.ErrMissingUTXO) {
-					conflict = storage.ConflictInputUTXONotFound
-				} else if errors.Is(err, iotago.ErrInputOutputSumMismatch) {
-					conflict = storage.ConflictInputOutputSumMismatch
-				} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
-					conflict = storage.ConflictInvalidSignature
-				} else {
-					conflict = storage.ConflictSemanticValidationFailed
+			if conflict == storage.ConflictNone {
+				// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
+				if err := transaction.SemanticallyValidate(semValCtx, inputOutputs.ToOutputSet()); err != nil {
+					if errors.Is(err, iotago.ErrMissingUTXO) {
+						conflict = storage.ConflictInputUTXONotFound
+					} else if errors.Is(err, iotago.ErrInputOutputSumMismatch) {
+						conflict = storage.ConflictInputOutputSumMismatch
+					} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
+						conflict = storage.ConflictInvalidSignature
+					} else {
+						conflict = storage.ConflictSemanticValidationFailed
+					}
 				}
 			}
 		}

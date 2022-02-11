@@ -52,7 +52,7 @@ func TestSnapshot(t *testing.T) {
 			if err != nil {
 				return false
 			}
-			return output.(*iotago.ExtendedOutput).Amount == finalOutputAmount
+			return output.(*iotago.BasicOutput).Amount == finalOutputAmount
 		}, 30*time.Second, 100*time.Millisecond)
 	}
 
