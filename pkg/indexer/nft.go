@@ -27,8 +27,8 @@ type nft struct {
 
 type NFTFilterOptions struct {
 	hasNativeTokens           *bool
-	minNativeTokenCount       *uint
-	maxNativeTokenCount       *uint
+	minNativeTokenCount       *uint32
+	maxNativeTokenCount       *uint32
 	unlockableByAddress       *iotago.Address
 	hasDustReturnCondition    *bool
 	dustReturnAddress         *iotago.Address
@@ -46,7 +46,7 @@ type NFTFilterOptions struct {
 	issuer                    *iotago.Address
 	sender                    *iotago.Address
 	tag                       []byte
-	pageSize                  int
+	pageSize                  uint32
 	cursor                    *string
 	createdBefore             *time.Time
 	createdAfter              *time.Time
@@ -60,13 +60,13 @@ func NFTHasNativeTokens(value bool) NFTFilterOption {
 	}
 }
 
-func NFTMinNativeTokenCount(value uint) NFTFilterOption {
+func NFTMinNativeTokenCount(value uint32) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
 		args.minNativeTokenCount = &value
 	}
 }
 
-func NFTMaxNativeTokenCount(value uint) NFTFilterOption {
+func NFTMaxNativeTokenCount(value uint32) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
 		args.maxNativeTokenCount = &value
 	}
@@ -174,7 +174,7 @@ func NFTTag(tag []byte) NFTFilterOption {
 	}
 }
 
-func NFTPageSize(pageSize int) NFTFilterOption {
+func NFTPageSize(pageSize uint32) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
 		args.pageSize = pageSize
 	}

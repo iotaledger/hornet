@@ -25,8 +25,8 @@ type basicOutput struct {
 
 type BasicOutputFilterOptions struct {
 	hasNativeTokens           *bool
-	minNativeTokenCount       *uint
-	maxNativeTokenCount       *uint
+	minNativeTokenCount       *uint32
+	maxNativeTokenCount       *uint32
 	unlockableByAddress       *iotago.Address
 	hasDustReturnCondition    *bool
 	dustReturnAddress         *iotago.Address
@@ -43,7 +43,7 @@ type BasicOutputFilterOptions struct {
 	timelockedAfterMilestone  *milestone.Index
 	sender                    *iotago.Address
 	tag                       []byte
-	pageSize                  int
+	pageSize                  uint32
 	cursor                    *string
 	createdBefore             *time.Time
 	createdAfter              *time.Time
@@ -57,13 +57,13 @@ func BasicOutputHasNativeTokens(value bool) BasicOutputFilterOption {
 	}
 }
 
-func BasicOutputMinNativeTokenCount(value uint) BasicOutputFilterOption {
+func BasicOutputMinNativeTokenCount(value uint32) BasicOutputFilterOption {
 	return func(args *BasicOutputFilterOptions) {
 		args.minNativeTokenCount = &value
 	}
 }
 
-func BasicOutputMaxNativeTokenCount(value uint) BasicOutputFilterOption {
+func BasicOutputMaxNativeTokenCount(value uint32) BasicOutputFilterOption {
 	return func(args *BasicOutputFilterOptions) {
 		args.maxNativeTokenCount = &value
 	}
@@ -165,7 +165,7 @@ func BasicOutputTag(tag []byte) BasicOutputFilterOption {
 	}
 }
 
-func BasicOutputPageSize(pageSize int) BasicOutputFilterOption {
+func BasicOutputPageSize(pageSize uint32) BasicOutputFilterOption {
 	return func(args *BasicOutputFilterOptions) {
 		args.pageSize = pageSize
 	}

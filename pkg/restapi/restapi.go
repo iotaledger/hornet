@@ -253,21 +253,7 @@ func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index
 	return milestone.Index(msIndex), nil
 }
 
-func ParseMilestoneIndexQueryParam(c echo.Context, paramName string) (milestone.Index, error) {
-	milestoneIndex := strings.ToLower(c.QueryParam(paramName))
-	if milestoneIndex == "" {
-		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
-	}
-
-	msIndex, err := strconv.ParseUint(milestoneIndex, 10, 32)
-	if err != nil {
-		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid milestone index: %s, error: %s", milestoneIndex, err)
-	}
-
-	return milestone.Index(msIndex), nil
-}
-
-func ParseUnsignedIntegerQueryParam(c echo.Context, paramName string, maxValue uint) (uint, error) {
+func ParseUint32QueryParam(c echo.Context, paramName string, maxValue ...uint32) (uint32, error) {
 	intString := strings.ToLower(c.QueryParam(paramName))
 	if intString == "" {
 		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
@@ -278,24 +264,27 @@ func ParseUnsignedIntegerQueryParam(c echo.Context, paramName string, maxValue u
 		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid value: %s, error: %s", intString, err)
 	}
 
-	if uint(value) > maxValue {
-		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid value: %s, higher than the max number %d", intString, maxValue)
+	if len(maxValue) > 0 {
+		if uint32(value) > maxValue[0] {
+			return 0, errors.WithMessagef(ErrInvalidParameter, "invalid value: %s, higher than the max number %d", intString, maxValue)
+		}
 	}
+	return uint32(value), nil
+}
 
-	return uint(value), nil
+func ParseMilestoneIndexQueryParam(c echo.Context, paramName string) (milestone.Index, error) {
+	msIndex, err := ParseUint32QueryParam(c, paramName)
+	if err != nil {
+		return 0, err
+	}
+	return milestone.Index(msIndex), nil
 }
 
 func ParseUnixTimestampQueryParam(c echo.Context, paramName string) (time.Time, error) {
-	tsString := strings.ToLower(c.QueryParam(paramName))
-	if tsString == "" {
-		return time.Time{}, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
-	}
-
-	timestamp, err := strconv.ParseUint(tsString, 10, 32)
+	timestamp, err := ParseUint32QueryParam(c, paramName)
 	if err != nil {
-		return time.Time{}, errors.WithMessagef(ErrInvalidParameter, "invalid timestamp: %s, error: %s", tsString, err)
+		return time.Time{}, err
 	}
-
 	return time.Unix(int64(timestamp), 0), nil
 }
 

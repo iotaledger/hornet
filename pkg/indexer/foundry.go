@@ -16,10 +16,10 @@ type foundry struct {
 
 type FoundryFilterOptions struct {
 	hasNativeTokens     *bool
-	minNativeTokenCount *uint
-	maxNativeTokenCount *uint
+	minNativeTokenCount *uint32
+	maxNativeTokenCount *uint32
 	aliasAddress        *iotago.AliasAddress
-	pageSize            int
+	pageSize            uint32
 	cursor              *string
 	createdBefore       *time.Time
 	createdAfter        *time.Time
@@ -33,13 +33,13 @@ func FoundryHasNativeTokens(value bool) FoundryFilterOption {
 	}
 }
 
-func FoundryMinNativeTokenCount(value uint) FoundryFilterOption {
+func FoundryMinNativeTokenCount(value uint32) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
 		args.minNativeTokenCount = &value
 	}
 }
 
-func FoundryMaxNativeTokenCount(value uint) FoundryFilterOption {
+func FoundryMaxNativeTokenCount(value uint32) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
 		args.maxNativeTokenCount = &value
 	}
@@ -51,7 +51,7 @@ func FoundryWithAliasAddress(address *iotago.AliasAddress) FoundryFilterOption {
 	}
 }
 
-func FoundryPageSize(pageSize int) FoundryFilterOption {
+func FoundryPageSize(pageSize uint32) FoundryFilterOption {
 	return func(args *FoundryFilterOptions) {
 		args.pageSize = pageSize
 	}

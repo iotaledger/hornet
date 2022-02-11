@@ -19,13 +19,13 @@ type alias struct {
 
 type AliasFilterOptions struct {
 	hasNativeTokens     *bool
-	minNativeTokenCount *uint
-	maxNativeTokenCount *uint
+	minNativeTokenCount *uint32
+	maxNativeTokenCount *uint32
 	stateController     *iotago.Address
 	governor            *iotago.Address
 	issuer              *iotago.Address
 	sender              *iotago.Address
-	pageSize            int
+	pageSize            uint32
 	cursor              *string
 	createdBefore       *time.Time
 	createdAfter        *time.Time
@@ -39,13 +39,13 @@ func AliasHasNativeTokens(value bool) AliasFilterOption {
 	}
 }
 
-func AliasMinNativeTokenCount(value uint) AliasFilterOption {
+func AliasMinNativeTokenCount(value uint32) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
 		args.minNativeTokenCount = &value
 	}
 }
 
-func AliasMaxNativeTokenCount(value uint) AliasFilterOption {
+func AliasMaxNativeTokenCount(value uint32) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
 		args.maxNativeTokenCount = &value
 	}
@@ -75,7 +75,7 @@ func AliasIssuer(address iotago.Address) AliasFilterOption {
 	}
 }
 
-func AliasPageSize(pageSize int) AliasFilterOption {
+func AliasPageSize(pageSize uint32) AliasFilterOption {
 	return func(args *AliasFilterOptions) {
 		args.pageSize = pageSize
 	}

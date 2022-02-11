@@ -232,7 +232,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
-		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +240,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
-		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -422,7 +422,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
-		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -430,7 +430,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
-		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -516,7 +516,7 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
-		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -524,7 +524,7 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
-		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -714,7 +714,7 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterMinNativeTokenCount)) > 0 {
-		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMinNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -722,7 +722,7 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterMaxNativeTokenCount)) > 0 {
-		value, err := restapi.ParseUnsignedIntegerQueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
+		value, err := restapi.ParseUint32QueryParam(c, QueryParameterMaxNativeTokenCount, iotago.MaxNativeTokenCountPerOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -797,7 +797,7 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 	}, nil
 }
 
-func parseCursorQueryParameter(c echo.Context) (string, int, error) {
+func parseCursorQueryParameter(c echo.Context) (string, uint32, error) {
 	cursorWithPageSize := c.QueryParam(QueryParameterCursor)
 
 	components := strings.Split(cursorWithPageSize, ".")
@@ -814,24 +814,22 @@ func parseCursorQueryParameter(c echo.Context) (string, int, error) {
 		return "", 0, errors.WithMessage(restapi.ErrInvalidParameter, fmt.Sprintf("query parameter %s has wrong format", QueryParameterCursor))
 	}
 
-	pageSize := int(size)
-	if pageSize > deps.RestAPILimitsMaxResults {
-		pageSize = deps.RestAPILimitsMaxResults
+	pageSize := uint32(size)
+	if pageSize > uint32(deps.RestAPILimitsMaxResults) {
+		pageSize = uint32(deps.RestAPILimitsMaxResults)
 	}
 
 	return components[0], pageSize, nil
 }
 
-func pageSizeFromContext(c echo.Context) int {
-	pageSize := deps.RestAPILimitsMaxResults
+func pageSizeFromContext(c echo.Context) uint32 {
+	pageSize := uint32(deps.RestAPILimitsMaxResults)
 	if len(c.QueryParam(QueryParameterPageSize)) > 0 {
-		i, err := strconv.Atoi(c.QueryParam(QueryParameterPageSize))
+		i, err := restapi.ParseUint32QueryParam(c, QueryParameterPageSize, pageSize)
 		if err != nil {
 			return pageSize
 		}
-		if i > 0 && i < pageSize {
-			pageSize = i
-		}
+		pageSize = i
 	}
 	return pageSize
 }
