@@ -49,9 +49,12 @@ func TestMsgProcessorEmit(t *testing.T) {
 	service := gossip.NewService(protocolID, n, manager, serverMetrics)
 	go service.Start(ctx)
 
+	networkID := iotago.NetworkIDFromString("testnet4")
+
 	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, testsuite.DeSerializationParameters, &gossip.Options{
 		MinPoWScore:       MinPoWScore,
 		ProtocolVersion:   ProtocolVersion,
+		NetworkID:         networkID,
 		BelowMaxDepth:     BelowMaxDepth,
 		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingMessagesFilter,
 	})

@@ -202,7 +202,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	switch payload := msg.Payload.(type) {
 	case *iotago.Transaction:
 		if payload.Essence.NetworkID != deps.NetworkID {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: wrong networkID: %d", payload.Essence.NetworkID)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
 		}
 	default:
 	}

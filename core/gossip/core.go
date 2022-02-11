@@ -89,6 +89,7 @@ func provide(c *dig.Container) {
 		RequestQueue              gossip.RequestQueue
 		PeeringManager            *p2p.Manager
 		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+		NetworkID                 uint64                       `name:"networkId"`
 		DeserializationParameters *iotago.DeSerializationParameters
 		BelowMaxDepth             int     `name:"belowMaxDepth"`
 		MinPoWScore               float64 `name:"minPoWScore"`
@@ -106,6 +107,7 @@ func provide(c *dig.Container) {
 			&gossip.Options{
 				MinPoWScore:       deps.MinPoWScore,
 				ProtocolVersion:   iotago.ProtocolVersion,
+				NetworkID:         deps.NetworkID,
 				BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 				WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 			})
