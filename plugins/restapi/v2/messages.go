@@ -190,13 +190,8 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		}
 	}
 
-	if msg.ProtocolVersion == 0 && msg.Nonce != 0 {
-		// Message was PoWed without the correct networkId being set, so reject it
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: PoW done but protocolVersion missing")
-	}
-
-	if msg.ProtocolVersion == 0 {
-		msg.ProtocolVersion = iotago.ProtocolVersion
+	if msg.ProtocolVersion != iotago.ProtocolVersion {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: protocolVersion invalid")
 	}
 
 	switch payload := msg.Payload.(type) {
