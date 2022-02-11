@@ -311,8 +311,8 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 		}
 		copy(foundry.OutputID, output.OutputID()[:])
 
-		if addressUnlock := conditions.Address(); addressUnlock != nil {
-			foundry.AliasAddress, err = addressBytesForAddress(addressUnlock.Address)
+		if aliasUnlock := conditions.ImmutableAlias(); aliasUnlock != nil {
+			foundry.AliasAddress, err = addressBytesForAddress(aliasUnlock.Address)
 			if err != nil {
 				return err
 			}
