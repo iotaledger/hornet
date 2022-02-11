@@ -14,8 +14,9 @@ import (
 // createCheckpoint creates a checkpoint message.
 func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*storage.Message, error) {
 	iotaMsg := &iotago.Message{
-		Parents: parents.ToSliceOfArrays(),
-		Payload: nil,
+		ProtocolVersion: iotago.ProtocolVersion,
+		Parents:         parents.ToSliceOfArrays(),
+		Payload:         nil,
 	}
 
 	// we pass a background context here to not create invalid checkpoints at node shutdown.
