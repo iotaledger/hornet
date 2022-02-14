@@ -197,7 +197,7 @@ You can find installation instructions in the  [official Go documentation](https
 
 5. Build the Hornet:
    ```bash
-   ./scritps/build_hornet_rocksdb_builtin.sh
+   ./scripts/build_hornet_rocksdb_builtin.sh
    ```
    * This command will build Hornet based on the latest commit from the currently chosen branch.
    * This may take a couple of minutes.
