@@ -8,22 +8,17 @@ import (
 func ouputOwnerAddress(output *utxo.Output) iotago.Address {
 	switch o := output.Output().(type) {
 	case *iotago.AliasOutput:
-		return nil
-	case iotago.UnlockConditionOutput:
-		return o.UnlockConditions().MustSet().Address().Address
+		return o.UnlockConditions().MustSet().GovernorAddress().Address
+	case *iotago.FoundryOutput:
+		return o.UnlockConditions().MustSet().ImmutableAlias().Address
 	default:
-		panic("unsupported output type")
+		return o.UnlockConditions().MustSet().Address().Address
 	}
 }
 
 func outputHasSpendingConstraint(output *utxo.Output) bool {
-	switch o := output.Output().(type) {
-	case iotago.UnlockConditionOutput:
-		conditions := o.UnlockConditions().MustSet()
-		return conditions.HasDustDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
-	default:
-		panic("Unknown output type")
-	}
+	conditions := output.Output().UnlockConditions().MustSet()
+	return conditions.HasDustDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
 }
 
 func (te *TestEnvironment) ComputeAddressBalanceWithoutConstraints(address iotago.Address, options ...utxo.UTXOIterateOption) (balance uint64, count int, err error) {
