@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package inx;
-option go_package = "github.com/gohornet/pkg/inx";
-
-message WrappedMessage {
-  bytes data = 1;
-}

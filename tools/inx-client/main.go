@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/gohornet/hornet/pkg/inx"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 const (
@@ -41,11 +42,11 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		msg := message.MustUnwrapMessage()
+		msg := message.MustUnwrapMessage(serializer.DeSeriModeNoValidation)
 		jsonMsg, err := json.Marshal(msg)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Rec: %s => %s\n", message.MessageID().ToHex(), string(jsonMsg))
+		fmt.Printf("Rec: %s => %s\n", message.UnwrapMessageID().ToHex(), string(jsonMsg))
 	}
 }

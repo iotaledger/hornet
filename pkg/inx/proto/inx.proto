@@ -3,26 +3,64 @@ syntax = "proto3";
 package inx;
 option go_package = "github.com/gohornet/pkg/inx";
 
-import "wrappers.proto";
-
 service INX {
-  rpc ListenToMessages(MessageFilter) returns (stream StreamedMessage) {}
+  // Messages
+  rpc ListenToMessages(MessageFilter) returns (stream Message);
   rpc SubmitMessage(SubmitMessageRequest) returns (SubmitMessageResponse);
+
+  // UTXO
+  rpc ReadLockLedger(NoParams) returns (NoParams);
+  rpc LedgerStatus(NoParams) returns (LedgerStatusResponse);
+  rpc ReadUnspentOutputs(NoParams) returns (stream LedgerOutput);
+  rpc ReadUnlockLedger(NoParams) returns (NoParams);
+  rpc ListenToLedgerUpdates(NoParams) returns (stream LedgerUpdate);
+
 }
+
+message NoParams {}
 
 message MessageFilter {
 }
 
 message SubmitMessageRequest {
-  WrappedMessage message = 1;
+  Raw message = 1;
 }
 
 message SubmitMessageResponse {
   bytes messageId = 1;
 }
 
-message StreamedMessage {
+message Raw {
+  bytes data = 1;
+}
+
+message Message {
   bytes messageId = 1;
-  WrappedMessage message = 2;
+  Raw message = 2;
+}
+
+message LedgerOutput {
+  bytes outputId = 1;
+  bytes messageId = 2;
+  uint32 milestoneIndex = 3;
+  uint32 milestoneTimestamp = 4;
+  Raw output = 5;
+}
+
+message LedgerSpent {
+  LedgerOutput output = 1;
+  bytes targetTransactionId = 2;
+  uint32 spentMilestoneIndex = 3;
+  uint32 spentMilestoneTimestamp = 4;
+}
+
+message LedgerStatusResponse {
+  uint32 ledgerIndex = 1;
+}
+
+message LedgerUpdate {
+  uint32 milestoneIndex = 1;
+  repeated LedgerOutput created = 2;
+  repeated LedgerSpent consumed = 3;
 }
 
