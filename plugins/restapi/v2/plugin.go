@@ -118,11 +118,10 @@ func init() {
 }
 
 var (
-	Plugin         *node.Plugin
-	powEnabled     bool
-	powWorkerCount int
-	features       = []string{}
-	plugins        = []string{}
+	Plugin   *node.Plugin
+	features = []string{}
+	plugins  = []string{}
+	attacher *tangle.MessageAttacher
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
@@ -139,7 +138,6 @@ type dependencies struct {
 	GossipService                         *gossip.Service
 	UTXOManager                           *utxo.Manager
 	PoWHandler                            *pow.Handler
-	MessageProcessor                      *gossip.MessageProcessor
 	SnapshotManager                       *snapshot.SnapshotManager
 	AppInfo                               *app.AppInfo
 	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
@@ -167,12 +165,12 @@ func configure() {
 
 	routeGroup := deps.Echo.Group("/api/v2")
 
-	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
-	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)
+	attacher = deps.Tangle.MessageAttacher(deps.TipSelector, deps.MinPoWScore, messageProcessedTimeout, deps.DeserializationParameters)
 
 	// Check for features
-	if powEnabled {
+	if deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled) {
 		AddFeature("PoW")
+		attacher = attacher.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount))
 	}
 
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {

@@ -1,7 +1,8 @@
 package v2
 
 import (
-	"context"
+	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -13,10 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -202,68 +200,21 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	default:
 	}
 
-	var refreshTipsFunc pow.RefreshTipsFunc
+	mergedCtx, mergedCtxCancel := utils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
+	defer mergedCtxCancel()
 
-	if len(msg.Parents) == 0 {
-		if deps.TipSelector == nil {
-			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: no parents given and node tipselection disabled")
-		}
-
-		tips, err := deps.TipSelector.SelectNonLazyTips()
-		if err != nil {
-			if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
-				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
-			}
-			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
-		}
-		msg.Parents = tips.ToSliceOfArrays()
-
-		// this function pointer is used to refresh the tips of a message
-		// if no parents were given and the PoW takes longer than a configured duration.
-		refreshTipsFunc = deps.TipSelector.SelectNonLazyTips
-	}
-
-	if msg.Nonce == 0 {
-		score, err := msg.POW()
-		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
-		}
-
-		if score < deps.MinPoWScore {
-			if !powEnabled {
-				return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
-			}
-
-			mergedCtx, mergedCtxCancel := utils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
-			defer mergedCtxCancel()
-
-			if err := deps.PoWHandler.DoPoW(mergedCtx, msg, powWorkerCount, refreshTipsFunc); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, deps.DeserializationParameters)
+	messageID, err := attacher.AttachMessage(mergedCtx, msg)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
-	}
-
-	msgProcessedChan := deps.Tangle.RegisterMessageProcessedEvent(message.MessageID())
-
-	if err := deps.MessageProcessor.Emit(message); err != nil {
-		deps.Tangle.DeregisterMessageProcessedEvent(message.MessageID())
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
-	}
-
-	// wait for at most "messageProcessedTimeout" for the message to be processed
-	ctx, cancel := context.WithTimeout(context.Background(), messageProcessedTimeout)
-	defer cancel()
-
-	if err := utils.WaitForChannelClosed(ctx, msgProcessedChan); errors.Is(err, context.DeadlineExceeded) {
-		deps.Tangle.DeregisterMessageProcessedEvent(message.MessageID())
+		if errors.Is(err, tangle.ErrMessageAttacherAttachingNotPossible) {
+			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
+		}
+		if errors.Is(err, tangle.ErrMessageAttacherInvalidMessage) {
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, err.Error())
+		}
+		return nil, err
 	}
 
 	return &messageCreatedResponse{
-		MessageID: message.MessageID().ToHex(),
+		MessageID: messageID.ToHex(),
 	}, nil
 }
