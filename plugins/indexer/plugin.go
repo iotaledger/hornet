@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
@@ -15,6 +16,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 
 	"github.com/gohornet/hornet/pkg/indexer"
+	indexer_server "github.com/gohornet/hornet/pkg/indexer/server"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -88,10 +90,22 @@ func provide(c *dig.Container) {
 	}
 }
 
+func nodeSyncedMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) (err error) {
+			if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
+				return errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
+			}
+			return next(c)
+		}
+	}
+}
+
 func configure() {
 
 	routeGroup := restapiv2.AddPlugin("indexer/v1")
-	configureRoutes(routeGroup)
+	routeGroup.Use(nodeSyncedMiddleware())
+	indexer_server.NewIndexerServer(deps.Indexer, routeGroup, deps.Bech32HRP, deps.RestAPILimitsMaxResults)
 
 	initializeIndexer()
 

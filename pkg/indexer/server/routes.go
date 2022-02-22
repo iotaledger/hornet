@@ -1,4 +1,4 @@
-package indexer
+package indexer_server
 
 import (
 	"fmt"
@@ -142,22 +142,10 @@ const (
 	QueryParameterMaxNativeTokenCount = "maxNativeTokenCount"
 )
 
-func nodeSyncedMiddleware() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) (err error) {
-			if !deps.SyncManager.WaitForNodeSynced(waitForNodeSyncedTimeout) {
-				return errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
-			}
-			return next(c)
-		}
-	}
-}
-
-func configureRoutes(routeGroup *echo.Group) {
-	routeGroup.Use(nodeSyncedMiddleware())
+func (s *IndexerServer) configureRoutes(routeGroup *echo.Group) {
 
 	routeGroup.GET(RouteOutputs, func(c echo.Context) error {
-		resp, err := outputsWithFilter(c)
+		resp, err := s.outputsWithFilter(c)
 		if err != nil {
 			return err
 		}
@@ -166,7 +154,7 @@ func configureRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteAliases, func(c echo.Context) error {
-		resp, err := aliasesWithFilter(c)
+		resp, err := s.aliasesWithFilter(c)
 		if err != nil {
 			return err
 		}
@@ -175,7 +163,7 @@ func configureRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteAliasByID, func(c echo.Context) error {
-		resp, err := aliasByID(c)
+		resp, err := s.aliasByID(c)
 		if err != nil {
 			return err
 		}
@@ -184,7 +172,7 @@ func configureRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteNFTs, func(c echo.Context) error {
-		resp, err := nftsWithFilter(c)
+		resp, err := s.nftsWithFilter(c)
 		if err != nil {
 			return err
 		}
@@ -193,7 +181,7 @@ func configureRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteNFTByID, func(c echo.Context) error {
-		resp, err := nftByID(c)
+		resp, err := s.nftByID(c)
 		if err != nil {
 			return err
 		}
@@ -202,7 +190,7 @@ func configureRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteFoundries, func(c echo.Context) error {
-		resp, err := foundriesWithFilter(c)
+		resp, err := s.foundriesWithFilter(c)
 		if err != nil {
 			return err
 		}
@@ -211,7 +199,7 @@ func configureRoutes(routeGroup *echo.Group) {
 	})
 
 	routeGroup.GET(RouteFoundryByID, func(c echo.Context) error {
-		resp, err := foundryByID(c)
+		resp, err := s.foundryByID(c)
 		if err != nil {
 			return err
 		}
@@ -220,8 +208,8 @@ func configureRoutes(routeGroup *echo.Group) {
 	})
 }
 
-func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
-	filters := []indexer.BasicOutputFilterOption{indexer.BasicOutputPageSize(pageSizeFromContext(c))}
+func (s *IndexerServer) outputsWithFilter(c echo.Context) (*outputsResponse, error) {
+	filters := []indexer.BasicOutputFilterOption{indexer.BasicOutputPageSize(s.pageSizeFromContext(c))}
 
 	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
 		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
@@ -248,7 +236,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -264,7 +252,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterStorageReturnAddress)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterStorageReturnAddress)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterStorageReturnAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -280,7 +268,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterExpirationReturnAddress)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterExpirationReturnAddress)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterExpirationReturnAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -360,7 +348,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterSender)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterSender)
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +364,7 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
-		cursor, pageSize, err := parseCursorQueryParameter(c)
+		cursor, pageSize, err := s.parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
@@ -399,19 +387,19 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.BasicOutputCreatedAfter(timestamp))
 	}
 
-	return outputsResponseFromResult(deps.Indexer.BasicOutputsWithFilters(filters...))
+	return outputsResponseFromResult(s.Indexer.BasicOutputsWithFilters(filters...))
 }
 
-func aliasByID(c echo.Context) (*outputsResponse, error) {
+func (s *IndexerServer) aliasByID(c echo.Context) (*outputsResponse, error) {
 	aliasID, err := restapi.ParseAliasIDParam(c)
 	if err != nil {
 		return nil, err
 	}
-	return singleOutputResponseFromResult(deps.Indexer.AliasOutput(aliasID))
+	return singleOutputResponseFromResult(s.Indexer.AliasOutput(aliasID))
 }
 
-func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
-	filters := []indexer.AliasFilterOption{indexer.AliasPageSize(pageSizeFromContext(c))}
+func (s *IndexerServer) aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
+	filters := []indexer.AliasFilterOption{indexer.AliasPageSize(s.pageSizeFromContext(c))}
 
 	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
 		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
@@ -438,7 +426,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterStateController)) > 0 {
-		stateController, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterStateController)
+		stateController, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterStateController)
 		if err != nil {
 			return nil, err
 		}
@@ -446,7 +434,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterGovernor)) > 0 {
-		governor, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterGovernor)
+		governor, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterGovernor)
 		if err != nil {
 			return nil, err
 		}
@@ -454,7 +442,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterIssuer)) > 0 {
-		issuer, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterIssuer)
+		issuer, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterIssuer)
 		if err != nil {
 			return nil, err
 		}
@@ -462,7 +450,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterSender)) > 0 {
-		sender, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
+		sender, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterSender)
 		if err != nil {
 			return nil, err
 		}
@@ -470,7 +458,7 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
-		cursor, pageSize, err := parseCursorQueryParameter(c)
+		cursor, pageSize, err := s.parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
@@ -493,19 +481,19 @@ func aliasesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.AliasCreatedAfter(timestamp))
 	}
 
-	return outputsResponseFromResult(deps.Indexer.AliasOutputsWithFilters(filters...))
+	return outputsResponseFromResult(s.Indexer.AliasOutputsWithFilters(filters...))
 }
 
-func nftByID(c echo.Context) (*outputsResponse, error) {
+func (s *IndexerServer) nftByID(c echo.Context) (*outputsResponse, error) {
 	nftID, err := restapi.ParseNFTIDParam(c)
 	if err != nil {
 		return nil, err
 	}
-	return singleOutputResponseFromResult(deps.Indexer.NFTOutput(nftID))
+	return singleOutputResponseFromResult(s.Indexer.NFTOutput(nftID))
 }
 
-func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
-	filters := []indexer.NFTFilterOption{indexer.NFTPageSize(pageSizeFromContext(c))}
+func (s *IndexerServer) nftsWithFilter(c echo.Context) (*outputsResponse, error) {
+	filters := []indexer.NFTFilterOption{indexer.NFTPageSize(s.pageSizeFromContext(c))}
 
 	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
 		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
@@ -532,7 +520,7 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterAddress)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAddress)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -548,7 +536,7 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterStorageReturnAddress)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterStorageReturnAddress)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterStorageReturnAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -564,7 +552,7 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterExpirationReturnAddress)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterExpirationReturnAddress)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterExpirationReturnAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -644,7 +632,7 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterIssuer)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterIssuer)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterIssuer)
 		if err != nil {
 			return nil, err
 		}
@@ -652,7 +640,7 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterSender)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterSender)
+		addr, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterSender)
 		if err != nil {
 			return nil, err
 		}
@@ -668,7 +656,7 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
-		cursor, pageSize, err := parseCursorQueryParameter(c)
+		cursor, pageSize, err := s.parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
@@ -691,19 +679,19 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTCreatedAfter(timestamp))
 	}
 
-	return outputsResponseFromResult(deps.Indexer.NFTOutputsWithFilters(filters...))
+	return outputsResponseFromResult(s.Indexer.NFTOutputsWithFilters(filters...))
 }
 
-func foundryByID(c echo.Context) (*outputsResponse, error) {
+func (s *IndexerServer) foundryByID(c echo.Context) (*outputsResponse, error) {
 	foundryID, err := restapi.ParseFoundryIDParam(c)
 	if err != nil {
 		return nil, err
 	}
-	return singleOutputResponseFromResult(deps.Indexer.FoundryOutput(foundryID))
+	return singleOutputResponseFromResult(s.Indexer.FoundryOutput(foundryID))
 }
 
-func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
-	filters := []indexer.FoundryFilterOption{indexer.FoundryPageSize(pageSizeFromContext(c))}
+func (s *IndexerServer) foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
+	filters := []indexer.FoundryFilterOption{indexer.FoundryPageSize(s.pageSizeFromContext(c))}
 
 	if len(c.QueryParam(QueryParameterHasNativeTokens)) > 0 {
 		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasNativeTokens)
@@ -730,18 +718,18 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 	}
 
 	if len(c.QueryParam(QueryParameterAliasAddress)) > 0 {
-		address, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterAliasAddress)
+		address, err := restapi.ParseBech32AddressQueryParam(c, s.Bech32HRP, QueryParameterAliasAddress)
 		if err != nil {
 			return nil, err
 		}
 		if address.Type() != iotago.AddressAlias {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, not an alias address", address.Bech32(deps.Bech32HRP))
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, not an alias address", address.Bech32(s.Bech32HRP))
 		}
 		filters = append(filters, indexer.FoundryWithAliasAddress(address.(*iotago.AliasAddress)))
 	}
 
 	if len(c.QueryParam(QueryParameterCursor)) > 0 {
-		cursor, pageSize, err := parseCursorQueryParameter(c)
+		cursor, pageSize, err := s.parseCursorQueryParameter(c)
 		if err != nil {
 			return nil, err
 		}
@@ -764,7 +752,7 @@ func foundriesWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.FoundryCreatedAfter(timestamp))
 	}
 
-	return outputsResponseFromResult(deps.Indexer.FoundryOutputsWithFilters(filters...))
+	return outputsResponseFromResult(s.Indexer.FoundryOutputsWithFilters(filters...))
 }
 
 func singleOutputResponseFromResult(result *indexer.IndexerResult) (*outputsResponse, error) {
@@ -797,7 +785,7 @@ func outputsResponseFromResult(result *indexer.IndexerResult) (*outputsResponse,
 	}, nil
 }
 
-func parseCursorQueryParameter(c echo.Context) (string, uint32, error) {
+func (s *IndexerServer) parseCursorQueryParameter(c echo.Context) (string, uint32, error) {
 	cursorWithPageSize := c.QueryParam(QueryParameterCursor)
 
 	components := strings.Split(cursorWithPageSize, ".")
@@ -815,15 +803,15 @@ func parseCursorQueryParameter(c echo.Context) (string, uint32, error) {
 	}
 
 	pageSize := uint32(size)
-	if pageSize > uint32(deps.RestAPILimitsMaxResults) {
-		pageSize = uint32(deps.RestAPILimitsMaxResults)
+	if pageSize > uint32(s.RestAPILimitsMaxResults) {
+		pageSize = uint32(s.RestAPILimitsMaxResults)
 	}
 
 	return components[0], pageSize, nil
 }
 
-func pageSizeFromContext(c echo.Context) uint32 {
-	pageSize := uint32(deps.RestAPILimitsMaxResults)
+func (s *IndexerServer) pageSizeFromContext(c echo.Context) uint32 {
+	pageSize := uint32(s.RestAPILimitsMaxResults)
 	if len(c.QueryParam(QueryParameterPageSize)) > 0 {
 		i, err := restapi.ParseUint32QueryParam(c, QueryParameterPageSize, pageSize)
 		if err != nil {
