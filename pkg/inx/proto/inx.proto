@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package inx;
+option go_package = "github.com/gohornet/pkg/inx";
+
+import "wrappers.proto";
+
+service INX {
+  rpc ListenToMessages(MessageFilter) returns (stream StreamedMessage) {}
+  rpc SubmitMessage(SubmitMessageRequest) returns (SubmitMessageResponse);
+}
+
+message MessageFilter {
+}
+
+message SubmitMessageRequest {
+  WrappedMessage message = 1;
+}
+
+message SubmitMessageResponse {
+  bytes messageId = 1;
+}
+
+message StreamedMessage {
+  bytes messageId = 1;
+  WrappedMessage message = 2;
+}
+
