@@ -82,7 +82,7 @@ func ConvertINXSpents(spents []*inx.LedgerSpent) (utxo.Spents, error) {
 	return sp, nil
 }
 
-func resetIndexer(client inx.INXClient, indexer *indexerpkg.Indexer) error {
+func fillIndexer(client inx.INXClient, indexer *indexerpkg.Indexer) error {
 	importer := indexer.ImportTransaction()
 	stream, err := client.ReadUnspentOutputs(context.Background(), &inx.NoParams{})
 	if err != nil {
@@ -196,7 +196,7 @@ func main() {
 		if errors.Is(err, indexerpkg.ErrNotFound) {
 			// Indexer is empty, so import initial ledger state from the node
 			fmt.Println("Indexer is empty, so import initial ledger")
-			if err := resetIndexer(client, indexer); err != nil {
+			if err := fillIndexer(client, indexer); err != nil {
 				fmt.Printf("Error: %s\n", err)
 				return
 			}
@@ -206,6 +206,23 @@ func main() {
 		}
 	} else {
 		fmt.Printf("Indexer started at ledgerIndex %d\n", ledgerIndex)
+	}
+
+	resp, err := client.ReadNodeStatus(context.Background(), &inx.NoParams{})
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+	if milestone.Index(resp.GetPruningIndex()) < ledgerIndex {
+		fmt.Println("Node has an older pruning index than our current ledgerIndex, so re-import initial ledger")
+		if err := indexer.Clear(); err != nil {
+			fmt.Printf("Error: %s\n", err)
+			return
+		}
+		if err := fillIndexer(client, indexer); err != nil {
+			fmt.Printf("Error: %s\n", err)
+			return
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

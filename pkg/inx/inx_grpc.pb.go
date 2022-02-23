@@ -18,11 +18,11 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type INXClient interface {
+	ReadNodeStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*NodeStatus, error)
 	// Messages
 	ListenToMessages(ctx context.Context, in *MessageFilter, opts ...grpc.CallOption) (INX_ListenToMessagesClient, error)
 	SubmitMessage(ctx context.Context, in *SubmitMessageRequest, opts ...grpc.CallOption) (*SubmitMessageResponse, error)
 	// UTXO
-	ReadLedgerStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*LedgerStatus, error)
 	ReadUnspentOutputs(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (INX_ReadUnspentOutputsClient, error)
 	ListenToLedgerUpdates(ctx context.Context, in *LedgerUpdateRequest, opts ...grpc.CallOption) (INX_ListenToLedgerUpdatesClient, error)
 	// REST API
@@ -36,6 +36,15 @@ type iNXClient struct {
 
 func NewINXClient(cc grpc.ClientConnInterface) INXClient {
 	return &iNXClient{cc}
+}
+
+func (c *iNXClient) ReadNodeStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*NodeStatus, error) {
+	out := new(NodeStatus)
+	err := c.cc.Invoke(ctx, "/inx.INX/ReadNodeStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *iNXClient) ListenToMessages(ctx context.Context, in *MessageFilter, opts ...grpc.CallOption) (INX_ListenToMessagesClient, error) {
@@ -73,15 +82,6 @@ func (x *iNXListenToMessagesClient) Recv() (*Message, error) {
 func (c *iNXClient) SubmitMessage(ctx context.Context, in *SubmitMessageRequest, opts ...grpc.CallOption) (*SubmitMessageResponse, error) {
 	out := new(SubmitMessageResponse)
 	err := c.cc.Invoke(ctx, "/inx.INX/SubmitMessage", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *iNXClient) ReadLedgerStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*LedgerStatus, error) {
-	out := new(LedgerStatus)
-	err := c.cc.Invoke(ctx, "/inx.INX/ReadLedgerStatus", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -174,11 +174,11 @@ func (c *iNXClient) UnregisterAPIRoute(ctx context.Context, in *APIRouteRequest,
 // All implementations must embed UnimplementedINXServer
 // for forward compatibility
 type INXServer interface {
+	ReadNodeStatus(context.Context, *NoParams) (*NodeStatus, error)
 	// Messages
 	ListenToMessages(*MessageFilter, INX_ListenToMessagesServer) error
 	SubmitMessage(context.Context, *SubmitMessageRequest) (*SubmitMessageResponse, error)
 	// UTXO
-	ReadLedgerStatus(context.Context, *NoParams) (*LedgerStatus, error)
 	ReadUnspentOutputs(*NoParams, INX_ReadUnspentOutputsServer) error
 	ListenToLedgerUpdates(*LedgerUpdateRequest, INX_ListenToLedgerUpdatesServer) error
 	// REST API
@@ -191,14 +191,14 @@ type INXServer interface {
 type UnimplementedINXServer struct {
 }
 
+func (UnimplementedINXServer) ReadNodeStatus(context.Context, *NoParams) (*NodeStatus, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadNodeStatus not implemented")
+}
 func (UnimplementedINXServer) ListenToMessages(*MessageFilter, INX_ListenToMessagesServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListenToMessages not implemented")
 }
 func (UnimplementedINXServer) SubmitMessage(context.Context, *SubmitMessageRequest) (*SubmitMessageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitMessage not implemented")
-}
-func (UnimplementedINXServer) ReadLedgerStatus(context.Context, *NoParams) (*LedgerStatus, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReadLedgerStatus not implemented")
 }
 func (UnimplementedINXServer) ReadUnspentOutputs(*NoParams, INX_ReadUnspentOutputsServer) error {
 	return status.Errorf(codes.Unimplemented, "method ReadUnspentOutputs not implemented")
@@ -223,6 +223,24 @@ type UnsafeINXServer interface {
 
 func RegisterINXServer(s grpc.ServiceRegistrar, srv INXServer) {
 	s.RegisterService(&INX_ServiceDesc, srv)
+}
+
+func _INX_ReadNodeStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NoParams)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(INXServer).ReadNodeStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/inx.INX/ReadNodeStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(INXServer).ReadNodeStatus(ctx, req.(*NoParams))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _INX_ListenToMessages_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -260,24 +278,6 @@ func _INX_SubmitMessage_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(INXServer).SubmitMessage(ctx, req.(*SubmitMessageRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _INX_ReadLedgerStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NoParams)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(INXServer).ReadLedgerStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/inx.INX/ReadLedgerStatus",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(INXServer).ReadLedgerStatus(ctx, req.(*NoParams))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -368,12 +368,12 @@ var INX_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*INXServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SubmitMessage",
-			Handler:    _INX_SubmitMessage_Handler,
+			MethodName: "ReadNodeStatus",
+			Handler:    _INX_ReadNodeStatus_Handler,
 		},
 		{
-			MethodName: "ReadLedgerStatus",
-			Handler:    _INX_ReadLedgerStatus_Handler,
+			MethodName: "SubmitMessage",
+			Handler:    _INX_SubmitMessage_Handler,
 		},
 		{
 			MethodName: "RegisterAPIRoute",

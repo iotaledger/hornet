@@ -4,12 +4,14 @@ package inx;
 option go_package = "github.com/gohornet/pkg/inx";
 
 service INX {
+
+  rpc ReadNodeStatus(NoParams) returns (NodeStatus);
+
   // Messages
   rpc ListenToMessages(MessageFilter) returns (stream Message);
   rpc SubmitMessage(SubmitMessageRequest) returns (SubmitMessageResponse);
 
   // UTXO
-  rpc ReadLedgerStatus(NoParams) returns (LedgerStatus);
   rpc ReadUnspentOutputs(NoParams) returns (stream LedgerOutput);
   rpc ListenToLedgerUpdates(LedgerUpdateRequest) returns (stream LedgerUpdate);
 
@@ -57,8 +59,11 @@ message LedgerSpent {
   uint32 spentMilestoneTimestamp = 4;
 }
 
-message LedgerStatus {
-  uint32 ledgerIndex = 1;
+message NodeStatus {
+  uint32 latestMilestoneIndex = 1;
+  uint32 confirmedMilestoneIndex = 2;
+  uint32 pruningIndex = 3;
+  uint32 ledgerIndex = 4;
 }
 
 message LedgerUpdateRequest {

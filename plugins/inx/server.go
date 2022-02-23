@@ -93,16 +93,16 @@ func (s *INXServer) SubmitMessage(context context.Context, req *inx.SubmitMessag
 	return r, nil
 }
 
-func (s *INXServer) LedgerStatus(context.Context, *inx.NoParams) (*inx.LedgerStatus, error) {
-	deps.UTXOManager.ReadLockLedger()
-	defer deps.UTXOManager.ReadUnlockLedger()
-
-	index, err := deps.UTXOManager.ReadLedgerIndex()
+func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
+	index, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return nil, err
 	}
-	return &inx.LedgerStatus{
-		LedgerIndex: uint32(index),
+	return &inx.NodeStatus{
+		LatestMilestoneIndex:    uint32(deps.SyncManager.LatestMilestoneIndex()),
+		ConfirmedMilestoneIndex: uint32(deps.SyncManager.ConfirmedMilestoneIndex()),
+		PruningIndex:            uint32(deps.Storage.SnapshotInfo().PruningIndex),
+		LedgerIndex:             uint32(index),
 	}, nil
 }
 
