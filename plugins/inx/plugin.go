@@ -2,10 +2,11 @@ package inx
 
 import (
 	"context"
-	"go.uber.org/dig"
-	"os"
+	"io/ioutil"
 	"path/filepath"
 	"time"
+
+	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -101,33 +102,36 @@ func loadExtensions() {
 	if !dirExists {
 		return
 	}
-	filepath.Walk(INXPath, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			extensions = append(extensions, NewExtension(path))
+	files, err := ioutil.ReadDir(INXPath)
+	for _, f := range files {
+		if f.IsDir() {
+			extension, err := NewExtension(filepath.Join(INXPath, f.Name()))
+			if err != nil {
+				Plugin.LogErrorf("Error loading IXI extension: %s", err)
+				continue
+			}
+			extensions = append(extensions, extension)
 		}
-		return nil
-	})
+	}
 }
 
 func startExtensions() {
 	for _, e := range extensions {
-		go func() {
-			Plugin.LogInfof("Starting IXI extension: %s", e.Name)
-			err := e.Run()
-			if err != nil {
-				Plugin.LogErrorf("IXI extension stopped with error: %s", err)
-			} else {
-				Plugin.LogInfof("Stopped IXI extension: %s", e.Name)
-			}
-		}()
+		Plugin.LogInfof("Starting IXI extension: %s", e.Name)
+		err := e.Start()
+		if err != nil {
+			Plugin.LogErrorf("IXI extension ended with error: %s", err)
+		}
 	}
 }
 
 func stopExtensions() {
 	for _, e := range extensions {
-		Plugin.LogInfof("Killing IXI extension: %s", e.Name)
-		if err := e.Kill(); err != nil {
-			Plugin.LogErrorf("IXI extension kill error: %s", err)
+		Plugin.LogInfof("Stopping IXI extension: %s", e.Name)
+		if err := e.Stop(); err != nil {
+			Plugin.LogErrorf("IXI extension stop error: %s", err)
+			Plugin.LogInfof("Killing IXI extension: %s", e.Name)
+			e.Kill()
 		}
 	}
 }
