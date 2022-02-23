@@ -12,11 +12,17 @@ service INX {
   rpc ReadLedgerStatus(NoParams) returns (LedgerStatus);
   rpc ReadUnspentOutputs(NoParams) returns (stream LedgerOutput);
   rpc ListenToLedgerUpdates(LedgerUpdateRequest) returns (stream LedgerUpdate);
+
+  // REST API
+  rpc RegisterAPIRoute(APIRouteRequest) returns (NoParams);
+  rpc UnregisterAPIRoute(APIRouteRequest) returns (NoParams);
+
 }
 
 message NoParams {}
 
 message MessageFilter {
+  //TODO
 }
 
 message SubmitMessageRequest {
@@ -65,3 +71,8 @@ message LedgerUpdate {
   repeated LedgerSpent consumed = 3;
 }
 
+message APIRouteRequest {
+  string route = 1;
+  string host = 2;
+  uint32 port = 3;
+}

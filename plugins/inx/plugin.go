@@ -60,8 +60,6 @@ type dependencies struct {
 }
 
 func configure() {
-	//routeGroup := restapiv2.AddPlugin("indexer/v1")
-
 	attacher = deps.Tangle.MessageAttacher(deps.TipSelector, deps.MinPoWScore, messageProcessedTimeout, deps.DeserializationParameters)
 
 	//TODO: add separate config params
@@ -75,19 +73,11 @@ func configure() {
 func run() {
 	if err := Plugin.Daemon().BackgroundWorker("INX", func(ctx context.Context) {
 		Plugin.LogInfo("Starting INX ... done")
-		attachEvents()
 		server.Start()
 		<-ctx.Done()
 		server.Stop()
-		detachEvents()
 		Plugin.LogInfo("Stopping INX ... done")
 	}, shutdown.PriorityIndexer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
-}
-
-func attachEvents() {
-}
-
-func detachEvents() {
 }

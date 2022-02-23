@@ -362,6 +362,26 @@ func AddFeature(feature string) {
 
 // AddPlugin adds a plugin route to the RouteInfo endpoint and returns the route for this plugin.
 func AddPlugin(pluginRoute string) *echo.Group {
-	plugins = append(plugins, pluginRoute)
+	found := false
+	for _, p := range plugins {
+		if p == pluginRoute {
+			found = true
+			break
+		}
+	}
+	if !found {
+		plugins = append(plugins, pluginRoute)
+	}
 	return deps.Echo.Group(fmt.Sprintf("/api/plugins/%s", pluginRoute))
+}
+
+// RemovePlugin removes a plugin route to the RouteInfo endpoint.
+func RemovePlugin(pluginRoute string) {
+	newPlugins := make([]string, 0)
+	for _, p := range plugins {
+		if p != pluginRoute {
+			newPlugins = append(newPlugins, p)
+		}
+	}
+	plugins = newPlugins
 }

@@ -25,6 +25,9 @@ type INXClient interface {
 	ReadLedgerStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*LedgerStatus, error)
 	ReadUnspentOutputs(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (INX_ReadUnspentOutputsClient, error)
 	ListenToLedgerUpdates(ctx context.Context, in *LedgerUpdateRequest, opts ...grpc.CallOption) (INX_ListenToLedgerUpdatesClient, error)
+	// REST API
+	RegisterAPIRoute(ctx context.Context, in *APIRouteRequest, opts ...grpc.CallOption) (*NoParams, error)
+	UnregisterAPIRoute(ctx context.Context, in *APIRouteRequest, opts ...grpc.CallOption) (*NoParams, error)
 }
 
 type iNXClient struct {
@@ -149,6 +152,24 @@ func (x *iNXListenToLedgerUpdatesClient) Recv() (*LedgerUpdate, error) {
 	return m, nil
 }
 
+func (c *iNXClient) RegisterAPIRoute(ctx context.Context, in *APIRouteRequest, opts ...grpc.CallOption) (*NoParams, error) {
+	out := new(NoParams)
+	err := c.cc.Invoke(ctx, "/inx.INX/RegisterAPIRoute", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *iNXClient) UnregisterAPIRoute(ctx context.Context, in *APIRouteRequest, opts ...grpc.CallOption) (*NoParams, error) {
+	out := new(NoParams)
+	err := c.cc.Invoke(ctx, "/inx.INX/UnregisterAPIRoute", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // INXServer is the server API for INX service.
 // All implementations must embed UnimplementedINXServer
 // for forward compatibility
@@ -160,6 +181,9 @@ type INXServer interface {
 	ReadLedgerStatus(context.Context, *NoParams) (*LedgerStatus, error)
 	ReadUnspentOutputs(*NoParams, INX_ReadUnspentOutputsServer) error
 	ListenToLedgerUpdates(*LedgerUpdateRequest, INX_ListenToLedgerUpdatesServer) error
+	// REST API
+	RegisterAPIRoute(context.Context, *APIRouteRequest) (*NoParams, error)
+	UnregisterAPIRoute(context.Context, *APIRouteRequest) (*NoParams, error)
 	mustEmbedUnimplementedINXServer()
 }
 
@@ -181,6 +205,12 @@ func (UnimplementedINXServer) ReadUnspentOutputs(*NoParams, INX_ReadUnspentOutpu
 }
 func (UnimplementedINXServer) ListenToLedgerUpdates(*LedgerUpdateRequest, INX_ListenToLedgerUpdatesServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListenToLedgerUpdates not implemented")
+}
+func (UnimplementedINXServer) RegisterAPIRoute(context.Context, *APIRouteRequest) (*NoParams, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterAPIRoute not implemented")
+}
+func (UnimplementedINXServer) UnregisterAPIRoute(context.Context, *APIRouteRequest) (*NoParams, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnregisterAPIRoute not implemented")
 }
 func (UnimplementedINXServer) mustEmbedUnimplementedINXServer() {}
 
@@ -294,6 +324,42 @@ func (x *iNXListenToLedgerUpdatesServer) Send(m *LedgerUpdate) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _INX_RegisterAPIRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIRouteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(INXServer).RegisterAPIRoute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/inx.INX/RegisterAPIRoute",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(INXServer).RegisterAPIRoute(ctx, req.(*APIRouteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _INX_UnregisterAPIRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIRouteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(INXServer).UnregisterAPIRoute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/inx.INX/UnregisterAPIRoute",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(INXServer).UnregisterAPIRoute(ctx, req.(*APIRouteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // INX_ServiceDesc is the grpc.ServiceDesc for INX service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -308,6 +374,14 @@ var INX_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReadLedgerStatus",
 			Handler:    _INX_ReadLedgerStatus_Handler,
+		},
+		{
+			MethodName: "RegisterAPIRoute",
+			Handler:    _INX_RegisterAPIRoute_Handler,
+		},
+		{
+			MethodName: "UnregisterAPIRoute",
+			Handler:    _INX_UnregisterAPIRoute_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
