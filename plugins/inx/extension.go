@@ -57,7 +57,7 @@ func (e *Extension) Stop() error {
 }
 
 func (e *Extension) Kill() error {
-	if e.cmd != nil {
+	if e.cmd != nil && e.cmd.Process != nil {
 		return e.cmd.Process.Kill()
 	}
 	return nil
