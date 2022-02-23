@@ -73,72 +73,50 @@ func ConvertINXSpents(spents []*inx.LedgerSpent) (utxo.Spents, error) {
 	return sp, nil
 }
 
-func initializeIndexer(client inx.INXClient, indexer *indexerpkg.Indexer) error {
-	// compare Indexer ledgerIndex with UTXO ledgerIndex and if it does not match, drop tables and import unspent outputs
-	needsInitialImport := false
-
-	if _, err := client.ReadLockLedger(context.Background(), &inx.NoParams{}); err != nil {
-		return err
-	}
-
-	defer func() {
-		client.ReadUnlockLedger(context.Background(), &inx.NoParams{})
-	}()
-
-	resp, err := client.LedgerStatus(context.Background(), &inx.NoParams{})
+func resetIndexer(client inx.INXClient, indexer *indexerpkg.Indexer) error {
+	importer := indexer.ImportTransaction()
+	stream, err := client.ReadUnspentOutputs(context.Background(), &inx.NoParams{})
 	if err != nil {
 		panic(err)
 	}
-	utxoLedgerIndex := milestone.Index(resp.GetLedgerIndex())
-	indexerLedgerIndex, err := indexer.LedgerIndex()
-	if err != nil {
-		if errors.Is(err, indexerpkg.ErrNotFound) {
-			needsInitialImport = true
-		} else {
-			return err
+	var highestMilestoneIndex milestone.Index
+	for {
+		message, err := stream.Recv()
+		if err == io.EOF {
+			break
 		}
-	} else {
-		if utxoLedgerIndex != indexerLedgerIndex {
-			fmt.Printf("Re-indexing UTXO ledger with index: %d\n", utxoLedgerIndex)
-			indexer.Clear()
-			needsInitialImport = true
-		}
-	}
-
-	if needsInitialImport {
-		importer := indexer.ImportTransaction()
-
-		stream, err := client.ReadUnspentOutputs(context.Background(), &inx.NoParams{})
 		if err != nil {
-			panic(err)
-		}
-		for {
-			message, err := stream.Recv()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
-			iotaOutput, err := message.UnwrapOutput(serializer.DeSeriModeNoValidation)
-			if err != nil {
-				return err
-			}
-			output := utxo.CreateOutput(message.UnwrapOutputID(), message.UnwrapMessageID(), milestone.Index(message.GetMilestoneIndex()), uint64(message.GetMilestoneTimestamp()), iotaOutput)
-			if err := importer.AddOutput(output); err != nil {
-				return err
-			}
-		}
-		if err := importer.Finalize(utxoLedgerIndex); err != nil {
 			return err
 		}
-		fmt.Printf("Imported initial ledger at index %d\n", utxoLedgerIndex)
+		iotaOutput, err := message.UnwrapOutput(serializer.DeSeriModeNoValidation)
+		if err != nil {
+			return err
+		}
+		outputMilestoneIndex := milestone.Index(message.GetMilestoneIndex())
+		output := utxo.CreateOutput(message.UnwrapOutputID(), message.UnwrapMessageID(), outputMilestoneIndex, uint64(message.GetMilestoneTimestamp()), iotaOutput)
+		if err := importer.AddOutput(output); err != nil {
+			return err
+		}
+		if outputMilestoneIndex > highestMilestoneIndex {
+			highestMilestoneIndex = outputMilestoneIndex
+		}
 	}
+	if err := importer.Finalize(highestMilestoneIndex); err != nil {
+		return err
+	}
+	fmt.Printf("Imported initial ledger at index %d\n", highestMilestoneIndex)
 	return nil
 }
 
 func listenToLedgerUpdates(ctx context.Context, client inx.INXClient, indexer *indexerpkg.Indexer) error {
-	stream, err := client.ListenToLedgerUpdates(ctx, &inx.NoParams{})
+	ledgerIndex, err := indexer.LedgerIndex()
+	if err != nil {
+		return err
+	}
+	req := &inx.LedgerUpdateRequest{
+		StartMilestoneIndex: uint32(ledgerIndex + 1),
+	}
+	stream, err := client.ListenToLedgerUpdates(ctx, req)
 	if err != nil {
 		panic(err)
 	}
@@ -186,19 +164,30 @@ func main() {
 	indexer, err := indexerpkg.NewIndexer(".")
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
+		return
 	}
 	defer indexer.CloseDatabase()
 
-	err = initializeIndexer(client, indexer)
+	ledgerIndex, err := indexer.LedgerIndex()
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		if errors.Is(err, indexerpkg.ErrNotFound) {
+			// Indexer is empty, so import initial ledger state from the node
+			fmt.Println("Indexer is empty, so import initial ledger")
+			if err := resetIndexer(client, indexer); err != nil {
+				fmt.Printf("Error: %s\n", err)
+				return
+			}
+		} else {
+			fmt.Printf("Error: %s\n", err)
+			return
+		}
+	} else {
+		fmt.Printf("Indexer started at ledgerIndex %d\n", ledgerIndex)
 	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go listenToLedgerUpdates(ctx, client, indexer)
-
 	indexer_server.NewIndexerServer(indexer, e.Group("indexer/v1"), iotago.PrefixTestnet, 1000)
-
 	e.Start(":9090")
 	cancel()
 }

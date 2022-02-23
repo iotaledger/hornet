@@ -5,6 +5,7 @@ import (
 	"go.uber.org/dig"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
@@ -49,6 +50,7 @@ type dependencies struct {
 	SyncManager               *syncmanager.SyncManager
 	UTXOManager               *utxo.Manager
 	Tangle                    *tangle.Tangle
+	Storage                   *storage.Storage
 	Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
 	ShutdownHandler           *shutdown.ShutdownHandler
 	TipSelector               *tipselect.TipSelector `optional:"true"`

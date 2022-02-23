@@ -6,6 +6,8 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -87,27 +89,23 @@ func (s *INXServer) SubmitMessage(context context.Context, req *inx.SubmitMessag
 	return r, nil
 }
 
-func (s *INXServer) ReadLockLedger(context.Context, *inx.NoParams) (*inx.NoParams, error) {
+func (s *INXServer) LedgerStatus(context.Context, *inx.NoParams) (*inx.LedgerStatus, error) {
 	deps.UTXOManager.ReadLockLedger()
-	return &inx.NoParams{}, nil
-}
+	defer deps.UTXOManager.ReadUnlockLedger()
 
-func (s *INXServer) ReadUnlockLedger(context.Context, *inx.NoParams) (*inx.NoParams, error) {
-	deps.UTXOManager.ReadUnlockLedger()
-	return &inx.NoParams{}, nil
-}
-
-func (s *INXServer) LedgerStatus(context.Context, *inx.NoParams) (*inx.LedgerStatusResponse, error) {
 	index, err := deps.UTXOManager.ReadLedgerIndex()
 	if err != nil {
 		return nil, err
 	}
-	return &inx.LedgerStatusResponse{
+	return &inx.LedgerStatus{
 		LedgerIndex: uint32(index),
 	}, nil
 }
 
 func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentOutputsServer) error {
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
 	var innerErr error
 	err := deps.UTXOManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
 		payload, err := INXOutputWithOutput(output)
@@ -127,7 +125,38 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 	return err
 }
 
-func (s *INXServer) ListenToLedgerUpdates(_ *inx.NoParams, srv inx.INX_ListenToLedgerUpdatesServer) error {
+func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerUpdateRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
+	startIndex := milestone.Index(req.GetStartMilestoneIndex())
+	if startIndex > 0 {
+		// Stream all available milestone diffs first
+		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+		if startIndex <= pruningIndex {
+			return status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
+		}
+
+		deps.UTXOManager.ReadLockLedger()
+		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
+		if err != nil {
+			deps.UTXOManager.ReadUnlockLedger()
+			return status.Error(codes.Unavailable, "error accessing the UTXO ledger")
+		}
+		currentIndex := startIndex
+		for currentIndex <= ledgerIndex {
+			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+			if err != nil {
+				deps.UTXOManager.ReadUnlockLedger()
+				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
+			}
+			payload, err := INXLedgerUpdated(msDiff.Index, msDiff.Outputs, msDiff.Spents)
+			if err := srv.Send(payload); err != nil {
+				deps.UTXOManager.ReadLockLedger()
+				return err
+			}
+			currentIndex++
+		}
+		deps.UTXOManager.ReadUnlockLedger()
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	onLedgerUpdated := events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 		payload, err := INXLedgerUpdated(index, newOutputs, newSpents)

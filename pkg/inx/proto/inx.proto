@@ -9,12 +9,9 @@ service INX {
   rpc SubmitMessage(SubmitMessageRequest) returns (SubmitMessageResponse);
 
   // UTXO
-  rpc ReadLockLedger(NoParams) returns (NoParams);
-  rpc LedgerStatus(NoParams) returns (LedgerStatusResponse);
+  rpc ReadLedgerStatus(NoParams) returns (LedgerStatus);
   rpc ReadUnspentOutputs(NoParams) returns (stream LedgerOutput);
-  rpc ReadUnlockLedger(NoParams) returns (NoParams);
-  rpc ListenToLedgerUpdates(NoParams) returns (stream LedgerUpdate);
-
+  rpc ListenToLedgerUpdates(LedgerUpdateRequest) returns (stream LedgerUpdate);
 }
 
 message NoParams {}
@@ -54,8 +51,12 @@ message LedgerSpent {
   uint32 spentMilestoneTimestamp = 4;
 }
 
-message LedgerStatusResponse {
+message LedgerStatus {
   uint32 ledgerIndex = 1;
+}
+
+message LedgerUpdateRequest {
+  uint32 startMilestoneIndex = 1;
 }
 
 message LedgerUpdate {

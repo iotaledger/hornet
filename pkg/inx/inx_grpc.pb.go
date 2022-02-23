@@ -22,11 +22,9 @@ type INXClient interface {
 	ListenToMessages(ctx context.Context, in *MessageFilter, opts ...grpc.CallOption) (INX_ListenToMessagesClient, error)
 	SubmitMessage(ctx context.Context, in *SubmitMessageRequest, opts ...grpc.CallOption) (*SubmitMessageResponse, error)
 	// UTXO
-	ReadLockLedger(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*NoParams, error)
-	LedgerStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*LedgerStatusResponse, error)
+	ReadLedgerStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*LedgerStatus, error)
 	ReadUnspentOutputs(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (INX_ReadUnspentOutputsClient, error)
-	ReadUnlockLedger(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*NoParams, error)
-	ListenToLedgerUpdates(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (INX_ListenToLedgerUpdatesClient, error)
+	ListenToLedgerUpdates(ctx context.Context, in *LedgerUpdateRequest, opts ...grpc.CallOption) (INX_ListenToLedgerUpdatesClient, error)
 }
 
 type iNXClient struct {
@@ -78,18 +76,9 @@ func (c *iNXClient) SubmitMessage(ctx context.Context, in *SubmitMessageRequest,
 	return out, nil
 }
 
-func (c *iNXClient) ReadLockLedger(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*NoParams, error) {
-	out := new(NoParams)
-	err := c.cc.Invoke(ctx, "/inx.INX/ReadLockLedger", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *iNXClient) LedgerStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*LedgerStatusResponse, error) {
-	out := new(LedgerStatusResponse)
-	err := c.cc.Invoke(ctx, "/inx.INX/LedgerStatus", in, out, opts...)
+func (c *iNXClient) ReadLedgerStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*LedgerStatus, error) {
+	out := new(LedgerStatus)
+	err := c.cc.Invoke(ctx, "/inx.INX/ReadLedgerStatus", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,16 +117,7 @@ func (x *iNXReadUnspentOutputsClient) Recv() (*LedgerOutput, error) {
 	return m, nil
 }
 
-func (c *iNXClient) ReadUnlockLedger(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*NoParams, error) {
-	out := new(NoParams)
-	err := c.cc.Invoke(ctx, "/inx.INX/ReadUnlockLedger", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *iNXClient) ListenToLedgerUpdates(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (INX_ListenToLedgerUpdatesClient, error) {
+func (c *iNXClient) ListenToLedgerUpdates(ctx context.Context, in *LedgerUpdateRequest, opts ...grpc.CallOption) (INX_ListenToLedgerUpdatesClient, error) {
 	stream, err := c.cc.NewStream(ctx, &INX_ServiceDesc.Streams[2], "/inx.INX/ListenToLedgerUpdates", opts...)
 	if err != nil {
 		return nil, err
@@ -177,11 +157,9 @@ type INXServer interface {
 	ListenToMessages(*MessageFilter, INX_ListenToMessagesServer) error
 	SubmitMessage(context.Context, *SubmitMessageRequest) (*SubmitMessageResponse, error)
 	// UTXO
-	ReadLockLedger(context.Context, *NoParams) (*NoParams, error)
-	LedgerStatus(context.Context, *NoParams) (*LedgerStatusResponse, error)
+	ReadLedgerStatus(context.Context, *NoParams) (*LedgerStatus, error)
 	ReadUnspentOutputs(*NoParams, INX_ReadUnspentOutputsServer) error
-	ReadUnlockLedger(context.Context, *NoParams) (*NoParams, error)
-	ListenToLedgerUpdates(*NoParams, INX_ListenToLedgerUpdatesServer) error
+	ListenToLedgerUpdates(*LedgerUpdateRequest, INX_ListenToLedgerUpdatesServer) error
 	mustEmbedUnimplementedINXServer()
 }
 
@@ -195,19 +173,13 @@ func (UnimplementedINXServer) ListenToMessages(*MessageFilter, INX_ListenToMessa
 func (UnimplementedINXServer) SubmitMessage(context.Context, *SubmitMessageRequest) (*SubmitMessageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitMessage not implemented")
 }
-func (UnimplementedINXServer) ReadLockLedger(context.Context, *NoParams) (*NoParams, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReadLockLedger not implemented")
-}
-func (UnimplementedINXServer) LedgerStatus(context.Context, *NoParams) (*LedgerStatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LedgerStatus not implemented")
+func (UnimplementedINXServer) ReadLedgerStatus(context.Context, *NoParams) (*LedgerStatus, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadLedgerStatus not implemented")
 }
 func (UnimplementedINXServer) ReadUnspentOutputs(*NoParams, INX_ReadUnspentOutputsServer) error {
 	return status.Errorf(codes.Unimplemented, "method ReadUnspentOutputs not implemented")
 }
-func (UnimplementedINXServer) ReadUnlockLedger(context.Context, *NoParams) (*NoParams, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ReadUnlockLedger not implemented")
-}
-func (UnimplementedINXServer) ListenToLedgerUpdates(*NoParams, INX_ListenToLedgerUpdatesServer) error {
+func (UnimplementedINXServer) ListenToLedgerUpdates(*LedgerUpdateRequest, INX_ListenToLedgerUpdatesServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListenToLedgerUpdates not implemented")
 }
 func (UnimplementedINXServer) mustEmbedUnimplementedINXServer() {}
@@ -262,38 +234,20 @@ func _INX_SubmitMessage_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _INX_ReadLockLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _INX_ReadLedgerStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(NoParams)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(INXServer).ReadLockLedger(ctx, in)
+		return srv.(INXServer).ReadLedgerStatus(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/inx.INX/ReadLockLedger",
+		FullMethod: "/inx.INX/ReadLedgerStatus",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(INXServer).ReadLockLedger(ctx, req.(*NoParams))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _INX_LedgerStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NoParams)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(INXServer).LedgerStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/inx.INX/LedgerStatus",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(INXServer).LedgerStatus(ctx, req.(*NoParams))
+		return srv.(INXServer).ReadLedgerStatus(ctx, req.(*NoParams))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -319,26 +273,8 @@ func (x *iNXReadUnspentOutputsServer) Send(m *LedgerOutput) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _INX_ReadUnlockLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NoParams)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(INXServer).ReadUnlockLedger(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/inx.INX/ReadUnlockLedger",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(INXServer).ReadUnlockLedger(ctx, req.(*NoParams))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _INX_ListenToLedgerUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(NoParams)
+	m := new(LedgerUpdateRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -370,16 +306,8 @@ var INX_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _INX_SubmitMessage_Handler,
 		},
 		{
-			MethodName: "ReadLockLedger",
-			Handler:    _INX_ReadLockLedger_Handler,
-		},
-		{
-			MethodName: "LedgerStatus",
-			Handler:    _INX_LedgerStatus_Handler,
-		},
-		{
-			MethodName: "ReadUnlockLedger",
-			Handler:    _INX_ReadUnlockLedger_Handler,
+			MethodName: "ReadLedgerStatus",
+			Handler:    _INX_ReadLedgerStatus_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
