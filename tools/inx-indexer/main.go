@@ -4,12 +4,18 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 
 	indexerpkg "github.com/gohornet/hornet/pkg/indexer"
 	indexer_server "github.com/gohornet/hornet/pkg/indexer/server"
@@ -21,7 +27,10 @@ import (
 )
 
 const (
-	INXPort = 9029
+	INXPort  = 9029
+	APIRoute = "inx-indexer/v1"
+	HTTPHost = "localhost"
+	HTTPPort = 9000
 )
 
 func ConvertINXOutput(output *inx.LedgerOutput) (*utxo.Output, error) {
@@ -147,8 +156,14 @@ func listenToLedgerUpdates(ctx context.Context, client inx.INXClient, indexer *i
 }
 
 func main() {
+
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	opts = append(opts, grpc.WithKeepaliveParams(keepalive.ClientParameters{
+		Time:                10 * time.Second,
+		Timeout:             1 * time.Second,
+		PermitWithoutStream: true,
+	}))
 	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", INXPort), opts...)
 	if err != nil {
 		panic(err)
@@ -160,6 +175,14 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(middleware.Recover())
+
+	go func() {
+		if err := e.Start(fmt.Sprintf("%s:%d", HTTPHost, HTTPPort)); err != nil {
+			if !errors.Is(err, http.ErrServerClosed) {
+				panic(err)
+			}
+		}
+	}()
 
 	indexer, err := indexerpkg.NewIndexer(".")
 	if err != nil {
@@ -186,8 +209,47 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	go listenToLedgerUpdates(ctx, client, indexer)
-	indexer_server.NewIndexerServer(indexer, e.Group("indexer/v1"), iotago.PrefixTestnet, 1000)
-	e.Start(":9090")
+	go func() {
+		if err := listenToLedgerUpdates(ctx, client, indexer); err != nil {
+			fmt.Printf("Error: %s\n", err)
+		}
+		cancel()
+	}()
+	indexer_server.NewIndexerServer(indexer, e.Group(APIRoute), iotago.PrefixTestnet, 1000)
+
+	apiReq := &inx.APIRouteRequest{
+		Route: APIRoute,
+		Host:  HTTPHost,
+		Port:  HTTPPort,
+	}
+	fmt.Println("Registering API route")
+	if _, err := client.RegisterAPIRoute(context.Background(), apiReq); err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	done := make(chan bool, 1)
+	go func() {
+		<-signalChan
+		done <- true
+	}()
+	go func() {
+		select {
+		case <-signalChan:
+			done <- true
+		case <-ctx.Done():
+			done <- true
+		}
+	}()
+	<-done
 	cancel()
+	e.Close()
+	fmt.Println("Removing API route")
+	if _, err := client.UnregisterAPIRoute(context.Background(), apiReq); err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+	fmt.Println("exiting")
 }
