@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,8 +30,6 @@ import (
 const (
 	INXPort  = 9029
 	APIRoute = "inx-indexer/v1"
-	HTTPHost = "localhost"
-	HTTPPort = 9000
 )
 
 func ConvertINXOutput(output *inx.LedgerOutput) (*utxo.Output, error) {
@@ -177,7 +176,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	go func() {
-		if err := e.Start(fmt.Sprintf("%s:%d", HTTPHost, HTTPPort)); err != nil {
+		if err := e.Start(":0"); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
 				panic(err)
 			}
@@ -236,8 +235,8 @@ func main() {
 
 	apiReq := &inx.APIRouteRequest{
 		Route: APIRoute,
-		Host:  HTTPHost,
-		Port:  HTTPPort,
+		Host:  "localhost",
+		Port:  uint32(e.Listener.Addr().(*net.TCPAddr).Port),
 	}
 	fmt.Println("Registering API route")
 	if _, err := client.RegisterAPIRoute(context.Background(), apiReq); err != nil {
