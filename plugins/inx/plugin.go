@@ -3,6 +3,8 @@ package inx
 import (
 	"context"
 	"go.uber.org/dig"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -15,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
+	hiveutils "github.com/iotaledger/hive.go/kvstore/utils"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -33,6 +36,7 @@ func init() {
 const (
 	//TODO: add config param
 	INXPort = 9029
+	INXPath = "inx"
 )
 
 var (
@@ -40,6 +44,8 @@ var (
 	deps     dependencies
 	attacher *tangle.MessageAttacher
 	server   *INXServer
+
+	extensions []*Extension
 
 	messageProcessedTimeout = 1 * time.Second
 )
@@ -68,16 +74,60 @@ func configure() {
 	}
 
 	server = newINXServer()
+	loadExtensions()
 }
 
 func run() {
 	if err := Plugin.Daemon().BackgroundWorker("INX", func(ctx context.Context) {
 		Plugin.LogInfo("Starting INX ... done")
 		server.Start()
+		startExtensions()
 		<-ctx.Done()
+		stopExtensions()
 		server.Stop()
 		Plugin.LogInfo("Stopping INX ... done")
 	}, shutdown.PriorityIndexer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
+	}
+}
+
+func loadExtensions() {
+	extensions = make([]*Extension, 0)
+
+	dirExists, err := hiveutils.PathExists(INXPath)
+	if err != nil {
+		return
+	}
+	if !dirExists {
+		return
+	}
+	filepath.Walk(INXPath, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			extensions = append(extensions, NewExtension(path))
+		}
+		return nil
+	})
+}
+
+func startExtensions() {
+	for _, e := range extensions {
+		go func() {
+			Plugin.LogInfof("Starting IXI extension: %s", e.Name)
+			err := e.Run()
+			if err != nil {
+				Plugin.LogErrorf("IXI extension stopped with error: %s", err)
+			} else {
+				Plugin.LogInfof("Stopped IXI extension: %s", e.Name)
+			}
+		}()
+	}
+}
+
+func stopExtensions() {
+	for _, e := range extensions {
+		Plugin.LogInfof("Killing IXI extension: %s", e.Name)
+		if err := e.Kill(); err != nil {
+			Plugin.LogErrorf("IXI extension kill error: %s", err)
+		}
 	}
 }
