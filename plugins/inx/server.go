@@ -72,6 +72,25 @@ func (s *INXServer) ListenToMessages(filter *inx.MessageFilter, srv inx.INX_List
 	return ctx.Err()
 }
 
+func (s *INXServer) ListenToReferencedMessages(filter *inx.MessageFilter, srv inx.INX_ListenToReferencedMessagesServer) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	onReferencedMessage := events.NewClosure(func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
+		defer msgMeta.Release(true)
+
+		//TODO: use workerpool?
+		//TODO: apply filter?
+		payload := INXMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata(), index)
+		if err := srv.Send(payload); err != nil {
+			Plugin.LogInfof("Send error: %v", err)
+			cancel()
+		}
+	})
+	deps.Tangle.Events.MessageReferenced.Attach(onReferencedMessage)
+	<-ctx.Done()
+	deps.Tangle.Events.MessageReferenced.Detach(onReferencedMessage)
+	return ctx.Err()
+}
+
 func (s *INXServer) SubmitMessage(context context.Context, req *inx.SubmitMessageRequest) (*inx.SubmitMessageResponse, error) {
 	msg, err := req.GetMessage().UnwrapMessage(serializer.DeSeriModePerformValidation)
 	if err != nil {

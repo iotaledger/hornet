@@ -21,6 +21,7 @@ type INXClient interface {
 	ReadNodeStatus(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (*NodeStatus, error)
 	// Messages
 	ListenToMessages(ctx context.Context, in *MessageFilter, opts ...grpc.CallOption) (INX_ListenToMessagesClient, error)
+	ListenToReferencedMessages(ctx context.Context, in *MessageFilter, opts ...grpc.CallOption) (INX_ListenToReferencedMessagesClient, error)
 	SubmitMessage(ctx context.Context, in *SubmitMessageRequest, opts ...grpc.CallOption) (*SubmitMessageResponse, error)
 	// UTXO
 	ReadUnspentOutputs(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (INX_ReadUnspentOutputsClient, error)
@@ -79,6 +80,38 @@ func (x *iNXListenToMessagesClient) Recv() (*Message, error) {
 	return m, nil
 }
 
+func (c *iNXClient) ListenToReferencedMessages(ctx context.Context, in *MessageFilter, opts ...grpc.CallOption) (INX_ListenToReferencedMessagesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &INX_ServiceDesc.Streams[1], "/inx.INX/ListenToReferencedMessages", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &iNXListenToReferencedMessagesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type INX_ListenToReferencedMessagesClient interface {
+	Recv() (*MessageMetadata, error)
+	grpc.ClientStream
+}
+
+type iNXListenToReferencedMessagesClient struct {
+	grpc.ClientStream
+}
+
+func (x *iNXListenToReferencedMessagesClient) Recv() (*MessageMetadata, error) {
+	m := new(MessageMetadata)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *iNXClient) SubmitMessage(ctx context.Context, in *SubmitMessageRequest, opts ...grpc.CallOption) (*SubmitMessageResponse, error) {
 	out := new(SubmitMessageResponse)
 	err := c.cc.Invoke(ctx, "/inx.INX/SubmitMessage", in, out, opts...)
@@ -89,7 +122,7 @@ func (c *iNXClient) SubmitMessage(ctx context.Context, in *SubmitMessageRequest,
 }
 
 func (c *iNXClient) ReadUnspentOutputs(ctx context.Context, in *NoParams, opts ...grpc.CallOption) (INX_ReadUnspentOutputsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &INX_ServiceDesc.Streams[1], "/inx.INX/ReadUnspentOutputs", opts...)
+	stream, err := c.cc.NewStream(ctx, &INX_ServiceDesc.Streams[2], "/inx.INX/ReadUnspentOutputs", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +154,7 @@ func (x *iNXReadUnspentOutputsClient) Recv() (*LedgerOutput, error) {
 }
 
 func (c *iNXClient) ListenToLedgerUpdates(ctx context.Context, in *LedgerUpdateRequest, opts ...grpc.CallOption) (INX_ListenToLedgerUpdatesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &INX_ServiceDesc.Streams[2], "/inx.INX/ListenToLedgerUpdates", opts...)
+	stream, err := c.cc.NewStream(ctx, &INX_ServiceDesc.Streams[3], "/inx.INX/ListenToLedgerUpdates", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -177,6 +210,7 @@ type INXServer interface {
 	ReadNodeStatus(context.Context, *NoParams) (*NodeStatus, error)
 	// Messages
 	ListenToMessages(*MessageFilter, INX_ListenToMessagesServer) error
+	ListenToReferencedMessages(*MessageFilter, INX_ListenToReferencedMessagesServer) error
 	SubmitMessage(context.Context, *SubmitMessageRequest) (*SubmitMessageResponse, error)
 	// UTXO
 	ReadUnspentOutputs(*NoParams, INX_ReadUnspentOutputsServer) error
@@ -196,6 +230,9 @@ func (UnimplementedINXServer) ReadNodeStatus(context.Context, *NoParams) (*NodeS
 }
 func (UnimplementedINXServer) ListenToMessages(*MessageFilter, INX_ListenToMessagesServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListenToMessages not implemented")
+}
+func (UnimplementedINXServer) ListenToReferencedMessages(*MessageFilter, INX_ListenToReferencedMessagesServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListenToReferencedMessages not implemented")
 }
 func (UnimplementedINXServer) SubmitMessage(context.Context, *SubmitMessageRequest) (*SubmitMessageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitMessage not implemented")
@@ -261,6 +298,27 @@ type iNXListenToMessagesServer struct {
 }
 
 func (x *iNXListenToMessagesServer) Send(m *Message) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _INX_ListenToReferencedMessages_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(MessageFilter)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(INXServer).ListenToReferencedMessages(m, &iNXListenToReferencedMessagesServer{stream})
+}
+
+type INX_ListenToReferencedMessagesServer interface {
+	Send(*MessageMetadata) error
+	grpc.ServerStream
+}
+
+type iNXListenToReferencedMessagesServer struct {
+	grpc.ServerStream
+}
+
+func (x *iNXListenToReferencedMessagesServer) Send(m *MessageMetadata) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -388,6 +446,11 @@ var INX_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ListenToMessages",
 			Handler:       _INX_ListenToMessages_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ListenToReferencedMessages",
+			Handler:       _INX_ListenToReferencedMessages_Handler,
 			ServerStreams: true,
 		},
 		{

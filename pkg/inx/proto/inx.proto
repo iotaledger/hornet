@@ -9,6 +9,7 @@ service INX {
 
   // Messages
   rpc ListenToMessages(MessageFilter) returns (stream Message);
+  rpc ListenToReferencedMessages(MessageFilter) returns (stream MessageMetadata);
   rpc SubmitMessage(SubmitMessageRequest) returns (SubmitMessageResponse);
 
   // UTXO
@@ -42,6 +43,30 @@ message Raw {
 message Message {
   bytes messageId = 1;
   Raw message = 2;
+}
+
+message MessageMetadata {
+  bytes messageId = 1;
+  repeated bytes parents = 2;
+  uint32 referencedByMilestoneIndex = 3;
+  uint32 milestoneIndex = 4;
+  enum LedgerInclusionState {
+    NO_TRANSACTION = 0;
+    INCLUDED = 1;
+    CONFLICTING = 2;
+  }
+  LedgerInclusionState ledgerInclusionState = 5;
+  enum ConflictReason {
+    NONE = 0;
+    INPUT_ALREADY_SPENT = 1;
+    INPUT_ALREADY_SPENT_IN_THIS_MILESTONE = 2;
+    INPUT_NOT_FOUND = 3;
+    INPUT_OUTPUT_SUM_MISMATCH = 4;
+    INVALID_SIGNATURE = 5;
+    INVALID_NETWORK_ID = 6;
+    SEMANTIC_VALIDATION_FAILED = 255;
+  }
+  ConflictReason conflictReason = 6;
 }
 
 message LedgerOutput {

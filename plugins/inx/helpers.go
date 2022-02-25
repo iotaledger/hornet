@@ -4,21 +4,46 @@ import (
 	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func INXMessageWithBytes(messageID hornet.MessageID, data []byte) *inx.Message {
-	s := &inx.Message{
+	m := &inx.Message{
 		MessageId: make([]byte, len(messageID)),
 		Message: &inx.Raw{
 			Data: make([]byte, len(data)),
 		},
 	}
-	copy(s.MessageId, messageID[:])
-	copy(s.Message.Data, data)
-	return s
+	copy(m.MessageId, messageID[:])
+	copy(m.Message.Data, data)
+	return m
+}
+
+func INXMessageMetadata(messageID hornet.MessageID, metadata *storage.MessageMetadata, msIndex milestone.Index) *inx.MessageMetadata {
+	m := &inx.MessageMetadata{
+		MessageId:                  make([]byte, len(messageID)),
+		Parents:                    metadata.Parents().ToSliceOfSlices(),
+		ReferencedByMilestoneIndex: uint32(msIndex),
+	}
+	copy(m.MessageId, messageID[:])
+
+	inclusionState := inx.MessageMetadata_NO_TRANSACTION
+	conflict := metadata.Conflict()
+	if conflict != storage.ConflictNone {
+		inclusionState = inx.MessageMetadata_CONFLICTING
+		m.ConflictReason = inx.MessageMetadata_ConflictReason(conflict)
+	} else if metadata.IsIncludedTxInLedger() {
+		inclusionState = inx.MessageMetadata_INCLUDED
+	}
+	m.LedgerInclusionState = inclusionState
+
+	if metadata.IsMilestone() {
+		m.MilestoneIndex = uint32(msIndex)
+	}
+	return m
 }
 
 func INXOutputWithOutput(o *utxo.Output) (*inx.LedgerOutput, error) {

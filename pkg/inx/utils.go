@@ -41,6 +41,10 @@ func (x *Message) MustUnwrapMessage(deSeriMode serializer.DeSerializationMode) *
 	return msg
 }
 
+func (x *MessageMetadata) UnwrapMessageID() hornet.MessageID {
+	return hornet.MessageIDFromSlice(x.GetMessageId())
+}
+
 // Ledger
 
 func (x *LedgerOutput) UnwrapOutputID() *iotago.OutputID {
