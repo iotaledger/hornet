@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.0-alpha2] - 11.02.2022
+## [2.0.0-alpha3] - 25.02.2022
 
 ### Changed
     - Everything, since we are all stardust. 
