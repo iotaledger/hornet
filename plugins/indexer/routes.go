@@ -18,7 +18,7 @@ const (
 
 	// RouteOutputs is the route for getting outputs filtered by the given parameters.
 	// GET with query parameter returns all outputIDs that fit these filter criteria.
-	// Query parameters: "address", "hasDustReturnCondition", "dustReturnAddress", "hasExpirationCondition",
+	// Query parameters: "address", "hasStorageReturnCondition", "storageReturnAddress", "hasExpirationCondition",
 	//					 "expiresBefore", "expiresAfter", "expiresBeforeMilestone", "expiresAfterMilestone",
 	//					 "hasTimelockCondition", "timelockedBefore", "timelockedAfter", "timelockedBeforeMilestone",
 	//					 "timelockedAfterMilestone", "sender", "tag", "createdBefore", "createdAfter"
@@ -36,7 +36,7 @@ const (
 	RouteAliasByID = "/aliases/:" + restapi.ParameterAliasID
 
 	// RouteNFTs is the route for getting NFT filtered by the given parameters.
-	// Query parameters: "address", "hasDustReturnCondition", "dustReturnAddress", "hasExpirationCondition",
+	// Query parameters: "address", "hasStorageReturnCondition", "storageReturnAddress", "hasExpirationCondition",
 	//					 "expiresBefore", "expiresAfter", "expiresBeforeMilestone", "expiresAfterMilestone",
 	//					 "hasTimelockCondition", "timelockedBefore", "timelockedAfter", "timelockedBeforeMilestone",
 	//					 "timelockedAfterMilestone", "issuer", "sender", "tag", "createdBefore", "createdAfter"
@@ -75,11 +75,11 @@ const (
 	// QueryParameterTag is used to filter for a certain tag.
 	QueryParameterTag = "tag"
 
-	// QueryParameterHasDustReturnCondition is used to filter for outputs having a dust return unlock condition.
-	QueryParameterHasDustReturnCondition = "hasDustReturnCondition"
+	// QueryParameterHasStorageReturnCondition is used to filter for outputs having a storage deposit return unlock condition.
+	QueryParameterHasStorageReturnCondition = "hasStorageReturnCondition"
 
-	// QueryParameterDustReturnAddress is used to filter for outputs with a certain dust return address.
-	QueryParameterDustReturnAddress = "dustReturnAddress"
+	// QueryParameterStorageReturnAddress is used to filter for outputs with a certain storage deposit return address.
+	QueryParameterStorageReturnAddress = "storageReturnAddress"
 
 	// QueryParameterHasExpirationCondition is used to filter for outputs having an expiration unlock condition.
 	QueryParameterHasExpirationCondition = "hasExpirationCondition"
@@ -255,20 +255,20 @@ func outputsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.BasicOutputUnlockableByAddress(addr))
 	}
 
-	if len(c.QueryParam(QueryParameterHasDustReturnCondition)) > 0 {
-		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasDustReturnCondition)
+	if len(c.QueryParam(QueryParameterHasStorageReturnCondition)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasStorageReturnCondition)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.BasicOutputHasDustReturnCondition(value))
+		filters = append(filters, indexer.BasicOutputHasStorageDepositReturnCondition(value))
 	}
 
-	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterDustReturnAddress)
+	if len(c.QueryParam(QueryParameterStorageReturnAddress)) > 0 {
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterStorageReturnAddress)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.BasicOutputDustReturnAddress(addr))
+		filters = append(filters, indexer.BasicOutputStorageDepositReturnAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterHasExpirationCondition)) > 0 {
@@ -539,20 +539,20 @@ func nftsWithFilter(c echo.Context) (*outputsResponse, error) {
 		filters = append(filters, indexer.NFTUnlockableByAddress(addr))
 	}
 
-	if len(c.QueryParam(QueryParameterHasDustReturnCondition)) > 0 {
-		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasDustReturnCondition)
+	if len(c.QueryParam(QueryParameterHasStorageReturnCondition)) > 0 {
+		value, err := restapi.ParseBoolQueryParam(c, QueryParameterHasStorageReturnCondition)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTHasDustReturnCondition(value))
+		filters = append(filters, indexer.NFTHasStorageDepositReturnCondition(value))
 	}
 
-	if len(c.QueryParam(QueryParameterDustReturnAddress)) > 0 {
-		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterDustReturnAddress)
+	if len(c.QueryParam(QueryParameterStorageReturnAddress)) > 0 {
+		addr, err := restapi.ParseBech32AddressQueryParam(c, deps.Bech32HRP, QueryParameterStorageReturnAddress)
 		if err != nil {
 			return nil, err
 		}
-		filters = append(filters, indexer.NFTDustReturnAddress(addr))
+		filters = append(filters, indexer.NFTStorageDepositReturnAddress(addr))
 	}
 
 	if len(c.QueryParam(QueryParameterHasExpirationCondition)) > 0 {

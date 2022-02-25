@@ -18,7 +18,7 @@ func ouputOwnerAddress(output *utxo.Output) iotago.Address {
 
 func outputHasSpendingConstraint(output *utxo.Output) bool {
 	conditions := output.Output().UnlockConditions().MustSet()
-	return conditions.HasDustDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
+	return conditions.HasStorageDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
 }
 
 func (te *TestEnvironment) ComputeAddressBalanceWithoutConstraints(address iotago.Address, options ...utxo.UTXOIterateOption) (balance uint64, count int, err error) {

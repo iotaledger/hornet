@@ -8,48 +8,48 @@ import (
 )
 
 type nft struct {
-	NFTID                   nftIDBytes    `gorm:"primaryKey;notnull"`
-	OutputID                outputIDBytes `gorm:"unique;notnull"`
-	NativeTokenCount        int           `gorm:"notnull"`
-	Issuer                  addressBytes  `gorm:"index:nfts_issuer"`
-	Sender                  addressBytes  `gorm:"index:nfts_sender_tag"`
-	Tag                     []byte        `gorm:"index:nfts_sender_tag"`
-	Address                 addressBytes  `gorm:"notnull;index:nfts_address"`
-	DustReturn              *uint64
-	DustReturnAddress       addressBytes
-	TimelockMilestone       *milestone.Index
-	TimelockTime            *time.Time
-	ExpirationMilestone     *milestone.Index
-	ExpirationTime          *time.Time
-	ExpirationReturnAddress addressBytes
-	CreatedAt               time.Time `gorm:"notnull"`
+	NFTID                       nftIDBytes    `gorm:"primaryKey;notnull"`
+	OutputID                    outputIDBytes `gorm:"unique;notnull"`
+	NativeTokenCount            int           `gorm:"notnull"`
+	Issuer                      addressBytes  `gorm:"index:nfts_issuer"`
+	Sender                      addressBytes  `gorm:"index:nfts_sender_tag"`
+	Tag                         []byte        `gorm:"index:nfts_sender_tag"`
+	Address                     addressBytes  `gorm:"notnull;index:nfts_address"`
+	StorageDepositReturn        *uint64
+	StorageDepositReturnAddress addressBytes
+	TimelockMilestone           *milestone.Index
+	TimelockTime                *time.Time
+	ExpirationMilestone         *milestone.Index
+	ExpirationTime              *time.Time
+	ExpirationReturnAddress     addressBytes
+	CreatedAt                   time.Time `gorm:"notnull"`
 }
 
 type NFTFilterOptions struct {
-	hasNativeTokens           *bool
-	minNativeTokenCount       *uint32
-	maxNativeTokenCount       *uint32
-	unlockableByAddress       *iotago.Address
-	hasDustReturnCondition    *bool
-	dustReturnAddress         *iotago.Address
-	hasExpirationCondition    *bool
-	expirationReturnAddress   *iotago.Address
-	expiresBefore             *time.Time
-	expiresAfter              *time.Time
-	expiresBeforeMilestone    *milestone.Index
-	expiresAfterMilestone     *milestone.Index
-	hasTimelockCondition      *bool
-	timelockedBefore          *time.Time
-	timelockedAfter           *time.Time
-	timelockedBeforeMilestone *milestone.Index
-	timelockedAfterMilestone  *milestone.Index
-	issuer                    *iotago.Address
-	sender                    *iotago.Address
-	tag                       []byte
-	pageSize                  uint32
-	cursor                    *string
-	createdBefore             *time.Time
-	createdAfter              *time.Time
+	hasNativeTokens                  *bool
+	minNativeTokenCount              *uint32
+	maxNativeTokenCount              *uint32
+	unlockableByAddress              *iotago.Address
+	hasStorageDepositReturnCondition *bool
+	storageDepositReturnAddress      *iotago.Address
+	hasExpirationCondition           *bool
+	expirationReturnAddress          *iotago.Address
+	expiresBefore                    *time.Time
+	expiresAfter                     *time.Time
+	expiresBeforeMilestone           *milestone.Index
+	expiresAfterMilestone            *milestone.Index
+	hasTimelockCondition             *bool
+	timelockedBefore                 *time.Time
+	timelockedAfter                  *time.Time
+	timelockedBeforeMilestone        *milestone.Index
+	timelockedAfterMilestone         *milestone.Index
+	issuer                           *iotago.Address
+	sender                           *iotago.Address
+	tag                              []byte
+	pageSize                         uint32
+	cursor                           *string
+	createdBefore                    *time.Time
+	createdAfter                     *time.Time
 }
 
 type NFTFilterOption func(*NFTFilterOptions)
@@ -78,15 +78,15 @@ func NFTUnlockableByAddress(address iotago.Address) NFTFilterOption {
 	}
 }
 
-func NFTHasDustReturnCondition(requiresDustReturn bool) NFTFilterOption {
+func NFTHasStorageDepositReturnCondition(value bool) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
-		args.hasDustReturnCondition = &requiresDustReturn
+		args.hasStorageDepositReturnCondition = &value
 	}
 }
 
-func NFTDustReturnAddress(address iotago.Address) NFTFilterOption {
+func NFTStorageDepositReturnAddress(address iotago.Address) NFTFilterOption {
 	return func(args *NFTFilterOptions) {
-		args.dustReturnAddress = &address
+		args.storageDepositReturnAddress = &address
 	}
 }
 
@@ -243,20 +243,20 @@ func (i *Indexer) NFTOutputsWithFilters(filters ...NFTFilterOption) *IndexerResu
 		query = query.Where("address = ?", addr[:])
 	}
 
-	if opts.hasDustReturnCondition != nil {
-		if *opts.hasDustReturnCondition {
-			query = query.Where("dust_return IS NOT NULL")
+	if opts.hasStorageDepositReturnCondition != nil {
+		if *opts.hasStorageDepositReturnCondition {
+			query = query.Where("storage_deposit_return IS NOT NULL")
 		} else {
-			query = query.Where("dust_return IS NULL")
+			query = query.Where("storage_deposit_return IS NULL")
 		}
 	}
 
-	if opts.dustReturnAddress != nil {
-		addr, err := addressBytesForAddress(*opts.dustReturnAddress)
+	if opts.storageDepositReturnAddress != nil {
+		addr, err := addressBytesForAddress(*opts.storageDepositReturnAddress)
 		if err != nil {
 			return errorResult(err)
 		}
-		query = query.Where("dust_return_address = ?", addr[:])
+		query = query.Where("storage_deposit_return_address = ?", addr[:])
 	}
 
 	if opts.hasExpirationCondition != nil {

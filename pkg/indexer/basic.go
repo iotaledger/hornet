@@ -8,45 +8,45 @@ import (
 )
 
 type basicOutput struct {
-	OutputID                outputIDBytes `gorm:"primaryKey;notnull"`
-	NativeTokenCount        int           `gorm:"notnull"`
-	Sender                  addressBytes  `gorm:"index:basic_outputs_sender_tag"`
-	Tag                     []byte        `gorm:"index:basic_outputs_sender_tag"`
-	Address                 addressBytes  `gorm:"notnull;index:basic_outputs_address"`
-	DustReturn              *uint64
-	DustReturnAddress       addressBytes
-	TimelockMilestone       *milestone.Index
-	TimelockTime            *time.Time
-	ExpirationMilestone     *milestone.Index
-	ExpirationTime          *time.Time
-	ExpirationReturnAddress addressBytes
-	CreatedAt               time.Time `gorm:"notnull"`
+	OutputID                    outputIDBytes `gorm:"primaryKey;notnull"`
+	NativeTokenCount            int           `gorm:"notnull"`
+	Sender                      addressBytes  `gorm:"index:basic_outputs_sender_tag"`
+	Tag                         []byte        `gorm:"index:basic_outputs_sender_tag"`
+	Address                     addressBytes  `gorm:"notnull;index:basic_outputs_address"`
+	StorageDepositReturn        *uint64
+	StorageDepositReturnAddress addressBytes
+	TimelockMilestone           *milestone.Index
+	TimelockTime                *time.Time
+	ExpirationMilestone         *milestone.Index
+	ExpirationTime              *time.Time
+	ExpirationReturnAddress     addressBytes
+	CreatedAt                   time.Time `gorm:"notnull"`
 }
 
 type BasicOutputFilterOptions struct {
-	hasNativeTokens           *bool
-	minNativeTokenCount       *uint32
-	maxNativeTokenCount       *uint32
-	unlockableByAddress       *iotago.Address
-	hasDustReturnCondition    *bool
-	dustReturnAddress         *iotago.Address
-	hasExpirationCondition    *bool
-	expirationReturnAddress   *iotago.Address
-	expiresBefore             *time.Time
-	expiresAfter              *time.Time
-	expiresBeforeMilestone    *milestone.Index
-	expiresAfterMilestone     *milestone.Index
-	hasTimelockCondition      *bool
-	timelockedBefore          *time.Time
-	timelockedAfter           *time.Time
-	timelockedBeforeMilestone *milestone.Index
-	timelockedAfterMilestone  *milestone.Index
-	sender                    *iotago.Address
-	tag                       []byte
-	pageSize                  uint32
-	cursor                    *string
-	createdBefore             *time.Time
-	createdAfter              *time.Time
+	hasNativeTokens                  *bool
+	minNativeTokenCount              *uint32
+	maxNativeTokenCount              *uint32
+	unlockableByAddress              *iotago.Address
+	hasStorageDepositReturnCondition *bool
+	storageDepositReturnAddress      *iotago.Address
+	hasExpirationCondition           *bool
+	expirationReturnAddress          *iotago.Address
+	expiresBefore                    *time.Time
+	expiresAfter                     *time.Time
+	expiresBeforeMilestone           *milestone.Index
+	expiresAfterMilestone            *milestone.Index
+	hasTimelockCondition             *bool
+	timelockedBefore                 *time.Time
+	timelockedAfter                  *time.Time
+	timelockedBeforeMilestone        *milestone.Index
+	timelockedAfterMilestone         *milestone.Index
+	sender                           *iotago.Address
+	tag                              []byte
+	pageSize                         uint32
+	cursor                           *string
+	createdBefore                    *time.Time
+	createdAfter                     *time.Time
 }
 
 type BasicOutputFilterOption func(*BasicOutputFilterOptions)
@@ -75,15 +75,15 @@ func BasicOutputUnlockableByAddress(address iotago.Address) BasicOutputFilterOpt
 	}
 }
 
-func BasicOutputHasDustReturnCondition(value bool) BasicOutputFilterOption {
+func BasicOutputHasStorageDepositReturnCondition(value bool) BasicOutputFilterOption {
 	return func(args *BasicOutputFilterOptions) {
-		args.hasDustReturnCondition = &value
+		args.hasStorageDepositReturnCondition = &value
 	}
 }
 
-func BasicOutputDustReturnAddress(address iotago.Address) BasicOutputFilterOption {
+func BasicOutputStorageDepositReturnAddress(address iotago.Address) BasicOutputFilterOption {
 	return func(args *BasicOutputFilterOptions) {
-		args.dustReturnAddress = &address
+		args.storageDepositReturnAddress = &address
 	}
 }
 
@@ -225,20 +225,20 @@ func (i *Indexer) BasicOutputsWithFilters(filters ...BasicOutputFilterOption) *I
 		query = query.Where("address = ?", addr[:])
 	}
 
-	if opts.hasDustReturnCondition != nil {
-		if *opts.hasDustReturnCondition {
-			query = query.Where("dust_return IS NOT NULL")
+	if opts.hasStorageDepositReturnCondition != nil {
+		if *opts.hasStorageDepositReturnCondition {
+			query = query.Where("storage_deposit_return IS NOT NULL")
 		} else {
-			query = query.Where("dust_return IS NULL")
+			query = query.Where("storage_deposit_return IS NULL")
 		}
 	}
 
-	if opts.dustReturnAddress != nil {
-		addr, err := addressBytesForAddress(*opts.dustReturnAddress)
+	if opts.storageDepositReturnAddress != nil {
+		addr, err := addressBytesForAddress(*opts.storageDepositReturnAddress)
 		if err != nil {
 			return errorResult(err)
 		}
-		query = query.Where("dust_return_address = ?", addr[:])
+		query = query.Where("storage_deposit_return_address = ?", addr[:])
 	}
 
 	if opts.hasExpirationCondition != nil {

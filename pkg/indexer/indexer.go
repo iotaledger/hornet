@@ -105,9 +105,9 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			}
 		}
 
-		if dustReturn := conditions.DustDepositReturn(); dustReturn != nil {
-			basic.DustReturn = &dustReturn.Amount
-			basic.DustReturnAddress, err = addressBytesForAddress(dustReturn.ReturnAddress)
+		if storageDepositReturn := conditions.StorageDepositReturn(); storageDepositReturn != nil {
+			basic.StorageDepositReturn = &storageDepositReturn.Amount
+			basic.StorageDepositReturnAddress, err = addressBytesForAddress(storageDepositReturn.ReturnAddress)
 			if err != nil {
 				return err
 			}
@@ -254,9 +254,9 @@ func processOutput(output *utxo.Output, tx *gorm.DB) error {
 			}
 		}
 
-		if dustReturn := conditions.DustDepositReturn(); dustReturn != nil {
-			nft.DustReturn = &dustReturn.Amount
-			nft.DustReturnAddress, err = addressBytesForAddress(dustReturn.ReturnAddress)
+		if storageDepositReturn := conditions.StorageDepositReturn(); storageDepositReturn != nil {
+			nft.StorageDepositReturn = &storageDepositReturn.Amount
+			nft.StorageDepositReturnAddress, err = addressBytesForAddress(storageDepositReturn.ReturnAddress)
 			if err != nil {
 				return err
 			}
