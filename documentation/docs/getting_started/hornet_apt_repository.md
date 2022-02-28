@@ -43,7 +43,7 @@ You can find the Hornet configuration files under the `/var/lib/hornet` director
 Additionally, the Environment file for configuring multiple default parameters can be found under the 
 `/etc/default/hornet` directory.
 
-### Start the node
+### Start the Node
 
 You can use  the `systemd` service to start running Hornet on the Mainnet by running the following command:
 ```bash
@@ -192,7 +192,7 @@ You can find installation instructions in the [official Go documentation](https:
 
 5. Build the Hornet:
    ```bash
-   ./scritps/build_hornet_rocksdb_builtin.sh
+   ./scripts/build_hornet_rocksdb_builtin.sh
    ```
    * This command will build Hornet based on the latest commit from the currently chosen branch.
    * This may take a couple of minutes.
