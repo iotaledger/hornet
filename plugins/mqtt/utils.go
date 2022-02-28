@@ -173,72 +173,69 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		if hasSingleMessageTopicSubscriber {
 			deps.MQTTBroker.Send(singleMessageTopic, jsonPayload)
 		}
-		if hasAllMessagesTopicSubscriber {
+		if referenced && hasAllMessagesTopicSubscriber {
 			deps.MQTTBroker.Send(topicMessagesReferenced, jsonPayload)
 		}
 	}
 }
 
-func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool) *outputPayload {
+func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output) *outputPayload {
 	rawOutputJSON, err := output.Output().MarshalJSON()
 	if err != nil {
 		return nil
 	}
 
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
+	transactionID := output.OutputID().TransactionID()
 
 	return &outputPayload{
-		MessageID:     output.MessageID().ToHex(),
-		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
-		Spent:         spent,
-		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+serializer.UInt16ByteSize]),
-		LedgerIndex:   ledgerIndex,
-		RawOutput:     &rawRawOutputJSON,
+		MessageID:                output.MessageID().ToHex(),
+		TransactionID:            hex.EncodeToString(transactionID[:]),
+		Spent:                    false,
+		OutputIndex:              output.OutputID().Index(),
+		RawOutput:                &rawRawOutputJSON,
+		MilestoneIndexBooked:     output.MilestoneIndex(),
+		MilestoneTimestampBooked: output.MilestoneTimestamp(),
+		LedgerIndex:              ledgerIndex,
 	}
 }
 
-func publishOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool) {
+func payloadForSpent(ledgerIndex milestone.Index, spent *utxo.Spent) *outputPayload {
+	payload := payloadForOutput(ledgerIndex, spent.Output())
+	if payload != nil {
+		payload.Spent = true
+		payload.MilestoneIndexSpent = spent.MilestoneIndex()
+		payload.TransactionIDSpent = hex.EncodeToString(spent.TargetTransactionID()[:])
+		payload.MilestoneTimestampSpent = spent.MilestoneTimestamp()
+	}
+	return payload
+}
 
+func publishOutput(ledgerIndex milestone.Index, output *utxo.Output) {
 	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
 	outputsTopicHasSubscribers := deps.MQTTBroker.HasSubscribers(outputsTopic)
 
-	// TODO: Re-Add address topics if Indexer is enabled
-	//addressBech32Topic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(deps.Bech32HRP))
-	//addressBech32TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressBech32Topic)
-	//
-	//addressEd25519Topic := strings.ReplaceAll(topicAddressesEd25519Output, "{address}", output.Address().String())
-	//addressEd25519TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressEd25519Topic)
-
-	if outputsTopicHasSubscribers { //} || addressEd25519TopicHasSubscribers || addressBech32TopicHasSubscribers {
-		if payload := payloadForOutput(ledgerIndex, output, spent); payload != nil {
-
-			// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
-			jsonPayload, err := json.Marshal(payload)
-			if err != nil {
-				Plugin.LogWarn(err)
-				return
-			}
-
-			if outputsTopicHasSubscribers {
-				deps.MQTTBroker.Send(outputsTopic, jsonPayload)
-			}
-
-			//if addressBech32TopicHasSubscribers {
-			//	deps.MQTTBroker.Send(addressBech32Topic, jsonPayload)
-			//}
-			//
-			//if addressEd25519TopicHasSubscribers {
-			//	deps.MQTTBroker.Send(addressEd25519Topic, jsonPayload)
-			//}
+	if outputsTopicHasSubscribers {
+		if payload := payloadForOutput(ledgerIndex, output); payload != nil {
+			publishOnTopic(outputsTopic, payload)
 		}
 	}
 
-	if !spent {
-		// If this is the first output in a transaction (index 0), then check if someone is observing the transaction that generated this output
-		if binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength:]) == 0 {
-			transactionID := &iotago.TransactionID{}
-			copy(transactionID[:], output.OutputID()[:iotago.TransactionIDLength])
-			publishTransactionIncludedMessage(transactionID, output.MessageID())
+	// If this is the first output in a transaction (index 0), then check if someone is observing the transaction that generated this output
+	if binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength:]) == 0 {
+		transactionID := &iotago.TransactionID{}
+		copy(transactionID[:], output.OutputID()[:iotago.TransactionIDLength])
+		publishTransactionIncludedMessage(transactionID, output.MessageID())
+	}
+}
+
+func publishSpent(ledgerIndex milestone.Index, spent *utxo.Spent) {
+	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", spent.OutputID().ToHex())
+	outputsTopicHasSubscribers := deps.MQTTBroker.HasSubscribers(outputsTopic)
+
+	if outputsTopicHasSubscribers {
+		if payload := payloadForSpent(ledgerIndex, spent); payload != nil {
+			publishOnTopic(outputsTopic, payload)
 		}
 	}
 }
