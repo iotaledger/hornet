@@ -1,7 +1,6 @@
 package mqtt
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"strings"
@@ -214,10 +213,9 @@ func publishOutput(ledgerIndex milestone.Index, output *utxo.Output) {
 	}
 
 	// If this is the first output in a transaction (index 0), then check if someone is observing the transaction that generated this output
-	if binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength:]) == 0 {
-		transactionID := &iotago.TransactionID{}
-		copy(transactionID[:], output.OutputID()[:iotago.TransactionIDLength])
-		publishTransactionIncludedMessage(transactionID, output.MessageID())
+	if output.OutputID().Index() == 0 {
+		transactionID := output.OutputID().TransactionID()
+		publishTransactionIncludedMessage(&transactionID, output.MessageID())
 	}
 }
 
