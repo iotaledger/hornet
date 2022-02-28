@@ -59,14 +59,6 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 	if deps.MQTTBroker.HasSubscribers(topicMessages) {
 		deps.MQTTBroker.Send(topicMessages, cachedMessage.Message().Data())
 	}
-
-	taggedData := cachedMessage.Message().TaggedData()
-	if taggedData != nil && len(taggedData.Tag) > 0 {
-		taggedDataTopic := strings.ReplaceAll(topicMessagesTaggedData, "{tag}", hex.EncodeToString(taggedData.Tag))
-		if deps.MQTTBroker.HasSubscribers(taggedDataTopic) {
-			deps.MQTTBroker.Send(taggedDataTopic, cachedMessage.Message().Data())
-		}
-	}
 }
 
 func publishTransactionIncludedMessage(transactionID *iotago.TransactionID, messageID hornet.MessageID) {
