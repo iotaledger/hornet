@@ -58,7 +58,7 @@ func DatabaseEngine(engineStr string, allowedEngines ...Engine) (Engine, error) 
 // Otherwise the files in the database folder are not compatible.
 func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine ...Engine) (Engine, error) {
 
-	if len(dbEngine) >= 0 && dbEngine[0] == EngineMapDB {
+	if len(dbEngine) > 0 && dbEngine[0] == EngineMapDB {
 		// no need to create or access a "database info file" in case of mapdb (in-memory)
 		return EngineMapDB, nil
 	}
