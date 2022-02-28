@@ -2,6 +2,9 @@
 description: This section provides a checklist of steps for running a reliable and secure node.
 image: /img/logo/HornetLogo.png
 keywords:
+description: This section provides a checklist of steps for running a reliable and secure node.
+image: /img/logo/HornetLogo.png
+
 - IOTA Node 
 - Hornet Node
 - Hornet
