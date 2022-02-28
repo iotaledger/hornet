@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -263,17 +262,11 @@ func transactionIDFromTopic(topicName string) *iotago.TransactionID {
 func outputIDFromTopic(topicName string) *iotago.OutputID {
 	if strings.HasPrefix(topicName, "outputs/") {
 		outputIDHex := strings.Replace(topicName, "outputs/", "", 1)
-
-		bytes, err := hex.DecodeString(outputIDHex)
+		outputID, err := iotago.OutputIDFromHex(outputIDHex)
 		if err != nil {
 			return nil
 		}
-
-		if len(bytes) == iotago.TransactionIDLength+serializer.UInt16ByteSize {
-			outputID := &iotago.OutputID{}
-			copy(outputID[:], bytes)
-			return outputID
-		}
+		return &outputID
 	}
 	return nil
 }
