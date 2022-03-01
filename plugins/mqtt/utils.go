@@ -16,6 +16,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+func publishRawOnTopicIfSubscribed(topic string, payload []byte) {
+	if deps.MQTTBroker.HasSubscribers(topic) {
+		deps.MQTTBroker.Send(topic, payload)
+	}
+}
+
 func publishOnTopicIfSubscribed(topic string, payload interface{}) {
 	if deps.MQTTBroker.HasSubscribers(topic) {
 		publishOnTopic(topic, payload)
@@ -56,12 +62,28 @@ func publishReceipt(r *iotago.Receipt) {
 func publishMessage(cachedMessage *storage.CachedMessage) {
 	defer cachedMessage.Release(true)
 
-	publishOnTopicIfSubscribed(topicMessages, cachedMessage.Message().Data())
+	var payload []byte
+	payloadFunc := func() []byte {
+		if len(payload) == 0 {
+			payload = cachedMessage.Message().Data()
+		}
+		return payload
+	}
+
+	publishRawOnTopicIfSubscribed(topicMessages, payloadFunc())
 
 	taggedData := cachedMessage.Message().TaggedData()
 	if taggedData != nil && len(taggedData.Tag) > 0 {
 		taggedDataTopic := strings.ReplaceAll(topicMessagesTaggedData, "{tag}", hex.EncodeToString(taggedData.Tag))
-		publishOnTopicIfSubscribed(taggedDataTopic, cachedMessage.Message().Data())
+		publishRawOnTopicIfSubscribed(taggedDataTopic, payloadFunc())
+	}
+
+	if cachedMessage.Message().IsTransaction() {
+		publishRawOnTopicIfSubscribed(topicMessagesTransaction, payloadFunc())
+	}
+
+	if cachedMessage.Message().IsMilestone() {
+		publishRawOnTopicIfSubscribed(topicMessagesMilestone, payloadFunc())
 	}
 }
 
