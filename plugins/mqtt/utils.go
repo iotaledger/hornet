@@ -16,6 +16,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+func publishOnTopicIfSubscribed(topic string, payload interface{}) {
+	if deps.MQTTBroker.HasSubscribers(topic) {
+		publishOnTopic(topic, payload)
+	}
+}
+
 func publishOnTopic(topic string, payload interface{}) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
@@ -37,26 +43,19 @@ func publishLatestMilestone(cachedMs *storage.CachedMilestone) {
 }
 
 func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
-	if deps.MQTTBroker.HasSubscribers(topic) {
-		publishOnTopic(topic, &milestonePayload{
-			Index: uint32(milestone.Index),
-			Time:  milestone.Timestamp.Unix(),
-		})
-	}
+	publishOnTopicIfSubscribed(topic, &milestonePayload{
+		Index: uint32(milestone.Index),
+		Time:  milestone.Timestamp.Unix(),
+	})
 }
 
 func publishReceipt(r *iotago.Receipt) {
-	if deps.MQTTBroker.HasSubscribers(topicReceipts) {
-		publishOnTopic(topicReceipts, r)
-	}
+	publishOnTopicIfSubscribed(topicReceipts, r)
 }
 
 func publishMessage(cachedMessage *storage.CachedMessage) {
 	defer cachedMessage.Release(true)
-
-	if deps.MQTTBroker.HasSubscribers(topicMessages) {
-		deps.MQTTBroker.Send(topicMessages, cachedMessage.Message().Data())
-	}
+	publishOnTopicIfSubscribed(topicMessages, cachedMessage.Message().Data())
 }
 
 func publishTransactionIncludedMessage(transactionID *iotago.TransactionID, messageID hornet.MessageID) {
@@ -201,32 +200,105 @@ func payloadForSpent(ledgerIndex milestone.Index, spent *utxo.Spent) *outputPayl
 	return payload
 }
 
-func publishOutput(ledgerIndex milestone.Index, output *utxo.Output) {
-	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
-	outputsTopicHasSubscribers := deps.MQTTBroker.HasSubscribers(outputsTopic)
+func publishOnUnlockConditionTopics(baseTopic string, output iotago.Output, payloadFunc func() interface{}) {
 
-	if outputsTopicHasSubscribers {
-		if payload := payloadForOutput(ledgerIndex, output); payload != nil {
-			publishOnTopic(outputsTopic, payload)
-		}
+	topicFunc := func(condition unlockCondition, addressString string) string {
+		topic := strings.ReplaceAll(baseTopic, "{condition}", string(condition))
+		return strings.ReplaceAll(topic, "{address}", addressString)
 	}
+
+	unlockConditions, err := output.UnlockConditions().Set()
+	if err != nil {
+		return
+	}
+
+	// this tracks the addresses used by any unlock condition
+	// so that after checking all conditions we can see if anyone is subscribed to the wildcard
+	addressesToPublishForAny := make(map[string]struct{})
+
+	address := unlockConditions.Address()
+	if address != nil {
+		addr := address.Address.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionAddress, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	storageReturn := unlockConditions.StorageDepositReturn()
+	if storageReturn != nil {
+		addr := storageReturn.ReturnAddress.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionStorageReturn, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	expiration := unlockConditions.Expiration()
+	if expiration != nil {
+		addr := expiration.ReturnAddress.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionExpirationReturn, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	stateController := unlockConditions.StateControllerAddress()
+	if stateController != nil {
+		addr := stateController.Address.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionStateController, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	governor := unlockConditions.StateControllerAddress()
+	if governor != nil {
+		addr := governor.Address.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionGovernor, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	immutableAlias := unlockConditions.ImmutableAlias()
+	if immutableAlias != nil {
+		addr := immutableAlias.Address.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionImmutableAlias, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	for addr := range addressesToPublishForAny {
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionAny, addr), payloadFunc())
+	}
+}
+
+func publishOutput(ledgerIndex milestone.Index, output *utxo.Output) {
+
+	var payload *outputPayload
+	payloadFunc := func() interface{} {
+		if payload == nil {
+			payload = payloadForOutput(ledgerIndex, output)
+		}
+		return payload
+	}
+
+	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
+	publishOnTopicIfSubscribed(outputsTopic, payloadFunc())
 
 	// If this is the first output in a transaction (index 0), then check if someone is observing the transaction that generated this output
 	if output.OutputID().Index() == 0 {
 		transactionID := output.OutputID().TransactionID()
 		publishTransactionIncludedMessage(&transactionID, output.MessageID())
 	}
+
+	publishOnUnlockConditionTopics(topicOutputsByUnlockConditionAndAddress, output.Output(), payloadFunc)
 }
 
 func publishSpent(ledgerIndex milestone.Index, spent *utxo.Spent) {
-	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", spent.OutputID().ToHex())
-	outputsTopicHasSubscribers := deps.MQTTBroker.HasSubscribers(outputsTopic)
 
-	if outputsTopicHasSubscribers {
-		if payload := payloadForSpent(ledgerIndex, spent); payload != nil {
-			publishOnTopic(outputsTopic, payload)
+	var payload *outputPayload
+	payloadFunc := func() interface{} {
+		if payload == nil {
+			payload = payloadForSpent(ledgerIndex, spent)
 		}
+		return payload
 	}
+
+	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", spent.OutputID().ToHex())
+	publishOnTopicIfSubscribed(outputsTopic, payloadFunc())
+
+	publishOnUnlockConditionTopics(topicSpentOutputsByUnlockConditionAndAddress, spent.Output().Output(), payloadFunc)
 }
 
 func messageIDFromTopic(topicName string) hornet.MessageID {
