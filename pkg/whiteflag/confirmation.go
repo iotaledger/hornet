@@ -189,9 +189,13 @@ func ConfirmMilestone(
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.MessagesReferenced++
 				confirmedMilestoneStats.MessagesIncludedWithTransactions++
-				serverMetrics.IncludedTransactionMessages.Inc()
-				serverMetrics.ReferencedMessages.Inc()
-				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+				if serverMetrics != nil {
+					serverMetrics.IncludedTransactionMessages.Inc()
+					serverMetrics.ReferencedMessages.Inc()
+				}
+				if forEachReferencedMessage != nil {
+					forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+				}
 			}
 		}); err != nil {
 			return nil, nil, err
@@ -208,9 +212,13 @@ func ConfirmMilestone(
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.MessagesReferenced++
 				confirmedMilestoneStats.MessagesExcludedWithoutTransactions++
-				serverMetrics.NoTransactionMessages.Inc()
-				serverMetrics.ReferencedMessages.Inc()
-				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+				if serverMetrics != nil {
+					serverMetrics.NoTransactionMessages.Inc()
+					serverMetrics.ReferencedMessages.Inc()
+				}
+				if forEachReferencedMessage != nil {
+					forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+				}
 			}
 		}); err != nil {
 			return nil, nil, err
@@ -227,9 +235,13 @@ func ConfirmMilestone(
 			meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 			confirmedMilestoneStats.MessagesReferenced++
 			confirmedMilestoneStats.MessagesExcludedWithoutTransactions++
-			serverMetrics.NoTransactionMessages.Inc()
-			serverMetrics.ReferencedMessages.Inc()
-			forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+			if serverMetrics != nil {
+				serverMetrics.NoTransactionMessages.Inc()
+				serverMetrics.ReferencedMessages.Inc()
+			}
+			if forEachReferencedMessage != nil {
+				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+			}
 		}
 	}); err != nil {
 		return nil, nil, err
@@ -245,9 +257,13 @@ func ConfirmMilestone(
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.MessagesReferenced++
 				confirmedMilestoneStats.MessagesExcludedWithConflictingTransactions++
-				serverMetrics.ConflictingTransactionMessages.Inc()
-				serverMetrics.ReferencedMessages.Inc()
-				forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+				if serverMetrics != nil {
+					serverMetrics.ConflictingTransactionMessages.Inc()
+					serverMetrics.ReferencedMessages.Inc()
+				}
+				if forEachReferencedMessage != nil {
+					forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+				}
 			}
 		}); err != nil {
 			return nil, nil, err
@@ -255,17 +271,23 @@ func ConfirmMilestone(
 	}
 	timeApplyExcludedWithConflictingTransactions := time.Now()
 
-	for _, output := range newOutputs {
-		forEachNewOutput(milestoneIndex, output)
+	if forEachNewOutput != nil {
+		for _, output := range newOutputs {
+			forEachNewOutput(milestoneIndex, output)
+		}
 	}
 	timeForEachNewOutput := time.Now()
 
-	for _, spent := range newSpents {
-		forEachNewSpent(milestoneIndex, spent)
+	if forEachNewSpent != nil {
+		for _, spent := range newSpents {
+			forEachNewSpent(milestoneIndex, spent)
+		}
 	}
 	timeForEachNewSpent := time.Now()
 
-	onMilestoneConfirmed(confirmation)
+	if onMilestoneConfirmed != nil {
+		onMilestoneConfirmed(confirmation)
+	}
 	timeOnMilestoneConfirmed := time.Now()
 
 	return confirmedMilestoneStats, &ConfirmationMetrics{
