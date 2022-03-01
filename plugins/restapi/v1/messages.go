@@ -116,7 +116,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 func messageByID(c echo.Context) (*iotago.Message, error) {
 	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
@@ -147,7 +147,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 
 	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults
