@@ -9,7 +9,7 @@ const (
 	topicMessagesReferenced  = "messages/referenced"
 	topicMessagesTransaction = "messages/transaction"
 	topicMessagesMilestone   = "messages/milestone"
-	topicMessagesTaggedData  = "messages/data/{tag}"
+	topicMessagesTaggedData  = "messages/taggedData/{tag}"
 	topicMessagesMetadata    = "messages/{messageId}/metadata"
 
 	topicTransactionsIncludedMessage = "transactions/{transactionId}/included-message"
