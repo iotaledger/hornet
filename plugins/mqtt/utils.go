@@ -361,7 +361,7 @@ func transactionIDFromTopic(topicName string) *iotago.TransactionID {
 }
 
 func outputIDFromTopic(topicName string) *iotago.OutputID {
-	if strings.HasPrefix(topicName, "outputs/") {
+	if strings.HasPrefix(topicName, "outputs/") && !strings.HasPrefix(topicName, "outputs/unlock") {
 		outputIDHex := strings.Replace(topicName, "outputs/", "", 1)
 		outputID, err := iotago.OutputIDFromHex(outputIDHex)
 		if err != nil {
