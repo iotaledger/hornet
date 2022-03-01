@@ -163,7 +163,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	if err != nil {
 		return err
 	}
-	_, err = o.output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, nil)
+	_, err = o.output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	if err != nil {
 		return err
 	}
@@ -195,6 +195,19 @@ func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.OutputID) 
 		return nil, err
 	}
 	return output, nil
+}
+
+func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID *iotago.OutputID) ([]byte, error) {
+	key := outputStorageKeyForOutputID(outputID)
+	value, err := u.utxoStorage.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	offset := iotago.MessageIDLength + serializer.UInt32ByteSize + serializer.UInt32ByteSize
+	if len(value) <= offset {
+		return nil, errors.New("invalid UTXO output length")
+	}
+	return value[offset:], nil
 }
 
 func (u *Manager) ReadOutputByOutputID(outputID *iotago.OutputID) (*Output, error) {
