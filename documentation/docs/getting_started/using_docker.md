@@ -104,7 +104,7 @@ docker run \
 * `-d` Instructs Docker to run the container instance in a detached mode (daemon).
 
 
-You can run `docker stop -t 300 hornet` to gracefully end the process.
+You can run `docker stop -t 300 hornet` to end the process.
 
 ## Create Username and Password for the Hornet Dashboard
 
