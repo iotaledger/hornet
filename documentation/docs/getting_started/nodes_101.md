@@ -15,7 +15,7 @@ keywords:
 # Nodes 101
 
 The IOTA network is a distributed type of network called Tangle. The network is distributed among several servers
-called nodes which are the backbone of an IOTA network. This article explains what nodes do in an IOTA network.
+called nodes which are the backbone of an IOTA network.
 
 Nodes are responsible for:
 

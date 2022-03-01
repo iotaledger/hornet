@@ -68,39 +68,39 @@ Hornet ships as a single executable binary (`hornet` or `hornet.exe`) and some J
 
 ### Linux (and Raspberry Pi)
 
-Hornet on Linux can be installed using:
+You can install Hornet on Linux using:
 
 - [The hornet apt repository](https://wiki.iota.org/hornet/getting_started/hornet_apt_repository).
 - [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
 
-It can also be installed using:
+Alternatively, you can buuld Hornet by following these instructions:
 
 - [Prebuilt binary files](hornet_apt_repository.md#pre-built-binaries), or
 - [Built from the source](hornet_apt_repository.md#build-from-source).
 
 ### MacOS
 
-Hornet on MacOS can be installed using:
+You can install Hornet on MacOS using:
 
 - [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
 
-It can also be installed using:
+Alternatively, you can build Hornet by following these instructions:
 
 - [Prebuilt binary files](https://wiki.iota.org/hornet/getting_started/using_docker#starting-an-existing-hornet).
 
 ### Windows
 
-Hornet on Windows can be installed using:
+You can install Hornet on windows using:
 
 - [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
 
-It can also be installed using:
+Alternatively, you can build Hornet by following these instructions:
 
 - [Prebuilt binary files](hornet_apt_repository.md#pre-built-binaries).
 
 ## Configuration
 
-Hornet uses several JSON configuration files that can be adjusted based on your deployment and use cases:
+Hornet uses two JSON configuration files that you can tweak based on your deployment requirements:
 
 - `config.json`: includes all core configuration parameters.
 - `peering.json`: includes connection details to node neighbors (peers).
