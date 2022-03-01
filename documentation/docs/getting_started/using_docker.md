@@ -1,4 +1,6 @@
 ---
+description: Learn how to install and run a Hornet node using Docker. It is recommended for macOS and Windows.
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node
 - Hornet Node
@@ -7,40 +9,42 @@ keywords:
 - Run
 - macOS
 - Windows
-description: Install and run a Hornet node using Docker.  Recommended for macOS and Windows.
-image: /img/logo/HornetLogo.png
+- how to
+
 ---
 
 # Using Docker
 
-Hornet Docker images (amd64/x86_64 architecture) are available at [gohornet/hornet](https://hub.docker.com/r/gohornet/hornet) Docker hub.
+Hornet Docker images (amd64/x86_64 architecture) are available at the [gohornet/hornet](https://hub.docker.com/r/gohornet/hornet) Docker hub.
 
 ## Requirements
 
-1. A recent release of Docker enterprise or community edition. You can finde installation instructions in the [official Docker documentation](https://docs.docker.com/engine/install/).
-2. [GIT](https://git-scm.com/)
-3. [CURL](https://curl.se/)
-4. At least 1GB available RAM
+1. A recent release of Docker enterprise or community edition. You can find installation instructions in the [official Docker documentation](https://docs.docker.com/engine/install/).
+2. [GIT](https://git-scm.com/).
+3. [CURL](https://curl.se/).
+4. At least 1GB available RAM.
 
 ## Clone the Repository
 
-Once you have completed all the installation [requirements](#requirements), you can clone the repository or by running:
+Once you have completed all the installation [requirements](#requirements), you can clone the repository by running:
 
 ```sh
 git clone https://github.com/gohornet/hornet && cd hornet && git checkout mainnet
 ```
 
-:::info
+:::note
+
 The next portion of the guide assumes you are executing commands from the root directory of the repository.
+
 :::
 
 ## Prepare
 
 1. If you want to use alternative ports, edit the `config.json` file.
 
-2. Add your neighbors addressed to the `peering.json` file.
+2. Add your neighbors addresses to the `peering.json` file.
 
-The Docker image runs under user with user id 65532 and group id 65532. To make sure there are no permission issues you will need to:
+The Docker image runs under "user" with user id 65532 and group id 65532. To make sure there are no permission issues, you will need to:
 
 1. Create the directory for the database by running the following command:
 
@@ -68,7 +72,7 @@ You can pull the latest image from `gohornet/hornet` public Docker hub registry 
 docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:latest
 ```
 
-We recommend that you run on host network to improve performance.  Otherwise, you are going to have to publish ports using iptables NAT which is slower.
+We recommend that you run on host network to improve performance. Otherwise, you will have to publish ports using iptables NAT which is slower.
 
 ```sh
 docker run \
@@ -95,16 +99,16 @@ docker run \
 * `-v $(pwd)/snapshots/mainnet:/app/snapshots/mainnet` Maps the local `snapshots` directory into the container.
 * `--restart always` Instructs Docker to restart the container after Docker reboots.
 * `--name hornet` Name of the running container instance. You can refer to the given container by this name.
-* `--net=host` Instructs Docker to use the host's network, so the network is not isolated. We recommend that you run on host network for better performance.  This way, the container will also open any ports it needs on the host network, so you will not need to specify any ports.
+* `--net=host` Instructs Docker to use the host's network, so the network is not isolated. We recommend that you run on host network for better performance. This way, the container will also open any ports it needs on the host network, so you will not need to specify any ports.
 * `--ulimit nofile=8192:8192` increases the ulimits inside the container. This is important when running with large databases.
 * `-d` Instructs Docker to run the container instance in a detached mode (daemon).
 
 
-You can run `docker stop -t 300 hornet` to gracefully end the process.
+You can run `docker stop -t 300 hornet` to end the process.
 
 ## Create Username and Password for the Hornet Dashboard
 
-If you use the Hornet dashboard, you need to create a secure password. Start your Hornet container and execute the following command when the container is running:
+If you use the Hornet dashboard, you need to create a secure password. You can start your Hornet container and execute the following command when the container is running:
 
 ```sh
 docker exec -it hornet /app/hornet tool pwd-hash
@@ -151,8 +155,10 @@ docker pull gohornet/hornet:latest && docker tag gohornet/hornet:latest hornet:l
 
 ## Managing a Node
 
-:::info
-Hornet uses an in-memory cache.  In order to save all data to the underlying persistent storage, it is necessary to provide a grace period of at least 200 seconds while shutting it down.
+:::note
+
+Hornet uses an in-memory cache so to save all data to the underlying persistent storage, a grace period of at least 200 seconds for a shutdown is necessary.
+
 :::
 
 ### Starting an Existing Hornet
@@ -185,7 +191,7 @@ docker stop -t 300 hornet
 
 ### Displaying Log Output
 
-You can display an existing Hornet containers logs by running:
+You can display existing Hornet container logs by running:
 
 ```bash
 docker logs -f hornet

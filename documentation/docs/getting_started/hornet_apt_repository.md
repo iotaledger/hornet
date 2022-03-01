@@ -1,4 +1,6 @@
 ---
+description: Learn how to install and run a Hornet node using Hornet's apt repository using this tutorial. It is recommended for Linux and Ubuntu.
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node 
 - Hornet Node
@@ -6,8 +8,8 @@ keywords:
 - Ubuntu
 - apt
 - install
-description: Install and run a Hornet node using Hornets apt repository.  Recommended for Linux/Ubuntu.
-image: /img/logo/HornetLogo.png
+- how to
+
 ---
 
 # Hornet `apt` Repository (Linux-distro specific)
@@ -36,9 +38,9 @@ Hornet developers maintain the Hornet `apt` repository. It installs Hornet as a 
    sudo systemctl enable hornet.service
    ```
 
-You can find the Hornet configuration files under the `/var/lib/hornet` directory. You can find more details on how to configure Hornet in the [post installation](../post_installation/post_installation.md) chapter.
+You can find the Hornet configuration files under the `/var/lib/hornet` directory. You can also find more details on how to configure Hornet in the [post installation](https://wiki.iota.org/hornet/post_installation) article.
 
-You can find the Environment file to configure multiple default parameters under the `/etc/default/hornet` directory.
+Additionally, the Environment file for configuring multiple defauly parameters can be found under the `/etc/default/hornet` directory.
 
 ### Start the node
 
@@ -58,7 +60,7 @@ journalctl -fu hornet
 ```
 
 * `-f`: instructs `journalctl` to continue displaying the log to stdout until CTRL+C is pressed
-* `-u hornet`: filter log output by user name
+* `-u hornet`: filters the log output by user name
 
 #### Restarting Hornet
 You can restart `hornet` by running the following command:
@@ -74,18 +76,22 @@ You can stop `hornet` by running the following command:
 sudo systemctl stop hornet
 ```
 
-:::info
-Hornet uses an in-memory cache.  In order to save all data to the underlying persistent storage, it is necessary to provide a grace period of at least 200 seconds while shutting it down.
+:::note
+
+Hornet uses an in-memory cache. To save all data to the underlying persistent storage, a grace period of at least 200 seconds for shutting down is required.
+
 ::: 
 
-You can find more details on how to configure Hornet in the [post installation](../post_installation/post_installation.md) chapter.
+You can find more details on how to configure Hornet in the [post installation](https://wiki.iota.org/hornet/post_installation) article.
 
 
 # Pre-built Binaries
 There are several pre-built binaries of Hornet for major platforms available including some default configuration JSON files.
 
-:::info
-We consider this as an advanced installation method for production use as you will have to prepare a system environment in order to run the executable as a service (in daemon mode), using `systemd` or `supervisord`.
+:::note
+
+All installation methods mentioned in this article from this point should be considered advanced for production use as you will have to prepare a system environment to run the executable as a service (in daemon mode), using `systemd` or `supervisord`.
+
 :::
 
 1. Download the latest release compiled for your system from [GitHub release assets](https://github.com/gohornet/hornet/releases):
@@ -127,17 +133,9 @@ You can run Hornet using default settings by running:
 ./hornet
 ```
 
-If you are using this method, you will have to make sure the executable runs in a daemon mode,  for example using `systemd`.
-
-:::info 
-Hornet uses an in-memory cache.  In order to save all data to the underlying persistent storage, it is necessary to provide a grace period of at least 200 seconds while shutting it down.
-:::
-
-You can find more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
-
 ## Example of Systemd Unit File
 
-The following is an example of a `systemd` unit file. If you have extracted the Hornet executable to `/opt/hornet` together with configuration files, this file should work as is.  If you have extracted the Hornet executable in another location, please review the configuration and update it accordingly.
+The following is an example of a `systemd` unit file. If you have extracted the Hornet executable to `/opt/hornet` together with configuration files, this file should work as is. If you have extracted the Hornet executable in another location, please review the configuration and update it accordingly.
 
 ```plaintext
 [Unit]
@@ -166,13 +164,9 @@ WantedBy=multi-user.target
 
 # Build From Source
 
-:::info
-We consider this as an advanced installation method for production use as you will have to prepare a system environment in order to run the executable as a service (in daemon mode), using `systemd` or `supervisord`.
-:::
-
 1. Install Go:
 
-You can find installation instructions in the  [official Go documentation](https://golang.org/doc/install).
+You can find installation instructions in the [official Go documentation](https://golang.org/doc/install).
 
 2. Install dependencies: `Git` and `build-essentials`:
    
@@ -187,7 +181,7 @@ You can find installation instructions in the  [official Go documentation](https
    go version
    git --version
    ```
-   Make sure you have the latest version from https://golang.org/dl/
+   Make sure you have the latest version from https://golang.org/dl/.
 
 4. Clone the Hornet source code from GitHub:
    
@@ -202,7 +196,7 @@ You can find installation instructions in the  [official Go documentation](https
    * This command will build Hornet based on the latest commit from the currently chosen branch.
    * This may take a couple of minutes.
    
-6. Once it is compiled, then the executable file named `hornet` should be available in the current directory.  You can check the version by running:
+6. Once it is compiled, then the executable file named `hornet` should be available in the current directory. You can check the version by running:
 
    ```bash
    ./hornet --version
@@ -234,36 +228,3 @@ You can run Hornet using default settings by running:
 
 Using this method, you have to make sure the executable runs in a daemon mode using for example `systemd`.
 
-:::info
-Hornet uses an in-memory cache.  In order to save all data to the underlying persistent storage, it is necessary to provide a grace period of at least 200 seconds while shutting it down.
-:::
-
-See more details on how to configure Hornet under the [post installation](../post_installation/post_installation.md) chapter.
-
-### Example of Systemd Unit File
-The following is an example of a `systemd` unit file. If you have extracted the Hornet executable to `/opt/hornet` together with configuration files, this file should work as is.  If you have extracted the Hornet executable in another location, please review the configuration and update it accordingly.
-
-```plaintext
-[Unit]
-Description=Hornet
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=hornet
-PrivateDevices=yes
-PrivateTmp=yes
-ProtectSystem=full
-ProtectHome=yes
-
-User=hornet
-WorkingDirectory=/opt/hornet
-TimeoutSec=1200
-Restart=always
-ExecStart=/opt/hornet/hornet
-
-[Install]
-WantedBy=multi-user.target
-```

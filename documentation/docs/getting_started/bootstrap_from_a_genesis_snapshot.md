@@ -1,12 +1,13 @@
 ---
+description: Please follow these instructions to bootstrap the Chrysalis Phase 2 Hornet node from the Genesis Snapshot.
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node 
 - Hornet Node
 - genesis snapshot
 - Chrysalis Phase 2
 - bootstrap network
-description: Please follow these instructions to bootstrap the Chrysalis Phase 2 Hornet node from the Genesis Snapshot.
-image: /img/logo/HornetLogo.png
+- how to
 ---
 # Bootstrapping the Chrysalis Phase 2 Hornet Node From the Genesis Snapshot
 

@@ -1,4 +1,6 @@
 ---
+description: Learn how to install and run a Hornet node using Docker Compose.
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node
 - Hornet Node
@@ -6,19 +8,18 @@ keywords:
 - Install
 - Docker Compose
 - Build
-description: Install and run a Hornet node using Docker Compose.
-image: /img/logo/HornetLogo.png
+- how to
 ---
 
 # Using Docker Compose
 
-Make sure that you have read [Using Docker](using_docker.md) before you continue reading as this chapter is for advanced users.  You can find more information on Docker Compose in the [official Docker Compose documentation](https://docs.docker.com/compose/).
+Make sure that you have read [Using Docker](using_docker.md) before you continue reading as this article is for advanced users. You can find more information on Docker Compose in the [official Docker Compose documentation](https://docs.docker.com/compose/).
 
 ## Using Your Own Docker Compose File For Running Hornet
 
-Docker Compose is a tool on top of the Docker engine that enables you to define Docker parameters in a structured way using a `docker-compose.yaml` file. You can create and start the container with a single `docker-compose` command based on your configuration.
+Docker Compose is a tool on top of the Docker engine that help you to define Docker parameters in a structured way using a `docker-compose.yaml` file. You can create and start the container with a single `docker-compose` command based on your configuration.
 
-To do so, you will need to create `docker-compose.yml` in the same directory as described in the [Using Docker](using_docker.md)  section:
+To do so, you will need to create `docker-compose.yml` in the same directory as described in the [Using Docker](https://wiki.iota.org/hornet/getting_started/using_docker) article:
 
 ```plaintext{5}
 .
@@ -62,12 +63,14 @@ You can run the following command in the current directory to create and start a
 
 `docker-compose up -d`
 
-You can find more details on how to configure Hornet in the [post installation](../post_installation/post_installation.md) section.
+You can find more details on how to configure Hornet in the [post installation](https://wiki.iota.org/hornet/post_installation) section.
 
 ## Build Your Own Image Using Docker Compose
 
-:::info
+:::note
+
 Follow this step only if you want to run Hornet via Docker Compose.
+
 :::
 
 If you are using any architecture other than `amd64/x86_64`, you should edit the `docker-compose.yml` file and set the correct architecture where noted.
