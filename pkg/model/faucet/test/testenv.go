@@ -209,7 +209,7 @@ func NewFaucetTestEnv(t *testing.T,
 				// message is a SEP and not below max depth
 				return nil
 			}
-			defer cachedMsgMeta.Release(true)
+			defer cachedMsgMeta.Release(true) // meta -1
 
 			if !cachedMsgMeta.Metadata().IsSolid() {
 				// if the parent is not solid, the message itself can't be solid

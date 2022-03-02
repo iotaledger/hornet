@@ -30,7 +30,7 @@ func (cachedChildren CachedChildren) Retain() CachedChildren {
 // Release releases the cached children, to be picked up by the persistence layer (as soon as all consumers are done).
 func (cachedChildren CachedChildren) Release(force ...bool) {
 	for _, cachedChild := range cachedChildren {
-		cachedChild.Release(force...)
+		cachedChild.Release(force...) // child -1
 	}
 }
 

@@ -243,13 +243,13 @@ func run() {
 }
 
 func getMilestoneMessageID(index milestone.Index) hornet.MessageID {
-	cachedMs := deps.Storage.MilestoneCachedMessageOrNil(index) // message +1
-	if cachedMs == nil {
+	cachedMsgMilestone := deps.Storage.MilestoneCachedMessageOrNil(index) // message +1
+	if cachedMsgMilestone == nil {
 		return nil
 	}
-	defer cachedMs.Release(true) // message -1
+	defer cachedMsgMilestone.Release(true) // message -1
 
-	return cachedMs.Message().MessageID()
+	return cachedMsgMilestone.Message().MessageID()
 }
 
 // Msg represents a websocket message.

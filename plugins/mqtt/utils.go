@@ -28,14 +28,14 @@ func publishOnTopic(topic string, payload interface{}) {
 	deps.MQTTBroker.Send(topic, jsonPayload)
 }
 
-func publishConfirmedMilestone(cachedMs *storage.CachedMilestone) {
-	defer cachedMs.Release(true)
-	publishMilestoneOnTopic(topicMilestonesConfirmed, cachedMs.Milestone())
+func publishConfirmedMilestone(cachedMilestone *storage.CachedMilestone) {
+	defer cachedMilestone.Release(true) // milestone -1
+	publishMilestoneOnTopic(topicMilestonesConfirmed, cachedMilestone.Milestone())
 }
 
-func publishLatestMilestone(cachedMs *storage.CachedMilestone) {
-	defer cachedMs.Release(true)
-	publishMilestoneOnTopic(topicMilestonesLatest, cachedMs.Milestone())
+func publishLatestMilestone(cachedMilestone *storage.CachedMilestone) {
+	defer cachedMilestone.Release(true) // milestone -1
+	publishMilestoneOnTopic(topicMilestonesLatest, cachedMilestone.Milestone())
 }
 
 func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
@@ -53,18 +53,18 @@ func publishReceipt(r *iotago.Receipt) {
 	}
 }
 
-func publishMessage(cachedMessage *storage.CachedMessage) {
-	defer cachedMessage.Release(true)
+func publishMessage(cachedMsg *storage.CachedMessage) {
+	defer cachedMsg.Release(true) // message -1
 
 	if deps.MQTTBroker.HasSubscribers(topicMessages) {
-		deps.MQTTBroker.Send(topicMessages, cachedMessage.Message().Data())
+		deps.MQTTBroker.Send(topicMessages, cachedMsg.Message().Data())
 	}
 
-	indexation := cachedMessage.Message().Indexation()
+	indexation := cachedMsg.Message().Indexation()
 	if indexation != nil {
 		indexationTopic := strings.ReplaceAll(topicMessagesIndexation, "{index}", hex.EncodeToString(indexation.Index))
 		if deps.MQTTBroker.HasSubscribers(indexationTopic) {
-			deps.MQTTBroker.Send(indexationTopic, cachedMessage.Message().Data())
+			deps.MQTTBroker.Send(indexationTopic, cachedMsg.Message().Data())
 		}
 	}
 }
@@ -72,18 +72,18 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 func publishTransactionIncludedMessage(transactionID *iotago.TransactionID, messageID hornet.MessageID) {
 	transactionTopic := strings.ReplaceAll(topicTransactionsIncludedMessage, "{transactionId}", hex.EncodeToString(transactionID[:]))
 	if deps.MQTTBroker.HasSubscribers(transactionTopic) {
-		cachedMessage := deps.Storage.CachedMessageOrNil(messageID)
-		if cachedMessage != nil {
-			deps.MQTTBroker.Send(transactionTopic, cachedMessage.Message().Data())
-			cachedMessage.Release(true)
+		cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
+		if cachedMsg != nil {
+			deps.MQTTBroker.Send(transactionTopic, cachedMsg.Message().Data())
+			cachedMsg.Release(true) // message -1
 		}
 	}
 }
 
-func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
-	defer cachedMetadata.Release(true)
+func publishMessageMetadata(cachedMsgMeta *storage.CachedMetadata) {
+	defer cachedMsgMeta.Release(true) // meta -1
 
-	metadata := cachedMetadata.Metadata()
+	metadata := cachedMsgMeta.Metadata()
 
 	messageID := metadata.MessageID().ToHex()
 	singleMessageTopic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageID)
@@ -132,7 +132,7 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		} else if metadata.IsSolid() {
 			// determine info about the quality of the tip if not referenced
 			cmi := deps.SyncManager.ConfirmedMilestoneIndex()
-			ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMetadata.Retain(), cmi)
+			ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi)
 			if err != nil {
 				if !errors.Is(err, common.ErrOperationAborted) {
 					Plugin.LogWarn(err)

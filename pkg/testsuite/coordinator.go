@@ -23,9 +23,9 @@ import (
 func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager) {
 
 	storeMessageFunc := func(msg *storage.Message, _ ...milestone.Index) error {
-		cachedMessage := te.StoreMessage(msg) // no need to release, since we remember all the messages for later cleanup
+		cachedMsg := te.StoreMessage(msg) // message +1, no need to release, since we remember all the messages for later cleanup
 
-		ms := cachedMessage.Message().Milestone()
+		ms := cachedMsg.Message().Milestone()
 		if ms != nil {
 			te.syncManager.SetLatestMilestoneIndex(milestone.Index(ms.Index))
 		}
@@ -63,10 +63,10 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	te.LastMilestoneMessageID = milestoneMessageID
 
-	ms := te.storage.CachedMilestoneOrNil(1)
-	require.NotNil(te.TestInterface, ms)
+	cachedMilestone := te.storage.CachedMilestoneOrNil(1) // milestone +1
+	require.NotNil(te.TestInterface, cachedMilestone)
 
-	te.Milestones = append(te.Milestones, ms)
+	te.Milestones = append(te.Milestones, cachedMilestone)
 
 	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
@@ -87,7 +87,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
 		messagesMemcache.CachedMessage,
-		ms.Milestone().MessageID,
+		cachedMilestone.Milestone().MessageID,
 		te.serverMetrics,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
@@ -117,8 +117,8 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 	te.VerifyLMI(currentIndex + 1)
 
 	milestoneIndex := currentIndex + 1
-	ms := te.storage.CachedMilestoneOrNil(milestoneIndex)
-	require.NotNil(te.TestInterface, ms)
+	cachedMilestone := te.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
+	require.NotNil(te.TestInterface, cachedMilestone)
 
 	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
@@ -140,7 +140,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
 		messagesMemcache.CachedMessage,
-		ms.Milestone().MessageID,
+		cachedMilestone.Milestone().MessageID,
 		te.serverMetrics,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
@@ -183,7 +183,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		}
 	}
 
-	te.Milestones = append(te.Milestones, ms)
+	te.Milestones = append(te.Milestones, cachedMilestone)
 
 	return wfConf, confirmedMilestoneStats
 }

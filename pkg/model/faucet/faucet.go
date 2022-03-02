@@ -852,7 +852,7 @@ func (f *Faucet) ApplyConfirmation(confirmation *whiteflag.Confirmation) error {
 			f.clearPendingTransactionWithoutLocking(msgID)
 			return
 		}
-		defer cachedMsgMeta.Release(true)
+		defer cachedMsgMeta.Release(true) // meta -1
 
 		metadata := cachedMsgMeta.Metadata()
 		if metadata.IsReferenced() {

@@ -128,12 +128,12 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 	}
 
-	childMessageIDs, err := t.childrenTraverserStorage.ChildrenMessageIDs(currentMessageID)
+	childrenMessageIDs, err := t.childrenTraverserStorage.ChildrenMessageIDs(currentMessageID)
 	if err != nil {
 		return err
 	}
 
-	for _, childMessageID := range childMessageIDs {
+	for _, childMessageID := range childrenMessageIDs {
 		if !t.walkAlreadyDiscovered {
 			childMessageIDMapKey := childMessageID.ToMapKey()
 			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {

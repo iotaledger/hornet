@@ -5,7 +5,7 @@ import (
 )
 
 func (t *Tangle) processValidMilestone(cachedMilestone *storage.CachedMilestone, requested bool) {
-	defer cachedMilestone.Release(true) // message -1
+	defer cachedMilestone.Release(true) // milestone -1
 
 	t.Events.ReceivedNewMilestone.Trigger(cachedMilestone) // milestone pass +1
 

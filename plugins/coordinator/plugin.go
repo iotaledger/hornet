@@ -496,7 +496,7 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 
 // isBelowMaxDepth checks the below max depth criteria for the given message.
 func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) (bool, error) {
-	defer cachedMsgMeta.Release(true)
+	defer cachedMsgMeta.Release(true) // meta -1
 
 	cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
@@ -520,7 +520,7 @@ func Events() *coordinator.Events {
 func configureEvents() {
 	// pass all new solid messages to the selector
 	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
-		defer cachedMsgMeta.Release(true)
+		defer cachedMsgMeta.Release(true) // meta -1
 
 		belowMaxDepth, err := isBelowMaxDepth(cachedMsgMeta.Retain())
 		if err != nil {
