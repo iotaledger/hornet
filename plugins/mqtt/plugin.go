@@ -56,6 +56,7 @@ var (
 	messagesWorkerPool        *workerpool.WorkerPool
 	messageMetadataWorkerPool *workerpool.WorkerPool
 	utxoOutputWorkerPool      *workerpool.WorkerPool
+	utxoSpentWorkerPool       *workerpool.WorkerPool
 	receiptWorkerPool         *workerpool.WorkerPool
 
 	topicSubscriptionWorkerPool *workerpool.WorkerPool
@@ -127,7 +128,12 @@ func configure() {
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	utxoOutputWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishOutput(task.Param(0).(milestone.Index), task.Param(1).(*utxo.Output), task.Param(2).(bool))
+		publishOutput(task.Param(0).(milestone.Index), task.Param(1).(*utxo.Output))
+		task.Return(nil)
+	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize))
+
+	utxoSpentWorkerPool = workerpool.New(func(task workerpool.Task) {
+		publishSpent(task.Param(0).(milestone.Index), task.Param(1).(*utxo.Spent))
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize))
 
@@ -167,7 +173,6 @@ func configure() {
 		}
 
 		if outputID := outputIDFromTopic(topicName); outputID != nil {
-
 			// we need to lock the ledger here to have the correct index for unspent info of the output.
 			deps.Storage.UTXOManager().ReadLockLedger()
 			defer deps.Storage.UTXOManager().ReadUnlockLedger()
@@ -177,16 +182,24 @@ func configure() {
 				return
 			}
 
-			output, err := deps.Storage.UTXOManager().ReadOutputByOutputIDWithoutLocking(outputID)
+			unspent, err := deps.Storage.UTXOManager().IsOutputIDUnspentWithoutLocking(outputID)
 			if err != nil {
 				return
 			}
 
-			unspent, err := deps.Storage.UTXOManager().IsOutputUnspentWithoutLocking(output)
+			if unspent {
+				output, err := deps.Storage.UTXOManager().ReadOutputByOutputIDWithoutLocking(outputID)
+				if err != nil {
+					return
+				}
+				utxoOutputWorkerPool.TrySubmit(ledgerIndex, output)
+				return
+			}
+			spent, err := deps.Storage.UTXOManager().ReadSpentForOutputIDWithoutLocking(outputID)
 			if err != nil {
 				return
 			}
-			utxoOutputWorkerPool.TrySubmit(ledgerIndex, output, !unspent)
+			utxoSpentWorkerPool.TrySubmit(ledgerIndex, spent)
 			return
 		}
 
@@ -295,12 +308,13 @@ func run() {
 		cachedMetadata.Release(true)
 	})
 
-	onUTXOOutput := events.NewClosure(func(index milestone.Index, output *utxo.Output) {
-		utxoOutputWorkerPool.TrySubmit(index, output, false)
-	})
-
-	onUTXOSpent := events.NewClosure(func(index milestone.Index, spent *utxo.Spent) {
-		utxoOutputWorkerPool.TrySubmit(index, spent.Output(), true)
+	onLedgerUpdated := events.NewClosure(func(index milestone.Index, outputs utxo.Outputs, spents utxo.Spents) {
+		for _, o := range outputs {
+			utxoOutputWorkerPool.TrySubmit(index, o)
+		}
+		for _, s := range spents {
+			utxoSpentWorkerPool.TrySubmit(index, s)
+		}
 	})
 
 	onReceipt := events.NewClosure(func(receipt *iotago.Receipt) {
@@ -338,8 +352,7 @@ func run() {
 		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
 		deps.Tangle.Events.MessageReferenced.Attach(onMessageReferenced)
 
-		deps.Tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
-		deps.Tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
+		deps.Tangle.Events.LedgerUpdated.Attach(onLedgerUpdated)
 
 		deps.Tangle.Events.NewReceipt.Attach(onReceipt)
 
@@ -349,6 +362,7 @@ func run() {
 		messageMetadataWorkerPool.Start()
 		topicSubscriptionWorkerPool.Start()
 		utxoOutputWorkerPool.Start()
+		utxoSpentWorkerPool.Start()
 		receiptWorkerPool.Start()
 
 		<-ctx.Done()
@@ -360,8 +374,7 @@ func run() {
 		deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
 		deps.Tangle.Events.MessageReferenced.Detach(onMessageReferenced)
 
-		deps.Tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
-		deps.Tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
+		deps.Tangle.Events.LedgerUpdated.Detach(onLedgerUpdated)
 
 		deps.Tangle.Events.NewReceipt.Detach(onReceipt)
 
@@ -371,6 +384,7 @@ func run() {
 		messageMetadataWorkerPool.StopAndWait()
 		topicSubscriptionWorkerPool.StopAndWait()
 		utxoOutputWorkerPool.StopAndWait()
+		utxoSpentWorkerPool.StopAndWait()
 		receiptWorkerPool.StopAndWait()
 
 		Plugin.LogInfo("Stopping MQTT Events ... done")
