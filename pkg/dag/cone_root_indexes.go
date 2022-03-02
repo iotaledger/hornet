@@ -72,23 +72,23 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 		cachedMsgMeta.Metadata().MessageID(),
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
-			defer cachedMetadata.Release(true) // meta -1
+		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedMsgMeta.Release(true) // meta -1
 
 			// first check if the msg was referenced => update ycri and ocri with the confirmation index
-			if referenced, at := cachedMetadata.Metadata().ReferencedWithIndex(); referenced {
+			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced {
 				updateIndexes(at, at)
 				return false, nil
 			}
 
-			if bytes.Equal(startMessageID, cachedMetadata.Metadata().MessageID()) {
+			if bytes.Equal(startMessageID, cachedMsgMeta.Metadata().MessageID()) {
 				// do not update indexes for the start message
 				return true, nil
 			}
 
 			// if the msg was not referenced yet, but already contains recent (calculation index matches CMI) information
 			// about ycri and ocri, propagate that info
-			ycri, ocri, ci := cachedMetadata.Metadata().ConeRootIndexes()
+			ycri, ocri, ci := cachedMsgMeta.Metadata().ConeRootIndexes()
 			if ci == cmi {
 				updateIndexes(ycri, ocri)
 				return false, nil
@@ -97,15 +97,15 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 			return true, nil
 		},
 		// consumer
-		func(cachedMetadata *storage.CachedMetadata) error { // meta +1
-			defer cachedMetadata.Release(true) // meta -1
+		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
+			defer cachedMsgMeta.Release(true) // meta -1
 
-			if bytes.Equal(startMessageID, cachedMetadata.Metadata().MessageID()) {
+			if bytes.Equal(startMessageID, cachedMsgMeta.Metadata().MessageID()) {
 				// skip the start message, so it doesn't get added to the outdatedMessageIDs
 				return nil
 			}
 
-			outdatedMessageIDs = append(outdatedMessageIDs, cachedMetadata.Metadata().MessageID())
+			outdatedMessageIDs = append(outdatedMessageIDs, cachedMsgMeta.Metadata().MessageID())
 			return nil
 		},
 		// called on missing parents

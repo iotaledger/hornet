@@ -109,7 +109,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 	defer cachedMsgMeta.Release(true) // meta -1
 
 	// check condition to decide if msg should be consumed and traversed
-	traverse, err := t.condition(cachedMsgMeta.Retain()) // meta + 1
+	traverse, err := t.condition(cachedMsgMeta.Retain()) // meta pass +1
 	if err != nil {
 		// there was an error, stop processing the stack
 		return err
@@ -122,18 +122,18 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	if t.consumer != nil {
 		// consume the message
-		if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta +1
+		if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta pass +1
 			// there was an error, stop processing the stack
 			return err
 		}
 	}
 
-	childMessageIDs, err := t.childrenTraverserStorage.ChildrenMessageIDs(currentMessageID)
+	childrenMessageIDs, err := t.childrenTraverserStorage.ChildrenMessageIDs(currentMessageID)
 	if err != nil {
 		return err
 	}
 
-	for _, childMessageID := range childMessageIDs {
+	for _, childMessageID := range childrenMessageIDs {
 		if !t.walkAlreadyDiscovered {
 			childMessageIDMapKey := childMessageID.ToMapKey()
 			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {

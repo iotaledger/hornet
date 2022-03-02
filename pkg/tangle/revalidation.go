@@ -438,8 +438,8 @@ func (t *Tangle) cleanupIndexations() error {
 
 	lastStatusTime := time.Now()
 	var indexationCounter int64
-	t.storage.NonCachedStorage().ForEachIndexation(func(indexation *storage.CachedIndexation) bool {
-		defer indexation.Release(true)
+	t.storage.NonCachedStorage().ForEachIndexation(func(cachedIndex *storage.CachedIndexation) bool {
+		defer cachedIndex.Release(true) // indexation -1
 
 		indexationCounter++
 
@@ -454,8 +454,8 @@ func (t *Tangle) cleanupIndexations() error {
 		}
 
 		// delete indexation if message metadata doesn't exist
-		if !t.storage.MessageMetadataExistsInStore(indexation.Indexation().MessageID()) {
-			indexationsToDelete[string(indexation.Key())] = struct{}{}
+		if !t.storage.MessageMetadataExistsInStore(cachedIndex.Indexation().MessageID()) {
+			indexationsToDelete[string(cachedIndex.Key())] = struct{}{}
 		}
 
 		return true

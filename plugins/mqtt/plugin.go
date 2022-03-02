@@ -117,12 +117,12 @@ func configure() {
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	messagesWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishMessage(task.Param(0).(*storage.CachedMessage)) // metadata pass +1
+		publishMessage(task.Param(0).(*storage.CachedMessage)) // message pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	messageMetadataWorkerPool = workerpool.New(func(task workerpool.Task) {
-		publishMessageMetadata(task.Param(0).(*storage.CachedMetadata)) // metadata pass +1
+		publishMessageMetadata(task.Param(0).(*storage.CachedMetadata)) // meta pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -147,7 +147,7 @@ func configure() {
 				if _, added := messageMetadataWorkerPool.TrySubmit(cachedMsgMeta); added {
 					return // Avoid Release (done inside workerpool task)
 				}
-				cachedMsgMeta.Release(true)
+				cachedMsgMeta.Release(true) // meta -1
 			}
 			return
 		}
@@ -192,16 +192,16 @@ func configure() {
 
 		if topicName == topicMilestonesLatest {
 			index := deps.SyncManager.LatestMilestoneIndex()
-			if milestone := deps.Storage.CachedMilestoneOrNil(index); milestone != nil {
-				publishLatestMilestone(milestone) // milestone pass +1
+			if cachedMilestone := deps.Storage.CachedMilestoneOrNil(index); cachedMilestone != nil { // milestone +1
+				publishLatestMilestone(cachedMilestone) // milestone pass +1
 			}
 			return
 		}
 
 		if topicName == topicMilestonesConfirmed {
 			index := deps.SyncManager.ConfirmedMilestoneIndex()
-			if milestone := deps.Storage.CachedMilestoneOrNil(index); milestone != nil {
-				publishConfirmedMilestone(milestone) // milestone pass +1
+			if cachedMilestone := deps.Storage.CachedMilestoneOrNil(index); cachedMilestone != nil { // milestone +1
+				publishConfirmedMilestone(cachedMilestone) // milestone pass +1
 			}
 			return
 		}
@@ -240,59 +240,59 @@ func run() {
 
 	Plugin.LogInfof("Starting MQTT Broker (port %s) ...", deps.MQTTBroker.Config().Port)
 
-	onLatestMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
+	onLatestMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
 		if !wasSyncBefore {
 			// Not sync
-			cachedMs.Release(true)
+			cachedMilestone.Release(true) // milestone -1
 			return
 		}
 
-		if _, added := newLatestMilestoneWorkerPool.TrySubmit(cachedMs); added {
+		if _, added := newLatestMilestoneWorkerPool.TrySubmit(cachedMilestone); added {
 			return // Avoid Release (done inside workerpool task)
 		}
-		cachedMs.Release(true)
+		cachedMilestone.Release(true) // milestone -1
 	})
 
-	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMs *storage.CachedMilestone) {
+	onConfirmedMilestoneChanged := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
 		if !wasSyncBefore {
 			if !deps.SyncManager.IsNodeAlmostSynced() {
-				cachedMs.Release(true)
+				cachedMilestone.Release(true) // milestone -1
 				return
 			}
 			wasSyncBefore = true
 		}
 
-		if _, added := newConfirmedMilestoneWorkerPool.TrySubmit(cachedMs); added {
+		if _, added := newConfirmedMilestoneWorkerPool.TrySubmit(cachedMilestone); added {
 			return // Avoid Release (done inside workerpool task)
 		}
-		cachedMs.Release(true)
+		cachedMilestone.Release(true) // milestone -1
 	})
 
 	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
 		if !wasSyncBefore {
 			// Not sync
-			cachedMsg.Release(true)
+			cachedMsg.Release(true) // message -1
 			return
 		}
 
 		if _, added := messagesWorkerPool.TrySubmit(cachedMsg); added {
 			return // Avoid Release (done inside workerpool task)
 		}
-		cachedMsg.Release(true)
+		cachedMsg.Release(true) // message -1
 	})
 
-	onMessageSolid := events.NewClosure(func(cachedMetadata *storage.CachedMetadata) {
-		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
+	onMessageSolid := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
+		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMsgMeta); added {
 			return // Avoid Release (done inside workerpool task)
 		}
-		cachedMetadata.Release(true)
+		cachedMsgMeta.Release(true) // meta -1
 	})
 
-	onMessageReferenced := events.NewClosure(func(cachedMetadata *storage.CachedMetadata, _ milestone.Index, _ uint64) {
-		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMetadata); added {
+	onMessageReferenced := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata, _ milestone.Index, _ uint64) {
+		if _, added := messageMetadataWorkerPool.TrySubmit(cachedMsgMeta); added {
 			return // Avoid Release (done inside workerpool task)
 		}
-		cachedMetadata.Release(true)
+		cachedMsgMeta.Release(true) // meta -1
 	})
 
 	onUTXOOutput := events.NewClosure(func(index milestone.Index, output *utxo.Output) {

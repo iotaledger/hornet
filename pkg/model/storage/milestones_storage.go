@@ -108,8 +108,8 @@ type CachedMilestones []*CachedMilestone
 // milestone +1
 func (c CachedMilestones) Retain() CachedMilestones {
 	cachedResult := make(CachedMilestones, len(c))
-	for i, cachedMs := range c {
-		cachedResult[i] = cachedMs.Retain()
+	for i, cachedMilestone := range c {
+		cachedResult[i] = cachedMilestone.Retain() // milestone +1
 	}
 	return cachedResult
 }
@@ -117,15 +117,15 @@ func (c CachedMilestones) Retain() CachedMilestones {
 // Release releases the cached milestones, to be picked up by the persistence layer (as soon as all consumers are done).
 // milestone -1
 func (c CachedMilestones) Release(force ...bool) {
-	for _, cachedMs := range c {
-		cachedMs.Release(force...)
+	for _, cachedMilestone := range c {
+		cachedMilestone.Release(force...) // milestone -1
 	}
 }
 
 // Retain registers a new consumer for the cached milestone.
 // milestone +1
 func (c *CachedMilestone) Retain() *CachedMilestone {
-	return &CachedMilestone{c.CachedObject.Retain()}
+	return &CachedMilestone{c.CachedObject.Retain()} // milestone +1
 }
 
 // Milestone retrieves the milestone, that is cached in this container.
@@ -185,9 +185,9 @@ func (ns *NonCachedStorage) ForEachMilestoneIndex(consumer MilestoneIndexConsume
 }
 
 // milestone +1
-func (s *Storage) StoreMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (cachedMilestone *CachedMilestone, newlyAdded bool) {
+func (s *Storage) StoreMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (*CachedMilestone, bool) {
 
-	cachedMs, newlyAdded := s.milestoneStorage.StoreIfAbsent(&Milestone{
+	cachedMilestone, newlyAdded := s.milestoneStorage.StoreIfAbsent(&Milestone{
 		Index:     index,
 		MessageID: messageID,
 		Timestamp: timestamp,
@@ -196,7 +196,7 @@ func (s *Storage) StoreMilestoneIfAbsent(index milestone.Index, messageID hornet
 		return nil, false
 	}
 
-	return &CachedMilestone{CachedObject: cachedMs}, newlyAdded
+	return &CachedMilestone{CachedObject: cachedMilestone}, newlyAdded
 }
 
 // DeleteMilestone deletes the milestone in the cache/persistence layer.

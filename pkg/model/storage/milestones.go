@@ -5,22 +5,22 @@ import (
 )
 
 func MilestoneCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMs *CachedMilestone))(params[0].(*CachedMilestone).Retain())
+	handler.(func(cachedMilestone *CachedMilestone))(params[0].(*CachedMilestone).Retain()) // milestone pass +1
 }
 
 func MilestoneWithRequestedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMs *CachedMilestone, requested bool))(params[0].(*CachedMilestone).Retain(), params[1].(bool))
+	handler.(func(cachedMilestone *CachedMilestone, requested bool))(params[0].(*CachedMilestone).Retain(), params[1].(bool)) // milestone pass +1
 }
 
 // MilestoneCachedMessageOrNil returns the cached message of a milestone index or nil if it doesn't exist.
 // message +1
 func (s *Storage) MilestoneCachedMessageOrNil(milestoneIndex milestone.Index) *CachedMessage {
 
-	cachedMs := s.CachedMilestoneOrNil(milestoneIndex) // milestone +1
-	if cachedMs == nil {
+	cachedMilestone := s.CachedMilestoneOrNil(milestoneIndex) // milestone +1
+	if cachedMilestone == nil {
 		return nil
 	}
-	defer cachedMs.Release(true) // milestone -1
+	defer cachedMilestone.Release(true) // milestone -1
 
-	return s.CachedMessageOrNil(cachedMs.Milestone().MessageID)
+	return s.CachedMessageOrNil(cachedMilestone.Milestone().MessageID) // message +1
 }

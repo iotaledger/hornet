@@ -29,11 +29,11 @@ func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", hex.EncodeToString(transactionID[:]))
 	}
 
-	cachedMsg := deps.Storage.CachedMessageOrNil(output.MessageID())
+	cachedMsg := deps.Storage.CachedMessageOrNil(output.MessageID()) // message +1
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", hex.EncodeToString(transactionID[:]))
 	}
-	defer cachedMsg.Release(true)
+	defer cachedMsg.Release(true) // message -1
 
 	return cachedMsg.Message().Message(), nil
 }

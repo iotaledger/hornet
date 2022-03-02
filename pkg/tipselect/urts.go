@@ -562,9 +562,9 @@ func (ts *TipSelector) calculateScore(messageID hornet.MessageID, cmi milestone.
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
 		return ScoreLazy, nil
 	}
-	defer cachedMsgMeta.Release(true)
+	defer cachedMsgMeta.Release(true) // meta -1
 
-	ycri, ocri, err := dag.ConeRootIndexes(ts.shutdownCtx, ts.storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	ycri, ocri, err := dag.ConeRootIndexes(ts.shutdownCtx, ts.storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
 	if err != nil {
 		return ScoreLazy, err
 	}

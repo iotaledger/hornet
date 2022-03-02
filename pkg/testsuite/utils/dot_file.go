@@ -20,15 +20,15 @@ func ShortenedHash(hash hornet.MessageID) string {
 
 // ShortenedIndex returns a shortened index or milestone index for the given message.
 // this is used for the dot file.
-func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
-	defer cachedMessage.Release(true)
+func ShortenedIndex(cachedMsg *storage.CachedMessage) string {
+	defer cachedMsg.Release(true) // message -1
 
-	ms := cachedMessage.Message().Milestone()
+	ms := cachedMsg.Message().Milestone()
 	if ms != nil {
 		return fmt.Sprintf("%d", ms.Index)
 	}
 
-	indexation := storage.CheckIfIndexation(cachedMessage.Message())
+	indexation := storage.CheckIfIndexation(cachedMsg.Message())
 
 	index := indexation.Index
 	if len(index) > 4 {
@@ -36,8 +36,8 @@ func ShortenedIndex(cachedMessage *storage.CachedMessage) string {
 	}
 	indexHex := hex.EncodeToString(index)
 
-	if cachedMessage.Metadata().IsConflictingTx() {
-		conflict := cachedMessage.Metadata().Conflict()
+	if cachedMsg.Metadata().IsConflictingTx() {
+		conflict := cachedMsg.Metadata().Conflict()
 		return fmt.Sprintf("%s (%d)", indexHex, conflict)
 	}
 

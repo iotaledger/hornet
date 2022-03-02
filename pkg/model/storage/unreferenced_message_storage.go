@@ -22,7 +22,7 @@ type CachedUnreferencedMessages []*CachedUnreferencedMessage
 // Release releases the cached unreferenced messages, to be picked up by the persistence layer (as soon as all consumers are done).
 func (cachedUnreferencedMessages CachedUnreferencedMessages) Release(force ...bool) {
 	for _, cachedUnreferencedMessage := range cachedUnreferencedMessages {
-		cachedUnreferencedMessage.Release(force...)
+		cachedUnreferencedMessage.Release(force...) // unreferencedTx -1
 	}
 }
 
