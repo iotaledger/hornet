@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -68,11 +69,13 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	te.Milestones = append(te.Milestones, ms)
 
-	messagesMemcache := storage.NewMessagesMemcache(te.storage)
-	metadataMemcache := storage.NewMetadataMemcache(te.storage)
+	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
+	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
+	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
 	defer func() {
 		// all releases are forced since the cone is referenced and not needed anymore
+		memcachedParentsTraverserStorage.Cleanup(true)
 
 		// release all messages at the end
 		messagesMemcache.Cleanup(true)
@@ -81,15 +84,24 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		metadataMemcache.Cleanup(true)
 	}()
 
-	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(te.storage, te.networkID, te.serverMetrics, messagesMemcache, metadataMemcache, ms.Milestone().MessageID,
-		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
+	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
+
+	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
+		te.UTXOManager(),
+		parentsTraverser,
+		metadataMemcache.CachedMessageMetadata,
+		messagesMemcache.CachedMessage,
+		te.networkID,
+		ms.Milestone().MessageID,
+		te.serverMetrics,
+		nil,
 		func(confirmation *whiteflag.Confirmation) {
 			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
 		},
-		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {},
-		func(index milestone.Index, output *utxo.Output) {},
-		func(index milestone.Index, spent *utxo.Spent) {},
+		nil,
+		nil,
+		nil,
 		nil,
 	)
 	require.NoError(te.TestInterface, err)
@@ -114,11 +126,13 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 	ms := te.storage.CachedMilestoneOrNil(milestoneIndex)
 	require.NotNil(te.TestInterface, ms)
 
-	messagesMemcache := storage.NewMessagesMemcache(te.storage)
-	metadataMemcache := storage.NewMetadataMemcache(te.storage)
+	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
+	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
+	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
 	defer func() {
 		// all releases are forced since the cone is referenced and not needed anymore
+		memcachedParentsTraverserStorage.Cleanup(true)
 
 		// release all messages at the end
 		messagesMemcache.Cleanup(true)
@@ -127,9 +141,18 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		metadataMemcache.Cleanup(true)
 	}()
 
+	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
+
 	var wfConf *whiteflag.Confirmation
-	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(te.storage, te.networkID, te.serverMetrics, messagesMemcache, metadataMemcache, ms.Milestone().MessageID,
-		func(txMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {},
+	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
+		te.UTXOManager(),
+		parentsTraverser,
+		metadataMemcache.CachedMessageMetadata,
+		messagesMemcache.CachedMessage,
+		te.networkID,
+		ms.Milestone().MessageID,
+		te.serverMetrics,
+		nil,
 		func(confirmation *whiteflag.Confirmation) {
 			wfConf = confirmation
 			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)

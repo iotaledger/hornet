@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -49,14 +50,14 @@ type ConfirmationMetrics struct {
 // then the ledger diffs are calculated, the ledger state is checked and all msg are marked as referenced.
 // Additionally, this function also examines the milestone for a receipt and generates new migrated outputs
 // if one is present. The treasury is mutated accordingly.
-// metadataMemcache has to be cleaned up outside.
 func ConfirmMilestone(
-	dbStorage *storage.Storage,
+	utxoManager *utxo.Manager,
+	parentsTraverser *dag.ParentsTraverser,
+	cachedMessageMetadataFunc storage.CachedMessageMetadataFunc,
+	cachedMessageFunc storage.CachedMessageFunc,
 	networkId uint64,
-	serverMetrics *metrics.ServerMetrics,
-	messagesMemcache *storage.MessagesMemcache,
-	metadataMemcache *storage.MetadataMemcache,
 	milestoneMessageID hornet.MessageID,
+	serverMetrics *metrics.ServerMetrics,
 	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64),
 	onMilestoneConfirmed func(confirmation *Confirmation),
 	onLedgerUpdated func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents),
@@ -64,13 +65,17 @@ func ConfirmMilestone(
 	forEachNewSpent func(index milestone.Index, spent *utxo.Spent),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, *ConfirmationMetrics, error) {
 
-	cachedMilestoneMessage := messagesMemcache.CachedMessageOrNil(milestoneMessageID)
+	cachedMilestoneMessage, err := cachedMessageFunc(milestoneMessageID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get milestone message failed: %v, error: %w", milestoneMessageID.ToHex(), err)
+	}
 	if cachedMilestoneMessage == nil {
 		return nil, nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.ToHex())
 	}
+	defer cachedMilestoneMessage.Release(true)
 
-	dbStorage.UTXOManager().WriteLockLedger()
-	defer dbStorage.UTXOManager().WriteUnlockLedger()
+	utxoManager.WriteLockLedger()
+	defer utxoManager.WriteUnlockLedger()
 	message := cachedMilestoneMessage.Message()
 
 	ms := message.Milestone()
@@ -89,7 +94,7 @@ func ConfirmMilestone(
 
 	// we pass a background context here to not cancel the whiteflag computation!
 	// otherwise the node could panic at shutdown.
-	mutations, err := ComputeWhiteFlagMutations(context.Background(), dbStorage, networkId, milestoneIndex, ms.Timestamp, metadataMemcache, messagesMemcache, message.Parents())
+	mutations, err := ComputeWhiteFlagMutations(context.Background(), utxoManager, parentsTraverser, cachedMessageFunc, networkId, milestoneIndex, ms.Timestamp, message.Parents())
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
@@ -137,7 +142,7 @@ func ConfirmMilestone(
 			}
 		}
 
-		unspentTreasuryOutput, err := dbStorage.UTXOManager().UnspentTreasuryOutputWithoutLocking()
+		unspentTreasuryOutput, err := utxoManager.UnspentTreasuryOutputWithoutLocking()
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to fetch previous unspent treasury output: %w", err)
 		}
@@ -164,7 +169,7 @@ func ConfirmMilestone(
 		newSpents = append(newSpents, spent)
 	}
 
-	if err = dbStorage.UTXOManager().ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt); err != nil {
+	if err = utxoManager.ApplyConfirmationWithoutLocking(milestoneIndex, newOutputs, newSpents, tm, rt); err != nil {
 		return nil, nil, fmt.Errorf("confirmMilestone: utxo.ApplyConfirmation failed: %w", err)
 	}
 	timeConfirmation := time.Now()
@@ -174,11 +179,15 @@ func ConfirmMilestone(
 
 	// load the message for the given id
 	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
-		cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(messageID) // meta +1
+		cachedMsgMeta, err := cachedMessageMetadataFunc(messageID) // meta +1
+		if err != nil {
+			return fmt.Errorf("confirmMilestone: get message failed: %v, Error: %w", messageID.ToHex(), err)
+		}
 		if cachedMsgMeta == nil {
-			return fmt.Errorf("confirmMilestone: Message not found: %v", messageID.ToHex())
+			return fmt.Errorf("confirmMilestone: message not found: %v", messageID.ToHex())
 		}
 		do(cachedMsgMeta)
+		cachedMsgMeta.Release(true)
 		return nil
 	}
 

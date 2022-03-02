@@ -48,11 +48,9 @@ func (t *Tangle) markMessageAsSolid(cachedMetadata *storage.CachedMetadata) {
 // SolidQueueCheck traverses a milestone and checks if it is solid.
 // Missing messages are requested.
 // Can be aborted if the given context is canceled.
-// metadataMemcache has to be cleaned up outside.
 func (t *Tangle) SolidQueueCheck(
 	ctx context.Context,
-	messagesMemcache *storage.MessagesMemcache,
-	metadataMemcache *storage.MetadataMemcache,
+	memcachedTraverserStorage dag.TraverserStorage,
 	milestoneIndex milestone.Index,
 	parents hornet.MessageIDs) (solid bool, aborted bool) {
 
@@ -62,8 +60,7 @@ func (t *Tangle) SolidQueueCheck(
 	var messageIDsToSolidify hornet.MessageIDs
 	messageIDsToRequest := make(map[string]struct{})
 
-	// we don't need to call cleanup at the end, because we pass our own metadataMemcache.
-	parentsTraverser := dag.NewParentTraverser(t.storage, metadataMemcache)
+	parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
 
 	// collect all msg to solidify by traversing the tangle
 	if err := parentsTraverser.Traverse(
@@ -120,19 +117,25 @@ func (t *Tangle) SolidQueueCheck(
 	// no messages to request => the whole cone is solid
 	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
 	for _, messageID := range messageIDsToSolidify {
-		cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(messageID)
+		cachedMsgMeta, err := memcachedTraverserStorage.CachedMessageMetadata(messageID)
+		if err != nil {
+			t.LogPanicf("solidQueueCheck: Get message metadata failed: %v, Error: %w", messageID.ToHex(), err)
+			return
+		}
 		if cachedMsgMeta == nil {
 			t.LogPanicf("solidQueueCheck: Message metadata not found: %v", messageID.ToHex())
+			return
 		}
 
 		t.markMessageAsSolid(cachedMsgMeta.Retain())
+		cachedMsgMeta.Release(true)
 	}
 
 	tSolid := time.Now()
 
 	if t.syncManager.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
-		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(ctx, messageIDsToSolidify, metadataMemcache); err != nil {
+		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(ctx, memcachedTraverserStorage, messageIDsToSolidify); err != nil {
 			t.LogDebugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)
 		}
 	}
@@ -233,15 +236,23 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	milestoneSolidificationCtx, milestoneSolidificationCancelFunc := t.newMilestoneSolidificationCtx()
 	defer milestoneSolidificationCancelFunc()
 
-	messagesMemcache := storage.NewMessagesMemcache(t.storage)
-	metadataMemcache := storage.NewMetadataMemcache(t.storage)
+	messagesMemcache := storage.NewMessagesMemcache(t.storage.CachedMessage)
+	metadataMemcache := storage.NewMetadataMemcache(t.storage.CachedMessageMetadata)
+	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(t.storage, metadataMemcache)
 
-	// release all messages at the end
-	defer messagesMemcache.Cleanup(true)
-	defer metadataMemcache.Cleanup(true)
+	defer func() {
+		// all releases are forced since the cone is referenced and not needed anymore
+		memcachedTraverserStorage.Cleanup(true)
+
+		// release all messages at the end
+		messagesMemcache.Cleanup(true)
+
+		// Release all message metadata at the end
+		metadataMemcache.Cleanup(true)
+	}()
 
 	t.LogInfof("Run solidity check for Milestone (%d)...", milestoneIndexToSolidify)
-	if becameSolid, aborted := t.SolidQueueCheck(milestoneSolidificationCtx, messagesMemcache, metadataMemcache, milestoneIndexToSolidify, hornet.MessageIDs{cachedMsToSolidify.Milestone().MessageID}); !becameSolid { // meta pass +1
+	if becameSolid, aborted := t.SolidQueueCheck(milestoneSolidificationCtx, memcachedTraverserStorage, milestoneIndexToSolidify, hornet.MessageIDs{cachedMsToSolidify.Milestone().MessageID}); !becameSolid { // meta pass +1
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
 			t.LogInfof("Aborted solid queue check for milestone %d", milestoneIndexToSolidify)
@@ -283,8 +294,17 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	var timeStartConfirmation, timeSetConfirmedMilestoneIndex, timeUpdateConeRootIndexes, timeConfirmedMilestoneChanged, timeConfirmedMilestoneIndexChanged, timeMilestoneConfirmedSyncEvent, timeMilestoneConfirmed time.Time
 
+	parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
+
 	timeStart := time.Now()
-	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(t.storage, t.networkId, t.serverMetrics, messagesMemcache, metadataMemcache, cachedMsToSolidify.Milestone().MessageID,
+	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(
+		t.storage.UTXOManager(),
+		parentsTraverser,
+		metadataMemcache.CachedMessageMetadata,
+		messagesMemcache.CachedMessage,
+		t.networkId,
+		cachedMsToSolidify.Milestone().MessageID,
+		t.serverMetrics,
 		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 		},
@@ -297,7 +317,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			if t.syncManager.IsNodeAlmostSynced() {
 				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
 				// we can safely ignore errors of the future cone solidifier.
-				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, t.storage, metadataMemcache, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
 			}
 			timeUpdateConeRootIndexes = time.Now()
 			t.Events.ConfirmedMilestoneChanged.Trigger(cachedMsToSolidify) // milestone pass +1

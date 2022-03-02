@@ -155,7 +155,11 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		}
 
 		for i, parent := range message.Parents() {
-			if te.storage.SolidEntryPointsContain(parent) {
+			contains, err := te.storage.SolidEntryPointsContain(parent)
+			if err != nil {
+				panic(err)
+			}
+			if contains {
 				dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedHash(parent), i+1)
 				continue
 			}

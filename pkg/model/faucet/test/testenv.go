@@ -192,7 +192,10 @@ func NewFaucetTestEnv(t *testing.T,
 			cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(messageID) // meta +1
 			if cachedMsgMeta == nil {
 				// parent not found
-				entryPointIndex, exists := te.Storage().SolidEntryPointsIndex(messageID)
+				entryPointIndex, exists, err := te.Storage().SolidEntryPointsIndex(messageID)
+				if err != nil {
+					return err
+				}
 				if !exists {
 					return gossip.ErrMessageNotSolid
 				}

@@ -170,9 +170,18 @@ type MilestoneIndexConsumer func(index milestone.Index) bool
 
 // ForEachMilestoneIndex loops through all milestones.
 func (s *Storage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, iteratorOptions ...IteratorOption) {
+
 	s.milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestoneIndexFromDatabaseKey(key))
-	}, iteratorOptions...)
+	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
+}
+
+// ForEachMilestoneIndex loops through all milestones.
+func (ns *NonCachedStorage) ForEachMilestoneIndex(consumer MilestoneIndexConsumer, iteratorOptions ...IteratorOption) {
+
+	ns.storage.milestoneStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(milestoneIndexFromDatabaseKey(key))
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // milestone +1

@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/utils"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -328,11 +329,15 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 // Returns non-critical and critical errors.
 func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMilestoneIndex milestone.Index) error {
 
-	messagesMemcache := storage.NewMessagesMemcache(coo.storage)
-	metadataMemcache := storage.NewMetadataMemcache(coo.storage)
+	parents = parents.RemoveDupsAndSortByLexicalOrder()
+
+	messagesMemcache := storage.NewMessagesMemcache(coo.storage.CachedMessage)
+	metadataMemcache := storage.NewMetadataMemcache(coo.storage.CachedMessageMetadata)
+	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(coo.storage, metadataMemcache)
 
 	defer func() {
-		// All releases are forced since the cone is referenced and not needed anymore
+		// all releases are forced since the cone is referenced and not needed anymore
+		memcachedParentsTraverserStorage.Cleanup(true)
 
 		// release all messages at the end
 		messagesMemcache.Cleanup(true)
@@ -341,7 +346,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		metadataMemcache.Cleanup(true)
 	}()
 
-	parents = parents.RemoveDupsAndSortByLexicalOrder()
+	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
 
 	// We have to set a timestamp for when we run the white-flag mutations due to the semantic validation.
 	// This should be exactly the same one used when issuing the milestone later on.
@@ -350,7 +355,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// compute merkle tree root
 	// we pass a background context here to not cancel the white-flag computation!
 	// otherwise the coordinator could panic at shutdown.
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage, coo.networkID, newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), metadataMemcache, messagesMemcache, parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, coo.networkID, newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}

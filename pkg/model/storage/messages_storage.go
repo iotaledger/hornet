@@ -38,9 +38,20 @@ type CachedMessage struct {
 	metadata objectstorage.CachedObject
 }
 
+func NewCachedMessage(msg objectstorage.CachedObject, metadata objectstorage.CachedObject) *CachedMessage {
+	return &CachedMessage{
+		msg:      msg,
+		metadata: metadata,
+	}
+}
+
 // CachedMetadata contains the cached object only for metadata.
 type CachedMetadata struct {
 	objectstorage.CachedObject
+}
+
+func NewCachedMetadata(metadata objectstorage.CachedObject) *CachedMetadata {
+	return &CachedMetadata{CachedObject: metadata}
 }
 
 type CachedMessages []*CachedMessage
@@ -151,7 +162,7 @@ func (c *CachedMessage) Release(force ...bool) {
 	c.metadata.Release(force...)
 }
 
-func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
+func MessageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	msg := &Message{
 		messageID: hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]),
 		data:      data,
@@ -182,7 +193,7 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 
 	s.messagesStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixMessages}),
-		messageFactory,
+		MessageFactory,
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.StoreOnCreation(true),
@@ -233,6 +244,12 @@ func (s *Storage) CachedMessageOrNil(messageID hornet.MessageID) *CachedMessage 
 	}
 }
 
+// CachedMessage returns a cached message object.
+// msg +1
+func (s *Storage) CachedMessage(messageID hornet.MessageID) (*CachedMessage, error) {
+	return s.CachedMessageOrNil(messageID), nil
+}
+
 // CachedMessageMetadataOrNil returns a cached metadata object.
 // metadata +1
 func (s *Storage) CachedMessageMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
@@ -242,6 +259,12 @@ func (s *Storage) CachedMessageMetadataOrNil(messageID hornet.MessageID) *Cached
 		return nil
 	}
 	return &CachedMetadata{CachedObject: cachedMeta}
+}
+
+// CachedMessageMetadata returns a cached metadata object.
+// metadata +1
+func (s *Storage) CachedMessageMetadata(messageID hornet.MessageID) (*CachedMetadata, error) {
+	return s.CachedMessageMetadataOrNil(messageID), nil
 }
 
 // StoredMetadataOrNil returns a metadata object without accessing the cache layer.
@@ -280,7 +303,7 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 
 		metadata := &MessageMetadata{
 			messageID: message.MessageID(),
-			parents:   hornet.MessageIDsFromSliceOfArrays(message.message.Parents),
+			parents:   hornet.MessageIDsFromSliceOfArrays(message.Message().Parents),
 		}
 
 		cachedMeta = s.metadataStorage.Store(metadata) // meta +1
@@ -303,16 +326,34 @@ type MessageIDConsumer func(messageID hornet.MessageID) bool
 
 // ForEachMessageID loops over all message IDs.
 func (s *Storage) ForEachMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
+
 	s.messagesStorage.ForEachKeyOnly(func(messageID []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(messageID))
-	}, iteratorOptions...)
+	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
+}
+
+// ForEachMessageID loops over all message IDs.
+func (ns *NonCachedStorage) ForEachMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
+
+	ns.storage.messagesStorage.ForEachKeyOnly(func(messageID []byte) bool {
+		return consumer(hornet.MessageIDFromSlice(messageID))
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // ForEachMessageMetadataMessageID loops over all message metadata message IDs.
 func (s *Storage) ForEachMessageMetadataMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
+
 	s.metadataStorage.ForEachKeyOnly(func(messageID []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(messageID))
-	}, iteratorOptions...)
+	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
+}
+
+// ForEachMessageMetadataMessageID loops over all message metadata message IDs.
+func (ns *NonCachedStorage) ForEachMessageMetadataMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
+
+	ns.storage.metadataStorage.ForEachKeyOnly(func(messageID []byte) bool {
+		return consumer(hornet.MessageIDFromSlice(messageID))
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // DeleteMessage deletes the message and metadata in the cache/persistence layer.

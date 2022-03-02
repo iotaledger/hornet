@@ -52,7 +52,11 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	for _, parent := range parents {
 		cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(parent)
 		if cachedMsgMeta == nil {
-			if deps.Storage.SolidEntryPointsContain(parent) {
+			contains, err := deps.Storage.SolidEntryPointsContain(parent)
+			if err != nil {
+				return nil, err
+			}
+			if contains {
 				// deregister the event, because the parent is already solid (this also fires the event)
 				deps.Tangle.DeregisterMessageSolidEvent(parent)
 			}
@@ -69,14 +73,18 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 		})
 	}
 
-	messagesMemcache := storage.NewMessagesMemcache(deps.Storage)
-	metadataMemcache := storage.NewMetadataMemcache(deps.Storage)
+	messagesMemcache := storage.NewMessagesMemcache(deps.Storage.CachedMessage)
+	metadataMemcache := storage.NewMetadataMemcache(deps.Storage.CachedMessageMetadata)
+	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(deps.Storage, metadataMemcache)
 
 	defer func() {
 		// deregister the events to free the memory
 		for _, parent := range parents {
 			deps.Tangle.DeregisterMessageSolidEvent(parent)
 		}
+
+		// all releases are forced since the cone is referenced and not needed anymore
+		memcachedTraverserStorage.Cleanup(true)
 
 		// release all messages at the end
 		messagesMemcache.Cleanup(true)
@@ -86,7 +94,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}()
 
 	// check if all requested parents are solid
-	solid, aborted := deps.Tangle.SolidQueueCheck(Plugin.Daemon().ContextStopped(), messagesMemcache, metadataMemcache, request.Index, parents)
+	solid, aborted := deps.Tangle.SolidQueueCheck(Plugin.Daemon().ContextStopped(), memcachedTraverserStorage, request.Index, parents)
 	if aborted {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, common.ErrOperationAborted.Error())
 	}
@@ -104,9 +112,11 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 		}
 	}
 
+	parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
+
 	// at this point all parents are solid
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), deps.Storage, deps.NetworkID, request.Index, request.Timestamp, metadataMemcache, messagesMemcache, parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), deps.Storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, deps.NetworkID, request.Index, request.Timestamp, parents)
 	if err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "failed to compute white flag mutations: %s", err)
@@ -358,8 +368,9 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(messageID hornet.MessageID) {
+		func(messageID hornet.MessageID) error {
 			entryPoints = append(entryPoints, &entryPoint{MessageID: messageID.ToHex(), ReferencedByMilestone: entryPointIndex})
+			return nil
 		},
 		false); err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {

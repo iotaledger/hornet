@@ -16,8 +16,63 @@ type packageEvents struct {
 }
 
 type ReadOption = objectstorage.ReadOption
-type IteratorOption = objectstorage.IteratorOption
 
+// the default options used for object storage iteration.
+var defaultIteratorOptions = []IteratorOption{
+	WithIteratorPrefix(kvstore.EmptyPrefix),
+	WithIteratorMaxIterations(0),
+}
+
+// IteratorOption is a function setting an iterator option.
+type IteratorOption func(opts *IteratorOptions)
+
+// IteratorOptions define options for iterations in the object storage.
+type IteratorOptions struct {
+	// an optional prefix to iterate a subset of elements.
+	optionalPrefix []byte
+	// used to stop the iteration after a certain amount of iterations.
+	maxIterations int
+}
+
+func ObjectStorageIteratorOptions(iteratorOptions ...IteratorOption) []objectstorage.IteratorOption {
+	opts := IteratorOptions{}
+	opts.apply(defaultIteratorOptions...)
+	opts.apply(iteratorOptions...)
+
+	return []objectstorage.IteratorOption{
+		objectstorage.WithIteratorMaxIterations(opts.maxIterations),
+		objectstorage.WithIteratorPrefix(opts.optionalPrefix),
+	}
+}
+
+// applies the given IteratorOption.
+func (o *IteratorOptions) apply(opts ...IteratorOption) {
+	for _, opt := range opts {
+		opt(o)
+	}
+}
+
+// WithIteratorPrefix is used to iterate a subset of elements with a defined prefix.
+func WithIteratorPrefix(prefix []byte) IteratorOption {
+	return func(opts *IteratorOptions) {
+		opts.optionalPrefix = prefix
+	}
+}
+
+// WithIteratorMaxIterations is used to stop the iteration after a certain amount of iterations.
+// 0 disables the limit.
+func WithIteratorMaxIterations(maxIterations int) IteratorOption {
+	return func(opts *IteratorOptions) {
+		opts.maxIterations = maxIterations
+	}
+}
+
+// NonCachedStorage is a Storage without a cache.
+type NonCachedStorage struct {
+	storage *Storage
+}
+
+// Storage is the access layer to the node databases (partially cached).
 type Storage struct {
 
 	// databases
@@ -82,6 +137,10 @@ func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile .
 	return s, nil
 }
 
+func (s *Storage) NonCachedStorage() *NonCachedStorage {
+	return &NonCachedStorage{storage: s}
+}
+
 func (s *Storage) UTXOManager() *utxo.Manager {
 	return s.utxoManager
 }
@@ -141,6 +200,126 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 				Enabled:               false,
 				MaxConsumersPerObject: 10,
 				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+	}
+}
+
+// profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
+func (s *Storage) profileCacheEnabled() *profile.Caches {
+	return &profile.Caches{
+		Addresses: &profile.CacheOpts{
+			CacheTime:                  "500ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		Children: &profile.CacheOpts{
+			CacheTime:                  "500ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		Milestones: &profile.CacheOpts{
+			CacheTime:                  "500ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		Messages: &profile.CacheOpts{
+			CacheTime:                  "500ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		UnreferencedMessages: &profile.CacheOpts{
+			CacheTime:                  "500ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+		IncomingMessagesFilter: &profile.CacheOpts{
+			CacheTime:                  "500ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               false,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "0ms",
+			},
+		},
+	}
+}
+
+// profileLeakDetectionEnabled returns a Caches profile with caching disabled and leak detection enabled.
+func (s *Storage) profileLeakDetectionEnabled() *profile.Caches {
+	return &profile.Caches{
+		Addresses: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               true,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "1s",
+			},
+		},
+		Children: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               true,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "1s",
+			},
+		},
+		Milestones: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               true,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "1s",
+			},
+		},
+		Messages: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               true,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "1s",
+			},
+		},
+		UnreferencedMessages: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               true,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "1s",
+			},
+		},
+		IncomingMessagesFilter: &profile.CacheOpts{
+			CacheTime:                  "0ms",
+			ReleaseExecutorWorkerCount: 1,
+			LeakDetectionOptions: &profile.LeakDetectionOpts{
+				Enabled:               true,
+				MaxConsumersPerObject: 10,
+				MaxConsumerHoldTime:   "1s",
 			},
 		},
 	}

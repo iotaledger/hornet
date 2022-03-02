@@ -191,17 +191,35 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
-	metadataMemcache := storage.NewMetadataMemcache(s.storage)
-	defer metadataMemcache.Cleanup(true)
+	metadataMemcache := storage.NewMetadataMemcache(s.storage.CachedMessageMetadata)
+	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(s.storage, metadataMemcache)
+	memcachedChildrenTraverserStorage := dag.NewMemcachedChildrenTraverserStorage(s.storage, metadataMemcache)
+
+	defer func() {
+		// all releases are forced since the cone is referenced and not needed anymore
+		memcachedParentsTraverserStorage.Cleanup(true)
+		memcachedChildrenTraverserStorage.Cleanup(true)
+
+		// Release all message metadata at the end
+		metadataMemcache.Cleanup(true)
+	}()
 
 	// we share the same traverser for all milestones, so we don't cleanup the cachedMessages in between.
-	// we don't need to call cleanup at the end, because we passed our own metadataMemcache.
-	parentsTraverser := dag.NewParentTraverser(s.storage, metadataMemcache)
+	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
 
 	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
-	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) bool {
-		for _, childMessageID := range s.storage.ChildrenMessageIDs(messageID) {
-			cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(childMessageID) // meta +1
+	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) (bool, error) {
+		childMessageIDs, err := memcachedChildrenTraverserStorage.ChildrenMessageIDs(messageID)
+		if err != nil {
+			return false, err
+		}
+
+		for _, childMessageID := range childMessageIDs {
+			cachedMsgMeta, err := memcachedChildrenTraverserStorage.CachedMessageMetadata(childMessageID) // meta +1
+			if err != nil {
+				return false, err
+			}
+
 			if cachedMsgMeta == nil {
 				// Ignore this message since it doesn't exist anymore
 				s.LogWarnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
@@ -210,10 +228,12 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 
 			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
 				// referenced by a later milestone than targetIndex => solidEntryPoint
-				return true
+				cachedMsgMeta.Release(true)
+				return true, nil
 			}
+			cachedMsgMeta.Release(true)
 		}
-		return false
+		return false, nil
 	}
 
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
@@ -257,7 +277,12 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 
 				messageID := cachedMsgMeta.Metadata().MessageID()
 
-				if isEntryPoint := isSolidEntryPoint(messageID, targetIndex); !isEntryPoint {
+				isEntryPoint, err := isSolidEntryPoint(messageID, targetIndex)
+				if err != nil {
+					return err
+				}
+
+				if !isEntryPoint {
 					return nil
 				}
 
