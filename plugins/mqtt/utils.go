@@ -273,7 +273,7 @@ func publishOnUnlockConditionTopics(baseTopic string, output iotago.Output, payl
 		addressesToPublishForAny[addr] = struct{}{}
 	}
 
-	governor := unlockConditions.StateControllerAddress()
+	governor := unlockConditions.GovernorAddress()
 	if governor != nil {
 		addr := governor.Address.Bech32(deps.Bech32HRP)
 		publishOnTopicIfSubscribed(topicFunc(unlockConditionGovernor, addr), payloadFunc())
