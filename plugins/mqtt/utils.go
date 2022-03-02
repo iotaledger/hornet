@@ -132,7 +132,7 @@ func publishMessageMetadata(cachedMsgMeta *storage.CachedMetadata) {
 		} else if metadata.IsSolid() {
 			// determine info about the quality of the tip if not referenced
 			cmi := deps.SyncManager.ConfirmedMilestoneIndex()
-			ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi)
+			ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
 			if err != nil {
 				if !errors.Is(err, common.ErrOperationAborted) {
 					Plugin.LogWarn(err)

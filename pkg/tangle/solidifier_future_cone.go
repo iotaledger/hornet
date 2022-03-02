@@ -124,7 +124,7 @@ func solidifyFutureCone(
 				}
 
 				// mark current message as solid
-				markMessageAsSolidFunc(cachedMsgMeta.Retain())
+				markMessageAsSolidFunc(cachedMsgMeta.Retain()) // meta pass +1
 
 				// walk the future cone since the message got newly solid
 				return true, nil

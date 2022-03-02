@@ -127,8 +127,8 @@ func (t *Tangle) SolidQueueCheck(
 			return
 		}
 
-		t.markMessageAsSolid(cachedMsgMeta.Retain())
-		cachedMsgMeta.Release(true) // meta -1
+		t.markMessageAsSolid(cachedMsgMeta.Retain()) // meta pass +1
+		cachedMsgMeta.Release(true)                  // meta -1
 	}
 
 	tSolid := time.Now()
@@ -377,7 +377,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	t.Events.ConfirmationMetricsUpdated.Trigger(confirmationMetrics)
 
 	var rmpsMessage string
-	if metric, err := t.calcConfirmedMilestoneMetric(cachedMilestoneToSolidify.Retain(), confirmedMilestoneStats.Index); err == nil {
+	if metric, err := t.calcConfirmedMilestoneMetric(cachedMilestoneToSolidify.Retain(), confirmedMilestoneStats.Index); err == nil { // milestone pass +1
 		if t.syncManager.IsNodeSynced() {
 			// Only trigger the metrics event if the node is sync (otherwise the MPS and conf.rate is wrong)
 			if t.firstSyncedMilestone == 0 {
@@ -496,7 +496,7 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 			}
 
 			// milestone found!
-			t.milestoneManager.StoreMilestone(cachedMsg.Retain(), ms, false)
+			t.milestoneManager.StoreMilestone(cachedMsg.Retain(), ms, false) // message pass +1
 
 			milestoneFound = true
 			return true, nil // we keep searching for all missing milestones

@@ -19,10 +19,11 @@ type CachedChild struct {
 type CachedChildren []*CachedChild
 
 // Retain registers a new consumer for the cached children.
+// child +1
 func (cachedChildren CachedChildren) Retain() CachedChildren {
 	cachedResult := make(CachedChildren, len(cachedChildren))
 	for i, cachedChild := range cachedChildren {
-		cachedResult[i] = cachedChild.Retain()
+		cachedResult[i] = cachedChild.Retain() // child +1
 	}
 	return cachedResult
 }
@@ -35,8 +36,9 @@ func (cachedChildren CachedChildren) Release(force ...bool) {
 }
 
 // Retain registers a new consumer for the cached child.
+// child +1
 func (c *CachedChild) Retain() *CachedChild {
-	return &CachedChild{c.CachedObject.Retain()}
+	return &CachedChild{c.CachedObject.Retain()} // child +1
 }
 
 // Child retrieves the child, that is cached in this container.

@@ -236,7 +236,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		}
 
 		// we pass a background context here to not prevent emitting messages at shutdown (COO etc).
-		_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), cmi) // meta +
+		_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
 		if err != nil {
 			return err
 		}
@@ -482,7 +482,7 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 	}
 
 	// we pass a background context here to not prevent broadcasting messages at shutdown (COO etc).
-	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex())
+	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex()) // meta pass +1
 	if err != nil {
 		return
 	}

@@ -13,11 +13,11 @@ import (
 )
 
 func MessageCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsg *CachedMessage))(params[0].(*CachedMessage).Retain())
+	handler.(func(cachedMsg *CachedMessage))(params[0].(*CachedMessage).Retain()) // message pass +1
 }
 
 func MessageMetadataCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsgMeta *CachedMetadata))(params[0].(*CachedMetadata).Retain())
+	handler.(func(cachedMsgMeta *CachedMetadata))(params[0].(*CachedMetadata).Retain()) // message pass +1
 }
 
 func MessageIDCaller(handler interface{}, params ...interface{}) {
@@ -25,11 +25,11 @@ func MessageIDCaller(handler interface{}, params ...interface{}) {
 }
 
 func NewMessageCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsg *CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index))(params[0].(*CachedMessage).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
+	handler.(func(cachedMsg *CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index))(params[0].(*CachedMessage).Retain(), params[1].(milestone.Index), params[2].(milestone.Index)) // message pass +1
 }
 
 func MessageReferencedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsgMeta *CachedMetadata, msIndex milestone.Index, confTime uint64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint64))
+	handler.(func(cachedMsgMeta *CachedMetadata, msIndex milestone.Index, confTime uint64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint64)) // message pass +1
 }
 
 // CachedMessage contains two cached objects, one for message data and one for metadata.
@@ -61,7 +61,7 @@ type CachedMessages []*CachedMessage
 func (cachedMsgs CachedMessages) Retain() CachedMessages {
 	cachedResult := make(CachedMessages, len(cachedMsgs))
 	for i, cachedMsg := range cachedMsgs {
-		cachedResult[i] = cachedMsg.Retain()
+		cachedResult[i] = cachedMsg.Retain() // message +1
 	}
 	return cachedResult
 }
@@ -82,7 +82,7 @@ func (c *CachedMessage) Message() *Message {
 // CachedMetadata returns the underlying cached metadata.
 // meta +1
 func (c *CachedMessage) CachedMetadata() *CachedMetadata {
-	return &CachedMetadata{c.metadata.Retain()}
+	return &CachedMetadata{c.metadata.Retain()} // meta +1
 }
 
 // Metadata retrieves the metadata, that is cached in this container.
@@ -99,14 +99,15 @@ func (c *CachedMetadata) Metadata() *MessageMetadata {
 // message +1
 func (c *CachedMessage) Retain() *CachedMessage {
 	return &CachedMessage{
-		c.msg.Retain(),
-		c.metadata.Retain(),
+		c.msg.Retain(),      // message +1
+		c.metadata.Retain(), // meta +1
 	}
 }
 
 // Retain registers a new consumer for the cached metadata.
+// meta +1
 func (c *CachedMetadata) Retain() *CachedMetadata {
-	return &CachedMetadata{c.CachedObject.Retain()}
+	return &CachedMetadata{c.CachedObject.Retain()} // meta +1
 }
 
 // Exists returns true if the message in this container does exist

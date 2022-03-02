@@ -212,7 +212,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 		for _, request := range requests {
 			// add this newly received message's parents to the request queue
 			if request.RequestType == gossip.RequestTypeMessageID {
-				t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
+				t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true) // message pass +1
 			}
 		}
 

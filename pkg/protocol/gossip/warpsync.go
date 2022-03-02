@@ -355,7 +355,7 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 
 		// milestone already exists
 		if onExistingMilestoneInRange != nil {
-			if err := onExistingMilestoneInRange(ctx, cachedMilestone.Retain()); err != nil && errors.Is(err, common.ErrOperationAborted) {
+			if err := onExistingMilestoneInRange(ctx, cachedMilestone.Retain()); err != nil && errors.Is(err, common.ErrOperationAborted) { // milestone pass +1
 				// do not proceed if the node was shut down
 				cachedMilestone.Release(true) // milestone -1
 				return 0

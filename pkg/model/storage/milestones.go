@@ -5,11 +5,11 @@ import (
 )
 
 func MilestoneCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMilestone *CachedMilestone))(params[0].(*CachedMilestone).Retain())
+	handler.(func(cachedMilestone *CachedMilestone))(params[0].(*CachedMilestone).Retain()) // milestone pass +1
 }
 
 func MilestoneWithRequestedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMilestone *CachedMilestone, requested bool))(params[0].(*CachedMilestone).Retain(), params[1].(bool))
+	handler.(func(cachedMilestone *CachedMilestone, requested bool))(params[0].(*CachedMilestone).Retain(), params[1].(bool)) // milestone pass +1
 }
 
 // MilestoneCachedMessageOrNil returns the cached message of a milestone index or nil if it doesn't exist.

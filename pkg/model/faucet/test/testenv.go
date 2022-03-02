@@ -217,7 +217,7 @@ func NewFaucetTestEnv(t *testing.T,
 			}
 
 			// we pass a background context here to not prevent emitting messages at shutdown (COO etc).
-			_, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta.Retain(), cmi) // meta +
+			_, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta.Retain(), cmi) // meta pass +1
 			if err != nil {
 				return err
 			}

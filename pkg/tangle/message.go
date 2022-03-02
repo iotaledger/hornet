@@ -18,7 +18,7 @@ func AddMessageToStorage(dbStorage *storage.Storage, milestoneManager *milestone
 			// if the message was requested, was already known, but contains an unknown milestone payload, we need to re-verfiy the milestone payload.
 			// (maybe caused by formerly invalid milestones e.g. because of missing COO public keys in the node config).
 			if ms := milestoneManager.VerifyMilestone(message); ms != nil {
-				milestoneManager.StoreMilestone(cachedMsg.Retain(), ms, requested)
+				milestoneManager.StoreMilestone(cachedMsg.Retain(), ms, requested) // message pass +1
 			}
 		}
 		return cachedMsg, true
@@ -41,7 +41,7 @@ func AddMessageToStorage(dbStorage *storage.Storage, milestoneManager *milestone
 	}
 
 	if ms := milestoneManager.VerifyMilestone(message); ms != nil {
-		milestoneManager.StoreMilestone(cachedMsg.Retain(), ms, requested)
+		milestoneManager.StoreMilestone(cachedMsg.Retain(), ms, requested) // message pass +1
 	}
 
 	return cachedMsg, false

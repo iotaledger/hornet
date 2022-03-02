@@ -109,7 +109,7 @@ type CachedMilestones []*CachedMilestone
 func (c CachedMilestones) Retain() CachedMilestones {
 	cachedResult := make(CachedMilestones, len(c))
 	for i, cachedMilestone := range c {
-		cachedResult[i] = cachedMilestone.Retain()
+		cachedResult[i] = cachedMilestone.Retain() // milestone +1
 	}
 	return cachedResult
 }
@@ -125,7 +125,7 @@ func (c CachedMilestones) Release(force ...bool) {
 // Retain registers a new consumer for the cached milestone.
 // milestone +1
 func (c *CachedMilestone) Retain() *CachedMilestone {
-	return &CachedMilestone{c.CachedObject.Retain()}
+	return &CachedMilestone{c.CachedObject.Retain()} // milestone +1
 }
 
 // Milestone retrieves the milestone, that is cached in this container.

@@ -79,7 +79,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
-		ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi)
+		ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
