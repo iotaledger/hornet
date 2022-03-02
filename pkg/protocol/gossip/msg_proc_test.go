@@ -34,9 +34,17 @@ func TestMsgProcessorEmit(t *testing.T) {
 
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
 	sk, _, _ := crypto.GenerateKeyPair(crypto.Ed25519, -1)
+
+	connManager, err := connmgr.NewConnManager(
+		1,
+		100,
+		connmgr.WithGracePeriod(0),
+	)
+	require.NoError(t, err)
+
 	n, err := libp2p.New(
 		libp2p.Identity(sk),
-		libp2p.ConnectionManager(connmgr.NewConnManager(1, 100, 0)),
+		libp2p.ConnectionManager(connManager),
 	)
 	require.NoError(t, err)
 
