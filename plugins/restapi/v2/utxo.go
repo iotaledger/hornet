@@ -103,6 +103,7 @@ func rawOutputByID(c echo.Context) ([]byte, error) {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.WithMessagef(echo.ErrNotFound, "output not found: %s", outputID.ToHex())
 		}
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "reading raw output failed: %s, error: %s", outputID.ToHex(), err)
 	}
 
 	return bytes, nil

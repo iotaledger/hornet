@@ -66,7 +66,7 @@ const (
 	// GET returns the output IDs of all UTXO changes.
 	RouteMilestoneUTXOChanges = "/milestones/:" + restapipkg.ParameterMilestoneIndex + "/utxo-changes"
 
-	// RouteOutput is the route for getting output by its outputID (transactionHash + outputIndex).
+	// RouteOutput is the route for getting an output by its outputID (transactionHash + outputIndex).
 	// GET returns the output.
 	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
 
