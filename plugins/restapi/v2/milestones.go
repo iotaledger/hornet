@@ -20,7 +20,7 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 	if cachedMilestone == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "milestone not found: %d", msIndex)
 	}
-	defer cachedMilestone.Release(true)
+	defer cachedMilestone.Release(true) // milestone -1
 
 	return &milestoneResponse{
 		Index:     uint32(cachedMilestone.Milestone().Index),

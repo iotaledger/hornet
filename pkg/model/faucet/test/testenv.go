@@ -208,7 +208,7 @@ func NewFaucetTestEnv(t *testing.T,
 				// message is a SEP and not below max depth
 				return nil
 			}
-			defer cachedMsgMeta.Release(true)
+			defer cachedMsgMeta.Release(true) // meta -1
 
 			if !cachedMsgMeta.Metadata().IsSolid() {
 				// if the parent is not solid, the message itself can't be solid
@@ -216,7 +216,7 @@ func NewFaucetTestEnv(t *testing.T,
 			}
 
 			// we pass a background context here to not prevent emitting messages at shutdown (COO etc).
-			_, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta.Retain(), cmi) // meta +
+			_, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta.Retain(), cmi) // meta pass +1
 			if err != nil {
 				return err
 			}

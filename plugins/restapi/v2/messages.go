@@ -37,7 +37,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	if cachedMsgMeta == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
-	defer cachedMsgMeta.Release(true)
+	defer cachedMsgMeta.Release(true) // meta -1
 
 	metadata := cachedMsgMeta.Metadata()
 
@@ -113,11 +113,11 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 		return nil, err
 	}
 
-	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
+	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
-	defer cachedMsg.Release(true)
+	defer cachedMsg.Release(true) // message -1
 
 	return cachedMsg.Message().Message(), nil
 }
@@ -128,11 +128,11 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 		return nil, err
 	}
 
-	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
+	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
-	defer cachedMsg.Release(true)
+	defer cachedMsg.Release(true) // message -1
 
 	return cachedMsg.Message().Data(), nil
 }

@@ -55,7 +55,7 @@ func (m *MilestoneManager) KeyManager() *keymanager.KeyManager {
 }
 
 // FindClosestNextMilestoneOrNil searches for the next known cached milestone in the persistence layer.
-// message +1
+// milestone +1
 func (m *MilestoneManager) FindClosestNextMilestoneOrNil(index milestone.Index) *storage.CachedMilestone {
 	lmi := m.syncManager.LatestMilestoneIndex()
 	if lmi == 0 {
@@ -75,9 +75,9 @@ func (m *MilestoneManager) FindClosestNextMilestoneOrNil(index milestone.Index) 
 			return nil
 		}
 
-		cachedMs := m.storage.CachedMilestoneOrNil(index) // milestone +1
-		if cachedMs != nil {
-			return cachedMs
+		cachedMilestone := m.storage.CachedMilestoneOrNil(index) // milestone +1
+		if cachedMilestone != nil {
+			return cachedMilestone
 		}
 	}
 }
@@ -105,16 +105,16 @@ func (m *MilestoneManager) VerifyMilestone(message *storage.Message) *iotago.Mil
 }
 
 // StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
-func (m *MilestoneManager) StoreMilestone(cachedMessage *storage.CachedMessage, ms *iotago.Milestone, requested bool) {
-	defer cachedMessage.Release(true)
+func (m *MilestoneManager) StoreMilestone(cachedMsg *storage.CachedMessage, ms *iotago.Milestone, requested bool) {
+	defer cachedMsg.Release(true) // message -1
 
-	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestone.Index(ms.Index), cachedMessage.Message().MessageID(), time.Unix(int64(ms.Timestamp), 0))
+	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestone.Index(ms.Index), cachedMsg.Message().MessageID(), time.Unix(int64(ms.Timestamp), 0)) // milestone +1
 	if !newlyAdded {
 		return
 	}
 
 	// Force release to store milestones without caching
-	defer cachedMilestone.Release(true) // milestone +-0
+	defer cachedMilestone.Release(true) // milestone -1
 
 	m.Events.ReceivedValidMilestone.Trigger(cachedMilestone, requested) // milestone pass +1
 }

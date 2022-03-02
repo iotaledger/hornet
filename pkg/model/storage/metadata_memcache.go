@@ -31,7 +31,7 @@ func (c *MetadataMemcache) Cleanup(forceRelease bool) {
 }
 
 // CachedMessageMetadata returns a cached metadata object.
-// metadata +1
+// meta +1
 func (c *MetadataMemcache) CachedMessageMetadata(messageID hornet.MessageID) (*CachedMetadata, error) {
 	messageIDMapKey := messageID.ToMapKey()
 

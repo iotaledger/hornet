@@ -8,10 +8,10 @@ import (
 )
 
 // Predicate defines whether a traversal should continue or not.
-type Predicate func(cachedMetadata *storage.CachedMetadata) (bool, error)
+type Predicate func(cachedMsgMeta *storage.CachedMetadata) (bool, error)
 
 // Consumer consumes the given message metadata during traversal.
-type Consumer func(cachedMetadata *storage.CachedMetadata) error
+type Consumer func(cachedMsgMeta *storage.CachedMetadata) error
 
 // OnMissingParent gets called when during traversal a parent is missing.
 type OnMissingParent func(parentMessageID hornet.MessageID) error

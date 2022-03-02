@@ -247,12 +247,12 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 // If it can not retrieve a wanted milestone it panics.
 func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieverFunc {
 	return func(index milestone.Index) (*iotago.Milestone, error) {
-		cachedMsMsg := dbStorage.MilestoneCachedMessageOrNil(index)
-		if cachedMsMsg == nil {
+		cachedMsgMilestone := dbStorage.MilestoneCachedMessageOrNil(index) // message +1
+		if cachedMsgMilestone == nil {
 			return nil, fmt.Errorf("message for milestone with index %d is not stored in the database", index)
 		}
-		defer cachedMsMsg.Release()
-		return cachedMsMsg.Message().Milestone(), nil
+		defer cachedMsgMilestone.Release() // message -1
+		return cachedMsgMilestone.Message().Milestone(), nil
 	}
 }
 
@@ -319,11 +319,11 @@ func (s *SnapshotManager) readLedgerIndex() (milestone.Index, error) {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
 	}
 
-	cachedMilestone := s.storage.CachedMilestoneOrNil(ledgerMilestoneIndex)
+	cachedMilestone := s.storage.CachedMilestoneOrNil(ledgerMilestoneIndex) // milestone +1
 	if cachedMilestone == nil {
 		return 0, errors.Wrapf(ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
 	}
-	cachedMilestone.Release(true)
+	cachedMilestone.Release(true) // milestone -1
 	return ledgerMilestoneIndex, nil
 }
 
@@ -347,13 +347,13 @@ func (s *SnapshotManager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath
 
 // returns the timestamp of the target milestone.
 func (s *SnapshotManager) readTargetMilestoneTimestamp(targetIndex milestone.Index) (time.Time, error) {
-	cachedTargetMilestone := s.storage.CachedMilestoneOrNil(targetIndex) // milestone +1
-	if cachedTargetMilestone == nil {
+	cachedMilestoneTarget := s.storage.CachedMilestoneOrNil(targetIndex) // milestone +1
+	if cachedMilestoneTarget == nil {
 		return time.Time{}, errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
 	}
-	defer cachedTargetMilestone.Release(true) // milestone -1
+	defer cachedMilestoneTarget.Release(true) // milestone -1
 
-	ts := cachedTargetMilestone.Milestone().Timestamp
+	ts := cachedMilestoneTarget.Milestone().Timestamp
 	return ts, nil
 }
 

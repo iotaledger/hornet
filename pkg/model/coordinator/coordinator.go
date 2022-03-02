@@ -283,12 +283,12 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		latestMilestoneMessageID := hornet.NullMessageID()
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
-			cachedMilestoneMsg := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
-			if cachedMilestoneMsg == nil {
+			cachedMsgMilestone := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase) // message +1
+			if cachedMsgMilestone == nil {
 				return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 			}
-			latestMilestoneMessageID = cachedMilestoneMsg.Message().MessageID()
-			cachedMilestoneMsg.Release()
+			latestMilestoneMessageID = cachedMsgMilestone.Message().MessageID()
+			cachedMsgMilestone.Release() // message -1
 		}
 
 		// create a new coordinator state to bootstrap the network
@@ -315,11 +315,11 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		return fmt.Errorf("previous milestone does not match latest milestone in database. previous: %d, database: %d", coo.state.LatestMilestoneIndex, latestMilestoneFromDatabase)
 	}
 
-	cachedMilestoneMsg := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
-	if cachedMilestoneMsg == nil {
+	cachedMsgMilestone := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase) // message +1
+	if cachedMsgMilestone == nil {
 		return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 	}
-	cachedMilestoneMsg.Release()
+	cachedMsgMilestone.Release() // message -1
 
 	coo.bootstrapped = true
 	return nil

@@ -125,12 +125,12 @@ func (s *SnapshotManager) pruneMessages(messageIDsToDeleteMap map[string]struct{
 
 		msgID := hornet.MessageIDFromMapKey(messageIDToDelete)
 
-		cachedMsg := s.storage.CachedMessageOrNil(msgID) // msg +1
+		cachedMsg := s.storage.CachedMessageOrNil(msgID) // message +1
 		if cachedMsg == nil {
 			continue
 		}
 
-		cachedMsg.ConsumeMessage(func(msg *storage.Message) { // msg -1
+		cachedMsg.ConsumeMessage(func(msg *storage.Message) { // message -1
 			// Delete the reference in the parents
 			for _, parent := range msg.Parents() {
 				s.storage.DeleteChild(parent, msgID)
@@ -234,8 +234,8 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		txCountDeleted, msgCountChecked := s.pruneUnreferencedMessages(milestoneIndex)
 		timePruneUnreferencedMessages := time.Now()
 
-		cachedMs := s.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
-		if cachedMs == nil {
+		cachedMilestone := s.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
+		if cachedMilestone == nil {
 			// Milestone not found, pruning impossible
 			s.LogWarnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
 			continue
@@ -246,17 +246,17 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		err := dag.TraverseParentsOfMessage(
 			ctx,
 			s.storage,
-			cachedMs.Milestone().MessageID,
+			cachedMilestone.Milestone().MessageID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
-				defer cachedMsgMeta.Release(true) // msg -1
+			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
 				// everything that was referenced by that milestone can be pruned (even messages of older milestones)
 				return true, nil
 			},
 			// consumer
-			func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
-				defer cachedMsgMeta.Release(true) // msg -1
+			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
 				messageIDsToDeleteMap[cachedMsgMeta.Metadata().MessageID().ToMapKey()] = struct{}{}
 				return nil
 			},
@@ -269,22 +269,22 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			true)
 		timeTraverseMilestoneCone := time.Now()
 
-		cachedMs.Release(true) // milestone -1
+		cachedMilestone.Release(true) // milestone -1
 		if err != nil {
 			s.LogWarnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 			continue
 		}
 
 		// check whether milestone contained receipt and delete it accordingly
-		cachedMsMsg := s.storage.MilestoneCachedMessageOrNil(milestoneIndex) // milestone msg +1
-		if cachedMsMsg == nil {
+		cachedMsgMilestone := s.storage.MilestoneCachedMessageOrNil(milestoneIndex) // message +1
+		if cachedMsgMilestone == nil {
 			// no message for milestone persisted
 			s.LogWarnf("Pruning milestone (%d) failed! Milestone message not found!", milestoneIndex)
 			continue
 		}
 
 		var migratedAtIndex []uint32
-		if r, ok := cachedMsMsg.Message().Milestone().Receipt.(*iotago.Receipt); ok {
+		if r, ok := cachedMsgMilestone.Message().Milestone().Receipt.(*iotago.Receipt); ok {
 			migratedAtIndex = append(migratedAtIndex, r.MigratedAt)
 		}
 
@@ -293,7 +293,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		}
 		timePruneMilestone := time.Now()
 
-		cachedMsMsg.Release(true) // milestone msg -1
+		cachedMsgMilestone.Release(true) // message -1
 
 		msgCountChecked += len(messageIDsToDeleteMap)
 		txCountDeleted += s.pruneMessages(messageIDsToDeleteMap)

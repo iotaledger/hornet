@@ -53,7 +53,7 @@ func (s *FutureConeSolidifier) SolidifyMessageAndFutureCone(ctx context.Context,
 	s.Lock()
 	defer s.Unlock()
 
-	defer cachedMsgMeta.Release(true)
+	defer cachedMsgMeta.Release(true) // meta -1
 
 	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markMessageAsSolidFunc, hornet.MessageIDs{cachedMsgMeta.Metadata().MessageID()})
 }
@@ -104,27 +104,27 @@ func solidifyFutureCone(
 						continue
 					}
 
-					cachedParentMsgMeta, err := traverserStorage.CachedMessageMetadata(parentMessageID) // meta +1
+					cachedMsgMetaParent, err := traverserStorage.CachedMessageMetadata(parentMessageID) // meta +1
 					if err != nil {
 						return false, err
 					}
-					if cachedParentMsgMeta == nil {
+					if cachedMsgMetaParent == nil {
 						// parent is missing => message is not solid
 						// do not walk the future cone if the current message is not solid
 						return false, nil
 					}
 
-					if !cachedParentMsgMeta.Metadata().IsSolid() {
+					if !cachedMsgMetaParent.Metadata().IsSolid() {
 						// parent is not solid => message is not solid
 						// do not walk the future cone if the current message is not solid
-						cachedParentMsgMeta.Release(true)
+						cachedMsgMetaParent.Release(true) // meta -1
 						return false, nil
 					}
-					cachedParentMsgMeta.Release(true)
+					cachedMsgMetaParent.Release(true) // meta -1
 				}
 
 				// mark current message as solid
-				markMessageAsSolidFunc(cachedMsgMeta.Retain())
+				markMessageAsSolidFunc(cachedMsgMeta.Retain()) // meta pass +1
 
 				// walk the future cone since the message got newly solid
 				return true, nil

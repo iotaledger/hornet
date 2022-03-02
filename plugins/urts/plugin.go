@@ -115,7 +115,7 @@ func run() {
 
 func configureEvents() {
 	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
+		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
 			// do not add tips during syncing, because it is not needed at all
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return

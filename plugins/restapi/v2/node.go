@@ -29,10 +29,10 @@ func info() (*infoResponse, error) {
 
 	// latest milestone timestamp
 	var latestMilestoneTimestamp uint32 = 0
-	cachedLatestMilestone := deps.Storage.CachedMilestoneOrNil(latestMilestoneIndex)
-	if cachedLatestMilestone != nil {
-		latestMilestoneTimestamp = uint32(cachedLatestMilestone.Milestone().Timestamp.Unix())
-		cachedLatestMilestone.Release(true)
+	cachedMilestoneLatest := deps.Storage.CachedMilestoneOrNil(latestMilestoneIndex) // milestone +1
+	if cachedMilestoneLatest != nil {
+		latestMilestoneTimestamp = uint32(cachedMilestoneLatest.Milestone().Timestamp.Unix())
+		cachedMilestoneLatest.Release(true) // milestone -1
 	}
 
 	// confirmed milestone index

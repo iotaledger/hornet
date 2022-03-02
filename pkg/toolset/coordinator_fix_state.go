@@ -84,11 +84,11 @@ func coordinatorFixStateFile(args []string) error {
 		return fmt.Errorf("node is not synchronized (solid milestone index: %d, latest milestone index: %d)", ledgerIndex, latestMilestoneFromDatabase)
 	}
 
-	cachedMs := dbStorage.CachedMilestoneOrNil(ledgerIndex) // milestone +1
-	if cachedMs == nil {
+	cachedMilestone := dbStorage.CachedMilestoneOrNil(ledgerIndex) // milestone +1
+	if cachedMilestone == nil {
 		return fmt.Errorf("milestone %d not found", ledgerIndex)
 	}
-	defer cachedMs.Release(true) // milestone -1
+	defer cachedMilestone.Release(true) // milestone -1
 
 	_, err = os.Stat(coordinatorStateFilePath)
 	if err != nil && !os.IsNotExist(err) {
@@ -116,8 +116,8 @@ func coordinatorFixStateFile(args []string) error {
 	// state of the coordinator holds information about the last issued milestones.
 	state := &coordinator.State{
 		LatestMilestoneIndex:     ledgerIndex,
-		LatestMilestoneMessageID: cachedMs.Milestone().MessageID,
-		LatestMilestoneTime:      cachedMs.Milestone().Timestamp,
+		LatestMilestoneMessageID: cachedMilestone.Milestone().MessageID,
+		LatestMilestoneTime:      cachedMilestone.Milestone().Timestamp,
 	}
 
 	if err := utils.WriteJSONToFile(coordinatorStateFilePath, state, 0660); err != nil {

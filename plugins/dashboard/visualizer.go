@@ -47,7 +47,7 @@ type tipinfo struct {
 func runVisualizer() {
 
 	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
-		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // msg -1
+		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // message -1
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
@@ -74,7 +74,7 @@ func runVisualizer() {
 	})
 
 	onMessageSolid := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
+		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
 
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return

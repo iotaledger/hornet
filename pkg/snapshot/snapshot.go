@@ -228,10 +228,10 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 
 			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
 				// referenced by a later milestone than targetIndex => solidEntryPoint
-				cachedMsgMeta.Release(true)
+				cachedMsgMeta.Release(true) // meta -1
 				return true, nil
 			}
-			cachedMsgMeta.Release(true)
+			cachedMsgMeta.Release(true) // meta -1
 		}
 		return false, nil
 	}
@@ -251,7 +251,7 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 
 		// Get all parents of that milestone
 		milestoneMessageID := cachedMilestone.Milestone().MessageID
-		cachedMilestone.Release(true) // message -1
+		cachedMilestone.Release(true) // milestone -1
 
 		// traverse the milestone and collect all messages that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
@@ -259,16 +259,16 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 			hornet.MessageIDs{milestoneMessageID},
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
-				defer cachedMsgMeta.Release(true) // msg -1
+			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
 
 				// collect all msg that were referenced by that milestone or newer
 				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
 				return referenced && at >= milestoneIndex, nil
 			},
 			// consumer
-			func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
-				defer cachedMsgMeta.Release(true) // msg -1
+			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
 
 				if err := utils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
 					// stop snapshot creation if node was shutdown

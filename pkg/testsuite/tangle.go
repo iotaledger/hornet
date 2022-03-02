@@ -17,6 +17,7 @@ import (
 )
 
 // StoreMessage adds the message to the storage layer and solidifies it.
+// message +1
 func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMessage {
 
 	// Store message in the database
@@ -85,7 +86,7 @@ func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 func (te *TestEnvironment) AssertMessageConflictReason(messageID hornet.MessageID, conflict storage.Conflict) {
 	cachedMsgMeta := te.storage.CachedMessageMetadataOrNil(messageID)
 	require.NotNil(te.TestInterface, cachedMsgMeta)
-	defer cachedMsgMeta.Release(true)
+	defer cachedMsgMeta.Release(true) // meta -1
 	require.Equal(te.TestInterface, cachedMsgMeta.Metadata().Conflict(), conflict)
 }
 
@@ -123,7 +124,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			defer cachedMsgMeta.Release(true) // meta -1
 
 			if _, visited := visitedCachedMessages[cachedMsgMeta.Metadata().MessageID().ToMapKey()]; !visited {
-				cachedMsg := te.storage.CachedMessageOrNil(cachedMsgMeta.Metadata().MessageID())
+				cachedMsg := te.storage.CachedMessageOrNil(cachedMsgMeta.Metadata().MessageID()) // message +1
 				require.NotNil(te.TestInterface, cachedMsg)
 				visitedCachedMessages[cachedMsgMeta.Metadata().MessageID().ToMapKey()] = cachedMsg
 			}
@@ -144,11 +145,11 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 	var conflictingMsgs []string
 
 	dotFile := fmt.Sprintf("digraph %s\n{\n", te.TestInterface.Name())
-	for _, cachedMessage := range visitedCachedMessages {
-		message := cachedMessage.Message()
-		meta := cachedMessage.Metadata()
+	for _, cachedMsg := range visitedCachedMessages {
+		message := cachedMsg.Message()
+		meta := cachedMsg.Metadata()
 
-		shortIndex := utils.ShortenedTag(cachedMessage.Retain())
+		shortIndex := utils.ShortenedTag(cachedMsg.Retain()) // message pass +1
 
 		if index := indexOf(message.MessageID()); index != -1 {
 			dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortIndex, index, shortIndex)
@@ -164,10 +165,10 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 				continue
 			}
 
-			cachedMessageParent := te.storage.CachedMessageOrNil(parent)
-			require.NotNil(te.TestInterface, cachedMessageParent)
-			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedTag(cachedMessageParent.Retain()), i+1)
-			cachedMessageParent.Release(true)
+			cachedMsgParent := te.storage.CachedMessageOrNil(parent)
+			require.NotNil(te.TestInterface, cachedMsgParent)
+			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedTag(cachedMsgParent.Retain()), i+1) // message pass +1
+			cachedMsgParent.Release(true)                                                                                                       // message -1
 		}
 
 		ms := message.Milestone()
@@ -187,7 +188,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 				panic("unknown msg state")
 			}
 		}
-		cachedMessage.Release(true)
+		cachedMsg.Release(true) // message -1
 	}
 
 	for _, milestone := range milestoneMsgs {

@@ -25,13 +25,13 @@ func (c *MessagesMemcache) Cleanup(forceRelease bool) {
 
 	// release all msgs at the end
 	for _, cachedMsg := range c.cachedMsgs {
-		cachedMsg.Release(forceRelease) // meta -1
+		cachedMsg.Release(forceRelease) // message -1
 	}
 	c.cachedMsgs = make(map[string]*CachedMessage)
 }
 
 // CachedMessage returns a cached message object.
-// msg +1
+// message +1
 func (c *MessagesMemcache) CachedMessage(messageID hornet.MessageID) (*CachedMessage, error) {
 	messageIDMapKey := messageID.ToMapKey()
 
@@ -40,7 +40,7 @@ func (c *MessagesMemcache) CachedMessage(messageID hornet.MessageID) (*CachedMes
 	// load up msg
 	cachedMsg, exists := c.cachedMsgs[messageIDMapKey]
 	if !exists {
-		cachedMsg, err = c.cachedMessageFunc(messageID) // msg +1 (this is the one that gets cleared by "Cleanup")
+		cachedMsg, err = c.cachedMessageFunc(messageID) // message +1 (this is the one that gets cleared by "Cleanup")
 		if err != nil {
 			return nil, err
 		}
@@ -52,5 +52,5 @@ func (c *MessagesMemcache) CachedMessage(messageID hornet.MessageID) (*CachedMes
 		c.cachedMsgs[messageIDMapKey] = cachedMsg
 	}
 
-	return cachedMsg.Retain(), nil // msg +1
+	return cachedMsg.Retain(), nil // message +1
 }

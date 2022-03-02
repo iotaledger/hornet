@@ -241,10 +241,10 @@ func (te *TestEnvironment) LastMilestoneIndex() milestone.Index {
 
 // CleanupTestEnvironment cleans up everything at the end of the test.
 func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
-	te.cachedMessages.Release(true)
+	te.cachedMessages.Release(true) // message -1
 	te.cachedMessages = nil
 
-	te.Milestones.Release(true)
+	te.Milestones.Release(true) // milestone -1
 	te.cachedMessages = nil
 
 	// this should not hang, i.e. all objects should be released
@@ -263,8 +263,8 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 
 func (te *TestEnvironment) NewTestMessage(index int, parents hornet.MessageIDs) *storage.MessageMetadata {
 	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
-	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // metadata +1
-	defer cachedMsgMeta.Release(true)
+	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // meta +1
+	defer cachedMsgMeta.Release(true)                                               // meta -1
 	return cachedMsgMeta.Metadata()
 }
 

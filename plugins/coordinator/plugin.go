@@ -499,11 +499,11 @@ func sendMessage(msg *storage.Message, msIndex ...milestone.Index) error {
 
 // isBelowMaxDepth checks the below max depth criteria for the given message.
 func isBelowMaxDepth(cachedMsgMeta *storage.CachedMetadata) (bool, error) {
-	defer cachedMsgMeta.Release(true)
+	defer cachedMsgMeta.Release(true) // meta -1
 
 	cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
-	_, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	_, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
 	if err != nil {
 		return true, err
 	}
@@ -523,9 +523,9 @@ func Events() *coordinator.Events {
 func configureEvents() {
 	// pass all new solid messages to the selector
 	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
-		defer cachedMsgMeta.Release(true)
+		defer cachedMsgMeta.Release(true) // meta -1
 
-		belowMaxDepth, err := isBelowMaxDepth(cachedMsgMeta.Retain())
+		belowMaxDepth, err := isBelowMaxDepth(cachedMsgMeta.Retain()) // meta pass +1
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				// ignore errors due to node shutdown

@@ -93,28 +93,28 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 
 	// traversal stops if no more messages pass the given condition
 	// Caution: condition func is not in DFS order
-	condition := func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
-		defer cachedMetadata.Release(true) // meta -1
+	condition := func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+		defer cachedMsgMeta.Release(true) // meta -1
 
 		// only traverse and process the message if it was not referenced yet
-		return !cachedMetadata.Metadata().IsReferenced(), nil
+		return !cachedMsgMeta.Metadata().IsReferenced(), nil
 	}
 
 	// consumer
-	consumer := func(cachedMetadata *storage.CachedMetadata) error { // meta +1
-		defer cachedMetadata.Release(true) // meta -1
+	consumer := func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
+		defer cachedMsgMeta.Release(true) // meta -1
 
 		// load up message
-		cachedMessage, err := cachedMessageFunc(cachedMetadata.Metadata().MessageID())
+		cachedMsg, err := cachedMessageFunc(cachedMsgMeta.Metadata().MessageID()) // message +1
 		if err != nil {
 			return err
 		}
-		if cachedMessage == nil {
-			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.Metadata().MessageID().ToHex(), cachedMetadata.Metadata().MessageID().ToHex())
+		if cachedMsg == nil {
+			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMsgMeta.Metadata().MessageID().ToHex(), cachedMsgMeta.Metadata().MessageID().ToHex())
 		}
-		defer cachedMessage.Release(true)
+		defer cachedMsg.Release(true) // message -1
 
-		message := cachedMessage.Message()
+		message := cachedMsg.Message()
 
 		// exclude message without transactions
 		if !message.IsTransaction() {
@@ -217,18 +217,18 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			}
 		}
 
-		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.Metadata().MessageID())
+		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMsgMeta.Metadata().MessageID())
 
 		if conflict != storage.ConflictNone {
 			wfConf.MessagesExcludedWithConflictingTransactions = append(wfConf.MessagesExcludedWithConflictingTransactions, MessageWithConflict{
-				MessageID: cachedMetadata.Metadata().MessageID(),
+				MessageID: cachedMsgMeta.Metadata().MessageID(),
 				Conflict:  conflict,
 			})
 			return nil
 		}
 
 		// mark the given message to be part of milestone ledger by changing message inclusion set
-		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.Metadata().MessageID())
+		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMsgMeta.Metadata().MessageID())
 
 		newSpents := make(utxo.Spents, len(inputOutputs))
 

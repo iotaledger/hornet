@@ -63,7 +63,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 			continue
 		}
 
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // metadata -1
+		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
 			if !metadata.IsSolid() {
 				return
 			}
@@ -317,17 +317,17 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		return nil, err
 	}
 
-	cachedStartMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID) // meta +1
-	if cachedStartMsgMeta == nil {
+	cachedMsgMetaStart := deps.Storage.CachedMessageMetadataOrNil(messageID) // meta +1
+	if cachedMsgMetaStart == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
-	defer cachedStartMsgMeta.Release(true)
+	defer cachedMsgMetaStart.Release(true) // meta -1
 
-	if !cachedStartMsgMeta.Metadata().IsSolid() {
+	if !cachedMsgMetaStart.Metadata().IsSolid() {
 		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start message is not solid: %s", messageID.ToHex())
 	}
 
-	startMsgReferened, startMsgReferenedAt := cachedStartMsgMeta.Metadata().ReferencedWithIndex()
+	startMsgReferened, startMsgReferenedAt := cachedMsgMetaStart.Metadata().ReferencedWithIndex()
 
 	entryPointIndex := deps.Storage.SnapshotInfo().EntryPointIndex
 	entryPoints := []*entryPoint{}

@@ -64,18 +64,18 @@ func ConfirmMilestone(
 	forEachNewSpent func(index milestone.Index, spent *utxo.Spent),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, *ConfirmationMetrics, error) {
 
-	cachedMilestoneMessage, err := cachedMessageFunc(milestoneMessageID)
+	cachedMsgMilestone, err := cachedMessageFunc(milestoneMessageID) // message +1
 	if err != nil {
 		return nil, nil, fmt.Errorf("get milestone message failed: %v, error: %w", milestoneMessageID.ToHex(), err)
 	}
-	if cachedMilestoneMessage == nil {
+	if cachedMsgMilestone == nil {
 		return nil, nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.ToHex())
 	}
-	defer cachedMilestoneMessage.Release(true)
+	defer cachedMsgMilestone.Release(true) // message -1
 
 	utxoManager.WriteLockLedger()
 	defer utxoManager.WriteUnlockLedger()
-	message := cachedMilestoneMessage.Message()
+	message := cachedMsgMilestone.Message()
 
 	ms := message.Milestone()
 	if ms == nil {
@@ -188,7 +188,7 @@ func ConfirmMilestone(
 			return fmt.Errorf("confirmMilestone: message not found: %v", messageID.ToHex())
 		}
 		do(cachedMsgMeta)
-		cachedMsgMeta.Release(true)
+		cachedMsgMeta.Release(true) // meta -1
 		return nil
 	}
 
