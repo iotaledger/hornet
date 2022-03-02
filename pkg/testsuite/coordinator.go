@@ -83,12 +83,9 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		metadataMemcache.Cleanup(true)
 	}()
 
-	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
-
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		te.UTXOManager(),
-		parentsTraverser,
-		metadataMemcache.CachedMessageMetadata,
+		memcachedParentsTraverserStorage,
 		messagesMemcache.CachedMessage,
 		ms.Milestone().MessageID,
 		te.serverMetrics,
@@ -138,13 +135,10 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		metadataMemcache.Cleanup(true)
 	}()
 
-	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
-
 	var wfConf *whiteflag.Confirmation
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		te.UTXOManager(),
-		parentsTraverser,
-		metadataMemcache.CachedMessageMetadata,
+		memcachedParentsTraverserStorage,
 		messagesMemcache.CachedMessage,
 		ms.Milestone().MessageID,
 		te.serverMetrics,

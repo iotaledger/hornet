@@ -21,7 +21,6 @@ type FutureConeSolidifier struct {
 	markMessageAsSolidFunc    MarkMessageAsSolidFunc
 	metadataMemcache          *storage.MetadataMemcache
 	memcachedTraverserStorage *dag.MemcachedTraverserStorage
-	childrenTraverser         *dag.ChildrenTraverser
 }
 
 // NewFutureConeSolidifier creates a new FutureConeSolidifier instance.
@@ -35,7 +34,6 @@ func NewFutureConeSolidifier(dbStorage *storage.Storage, markMessageAsSolidFunc 
 		markMessageAsSolidFunc:    markMessageAsSolidFunc,
 		metadataMemcache:          metadataMemcache,
 		memcachedTraverserStorage: memcachedTraverserStorage,
-		childrenTraverser:         dag.NewChildrenTraverser(memcachedTraverserStorage),
 	}
 }
 
@@ -57,7 +55,7 @@ func (s *FutureConeSolidifier) SolidifyMessageAndFutureCone(ctx context.Context,
 
 	defer cachedMsgMeta.Release(true)
 
-	return solidifyFutureCone(ctx, s.childrenTraverser, s.memcachedTraverserStorage, s.markMessageAsSolidFunc, hornet.MessageIDs{cachedMsgMeta.Metadata().MessageID()})
+	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markMessageAsSolidFunc, hornet.MessageIDs{cachedMsgMeta.Metadata().MessageID()})
 }
 
 // SolidifyFutureConesWithMetadataMemcache updates the solidity of the given messages and their future cones (messages approving the given messages).
@@ -66,20 +64,18 @@ func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(ctx conte
 	s.Lock()
 	defer s.Unlock()
 
-	// we do not cleanup the traverser to not cleanup the MetadataMemcache
-	childrenTraverser := dag.NewChildrenTraverser(memcachedTraverserStorage)
-
-	return solidifyFutureCone(ctx, childrenTraverser, memcachedTraverserStorage, s.markMessageAsSolidFunc, messageIDs)
+	return solidifyFutureCone(ctx, memcachedTraverserStorage, s.markMessageAsSolidFunc, messageIDs)
 }
 
 // solidifyFutureCone updates the solidity of the future cone (messages approving the given messages).
 // We keep on walking the future cone, if a message became newly solid during the walk.
 func solidifyFutureCone(
 	ctx context.Context,
-	childrenTraverser *dag.ChildrenTraverser,
 	traverserStorage dag.TraverserStorage,
 	markMessageAsSolidFunc MarkMessageAsSolidFunc,
 	messageIDs hornet.MessageIDs) error {
+
+	childrenTraverser := dag.NewChildrenTraverser(traverserStorage)
 
 	for _, messageID := range messageIDs {
 
