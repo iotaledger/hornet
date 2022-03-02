@@ -33,14 +33,19 @@ func TestMsgProcessorEmit(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
-	cm, err := connmgr.NewConnManager(1, 100, connmgr.WithGracePeriod(0))
-	require.NoError(t, err)
-
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
 	sk, _, _ := crypto.GenerateKeyPair(crypto.Ed25519, -1)
+
+	connManager, err := connmgr.NewConnManager(
+		1,
+		100,
+		connmgr.WithGracePeriod(0),
+	)
+	require.NoError(t, err)
+
 	n, err := libp2p.New(
 		libp2p.Identity(sk),
-		libp2p.ConnectionManager(cm),
+		libp2p.ConnectionManager(connManager),
 	)
 	require.NoError(t, err)
 
