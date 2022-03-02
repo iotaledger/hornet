@@ -2,7 +2,6 @@ package debug
 
 import (
 	"context"
-	"encoding/hex"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -18,6 +17,7 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsResponse, error) {
@@ -115,7 +115,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	}
 
 	return &computeWhiteFlagMutationsResponse{
-		MerkleTreeHash: hex.EncodeToString(mutations.MerkleTreeHash[:]),
+		MerkleTreeHash: iotago.EncodeHex(mutations.MerkleTreeHash[:]),
 	}, nil
 }
 

@@ -1,8 +1,6 @@
 package v2
 
 import (
-	"encoding/hex"
-
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
@@ -24,14 +22,14 @@ func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
 	output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(outputID)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
-			return nil, errors.WithMessagef(echo.ErrNotFound, "output for transaction not found: %s", hex.EncodeToString(transactionID[:]))
+			return nil, errors.WithMessagef(echo.ErrNotFound, "output for transaction not found: %s", transactionID.ToHex())
 		}
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", hex.EncodeToString(transactionID[:]))
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", transactionID.ToHex())
 	}
 
 	cachedMsg := deps.Storage.CachedMessageOrNil(output.MessageID())
 	if cachedMsg == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", hex.EncodeToString(transactionID[:]))
+		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", transactionID.ToHex())
 	}
 	defer cachedMsg.Release(true)
 

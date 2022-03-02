@@ -67,7 +67,12 @@ func TestBatch(t *testing.T) {
 			log.Printf("failed to get current treasury: %s", err)
 			return false
 		}
-		return treasury.Amount == initialTreasuryTokens-totalMigrationTokens
+		amount, err := iotago.DecodeUint64(treasury.Amount)
+		if err != nil {
+			log.Printf("failed to decode treasury amount: %s", err)
+			return false
+		}
+		return amount == initialTreasuryTokens-totalMigrationTokens
 	}, 2*time.Minute, time.Second)
 
 	// checking that funds were migrated in appropriate receipts

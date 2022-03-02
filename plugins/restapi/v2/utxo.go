@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"encoding/hex"
 	"encoding/json"
 
 	"github.com/labstack/echo/v4"
@@ -11,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func NewOutputResponse(output *utxo.Output, ledgerIndex milestone.Index, metadataOnly bool) (*OutputResponse, error) {
@@ -23,7 +23,7 @@ func NewOutputResponse(output *utxo.Output, ledgerIndex milestone.Index, metadat
 
 	r := &OutputResponse{
 		MessageID:                output.MessageID().ToHex(),
-		TransactionID:            hex.EncodeToString(transactionID[:]),
+		TransactionID:            transactionID.ToHex(),
 		Spent:                    false,
 		OutputIndex:              output.OutputID().Index(),
 		MilestoneIndexBooked:     output.MilestoneIndex(),
@@ -46,7 +46,7 @@ func NewSpentResponse(spent *utxo.Spent, ledgerIndex milestone.Index, metadataOn
 	}
 	response.Spent = true
 	response.MilestoneIndexSpent = spent.MilestoneIndex()
-	response.TransactionIDSpent = hex.EncodeToString(spent.TargetTransactionID()[:])
+	response.TransactionIDSpent = spent.TargetTransactionID().ToHex()
 	response.MilestoneTimestampSpent = spent.MilestoneTimestamp()
 	return response, nil
 }
@@ -117,7 +117,7 @@ func treasury(_ echo.Context) (*treasuryResponse, error) {
 	}
 
 	return &treasuryResponse{
-		MilestoneID: hex.EncodeToString(treasuryOutput.MilestoneID[:]),
-		Amount:      treasuryOutput.Amount,
+		MilestoneID: treasuryOutput.MilestoneID.ToHex(),
+		Amount:      iotago.EncodeUint64(treasuryOutput.Amount),
 	}, nil
 }
