@@ -1,7 +1,6 @@
 package restapi
 
 import (
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -91,7 +90,7 @@ func ParseMessageIDParam(c echo.Context) (hornet.MessageID, error) {
 func ParseTransactionIDParam(c echo.Context) (*iotago.TransactionID, error) {
 	transactionIDHex := strings.ToLower(c.Param(ParameterTransactionID))
 
-	transactionIDBytes, err := hex.DecodeString(transactionIDHex)
+	transactionIDBytes, err := iotago.DecodeHex(transactionIDHex)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid transaction ID: %s, error: %s", transactionIDHex, err)
 	}
@@ -108,17 +107,11 @@ func ParseTransactionIDParam(c echo.Context) (*iotago.TransactionID, error) {
 func ParseOutputIDParam(c echo.Context) (*iotago.OutputID, error) {
 	outputIDParam := strings.ToLower(c.Param(ParameterOutputID))
 
-	outputIDBytes, err := hex.DecodeString(outputIDParam)
+	outputID, err := iotago.OutputIDFromHex(outputIDParam)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
 	}
 
-	if len(outputIDBytes) != iotago.OutputIDLength {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid output ID: %s, error: %s", outputIDParam, err)
-	}
-
-	var outputID iotago.OutputID
-	copy(outputID[:], outputIDBytes)
 	return &outputID, nil
 }
 
@@ -140,7 +133,7 @@ func ParseBech32AddressParam(c echo.Context, prefix iotago.NetworkPrefix) (iotag
 func ParseEd25519AddressParam(c echo.Context) (*iotago.Ed25519Address, error) {
 	addressParam := strings.ToLower(c.Param(ParameterAddress))
 
-	addressBytes, err := hex.DecodeString(addressParam)
+	addressBytes, err := iotago.DecodeHex(addressParam)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
 	}
@@ -157,7 +150,7 @@ func ParseEd25519AddressParam(c echo.Context) (*iotago.Ed25519Address, error) {
 func ParseAliasAddressParam(c echo.Context) (*iotago.AliasAddress, error) {
 	addressParam := strings.ToLower(c.Param(ParameterAddress))
 
-	addressBytes, err := hex.DecodeString(addressParam)
+	addressBytes, err := iotago.DecodeHex(addressParam)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
 	}
@@ -174,7 +167,7 @@ func ParseAliasAddressParam(c echo.Context) (*iotago.AliasAddress, error) {
 func ParseNFTAddressParam(c echo.Context) (*iotago.NFTAddress, error) {
 	addressParam := strings.ToLower(c.Param(ParameterAddress))
 
-	addressBytes, err := hex.DecodeString(addressParam)
+	addressBytes, err := iotago.DecodeHex(addressParam)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
 	}
@@ -191,7 +184,7 @@ func ParseNFTAddressParam(c echo.Context) (*iotago.NFTAddress, error) {
 func ParseAliasIDParam(c echo.Context) (*iotago.AliasID, error) {
 	aliasIDParam := strings.ToLower(c.Param(ParameterAliasID))
 
-	aliasIDBytes, err := hex.DecodeString(aliasIDParam)
+	aliasIDBytes, err := iotago.DecodeHex(aliasIDParam)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid alias ID: %s, error: %s", aliasIDParam, err)
 	}
@@ -208,7 +201,7 @@ func ParseAliasIDParam(c echo.Context) (*iotago.AliasID, error) {
 func ParseNFTIDParam(c echo.Context) (*iotago.NFTID, error) {
 	nftIDParam := strings.ToLower(c.Param(ParameterNFTID))
 
-	nftIDBytes, err := hex.DecodeString(nftIDParam)
+	nftIDBytes, err := iotago.DecodeHex(nftIDParam)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid NFT ID: %s, error: %s", nftIDParam, err)
 	}
@@ -225,7 +218,7 @@ func ParseNFTIDParam(c echo.Context) (*iotago.NFTID, error) {
 func ParseFoundryIDParam(c echo.Context) (*iotago.FoundryID, error) {
 	foundryIDParam := strings.ToLower(c.Param(ParameterFoundryID))
 
-	foundryIDBytes, err := hex.DecodeString(foundryIDParam)
+	foundryIDBytes, err := iotago.DecodeHex(foundryIDParam)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid foundry ID: %s, error: %s", foundryIDParam, err)
 	}
@@ -334,7 +327,7 @@ func ParseBech32AddressQueryParam(c echo.Context, prefix iotago.NetworkPrefix, p
 func ParseHexQueryParam(c echo.Context, paramName string, maxLen int) ([]byte, error) {
 	param := c.QueryParam(paramName)
 
-	paramBytes, err := hex.DecodeString(param)
+	paramBytes, err := iotago.DecodeHex(param)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid param: %s, error: %s", paramName, err)
 	}

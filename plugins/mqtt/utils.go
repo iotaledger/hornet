@@ -1,7 +1,6 @@
 package mqtt
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"strings"
 
@@ -76,7 +75,7 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 	if taggedData != nil {
 		publishRawOnTopicIfSubscribed(topicMessagesTaggedData, payloadFunc())
 		if len(taggedData.Tag) > 0 {
-			taggedDataTagTopic := strings.ReplaceAll(topicMessagesTaggedDataTag, "{tag}", hex.EncodeToString(taggedData.Tag))
+			taggedDataTagTopic := strings.ReplaceAll(topicMessagesTaggedDataTag, "{tag}", iotago.EncodeHex(taggedData.Tag))
 			publishRawOnTopicIfSubscribed(taggedDataTagTopic, payloadFunc())
 		}
 	}
@@ -88,7 +87,7 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 		if txTaggedData != nil {
 			publishRawOnTopicIfSubscribed(topicMessagesTransactionTaggedData, payloadFunc())
 			if len(txTaggedData.Tag) > 0 {
-				txTaggedDataTagTopic := strings.ReplaceAll(topicMessagesTransactionTaggedDataTag, "{tag}", hex.EncodeToString(txTaggedData.Tag))
+				txTaggedDataTagTopic := strings.ReplaceAll(topicMessagesTransactionTaggedDataTag, "{tag}", iotago.EncodeHex(txTaggedData.Tag))
 				publishRawOnTopicIfSubscribed(txTaggedDataTagTopic, payloadFunc())
 			}
 		}
@@ -100,7 +99,7 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 }
 
 func publishTransactionIncludedMessage(transactionID *iotago.TransactionID, messageID hornet.MessageID) {
-	transactionTopic := strings.ReplaceAll(topicTransactionsIncludedMessage, "{transactionId}", hex.EncodeToString(transactionID[:]))
+	transactionTopic := strings.ReplaceAll(topicTransactionsIncludedMessage, "{transactionId}", transactionID.ToHex())
 	if deps.MQTTBroker.HasSubscribers(transactionTopic) {
 		cachedMessage := deps.Storage.CachedMessageOrNil(messageID)
 		if cachedMessage != nil {
@@ -220,7 +219,7 @@ func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output) *outputP
 
 	return &outputPayload{
 		MessageID:                output.MessageID().ToHex(),
-		TransactionID:            hex.EncodeToString(transactionID[:]),
+		TransactionID:            transactionID.ToHex(),
 		Spent:                    false,
 		OutputIndex:              output.OutputID().Index(),
 		RawOutput:                &rawRawOutputJSON,
@@ -235,7 +234,7 @@ func payloadForSpent(ledgerIndex milestone.Index, spent *utxo.Spent) *outputPayl
 	if payload != nil {
 		payload.Spent = true
 		payload.MilestoneIndexSpent = spent.MilestoneIndex()
-		payload.TransactionIDSpent = hex.EncodeToString(spent.TargetTransactionID()[:])
+		payload.TransactionIDSpent = spent.TargetTransactionID().ToHex()
 		payload.MilestoneTimestampSpent = spent.MilestoneTimestamp()
 	}
 	return payload
@@ -361,7 +360,7 @@ func transactionIDFromTopic(topicName string) *iotago.TransactionID {
 		transactionIDHex := strings.Replace(topicName, "transactions/", "", 1)
 		transactionIDHex = strings.Replace(transactionIDHex, "/included-message", "", 1)
 
-		decoded, err := hex.DecodeString(transactionIDHex)
+		decoded, err := iotago.DecodeHex(transactionIDHex)
 		if err != nil || len(decoded) != iotago.TransactionIDLength {
 			return nil
 		}

@@ -1,13 +1,13 @@
 package participation
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -28,7 +28,7 @@ type Participation struct {
 
 func (p *Participation) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
 	return serializer.NewDeserializer(data).
-		ReadArrayOf32Bytes(&p.EventID, func(err error) error {
+		ReadBytesInPlace(p.EventID[:], func(err error) error {
 			return fmt.Errorf("unable to deserialize eventID in participation: %w", err)
 		}).
 		ReadVariableByteSlice(&p.Answers, serializer.SeriLengthPrefixTypeAsByte, func(err error) error {
@@ -65,9 +65,10 @@ func (p *Participation) Serialize(deSeriMode serializer.DeSerializationMode, deS
 }
 
 func (p *Participation) MarshalJSON() ([]byte, error) {
-	j := &jsonParticipation{}
-	j.EventID = hex.EncodeToString(p.EventID[:])
-	j.Answers = hex.EncodeToString(p.Answers)
+	j := &jsonParticipation{
+		EventID: p.EventID.ToHex(),
+		Answers: iotago.EncodeHex(p.Answers),
+	}
 	return json.Marshal(j)
 }
 
@@ -98,13 +99,13 @@ func (j *jsonParticipation) ToSerializable() (serializer.Serializable, error) {
 		Answers: []byte{},
 	}
 
-	eventIDBytes, err := hex.DecodeString(j.EventID)
+	eventIDBytes, err := iotago.DecodeHex(j.EventID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode event ID from JSON in participation: %w", err)
 	}
 	copy(p.EventID[:], eventIDBytes)
 
-	answersBytes, err := hex.DecodeString(j.Answers)
+	answersBytes, err := iotago.DecodeHex(j.Answers)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode answers from JSON in participation: %w", err)
 	}

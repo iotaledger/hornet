@@ -40,14 +40,6 @@ const (
 	// GET returns the outputIDs for all spent outputs.
 	RouteDebugOutputsSpent = "/outputs/spent"
 
-	// RouteDebugAddresses is the debug route for getting all known addresses.
-	// GET returns all known addresses encoded in hex.
-	RouteDebugAddresses = "/addresses"
-
-	// RouteDebugAddressesEd25519 is the debug route for getting all known ed25519 addresses.
-	// GET returns all known ed25519 addresses encoded in hex.
-	RouteDebugAddressesEd25519 = "/addresses/ed25519"
-
 	// RouteDebugMilestoneDiffs is the debug route for getting a milestone diff by it's milestoneIndex.
 	// GET returns the utxo diff (new outputs & spents) for the milestone index.
 	RouteDebugMilestoneDiffs = "/ms-diff/:" + restapipkg.ParameterMilestoneIndex

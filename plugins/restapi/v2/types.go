@@ -27,7 +27,7 @@ type nodeStatus struct {
 	// Whether the node is healthy.
 	IsHealthy bool `json:"isHealthy"`
 	// The timestamp of the latest known milestone.
-	LatestMilestoneTimestamp int64 `json:"latestMilestoneTimestamp"`
+	LatestMilestoneTimestamp uint32 `json:"latestMilestoneTimestamp"`
 	// The latest known milestone index.
 	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
 	// The current confirmed milestone's index.
@@ -121,7 +121,7 @@ type milestoneResponse struct {
 	// The hex encoded ID of the message containing the milestone.
 	MessageID string `json:"messageId"`
 	// The unix time of the milestone payload.
-	Time int64 `json:"timestamp"`
+	Time uint32 `json:"timestamp"`
 }
 
 // milestoneUTXOChangesResponse defines the response of a GET milestone UTXO changes REST API call.
@@ -160,24 +160,10 @@ type OutputResponse struct {
 	RawOutput *json.RawMessage `json:"output,omitempty"`
 }
 
-// addressBalanceResponse defines the response of a GET addresses REST API call.
-type addressBalanceResponse struct {
-	// The type of the address (0=Ed25519).
-	AddressType byte `json:"addressType"`
-	// The hex encoded address.
-	Address string `json:"address"`
-	// The balance of the address.
-	Balance uint64 `json:"balance"`
-	// Indicates if dust is allowed on this address.
-	DustAllowed bool `json:"dustAllowed"`
-	// The ledger index at which this balance was queried at.
-	LedgerIndex milestone.Index `json:"ledgerIndex"`
-}
-
 // treasuryResponse defines the response of a GET treasury REST API call.
 type treasuryResponse struct {
 	MilestoneID string `json:"milestoneId"`
-	Amount      uint64 `json:"amount"`
+	Amount      string `json:"amount"`
 }
 
 // addPeerRequest defines the request for a POST peer REST API call.

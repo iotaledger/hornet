@@ -2,7 +2,6 @@ package hornet
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"sort"
 
@@ -33,7 +32,7 @@ func (l LexicalOrderedMessageIDs) Swap(i, j int) {
 
 // ToHex converts the MessageID to its hex representation.
 func (m MessageID) ToHex() string {
-	return hex.EncodeToString(m)
+	return iotago.EncodeHex(m)
 }
 
 // ToArray converts the MessageID to an array.
@@ -62,7 +61,7 @@ func NullMessageID() MessageID {
 // MessageIDFromHex creates a MessageID from a hex string representation.
 func MessageIDFromHex(hexString string) (MessageID, error) {
 
-	b, err := hex.DecodeString(hexString)
+	b, err := iotago.DecodeHex(hexString)
 	if err != nil {
 		return nil, err
 	}

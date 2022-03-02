@@ -289,6 +289,8 @@ func utxoOutput(fill byte, amount uint64, msIndex milestone.Index) *utxo.Output 
 }
 
 func utxoSpent(fill byte, amount uint64, msIndexCreated milestone.Index, msIndexSpent milestone.Index) *utxo.Spent {
-	txID := static32ByteID(fill)
-	return utxo.NewSpent(utxoOutput(fill, amount, msIndexCreated), &txID, msIndexSpent, 0)
+	r := static32ByteID(fill)
+	txID := &iotago.TransactionID{}
+	copy(txID[:], r[:])
+	return utxo.NewSpent(utxoOutput(fill, amount, msIndexCreated), txID, msIndexSpent, 0)
 }

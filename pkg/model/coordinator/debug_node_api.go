@@ -2,7 +2,6 @@ package coordinator
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 
@@ -57,7 +56,7 @@ func (api *DebugNodeAPIClient) Whiteflag(index milestone.Index, parents hornet.M
 		return nil, err
 	}
 
-	merkleTreeHashBytes, err := hex.DecodeString(res.MerkleTreeHash)
+	merkleTreeHashBytes, err := iotago.DecodeHex(res.MerkleTreeHash)
 	if err != nil {
 		return nil, err
 	}

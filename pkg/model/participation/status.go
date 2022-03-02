@@ -3,9 +3,9 @@ package participation
 import (
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // AnswerStatus holds the current and accumulated vote for an answer.
@@ -161,7 +161,7 @@ func (pm *ParticipationManager) EventStatus(eventID EventID, milestone ...milest
 		}
 	}
 
-	status.Checksum = hex.EncodeToString(statusHash.Sum(nil))
+	status.Checksum = iotago.EncodeHex(statusHash.Sum(nil))
 	return status, nil
 }
 
