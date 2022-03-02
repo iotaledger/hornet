@@ -17,16 +17,16 @@ type ParentsTraverserInterface interface {
 
 // ParentsTraverser can be used to walk the dag in direction of the parents (past cone).
 type ParentsTraverser struct {
-	// interface to the used storage
+	// interface to the used storage.
 	parentsTraverserStorage ParentsTraverserStorage
 
-	// stack holding the ordered msg to process
+	// stack holding the ordered msg to process.
 	stack *list.List
 
-	// processed map with already processed messages
+	// processed map with already processed messages.
 	processed map[string]struct{}
 
-	// checked map with result of traverse condition
+	// checked map with result of traverse condition.
 	checked map[string]bool
 
 	ctx                      context.Context
@@ -52,6 +52,7 @@ func NewParentsTraverser(parentsTraverserStorage ParentsTraverserStorage) *Paren
 	return t
 }
 
+// reset the traverser for the next walk.
 func (t *ParentsTraverser) reset() {
 
 	t.processed = make(map[string]struct{})
