@@ -44,7 +44,7 @@ The next portion of the guide assumes you are executing commands from the root d
 
 2. Add your neighbors addresses to the `peering.json` file.
 
-The Docker image runs under "user" with user id 65532 and group id 65532. To make sure there are no permission issues, you will need to:
+The Docker image runs under user with user id 65532 and group id 65532. To make sure there are no permission issues, you will need to:
 
 1. Create the directory for the database by running the following command:
 
@@ -104,7 +104,7 @@ docker run \
 * `-d` Instructs Docker to run the container instance in a detached mode (daemon).
 
 
-You can run `docker stop -t 300 hornet` to end the process.
+You can run `docker stop -t 300 hornet` to gracefully end the process.
 
 ## Create Username and Password for the Hornet Dashboard
 

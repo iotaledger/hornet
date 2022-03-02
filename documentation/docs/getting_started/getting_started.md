@@ -73,10 +73,10 @@ You can install Hornet on Linux using:
 - [The hornet apt repository](https://wiki.iota.org/hornet/getting_started/hornet_apt_repository).
 - [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
 
-Alternatively, you can buuld Hornet by following these instructions:
+Alternatively, you can build Hornet by following these instructions:
 
 - [Prebuilt binary files](hornet_apt_repository.md#pre-built-binaries), or
-- [Built from the source](hornet_apt_repository.md#build-from-source).
+- [Build from the source](hornet_apt_repository.md#build-from-source).
 
 ### MacOS
 

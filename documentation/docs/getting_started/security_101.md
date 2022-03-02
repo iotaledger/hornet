@@ -36,7 +36,7 @@ You can take measures to protect your device from unauthorized access when loggi
 
 ### Blocking Unnecessary Ports
 
-Attackers can abuse any open ports on your device. To secure your device against attacks on unused open ports, you can close all ports except ones you are using.
+Attackers can abuse any open ports on your device. To secure your device against attacks on unused open ports, you can close all ports except the ones that you are using.
 
 You can use a firewall for port security since all operating systems include firewall options. Using a firewall lets you completely block unused and unnecessary ports.
 
