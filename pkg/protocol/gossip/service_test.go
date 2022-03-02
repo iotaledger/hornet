@@ -29,9 +29,17 @@ func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.Manag
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
 	sk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
 	require.NoError(t, err)
+
+	connManager, err := connmgr.NewConnManager(
+		1,
+		100,
+		connmgr.WithGracePeriod(0),
+	)
+	require.NoError(t, err)
+
 	n, err := libp2p.New(
 		libp2p.Identity(sk),
-		libp2p.ConnectionManager(connmgr.NewConnManager(1, 100, 0)),
+		libp2p.ConnectionManager(connManager),
 	)
 	require.NoError(t, err)
 
