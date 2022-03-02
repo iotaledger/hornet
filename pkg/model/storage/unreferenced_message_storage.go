@@ -83,7 +83,7 @@ func (s *Storage) UnreferencedMessageIDs(msIndex milestone.Index, iteratorOption
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.MessageIDFromSlice(key[4:36]))
 		return true
-	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(key))...)
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(key))...)
 
 	return unreferencedMessageIDs
 }
@@ -95,7 +95,14 @@ type UnreferencedMessageConsumer func(msIndex milestone.Index, messageID hornet.
 func (s *Storage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, iteratorOptions ...IteratorOption) {
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromSlice(key[4:36]))
-	}, iteratorOptions...)
+	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
+}
+
+// ForEachUnreferencedMessage loops over all unreferenced messages.
+func (ns *NonCachedStorage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, iteratorOptions ...IteratorOption) {
+	ns.storage.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromSlice(key[4:36]))
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // StoreUnreferencedMessage stores the unreferenced message in the persistence layer and returns a cached object.
@@ -116,7 +123,7 @@ func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index, iteratorOp
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(msIndexBytes))...)
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(msIndexBytes))...)
 
 	for _, key := range keysToDelete {
 		s.unreferencedMessagesStorage.Delete(key)

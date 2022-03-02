@@ -68,8 +68,13 @@ type WhiteFlagMutations struct {
 // It also computes the merkle tree root hash consisting out of the IDs of the messages which are part of the set
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-// metadataMemcache has to be cleaned up outside.
-func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, msIndex milestone.Index, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(ctx context.Context,
+	utxoManager *utxo.Manager,
+	parentsTraverser *dag.ParentsTraverser,
+	cachedMessageFunc storage.CachedMessageFunc,
+	msIndex milestone.Index,
+	parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
+
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
@@ -94,10 +99,14 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		defer cachedMetadata.Release(true) // meta -1
 
 		// load up message
-		cachedMessage := messagesMemcache.CachedMessageOrNil(cachedMetadata.Metadata().MessageID())
+		cachedMessage, err := cachedMessageFunc(cachedMetadata.Metadata().MessageID())
+		if err != nil {
+			return err
+		}
 		if cachedMessage == nil {
 			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.Metadata().MessageID().ToHex(), cachedMetadata.Metadata().MessageID().ToHex())
 		}
+		defer cachedMessage.Release(true)
 
 		message := cachedMessage.Message()
 
@@ -145,7 +154,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 			}
 
 			// check current ledger for this input
-			output, err = dbStorage.UTXOManager().ReadOutputByOutputIDWithoutLocking(input)
+			output, err = utxoManager.ReadOutputByOutputIDWithoutLocking(input)
 			if err != nil {
 				if errors.Is(err, kvstore.ErrKeyNotFound) {
 					// input not found, so mark as invalid tx
@@ -156,7 +165,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 			}
 
 			// check if this output is unspent
-			unspent, err := dbStorage.UTXOManager().IsOutputUnspentWithoutLocking(output)
+			unspent, err := utxoManager.IsOutputUnspentWithoutLocking(output)
 			if err != nil {
 				return err
 			}
@@ -173,7 +182,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		if conflict == storage.ConflictNone {
 			// Dust validation
 			dustValidation := iotago.NewDustSemanticValidation(iotago.DustAllowanceDivisor, iotago.MaxDustOutputsOnAddress, func(addr iotago.Address) (dustAllowanceSum uint64, amountDustOutputs int64, err error) {
-				return dbStorage.UTXOManager().ReadDustForAddress(addr, wfConf.dustAllowanceDiff)
+				return utxoManager.ReadDustForAddress(addr, wfConf.dustAllowanceDiff)
 			})
 
 			// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
@@ -245,9 +254,6 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		// Apply the new outputs and spents to the current dust allowance diff
 		return wfConf.dustAllowanceDiff.Add(depositOutputs, newSpents)
 	}
-
-	// we don't need to call cleanup at the end, because we pass our own metadataMemcache.
-	parentsTraverser := dag.NewParentTraverser(dbStorage, metadataMemcache)
 
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If the parents are SEPs, are already processed or already referenced,

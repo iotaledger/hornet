@@ -4,16 +4,18 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
+type CachedMessageMetadataFunc func(messageID hornet.MessageID) (*CachedMetadata, error)
+
 type MetadataMemcache struct {
-	storage        *Storage
-	cachedMsgMetas map[string]*CachedMetadata
+	cachedMessageMetadataFunc CachedMessageMetadataFunc
+	cachedMsgMetas            map[string]*CachedMetadata
 }
 
 // NewMetadataMemcache creates a new NewMetadataMemcache instance.
-func NewMetadataMemcache(dbStorage *Storage) *MetadataMemcache {
+func NewMetadataMemcache(cachedMessageMetadataFunc CachedMessageMetadataFunc) *MetadataMemcache {
 	return &MetadataMemcache{
-		storage:        dbStorage,
-		cachedMsgMetas: make(map[string]*CachedMetadata),
+		cachedMessageMetadataFunc: cachedMessageMetadataFunc,
+		cachedMsgMetas:            make(map[string]*CachedMetadata),
 	}
 }
 
@@ -28,22 +30,27 @@ func (c *MetadataMemcache) Cleanup(forceRelease bool) {
 	c.cachedMsgMetas = make(map[string]*CachedMetadata)
 }
 
-// CachedMetadataOrNil returns a cached metadata object.
+// CachedMessageMetadata returns a cached metadata object.
 // metadata +1
-func (c *MetadataMemcache) CachedMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
+func (c *MetadataMemcache) CachedMessageMetadata(messageID hornet.MessageID) (*CachedMetadata, error) {
 	messageIDMapKey := messageID.ToMapKey()
+
+	var err error
 
 	// load up msg metadata
 	cachedMsgMeta, exists := c.cachedMsgMetas[messageIDMapKey]
 	if !exists {
-		cachedMsgMeta = c.storage.CachedMessageMetadataOrNil(messageID) // meta +1
+		cachedMsgMeta, err = c.cachedMessageMetadataFunc(messageID) // meta +1 (this is the one that gets cleared by "Cleanup")
+		if err != nil {
+			return nil, err
+		}
 		if cachedMsgMeta == nil {
-			return nil
+			return nil, nil
 		}
 
 		// add the cachedObject to the map, it will be released by calling "Cleanup" at the end
 		c.cachedMsgMetas[messageIDMapKey] = cachedMsgMeta
 	}
 
-	return cachedMsgMeta
+	return cachedMsgMeta.Retain(), nil // meta +1
 }

@@ -210,7 +210,11 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 	switch value := data.(type) {
 	case hornet.MessageID:
 		messageID := value
-		if r.storage.SolidEntryPointsContain(messageID) {
+		contains, err := r.storage.SolidEntryPointsContain(messageID)
+		if err != nil {
+			panic(err)
+		}
+		if contains {
 			return false
 		}
 		if r.storage.ContainsMessage(messageID) {
@@ -253,7 +257,11 @@ func (r *Requester) RequestParents(cachedMsg *storage.CachedMessage, msIndex mil
 	cachedMsg.ConsumeMetadata(func(metadata *storage.MessageMetadata) {
 		messageID := metadata.MessageID()
 
-		if r.storage.SolidEntryPointsContain(messageID) {
+		contains, err := r.storage.SolidEntryPointsContain(messageID)
+		if err != nil {
+			panic(err)
+		}
+		if contains {
 			return
 		}
 

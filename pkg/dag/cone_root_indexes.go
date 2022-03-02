@@ -15,14 +15,17 @@ import (
 
 // updateOutdatedConeRootIndexes updates the cone root indexes of the given messages.
 // the "outdatedMessageIDs" should be ordered from oldest to latest to avoid recursion.
-func updateOutdatedConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, outdatedMessageIDs hornet.MessageIDs, cmi milestone.Index) error {
+func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, outdatedMessageIDs hornet.MessageIDs, cmi milestone.Index) error {
 	for _, outdatedMessageID := range outdatedMessageIDs {
-		cachedMsgMeta := dbStorage.CachedMessageMetadataOrNil(outdatedMessageID)
+		cachedMsgMeta, err := parentsTraverserStorage.CachedMessageMetadata(outdatedMessageID)
+		if err != nil {
+			return err
+		}
 		if cachedMsgMeta == nil {
 			panic(common.ErrMessageNotFound)
 		}
 
-		if _, _, err := ConeRootIndexes(ctx, dbStorage, cachedMsgMeta, cmi); err != nil {
+		if _, _, err := ConeRootIndexes(ctx, parentsTraverserStorage, cachedMsgMeta, cmi); err != nil {
 			return err
 		}
 	}
@@ -31,7 +34,7 @@ func updateOutdatedConeRootIndexes(ctx context.Context, dbStorage *storage.Stora
 
 // ConeRootIndexes searches the cone root indexes for a given message.
 // cachedMsgMeta has to be solid, otherwise youngestConeRootIndex and oldestConeRootIndex will be 0 if a message is missing in the cone.
-func ConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, cachedMsgMeta *storage.CachedMetadata, cmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index, err error) {
+func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, cachedMsgMeta *storage.CachedMetadata, cmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index, err error) {
 	defer cachedMsgMeta.Release(true) // meta -1
 
 	// if the msg already contains recent (calculation index matches CMI)
@@ -65,7 +68,7 @@ func ConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, cachedMsgM
 	// this walk will also collect all outdated messages in the same cone, to update them afterwards.
 	if err := TraverseParentsOfMessage(
 		ctx,
-		dbStorage,
+		parentsTraverserStorage,
 		cachedMsgMeta.Metadata().MessageID(),
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
@@ -109,10 +112,14 @@ func ConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, cachedMsgM
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(messageID hornet.MessageID) {
+		func(messageID hornet.MessageID) error {
 			// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
-			entryPointIndex, _ := dbStorage.SolidEntryPointsIndex(messageID)
+			entryPointIndex, _, err := parentsTraverserStorage.SolidEntryPointsIndex(messageID)
+			if err != nil {
+				return err
+			}
 			updateIndexes(entryPointIndex, entryPointIndex)
+			return nil
 		}, false); err != nil {
 		if errors.Is(err, common.ErrMessageNotFound) {
 			indexesValid = false
@@ -126,7 +133,7 @@ func ConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, cachedMsgM
 
 	// update the outdated cone root indexes of all messages in the cone in order from oldest msgs to latest.
 	// this is an efficient way to update the whole cone, because updating from oldest to latest will not be recursive.
-	if err := updateOutdatedConeRootIndexes(ctx, dbStorage, outdatedMessageIDs, cmi); err != nil {
+	if err := updateOutdatedConeRootIndexes(ctx, parentsTraverserStorage, outdatedMessageIDs, cmi); err != nil {
 		return 0, 0, err
 	}
 
@@ -147,15 +154,10 @@ func ConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, cachedMsgM
 // we have to walk the future cone, and update the past cone of all messages that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same messages multiple times.
-func UpdateConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, metadataMemcache *storage.MetadataMemcache, messageIDs hornet.MessageIDs, cmi milestone.Index, iteratorOptions ...storage.IteratorOption) error {
+func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorage, messageIDs hornet.MessageIDs, cmi milestone.Index) error {
 	traversed := map[string]struct{}{}
 
-	t := NewChildrenTraverser(dbStorage, metadataMemcache)
-
-	if metadataMemcache == nil {
-		// we only cleanup the traverser if no MetadataMemcache was given
-		defer t.Cleanup(true)
-	}
+	t := NewChildrenTraverser(traverserStorage)
 
 	// we update all messages in order from oldest to latest
 	for _, messageID := range messageIDs {
@@ -178,12 +180,12 @@ func UpdateConeRootIndexes(ctx context.Context, dbStorage *storage.Storage, meta
 				traversed[cachedMsgMeta.Metadata().MessageID().ToMapKey()] = struct{}{}
 
 				// updates the cone root indexes of the outdated past cone for this message
-				if _, _, err := ConeRootIndexes(ctx, dbStorage, cachedMsgMeta.Retain(), cmi); err != nil { // meta pass +1
+				if _, _, err := ConeRootIndexes(ctx, traverserStorage, cachedMsgMeta.Retain(), cmi); err != nil { // meta pass +1
 					return err
 				}
 
 				return nil
-			}, false, iteratorOptions...); err != nil {
+			}, false); err != nil {
 			return err
 		}
 	}

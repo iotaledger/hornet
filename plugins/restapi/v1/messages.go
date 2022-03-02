@@ -19,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
@@ -151,7 +150,10 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults
-	childrenMessageIDs := deps.Storage.ChildrenMessageIDs(messageID, objectstorage.WithIteratorMaxIterations(maxResults))
+	childrenMessageIDs, err := deps.Storage.ChildrenMessageIDs(messageID, storage.WithIteratorMaxIterations(maxResults))
+	if err != nil {
+		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+	}
 
 	return &childrenResponse{
 		MessageID:  messageID.ToHex(),
@@ -178,7 +180,7 @@ func messageIDsByIndex(c echo.Context) (*messageIDsByIndexResponse, error) {
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults
-	indexMessageIDs := deps.Storage.IndexMessageIDs(indexBytes, objectstorage.WithIteratorMaxIterations(maxResults))
+	indexMessageIDs := deps.Storage.IndexMessageIDs(indexBytes, storage.WithIteratorMaxIterations(maxResults))
 
 	return &messageIDsByIndexResponse{
 		Index:      index,

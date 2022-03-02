@@ -212,7 +212,10 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		cachedMsgMeta := proc.storage.CachedMessageMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			// parent not found
-			entryPointIndex, exists := proc.storage.SolidEntryPointsIndex(messageID)
+			entryPointIndex, exists, err := proc.storage.SolidEntryPointsIndex(messageID)
+			if err != nil {
+				return err
+			}
 			if !exists {
 				return ErrMessageNotSolid
 			}
