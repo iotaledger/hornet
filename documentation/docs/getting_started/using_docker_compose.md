@@ -17,7 +17,7 @@ Make sure that you have read [Using Docker](using_docker.md) before you continue
 
 ## Using Your Own Docker Compose File For Running Hornet
 
-Docker Compose is a tool on top of the Docker engine that help you to define Docker parameters in a structured way using a `docker-compose.yaml` file. You can create and start the container with a single `docker-compose` command based on your configuration.
+Docker Compose is a tool on top of the Docker engine that helps you to define Docker parameters in a structured way using a `docker-compose.yaml` file. You can create and start the container with a single `docker-compose` command based on your configuration.
 
 To do so, you will need to create `docker-compose.yml` in the same directory as described in the [Using Docker](https://wiki.iota.org/hornet/getting_started/using_docker) article:
 

@@ -1,4 +1,6 @@
 ---
+description: This section describes the configuration parameters and their types for your Hornet node.
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node 
 - Hornet Node
@@ -6,8 +8,7 @@ keywords:
 - JSON
 - Customize
 - Config
-description: This section describes the configuration parameters and their types for your Hornet node.
-image: /img/logo/HornetLogo.png
+- reference
 ---
 
 
@@ -33,8 +34,8 @@ hornet -h --full
 | :------------------- | :---------------------------------------------------------------------------------------------- | :--------------- |
 | bindAddress          | The bind address on which the REST API listens on                                               | string           |
 | [jwtAuth](#jwt-auth) | Config for JWT auth                                                                             | object           |
-| publicRoutes         | the HTTP REST routes which can be called without authorization. Wildcards using * are allowed.  | array of strings |
-| protectedRoutes      | the HTTP REST routes which need to be called with authorization. Wildcards using * are allowed. | array of strings |
+| publicRoutes         | The HTTP REST routes which can be called without authorization. Wildcards using * are allowed.  | array of strings |
+| protectedRoutes      | The HTTP REST routes which need to be called with authorization. Wildcards using * are allowed. | array of strings |
 | powEnabled           | Whether the node does PoW if messages are received via API                                      | bool             |
 | powWorkerCount       | The amount of workers used for calculating PoW when issuing messages via API                    | integer          |
 | [limits](#limits)    | Configuration for api limits                                                                    | object           |
@@ -422,7 +423,7 @@ Example:
 
 ## 11. Receipts
 
-This part is used in the migration from IOTA 1.0 to IOTA 1.5 (Chrysalis)
+This part was used in the migration from IOTA 1.0 to IOTA 1.5 (Chrysalis)
 
 | Name                    | Description                 | Type   |
 | :---------------------- | :-------------------------- | :----- |
