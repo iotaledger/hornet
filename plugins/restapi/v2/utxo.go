@@ -2,7 +2,7 @@ package v2
 
 import (
 	"encoding/json"
-	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
@@ -10,6 +10,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func NewOutputResponse(output *utxo.Output, ledgerIndex milestone.Index, metadataOnly bool) (*OutputResponse, error) {
