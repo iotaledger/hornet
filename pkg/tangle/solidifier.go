@@ -294,13 +294,10 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	var timeStartConfirmation, timeSetConfirmedMilestoneIndex, timeUpdateConeRootIndexes, timeConfirmedMilestoneChanged, timeConfirmedMilestoneIndexChanged, timeMilestoneConfirmedSyncEvent, timeMilestoneConfirmed time.Time
 
-	parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
-
 	timeStart := time.Now()
 	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(
 		t.storage.UTXOManager(),
-		parentsTraverser,
-		metadataMemcache.CachedMessageMetadata,
+		memcachedTraverserStorage,
 		messagesMemcache.CachedMessage,
 		t.networkId,
 		cachedMsToSolidify.Milestone().MessageID,

@@ -52,8 +52,7 @@ type ConfirmationMetrics struct {
 // if one is present. The treasury is mutated accordingly.
 func ConfirmMilestone(
 	utxoManager *utxo.Manager,
-	parentsTraverser *dag.ParentsTraverser,
-	cachedMessageMetadataFunc storage.CachedMessageMetadataFunc,
+	parentsTraverserStorage dag.ParentsTraverserStorage,
 	cachedMessageFunc storage.CachedMessageFunc,
 	networkId uint64,
 	milestoneMessageID hornet.MessageID,
@@ -91,6 +90,8 @@ func ConfirmMilestone(
 	milestoneIndex := milestone.Index(ms.Index)
 
 	timeStart := time.Now()
+
+	parentsTraverser := dag.NewParentsTraverser(parentsTraverserStorage)
 
 	// we pass a background context here to not cancel the whiteflag computation!
 	// otherwise the node could panic at shutdown.
@@ -179,7 +180,7 @@ func ConfirmMilestone(
 
 	// load the message for the given id
 	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
-		cachedMsgMeta, err := cachedMessageMetadataFunc(messageID) // meta +1
+		cachedMsgMeta, err := parentsTraverserStorage.CachedMessageMetadata(messageID) // meta +1
 		if err != nil {
 			return fmt.Errorf("confirmMilestone: get message failed: %v, Error: %w", messageID.ToHex(), err)
 		}
