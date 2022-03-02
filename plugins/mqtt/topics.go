@@ -5,12 +5,15 @@ const (
 	topicMilestonesLatest    = "milestones/latest"
 	topicMilestonesConfirmed = "milestones/confirmed"
 
-	topicMessages            = "messages"
-	topicMessagesReferenced  = "messages/referenced"
-	topicMessagesTransaction = "messages/transaction"
-	topicMessagesMilestone   = "messages/milestone"
-	topicMessagesTaggedData  = "messages/taggedData/{tag}"
-	topicMessagesMetadata    = "messages/{messageId}/metadata"
+	topicMessages                         = "messages"
+	topicMessagesReferenced               = "messages/referenced"
+	topicMessagesTransaction              = "messages/transaction"
+	topicMessagesTransactionTaggedData    = "messages/transaction/taggedData"
+	topicMessagesTransactionTaggedDataTag = "messages/transaction/taggedData/{tag}"
+	topicMessagesMilestone                = "messages/milestone"
+	topicMessagesTaggedData               = "messages/taggedData"
+	topicMessagesTaggedDataTag            = "messages/taggedData/{tag}"
+	topicMessagesMetadata                 = "messages/{messageId}/metadata"
 
 	topicTransactionsIncludedMessage = "transactions/{transactionId}/included-message"
 

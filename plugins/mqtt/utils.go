@@ -73,13 +73,25 @@ func publishMessage(cachedMessage *storage.CachedMessage) {
 	publishRawOnTopicIfSubscribed(topicMessages, payloadFunc())
 
 	taggedData := cachedMessage.Message().TaggedData()
-	if taggedData != nil && len(taggedData.Tag) > 0 {
-		taggedDataTopic := strings.ReplaceAll(topicMessagesTaggedData, "{tag}", hex.EncodeToString(taggedData.Tag))
-		publishRawOnTopicIfSubscribed(taggedDataTopic, payloadFunc())
+	if taggedData != nil {
+		publishRawOnTopicIfSubscribed(topicMessagesTaggedData, payloadFunc())
+		if len(taggedData.Tag) > 0 {
+			taggedDataTagTopic := strings.ReplaceAll(topicMessagesTaggedDataTag, "{tag}", hex.EncodeToString(taggedData.Tag))
+			publishRawOnTopicIfSubscribed(taggedDataTagTopic, payloadFunc())
+		}
 	}
 
 	if cachedMessage.Message().IsTransaction() {
 		publishRawOnTopicIfSubscribed(topicMessagesTransaction, payloadFunc())
+
+		txTaggedData := cachedMessage.Message().TransactionEssenceTaggedData()
+		if txTaggedData != nil {
+			publishRawOnTopicIfSubscribed(topicMessagesTransactionTaggedData, payloadFunc())
+			if len(txTaggedData.Tag) > 0 {
+				txTaggedDataTagTopic := strings.ReplaceAll(topicMessagesTransactionTaggedDataTag, "{tag}", hex.EncodeToString(txTaggedData.Tag))
+				publishRawOnTopicIfSubscribed(txTaggedDataTagTopic, payloadFunc())
+			}
+		}
 	}
 
 	if cachedMessage.Message().IsMilestone() {
