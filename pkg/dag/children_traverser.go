@@ -14,13 +14,13 @@ import (
 
 // ChildrenTraverser can be used to walk the dag in direction of the tips (future cone).
 type ChildrenTraverser struct {
-	// interface to the used storage
+	// interface to the used storage.
 	childrenTraverserStorage ChildrenTraverserStorage
 
-	// stack holding the ordered msg to process
+	// stack holding the ordered msg to process.
 	stack *list.List
 
-	// discovers map with already found messages
+	// discovers map with already found messages.
 	discovered map[string]struct{}
 
 	ctx                   context.Context
@@ -43,6 +43,7 @@ func NewChildrenTraverser(childrenTraverserStorage ChildrenTraverserStorage) *Ch
 	return t
 }
 
+// reset the traverser for the next walk.
 func (t *ChildrenTraverser) reset() {
 
 	t.discovered = make(map[string]struct{})
