@@ -6,8 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/objectstorage"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -160,7 +158,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 
 	lastStatusTime := time.Now()
 	var milestonesCounter int64
-	t.storage.ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
+	t.storage.NonCachedStorage().ForEachMilestoneIndex(func(msIndex milestone.Index) bool {
 		milestonesCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -181,7 +179,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 		milestonesToDelete[msIndex] = struct{}{}
 
 		return true
-	}, objectstorage.WithIteratorSkipCache(true))
+	})
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -225,7 +223,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
-	t.storage.ForEachMessageID(func(messageID hornet.MessageID) bool {
+	t.storage.NonCachedStorage().ForEachMessageID(func(messageID hornet.MessageID) bool {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -259,7 +257,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 		}
 
 		return true
-	}, objectstorage.WithIteratorSkipCache(true))
+	})
 	t.LogInfof("analyzed %d messages", txsCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -301,7 +299,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 
 	lastStatusTime := time.Now()
 	var metadataCounter int64
-	t.storage.ForEachMessageMetadataMessageID(func(messageID hornet.MessageID) bool {
+	t.storage.NonCachedStorage().ForEachMessageMetadataMessageID(func(messageID hornet.MessageID) bool {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -320,7 +318,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 		}
 
 		return true
-	}, objectstorage.WithIteratorSkipCache(true))
+	})
 	t.LogInfof("analyzed %d message metadata", metadataCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -367,7 +365,7 @@ func (t *Tangle) cleanupChildren() error {
 
 	lastStatusTime := time.Now()
 	var childCounter int64
-	t.storage.ForEachChild(func(messageID hornet.MessageID, childMessageID hornet.MessageID) bool {
+	t.storage.NonCachedStorage().ForEachChild(func(messageID hornet.MessageID, childMessageID hornet.MessageID) bool {
 		childCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -398,7 +396,7 @@ func (t *Tangle) cleanupChildren() error {
 		}
 
 		return true
-	}, objectstorage.WithIteratorSkipCache(true))
+	})
 	t.LogInfof("analyzed %d children", childCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -440,7 +438,7 @@ func (t *Tangle) cleanupIndexations() error {
 
 	lastStatusTime := time.Now()
 	var indexationCounter int64
-	t.storage.ForEachIndexation(func(indexation *storage.CachedIndexation) bool {
+	t.storage.NonCachedStorage().ForEachIndexation(func(indexation *storage.CachedIndexation) bool {
 		defer indexation.Release(true)
 
 		indexationCounter++
@@ -461,7 +459,7 @@ func (t *Tangle) cleanupIndexations() error {
 		}
 
 		return true
-	}, objectstorage.WithIteratorSkipCache(true))
+	})
 	t.LogInfof("analyzed %d indexations", indexationCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
@@ -503,7 +501,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 
 	lastStatusTime := time.Now()
 	var unreferencedTxsCounter int64
-	t.storage.ForEachUnreferencedMessage(func(msIndex milestone.Index, _ hornet.MessageID) bool {
+	t.storage.NonCachedStorage().ForEachUnreferencedMessage(func(msIndex milestone.Index, _ hornet.MessageID) bool {
 		unreferencedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -519,7 +517,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 		unreferencedMilestoneIndexes[msIndex] = struct{}{}
 
 		return true
-	}, objectstorage.WithIteratorSkipCache(true))
+	})
 	t.LogInfof("analyzed %d unreferenced messages", unreferencedTxsCounter)
 
 	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {

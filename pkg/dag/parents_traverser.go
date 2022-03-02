@@ -8,13 +8,17 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
-type ParentTraverser struct {
-	storage          *storage.Storage
-	metadataMemcache *storage.MetadataMemcache
+type ParentsTraverserInterface interface {
+	Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error
+}
+
+// ParentsTraverser can be used to walk the dag in direction of the parents (past cone).
+type ParentsTraverser struct {
+	// interface to the used storage
+	parentsTraverserStorage ParentsTraverserStorage
 
 	// stack holding the ordered msg to process
 	stack *list.List
@@ -35,43 +39,31 @@ type ParentTraverser struct {
 	traverserLock sync.Mutex
 }
 
-// NewParentTraverser create a new traverser to traverse the parents (past cone)
-func NewParentTraverser(dbStorage *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ParentTraverser {
+// NewParentsTraverser create a new traverser to traverse the parents (past cone)
+func NewParentsTraverser(parentsTraverserStorage ParentsTraverserStorage) *ParentsTraverser {
 
-	t := &ParentTraverser{
-		storage:          dbStorage,
-		metadataMemcache: storage.NewMetadataMemcache(dbStorage),
-		stack:            list.New(),
-		processed:        make(map[string]struct{}),
-		checked:          make(map[string]bool),
-	}
-
-	if len(metadataMemcache) > 0 && metadataMemcache[0] != nil {
-		// use the memcache from outside to share the same cached metadata
-		t.metadataMemcache = metadataMemcache[0]
+	t := &ParentsTraverser{
+		parentsTraverserStorage: parentsTraverserStorage,
+		stack:                   list.New(),
+		processed:               make(map[string]struct{}),
+		checked:                 make(map[string]bool),
 	}
 
 	return t
 }
 
-func (t *ParentTraverser) reset() {
+func (t *ParentsTraverser) reset() {
 
 	t.processed = make(map[string]struct{})
 	t.checked = make(map[string]bool)
 	t.stack = list.New()
 }
 
-// Cleanup releases all the cached objects that have been traversed.
-// This MUST be called by the user at the end.
-func (t *ParentTraverser) Cleanup(forceRelease bool) {
-	t.metadataMemcache.Cleanup(forceRelease)
-}
-
 // Traverse starts to traverse the parents (past cone) in the given order until
 // the traversal stops due to no more messages passing the given condition.
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func (t *ParentTraverser) Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
+func (t *ParentsTraverser) Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -109,7 +101,7 @@ func (t *ParentTraverser) Traverse(ctx context.Context, parents hornet.MessageID
 
 // processStackParents checks if the current element in the stack must be processed or traversed.
 // the paths of the parents are traversed one after another.
-func (t *ParentTraverser) processStackParents() error {
+func (t *ParentsTraverser) processStackParents() error {
 
 	if err := utils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
 		return err
@@ -128,7 +120,12 @@ func (t *ParentTraverser) processStackParents() error {
 	}
 
 	// check if the message is a solid entry point
-	if t.storage.SolidEntryPointsContain(currentMessageID) {
+	contains, err := t.parentsTraverserStorage.SolidEntryPointsContain(currentMessageID)
+	if err != nil {
+		return err
+	}
+
+	if contains {
 		if t.onSolidEntryPoint != nil {
 			t.onSolidEntryPoint(currentMessageID)
 		}
@@ -142,7 +139,11 @@ func (t *ParentTraverser) processStackParents() error {
 		}
 	}
 
-	cachedMsgMeta := t.metadataMemcache.CachedMetadataOrNil(currentMessageID) // meta +1
+	cachedMsgMeta, err := t.parentsTraverserStorage.CachedMessageMetadata(currentMessageID) // meta +1
+	if err != nil {
+		return err
+	}
+
 	if cachedMsgMeta == nil {
 		// remove the message from the stack, the parents are not traversed
 		t.processed[currentMessageIDMapKey] = struct{}{}
@@ -157,6 +158,7 @@ func (t *ParentTraverser) processStackParents() error {
 		// stop processing the stack if the caller returns an error
 		return t.onMissingParent(currentMessageID)
 	}
+	defer cachedMsgMeta.Release(true) // meta -1
 
 	traverse, checkedBefore := t.checked[currentMessageIDMapKey]
 	if !checkedBefore {

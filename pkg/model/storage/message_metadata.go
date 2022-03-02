@@ -80,6 +80,13 @@ type MessageMetadata struct {
 	parents hornet.MessageIDs
 }
 
+func NewMessageMetadata(messageID hornet.MessageID, parents hornet.MessageIDs) *MessageMetadata {
+	return &MessageMetadata{
+		messageID: messageID,
+		parents:   parents,
+	}
+}
+
 func (m *MessageMetadata) MessageID() hornet.MessageID {
 	return m.messageID
 }

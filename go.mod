@@ -9,7 +9,7 @@ replace github.com/linxGnu/grocksdb => github.com/gohornet/grocksdb v1.6.38-0.20
 require (
 	github.com/bits-and-blooms/bitset v1.2.1
 	github.com/blang/vfs v1.0.0
-	github.com/cockroachdb/pebble v0.0.0-20211202002240-4b595de954b1
+	github.com/cockroachdb/pebble v0.0.0-20220224165957-0e0d279abe38
 	github.com/docker/docker v20.10.11+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dustin/go-humanize v1.0.0
@@ -18,11 +18,11 @@ require (
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/gorilla/websocket v1.4.2
+	github.com/gorilla/websocket v1.5.0
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20211125083540-7ba1c9edcba9
-	github.com/iotaledger/hive.go v0.0.0-20211207105259-9e48241c18f7
+	github.com/iotaledger/hive.go v0.0.0-20220224183128-91c7be21f068
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v2 v2.0.1-0.20211018071144-edf83a5ab704
+	github.com/iotaledger/iota.go/v2 v2.0.2-0.20220225080023-871c779a63cb
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger v0.3.0
 	github.com/labstack/echo/v4 v4.6.1
@@ -43,7 +43,7 @@ require (
 	github.com/wollac/iota-crypto-demo v0.0.0-20211124150533-68dd13b59838
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.13.0
-	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
 	golang.org/x/net v0.0.0-20211206223403-eba003a116a9
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11
@@ -54,6 +54,7 @@ require (
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/DataDog/zstd v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
+	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
 	github.com/Shopify/sarama v1.30.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -120,7 +121,7 @@ require (
 	github.com/karrick/godirwalk v1.16.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
-	github.com/knadh/koanf v1.3.3 // indirect
+	github.com/knadh/koanf v1.4.0 // indirect
 	github.com/koron/go-ssdp v0.0.2 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -157,7 +158,7 @@ require (
 	github.com/libp2p/go-tcp-transport v0.4.0 // indirect
 	github.com/libp2p/go-ws-transport v0.5.0 // indirect
 	github.com/libp2p/go-yamux/v2 v2.3.0 // indirect
-	github.com/linxGnu/grocksdb v1.6.42 // indirect
+	github.com/linxGnu/grocksdb v1.6.46 // indirect
 	github.com/lucas-clemente/quic-go v0.24.0 // indirect
 	github.com/markbates/errx v1.1.0 // indirect
 	github.com/markbates/oncer v1.0.0 // indirect
@@ -194,7 +195,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/panjf2000/ants/v2 v2.4.7 // indirect
+	github.com/panjf2000/ants/v2 v2.4.8 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
@@ -221,7 +222,7 @@ require (
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
-	go.uber.org/zap v1.19.1 // indirect
+	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/exp v0.0.0-20211129234152-8a230f1f7d7a // indirect
 	golang.org/x/mod v0.6.0-dev.0.20211013180041-c96bc1413d57 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect

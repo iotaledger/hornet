@@ -1,9 +1,10 @@
 package participation_test
 
 import (
-	"errors"
 	"math/rand"
 	"testing"
+
+	"github.com/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
 
