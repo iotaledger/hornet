@@ -157,7 +157,7 @@ type OutputResponse struct {
 	// The ledger index at which this output was available at.
 	LedgerIndex milestone.Index `json:"ledgerIndex"`
 	// The output in its serialized form.
-	RawOutput *json.RawMessage `json:"output"`
+	RawOutput *json.RawMessage `json:"output,omitempty"`
 }
 
 // addressBalanceResponse defines the response of a GET addresses REST API call.

@@ -94,7 +94,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 
 func CreateOutputAndAssertSerialization(t *testing.T, messageID hornet.MessageID, msIndex milestone.Index, msTimestamp uint64, outputID *iotago.OutputID, iotaOutput iotago.Output) *Output {
 	output := CreateOutput(outputID, messageID, msIndex, msTimestamp, iotaOutput)
-	outputBytes, err := output.Output().Serialize(serializer.DeSeriModeNoValidation, nil)
+	outputBytes, err := output.Output().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	require.NoError(t, err)
 
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:]), output.kvStorableKey())

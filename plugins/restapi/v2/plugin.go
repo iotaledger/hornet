@@ -42,7 +42,7 @@ const (
 	// GET returns message metadata (including info about "promotion/reattachment needed").
 	RouteMessageMetadata = "/messages/:" + restapipkg.ParameterMessageID + "/metadata"
 
-	// RouteMessageBytes is the route for getting message raw data by it's messageID.
+	// RouteMessageBytes is the route for getting message raw data by its messageID.
 	// GET returns raw message data (bytes).
 	RouteMessageBytes = "/messages/:" + restapipkg.ParameterMessageID + "/raw"
 
@@ -58,7 +58,7 @@ const (
 	// GET returns message data (json).
 	RouteTransactionsIncludedMessage = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-message"
 
-	// RouteMilestone is the route for getting a milestone by it's milestoneIndex.
+	// RouteMilestone is the route for getting a milestone by its milestoneIndex.
 	// GET returns the milestone.
 	RouteMilestone = "/milestones/:" + restapipkg.ParameterMilestoneIndex
 
@@ -66,9 +66,17 @@ const (
 	// GET returns the output IDs of all UTXO changes.
 	RouteMilestoneUTXOChanges = "/milestones/:" + restapipkg.ParameterMilestoneIndex + "/utxo-changes"
 
-	// RouteOutput is the route for getting outputs by their outputID (transactionHash + outputIndex).
+	// RouteOutput is the route for getting an output by its outputID (transactionHash + outputIndex).
 	// GET returns the output.
 	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
+
+	// RouteOutputMetadata is the route for getting output metadata by its outputID (transactionHash + outputIndex) without getting the data again.
+	// GET returns the output metadata.
+	RouteOutputMetadata = "/outputs/:" + restapipkg.ParameterOutputID + "/metadata"
+
+	// RouteOutputBytes is the route for getting output raw data by its outputID (transactionHash + outputIndex).
+	// GET returns the raw output data (bytes).
+	RouteOutputBytes = "/outputs/:" + restapipkg.ParameterOutputID + "/raw"
 
 	// RouteTreasury is the route for getting the current treasury output.
 	RouteTreasury = "/treasury"
@@ -234,7 +242,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -243,7 +250,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -252,17 +258,31 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
-		resp, err := outputByID(c)
+		resp, err := outputByID(c, false)
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteOutputMetadata, func(c echo.Context) error {
+		resp, err := outputByID(c, true)
+		if err != nil {
+			return err
+		}
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteOutputBytes, func(c echo.Context) error {
+		resp, err := rawOutputByID(c)
+		if err != nil {
+			return err
+		}
+		return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
 	})
 
 	routeGroup.GET(RouteTreasury, func(c echo.Context) error {
@@ -270,7 +290,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -279,7 +298,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -288,7 +306,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -297,7 +314,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -305,7 +321,6 @@ func configure() {
 		if err := removePeer(c); err != nil {
 			return err
 		}
-
 		return c.NoContent(http.StatusNoContent)
 	})
 
@@ -314,7 +329,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -323,7 +337,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -332,7 +345,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
@@ -341,7 +353,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 }
