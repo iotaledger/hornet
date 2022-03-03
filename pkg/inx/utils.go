@@ -1,32 +1,39 @@
 package inx
 
 import (
+	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/pkg/errors"
 )
-
-// Request & Response
-
-func SubmitMessageRequestWithMessage(msg *iotago.Message) (*SubmitMessageRequest, error) {
-	wrapped, err := WrapMessage(msg)
-	if err != nil {
-		return nil, err
-	}
-	return &SubmitMessageRequest{
-		Message: wrapped,
-	}, nil
-}
-
-func (x *SubmitMessageResponse) UnwrapMessageID() hornet.MessageID {
-	return hornet.MessageIDFromSlice(x.GetMessageId())
-}
 
 // Message
 
+func WrapMessage(msg *iotago.Message) (*RawMessage, error) {
+	bytes, err := msg.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	if err != nil {
+		return nil, err
+	}
+	return &RawMessage{
+		Data: bytes,
+	}, nil
+}
+
+func (x *RawMessage) UnwrapMessage(deSeriMode serializer.DeSerializationMode) (*iotago.Message, error) {
+	msg := &iotago.Message{}
+	if _, err := msg.Deserialize(x.GetData(), deSeriMode, iotago.ZeroRentParas); err != nil {
+		return nil, err
+	}
+	return msg, nil
+}
+
+func (x *MessageId) Unwrap() hornet.MessageID {
+	return hornet.MessageIDFromSlice(x.GetId())
+}
+
 func (x *Message) UnwrapMessageID() hornet.MessageID {
-	return hornet.MessageIDFromSlice(x.GetMessageId())
+	return x.GetMessageId().Unwrap()
 }
 
 func (x *Message) UnwrapMessage(deSeriMode serializer.DeSerializationMode) (*iotago.Message, error) {
@@ -42,61 +49,27 @@ func (x *Message) MustUnwrapMessage(deSeriMode serializer.DeSerializationMode) *
 }
 
 func (x *MessageMetadata) UnwrapMessageID() hornet.MessageID {
-	return hornet.MessageIDFromSlice(x.GetMessageId())
+	return x.GetMessageId().Unwrap()
 }
 
 // Ledger
 
-func (x *LedgerOutput) UnwrapOutputID() *iotago.OutputID {
+func (x *OutputId) Unwrap() *iotago.OutputID {
 	id := &iotago.OutputID{}
-	copy(id[:], x.GetOutputId())
+	copy(id[:], x.GetId())
 	return id
+}
+
+func (x *LedgerOutput) UnwrapOutputID() *iotago.OutputID {
+	return x.OutputId.Unwrap()
 }
 
 func (x *LedgerOutput) UnwrapMessageID() hornet.MessageID {
-	return hornet.MessageIDFromSlice(x.GetMessageId())
+	return x.MessageId.Unwrap()
 }
 
 func (x *LedgerOutput) UnwrapOutput(deSeriMode serializer.DeSerializationMode) (iotago.Output, error) {
-	return x.Output.UnwrapOutput(deSeriMode)
-}
-
-func (x *LedgerOutput) MustUnwrapOutput(deSeriMode serializer.DeSerializationMode) iotago.Output {
-	output, err := x.Output.UnwrapOutput(deSeriMode)
-	if err != nil {
-		panic(err)
-	}
-	return output
-}
-
-func (x *LedgerSpent) UnwrapTargetTransactionID() *iotago.TransactionID {
-	id := &iotago.TransactionID{}
-	copy(id[:], x.GetTargetTransactionId())
-	return id
-}
-
-// Raw bytes
-
-func WrapMessage(msg *iotago.Message) (*Raw, error) {
-	bytes, err := msg.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
-	if err != nil {
-		return nil, err
-	}
-	return &Raw{
-		Data: bytes,
-	}, nil
-}
-
-func (x *Raw) UnwrapMessage(deSeriMode serializer.DeSerializationMode) (*iotago.Message, error) {
-	msg := &iotago.Message{}
-	if _, err := msg.Deserialize(x.GetData(), deSeriMode, iotago.ZeroRentParas); err != nil {
-		return nil, err
-	}
-	return msg, nil
-}
-
-func (x *Raw) UnwrapOutput(deSeriMode serializer.DeSerializationMode) (iotago.Output, error) {
-	data := x.GetData()
+	data := x.GetOutput()
 	if len(data) == 0 {
 		return nil, errors.New("invalid output length")
 	}
@@ -111,4 +84,38 @@ func (x *Raw) UnwrapOutput(deSeriMode serializer.DeSerializationMode) (iotago.Ou
 		return nil, err
 	}
 	return output, nil
+}
+
+func (x *LedgerOutput) MustUnwrapOutput(deSeriMode serializer.DeSerializationMode) iotago.Output {
+	output, err := x.UnwrapOutput(deSeriMode)
+	if err != nil {
+		panic(err)
+	}
+	return output
+}
+
+func (x *LedgerSpent) UnwrapTargetTransactionID() *iotago.TransactionID {
+	id := &iotago.TransactionID{}
+	copy(id[:], x.GetTargetTransactionId())
+	return id
+}
+
+// Milestones
+
+func WrapReceipt(receipt *iotago.Receipt) (*RawReceipt, error) {
+	bytes, err := receipt.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	if err != nil {
+		return nil, err
+	}
+	return &RawReceipt{
+		Data: bytes,
+	}, nil
+}
+
+func (x *RawReceipt) UnwrapReceipt(deSeriMode serializer.DeSerializationMode) (*iotago.Receipt, error) {
+	r := &iotago.Receipt{}
+	if _, err := r.Deserialize(x.GetData(), deSeriMode, iotago.ZeroRentParas); err != nil {
+		return nil, err
+	}
+	return r, nil
 }

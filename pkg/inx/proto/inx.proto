@@ -4,58 +4,81 @@ package inx;
 option go_package = "github.com/gohornet/pkg/inx";
 
 service INX {
-
+  // Milestones
   rpc ReadNodeStatus(NoParams) returns (NodeStatus);
+  rpc ReadMilestone(MilestoneRequest) returns (Milestone);
+  rpc ListenToLatestMilestone(NoParams) returns (stream Milestone);
+  rpc ListenToConfirmedMilestone(NoParams) returns (stream Milestone);
 
   // Messages
   rpc ListenToMessages(MessageFilter) returns (stream Message);
+  rpc ListenToSolidMessages(MessageFilter) returns (stream MessageMetadata);
   rpc ListenToReferencedMessages(MessageFilter) returns (stream MessageMetadata);
-  rpc SubmitMessage(SubmitMessageRequest) returns (SubmitMessageResponse);
+  rpc SubmitMessage(RawMessage) returns (MessageId);
+  rpc ReadMessage(MessageId) returns (RawMessage);
+  rpc ReadMessageMetadata(MessageId) returns (MessageMetadata);
 
   // UTXO
   rpc ReadUnspentOutputs(NoParams) returns (stream LedgerOutput);
   rpc ListenToLedgerUpdates(LedgerUpdateRequest) returns (stream LedgerUpdate);
+  rpc ReadOutput(OutputId) returns (OutputResponse);
+  rpc ListenToMigrationReceipts(NoParams) returns (stream RawReceipt);
 
   // REST API
   rpc RegisterAPIRoute(APIRouteRequest) returns (NoParams);
   rpc UnregisterAPIRoute(APIRouteRequest) returns (NoParams);
-
 }
 
 message NoParams {}
 
+// Milestones
+message NodeStatus {
+  uint32 latestMilestoneIndex = 1;
+  uint32 confirmedMilestoneIndex = 2;
+  uint32 pruningIndex = 3;
+  uint32 ledgerIndex = 4;
+}
+
+message MilestoneRequest {
+  uint32 milestoneIndex = 1;
+}
+
+message Milestone {
+  uint32 milestoneIndex = 1;
+  uint32 milestoneTimestamp = 2;
+  MessageId messageId = 3;
+}
+
+// Messages
 message MessageFilter {
   //TODO
 }
 
-message SubmitMessageRequest {
-  Raw message = 1;
-}
-
-message SubmitMessageResponse {
-  bytes messageId = 1;
-}
-
-message Raw {
+message RawMessage {
   bytes data = 1;
 }
 
+message MessageId {
+  bytes id = 1;
+}
+
 message Message {
-  bytes messageId = 1;
-  Raw message = 2;
+  MessageId messageId = 1;
+  RawMessage message = 2;
 }
 
 message MessageMetadata {
-  bytes messageId = 1;
+  MessageId messageId = 1;
   repeated bytes parents = 2;
-  uint32 referencedByMilestoneIndex = 3;
-  uint32 milestoneIndex = 4;
+  bool solid = 3;
+  uint32 referencedByMilestoneIndex = 4;
+  uint32 milestoneIndex = 5;
   enum LedgerInclusionState {
     NO_TRANSACTION = 0;
     INCLUDED = 1;
     CONFLICTING = 2;
   }
-  LedgerInclusionState ledgerInclusionState = 5;
+  LedgerInclusionState ledgerInclusionState = 6;
   enum ConflictReason {
     NONE = 0;
     INPUT_ALREADY_SPENT = 1;
@@ -66,15 +89,27 @@ message MessageMetadata {
     INVALID_NETWORK_ID = 6;
     SEMANTIC_VALIDATION_FAILED = 255;
   }
-  ConflictReason conflictReason = 6;
+  ConflictReason conflictReason = 7;
+}
+
+// UTXO
+message OutputId {
+  bytes id = 1;
+}
+
+message OutputResponse {
+  oneof payload {
+    LedgerOutput output = 1;
+    LedgerSpent spent = 2;
+  }
 }
 
 message LedgerOutput {
-  bytes outputId = 1;
-  bytes messageId = 2;
+  OutputId outputId = 1;
+  MessageId messageId = 2;
   uint32 milestoneIndex = 3;
   uint32 milestoneTimestamp = 4;
-  Raw output = 5;
+  bytes output = 5;
 }
 
 message LedgerSpent {
@@ -82,13 +117,6 @@ message LedgerSpent {
   bytes targetTransactionId = 2;
   uint32 spentMilestoneIndex = 3;
   uint32 spentMilestoneTimestamp = 4;
-}
-
-message NodeStatus {
-  uint32 latestMilestoneIndex = 1;
-  uint32 confirmedMilestoneIndex = 2;
-  uint32 pruningIndex = 3;
-  uint32 ledgerIndex = 4;
 }
 
 message LedgerUpdateRequest {
@@ -101,6 +129,11 @@ message LedgerUpdate {
   repeated LedgerSpent consumed = 3;
 }
 
+message RawReceipt {
+  bytes data = 1;
+}
+
+// REST API
 message APIRouteRequest {
   string route = 1;
   string host = 2;
