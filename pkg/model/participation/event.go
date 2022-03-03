@@ -24,7 +24,7 @@ const (
 )
 
 // EventID is the ID of an event.
-type EventID = [EventIDLength]byte
+type EventID [EventIDLength]byte
 
 var (
 	NullEventID = EventID{}
@@ -49,6 +49,10 @@ var (
 		},
 	}
 )
+
+func (eventID EventID) ToHex() string {
+	return iotago.EncodeHex(eventID[:])
+}
 
 // PayloadSelector implements SerializableSelectorFunc for payload types.
 func PayloadSelector(payloadType uint32) (serializer.Serializable, error) {

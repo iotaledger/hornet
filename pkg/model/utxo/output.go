@@ -111,7 +111,7 @@ func (o *Output) kvStorableValue() (value []byte) {
 	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
 	ms.WriteUint32(o.milestoneTimestamp)     // 4 bytes
 
-	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
+	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	if err != nil {
 		panic(err)
 	}
@@ -163,7 +163,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	if err != nil {
 		return err
 	}
-	_, err = o.output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, nil)
+	_, err = o.output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	if err != nil {
 		return err
 	}
@@ -195,6 +195,21 @@ func (u *Manager) ReadOutputByOutputIDWithoutLocking(outputID *iotago.OutputID) 
 		return nil, err
 	}
 	return output, nil
+}
+
+func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID *iotago.OutputID) ([]byte, error) {
+	key := outputStorageKeyForOutputID(outputID)
+	value, err := u.utxoStorage.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	// messageID + milestoneIndex + milestoneTimestamp
+	offset := iotago.MessageIDLength + serializer.UInt32ByteSize + serializer.UInt32ByteSize
+	if len(value) <= offset {
+		return nil, errors.New("invalid UTXO output length")
+	}
+	return value[offset:], nil
 }
 
 func (u *Manager) ReadOutputByOutputID(outputID *iotago.OutputID) (*Output, error) {
