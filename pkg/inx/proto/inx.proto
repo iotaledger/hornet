@@ -19,7 +19,7 @@ service INX {
   rpc ReadMessageMetadata(MessageId) returns (MessageMetadata);
 
   // UTXO
-  rpc ReadUnspentOutputs(NoParams) returns (stream LedgerOutput);
+  rpc ReadUnspentOutputs(NoParams) returns (stream UnspentOutput);
   rpc ListenToLedgerUpdates(LedgerUpdateRequest) returns (stream LedgerUpdate);
   rpc ReadOutput(OutputId) returns (OutputResponse);
   rpc ListenToMigrationReceipts(NoParams) returns (stream RawReceipt);
@@ -102,6 +102,11 @@ message OutputResponse {
     LedgerOutput output = 1;
     LedgerSpent spent = 2;
   }
+}
+
+message UnspentOutput {
+  uint32 ledgerIndex = 1;
+  LedgerOutput output = 2;
 }
 
 message LedgerOutput {

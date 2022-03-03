@@ -87,7 +87,7 @@ func fillIndexer(client inx.INXClient, indexer *indexerpkg.Indexer) error {
 	if err != nil {
 		panic(err)
 	}
-	var highestMilestoneIndex milestone.Index
+	var ledgerIndex milestone.Index
 	for {
 		message, err := stream.Recv()
 		if err == io.EOF {
@@ -96,23 +96,25 @@ func fillIndexer(client inx.INXClient, indexer *indexerpkg.Indexer) error {
 		if err != nil {
 			return err
 		}
-		iotaOutput, err := message.UnwrapOutput(serializer.DeSeriModeNoValidation)
+
+		ledgerOutput := message.GetOutput()
+		iotaOutput, err := ledgerOutput.UnwrapOutput(serializer.DeSeriModeNoValidation)
 		if err != nil {
 			return err
 		}
-		outputMilestoneIndex := milestone.Index(message.GetMilestoneIndex())
-		output := utxo.CreateOutput(message.UnwrapOutputID(), message.UnwrapMessageID(), outputMilestoneIndex, uint64(message.GetMilestoneTimestamp()), iotaOutput)
+		outputMilestoneIndex := milestone.Index(message.GetLedgerIndex())
+		output := utxo.CreateOutput(ledgerOutput.UnwrapOutputID(), ledgerOutput.UnwrapMessageID(), outputMilestoneIndex, uint64(ledgerOutput.GetMilestoneTimestamp()), iotaOutput)
 		if err := importer.AddOutput(output); err != nil {
 			return err
 		}
-		if outputMilestoneIndex > highestMilestoneIndex {
-			highestMilestoneIndex = outputMilestoneIndex
+		if outputMilestoneIndex > ledgerIndex {
+			ledgerIndex = outputMilestoneIndex
 		}
 	}
-	if err := importer.Finalize(highestMilestoneIndex); err != nil {
+	if err := importer.Finalize(ledgerIndex); err != nil {
 		return err
 	}
-	fmt.Printf("Imported initial ledger at index %d\n", highestMilestoneIndex)
+	fmt.Printf("Imported initial ledger at index %d\n", ledgerIndex)
 	return nil
 }
 
@@ -212,8 +214,8 @@ func main() {
 		fmt.Printf("Error: %s\n", err)
 		return
 	}
-	if milestone.Index(resp.GetPruningIndex()) < ledgerIndex {
-		fmt.Println("Node has an older pruning index than our current ledgerIndex, so re-import initial ledger")
+	if milestone.Index(resp.GetPruningIndex()) > ledgerIndex {
+		fmt.Println("Node has an newer pruning index than our current ledgerIndex, so re-import initial ledger")
 		if err := indexer.Clear(); err != nil {
 			fmt.Printf("Error: %s\n", err)
 			return

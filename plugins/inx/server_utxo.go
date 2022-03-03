@@ -60,12 +60,21 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
 
+	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+	if err != nil {
+		return err
+	}
+
 	var innerErr error
-	err := deps.UTXOManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
-		payload, err := inx.NewLedgerOutput(output)
+	err = deps.UTXOManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
+		ledgerOutput, err := inx.NewLedgerOutput(output)
 		if err != nil {
 			innerErr = err
 			return false
+		}
+		payload := &inx.UnspentOutput{
+			LedgerIndex: uint32(ledgerIndex),
+			Output:      ledgerOutput,
 		}
 		if err := srv.Send(payload); err != nil {
 			innerErr = err

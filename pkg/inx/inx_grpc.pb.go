@@ -269,7 +269,7 @@ func (c *iNXClient) ReadUnspentOutputs(ctx context.Context, in *NoParams, opts .
 }
 
 type INX_ReadUnspentOutputsClient interface {
-	Recv() (*LedgerOutput, error)
+	Recv() (*UnspentOutput, error)
 	grpc.ClientStream
 }
 
@@ -277,8 +277,8 @@ type iNXReadUnspentOutputsClient struct {
 	grpc.ClientStream
 }
 
-func (x *iNXReadUnspentOutputsClient) Recv() (*LedgerOutput, error) {
-	m := new(LedgerOutput)
+func (x *iNXReadUnspentOutputsClient) Recv() (*UnspentOutput, error) {
+	m := new(UnspentOutput)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -672,7 +672,7 @@ func _INX_ReadUnspentOutputs_Handler(srv interface{}, stream grpc.ServerStream) 
 }
 
 type INX_ReadUnspentOutputsServer interface {
-	Send(*LedgerOutput) error
+	Send(*UnspentOutput) error
 	grpc.ServerStream
 }
 
@@ -680,7 +680,7 @@ type iNXReadUnspentOutputsServer struct {
 	grpc.ServerStream
 }
 
-func (x *iNXReadUnspentOutputsServer) Send(m *LedgerOutput) error {
+func (x *iNXReadUnspentOutputsServer) Send(m *UnspentOutput) error {
 	return x.ServerStream.SendMsg(m)
 }
 
