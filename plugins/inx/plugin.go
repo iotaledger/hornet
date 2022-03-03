@@ -24,7 +24,7 @@ import (
 
 func init() {
 	Plugin = &node.Plugin{
-		Status: node.StatusEnabled,
+		Status: node.StatusDisabled,
 		Pluggable: node.Pluggable{
 			Name:      "INX",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
