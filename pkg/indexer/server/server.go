@@ -1,9 +1,10 @@
 package indexer_server
 
 import (
+	"github.com/labstack/echo/v4"
+
 	"github.com/gohornet/hornet/pkg/indexer"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/labstack/echo/v4"
 )
 
 type IndexerServer struct {
