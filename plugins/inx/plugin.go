@@ -126,9 +126,10 @@ func loadExtensions() {
 
 func startExtensions() {
 	for _, e := range extensions {
+		ext := e
 		go func() {
-			Plugin.LogInfof("Starting INX extension: %s", e.Name)
-			err := e.Start()
+			Plugin.LogInfof("Starting INX extension: %s", ext.Name)
+			err := ext.Start()
 			if err != nil {
 				Plugin.LogErrorf("INX extension ended with error: %s", err)
 			}
