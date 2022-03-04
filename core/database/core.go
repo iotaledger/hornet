@@ -28,9 +28,10 @@ const (
 	CfgTangleDeleteDatabase = "deleteDatabase"
 	// whether to delete the database and snapshots at startup
 	CfgTangleDeleteAll = "deleteAll"
-
+	// subfolder for the tangle database
 	TangleDatabaseDirectoryName = "tangle"
-	UTXODatabaseDirectoryName   = "utxo"
+	// subfolder for the UTXO database
+	UTXODatabaseDirectoryName = "utxo"
 )
 
 func init() {
