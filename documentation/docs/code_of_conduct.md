@@ -1,11 +1,12 @@
 ---
+description: Contributors code of conduct.  
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node 
 - Hornet Node
 - conduct
 - code
-description: Contributors code of conduct.  
-image: /img/logo/HornetLogo.png
+- reference
 ---
 
 # Contributor Covenant Code of Conduct
@@ -44,18 +45,18 @@ Examples of unacceptable behavior by participants include:
   advances.
 - Trolling, insulting/derogatory comments, and personal or political attacks.
 - Public or private harassment.
-- Publishing others' private information, such as a physical or electronic  address, without explicit permission.
-- Other conduct which could reasonably be considered inappropriate in a  professional setting.
+- Publishing others' private information, such as a physical or electronic address, without explicit permission.
+- Other conduct which could reasonably be considered inappropriate in a professional setting.
 
 ## Our Responsibilities
 
-Project maintainers are responsible for clarifying the standards of acceptable behavior, and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behavior.
+Project maintainers are responsible for clarifying the standards of acceptable behavior and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behavior.
 
 Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct. Project maintainers may temporarily or permanently ban any contributor for other behaviors that they deem inappropriate, threatening, offensive, or harmful.
 
 ## Scope
 
-This Code of Conduct applies within all project spaces.  It also applies when an individual is representing the project or its community in public spaces. Examples of representing a project or community include:
+This Code of Conduct applies within all project spaces. It also applies when an individual is representing the project or its community in public spaces. Examples of representing a project or community include:
   - Using an official project e-mail address.
   - Posting via an official social media account.
   - Acting as an appointed representative at an online or offline event.
@@ -66,7 +67,7 @@ Project maintainers may further define and clarify what is meant by representati
 
 You may report instances of abusive, harassing, or otherwise unacceptable behavior by contacting the project team at [hornet@iotmod.de](mailto:hornet@iotmod.de). 
 
-All complaints will be reviewed, investigated, and will result in a response that  is deemed necessary and appropriate to the circumstances. The project team is obligated to maintain confidentiality with regards to the reporter of an incident.  Project maintainers may post details of specific enforcement policies may separately.
+All complaints will be reviewed, investigated, and will result in a response that is deemed necessary and appropriate to the circumstances. The project team is obligated to maintain confidentiality with regards to the reporter of an incident. Project maintainers may post details of specific enforcement policies may separately.
 
 Project maintainers who do not follow or enforce the Code of Conduct in good faith may face temporary or permanent repercussions as determined by other members of the project's leadership.
 
