@@ -112,6 +112,9 @@ func loadExtensions() {
 		return
 	}
 	files, err := ioutil.ReadDir(INXPath)
+	if err != nil {
+		return
+	}
 	for _, f := range files {
 		if f.IsDir() {
 			extension, err := NewExtension(filepath.Join(INXPath, f.Name()))
