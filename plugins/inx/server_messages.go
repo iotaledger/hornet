@@ -3,17 +3,78 @@ package inx
 import (
 	"context"
 
+	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/inx"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
 )
+
+func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.MessageMetadata) (*inx.MessageMetadata, error) {
+	m := &inx.MessageMetadata{
+		MessageId: inx.NewMessageId(messageID),
+		Parents:   metadata.Parents().ToSliceOfSlices(),
+		Solid:     metadata.IsSolid(),
+	}
+
+	referenced, msIndex := metadata.ReferencedWithIndex()
+	if referenced {
+		m.ReferencedByMilestoneIndex = uint32(msIndex)
+		inclusionState := inx.MessageMetadata_NO_TRANSACTION
+		conflict := metadata.Conflict()
+		if conflict != storage.ConflictNone {
+			inclusionState = inx.MessageMetadata_CONFLICTING
+			m.ConflictReason = inx.MessageMetadata_ConflictReason(conflict)
+		} else if metadata.IsIncludedTxInLedger() {
+			inclusionState = inx.MessageMetadata_INCLUDED
+		}
+		m.LedgerInclusionState = inclusionState
+
+		if metadata.IsMilestone() {
+			m.MilestoneIndex = uint32(msIndex)
+		}
+	} else if metadata.IsSolid() {
+		// determine info about the quality of the tip if not referenced
+		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
+
+		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), messageID, cmi)
+		if err != nil {
+			if errors.Is(err, common.ErrOperationAborted) {
+				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
+			}
+			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+		}
+
+		shouldPromote := false
+		shouldReattach := false
+
+		switch tipScore {
+		case tangle.TipScoreNotFound:
+			return nil, errors.WithMessage(echo.ErrInternalServerError, "tip score could not be calculated")
+		case tangle.TipScoreOCRIThresholdReached, tangle.TipScoreYCRIThresholdReached:
+			shouldPromote = true
+			shouldReattach = false
+		case tangle.TipScoreBelowMaxDepth:
+			shouldPromote = false
+			shouldReattach = true
+		}
+
+		m.ShouldPromote = shouldPromote
+		m.ShouldReattach = shouldReattach
+	}
+
+	return m, nil
+}
 
 func (s *INXServer) ReadMessage(_ context.Context, messageID *inx.MessageId) (*inx.RawMessage, error) {
 	cachedMsg := deps.Storage.CachedMessageOrNil(messageID.Unwrap())
@@ -30,7 +91,7 @@ func (s *INXServer) ReadMessageMetadata(_ context.Context, messageID *inx.Messag
 		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", messageID.Unwrap().ToHex())
 	}
 	defer cachedMsgMeta.Release(true)
-	return inx.NewMessageMetadata(cachedMsgMeta.Metadata().MessageID(), cachedMsgMeta.Metadata()), nil
+	return INXNewMessageMetadata(cachedMsgMeta.Metadata().MessageID(), cachedMsgMeta.Metadata())
 }
 
 func (s *INXServer) ListenToMessages(filter *inx.MessageFilter, srv inx.INX_ListenToMessagesServer) error {
@@ -64,7 +125,12 @@ func (s *INXServer) ListenToSolidMessages(filter *inx.MessageFilter, srv inx.INX
 		msgMeta := task.Param(0).(*storage.CachedMetadata)
 		defer msgMeta.Release(true)
 
-		payload := inx.NewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		payload, err := INXNewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		if err != nil {
+			Plugin.LogInfof("Send error: %v", err)
+			cancel()
+			return
+		}
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -89,7 +155,12 @@ func (s *INXServer) ListenToReferencedMessages(filter *inx.MessageFilter, srv in
 		msgMeta := task.Param(0).(*storage.CachedMetadata)
 		defer msgMeta.Release(true)
 
-		payload := inx.NewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		payload, err := INXNewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		if err != nil {
+			Plugin.LogInfof("Send error: %v", err)
+			cancel()
+			return
+		}
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()

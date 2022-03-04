@@ -305,7 +305,6 @@ func DefaultRestAPIConfig() RestAPIConfig {
 		BindAddress: "0.0.0.0:14265",
 		PublicRoutes: []string{
 			"/health",
-			"/mqtt",
 			"/api/v2/*",
 			"/api/plugins/*",
 		},

@@ -6,7 +6,6 @@
     },
     "publicRoutes": [
       "/health",
-      "/mqtt",
       "/api/v2/info",
       "/api/v2/tips",
       "/api/v2/messages*",
@@ -18,7 +17,7 @@
       "/api/v2/receipts*",
       "/api/plugins/debug/v1/*",
       "/api/plugins/indexer/v1/*",
-      "/api/plugins/inx-indexer/v1/*",
+      "/api/plugins/inx-*",
       "/api/plugins/participation/v1/events*",
       "/api/plugins/participation/v1/outputs*",
       "/api/plugins/participation/v1/addresses*"
@@ -195,7 +194,6 @@
     "restAPIMetrics": true,
     "migrationMetrics": true,
     "coordinatorMetrics": true,
-    "mqttBrokerMetrics": true,
     "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,

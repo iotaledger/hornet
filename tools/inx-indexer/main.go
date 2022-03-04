@@ -35,8 +35,8 @@ const (
 func ConvertINXOutput(output *inx.LedgerOutput) (*utxo.Output, error) {
 	outputID := output.UnwrapOutputID()
 	messageID := output.UnwrapMessageID()
-	milestoneIndex := milestone.Index(output.GetMilestoneIndex())
-	milestoneTimestamp := uint64(output.GetMilestoneTimestamp())
+	milestoneIndex := milestone.Index(output.GetMilestoneIndexBooked())
+	milestoneTimestamp := uint64(output.GetMilestoneTimestampBooked())
 	o, err := output.UnwrapOutput(serializer.DeSeriModePerformValidation)
 	if err != nil {
 		return nil, err
@@ -50,9 +50,9 @@ func ConvertINXSpent(spent *inx.LedgerSpent) (*utxo.Spent, error) {
 	if err != nil {
 		return nil, err
 	}
-	targetTransactionID := spent.UnwrapTargetTransactionID()
-	milestoneIndex := milestone.Index(spent.GetSpentMilestoneIndex())
-	milestoneTimestamp := uint64(spent.GetSpentMilestoneTimestamp())
+	targetTransactionID := spent.UnwrapTransactionIDSpent()
+	milestoneIndex := milestone.Index(spent.GetMilestoneIndexSpent())
+	milestoneTimestamp := uint64(spent.GetMilestoneTimestampSpent())
 
 	return utxo.NewSpent(output, targetTransactionID, milestoneIndex, milestoneTimestamp), nil
 }
@@ -102,13 +102,13 @@ func fillIndexer(client inx.INXClient, indexer *indexerpkg.Indexer) error {
 		if err != nil {
 			return err
 		}
-		outputMilestoneIndex := milestone.Index(message.GetLedgerIndex())
-		output := utxo.CreateOutput(ledgerOutput.UnwrapOutputID(), ledgerOutput.UnwrapMessageID(), outputMilestoneIndex, uint64(ledgerOutput.GetMilestoneTimestamp()), iotaOutput)
+		outputLedgerIndex := milestone.Index(message.GetLedgerIndex())
+		output := utxo.CreateOutput(ledgerOutput.UnwrapOutputID(), ledgerOutput.UnwrapMessageID(), milestone.Index(ledgerOutput.GetMilestoneIndexBooked()), uint64(ledgerOutput.GetMilestoneTimestampBooked()), iotaOutput)
 		if err := importer.AddOutput(output); err != nil {
 			return err
 		}
-		if outputMilestoneIndex > ledgerIndex {
-			ledgerIndex = outputMilestoneIndex
+		if outputLedgerIndex > ledgerIndex {
+			ledgerIndex = outputLedgerIndex
 		}
 	}
 	if err := importer.Finalize(ledgerIndex); err != nil {

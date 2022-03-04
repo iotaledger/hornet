@@ -1,8 +1,6 @@
 package v2
 
 import (
-	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/utils"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -11,10 +9,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/restapi"
+	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -76,7 +75,8 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
-		ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi)
+
+		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), cachedMsgMeta.Metadata().MessageID(), cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
@@ -84,22 +84,18 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
-		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
 		shouldPromote := false
 		shouldReattach := false
 
-		if (cmi - ocri) > milestone.Index(deps.BelowMaxDepth) {
-			// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
+		switch tipScore {
+		case tangle.TipScoreNotFound:
+			return nil, errors.WithMessage(echo.ErrInternalServerError, "tip score could not be calculated")
+		case tangle.TipScoreOCRIThresholdReached, tangle.TipScoreYCRIThresholdReached:
+			shouldPromote = true
+			shouldReattach = false
+		case tangle.TipScoreBelowMaxDepth:
 			shouldPromote = false
 			shouldReattach = true
-		} else if (cmi - ycri) > milestone.Index(deps.MaxDeltaMsgYoungestConeRootIndexToCMI) {
-			// if the CMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy and should be promoted
-			shouldPromote = true
-			shouldReattach = false
-		} else if (cmi - ocri) > milestone.Index(deps.MaxDeltaMsgOldestConeRootIndexToCMI) {
-			// if the OCRI to CMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy and should be promoted
-			shouldPromote = true
-			shouldReattach = false
 		}
 
 		messageMetadataResponse.ShouldPromote = &shouldPromote

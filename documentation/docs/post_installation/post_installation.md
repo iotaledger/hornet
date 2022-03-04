@@ -121,7 +121,6 @@ You can find the HTTP REST API related options in the  `restAPI` section within 
     },
     "publicRoutes": [
       "/health",
-      "/mqtt",
       "/api/v2/info",
       "/api/v2/tips",
       "/api/v2/messages*",

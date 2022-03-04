@@ -57,7 +57,9 @@ type dependencies struct {
 	SyncManager               *syncmanager.SyncManager
 	UTXOManager               *utxo.Manager
 	Tangle                    *tangle.Tangle
+	TipScoreCalculator        *tangle.TipScoreCalculator
 	Storage                   *storage.Storage
+	NetworkIDName             string               `name:"networkIdName"`
 	Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
 	ShutdownHandler           *shutdown.ShutdownHandler
 	TipSelector               *tipselect.TipSelector `optional:"true"`
@@ -67,13 +69,20 @@ type dependencies struct {
 }
 
 func configure() {
-	attacher = deps.Tangle.MessageAttacher(deps.TipSelector, deps.MinPoWScore, messageProcessedTimeout, deps.DeserializationParameters)
 
-	//TODO: add separate config params
+	attacherOpts := []tangle.MessageAttacherOption{
+		tangle.WithTimeout(messageProcessedTimeout),
+		tangle.WithDeserializationParameters(deps.DeserializationParameters),
+		tangle.WithMinPoWScore(deps.MinPoWScore),
+	}
+	if deps.TipSelector != nil {
+		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))
+	}
 	if deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled) {
-		attacher = attacher.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount))
+		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)))
 	}
 
+	attacher = deps.Tangle.MessageAttacher(attacherOpts...)
 	server = newINXServer()
 	loadExtensions()
 }
@@ -107,7 +116,7 @@ func loadExtensions() {
 		if f.IsDir() {
 			extension, err := NewExtension(filepath.Join(INXPath, f.Name()))
 			if err != nil {
-				Plugin.LogErrorf("Error loading IXI extension: %s", err)
+				Plugin.LogErrorf("Error loading INX extension: %s", err)
 				continue
 			}
 			extensions = append(extensions, extension)
@@ -117,20 +126,22 @@ func loadExtensions() {
 
 func startExtensions() {
 	for _, e := range extensions {
-		Plugin.LogInfof("Starting IXI extension: %s", e.Name)
-		err := e.Start()
-		if err != nil {
-			Plugin.LogErrorf("IXI extension ended with error: %s", err)
-		}
+		go func() {
+			Plugin.LogInfof("Starting INX extension: %s", e.Name)
+			err := e.Start()
+			if err != nil {
+				Plugin.LogErrorf("INX extension ended with error: %s", err)
+			}
+		}()
 	}
 }
 
 func stopExtensions() {
 	for _, e := range extensions {
-		Plugin.LogInfof("Stopping IXI extension: %s", e.Name)
+		Plugin.LogInfof("Stopping INX extension: %s", e.Name)
 		if err := e.Stop(); err != nil {
-			Plugin.LogErrorf("IXI extension stop error: %s", err)
-			Plugin.LogInfof("Killing IXI extension: %s", e.Name)
+			Plugin.LogErrorf("INX extension stop error: %s", err)
+			Plugin.LogInfof("Killing INX extension: %s", e.Name)
 			e.Kill()
 		}
 	}

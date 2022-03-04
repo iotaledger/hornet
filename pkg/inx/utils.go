@@ -8,6 +8,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+// Node
+
+func (x *ProtocolParameters) NetworkPrefix() iotago.NetworkPrefix {
+	return iotago.NetworkPrefix(x.GetBech32HRP())
+}
+
 // Message
 
 func WrapMessage(msg *iotago.Message) (*RawMessage, error) {
@@ -94,9 +100,9 @@ func (x *LedgerOutput) MustUnwrapOutput(deSeriMode serializer.DeSerializationMod
 	return output
 }
 
-func (x *LedgerSpent) UnwrapTargetTransactionID() *iotago.TransactionID {
+func (x *LedgerSpent) UnwrapTransactionIDSpent() *iotago.TransactionID {
 	id := &iotago.TransactionID{}
-	copy(id[:], x.GetTargetTransactionId())
+	copy(id[:], x.GetTransactionIdSpent())
 	return id
 }
 

@@ -10,12 +10,12 @@ import (
 	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -86,21 +86,12 @@ type Events struct {
 type TipSelector struct {
 	// context that is done when the node is shutting down.
 	shutdownCtx context.Context
-	// tangle contains the database.
-	storage *storage.Storage
+	// tipScoreCalculator is used to calculate the tip score.
+	tipScoreCalculator *tangle.TipScoreCalculator
 	// used to determine the sync status of the node
 	syncManager *syncmanager.SyncManager
 	// serverMetrics is the shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
-	// maxDeltaMsgYoungestConeRootIndexToCMI is the maximum allowed delta
-	// value for the YCRI of a given message in relation to the current CMI before it gets lazy.
-	maxDeltaMsgYoungestConeRootIndexToCMI milestone.Index
-	// maxDeltaMsgOldestConeRootIndexToCMI is the maximum allowed delta
-	// value between OCRI of a given message in relation to the current CMI before it gets semi-lazy.
-	maxDeltaMsgOldestConeRootIndexToCMI milestone.Index
-	// belowMaxDepth is the maximum allowed delta
-	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
-	belowMaxDepth milestone.Index
 	// retentionRulesTipsLimitNonLazy is the maximum amount of current tips for which "maxReferencedTipAgeNonLazy"
 	// and "maxChildren" are checked. if the amount of tips exceeds this limit,
 	// referenced tips get removed directly to reduce the amount of tips in the network. (non-lazy pool)
@@ -144,12 +135,9 @@ type TipSelector struct {
 // New creates a new tip-selector.
 func New(
 	shutdownCtx context.Context,
-	dbStorage *storage.Storage,
+	tipScoreCalculator *tangle.TipScoreCalculator,
 	syncManager *syncmanager.SyncManager,
 	serverMetrics *metrics.ServerMetrics,
-	maxDeltaMsgYoungestConeRootIndexToCMI int,
-	maxDeltaMsgOldestConeRootIndexToCMI int,
-	belowMaxDepth int,
 	retentionRulesTipsLimitNonLazy int,
 	maxReferencedTipAgeNonLazy time.Duration,
 	maxChildrenNonLazy uint32,
@@ -160,23 +148,20 @@ func New(
 	spammerTipsThresholdSemiLazy int) *TipSelector {
 
 	return &TipSelector{
-		shutdownCtx:                           shutdownCtx,
-		storage:                               dbStorage,
-		syncManager:                           syncManager,
-		serverMetrics:                         serverMetrics,
-		maxDeltaMsgYoungestConeRootIndexToCMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToCMI),
-		maxDeltaMsgOldestConeRootIndexToCMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToCMI),
-		belowMaxDepth:                         milestone.Index(belowMaxDepth),
-		retentionRulesTipsLimitNonLazy:        retentionRulesTipsLimitNonLazy,
-		maxReferencedTipAgeNonLazy:            maxReferencedTipAgeNonLazy,
-		maxChildrenNonLazy:                    maxChildrenNonLazy,
-		spammerTipsThresholdNonLazy:           spammerTipsThresholdNonLazy,
-		retentionRulesTipsLimitSemiLazy:       retentionRulesTipsLimitSemiLazy,
-		maxReferencedTipAgeSemiLazy:           maxReferencedTipAgeSemiLazy,
-		maxChildrenSemiLazy:                   maxChildrenSemiLazy,
-		spammerTipsThresholdSemiLazy:          spammerTipsThresholdSemiLazy,
-		nonLazyTipsMap:                        make(map[string]*Tip),
-		semiLazyTipsMap:                       make(map[string]*Tip),
+		shutdownCtx:                     shutdownCtx,
+		tipScoreCalculator:              tipScoreCalculator,
+		syncManager:                     syncManager,
+		serverMetrics:                   serverMetrics,
+		retentionRulesTipsLimitNonLazy:  retentionRulesTipsLimitNonLazy,
+		maxReferencedTipAgeNonLazy:      maxReferencedTipAgeNonLazy,
+		maxChildrenNonLazy:              maxChildrenNonLazy,
+		spammerTipsThresholdNonLazy:     spammerTipsThresholdNonLazy,
+		retentionRulesTipsLimitSemiLazy: retentionRulesTipsLimitSemiLazy,
+		maxReferencedTipAgeSemiLazy:     maxReferencedTipAgeSemiLazy,
+		maxChildrenSemiLazy:             maxChildrenSemiLazy,
+		spammerTipsThresholdSemiLazy:    spammerTipsThresholdSemiLazy,
+		nonLazyTipsMap:                  make(map[string]*Tip),
+		semiLazyTipsMap:                 make(map[string]*Tip),
 		Events: Events{
 			TipAdded:        events.NewEvent(TipCaller),
 			TipRemoved:      events.NewEvent(TipCaller),
@@ -556,33 +541,26 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 
 // calculateScore calculates the tip selection score of this message
 func (ts *TipSelector) calculateScore(messageID hornet.MessageID, cmi milestone.Index) (Score, error) {
-	cachedMsgMeta := ts.storage.CachedMessageMetadataOrNil(messageID) // meta +1
-	if cachedMsgMeta == nil {
-		// we need to return lazy instead of panic here, because the message could have been pruned already
-		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
-		return ScoreLazy, nil
-	}
-	defer cachedMsgMeta.Release(true)
 
-	ycri, ocri, err := dag.ConeRootIndexes(ts.shutdownCtx, ts.storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	tipScore, err := ts.tipScoreCalculator.TipScore(ts.shutdownCtx, messageID, cmi)
 	if err != nil {
 		return ScoreLazy, err
 	}
 
-	// if the CMI to YCRI delta is over maxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy
-	if (cmi - ycri) > ts.maxDeltaMsgYoungestConeRootIndexToCMI {
+	switch tipScore {
+	case tangle.TipScoreNotFound:
+		// we need to return lazy instead of panic here, because the message could have been pruned already
+		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
 		return ScoreLazy, nil
-	}
-
-	// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy
-	if (cmi - ocri) > ts.belowMaxDepth {
+	case tangle.TipScoreYCRIThresholdReached:
 		return ScoreLazy, nil
-	}
-
-	// if the OCRI to CMI delta is over maxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy
-	if (cmi - ocri) > ts.maxDeltaMsgOldestConeRootIndexToCMI {
+	case tangle.TipScoreBelowMaxDepth:
+		return ScoreLazy, nil
+	case tangle.TipScoreOCRIThresholdReached:
 		return ScoreSemiLazy, nil
+	case tangle.TipScoreHealthy:
+		return ScoreNonLazy, nil
+	default:
+		return ScoreLazy, nil
 	}
-
-	return ScoreNonLazy, nil
 }

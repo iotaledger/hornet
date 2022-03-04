@@ -6,11 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -22,10 +20,10 @@ var (
 	ErrMessageAttacherPoWNotAvailable      = errors.New("proof of work is not available on this node")
 )
 
-type MessageAttacher struct {
-	tangle *Tangle
+type MessageAttacherOption func(opts *MessageAttacherOptions)
 
-	tipSelector               *tipselect.TipSelector
+type MessageAttacherOptions struct {
+	tipSelFunc                pow.RefreshTipsFunc
 	minPoWScore               float64
 	messageProcessedTimeout   time.Duration
 	deserializationParameters *iotago.DeSerializationParameters
@@ -34,42 +32,76 @@ type MessageAttacher struct {
 	powWorkerCount int
 }
 
-func (t *Tangle) MessageAttacher(tipSel *tipselect.TipSelector, minPoWScore float64, messageProcessedTimeout time.Duration, deserializationParameters *iotago.DeSerializationParameters) *MessageAttacher {
-	return &MessageAttacher{
-		tipSelector:               tipSel,
-		minPoWScore:               minPoWScore,
-		messageProcessedTimeout:   messageProcessedTimeout,
-		deserializationParameters: deserializationParameters,
-		tangle:                    t,
+func attacherOptions(opts []MessageAttacherOption) *MessageAttacherOptions {
+	result := &MessageAttacherOptions{
+		tipSelFunc:                nil,
+		minPoWScore:               0,
+		messageProcessedTimeout:   100 * time.Second,
+		deserializationParameters: iotago.ZeroRentParas,
+		powHandler:                nil,
+		powWorkerCount:            0,
+	}
+
+	for _, opt := range opts {
+		opt(result)
+	}
+	return result
+}
+
+func WithTimeout(messageProcessedTimeout time.Duration) MessageAttacherOption {
+	return func(opts *MessageAttacherOptions) {
+		opts.messageProcessedTimeout = messageProcessedTimeout
 	}
 }
 
-func (a *MessageAttacher) WithPoW(handler *pow.Handler, workerCount int) *MessageAttacher {
-	a.powHandler = handler
-	a.powWorkerCount = workerCount
-	return a
+func WithMinPoWScore(minPoWScore float64) MessageAttacherOption {
+	return func(opts *MessageAttacherOptions) {
+		opts.minPoWScore = minPoWScore
+	}
+}
+
+func WithDeserializationParameters(deserializationParameters *iotago.DeSerializationParameters) MessageAttacherOption {
+	return func(opts *MessageAttacherOptions) {
+		opts.deserializationParameters = deserializationParameters
+	}
+}
+
+func WithTipSel(tipsFunc pow.RefreshTipsFunc) MessageAttacherOption {
+	return func(opts *MessageAttacherOptions) {
+		opts.tipSelFunc = tipsFunc
+	}
+}
+
+func WithPoW(handler *pow.Handler, workerCount int) MessageAttacherOption {
+	return func(opts *MessageAttacherOptions) {
+		opts.powHandler = handler
+		opts.powWorkerCount = workerCount
+	}
+}
+
+type MessageAttacher struct {
+	tangle *Tangle
+	opts   *MessageAttacherOptions
+}
+
+func (t *Tangle) MessageAttacher(opts ...MessageAttacherOption) *MessageAttacher {
+	return &MessageAttacher{
+		tangle: t,
+		opts:   attacherOptions(opts),
+	}
 }
 
 func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message) (hornet.MessageID, error) {
-	var refreshTipsFunc pow.RefreshTipsFunc
-
 	if len(msg.Parents) == 0 {
-		if a.tipSelector == nil {
+		if a.opts.tipSelFunc == nil {
 			return nil, errors.WithMessage(ErrMessageAttacherInvalidMessage, "no parents given and node tipselection disabled")
 		}
 
-		tips, err := a.tipSelector.SelectNonLazyTips()
+		tips, err := a.opts.tipSelFunc()
 		if err != nil {
-			if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
-				return nil, errors.WithMessage(ErrMessageAttacherAttachingNotPossible, err.Error())
-			}
-			return nil, err
+			return nil, errors.WithMessage(ErrMessageAttacherAttachingNotPossible, err.Error())
 		}
 		msg.Parents = tips.ToSliceOfArrays()
-
-		// this function pointer is used to refresh the tips of a message
-		// if no parents were given and the PoW takes longer than a configured duration.
-		refreshTipsFunc = a.tipSelector.SelectNonLazyTips
 	}
 
 	if msg.Nonce == 0 {
@@ -78,21 +110,21 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message
 			return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
 		}
 
-		if score < a.minPoWScore {
-			if a.powHandler == nil {
+		if score < a.opts.minPoWScore {
+			if a.opts.powHandler == nil {
 				return nil, ErrMessageAttacherPoWNotAvailable
 			}
 
 			powCtx, ctxCancel := context.WithCancel(ctx)
 			defer ctxCancel()
 
-			if err := a.powHandler.DoPoW(powCtx, msg, a.powWorkerCount, refreshTipsFunc); err != nil {
+			if err := a.opts.powHandler.DoPoW(powCtx, msg, a.opts.powWorkerCount, a.opts.tipSelFunc); err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, a.deserializationParameters)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, a.opts.deserializationParameters)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
 	}
@@ -105,7 +137,7 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message
 	}
 
 	// wait for at most "messageProcessedTimeout" for the message to be processed
-	ctx, cancel := context.WithTimeout(context.Background(), a.messageProcessedTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), a.opts.messageProcessedTimeout)
 	defer cancel()
 
 	if err := utils.WaitForChannelClosed(ctx, msgProcessedChan); errors.Is(err, context.DeadlineExceeded) {

@@ -13,26 +13,17 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 )
 
-func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
-	index, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
-	if err != nil {
-		return nil, err
-	}
-	return &inx.NodeStatus{
-		LatestMilestoneIndex:    uint32(deps.SyncManager.LatestMilestoneIndex()),
-		ConfirmedMilestoneIndex: uint32(deps.SyncManager.ConfirmedMilestoneIndex()),
-		PruningIndex:            uint32(deps.Storage.SnapshotInfo().PruningIndex),
-		LedgerIndex:             uint32(index),
-	}, nil
-}
-
-func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*inx.Milestone, error) {
-	cachedMilestone := deps.Storage.CachedMilestoneOrNil(milestone.Index(req.GetMilestoneIndex()))
+func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
+	cachedMilestone := deps.Storage.CachedMilestoneOrNil(msIndex)
 	if cachedMilestone == nil {
-		return nil, status.Errorf(codes.NotFound, "milestone %d not found", req.GetMilestoneIndex())
+		return nil, status.Errorf(codes.NotFound, "milestone %d not found", msIndex)
 	}
 	defer cachedMilestone.Release(true)
 	return inx.NewMilestone(cachedMilestone.Milestone()), nil
+}
+
+func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*inx.Milestone, error) {
+	return milestoneForIndex(milestone.Index(req.GetMilestoneIndex()))
 }
 
 func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestoneServer) error {

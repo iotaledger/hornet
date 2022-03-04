@@ -28,34 +28,6 @@ func NewMessageWithBytes(messageID hornet.MessageID, data []byte) *Message {
 	return m
 }
 
-func NewMessageMetadata(messageID hornet.MessageID, metadata *storage.MessageMetadata) *MessageMetadata {
-	m := &MessageMetadata{
-		MessageId: NewMessageId(messageID),
-		Parents:   metadata.Parents().ToSliceOfSlices(),
-		Solid:     metadata.IsSolid(),
-	}
-
-	referenced, msIndex := metadata.ReferencedWithIndex()
-	if referenced {
-		m.ReferencedByMilestoneIndex = uint32(msIndex)
-		inclusionState := MessageMetadata_NO_TRANSACTION
-		conflict := metadata.Conflict()
-		if conflict != storage.ConflictNone {
-			inclusionState = MessageMetadata_CONFLICTING
-			m.ConflictReason = MessageMetadata_ConflictReason(conflict)
-		} else if metadata.IsIncludedTxInLedger() {
-			inclusionState = MessageMetadata_INCLUDED
-		}
-		m.LedgerInclusionState = inclusionState
-
-		if metadata.IsMilestone() {
-			m.MilestoneIndex = uint32(msIndex)
-		}
-	}
-
-	return m
-}
-
 func NewOutputId(outputID *iotago.OutputID) *OutputId {
 	id := &OutputId{
 		Id: make([]byte, len(outputID)),
@@ -70,11 +42,11 @@ func NewLedgerOutput(o *utxo.Output) (*LedgerOutput, error) {
 		return nil, err
 	}
 	l := &LedgerOutput{
-		OutputId:           NewOutputId(o.OutputID()),
-		MessageId:          NewMessageId(o.MessageID()),
-		MilestoneIndex:     uint32(o.MilestoneIndex()),
-		MilestoneTimestamp: o.MilestoneTimestamp(),
-		Output:             make([]byte, len(outputBytes)),
+		OutputId:                 NewOutputId(o.OutputID()),
+		MessageId:                NewMessageId(o.MessageID()),
+		MilestoneIndexBooked:     uint32(o.MilestoneIndex()),
+		MilestoneTimestampBooked: o.MilestoneTimestamp(),
+		Output:                   make([]byte, len(outputBytes)),
 	}
 	copy(l.Output, outputBytes)
 	return l, nil
@@ -88,11 +60,11 @@ func NewLedgerSpent(s *utxo.Spent) (*LedgerSpent, error) {
 	transactionID := s.TargetTransactionID()
 	l := &LedgerSpent{
 		Output:                  output,
-		TargetTransactionId:     make([]byte, len(transactionID)),
-		SpentMilestoneIndex:     uint32(s.MilestoneIndex()),
-		SpentMilestoneTimestamp: s.MilestoneTimestamp(),
+		TransactionIdSpent:      make([]byte, len(transactionID)),
+		MilestoneIndexSpent:     uint32(s.MilestoneIndex()),
+		MilestoneTimestampSpent: s.MilestoneTimestamp(),
 	}
-	copy(l.TargetTransactionId, transactionID[:])
+	copy(l.TransactionIdSpent, transactionID[:])
 	return l, nil
 }
 

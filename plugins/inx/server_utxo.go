@@ -18,6 +18,11 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
 
+	ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+	if err != nil {
+		return nil, err
+	}
+
 	outputID := id.Unwrap()
 
 	unspent, err := deps.UTXOManager.IsOutputIDUnspentWithoutLocking(outputID)
@@ -35,6 +40,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 			return nil, err
 		}
 		return &inx.OutputResponse{
+			LedgerIndex: uint32(ledgerIndex),
 			Payload: &inx.OutputResponse_Output{
 				Output: ledgerOutput,
 			},
@@ -50,6 +56,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 		return nil, err
 	}
 	return &inx.OutputResponse{
+		LedgerIndex: uint32(ledgerIndex),
 		Payload: &inx.OutputResponse_Spent{
 			Spent: ledgerSpent,
 		},

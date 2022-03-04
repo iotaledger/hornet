@@ -103,6 +103,42 @@ func provide(c *dig.Container) {
 		CorePlugin.LogPanic(err)
 	}
 
+	type cfgDeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	type cfgResult struct {
+		dig.Out
+		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+		BelowMaxDepth                         int `name:"belowMaxDepth"`
+	}
+
+	if err := c.Provide(func(deps cfgDeps) cfgResult {
+		return cfgResult{
+			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.NodeConfig.Int(CfgTangleMaxDeltaMsgYoungestConeRootIndexToCMI),
+			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.NodeConfig.Int(CfgTangleMaxDeltaMsgOldestConeRootIndexToCMI),
+			BelowMaxDepth:                         deps.NodeConfig.Int(CfgTangleBelowMaxDepth),
+		}
+	}); err != nil {
+		CorePlugin.LogPanic(err)
+	}
+
+	type tipScoreDeps struct {
+		dig.In
+		Storage                               *storage.Storage
+		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+		BelowMaxDepth                         int `name:"belowMaxDepth"`
+	}
+
+	if err := c.Provide(func(deps tipScoreDeps) *tangle.TipScoreCalculator {
+		return tangle.NewTipScoreCalculator(deps.Storage, deps.MaxDeltaMsgYoungestConeRootIndexToCMI, deps.MaxDeltaMsgOldestConeRootIndexToCMI, deps.BelowMaxDepth)
+	}); err != nil {
+		CorePlugin.LogPanic(err)
+	}
+
 	type tangleDeps struct {
 		dig.In
 		Storage          *storage.Storage
@@ -116,7 +152,6 @@ func provide(c *dig.Container) {
 		ReceiptService   *migrator.ReceiptService     `optional:"true"`
 		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
 		NetworkID        uint64                       `name:"networkId"`
-		BelowMaxDepth    int                          `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps tangleDeps) *tangle.Tangle {
@@ -134,7 +169,6 @@ func provide(c *dig.Container) {
 			deps.Requester,
 			deps.ReceiptService,
 			deps.NetworkID,
-			deps.BelowMaxDepth,
 			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			*syncedAtStartup)
 	}); err != nil {

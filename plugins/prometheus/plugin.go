@@ -25,7 +25,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -85,7 +84,6 @@ type dependencies struct {
 	TipSelector      *tipselect.TipSelector `optional:"true"`
 	SnapshotManager  *snapshot.SnapshotManager
 	Coordinator      *coordinator.Coordinator `optional:"true"`
-	MQTTBroker       *mqtt.Broker             `optional:"true"`
 }
 
 func configure() {
@@ -117,9 +115,6 @@ func configure() {
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusCoordinator) && deps.Coordinator != nil {
 		configureCoordinator()
-	}
-	if deps.NodeConfig.Bool(CfgPrometheusMQTTBroker) && deps.MQTTBroker != nil {
-		configureMQTTBroker()
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusDebug) {
 		configureDebug()

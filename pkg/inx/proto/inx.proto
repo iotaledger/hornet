@@ -4,8 +4,12 @@ package inx;
 option go_package = "github.com/gohornet/pkg/inx";
 
 service INX {
-  // Milestones
+
+  // Node
   rpc ReadNodeStatus(NoParams) returns (NodeStatus);
+  rpc ReadProtocolParameters(NoParams) returns (ProtocolParameters);
+
+  // Milestones
   rpc ReadMilestone(MilestoneRequest) returns (Milestone);
   rpc ListenToLatestMilestone(NoParams) returns (stream Milestone);
   rpc ListenToConfirmedMilestone(NoParams) returns (stream Milestone);
@@ -31,14 +35,31 @@ service INX {
 
 message NoParams {}
 
-// Milestones
-message NodeStatus {
-  uint32 latestMilestoneIndex = 1;
-  uint32 confirmedMilestoneIndex = 2;
-  uint32 pruningIndex = 3;
-  uint32 ledgerIndex = 4;
+// Node
+
+message ProtocolParameters {
+  string networkName = 1;
+  int32 protocolVersion = 2;
+  string bech32HRP = 3;
+  float minPoWScore = 4;
+  RentStructure rentStructure = 5;
 }
 
+message RentStructure {
+  uint64 vByteCost = 1;
+  uint64 vByteFactorData = 2;
+  uint64 vByteFactorKey = 3;
+}
+
+message NodeStatus {
+  bool isHealthy = 1;
+  Milestone latestMilestone = 2;
+  Milestone confirmedMilestone = 3;
+  uint32 pruningIndex = 4;
+  uint32 ledgerIndex = 5;
+}
+
+// Milestones
 message MilestoneRequest {
   uint32 milestoneIndex = 1;
 }
@@ -71,14 +92,16 @@ message MessageMetadata {
   MessageId messageId = 1;
   repeated bytes parents = 2;
   bool solid = 3;
-  uint32 referencedByMilestoneIndex = 4;
-  uint32 milestoneIndex = 5;
+  bool shouldPromote = 4;
+  bool shouldReattach = 5;
+  uint32 referencedByMilestoneIndex = 6;
+  uint32 milestoneIndex = 7;
   enum LedgerInclusionState {
     NO_TRANSACTION = 0;
     INCLUDED = 1;
     CONFLICTING = 2;
   }
-  LedgerInclusionState ledgerInclusionState = 6;
+  LedgerInclusionState ledgerInclusionState = 8;
   enum ConflictReason {
     NONE = 0;
     INPUT_ALREADY_SPENT = 1;
@@ -89,7 +112,7 @@ message MessageMetadata {
     INVALID_NETWORK_ID = 6;
     SEMANTIC_VALIDATION_FAILED = 255;
   }
-  ConflictReason conflictReason = 7;
+  ConflictReason conflictReason = 9;
 }
 
 // UTXO
@@ -98,9 +121,10 @@ message OutputId {
 }
 
 message OutputResponse {
+  uint32 ledgerIndex = 1;
   oneof payload {
-    LedgerOutput output = 1;
-    LedgerSpent spent = 2;
+    LedgerOutput output = 2;
+    LedgerSpent spent = 3;
   }
 }
 
@@ -112,16 +136,16 @@ message UnspentOutput {
 message LedgerOutput {
   OutputId outputId = 1;
   MessageId messageId = 2;
-  uint32 milestoneIndex = 3;
-  uint32 milestoneTimestamp = 4;
+  uint32 milestoneIndexBooked = 3;
+  uint32 milestoneTimestampBooked = 4;
   bytes output = 5;
 }
 
 message LedgerSpent {
   LedgerOutput output = 1;
-  bytes targetTransactionId = 2;
-  uint32 spentMilestoneIndex = 3;
-  uint32 spentMilestoneTimestamp = 4;
+  bytes transactionIdSpent = 2;
+  uint32 milestoneIndexSpent = 3;
+  uint32 milestoneTimestampSpent = 4;
 }
 
 message LedgerUpdateRequest {

@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -40,14 +41,13 @@ func TestTipSelect(t *testing.T) {
 
 	serverMetrics := metrics.ServerMetrics{}
 
+	calculator := tangle.NewTipScoreCalculator(te.Storage(), MaxDeltaMsgYoungestConeRootIndexToCMI, MaxDeltaMsgOldestConeRootIndexToCMI, BelowMaxDepth)
+
 	ts := tipselect.New(
 		context.Background(),
-		te.Storage(),
+		calculator,
 		te.SyncManager(),
 		&serverMetrics,
-		MaxDeltaMsgYoungestConeRootIndexToCMI,
-		MaxDeltaMsgOldestConeRootIndexToCMI,
-		BelowMaxDepth,
 		RetentionRulesTipsLimitNonLazy,
 		MaxReferencedTipAgeNonLazy,
 		uint32(MaxChildrenNonLazy),

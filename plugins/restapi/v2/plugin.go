@@ -134,6 +134,7 @@ type dependencies struct {
 	Storage                               *storage.Storage
 	SyncManager                           *syncmanager.SyncManager
 	Tangle                                *tangle.Tangle
+	TipScoreCalculator                    *tangle.TipScoreCalculator
 	PeeringManager                        *p2p.Manager
 	GossipService                         *gossip.Service
 	UTXOManager                           *utxo.Manager
@@ -165,13 +166,22 @@ func configure() {
 
 	routeGroup := deps.Echo.Group("/api/v2")
 
-	attacher = deps.Tangle.MessageAttacher(deps.TipSelector, deps.MinPoWScore, messageProcessedTimeout, deps.DeserializationParameters)
+	attacherOpts := []tangle.MessageAttacherOption{
+		tangle.WithTimeout(messageProcessedTimeout),
+		tangle.WithDeserializationParameters(deps.DeserializationParameters),
+		tangle.WithMinPoWScore(deps.MinPoWScore),
+	}
+	if deps.TipSelector != nil {
+		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))
+	}
 
 	// Check for features
 	if deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled) {
 		AddFeature("PoW")
-		attacher = attacher.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount))
+		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)))
 	}
+
+	attacher = deps.Tangle.MessageAttacher(attacherOpts...)
 
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
 		resp, err := info()

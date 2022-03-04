@@ -24,13 +24,12 @@ func init() {
 	Plugin = &node.Plugin{
 		Status: node.StatusEnabled,
 		Pluggable: node.Pluggable{
-			Name:           "URTS",
-			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
-			Params:         params,
-			InitConfigPars: initConfigPars,
-			Provide:        provide,
-			Configure:      configure,
-			Run:            run,
+			Name:      "URTS",
+			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
+			Provide:   provide,
+			Configure: configure,
+			Run:       run,
 		},
 	}
 }
@@ -52,54 +51,22 @@ type dependencies struct {
 	ShutdownHandler *shutdown.ShutdownHandler
 }
 
-func initConfigPars(c *dig.Container) {
-
-	type cfgDeps struct {
-		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-	}
-
-	type cfgResult struct {
-		dig.Out
-		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
-		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-		BelowMaxDepth                         int `name:"belowMaxDepth"`
-	}
-
-	if err := c.Provide(func(deps cfgDeps) cfgResult {
-		return cfgResult{
-			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI),
-			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.NodeConfig.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI),
-			BelowMaxDepth:                         deps.NodeConfig.Int(CfgTipSelBelowMaxDepth),
-		}
-	}); err != nil {
-		Plugin.LogPanic(err)
-	}
-}
-
 func provide(c *dig.Container) {
 
 	type tipselDeps struct {
 		dig.In
-		Storage                               *storage.Storage
-		SyncManager                           *syncmanager.SyncManager
-		ServerMetrics                         *metrics.ServerMetrics
-		NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
-		MaxDeltaMsgYoungestConeRootIndexToCMI int                          `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
-		MaxDeltaMsgOldestConeRootIndexToCMI   int                          `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-		BelowMaxDepth                         int                          `name:"belowMaxDepth"`
+		TipScoreCalculator *tangle.TipScoreCalculator
+		SyncManager        *syncmanager.SyncManager
+		ServerMetrics      *metrics.ServerMetrics
+		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
 	}
 
 	if err := c.Provide(func(deps tipselDeps) *tipselect.TipSelector {
 		return tipselect.New(
 			Plugin.Daemon().ContextStopped(),
-			deps.Storage,
+			deps.TipScoreCalculator,
 			deps.SyncManager,
 			deps.ServerMetrics,
-
-			deps.MaxDeltaMsgYoungestConeRootIndexToCMI,
-			deps.MaxDeltaMsgOldestConeRootIndexToCMI,
-			deps.BelowMaxDepth,
 
 			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),
 			deps.NodeConfig.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge),
