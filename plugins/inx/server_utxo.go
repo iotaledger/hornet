@@ -118,8 +118,12 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerUpdateRequest, srv inx.
 				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
 			}
 			payload, err := inx.NewLedgerUpdate(msDiff.Index, msDiff.Outputs, msDiff.Spents)
+			if err != nil {
+				deps.UTXOManager.ReadUnlockLedger()
+				return err
+			}
 			if err := srv.Send(payload); err != nil {
-				deps.UTXOManager.ReadLockLedger()
+				deps.UTXOManager.ReadUnlockLedger()
 				return err
 			}
 			currentIndex++
