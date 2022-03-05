@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	databasecore "github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -24,22 +25,9 @@ import (
 	iotago "github.com/iotaledger/iota.go/v2"
 )
 
-const (
-	// the amount of public keys in a milestone.
-	CfgProtocolMilestonePublicKeyCount = "protocol.milestonePublicKeyCount"
-	// the ed25519 public key of the coordinator in hex representation.
-	CfgProtocolPublicKeyRanges = "protocol.publicKeyRanges"
-	// the ed25519 public key of the coordinator in hex representation.
-	CfgProtocolPublicKeyRangesJSON = "publicKeyRanges"
-	// subfolder for the tangle database
-	TangleDatabaseDirectoryName = "tangle"
-	// subfolder for the UTXO database
-	UTXODatabaseDirectoryName = "utxo"
-)
-
 func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.MilestoneManager, error) {
 
-	nodeConfig, err := loadConfigFile("config.json")
+	nodeConfig, err := loadConfigFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +35,7 @@ func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.Miles
 	var coordinatorPublicKeyRanges coordinator.PublicKeyRanges
 
 	// load from config
-	if err := nodeConfig.Unmarshal(CfgProtocolPublicKeyRanges, &coordinatorPublicKeyRanges); err != nil {
+	if err := nodeConfig.Unmarshal(protocfg.CfgProtocolPublicKeyRanges, &coordinatorPublicKeyRanges); err != nil {
 		return nil, err
 	}
 
@@ -61,7 +49,7 @@ func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.Miles
 		keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 	}
 
-	return milestonemanager.New(nil, nil, keyManager, nodeConfig.Int(CfgProtocolMilestonePublicKeyCount)), nil
+	return milestonemanager.New(nil, nil, keyManager, nodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount)), nil
 }
 
 func checkDatabaseHealth(storage *storage.Storage, markTainted bool) error {
@@ -186,7 +174,7 @@ func getTangleStorage(path string,
 	splitDB bool,
 	checkHealth bool,
 	markTainted bool,
-	checkSnapshotInfo bool) (*storage.Storage, error) {
+	checkSnapInfo bool) (*storage.Storage, error) {
 
 	dbEngine, err := database.DatabaseEngine(dbEngineStr, database.EnginePebble, database.EngineRocksDB)
 	if err != nil {
@@ -210,19 +198,14 @@ func getTangleStorage(path string,
 		}
 	}
 
-	storeTangle, err := database.StoreWithDefaultSettings(filepath.Join(path, TangleDatabaseDirectoryName), true, dbEngine)
+	tangleStore, err := createTangleStorage(
+		name,
+		filepath.Join(path, databasecore.TangleDatabaseDirectoryName),
+		filepath.Join(path, databasecore.UTXODatabaseDirectoryName),
+		dbEngine,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("%s tangle database initialization failed: %w", name, err)
-	}
-
-	storeUTXO, err := database.StoreWithDefaultSettings(filepath.Join(path, UTXODatabaseDirectoryName), true, dbEngine)
-	if err != nil {
-		return nil, fmt.Errorf("%s utxo database initialization failed: %w", name, err)
-	}
-
-	tangleStore, err := storage.New(storeTangle, storeUTXO)
-	if err != nil {
-		return nil, fmt.Errorf("%s storage initialization failed: %w", name, err)
+		return nil, err
 	}
 
 	if checkHealth {
@@ -231,8 +214,37 @@ func getTangleStorage(path string,
 		}
 	}
 
-	if checkSnapshotInfo && tangleStore.SnapshotInfo() == nil {
-		return nil, fmt.Errorf("%s storage initialization failed: snapshot info not found", name)
+	if checkSnapInfo {
+		if err := checkSnapshotInfo(tangleStore); err != nil {
+			return nil, fmt.Errorf("%s storage initialization failed: %w", name, err)
+		}
+	}
+
+	return tangleStore, nil
+}
+
+func checkSnapshotInfo(dbStorage *storage.Storage) error {
+	if dbStorage.SnapshotInfo() == nil {
+		return errors.New("snapshot info not found")
+	}
+	return nil
+}
+
+func createTangleStorage(name string, tangleDatabasePath string, utxoDatabasePath string, dbEngine database.Engine) (*storage.Storage, error) {
+
+	storeTangle, err := database.StoreWithDefaultSettings(tangleDatabasePath, true, dbEngine)
+	if err != nil {
+		return nil, fmt.Errorf("%s tangle database initialization failed: %w", name, err)
+	}
+
+	storeUTXO, err := database.StoreWithDefaultSettings(utxoDatabasePath, true, dbEngine)
+	if err != nil {
+		return nil, fmt.Errorf("%s utxo database initialization failed: %w", name, err)
+	}
+
+	tangleStore, err := storage.New(storeTangle, storeUTXO)
+	if err != nil {
+		return nil, fmt.Errorf("%s storage initialization failed: %w", name, err)
 	}
 
 	return tangleStore, nil

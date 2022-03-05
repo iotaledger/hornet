@@ -60,7 +60,7 @@ func SplitIntoTangleAndUTXO(databasePath string, dbEngine ...database.Engine) er
 	utxoDatabasePath := filepath.Join(legacyDatabasePath, UTXODatabaseDirectoryName)
 
 	// Read the engine the current database is using
-	dbEngineLegacy, err := database.CheckDatabaseEngine(legacyDatabasePath, false, dbEngine...)
+	dbEngineCurrent, err := database.CheckDatabaseEngine(legacyDatabasePath, false, dbEngine...)
 	if err != nil {
 		return err
 	}
@@ -85,19 +85,19 @@ func SplitIntoTangleAndUTXO(databasePath string, dbEngine ...database.Engine) er
 		os.Rename(filepath.Join(legacyDatabasePath, f.Name()), filepath.Join(tangleDatabasePath, f.Name()))
 	}
 
-	tangleStore, err := database.StoreWithDefaultSettings(tangleDatabasePath, false, dbEngineLegacy)
+	tangleStore, err := database.StoreWithDefaultSettings(tangleDatabasePath, false, dbEngineCurrent)
 	if err != nil {
 		return fmt.Errorf("%s database initialization failed: %w", TangleDatabaseDirectoryName, err)
 	}
 	defer func() { _ = tangleStore.Close() }()
 
-	utxoStore, err := database.StoreWithDefaultSettings(utxoDatabasePath, true, dbEngineLegacy)
+	utxoStore, err := database.StoreWithDefaultSettings(utxoDatabasePath, true, dbEngineCurrent)
 	if err != nil {
 		return fmt.Errorf("%s database initialization failed: %w", UTXODatabaseDirectoryName, err)
 	}
 	defer func() { _ = utxoStore.Close() }()
 
-	fmt.Printf("Splitting database using %s...\n", dbEngineLegacy)
+	fmt.Printf("Splitting database using %s...\n", dbEngineCurrent)
 
 	// Migrate the UTXO data by removing the old 8 prefix
 	legacyStorePrefixUTXO := kvstore.KeyPrefix{storePrefixUTXODeprecated}
