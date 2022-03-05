@@ -53,7 +53,7 @@ type ConcurrentParentsTraverser struct {
 func NewConcurrentParentsTraverser(parentsTraverserStorage ParentsTraverserStorage, parallelism ...int) *ConcurrentParentsTraverser {
 
 	walkerParallelism := runtime.NumCPU()
-	if len(parallelism) > 0 {
+	if len(parallelism) > 0 && parallelism[0] > 0 {
 		walkerParallelism = parallelism[0]
 	}
 

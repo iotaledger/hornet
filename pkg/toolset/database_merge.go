@@ -44,6 +44,7 @@ func databaseMerge(args []string) error {
 	nodeURLFlag := fs.String(FlagToolDatabaseMergeNodeURL, "", "URL of the node (optional)")
 	chronicleFlag := fs.Bool(FlagToolDatabaseMergeChronicle, false, "use chronicle compatibility mode for API sync")
 	chronicleKeyspaceFlag := fs.String(FlagToolDatabaseMergeChronicleKeyspace, "mainnet", "key space for chronicle compatibility mode")
+	apiParallelismFlag := fs.Uint("apiParallelism", 50, "the amount of concurrent API requests")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", ToolDatabaseMerge)
@@ -158,6 +159,7 @@ func databaseMerge(args []string) error {
 		milestone.Index(*targetIndexFlag),
 		*genesisSnapshotFilePathFlag,
 		*chronicleFlag,
+		int(*apiParallelismFlag),
 	); err != nil && !errors.Is(err, common.ErrOperationAborted) && !errors.Is(err, ErrNoNewTangleData) {
 		// ignore errors due to node shutdown
 		return err
@@ -314,7 +316,8 @@ func mergeViaAPI(
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
 	client *iotago.NodeHTTPAPIClient,
-	chronicleMode bool) error {
+	chronicleMode bool,
+	apiParallelism int) error {
 
 	getMessageViaAPI := func(client *iotago.NodeHTTPAPIClient, messageID hornet.MessageID) (*iotago.Message, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -368,7 +371,7 @@ func mergeViaAPI(
 		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
 			return getMilestoneAndMessageIDViaAPI(client, parentsTraverserStorageAPI.CachedMessage, msIndex)
 		},
-		dag.NewConcurrentParentsTraverser(parentsTraverserStorageAPI),
+		dag.NewConcurrentParentsTraverser(parentsTraverserStorageAPI, apiParallelism),
 		parentsTraverserStorageAPI.CachedMessage,
 		storeTarget,
 		milestoneManager); err != nil {
@@ -419,7 +422,8 @@ func mergeDatabase(
 	client *iotago.NodeHTTPAPIClient,
 	targetIndex milestone.Index,
 	genesisSnapshotFilePath string,
-	chronicleMode bool) error {
+	chronicleMode bool,
+	apiParallelism int) error {
 
 	sourceNetworkID := tangleStoreSource.SnapshotInfo().NetworkID
 
@@ -475,6 +479,7 @@ func mergeDatabase(
 				milestoneManager,
 				client,
 				chronicleMode,
+				apiParallelism,
 			); err != nil {
 				return err
 			}
