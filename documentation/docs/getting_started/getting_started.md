@@ -1,5 +1,5 @@
 ---
-description: Getting started with the recommended requirements and installation links for Linux, macOS, and Windows.
+description: Recommended requirements and installation links for Linux, macOS, and Windows.
 image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node
@@ -16,10 +16,10 @@ keywords:
 # Getting Started
 
 Running a node is an efficient way to use IOTA. By doing so, you have direct access to the Tangle instead of having to
-connect to and trust someone else's node. Additionally, you help the IOTA network to become more distributed and resilient.
+connect to and trust someone else's node. Additionally, you help the IOTA network become more distributed and resilient.
 
-The node software is the backbone of the IOTA network. For an overview of tasks a node is responsible for, please
-see our [Node 101](https://wiki.iota.org/hornet/getting_started/nodes_101) section.
+Node software is the backbone of the IOTA network. For an overview of tasks a node is responsible for, please
+see our [Nodes 101](https://wiki.iota.org/hornet/getting_started/nodes_101) section.
 
 To make sure that your device meets the minimum security requirements for running a node, please
 see our [Security 101](https://wiki.iota.org/hornet/getting_started/security_101) section.
