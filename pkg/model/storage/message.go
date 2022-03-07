@@ -78,7 +78,7 @@ func (msg *Message) Message() *iotago.Message {
 	msg.messageOnce.Do(func() {
 		iotaMsg := &iotago.Message{}
 		// No need to verify the message again here
-		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation, nil); err != nil {
+		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation, iotago.ZeroRentParas); err != nil {
 			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.ToHex(), err))
 		}
 

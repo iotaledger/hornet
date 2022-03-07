@@ -64,7 +64,7 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 	}
 
 	getPoWData := func(msg *iotago.Message) (powData []byte, err error) {
-		msgData, err := msg.Serialize(serializer.DeSeriModeNoValidation, nil)
+		msgData, err := msg.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 		if err != nil {
 			return nil, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
 		}

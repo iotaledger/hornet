@@ -29,7 +29,7 @@ func (rt *ReceiptTuple) kvStorableKey() (key []byte) {
 }
 
 func (rt *ReceiptTuple) kvStorableValue() (value []byte) {
-	receiptBytes, err := rt.Receipt.Serialize(serializer.DeSeriModeNoValidation, nil)
+	receiptBytes, err := rt.Receipt.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	if err != nil {
 		panic(err)
 	}
@@ -55,7 +55,7 @@ func (rt *ReceiptTuple) kvStorableLoad(_ *Manager, key []byte, value []byte) err
 	}
 
 	r := &iotago.Receipt{}
-	if _, err := r.Deserialize(value, serializer.DeSeriModeNoValidation, nil); err != nil {
+	if _, err := r.Deserialize(value, serializer.DeSeriModeNoValidation, iotago.ZeroRentParas); err != nil {
 		return err
 	}
 

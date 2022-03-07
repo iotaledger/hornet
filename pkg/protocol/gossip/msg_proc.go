@@ -307,7 +307,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -335,7 +335,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 	}
 	defer cachedMessage.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
+	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	if err != nil {
 		// can't reply if serialization fails
 		return

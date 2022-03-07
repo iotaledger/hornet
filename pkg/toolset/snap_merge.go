@@ -1,7 +1,6 @@
 package toolset
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"time"
@@ -88,7 +87,7 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 		var treasury *treasuryStruct
 		if header.TreasuryOutput != nil {
 			treasury = &treasuryStruct{
-				MilestoneID: hex.EncodeToString(header.TreasuryOutput.MilestoneID[:]),
+				MilestoneID: header.TreasuryOutput.MilestoneID.ToHex(),
 				Tokens:      header.TreasuryOutput.Amount,
 			}
 		}
@@ -144,7 +143,7 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 			if header.TreasuryOutput == nil {
 				return "no treasury output in header"
 			}
-			return fmt.Sprintf("milestone ID %s, tokens %d", hex.EncodeToString(header.TreasuryOutput.MilestoneID[:]), header.TreasuryOutput.Amount)
+			return fmt.Sprintf("milestone ID %s, tokens %d", header.TreasuryOutput.MilestoneID.ToHex(), header.TreasuryOutput.Amount)
 		}(),
 		header.LedgerMilestoneIndex,
 		header.SEPMilestoneIndex,
