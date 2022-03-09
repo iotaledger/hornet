@@ -12,7 +12,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -103,8 +102,6 @@ type Faucet struct {
 	belowMaxDepth milestone.Index
 	// used to get the outputs.
 	utxoManager *utxo.Manager
-	// used to access the outputs for the faucet's address.
-	indexer *indexer.Indexer
 	// the address of the faucet.
 	address iotago.Address
 	// used to sign the faucet transactions.
@@ -263,7 +260,6 @@ func New(
 	deSeriParas *iotago.DeSerializationParameters,
 	belowMaxDepth int,
 	utxoManager *utxo.Manager,
-	indexer *indexer.Indexer,
 	address iotago.Address,
 	addressSigner iotago.AddressSigner,
 	tipselFunc TipselFunc,
@@ -283,7 +279,6 @@ func New(
 		deSeriParas:     deSeriParas,
 		belowMaxDepth:   milestone.Index(belowMaxDepth),
 		utxoManager:     utxoManager,
-		indexer:         indexer,
 		address:         address,
 		addressSigner:   addressSigner,
 		tipselFunc:      tipselFunc,
@@ -325,21 +320,35 @@ func (f *Faucet) Info() (*FaucetInfoResponse, error) {
 	}, nil
 }
 
-func (f *Faucet) computeAddressBalance(address iotago.Address) (uint64, error) {
-	result := f.indexer.BasicOutputsWithFilters(indexer.BasicOutputUnlockableByAddress(address), indexer.BasicOutputHasStorageDepositReturnCondition(false))
-	if result.Error != nil {
-		return 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), result.Error))
+func (f *Faucet) collectUnspentBasicOutputsWithoutConstraints(address iotago.Address) (utxo.Outputs, uint64, error) {
+
+	outputHasSpendingConstraint := func(output *utxo.Output) bool {
+		conditions := output.Output().UnlockConditions().MustSet()
+		return conditions.HasStorageDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
 	}
 
-	var amount uint64 = 0
-	for _, unspentOutputID := range result.OutputIDs {
-		unspentOutput, err := f.utxoManager.ReadOutputByOutputIDWithoutLocking(&unspentOutputID)
-		if err != nil {
-			return 0, common.CriticalError(fmt.Errorf("reading unspent output failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
+	outputs := utxo.Outputs{}
+	var balance uint64
+	consumerFunc := func(output *utxo.Output) bool {
+		if output.OutputType() != iotago.OutputBasic {
+			return true
 		}
-		amount += unspentOutput.Deposit()
+		ownerAddress := output.Output().UnlockConditions().MustSet().Address().Address
+		if ownerAddress != nil && address.Equal(ownerAddress) && !outputHasSpendingConstraint(output) {
+			outputs = append(outputs, output)
+			balance += output.Deposit()
+		}
+		return true
 	}
-	return amount, nil
+	if err := f.utxoManager.ForEachUnspentOutput(consumerFunc, utxo.ReadLockLedger(false)); err != nil {
+		return nil, 0, err
+	}
+	return outputs, balance, nil
+}
+
+func (f *Faucet) computeAddressBalance(address iotago.Address) (uint64, error) {
+	_, balance, err := f.collectUnspentBasicOutputsWithoutConstraints(address)
+	return balance, err
 }
 
 // Enqueue adds a new faucet request to the queue.
@@ -766,25 +775,7 @@ func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) err
 					// since it's creating transaction could also have consumed the same UTXOs.
 					return []*utxo.Output{f.lastRemainderOutput}, f.lastRemainderOutput.Deposit(), nil
 				}
-
-				result := f.indexer.BasicOutputsWithFilters(indexer.BasicOutputUnlockableByAddress(f.address), indexer.BasicOutputHasStorageDepositReturnCondition(false))
-				if result.Error != nil {
-					return nil, 0, common.CriticalError(fmt.Errorf("reading unspent outputs failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), result.Error))
-				}
-
-				var amount uint64 = 0
-				var unspentOutputs utxo.Outputs
-				for _, unspentOutputID := range result.OutputIDs {
-
-					unspentOutput, err := f.utxoManager.ReadOutputByOutputIDWithoutLocking(&unspentOutputID)
-					if err != nil {
-						return nil, 0, common.CriticalError(fmt.Errorf("reading unspent output failed: %s, error: %w", f.address.Bech32(f.opts.hrpNetworkPrefix), err))
-					}
-
-					amount += unspentOutput.Deposit()
-					unspentOutputs = append(unspentOutputs, unspentOutput)
-				}
-				return unspentOutputs, amount, nil
+				return f.collectUnspentBasicOutputsWithoutConstraints(f.address)
 			}
 
 			processRequests := func() ([]*utxo.Output, []*queueItem, hornet.MessageIDs, error) {
