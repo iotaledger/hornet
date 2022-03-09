@@ -48,23 +48,45 @@ func (s *INXServer) Stop() {
 }
 
 func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
+
+	pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+
 	index, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 	if err != nil {
 		return nil, err
 	}
-	lmi, err := milestoneForIndex(deps.SyncManager.LatestMilestoneIndex())
-	if err != nil {
-		return nil, err
+
+	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
+	var lmi *inx.Milestone
+	if latestMilestoneIndex > pruningIndex {
+		lmi, err = milestoneForIndex(latestMilestoneIndex)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		lmi = &inx.Milestone{
+			MilestoneIndex: uint32(latestMilestoneIndex),
+		}
 	}
-	cmi, err := milestoneForIndex(deps.SyncManager.ConfirmedMilestoneIndex())
-	if err != nil {
-		return nil, err
+
+	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
+	var cmi *inx.Milestone
+	if confirmedMilestoneIndex > pruningIndex {
+		cmi, err = milestoneForIndex(confirmedMilestoneIndex)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		cmi = &inx.Milestone{
+			MilestoneIndex: uint32(confirmedMilestoneIndex),
+		}
 	}
+
 	return &inx.NodeStatus{
 		IsHealthy:          deps.Tangle.IsNodeHealthy(),
 		LatestMilestone:    lmi,
 		ConfirmedMilestone: cmi,
-		PruningIndex:       uint32(deps.Storage.SnapshotInfo().PruningIndex),
+		PruningIndex:       uint32(pruningIndex),
 		LedgerIndex:        uint32(index),
 	}, nil
 }
