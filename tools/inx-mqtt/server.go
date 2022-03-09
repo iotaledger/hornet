@@ -107,6 +107,8 @@ func (s *Server) onSubscribeTopic(ctx context.Context, topic string) {
 			go s.fetchAndPublishOutput(ctx, outputID)
 		}
 		s.startListenIfNeeded(ctx, grpcListenToLedgerUpdates, s.listenToLedgerUpdates)
+	} else if topic == topicReceipts {
+		s.startListenIfNeeded(ctx, grpcListenToMigrationReceipts, s.listenToMigrationReceipts)
 	}
 }
 
@@ -122,6 +124,8 @@ func (s *Server) onUnsubscribeTopic(topic string) {
 		s.stopListenIfNeeded(grpcListenToReferencedMessages)
 	} else if strings.HasPrefix(topic, "outputs/") || strings.HasPrefix(topic, "transactions/") {
 		s.stopListenIfNeeded(grpcListenToLedgerUpdates)
+	} else if topic == topicReceipts {
+		s.stopListenIfNeeded(grpcListenToMigrationReceipts)
 	}
 }
 
@@ -257,7 +261,7 @@ func (s *Server) listenToSolidMessages(ctx context.Context) error {
 		return err
 	}
 	for {
-		message, err := stream.Recv()
+		messageMetadata, err := stream.Recv()
 		if err != nil {
 			if err == io.EOF || status.Code(err) == codes.Canceled {
 				break
@@ -268,7 +272,7 @@ func (s *Server) listenToSolidMessages(ctx context.Context) error {
 		if c.Err() != nil {
 			break
 		}
-		s.PublishMessageMetadata(message)
+		s.PublishMessageMetadata(messageMetadata)
 	}
 	return nil
 }
@@ -282,7 +286,7 @@ func (s *Server) listenToReferencedMessages(ctx context.Context) error {
 		return err
 	}
 	for {
-		message, err := stream.Recv()
+		messageMetadata, err := stream.Recv()
 		if err != nil {
 			if err == io.EOF || status.Code(err) == codes.Canceled {
 				break
@@ -293,7 +297,7 @@ func (s *Server) listenToReferencedMessages(ctx context.Context) error {
 		if c.Err() != nil {
 			break
 		}
-		s.PublishMessageMetadata(message)
+		s.PublishMessageMetadata(messageMetadata)
 	}
 	return nil
 }
@@ -307,7 +311,7 @@ func (s *Server) listenToLedgerUpdates(ctx context.Context) error {
 		return err
 	}
 	for {
-		message, err := stream.Recv()
+		ledgerUpdate, err := stream.Recv()
 		if err != nil {
 			if err == io.EOF || status.Code(err) == codes.Canceled {
 				break
@@ -318,15 +322,39 @@ func (s *Server) listenToLedgerUpdates(ctx context.Context) error {
 		if c.Err() != nil {
 			break
 		}
-		index := milestone.Index(message.GetMilestoneIndex())
-		created := message.GetCreated()
-		consumed := message.GetConsumed()
+		index := milestone.Index(ledgerUpdate.GetMilestoneIndex())
+		created := ledgerUpdate.GetCreated()
+		consumed := ledgerUpdate.GetConsumed()
 		for _, o := range created {
 			s.PublishOutput(index, o)
 		}
 		for _, o := range consumed {
 			s.PublishSpent(index, o)
 		}
+	}
+	return nil
+}
+
+func (s *Server) listenToMigrationReceipts(ctx context.Context) error {
+	c, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stream, err := s.Client.ListenToMigrationReceipts(c, &inx.NoParams{})
+	if err != nil {
+		return err
+	}
+	for {
+		receipt, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				break
+			}
+			fmt.Printf("listenToMigrationReceipts: %s\n", err.Error())
+			break
+		}
+		if c.Err() != nil {
+			break
+		}
+		s.PublishReceipt(receipt)
 	}
 	return nil
 }

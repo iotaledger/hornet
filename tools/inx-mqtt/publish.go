@@ -40,8 +40,12 @@ func (s *Server) PublishMilestoneOnTopic(topic string, milestone *inx.Milestone)
 	})
 }
 
-func (s *Server) PublishReceipt(r *iotago.Receipt) {
-	s.PublishOnTopicIfSubscribed(topicReceipts, r)
+func (s *Server) PublishReceipt(r *inx.RawReceipt) {
+	receipt, err := r.UnwrapReceipt(serializer.DeSeriModeNoValidation)
+	if err != nil {
+		return
+	}
+	s.PublishOnTopicIfSubscribed(topicReceipts, receipt)
 }
 
 func (s *Server) PublishMessage(msg *inx.RawMessage) {
