@@ -13,25 +13,35 @@ LABEL org.label-schema.usage="https://github.com/gohornet/hornet/blob/main/docum
 RUN update-ca-certificates
 
 # Set the current Working Directory inside the container
-RUN mkdir /app
-WORKDIR /app
+RUN mkdir /scratch
+WORKDIR /scratch
 
-# Use Go Modules
-COPY go.mod .
-COPY go.sum .
+# Copy everything from the current directory to the PWD(Present Working Directory) inside the container
+COPY . .
 
 ENV GO111MODULE=on
 RUN go mod download
 RUN go mod verify
 
-# Copy everything from the current directory to the PWD(Present Working Directory) inside the container
-COPY . .
+RUN mkdir /app
 
 # Build the binary
-RUN go build \
-      -tags="$BUILD_TAGS" \
-      -ldflags='-w -s' -a \
-      -o /go/bin/hornet
+RUN go build -o /app/hornet -a -tags="$BUILD_TAGS" -ldflags='-w -s'
+
+# Build the Indexer INX binary
+RUN mkdir -p /app/inx/indexer
+RUN go build -o /app/inx/indexer/inx-indexer tools/inx-indexer/main.go
+COPY ./inx/indexer/inx.json /app/inx/indexer/inx.json
+
+# Build the MQTT INX binary
+RUN mkdir -p /app/inx/mqtt
+RUN go build -o /app/inx/mqtt/inx-mqtt tools/inx-mqtt/main.go
+COPY ./inx/mqtt/inx.json /app/inx/mqtt/inx.json
+
+# Copy the assets
+COPY ./config.json /app/config.json
+COPY ./peering.json /app/peering.json
+COPY ./profiles.json /app/profiles.json
 
 ############################
 # Image
@@ -47,13 +57,8 @@ EXPOSE 8081/tcp
 EXPOSE 8091/tcp
 EXPOSE 1883/tcp
 
-# Copy the binary into distroless image
-COPY --chown=nonroot:nonroot --from=build /go/bin/hornet /app/hornet
-
-# Copy the assets
-COPY ./config.json /app/config.json
-COPY ./peering.json /app/peering.json
-COPY ./profiles.json /app/profiles.json
+# Copy the app dir into distroless image
+COPY --chown=nonroot:nonroot --from=build /app /app
 
 WORKDIR /app
 USER nonroot
