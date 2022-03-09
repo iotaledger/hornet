@@ -26,7 +26,6 @@ import (
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/faucet"
-	"github.com/gohornet/hornet/plugins/indexer"
 	"github.com/gohornet/hornet/plugins/inx"
 	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/participation"
@@ -143,7 +142,6 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 		initConfig.ForceDisablePluggable(debug.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(faucet.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(participation.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(indexer.Plugin.Identifier())
 	}
 
 	// the parameter has to be provided in the preProvide stage.

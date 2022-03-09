@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	APIRoute = "inx-indexer/v1"
+	APIRoute = "indexer/v1"
 )
 
 func ConvertINXOutput(output *inx.LedgerOutput) (*utxo.Output, error) {
