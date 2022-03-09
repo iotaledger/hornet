@@ -64,8 +64,8 @@ func NewServer(client inx.INXClient) (*Server, error) {
 func (s *Server) Start(ctx context.Context) error {
 
 	broker, err := mqtt.NewBroker(
-		MQTTBindAddress,
-		MQTTWSPort,
+		config.String(CfgMQTTBindAddress),
+		config.Int(CfgMQTTWSPort),
 		fmt.Sprintf("/%s", APIRoute),
 		100,
 		func(topic []byte) {

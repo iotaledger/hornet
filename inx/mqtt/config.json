@@ -1,0 +1,4 @@
+{
+  "bindAddress": "localhost:1883",
+  "wsPort": 1888
+}

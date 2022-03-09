@@ -8,25 +8,42 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 
 	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/configuration"
 )
 
 const (
 	APIRoute = "mqtt/v1"
 
-	MQTTBindAddress = "0.0.0.0:1883"
-	MQTTWSPort      = 1888
-	MQTTWSPath      = "/inx-mqtt/v1"
+	// CfgMQTTBindAddress the bind address on which the MQTT broker listens on.
+	CfgMQTTBindAddress = "bindAddress"
+	// CfgMQTTWSPort the port of the WebSocket MQTT broker.
+	CfgMQTTWSPort = "wsPort"
+	// CfgMQTTWorkerCount the number of parallel workers the MQTT broker uses to publish messages.
+	CfgMQTTWorkerCount = "workerCount"
+	// CfgMQTTTopicCleanupThreshold the number of deleted topics that trigger a garbage collection of the topic manager.
+	CfgMQTTTopicCleanupThreshold = "topicCleanupThreshold"
+)
+
+var (
+	config *configuration.Configuration
 )
 
 func main() {
 
 	port, err := utils.LoadStringFromEnvironment("INX_PORT")
+	if err != nil {
+		panic(err)
+	}
+
+	config, err = loadConfigFile("config.json")
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +76,7 @@ func main() {
 	apiReq := &inx.APIRouteRequest{
 		Route: APIRoute,
 		Host:  "localhost",
-		Port:  MQTTWSPort,
+		Port:  uint32(config.Int(CfgMQTTWSPort)),
 	}
 	fmt.Println("Registering API route")
 	if _, err := client.RegisterAPIRoute(context.Background(), apiReq); err != nil {
@@ -86,4 +103,27 @@ func main() {
 		return
 	}
 	fmt.Println("exiting")
+}
+
+func flagSet() *flag.FlagSet {
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs.String(CfgMQTTBindAddress, "localhost:1883", "bind address on which the MQTT broker listens on")
+	fs.Int(CfgMQTTWSPort, 1888, "port of the WebSocket MQTT broker")
+	fs.Int(CfgMQTTWorkerCount, 100, "number of parallel workers the MQTT broker uses to publish messages")
+	fs.Int(CfgMQTTTopicCleanupThreshold, 10000, "number of deleted topics that trigger a garbage collection of the topic manager")
+	return fs
+}
+
+func loadConfigFile(filePath string) (*configuration.Configuration, error) {
+	config := configuration.New()
+
+	if err := config.LoadFile(filePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("loading config file failed: %w", err)
+	}
+
+	if err := config.LoadFlagSet(flagSet()); err != nil {
+		return nil, err
+	}
+
+	return config, nil
 }
