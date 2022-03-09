@@ -4,15 +4,19 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"strings"
 	"sync"
 
-	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/mqtt"
+	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -27,8 +31,9 @@ const (
 )
 
 type topicSubcription struct {
-	Count int
-	Func  func()
+	Count      int
+	Func       func()
+	Identifier int
 }
 
 type Server struct {
@@ -120,170 +125,197 @@ func (s *Server) onUnsubscribeTopic(topic string) {
 	}
 }
 
-func (s *Server) stopListenIfNeeded(identifier string) {
+func (s *Server) stopListenIfNeeded(grpcCall string) {
 	s.grpcSubscriptionsLock.Lock()
 	defer s.grpcSubscriptionsLock.Unlock()
 
-	sub, ok := s.grpcSubscriptions[identifier]
+	sub, ok := s.grpcSubscriptions[grpcCall]
 	if ok {
-		if sub.Count <= 1 {
+		if sub.Count == 1 {
+			sub.Count = 0
 			sub.Func()
-			delete(s.grpcSubscriptions, identifier)
+			delete(s.grpcSubscriptions, grpcCall)
 		} else {
 			sub.Count--
 		}
 	}
 }
 
-func (s *Server) startListenIfNeeded(ctx context.Context, identifier string, listenFunc func(context.Context)) {
+func (s *Server) startListenIfNeeded(ctx context.Context, grpcCall string, listenFunc func(context.Context) error) {
 	s.grpcSubscriptionsLock.Lock()
 	defer s.grpcSubscriptionsLock.Unlock()
 
-	sub, ok := s.grpcSubscriptions[identifier]
+	sub, ok := s.grpcSubscriptions[grpcCall]
 	if !ok {
 		c, cancel := context.WithCancel(ctx)
+		subscriptionIdentifier := rand.Int()
+		s.grpcSubscriptions[grpcCall] = &topicSubcription{
+			Count:      1,
+			Func:       cancel,
+			Identifier: subscriptionIdentifier,
+		}
 		go func() {
-			fmt.Printf("Listen to %s\n", identifier)
-			listenFunc(c)
+			fmt.Printf("Listen to %s\n", grpcCall)
+			err := listenFunc(c)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				fmt.Printf("Finished listen to %s with error: %s\n", grpcCall, err.Error())
+			} else {
+				fmt.Printf("Finished listen to %s\n", grpcCall)
+			}
 			s.grpcSubscriptionsLock.Lock()
-			fmt.Printf("Finished listen to %s\n", identifier)
-			delete(s.grpcSubscriptions, identifier)
+			sub, ok := s.grpcSubscriptions[grpcCall]
+			if ok && sub.Identifier == subscriptionIdentifier {
+				// Only delete if it was not already replaced by a new one.
+				delete(s.grpcSubscriptions, grpcCall)
+			}
 			s.grpcSubscriptionsLock.Unlock()
 		}()
-		s.grpcSubscriptions[identifier] = &topicSubcription{
-			Count: 1,
-			Func:  cancel,
-		}
 	} else {
 		sub.Count++
 	}
 }
 
-func (s *Server) listenToLatestMilestone(ctx context.Context) {
+func (s *Server) listenToLatestMilestone(ctx context.Context) error {
 	c, cancel := context.WithCancel(ctx)
 	defer cancel()
 	stream, err := s.Client.ListenToLatestMilestone(c, &inx.NoParams{})
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for {
 		milestone, err := stream.Recv()
-		if err == io.EOF {
+		if err != nil {
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				break
+			}
+			fmt.Printf("listenToLatestMilestone: %s\n", err.Error())
 			break
 		}
-		if err != nil {
-			fmt.Println(err.Error())
-			cancel()
+		if c.Err() != nil {
 			break
 		}
 		s.PublishMilestoneOnTopic(topicMilestonesLatest, milestone)
 	}
+	return nil
 }
 
-func (s *Server) listenToConfirmedMilestone(ctx context.Context) {
+func (s *Server) listenToConfirmedMilestone(ctx context.Context) error {
 	c, cancel := context.WithCancel(ctx)
 	defer cancel()
 	stream, err := s.Client.ListenToConfirmedMilestone(c, &inx.NoParams{})
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for {
 		milestone, err := stream.Recv()
-		if err == io.EOF {
+		if err != nil {
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				break
+			}
+			fmt.Printf("listenToConfirmedMilestone: %s\n", err.Error())
 			break
 		}
-		if err != nil {
-			fmt.Println(err.Error())
-			cancel()
+		if c.Err() != nil {
 			break
 		}
 		s.PublishMilestoneOnTopic(topicMilestonesConfirmed, milestone)
 	}
+	return nil
 }
 
-func (s *Server) listenToMessages(ctx context.Context) {
+func (s *Server) listenToMessages(ctx context.Context) error {
 	c, cancel := context.WithCancel(ctx)
 	defer cancel()
 	filter := &inx.MessageFilter{}
 	stream, err := s.Client.ListenToMessages(c, filter)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for {
 		message, err := stream.Recv()
-		if err == io.EOF {
+		if err != nil {
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				break
+			}
+			fmt.Printf("listenToMessages: %s\n", err.Error())
 			break
 		}
-		if err != nil {
-			fmt.Println(err.Error())
-			cancel()
+		if c.Err() != nil {
 			break
 		}
 		s.PublishMessage(message.GetMessage())
 	}
-	cancel()
+	return nil
 }
 
-func (s *Server) listenToSolidMessages(ctx context.Context) {
+func (s *Server) listenToSolidMessages(ctx context.Context) error {
 	c, cancel := context.WithCancel(ctx)
 	defer cancel()
 	filter := &inx.MessageFilter{}
 	stream, err := s.Client.ListenToSolidMessages(c, filter)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for {
 		message, err := stream.Recv()
-		if err == io.EOF {
+		if err != nil {
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				break
+			}
+			fmt.Printf("listenToSolidMessages: %s\n", err.Error())
 			break
 		}
-		if err != nil {
-			fmt.Println(err.Error())
-			cancel()
+		if c.Err() != nil {
 			break
 		}
 		s.PublishMessageMetadata(message)
 	}
+	return nil
 }
 
-func (s *Server) listenToReferencedMessages(ctx context.Context) {
+func (s *Server) listenToReferencedMessages(ctx context.Context) error {
 	c, cancel := context.WithCancel(ctx)
 	defer cancel()
 	filter := &inx.MessageFilter{}
 	stream, err := s.Client.ListenToReferencedMessages(c, filter)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for {
 		message, err := stream.Recv()
-		if err == io.EOF {
+		if err != nil {
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				break
+			}
+			fmt.Printf("listenToReferencedMessages: %s\n", err.Error())
 			break
 		}
-		if err != nil {
-			fmt.Println(err.Error())
-			cancel()
+		if c.Err() != nil {
 			break
 		}
 		s.PublishMessageMetadata(message)
 	}
+	return nil
 }
 
-func (s *Server) listenToLedgerUpdates(ctx context.Context) {
+func (s *Server) listenToLedgerUpdates(ctx context.Context) error {
 	c, cancel := context.WithCancel(ctx)
 	defer cancel()
 	filter := &inx.LedgerUpdateRequest{}
 	stream, err := s.Client.ListenToLedgerUpdates(c, filter)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for {
 		message, err := stream.Recv()
-		if err == io.EOF {
+		if err != nil {
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				break
+			}
+			fmt.Printf("listenToLedgerUpdates: %s\n", err.Error())
 			break
 		}
-		if err != nil {
-			fmt.Println(err.Error())
-			cancel()
+		if c.Err() != nil {
 			break
 		}
 		index := milestone.Index(message.GetMilestoneIndex())
@@ -296,6 +328,7 @@ func (s *Server) listenToLedgerUpdates(ctx context.Context) {
 			s.PublishSpent(index, o)
 		}
 	}
+	return nil
 }
 
 func (s *Server) fetchAndPublishMilestoneTopics(ctx context.Context) {

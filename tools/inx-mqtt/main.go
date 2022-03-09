@@ -66,10 +66,6 @@ func main() {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	done := make(chan bool, 1)
 	go func() {
-		<-signalChan
-		done <- true
-	}()
-	go func() {
 		select {
 		case <-signalChan:
 			done <- true
