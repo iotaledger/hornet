@@ -1,0 +1,4 @@
+{
+	"name": "Indexer",
+	"entrypoint": "./inx-indexer"
+}

@@ -1,0 +1,4 @@
+{
+	"name": "MQTT",
+	"entrypoint": "./inx-mqtt"
+}

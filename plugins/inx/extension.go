@@ -6,6 +6,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
+
+	"github.com/iotaledger/hive.go/configuration"
+)
+
+const (
+	INXManifestName       = "name"
+	INXManifestEntrypoint = "entrypoint"
 )
 
 type Extension struct {
@@ -21,16 +28,29 @@ func NewExtension(path string) (*Extension, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	config := configuration.New()
+	if err := config.LoadFile(filepath.Join(absPath, "inx.json")); err != nil {
+		return nil, err
+	}
+	if len(config.String(INXManifestName)) == 0 {
+		return nil, fmt.Errorf("inx.json missing key %s", INXManifestName)
+	}
+	if len(config.String(INXManifestEntrypoint)) == 0 {
+		return nil, fmt.Errorf("inx.json missing key %s", INXManifestEntrypoint)
+	}
+
 	return &Extension{
 		Path:       absPath,
-		Name:       filepath.Base(absPath),
-		Entrypoint: filepath.Join(absPath, "run.sh"),
+		Name:       config.String(INXManifestName),
+		Entrypoint: config.String(INXManifestEntrypoint),
 	}, nil
 }
 
 func (e *Extension) Start(inxPort int) error {
 	e.cmd = exec.Command(e.Entrypoint)
 	e.cmd.Env = append(syscall.Environ(), fmt.Sprintf("INX_PORT=%d", inxPort))
+	e.cmd.Dir = e.Path
 
 	var logFile *os.File
 	logFile, err := os.Create(filepath.Join(e.Path, "output.log"))
