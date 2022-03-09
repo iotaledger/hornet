@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -142,17 +140,6 @@ func databaseMerge(args []string) error {
 
 	client := getNodeHTTPAPIClient(*nodeURLFlag, *chronicleFlag, *chronicleKeyspaceFlag)
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	gracefulStop := make(chan os.Signal, 1)
-	signal.Notify(gracefulStop, syscall.SIGTERM)
-	signal.Notify(gracefulStop, syscall.SIGINT)
-
-	go func() {
-		<-gracefulStop
-		cancel()
-	}()
-
 	// mark the database as corrupted.
 	// this flag will be cleared after the operation finished successfully.
 	if err := tangleStoreTarget.MarkDatabasesCorrupted(); err != nil {
@@ -163,7 +150,7 @@ func databaseMerge(args []string) error {
 	println(fmt.Sprintf("merging databases... (source: %s, target: %s)", *databasePathSourceFlag, *databasePathTargetFlag))
 
 	errMerge := mergeDatabase(
-		ctx,
+		getGracefulStopContext(),
 		milestoneManager,
 		tangleStoreSource,
 		tangleStoreTarget,

@@ -1,10 +1,13 @@
 package toolset
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -225,4 +228,20 @@ func loadConfigFile(filePath string) (*configuration.Configuration, error) {
 	}
 
 	return config, nil
+}
+
+func getGracefulStopContext() context.Context {
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	gracefulStop := make(chan os.Signal, 1)
+	signal.Notify(gracefulStop, syscall.SIGTERM)
+	signal.Notify(gracefulStop, syscall.SIGINT)
+
+	go func() {
+		<-gracefulStop
+		cancel()
+	}()
+
+	return ctx
 }
