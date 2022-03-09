@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"go.uber.org/dig"
@@ -28,17 +29,12 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "INX",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Params:    params,
 			Configure: configure,
 			Run:       run,
 		},
 	}
 }
-
-const (
-	//TODO: add config param
-	INXPort = 9029
-	INXPath = "inx"
-)
 
 var (
 	Plugin   *node.Plugin
@@ -104,24 +100,36 @@ func run() {
 func loadExtensions() {
 	extensions = make([]*Extension, 0)
 
-	dirExists, err := hiveutils.PathExists(INXPath)
+	inxPath := deps.NodeConfig.String(CfxINXPath)
+
+	disabledExtensions := make(map[string]struct{})
+	for _, d := range deps.NodeConfig.Strings(CfgINXDisableExtensions) {
+		disabledExtensions[strings.ToLower(d)] = struct{}{}
+	}
+
+	dirExists, err := hiveutils.PathExists(inxPath)
 	if err != nil {
 		return
 	}
 	if !dirExists {
 		return
 	}
-	files, err := ioutil.ReadDir(INXPath)
+	files, err := ioutil.ReadDir(inxPath)
 	if err != nil {
 		return
 	}
 	for _, f := range files {
 		if f.IsDir() {
-			extension, err := NewExtension(filepath.Join(INXPath, f.Name()))
+			extension, err := NewExtension(filepath.Join(inxPath, f.Name()))
 			if err != nil {
 				Plugin.LogErrorf("Error loading INX extension: %s", err)
 				continue
 			}
+			if _, disable := disabledExtensions[strings.ToLower(extension.Name)]; disable {
+				Plugin.LogInfof("Skipping disabled INX extension: %s", extension.Name)
+				continue
+			}
+			Plugin.LogInfof("Loaded INX extension: %s", extension.Name)
 			extensions = append(extensions, extension)
 		}
 	}
@@ -132,7 +140,7 @@ func startExtensions() {
 		ext := e
 		go func() {
 			Plugin.LogInfof("Starting INX extension: %s", ext.Name)
-			err := ext.Start(INXPort)
+			err := ext.Start(deps.NodeConfig.Int(CfgINXPort))
 			if err != nil {
 				Plugin.LogErrorf("INX extension ended with error: %s", err)
 			}

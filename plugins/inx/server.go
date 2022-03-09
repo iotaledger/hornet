@@ -31,7 +31,7 @@ type INXServer struct {
 
 func (s *INXServer) Start() {
 	go func() {
-		lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", INXPort))
+		lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", deps.NodeConfig.Int(CfgINXPort)))
 		if err != nil {
 			Plugin.LogFatalf("failed to listen: %v", err)
 		}
