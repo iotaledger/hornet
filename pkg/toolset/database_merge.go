@@ -469,7 +469,7 @@ func mergeDatabase(
 		// no ledger state in database available => load the genesis snapshot
 		println("loading genesis snapshot...")
 		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
-			return errors.Wrapf(ErrCritical, "loading genesis snapshot failed: %w", err)
+			return errors.Wrapf(ErrCritical, "loading genesis snapshot failed: %s", err.Error())
 		}
 
 		// set the new start and end indexes after applying the genesis snapshot
