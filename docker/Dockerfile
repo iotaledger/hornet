@@ -16,26 +16,27 @@ RUN update-ca-certificates
 RUN mkdir /scratch
 WORKDIR /scratch
 
+# Prepare the folder where we are putting all the files
+RUN mkdir /app
+
 # Copy everything from the current directory to the PWD(Present Working Directory) inside the container
 COPY . .
 
-ENV GO111MODULE=on
+# Download go modules
 RUN go mod download
 RUN go mod verify
-
-RUN mkdir /app
 
 # Build the binary
 RUN go build -o /app/hornet -a -tags="$BUILD_TAGS" -ldflags='-w -s'
 
 # Build the Indexer INX binary
 RUN mkdir -p /app/inx/indexer
-RUN go build -o /app/inx/indexer/inx-indexer tools/inx-indexer/main.go
+RUN go build -o /app/inx/indexer/inx-indexer ./tools/inx-indexer
 COPY ./inx/indexer/inx.json /app/inx/indexer/inx.json
 
 # Build the MQTT INX binary
 RUN mkdir -p /app/inx/mqtt
-RUN go build -o /app/inx/mqtt/inx-mqtt tools/inx-mqtt/main.go
+RUN go build -o /app/inx/mqtt/inx-mqtt ./tools/inx-mqtt
 COPY ./inx/mqtt/inx.json /app/inx/mqtt/inx.json
 
 # Copy the assets
