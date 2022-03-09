@@ -17,6 +17,7 @@
       "/api/v2/receipts*",
       "/api/plugins/debug/v1/*",
       "/api/plugins/indexer/v1/*",
+      "/api/plugins/mqtt*",
       "/api/plugins/inx-*",
       "/api/plugins/participation/v1/events*",
       "/api/plugins/participation/v1/outputs*",

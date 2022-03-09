@@ -66,7 +66,7 @@ func (s *Server) Start(ctx context.Context) error {
 	broker, err := mqtt.NewBroker(
 		MQTTBindAddress,
 		MQTTWSPort,
-		MQTTWSPath,
+		fmt.Sprintf("/%s", APIRoute),
 		100,
 		func(topic []byte) {
 			s.onSubscribeTopic(ctx, string(topic))

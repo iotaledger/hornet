@@ -48,6 +48,7 @@ func (s *INXServer) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest
 		return nil, status.Error(codes.InvalidArgument, "invalid host and port combination")
 	}
 	restapiv2.AddPlugin(req.GetRoute()).Use(mw)
+	Plugin.LogInfof("Registered proxy %s => %s:%d", req.GetRoute(), req.GetHost(), req.GetPort())
 	return &inx.NoParams{}, nil
 }
 
@@ -56,5 +57,6 @@ func (s *INXServer) UnregisterAPIRoute(_ context.Context, req *inx.APIRouteReque
 		return nil, status.Error(codes.InvalidArgument, "route can not be empty")
 	}
 	restapiv2.RemovePlugin(req.GetRoute())
+	Plugin.LogInfof("Removed proxy %s", req.GetRoute())
 	return &inx.NoParams{}, nil
 }

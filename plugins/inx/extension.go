@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 )
 
 type Extension struct {
@@ -27,8 +28,9 @@ func NewExtension(path string) (*Extension, error) {
 	}, nil
 }
 
-func (e *Extension) Start() error {
+func (e *Extension) Start(inxPort int) error {
 	e.cmd = exec.Command(e.Entrypoint)
+	e.cmd.Env = append(syscall.Environ(), fmt.Sprintf("INX_PORT=%d", inxPort))
 
 	var logFile *os.File
 	logFile, err := os.Create(filepath.Join(e.Path, "output.log"))

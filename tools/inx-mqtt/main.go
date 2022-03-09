@@ -13,11 +13,11 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	"github.com/gohornet/hornet/pkg/inx"
+	"github.com/gohornet/hornet/pkg/utils"
 )
 
 const (
-	INXPort  = 9029
-	APIRoute = "inx-mqtt/v1"
+	APIRoute = "mqtt/v1"
 
 	MQTTBindAddress = "0.0.0.0:1883"
 	MQTTWSPort      = 1888
@@ -26,6 +26,11 @@ const (
 
 func main() {
 
+	port, err := utils.LoadStringFromEnvironment("INX_PORT")
+	if err != nil {
+		panic(err)
+	}
+
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	opts = append(opts, grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -33,7 +38,7 @@ func main() {
 		Timeout:             1 * time.Second,
 		PermitWithoutStream: true,
 	}))
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", INXPort), opts...)
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port), opts...)
 	if err != nil {
 		panic(err)
 	}

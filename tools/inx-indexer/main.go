@@ -23,12 +23,12 @@ import (
 	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
-	INXPort  = 9029
 	APIRoute = "inx-indexer/v1"
 )
 
@@ -158,6 +158,11 @@ func listenToLedgerUpdates(ctx context.Context, client inx.INXClient, indexer *i
 
 func main() {
 
+	port, err := utils.LoadStringFromEnvironment("INX_PORT")
+	if err != nil {
+		panic(err)
+	}
+
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	opts = append(opts, grpc.WithKeepaliveParams(keepalive.ClientParameters{
@@ -165,7 +170,7 @@ func main() {
 		Timeout:             1 * time.Second,
 		PermitWithoutStream: true,
 	}))
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", INXPort), opts...)
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port), opts...)
 	if err != nil {
 		panic(err)
 	}

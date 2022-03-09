@@ -132,7 +132,7 @@ func startExtensions() {
 		ext := e
 		go func() {
 			Plugin.LogInfof("Starting INX extension: %s", ext.Name)
-			err := ext.Start()
+			err := ext.Start(INXPort)
 			if err != nil {
 				Plugin.LogErrorf("INX extension ended with error: %s", err)
 			}
