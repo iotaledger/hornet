@@ -165,7 +165,6 @@
     "disablePlugins": [],
     "enablePlugins": [
       "INX",
-      "Indexer",
       "Spammer",
       "Debug",
       "Prometheus"

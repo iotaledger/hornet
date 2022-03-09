@@ -6,7 +6,7 @@ go run ../main.go -c config_private_tangle.json \
 --dashboard.bindAddress="localhost:8082" \
 --db.path="privatedb2" \
 --node.disablePlugins="Autopeering" \
---node.enablePlugins="Spammer,Debug,Prometheus,Indexer,INX" \
+--node.enablePlugins="Spammer,Debug,Prometheus" \
 --snapshots.fullPath="snapshots/private_tangle2/full_snapshot.bin" \
 --snapshots.deltaPath="snapshots/private_tangle2/delta_snapshot.bin" \
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15601" \
