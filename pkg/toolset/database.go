@@ -11,7 +11,6 @@ import (
 
 	databasecore "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/protocfg"
-	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -30,11 +29,6 @@ var (
 	// Returned when a critical error stops the execution of a task.
 	ErrCritical = errors.New("critical error")
 )
-
-type ParentsTraverserWithStoreMessage interface {
-	dag.ParentsTraverserStorage
-	StoreMessageInterface
-}
 
 func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.MilestoneManager, error) {
 

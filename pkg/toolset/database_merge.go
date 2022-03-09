@@ -258,7 +258,8 @@ func copyAndVerifyMilestoneCone(
 	cachedMessageFuncSource storage.CachedMessageFunc,
 	cachedMessageFuncTarget storage.CachedMessageFunc,
 	utxoManagerTarget *utxo.Manager,
-	parentsTraverserWithStoreMessageTarget ParentsTraverserWithStoreMessage,
+	storeMessageTarget StoreMessageInterface,
+	parentsTraverserStorageTarget dag.ParentsTraverserStorage,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
 	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
@@ -282,7 +283,7 @@ func copyAndVerifyMilestoneCone(
 		milestoneMessageID,
 		parentsTraverserInterfaceSource,
 		cachedMessageFuncSource,
-		parentsTraverserWithStoreMessageTarget,
+		storeMessageTarget,
 		milestoneManager); err != nil {
 		return err
 	}
@@ -291,7 +292,7 @@ func copyAndVerifyMilestoneCone(
 
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		utxoManagerTarget,
-		parentsTraverserWithStoreMessageTarget,
+		parentsTraverserStorageTarget,
 		cachedMessageFuncTarget,
 		milestoneMessageID,
 		nil,
@@ -385,6 +386,7 @@ func mergeViaAPI(
 		proxyStorage.CachedMessage,
 		storeTarget.UTXOManager(),
 		proxyStorage,
+		proxyStorage,
 		milestoneManager); err != nil {
 		return err
 	}
@@ -429,6 +431,7 @@ func mergeViaSourceDatabase(
 		storeSource.CachedMessage,
 		storeTarget.CachedMessage,
 		storeTarget.UTXOManager(),
+		proxyStorage,
 		proxyStorage,
 		milestoneManager); err != nil {
 		return err
