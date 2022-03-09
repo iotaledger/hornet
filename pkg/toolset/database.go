@@ -11,6 +11,7 @@ import (
 
 	databasecore "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/coordinator"
@@ -24,6 +25,16 @@ import (
 	"github.com/iotaledger/hive.go/serializer"
 	iotago "github.com/iotaledger/iota.go/v2"
 )
+
+var (
+	// Returned when a critical error stops the execution of a task.
+	ErrCritical = errors.New("critical error")
+)
+
+type ParentsTraverserWithStoreMessage interface {
+	dag.ParentsTraverserStorage
+	StoreMessageInterface
+}
 
 func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.MilestoneManager, error) {
 
@@ -127,11 +138,18 @@ func getStorageMilestoneRange(tangleStore *storage.Storage) (milestone.Index, mi
 	return msIndexStart, msIndexEnd
 }
 
+type StoreMessageInterface interface {
+	StoreMessageIfAbsent(message *storage.Message) (cachedMsg *storage.CachedMessage, newlyAdded bool)
+	StoreChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *storage.CachedChild
+	StoreIndexation(index []byte, messageID hornet.MessageID) *storage.CachedIndexation
+	StoreMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (*storage.CachedMilestone, bool)
+}
+
 // storeMessage adds a new message to the storage,
 // including all additional information like
 // metadata, children, indexation and milestone entries.
 // message +1
-func storeMessage(dbStorage *storage.Storage, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Message) (*storage.CachedMessage, error) {
+func storeMessage(dbStorage StoreMessageInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Message) (*storage.CachedMessage, error) {
 
 	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation)
 	if err != nil {

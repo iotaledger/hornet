@@ -3,7 +3,6 @@ package toolset
 import (
 	"context"
 	"fmt"
-	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v2"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -22,6 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
@@ -161,7 +162,7 @@ func databaseMerge(args []string) error {
 	ts := time.Now()
 	println(fmt.Sprintf("merging databases... (source: %s, target: %s)", *databasePathSourceFlag, *databasePathTargetFlag))
 
-	if err := mergeDatabase(
+	errMerge := mergeDatabase(
 		ctx,
 		milestoneManager,
 		tangleStoreSource,
@@ -171,13 +172,18 @@ func databaseMerge(args []string) error {
 		*genesisSnapshotFilePathFlag,
 		*chronicleFlag,
 		int(*apiParallelismFlag),
-	); err != nil && !errors.Is(err, common.ErrOperationAborted) && !errors.Is(err, ErrNoNewTangleData) {
-		// ignore errors due to node shutdown
-		return err
+	)
+	if errMerge != nil && errors.Is(errMerge, ErrCritical) {
+		// do not mark the database as healthy in case of critical errors
+		return errMerge
 	}
 
 	// mark clean shutdown of the database
 	if err := tangleStoreTarget.MarkDatabasesHealthy(); err != nil {
+		return err
+	}
+
+	if errMerge != nil && (errors.Is(errMerge, common.ErrOperationAborted) || errors.Is(errMerge, ErrNoNewTangleData)) {
 		return err
 	}
 
@@ -189,12 +195,13 @@ func databaseMerge(args []string) error {
 }
 
 // copyMilestoneCone copies all messages of a milestone cone to the target storage.
-func copyMilestoneCone(ctx context.Context,
+func copyMilestoneCone(
+	ctx context.Context,
 	msIndex milestone.Index,
 	milestoneMessageID hornet.MessageID,
 	parentsTraverserInterface dag.ParentsTraverserInterface,
 	cachedMessageFuncSource storage.CachedMessageFunc,
-	storeTarget *storage.Storage,
+	storeMessageTarget StoreMessageInterface,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
 	// traversal stops if no more messages pass the given condition
@@ -226,7 +233,7 @@ func copyMilestoneCone(ctx context.Context,
 		defer cachedMsg.Release(true) // message -1
 
 		// store the message in the target storage
-		cachedMsgNew, err := storeMessage(storeTarget, milestoneManager, cachedMsg.Message().Message()) // message +1
+		cachedMsgNew, err := storeMessage(storeMessageTarget, milestoneManager, cachedMsg.Message().Message()) // message +1
 		if err != nil {
 			return false, err
 		}
@@ -262,7 +269,9 @@ func copyAndVerifyMilestoneCone(
 	getMilestoneAndMessageID func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error),
 	parentsTraverserInterfaceSource dag.ParentsTraverserInterface,
 	cachedMessageFuncSource storage.CachedMessageFunc,
-	storeTarget *storage.Storage,
+	cachedMessageFuncTarget storage.CachedMessageFunc,
+	utxoManagerTarget *utxo.Manager,
+	parentsTraverserWithStoreMessageTarget ParentsTraverserWithStoreMessage,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
 	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
@@ -286,7 +295,7 @@ func copyAndVerifyMilestoneCone(
 		milestoneMessageID,
 		parentsTraverserInterfaceSource,
 		cachedMessageFuncSource,
-		storeTarget,
+		parentsTraverserWithStoreMessageTarget,
 		milestoneManager); err != nil {
 		return err
 	}
@@ -294,9 +303,9 @@ func copyAndVerifyMilestoneCone(
 	timeCopyMilestoneCone := time.Now()
 
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
-		storeTarget.UTXOManager(),
-		storeTarget,
-		storeTarget.CachedMessage,
+		utxoManagerTarget,
+		parentsTraverserWithStoreMessageTarget,
+		cachedMessageFuncTarget,
 		milestoneMessageID,
 		nil,
 		nil,
@@ -329,7 +338,7 @@ func mergeViaAPI(
 	chronicleMode bool,
 	apiParallelism int) error {
 
-	getMessageViaAPI := func(client *iotago.NodeHTTPAPIClient, messageID hornet.MessageID) (*iotago.Message, error) {
+	getMessageViaAPI := func(messageID hornet.MessageID) (*iotago.Message, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
@@ -373,19 +382,28 @@ func mergeViaAPI(
 		return cachedMsg.Message(), cachedMsg.Message().MessageID(), nil
 	}
 
-	parentsTraverserStorageAPI := NewAPIStorage(storeTarget, milestoneManager, client, getMessageViaAPI)
+	proxyStorage, err := NewProxyStorage(storeTarget, milestoneManager, getMessageViaAPI)
+	if err != nil {
+		return err
+	}
 
 	if err := copyAndVerifyMilestoneCone(
 		ctx,
 		msIndex,
 		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
-			return getMilestoneAndMessageIDViaAPI(client, parentsTraverserStorageAPI.CachedMessage, msIndex)
+			return getMilestoneAndMessageIDViaAPI(client, proxyStorage.CachedMessage, msIndex)
 		},
-		dag.NewConcurrentParentsTraverser(parentsTraverserStorageAPI, apiParallelism),
-		parentsTraverserStorageAPI.CachedMessage,
-		storeTarget,
+		dag.NewConcurrentParentsTraverser(proxyStorage, apiParallelism),
+		proxyStorage.CachedMessage,
+		proxyStorage.CachedMessage,
+		storeTarget.UTXOManager(),
+		proxyStorage,
 		milestoneManager); err != nil {
 		return err
+	}
+
+	if err := proxyStorage.MergeStorages(); err != nil {
+		return fmt.Errorf("merge storages failed: %w", err)
 	}
 
 	return nil
@@ -399,7 +417,12 @@ func mergeViaSourceDatabase(
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
-	return copyAndVerifyMilestoneCone(
+	proxyStorage, err := NewProxyStorage(storeTarget, milestoneManager, storeSource.Message)
+	if err != nil {
+		return err
+	}
+
+	if err := copyAndVerifyMilestoneCone(
 		ctx,
 		msIndex,
 		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
@@ -417,8 +440,18 @@ func mergeViaSourceDatabase(
 		},
 		dag.NewConcurrentParentsTraverser(storeSource),
 		storeSource.CachedMessage,
-		storeTarget,
-		milestoneManager)
+		storeTarget.CachedMessage,
+		storeTarget.UTXOManager(),
+		proxyStorage,
+		milestoneManager); err != nil {
+		return err
+	}
+
+	if err := proxyStorage.MergeStorages(); err != nil {
+		return fmt.Errorf("merge storages failed: %w", err)
+	}
+
+	return nil
 }
 
 // mergeDatabase copies milestone after milestone from source to target database.
@@ -449,7 +482,7 @@ func mergeDatabase(
 		// no ledger state in database available => load the genesis snapshot
 		println("loading genesis snapshot...")
 		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
-			return fmt.Errorf("loading genesis snapshot failed: %w", err)
+			return errors.Wrapf(ErrCritical, "loading genesis snapshot failed: %w", err)
 		}
 
 		// set the new start and end indexes after applying the genesis snapshot
@@ -603,4 +636,118 @@ func (s *APIStorage) SolidEntryPointsContain(messageID hornet.MessageID) (bool, 
 
 func (s *APIStorage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool, error) {
 	return s.storeTarget.SolidEntryPointsIndex(messageID)
+}
+
+type GetMessageFunc func(messageID hornet.MessageID) (*iotago.Message, error)
+
+// ProxyStorage is used to temporarily store changes to an intermediate storage,
+// which then can be merged with the target store in a single commit.
+type ProxyStorage struct {
+	storeTarget      *storage.Storage
+	storeProxy       *storage.Storage
+	milestoneManager *milestonemanager.MilestoneManager
+	getMessageFunc   GetMessageFunc
+}
+
+func NewProxyStorage(
+	storeTarget *storage.Storage,
+	milestoneManager *milestonemanager.MilestoneManager,
+	getMessageFunc GetMessageFunc) (*ProxyStorage, error) {
+
+	storeProxy, err := createTangleStorage("proxy", "", "", database.EngineMapDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ProxyStorage{
+		storeTarget:      storeTarget,
+		storeProxy:       storeProxy,
+		milestoneManager: milestoneManager,
+		getMessageFunc:   getMessageFunc,
+	}, nil
+}
+
+// message +1
+func (s *ProxyStorage) CachedMessage(messageID hornet.MessageID) (*storage.CachedMessage, error) {
+	if !s.storeTarget.ContainsMessage(messageID) {
+		if !s.storeProxy.ContainsMessage(messageID) {
+			msg, err := s.getMessageFunc(messageID)
+			if err != nil {
+				return nil, err
+			}
+
+			cachedMsg, err := storeMessage(s.storeProxy, s.milestoneManager, msg) // message +1
+			if err != nil {
+				return nil, err
+			}
+
+			return cachedMsg, nil
+		}
+		return s.storeProxy.CachedMessage(messageID) // message +1
+	}
+	return s.storeTarget.CachedMessage(messageID) // message +1
+}
+
+// meta +1
+func (s *ProxyStorage) CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
+	cachedMsg, err := s.CachedMessage(messageID) // message +1
+	if err != nil {
+		return nil, err
+	}
+	if cachedMsg == nil {
+		return nil, nil
+	}
+	defer cachedMsg.Release(true)          // message -1
+	return cachedMsg.CachedMetadata(), nil // meta +1
+}
+
+func (s *ProxyStorage) SolidEntryPointsContain(messageID hornet.MessageID) (bool, error) {
+	return s.storeTarget.SolidEntryPointsContain(messageID)
+}
+
+func (s *ProxyStorage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool, error) {
+	return s.storeTarget.SolidEntryPointsIndex(messageID)
+}
+
+func (s *ProxyStorage) MergeStorages() error {
+
+	// first flush both storages
+	s.storeProxy.FlushStorages()
+	s.storeTarget.FlushStorages()
+
+	// copy all existing keys with values from the proxy storage to the target storage
+	mutations := s.storeTarget.TangleStore().Batched()
+
+	var innerErr error
+	s.storeProxy.TangleStore().Iterate([]byte{}, func(key, value kvstore.Value) bool {
+		if err := mutations.Set(key, value); err != nil {
+			innerErr = err
+		}
+
+		return innerErr == nil
+	})
+
+	if innerErr != nil {
+		mutations.Cancel()
+		return innerErr
+	}
+
+	return mutations.Commit()
+}
+
+// StoreMessageInterface
+func (s *ProxyStorage) StoreMessageIfAbsent(message *storage.Message) (cachedMsg *storage.CachedMessage, newlyAdded bool) {
+	return s.storeProxy.StoreMessageIfAbsent(message)
+}
+
+func (s *ProxyStorage) StoreChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *storage.CachedChild {
+	return s.storeProxy.StoreChild(parentMessageID, childMessageID)
+}
+
+func (s *ProxyStorage) StoreIndexation(index []byte, messageID hornet.MessageID) *storage.CachedIndexation {
+	return s.storeProxy.StoreIndexation(index, messageID)
+}
+
+func (s *ProxyStorage) StoreMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (*storage.CachedMilestone, bool) {
+	return s.storeProxy.StoreMilestoneIfAbsent(index, messageID, timestamp)
 }
