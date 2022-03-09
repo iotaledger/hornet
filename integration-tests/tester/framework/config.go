@@ -334,7 +334,7 @@ func DefaultPluginConfig() PluginConfig {
 	disabled := make([]string, len(disabledPluginsPeer))
 	copy(disabled, disabledPluginsPeer)
 	return PluginConfig{
-		Enabled:  []string{"Indexer"},
+		Enabled:  []string{},
 		Disabled: disabled,
 	}
 }
