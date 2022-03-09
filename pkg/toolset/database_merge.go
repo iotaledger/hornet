@@ -72,7 +72,9 @@ func databaseMerge(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolConfigFilePath)
 	}
 	if len(*databasePathSourceFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolDatabasePathSource)
+		if len(*nodeURLFlag) == 0 {
+			return fmt.Errorf("either '%s' or '%s' must be specified", FlagToolDatabasePathSource, FlagToolDatabaseMergeNodeURL)
+		}
 	}
 	if len(*databasePathTargetFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolDatabasePathTarget)
@@ -92,11 +94,16 @@ func databaseMerge(args []string) error {
 		}
 	}
 
-	// we don't need to check the health of the source db.
-	// it is fine as long as all messages in the cone are found.
-	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", *databaseEngineSourceFlag, true, true, false, false, true)
-	if err != nil {
-		return err
+	var tangleStoreSource *storage.Storage = nil
+	if len(*databasePathSourceFlag) > 0 {
+		var err error
+
+		// we don't need to check the health of the source db.
+		// it is fine as long as all messages in the cone are found.
+		tangleStoreSource, err = getTangleStorage(*databasePathSourceFlag, "source", *databaseEngineSourceFlag, true, true, false, false, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	// we need to check the health of the target db, since we don't want use tainted/corrupted dbs.
@@ -107,11 +114,15 @@ func databaseMerge(args []string) error {
 
 	defer func() {
 		println("\nshutdown storages...")
-		tangleStoreSource.ShutdownStorages()
+		if tangleStoreSource != nil {
+			tangleStoreSource.ShutdownStorages()
+		}
 		tangleStoreTarget.ShutdownStorages()
 
 		println("flush and close stores...")
-		tangleStoreSource.FlushAndCloseStores()
+		if tangleStoreSource != nil {
+			tangleStoreSource.FlushAndCloseStores()
+		}
 		tangleStoreTarget.FlushAndCloseStores()
 	}()
 
@@ -312,7 +323,6 @@ func copyAndVerifyMilestoneCone(
 func mergeViaAPI(
 	ctx context.Context,
 	msIndex milestone.Index,
-	storeSource *storage.Storage,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
 	client *iotago.NodeHTTPAPIClient,
@@ -425,14 +435,20 @@ func mergeDatabase(
 	chronicleMode bool,
 	apiParallelism int) error {
 
-	sourceNetworkID := tangleStoreSource.SnapshotInfo().NetworkID
+	tangleStoreSourceAvailable := tangleStoreSource != nil
 
-	msIndexStartSource, msIndexEndSource := getStorageMilestoneRange(tangleStoreSource)
+	var sourceNetworkID uint64
+	var msIndexStartSource, msIndexEndSource milestone.Index = 0, 0
 	msIndexStartTarget, msIndexEndTarget := getStorageMilestoneRange(tangleStoreTarget)
+	if tangleStoreSourceAvailable {
+		sourceNetworkID = tangleStoreSource.SnapshotInfo().NetworkID
+		msIndexStartSource, msIndexEndSource = getStorageMilestoneRange(tangleStoreSource)
+	}
 
 	if msIndexEndTarget == 0 {
 		// no ledger state in database available => load the genesis snapshot
-		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, sourceNetworkID); err != nil {
+		println("loading genesis snapshot...")
+		if err := loadGenesisSnapshot(tangleStoreTarget, genesisSnapshotFilePath, tangleStoreSourceAvailable, sourceNetworkID); err != nil {
 			return fmt.Errorf("loading genesis snapshot failed: %w", err)
 		}
 
@@ -445,7 +461,7 @@ func mergeDatabase(
 
 	// check network ID
 	targetNetworkID := tangleStoreTarget.SnapshotInfo().NetworkID
-	if sourceNetworkID != targetNetworkID {
+	if tangleStoreSourceAvailable && sourceNetworkID != targetNetworkID {
 		return fmt.Errorf("source storage networkID not equal to target storage networkID (%d != %d)", sourceNetworkID, targetNetworkID)
 	}
 
@@ -465,7 +481,7 @@ func mergeDatabase(
 	}
 
 	for msIndex := msIndexStart; msIndex <= msIndexEnd; msIndex++ {
-		if !indexAvailableInSource(msIndex) {
+		if !tangleStoreSourceAvailable || !indexAvailableInSource(msIndex) {
 			if client == nil {
 				return fmt.Errorf("history is missing (oldest source index: %d, target index: %d)", msIndexStartSource, msIndex)
 			}
@@ -474,7 +490,6 @@ func mergeDatabase(
 			if err := mergeViaAPI(
 				ctx,
 				msIndex,
-				tangleStoreSource,
 				tangleStoreTarget,
 				milestoneManager,
 				client,

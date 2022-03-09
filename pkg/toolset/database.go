@@ -251,14 +251,14 @@ func createTangleStorage(name string, tangleDatabasePath string, utxoDatabasePat
 }
 
 // loadGenesisSnapshot loads the genesis snapshot to the storage and checks if the networkID fits.
-func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath string, sourceNetworkID uint64) error {
+func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath string, checkSourceNetworkID bool, sourceNetworkID uint64) error {
 
 	fullHeader, err := snapshot.ReadSnapshotHeaderFromFile(genesisSnapshotFilePath)
 	if err != nil {
 		return err
 	}
 
-	if sourceNetworkID != fullHeader.NetworkID {
+	if checkSourceNetworkID && sourceNetworkID != fullHeader.NetworkID {
 		return fmt.Errorf("source storage networkID not equal to genesis snapshot networkID (%d != %d)", sourceNetworkID, fullHeader.NetworkID)
 	}
 
