@@ -42,7 +42,7 @@ You can find the Hornet configuration files under the `/var/lib/hornet` director
 
 Additionally, the Environment file for configuring multiple defauly parameters can be found under the `/etc/default/hornet` directory.
 
-### Start the node
+### Start the Node
 
 You can use  the `systemd` service to start running Hornet on the Mainnet by running the following command:
 ```bash

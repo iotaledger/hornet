@@ -54,7 +54,7 @@ If you run more than one node, it is a good practice to make sure that you distr
 
 To evenly distribute the API requests among all your nodes, you can run a reverse proxy server that will act as a load balancer ([HAProxy](http://www.haproxy.org/), [Traefik](https://traefik.io/), [Nginx](https://www.nginx.com/), [Apache](https://www.apache.org/), etc.). This way, you can have one domain name for your reverse proxy server that all nodes will send their API calls to. On the backend, the nodes with the most spare computational power will process the request and return the response.
 
-Since broadcasted messages are atomic and nodes provide restful API to communicate, you will not need sticky sessions or similar technologies.
+Since broadcasted messages are atomic and nodes provide RESTful API to communicate, you will not need sticky sessions or similar technologies.
 
 ## Reverse Proxy
 
