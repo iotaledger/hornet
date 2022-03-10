@@ -53,7 +53,7 @@ func databaseSnapshot(args []string) error {
 	solidEntryPointCheckThresholdPast := milestone.Index(belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdPast)
 	solidEntryPointCheckThresholdFuture := milestone.Index(belowMaxDepth + snapCore.SolidEntryPointCheckAdditionalThresholdFuture)
 
-	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineRocksDB), true, true, true, true, true)
+	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, true, true, true, true)
 	if err != nil {
 		return err
 	}

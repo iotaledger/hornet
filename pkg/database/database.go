@@ -16,6 +16,7 @@ type Engine string
 
 const (
 	EngineUnknown Engine = "unknown"
+	EngineAuto    Engine = "auto"
 	EngineRocksDB Engine = "rocksdb"
 	EnginePebble  Engine = "pebble"
 	EngineMapDB   Engine = "mapdb"

@@ -87,7 +87,7 @@ func initConfigPars(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
-		dbEngine, err := database.DatabaseEngine(deps.NodeConfig.String(CfgDatabaseEngine))
+		dbEngine, err := database.DatabaseEngineFromStringAllowed(deps.NodeConfig.String(CfgDatabaseEngine))
 		if err != nil {
 			CorePlugin.LogPanic(err)
 		}
