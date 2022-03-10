@@ -713,7 +713,11 @@ func CreateSnapshotFromStorage(
 
 	// roll back the confirmation in the temporary UTXO manager
 	utxoManagerTemp := utxo.New(utxoStoreTemp)
-	for msIndex := ledgerIndex; msIndex >= targetIndex; msIndex-- {
+
+	// we only need to rollback until the resulting ledgerIndex == targetIndex,
+	// but everytime we run RollbackConfirmationWithoutLocking we decrease the ledgerIndex by 1.
+	// => msIndex > targetIndex is correct in this case.
+	for msIndex := ledgerIndex; msIndex > targetIndex; msIndex-- {
 
 		msDiff, err := utxoManagerTemp.MilestoneDiffWithoutLocking(msIndex)
 		if err != nil {
