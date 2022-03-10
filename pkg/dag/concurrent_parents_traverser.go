@@ -53,7 +53,7 @@ type ConcurrentParentsTraverser struct {
 func NewConcurrentParentsTraverser(parentsTraverserStorage ParentsTraverserStorage, parallelism ...int) *ConcurrentParentsTraverser {
 
 	walkerParallelism := runtime.NumCPU()
-	if len(parallelism) > 0 {
+	if len(parallelism) > 0 && parallelism[0] > 0 {
 		walkerParallelism = parallelism[0]
 	}
 
@@ -162,7 +162,7 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents horne
 	}
 
 	doneChan := make(chan struct{})
-	errChan := make(chan error)
+	errChan := make(chan error, t.parallelism)
 
 	for i := 0; i < t.parallelism; i++ {
 		go t.processStack(doneChan, errChan)
@@ -171,14 +171,12 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents horne
 	select {
 	case <-doneChan:
 		// traverser finished successfully
-		close(errChan)
 		close(t.stackChanIn)
 		return nil
 
 	case err := <-errChan:
 		// traverser encountered an error
 		close(doneChan)
-		close(errChan)
 		close(t.stackChanIn)
 		return err
 	}
@@ -208,10 +206,8 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 			return err
 		}
 
-		select {
-		case <-doneChan:
-			return ErrTraversalDone
-		default:
+		if err := utils.ReturnErrIfChannelClosed(doneChan, ErrTraversalDone); err != nil {
+			return err
 		}
 
 		if markAsProcessed(currentMessageID) {
@@ -280,6 +276,11 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 
 		for _, parentMessageID := range cachedMsgMeta.Metadata().Parents() {
 			if !wasProcessed(parentMessageID) {
+				// do not walk further parents if the traversal was already done
+				if err := utils.ReturnErrIfChannelClosed(doneChan, ErrTraversalDone); err != nil {
+					return err
+				}
+
 				// parent was not processed yet, add it to the pipeline
 				t.traverseMessage(parentMessageID)
 			}

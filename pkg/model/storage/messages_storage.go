@@ -251,6 +251,21 @@ func (s *Storage) CachedMessage(messageID hornet.MessageID) (*CachedMessage, err
 	return s.CachedMessageOrNil(messageID), nil // message +1
 }
 
+// Message returns an iotago message object.
+func (s *Storage) Message(messageID hornet.MessageID) (*iotago.Message, error) {
+	cachedMsg, err := s.CachedMessage(messageID)
+	if err != nil {
+		return nil, err
+	}
+
+	if cachedMsg == nil {
+		return nil, nil
+	}
+
+	defer cachedMsg.Release(true)
+	return cachedMsg.Message().Message(), nil
+}
+
 // CachedMessageMetadataOrNil returns a cached metadata object.
 // meta +1
 func (s *Storage) CachedMessageMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
