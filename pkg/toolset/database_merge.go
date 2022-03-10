@@ -39,7 +39,7 @@ func databaseMerge(args []string) error {
 	databasePathTargetFlag := fs.String(FlagToolDatabasePathTarget, "", "the path to the target database")
 	databaseEngineSourceFlag := fs.String(FlagToolDatabaseEngineSource, string(DefaultValueDatabaseEngine), "the engine of the source database (values: pebble, rocksdb)")
 	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, string(DefaultValueDatabaseEngine), "the engine of the target database (values: pebble, rocksdb)")
-	targetIndexFlag := fs.Uint32("targetIndex", 0, "the target index (optional)")
+	targetIndexFlag := fs.Uint32(FlagToolDatabaseTargetIndex, 0, "the target index (optional)")
 	nodeURLFlag := fs.String(FlagToolDatabaseMergeNodeURL, "", "URL of the node (optional)")
 	chronicleFlag := fs.Bool(FlagToolDatabaseMergeChronicle, false, "use chronicle compatibility mode for API sync")
 	chronicleKeyspaceFlag := fs.String(FlagToolDatabaseMergeChronicleKeyspace, "mainnet", "key space for chronicle compatibility mode")
@@ -53,7 +53,7 @@ func databaseMerge(args []string) error {
 			FlagToolConfigFilePath,
 			"config.json",
 			FlagToolDatabasePathSource,
-			"mainnetdb",
+			DefaultValueMainnetDatabasePath,
 			FlagToolDatabaseEngineSource,
 			database.EnginePebble,
 			FlagToolDatabasePathTarget,
@@ -295,6 +295,9 @@ func copyAndVerifyMilestoneCone(
 		parentsTraverserStorageTarget,
 		cachedMessageFuncTarget,
 		milestoneMessageID,
+		whiteflag.DefaultWhiteFlagTraversalCondition,
+		whiteflag.DefaultCheckMessageReferencedFunc,
+		whiteflag.DefaultSetMessageReferencedFunc,
 		nil,
 		nil,
 		nil,
