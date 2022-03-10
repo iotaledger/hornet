@@ -711,23 +711,7 @@ func (s *ProxyStorage) MergeStorages() error {
 	s.storeTarget.FlushStorages()
 
 	// copy all existing keys with values from the proxy storage to the target storage
-	mutations := s.storeTarget.TangleStore().Batched()
-
-	var innerErr error
-	s.storeProxy.TangleStore().Iterate([]byte{}, func(key, value kvstore.Value) bool {
-		if err := mutations.Set(key, value); err != nil {
-			innerErr = err
-		}
-
-		return innerErr == nil
-	})
-
-	if innerErr != nil {
-		mutations.Cancel()
-		return innerErr
-	}
-
-	return mutations.Commit()
+	return kvstore.Copy(s.storeProxy.TangleStore(), s.storeTarget.TangleStore())
 }
 
 // StoreMessageInterface
