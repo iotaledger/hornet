@@ -40,7 +40,7 @@ Hornet developers maintain the Hornet `apt` repository. It installs Hornet as a 
 
 You can find the Hornet configuration files under the `/var/lib/hornet` directory. You can also find more details on how to configure Hornet in the [post installation](https://wiki.iota.org/hornet/post_installation) article.
 
-Additionally, the Environment file for configuring multiple defauly parameters can be found under the `/etc/default/hornet` directory.
+Additionally, the Environment file for configuring multiple default parameters can be found under the `/etc/default/hornet` directory.
 
 ### Managing the Node
 

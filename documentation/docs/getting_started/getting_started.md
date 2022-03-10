@@ -90,7 +90,7 @@ Alternatively, you can build Hornet by following these instructions:
 
 ### Windows
 
-You can install Hornet on windows using:
+You can install Hornet on Windows using:
 
 - [The docker image](https://wiki.iota.org/hornet/getting_started/using_docker).
 
