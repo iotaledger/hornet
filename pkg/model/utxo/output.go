@@ -1,6 +1,7 @@
 package utxo
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
@@ -18,7 +19,21 @@ const (
 	OutputIDLength = iotago.TransactionIDLength + serializer.UInt16ByteSize
 )
 
-var FakeTreasuryAddress = iotago.Ed25519Address{}
+// LexicalOrderedOutputs are outputs
+// ordered in lexical order by their outputID.
+type LexicalOrderedOutputs []*Output
+
+func (l LexicalOrderedOutputs) Len() int {
+	return len(l)
+}
+
+func (l LexicalOrderedOutputs) Less(i, j int) bool {
+	return bytes.Compare(l[i].outputID[:], l[j].outputID[:]) < 0
+}
+
+func (l LexicalOrderedOutputs) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
 
 type Output struct {
 	kvStorable

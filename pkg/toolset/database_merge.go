@@ -39,7 +39,7 @@ func databaseMerge(args []string) error {
 	databasePathTargetFlag := fs.String(FlagToolDatabasePathTarget, "", "the path to the target database")
 	databaseEngineSourceFlag := fs.String(FlagToolDatabaseEngineSource, string(DefaultValueDatabaseEngine), "the engine of the source database (values: pebble, rocksdb)")
 	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, string(DefaultValueDatabaseEngine), "the engine of the target database (values: pebble, rocksdb)")
-	targetIndexFlag := fs.Uint32("targetIndex", 0, "the target index (optional)")
+	targetIndexFlag := fs.Uint32(FlagToolDatabaseTargetIndex, 0, "the target index (optional)")
 	nodeURLFlag := fs.String(FlagToolDatabaseMergeNodeURL, "", "URL of the node (optional)")
 	chronicleFlag := fs.Bool(FlagToolDatabaseMergeChronicle, false, "use chronicle compatibility mode for API sync")
 	chronicleKeyspaceFlag := fs.String(FlagToolDatabaseMergeChronicleKeyspace, "mainnet", "key space for chronicle compatibility mode")
@@ -53,7 +53,7 @@ func databaseMerge(args []string) error {
 			FlagToolConfigFilePath,
 			"config.json",
 			FlagToolDatabasePathSource,
-			"mainnetdb",
+			DefaultValueMainnetDatabasePath,
 			FlagToolDatabaseEngineSource,
 			database.EnginePebble,
 			FlagToolDatabasePathTarget,
@@ -248,6 +248,13 @@ func copyMilestoneCone(
 	return nil
 }
 
+type confStats struct {
+	msIndex              milestone.Index
+	messagesReferenced   int
+	durationCopy         time.Duration
+	durationConfirmation time.Duration
+}
+
 // copyAndVerifyMilestoneCone verifies the milestone, copies the milestone cone to the
 // target storage, confirms the milestone and applies the ledger changes.
 func copyAndVerifyMilestoneCone(
@@ -260,19 +267,19 @@ func copyAndVerifyMilestoneCone(
 	utxoManagerTarget *utxo.Manager,
 	storeMessageTarget StoreMessageInterface,
 	parentsTraverserStorageTarget dag.ParentsTraverserStorage,
-	milestoneManager *milestonemanager.MilestoneManager) error {
+	milestoneManager *milestonemanager.MilestoneManager) (*confStats, error) {
 
 	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
-		return err
+		return nil, err
 	}
 
 	msMsg, milestoneMessageID, err := getMilestoneAndMessageID(msIndex)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if ms := milestoneManager.VerifyMilestone(msMsg); ms == nil {
-		return fmt.Errorf("source milestone not valid! %d", msIndex)
+		return nil, fmt.Errorf("source milestone not valid! %d", msIndex)
 	}
 
 	ts := time.Now()
@@ -285,7 +292,7 @@ func copyAndVerifyMilestoneCone(
 		cachedMessageFuncSource,
 		storeMessageTarget,
 		milestoneManager); err != nil {
-		return err
+		return nil, err
 	}
 
 	timeCopyMilestoneCone := time.Now()
@@ -295,6 +302,9 @@ func copyAndVerifyMilestoneCone(
 		parentsTraverserStorageTarget,
 		cachedMessageFuncTarget,
 		milestoneMessageID,
+		whiteflag.DefaultWhiteFlagTraversalCondition,
+		whiteflag.DefaultCheckMessageReferencedFunc,
+		whiteflag.DefaultSetMessageReferencedFunc,
 		nil,
 		nil,
 		nil,
@@ -303,17 +313,17 @@ func copyAndVerifyMilestoneCone(
 		nil,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	timeConfirmMilestone := time.Now()
-	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, total: %v",
-		confirmedMilestoneStats.Index,
-		confirmedMilestoneStats.MessagesReferenced,
-		timeCopyMilestoneCone.Sub(ts).Truncate(time.Millisecond),
-		timeConfirmMilestone.Sub(timeCopyMilestoneCone).Truncate(time.Millisecond),
-		timeConfirmMilestone.Sub(ts).Truncate(time.Millisecond)))
-	return nil
+
+	return &confStats{
+		msIndex:              confirmedMilestoneStats.Index,
+		messagesReferenced:   confirmedMilestoneStats.MessagesReferenced,
+		durationCopy:         timeCopyMilestoneCone.Sub(ts).Truncate(time.Millisecond),
+		durationConfirmation: timeConfirmMilestone.Sub(timeCopyMilestoneCone).Truncate(time.Millisecond),
+	}, nil
 }
 
 // mergeViaAPI copies a milestone from a remote node to the target database via API.
@@ -375,7 +385,9 @@ func mergeViaAPI(
 		return err
 	}
 
-	if err := copyAndVerifyMilestoneCone(
+	ts := time.Now()
+
+	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
 		msIndex,
 		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
@@ -387,13 +399,26 @@ func mergeViaAPI(
 		storeTarget.UTXOManager(),
 		proxyStorage,
 		proxyStorage,
-		milestoneManager); err != nil {
+		milestoneManager)
+	if err != nil {
 		return err
 	}
+
+	timeMergeStoragesStart := time.Now()
 
 	if err := proxyStorage.MergeStorages(); err != nil {
 		return fmt.Errorf("merge storages failed: %w", err)
 	}
+
+	te := time.Now()
+
+	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
+		confStats.msIndex,
+		confStats.messagesReferenced,
+		confStats.durationCopy,
+		confStats.durationConfirmation,
+		te.Sub(timeMergeStoragesStart).Truncate(time.Millisecond),
+		te.Sub(ts).Truncate(time.Millisecond)))
 
 	return nil
 }
@@ -411,7 +436,9 @@ func mergeViaSourceDatabase(
 		return err
 	}
 
-	if err := copyAndVerifyMilestoneCone(
+	ts := time.Now()
+
+	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
 		msIndex,
 		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
@@ -433,13 +460,26 @@ func mergeViaSourceDatabase(
 		storeTarget.UTXOManager(),
 		proxyStorage,
 		proxyStorage,
-		milestoneManager); err != nil {
+		milestoneManager)
+	if err != nil {
 		return err
 	}
+
+	timeMergeStoragesStart := time.Now()
 
 	if err := proxyStorage.MergeStorages(); err != nil {
 		return fmt.Errorf("merge storages failed: %w", err)
 	}
+
+	te := time.Now()
+
+	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
+		confStats.msIndex,
+		confStats.messagesReferenced,
+		confStats.durationCopy,
+		confStats.durationConfirmation,
+		te.Sub(timeMergeStoragesStart).Truncate(time.Millisecond),
+		te.Sub(ts).Truncate(time.Millisecond)))
 
 	return nil
 }
@@ -708,23 +748,7 @@ func (s *ProxyStorage) MergeStorages() error {
 	s.storeTarget.FlushStorages()
 
 	// copy all existing keys with values from the proxy storage to the target storage
-	mutations := s.storeTarget.TangleStore().Batched()
-
-	var innerErr error
-	s.storeProxy.TangleStore().Iterate([]byte{}, func(key, value kvstore.Value) bool {
-		if err := mutations.Set(key, value); err != nil {
-			innerErr = err
-		}
-
-		return innerErr == nil
-	})
-
-	if innerErr != nil {
-		mutations.Cancel()
-		return innerErr
-	}
-
-	return mutations.Commit()
+	return kvstore.Copy(s.storeProxy.TangleStore(), s.storeTarget.TangleStore())
 }
 
 // StoreMessageInterface

@@ -45,6 +45,18 @@ type ConfirmationMetrics struct {
 	DurationTotal                                    time.Duration
 }
 
+type CheckMessageReferencedFunc func(meta *storage.MessageMetadata) bool
+type SetMessageReferencedFunc func(meta *storage.MessageMetadata, referenced bool, msIndex milestone.Index)
+
+var (
+	DefaultCheckMessageReferencedFunc = func(meta *storage.MessageMetadata) bool {
+		return meta.IsReferenced()
+	}
+	DefaultSetMessageReferencedFunc = func(meta *storage.MessageMetadata, referenced bool, msIndex milestone.Index) {
+		meta.SetReferenced(referenced, msIndex)
+	}
+)
+
 // ConfirmMilestone traverses a milestone and collects all unreferenced msg,
 // then the ledger diffs are calculated, the ledger state is checked and all msg are marked as referenced.
 // Additionally, this function also examines the milestone for a receipt and generates new migrated outputs
@@ -54,6 +66,9 @@ func ConfirmMilestone(
 	parentsTraverserStorage dag.ParentsTraverserStorage,
 	cachedMessageFunc storage.CachedMessageFunc,
 	milestoneMessageID hornet.MessageID,
+	whiteFlagTraversalCondition dag.Predicate,
+	checkMessageReferencedFunc CheckMessageReferencedFunc,
+	setMessageReferencedFunc SetMessageReferencedFunc,
 	serverMetrics *metrics.ServerMetrics,
 	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64),
 	onMilestoneConfirmed func(confirmation *Confirmation),
@@ -92,7 +107,7 @@ func ConfirmMilestone(
 
 	// we pass a background context here to not cancel the whiteflag computation!
 	// otherwise the node could panic at shutdown.
-	mutations, err := ComputeWhiteFlagMutations(context.Background(), utxoManager, parentsTraverser, cachedMessageFunc, milestoneIndex, message.Parents())
+	mutations, err := ComputeWhiteFlagMutations(context.Background(), utxoManager, parentsTraverser, cachedMessageFunc, milestoneIndex, message.Parents(), whiteFlagTraversalCondition)
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
@@ -194,8 +209,8 @@ func ConfirmMilestone(
 	// confirm all included messages
 	for _, messageID := range mutations.MessagesIncludedWithTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *storage.CachedMetadata) {
-			if !meta.Metadata().IsReferenced() {
-				meta.Metadata().SetReferenced(true, milestoneIndex)
+			if !checkMessageReferencedFunc(meta.Metadata()) {
+				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.MessagesReferenced++
 				confirmedMilestoneStats.MessagesIncludedWithTransactions++
@@ -217,8 +232,8 @@ func ConfirmMilestone(
 	for _, messageID := range mutations.MessagesExcludedWithoutTransactions {
 		if err := forMessageMetadataWithMessageID(messageID, func(meta *storage.CachedMetadata) {
 			meta.Metadata().SetIsNoTransaction(true)
-			if !meta.Metadata().IsReferenced() {
-				meta.Metadata().SetReferenced(true, milestoneIndex)
+			if !checkMessageReferencedFunc(meta.Metadata()) {
+				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.MessagesReferenced++
 				confirmedMilestoneStats.MessagesExcludedWithoutTransactions++
@@ -239,8 +254,8 @@ func ConfirmMilestone(
 	// confirm the milestone itself
 	if err := forMessageMetadataWithMessageID(milestoneMessageID, func(meta *storage.CachedMetadata) {
 		meta.Metadata().SetIsNoTransaction(true)
-		if !meta.Metadata().IsReferenced() {
-			meta.Metadata().SetReferenced(true, milestoneIndex)
+		if !checkMessageReferencedFunc(meta.Metadata()) {
+			setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
 			meta.Metadata().SetMilestone(true)
 			meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 			confirmedMilestoneStats.MessagesReferenced++
@@ -262,8 +277,8 @@ func ConfirmMilestone(
 	for _, conflictedMessage := range mutations.MessagesExcludedWithConflictingTransactions {
 		if err := forMessageMetadataWithMessageID(conflictedMessage.MessageID, func(meta *storage.CachedMetadata) {
 			meta.Metadata().SetConflictingTx(conflictedMessage.Conflict)
-			if !meta.Metadata().IsReferenced() {
-				meta.Metadata().SetReferenced(true, milestoneIndex)
+			if !checkMessageReferencedFunc(meta.Metadata()) {
+				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.MessagesReferenced++
 				confirmedMilestoneStats.MessagesExcludedWithConflictingTransactions++

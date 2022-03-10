@@ -300,6 +300,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		memcachedTraverserStorage,
 		messagesMemcache.CachedMessage,
 		cachedMilestoneToSolidify.Milestone().MessageID,
+		whiteflag.DefaultWhiteFlagTraversalCondition,
+		whiteflag.DefaultCheckMessageReferencedFunc,
+		whiteflag.DefaultSetMessageReferencedFunc,
 		t.serverMetrics,
 		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
