@@ -151,13 +151,17 @@ func (ms *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value 
 }
 
 func (ms *MilestoneDiff) sortedOutputs() LexicalOrderedOutputs {
-	var sortedOutputs LexicalOrderedOutputs = LexicalOrderedOutputs(ms.Outputs)
+	// do not sort in place
+	sortedOutputs := make(LexicalOrderedOutputs, len(ms.Outputs))
+	copy(sortedOutputs, LexicalOrderedOutputs(ms.Outputs))
 	sort.Sort(sortedOutputs)
 	return sortedOutputs
 }
 
 func (ms *MilestoneDiff) sortedSpents() LexicalOrderedSpents {
-	var sortedSpents LexicalOrderedSpents = LexicalOrderedSpents(ms.Spents)
+	// do not sort in place
+	sortedSpents := make(LexicalOrderedSpents, len(ms.Spents))
+	copy(sortedSpents, LexicalOrderedSpents(ms.Spents))
 	sort.Sort(sortedSpents)
 	return sortedSpents
 }
