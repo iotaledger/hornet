@@ -3,7 +3,6 @@ package participation
 import (
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"sort"
 	"strconv"
@@ -22,7 +21,7 @@ import (
 // EventIDFromHex creates a EventID from a hex string representation.
 func EventIDFromHex(hexString string) (participation.EventID, error) {
 
-	b, err := hex.DecodeString(hexString)
+	b, err := iotago.DecodeHex(hexString)
 	if err != nil {
 		return participation.NullEventID, err
 	}
@@ -86,7 +85,7 @@ func getEvents(c echo.Context) (*EventsResponse, error) {
 
 	hexEventIDs := []string{}
 	for _, id := range eventIDs {
-		hexEventIDs = append(hexEventIDs, hex.EncodeToString(id[:]))
+		hexEventIDs = append(hexEventIDs, id.ToHex())
 	}
 	sort.Strings(hexEventIDs)
 
@@ -110,7 +109,7 @@ func createEvent(c echo.Context) (*CreateEventResponse, error) {
 	}
 
 	return &CreateEventResponse{
-		EventID: hex.EncodeToString(eventID[:]),
+		EventID: eventID.ToHex(),
 	}, nil
 }
 
@@ -123,7 +122,7 @@ func getEvent(c echo.Context) (*participation.Event, error) {
 
 	event := deps.ParticipationManager.Event(eventID)
 	if event == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))
+		return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", eventID.ToHex())
 	}
 
 	return event, nil
@@ -138,7 +137,7 @@ func deleteEvent(c echo.Context) error {
 
 	if err = deps.ParticipationManager.DeleteEvent(eventID); err != nil {
 		if errors.Is(err, participation.ErrEventNotFound) {
-			return errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))
+			return errors.WithMessagef(echo.ErrNotFound, "event not found: %s", eventID.ToHex())
 		}
 		return errors.WithMessagef(echo.ErrInternalServerError, "deleting event failed: %s", err)
 	}
@@ -178,7 +177,7 @@ func getEventStatus(c echo.Context) (*participation.EventStatus, error) {
 	status, err := deps.ParticipationManager.EventStatus(eventID, milestoneIndexFilter...)
 	if err != nil {
 		if errors.Is(err, participation.ErrEventNotFound) {
-			return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", hex.EncodeToString(eventID[:]))
+			return nil, errors.WithMessagef(echo.ErrNotFound, "event not found: %s", eventID.ToHex())
 		}
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "get event status failed: %s", err)
 	}
@@ -211,7 +210,7 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 			StartMilestoneIndex: trackedParticipation.StartIndex,
 			EndMilestoneIndex:   trackedParticipation.EndIndex,
 		}
-		response.Participations[hex.EncodeToString(trackedParticipation.EventID[:])] = t
+		response.Participations[trackedParticipation.EventID.ToHex()] = t
 	}
 
 	return response, nil
@@ -263,7 +262,7 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)
 		}
 
-		response.Rewards[hex.EncodeToString(eventID[:])] = &AddressReward{
+		response.Rewards[eventID.ToHex()] = &AddressReward{
 			Amount:         amount,
 			Symbol:         staking.Symbol,
 			MinimumReached: amount >= staking.RequiredMinimumRewards,
@@ -322,7 +321,7 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 		response.TotalRewards += amount
 	}
 
-	response.Checksum = hex.EncodeToString(responseHash.Sum(nil))
+	response.Checksum = iotago.EncodeHex(responseHash.Sum(nil))
 
 	return response, nil
 }

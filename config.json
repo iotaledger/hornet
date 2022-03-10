@@ -75,7 +75,7 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "stardust-testnet-2",
+    "networkID": "stardust-testnet-3",
     "bech32HRP": "atoi",
     "minPoWScore": 1000.0,
     "vByteCost": 500,

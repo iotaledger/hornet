@@ -47,6 +47,16 @@ type outputPayload struct {
 	OutputIndex uint16 `json:"outputIndex"`
 	// Whether this output is spent.
 	Spent bool `json:"isSpent"`
+	// The milestone index at which this output was spent.
+	MilestoneIndexSpent milestone.Index `json:"milestoneIndexSpent,omitempty"`
+	// The milestone timestamp this output was spent.
+	MilestoneTimestampSpent uint32 `json:"milestoneTimestampSpent,omitempty"`
+	// The transaction this output was spent with.
+	TransactionIDSpent string `json:"transactionIdSpent,omitempty"`
+	// The milestone index at which this output was booked into the ledger.
+	MilestoneIndexBooked milestone.Index `json:"milestoneIndexBooked"`
+	// The milestone timestamp this output was booked in the ledger.
+	MilestoneTimestampBooked uint32 `json:"milestoneTimestampBooked"`
 	// The ledger index at which this output was available at.
 	LedgerIndex milestone.Index `json:"ledgerIndex"`
 	// The output in its serialized form.

@@ -26,10 +26,10 @@ func TestMigration(t *testing.T) {
 	}
 
 	migrations := map[string]tuple{
-		"2c2bb061de51f09ce2ccee44a626762bbb766997e1c8098eaec2e3a089c65843": {1, 1000000},
-		"0be076ce68461235e6c43241160a62faeff1536f1a79d816e054f7c7e0c68661": {3, 2000000},
-		"583e0b3a19e15c1ad09f53cc152cafde9109cd56486107249feb77d1ff16ce61": {3, 4000000},
-		"0a9a5b39438f3fe9107facd9bf6df747573a8c5050c467f4dfcc32d82e3560f8": {5, 10000000},
+		"0x2c2bb061de51f09ce2ccee44a626762bbb766997e1c8098eaec2e3a089c65843": {1, 1000000},
+		"0x0be076ce68461235e6c43241160a62faeff1536f1a79d816e054f7c7e0c68661": {3, 2000000},
+		"0x583e0b3a19e15c1ad09f53cc152cafde9109cd56486107249feb77d1ff16ce61": {3, 4000000},
+		"0x0a9a5b39438f3fe9107facd9bf6df747573a8c5050c467f4dfcc32d82e3560f8": {5, 10000000},
 	}
 
 	var totalMigration uint64
@@ -73,7 +73,12 @@ func TestMigration(t *testing.T) {
 			log.Printf("failed to get current treasury: %s", err)
 			return false
 		}
-		return treasury.Amount == initialTreasuryTokens-totalMigration
+		amount, err := iotago.DecodeUint64(treasury.Amount)
+		if err != nil {
+			log.Printf("failed to decode treasury amount: %s", err)
+			return false
+		}
+		return amount == initialTreasuryTokens-totalMigration
 	}, 2*time.Minute, time.Second)
 
 	// checking that funds were migrated in appropriate receipts

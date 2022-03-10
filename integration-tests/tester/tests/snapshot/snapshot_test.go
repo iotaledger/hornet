@@ -59,12 +59,17 @@ func TestSnapshot(t *testing.T) {
 	// check that the treasury output contains total supply - 40'000'000
 	for _, node := range n.Nodes {
 		require.Eventually(t, func() bool {
-			res, err := node.DebugNodeAPIClient.Treasury(context.Background())
+			treasury, err := node.DebugNodeAPIClient.Treasury(context.Background())
 			if err != nil {
 				log.Println(err)
 				return false
 			}
-			return res.Amount == consts.TotalSupply-40_000_000
+			amount, err := iotago.DecodeUint64(treasury.Amount)
+			if err != nil {
+				log.Printf("failed to decode treasury amount: %s", err)
+				return false
+			}
+			return amount == consts.TotalSupply-40_000_000
 		}, 30*time.Second, 100*time.Millisecond)
 	}
 }

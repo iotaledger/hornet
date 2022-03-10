@@ -136,7 +136,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		var treasury *treasuryStruct
 		if treasuryOutput != nil {
 			treasury = &treasuryStruct{
-				MilestoneID: hex.EncodeToString(treasuryOutput.MilestoneID[:]),
+				MilestoneID: treasuryOutput.MilestoneID.ToHex(),
 				Tokens:      treasuryOutput.Amount,
 			}
 		}
@@ -190,7 +190,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			if treasuryOutput == nil {
 				return "no treasury output found"
 			}
-			return fmt.Sprintf("milestone ID %s, tokens %d", hex.EncodeToString(treasuryOutput.MilestoneID[:]), treasuryOutput.Amount)
+			return fmt.Sprintf("milestone ID %s, tokens %d", treasuryOutput.MilestoneID.ToHex(), treasuryOutput.Amount)
 		}(),
 		ledgerIndex,
 		snapshotInfo.SnapshotIndex,

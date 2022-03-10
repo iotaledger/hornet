@@ -1,8 +1,6 @@
 package mqtt
 
 import (
-	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"strings"
 
@@ -14,9 +12,20 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
+
+func publishRawOnTopicIfSubscribed(topic string, payload []byte) {
+	if deps.MQTTBroker.HasSubscribers(topic) {
+		deps.MQTTBroker.Send(topic, payload)
+	}
+}
+
+func publishOnTopicIfSubscribed(topic string, payload interface{}) {
+	if deps.MQTTBroker.HasSubscribers(topic) {
+		publishOnTopic(topic, payload)
+	}
+}
 
 func publishOnTopic(topic string, payload interface{}) {
 	jsonPayload, err := json.Marshal(payload)
@@ -39,38 +48,58 @@ func publishLatestMilestone(cachedMs *storage.CachedMilestone) {
 }
 
 func publishMilestoneOnTopic(topic string, milestone *storage.Milestone) {
-	if deps.MQTTBroker.HasSubscribers(topic) {
-		publishOnTopic(topic, &milestonePayload{
-			Index: uint32(milestone.Index),
-			Time:  milestone.Timestamp.Unix(),
-		})
-	}
+	publishOnTopicIfSubscribed(topic, &milestonePayload{
+		Index: uint32(milestone.Index),
+		Time:  milestone.Timestamp.Unix(),
+	})
 }
 
 func publishReceipt(r *iotago.Receipt) {
-	if deps.MQTTBroker.HasSubscribers(topicReceipts) {
-		publishOnTopic(topicReceipts, r)
-	}
+	publishOnTopicIfSubscribed(topicReceipts, r)
 }
 
 func publishMessage(cachedMessage *storage.CachedMessage) {
 	defer cachedMessage.Release(true)
 
-	if deps.MQTTBroker.HasSubscribers(topicMessages) {
-		deps.MQTTBroker.Send(topicMessages, cachedMessage.Message().Data())
+	var payload []byte
+	payloadFunc := func() []byte {
+		if len(payload) == 0 {
+			payload = cachedMessage.Message().Data()
+		}
+		return payload
 	}
 
+	publishRawOnTopicIfSubscribed(topicMessages, payloadFunc())
+
 	taggedData := cachedMessage.Message().TaggedData()
-	if taggedData != nil && len(taggedData.Tag) > 0 {
-		taggedDataTopic := strings.ReplaceAll(topicMessagesTaggedData, "{tag}", hex.EncodeToString(taggedData.Tag))
-		if deps.MQTTBroker.HasSubscribers(taggedDataTopic) {
-			deps.MQTTBroker.Send(taggedDataTopic, cachedMessage.Message().Data())
+	if taggedData != nil {
+		publishRawOnTopicIfSubscribed(topicMessagesTaggedData, payloadFunc())
+		if len(taggedData.Tag) > 0 {
+			taggedDataTagTopic := strings.ReplaceAll(topicMessagesTaggedDataTag, "{tag}", iotago.EncodeHex(taggedData.Tag))
+			publishRawOnTopicIfSubscribed(taggedDataTagTopic, payloadFunc())
 		}
+	}
+
+	if cachedMessage.Message().IsTransaction() {
+		publishRawOnTopicIfSubscribed(topicMessagesTransaction, payloadFunc())
+
+		txTaggedData := cachedMessage.Message().TransactionEssenceTaggedData()
+		if txTaggedData != nil {
+			publishRawOnTopicIfSubscribed(topicMessagesTransactionTaggedData, payloadFunc())
+			if len(txTaggedData.Tag) > 0 {
+				txTaggedDataTagTopic := strings.ReplaceAll(topicMessagesTransactionTaggedDataTag, "{tag}", iotago.EncodeHex(txTaggedData.Tag))
+				publishRawOnTopicIfSubscribed(txTaggedDataTagTopic, payloadFunc())
+			}
+		}
+	}
+
+	if cachedMessage.Message().IsMilestone() {
+		publishRawOnTopicIfSubscribed(topicMessagesMilestone, payloadFunc())
 	}
 }
 
 func publishTransactionIncludedMessage(transactionID *iotago.TransactionID, messageID hornet.MessageID) {
-	transactionTopic := strings.ReplaceAll(topicTransactionsIncludedMessage, "{transactionId}", hex.EncodeToString(transactionID[:]))
+	transactionTopic := strings.ReplaceAll(topicTransactionsIncludedMessage, "{transactionId}", transactionID.ToHex())
 	if deps.MQTTBroker.HasSubscribers(transactionTopic) {
 		cachedMessage := deps.Storage.CachedMessageOrNil(messageID)
 		if cachedMessage != nil {
@@ -173,74 +202,143 @@ func publishMessageMetadata(cachedMetadata *storage.CachedMetadata) {
 		if hasSingleMessageTopicSubscriber {
 			deps.MQTTBroker.Send(singleMessageTopic, jsonPayload)
 		}
-		if hasAllMessagesTopicSubscriber {
+		if referenced && hasAllMessagesTopicSubscriber {
 			deps.MQTTBroker.Send(topicMessagesReferenced, jsonPayload)
 		}
 	}
 }
 
-func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool) *outputPayload {
+func payloadForOutput(ledgerIndex milestone.Index, output *utxo.Output) *outputPayload {
 	rawOutputJSON, err := output.Output().MarshalJSON()
 	if err != nil {
 		return nil
 	}
 
 	rawRawOutputJSON := json.RawMessage(rawOutputJSON)
+	transactionID := output.OutputID().TransactionID()
 
 	return &outputPayload{
-		MessageID:     output.MessageID().ToHex(),
-		TransactionID: hex.EncodeToString(output.OutputID()[:iotago.TransactionIDLength]),
-		Spent:         spent,
-		OutputIndex:   binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength : iotago.TransactionIDLength+serializer.UInt16ByteSize]),
-		LedgerIndex:   ledgerIndex,
-		RawOutput:     &rawRawOutputJSON,
+		MessageID:                output.MessageID().ToHex(),
+		TransactionID:            transactionID.ToHex(),
+		Spent:                    false,
+		OutputIndex:              output.OutputID().Index(),
+		RawOutput:                &rawRawOutputJSON,
+		MilestoneIndexBooked:     output.MilestoneIndex(),
+		MilestoneTimestampBooked: output.MilestoneTimestamp(),
+		LedgerIndex:              ledgerIndex,
 	}
 }
 
-func publishOutput(ledgerIndex milestone.Index, output *utxo.Output, spent bool) {
+func payloadForSpent(ledgerIndex milestone.Index, spent *utxo.Spent) *outputPayload {
+	payload := payloadForOutput(ledgerIndex, spent.Output())
+	if payload != nil {
+		payload.Spent = true
+		payload.MilestoneIndexSpent = spent.MilestoneIndex()
+		payload.TransactionIDSpent = spent.TargetTransactionID().ToHex()
+		payload.MilestoneTimestampSpent = spent.MilestoneTimestamp()
+	}
+	return payload
+}
+
+func publishOnUnlockConditionTopics(baseTopic string, output iotago.Output, payloadFunc func() interface{}) {
+
+	topicFunc := func(condition unlockCondition, addressString string) string {
+		topic := strings.ReplaceAll(baseTopic, "{condition}", string(condition))
+		return strings.ReplaceAll(topic, "{address}", addressString)
+	}
+
+	unlockConditions, err := output.UnlockConditions().Set()
+	if err != nil {
+		return
+	}
+
+	// this tracks the addresses used by any unlock condition
+	// so that after checking all conditions we can see if anyone is subscribed to the wildcard
+	addressesToPublishForAny := make(map[string]struct{})
+
+	address := unlockConditions.Address()
+	if address != nil {
+		addr := address.Address.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionAddress, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	storageReturn := unlockConditions.StorageDepositReturn()
+	if storageReturn != nil {
+		addr := storageReturn.ReturnAddress.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionStorageReturn, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	expiration := unlockConditions.Expiration()
+	if expiration != nil {
+		addr := expiration.ReturnAddress.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionExpirationReturn, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	stateController := unlockConditions.StateControllerAddress()
+	if stateController != nil {
+		addr := stateController.Address.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionStateController, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	governor := unlockConditions.GovernorAddress()
+	if governor != nil {
+		addr := governor.Address.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionGovernor, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	immutableAlias := unlockConditions.ImmutableAlias()
+	if immutableAlias != nil {
+		addr := immutableAlias.Address.Bech32(deps.Bech32HRP)
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionImmutableAlias, addr), payloadFunc())
+		addressesToPublishForAny[addr] = struct{}{}
+	}
+
+	for addr := range addressesToPublishForAny {
+		publishOnTopicIfSubscribed(topicFunc(unlockConditionAny, addr), payloadFunc())
+	}
+}
+
+func publishOutput(ledgerIndex milestone.Index, output *utxo.Output) {
+
+	var payload *outputPayload
+	payloadFunc := func() interface{} {
+		if payload == nil {
+			payload = payloadForOutput(ledgerIndex, output)
+		}
+		return payload
+	}
 
 	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", output.OutputID().ToHex())
-	outputsTopicHasSubscribers := deps.MQTTBroker.HasSubscribers(outputsTopic)
+	publishOnTopicIfSubscribed(outputsTopic, payloadFunc())
 
-	// TODO: Re-Add address topics if Indexer is enabled
-	//addressBech32Topic := strings.ReplaceAll(topicAddressesOutput, "{address}", output.Address().Bech32(deps.Bech32HRP))
-	//addressBech32TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressBech32Topic)
-	//
-	//addressEd25519Topic := strings.ReplaceAll(topicAddressesEd25519Output, "{address}", output.Address().String())
-	//addressEd25519TopicHasSubscribers := deps.MQTTBroker.HasSubscribers(addressEd25519Topic)
-
-	if outputsTopicHasSubscribers { //} || addressEd25519TopicHasSubscribers || addressBech32TopicHasSubscribers {
-		if payload := payloadForOutput(ledgerIndex, output, spent); payload != nil {
-
-			// Serialize here instead of using publishOnTopic to avoid double JSON marshaling
-			jsonPayload, err := json.Marshal(payload)
-			if err != nil {
-				Plugin.LogWarn(err)
-				return
-			}
-
-			if outputsTopicHasSubscribers {
-				deps.MQTTBroker.Send(outputsTopic, jsonPayload)
-			}
-
-			//if addressBech32TopicHasSubscribers {
-			//	deps.MQTTBroker.Send(addressBech32Topic, jsonPayload)
-			//}
-			//
-			//if addressEd25519TopicHasSubscribers {
-			//	deps.MQTTBroker.Send(addressEd25519Topic, jsonPayload)
-			//}
-		}
+	// If this is the first output in a transaction (index 0), then check if someone is observing the transaction that generated this output
+	if output.OutputID().Index() == 0 {
+		transactionID := output.OutputID().TransactionID()
+		publishTransactionIncludedMessage(&transactionID, output.MessageID())
 	}
 
-	if !spent {
-		// If this is the first output in a transaction (index 0), then check if someone is observing the transaction that generated this output
-		if binary.LittleEndian.Uint16(output.OutputID()[iotago.TransactionIDLength:]) == 0 {
-			transactionID := &iotago.TransactionID{}
-			copy(transactionID[:], output.OutputID()[:iotago.TransactionIDLength])
-			publishTransactionIncludedMessage(transactionID, output.MessageID())
+	publishOnUnlockConditionTopics(topicOutputsByUnlockConditionAndAddress, output.Output(), payloadFunc)
+}
+
+func publishSpent(ledgerIndex milestone.Index, spent *utxo.Spent) {
+
+	var payload *outputPayload
+	payloadFunc := func() interface{} {
+		if payload == nil {
+			payload = payloadForSpent(ledgerIndex, spent)
 		}
+		return payload
 	}
+
+	outputsTopic := strings.ReplaceAll(topicOutputs, "{outputId}", spent.OutputID().ToHex())
+	publishOnTopicIfSubscribed(outputsTopic, payloadFunc())
+
+	publishOnUnlockConditionTopics(topicSpentOutputsByUnlockConditionAndAddress, spent.Output().Output(), payloadFunc)
 }
 
 func messageIDFromTopic(topicName string) hornet.MessageID {
@@ -262,7 +360,7 @@ func transactionIDFromTopic(topicName string) *iotago.TransactionID {
 		transactionIDHex := strings.Replace(topicName, "transactions/", "", 1)
 		transactionIDHex = strings.Replace(transactionIDHex, "/included-message", "", 1)
 
-		decoded, err := hex.DecodeString(transactionIDHex)
+		decoded, err := iotago.DecodeHex(transactionIDHex)
 		if err != nil || len(decoded) != iotago.TransactionIDLength {
 			return nil
 		}
@@ -274,19 +372,13 @@ func transactionIDFromTopic(topicName string) *iotago.TransactionID {
 }
 
 func outputIDFromTopic(topicName string) *iotago.OutputID {
-	if strings.HasPrefix(topicName, "outputs/") {
+	if strings.HasPrefix(topicName, "outputs/") && !strings.HasPrefix(topicName, "outputs/unlock") {
 		outputIDHex := strings.Replace(topicName, "outputs/", "", 1)
-
-		bytes, err := hex.DecodeString(outputIDHex)
+		outputID, err := iotago.OutputIDFromHex(outputIDHex)
 		if err != nil {
 			return nil
 		}
-
-		if len(bytes) == iotago.TransactionIDLength+serializer.UInt16ByteSize {
-			outputID := &iotago.OutputID{}
-			copy(outputID[:], bytes)
-			return outputID
-		}
+		return &outputID
 	}
 	return nil
 }

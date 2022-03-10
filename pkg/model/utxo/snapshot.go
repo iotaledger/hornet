@@ -21,7 +21,7 @@ func (o *Output) SnapshotBytes() []byte {
 	m.WriteUint32(uint32(o.milestoneIndex))
 	m.WriteUint32(o.milestoneTimestamp)
 
-	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
+	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	if err != nil {
 		panic(err)
 	}
