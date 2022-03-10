@@ -116,7 +116,7 @@ func (s *Storage) ForEachSolidEntryPointWithoutLocking(consumer SolidEntryPointC
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
 
-	seps := s.solidEntryPoints.Copy()
+	seps := s.solidEntryPoints.Sorted()
 	for i := 0; i < len(seps); i++ {
 		sep := seps[i]
 

@@ -1,8 +1,10 @@
 package utxo
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"sort"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -354,4 +356,42 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 	}
 
 	return mutations.Commit()
+}
+
+func (u *Manager) LedgerStateSHA256Sum() ([]byte, error) {
+	u.ReadLockLedger()
+	defer u.ReadUnlockLedger()
+
+	ledgerStateHash := sha256.New()
+
+	ledgerIndex, err := u.ReadLedgerIndexWithoutLocking()
+	if err != nil {
+		return nil, err
+	}
+	if err := binary.Write(ledgerStateHash, binary.LittleEndian, ledgerIndex); err != nil {
+		return nil, err
+	}
+
+	// get all UTXOs and sort them by outputID
+	var outputs LexicalOrderedOutputs
+	if err := u.ForEachUnspentOutput(func(output *Output) bool {
+		outputs = append(outputs, output)
+		return true
+	}, ReadLockLedger(false)); err != nil {
+		return nil, err
+	}
+	sort.Sort(outputs)
+
+	for _, output := range outputs {
+		if _, err := ledgerStateHash.Write(output.outputID[:]); err != nil {
+			return nil, err
+		}
+
+		if _, err := ledgerStateHash.Write(output.kvStorableValue()); err != nil {
+			return nil, err
+		}
+	}
+
+	// calculate sha256 hash
+	return ledgerStateHash.Sum(nil), nil
 }

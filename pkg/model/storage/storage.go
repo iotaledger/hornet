@@ -153,6 +153,10 @@ func (s *Storage) UTXOManager() *utxo.Manager {
 	return s.utxoManager
 }
 
+func (s *Storage) SolidEntryPoints() *SolidEntryPoints {
+	return s.solidEntryPoints
+}
+
 // profileCachesDisabled returns a Caches profile with caching disabled.
 func (s *Storage) profileCachesDisabled() *profile.Caches {
 	return &profile.Caches{

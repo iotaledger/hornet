@@ -2,8 +2,10 @@ package storage
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"sort"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -13,6 +15,22 @@ import (
 type SolidEntryPoint struct {
 	MessageID hornet.MessageID
 	Index     milestone.Index
+}
+
+// LexicalOrderedSolidEntryPoints are solid entry points
+// ordered in lexical order by their MessageID.
+type LexicalOrderedSolidEntryPoints []*SolidEntryPoint
+
+func (l LexicalOrderedSolidEntryPoints) Len() int {
+	return len(l)
+}
+
+func (l LexicalOrderedSolidEntryPoints) Less(i, j int) bool {
+	return bytes.Compare(l[i].MessageID, l[j].MessageID) < 0
+}
+
+func (l LexicalOrderedSolidEntryPoints) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
 }
 
 type SolidEntryPoints struct {
@@ -30,13 +48,7 @@ func NewSolidEntryPoints() *SolidEntryPoints {
 	}
 }
 
-func (s *SolidEntryPoints) Hashes() hornet.MessageIDs {
-	solidEntryPointsCopy := make(hornet.MessageIDs, len(s.entryPointsSlice))
-	copy(solidEntryPointsCopy, s.entryPointsSlice)
-	return solidEntryPointsCopy
-}
-
-func (s *SolidEntryPoints) Copy() []*SolidEntryPoint {
+func (s *SolidEntryPoints) copy() []*SolidEntryPoint {
 	solidEntryPointsCount := len(s.entryPointsMap)
 	result := make([]*SolidEntryPoint, solidEntryPointsCount)
 
@@ -92,6 +104,14 @@ func (s *SolidEntryPoints) SetModified(modified bool) {
 	s.modified = modified
 }
 
+// sort the solid entry points lexicographically by their MessageID
+func (s *SolidEntryPoints) Sorted() []*SolidEntryPoint {
+
+	var sortedSolidEntryPoints LexicalOrderedSolidEntryPoints = s.copy()
+	sort.Sort(sortedSolidEntryPoints)
+	return sortedSolidEntryPoints
+}
+
 func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints, error) {
 	s := NewSolidEntryPoints()
 
@@ -123,17 +143,30 @@ func (s *SolidEntryPoints) Bytes() []byte {
 
 	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(32+4)))
 
-	for messageIDMapKey, msIndex := range s.entryPointsMap {
-		err := binary.Write(buf, binary.LittleEndian, hornet.MessageIDFromMapKey(messageIDMapKey))
+	for _, sep := range s.Sorted() {
+		err := binary.Write(buf, binary.LittleEndian, sep.MessageID)
 		if err != nil {
 			return nil
 		}
 
-		err = binary.Write(buf, binary.LittleEndian, uint32(msIndex))
+		err = binary.Write(buf, binary.LittleEndian, sep.Index)
 		if err != nil {
 			return nil
 		}
 	}
 
 	return buf.Bytes()
+}
+
+func (s *SolidEntryPoints) SHA256Sum() ([]byte, error) {
+
+	sepHash := sha256.New()
+
+	// compute the sha256 of the solid entry points byte representation
+	if err := binary.Write(sepHash, binary.LittleEndian, s.Bytes()); err != nil {
+		return nil, fmt.Errorf("unable to serialize solid entry points: %w", err)
+	}
+
+	// calculate sha256 hash
+	return sepHash.Sum(nil), nil
 }

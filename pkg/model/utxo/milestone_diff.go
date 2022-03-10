@@ -1,7 +1,10 @@
 package utxo
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
+	"sort"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
@@ -40,12 +43,12 @@ func (d *MilestoneDiff) kvStorableValue() []byte {
 	m := marshalutil.New()
 
 	m.WriteUint32(uint32(len(d.Outputs)))
-	for _, output := range d.Outputs {
+	for _, output := range d.sortedOutputs() {
 		m.WriteBytes(output.outputID[:])
 	}
 
 	m.WriteUint32(uint32(len(d.Spents)))
-	for _, spent := range d.Spents {
+	for _, spent := range d.sortedSpents() {
 		m.WriteBytes(spent.output.outputID[:])
 	}
 
@@ -145,6 +148,39 @@ func (d *MilestoneDiff) kvStorableLoad(utxoManager *Manager, key []byte, value [
 	d.Spents = spents
 
 	return nil
+}
+
+func (ms *MilestoneDiff) sortedOutputs() LexicalOrderedOutputs {
+	// do not sort in place
+	sortedOutputs := make(LexicalOrderedOutputs, len(ms.Outputs))
+	copy(sortedOutputs, LexicalOrderedOutputs(ms.Outputs))
+	sort.Sort(sortedOutputs)
+	return sortedOutputs
+}
+
+func (ms *MilestoneDiff) sortedSpents() LexicalOrderedSpents {
+	// do not sort in place
+	sortedSpents := make(LexicalOrderedSpents, len(ms.Spents))
+	copy(sortedSpents, LexicalOrderedSpents(ms.Spents))
+	sort.Sort(sortedSpents)
+	return sortedSpents
+}
+
+// compute the sha256 of the milestone diff byte representation
+func (ms *MilestoneDiff) SHA256Sum() ([]byte, error) {
+
+	msDiffHash := sha256.New()
+
+	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.kvStorableKey()); err != nil {
+		return nil, fmt.Errorf("unable to serialize milestone diff: %w", err)
+	}
+
+	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.kvStorableValue()); err != nil {
+		return nil, fmt.Errorf("unable to serialize milestone diff: %w", err)
+	}
+
+	// calculate sha256 hash
+	return msDiffHash.Sum(nil), nil
 }
 
 //- DB helpers

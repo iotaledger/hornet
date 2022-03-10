@@ -1,6 +1,8 @@
 package utxo
 
 import (
+	"bytes"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
@@ -9,6 +11,22 @@ import (
 )
 
 type SpentConsumer func(spent *Spent) bool
+
+// LexicalOrderedOutputs are spents
+// ordered in lexical order by their outputID.
+type LexicalOrderedSpents []*Spent
+
+func (l LexicalOrderedSpents) Len() int {
+	return len(l)
+}
+
+func (l LexicalOrderedSpents) Less(i, j int) bool {
+	return bytes.Compare(l[i].outputID[:], l[j].outputID[:]) < 0
+}
+
+func (l LexicalOrderedSpents) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
 
 // Spent are already spent TXOs (transaction outputs)
 type Spent struct {

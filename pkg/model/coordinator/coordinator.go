@@ -355,7 +355,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// compute merkle tree root
 	// we pass a background context here to not cancel the white-flag computation!
 	// otherwise the coordinator could panic at shutdown.
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, coo.networkID, newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, coo.networkID, newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents, whiteflag.DefaultWhiteFlagTraversalCondition)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}

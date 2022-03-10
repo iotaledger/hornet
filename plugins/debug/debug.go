@@ -116,7 +116,7 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 
 	// at this point all parents are solid
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), deps.Storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, deps.NetworkID, request.Index, request.Timestamp, parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), deps.Storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, deps.NetworkID, request.Index, request.Timestamp, parents, whiteflag.DefaultWhiteFlagTraversalCondition)
 	if err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "failed to compute white flag mutations: %s", err)

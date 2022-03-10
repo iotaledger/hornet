@@ -90,6 +90,9 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		messagesMemcache.CachedMessage,
 		te.networkID,
 		cachedMilestone.Milestone().MessageID,
+		whiteflag.DefaultWhiteFlagTraversalCondition,
+		whiteflag.DefaultCheckMessageReferencedFunc,
+		whiteflag.DefaultSetMessageReferencedFunc,
 		te.serverMetrics,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
@@ -145,6 +148,9 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		messagesMemcache.CachedMessage,
 		te.networkID,
 		cachedMilestone.Milestone().MessageID,
+		whiteflag.DefaultWhiteFlagTraversalCondition,
+		whiteflag.DefaultCheckMessageReferencedFunc,
+		whiteflag.DefaultSetMessageReferencedFunc,
 		te.serverMetrics,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
