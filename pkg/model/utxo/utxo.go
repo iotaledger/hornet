@@ -501,7 +501,11 @@ func (u *Manager) LedgerStateSHA256Sum() ([]byte, error) {
 	sort.Sort(outputs)
 
 	for _, output := range outputs {
-		if _, err := ledgerStateHash.Write(append(output.outputID[:], output.kvStorableValue()...)); err != nil {
+		if _, err := ledgerStateHash.Write(output.outputID[:]); err != nil {
+			return nil, err
+		}
+
+		if _, err := ledgerStateHash.Write(output.kvStorableValue()); err != nil {
 			return nil, err
 		}
 	}

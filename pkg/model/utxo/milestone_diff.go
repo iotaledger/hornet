@@ -162,12 +162,16 @@ func (ms *MilestoneDiff) sortedSpents() LexicalOrderedSpents {
 	return sortedSpents
 }
 
+// compute the sha256 of the milestone diff byte representation
 func (ms *MilestoneDiff) SHA256Sum() ([]byte, error) {
 
 	msDiffHash := sha256.New()
 
-	// compute the sha256 of the milestone diff byte representation
-	if err := binary.Write(msDiffHash, binary.LittleEndian, append(ms.kvStorableKey(), ms.kvStorableValue()...)); err != nil {
+	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.kvStorableKey()); err != nil {
+		return nil, fmt.Errorf("unable to serialize milestone diff: %w", err)
+	}
+
+	if err := binary.Write(msDiffHash, binary.LittleEndian, ms.kvStorableValue()); err != nil {
 		return nil, fmt.Errorf("unable to serialize milestone diff: %w", err)
 	}
 
