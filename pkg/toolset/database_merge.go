@@ -248,6 +248,13 @@ func copyMilestoneCone(
 	return nil
 }
 
+type confStats struct {
+	msIndex              milestone.Index
+	messagesReferenced   int
+	durationCopy         time.Duration
+	durationConfirmation time.Duration
+}
+
 // copyAndVerifyMilestoneCone verifies the milestone, copies the milestone cone to the
 // target storage, confirms the milestone and applies the ledger changes.
 func copyAndVerifyMilestoneCone(
@@ -260,19 +267,19 @@ func copyAndVerifyMilestoneCone(
 	utxoManagerTarget *utxo.Manager,
 	storeMessageTarget StoreMessageInterface,
 	parentsTraverserStorageTarget dag.ParentsTraverserStorage,
-	milestoneManager *milestonemanager.MilestoneManager) error {
+	milestoneManager *milestonemanager.MilestoneManager) (*confStats, error) {
 
 	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
-		return err
+		return nil, err
 	}
 
 	msMsg, milestoneMessageID, err := getMilestoneAndMessageID(msIndex)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if ms := milestoneManager.VerifyMilestone(msMsg); ms == nil {
-		return fmt.Errorf("source milestone not valid! %d", msIndex)
+		return nil, fmt.Errorf("source milestone not valid! %d", msIndex)
 	}
 
 	ts := time.Now()
@@ -285,7 +292,7 @@ func copyAndVerifyMilestoneCone(
 		cachedMessageFuncSource,
 		storeMessageTarget,
 		milestoneManager); err != nil {
-		return err
+		return nil, err
 	}
 
 	timeCopyMilestoneCone := time.Now()
@@ -306,17 +313,17 @@ func copyAndVerifyMilestoneCone(
 		nil,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	timeConfirmMilestone := time.Now()
-	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, total: %v",
-		confirmedMilestoneStats.Index,
-		confirmedMilestoneStats.MessagesReferenced,
-		timeCopyMilestoneCone.Sub(ts).Truncate(time.Millisecond),
-		timeConfirmMilestone.Sub(timeCopyMilestoneCone).Truncate(time.Millisecond),
-		timeConfirmMilestone.Sub(ts).Truncate(time.Millisecond)))
-	return nil
+
+	return &confStats{
+		msIndex:              confirmedMilestoneStats.Index,
+		messagesReferenced:   confirmedMilestoneStats.MessagesReferenced,
+		durationCopy:         timeCopyMilestoneCone.Sub(ts).Truncate(time.Millisecond),
+		durationConfirmation: timeConfirmMilestone.Sub(timeCopyMilestoneCone).Truncate(time.Millisecond),
+	}, nil
 }
 
 // mergeViaAPI copies a milestone from a remote node to the target database via API.
@@ -378,7 +385,9 @@ func mergeViaAPI(
 		return err
 	}
 
-	if err := copyAndVerifyMilestoneCone(
+	ts := time.Now()
+
+	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
 		msIndex,
 		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
@@ -390,13 +399,26 @@ func mergeViaAPI(
 		storeTarget.UTXOManager(),
 		proxyStorage,
 		proxyStorage,
-		milestoneManager); err != nil {
+		milestoneManager)
+	if err != nil {
 		return err
 	}
+
+	timeMergeStoragesStart := time.Now()
 
 	if err := proxyStorage.MergeStorages(); err != nil {
 		return fmt.Errorf("merge storages failed: %w", err)
 	}
+
+	te := time.Now()
+
+	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
+		confStats.msIndex,
+		confStats.messagesReferenced,
+		confStats.durationCopy,
+		confStats.durationConfirmation,
+		te.Sub(timeMergeStoragesStart).Truncate(time.Millisecond),
+		te.Sub(ts).Truncate(time.Millisecond)))
 
 	return nil
 }
@@ -414,7 +436,9 @@ func mergeViaSourceDatabase(
 		return err
 	}
 
-	if err := copyAndVerifyMilestoneCone(
+	ts := time.Now()
+
+	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
 		msIndex,
 		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
@@ -436,13 +460,26 @@ func mergeViaSourceDatabase(
 		storeTarget.UTXOManager(),
 		proxyStorage,
 		proxyStorage,
-		milestoneManager); err != nil {
+		milestoneManager)
+	if err != nil {
 		return err
 	}
+
+	timeMergeStoragesStart := time.Now()
 
 	if err := proxyStorage.MergeStorages(); err != nil {
 		return fmt.Errorf("merge storages failed: %w", err)
 	}
+
+	te := time.Now()
+
+	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
+		confStats.msIndex,
+		confStats.messagesReferenced,
+		confStats.durationCopy,
+		confStats.durationConfirmation,
+		te.Sub(timeMergeStoragesStart).Truncate(time.Millisecond),
+		te.Sub(ts).Truncate(time.Millisecond)))
 
 	return nil
 }
