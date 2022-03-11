@@ -12,6 +12,7 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.5.5",
     "@koa/router": "^10.1.1",
-    "koa": "^2.13.4"
+    "koa": "^2.13.4",
+    "koa-logger": "^3.2.1"
   }
 }

@@ -238,14 +238,15 @@ func main() {
 		}
 		cancel()
 	}()
-	indexer_server.NewIndexerServer(indexer, e.Group(APIRoute), iotago.PrefixTestnet, 1000)
+	indexer_server.NewIndexerServer(indexer, e.Group(""), iotago.PrefixTestnet, 1000)
 
 	apiReq := &inx.APIRouteRequest{
-		Route: APIRoute,
-		Host:  "localhost",
-		Port:  uint32(e.Listener.Addr().(*net.TCPAddr).Port),
+		Route:   APIRoute,
+		Host:    "localhost",
+		Port:    uint32(e.Listener.Addr().(*net.TCPAddr).Port),
+		Metrics: PrometheusMetricsRoute,
 	}
-	fmt.Println("Registering API route")
+	fmt.Printf("Registering API route to http://%s:%d\n", apiReq.GetHost(), apiReq.GetPort())
 	if _, err := client.RegisterAPIRoute(context.Background(), apiReq); err != nil {
 		fmt.Printf("Error: %s\n", err)
 		return

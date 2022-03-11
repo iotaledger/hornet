@@ -51,8 +51,7 @@ func main() {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	opts = append(opts, grpc.WithKeepaliveParams(keepalive.ClientParameters{
-		Time:                10 * time.Second,
-		Timeout:             1 * time.Second,
+		Time:                20 * time.Second,
 		PermitWithoutStream: true,
 	}))
 	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port), opts...)

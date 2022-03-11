@@ -1,3 +1,4 @@
+const logger = require('koa-logger')
 const Koa = require('koa');
 const Router = require('@koa/router');
 const grpc = require("@grpc/grpc-js");
@@ -31,7 +32,9 @@ const client = new INX(
 const app = new Koa();
 const router = new Router();
 
-router.get('/inx-nodejs/v1/info', (ctx) => {
+app.use(logger())
+
+router.get('/info', (ctx) => {
     return new Promise(function (resolve, reject) {
         client.ReadNodeStatus({}, (error, status) => {
             if (error) {

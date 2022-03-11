@@ -16,10 +16,10 @@ import (
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/restapi"
+	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
-	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -46,13 +46,13 @@ const (
 
 	// RouteOutputStatus is the route to get the vote status for a given outputID.
 	// GET returns the messageID the participation was included, the starting and ending milestone index this participation was tracked.
-	RouteOutputStatus = "/outputs/:" + restapi.ParameterOutputID
+	RouteOutputStatus = "/outputs/:" + restapipkg.ParameterOutputID
 
 	// RouteAddressBech32Status is the route to get the staking rewards for the given bech32 address.
-	RouteAddressBech32Status = "/addresses/:" + restapi.ParameterAddress
+	RouteAddressBech32Status = "/addresses/:" + restapipkg.ParameterAddress
 
 	// RouteAddressEd25519Status is the route to get the staking rewards for the given ed25519 address.
-	RouteAddressEd25519Status = "/addresses/ed25519/:" + restapi.ParameterAddress
+	RouteAddressEd25519Status = "/addresses/ed25519/:" + restapipkg.ParameterAddress
 
 	// RouteAdminCreateEvent is the route the node operator can use to add events.
 	// POST creates a new event to track
@@ -105,6 +105,7 @@ type dependencies struct {
 	Tangle               *tangle.Tangle
 	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
 	ShutdownHandler      *shutdown.ShutdownHandler
+	RestPluginManager    *restapi.RestPluginManager `optional:"true"`
 }
 
 func provide(c *dig.Container) {
@@ -143,7 +144,12 @@ func provide(c *dig.Container) {
 
 func configure() {
 
-	routeGroup := restapiv2.AddPlugin("participation/v1")
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
+	}
+
+	routeGroup := deps.RestPluginManager.AddPlugin("participation/v1")
 
 	routeGroup.GET(RouteParticipationEvents, func(c echo.Context) error {
 		resp, err := getEvents(c)
@@ -151,7 +157,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteAdminCreateEvent, func(c echo.Context) error {
@@ -162,7 +168,7 @@ func configure() {
 		}
 
 		c.Response().Header().Set(echo.HeaderLocation, resp.EventID)
-		return restapi.JSONResponse(c, http.StatusCreated, resp)
+		return restapipkg.JSONResponse(c, http.StatusCreated, resp)
 	})
 
 	routeGroup.GET(RouteParticipationEvent, func(c echo.Context) error {
@@ -171,7 +177,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.DELETE(RouteAdminDeleteEvent, func(c echo.Context) error {
@@ -187,7 +193,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteOutputStatus, func(c echo.Context) error {
@@ -195,7 +201,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressBech32Status, func(c echo.Context) error {
@@ -203,7 +209,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAddressEd25519Status, func(c echo.Context) error {
@@ -211,7 +217,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAdminActiveParticipations, func(c echo.Context) error {
@@ -219,7 +225,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAdminPastParticipations, func(c echo.Context) error {
@@ -227,7 +233,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.GET(RouteAdminRewards, func(c echo.Context) error {
@@ -235,7 +241,7 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	if err := Plugin.Node.Daemon().BackgroundWorker("Close Participation database", func(ctx context.Context) {

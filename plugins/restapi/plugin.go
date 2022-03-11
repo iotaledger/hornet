@@ -117,6 +117,17 @@ func provide(c *dig.Container) {
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	type proxyDeps struct {
+		dig.In
+		Echo *echo.Echo
+	}
+
+	if err := c.Provide(func(deps proxyDeps) *RestPluginManager {
+		return newRestPluginManager(deps.Echo)
+	}); err != nil {
+		Plugin.LogPanic(err)
+	}
 }
 
 func configure() {

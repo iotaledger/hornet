@@ -23,13 +23,13 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
+	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
+	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -72,10 +72,11 @@ type dependencies struct {
 	dig.In
 	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
 	RestAPIBindAddress    string                       `name:"restAPIBindAddress"`
-	FaucetAllowedAPIRoute restapi.AllowedRoute         `name:"faucetAllowedAPIRoute"`
+	FaucetAllowedAPIRoute restapipkg.AllowedRoute      `name:"faucetAllowedAPIRoute"`
 	Faucet                *faucet.Faucet
 	Tangle                *tangle.Tangle
 	ShutdownHandler       *shutdown.ShutdownHandler
+	RestPluginManager     *restapi.RestPluginManager `optional:"true"`
 }
 
 func provide(c *dig.Container) {
@@ -146,12 +147,12 @@ func provide(c *dig.Container) {
 }
 
 func configure() {
-	// check if RestAPIV2 plugin is disabled
-	if Plugin.Node.IsSkipped(restapiv2.Plugin) {
-		Plugin.LogPanic("RestAPIV2 plugin needs to be enabled to use the Faucet plugin")
+	// check if RestAPI plugin is disabled
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Faucet plugin")
 	}
 
-	routeGroup := restapiv2.AddPlugin("faucet/v1")
+	routeGroup := deps.RestPluginManager.AddPlugin("faucet/v1")
 
 	allowedRoutes := map[string][]string{
 		http.MethodGet: {
@@ -204,7 +205,7 @@ func configure() {
 			return err
 		}
 
-		return restapi.JSONResponse(c, http.StatusOK, resp)
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
 	routeGroup.POST(RouteFaucetEnqueue, func(c echo.Context) error {
@@ -217,7 +218,7 @@ func configure() {
 			var e *echo.HTTPError
 			if errors.As(err, &e) {
 				statusCode = e.Code
-				if errors.Is(err, restapi.ErrInvalidParameter) {
+				if errors.Is(err, restapipkg.ErrInvalidParameter) {
 					message = strings.Replace(err.Error(), ": "+errors.Unwrap(err).Error(), "", 1)
 				} else {
 					message = err.Error()
@@ -227,10 +228,10 @@ func configure() {
 				message = fmt.Sprintf("internal server error. error: %s", err.Error())
 			}
 
-			return c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
+			return c.JSON(statusCode, restapipkg.HTTPErrorResponseEnvelope{Error: restapipkg.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
 		}
 
-		return restapi.JSONResponse(c, http.StatusAccepted, resp)
+		return restapipkg.JSONResponse(c, http.StatusAccepted, resp)
 	})
 
 	configureEvents()

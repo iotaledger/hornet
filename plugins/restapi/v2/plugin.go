@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -120,7 +119,6 @@ func init() {
 var (
 	Plugin   *node.Plugin
 	features = []string{}
-	plugins  = []string{}
 	attacher *tangle.MessageAttacher
 
 	// ErrNodeNotSync is returned when the node was not synced.
@@ -146,16 +144,17 @@ type dependencies struct {
 	NetworkID                             uint64 `name:"networkId"`
 	NetworkIDName                         string `name:"networkIdName"`
 	DeserializationParameters             *iotago.DeSerializationParameters
-	MaxDeltaMsgYoungestConeRootIndexToCMI int                    `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
-	MaxDeltaMsgOldestConeRootIndexToCMI   int                    `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-	BelowMaxDepth                         int                    `name:"belowMaxDepth"`
-	MinPoWScore                           float64                `name:"minPoWScore"`
-	Bech32HRP                             iotago.NetworkPrefix   `name:"bech32HRP"`
-	RestAPILimitsMaxResults               int                    `name:"restAPILimitsMaxResults"`
-	SnapshotsFullPath                     string                 `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath                    string                 `name:"snapshotsDeltaPath"`
-	TipSelector                           *tipselect.TipSelector `optional:"true"`
-	Echo                                  *echo.Echo             `optional:"true"`
+	MaxDeltaMsgYoungestConeRootIndexToCMI int                        `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+	MaxDeltaMsgOldestConeRootIndexToCMI   int                        `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+	BelowMaxDepth                         int                        `name:"belowMaxDepth"`
+	MinPoWScore                           float64                    `name:"minPoWScore"`
+	Bech32HRP                             iotago.NetworkPrefix       `name:"bech32HRP"`
+	RestAPILimitsMaxResults               int                        `name:"restAPILimitsMaxResults"`
+	SnapshotsFullPath                     string                     `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath                    string                     `name:"snapshotsDeltaPath"`
+	TipSelector                           *tipselect.TipSelector     `optional:"true"`
+	Echo                                  *echo.Echo                 `optional:"true"`
+	RestPluginManager                     *restapi.RestPluginManager `optional:"true"`
 }
 
 func configure() {
@@ -368,30 +367,4 @@ func configure() {
 // AddFeature adds a feature to the RouteInfo endpoint.
 func AddFeature(feature string) {
 	features = append(features, feature)
-}
-
-// AddPlugin adds a plugin route to the RouteInfo endpoint and returns the route for this plugin.
-func AddPlugin(pluginRoute string) *echo.Group {
-	found := false
-	for _, p := range plugins {
-		if p == pluginRoute {
-			found = true
-			break
-		}
-	}
-	if !found {
-		plugins = append(plugins, pluginRoute)
-	}
-	return deps.Echo.Group(fmt.Sprintf("/api/plugins/%s", pluginRoute))
-}
-
-// RemovePlugin removes a plugin route to the RouteInfo endpoint.
-func RemovePlugin(pluginRoute string) {
-	newPlugins := make([]string, 0)
-	for _, p := range plugins {
-		if p != pluginRoute {
-			newPlugins = append(newPlugins, p)
-		}
-	}
-	plugins = newPlugins
 }

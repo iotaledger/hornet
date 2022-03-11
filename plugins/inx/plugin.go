@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -62,6 +63,8 @@ type dependencies struct {
 	MinPoWScore               float64                `name:"minPoWScore"`
 	DeserializationParameters *iotago.DeSerializationParameters
 	PoWHandler                *pow.Handler
+	Echo                      *echo.Echo                 `optional:"true"`
+	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
 }
 
 func configure() {
