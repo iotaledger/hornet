@@ -3,17 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/labstack/echo-contrib/prometheus"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -46,24 +41,6 @@ const (
 var (
 	config *configuration.Configuration
 )
-
-func setupPrometheus(bindAddress string) {
-	e := echo.New()
-	e.HideBanner = true
-	e.Use(middleware.Recover())
-
-	// Enable metrics middleware
-	p := prometheus.NewPrometheus("echo", nil)
-	p.Use(e)
-
-	go func() {
-		if err := e.Start(bindAddress); err != nil {
-			if !errors.Is(err, http.ErrServerClosed) {
-				panic(err)
-			}
-		}
-	}()
-}
 
 func main() {
 
@@ -116,7 +93,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		setupPrometheus(config.String(CfgPrometheusBindAddress))
+		setupPrometheus(config.String(CfgPrometheusBindAddress), server)
 		apiReq.MetricsPort = uint32(prometheusPort)
 	}
 
