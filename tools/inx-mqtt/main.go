@@ -3,10 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/labstack/echo-contrib/prometheus"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -23,18 +28,40 @@ const (
 	APIRoute = "mqtt/v1"
 
 	// CfgMQTTBindAddress the bind address on which the MQTT broker listens on.
-	CfgMQTTBindAddress = "bindAddress"
+	CfgMQTTBindAddress = "mqtt.bindAddress"
 	// CfgMQTTWSPort the port of the WebSocket MQTT broker.
-	CfgMQTTWSPort = "wsPort"
+	CfgMQTTWSPort = "mqtt.wsPort"
 	// CfgMQTTWorkerCount the number of parallel workers the MQTT broker uses to publish messages.
-	CfgMQTTWorkerCount = "workerCount"
+	CfgMQTTWorkerCount = "mqtt.workerCount"
 	// CfgMQTTTopicCleanupThreshold the number of deleted topics that trigger a garbage collection of the topic manager.
-	CfgMQTTTopicCleanupThreshold = "topicCleanupThreshold"
+	CfgMQTTTopicCleanupThreshold = "mqtt.topicCleanupThreshold"
+	// CfgPrometheusEnabled enable prometheus metrics.
+	CfgPrometheusEnabled = "prometheus.enabled"
+	// CfgPrometheusBindAddress bind address on which the Prometheus HTTP server listens.
+	CfgPrometheusBindAddress = "prometheus.bindAddress"
 )
 
 var (
 	config *configuration.Configuration
 )
+
+func setupPrometheus(bindAddress string) {
+	e := echo.New()
+	e.HideBanner = true
+	e.Use(middleware.Recover())
+
+	// Enable metrics middleware
+	p := prometheus.NewPrometheus("echo", nil)
+	p.Use(e)
+
+	go func() {
+		if err := e.Start(bindAddress); err != nil {
+			if !errors.Is(err, http.ErrServerClosed) {
+				panic(err)
+			}
+		}
+	}()
+}
 
 func main() {
 
@@ -83,6 +110,10 @@ func main() {
 		return
 	}
 
+	if config.Bool(CfgPrometheusEnabled) {
+		setupPrometheus(config.String(CfgPrometheusBindAddress))
+	}
+
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	done := make(chan bool, 1)
@@ -110,6 +141,8 @@ func flagSet() *flag.FlagSet {
 	fs.Int(CfgMQTTWSPort, 1888, "port of the WebSocket MQTT broker")
 	fs.Int(CfgMQTTWorkerCount, 100, "number of parallel workers the MQTT broker uses to publish messages")
 	fs.Int(CfgMQTTTopicCleanupThreshold, 10000, "number of deleted topics that trigger a garbage collection of the topic manager")
+	fs.Bool(CfgPrometheusEnabled, false, "enable prometheus metrics")
+	fs.String(CfgPrometheusBindAddress, "localhost:9313", "bind address on which the Prometheus HTTP server listens.")
 	return fs
 }
 
