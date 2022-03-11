@@ -11,9 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/labstack/echo-contrib/prometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
+	flag "github.com/spf13/pflag"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
@@ -24,12 +27,21 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
-	APIRoute = "indexer/v1"
+	APIRoute               = "indexer/v1"
+	PrometheusMetricsRoute = "metrics"
+
+	// CfgIndexerBindAddress bind address on which the Indexer HTTP server listens.
+	CfgIndexerBindAddress = "indexer.bindAddress"
+	// CfgPrometheusEnabled enable prometheus metrics.
+	CfgPrometheusEnabled = "prometheus.enabled"
+	// CfgPrometheusBindAddress bind address on which the Prometheus HTTP server listens.
+	CfgPrometheusBindAddress = "prometheus.bindAddress"
 )
 
 func ConvertINXOutput(output *inx.LedgerOutput) (*utxo.Output, error) {
@@ -156,21 +168,44 @@ func listenToLedgerUpdates(ctx context.Context, client inx.INXClient, indexer *i
 	return nil
 }
 
+func setupPrometheus(bindAddress string) {
+	e := echo.New()
+	e.HideBanner = true
+	e.Use(middleware.Recover())
+
+	// Enable metrics middleware
+	p := prometheus.NewPrometheus("echo", nil)
+	p.Use(e)
+
+	go func() {
+		if err := e.Start(bindAddress); err != nil {
+			if !errors.Is(err, http.ErrServerClosed) {
+				panic(err)
+			}
+		}
+	}()
+}
+
 func main() {
+	config, err := loadConfigFile("config.json")
+	if err != nil {
+		panic(err)
+	}
 
 	port, err := utils.LoadStringFromEnvironment("INX_PORT")
 	if err != nil {
 		panic(err)
 	}
 
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	opts = append(opts, grpc.WithKeepaliveParams(keepalive.ClientParameters{
-		Time:                10 * time.Second,
-		Timeout:             1 * time.Second,
-		PermitWithoutStream: true,
-	}))
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port), opts...)
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port),
+		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                20 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -183,7 +218,7 @@ func main() {
 	e.Use(middleware.Recover())
 
 	go func() {
-		if err := e.Start(":0"); err != nil {
+		if err := e.Start(config.String(CfgIndexerBindAddress)); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
 				panic(err)
 			}
@@ -252,6 +287,10 @@ func main() {
 		return
 	}
 
+	if config.Bool(CfgPrometheusEnabled) {
+		setupPrometheus(config.String(CfgPrometheusBindAddress))
+	}
+
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	done := make(chan bool, 1)
@@ -276,4 +315,23 @@ func main() {
 		return
 	}
 	fmt.Println("exiting")
+}
+
+func flagSet() *flag.FlagSet {
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs.String(CfgIndexerBindAddress, "localhost:9091", "bind address on which the Indexer HTTP server listens")
+	fs.Bool(CfgPrometheusEnabled, false, "enable prometheus metrics")
+	fs.String(CfgPrometheusBindAddress, "localhost:9312", "bind address on which the Prometheus HTTP server listens.")
+	return fs
+}
+
+func loadConfigFile(filePath string) (*configuration.Configuration, error) {
+	config := configuration.New()
+	if err := config.LoadFile(filePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("loading config file failed: %w", err)
+	}
+	if err := config.LoadFlagSet(flagSet()); err != nil {
+		return nil, err
+	}
+	return config, nil
 }

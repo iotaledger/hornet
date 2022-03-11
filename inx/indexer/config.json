@@ -1,0 +1,9 @@
+{
+  "indexer": {
+    "bindAddress": "localhost:9091"
+  },
+  "prometheus": {
+    "enabled": true,
+    "bindAddress": "localhost:9312"
+  }
+}
