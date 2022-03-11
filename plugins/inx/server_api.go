@@ -28,6 +28,12 @@ func (s *INXServer) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest
 	}
 	deps.RestPluginManager.AddPluginProxy(req.GetRoute(), req.GetHost(), req.GetPort())
 	Plugin.LogInfof("Registered proxy %s => %s:%d", req.GetRoute(), req.GetHost(), req.GetPort())
+
+	if req.GetMetricsPort() != 0 && deps.ExternalMetricsProxy != nil {
+		deps.ExternalMetricsProxy.AddReverseProxy(req.GetRoute(), req.GetHost(), req.GetMetricsPort())
+		Plugin.LogInfof("Registered external metrics %s => %s:%d", req.GetRoute(), req.GetHost(), req.GetMetricsPort())
+	}
+
 	return &inx.NoParams{}, nil
 }
 
@@ -41,5 +47,11 @@ func (s *INXServer) UnregisterAPIRoute(_ context.Context, req *inx.APIRouteReque
 	}
 	deps.RestPluginManager.RemovePlugin(req.GetRoute())
 	Plugin.LogInfof("Removed proxy %s", req.GetRoute())
+
+	if req.GetMetricsPort() != 0 && deps.ExternalMetricsProxy != nil {
+		deps.ExternalMetricsProxy.RemoveReverseProxy(req.GetRoute())
+		Plugin.LogInfof("Removed external metrics %s", req.GetRoute())
+	}
+
 	return &inx.NoParams{}, nil
 }

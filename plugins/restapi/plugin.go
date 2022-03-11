@@ -143,11 +143,10 @@ func run() {
 		Plugin.LogInfo("Starting REST-API server ... done")
 
 		bindAddr := deps.RestAPIBindAddress
-		server := &http.Server{Addr: bindAddr, Handler: deps.Echo}
 
 		go func() {
 			Plugin.LogInfof("You can now access the API using: http://%s", bindAddr)
-			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := deps.Echo.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				Plugin.LogWarnf("Stopped REST-API server due to an error (%s)", err)
 			}
 		}()
@@ -155,13 +154,11 @@ func run() {
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping REST-API server ...")
 
-		if server != nil {
-			shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if err := server.Shutdown(shutdownCtx); err != nil {
-				Plugin.LogWarn(err)
-			}
-			shutdownCtxCancel()
+		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := deps.Echo.Shutdown(shutdownCtx); err != nil {
+			Plugin.LogWarn(err)
 		}
+		shutdownCtxCancel()
 		Plugin.LogInfo("Stopping REST-API server ... done")
 	}, shutdown.PriorityRestAPI); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)

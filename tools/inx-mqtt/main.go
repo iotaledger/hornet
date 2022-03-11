@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -104,14 +106,24 @@ func main() {
 		Host:  "localhost",
 		Port:  uint32(config.Int(CfgMQTTWSPort)),
 	}
+
+	if config.Bool(CfgPrometheusEnabled) {
+		prometheusBindAddressParts := strings.Split(config.String(CfgPrometheusBindAddress), ":")
+		if len(prometheusBindAddressParts) != 2 {
+			panic(fmt.Sprintf("Invalid %s", CfgPrometheusBindAddress))
+		}
+		prometheusPort, err := strconv.ParseInt(prometheusBindAddressParts[1], 10, 32)
+		if err != nil {
+			panic(err)
+		}
+		setupPrometheus(config.String(CfgPrometheusBindAddress))
+		apiReq.MetricsPort = uint32(prometheusPort)
+	}
+
 	fmt.Println("Registering API route")
 	if _, err := client.RegisterAPIRoute(context.Background(), apiReq); err != nil {
 		fmt.Printf("Error: %s\n", err)
 		return
-	}
-
-	if config.Bool(CfgPrometheusEnabled) {
-		setupPrometheus(config.String(CfgPrometheusBindAddress))
 	}
 
 	signalChan := make(chan os.Signal, 1)

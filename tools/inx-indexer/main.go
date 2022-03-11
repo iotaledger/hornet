@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -33,8 +34,7 @@ import (
 )
 
 const (
-	APIRoute               = "indexer/v1"
-	PrometheusMetricsRoute = "metrics"
+	APIRoute = "indexer/v1"
 
 	// CfgIndexerBindAddress bind address on which the Indexer HTTP server listens.
 	CfgIndexerBindAddress = "indexer.bindAddress"
@@ -192,12 +192,12 @@ func main() {
 		panic(err)
 	}
 
-	port, err := utils.LoadStringFromEnvironment("INX_PORT")
+	inxPort, err := utils.LoadStringFromEnvironment("INX_PORT")
 	if err != nil {
 		panic(err)
 	}
 
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", port),
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", inxPort),
 		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
 		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -275,20 +275,37 @@ func main() {
 	}()
 	indexer_server.NewIndexerServer(indexer, e.Group(""), iotago.PrefixTestnet, 1000)
 
-	apiReq := &inx.APIRouteRequest{
-		Route:   APIRoute,
-		Host:    "localhost",
-		Port:    uint32(e.Listener.Addr().(*net.TCPAddr).Port),
-		Metrics: PrometheusMetricsRoute,
+	bindAddressParts := strings.Split(config.String(CfgIndexerBindAddress), ":")
+	if len(bindAddressParts) != 2 {
+		panic(fmt.Sprintf("Invalid %s", CfgIndexerBindAddress))
 	}
+	port, err := strconv.ParseInt(bindAddressParts[1], 10, 32)
+	if err != nil {
+		panic(err)
+	}
+
+	apiReq := &inx.APIRouteRequest{
+		Route: APIRoute,
+		Host:  bindAddressParts[0],
+		Port:  uint32(port),
+	}
+	if config.Bool(CfgPrometheusEnabled) {
+		prometheusBindAddressParts := strings.Split(config.String(CfgPrometheusBindAddress), ":")
+		if len(prometheusBindAddressParts) != 2 {
+			panic(fmt.Sprintf("Invalid %s", CfgPrometheusBindAddress))
+		}
+		prometheusPort, err := strconv.ParseInt(prometheusBindAddressParts[1], 10, 32)
+		if err != nil {
+			panic(err)
+		}
+		setupPrometheus(config.String(CfgPrometheusBindAddress))
+		apiReq.MetricsPort = uint32(prometheusPort)
+	}
+
 	fmt.Printf("Registering API route to http://%s:%d\n", apiReq.GetHost(), apiReq.GetPort())
 	if _, err := client.RegisterAPIRoute(context.Background(), apiReq); err != nil {
 		fmt.Printf("Error: %s\n", err)
 		return
-	}
-
-	if config.Bool(CfgPrometheusEnabled) {
-		setupPrometheus(config.String(CfgPrometheusBindAddress))
 	}
 
 	signalChan := make(chan os.Signal, 1)
