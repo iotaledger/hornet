@@ -7,17 +7,16 @@ import (
 	"net/http"
 	"time"
 
-	coreDatabase "github.com/gohornet/hornet/core/database"
-
-	"github.com/pkg/errors"
-
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/dig"
 
+	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -32,6 +31,7 @@ import (
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/plugins/inx"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -84,6 +84,7 @@ type dependencies struct {
 	TipSelector      *tipselect.TipSelector `optional:"true"`
 	SnapshotManager  *snapshot.SnapshotManager
 	Coordinator      *coordinator.Coordinator `optional:"true"`
+	INXServer        *inx.INXServer           `optional:"true"`
 }
 
 func configure() {
@@ -105,6 +106,12 @@ func configure() {
 	if deps.NodeConfig.Bool(CfgPrometheusRestAPI) && deps.RestAPIMetrics != nil {
 		configureRestAPI()
 	}
+
+	if deps.NodeConfig.Bool(CfgPrometheusINX) && deps.INXServer != nil {
+		deps.INXServer.ConfigurePrometheus()
+		registry.MustRegister(grpc_prometheus.DefaultServerMetrics)
+	}
+
 	if deps.NodeConfig.Bool(CfgPrometheusMigration) {
 		if deps.ReceiptService != nil {
 			configureReceipts()

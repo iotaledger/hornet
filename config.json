@@ -189,6 +189,7 @@
     "gossipMetrics": true,
     "cachesMetrics": true,
     "restAPIMetrics": true,
+    "inxMetrics": true,
     "migrationMetrics": true,
     "coordinatorMetrics": true,
     "debugMetrics": false,

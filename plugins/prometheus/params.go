@@ -25,6 +25,8 @@ const (
 	CfgPrometheusCaches = "prometheus.cachesMetrics"
 	// include restAPI metrics.
 	CfgPrometheusRestAPI = "prometheus.restAPIMetrics"
+	// include INX gRPC metrics.
+	CfgPrometheusINX = "prometheus.inxMetrics"
 	// include migration metrics.
 	CfgPrometheusMigration = "prometheus.migrationMetrics"
 	// include coordinator metrics.
@@ -52,6 +54,7 @@ var params = &node.PluginParams{
 			fs.Bool(CfgPrometheusGossip, true, "include gossip metrics")
 			fs.Bool(CfgPrometheusCaches, true, "include caches metrics")
 			fs.Bool(CfgPrometheusRestAPI, true, "include restAPI metrics")
+			fs.Bool(CfgPrometheusINX, true, "include INX gRPC metrics")
 			fs.Bool(CfgPrometheusMigration, true, "include migration metrics")
 			fs.Bool(CfgPrometheusCoordinator, true, "include coordinator metrics")
 			fs.Bool(CfgPrometheusDebug, false, "include debug metrics")

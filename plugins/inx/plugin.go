@@ -31,6 +31,7 @@ func init() {
 			Name:      "INX",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
+			Provide:   provide,
 			Configure: configure,
 			Run:       run,
 		},
@@ -38,11 +39,9 @@ func init() {
 }
 
 var (
-	Plugin   *node.Plugin
-	deps     dependencies
-	attacher *tangle.MessageAttacher
-	server   *INXServer
-
+	Plugin     *node.Plugin
+	deps       dependencies
+	attacher   *tangle.MessageAttacher
 	extensions []*Extension
 
 	messageProcessedTimeout = 1 * time.Second
@@ -63,8 +62,17 @@ type dependencies struct {
 	MinPoWScore               float64                `name:"minPoWScore"`
 	DeserializationParameters *iotago.DeSerializationParameters
 	PoWHandler                *pow.Handler
+	INXServer                 *INXServer
 	Echo                      *echo.Echo                 `optional:"true"`
 	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
+}
+
+func provide(c *dig.Container) {
+	if err := c.Provide(func() *INXServer {
+		return newINXServer()
+	}); err != nil {
+		Plugin.LogPanic(err)
+	}
 }
 
 func configure() {
@@ -82,18 +90,17 @@ func configure() {
 	}
 
 	attacher = deps.Tangle.MessageAttacher(attacherOpts...)
-	server = newINXServer()
 	loadExtensions()
 }
 
 func run() {
 	if err := Plugin.Daemon().BackgroundWorker("INX", func(ctx context.Context) {
 		Plugin.LogInfo("Starting INX ... done")
-		server.Start()
+		deps.INXServer.Start()
 		startExtensions()
 		<-ctx.Done()
 		stopExtensions()
-		server.Stop()
+		deps.INXServer.Stop()
 		Plugin.LogInfo("Stopping INX ... done")
 	}, shutdown.PriorityIndexer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
