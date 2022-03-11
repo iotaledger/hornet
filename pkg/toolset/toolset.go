@@ -80,6 +80,7 @@ const (
 	ToolDatabaseHealth          = "db-health"
 	ToolDatabaseMerge           = "db-merge"
 	ToolDatabaseMigration       = "db-migration"
+	ToolDatabaseSnapshot        = "db-snapshot"
 	ToolDatabaseSplit           = "db-split"
 	ToolDatabaseVerify          = "db-verify"
 	ToolCoordinatorFixStateFile = "coo-fix-state"
@@ -138,6 +139,7 @@ func HandleTools() {
 		ToolDatabaseHealth:          databaseHealth,
 		ToolDatabaseMerge:           databaseMerge,
 		ToolDatabaseMigration:       databaseMigration,
+		ToolDatabaseSnapshot:        databaseSnapshot,
 		ToolDatabaseSplit:           databaseSplit,
 		ToolDatabaseVerify:          databaseVerify,
 		ToolCoordinatorFixStateFile: coordinatorFixStateFile,
@@ -180,6 +182,7 @@ func listTools() {
 	fmt.Printf("%-20s checks the health status of the database\n", fmt.Sprintf("%s:", ToolDatabaseHealth))
 	fmt.Printf("%-20s merges missing tangle data from a database to another one\n", fmt.Sprintf("%s:", ToolDatabaseMerge))
 	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
+	fmt.Printf("%-20s creates a full snapshot from a database\n", fmt.Sprintf("%s:", ToolDatabaseSnapshot))
 	fmt.Printf("%-20s split a legacy database into `tangle` and `utxo`\n", fmt.Sprintf("%s:", ToolDatabaseSplit))
 	fmt.Printf("%-20s verifies a valid ledger state and the existence of all messages`\n", fmt.Sprintf("%s:", ToolDatabaseVerify))
 	fmt.Printf("%-20s applies the latest milestone in the database to the coordinator state file\n", fmt.Sprintf("%s:", ToolCoordinatorFixStateFile))

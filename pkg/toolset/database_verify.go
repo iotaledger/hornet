@@ -27,7 +27,6 @@ func databaseVerify(args []string) error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	configFilePathFlag := fs.String(FlagToolConfigFilePath, "", "the path to the config file")
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
-	databaseEngineSourceFlag := fs.String(FlagToolDatabaseEngineSource, string(DefaultValueDatabaseEngine), "the engine of the source database (values: pebble, rocksdb)")
 	genesisSnapshotFilePathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the genesis snapshot file")
 
 	fs.Usage = func() {
@@ -54,16 +53,13 @@ func databaseVerify(args []string) error {
 	if len(*databasePathSourceFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolDatabasePathSource)
 	}
-	if len(*databaseEngineSourceFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolDatabaseEngineSource)
-	}
 	if len(*genesisSnapshotFilePathFlag) == 0 {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPath)
 	}
 
 	// we don't need to check the health of the source db.
 	// it is fine as long as all messages in the cone are found.
-	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", *databaseEngineSourceFlag, true, true, false, false, true)
+	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, true, false, false, true)
 	if err != nil {
 		return err
 	}
