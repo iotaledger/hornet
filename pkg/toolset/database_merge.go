@@ -38,7 +38,7 @@ func databaseMerge(args []string) error {
 	genesisSnapshotFilePathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the genesis snapshot file (optional)")
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
 	databasePathTargetFlag := fs.String(FlagToolDatabasePathTarget, "", "the path to the target database")
-	databaseEngineSourceFlag := fs.String(FlagToolDatabaseEngineSource, string(DefaultValueDatabaseEngine), "the engine of the source database (values: pebble, rocksdb)")
+	databaseEngineSourceFlag := fs.String(FlagToolDatabaseEngineSource, string(database.EngineAuto), "the engine of the source database (optional, values: pebble, rocksdb, auto)")
 	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, string(DefaultValueDatabaseEngine), "the engine of the target database (values: pebble, rocksdb)")
 	targetIndexFlag := fs.Uint32(FlagToolDatabaseTargetIndex, 0, "the target index (optional)")
 	nodeURLFlag := fs.String(FlagToolDatabaseMergeNodeURL, "", "URL of the node (optional)")

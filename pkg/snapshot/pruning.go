@@ -189,9 +189,11 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 
 	// calculate solid entry points for the new end of the tangle history
 	var solidEntryPoints []*storage.SolidEntryPoint
-	err := s.forEachSolidEntryPoint(
+	err := forEachSolidEntryPoint(
 		ctx,
+		s.storage,
 		targetIndex,
+		s.solidEntryPointCheckThresholdPast,
 		func(sep *storage.SolidEntryPoint) bool {
 			solidEntryPoints = append(solidEntryPoints, sep)
 			return true

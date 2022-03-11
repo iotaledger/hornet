@@ -19,11 +19,31 @@ type databaseInfo struct {
 	Engine string `toml:"databaseEngine"`
 }
 
-// DatabaseEngine parses a string and returns an engine.
+// DatabaseEngineFromString parses an engine from a string.
 // Returns an error if the engine is unknown.
-func DatabaseEngine(engineStr string, allowedEngines ...Engine) (Engine, error) {
+func DatabaseEngineFromString(engineStr string) (Engine, error) {
 
-	engine := Engine(strings.ToLower(engineStr))
+	dbEngine := Engine(strings.ToLower(engineStr))
+
+	switch dbEngine {
+	case "":
+		// no engine specified
+		fallthrough
+	case EngineAuto:
+		return EngineAuto, nil
+	case EngineRocksDB:
+		return EngineRocksDB, nil
+	case EnginePebble:
+		return EnginePebble, nil
+	case EngineMapDB:
+		return EngineMapDB, nil
+	default:
+		return EngineUnknown, fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb/auto", dbEngine)
+	}
+}
+
+// DatabaseEngineAllowed checks if the database engine is allowed.
+func DatabaseEngineAllowed(dbEngine Engine, allowedEngines ...Engine) (Engine, error) {
 
 	if len(allowedEngines) > 0 {
 		supportedEngines := ""
@@ -33,23 +53,34 @@ func DatabaseEngine(engineStr string, allowedEngines ...Engine) (Engine, error) 
 			}
 			supportedEngines += string(allowedEngine)
 
-			if engine == allowedEngine {
-				return engine, nil
+			if dbEngine == allowedEngine {
+				return dbEngine, nil
 			}
 		}
 
-		return "", fmt.Errorf("unknown database engine: %s, supported engines: %s", engine, supportedEngines)
+		return "", fmt.Errorf("unknown database engine: %s, supported engines: %s", dbEngine, supportedEngines)
 	}
 
-	switch engine {
+	switch dbEngine {
 	case EngineRocksDB:
 	case EnginePebble:
 	case EngineMapDB:
 	default:
-		return "", fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", engine)
+		return "", fmt.Errorf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", dbEngine)
 	}
 
-	return engine, nil
+	return dbEngine, nil
+}
+
+// DatabaseEngineFromStringAllowed parses an engine from a string and checks if the database engine is allowed.
+func DatabaseEngineFromStringAllowed(dbEngineStr string, allowedEngines ...Engine) (Engine, error) {
+
+	dbEngine, err := DatabaseEngineFromString(dbEngineStr)
+	if err != nil {
+		return EngineUnknown, err
+	}
+
+	return DatabaseEngineAllowed(dbEngine, allowedEngines...)
 }
 
 // CheckDatabaseEngine checks if the correct database engine is used.
@@ -63,9 +94,7 @@ func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine
 		return EngineMapDB, nil
 	}
 
-	if createDatabaseIfNotExists && len(dbEngine) == 0 {
-		return EngineUnknown, errors.New("the database engine must be specified if the database should be newly created")
-	}
+	dbEngineSpecified := len(dbEngine) > 0 && dbEngine[0] != EngineAuto
 
 	// check if the database exists and if it should be created
 	dbExists, err := DatabaseExists(dbPath)
@@ -73,8 +102,14 @@ func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine
 		return EngineUnknown, err
 	}
 
-	if !dbExists && !createDatabaseIfNotExists {
-		return EngineUnknown, fmt.Errorf("database not found (%s)", dbPath)
+	if !dbExists {
+		if !createDatabaseIfNotExists {
+			return EngineUnknown, fmt.Errorf("database not found (%s)", dbPath)
+		}
+
+		if createDatabaseIfNotExists && !dbEngineSpecified {
+			return EngineUnknown, errors.New("the database engine must be specified if the database should be newly created")
+		}
 	}
 
 	var targetEngine Engine
@@ -87,7 +122,7 @@ func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine
 			return EngineUnknown, fmt.Errorf("unable to check database info file (%s): %w", dbInfoFilePath, err)
 		}
 
-		if len(dbEngine) == 0 {
+		if !dbEngineSpecified {
 			return EngineUnknown, fmt.Errorf("database info file not found (%s)", dbInfoFilePath)
 		}
 
@@ -104,7 +139,7 @@ func CheckDatabaseEngine(dbPath string, createDatabaseIfNotExists bool, dbEngine
 		}
 
 		// if the dbInfo file exists and the dbEngine is given, compare the engines.
-		if len(dbEngine) > 0 {
+		if dbEngineSpecified {
 
 			if dbEngineFromInfoFile != dbEngine[0] {
 				return EngineUnknown, fmt.Errorf(`database engine does not match the configuration: '%v' != '%v'
@@ -128,7 +163,7 @@ func LoadDatabaseEngineFromFile(path string) (Engine, error) {
 		return "", fmt.Errorf("unable to read database info file: %w", err)
 	}
 
-	return DatabaseEngine(info.Engine)
+	return DatabaseEngineFromStringAllowed(info.Engine)
 }
 
 // storeDatabaseInfoToFile stores the used engine in a "database info file".

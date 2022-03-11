@@ -181,7 +181,7 @@ func getTangleStorage(path string,
 	markTainted bool,
 	checkSnapInfo bool) (*storage.Storage, error) {
 
-	dbEngine, err := database.DatabaseEngine(dbEngineStr, database.EnginePebble, database.EngineRocksDB)
+	dbEngine, err := database.DatabaseEngineFromStringAllowed(dbEngineStr, database.EnginePebble, database.EngineRocksDB, database.EngineAuto)
 	if err != nil {
 		return nil, err
 	}
@@ -235,14 +235,14 @@ func checkSnapshotInfo(dbStorage *storage.Storage) error {
 	return nil
 }
 
-func createTangleStorage(name string, tangleDatabasePath string, utxoDatabasePath string, dbEngine database.Engine) (*storage.Storage, error) {
+func createTangleStorage(name string, tangleDatabasePath string, utxoDatabasePath string, dbEngine ...database.Engine) (*storage.Storage, error) {
 
-	storeTangle, err := database.StoreWithDefaultSettings(tangleDatabasePath, true, dbEngine)
+	storeTangle, err := database.StoreWithDefaultSettings(tangleDatabasePath, true, dbEngine...)
 	if err != nil {
 		return nil, fmt.Errorf("%s tangle database initialization failed: %w", name, err)
 	}
 
-	storeUTXO, err := database.StoreWithDefaultSettings(utxoDatabasePath, true, dbEngine)
+	storeUTXO, err := database.StoreWithDefaultSettings(utxoDatabasePath, true, dbEngine...)
 	if err != nil {
 		return nil, fmt.Errorf("%s utxo database initialization failed: %w", name, err)
 	}

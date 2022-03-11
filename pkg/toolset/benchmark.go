@@ -46,7 +46,7 @@ func benchmarkIO(args []string) error {
 	objectCnt := *objectsCountFlag
 	size := *objectsSizeFlag
 
-	dbEngine, err := database.DatabaseEngine(*databaseEngineFlag, database.EnginePebble, database.EngineRocksDB)
+	dbEngine, err := database.DatabaseEngineFromStringAllowed(*databaseEngineFlag, database.EnginePebble, database.EngineRocksDB)
 	if err != nil {
 		return err
 	}
