@@ -2,9 +2,7 @@ package restapi
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -167,23 +165,13 @@ func run() {
 
 func setupRoutes() {
 
+	errorHandler := restapi.ErrorHandler()
+
 	deps.Echo.HTTPErrorHandler = func(err error, c echo.Context) {
 		Plugin.LogDebugf("HTTP request failed: %s", err)
 		deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
 
-		var statusCode int
-		var message string
-
-		var e *echo.HTTPError
-		if errors.As(err, &e) {
-			statusCode = e.Code
-			message = fmt.Sprintf("%s, error: %s", e.Message, err)
-		} else {
-			statusCode = http.StatusInternalServerError
-			message = fmt.Sprintf("internal server error. error: %s", err)
-		}
-
-		_ = c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
+		errorHandler(err, c)
 	}
 
 	setupHealthRoute()

@@ -27,6 +27,7 @@ import (
 	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -217,7 +218,13 @@ func main() {
 
 	e := echo.New()
 	e.HideBanner = true
+	apiErrorHandler := restapi.ErrorHandler()
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		fmt.Printf("Error: %s", err)
+		apiErrorHandler(err, c)
+	}
 	e.Use(middleware.Recover())
+	e.Use(middleware.Gzip())
 
 	go func() {
 		if err := e.Start(config.String(CfgIndexerBindAddress)); err != nil {
