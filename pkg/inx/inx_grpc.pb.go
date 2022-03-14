@@ -40,6 +40,7 @@ type INXClient interface {
 	// REST API
 	RegisterAPIRoute(ctx context.Context, in *APIRouteRequest, opts ...grpc.CallOption) (*NoParams, error)
 	UnregisterAPIRoute(ctx context.Context, in *APIRouteRequest, opts ...grpc.CallOption) (*NoParams, error)
+	PerformAPIRequest(ctx context.Context, in *APIRequest, opts ...grpc.CallOption) (*APIResponse, error)
 }
 
 type iNXClient struct {
@@ -387,6 +388,15 @@ func (c *iNXClient) UnregisterAPIRoute(ctx context.Context, in *APIRouteRequest,
 	return out, nil
 }
 
+func (c *iNXClient) PerformAPIRequest(ctx context.Context, in *APIRequest, opts ...grpc.CallOption) (*APIResponse, error) {
+	out := new(APIResponse)
+	err := c.cc.Invoke(ctx, "/inx.INX/PerformAPIRequest", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // INXServer is the server API for INX service.
 // All implementations must embed UnimplementedINXServer
 // for forward compatibility
@@ -413,6 +423,7 @@ type INXServer interface {
 	// REST API
 	RegisterAPIRoute(context.Context, *APIRouteRequest) (*NoParams, error)
 	UnregisterAPIRoute(context.Context, *APIRouteRequest) (*NoParams, error)
+	PerformAPIRequest(context.Context, *APIRequest) (*APIResponse, error)
 	mustEmbedUnimplementedINXServer()
 }
 
@@ -470,6 +481,9 @@ func (UnimplementedINXServer) RegisterAPIRoute(context.Context, *APIRouteRequest
 }
 func (UnimplementedINXServer) UnregisterAPIRoute(context.Context, *APIRouteRequest) (*NoParams, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnregisterAPIRoute not implemented")
+}
+func (UnimplementedINXServer) PerformAPIRequest(context.Context, *APIRequest) (*APIResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PerformAPIRequest not implemented")
 }
 func (UnimplementedINXServer) mustEmbedUnimplementedINXServer() {}
 
@@ -814,6 +828,24 @@ func _INX_UnregisterAPIRoute_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _INX_PerformAPIRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(APIRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(INXServer).PerformAPIRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/inx.INX/PerformAPIRequest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(INXServer).PerformAPIRequest(ctx, req.(*APIRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // INX_ServiceDesc is the grpc.ServiceDesc for INX service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -856,6 +888,10 @@ var INX_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UnregisterAPIRoute",
 			Handler:    _INX_UnregisterAPIRoute_Handler,
+		},
+		{
+			MethodName: "PerformAPIRequest",
+			Handler:    _INX_PerformAPIRequest_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

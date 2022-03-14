@@ -1,7 +1,9 @@
 package inx
 
 import (
+	"bytes"
 	"context"
+	"net/http/httptest"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -52,4 +54,26 @@ func (s *INXServer) UnregisterAPIRoute(_ context.Context, req *inx.APIRouteReque
 	}
 
 	return &inx.NoParams{}, nil
+}
+
+func (s *INXServer) PerformAPIRequest(_ context.Context, req *inx.APIRequest) (*inx.APIResponse, error) {
+	if Plugin.Node.IsSkipped(restapi.Plugin) {
+		return nil, status.Error(codes.Unavailable, "RestAPI plugin is not enabled")
+	}
+
+	httpReq := httptest.NewRequest(req.GetMethod(), req.GetPath(), bytes.NewBuffer(req.GetBody()))
+	httpReq.Header = req.HttpHeader()
+
+	rec := httptest.NewRecorder()
+	c := deps.Echo.NewContext(httpReq, rec)
+	deps.Echo.Router().Find(req.GetMethod(), req.GetPath(), c)
+	if err := c.Handler()(c); err != nil {
+		return nil, err
+	}
+
+	return &inx.APIResponse{
+		Code:    uint32(rec.Code),
+		Headers: inx.HeadersFromHttpHeader(rec.Header()),
+		Body:    rec.Body.Bytes(),
+	}, nil
 }

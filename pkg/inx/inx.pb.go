@@ -66,7 +66,7 @@ func (x MessageMetadata_LedgerInclusionState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use MessageMetadata_LedgerInclusionState.Descriptor instead.
 func (MessageMetadata_LedgerInclusionState) EnumDescriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{10, 0}
+	return file_inx_proto_rawDescGZIP(), []int{12, 0}
 }
 
 type MessageMetadata_ConflictReason int32
@@ -130,7 +130,141 @@ func (x MessageMetadata_ConflictReason) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use MessageMetadata_ConflictReason.Descriptor instead.
 func (MessageMetadata_ConflictReason) EnumDescriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{10, 1}
+	return file_inx_proto_rawDescGZIP(), []int{12, 1}
+}
+
+type APIRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Method  string            `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
+	Path    string            `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	Headers map[string]string `protobuf:"bytes,3,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Body    []byte            `protobuf:"bytes,4,opt,name=body,proto3" json:"body,omitempty"`
+}
+
+func (x *APIRequest) Reset() {
+	*x = APIRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_inx_proto_msgTypes[0]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *APIRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*APIRequest) ProtoMessage() {}
+
+func (x *APIRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_inx_proto_msgTypes[0]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use APIRequest.ProtoReflect.Descriptor instead.
+func (*APIRequest) Descriptor() ([]byte, []int) {
+	return file_inx_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *APIRequest) GetMethod() string {
+	if x != nil {
+		return x.Method
+	}
+	return ""
+}
+
+func (x *APIRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *APIRequest) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *APIRequest) GetBody() []byte {
+	if x != nil {
+		return x.Body
+	}
+	return nil
+}
+
+type APIResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Code    uint32            `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Headers map[string]string `protobuf:"bytes,2,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Body    []byte            `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+}
+
+func (x *APIResponse) Reset() {
+	*x = APIResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_inx_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *APIResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*APIResponse) ProtoMessage() {}
+
+func (x *APIResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inx_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use APIResponse.ProtoReflect.Descriptor instead.
+func (*APIResponse) Descriptor() ([]byte, []int) {
+	return file_inx_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *APIResponse) GetCode() uint32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *APIResponse) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *APIResponse) GetBody() []byte {
+	if x != nil {
+		return x.Body
+	}
+	return nil
 }
 
 type NoParams struct {
@@ -142,7 +276,7 @@ type NoParams struct {
 func (x *NoParams) Reset() {
 	*x = NoParams{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[0]
+		mi := &file_inx_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -155,7 +289,7 @@ func (x *NoParams) String() string {
 func (*NoParams) ProtoMessage() {}
 
 func (x *NoParams) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[0]
+	mi := &file_inx_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -168,7 +302,7 @@ func (x *NoParams) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NoParams.ProtoReflect.Descriptor instead.
 func (*NoParams) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{0}
+	return file_inx_proto_rawDescGZIP(), []int{2}
 }
 
 type ProtocolParameters struct {
@@ -186,7 +320,7 @@ type ProtocolParameters struct {
 func (x *ProtocolParameters) Reset() {
 	*x = ProtocolParameters{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[1]
+		mi := &file_inx_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -199,7 +333,7 @@ func (x *ProtocolParameters) String() string {
 func (*ProtocolParameters) ProtoMessage() {}
 
 func (x *ProtocolParameters) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[1]
+	mi := &file_inx_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -212,7 +346,7 @@ func (x *ProtocolParameters) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProtocolParameters.ProtoReflect.Descriptor instead.
 func (*ProtocolParameters) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{1}
+	return file_inx_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ProtocolParameters) GetNetworkName() string {
@@ -263,7 +397,7 @@ type RentStructure struct {
 func (x *RentStructure) Reset() {
 	*x = RentStructure{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[2]
+		mi := &file_inx_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -276,7 +410,7 @@ func (x *RentStructure) String() string {
 func (*RentStructure) ProtoMessage() {}
 
 func (x *RentStructure) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[2]
+	mi := &file_inx_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -289,7 +423,7 @@ func (x *RentStructure) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RentStructure.ProtoReflect.Descriptor instead.
 func (*RentStructure) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{2}
+	return file_inx_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RentStructure) GetVByteCost() uint64 {
@@ -328,7 +462,7 @@ type NodeStatus struct {
 func (x *NodeStatus) Reset() {
 	*x = NodeStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[3]
+		mi := &file_inx_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -341,7 +475,7 @@ func (x *NodeStatus) String() string {
 func (*NodeStatus) ProtoMessage() {}
 
 func (x *NodeStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[3]
+	mi := &file_inx_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -354,7 +488,7 @@ func (x *NodeStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeStatus.ProtoReflect.Descriptor instead.
 func (*NodeStatus) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{3}
+	return file_inx_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *NodeStatus) GetIsHealthy() bool {
@@ -404,7 +538,7 @@ type MilestoneRequest struct {
 func (x *MilestoneRequest) Reset() {
 	*x = MilestoneRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[4]
+		mi := &file_inx_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -417,7 +551,7 @@ func (x *MilestoneRequest) String() string {
 func (*MilestoneRequest) ProtoMessage() {}
 
 func (x *MilestoneRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[4]
+	mi := &file_inx_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -430,7 +564,7 @@ func (x *MilestoneRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MilestoneRequest.ProtoReflect.Descriptor instead.
 func (*MilestoneRequest) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{4}
+	return file_inx_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *MilestoneRequest) GetMilestoneIndex() uint32 {
@@ -453,7 +587,7 @@ type Milestone struct {
 func (x *Milestone) Reset() {
 	*x = Milestone{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[5]
+		mi := &file_inx_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -466,7 +600,7 @@ func (x *Milestone) String() string {
 func (*Milestone) ProtoMessage() {}
 
 func (x *Milestone) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[5]
+	mi := &file_inx_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -479,7 +613,7 @@ func (x *Milestone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Milestone.ProtoReflect.Descriptor instead.
 func (*Milestone) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{5}
+	return file_inx_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Milestone) GetMilestoneIndex() uint32 {
@@ -513,7 +647,7 @@ type MessageFilter struct {
 func (x *MessageFilter) Reset() {
 	*x = MessageFilter{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[6]
+		mi := &file_inx_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -526,7 +660,7 @@ func (x *MessageFilter) String() string {
 func (*MessageFilter) ProtoMessage() {}
 
 func (x *MessageFilter) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[6]
+	mi := &file_inx_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -539,7 +673,7 @@ func (x *MessageFilter) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageFilter.ProtoReflect.Descriptor instead.
 func (*MessageFilter) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{6}
+	return file_inx_proto_rawDescGZIP(), []int{8}
 }
 
 type RawMessage struct {
@@ -553,7 +687,7 @@ type RawMessage struct {
 func (x *RawMessage) Reset() {
 	*x = RawMessage{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[7]
+		mi := &file_inx_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -566,7 +700,7 @@ func (x *RawMessage) String() string {
 func (*RawMessage) ProtoMessage() {}
 
 func (x *RawMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[7]
+	mi := &file_inx_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -579,7 +713,7 @@ func (x *RawMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RawMessage.ProtoReflect.Descriptor instead.
 func (*RawMessage) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{7}
+	return file_inx_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RawMessage) GetData() []byte {
@@ -600,7 +734,7 @@ type MessageId struct {
 func (x *MessageId) Reset() {
 	*x = MessageId{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[8]
+		mi := &file_inx_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -613,7 +747,7 @@ func (x *MessageId) String() string {
 func (*MessageId) ProtoMessage() {}
 
 func (x *MessageId) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[8]
+	mi := &file_inx_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -626,7 +760,7 @@ func (x *MessageId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageId.ProtoReflect.Descriptor instead.
 func (*MessageId) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{8}
+	return file_inx_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *MessageId) GetId() []byte {
@@ -648,7 +782,7 @@ type Message struct {
 func (x *Message) Reset() {
 	*x = Message{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[9]
+		mi := &file_inx_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -661,7 +795,7 @@ func (x *Message) String() string {
 func (*Message) ProtoMessage() {}
 
 func (x *Message) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[9]
+	mi := &file_inx_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -674,7 +808,7 @@ func (x *Message) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Message.ProtoReflect.Descriptor instead.
 func (*Message) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{9}
+	return file_inx_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Message) GetMessageId() *MessageId {
@@ -710,7 +844,7 @@ type MessageMetadata struct {
 func (x *MessageMetadata) Reset() {
 	*x = MessageMetadata{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[10]
+		mi := &file_inx_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -723,7 +857,7 @@ func (x *MessageMetadata) String() string {
 func (*MessageMetadata) ProtoMessage() {}
 
 func (x *MessageMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[10]
+	mi := &file_inx_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -736,7 +870,7 @@ func (x *MessageMetadata) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MessageMetadata.ProtoReflect.Descriptor instead.
 func (*MessageMetadata) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{10}
+	return file_inx_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *MessageMetadata) GetMessageId() *MessageId {
@@ -814,7 +948,7 @@ type OutputId struct {
 func (x *OutputId) Reset() {
 	*x = OutputId{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[11]
+		mi := &file_inx_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -827,7 +961,7 @@ func (x *OutputId) String() string {
 func (*OutputId) ProtoMessage() {}
 
 func (x *OutputId) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[11]
+	mi := &file_inx_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -840,7 +974,7 @@ func (x *OutputId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutputId.ProtoReflect.Descriptor instead.
 func (*OutputId) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{11}
+	return file_inx_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *OutputId) GetId() []byte {
@@ -865,7 +999,7 @@ type OutputResponse struct {
 func (x *OutputResponse) Reset() {
 	*x = OutputResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[12]
+		mi := &file_inx_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -878,7 +1012,7 @@ func (x *OutputResponse) String() string {
 func (*OutputResponse) ProtoMessage() {}
 
 func (x *OutputResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[12]
+	mi := &file_inx_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -891,7 +1025,7 @@ func (x *OutputResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OutputResponse.ProtoReflect.Descriptor instead.
 func (*OutputResponse) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{12}
+	return file_inx_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *OutputResponse) GetLedgerIndex() uint32 {
@@ -950,7 +1084,7 @@ type UnspentOutput struct {
 func (x *UnspentOutput) Reset() {
 	*x = UnspentOutput{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[13]
+		mi := &file_inx_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -963,7 +1097,7 @@ func (x *UnspentOutput) String() string {
 func (*UnspentOutput) ProtoMessage() {}
 
 func (x *UnspentOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[13]
+	mi := &file_inx_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -976,7 +1110,7 @@ func (x *UnspentOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnspentOutput.ProtoReflect.Descriptor instead.
 func (*UnspentOutput) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{13}
+	return file_inx_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UnspentOutput) GetLedgerIndex() uint32 {
@@ -1008,7 +1142,7 @@ type LedgerOutput struct {
 func (x *LedgerOutput) Reset() {
 	*x = LedgerOutput{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[14]
+		mi := &file_inx_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1021,7 +1155,7 @@ func (x *LedgerOutput) String() string {
 func (*LedgerOutput) ProtoMessage() {}
 
 func (x *LedgerOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[14]
+	mi := &file_inx_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1034,7 +1168,7 @@ func (x *LedgerOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LedgerOutput.ProtoReflect.Descriptor instead.
 func (*LedgerOutput) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{14}
+	return file_inx_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *LedgerOutput) GetOutputId() *OutputId {
@@ -1086,7 +1220,7 @@ type LedgerSpent struct {
 func (x *LedgerSpent) Reset() {
 	*x = LedgerSpent{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[15]
+		mi := &file_inx_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1099,7 +1233,7 @@ func (x *LedgerSpent) String() string {
 func (*LedgerSpent) ProtoMessage() {}
 
 func (x *LedgerSpent) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[15]
+	mi := &file_inx_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1112,7 +1246,7 @@ func (x *LedgerSpent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LedgerSpent.ProtoReflect.Descriptor instead.
 func (*LedgerSpent) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{15}
+	return file_inx_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *LedgerSpent) GetOutput() *LedgerOutput {
@@ -1154,7 +1288,7 @@ type LedgerUpdateRequest struct {
 func (x *LedgerUpdateRequest) Reset() {
 	*x = LedgerUpdateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[16]
+		mi := &file_inx_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1167,7 +1301,7 @@ func (x *LedgerUpdateRequest) String() string {
 func (*LedgerUpdateRequest) ProtoMessage() {}
 
 func (x *LedgerUpdateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[16]
+	mi := &file_inx_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1180,7 +1314,7 @@ func (x *LedgerUpdateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LedgerUpdateRequest.ProtoReflect.Descriptor instead.
 func (*LedgerUpdateRequest) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{16}
+	return file_inx_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *LedgerUpdateRequest) GetStartMilestoneIndex() uint32 {
@@ -1203,7 +1337,7 @@ type LedgerUpdate struct {
 func (x *LedgerUpdate) Reset() {
 	*x = LedgerUpdate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[17]
+		mi := &file_inx_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1216,7 +1350,7 @@ func (x *LedgerUpdate) String() string {
 func (*LedgerUpdate) ProtoMessage() {}
 
 func (x *LedgerUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[17]
+	mi := &file_inx_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1229,7 +1363,7 @@ func (x *LedgerUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LedgerUpdate.ProtoReflect.Descriptor instead.
 func (*LedgerUpdate) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{17}
+	return file_inx_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *LedgerUpdate) GetMilestoneIndex() uint32 {
@@ -1264,7 +1398,7 @@ type RawReceipt struct {
 func (x *RawReceipt) Reset() {
 	*x = RawReceipt{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[18]
+		mi := &file_inx_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1277,7 +1411,7 @@ func (x *RawReceipt) String() string {
 func (*RawReceipt) ProtoMessage() {}
 
 func (x *RawReceipt) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[18]
+	mi := &file_inx_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1290,7 +1424,7 @@ func (x *RawReceipt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RawReceipt.ProtoReflect.Descriptor instead.
 func (*RawReceipt) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{18}
+	return file_inx_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *RawReceipt) GetData() []byte {
@@ -1315,7 +1449,7 @@ type APIRouteRequest struct {
 func (x *APIRouteRequest) Reset() {
 	*x = APIRouteRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_inx_proto_msgTypes[19]
+		mi := &file_inx_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1328,7 +1462,7 @@ func (x *APIRouteRequest) String() string {
 func (*APIRouteRequest) ProtoMessage() {}
 
 func (x *APIRouteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inx_proto_msgTypes[19]
+	mi := &file_inx_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1341,7 +1475,7 @@ func (x *APIRouteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use APIRouteRequest.ProtoReflect.Descriptor instead.
 func (*APIRouteRequest) Descriptor() ([]byte, []int) {
-	return file_inx_proto_rawDescGZIP(), []int{19}
+	return file_inx_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *APIRouteRequest) GetRoute() string {
@@ -1376,6 +1510,29 @@ var File_inx_proto protoreflect.FileDescriptor
 
 var file_inx_proto_rawDesc = []byte{
 	0x0a, 0x09, 0x69, 0x6e, 0x78, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x03, 0x69, 0x6e, 0x78,
+	0x22, 0xc0, 0x01, 0x0a, 0x0a, 0x41, 0x50, 0x49, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x16, 0x0a, 0x06, 0x6d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x06, 0x6d, 0x65, 0x74, 0x68, 0x6f, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x12, 0x36, 0x0a, 0x07, 0x68,
+	0x65, 0x61, 0x64, 0x65, 0x72, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x69,
+	0x6e, 0x78, 0x2e, 0x41, 0x50, 0x49, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x48, 0x65,
+	0x61, 0x64, 0x65, 0x72, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x07, 0x68, 0x65, 0x61, 0x64,
+	0x65, 0x72, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x18, 0x04, 0x20, 0x01, 0x28,
+	0x0c, 0x52, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x1a, 0x3a, 0x0a, 0x0c, 0x48, 0x65, 0x61, 0x64, 0x65,
+	0x72, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c,
+	0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a,
+	0x02, 0x38, 0x01, 0x22, 0xaa, 0x01, 0x0a, 0x0b, 0x41, 0x50, 0x49, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x0d, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12, 0x37, 0x0a, 0x07, 0x68, 0x65, 0x61, 0x64, 0x65,
+	0x72, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x69, 0x6e, 0x78, 0x2e, 0x41,
+	0x50, 0x49, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2e, 0x48, 0x65, 0x61, 0x64, 0x65,
+	0x72, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x07, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72, 0x73,
+	0x12, 0x12, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04,
+	0x62, 0x6f, 0x64, 0x79, 0x1a, 0x3a, 0x0a, 0x0c, 0x48, 0x65, 0x61, 0x64, 0x65, 0x72, 0x73, 0x45,
+	0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01,
 	0x22, 0x0a, 0x0a, 0x08, 0x4e, 0x6f, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x22, 0xda, 0x01, 0x0a,
 	0x12, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x65, 0x74,
 	0x65, 0x72, 0x73, 0x12, 0x20, 0x0a, 0x0b, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x4e, 0x61,
@@ -1554,7 +1711,7 @@ var file_inx_proto_rawDesc = []byte{
 	0x04, 0x68, 0x6f, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x6f, 0x72, 0x74, 0x18, 0x03, 0x20,
 	0x01, 0x28, 0x0d, 0x52, 0x04, 0x70, 0x6f, 0x72, 0x74, 0x12, 0x20, 0x0a, 0x0b, 0x6d, 0x65, 0x74,
 	0x72, 0x69, 0x63, 0x73, 0x50, 0x6f, 0x72, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x0b,
-	0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x50, 0x6f, 0x72, 0x74, 0x32, 0xfa, 0x07, 0x0a, 0x03,
+	0x6d, 0x65, 0x74, 0x72, 0x69, 0x63, 0x73, 0x50, 0x6f, 0x72, 0x74, 0x32, 0xb2, 0x08, 0x0a, 0x03,
 	0x49, 0x4e, 0x58, 0x12, 0x30, 0x0a, 0x0e, 0x52, 0x65, 0x61, 0x64, 0x4e, 0x6f, 0x64, 0x65, 0x53,
 	0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x0d, 0x2e, 0x69, 0x6e, 0x78, 0x2e, 0x4e, 0x6f, 0x50, 0x61,
 	0x72, 0x61, 0x6d, 0x73, 0x1a, 0x0f, 0x2e, 0x69, 0x6e, 0x78, 0x2e, 0x4e, 0x6f, 0x64, 0x65, 0x53,
@@ -1618,10 +1775,13 @@ var file_inx_proto_rawDesc = []byte{
 	0x12, 0x55, 0x6e, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x41, 0x50, 0x49, 0x52, 0x6f,
 	0x75, 0x74, 0x65, 0x12, 0x14, 0x2e, 0x69, 0x6e, 0x78, 0x2e, 0x41, 0x50, 0x49, 0x52, 0x6f, 0x75,
 	0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x0d, 0x2e, 0x69, 0x6e, 0x78, 0x2e,
-	0x4e, 0x6f, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x42, 0x24, 0x5a, 0x22, 0x67, 0x69, 0x74, 0x68,
-	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x67, 0x6f, 0x68, 0x6f, 0x72, 0x6e, 0x65, 0x74, 0x2f,
-	0x68, 0x6f, 0x72, 0x6e, 0x65, 0x74, 0x2f, 0x70, 0x6b, 0x67, 0x2f, 0x69, 0x6e, 0x78, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x4e, 0x6f, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x12, 0x36, 0x0a, 0x11, 0x50, 0x65, 0x72, 0x66,
+	0x6f, 0x72, 0x6d, 0x41, 0x50, 0x49, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0f, 0x2e,
+	0x69, 0x6e, 0x78, 0x2e, 0x41, 0x50, 0x49, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x10,
+	0x2e, 0x69, 0x6e, 0x78, 0x2e, 0x41, 0x50, 0x49, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x42, 0x24, 0x5a, 0x22, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x67,
+	0x6f, 0x68, 0x6f, 0x72, 0x6e, 0x65, 0x74, 0x2f, 0x68, 0x6f, 0x72, 0x6e, 0x65, 0x74, 0x2f, 0x70,
+	0x6b, 0x67, 0x2f, 0x69, 0x6e, 0x78, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1637,88 +1797,96 @@ func file_inx_proto_rawDescGZIP() []byte {
 }
 
 var file_inx_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_inx_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_inx_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_inx_proto_goTypes = []interface{}{
 	(MessageMetadata_LedgerInclusionState)(0), // 0: inx.MessageMetadata.LedgerInclusionState
 	(MessageMetadata_ConflictReason)(0),       // 1: inx.MessageMetadata.ConflictReason
-	(*NoParams)(nil),                          // 2: inx.NoParams
-	(*ProtocolParameters)(nil),                // 3: inx.ProtocolParameters
-	(*RentStructure)(nil),                     // 4: inx.RentStructure
-	(*NodeStatus)(nil),                        // 5: inx.NodeStatus
-	(*MilestoneRequest)(nil),                  // 6: inx.MilestoneRequest
-	(*Milestone)(nil),                         // 7: inx.Milestone
-	(*MessageFilter)(nil),                     // 8: inx.MessageFilter
-	(*RawMessage)(nil),                        // 9: inx.RawMessage
-	(*MessageId)(nil),                         // 10: inx.MessageId
-	(*Message)(nil),                           // 11: inx.Message
-	(*MessageMetadata)(nil),                   // 12: inx.MessageMetadata
-	(*OutputId)(nil),                          // 13: inx.OutputId
-	(*OutputResponse)(nil),                    // 14: inx.OutputResponse
-	(*UnspentOutput)(nil),                     // 15: inx.UnspentOutput
-	(*LedgerOutput)(nil),                      // 16: inx.LedgerOutput
-	(*LedgerSpent)(nil),                       // 17: inx.LedgerSpent
-	(*LedgerUpdateRequest)(nil),               // 18: inx.LedgerUpdateRequest
-	(*LedgerUpdate)(nil),                      // 19: inx.LedgerUpdate
-	(*RawReceipt)(nil),                        // 20: inx.RawReceipt
-	(*APIRouteRequest)(nil),                   // 21: inx.APIRouteRequest
+	(*APIRequest)(nil),                        // 2: inx.APIRequest
+	(*APIResponse)(nil),                       // 3: inx.APIResponse
+	(*NoParams)(nil),                          // 4: inx.NoParams
+	(*ProtocolParameters)(nil),                // 5: inx.ProtocolParameters
+	(*RentStructure)(nil),                     // 6: inx.RentStructure
+	(*NodeStatus)(nil),                        // 7: inx.NodeStatus
+	(*MilestoneRequest)(nil),                  // 8: inx.MilestoneRequest
+	(*Milestone)(nil),                         // 9: inx.Milestone
+	(*MessageFilter)(nil),                     // 10: inx.MessageFilter
+	(*RawMessage)(nil),                        // 11: inx.RawMessage
+	(*MessageId)(nil),                         // 12: inx.MessageId
+	(*Message)(nil),                           // 13: inx.Message
+	(*MessageMetadata)(nil),                   // 14: inx.MessageMetadata
+	(*OutputId)(nil),                          // 15: inx.OutputId
+	(*OutputResponse)(nil),                    // 16: inx.OutputResponse
+	(*UnspentOutput)(nil),                     // 17: inx.UnspentOutput
+	(*LedgerOutput)(nil),                      // 18: inx.LedgerOutput
+	(*LedgerSpent)(nil),                       // 19: inx.LedgerSpent
+	(*LedgerUpdateRequest)(nil),               // 20: inx.LedgerUpdateRequest
+	(*LedgerUpdate)(nil),                      // 21: inx.LedgerUpdate
+	(*RawReceipt)(nil),                        // 22: inx.RawReceipt
+	(*APIRouteRequest)(nil),                   // 23: inx.APIRouteRequest
+	nil,                                       // 24: inx.APIRequest.HeadersEntry
+	nil,                                       // 25: inx.APIResponse.HeadersEntry
 }
 var file_inx_proto_depIdxs = []int32{
-	4,  // 0: inx.ProtocolParameters.rentStructure:type_name -> inx.RentStructure
-	7,  // 1: inx.NodeStatus.latestMilestone:type_name -> inx.Milestone
-	7,  // 2: inx.NodeStatus.confirmedMilestone:type_name -> inx.Milestone
-	10, // 3: inx.Milestone.messageId:type_name -> inx.MessageId
-	10, // 4: inx.Message.messageId:type_name -> inx.MessageId
-	9,  // 5: inx.Message.message:type_name -> inx.RawMessage
-	10, // 6: inx.MessageMetadata.messageId:type_name -> inx.MessageId
-	0,  // 7: inx.MessageMetadata.ledgerInclusionState:type_name -> inx.MessageMetadata.LedgerInclusionState
-	1,  // 8: inx.MessageMetadata.conflictReason:type_name -> inx.MessageMetadata.ConflictReason
-	16, // 9: inx.OutputResponse.output:type_name -> inx.LedgerOutput
-	17, // 10: inx.OutputResponse.spent:type_name -> inx.LedgerSpent
-	16, // 11: inx.UnspentOutput.output:type_name -> inx.LedgerOutput
-	13, // 12: inx.LedgerOutput.outputId:type_name -> inx.OutputId
-	10, // 13: inx.LedgerOutput.messageId:type_name -> inx.MessageId
-	16, // 14: inx.LedgerSpent.output:type_name -> inx.LedgerOutput
-	16, // 15: inx.LedgerUpdate.created:type_name -> inx.LedgerOutput
-	17, // 16: inx.LedgerUpdate.consumed:type_name -> inx.LedgerSpent
-	2,  // 17: inx.INX.ReadNodeStatus:input_type -> inx.NoParams
-	2,  // 18: inx.INX.ReadProtocolParameters:input_type -> inx.NoParams
-	6,  // 19: inx.INX.ReadMilestone:input_type -> inx.MilestoneRequest
-	2,  // 20: inx.INX.ListenToLatestMilestone:input_type -> inx.NoParams
-	2,  // 21: inx.INX.ListenToConfirmedMilestone:input_type -> inx.NoParams
-	8,  // 22: inx.INX.ListenToMessages:input_type -> inx.MessageFilter
-	8,  // 23: inx.INX.ListenToSolidMessages:input_type -> inx.MessageFilter
-	8,  // 24: inx.INX.ListenToReferencedMessages:input_type -> inx.MessageFilter
-	9,  // 25: inx.INX.SubmitMessage:input_type -> inx.RawMessage
-	10, // 26: inx.INX.ReadMessage:input_type -> inx.MessageId
-	10, // 27: inx.INX.ReadMessageMetadata:input_type -> inx.MessageId
-	2,  // 28: inx.INX.ReadUnspentOutputs:input_type -> inx.NoParams
-	18, // 29: inx.INX.ListenToLedgerUpdates:input_type -> inx.LedgerUpdateRequest
-	13, // 30: inx.INX.ReadOutput:input_type -> inx.OutputId
-	2,  // 31: inx.INX.ListenToMigrationReceipts:input_type -> inx.NoParams
-	21, // 32: inx.INX.RegisterAPIRoute:input_type -> inx.APIRouteRequest
-	21, // 33: inx.INX.UnregisterAPIRoute:input_type -> inx.APIRouteRequest
-	5,  // 34: inx.INX.ReadNodeStatus:output_type -> inx.NodeStatus
-	3,  // 35: inx.INX.ReadProtocolParameters:output_type -> inx.ProtocolParameters
-	7,  // 36: inx.INX.ReadMilestone:output_type -> inx.Milestone
-	7,  // 37: inx.INX.ListenToLatestMilestone:output_type -> inx.Milestone
-	7,  // 38: inx.INX.ListenToConfirmedMilestone:output_type -> inx.Milestone
-	11, // 39: inx.INX.ListenToMessages:output_type -> inx.Message
-	12, // 40: inx.INX.ListenToSolidMessages:output_type -> inx.MessageMetadata
-	12, // 41: inx.INX.ListenToReferencedMessages:output_type -> inx.MessageMetadata
-	10, // 42: inx.INX.SubmitMessage:output_type -> inx.MessageId
-	9,  // 43: inx.INX.ReadMessage:output_type -> inx.RawMessage
-	12, // 44: inx.INX.ReadMessageMetadata:output_type -> inx.MessageMetadata
-	15, // 45: inx.INX.ReadUnspentOutputs:output_type -> inx.UnspentOutput
-	19, // 46: inx.INX.ListenToLedgerUpdates:output_type -> inx.LedgerUpdate
-	14, // 47: inx.INX.ReadOutput:output_type -> inx.OutputResponse
-	20, // 48: inx.INX.ListenToMigrationReceipts:output_type -> inx.RawReceipt
-	2,  // 49: inx.INX.RegisterAPIRoute:output_type -> inx.NoParams
-	2,  // 50: inx.INX.UnregisterAPIRoute:output_type -> inx.NoParams
-	34, // [34:51] is the sub-list for method output_type
-	17, // [17:34] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	24, // 0: inx.APIRequest.headers:type_name -> inx.APIRequest.HeadersEntry
+	25, // 1: inx.APIResponse.headers:type_name -> inx.APIResponse.HeadersEntry
+	6,  // 2: inx.ProtocolParameters.rentStructure:type_name -> inx.RentStructure
+	9,  // 3: inx.NodeStatus.latestMilestone:type_name -> inx.Milestone
+	9,  // 4: inx.NodeStatus.confirmedMilestone:type_name -> inx.Milestone
+	12, // 5: inx.Milestone.messageId:type_name -> inx.MessageId
+	12, // 6: inx.Message.messageId:type_name -> inx.MessageId
+	11, // 7: inx.Message.message:type_name -> inx.RawMessage
+	12, // 8: inx.MessageMetadata.messageId:type_name -> inx.MessageId
+	0,  // 9: inx.MessageMetadata.ledgerInclusionState:type_name -> inx.MessageMetadata.LedgerInclusionState
+	1,  // 10: inx.MessageMetadata.conflictReason:type_name -> inx.MessageMetadata.ConflictReason
+	18, // 11: inx.OutputResponse.output:type_name -> inx.LedgerOutput
+	19, // 12: inx.OutputResponse.spent:type_name -> inx.LedgerSpent
+	18, // 13: inx.UnspentOutput.output:type_name -> inx.LedgerOutput
+	15, // 14: inx.LedgerOutput.outputId:type_name -> inx.OutputId
+	12, // 15: inx.LedgerOutput.messageId:type_name -> inx.MessageId
+	18, // 16: inx.LedgerSpent.output:type_name -> inx.LedgerOutput
+	18, // 17: inx.LedgerUpdate.created:type_name -> inx.LedgerOutput
+	19, // 18: inx.LedgerUpdate.consumed:type_name -> inx.LedgerSpent
+	4,  // 19: inx.INX.ReadNodeStatus:input_type -> inx.NoParams
+	4,  // 20: inx.INX.ReadProtocolParameters:input_type -> inx.NoParams
+	8,  // 21: inx.INX.ReadMilestone:input_type -> inx.MilestoneRequest
+	4,  // 22: inx.INX.ListenToLatestMilestone:input_type -> inx.NoParams
+	4,  // 23: inx.INX.ListenToConfirmedMilestone:input_type -> inx.NoParams
+	10, // 24: inx.INX.ListenToMessages:input_type -> inx.MessageFilter
+	10, // 25: inx.INX.ListenToSolidMessages:input_type -> inx.MessageFilter
+	10, // 26: inx.INX.ListenToReferencedMessages:input_type -> inx.MessageFilter
+	11, // 27: inx.INX.SubmitMessage:input_type -> inx.RawMessage
+	12, // 28: inx.INX.ReadMessage:input_type -> inx.MessageId
+	12, // 29: inx.INX.ReadMessageMetadata:input_type -> inx.MessageId
+	4,  // 30: inx.INX.ReadUnspentOutputs:input_type -> inx.NoParams
+	20, // 31: inx.INX.ListenToLedgerUpdates:input_type -> inx.LedgerUpdateRequest
+	15, // 32: inx.INX.ReadOutput:input_type -> inx.OutputId
+	4,  // 33: inx.INX.ListenToMigrationReceipts:input_type -> inx.NoParams
+	23, // 34: inx.INX.RegisterAPIRoute:input_type -> inx.APIRouteRequest
+	23, // 35: inx.INX.UnregisterAPIRoute:input_type -> inx.APIRouteRequest
+	2,  // 36: inx.INX.PerformAPIRequest:input_type -> inx.APIRequest
+	7,  // 37: inx.INX.ReadNodeStatus:output_type -> inx.NodeStatus
+	5,  // 38: inx.INX.ReadProtocolParameters:output_type -> inx.ProtocolParameters
+	9,  // 39: inx.INX.ReadMilestone:output_type -> inx.Milestone
+	9,  // 40: inx.INX.ListenToLatestMilestone:output_type -> inx.Milestone
+	9,  // 41: inx.INX.ListenToConfirmedMilestone:output_type -> inx.Milestone
+	13, // 42: inx.INX.ListenToMessages:output_type -> inx.Message
+	14, // 43: inx.INX.ListenToSolidMessages:output_type -> inx.MessageMetadata
+	14, // 44: inx.INX.ListenToReferencedMessages:output_type -> inx.MessageMetadata
+	12, // 45: inx.INX.SubmitMessage:output_type -> inx.MessageId
+	11, // 46: inx.INX.ReadMessage:output_type -> inx.RawMessage
+	14, // 47: inx.INX.ReadMessageMetadata:output_type -> inx.MessageMetadata
+	17, // 48: inx.INX.ReadUnspentOutputs:output_type -> inx.UnspentOutput
+	21, // 49: inx.INX.ListenToLedgerUpdates:output_type -> inx.LedgerUpdate
+	16, // 50: inx.INX.ReadOutput:output_type -> inx.OutputResponse
+	22, // 51: inx.INX.ListenToMigrationReceipts:output_type -> inx.RawReceipt
+	4,  // 52: inx.INX.RegisterAPIRoute:output_type -> inx.NoParams
+	4,  // 53: inx.INX.UnregisterAPIRoute:output_type -> inx.NoParams
+	3,  // 54: inx.INX.PerformAPIRequest:output_type -> inx.APIResponse
+	37, // [37:55] is the sub-list for method output_type
+	19, // [19:37] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_inx_proto_init() }
@@ -1728,7 +1896,7 @@ func file_inx_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_inx_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*NoParams); i {
+			switch v := v.(*APIRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1740,7 +1908,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ProtocolParameters); i {
+			switch v := v.(*APIResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1752,7 +1920,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RentStructure); i {
+			switch v := v.(*NoParams); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1764,7 +1932,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*NodeStatus); i {
+			switch v := v.(*ProtocolParameters); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1776,7 +1944,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MilestoneRequest); i {
+			switch v := v.(*RentStructure); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1788,7 +1956,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Milestone); i {
+			switch v := v.(*NodeStatus); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1800,7 +1968,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MessageFilter); i {
+			switch v := v.(*MilestoneRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1812,7 +1980,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RawMessage); i {
+			switch v := v.(*Milestone); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1824,7 +1992,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MessageId); i {
+			switch v := v.(*MessageFilter); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1836,7 +2004,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Message); i {
+			switch v := v.(*RawMessage); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1848,7 +2016,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MessageMetadata); i {
+			switch v := v.(*MessageId); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1860,7 +2028,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*OutputId); i {
+			switch v := v.(*Message); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1872,7 +2040,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*OutputResponse); i {
+			switch v := v.(*MessageMetadata); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1884,7 +2052,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UnspentOutput); i {
+			switch v := v.(*OutputId); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1896,7 +2064,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LedgerOutput); i {
+			switch v := v.(*OutputResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1908,7 +2076,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LedgerSpent); i {
+			switch v := v.(*UnspentOutput); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1920,7 +2088,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LedgerUpdateRequest); i {
+			switch v := v.(*LedgerOutput); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1932,7 +2100,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LedgerUpdate); i {
+			switch v := v.(*LedgerSpent); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1944,7 +2112,7 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RawReceipt); i {
+			switch v := v.(*LedgerUpdateRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1956,6 +2124,30 @@ func file_inx_proto_init() {
 			}
 		}
 		file_inx_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*LedgerUpdate); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_inx_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RawReceipt); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_inx_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*APIRouteRequest); i {
 			case 0:
 				return &v.state
@@ -1968,7 +2160,7 @@ func file_inx_proto_init() {
 			}
 		}
 	}
-	file_inx_proto_msgTypes[12].OneofWrappers = []interface{}{
+	file_inx_proto_msgTypes[14].OneofWrappers = []interface{}{
 		(*OutputResponse_Output)(nil),
 		(*OutputResponse_Spent)(nil),
 	}
@@ -1978,7 +2170,7 @@ func file_inx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_inx_proto_rawDesc,
 			NumEnums:      2,
-			NumMessages:   20,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
