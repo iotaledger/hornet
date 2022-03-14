@@ -1,6 +1,7 @@
 {
   "indexer": {
-    "bindAddress": "localhost:9091"
+    "bindAddress": "localhost:9091",
+    "maxPageSize": 1000
   },
   "prometheus": {
     "enabled": true,

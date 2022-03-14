@@ -30,7 +30,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/serializer/v2"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -38,6 +37,9 @@ const (
 
 	// CfgIndexerBindAddress bind address on which the Indexer HTTP server listens.
 	CfgIndexerBindAddress = "indexer.bindAddress"
+	// CfgIndexerMaxPageSize the maximum number of results that may be returned for each page.
+	CfgIndexerMaxPageSize = "indexer.maxPageSize"
+
 	// CfgPrometheusEnabled enable prometheus metrics.
 	CfgPrometheusEnabled = "prometheus.enabled"
 	// CfgPrometheusBindAddress bind address on which the Prometheus HTTP server listens.
@@ -249,6 +251,12 @@ func main() {
 		fmt.Printf("Indexer started at ledgerIndex %d\n", ledgerIndex)
 	}
 
+	protocolParams, err := client.ReadProtocolParameters(context.Background(), &inx.NoParams{})
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
 	resp, err := client.ReadNodeStatus(context.Background(), &inx.NoParams{})
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
@@ -273,7 +281,7 @@ func main() {
 		}
 		cancel()
 	}()
-	indexer_server.NewIndexerServer(indexer, e.Group(""), iotago.PrefixTestnet, 1000)
+	indexer_server.NewIndexerServer(indexer, e.Group(""), protocolParams.NetworkPrefix(), config.Int(CfgIndexerMaxPageSize))
 
 	bindAddressParts := strings.Split(config.String(CfgIndexerBindAddress), ":")
 	if len(bindAddressParts) != 2 {
@@ -337,6 +345,7 @@ func main() {
 func flagSet() *flag.FlagSet {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	fs.String(CfgIndexerBindAddress, "localhost:9091", "bind address on which the Indexer HTTP server listens")
+	fs.Int(CfgIndexerMaxPageSize, 1000, "the maximum number of results that may be returned for each page")
 	fs.Bool(CfgPrometheusEnabled, false, "enable prometheus metrics")
 	fs.String(CfgPrometheusBindAddress, "localhost:9312", "bind address on which the Prometheus HTTP server listens.")
 	return fs
