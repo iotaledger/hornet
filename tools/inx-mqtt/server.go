@@ -32,7 +32,7 @@ const (
 
 type topicSubcription struct {
 	Count      int
-	Func       func()
+	CancelFunc func()
 	Identifier int
 }
 
@@ -135,12 +135,10 @@ func (s *Server) stopListenIfNeeded(grpcCall string) {
 
 	sub, ok := s.grpcSubscriptions[grpcCall]
 	if ok {
-		if sub.Count == 1 {
-			sub.Count = 0
-			sub.Func()
+		sub.Count--
+		if sub.Count == 0 {
+			sub.CancelFunc()
 			delete(s.grpcSubscriptions, grpcCall)
-		} else {
-			sub.Count--
 		}
 	}
 }
@@ -150,33 +148,34 @@ func (s *Server) startListenIfNeeded(ctx context.Context, grpcCall string, liste
 	defer s.grpcSubscriptionsLock.Unlock()
 
 	sub, ok := s.grpcSubscriptions[grpcCall]
-	if !ok {
-		c, cancel := context.WithCancel(ctx)
-		subscriptionIdentifier := rand.Int()
-		s.grpcSubscriptions[grpcCall] = &topicSubcription{
-			Count:      1,
-			Func:       cancel,
-			Identifier: subscriptionIdentifier,
-		}
-		go func() {
-			fmt.Printf("Listen to %s\n", grpcCall)
-			err := listenFunc(c)
-			if err != nil && !errors.Is(err, context.Canceled) {
-				fmt.Printf("Finished listen to %s with error: %s\n", grpcCall, err.Error())
-			} else {
-				fmt.Printf("Finished listen to %s\n", grpcCall)
-			}
-			s.grpcSubscriptionsLock.Lock()
-			sub, ok := s.grpcSubscriptions[grpcCall]
-			if ok && sub.Identifier == subscriptionIdentifier {
-				// Only delete if it was not already replaced by a new one.
-				delete(s.grpcSubscriptions, grpcCall)
-			}
-			s.grpcSubscriptionsLock.Unlock()
-		}()
-	} else {
+	if ok {
 		sub.Count++
+		return
 	}
+
+	c, cancel := context.WithCancel(ctx)
+	subscriptionIdentifier := rand.Int()
+	s.grpcSubscriptions[grpcCall] = &topicSubcription{
+		Count:      1,
+		CancelFunc: cancel,
+		Identifier: subscriptionIdentifier,
+	}
+	go func() {
+		fmt.Printf("Listen to %s\n", grpcCall)
+		err := listenFunc(c)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			fmt.Printf("Finished listen to %s with error: %s\n", grpcCall, err.Error())
+		} else {
+			fmt.Printf("Finished listen to %s\n", grpcCall)
+		}
+		s.grpcSubscriptionsLock.Lock()
+		sub, ok := s.grpcSubscriptions[grpcCall]
+		if ok && sub.Identifier == subscriptionIdentifier {
+			// Only delete if it was not already replaced by a new one.
+			delete(s.grpcSubscriptions, grpcCall)
+		}
+		s.grpcSubscriptionsLock.Unlock()
+	}()
 }
 
 func (s *Server) listenToLatestMilestone(ctx context.Context) error {

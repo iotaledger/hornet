@@ -70,8 +70,6 @@ func (b *balancer) uriFromRequest(c echo.Context) string {
 }
 
 func (b *balancer) skipper(c echo.Context) bool {
-	b.mutex.RLock()
-	defer b.mutex.RUnlock()
 	return b.Next(c) == nil
 }
 

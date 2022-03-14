@@ -29,6 +29,7 @@ devnetdb*/
 testnetdb*/
 mainnetdb*/
 p2pstore*/
+stardust_testnet
 
 # snapshot dir
 snapshots/
@@ -44,12 +45,11 @@ coordinator.state
 
 # Docs
 book
-stardust_testnet
+
+# INX
+inx/*/err.log
+inx/*/output.log
 tools/inx-nodejs/node_modules
-inx/indexer/err.log
-inx/indexer/output.log
 inx/indexer/indexer.db
 inx/indexer/inx-indexer
-inx/mqtt/err.log
 inx/mqtt/inx-mqtt
-inx/mqtt/output.log

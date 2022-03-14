@@ -1,9 +1,7 @@
 package inx
 
 import (
-	"bytes"
 	"context"
-	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

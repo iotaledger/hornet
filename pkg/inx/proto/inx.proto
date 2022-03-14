@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package inx;
-option go_package = "github.com/gohornet/pkg/inx";
+option go_package = "github.com/gohornet/hornet/pkg/inx";
 
 service INX {
 

@@ -84,8 +84,8 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
-		shouldPromote := false
-		shouldReattach := false
+		var shouldPromote bool
+		var shouldReattach bool
 
 		switch tipScore {
 		case tangle.TipScoreNotFound:
@@ -96,6 +96,9 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		case tangle.TipScoreBelowMaxDepth:
 			shouldPromote = false
 			shouldReattach = true
+		case tangle.TipScoreHealthy:
+			shouldPromote = false
+			shouldReattach = false
 		}
 
 		messageMetadataResponse.ShouldPromote = &shouldPromote

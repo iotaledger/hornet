@@ -18,7 +18,6 @@ go run "..\main.go" -c config_private_tangle.json ^
 --profiling.bindAddress="127.0.0.1:6060" ^
 --prometheus.bindAddress="localhost:9311" ^
 --prometheus.fileServiceDiscovery.target="localhost:9311" ^
---mqtt.bindAddress="localhost:1883" ^
 --p2p.db.path="p2pstore" ^
 --p2p.identityPrivateKey="1f46fad4f538a031d4f87f490f6bca4319dfd0307636a5759a22b5e8874bd608f9156ba976a12918c16a481c38c88a7b5351b769adc30390e93b6c0a63b09b79" ^
 --p2p.peers="/ip4/127.0.0.1/tcp/15601/p2p/12D3KooWCKwcTWevoRKa2kEBputeGASvEBuDfRDSbe8t1DWugUmL,/ip4/127.0.0.1/tcp/15602/p2p/12D3KooWGdr8M5KX8KuKaXSiKfHJstdVnRkadYmupF7tFk2HrRoA,/ip4/127.0.0.1/tcp/15603/p2p/12D3KooWC7uE9w3RN4Vh1FJAZa8SbE8yMWR6wCVBajcWpyWguV73"

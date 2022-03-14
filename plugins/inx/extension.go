@@ -23,21 +23,21 @@ type Extension struct {
 }
 
 func NewExtension(path string) (*Extension, error) {
-	//TODO: read inx.json or some config file
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
 
 	config := configuration.New()
-	if err := config.LoadFile(filepath.Join(absPath, "inx.json")); err != nil {
+	manifestFile := filepath.Join(absPath, "inx.json")
+	if err := config.LoadFile(manifestFile); err != nil {
 		return nil, err
 	}
 	if len(config.String(INXManifestName)) == 0 {
-		return nil, fmt.Errorf("inx.json missing key %s", INXManifestName)
+		return nil, fmt.Errorf("%s missing key %s", manifestFile, INXManifestName)
 	}
 	if len(config.String(INXManifestEntrypoint)) == 0 {
-		return nil, fmt.Errorf("inx.json missing key %s", INXManifestEntrypoint)
+		return nil, fmt.Errorf("%s missing key %s", manifestFile, INXManifestEntrypoint)
 	}
 
 	return &Extension{

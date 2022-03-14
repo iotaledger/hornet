@@ -49,7 +49,7 @@ func ConvertINXOutput(output *inx.LedgerOutput) (*utxo.Output, error) {
 	messageID := output.UnwrapMessageID()
 	milestoneIndex := milestone.Index(output.GetMilestoneIndexBooked())
 	milestoneTimestamp := uint64(output.GetMilestoneTimestampBooked())
-	o, err := output.UnwrapOutput(serializer.DeSeriModePerformValidation)
+	o, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func fillIndexer(client inx.INXClient, indexer *indexerpkg.Indexer) error {
 		if err := importer.AddOutput(output); err != nil {
 			return err
 		}
-		if outputLedgerIndex > ledgerIndex {
+		if ledgerIndex < outputLedgerIndex {
 			ledgerIndex = outputLedgerIndex
 		}
 	}

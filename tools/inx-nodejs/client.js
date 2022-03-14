@@ -6,7 +6,7 @@ const protoLoader = require("@grpc/proto-loader");
 const util = require("util");
 const PROTO_PATH = "../../pkg/inx/proto/inx.proto";
 
-const options = {
+const protoOptions = {
     keepCase: true,
     longs: String,
     enums: String,
@@ -22,7 +22,7 @@ if (process.env.INX_PORT) {
     process.exit(1)
 }
 
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, options);
+const packageDefinition = protoLoader.loadSync(PROTO_PATH, protoOptions);
 const INX = grpc.loadPackageDefinition(packageDefinition).inx.INX;
 const client = new INX(
     util.format("localhost:%s", port),
