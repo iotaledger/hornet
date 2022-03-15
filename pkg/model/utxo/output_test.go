@@ -325,12 +325,13 @@ func TestFoundryOutputSerialization(t *testing.T) {
 	supply := new(big.Int).SetUint64(rand.Uint64())
 
 	iotaOutput := &iotago.FoundryOutput{
-		Amount:            amount,
-		SerialNumber:      rand.Uint32(),
-		TokenTag:          utils.RandTokenTag(),
-		CirculatingSupply: supply,
-		MaximumSupply:     supply,
-		TokenScheme:       &iotago.SimpleTokenScheme{},
+		Amount:        amount,
+		SerialNumber:  rand.Uint32(),
+		TokenTag:      utils.RandTokenTag(),
+		MintedTokens:  supply,
+		MeltedTokens:  new(big.Int).SetBytes([]byte{0}),
+		MaximumSupply: supply,
+		TokenScheme:   &iotago.SimpleTokenScheme{},
 		Conditions: iotago.UnlockConditions{
 			&iotago.ImmutableAliasUnlockCondition{
 				Address: aliasID.ToAddress().(*iotago.AliasAddress),
