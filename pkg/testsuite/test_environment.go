@@ -103,9 +103,9 @@ type TestEnvironment struct {
 var (
 	DeSerializationParameters = &iotago.DeSerializationParameters{
 		RentStructure: &iotago.RentStructure{
-			VByteCost:    0,
-			VBFactorData: 0,
-			VBFactorKey:  0,
+			VByteCost:    500,
+			VBFactorData: 1,
+			VBFactorKey:  10,
 		},
 	}
 )

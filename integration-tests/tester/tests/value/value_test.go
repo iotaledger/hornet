@@ -44,13 +44,7 @@ func TestValue(t *testing.T) {
 	genesisInputID := &iotago.UTXOInput{TransactionID: [32]byte{}, TransactionOutputIndex: 0}
 
 	//TODO: this should be read from the node
-	deSeriParas := &iotago.DeSerializationParameters{
-		RentStructure: &iotago.RentStructure{
-			VByteCost:    0,
-			VBFactorData: 0,
-			VBFactorKey:  0,
-		},
-	}
+	deSeriParas := iotago.ZeroRentParas
 
 	// build and sign transaction spending the total supply
 	tx, err := builder.NewTransactionBuilder(iotago.NetworkIDFromString(n.Coordinator().Config.Protocol.NetworkIDName)).

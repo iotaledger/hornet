@@ -103,15 +103,6 @@ func EqualSpents(t *testing.T, expected utxo.Spents, actual utxo.Spents) {
 }
 
 func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
-
-	deSeriParas := &iotago.DeSerializationParameters{
-		RentStructure: &iotago.RentStructure{
-			VByteCost:    0,
-			VBFactorData: 0,
-			VBFactorKey:  0,
-		},
-	}
-
 	map1 := mapdb.NewMapDB()
 	u1 := utxo.New(map1)
 	map2 := mapdb.NewMapDB()
@@ -177,7 +168,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		outputBytes := output.SnapshotBytes()
 
 		// Unmarshal the output again
-		newOutput, err := readOutput(bytes.NewReader(outputBytes), deSeriParas)
+		newOutput, err := readOutput(bytes.NewReader(outputBytes), iotago.ZeroRentParas)
 		require.NoError(t, err)
 
 		err = consumer(newOutput)
