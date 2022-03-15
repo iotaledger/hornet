@@ -224,7 +224,6 @@ func main() {
 		apiErrorHandler(err, c)
 	}
 	e.Use(middleware.Recover())
-	e.Use(middleware.Gzip())
 
 	go func() {
 		if err := e.Start(config.String(CfgIndexerBindAddress)); err != nil {
