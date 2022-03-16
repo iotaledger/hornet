@@ -12,12 +12,10 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/indexer"
 	"github.com/gohornet/hornet/pkg/model/faucet"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
@@ -49,7 +47,6 @@ var (
 type FaucetTestEnv struct {
 	t       *testing.T
 	TestEnv *testsuite.TestEnvironment
-	Indexer *indexer.Indexer
 
 	GenesisWallet *utils.HDWallet
 	FaucetWallet  *utils.HDWallet
@@ -241,18 +238,6 @@ func NewFaucetTestEnv(t *testing.T,
 		return nil
 	}
 
-	indexer, err := indexer.NewIndexer(te.TempDir)
-	require.NoError(t, err)
-
-	indexerImport := indexer.ImportTransaction()
-	te.UTXOManager().ForEachUnspentOutput(func(output *utxo.Output) bool {
-		require.NoError(t, indexerImport.AddOutput(output))
-		return true
-	})
-	ledgerIndex, err := te.UTXOManager().ReadLedgerIndex()
-	require.NoError(t, err)
-	require.NoError(t, indexerImport.Finalize(ledgerIndex))
-
 	f := faucet.New(
 		defaultDaemon,
 		te.Storage(),
@@ -261,7 +246,6 @@ func NewFaucetTestEnv(t *testing.T,
 		testsuite.DeSerializationParameters,
 		int(te.BelowMaxDepth()),
 		te.UTXOManager(),
-		indexer,
 		faucetWallet.Address(),
 		faucetWallet.AddressSigner(),
 		tipselFunc,
@@ -299,15 +283,12 @@ func NewFaucetTestEnv(t *testing.T,
 			require.NoError(t, f.ApplyConfirmation(confirmation))
 		},
 		nil,
-		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
-			require.NoError(t, indexer.UpdatedLedger(index, newOutputs, newSpents))
-		},
+		nil,
 	)
 
 	return &FaucetTestEnv{
 		t:               t,
 		TestEnv:         te,
-		Indexer:         indexer,
 		GenesisWallet:   genesisWallet,
 		FaucetWallet:    faucetWallet,
 		Wallet1:         seed1Wallet,
@@ -326,7 +307,6 @@ func (env *FaucetTestEnv) Cleanup() {
 	if env.faucetCtxCancel != nil {
 		env.faucetCtxCancel()
 	}
-	require.NoError(env.t, env.Indexer.CloseDatabase())
 	env.TestEnv.CleanupTestEnvironment(true)
 }
 
@@ -429,7 +409,7 @@ func (env *FaucetTestEnv) AssertFaucetBalance(expected uint64) {
 }
 
 func (env *FaucetTestEnv) AssertAddressUTXOCount(address iotago.Address, expected int) {
-	result := env.Indexer.BasicOutputsWithFilters(indexer.BasicOutputUnlockableByAddress(address), indexer.BasicOutputHasStorageDepositReturnCondition(false))
-	require.NoError(env.t, result.Error)
-	require.Equal(env.t, expected, len(result.OutputIDs))
+	_, count, err := env.TestEnv.ComputeAddressBalanceWithoutConstraints(address)
+	require.NoError(env.t, err)
+	require.Equal(env.t, expected, count)
 }

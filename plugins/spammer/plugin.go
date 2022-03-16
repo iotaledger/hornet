@@ -25,7 +25,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/restapi"
-	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -90,6 +89,7 @@ type dependencies struct {
 	TipSelector               *tipselect.TipSelector       `optional:"true"`
 	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
 	DeserializationParameters *iotago.DeSerializationParameters
+	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
 }
 
 func configure() {
@@ -103,7 +103,7 @@ func configure() {
 		Plugin.LogPanic("URTS plugin needs to be enabled to use the Spammer plugin")
 	}
 
-	routeGroup := restapiv2.AddPlugin("spammer/v1")
+	routeGroup := deps.RestPluginManager.AddPlugin("spammer/v1")
 	setupRoutes(routeGroup)
 
 	spammerAvgHeap = utils.NewTimeHeap()

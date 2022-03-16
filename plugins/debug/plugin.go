@@ -15,7 +15,6 @@ import (
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/restapi"
-	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -75,13 +74,14 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage      *storage.Storage
-	SyncManager  *syncmanager.SyncManager
-	Tangle       *tangle.Tangle
-	RequestQueue gossip.RequestQueue
-	UTXOManager  *utxo.Manager
-	NodeConfig   *configuration.Configuration `name:"nodeConfig"`
-	NetworkID    uint64                       `name:"networkId"`
+	Storage           *storage.Storage
+	SyncManager       *syncmanager.SyncManager
+	Tangle            *tangle.Tangle
+	RequestQueue      gossip.RequestQueue
+	UTXOManager       *utxo.Manager
+	NodeConfig        *configuration.Configuration `name:"nodeConfig"`
+	NetworkID         uint64                       `name:"networkId"`
+	RestPluginManager *restapi.RestPluginManager   `optional:"true"`
 }
 
 func configure() {
@@ -92,7 +92,7 @@ func configure() {
 
 	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
 
-	routeGroup := restapiv2.AddPlugin("debug/v1")
+	routeGroup := deps.RestPluginManager.AddPlugin("debug/v1")
 
 	routeGroup.POST(RouteDebugComputeWhiteFlag, func(c echo.Context) error {
 		resp, err := computeWhiteFlagMutations(c)

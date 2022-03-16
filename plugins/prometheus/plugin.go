@@ -7,17 +7,16 @@ import (
 	"net/http"
 	"time"
 
-	coreDatabase "github.com/gohornet/hornet/core/database"
-
-	"github.com/pkg/errors"
-
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/dig"
 
+	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -25,14 +24,15 @@ import (
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/mqtt"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
+	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/plugins/inx"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -49,6 +49,7 @@ func init() {
 			Name:      "Prometheus",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
+			Provide:   provide,
 			Configure: configure,
 			Run:       run,
 		},
@@ -66,26 +67,54 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo          *app.AppInfo
-	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-	SyncManager      *syncmanager.SyncManager
-	ServerMetrics    *metrics.ServerMetrics
-	Storage          *storage.Storage
-	StorageMetrics   *metrics.StorageMetrics
-	TangleDatabase   *database.Database      `name:"tangleDatabase"`
-	UTXODatabase     *database.Database      `name:"utxoDatabase"`
-	RestAPIMetrics   *metrics.RestAPIMetrics `optional:"true"`
-	GossipService    *gossip.Service
-	ReceiptService   *migrator.ReceiptService `optional:"true"`
-	Tangle           *tangle.Tangle
-	MigratorService  *migrator.MigratorService `optional:"true"`
-	PeeringManager   *p2p.Manager
-	RequestQueue     gossip.RequestQueue
-	MessageProcessor *gossip.MessageProcessor
-	TipSelector      *tipselect.TipSelector `optional:"true"`
-	SnapshotManager  *snapshot.SnapshotManager
-	Coordinator      *coordinator.Coordinator `optional:"true"`
-	MQTTBroker       *mqtt.Broker             `optional:"true"`
+	AppInfo              *app.AppInfo
+	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	SyncManager          *syncmanager.SyncManager
+	ServerMetrics        *metrics.ServerMetrics
+	Storage              *storage.Storage
+	StorageMetrics       *metrics.StorageMetrics
+	TangleDatabase       *database.Database      `name:"tangleDatabase"`
+	UTXODatabase         *database.Database      `name:"utxoDatabase"`
+	RestAPIMetrics       *metrics.RestAPIMetrics `optional:"true"`
+	GossipService        *gossip.Service
+	ReceiptService       *migrator.ReceiptService `optional:"true"`
+	Tangle               *tangle.Tangle
+	MigratorService      *migrator.MigratorService `optional:"true"`
+	PeeringManager       *p2p.Manager
+	RequestQueue         gossip.RequestQueue
+	MessageProcessor     *gossip.MessageProcessor
+	TipSelector          *tipselect.TipSelector `optional:"true"`
+	SnapshotManager      *snapshot.SnapshotManager
+	Coordinator          *coordinator.Coordinator `optional:"true"`
+	PrometheusEcho       *echo.Echo               `name:"prometheusEcho"`
+	ExternalMetricsProxy *restapi.DynamicProxy    `name:"externalMetricsProxy"`
+	INXServer            *inx.INXServer           `optional:"true"`
+}
+
+func provide(c *dig.Container) {
+
+	type depsIn struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	type depsOut struct {
+		dig.Out
+		PrometheusEcho       *echo.Echo            `name:"prometheusEcho"`
+		ExternalMetricsProxy *restapi.DynamicProxy `name:"externalMetricsProxy"`
+	}
+
+	if err := c.Provide(func(depsIn) depsOut {
+		e := echo.New()
+		e.HideBanner = true
+		e.Use(middleware.Recover())
+		return depsOut{
+			PrometheusEcho:       e,
+			ExternalMetricsProxy: restapi.NewDynamicProxy(e, "/external"),
+		}
+	}); err != nil {
+		Plugin.LogPanic(err)
+	}
 }
 
 func configure() {
@@ -107,6 +136,12 @@ func configure() {
 	if deps.NodeConfig.Bool(CfgPrometheusRestAPI) && deps.RestAPIMetrics != nil {
 		configureRestAPI()
 	}
+
+	if deps.NodeConfig.Bool(CfgPrometheusINX) && deps.INXServer != nil {
+		deps.INXServer.ConfigurePrometheus()
+		registry.MustRegister(grpc_prometheus.DefaultServerMetrics)
+	}
+
 	if deps.NodeConfig.Bool(CfgPrometheusMigration) {
 		if deps.ReceiptService != nil {
 			configureReceipts()
@@ -117,9 +152,6 @@ func configure() {
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusCoordinator) && deps.Coordinator != nil {
 		configureCoordinator()
-	}
-	if deps.NodeConfig.Bool(CfgPrometheusMQTTBroker) && deps.MQTTBroker != nil {
-		configureMQTTBroker()
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusDebug) {
 		configureDebug()
@@ -171,11 +203,7 @@ func run() {
 	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(ctx context.Context) {
 		Plugin.LogInfo("Starting Prometheus exporter ... done")
 
-		e := echo.New()
-		e.HideBanner = true
-		e.Use(middleware.Recover())
-
-		e.GET(RouteMetrics, func(c echo.Context) error {
+		deps.PrometheusEcho.GET(RouteMetrics, func(c echo.Context) error {
 			for _, collect := range collects {
 				collect()
 			}
@@ -194,11 +222,10 @@ func run() {
 		})
 
 		bindAddr := deps.NodeConfig.String(CfgPrometheusBindAddress)
-		server = &http.Server{Addr: bindAddr, Handler: e}
 
 		go func() {
 			Plugin.LogInfof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
-			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := deps.PrometheusEcho.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				Plugin.LogWarnf("Stopped Prometheus exporter due to an error (%s)", err)
 			}
 		}()
@@ -206,14 +233,12 @@ func run() {
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping Prometheus exporter ...")
 
-		if server != nil {
-			shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
-			err := server.Shutdown(shutdownCtx)
-			if err != nil {
-				Plugin.LogWarn(err)
-			}
-			shutdownCtxCancel()
+		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := deps.PrometheusEcho.Shutdown(shutdownCtx)
+		if err != nil {
+			Plugin.LogWarn(err)
 		}
+		shutdownCtxCancel()
 		Plugin.LogInfo("Stopping Prometheus exporter ... done")
 	}, shutdown.PriorityPrometheus); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)

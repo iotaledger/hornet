@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -118,11 +117,9 @@ func init() {
 }
 
 var (
-	Plugin         *node.Plugin
-	powEnabled     bool
-	powWorkerCount int
-	features       = []string{}
-	plugins        = []string{}
+	Plugin   *node.Plugin
+	features = []string{}
+	attacher *tangle.MessageAttacher
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
@@ -135,11 +132,11 @@ type dependencies struct {
 	Storage                               *storage.Storage
 	SyncManager                           *syncmanager.SyncManager
 	Tangle                                *tangle.Tangle
+	TipScoreCalculator                    *tangle.TipScoreCalculator
 	PeeringManager                        *p2p.Manager
 	GossipService                         *gossip.Service
 	UTXOManager                           *utxo.Manager
 	PoWHandler                            *pow.Handler
-	MessageProcessor                      *gossip.MessageProcessor
 	SnapshotManager                       *snapshot.SnapshotManager
 	AppInfo                               *app.AppInfo
 	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
@@ -147,16 +144,17 @@ type dependencies struct {
 	NetworkID                             uint64 `name:"networkId"`
 	NetworkIDName                         string `name:"networkIdName"`
 	DeserializationParameters             *iotago.DeSerializationParameters
-	MaxDeltaMsgYoungestConeRootIndexToCMI int                    `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
-	MaxDeltaMsgOldestConeRootIndexToCMI   int                    `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-	BelowMaxDepth                         int                    `name:"belowMaxDepth"`
-	MinPoWScore                           float64                `name:"minPoWScore"`
-	Bech32HRP                             iotago.NetworkPrefix   `name:"bech32HRP"`
-	RestAPILimitsMaxResults               int                    `name:"restAPILimitsMaxResults"`
-	SnapshotsFullPath                     string                 `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath                    string                 `name:"snapshotsDeltaPath"`
-	TipSelector                           *tipselect.TipSelector `optional:"true"`
-	Echo                                  *echo.Echo             `optional:"true"`
+	MaxDeltaMsgYoungestConeRootIndexToCMI int                        `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+	MaxDeltaMsgOldestConeRootIndexToCMI   int                        `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+	BelowMaxDepth                         int                        `name:"belowMaxDepth"`
+	MinPoWScore                           float64                    `name:"minPoWScore"`
+	Bech32HRP                             iotago.NetworkPrefix       `name:"bech32HRP"`
+	RestAPILimitsMaxResults               int                        `name:"restAPILimitsMaxResults"`
+	SnapshotsFullPath                     string                     `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath                    string                     `name:"snapshotsDeltaPath"`
+	TipSelector                           *tipselect.TipSelector     `optional:"true"`
+	Echo                                  *echo.Echo                 `optional:"true"`
+	RestPluginManager                     *restapi.RestPluginManager `optional:"true"`
 }
 
 func configure() {
@@ -167,13 +165,22 @@ func configure() {
 
 	routeGroup := deps.Echo.Group("/api/v2")
 
-	powEnabled = deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled)
-	powWorkerCount = deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)
+	attacherOpts := []tangle.MessageAttacherOption{
+		tangle.WithTimeout(messageProcessedTimeout),
+		tangle.WithDeserializationParameters(deps.DeserializationParameters),
+		tangle.WithMinPoWScore(deps.MinPoWScore),
+	}
+	if deps.TipSelector != nil {
+		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))
+	}
 
 	// Check for features
-	if powEnabled {
+	if deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled) {
 		AddFeature("PoW")
+		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)))
 	}
+
+	attacher = deps.Tangle.MessageAttacher(attacherOpts...)
 
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
 		resp, err := info()
@@ -360,10 +367,4 @@ func configure() {
 // AddFeature adds a feature to the RouteInfo endpoint.
 func AddFeature(feature string) {
 	features = append(features, feature)
-}
-
-// AddPlugin adds a plugin route to the RouteInfo endpoint and returns the route for this plugin.
-func AddPlugin(pluginRoute string) *echo.Group {
-	plugins = append(plugins, pluginRoute)
-	return deps.Echo.Group(fmt.Sprintf("/api/plugins/%s", pluginRoute))
 }

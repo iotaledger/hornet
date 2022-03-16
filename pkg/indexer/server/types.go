@@ -1,4 +1,4 @@
-package indexer
+package indexer_server
 
 import (
 	"github.com/gohornet/hornet/pkg/model/milestone"

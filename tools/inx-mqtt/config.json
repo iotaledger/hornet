@@ -1,0 +1,10 @@
+{
+  "mqtt": {
+    "bindAddress": "localhost:1883",
+    "wsPort": 1888
+  },
+  "prometheus": {
+    "enabled": true,
+    "bindAddress": "localhost:9313"
+  }
+}

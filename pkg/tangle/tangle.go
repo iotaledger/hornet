@@ -49,9 +49,7 @@ type Tangle struct {
 	// used to persist and validate batches of receipts.
 	receiptService *migrator.ReceiptService
 	networkId      uint64
-	// belowMaxDepth is the maximum allowed delta value between OCRI of
-	// a given message in relation to the current CMI before it gets lazy.
-	belowMaxDepth         milestone.Index
+
 	milestoneTimeout      time.Duration
 	updateSyncedAtStartup bool
 
@@ -123,7 +121,6 @@ func New(
 	requester *gossip.Requester,
 	receiptService *migrator.ReceiptService,
 	networkId uint64,
-	belowMaxDepth int,
 	milestoneTimeout time.Duration,
 	updateSyncedAtStartup bool) *Tangle {
 
@@ -141,7 +138,6 @@ func New(
 		requester:             requester,
 		receiptService:        receiptService,
 		networkId:             networkId,
-		belowMaxDepth:         milestone.Index(belowMaxDepth),
 		milestoneTimeout:      milestoneTimeout,
 		updateSyncedAtStartup: updateSyncedAtStartup,
 

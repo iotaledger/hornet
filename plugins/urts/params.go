@@ -9,15 +9,6 @@ import (
 )
 
 const (
-	// CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI is the maximum allowed delta
-	// value for the YCRI of a given message in relation to the current CMI before it gets lazy.
-	CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI = "tipsel.maxDeltaMsgYoungestConeRootIndexToCMI"
-	// CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI is the maximum allowed delta
-	// value between OCRI of a given message in relation to the current CMI before it gets semi-lazy.
-	CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI = "tipsel.maxDeltaMsgOldestConeRootIndexToCMI"
-	// CfgTipSelBelowMaxDepth is the maximum allowed delta
-	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
-	CfgTipSelBelowMaxDepth = "tipsel.belowMaxDepth"
 	// the config group used for the non-lazy tip-pool
 	CfgTipSelNonLazy = "tipsel.nonLazy."
 	// the config group used for the semi-lazy tip-pool
@@ -41,12 +32,6 @@ var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.Int(CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI, 8, "the maximum allowed delta "+
-				"value for the YCRI of a given message in relation to the current CMI before it gets lazy")
-			fs.Int(CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI, 13, "the maximum allowed delta "+
-				"value between OCRI of a given message in relation to the current CMI before it gets semi-lazy")
-			fs.Int(CfgTipSelBelowMaxDepth, 15, "the maximum allowed delta "+
-				"value for the OCRI of a given message in relation to the current CMI before it gets lazy")
 			fs.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
 			fs.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge, 3*time.Second, "the maximum time a tip remains in the tip pool "+
 				"after it was referenced by the first message (non-lazy)")

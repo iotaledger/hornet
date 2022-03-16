@@ -1,0 +1,185 @@
+syntax = "proto3";
+
+package inx;
+option go_package = "github.com/gohornet/hornet/pkg/inx";
+
+service INX {
+
+  // Node
+  rpc ReadNodeStatus(NoParams) returns (NodeStatus);
+  rpc ReadProtocolParameters(NoParams) returns (ProtocolParameters);
+
+  // Milestones
+  rpc ReadMilestone(MilestoneRequest) returns (Milestone);
+  rpc ListenToLatestMilestone(NoParams) returns (stream Milestone);
+  rpc ListenToConfirmedMilestone(NoParams) returns (stream Milestone);
+
+  // Messages
+  rpc ListenToMessages(MessageFilter) returns (stream Message);
+  rpc ListenToSolidMessages(MessageFilter) returns (stream MessageMetadata);
+  rpc ListenToReferencedMessages(MessageFilter) returns (stream MessageMetadata);
+  rpc SubmitMessage(RawMessage) returns (MessageId);
+  rpc ReadMessage(MessageId) returns (RawMessage);
+  rpc ReadMessageMetadata(MessageId) returns (MessageMetadata);
+
+  // UTXO
+  rpc ReadUnspentOutputs(NoParams) returns (stream UnspentOutput);
+  rpc ListenToLedgerUpdates(LedgerUpdateRequest) returns (stream LedgerUpdate);
+  rpc ReadOutput(OutputId) returns (OutputResponse);
+  rpc ListenToMigrationReceipts(NoParams) returns (stream RawReceipt);
+
+  // REST API
+  rpc RegisterAPIRoute(APIRouteRequest) returns (NoParams);
+  rpc UnregisterAPIRoute(APIRouteRequest) returns (NoParams);
+  rpc PerformAPIRequest(APIRequest) returns (APIResponse);
+}
+
+message APIRequest {
+  string method = 1;
+  string path = 2;
+  map<string,string> headers = 3;
+  bytes body = 4;
+}
+
+message APIResponse {
+  uint32 code = 1;
+  map<string,string>  headers = 2;
+  bytes body = 3;
+}
+
+message NoParams {}
+
+// Node
+
+message ProtocolParameters {
+  string networkName = 1;
+  int32 protocolVersion = 2;
+  string bech32HRP = 3;
+  float minPoWScore = 4;
+  RentStructure rentStructure = 5;
+}
+
+message RentStructure {
+  uint64 vByteCost = 1;
+  uint64 vByteFactorData = 2;
+  uint64 vByteFactorKey = 3;
+}
+
+message NodeStatus {
+  bool isHealthy = 1;
+  Milestone latestMilestone = 2;
+  Milestone confirmedMilestone = 3;
+  uint32 pruningIndex = 4;
+  uint32 ledgerIndex = 5;
+}
+
+// Milestones
+message MilestoneRequest {
+  uint32 milestoneIndex = 1;
+}
+
+message Milestone {
+  uint32 milestoneIndex = 1;
+  uint32 milestoneTimestamp = 2;
+  MessageId messageId = 3;
+}
+
+// Messages
+message MessageFilter {
+  //TODO
+}
+
+message RawMessage {
+  bytes data = 1;
+}
+
+message MessageId {
+  bytes id = 1;
+}
+
+message Message {
+  MessageId messageId = 1;
+  RawMessage message = 2;
+}
+
+message MessageMetadata {
+  MessageId messageId = 1;
+  repeated bytes parents = 2;
+  bool solid = 3;
+  bool shouldPromote = 4;
+  bool shouldReattach = 5;
+  uint32 referencedByMilestoneIndex = 6;
+  uint32 milestoneIndex = 7;
+  enum LedgerInclusionState {
+    NO_TRANSACTION = 0;
+    INCLUDED = 1;
+    CONFLICTING = 2;
+  }
+  LedgerInclusionState ledgerInclusionState = 8;
+  enum ConflictReason {
+    NONE = 0;
+    INPUT_ALREADY_SPENT = 1;
+    INPUT_ALREADY_SPENT_IN_THIS_MILESTONE = 2;
+    INPUT_NOT_FOUND = 3;
+    INPUT_OUTPUT_SUM_MISMATCH = 4;
+    INVALID_SIGNATURE = 5;
+    INVALID_NETWORK_ID = 6;
+    SEMANTIC_VALIDATION_FAILED = 255;
+  }
+  ConflictReason conflictReason = 9;
+}
+
+// UTXO
+message OutputId {
+  bytes id = 1;
+}
+
+message OutputResponse {
+  uint32 ledgerIndex = 1;
+  oneof payload {
+    LedgerOutput output = 2;
+    LedgerSpent spent = 3;
+  }
+}
+
+message UnspentOutput {
+  uint32 ledgerIndex = 1;
+  LedgerOutput output = 2;
+}
+
+message LedgerOutput {
+  OutputId outputId = 1;
+  MessageId messageId = 2;
+  uint32 milestoneIndexBooked = 3;
+  uint32 milestoneTimestampBooked = 4;
+  bytes output = 5;
+}
+
+message LedgerSpent {
+  LedgerOutput output = 1;
+  bytes transactionIdSpent = 2;
+  uint32 milestoneIndexSpent = 3;
+  uint32 milestoneTimestampSpent = 4;
+}
+
+message LedgerUpdateRequest {
+  uint32 startMilestoneIndex = 1;
+}
+
+message LedgerUpdate {
+  uint32 milestoneIndex = 1;
+  repeated LedgerOutput created = 2;
+  repeated LedgerSpent consumed = 3;
+}
+
+message RawReceipt {
+  bytes data = 1;
+}
+
+// REST API
+message APIRouteRequest {
+  string route = 1;
+  string host = 2;
+  uint32 port = 3;
+  uint32 metricsPort = 4;
+}

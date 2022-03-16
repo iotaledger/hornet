@@ -30,7 +30,7 @@ hornet -h --full
 ## 1. REST API
 
 | Name                 | Description                                                                                     | Type             |
-| :------------------- | :---------------------------------------------------------------------------------------------- | :--------------- |
+|:---------------------|:------------------------------------------------------------------------------------------------|:-----------------|
 | bindAddress          | The bind address on which the REST API listens on                                               | string           |
 | [jwtAuth](#jwt-auth) | Config for JWT auth                                                                             | object           |
 | publicRoutes         | the HTTP REST routes which can be called without authorization. Wildcards using * are allowed.  | array of strings |
@@ -42,14 +42,14 @@ hornet -h --full
 ### JWT Auth
 
 | Name | Description                                                                                                                             | Type   |
-| :--- | :-------------------------------------------------------------------------------------------------------------------------------------- | :----- |
+|:-----|:----------------------------------------------------------------------------------------------------------------------------------------|:-------|
 | salt | Salt used inside the JWT tokens for the REST API. Change this to a different value to invalidate JWT tokens not matching this new value | string |
 
 
 ### Limits
 
 | Name       | Description                                                               | Type    |
-| :--------- | :------------------------------------------------------------------------ | :------ |
+|:-----------|:--------------------------------------------------------------------------|:--------|
 | bodyLength | The maximum number of characters that the body of an API call may contain | string  |
 | maxResults | The maximum number of results that may be returned by an endpoint         | integer |
 
@@ -63,7 +63,6 @@ Example:
     },
     "publicRoutes": [
       "/health",
-      "/mqtt",
       "/api/v2/info",
       "/api/v2/tips",
       "/api/v2/messages*",
@@ -90,7 +89,7 @@ Example:
 ## 2. Dashboard
 
 | Name          | Description                                                  | Type   |
-| :------------ | :----------------------------------------------------------- | :----- |
+|:--------------|:-------------------------------------------------------------|:-------|
 | bindAddress   | The bind address on which the dashboard can be accessed from | string |
 | dev           | Whether to run the dashboard in dev mode                     | bool   |
 | [auth](#auth) | Configuration for dashboard auth                             | object |
@@ -98,7 +97,7 @@ Example:
 ### Auth
 
 | Name           | Description                                           | Type   |
-| :------------- | :---------------------------------------------------- | :----- |
+|:---------------|:------------------------------------------------------|:-------|
 | sessionTimeout | How long the auth session should last before expiring | string |
 | username       | The auth username (max 25 chars)                      | string |
 | passwordHash   | The auth password+salt as a scrypt hash               | string |
@@ -122,7 +121,7 @@ Example:
 ## 3. DB
 
 | Name             | Description                                                                         | Type   |
-| :--------------- | :---------------------------------------------------------------------------------- | :----- |
+|:-----------------|:------------------------------------------------------------------------------------|:-------|
 | engine           | The used database engine (pebble/rocksdb/mapdb)                                     | string |
 | path             | The path to the database folder                                                     | string |
 | autoRevalidation | Whether to automatically start revalidation on startup if the database is corrupted | bool   |
@@ -140,7 +139,7 @@ Example:
 ## 4. Snapshots
 
 | Name                          | Description                                                                                                                                                            | Type             |
-| :---------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
+|:------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------|
 | depth                         | The depth, respectively the starting point, at which a snapshot of the ledger is generated                                                                             | integer          |
 | interval                      | Interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)                                                        | integer          |
 | fullPath                      | Path to the full snapshot file                                                                                                                                         | string           |
@@ -151,7 +150,7 @@ Example:
 ### DownloadURLs
 
 | Name  | Description                              | Type   |
-| :---- | :--------------------------------------- | :----- |
+|:------|:-----------------------------------------|:-------|
 | full  | Download link to the full snapshot file  | string |
 | delta | Download link to the delta snapshot file | string |
 
@@ -180,7 +179,7 @@ Example:
 ## 5. Pruning
 
 | Name                      | Description                                           | Type   |
-| :------------------------ | :---------------------------------------------------- | :----- |
+|:--------------------------|:------------------------------------------------------|:-------|
 | [milestones](#Milestones) | Milestones based pruning                              | object |
 | [size](#Size)             | Database size based pruning                           | object |
 | pruneReceipts             | Whether to delete old receipts data from the database | bool   |
@@ -188,13 +187,13 @@ Example:
 ### Milestones
 
 | Name                | Description                                                                              | Type    |
-| :------------------ | :--------------------------------------------------------------------------------------- | :------ |
+|:--------------------|:-----------------------------------------------------------------------------------------|:--------|
 | enabled             | Whether to delete old message data from the database based on maximum milestones to keep | bool    |
 | maxMilestonesToKeep | Maximum amount of milestone cones to keep in the database                                | integer |
 
 ### Size
 | Name                | Description                                                                         | Type   |
-| :------------------ | :---------------------------------------------------------------------------------- | :----- |
+|:--------------------|:------------------------------------------------------------------------------------|:-------|
 | enabled             | Whether to delete old message data from the database based on maximum database size | bool   |
 | targetSize          | Target size of the database                                                         | string |
 | thresholdPercentage | The percentage the database size gets reduced if the target size is reached         | float  |
@@ -221,7 +220,7 @@ Example:
 ## 6. Protocol
 
 | Name                                | Description                                       | Type             |
-| :---------------------------------- | :------------------------------------------------ | :--------------- |
+|:------------------------------------|:--------------------------------------------------|:-----------------|
 | networkID                           | The network ID on which this node operates on     | string           |
 | bech32HRP                           | The HRP which should be used for Bech32 addresses | string           |
 | minPoWScore                         | The minimum PoW score required by the network     | float            |
@@ -231,7 +230,7 @@ Example:
 ### PublicKeyRanges
 
 | Name  | Description           | Type    |
-| :---- | :-------------------- | :------ |
+|:------|:----------------------|:--------|
 | key   | Public key            | string  |
 | start | Milestone start index | integer |
 | end   | Milestone end index   | integer |
@@ -267,7 +266,7 @@ Example:
 ## 7. Proof of Work
 
 | Name                | Description                                                                                              | Type   |
-| :------------------ | :------------------------------------------------------------------------------------------------------- | :----- |
+|:--------------------|:---------------------------------------------------------------------------------------------------------|:-------|
 | refreshTipsInterval | Interval for refreshing tips during PoW for spammer messages and messages passed without parents via API | string |
 
 Example:
@@ -281,7 +280,7 @@ Example:
 ## 8. Requests
 
 | Name                     | Description                                           | Type   |
-| :----------------------- | :---------------------------------------------------- | :----- |
+|:-------------------------|:------------------------------------------------------|:-------|
 | discardOlderThan         | The maximum time a request stays in the request queue | string |
 | pendingReEnqueueInterval | The interval the pending requests are re-enqueued     | string |
 
@@ -297,7 +296,7 @@ Example:
 ## 9. Coordinator
 
 | Name                        | Description                                                                            | Type    |
-| :-------------------------- | :------------------------------------------------------------------------------------- | :------ |
+|:----------------------------|:---------------------------------------------------------------------------------------|:--------|
 | stateFilePath               | The path to the state file of the coordinator                                          | string  |
 | interval                    | The interval milestones are issued                                                     | string  |
 | powWorkerCount              | The amount of workers used for calculating PoW when issuing checkpoints and milestones | integer |
@@ -309,13 +308,13 @@ Example:
 ### Checkpoints
 
 | Name               | Description                                                  | Type    |
-| :----------------- | :----------------------------------------------------------- | :------ |
+|:-------------------|:-------------------------------------------------------------|:--------|
 | maxTrackedMessages | Maximum amount of known messages for milestone tip selection | integer |
 
 ### Tipsel
 
 | Name                                           | Description                                                       | Type    |
-| :--------------------------------------------- | :---------------------------------------------------------------- | :------ |
+|:-----------------------------------------------|:------------------------------------------------------------------|:--------|
 | minHeaviestBranchUnreferencedMessagesThreshold | Minimum threshold of unreferenced messages in the heaviest branch | integer |
 | maxHeaviestBranchTipsPerCheckpoint             | Maximum amount of checkpoint messages with heaviest branch tips   | integer |
 | randomTipsPerCheckpoint                        | Amount of checkpoint messages with random tips                    | integer |
@@ -324,7 +323,7 @@ Example:
 ### Signing
 
 | Name          | Description                                                                  | Type    |
-| :------------ | :--------------------------------------------------------------------------- | :------ |
+|:--------------|:-----------------------------------------------------------------------------|:--------|
 | provider      | The signing provider the coordinator uses to sign a milestone (local/remote) | string  |
 | remoteAddress | The address of the remote signing provider (insecure connection!)            | string  |
 | retryAmount   | Number of signing retries to perform before shutting down the node           | integer |
@@ -333,7 +332,7 @@ Example:
 ### Quorum
 
 | Name              | Description                                                                           | Type                   |
-| :---------------- | :------------------------------------------------------------------------------------ | :--------------------- |
+|:------------------|:--------------------------------------------------------------------------------------|:-----------------------|
 | enabled           | Whether the coordinator quorum is enabled                                             | bool                   |
 | [groups](#groups) | The quorum groups used to ask other nodes for correct ledger state of the coordinator | array of object arrays |
 | timeout           | The timeout until a node in the quorum must have answered                             | string                 |
@@ -341,13 +340,13 @@ Example:
 #### Groups
 
 | Name                        | Description                                                                          | Type             |
-| :-------------------------- | :----------------------------------------------------------------------------------- | :--------------- |
+|:----------------------------|:-------------------------------------------------------------------------------------|:-----------------|
 | [{GROUP_NAME}](#group_name) | The quorum group used to ask other nodes for correct ledger state of the coordinator | array of objects |
 
 ##### {GROUP_NAME}
 
 | Name     | Description                           | Type   |
-| :------- | :------------------------------------ | :----- |
+|:---------|:--------------------------------------|:-------|
 | alias    | Alias of the quorum client (optional) | string |
 | baseURL  | BaseURL of the quorum client          | string |
 | userName | Username for basic auth (optional)    | string |
@@ -405,7 +404,7 @@ Example:
 This part is used in the migration from IOTA 1.0 to IOTA 1.5 (Chrysalis)
 
 | Name                | Description                                             | Type    |
-| :------------------ | :------------------------------------------------------ | :------ |
+|:--------------------|:--------------------------------------------------------|:--------|
 | stateFilePath       | Path to the state file of the migrator                  | string  |
 | receiptMaxEntries   | The max amount of entries to embed within a receipt     | integer |
 | queryCooldownPeriod | The cool down period of the service to ask for new data | string  |
@@ -425,21 +424,21 @@ Example:
 This part is used in the migration from IOTA 1.0 to IOTA 1.5 (Chrysalis)
 
 | Name                    | Description                 | Type   |
-| :---------------------- | :-------------------------- | :----- |
+|:------------------------|:----------------------------|:-------|
 | [backup](#backup)       | Configuration for backup    | object |
 | [validator](#validator) | Configuration for validator | object |
 
 ### Backup
 
 | Name    | Description                                     | Type   |
-| :------ | :---------------------------------------------- | :----- |
+|:--------|:------------------------------------------------|:-------|
 | enabled | Whether to backup receipts in the backup folder | bool   |
 | path    | Path to the receipts backup folder              | string |
 
 ### Validator
 
 | Name                        | Description                                                       | Type   |
-| :-------------------------- | :---------------------------------------------------------------- | :----- |
+|:----------------------------|:------------------------------------------------------------------|:-------|
 | validate                    | Whether to validate receipts                                      | bool   |
 | ignoreSoftErrors            | Whether to ignore soft errors and not panic if one is encountered | bool   |
 | [api](#api)                 | Configuration for legacy API                                      | object |
@@ -448,14 +447,14 @@ This part is used in the migration from IOTA 1.0 to IOTA 1.5 (Chrysalis)
 #### Api
 
 | Name    | Description                    | Type   |
-| :------ | :----------------------------- | :----- |
+|:--------|:-------------------------------|:-------|
 | address | Address of the legacy node API | string |
 | timeout | Timeout of API calls           | string |
 
 #### Coordinator
 
 | Name            | Description                                 | Type    |
-| :-------------- | :------------------------------------------ | :------ |
+|:----------------|:--------------------------------------------|:--------|
 | address         | Address of the legacy coordinator           | string  |
 | merkleTreeDepth | Depth of the Merkle tree of the coordinator | integer |
 
@@ -484,32 +483,35 @@ Example:
 
 ## 12. Tangle
 
-| Name             | Description                                                                       | Type   |
-| :--------------- | :-------------------------------------------------------------------------------- | :----- |
-| milestoneTimeout | The interval milestone timeout events are fired if no new milestones are received | string |
+| Name                                  | Description                                                                                                             | Type     |
+|:--------------------------------------|:------------------------------------------------------------------------------------------------------------------------|:---------|
+| milestoneTimeout                      | The interval milestone timeout events are fired if no new milestones are received                                       | string   |
+| maxDeltaMsgYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | integer  |
+| maxDeltaMsgOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | integer  |
+| belowMaxDepth                         | The maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy      | integer  |
 
 Example:
 
 ```json
   "tangle": {
-    "milestoneTimeout": "30s"
+    "milestoneTimeout": "30s",
+    "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
+    "maxDeltaMsgOldestConeRootIndexToCMI": 13,
+    "belowMaxDepth": 15,
   },
 ```
 
 ## 13. Tipsel
 
-| Name                                  | Description                                                                                                             | Type    |
-| :------------------------------------ | :---------------------------------------------------------------------------------------------------------------------- | :------ |
-| maxDeltaMsgYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | integer |
-| maxDeltaMsgOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | integer |
-| belowMaxDepth                         | The maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy      | integer |
-| [nonLazy](#nonlazy)                   | Configuration for tips from the non-lazy pool                                                                           | object  |
-| [semiLazy](#semilazy)                 | Configuration for tips from the semi-lazy pool                                                                          | object  |
+| Name                  | Description                                    | Type   |
+|:----------------------|:-----------------------------------------------|:-------|
+| [nonLazy](#nonlazy)   | Configuration for tips from the non-lazy pool  | object |
+| [semiLazy](#semilazy) | Configuration for tips from the semi-lazy pool | object |
 
 ### NonLazy
 
 | Name                    | Description                                                                                               | Type    |
-| :---------------------- | :-------------------------------------------------------------------------------------------------------- | :------ |
+|:------------------------|:----------------------------------------------------------------------------------------------------------|:--------|
 | retentionRulesTipsLimit | The maximum number of current tips for which the retention rules are checked (non-lazy)                   | integer |
 | maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first message (non-lazy)    | string  |
 | maxChildren             | The maximum amount of references by other messages before the tip is removed from the tip pool (non-lazy) | integer |
@@ -518,7 +520,7 @@ Example:
 ### SemiLazy
 
 | Name                    | Description                                                                                                | Type    |
-| :---------------------- | :--------------------------------------------------------------------------------------------------------- | :------ |
+|:------------------------|:-----------------------------------------------------------------------------------------------------------|:--------|
 | retentionRulesTipsLimit | The maximum number of current tips for which the retention rules are checked (semi-lazy)                   | integer |
 | maxReferencedTipAge     | The maximum time a tip remains in the tip pool after it was referenced by the first message (semi-lazy)    | string  |
 | maxChildren             | The maximum amount of references by other messages before the tip is removed from the tip pool (semi-lazy) | integer |
@@ -528,9 +530,6 @@ Example:
 
 ```json
   "tipsel": {
-    "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
-    "maxDeltaMsgOldestConeRootIndexToCMI": 13,
-    "belowMaxDepth": 15,
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAge": "3s",
@@ -549,7 +548,7 @@ Example:
 ## 14. Node
 
 | Name           | Description                              | Type             |
-| :------------- | :--------------------------------------- | :--------------- |
+|:---------------|:-----------------------------------------|:-----------------|
 | alias          | The alias to identify a node             | string           |
 | profile        | The profile the node runs with           | string           |
 | disablePlugins | A list of plugins that shall be disabled | array of strings |
@@ -574,7 +573,7 @@ Example:
 ## 15. P2P
 
 | Name                                    | Description                                                        | Type             |
-| :-------------------------------------- | :----------------------------------------------------------------- | :--------------- |
+|:----------------------------------------|:-------------------------------------------------------------------|:-----------------|
 | bindMultiAddresses                      | The bind addresses for this node                                   | array of strings |
 | [connectionManager](#connectionmanager) | Configuration for connection manager                               | object           |
 | [gossip](#gossip)                       | Configuration for gossip protocol                                  | object           |
@@ -586,14 +585,14 @@ Example:
 ### ConnectionManager
 
 | Name          | Description                                                                  | Type    |
-| :------------ | :--------------------------------------------------------------------------- | :------ |
+|:--------------|:-----------------------------------------------------------------------------|:--------|
 | highWatermark | The threshold up on which connections count truncates to the lower watermark | integer |
 | lowWatermark  | The minimum connections count to hold after the high watermark was reached   | integer |
 
 ### Gossip
 
 | Name               | Description                                                                    | Type    |
-| :----------------- | :----------------------------------------------------------------------------- | :------ |
+|:-------------------|:-------------------------------------------------------------------------------|:--------|
 | unknownPeersLimit  | maximum amount of unknown peers a gossip protocol connection is established to | integer |
 | streamReadTimeout  | The read timeout for subsequent reads from the gossip stream                   | string  |
 | streamWriteTimeout | The write timeout for writes to the gossip stream                              | string  |
@@ -601,13 +600,13 @@ Example:
 ### Database
 
 | Name | Description                  | Type   |
-| :--- | :--------------------------- | :----- |
+|:-----|:-----------------------------|:-------|
 | path | The path to the p2p database | string |
 
 ### Autopeering
 
 | Name                 | Description                                                      | Type             |
-| :------------------- | :--------------------------------------------------------------- | :--------------- |
+|:---------------------|:-----------------------------------------------------------------|:-----------------|
 | bindAddress          | The bind address on which the autopeering module listens on      | string           |
 | entryNodes           | The list of autopeering entry nodes to use                       | array of strings |
 | entryNodesPreferIPv6 | Defines if connecting over IPv6 is preferred for entry nodes     | bool             |
@@ -652,7 +651,7 @@ Example:
 ## 16. Logger
 
 | Name          | Description                                                                                                       | Type             |
-| :------------ | :---------------------------------------------------------------------------------------------------------------- | :--------------- |
+|:--------------|:------------------------------------------------------------------------------------------------------------------|:-----------------|
 | level         | The minimum enabled logging level. Valid values are: "debug", "info", "warn", "error", "dpanic", "panic", "fatal" | string           |
 | disableCaller | Stops annotating logs with the calling function's file name and line number                                       | bool             |
 | encoding      | Sets the logger's encoding. Valid values are "json" and "console"                                                 | string           |
@@ -675,7 +674,7 @@ Example:
 ## 17. Warpsync
 
 | Name             | Description                                        | Type    |
-| :--------------- | :------------------------------------------------- | :------ |
+|:-----------------|:---------------------------------------------------|:--------|
 | advancementRange | The used advancement range per warpsync checkpoint | integer |
 
 Example:
@@ -689,7 +688,7 @@ Example:
 ## 18. Spammer
 
 | Name         | Description                                                                        | Type    |
-|:-------------|:-----------------------------------------------------------------------------------| :------ |
+|:-------------|:-----------------------------------------------------------------------------------|:--------|
 | message      | The message to embed within the spam messages                                      | string  |
 | tag          | The tag of the message                                                             | string  |
 | tagSemiLazy  | The tag of the message if the semi-lazy pool is used (uses "tag" if empty)         | string  |
@@ -715,7 +714,7 @@ Example:
 ## 19. Faucet
 
 | Name                | Description                                                                                                                  | Type    |
-|:--------------------|:-----------------------------------------------------------------------------------------------------------------------------| :------ |
+|:--------------------|:-----------------------------------------------------------------------------------------------------------------------------|:--------|
 | amount              | The amount of funds the requester receives                                                                                   | integer |
 | smallAmount         | The amount of funds the requester receives if the target address has more funds than the faucet amount and less than maximum | integer |
 | maxAddressBalance   | The maximum allowed amount of funds on the target address                                                                    | integer |
@@ -728,7 +727,7 @@ Example:
 ### Website
 
 | Name        | Description                                                       | Type   |
-| :---------- | :---------------------------------------------------------------- | :----- |
+|:------------|:------------------------------------------------------------------|:-------|
 | bindAddress | The bind address on which the faucet website can be accessed from | string |
 | enabled     | Whether to host the faucet website                                | bool   |
 
@@ -753,7 +752,7 @@ Example:
 ## 20. MQTT
 
 | Name        | Description                                                         | Type    |
-| :---------- | :------------------------------------------------------------------ | :------ |
+|:------------|:--------------------------------------------------------------------|:--------|
 | bindAddress | Bind address on which the MQTT broker listens on                    | string  |
 | wsPort      | Port of the WebSocket MQTT broker                                   | integer |
 | workerCount | Number of parallel workers the MQTT broker uses to publish messages | integer |
@@ -771,7 +770,7 @@ Example:
 ## 21. Profiling
 
 | Name        | Description                                       | Type   |
-| :---------- | :------------------------------------------------ | :----- |
+|:------------|:--------------------------------------------------|:-------|
 | bindAddress | The bind address on which the profiler listens on | string |
 
 Example:
@@ -785,7 +784,7 @@ Example:
 ## 22. Prometheus
 
 | Name                                          | Description                                                  | Type   |
-| :-------------------------------------------- | :----------------------------------------------------------- | :----- |
+|:----------------------------------------------|:-------------------------------------------------------------|:-------|
 | bindAddress                                   | The bind address on which the Prometheus exporter listens on | string |
 | [fileServiceDiscovery](#fileservicediscovery) | Configuration for file service discovery                     | object |
 | databaseMetrics                               | Include database metrics                                     | bool   |
@@ -795,7 +794,6 @@ Example:
 | restAPIMetrics                                | Include restAPI metrics                                      | bool   |
 | migrationMetrics                              | Include migration metrics                                    | bool   |
 | coordinatorMetrics                            | Include coordinator metrics                                  | bool   |
-| mqttBrokerMetrics                             | Include MQTT broker metrics                                  | bool   |
 | debugMetrics                                  | Include debug metrics                                        | bool   |
 | goMetrics                                     | Include go metrics                                           | bool   |
 | processMetrics                                | Include process metrics                                      | bool   |
@@ -804,7 +802,7 @@ Example:
 ### FileServiceDiscovery
 
 | Name    | Description                                                 | Type   |
-| :------ | :---------------------------------------------------------- | :----- |
+|:--------|:------------------------------------------------------------|:-------|
 | enabled | Whether the plugin should write a Prometheus 'file SD' file | bool   |
 | path    | The path where to write the 'file SD' file to               | string |
 | target  | The target to write into the 'file SD' file                 | string |
@@ -826,7 +824,6 @@ Example:
     "restAPIMetrics": true,
     "migrationMetrics": true,
     "coordinatorMetrics": true,
-    "mqttBrokerMetrics": true,
     "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,
@@ -837,7 +834,7 @@ Example:
 ## 23. Debug
 
 | Name                         | Description                                                                                              | Type   |
-| :--------------------------- | :------------------------------------------------------------------------------------------------------- | :----- |
+|:-----------------------------|:---------------------------------------------------------------------------------------------------------|:-------|
 | whiteFlagParentsSolidTimeout | Defines the the maximum duration for the parents to become solid during white flag confirmation API call | string |
 
 Example:

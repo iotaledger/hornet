@@ -6,7 +6,6 @@
     },
     "publicRoutes": [
       "/health",
-      "/mqtt",
       "/api/v2/*",
       "/api/plugins/*"
     ],
@@ -59,7 +58,7 @@
     "networkID": "private_tangle1",
     "bech32HRP": "atoi",
     "minPoWScore": 100.0,
-    "vByteCost": 0,
+    "vByteCost": 500,
     "vByteFactorData": 1,
     "vByteFactorKey": 10,
     "milestonePublicKeyCount": 2,
@@ -141,12 +140,12 @@
     }
   },
   "tangle": {
-    "milestoneTimeout": "30s"
-  },
-  "tipsel": {
+    "milestoneTimeout": "30s",
     "maxDeltaMsgYoungestConeRootIndexToCMI": 2,
     "maxDeltaMsgOldestConeRootIndexToCMI": 7,
-    "belowMaxDepth": 15,
+    "belowMaxDepth": 15
+  },
+  "tipsel": {
     "nonLazy": {
       "retentionRulesTipsLimit": 100,
       "maxReferencedTipAge": "3s",
@@ -165,10 +164,14 @@
     "profile": "auto",
     "disablePlugins": [],
     "enablePlugins": [
-      "Indexer",
+      "INX",
       "Spammer",
       "Debug",
       "Prometheus"
+    ]
+  },
+  "inx": {
+    "disableExtensions": [
     ]
   },
   "p2p": {
@@ -250,7 +253,6 @@
     "restAPIMetrics": true,
     "migrationMetrics": true,
     "coordinatorMetrics": true,
-    "mqttBrokerMetrics": true,
     "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,

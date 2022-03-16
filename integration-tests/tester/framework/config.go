@@ -305,7 +305,6 @@ func DefaultRestAPIConfig() RestAPIConfig {
 		BindAddress: "0.0.0.0:14265",
 		PublicRoutes: []string{
 			"/health",
-			"/mqtt",
 			"/api/v2/*",
 			"/api/plugins/*",
 		},
@@ -335,7 +334,7 @@ func DefaultPluginConfig() PluginConfig {
 	disabled := make([]string, len(disabledPluginsPeer))
 	copy(disabled, disabledPluginsPeer)
 	return PluginConfig{
-		Enabled:  []string{"Indexer"},
+		Enabled:  []string{},
 		Disabled: disabled,
 	}
 }

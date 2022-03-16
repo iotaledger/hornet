@@ -36,9 +36,9 @@ var params = &node.PluginParams{
 			fs.String(CfgProtocolBech32HRP, string(iotago.PrefixMainnet), "the HRP which should be used for Bech32 addresses.")
 			fs.Float64(CfgProtocolMinPoWScore, 4000, "the minimum PoW score required by the network.")
 			fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
-			fs.Uint64(CfgProtocolRentStructureVByteCost, 0, "the vByte cost used for the dust protection") //TODO: define final values
-			fs.Uint64(CfgProtocolRentStructureVByteFactorData, 1, "the vByte factor used for data fields") //TODO: define final values
-			fs.Uint64(CfgProtocolRentStructureVByteFactorKey, 10, "the vByte factor used for key fields")  //TODO: define final values
+			fs.Uint64(CfgProtocolRentStructureVByteCost, 500, "the vByte cost used for the dust protection")
+			fs.Uint64(CfgProtocolRentStructureVByteFactorData, 1, "the vByte factor used for data fields")
+			fs.Uint64(CfgProtocolRentStructureVByteFactorKey, 10, "the vByte factor used for key fields")
 			return fs
 		}(),
 	},

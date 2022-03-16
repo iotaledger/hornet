@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"context"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -10,12 +9,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -78,7 +75,8 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
-		ycri, ocri, err := dag.ConeRootIndexes(Plugin.Daemon().ContextStopped(), deps.Storage, cachedMsgMeta.Retain(), cmi)
+
+		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), cachedMsgMeta.Metadata().MessageID(), cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
@@ -86,21 +84,20 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
-		// if none of the following checks is true, the tip is non-lazy, so there is no need to promote or reattach
-		shouldPromote := false
-		shouldReattach := false
+		var shouldPromote bool
+		var shouldReattach bool
 
-		if (cmi - ocri) > milestone.Index(deps.BelowMaxDepth) {
-			// if the OCRI to CMI delta is over BelowMaxDepth/below-max-depth, then the tip is lazy and should be reattached
-			shouldPromote = false
-			shouldReattach = true
-		} else if (cmi - ycri) > milestone.Index(deps.MaxDeltaMsgYoungestConeRootIndexToCMI) {
-			// if the CMI to YCRI delta is over CfgTipSelMaxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy and should be promoted
+		switch tipScore {
+		case tangle.TipScoreNotFound:
+			return nil, errors.WithMessage(echo.ErrInternalServerError, "tip score could not be calculated")
+		case tangle.TipScoreOCRIThresholdReached, tangle.TipScoreYCRIThresholdReached:
 			shouldPromote = true
 			shouldReattach = false
-		} else if (cmi - ocri) > milestone.Index(deps.MaxDeltaMsgOldestConeRootIndexToCMI) {
-			// if the OCRI to CMI delta is over CfgTipSelMaxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy and should be promoted
-			shouldPromote = true
+		case tangle.TipScoreBelowMaxDepth:
+			shouldPromote = false
+			shouldReattach = true
+		case tangle.TipScoreHealthy:
+			shouldPromote = false
 			shouldReattach = false
 		}
 
@@ -202,68 +199,21 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	default:
 	}
 
-	var refreshTipsFunc pow.RefreshTipsFunc
+	mergedCtx, mergedCtxCancel := utils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
+	defer mergedCtxCancel()
 
-	if len(msg.Parents) == 0 {
-		if deps.TipSelector == nil {
-			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: no parents given and node tipselection disabled")
-		}
-
-		tips, err := deps.TipSelector.SelectNonLazyTips()
-		if err != nil {
-			if errors.Is(err, common.ErrNodeNotSynced) || errors.Is(err, tipselect.ErrNoTipsAvailable) {
-				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
-			}
-			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
-		}
-		msg.Parents = tips.ToSliceOfArrays()
-
-		// this function pointer is used to refresh the tips of a message
-		// if no parents were given and the PoW takes longer than a configured duration.
-		refreshTipsFunc = deps.TipSelector.SelectNonLazyTips
-	}
-
-	if msg.Nonce == 0 {
-		score, err := msg.POW()
-		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
-		}
-
-		if score < deps.MinPoWScore {
-			if !powEnabled {
-				return nil, errors.WithMessage(restapi.ErrInvalidParameter, "proof of work is not enabled on this node")
-			}
-
-			mergedCtx, mergedCtxCancel := utils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
-			defer mergedCtxCancel()
-
-			if err := deps.PoWHandler.DoPoW(mergedCtx, msg, powWorkerCount, refreshTipsFunc); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, deps.DeserializationParameters)
+	messageID, err := attacher.AttachMessage(mergedCtx, msg)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
-	}
-
-	msgProcessedChan := deps.Tangle.RegisterMessageProcessedEvent(message.MessageID())
-
-	if err := deps.MessageProcessor.Emit(message); err != nil {
-		deps.Tangle.DeregisterMessageProcessedEvent(message.MessageID())
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
-	}
-
-	// wait for at most "messageProcessedTimeout" for the message to be processed
-	ctx, cancel := context.WithTimeout(context.Background(), messageProcessedTimeout)
-	defer cancel()
-
-	if err := utils.WaitForChannelClosed(ctx, msgProcessedChan); errors.Is(err, context.DeadlineExceeded) {
-		deps.Tangle.DeregisterMessageProcessedEvent(message.MessageID())
+		if errors.Is(err, tangle.ErrMessageAttacherAttachingNotPossible) {
+			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
+		}
+		if errors.Is(err, tangle.ErrMessageAttacherInvalidMessage) {
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, err.Error())
+		}
+		return nil, err
 	}
 
 	return &messageCreatedResponse{
-		MessageID: message.MessageID().ToHex(),
+		MessageID: messageID.ToHex(),
 	}, nil
 }

@@ -77,6 +77,25 @@ type (
 	AllowedRoute func(echo.Context) bool
 )
 
+func ErrorHandler() func(error, echo.Context) {
+	return func(err error, c echo.Context) {
+
+		var statusCode int
+		var message string
+
+		var e *echo.HTTPError
+		if errors.As(err, &e) {
+			statusCode = e.Code
+			message = fmt.Sprintf("%s, error: %s", e.Message, err)
+		} else {
+			statusCode = http.StatusInternalServerError
+			message = fmt.Sprintf("internal server error. error: %s", err)
+		}
+
+		_ = c.JSON(statusCode, HTTPErrorResponseEnvelope{Error: HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
+	}
+}
+
 func ParseMessageIDParam(c echo.Context) (hornet.MessageID, error) {
 	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 

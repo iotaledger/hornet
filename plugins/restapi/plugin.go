@@ -2,9 +2,7 @@ package restapi
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -117,6 +115,17 @@ func provide(c *dig.Container) {
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	type proxyDeps struct {
+		dig.In
+		Echo *echo.Echo
+	}
+
+	if err := c.Provide(func(deps proxyDeps) *RestPluginManager {
+		return newRestPluginManager(deps.Echo)
+	}); err != nil {
+		Plugin.LogPanic(err)
+	}
 }
 
 func configure() {
@@ -132,11 +141,10 @@ func run() {
 		Plugin.LogInfo("Starting REST-API server ... done")
 
 		bindAddr := deps.RestAPIBindAddress
-		server := &http.Server{Addr: bindAddr, Handler: deps.Echo}
 
 		go func() {
 			Plugin.LogInfof("You can now access the API using: http://%s", bindAddr)
-			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := deps.Echo.Start(bindAddr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				Plugin.LogWarnf("Stopped REST-API server due to an error (%s)", err)
 			}
 		}()
@@ -144,13 +152,11 @@ func run() {
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping REST-API server ...")
 
-		if server != nil {
-			shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if err := server.Shutdown(shutdownCtx); err != nil {
-				Plugin.LogWarn(err)
-			}
-			shutdownCtxCancel()
+		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := deps.Echo.Shutdown(shutdownCtx); err != nil {
+			Plugin.LogWarn(err)
 		}
+		shutdownCtxCancel()
 		Plugin.LogInfo("Stopping REST-API server ... done")
 	}, shutdown.PriorityRestAPI); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
@@ -159,23 +165,13 @@ func run() {
 
 func setupRoutes() {
 
+	errorHandler := restapi.ErrorHandler()
+
 	deps.Echo.HTTPErrorHandler = func(err error, c echo.Context) {
 		Plugin.LogDebugf("HTTP request failed: %s", err)
 		deps.RestAPIMetrics.HTTPRequestErrorCounter.Inc()
 
-		var statusCode int
-		var message string
-
-		var e *echo.HTTPError
-		if errors.As(err, &e) {
-			statusCode = e.Code
-			message = fmt.Sprintf("%s, error: %s", e.Message, err)
-		} else {
-			statusCode = http.StatusInternalServerError
-			message = fmt.Sprintf("internal server error. error: %s", err)
-		}
-
-		_ = c.JSON(statusCode, restapi.HTTPErrorResponseEnvelope{Error: restapi.HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
+		errorHandler(err, c)
 	}
 
 	setupHealthRoute()

@@ -41,14 +41,6 @@ func blankMilestone(index uint32) *iotago.Milestone {
 	}
 }
 
-var deSeriParas = &iotago.DeSerializationParameters{
-	RentStructure: &iotago.RentStructure{
-		VByteCost:    0,
-		VBFactorData: 0,
-		VBFactorKey:  0,
-	},
-}
-
 var fullSnapshotHeader = &snapshot.FileHeader{
 	Version:              snapshot.SupportedFormatVersion,
 	Type:                 snapshot.Full,
@@ -173,7 +165,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 					Address:             &iotago.Ed25519Address{},
 					Deposit:             10_000_000,
 				}).
-				Build(deSeriParas)
+				Build(iotago.ZeroRentParas)
 			if err != nil {
 				panic(err)
 			}

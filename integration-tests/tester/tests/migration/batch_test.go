@@ -39,6 +39,7 @@ func TestBatch(t *testing.T) {
 		case index == 0:
 			cfg.WithMigration()
 			cfg.Migrator.StartIndex = 1
+			cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "INX")
 		default:
 			cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
 		}

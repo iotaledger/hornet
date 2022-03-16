@@ -169,3 +169,12 @@ func MessageIDsFromSliceOfArrays(b iotago.MessageIDs) MessageIDs {
 	}
 	return results
 }
+
+func MessageIDsFromSliceOfSlices(s [][]byte) MessageIDs {
+	results := make(MessageIDs, len(s))
+	for i, msgID := range s {
+		// as msgID is reused between iterations, it must be copied
+		results[i] = MessageIDFromSlice(msgID)
+	}
+	return results
+}

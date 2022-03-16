@@ -1,10 +1,10 @@
-package mqtt
+package main
 
 import (
 	"encoding/json"
 
+	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
 // milestonePayload defines the payload of the milestone latest and confirmed topics
@@ -12,7 +12,7 @@ type milestonePayload struct {
 	// The index of the milestone.
 	Index uint32 `json:"index"`
 	// The unix time of the milestone payload.
-	Time int64 `json:"timestamp"`
+	Time uint32 `json:"timestamp"`
 }
 
 // messageMetadataPayload defines the payload of the message metadata topic
@@ -30,7 +30,7 @@ type messageMetadataPayload struct {
 	// The ledger inclusion state of the transaction payload.
 	LedgerInclusionState *string `json:"ledgerInclusionState,omitempty"`
 	// The reason why this message is marked as conflicting.
-	ConflictReason *storage.Conflict `json:"conflictReason,omitempty"`
+	ConflictReason *inx.MessageMetadata_ConflictReason `json:"conflictReason,omitempty"`
 	// Whether the message should be promoted.
 	ShouldPromote *bool `json:"shouldPromote,omitempty"`
 	// Whether the message should be reattached.

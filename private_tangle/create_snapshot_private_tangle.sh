@@ -1,12 +1,12 @@
 #!/bin/bash
-rm snapshots/private_tangle1/full_snapshot.bin
-rm snapshots/private_tangle1/delta_snapshot.bin
-rm snapshots/private_tangle2/full_snapshot.bin
-rm snapshots/private_tangle2/delta_snapshot.bin
-rm snapshots/private_tangle3/full_snapshot.bin
-rm snapshots/private_tangle3/delta_snapshot.bin
-rm snapshots/private_tangle4/full_snapshot.bin
-rm snapshots/private_tangle4/delta_snapshot.bin
+rm -f snapshots/private_tangle1/full_snapshot.bin
+rm -f snapshots/private_tangle1/delta_snapshot.bin
+rm -f snapshots/private_tangle2/full_snapshot.bin
+rm -f snapshots/private_tangle2/delta_snapshot.bin
+rm -f snapshots/private_tangle3/full_snapshot.bin
+rm -f snapshots/private_tangle3/delta_snapshot.bin
+rm -f snapshots/private_tangle4/full_snapshot.bin
+rm -f snapshots/private_tangle4/delta_snapshot.bin
 mkdir -p snapshots/private_tangle1/
 mkdir -p snapshots/private_tangle2/
 mkdir -p snapshots/private_tangle3/

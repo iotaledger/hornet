@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
@@ -40,6 +41,9 @@ func (api *DebugNodeAPIClient) BalanceByAddress(ctx context.Context, addr iotago
 		for _, output := range outputs {
 			balance += output.Deposit()
 		}
+	}
+	if result.Error != nil {
+		return 0, result.Error
 	}
 
 	return balance, nil

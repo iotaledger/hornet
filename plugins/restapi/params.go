@@ -33,7 +33,6 @@ var params = &node.PluginParams{
 			fs.StringSlice(CfgRestAPIPublicRoutes,
 				[]string{
 					"/health",
-					"/mqtt",
 					"/api/v2/info",
 					"/api/v2/tips",
 					"/api/v2/messages*",
