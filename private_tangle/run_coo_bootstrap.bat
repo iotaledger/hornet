@@ -12,6 +12,7 @@ go run "..\main.go" -c config_private_tangle.json ^
 --db.path="privatedb" ^
 --node.disablePlugins="Autopeering" ^
 --node.enablePlugins="Spammer,Coordinator,Debug,Prometheus,Faucet,INX" ^
+--inx.path="../inx" ^
 --snapshots.fullPath="snapshots/private_tangle1/full_snapshot.bin" ^
 --snapshots.deltaPath="snapshots/private_tangle1/delta_snapshot.bin" ^
 --p2p.bindMultiAddresses="/ip4/127.0.0.1/tcp/15600" ^
