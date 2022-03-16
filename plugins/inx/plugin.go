@@ -113,7 +113,7 @@ func run() {
 func loadExtensions() {
 	extensions = make([]*Extension, 0)
 
-	inxPath := deps.NodeConfig.String(CfxINXPath)
+	inxPath := deps.NodeConfig.String(CfgINXPath)
 
 	disabledExtensions := make(map[string]struct{})
 	for _, d := range deps.NodeConfig.Strings(CfgINXDisableExtensions) {
