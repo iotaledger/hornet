@@ -10,18 +10,19 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/gohornet/hornet/pkg/inx"
+	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
-const (
-	INXPort = 9029
-)
-
 func main() {
+	inxPort, err := utils.LoadStringFromEnvironment("INX_PORT")
+	if err != nil {
+		panic(err)
+	}
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", INXPort), opts...)
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", inxPort), opts...)
 	if err != nil {
 		panic(err)
 	}
