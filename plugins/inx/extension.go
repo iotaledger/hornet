@@ -11,14 +11,16 @@ import (
 )
 
 const (
-	INXManifestName       = "name"
-	INXManifestEntrypoint = "entrypoint"
+	INXManifestName          = "name"
+	INXManifestEntrypoint    = "entrypoint"
+	INXManifestEnableLogging = "enableLogging"
 )
 
 type Extension struct {
 	Path       string
 	Name       string
 	Entrypoint string
+	LogOutput  bool
 	cmd        *exec.Cmd
 }
 
@@ -44,15 +46,16 @@ func NewExtension(path string) (*Extension, error) {
 		Path:       absPath,
 		Name:       config.String(INXManifestName),
 		Entrypoint: config.String(INXManifestEntrypoint),
+		LogOutput:  config.Bool(INXManifestEnableLogging),
 	}, nil
 }
 
-func (e *Extension) Start(inxPort int, logs bool) error {
+func (e *Extension) Start(inxPort int) error {
 	e.cmd = exec.Command(e.Entrypoint)
 	e.cmd.Env = append(syscall.Environ(), fmt.Sprintf("INX_PORT=%d", inxPort))
 	e.cmd.Dir = e.Path
 
-	if logs {
+	if e.LogOutput {
 		var logFile *os.File
 		logFile, err := os.Create(filepath.Join(e.Path, "output.log"))
 		if err != nil {

@@ -1,4 +1,5 @@
 {
 	"name": "MQTT",
-	"entrypoint": "./inx-mqtt"
+	"entrypoint": "./inx-mqtt",
+	"enableLogging": false
 }
