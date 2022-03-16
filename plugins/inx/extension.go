@@ -47,26 +47,28 @@ func NewExtension(path string) (*Extension, error) {
 	}, nil
 }
 
-func (e *Extension) Start(inxPort int) error {
+func (e *Extension) Start(inxPort int, logs bool) error {
 	e.cmd = exec.Command(e.Entrypoint)
 	e.cmd.Env = append(syscall.Environ(), fmt.Sprintf("INX_PORT=%d", inxPort))
 	e.cmd.Dir = e.Path
 
-	var logFile *os.File
-	logFile, err := os.Create(filepath.Join(e.Path, "output.log"))
-	if err != nil {
-		return fmt.Errorf("unable to open log file: %w", err)
-	}
-	defer func() { _ = logFile.Close() }()
-	e.cmd.Stdout = logFile
+	if logs {
+		var logFile *os.File
+		logFile, err := os.Create(filepath.Join(e.Path, "output.log"))
+		if err != nil {
+			return fmt.Errorf("unable to open log file: %w", err)
+		}
+		defer func() { _ = logFile.Close() }()
+		e.cmd.Stdout = logFile
 
-	var errFile *os.File
-	errFile, err = os.Create(filepath.Join(e.Path, "err.log"))
-	if err != nil {
-		return fmt.Errorf("unable to open log file: %w", err)
+		var errFile *os.File
+		errFile, err = os.Create(filepath.Join(e.Path, "err.log"))
+		if err != nil {
+			return fmt.Errorf("unable to open log file: %w", err)
+		}
+		defer func() { _ = errFile.Close() }()
+		e.cmd.Stderr = errFile
 	}
-	defer func() { _ = errFile.Close() }()
-	e.cmd.Stderr = errFile
 
 	return e.cmd.Start()
 }

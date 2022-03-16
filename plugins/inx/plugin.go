@@ -152,7 +152,7 @@ func startExtensions() {
 	for _, e := range extensions {
 		go func(ext *Extension) {
 			Plugin.LogInfof("Starting INX extension: %s", ext.Name)
-			err := ext.Start(deps.NodeConfig.Int(CfgINXPort))
+			err := ext.Start(deps.NodeConfig.Int(CfgINXPort), deps.NodeConfig.Bool(CfgINXExtensionLogsEnabled))
 			if err != nil {
 				Plugin.LogErrorf("INX extension ended with error: %s", err)
 			}
