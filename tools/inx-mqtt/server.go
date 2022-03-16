@@ -85,47 +85,53 @@ func (s *Server) Start(ctx context.Context) error {
 }
 
 func (s *Server) onSubscribeTopic(ctx context.Context, topic string) {
-	if topic == topicMilestonesLatest {
+	switch topic {
+	case topicMilestonesLatest:
 		go s.fetchAndPublishMilestoneTopics(ctx)
 		s.startListenIfNeeded(ctx, grpcListenToLatestMilestone, s.listenToLatestMilestone)
-	} else if topic == topicMilestonesConfirmed {
+	case topicMilestonesConfirmed:
 		go s.fetchAndPublishMilestoneTopics(ctx)
 		s.startListenIfNeeded(ctx, grpcListenToConfirmedMilestone, s.listenToConfirmedMilestone)
-	} else if topic == topicMessages {
+	case topicMessages:
 		s.startListenIfNeeded(ctx, grpcListenToMessages, s.listenToMessages)
-	} else if strings.HasPrefix(topic, "messages/") {
-		if messageID := messageIDFromTopic(topic); messageID != nil {
-			go s.fetchAndPublishMessageMetadata(ctx, messageID)
-		}
-		s.startListenIfNeeded(ctx, grpcListenToSolidMessages, s.listenToSolidMessages)
-		s.startListenIfNeeded(ctx, grpcListenToReferencedMessages, s.listenToReferencedMessages)
-	} else if strings.HasPrefix(topic, "outputs/") || strings.HasPrefix(topic, "transactions/") {
-		if transactionID := transactionIDFromTopic(topic); transactionID != nil {
-			go s.fetchAndPublishTransactionInclusion(ctx, transactionID)
-		}
-		if outputID := outputIDFromTopic(topic); outputID != nil {
-			go s.fetchAndPublishOutput(ctx, outputID)
-		}
-		s.startListenIfNeeded(ctx, grpcListenToLedgerUpdates, s.listenToLedgerUpdates)
-	} else if topic == topicReceipts {
+	case topicReceipts:
 		s.startListenIfNeeded(ctx, grpcListenToMigrationReceipts, s.listenToMigrationReceipts)
+	default:
+		if strings.HasPrefix(topic, "messages/") {
+			if messageID := messageIDFromTopic(topic); messageID != nil {
+				go s.fetchAndPublishMessageMetadata(ctx, messageID)
+			}
+			s.startListenIfNeeded(ctx, grpcListenToSolidMessages, s.listenToSolidMessages)
+			s.startListenIfNeeded(ctx, grpcListenToReferencedMessages, s.listenToReferencedMessages)
+		} else if strings.HasPrefix(topic, "outputs/") || strings.HasPrefix(topic, "transactions/") {
+			if transactionID := transactionIDFromTopic(topic); transactionID != nil {
+				go s.fetchAndPublishTransactionInclusion(ctx, transactionID)
+			}
+			if outputID := outputIDFromTopic(topic); outputID != nil {
+				go s.fetchAndPublishOutput(ctx, outputID)
+			}
+			s.startListenIfNeeded(ctx, grpcListenToLedgerUpdates, s.listenToLedgerUpdates)
+		}
 	}
 }
 
 func (s *Server) onUnsubscribeTopic(topic string) {
-	if topic == topicMilestonesLatest {
+	switch topic {
+	case topicMilestonesLatest:
 		s.stopListenIfNeeded(grpcListenToLatestMilestone)
-	} else if topic == topicMilestonesConfirmed {
+	case topicMilestonesConfirmed:
 		s.stopListenIfNeeded(grpcListenToConfirmedMilestone)
-	} else if topic == topicMessages {
+	case topicMessages:
 		s.stopListenIfNeeded(grpcListenToMessages)
-	} else if strings.HasPrefix(topic, "messages/") {
-		s.stopListenIfNeeded(grpcListenToSolidMessages)
-		s.stopListenIfNeeded(grpcListenToReferencedMessages)
-	} else if strings.HasPrefix(topic, "outputs/") || strings.HasPrefix(topic, "transactions/") {
-		s.stopListenIfNeeded(grpcListenToLedgerUpdates)
-	} else if topic == topicReceipts {
+	case topicReceipts:
 		s.stopListenIfNeeded(grpcListenToMigrationReceipts)
+	default:
+		if strings.HasPrefix(topic, "messages/") {
+			s.stopListenIfNeeded(grpcListenToSolidMessages)
+			s.stopListenIfNeeded(grpcListenToReferencedMessages)
+		} else if strings.HasPrefix(topic, "outputs/") || strings.HasPrefix(topic, "transactions/") {
+			s.stopListenIfNeeded(grpcListenToLedgerUpdates)
+		}
 	}
 }
 

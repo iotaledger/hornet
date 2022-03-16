@@ -14,11 +14,11 @@ import (
 )
 
 func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
-	cachedMilestone := deps.Storage.CachedMilestoneOrNil(msIndex)
+	cachedMilestone := deps.Storage.CachedMilestoneOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, status.Errorf(codes.NotFound, "milestone %d not found", msIndex)
 	}
-	defer cachedMilestone.Release(true)
+	defer cachedMilestone.Release(true) // milestone -1
 	return inx.NewMilestone(cachedMilestone.Milestone()), nil
 }
 
@@ -30,7 +30,7 @@ func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenT
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
-		defer cachedMilestone.Release(true)
+		defer cachedMilestone.Release(true) // milestone -1
 		payload := inx.NewMilestone(cachedMilestone.Milestone())
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
@@ -53,7 +53,7 @@ func (s *INXServer) ListenToConfirmedMilestone(_ *inx.NoParams, srv inx.INX_List
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
-		defer cachedMilestone.Release(true)
+		defer cachedMilestone.Release(true) // milestone -1
 		payload := inx.NewMilestone(cachedMilestone.Milestone())
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)

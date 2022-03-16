@@ -55,8 +55,8 @@ func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.Message
 			return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 		}
 
-		shouldPromote := false
-		shouldReattach := false
+		var shouldPromote bool
+		var shouldReattach bool
 
 		switch tipScore {
 		case tangle.TipScoreNotFound:
@@ -67,6 +67,9 @@ func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.Message
 		case tangle.TipScoreBelowMaxDepth:
 			shouldPromote = false
 			shouldReattach = true
+		case tangle.TipScoreHealthy:
+			shouldPromote = false
+			shouldReattach = false
 		}
 
 		m.ShouldPromote = shouldPromote
@@ -77,20 +80,20 @@ func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.Message
 }
 
 func (s *INXServer) ReadMessage(_ context.Context, messageID *inx.MessageId) (*inx.RawMessage, error) {
-	cachedMsg := deps.Storage.CachedMessageOrNil(messageID.Unwrap())
+	cachedMsg := deps.Storage.CachedMessageOrNil(messageID.Unwrap()) // message +1
 	if cachedMsg == nil {
 		return nil, status.Errorf(codes.NotFound, "message %s not found", messageID.Unwrap().ToHex())
 	}
-	defer cachedMsg.Release(true)
+	defer cachedMsg.Release(true) // message -1
 	return inx.WrapMessage(cachedMsg.Message().Message())
 }
 
 func (s *INXServer) ReadMessageMetadata(_ context.Context, messageID *inx.MessageId) (*inx.MessageMetadata, error) {
-	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID.Unwrap())
+	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID.Unwrap()) // meta +1
 	if cachedMsgMeta == nil {
 		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", messageID.Unwrap().ToHex())
 	}
-	defer cachedMsgMeta.Release(true)
+	defer cachedMsgMeta.Release(true) // meta -1
 	return INXNewMessageMetadata(cachedMsgMeta.Metadata().MessageID(), cachedMsgMeta.Metadata())
 }
 
@@ -98,7 +101,7 @@ func (s *INXServer) ListenToMessages(filter *inx.MessageFilter, srv inx.INX_List
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMsg := task.Param(0).(*storage.CachedMessage)
-		defer cachedMsg.Release(true)
+		defer cachedMsg.Release(true) // message -1
 
 		payload := inx.NewMessageWithBytes(cachedMsg.Message().MessageID(), cachedMsg.Message().Data())
 		if err := srv.Send(payload); err != nil {
@@ -123,7 +126,7 @@ func (s *INXServer) ListenToSolidMessages(filter *inx.MessageFilter, srv inx.INX
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		msgMeta := task.Param(0).(*storage.CachedMetadata)
-		defer msgMeta.Release(true)
+		defer msgMeta.Release(true) // meta -1
 
 		payload, err := INXNewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
 		if err != nil {
@@ -153,7 +156,7 @@ func (s *INXServer) ListenToReferencedMessages(filter *inx.MessageFilter, srv in
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		msgMeta := task.Param(0).(*storage.CachedMetadata)
-		defer msgMeta.Release(true)
+		defer msgMeta.Release(true) // meta -1
 
 		payload, err := INXNewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
 		if err != nil {

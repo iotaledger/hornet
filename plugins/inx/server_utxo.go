@@ -96,39 +96,41 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 }
 
 func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerUpdateRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
-	startIndex := milestone.Index(req.GetStartMilestoneIndex())
-	if startIndex > 0 {
-		// Stream all available milestone diffs first
-		pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
-		if startIndex <= pruningIndex {
-			return status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
-		}
 
-		deps.UTXOManager.ReadLockLedger()
-		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
-		if err != nil {
-			deps.UTXOManager.ReadUnlockLedger()
-			return status.Error(codes.Unavailable, "error accessing the UTXO ledger")
-		}
-		currentIndex := startIndex
-		for currentIndex <= ledgerIndex {
-			msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+	sendPreviousMilestoneDiffs := func(startIndex milestone.Index) error {
+		if startIndex > 0 {
+			deps.UTXOManager.ReadLockLedger()
+			defer deps.UTXOManager.ReadUnlockLedger()
+
+			// Stream all available milestone diffs first
+			pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+			if startIndex <= pruningIndex {
+				return status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
+			}
+
+			ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
 			if err != nil {
-				deps.UTXOManager.ReadUnlockLedger()
-				return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
+				return status.Error(codes.Unavailable, "error accessing the UTXO ledger")
 			}
-			payload, err := inx.NewLedgerUpdate(msDiff.Index, msDiff.Outputs, msDiff.Spents)
-			if err != nil {
-				deps.UTXOManager.ReadUnlockLedger()
-				return err
+			for currentIndex := startIndex; currentIndex <= ledgerIndex; currentIndex++ {
+				msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+				if err != nil {
+					return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
+				}
+				payload, err := inx.NewLedgerUpdate(msDiff.Index, msDiff.Outputs, msDiff.Spents)
+				if err != nil {
+					return err
+				}
+				if err := srv.Send(payload); err != nil {
+					return err
+				}
 			}
-			if err := srv.Send(payload); err != nil {
-				deps.UTXOManager.ReadUnlockLedger()
-				return err
-			}
-			currentIndex++
 		}
-		deps.UTXOManager.ReadUnlockLedger()
+		return nil
+	}
+
+	if err := sendPreviousMilestoneDiffs(milestone.Index(req.GetStartMilestoneIndex())); err != nil {
+		return err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

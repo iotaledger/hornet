@@ -102,6 +102,7 @@ func run() {
 		startExtensions()
 		<-ctx.Done()
 		stopExtensions()
+		Plugin.LogInfo("Stopping INX ...")
 		deps.INXServer.Stop()
 		Plugin.LogInfo("Stopping INX ... done")
 	}, shutdown.PriorityIndexer); err != nil {
@@ -149,14 +150,13 @@ func loadExtensions() {
 
 func startExtensions() {
 	for _, e := range extensions {
-		ext := e
-		go func() {
+		go func(ext *Extension) {
 			Plugin.LogInfof("Starting INX extension: %s", ext.Name)
 			err := ext.Start(deps.NodeConfig.Int(CfgINXPort))
 			if err != nil {
 				Plugin.LogErrorf("INX extension ended with error: %s", err)
 			}
-		}()
+		}(e)
 	}
 }
 
