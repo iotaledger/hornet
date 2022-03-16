@@ -27,6 +27,7 @@ require (
 	github.com/iotaledger/iota.go/v3 v3.0.0-20220315144333-21759a61c8b9
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger v0.3.0
+	github.com/labstack/echo-contrib v0.12.0
 	github.com/labstack/echo/v4 v4.7.1
 	github.com/labstack/gommon v0.3.1
 	github.com/libp2p/go-libp2p v0.16.0
