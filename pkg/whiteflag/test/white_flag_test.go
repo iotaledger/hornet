@@ -134,12 +134,12 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
 
-	// Invalid transfer from seed3 (0) to seed2 (100_000) (invalid input)
+	// Invalid transfer from seed3 (0) to seed2 (1_000_000) (invalid input)
 	messageC := te.NewMessageBuilder("C").
 		Parents(hornet.MessageIDs{te.Milestones[2].Milestone().MessageID, messageB.StoredMessageID()}).
 		FromWallet(seed3Wallet).
 		ToWallet(seed2Wallet).
-		Amount(100_000).
+		Amount(1_000_000).
 		FakeInputs().
 		Build().
 		Store()
@@ -201,12 +201,12 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te.AssertWalletBalance(seed3Wallet, 0)
 	te.AssertWalletBalance(seed4Wallet, 1_500_000)
 
-	// Invalid transfer from seed3 (0) to seed2 (100_000) (already spent (genesis))
+	// Invalid transfer from seed3 (0) to seed2 (1_000_000) (already spent (genesis))
 	messageF := te.NewMessageBuilder("F").
 		Parents(hornet.MessageIDs{te.Milestones[3].Milestone().MessageID, messageE.StoredMessageID()}).
 		FromWallet(seed3Wallet).
 		ToWallet(seed2Wallet).
-		Amount(100_000).
+		Amount(1_000_000).
 		UsingOutput(te.GenesisOutput).
 		Build().
 		Store()
