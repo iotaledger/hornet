@@ -16,8 +16,8 @@ import (
 
 func (o *Output) SnapshotBytes() []byte {
 	m := marshalutil.New()
-	m.WriteBytes(o.messageID)
 	m.WriteBytes(o.outputID[:])
+	m.WriteBytes(o.messageID)
 	m.WriteUint32(uint32(o.milestoneIndex))
 	m.WriteUint32(o.milestoneTimestamp)
 
@@ -31,14 +31,14 @@ func (o *Output) SnapshotBytes() []byte {
 }
 
 func OutputFromSnapshotReader(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters) (*Output, error) {
-	messageID := iotago.MessageID{}
-	if _, err := io.ReadFull(reader, messageID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS message ID: %w", err)
-	}
-
 	outputID := iotago.OutputID{}
 	if _, err := io.ReadFull(reader, outputID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS output ID: %w", err)
+	}
+
+	messageID := iotago.MessageID{}
+	if _, err := io.ReadFull(reader, messageID[:]); err != nil {
+		return nil, fmt.Errorf("unable to read LS message ID: %w", err)
 	}
 
 	var confirmationIndex uint32

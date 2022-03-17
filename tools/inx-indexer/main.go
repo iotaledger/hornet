@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/labstack/echo-contrib/prometheus"
@@ -20,7 +19,6 @@ import (
 	flag "github.com/spf13/pflag"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 
 	indexerpkg "github.com/gohornet/hornet/pkg/indexer"
 	indexer_server "github.com/gohornet/hornet/pkg/indexer/server"
@@ -204,10 +202,6 @@ func main() {
 		grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
 		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                20 * time.Second,
-			PermitWithoutStream: true,
-		}),
 	)
 	if err != nil {
 		panic(err)
