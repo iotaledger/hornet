@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha5] - 17.03.2022
+
+### Changed
+    - Changed the snapshot format to simplify parsing for Bee
+    - Using default keepalive parameters for the Indexer to avoid disconnections due to too many pings.
+
+
 ## [2.0.0-alpha4] - 17.03.2022
 
 ### Changed
