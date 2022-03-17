@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha4] - 17.03.2022
+
+### Changed
+    - API now using hex-representation for bytes and uint256. Note: `0x` prefix is now required.
+    - Adapted to latest `FoundryOutput` changes according to TIP-18
+    - Introduced new `INX` (IOTA Node Extension) feature. This allows the core HORNET node to be extended with plugins written in any language supporting gRPC.
+    - Re-implemented Indexer and MQTT plugins as INX extensions. (Note: MQTT over WebSockets is now available under `/api/plugins/mqtt/v1` instead of `/mqtt`)
+    - Implemented new MQTT topics acccording to TIP-28
+    - Added two new endpoints to the API `/api/v2/outputs/raw` to fetch the raw bytes of an output, and `/api/v2/outputs/metadata` to fetch metadata only.
+
+
 ## [2.0.0-alpha3] - 25.02.2022
 
 ### Changed
