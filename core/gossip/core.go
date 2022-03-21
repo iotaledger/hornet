@@ -307,13 +307,16 @@ func configureEvents() {
 	onGossipServiceProtocolStarted = events.NewClosure(func(proto *gossip.Protocol) {
 		attachEventsProtocolMessages(proto)
 
-		proto.Events.Errors.Attach(events.NewClosure(func(err error) {
+		closeConnectionDueToError := events.NewClosure(func(err error) {
 			CorePlugin.LogWarnf("closing connection to peer %s because of an error: %s", proto.PeerID.ShortString(), err.Error())
 
 			if err := deps.GossipService.CloseStream(proto.PeerID); err != nil {
 				CorePlugin.LogWarnf("closing connection to peer %s failed, error: %s", proto.PeerID.ShortString(), err.Error())
 			}
-		}))
+		})
+
+		proto.Events.Errors.Attach(closeConnectionDueToError)
+		proto.Parser.Events.Error.Attach(closeConnectionDueToError)
 
 		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
 			buf := make([]byte, readBufSize)
@@ -361,10 +364,18 @@ func configureEvents() {
 	})
 
 	onGossipServiceProtocolTerminated = events.NewClosure(func(proto *gossip.Protocol) {
+		if proto == nil {
+			return
+		}
+
 		detachEventsProtocolMessages(proto)
 
-		if proto.Events.Errors != nil {
+		if proto.Events != nil && proto.Events.Errors != nil {
 			proto.Events.Errors.DetachAll()
+		}
+
+		if proto.Parser != nil && proto.Parser.Events != nil && proto.Parser.Events.Error != nil {
+			proto.Parser.Events.Error.DetachAll()
 		}
 	})
 
