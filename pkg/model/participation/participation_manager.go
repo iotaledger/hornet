@@ -334,15 +334,7 @@ func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event)
 	return nil
 }
 
-// ApplyNewUTXO checks if the new UTXO is part of a participation transaction.
-// The following rules must be satisfied:
-// 	- Must be a value transaction
-// 	- Inputs must all come from the same address. Multiple inputs are allowed.
-// 	- Has a singular output going to the same address as all input addresses.
-// 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
-// 	- The Indexation must match the configured Indexation.
-//  - The participation data must be parseable.
-func (pm *ParticipationManager) ApplyNewUTXOs(index milestone.Index, newOutputs utxo.Outputs) error {
+func (pm *ParticipationManager) ApplyNewLedgerUpdate(index milestone.Index, created utxo.Outputs, consumed utxo.Spents) error {
 
 	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
 		return e.ShouldAcceptParticipation(index)
@@ -353,14 +345,28 @@ func (pm *ParticipationManager) ApplyNewUTXOs(index milestone.Index, newOutputs 
 		return nil
 	}
 
-	for _, newOutput := range newOutputs {
+	for _, newOutput := range created {
 		if err := pm.applyNewUTXOForEvents(index, newOutput, acceptingEvents); err != nil {
 			return err
 		}
 	}
-	return nil
+	for _, spent := range consumed {
+		if err := pm.applySpentUTXOForEvents(index, spent, acceptingEvents); err != nil {
+			return err
+		}
+	}
+
+	return pm.applyNewConfirmedMilestoneIndexForEvents(index, acceptingEvents)
 }
 
+// applyNewUTXOForEvents checks if the new UTXO is part of a participation transaction.
+// The following rules must be satisfied:
+// 	- Must be a value transaction
+// 	- Inputs must all come from the same address. Multiple inputs are allowed.
+// 	- Has a singular output going to the same address as all input addresses.
+// 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
+// 	- The Indexation must match the configured Indexation.
+//  - The participation data must be parseable.
 func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, newOutput *utxo.Output, events map[EventID]*Event) error {
 	messageID := newOutput.MessageID()
 
@@ -436,26 +442,7 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 	return mutations.Commit()
 }
 
-// ApplySpentUTXO checks if the spent UTXO was part of a participation transaction.
-func (pm *ParticipationManager) ApplySpentUTXOs(index milestone.Index, spents utxo.Spents) error {
-
-	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
-		return e.ShouldAcceptParticipation(index)
-	})
-
-	// No events accepting participation, so no work to be done
-	if len(acceptingEvents) == 0 {
-		return nil
-	}
-
-	for _, spent := range spents {
-		if err := pm.applySpentUTXOForEvents(index, spent, acceptingEvents); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
+// applySpentUTXOForEvents checks if the spent UTXO was part of a participation transaction.
 func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, spent *utxo.Spent, events map[EventID]*Event) error {
 
 	// Fetch the message, this must have been stored for at least one of the events
@@ -539,21 +526,7 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 	return mutations.Commit()
 }
 
-// ApplyNewConfirmedMilestoneIndex iterates over each counting ballot participation and applies the current vote balance for each question to the total vote balance
-func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
-
-	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
-		return e.ShouldAcceptParticipation(index)
-	})
-
-	// No events accepting participation, so no work to be done
-	if len(acceptingEvents) == 0 {
-		return nil
-	}
-
-	return pm.applyNewConfirmedMilestoneIndexForEvents(index, acceptingEvents)
-}
-
+// applyNewConfirmedMilestoneIndexForEvents iterates over each counting ballot participation and applies the current vote balance for each question to the total vote balance
 func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index milestone.Index, events map[EventID]*Event) error {
 
 	mutations := pm.participationStore.Batched()

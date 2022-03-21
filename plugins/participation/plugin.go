@@ -290,14 +290,8 @@ func run() {
 func configureEvents() {
 
 	onLedgerUpdated = events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
-		if err := deps.ParticipationManager.ApplyNewUTXOs(index, newOutputs); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("participation plugin hit a critical error while applying new UTXO: %s", err.Error()))
-		}
-		if err := deps.ParticipationManager.ApplySpentUTXOs(index, newSpents); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("participation plugin hit a critical error while applying spent TXO: %s", err.Error()))
-		}
-		if err := deps.ParticipationManager.ApplyNewConfirmedMilestoneIndex(index); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("participation plugin hit a critical error while applying new confirmed milestone index: %s", err.Error()))
+		if err := deps.ParticipationManager.ApplyNewLedgerUpdate(index, newOutputs, newSpents); err != nil {
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("participation plugin hit a critical error while applying new ledger update: %s", err.Error()))
 		}
 	})
 }

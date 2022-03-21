@@ -142,9 +142,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		nil,
 		nil,
 		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
-			require.NoError(t, pm.ApplyNewUTXOs(index, newOutputs))
-			require.NoError(t, pm.ApplySpentUTXOs(index, newSpents))
-			require.NoError(t, pm.ApplyNewConfirmedMilestoneIndex(index))
+			require.NoError(t, pm.ApplyNewLedgerUpdate(index, newOutputs, newSpents))
 		},
 	)
 
