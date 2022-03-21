@@ -413,6 +413,10 @@ func ed25519Outputs(address *iotago.Ed25519Address) (*AddressOutputsResponse, er
 		Outputs: make(map[string]*OutputStatusResponse),
 	}
 
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
 	for _, eventID := range eventIDs {
 
 		event := deps.ParticipationManager.Event(eventID)
