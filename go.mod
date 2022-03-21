@@ -24,7 +24,7 @@ require (
 	github.com/iotaledger/hive.go v0.0.0-20220321105346-3f491b0e89c6
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220209164443-53ca2b8201b4
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v3 v3.0.0-20220315144333-21759a61c8b9
+	github.com/iotaledger/iota.go/v3 v3.0.0-20220321161001-ee47d60a05b0
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger v0.3.0
 	github.com/labstack/echo-contrib v0.12.0
@@ -46,7 +46,7 @@ require (
 	github.com/wollac/iota-crypto-demo v0.0.0-20211124150533-68dd13b59838
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.14.0
-	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd
+	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65

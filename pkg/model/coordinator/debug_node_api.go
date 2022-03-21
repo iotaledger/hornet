@@ -19,8 +19,8 @@ const (
 )
 
 // NewDebugNodeAPIClient returns a new DebugNodeAPIClient with the given BaseURL.
-func NewDebugNodeAPIClient(baseURL string, deSeriParas *iotago.DeSerializationParameters, opts ...nodeclient.ClientOption) *DebugNodeAPIClient {
-	return &DebugNodeAPIClient{Client: nodeclient.New(baseURL, deSeriParas, opts...)}
+func NewDebugNodeAPIClient(baseURL string, opts ...nodeclient.ClientOption) *DebugNodeAPIClient {
+	return &DebugNodeAPIClient{Client: nodeclient.New(baseURL, opts...)}
 }
 
 // DebugNodeAPIClient is a client for node HTTP REST APIs.
