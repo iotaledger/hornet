@@ -285,8 +285,8 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 
 		cachedMeta = s.metadataStorage.Store(metadata) // meta +1
 
-		message.Persist()
-		message.SetModified()
+		message.Persist(true)
+		message.SetModified(true)
 		return message
 	})
 
