@@ -170,8 +170,8 @@ func databaseMerge(args []string) error {
 		return err
 	}
 
-	if errMerge != nil && (errors.Is(errMerge, common.ErrOperationAborted) || errors.Is(errMerge, ErrNoNewTangleData)) {
-		return err
+	if errMerge != nil {
+		return errMerge
 	}
 
 	msIndexStart, msIndexEnd := getStorageMilestoneRange(tangleStoreTarget)
