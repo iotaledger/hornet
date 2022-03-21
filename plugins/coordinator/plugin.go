@@ -584,5 +584,6 @@ func attachEvents() {
 func detachEvents() {
 	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
+	deps.Coordinator.Events.IssuedCheckpointMessage.Detach(onIssuedCheckpoint)
 	deps.Coordinator.Events.IssuedMilestone.Detach(onIssuedMilestone)
 }
