@@ -43,7 +43,7 @@ func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerCo
 		return nil, err
 	}
 
-	debugNodeAPI := NewDebugNodeAPIClient(getNodeAPIBaseURL(ip), iotago.ZeroRentParas, nodeclient.WithIndexer())
+	debugNodeAPI := NewDebugNodeAPIClient(getNodeAPIBaseURL(ip))
 
 	return &Node{
 		Name: name,
@@ -112,7 +112,7 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 						Data: []byte(data)},
 				}
 
-				if _, err := p.DebugNodeAPIClient.SubmitMessage(context.Background(), iotaMsg); err != nil {
+				if _, err := p.DebugNodeAPIClient.SubmitMessage(context.Background(), iotaMsg, iotago.ZeroRentParas); err != nil {
 					spamErr = err
 					return
 				}

@@ -8,8 +8,8 @@ import (
 )
 
 // NewDebugNodeAPIClient returns a new debug node API instance.
-func NewDebugNodeAPIClient(baseURL string, deSeriParas *iotago.DeSerializationParameters, opts ...nodeclient.ClientOption) *DebugNodeAPIClient {
-	return &DebugNodeAPIClient{Client: nodeclient.New(baseURL, deSeriParas, opts...)}
+func NewDebugNodeAPIClient(baseURL string, opts ...nodeclient.ClientOption) *DebugNodeAPIClient {
+	return &DebugNodeAPIClient{Client: nodeclient.New(baseURL, opts...)}
 }
 
 // DebugNodeAPIClient is an API wrapper over the debug node API.
@@ -27,7 +27,12 @@ func (api *DebugNodeAPIClient) BaseURL() string {
 func (api *DebugNodeAPIClient) BalanceByAddress(ctx context.Context, addr iotago.Address) (uint64, error) {
 	var balance uint64
 
-	result, err := api.Indexer().Outputs(ctx, &nodeclient.OutputsQuery{AddressBech32: addr.Bech32(iotago.PrefixTestnet)})
+	indexer, err := api.Indexer(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	result, err := indexer.Outputs(ctx, &nodeclient.OutputsQuery{AddressBech32: addr.Bech32(iotago.PrefixTestnet)})
 	if err != nil {
 		return 0, err
 	}
