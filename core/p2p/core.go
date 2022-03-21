@@ -136,6 +136,9 @@ Your node identity private key can now be found at "%s".
 			deps.NodeConfig.Int(CfgP2PConnMngLowWatermark),
 			deps.NodeConfig.Int(CfgP2PConnMngHighWatermark),
 		)
+		if err != nil {
+			CorePlugin.LogPanic(err)
+		}
 
 		createdHost, err := libp2p.New(libp2p.Identity(privKey),
 			libp2p.ListenAddrStrings(deps.P2PBindMultiAddresses...),
