@@ -285,6 +285,10 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 		return nil, errors.WithMessage(echo.ErrNotFound, "no staking event found")
 	}
 
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
 	var addresses []string
 	rewardsByAddress := make(map[string]uint64)
 	if err := deps.ParticipationManager.ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
@@ -333,6 +337,10 @@ func getActiveParticipations(c echo.Context) (*ParticipationsResponse, error) {
 		return nil, err
 	}
 
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
 	response := &ParticipationsResponse{
 		Participations: make(map[string]*TrackedParticipation),
 	}
@@ -356,6 +364,10 @@ func getPastParticipations(c echo.Context) (*ParticipationsResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
 
 	response := &ParticipationsResponse{
 		Participations: make(map[string]*TrackedParticipation),
