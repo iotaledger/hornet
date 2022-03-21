@@ -102,7 +102,7 @@ func getMilestoneMessageFromStorage(tangleStore *storage.Storage, milestoneMessa
 
 	cachedMsg := tangleStore.CachedMessageOrNil(milestoneMessageID) // message +1
 	if cachedMsg == nil {
-		return nil, fmt.Errorf("milestone not found! %s", milestoneMessageID.ToHex())
+		return nil, fmt.Errorf("milestone message not found! %s", milestoneMessageID.ToHex())
 	}
 	defer cachedMsg.Release(true) // message -1
 
