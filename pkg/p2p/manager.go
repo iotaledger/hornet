@@ -196,7 +196,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 	mngOpts.apply(opts...)
 
 	peeringManager := &Manager{
-		Events: ManagerEvents{
+		Events: &ManagerEvents{
 			Connect:            events.NewEvent(PeerCaller),
 			Disconnect:         events.NewEvent(PeerCaller),
 			Allowed:            events.NewEvent(PeerIDCaller),
@@ -239,7 +239,7 @@ type Manager struct {
 	*utils.WrappedLogger
 
 	// Events happening around the Manager.
-	Events ManagerEvents
+	Events *ManagerEvents
 	// the libp2p host instance from which to work with.
 	host host.Host
 	// holds the set of peers.

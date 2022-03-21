@@ -48,7 +48,7 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 	return &Protocol{
 		Parser: protocol.New(gossipMessageRegistry),
 		PeerID: peerID,
-		Events: ProtocolEvents{
+		Events: &ProtocolEvents{
 			HeartbeatUpdated: events.NewEvent(HeartbeatCaller),
 			// we need this because protocol.Protocol doesn't emit
 			// events for sent messages anymore.
@@ -75,7 +75,7 @@ type Protocol struct {
 	// terminatedChan is closed if the protocol was terminated.
 	terminatedChan chan struct{}
 	// The events surrounding a Protocol.
-	Events ProtocolEvents
+	Events *ProtocolEvents
 	// The peer's latest heartbeat message.
 	LatestHeartbeat *Heartbeat
 	// Time the last heartbeat was received.

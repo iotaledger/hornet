@@ -159,7 +159,7 @@ type Service struct {
 	*utils.WrappedLogger
 
 	// Events happening around a Service.
-	Events ServiceEvents
+	Events *ServiceEvents
 	// the libp2p host instance from which to work with.
 	host     host.Host
 	protocol protocol.ID
@@ -210,7 +210,7 @@ func NewService(
 	srvOpts.apply(opts...)
 
 	gossipService := &Service{
-		Events: ServiceEvents{
+		Events: &ServiceEvents{
 			ProtocolStarted:        events.NewEvent(ProtocolCaller),
 			ProtocolTerminated:     events.NewEvent(ProtocolCaller),
 			InboundStreamCancelled: events.NewEvent(StreamCancelCaller),
