@@ -539,7 +539,7 @@ func (pm *ParticipationManager) RewardsForTrackedParticipation(trackedParticipat
 	}
 
 	if trackedParticipation.StartIndex < eventMilestoneCountingStart {
-		// Substract the commencing milestones, minus the start itself
+		// Subtract the commencing milestones, minus the start itself
 		milestonesToSubtract = uint64(eventMilestoneCountingStart - trackedParticipation.StartIndex)
 	}
 
