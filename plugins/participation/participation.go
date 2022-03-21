@@ -104,6 +104,10 @@ func createEvent(c echo.Context) (*CreateEventResponse, error) {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event payload, error: %s", err)
 	}
 
+	// We need to lock the ledger here so that we don't add a new event while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
 	eventID, err := deps.ParticipationManager.StoreEvent(event)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid event, error: %s", err)
@@ -135,6 +139,10 @@ func deleteEvent(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// We need to lock the ledger here so that we delete an event while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
 
 	if err = deps.ParticipationManager.DeleteEvent(eventID); err != nil {
 		if errors.Is(err, participation.ErrEventNotFound) {
@@ -175,6 +183,10 @@ func getEventStatus(c echo.Context) (*participation.EventStatus, error) {
 		milestoneIndexFilter = append(milestoneIndexFilter, milestoneIndex)
 	}
 
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
 	status, err := deps.ParticipationManager.EventStatus(eventID, milestoneIndexFilter...)
 	if err != nil {
 		if errors.Is(err, participation.ErrEventNotFound) {
@@ -190,6 +202,10 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
 
 	trackedParticipations, err := deps.ParticipationManager.ParticipationsForOutputID(outputID)
 	if err != nil {
@@ -246,6 +262,10 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 		Rewards: make(map[string]*AddressReward),
 	}
 
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
 	for _, eventID := range eventIDs {
 
 		event := deps.ParticipationManager.Event(eventID)
@@ -284,6 +304,10 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 	if event == nil || event.Staking() == nil {
 		return nil, errors.WithMessage(echo.ErrNotFound, "no staking event found")
 	}
+
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
 
 	var addresses []string
 	rewardsByAddress := make(map[string]uint64)
@@ -333,6 +357,10 @@ func getActiveParticipations(c echo.Context) (*ParticipationsResponse, error) {
 		return nil, err
 	}
 
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
 	response := &ParticipationsResponse{
 		Participations: make(map[string]*TrackedParticipation),
 	}
@@ -356,6 +384,10 @@ func getPastParticipations(c echo.Context) (*ParticipationsResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
 
 	response := &ParticipationsResponse{
 		Participations: make(map[string]*TrackedParticipation),
