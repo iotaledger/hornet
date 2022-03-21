@@ -322,7 +322,9 @@ func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event)
 			}
 		}
 
-		pm.applyNewConfirmedMilestoneIndexForEvents(currentIndex, events)
+		if err := pm.applyNewConfirmedMilestoneIndexForEvents(currentIndex, events); err != nil {
+			return err
+		}
 
 		if currentIndex >= pm.syncManager.ConfirmedMilestoneIndex() || currentIndex >= event.EndMilestoneIndex() {
 			// We are done
