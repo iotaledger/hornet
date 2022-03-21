@@ -692,7 +692,7 @@ func (s *ProxyStorage) MergeStorages() error {
 	s.storeTarget.FlushStorages()
 
 	// copy all existing keys with values from the proxy storage to the target storage
-	return kvstore.Copy(s.storeProxy.TangleStore(), s.storeTarget.TangleStore())
+	return kvstore.CopyBatched(s.storeProxy.TangleStore(), s.storeTarget.TangleStore(), 10000)
 }
 
 // StoreMessageInterface
