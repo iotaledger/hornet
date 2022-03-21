@@ -171,8 +171,8 @@ func databaseMerge(args []string) error {
 		return err
 	}
 
-	if errMerge != nil && (errors.Is(errMerge, common.ErrOperationAborted) || errors.Is(errMerge, ErrNoNewTangleData)) {
-		return err
+	if errMerge != nil {
+		return errMerge
 	}
 
 	msIndexStart, msIndexEnd := getStorageMilestoneRange(tangleStoreTarget)
@@ -226,6 +226,12 @@ func copyMilestoneCone(
 			return false, err
 		}
 		defer cachedMsgNew.Release(true) // message -1
+
+		// set the new message as solid
+		cachedMsgMetaNew := cachedMsgNew.CachedMetadata() // meta +1
+		defer cachedMsgMetaNew.Release(true)              // meta -1
+
+		cachedMsgMetaNew.Metadata().SetSolid(true)
 
 		return true, nil
 	}
@@ -464,7 +470,7 @@ func mergeViaSourceDatabase(
 		},
 		dag.NewConcurrentParentsTraverser(storeSource),
 		storeSource.CachedMessage,
-		storeTarget.CachedMessage,
+		proxyStorage.CachedMessage,
 		storeTarget.UTXOManager(),
 		proxyStorage,
 		proxyStorage,
@@ -612,74 +618,6 @@ func getNodeHTTPAPIClient(nodeURL string, chronicleMode bool, chronicleKeyspace 
 	return client
 }
 
-type GetMessageViaAPIFunc func(client *nodeclient.Client, messageID hornet.MessageID) (*iotago.Message, error)
-
-// APIStorage is used to get messages via remote node API
-// if they do not exist in the target storage already.
-type APIStorage struct {
-	storeTarget          *storage.Storage
-	milestoneManager     *milestonemanager.MilestoneManager
-	client               *nodeclient.Client
-	getMessageViaAPIFunc GetMessageViaAPIFunc
-}
-
-func NewAPIStorage(
-	storeTarget *storage.Storage,
-	milestoneManager *milestonemanager.MilestoneManager,
-	client *nodeclient.Client,
-	getMessageViaAPIFunc GetMessageViaAPIFunc) *APIStorage {
-
-	return &APIStorage{
-		storeTarget:          storeTarget,
-		milestoneManager:     milestoneManager,
-		client:               client,
-		getMessageViaAPIFunc: getMessageViaAPIFunc,
-	}
-}
-
-// message +1
-func (s *APIStorage) CachedMessage(messageID hornet.MessageID) (*storage.CachedMessage, error) {
-	if !s.storeTarget.ContainsMessage(messageID) {
-		msg, err := s.getMessageViaAPIFunc(s.client, messageID)
-		if err != nil {
-			return nil, err
-		}
-
-		// store the message in the target storage
-		// Caution: this may not be the correct place here, but this way we avoid requesting
-		//          messages multiple times during the traversal of the milestone cone.
-		//			the message is requested via API because it would get stored anyway.
-		cachedMsg, err := storeMessage(s.storeTarget, s.milestoneManager, msg) // message +1
-		if err != nil {
-			return nil, err
-		}
-
-		return cachedMsg, nil
-	}
-	return s.storeTarget.CachedMessage(messageID) // message +1
-}
-
-// meta +1
-func (s *APIStorage) CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
-	cachedMsg, err := s.CachedMessage(messageID) // message +1
-	if err != nil {
-		return nil, err
-	}
-	if cachedMsg == nil {
-		return nil, nil
-	}
-	defer cachedMsg.Release(true)          // message -1
-	return cachedMsg.CachedMetadata(), nil // meta +1
-}
-
-func (s *APIStorage) SolidEntryPointsContain(messageID hornet.MessageID) (bool, error) {
-	return s.storeTarget.SolidEntryPointsContain(messageID)
-}
-
-func (s *APIStorage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool, error) {
-	return s.storeTarget.SolidEntryPointsIndex(messageID)
-}
-
 type GetMessageFunc func(messageID hornet.MessageID) (*iotago.Message, error)
 
 // ProxyStorage is used to temporarily store changes to an intermediate storage,
@@ -723,6 +661,12 @@ func (s *ProxyStorage) CachedMessage(messageID hornet.MessageID) (*storage.Cache
 				return nil, err
 			}
 
+			// set the new message as solid
+			cachedMsgMeta := cachedMsg.CachedMetadata() // meta +1
+			defer cachedMsgMeta.Release(true)           // meta -1
+
+			cachedMsgMeta.Metadata().SetSolid(true)
+
 			return cachedMsg, nil
 		}
 		return s.storeProxy.CachedMessage(messageID) // message +1
@@ -758,7 +702,7 @@ func (s *ProxyStorage) MergeStorages() error {
 	s.storeTarget.FlushStorages()
 
 	// copy all existing keys with values from the proxy storage to the target storage
-	return kvstore.Copy(s.storeProxy.TangleStore(), s.storeTarget.TangleStore())
+	return kvstore.CopyBatched(s.storeProxy.TangleStore(), s.storeTarget.TangleStore(), 10000)
 }
 
 // StoreMessageInterface
