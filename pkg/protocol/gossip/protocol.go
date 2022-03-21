@@ -123,13 +123,22 @@ func (p *Protocol) Send(message []byte) error {
 	p.sendMu.Lock()
 	defer p.sendMu.Unlock()
 
-	if err := p.Stream.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
-		return fmt.Errorf("unable to set write deadline: %w", err)
+	sendMessage := func(message []byte) error {
+		if err := p.Stream.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+			return fmt.Errorf("unable to set write deadline: %w", err)
+		}
+
+		// write message
+		if _, err := p.Stream.Write(message); err != nil {
+			return fmt.Errorf("failed to send message: %w", err)
+		}
+
+		return nil
 	}
 
-	// write message
-	if _, err := p.Stream.Write(message); err != nil {
-		return fmt.Errorf("failed to send message: %w", err)
+	if err := sendMessage(message); err != nil {
+		p.Events.Errors.Trigger(err)
+		return err
 	}
 
 	// fire event handler for sent message
