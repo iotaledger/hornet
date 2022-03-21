@@ -55,11 +55,12 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 			Sent:   sentEvents,
 			Errors: events.NewEvent(events.ErrorCaller),
 		},
-		Stream:        stream,
-		SendQueue:     make(chan []byte, sendQueueSize),
-		readTimeout:   readTimeout,
-		writeTimeout:  writeTimeout,
-		ServerMetrics: serverMetrics,
+		Stream:         stream,
+		terminatedChan: make(chan struct{}),
+		SendQueue:      make(chan []byte, sendQueueSize),
+		readTimeout:    readTimeout,
+		writeTimeout:   writeTimeout,
+		ServerMetrics:  serverMetrics,
 	}
 }
 
@@ -71,6 +72,8 @@ type Protocol struct {
 	PeerID peer.ID
 	// The underlying stream for this Protocol.
 	Stream network.Stream
+	// terminatedChan is closed if the protocol was terminated.
+	terminatedChan chan struct{}
 	// The events surrounding a Protocol.
 	Events ProtocolEvents
 	// The peer's latest heartbeat message.
@@ -88,6 +91,11 @@ type Protocol struct {
 	writeTimeout time.Duration
 	// The shared server metrics instance.
 	ServerMetrics *metrics.ServerMetrics
+}
+
+// Terminated returns a channel that is closed if the protocol was terminated.
+func (p *Protocol) Terminated() <-chan struct{} {
+	return p.terminatedChan
 }
 
 // Enqueue enqueues the given gossip protocol message to be sent to the peer.
