@@ -95,12 +95,16 @@ type TestEnvironment struct {
 
 	// OnConfirmedMilestoneIndexChanged callback that will be called after confirming a milestone. This is equivalent to the tangle.ConfirmedMilestoneIndexChanged event.
 	OnConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc
+
+	// OnLedgerUpdatedFunc callback that will be called after the ledger gets updating during confirmation. This is equivalent to the tangle.LedgerUpdated event.
+	OnLedgerUpdatedFunc OnLedgerUpdatedFunc
 }
 
 type OnNewOutputFunc func(index milestone.Index, output *utxo.Output)
 type OnNewSpentFunc func(index milestone.Index, spent *utxo.Spent)
 type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)
 type OnConfirmedMilestoneIndexChangedFunc func(index milestone.Index)
+type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents)
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
@@ -185,11 +189,12 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	return te
 }
 
-func (te *TestEnvironment) ConfigureUTXOCallbacks(onNewOutputFunc OnNewOutputFunc, onNewSpentFunc OnNewSpentFunc, onMilestoneConfirmedFunc OnMilestoneConfirmedFunc, onConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc) {
+func (te *TestEnvironment) ConfigureUTXOCallbacks(onNewOutputFunc OnNewOutputFunc, onNewSpentFunc OnNewSpentFunc, onMilestoneConfirmedFunc OnMilestoneConfirmedFunc, onConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc, onLedgerUpdatedFunc OnLedgerUpdatedFunc) {
 	te.OnNewOutput = onNewOutputFunc
 	te.OnNewSpent = onNewSpentFunc
 	te.OnMilestoneConfirmed = onMilestoneConfirmedFunc
 	te.OnConfirmedMilestoneIndexChanged = onConfirmedMilestoneIndexChanged
+	te.OnLedgerUpdatedFunc = onLedgerUpdatedFunc
 }
 
 func (te *TestEnvironment) NetworkID() iotago.NetworkID {

@@ -342,7 +342,7 @@ func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event)
 // 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
 // 	- The Indexation must match the configured Indexation.
 //  - The participation data must be parseable.
-func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
+func (pm *ParticipationManager) ApplyNewUTXOs(index milestone.Index, newOutputs utxo.Outputs) error {
 
 	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
 		return e.ShouldAcceptParticipation(index)
@@ -353,7 +353,12 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 		return nil
 	}
 
-	return pm.applyNewUTXOForEvents(index, newOutput, acceptingEvents)
+	for _, newOutput := range newOutputs {
+		if err := pm.applyNewUTXOForEvents(index, newOutput, acceptingEvents); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, newOutput *utxo.Output, events map[EventID]*Event) error {
@@ -432,7 +437,7 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 }
 
 // ApplySpentUTXO checks if the spent UTXO was part of a participation transaction.
-func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
+func (pm *ParticipationManager) ApplySpentUTXOs(index milestone.Index, spents utxo.Spents) error {
 
 	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
 		return e.ShouldAcceptParticipation(index)
@@ -443,7 +448,12 @@ func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utx
 		return nil
 	}
 
-	return pm.applySpentUTXOForEvents(index, spent, acceptingEvents)
+	for _, spent := range spents {
+		if err := pm.applySpentUTXOForEvents(index, spent, acceptingEvents); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, spent *utxo.Spent, events map[EventID]*Event) error {

@@ -259,6 +259,7 @@ func verifyDatabase(
 			nil,
 			nil,
 			nil,
+			nil,
 		)
 		if err != nil {
 			return err

@@ -328,6 +328,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			t.Events.MilestoneConfirmed.Trigger(confirmation)
 			timeMilestoneConfirmed = time.Now()
 		},
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+			t.Events.LedgerUpdated.Trigger(index, newOutputs, newSpents)
+		},
 		func(index milestone.Index, output *utxo.Output) {
 			t.Events.NewUTXOOutput.Trigger(index, output)
 		},

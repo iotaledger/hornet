@@ -137,14 +137,13 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 
 	// Connect the callbacks from the testsuite to the ParticipationManager
 	te.ConfigureUTXOCallbacks(
-		func(index milestone.Index, output *utxo.Output) {
-			require.NoError(t, pm.ApplyNewUTXO(index, output))
-		},
-		func(index milestone.Index, spent *utxo.Spent) {
-			require.NoError(t, pm.ApplySpentUTXO(index, spent))
-		},
 		nil,
-		func(index milestone.Index) {
+		nil,
+		nil,
+		nil,
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+			require.NoError(t, pm.ApplyNewUTXOs(index, newOutputs))
+			require.NoError(t, pm.ApplySpentUTXOs(index, newSpents))
 			require.NoError(t, pm.ApplyNewConfirmedMilestoneIndex(index))
 		},
 	)
