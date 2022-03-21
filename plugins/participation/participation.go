@@ -262,6 +262,10 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 		Rewards: make(map[string]*AddressReward),
 	}
 
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
 	for _, eventID := range eventIDs {
 
 		event := deps.ParticipationManager.Event(eventID)
@@ -273,10 +277,6 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 		if staking == nil {
 			return nil, errors.WithMessage(echo.ErrInternalServerError, "staking payload not found")
 		}
-
-		// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
-		deps.UTXOManager.ReadLockLedger()
-		defer deps.UTXOManager.ReadUnlockLedger()
 
 		amount, err := deps.ParticipationManager.StakingRewardForAddress(eventID, address)
 		if err != nil {
