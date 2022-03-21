@@ -157,25 +157,14 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 			if te.OnMilestoneConfirmed != nil {
 				te.OnMilestoneConfirmed(confirmation)
 			}
-			if te.OnConfirmedMilestoneIndexChanged != nil {
-				te.OnConfirmedMilestoneIndexChanged(confirmation.MilestoneIndex)
-			}
 		},
 		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 			if te.OnLedgerUpdatedFunc != nil {
 				te.OnLedgerUpdatedFunc(index, newOutputs, newSpents)
 			}
 		},
-		func(index milestone.Index, output *utxo.Output) {
-			if te.OnNewOutput != nil {
-				te.OnNewOutput(index, output)
-			}
-		},
-		func(index milestone.Index, spent *utxo.Spent) {
-			if te.OnNewSpent != nil {
-				te.OnNewSpent(index, spent)
-			}
-		},
+		nil,
+		nil,
 		nil,
 	)
 	require.NoError(te.TestInterface, err)

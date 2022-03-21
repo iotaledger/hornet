@@ -84,26 +84,14 @@ type TestEnvironment struct {
 	// GenesisOutput marks the initial output created when bootstrapping the tangle.
 	GenesisOutput *utxo.Output
 
-	// OnNewOutput callback that will be called for each created UTXO. This is equivalent to the tangle.NewUTXOOutput event.
-	OnNewOutput OnNewOutputFunc
-
-	// OnNewSpent callback that will be called for each spent UTXO. This is equivalent to the tangle.NewUTXOSpent event.
-	OnNewSpent OnNewSpentFunc
-
 	// OnMilestoneConfirmed callback that will be called at confirming a milestone. This is equivalent to the tangle.MilestoneConfirmed event.
 	OnMilestoneConfirmed OnMilestoneConfirmedFunc
-
-	// OnConfirmedMilestoneIndexChanged callback that will be called after confirming a milestone. This is equivalent to the tangle.ConfirmedMilestoneIndexChanged event.
-	OnConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc
 
 	// OnLedgerUpdatedFunc callback that will be called after the ledger gets updating during confirmation. This is equivalent to the tangle.LedgerUpdated event.
 	OnLedgerUpdatedFunc OnLedgerUpdatedFunc
 }
 
-type OnNewOutputFunc func(index milestone.Index, output *utxo.Output)
-type OnNewSpentFunc func(index milestone.Index, spent *utxo.Spent)
 type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)
-type OnConfirmedMilestoneIndexChangedFunc func(index milestone.Index)
 type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents)
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
@@ -189,11 +177,8 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	return te
 }
 
-func (te *TestEnvironment) ConfigureUTXOCallbacks(onNewOutputFunc OnNewOutputFunc, onNewSpentFunc OnNewSpentFunc, onMilestoneConfirmedFunc OnMilestoneConfirmedFunc, onConfirmedMilestoneIndexChanged OnConfirmedMilestoneIndexChangedFunc, onLedgerUpdatedFunc OnLedgerUpdatedFunc) {
-	te.OnNewOutput = onNewOutputFunc
-	te.OnNewSpent = onNewSpentFunc
+func (te *TestEnvironment) ConfigureUTXOCallbacks(onMilestoneConfirmedFunc OnMilestoneConfirmedFunc, onLedgerUpdatedFunc OnLedgerUpdatedFunc) {
 	te.OnMilestoneConfirmed = onMilestoneConfirmedFunc
-	te.OnConfirmedMilestoneIndexChanged = onConfirmedMilestoneIndexChanged
 	te.OnLedgerUpdatedFunc = onLedgerUpdatedFunc
 }
 
