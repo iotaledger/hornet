@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -63,6 +64,10 @@ const (
 	// StreamCancelReasonHostShutdown defines a stream cancellation
 	// because the host is shutting down.
 	StreamCancelReasonHostShutdown StreamCancelReason = "host shutdown"
+)
+
+var (
+	ErrProtocolDoesNotExist = errors.New("stream/protocol does not exist")
 )
 
 const (
@@ -173,11 +178,24 @@ type Service struct {
 	// event loop channels
 	inboundStreamChan   chan network.Stream
 	connectedChan       chan *connectionmsg
+	closeStreamChan     chan *closestreammsg
 	disconnectedChan    chan *connectionmsg
 	streamClosedChan    chan *streamclosedmsg
 	relationUpdatedChan chan *relationupdatedmsg
 	streamReqChan       chan *streamreqmsg
 	forEachChan         chan *foreachmsg
+
+	// closures
+	// peering manager
+	onPeeringManagerConnected       *events.Closure
+	onPeeringManagerDisconnected    *events.Closure
+	onPeeringManagerRelationUpdated *events.Closure
+
+	// logger
+	onGossipServiceProtocolStarted        *events.Closure
+	onGossipServiceProtocolTerminated     *events.Closure
+	onGossipServiceInboundStreamCancelled *events.Closure
+	onGossipServiceError                  *events.Closure
 }
 
 // NewService creates a new Service.
@@ -208,6 +226,7 @@ func NewService(
 		unknownPeers:        map[peer.ID]struct{}{},
 		inboundStreamChan:   make(chan network.Stream, 10),
 		connectedChan:       make(chan *connectionmsg, 10),
+		closeStreamChan:     make(chan *closestreammsg, 10),
 		disconnectedChan:    make(chan *connectionmsg, 10),
 		streamClosedChan:    make(chan *streamclosedmsg, 10),
 		relationUpdatedChan: make(chan *relationupdatedmsg, 10),
@@ -215,7 +234,7 @@ func NewService(
 		forEachChan:         make(chan *foreachmsg, 10),
 	}
 	gossipService.WrappedLogger = utils.NewWrappedLogger(gossipService.opts.logger)
-	gossipService.registerLoggerOnEvents()
+	gossipService.configureEvents()
 	return gossipService
 }
 
@@ -259,37 +278,42 @@ func (s *Service) SynchronizedCount(latestMilestoneIndex milestone.Index) int {
 	return count
 }
 
+// CloseStream closes an ongoing stream with a peer.
+func (s *Service) CloseStream(peerID peer.ID) error {
+	if s.stopped.IsSet() {
+		return nil
+	}
+
+	back := make(chan error)
+	s.closeStreamChan <- &closestreammsg{peerID: peerID, back: back}
+	return <-back
+}
+
 // Start starts the Service's event loop.
 func (s *Service) Start(ctx context.Context) {
+
+	s.attachEvents()
+
+	// libp2p stream handler
 	s.host.SetStreamHandler(s.protocol, func(stream network.Stream) {
 		if s.stopped.IsSet() {
 			return
 		}
 		s.inboundStreamChan <- stream
 	})
-	s.peeringManager.Events.Connected.Attach(events.NewClosure(func(peer *p2p.Peer, conn network.Conn) {
-		if s.stopped.IsSet() {
-			return
-		}
-		s.connectedChan <- &connectionmsg{peer: peer, conn: conn}
-	}))
-	s.peeringManager.Events.Disconnected.Attach(events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
-		if s.stopped.IsSet() {
-			return
-		}
-		s.disconnectedChan <- &connectionmsg{peer: peerOptErr.Peer, conn: nil}
-	}))
-	s.peeringManager.Events.RelationUpdated.Attach(events.NewClosure(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
-		if s.stopped.IsSet() {
-			return
-		}
-		s.relationUpdatedChan <- &relationupdatedmsg{peer: peer, oldRelation: oldRel}
-	}))
+
 	// manage libp2p network events
 	s.host.Network().Notify((*netNotifiee)(s))
+
 	s.eventLoop(ctx)
+
+	// libp2p stream handler
+	s.host.RemoveStreamHandler(s.protocol)
+
 	// de-register libp2p network events
 	s.host.Network().StopNotify((*netNotifiee)(s))
+
+	s.detachEvents()
 }
 
 // shutdown sets the stopped flag and drains all outstanding requests of the event loop.
@@ -305,6 +329,10 @@ drainLoop:
 		case <-s.inboundStreamChan:
 
 		case <-s.connectedChan:
+
+		case <-s.closeStreamChan:
+		case disconnectMsg := <-s.closeStreamChan:
+			disconnectMsg.back <- nil
 
 		case <-s.disconnectedChan:
 
@@ -327,6 +355,11 @@ drainLoop:
 type connectionmsg struct {
 	peer *p2p.Peer
 	conn network.Conn
+}
+
+type closestreammsg struct {
+	peerID peer.ID
+	back   chan error
 }
 
 type streamreqmsg struct {
@@ -373,11 +406,18 @@ func (s *Service) eventLoop(ctx context.Context) {
 				s.Events.ProtocolStarted.Trigger(proto)
 			}
 
+		case disconnectMsg := <-s.closeStreamChan:
+			disconnectMsg.back <- s.deregisterProtocol(disconnectMsg.peerID)
+
 		case disconnectedMsg := <-s.disconnectedChan:
-			s.closeStream(disconnectedMsg.peer.ID)
+			if err := s.deregisterProtocol(disconnectedMsg.peer.ID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
+				s.Events.Error.Trigger(err)
+			}
 
 		case streamClosedMsg := <-s.streamClosedChan:
-			s.closeStream(streamClosedMsg.peerID)
+			if err := s.deregisterProtocol(streamClosedMsg.peerID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
+				s.Events.Error.Trigger(err)
+			}
 
 		case relationUpdatedMsg := <-s.relationUpdatedChan:
 			proto, err := s.handleRelationUpdated(relationUpdatedMsg.peer, relationUpdatedMsg.oldRelation)
@@ -505,30 +545,24 @@ func (s *Service) registerProtocol(peerID peer.ID, stream network.Stream) *Proto
 }
 
 // deregisters ongoing gossip protocol streams and closes them for the given peer.
-func (s *Service) deregisterProtocol(peerID peer.ID) (bool, error) {
-	if _, ongoing := s.streams[peerID]; !ongoing {
-		return false, nil
+func (s *Service) deregisterProtocol(peerID peer.ID) error {
+	proto, ongoing := s.streams[peerID]
+	if !ongoing {
+		return fmt.Errorf("unable to deregister protocol %s: %w", peerID, ErrProtocolDoesNotExist)
 	}
-	proto := s.streams[peerID]
-	delete(s.streams, peerID)
-	if err := proto.Stream.Reset(); err != nil {
-		return true, fmt.Errorf("unable to cleanly reset stream to %s: %w", peerID, err)
-	}
-	return true, nil
-}
 
-// closes the stream for the given peer and fires the appropriate events.
-func (s *Service) closeStream(peerID peer.ID) {
-	proto := s.streams[peerID]
-	delete(s.unknownPeers, peerID)
-	reset, err := s.deregisterProtocol(peerID)
-	if err != nil {
-		s.Events.Error.Trigger(err)
-		return
-	}
-	if reset {
+	defer func() {
+		delete(s.streams, peerID)
+		delete(s.unknownPeers, peerID)
+		close(proto.terminatedChan)
 		s.Events.ProtocolTerminated.Trigger(proto)
+	}()
+
+	if err := proto.Stream.Reset(); err != nil {
+		return fmt.Errorf("unable to cleanly reset stream to %s: %w", peerID, err)
 	}
+
+	return nil
 }
 
 // handles updates to the relation to a given peer: if the peer's relation
@@ -541,7 +575,7 @@ func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation)
 	// close the stream if no more unknown peer slots are available
 	if newRel == p2p.PeerRelationUnknown {
 		if len(s.unknownPeers) >= s.opts.unknownPeersLimit {
-			_, err := s.deregisterProtocol(peer.ID)
+			err := s.deregisterProtocol(peer.ID)
 			return nil, err
 		}
 		s.unknownPeers[peer.ID] = struct{}{}
@@ -580,21 +614,73 @@ func (s *Service) proto(peerID peer.ID) *Protocol {
 	return s.streams[peerID]
 }
 
-// registers the logger on the events of the Service.
-func (s *Service) registerLoggerOnEvents() {
-	s.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *Protocol) {
+func (s *Service) configureEvents() {
+
+	// peering manager
+	s.onPeeringManagerConnected = events.NewClosure(func(peer *p2p.Peer, conn network.Conn) {
+		if s.stopped.IsSet() {
+			return
+		}
+		s.connectedChan <- &connectionmsg{peer: peer, conn: conn}
+	})
+
+	s.onPeeringManagerDisconnected = events.NewClosure(func(peerOptErr *p2p.PeerOptError) {
+		if s.stopped.IsSet() {
+			return
+		}
+		s.disconnectedChan <- &connectionmsg{peer: peerOptErr.Peer, conn: nil}
+	})
+
+	s.onPeeringManagerRelationUpdated = events.NewClosure(func(peer *p2p.Peer, oldRel p2p.PeerRelation) {
+		if s.stopped.IsSet() {
+			return
+		}
+		s.relationUpdatedChan <- &relationupdatedmsg{peer: peer, oldRelation: oldRel}
+	})
+
+	// logger
+	s.onGossipServiceProtocolStarted = events.NewClosure(func(proto *Protocol) {
 		s.LogInfof("started protocol with %s", proto.PeerID.ShortString())
-	}))
-	s.Events.ProtocolTerminated.Attach(events.NewClosure(func(proto *Protocol) {
+	})
+
+	s.onGossipServiceProtocolTerminated = events.NewClosure(func(proto *Protocol) {
 		s.LogInfof("terminated protocol with %s", proto.PeerID.ShortString())
-	}))
-	s.Events.InboundStreamCancelled.Attach(events.NewClosure(func(stream network.Stream, reason StreamCancelReason) {
+	})
+
+	s.onGossipServiceInboundStreamCancelled = events.NewClosure(func(stream network.Stream, reason StreamCancelReason) {
 		remotePeer := stream.Conn().RemotePeer().ShortString()
 		s.LogInfof("canceled inbound protocol stream from %s: %s", remotePeer, reason)
-	}))
-	s.Events.Error.Attach(events.NewClosure(func(err error) {
+	})
+
+	s.onGossipServiceError = events.NewClosure(func(err error) {
 		s.LogWarn(err)
-	}))
+	})
+}
+
+func (s *Service) attachEvents() {
+	// peering manager
+	s.peeringManager.Events.Connected.Attach(s.onPeeringManagerConnected)
+	s.peeringManager.Events.Disconnected.Attach(s.onPeeringManagerDisconnected)
+	s.peeringManager.Events.RelationUpdated.Attach(s.onPeeringManagerRelationUpdated)
+
+	// logger
+	s.Events.ProtocolStarted.Attach(s.onGossipServiceProtocolStarted)
+	s.Events.ProtocolTerminated.Attach(s.onGossipServiceProtocolTerminated)
+	s.Events.InboundStreamCancelled.Attach(s.onGossipServiceInboundStreamCancelled)
+	s.Events.Error.Attach(s.onGossipServiceError)
+}
+
+func (s *Service) detachEvents() {
+	// peering manager
+	s.peeringManager.Events.Connected.Detach(s.onPeeringManagerConnected)
+	s.peeringManager.Events.Disconnected.Detach(s.onPeeringManagerDisconnected)
+	s.peeringManager.Events.RelationUpdated.Detach(s.onPeeringManagerRelationUpdated)
+
+	// logger
+	s.Events.ProtocolStarted.Detach(s.onGossipServiceProtocolStarted)
+	s.Events.ProtocolTerminated.Detach(s.onGossipServiceProtocolTerminated)
+	s.Events.InboundStreamCancelled.Detach(s.onGossipServiceInboundStreamCancelled)
+	s.Events.Error.Detach(s.onGossipServiceError)
 }
 
 // lets Service implement network.Notifiee in order to automatically
