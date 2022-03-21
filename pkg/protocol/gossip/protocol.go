@@ -111,10 +111,19 @@ func (p *Protocol) Enqueue(data []byte) {
 
 // Read reads from the stream into the given buffer.
 func (p *Protocol) Read(buf []byte) (int, error) {
-	if err := p.Stream.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
-		return 0, fmt.Errorf("unable to set read deadline: %w", err)
+	readMessage := func(buf []byte) (int, error) {
+		if err := p.Stream.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
+			return 0, fmt.Errorf("unable to set read deadline: %w", err)
+		}
+
+		return p.Stream.Read(buf)
 	}
-	r, err := p.Stream.Read(buf)
+
+	r, err := readMessage(buf)
+	if err != nil {
+		p.Events.Errors.Trigger(err)
+	}
+
 	return r, err
 }
 
