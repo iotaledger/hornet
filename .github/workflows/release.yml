@@ -9,7 +9,7 @@ jobs:
     name: Release Binaries
     runs-on: ubuntu-latest
     container:
-      image: gohornet/goreleaser-cgo-cross-compiler:1.17.3
+      image: gohornet/goreleaser-cgo-cross-compiler:1.18
       volumes: [/repo]
     steps:
       - name: Check out code into the Go module directory
