@@ -462,7 +462,7 @@ func mergeViaSourceDatabase(
 		},
 		dag.NewConcurrentParentsTraverser(storeSource),
 		storeSource.CachedMessage,
-		storeTarget.CachedMessage,
+		proxyStorage.CachedMessage,
 		storeTarget.UTXOManager(),
 		proxyStorage,
 		proxyStorage,
