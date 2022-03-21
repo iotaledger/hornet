@@ -226,6 +226,12 @@ func copyMilestoneCone(
 		}
 		defer cachedMsgNew.Release(true) // message -1
 
+		// set the new message as solid
+		cachedMsgMetaNew := cachedMsgNew.CachedMetadata()
+		defer cachedMsgMetaNew.Release(true)
+
+		cachedMsgMetaNew.Metadata().SetSolid(true)
+
 		return true, nil
 	}
 
@@ -644,6 +650,12 @@ func (s *APIStorage) CachedMessage(messageID hornet.MessageID) (*storage.CachedM
 			return nil, err
 		}
 
+		// set the new message as solid
+		cachedMsgMeta := cachedMsg.CachedMetadata()
+		defer cachedMsgMeta.Release(true)
+
+		cachedMsgMeta.Metadata().SetSolid(true)
+
 		return cachedMsg, nil
 	}
 	return s.storeTarget.CachedMessage(messageID) // message +1
@@ -712,6 +724,12 @@ func (s *ProxyStorage) CachedMessage(messageID hornet.MessageID) (*storage.Cache
 			if err != nil {
 				return nil, err
 			}
+
+			// set the new message as solid
+			cachedMsgMeta := cachedMsg.CachedMetadata()
+			defer cachedMsgMeta.Release(true)
+
+			cachedMsgMeta.Metadata().SetSolid(true)
 
 			return cachedMsg, nil
 		}
