@@ -498,7 +498,7 @@ func (pm *ParticipationManager) stopCountingBallotAnswers(event *Event, vote *Pa
 
 // Staking
 
-func (pm *ParticipationManager) rewardsForTrackedParticipation(trackedParticipation *TrackedParticipation, atIndex milestone.Index) (uint64, error) {
+func (pm *ParticipationManager) RewardsForTrackedParticipation(trackedParticipation *TrackedParticipation, atIndex milestone.Index) (uint64, error) {
 
 	event := pm.Event(trackedParticipation.EventID)
 	if event == nil {
@@ -555,7 +555,7 @@ func (pm *ParticipationManager) StakingRewardForAddress(eventID EventID, address
 		return 0, err
 	}
 	for _, trackedParticipation := range trackedParticipations {
-		amount, err := pm.rewardsForTrackedParticipation(trackedParticipation, msIndex)
+		amount, err := pm.RewardsForTrackedParticipation(trackedParticipation, msIndex)
 		if err != nil {
 			return 0, err
 		}
@@ -735,7 +735,7 @@ func (pm *ParticipationManager) ForEachAddressStakingParticipation(eventID Event
 			return false
 		}
 
-		balance, err := pm.rewardsForTrackedParticipation(participation, msIndex)
+		balance, err := pm.RewardsForTrackedParticipation(participation, msIndex)
 		if err != nil {
 			innerErr = err
 			return false
