@@ -57,6 +57,10 @@ func databaseSnapshot(args []string) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		tangleStoreSource.ShutdownStorages()
+		tangleStoreSource.FlushAndCloseStores()
+	}()
 
 	if !*outputJSONFlag {
 		fmt.Println("creating full snapshot file...")

@@ -393,7 +393,6 @@ func (s *Storage) FlushStorages() {
 
 // ShutdownStorages shuts down all storages.
 func (s *Storage) ShutdownStorages() {
-
 	s.ShutdownMilestoneStorage()
 	s.ShutdownMessagesStorage()
 	s.ShutdownChildrenStorage()
