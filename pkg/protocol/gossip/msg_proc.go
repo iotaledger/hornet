@@ -88,7 +88,7 @@ type MessageProcessor struct {
 	opts Options
 
 	// events of the message processor.
-	Events MessageProcessorEvents
+	Events *MessageProcessorEvents
 	// cache that holds processed incomming messages.
 	workUnits *objectstorage.ObjectStorage
 	// worker pool for incomming messages.
@@ -118,7 +118,7 @@ func NewMessageProcessor(
 		serverMetrics:  serverMetrics,
 		deSeriParas:    deSeriParas,
 		opts:           *opts,
-		Events: MessageProcessorEvents{
+		Events: &MessageProcessorEvents{
 			MessageProcessed: events.NewEvent(MessageProcessedCaller),
 			BroadcastMessage: events.NewEvent(BroadcastCaller),
 		},

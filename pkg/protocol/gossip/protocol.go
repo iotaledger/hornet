@@ -30,8 +30,6 @@ type ProtocolEvents struct {
 	// This exists solely because protocol.Protocol in hive.go doesn't
 	// emit events anymore for sent messages, as it is solely a parser.
 	Sent []*events.Event
-	// Fired when the protocol stream has been closed.
-	Closed *events.Event
 	// Fired when an error occurs on the protocol.
 	Errors *events.Event
 }
@@ -50,19 +48,19 @@ func NewProtocol(peerID peer.ID, stream network.Stream, sendQueueSize int, readT
 	return &Protocol{
 		Parser: protocol.New(gossipMessageRegistry),
 		PeerID: peerID,
-		Events: ProtocolEvents{
+		Events: &ProtocolEvents{
 			HeartbeatUpdated: events.NewEvent(HeartbeatCaller),
 			// we need this because protocol.Protocol doesn't emit
 			// events for sent messages anymore.
 			Sent:   sentEvents,
-			Closed: events.NewEvent(events.VoidCaller),
 			Errors: events.NewEvent(events.ErrorCaller),
 		},
-		Stream:        stream,
-		SendQueue:     make(chan []byte, sendQueueSize),
-		readTimeout:   readTimeout,
-		writeTimeout:  writeTimeout,
-		ServerMetrics: serverMetrics,
+		Stream:         stream,
+		terminatedChan: make(chan struct{}),
+		SendQueue:      make(chan []byte, sendQueueSize),
+		readTimeout:    readTimeout,
+		writeTimeout:   writeTimeout,
+		ServerMetrics:  serverMetrics,
 	}
 }
 
@@ -74,8 +72,10 @@ type Protocol struct {
 	PeerID peer.ID
 	// The underlying stream for this Protocol.
 	Stream network.Stream
+	// terminatedChan is closed if the protocol was terminated.
+	terminatedChan chan struct{}
 	// The events surrounding a Protocol.
-	Events ProtocolEvents
+	Events *ProtocolEvents
 	// The peer's latest heartbeat message.
 	LatestHeartbeat *Heartbeat
 	// Time the last heartbeat was received.
@@ -93,6 +93,11 @@ type Protocol struct {
 	ServerMetrics *metrics.ServerMetrics
 }
 
+// Terminated returns a channel that is closed if the protocol was terminated.
+func (p *Protocol) Terminated() <-chan struct{} {
+	return p.terminatedChan
+}
+
 // Enqueue enqueues the given gossip protocol message to be sent to the peer.
 // If it can't because the send queue is over capacity, the message gets dropped.
 func (p *Protocol) Enqueue(data []byte) {
@@ -106,10 +111,19 @@ func (p *Protocol) Enqueue(data []byte) {
 
 // Read reads from the stream into the given buffer.
 func (p *Protocol) Read(buf []byte) (int, error) {
-	if err := p.Stream.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
-		return 0, fmt.Errorf("unable to set read deadline: %w", err)
+	readMessage := func(buf []byte) (int, error) {
+		if err := p.Stream.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
+			return 0, fmt.Errorf("unable to set read deadline: %w", err)
+		}
+
+		return p.Stream.Read(buf)
 	}
-	r, err := p.Stream.Read(buf)
+
+	r, err := readMessage(buf)
+	if err != nil {
+		p.Events.Errors.Trigger(err)
+	}
+
 	return r, err
 }
 
@@ -118,13 +132,22 @@ func (p *Protocol) Send(message []byte) error {
 	p.sendMu.Lock()
 	defer p.sendMu.Unlock()
 
-	if err := p.Stream.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
-		return fmt.Errorf("unable to set write deadline: %w", err)
+	sendMessage := func(message []byte) error {
+		if err := p.Stream.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+			return fmt.Errorf("unable to set write deadline: %w", err)
+		}
+
+		// write message
+		if _, err := p.Stream.Write(message); err != nil {
+			return fmt.Errorf("failed to send message: %w", err)
+		}
+
+		return nil
 	}
 
-	// write message
-	if _, err := p.Stream.Write(message); err != nil {
-		return fmt.Errorf("failed to send message: %w", err)
+	if err := sendMessage(message); err != nil {
+		p.Events.Errors.Trigger(err)
+		return err
 	}
 
 	// fire event handler for sent message
