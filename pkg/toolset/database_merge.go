@@ -103,6 +103,10 @@ func databaseMerge(args []string) error {
 		if err != nil {
 			return err
 		}
+		defer func() {
+			tangleStoreSource.ShutdownStorages()
+			tangleStoreSource.FlushAndCloseStores()
+		}()
 	}
 
 	// we need to check the health of the target db, since we don't want use tainted/corrupted dbs.
@@ -110,18 +114,11 @@ func databaseMerge(args []string) error {
 	if err != nil {
 		return err
 	}
-
 	defer func() {
 		println("\nshutdown storages...")
-		if tangleStoreSource != nil {
-			tangleStoreSource.ShutdownStorages()
-		}
 		tangleStoreTarget.ShutdownStorages()
 
 		println("flush and close stores...")
-		if tangleStoreSource != nil {
-			tangleStoreSource.FlushAndCloseStores()
-		}
 		tangleStoreTarget.FlushAndCloseStores()
 	}()
 
@@ -390,6 +387,7 @@ func mergeViaAPI(
 	if err != nil {
 		return err
 	}
+	defer proxyStorage.Cleanup()
 
 	ts := time.Now()
 
@@ -441,6 +439,7 @@ func mergeViaSourceDatabase(
 	if err != nil {
 		return err
 	}
+	defer proxyStorage.Cleanup()
 
 	ts := time.Now()
 
@@ -693,6 +692,12 @@ func (s *ProxyStorage) MergeStorages() error {
 
 	// copy all existing keys with values from the proxy storage to the target storage
 	return kvstore.CopyBatched(s.storeProxy.TangleStore(), s.storeTarget.TangleStore(), 10000)
+}
+
+// Cleanup shuts down, flushes and closes the proxy store.
+func (s *ProxyStorage) Cleanup() {
+	s.storeProxy.ShutdownStorages()
+	s.storeProxy.FlushAndCloseStores()
 }
 
 // StoreMessageInterface
