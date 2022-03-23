@@ -377,7 +377,7 @@ func configureEvents() {
 			proto.Events.Errors.DetachAll()
 		}
 
-		if proto.Parser != nil && proto.Parser.Events != nil && proto.Parser.Events.Error != nil {
+		if proto.Parser != nil && proto.Parser.Events.Error != nil {
 			proto.Parser.Events.Error.DetachAll()
 		}
 	})

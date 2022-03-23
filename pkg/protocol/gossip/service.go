@@ -391,23 +391,16 @@ func (s *Service) eventLoop(ctx context.Context) {
 			return
 
 		case inboundStream := <-s.inboundStreamChan:
-			if proto := s.handleInboundStream(inboundStream); proto != nil {
-				s.Events.ProtocolStarted.Trigger(proto)
-			}
+			s.handleInboundStream(inboundStream)
 
 		case connectedMsg := <-s.connectedChan:
-			proto, err := s.handleConnected(connectedMsg.peer, connectedMsg.conn)
-			if err != nil {
-				s.Events.Error.Trigger(err)
-				continue
-			}
-
-			if proto != nil {
-				s.Events.ProtocolStarted.Trigger(proto)
-			}
+			s.handleConnected(connectedMsg.peer, connectedMsg.conn)
 
 		case disconnectMsg := <-s.closeStreamChan:
-			disconnectMsg.back <- s.deregisterProtocol(disconnectMsg.peerID)
+			if err := s.deregisterProtocol(disconnectMsg.peerID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
+				disconnectMsg.back <- err
+			}
+			disconnectMsg.back <- nil
 
 		case disconnectedMsg := <-s.disconnectedChan:
 			if err := s.deregisterProtocol(disconnectedMsg.peer.ID); err != nil && !errors.Is(err, ErrProtocolDoesNotExist) {
@@ -420,15 +413,7 @@ func (s *Service) eventLoop(ctx context.Context) {
 			}
 
 		case relationUpdatedMsg := <-s.relationUpdatedChan:
-			proto, err := s.handleRelationUpdated(relationUpdatedMsg.peer, relationUpdatedMsg.oldRelation)
-			if err != nil {
-				s.Events.Error.Trigger(err)
-				continue
-			}
-
-			if proto != nil {
-				s.Events.ProtocolStarted.Trigger(proto)
-			}
+			s.handleRelationUpdated(relationUpdatedMsg.peer, relationUpdatedMsg.oldRelation)
 
 		case streamReqMsg := <-s.streamReqChan:
 			streamReqMsg.back <- s.proto(streamReqMsg.peerID)
@@ -441,13 +426,14 @@ func (s *Service) eventLoop(ctx context.Context) {
 }
 
 // handles incoming streams and closes them if the given peer's relation should not allow any.
-func (s *Service) handleInboundStream(stream network.Stream) *Protocol {
+func (s *Service) handleInboundStream(stream network.Stream) {
 	remotePeerID := stream.Conn().RemotePeer()
+
 	// close if there is already one
 	if _, ongoing := s.streams[remotePeerID]; ongoing {
 		s.Events.InboundStreamCancelled.Trigger(stream, StreamCancelReasonDuplicated)
 		s.closeUnwantedStream(stream)
-		return nil
+		return
 	}
 
 	// close if the relation to the peer is unknown and no slot is available
@@ -474,14 +460,14 @@ func (s *Service) handleInboundStream(stream network.Stream) *Protocol {
 	if len(cancelReason) > 0 {
 		s.Events.InboundStreamCancelled.Trigger(stream, cancelReason)
 		s.closeUnwantedStream(stream)
-		return nil
+		return
 	}
 
 	if hasUnknownRelation {
 		s.unknownPeers[remotePeerID] = struct{}{}
 	}
 
-	return s.registerProtocol(remotePeerID, stream)
+	s.registerProtocol(remotePeerID, stream)
 }
 
 // closes the given unwanted stream by closing the underlying
@@ -496,30 +482,39 @@ func (s *Service) closeUnwantedStream(stream network.Stream) {
 
 // handles the automatic creation of a protocol instance if the given peer
 // was connected outbound and its peer relation allows it.
-func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) (*Protocol, error) {
-	// don't create a new protocol if one is already ongoing
-	if _, ongoing := s.streams[peer.ID]; ongoing {
-		return nil, nil
-	}
+func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
 
-	// only initiate protocol if we connected outbound:
-	// aka, handleInboundStream will be called for this connection
-	if conn.Stat().Direction != network.DirOutbound {
-		return nil, nil
-	}
-
-	if peer.Relation == p2p.PeerRelationUnknown {
-		if len(s.unknownPeers) >= s.opts.unknownPeersLimit {
-			return nil, nil
+	connect := func() error {
+		// don't create a new protocol if one is already ongoing
+		if _, ongoing := s.streams[peer.ID]; ongoing {
+			return nil
 		}
-		s.unknownPeers[peer.ID] = struct{}{}
+
+		// only initiate protocol if we connected outbound:
+		// aka, handleInboundStream will be called for this connection
+		if conn.Stat().Direction != network.DirOutbound {
+			return nil
+		}
+
+		if peer.Relation == p2p.PeerRelationUnknown {
+			if len(s.unknownPeers) >= s.opts.unknownPeersLimit {
+				return nil
+			}
+			s.unknownPeers[peer.ID] = struct{}{}
+		}
+
+		stream, err := s.openStream(peer.ID)
+		if err != nil {
+			return err
+		}
+
+		s.registerProtocol(peer.ID, stream)
+		return nil
 	}
 
-	stream, err := s.openStream(peer.ID)
-	if err != nil {
-		return nil, err
+	if err := connect(); err != nil {
+		s.Events.Error.Trigger(err)
 	}
-	return s.registerProtocol(peer.ID, stream), nil
 }
 
 // opens up a stream to the given peer.
@@ -538,10 +533,15 @@ func (s *Service) openStream(peerID peer.ID) (network.Stream, error) {
 }
 
 // registers a protocol instance for the given peer and stream.
-func (s *Service) registerProtocol(peerID peer.ID, stream network.Stream) *Protocol {
+func (s *Service) registerProtocol(peerID peer.ID, stream network.Stream) {
+	// don't create a new protocol if one is already ongoing
+	if _, ongoing := s.streams[peerID]; ongoing {
+		return
+	}
+
 	proto := NewProtocol(peerID, stream, s.opts.sendQueueSize, s.opts.streamReadTimeout, s.opts.streamWriteTimeout, s.serverMetrics)
 	s.streams[peerID] = proto
-	return proto
+	s.Events.ProtocolStarted.Trigger(proto)
 }
 
 // deregisters ongoing gossip protocol streams and closes them for the given peer.
@@ -569,35 +569,44 @@ func (s *Service) deregisterProtocol(peerID peer.ID) error {
 // is no longer unknown, a gossip protocol stream is started. likewise, if the
 // relation is "downgraded" to unknown, the ongoing stream is closed if no more
 // unknown peer slots are available.
-func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation) (*Protocol, error) {
+func (s *Service) handleRelationUpdated(peer *p2p.Peer, oldRel p2p.PeerRelation) {
 	newRel := peer.Relation
 
-	// close the stream if no more unknown peer slots are available
-	if newRel == p2p.PeerRelationUnknown {
-		if len(s.unknownPeers) >= s.opts.unknownPeersLimit {
-			err := s.deregisterProtocol(peer.ID)
-			return nil, err
+	updateRelation := func() error {
+		if newRel == p2p.PeerRelationUnknown {
+			if len(s.unknownPeers) >= s.opts.unknownPeersLimit {
+				// close the stream if no more unknown peer slots are available
+				err := s.deregisterProtocol(peer.ID)
+				return err
+			}
+			s.unknownPeers[peer.ID] = struct{}{}
 		}
-		s.unknownPeers[peer.ID] = struct{}{}
+
+		// clean up slot
+		if oldRel == p2p.PeerRelationUnknown {
+			delete(s.unknownPeers, peer.ID)
+		}
+
+		// don't create a new protocol if one is already ongoing
+		if _, ongoing := s.streams[peer.ID]; ongoing {
+			return nil
+		}
+
+		// here we might open a stream even if the connection is inbound:
+		// the service should however take care of duplicated streams
+		stream, err := s.openStream(peer.ID)
+		if err != nil {
+			return err
+		}
+
+		s.registerProtocol(peer.ID, stream)
+
+		return nil
 	}
 
-	// clean up slot
-	if oldRel == p2p.PeerRelationUnknown {
-		delete(s.unknownPeers, peer.ID)
+	if err := updateRelation(); err != nil {
+		s.Events.Error.Trigger(err)
 	}
-
-	if _, ongoing := s.streams[peer.ID]; ongoing {
-		return nil, nil
-	}
-
-	// here we might open a stream even if the connection is inbound:
-	// the service should however take care of duplicated streams
-	stream, err := s.openStream(peer.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.registerProtocol(peer.ID, stream), nil
 }
 
 // calls the given ProtocolForEachFunc on each protocol.
