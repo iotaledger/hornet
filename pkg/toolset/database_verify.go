@@ -63,12 +63,8 @@ func databaseVerify(args []string) error {
 	if err != nil {
 		return err
 	}
-
 	defer func() {
-		println("shutdown storages...")
 		tangleStoreSource.ShutdownStorages()
-
-		println("flush and close stores...")
 		tangleStoreSource.FlushAndCloseStores()
 	}()
 
@@ -114,6 +110,10 @@ func verifyDatabase(
 	if err != nil {
 		return err
 	}
+	defer func() {
+		tangleStoreTemp.ShutdownStorages()
+		tangleStoreTemp.FlushAndCloseStores()
+	}()
 
 	// load the genesis ledger state into the temporary storage (SEP and ledger state only)
 	println("loading genesis snapshot...")
