@@ -138,7 +138,7 @@ type TipSelector struct {
 	// lock for the tipsMaps
 	tipsLock syncutils.Mutex
 	// Events are the events that are triggered by the TipSelector.
-	Events Events
+	Events *Events
 }
 
 // New creates a new tip-selector.
@@ -177,7 +177,7 @@ func New(
 		spammerTipsThresholdSemiLazy:          spammerTipsThresholdSemiLazy,
 		nonLazyTipsMap:                        make(map[string]*Tip),
 		semiLazyTipsMap:                       make(map[string]*Tip),
-		Events: Events{
+		Events: &Events{
 			TipAdded:        events.NewEvent(TipCaller),
 			TipRemoved:      events.NewEvent(TipCaller),
 			TipSelPerformed: events.NewEvent(WalkerStatsCaller),

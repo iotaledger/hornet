@@ -80,7 +80,7 @@ var (
 	lastCheckpointMessageID hornet.MessageID
 	lastMilestoneMessageID  hornet.MessageID
 
-	// Closures
+	// closures
 	onMessageSolid                   *events.Closure
 	onConfirmedMilestoneIndexChanged *events.Closure
 	onIssuedCheckpoint               *events.Closure
@@ -584,5 +584,6 @@ func attachEvents() {
 func detachEvents() {
 	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
+	deps.Coordinator.Events.IssuedCheckpointMessage.Detach(onIssuedCheckpoint)
 	deps.Coordinator.Events.IssuedMilestone.Detach(onIssuedMilestone)
 }

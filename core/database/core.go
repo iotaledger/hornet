@@ -55,7 +55,7 @@ var (
 	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
 	deleteAll      = flag.Bool(CfgTangleDeleteAll, false, "whether to delete the database and snapshots at startup")
 
-	// Closures
+	// closures
 	onPruningStateChanged *events.Closure
 )
 

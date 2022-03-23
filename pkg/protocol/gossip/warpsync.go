@@ -22,7 +22,7 @@ import (
 func NewWarpSync(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteria) *WarpSync {
 	ws := &WarpSync{
 		AdvancementRange: advRange,
-		Events: Events{
+		Events: &Events{
 			CheckpointUpdated: events.NewEvent(CheckpointCaller),
 			TargetUpdated:     events.NewEvent(TargetCaller),
 			Start:             events.NewEvent(SyncStartCaller),
@@ -95,7 +95,7 @@ type WarpSync struct {
 	// The used advancement range per checkpoint.
 	AdvancementRange int
 	// The Events of the warpsync.
-	Events Events
+	Events *Events
 	// The criteria whether to advance to the next checkpoint.
 	advCheckpointCriteria AdvanceCheckpointCriteria
 
