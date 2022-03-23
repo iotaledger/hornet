@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gobuffalo/packr/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 
+	"github.com/gohornet/dashboard"
 	"github.com/gohornet/hornet/pkg/jwt"
 )
 
@@ -34,35 +34,7 @@ var (
 
 	// ErrForbidden defines the forbidden error.
 	ErrForbidden = echo.ErrForbidden
-
-	// holds dashboard assets
-	appBox = packr.New("Dashboard_App", "./frontend/build")
 )
-
-func appBoxMiddleware() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) (err error) {
-			contentType := calculateMimeType(c)
-
-			path := strings.TrimPrefix(c.Request().URL.Path, "/")
-			if len(path) == 0 {
-				path = "index.html"
-				contentType = echo.MIMETextHTMLCharsetUTF8
-			}
-			staticBlob, err := appBox.Find(path)
-			if err != nil {
-				// If the asset cannot be found, fall back to the index.html for routing
-				path = "index.html"
-				contentType = echo.MIMETextHTMLCharsetUTF8
-				staticBlob, err = appBox.Find(path)
-				if err != nil {
-					return next(c)
-				}
-			}
-			return c.Blob(http.StatusOK, contentType, staticBlob)
-		}
-	}
-}
 
 func devModeReverseProxyMiddleware() echo.MiddlewareFunc {
 
@@ -137,36 +109,6 @@ func apiMiddlewares() []echo.MiddlewareFunc {
 	}
 }
 
-func calculateMimeType(e echo.Context) string {
-	url := e.Request().URL.String()
-
-	switch {
-	case strings.HasSuffix(url, ".html"):
-		return echo.MIMETextHTMLCharsetUTF8
-	case strings.HasSuffix(url, ".css"):
-		return "text/css"
-	case strings.HasSuffix(url, ".js"):
-		return echo.MIMEApplicationJavaScript
-	case strings.HasSuffix(url, ".json"):
-		return echo.MIMEApplicationJSONCharsetUTF8
-	case strings.HasSuffix(url, ".png"):
-		return "image/png"
-	case strings.HasSuffix(url, ".svg"):
-		return "image/svg+xml"
-	default:
-		return echo.MIMETextHTMLCharsetUTF8
-	}
-}
-
-func enforceMaxOneDotPerURL(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		if strings.Count(c.Request().URL.Path, "..") != 0 {
-			return c.String(http.StatusForbidden, "path not allowed")
-		}
-		return next(c)
-	}
-}
-
 func authRoute(c echo.Context) error {
 
 	type loginRequest struct {
@@ -204,10 +146,9 @@ func authRoute(c echo.Context) error {
 
 func setupRoutes(e *echo.Echo) {
 
-	e.Pre(enforceMaxOneDotPerURL)
 	e.Use(middleware.CSRF())
 
-	mw := appBoxMiddleware()
+	mw := dashboard.FrontendMiddleware()
 	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
 		mw = devModeReverseProxyMiddleware()
 	}

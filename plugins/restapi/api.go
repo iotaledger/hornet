@@ -124,6 +124,7 @@ var dashboardAllowedRoutes = map[string][]string{
 		"/api/v2/outputs",
 		"/api/v2/peers",
 		"/api/v2/transactions",
+		"/api/plugins/indexer/v1",
 		"/api/plugins/spammer/v1",
 		"/api/plugins/participation/v1/events",
 	},
