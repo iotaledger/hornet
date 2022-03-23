@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/milestone"
+	inx "github.com/iotaledger/inx/go"
 )
 
 // milestonePayload defines the payload of the milestone latest and confirmed topics

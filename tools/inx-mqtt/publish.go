@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -94,7 +94,7 @@ func (s *Server) PublishTransactionIncludedMessage(transactionID *iotago.Transac
 
 func (s *Server) PublishMessageMetadata(metadata *inx.MessageMetadata) {
 
-	messageID := metadata.UnwrapMessageID().ToHex()
+	messageID := iotago.MessageIDToHexString(metadata.UnwrapMessageID())
 	singleMessageTopic := strings.ReplaceAll(topicMessagesMetadata, "{messageId}", messageID)
 	hasSingleMessageTopicSubscriber := s.MQTTBroker.HasSubscribers(singleMessageTopic)
 	hasAllMessagesTopicSubscriber := s.MQTTBroker.HasSubscribers(topicMessagesReferenced)
@@ -165,7 +165,7 @@ func payloadForOutput(ledgerIndex milestone.Index, output *inx.LedgerOutput, iot
 	transactionID := outputID.TransactionID()
 
 	return &outputPayload{
-		MessageID:                output.GetMessageId().Unwrap().ToHex(),
+		MessageID:                iotago.MessageIDToHexString(output.GetMessageId().Unwrap()),
 		TransactionID:            transactionID.ToHex(),
 		Spent:                    false,
 		OutputIndex:              outputID.Index(),
@@ -301,16 +301,16 @@ func (s *Server) PublishSpent(ledgerIndex milestone.Index, spent *inx.LedgerSpen
 	s.PublishOnUnlockConditionTopics(topicSpentOutputsByUnlockConditionAndAddress, iotaOutput, payloadFunc)
 }
 
-func messageIDFromTopic(topicName string) hornet.MessageID {
+func messageIDFromTopic(topicName string) *iotago.MessageID {
 	if strings.HasPrefix(topicName, "messages/") && strings.HasSuffix(topicName, "/metadata") {
 		messageIDHex := strings.Replace(topicName, "messages/", "", 1)
 		messageIDHex = strings.Replace(messageIDHex, "/metadata", "", 1)
 
-		messageID, err := hornet.MessageIDFromHex(messageIDHex)
+		messageID, err := iotago.MessageIDFromHexString(messageIDHex)
 		if err != nil {
 			return nil
 		}
-		return messageID
+		return &messageID
 	}
 	return nil
 }

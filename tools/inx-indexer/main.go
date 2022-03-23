@@ -22,13 +22,14 @@ import (
 
 	indexerpkg "github.com/gohornet/hornet/pkg/indexer"
 	indexer_server "github.com/gohornet/hornet/pkg/indexer/server"
-	"github.com/gohornet/hornet/pkg/inx"
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	inx "github.com/iotaledger/inx/go"
 )
 
 const (
@@ -47,7 +48,7 @@ const (
 
 func ConvertINXOutput(output *inx.LedgerOutput) (*utxo.Output, error) {
 	outputID := output.UnwrapOutputID()
-	messageID := output.UnwrapMessageID()
+	messageID := hornet.MessageIDFromArray(output.UnwrapMessageID())
 	milestoneIndex := milestone.Index(output.GetMilestoneIndexBooked())
 	milestoneTimestamp := uint64(output.GetMilestoneTimestampBooked())
 	o, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation)
@@ -116,7 +117,7 @@ func fillIndexer(client inx.INXClient, indexer *indexerpkg.Indexer) error {
 			return err
 		}
 		outputLedgerIndex := milestone.Index(message.GetLedgerIndex())
-		output := utxo.CreateOutput(ledgerOutput.UnwrapOutputID(), ledgerOutput.UnwrapMessageID(), milestone.Index(ledgerOutput.GetMilestoneIndexBooked()), uint64(ledgerOutput.GetMilestoneTimestampBooked()), iotaOutput)
+		output := utxo.CreateOutput(ledgerOutput.UnwrapOutputID(), hornet.MessageIDFromArray(ledgerOutput.UnwrapMessageID()), milestone.Index(ledgerOutput.GetMilestoneIndexBooked()), uint64(ledgerOutput.GetMilestoneTimestampBooked()), iotaOutput)
 		if err := importer.AddOutput(output); err != nil {
 			return err
 		}

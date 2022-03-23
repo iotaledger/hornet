@@ -6,13 +6,69 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
+	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
+
+func NewLedgerOutput(o *utxo.Output) (*inx.LedgerOutput, error) {
+	outputBytes, err := o.Output().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	if err != nil {
+		return nil, err
+	}
+	l := &inx.LedgerOutput{
+		OutputId:                 inx.NewOutputId(o.OutputID()),
+		MessageId:                inx.NewMessageId(o.MessageID().ToArray()),
+		MilestoneIndexBooked:     uint32(o.MilestoneIndex()),
+		MilestoneTimestampBooked: o.MilestoneTimestamp(),
+		Output:                   make([]byte, len(outputBytes)),
+	}
+	copy(l.Output, outputBytes)
+	return l, nil
+}
+
+func NewLedgerSpent(s *utxo.Spent) (*inx.LedgerSpent, error) {
+	output, err := NewLedgerOutput(s.Output())
+	if err != nil {
+		return nil, err
+	}
+	transactionID := s.TargetTransactionID()
+	l := &inx.LedgerSpent{
+		Output:                  output,
+		TransactionIdSpent:      make([]byte, len(transactionID)),
+		MilestoneIndexSpent:     uint32(s.MilestoneIndex()),
+		MilestoneTimestampSpent: s.MilestoneTimestamp(),
+	}
+	copy(l.TransactionIdSpent, transactionID[:])
+	return l, nil
+}
+
+func NewLedgerUpdate(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) (*inx.LedgerUpdate, error) {
+	u := &inx.LedgerUpdate{
+		MilestoneIndex: uint32(index),
+		Created:        make([]*inx.LedgerOutput, len(newOutputs)),
+		Consumed:       make([]*inx.LedgerSpent, len(newSpents)),
+	}
+	for i, o := range newOutputs {
+		output, err := NewLedgerOutput(o)
+		if err != nil {
+			return nil, err
+		}
+		u.Created[i] = output
+	}
+	for i, s := range newSpents {
+		spent, err := NewLedgerSpent(s)
+		if err != nil {
+			return nil, err
+		}
+		u.Consumed[i] = spent
+	}
+	return u, nil
+}
 
 func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.OutputResponse, error) {
 	deps.UTXOManager.ReadLockLedger()
@@ -35,7 +91,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 		if err != nil {
 			return nil, err
 		}
-		ledgerOutput, err := inx.NewLedgerOutput(output)
+		ledgerOutput, err := NewLedgerOutput(output)
 		if err != nil {
 			return nil, err
 		}
@@ -51,7 +107,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 	if err != nil {
 		return nil, err
 	}
-	ledgerSpent, err := inx.NewLedgerSpent(spent)
+	ledgerSpent, err := NewLedgerSpent(spent)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +130,7 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 
 	var innerErr error
 	err = deps.UTXOManager.ForEachUnspentOutput(func(output *utxo.Output) bool {
-		ledgerOutput, err := inx.NewLedgerOutput(output)
+		ledgerOutput, err := NewLedgerOutput(output)
 		if err != nil {
 			innerErr = err
 			return false
@@ -117,7 +173,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerUpdateRequest, srv inx.
 				if err != nil {
 					return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
 				}
-				payload, err := inx.NewLedgerUpdate(msDiff.Index, msDiff.Outputs, msDiff.Spents)
+				payload, err := NewLedgerUpdate(msDiff.Index, msDiff.Outputs, msDiff.Spents)
 				if err != nil {
 					return err
 				}
@@ -138,7 +194,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerUpdateRequest, srv inx.
 		index := task.Param(0).(milestone.Index)
 		newOutputs := task.Param(1).(utxo.Outputs)
 		newSpents := task.Param(2).(utxo.Spents)
-		payload, err := inx.NewLedgerUpdate(index, newOutputs, newSpents)
+		payload, err := NewLedgerUpdate(index, newOutputs, newSpents)
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
