@@ -12,11 +12,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/gohornet/hornet/pkg/inx"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/mqtt"
 	mqttpkg "github.com/gohornet/hornet/pkg/mqtt"
+	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -99,7 +98,7 @@ func (s *Server) onSubscribeTopic(ctx context.Context, topic string) {
 	default:
 		if strings.HasPrefix(topic, "messages/") {
 			if messageID := messageIDFromTopic(topic); messageID != nil {
-				go s.fetchAndPublishMessageMetadata(ctx, messageID)
+				go s.fetchAndPublishMessageMetadata(ctx, *messageID)
 			}
 			s.startListenIfNeeded(ctx, grpcListenToSolidMessages, s.listenToSolidMessages)
 			s.startListenIfNeeded(ctx, grpcListenToReferencedMessages, s.listenToReferencedMessages)
@@ -374,8 +373,8 @@ func (s *Server) fetchAndPublishMilestoneTopics(ctx context.Context) {
 	s.PublishMilestoneOnTopic(topicMilestonesConfirmed, resp.GetConfirmedMilestone())
 }
 
-func (s *Server) fetchAndPublishMessageMetadata(ctx context.Context, messageID hornet.MessageID) {
-	fmt.Printf("fetchAndPublishMessageMetadata: %s\n", messageID.ToHex())
+func (s *Server) fetchAndPublishMessageMetadata(ctx context.Context, messageID iotago.MessageID) {
+	fmt.Printf("fetchAndPublishMessageMetadata: %s\n", iotago.MessageIDToHexString(messageID))
 	resp, err := s.Client.ReadMessageMetadata(ctx, inx.NewMessageId(messageID))
 	if err != nil {
 		return
@@ -404,7 +403,7 @@ func (s *Server) fetchAndPublishTransactionInclusion(ctx context.Context, transa
 	s.fetchAndPublishTransactionInclusionWithMessage(ctx, transactionID, resp.GetOutput().UnwrapMessageID())
 }
 
-func (s *Server) fetchAndPublishTransactionInclusionWithMessage(ctx context.Context, transactionID *iotago.TransactionID, messageID hornet.MessageID) {
+func (s *Server) fetchAndPublishTransactionInclusionWithMessage(ctx context.Context, transactionID *iotago.TransactionID, messageID iotago.MessageID) {
 	resp, err := s.Client.ReadMessage(ctx, inx.NewMessageId(messageID))
 	if err != nil {
 		return

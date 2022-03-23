@@ -8,8 +8,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/plugins/restapi"
+	inx "github.com/iotaledger/inx/go"
 )
 
 func (s *INXServer) RegisterAPIRoute(_ context.Context, req *inx.APIRouteRequest) (*inx.NoParams, error) {

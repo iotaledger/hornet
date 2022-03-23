@@ -9,9 +9,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer/v2"
+	inx "github.com/iotaledger/inx/go"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func main() {
@@ -48,6 +49,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Rec: %s => %s\n", message.UnwrapMessageID().ToHex(), string(jsonMsg))
+		fmt.Printf("Rec: %s => %s\n", iotago.MessageIDToHexString(message.UnwrapMessageID()), string(jsonMsg))
 	}
 }

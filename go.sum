@@ -841,6 +841,8 @@ github.com/iotaledger/hive.go v0.0.0-20220321105346-3f491b0e89c6 h1:9feq9eTOUeQc
 github.com/iotaledger/hive.go v0.0.0-20220321105346-3f491b0e89c6/go.mod h1:YKe8Y/+kiF1oZWnu6p67QEzofFNxNsAMpP6MpcvbnNM=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220209164443-53ca2b8201b4 h1:OayOb1hDkItzIoNl49dh1pAxuKxPWcT9K91ONwYOd3g=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220209164443-53ca2b8201b4/go.mod h1:Aw7fS+UjhMBj4hxTBxSG8Ti/5ifp1SWFpyapGZFuzdc=
+github.com/iotaledger/inx/go v0.0.0-20220323132515-2c55b385ce36 h1:q2JgCWLj3MJICw/kNsGXgp0fZmPS0MA5R7/HqjIXdiU=
+github.com/iotaledger/inx/go v0.0.0-20220323132515-2c55b385ce36/go.mod h1:slkjXywDLaBc2YpSsoxawQYvzyCKdliKxtPoDWMJ9Zk=
 github.com/iotaledger/iota.go v1.0.0 h1:tqm1FxJ/zOdzbrAaQ5BQpVF8dUy2eeGlSeWlNG8GoXY=
 github.com/iotaledger/iota.go v1.0.0/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go/v3 v3.0.0-20220321174547-5b62a60c7774 h1:eWDB77e/OzlPMkBME2vTcKFDaLjKfEtEMe8CmcqhjAk=
@@ -2311,8 +2313,8 @@ google.golang.org/genproto v0.0.0-20210319143718-93e7006c17a6/go.mod h1:FWY/as6D
 google.golang.org/genproto v0.0.0-20210402141018-6c239bbf2bb1/go.mod h1:9lPAdzaEmUacj36I+k7YKbEc5CXzPIeORRgDAUOu28A=
 google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c/go.mod h1:UODoCrxHCcBojKKwX1terBiRUaqAsFqJiF615XL43r0=
 google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84/go.mod h1:SzzZ/N+nwJDaO1kznhnlzqS8ocJICar6hYhVyhi++24=
-google.golang.org/genproto v0.0.0-20220317150908-0efb43f6373e h1:fNKDNuUyC4WH+inqDMpfXDdfvwfYILbsX+oskGZ8hxg=
-google.golang.org/genproto v0.0.0-20220317150908-0efb43f6373e/go.mod h1:hAL49I2IFola2sVEjAn7MEwsja0xp51I0tlGAf9hz4E=
+google.golang.org/genproto v0.0.0-20220322021311-435b647f9ef2 h1:3n0D2NdPGm0g0wrVJzXJWW5CBOoqgGBkDX9cRMJHZAY=
+google.golang.org/genproto v0.0.0-20220322021311-435b647f9ef2/go.mod h1:hAL49I2IFola2sVEjAn7MEwsja0xp51I0tlGAf9hz4E=
 google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
 google.golang.org/grpc v1.12.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
 google.golang.org/grpc v1.14.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=

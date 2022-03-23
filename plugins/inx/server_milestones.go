@@ -6,11 +6,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
+	inx "github.com/iotaledger/inx/go"
 )
 
 func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
@@ -19,7 +19,8 @@ func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
 		return nil, status.Errorf(codes.NotFound, "milestone %d not found", msIndex)
 	}
 	defer cachedMilestone.Release(true) // milestone -1
-	return inx.NewMilestone(cachedMilestone.Milestone()), nil
+	ms := cachedMilestone.Milestone()
+	return inx.NewMilestone(ms.MessageID.ToArray(), uint32(ms.Index), uint32(ms.Timestamp.Unix())), nil
 }
 
 func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*inx.Milestone, error) {
@@ -31,7 +32,8 @@ func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenT
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
 		defer cachedMilestone.Release(true) // milestone -1
-		payload := inx.NewMilestone(cachedMilestone.Milestone())
+		ms := cachedMilestone.Milestone()
+		payload := inx.NewMilestone(ms.MessageID.ToArray(), uint32(ms.Index), uint32(ms.Timestamp.Unix()))
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -54,7 +56,8 @@ func (s *INXServer) ListenToConfirmedMilestone(_ *inx.NoParams, srv inx.INX_List
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
 		defer cachedMilestone.Release(true) // milestone -1
-		payload := inx.NewMilestone(cachedMilestone.Milestone())
+		ms := cachedMilestone.Milestone()
+		payload := inx.NewMilestone(ms.MessageID.ToArray(), uint32(ms.Index), uint32(ms.Timestamp.Unix()))
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()

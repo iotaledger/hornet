@@ -9,7 +9,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/inx"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -18,11 +17,12 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
+	inx "github.com/iotaledger/inx/go"
 )
 
 func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.MessageMetadata) (*inx.MessageMetadata, error) {
 	m := &inx.MessageMetadata{
-		MessageId: inx.NewMessageId(messageID),
+		MessageId: inx.NewMessageId(messageID.ToArray()),
 		Parents:   metadata.Parents().ToSliceOfSlices(),
 		Solid:     metadata.IsSolid(),
 	}
@@ -80,18 +80,18 @@ func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.Message
 }
 
 func (s *INXServer) ReadMessage(_ context.Context, messageID *inx.MessageId) (*inx.RawMessage, error) {
-	cachedMsg := deps.Storage.CachedMessageOrNil(messageID.Unwrap()) // message +1
+	cachedMsg := deps.Storage.CachedMessageOrNil(hornet.MessageIDFromArray(messageID.Unwrap())) // message +1
 	if cachedMsg == nil {
-		return nil, status.Errorf(codes.NotFound, "message %s not found", messageID.Unwrap().ToHex())
+		return nil, status.Errorf(codes.NotFound, "message %s not found", hornet.MessageIDFromArray(messageID.Unwrap()).ToHex())
 	}
 	defer cachedMsg.Release(true) // message -1
 	return inx.WrapMessage(cachedMsg.Message().Message())
 }
 
 func (s *INXServer) ReadMessageMetadata(_ context.Context, messageID *inx.MessageId) (*inx.MessageMetadata, error) {
-	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID.Unwrap()) // meta +1
+	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(hornet.MessageIDFromArray(messageID.Unwrap())) // meta +1
 	if cachedMsgMeta == nil {
-		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", messageID.Unwrap().ToHex())
+		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", hornet.MessageIDFromArray(messageID.Unwrap()).ToHex())
 	}
 	defer cachedMsgMeta.Release(true) // meta -1
 	return INXNewMessageMetadata(cachedMsgMeta.Metadata().MessageID(), cachedMsgMeta.Metadata())
@@ -103,7 +103,7 @@ func (s *INXServer) ListenToMessages(filter *inx.MessageFilter, srv inx.INX_List
 		cachedMsg := task.Param(0).(*storage.CachedMessage)
 		defer cachedMsg.Release(true) // message -1
 
-		payload := inx.NewMessageWithBytes(cachedMsg.Message().MessageID(), cachedMsg.Message().Data())
+		payload := inx.NewMessageWithBytes(cachedMsg.Message().MessageID().ToArray(), cachedMsg.Message().Data())
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -195,5 +195,5 @@ func (s *INXServer) SubmitMessage(context context.Context, message *inx.RawMessa
 	if err != nil {
 		return nil, err
 	}
-	return inx.NewMessageId(messageID), nil
+	return inx.NewMessageId(messageID.ToArray()), nil
 }
