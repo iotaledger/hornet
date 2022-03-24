@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -29,15 +28,6 @@ const (
 	// ParameterAddress is used to identify an address.
 	ParameterAddress = "address"
 
-	// ParameterFoundryID is used to identify a foundry by its ID.
-	ParameterFoundryID = "foundryID"
-
-	// ParameterAliasID is used to identify an alias by its ID.
-	ParameterAliasID = "aliasID"
-
-	// ParameterNFTID is used to identify a nft by its ID.
-	ParameterNFTID = "nftID"
-
 	// ParameterMilestoneIndex is used to identify a milestone.
 	ParameterMilestoneIndex = "milestoneIndex"
 
@@ -56,7 +46,7 @@ var (
 	ErrServiceNotImplemented = echo.NewHTTPError(http.StatusNotImplemented, "service not implemented")
 )
 
-// JSONResponse wraps the result into a "data" field and sends the JSON response with status code.
+// JSONResponse sends the JSON response with status code.
 func JSONResponse(c echo.Context, statusCode int, result interface{}) error {
 	return c.JSON(statusCode, result)
 }
@@ -166,91 +156,6 @@ func ParseEd25519AddressParam(c echo.Context) (*iotago.Ed25519Address, error) {
 	return &address, nil
 }
 
-func ParseAliasAddressParam(c echo.Context) (*iotago.AliasAddress, error) {
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	addressBytes, err := iotago.DecodeHex(addressParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
-	}
-
-	if len(addressBytes) != (iotago.AliasAddressBytesLength) {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address length: %s", addressParam)
-	}
-
-	var address iotago.AliasAddress
-	copy(address[:], addressBytes)
-	return &address, nil
-}
-
-func ParseNFTAddressParam(c echo.Context) (*iotago.NFTAddress, error) {
-	addressParam := strings.ToLower(c.Param(ParameterAddress))
-
-	addressBytes, err := iotago.DecodeHex(addressParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
-	}
-
-	if len(addressBytes) != (iotago.NFTAddressBytesLength) {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address length: %s", addressParam)
-	}
-
-	var address iotago.NFTAddress
-	copy(address[:], addressBytes)
-	return &address, nil
-}
-
-func ParseAliasIDParam(c echo.Context) (*iotago.AliasID, error) {
-	aliasIDParam := strings.ToLower(c.Param(ParameterAliasID))
-
-	aliasIDBytes, err := iotago.DecodeHex(aliasIDParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid alias ID: %s, error: %s", aliasIDParam, err)
-	}
-
-	if len(aliasIDBytes) != iotago.AliasIDLength {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid alias ID: %s, error: %s", aliasIDParam, err)
-	}
-
-	var aliasID iotago.AliasID
-	copy(aliasID[:], aliasIDBytes)
-	return &aliasID, nil
-}
-
-func ParseNFTIDParam(c echo.Context) (*iotago.NFTID, error) {
-	nftIDParam := strings.ToLower(c.Param(ParameterNFTID))
-
-	nftIDBytes, err := iotago.DecodeHex(nftIDParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid NFT ID: %s, error: %s", nftIDParam, err)
-	}
-
-	if len(nftIDBytes) != iotago.NFTIDLength {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid NFT ID: %s, error: %s", nftIDParam, err)
-	}
-
-	var nftID iotago.NFTID
-	copy(nftID[:], nftIDBytes)
-	return &nftID, nil
-}
-
-func ParseFoundryIDParam(c echo.Context) (*iotago.FoundryID, error) {
-	foundryIDParam := strings.ToLower(c.Param(ParameterFoundryID))
-
-	foundryIDBytes, err := iotago.DecodeHex(foundryIDParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid foundry ID: %s, error: %s", foundryIDParam, err)
-	}
-
-	if len(foundryIDBytes) != iotago.FoundryIDLength {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid foundry ID: %s, error: %s", foundryIDParam, err)
-	}
-
-	var foundryID iotago.FoundryID
-	copy(foundryID[:], foundryIDBytes)
-	return &foundryID, nil
-}
-
 func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index, error) {
 	milestoneIndex := strings.ToLower(c.Param(paramName))
 	if milestoneIndex == "" {
@@ -263,41 +168,6 @@ func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index
 	}
 
 	return milestone.Index(msIndex), nil
-}
-
-func ParseUint32QueryParam(c echo.Context, paramName string, maxValue ...uint32) (uint32, error) {
-	intString := strings.ToLower(c.QueryParam(paramName))
-	if intString == "" {
-		return 0, errors.WithMessagef(ErrInvalidParameter, "parameter \"%s\" not specified", paramName)
-	}
-
-	value, err := strconv.ParseUint(intString, 10, 32)
-	if err != nil {
-		return 0, errors.WithMessagef(ErrInvalidParameter, "invalid value: %s, error: %s", intString, err)
-	}
-
-	if len(maxValue) > 0 {
-		if uint32(value) > maxValue[0] {
-			return 0, errors.WithMessagef(ErrInvalidParameter, "invalid value: %s, higher than the max number %d", intString, maxValue)
-		}
-	}
-	return uint32(value), nil
-}
-
-func ParseMilestoneIndexQueryParam(c echo.Context, paramName string) (milestone.Index, error) {
-	msIndex, err := ParseUint32QueryParam(c, paramName)
-	if err != nil {
-		return 0, err
-	}
-	return milestone.Index(msIndex), nil
-}
-
-func ParseUnixTimestampQueryParam(c echo.Context, paramName string) (time.Time, error) {
-	timestamp, err := ParseUint32QueryParam(c, paramName)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return time.Unix(int64(timestamp), 0), nil
 }
 
 func ParsePeerIDParam(c echo.Context) (peer.ID, error) {
@@ -326,36 +196,4 @@ func ParseOutputTypeQueryParam(c echo.Context) (*iotago.OutputType, error) {
 		filteredType = &outputType
 	}
 	return filteredType, nil
-}
-
-func ParseBech32AddressQueryParam(c echo.Context, prefix iotago.NetworkPrefix, paramName string) (iotago.Address, error) {
-	addressParam := strings.ToLower(c.QueryParam(paramName))
-
-	hrp, bech32Address, err := iotago.ParseBech32(addressParam)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid address: %s, error: %s", addressParam, err)
-	}
-
-	if hrp != prefix {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid bech32 address, expected prefix: %s", prefix)
-	}
-
-	return bech32Address, nil
-}
-
-func ParseHexQueryParam(c echo.Context, paramName string, maxLen int) ([]byte, error) {
-	param := c.QueryParam(paramName)
-
-	paramBytes, err := iotago.DecodeHex(param)
-	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid param: %s, error: %s", paramName, err)
-	}
-	if len(paramBytes) > maxLen {
-		return nil, errors.WithMessage(ErrInvalidParameter, fmt.Sprintf("query parameter %s too long, max. %d bytes but is %d", paramName, maxLen, len(paramBytes)))
-	}
-	return paramBytes, nil
-}
-
-func ParseBoolQueryParam(c echo.Context, paramName string) (bool, error) {
-	return strconv.ParseBool(c.QueryParam(paramName))
 }
