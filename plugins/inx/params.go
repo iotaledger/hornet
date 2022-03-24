@@ -7,15 +7,15 @@ import (
 )
 
 const (
-	// CfgINXPort the port the INX extensions should connect to
-	CfgINXPort = "inx.port"
+	// CfgINXBindAddress the bind address on which the INX can be accessed from
+	CfgINXBindAddress = "inx.bindAddress"
 )
 
 var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.Int(CfgINXPort, 9029, "the port the INX extensions should connect to")
+			fs.String(CfgINXBindAddress, "localhost:9029", "the bind address on which the INX can be accessed from")
 			return fs
 		}(),
 	},

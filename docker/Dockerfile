@@ -46,6 +46,7 @@ EXPOSE 14265/tcp
 EXPOSE 8081/tcp
 EXPOSE 8091/tcp
 EXPOSE 1883/tcp
+EXPOSE 9029/tcp
 
 # Copy the app dir into distroless image
 COPY --chown=nonroot:nonroot --from=build /app /app
