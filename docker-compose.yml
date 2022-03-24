@@ -1,9 +1,16 @@
 version: '3'
 services:
-  inx-indexer:
-    image: iotaledger/inx-indexer:latest
+  start_dependencies:
+    image: dadarek/wait-for-dependencies
     depends_on:
       - hornet
+    command: hornet:9029
+
+  inx-indexer:
+    image: iotaledger/inx-indexer:latest
+    restart: on-failure
+    depends_on:
+      - start_dependencies
     command:
       - "--inx.address=hornet:9029"
       - "--indexer.bindAddress=inx-indexer:9091"
@@ -11,8 +18,9 @@ services:
 
   inx-mqtt:
     image: iotaledger/inx-mqtt:latest
+    restart: on-failure
     depends_on:
-      - hornet
+      - start_dependencies
     command:
       - "--inx.address=hornet:9029"
       - "--mqtt.bindAddress=inx-mqtt:1883"
