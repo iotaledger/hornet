@@ -2,9 +2,6 @@ package inx
 
 import (
 	"context"
-	"io/ioutil"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -21,7 +18,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
-	hiveutils "github.com/iotaledger/hive.go/kvstore/utils"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -40,10 +36,9 @@ func init() {
 }
 
 var (
-	Plugin     *node.Plugin
-	deps       dependencies
-	attacher   *tangle.MessageAttacher
-	extensions []*Extension
+	Plugin   *node.Plugin
+	deps     dependencies
+	attacher *tangle.MessageAttacher
 
 	messageProcessedTimeout = 1 * time.Second
 )
@@ -92,81 +87,17 @@ func configure() {
 	}
 
 	attacher = deps.Tangle.MessageAttacher(attacherOpts...)
-	loadExtensions()
 }
 
 func run() {
 	if err := Plugin.Daemon().BackgroundWorker("INX", func(ctx context.Context) {
 		Plugin.LogInfo("Starting INX ... done")
 		deps.INXServer.Start()
-		startExtensions()
 		<-ctx.Done()
-		stopExtensions()
 		Plugin.LogInfo("Stopping INX ...")
 		deps.INXServer.Stop()
 		Plugin.LogInfo("Stopping INX ... done")
 	}, shutdown.PriorityIndexer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
-	}
-}
-
-func loadExtensions() {
-	extensions = make([]*Extension, 0)
-
-	inxPath := deps.NodeConfig.String(CfgINXPath)
-
-	disabledExtensions := make(map[string]struct{})
-	for _, d := range deps.NodeConfig.Strings(CfgINXDisableExtensions) {
-		disabledExtensions[strings.ToLower(d)] = struct{}{}
-	}
-
-	dirExists, err := hiveutils.PathExists(inxPath)
-	if err != nil {
-		return
-	}
-	if !dirExists {
-		return
-	}
-	files, err := ioutil.ReadDir(inxPath)
-	if err != nil {
-		return
-	}
-	for _, f := range files {
-		if f.IsDir() {
-			extension, err := NewExtension(filepath.Join(inxPath, f.Name()))
-			if err != nil {
-				Plugin.LogErrorf("Error loading INX extension: %s", err)
-				continue
-			}
-			if _, disable := disabledExtensions[strings.ToLower(extension.Name)]; disable {
-				Plugin.LogInfof("Skipping disabled INX extension: %s", extension.Name)
-				continue
-			}
-			Plugin.LogInfof("Loaded INX extension: %s", extension.Name)
-			extensions = append(extensions, extension)
-		}
-	}
-}
-
-func startExtensions() {
-	for _, e := range extensions {
-		go func(ext *Extension) {
-			Plugin.LogInfof("Starting INX extension: %s", ext.Name)
-			err := ext.Start(deps.NodeConfig.Int(CfgINXPort))
-			if err != nil {
-				Plugin.LogErrorf("INX extension ended with error: %s", err)
-			}
-		}(e)
-	}
-}
-
-func stopExtensions() {
-	for _, e := range extensions {
-		Plugin.LogInfof("Stopping INX extension: %s", e.Name)
-		if err := e.Stop(); err != nil {
-			Plugin.LogErrorf("INX extension stop error: %s", err)
-			Plugin.LogInfof("Killing INX extension: %s", e.Name)
-			e.Kill()
-		}
 	}
 }

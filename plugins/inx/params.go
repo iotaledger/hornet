@@ -9,10 +9,6 @@ import (
 const (
 	// CfgINXPort the port the INX extensions should connect to
 	CfgINXPort = "inx.port"
-	// CfgINXPath the path with the extensions to be loaded
-	CfgINXPath = "inx.path"
-	// CfgINXDisableExtensions defines a list of extensions that shall be disabled
-	CfgINXDisableExtensions = "inx.disableExtensions"
 )
 
 var params = &node.PluginParams{
@@ -20,8 +16,6 @@ var params = &node.PluginParams{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.Int(CfgINXPort, 9029, "the port the INX extensions should connect to")
-			fs.String(CfgINXPath, "inx", "the path with the extensions to be loaded")
-			fs.StringSlice(CfgINXDisableExtensions, []string{}, "defines a list of extensions that shall be disabled")
 			return fs
 		}(),
 	},
