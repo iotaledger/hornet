@@ -7,7 +7,6 @@ LABEL org.label-schema.description="HORNET - The IOTA community node"
 LABEL org.label-schema.name="gohornet/hornet"
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.vcs-url="https://github.com/gohornet/hornet"
-LABEL org.label-schema.usage="https://github.com/gohornet/hornet/blob/main/documentation/docs/getting_started/using_docker.md"
 
 # Ensure ca-certificates are up to date
 RUN update-ca-certificates
@@ -28,16 +27,6 @@ RUN go mod verify
 
 # Build the binary
 RUN go build -o /app/hornet -a -tags="$BUILD_TAGS" -ldflags='-w -s'
-
-# Build the Indexer INX binary
-RUN mkdir -p /app/inx/indexer
-RUN go build -o /app/inx/indexer/inx-indexer ./tools/inx-indexer
-COPY ./inx/indexer/inx.json /app/inx/indexer/inx.json
-
-# Build the MQTT INX binary
-RUN mkdir -p /app/inx/mqtt
-RUN go build -o /app/inx/mqtt/inx-mqtt ./tools/inx-mqtt
-COPY ./inx/mqtt/inx.json /app/inx/mqtt/inx.json
 
 # Copy the assets
 COPY ./config.json /app/config.json
