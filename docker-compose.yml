@@ -1,5 +1,24 @@
 version: '3'
 services:
+  inx-indexer:
+    image: iotaledger/inx-indexer:latest
+    depends_on:
+      - hornet
+    command:
+      - "--inx.address=hornet:9029"
+      - "--indexer.bindAddress=inx-indexer:9091"
+      - "--prometheus.bindAddress=inx-indexer:9312"
+
+  inx-mqtt:
+    image: iotaledger/inx-mqtt:latest
+    depends_on:
+      - hornet
+    command:
+      - "--inx.address=hornet:9029"
+      - "--mqtt.bindAddress=inx-mqtt:1883"
+      - "--mqtt.wsPort=1888"
+      - "--prometheus.bindAddress=inx-mqtt:9313"
+
   hornet:
     build:
       context: .
@@ -10,24 +29,21 @@ services:
         soft: 8192
         hard: 8192
     stop_grace_period: 5m
-    # Best performance via host network:
-    network_mode: host
-    # Else:
-    #ports:
-    #  - "15600:15600/tcp"
-    #  - "14626:14626/udp"
-    #  - "14265:14265/tcp"
-    #  - "8081:8081/tcp"
-    #  - "8091:8091/tcp"
-    #  - "1883:1883/tcp"
+    ports:
+      - "15600:15600/tcp"
+      - "14626:14626/udp"
+      - "14265:14265/tcp"
+      - "8081:8081/tcp"
+      - "8091:8091/tcp"
+      - "9311:9311/tcp"
     cap_drop:
       - ALL
     volumes:
       - ./config.json:/app/config.json:ro
       - ./peering.json:/app/peering.json
       - ./profiles.json:/app/profiles.json:ro
-      - ./mainnetdb:/app/mainnetdb
-      - ./p2pstore:/app/p2pstore
-      - ./snapshots/mainnet:/app/snapshots/mainnet
       - ./stardust_testnet:/app/stardust_testnet
-    command: ["-c", "config.json"]
+    command:
+      - "-c"
+      - "config.json"
+      - "--inx.bindAddress=hornet:9029"
