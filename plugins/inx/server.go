@@ -2,7 +2,6 @@ package inx
 
 import (
 	"context"
-	"fmt"
 	"net"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -38,7 +37,7 @@ func (s *INXServer) ConfigurePrometheus() {
 
 func (s *INXServer) Start() {
 	go func() {
-		lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", deps.NodeConfig.Int(CfgINXPort)))
+		lis, err := net.Listen("tcp", deps.NodeConfig.String(CfgINXBindAddress))
 		if err != nil {
 			Plugin.LogFatalf("failed to listen: %v", err)
 		}

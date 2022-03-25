@@ -14,6 +14,7 @@ then
     echo "wfmock:latest needs to be built by hand before running this scripts"
     exit 1
   fi
+  docker pull iotaledger/inx-indexer:latest
 fi
 
 echo "Run integration tests"

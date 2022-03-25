@@ -19,7 +19,7 @@
     }
   },
   "dashboard": {
-    "bindAddress": "localhost:8081",
+    "bindAddress": "0.0.0.0:8081",
     "dev": false,
     "auth": {
       "sessionTimeout": "72h",
@@ -29,15 +29,15 @@
     }
   },
   "db": {
-    "engine": "pebble",
+    "engine": "rocksdb",
     "path": "privatedb",
     "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
     "interval": 200,
-    "fullPath": "snapshots/private_tangle/full_snapshot.bin",
-    "deltaPath": "snapshots/private_tangle/delta_snapshot.bin",
+    "fullPath": "snapshots/full_snapshot.bin",
+    "deltaPath": "snapshots/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
     "downloadURLs": []
   },
@@ -83,7 +83,7 @@
     "pendingReEnqueueInterval": "5s"
   },
   "coordinator": {
-    "stateFilePath": "coordinator.state",
+    "stateFilePath": "state/coordinator.state",
     "interval": "10s",
     "powWorkerCount": 0,
     "checkpoints": {
@@ -117,7 +117,7 @@
     }
   },
   "migrator": {
-    "stateFilePath": "migrator.state",
+    "stateFilePath": "state/migrator.state",
     "receiptMaxEntries": 110,
     "queryCooldownPeriod": "5s"
   },
@@ -162,9 +162,10 @@
   "node": {
     "alias": "HORNET private-tangle node",
     "profile": "auto",
-    "disablePlugins": [],
+    "disablePlugins": [
+      "Autopeering"
+    ],
     "enablePlugins": [
-      "INX",
       "Spammer",
       "Debug",
       "Prometheus"
@@ -172,7 +173,8 @@
   },
   "p2p": {
     "bindMultiAddresses": [
-      "/ip4/127.0.0.1/tcp/15600"
+      "/ip4/0.0.0.0/tcp/15600",
+      "/ip6/::/tcp/15600"
     ],
     "connectionManager": {
       "highWatermark": 10,
@@ -223,24 +225,19 @@
     "batchTimeout": "2s",
     "powWorkerCount": 0,
     "website": {
-      "bindAddress": "localhost:8091",
+      "bindAddress": "0.0.0.0:8091",
       "enabled": true
     }
-  },
-  "mqtt": {
-    "bindAddress": "localhost:1883",
-    "wsPort": 1888,
-    "workerCount": 100
   },
   "profiling": {
     "bindAddress": "localhost:6060"
   },
   "prometheus": {
-    "bindAddress": "localhost:9311",
+    "bindAddress": "0.0.0.0:9311",
     "fileServiceDiscovery": {
       "enabled": false,
       "path": "target.json",
-      "target": "localhost:9311"
+      "target": "0.0.0.0:9311"
     },
     "databaseMetrics": true,
     "nodeMetrics": true,

@@ -5,6 +5,7 @@ package framework
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -114,6 +115,19 @@ func (f *Framework) CreateStaticNetwork(name string, intNetCfg *IntegrationNetwo
 		}
 		if _, err = network.CreateNode(cfg); err != nil {
 			return nil, err
+		}
+
+		if cfg.Plugins.ContainsINX() {
+			// TODO: remove when the INX-Indexer waits until the node is reachable, else the container will fail becore the Node it wants to connect to is not yet started.
+			time.Sleep(5 * time.Second)
+
+			// Setup an indexer container for this node
+			indexerCfg := &IndexerConfig{
+				INXAddress: fmt.Sprintf("%s:9029", cfg.Name),
+			}
+			if _, err := network.CreateIndexer(indexerCfg); err != nil {
+				return nil, err
+			}
 		}
 	}
 

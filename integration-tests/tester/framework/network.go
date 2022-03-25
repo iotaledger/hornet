@@ -34,6 +34,8 @@ type Network struct {
 	Name string
 	// The nodes within the network in the order in which they were spawned.
 	Nodes []*Node
+	// The containers running INX extensions in the network.
+	INXExtensions []*INXExtension
 	// The white-flag mock server if one was started.
 	WhiteFlagMockServer *DockerContainer
 	// The tester docker container executing the tests.
@@ -159,6 +161,39 @@ func (n *Network) CreateNode(cfg *NodeConfig, optPrvKey ...crypto.PrivKey) (*Nod
 	return peer, nil
 }
 
+// CreateIndexer creates a new INX-Indexer in the network.
+func (n *Network) CreateIndexer(cfg *IndexerConfig) (*INXExtension, error) {
+	name := n.PrefixName(fmt.Sprintf("%s%d", containerNameINX, len(n.INXExtensions)))
+
+	cfg.Name = name
+	cfg.BindAddress = fmt.Sprintf("%s:9091", name)
+
+	// create Docker container
+	container := NewDockerContainer(n.dockerClient)
+	if err := container.CreateIndexerContainer(cfg); err != nil {
+		return nil, err
+	}
+	if err := container.ConnectToNetwork(n.ID); err != nil {
+		return nil, err
+	}
+	if err := container.Start(); err != nil {
+		return nil, err
+	}
+
+	ip, err := container.IP(n.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := &INXExtension{
+		Name:            cfg.Name,
+		IP:              ip,
+		DockerContainer: container,
+	}
+	n.INXExtensions = append(n.INXExtensions, ext)
+	return ext, nil
+}
+
 // newNetwork returns a AutopeeredNetwork instance, creates its underlying Docker network and adds the tester container to the network.
 func newNetwork(dockerClient *client.Client, name string, netType NetworkType, tester *DockerContainer) (*Network, error) {
 	// create Docker network
@@ -199,6 +234,16 @@ func (n *Network) Shutdown() error {
 		}
 	}
 
+	for _, p := range n.INXExtensions {
+		logs, err := p.Logs()
+		if err != nil {
+			return err
+		}
+		if err = createContainerLogFile(p.Name, logs); err != nil {
+			return err
+		}
+	}
+
 	// save exit status of containers to check at end of shutdown process
 	exitStatus := make(map[string]int, len(n.Nodes))
 	for _, p := range n.Nodes {
@@ -208,9 +253,21 @@ func (n *Network) Shutdown() error {
 			return err
 		}
 	}
+	for _, p := range n.INXExtensions {
+		var err error
+		exitStatus[p.Name], err = p.ExitStatus()
+		if err != nil {
+			return err
+		}
+	}
 
 	// remove containers
 	for _, p := range n.Nodes {
+		if err := p.Remove(); err != nil {
+			return err
+		}
+	}
+	for _, p := range n.INXExtensions {
 		if err := p.Remove(); err != nil {
 			return err
 		}

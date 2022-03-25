@@ -17,8 +17,6 @@ import (
 // TestBatch boots up a statically peered network which runs with a white-flag mock server in order
 // to validate that the migrated funds entry limit is respected correctly.
 func TestBatch(t *testing.T) {
-	t.Skip("skipping testing without Indexer")
-
 	const (
 		initialTreasuryTokens uint64 = 10_000_000_000
 		migratedFundsCount           = 127 + 128 + 1

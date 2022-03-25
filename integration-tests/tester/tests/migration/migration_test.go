@@ -17,8 +17,6 @@ import (
 // in order to validate an entire migration flow.
 // The migration full snapshot used to bootstrap the C2 network has 10000000000 allocated on the treasury.
 func TestMigration(t *testing.T) {
-	t.Skip("skipping testing without Indexer")
-
 	const initialTreasuryTokens uint64 = 10_000_000_000
 
 	type tuple struct {
