@@ -144,9 +144,6 @@ services:
       - "--p2p.peers=/dns/hornet-2/tcp/15600/p2p/12D3KooWCKwcTWevoRKa2kEBputeGASvEBuDfRDSbe8t1DWugUmL,/dns/hornet-3/tcp/15600/p2p/12D3KooWGdr8M5KX8KuKaXSiKfHJstdVnRkadYmupF7tFk2HrRoA,/dns/hornet-4/tcp/15600/p2p/12D3KooWC7uE9w3RN4Vh1FJAZa8SbE8yMWR6wCVBajcWpyWguV73"
 
   hornet-2:
-    build:
-      context: ../
-      dockerfile: docker/Dockerfile
     image: hornet:dev
     depends_on:
       - hornet-coo
@@ -174,9 +171,6 @@ services:
       - "--p2p.peers=/dns/hornet-coo/tcp/15600/p2p/12D3KooWSagdVaCrS14GeJhM8CbQr41AW2PiYMgptTyAybCbQuEY,/dns/hornet-3/tcp/15600/p2p/12D3KooWGdr8M5KX8KuKaXSiKfHJstdVnRkadYmupF7tFk2HrRoA,/dns/hornet-4/tcp/15600/p2p/12D3KooWC7uE9w3RN4Vh1FJAZa8SbE8yMWR6wCVBajcWpyWguV73"
 
   hornet-3:
-    build:
-      context: ../
-      dockerfile: docker/Dockerfile
     image: hornet:dev
     depends_on:
       - hornet-coo
@@ -207,9 +201,6 @@ services:
       - "4"
 
   hornet-4:
-    build:
-      context: ../
-      dockerfile: docker/Dockerfile
     image: hornet:dev
     depends_on:
       - hornet-coo
