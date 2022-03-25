@@ -4,9 +4,9 @@ are:
 1. `./bootstrap.sh` this will bootstrap your own private tangle by creating the genesis snapshot and required files. It
    will start up the coordinator. You should then use Ctrl-C to gracefully shut it down.
 2. Run:
-   - `./run2.sh` to run COO + 1 additional node.
-   - `./run3.sh` to run COO + 2 additional nodes.
-   - `./run4.sh` to run COO + 3 additional nodes.
+   - `./run.sh` to run COO + 1 additional node.
+   - `./run.sh 3` to run COO + 2 additional nodes.
+   - `./run.sh 4` to run COO + 3 additional nodes.
 
 3. `./cleanup.sh` to clean up all generated files and start over. 
 
