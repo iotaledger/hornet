@@ -66,6 +66,16 @@ func (d *DockerContainer) CreateNodeContainer(cfg *NodeConfig) error {
 	})
 }
 
+// CreateIndexerContainer creates a new indexer container.
+func (d *DockerContainer) CreateIndexerContainer(cfg *IndexerConfig) error {
+	containerConfig := &container.Config{
+		Image: indexerImage,
+		Cmd:   cfg.CLIFlags(),
+	}
+
+	return d.CreateContainer(cfg.Name, containerConfig)
+}
+
 // CreateWhiteFlagMockContainer creates a new white-flag mock container.
 func (d *DockerContainer) CreateWhiteFlagMockContainer(cfg *WhiteFlagMockServerConfig) error {
 	containerConfig := &container.Config{

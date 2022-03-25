@@ -34,6 +34,12 @@ type Node struct {
 	peers []*nodeclient.PeerResponse
 }
 
+type INXExtension struct {
+	Name string
+	IP   string
+	*DockerContainer
+}
+
 // newNode creates a new instance of Node with the given information.
 // dockerContainer needs to be started in order to determine the container's (and therefore peer's) IP correctly.
 func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerContainer, network *Network) (*Node, error) {

@@ -9,8 +9,6 @@ import (
 
 	"github.com/docker/go-connections/nat"
 
-	"github.com/gohornet/hornet/plugins/autopeering"
-
 	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/p2p"
@@ -18,8 +16,10 @@ import (
 	"github.com/gohornet/hornet/core/snapshot"
 	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/inx"
 	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/receipt"
@@ -38,10 +38,12 @@ const (
 	autopeeringMaxTries = 50
 
 	containerNodeImage           = "hornet:dev"
+	indexerImage                 = "iotaledger/inx-indexer:latest"
 	containerWhiteFlagMockServer = "wfmock:latest"
 
 	containerNameTester  = "/tester"
 	containerNameReplica = "replica_"
+	containerNameINX     = "inx_"
 
 	logsDir = "/tmp/logs/"
 
@@ -82,6 +84,7 @@ func DefaultConfig() *NodeConfig {
 		Coordinator: DefaultCoordinatorConfig(),
 		Protocol:    DefaultProtocolConfig(),
 		RestAPI:     DefaultRestAPIConfig(),
+		INX:         DefaultINXConfig(),
 		Plugins:     DefaultPluginConfig(),
 		Profiling:   DefaultProfilingConfig(),
 		Dashboard:   DefaultDashboardConfig(),
@@ -120,6 +123,20 @@ func DefaultWhiteFlagMockServerConfig(name string, configFileName string) *White
 	}
 }
 
+// IndexerConfig defines the config of an INX-Indexer.
+type IndexerConfig struct {
+	Name        string
+	INXAddress  string
+	BindAddress string
+}
+
+func (cfg *IndexerConfig) CLIFlags() []string {
+	var cliFlags []string
+	cliFlags = append(cliFlags, fmt.Sprintf("--inx.address=%s", cfg.INXAddress))
+	cliFlags = append(cliFlags, fmt.Sprintf("--indexer.bindAddress=%s", cfg.BindAddress))
+	return cliFlags
+}
+
 // NodeConfig defines the config of a HORNET node.
 type NodeConfig struct {
 	// The name of this node.
@@ -134,6 +151,8 @@ type NodeConfig struct {
 	Network NetworkConfig
 	// Web API config.
 	RestAPI RestAPIConfig
+	// INX config.
+	INX INXConfig
 	// Snapshot config.
 	Snapshot SnapshotConfig
 	// Coordinator config.
@@ -176,6 +195,7 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Coordinator.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Protocol.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.RestAPI.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.INX.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Dashboard.CLIFlags()...)
@@ -313,12 +333,41 @@ func DefaultRestAPIConfig() RestAPIConfig {
 	}
 }
 
+// INXConfig defines the INX specific configuration.
+type INXConfig struct {
+	// The bind address for the INX.
+	BindAddress string
+}
+
+// CLIFlags returns the config as CLI flags.
+func (inxConfig *INXConfig) CLIFlags() []string {
+	return []string{
+		fmt.Sprintf("--%s=%s", inx.CfgINXBindAddress, inxConfig.BindAddress),
+	}
+}
+
+// DefaultINXConfig returns the default INX config.
+func DefaultINXConfig() INXConfig {
+	return INXConfig{
+		BindAddress: "0.0.0.0:9029",
+	}
+}
+
 // PluginConfig defines plugin specific configuration.
 type PluginConfig struct {
 	// Holds explicitly enabled plugins.
 	Enabled []string
 	// Holds explicitly disabled plugins.
 	Disabled []string
+}
+
+func (pluginConfig *PluginConfig) ContainsINX() bool {
+	for _, p := range pluginConfig.Enabled {
+		if strings.EqualFold(p, "INX") {
+			return true
+		}
+	}
+	return false
 }
 
 // CLIFlags returns the config as CLI flags.
