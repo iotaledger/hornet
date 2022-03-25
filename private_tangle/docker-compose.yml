@@ -110,8 +110,6 @@ services:
       context: ../
       dockerfile: docker/Dockerfile
     image: hornet:dev
-    depends_on:
-      - prepare_files
     ulimits:
       nofile:
         soft: 8192
