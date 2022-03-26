@@ -175,7 +175,9 @@ func ConfirmMilestone(
 	}
 	timeConfirmation := time.Now()
 
-	onLedgerUpdated(milestoneIndex, newOutputs, newSpents)
+	if onLedgerUpdated != nil {
+		onLedgerUpdated(milestoneIndex, newOutputs, newSpents)
+	}
 	timeLedgerUpdated := time.Now()
 
 	// load the message for the given id

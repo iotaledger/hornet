@@ -137,6 +137,14 @@ func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile .
 	return s, nil
 }
 
+func (s *Storage) TangleStore() kvstore.KVStore {
+	return s.tangleStore
+}
+
+func (s *Storage) UTXOStore() kvstore.KVStore {
+	return s.utxoStore
+}
+
 func (s *Storage) NonCachedStorage() *NonCachedStorage {
 	return &NonCachedStorage{storage: s}
 }

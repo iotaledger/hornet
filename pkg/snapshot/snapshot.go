@@ -262,7 +262,7 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 
-				// collect all msg that were referenced by that milestone or newer
+				// collect all msgs that were referenced by that milestone or newer
 				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
 				return referenced && at >= milestoneIndex, nil
 			},
