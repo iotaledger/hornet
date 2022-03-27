@@ -81,11 +81,9 @@ func waitForLowerCPUUsage(ctx context.Context, cpuMaxUsage float64) error {
 		select {
 		case <-ctx.Done():
 			return common.ErrOperationAborted
-		default:
+		case <-time.After(time.Duration(cpuUsageSleepTime + rand.Intn(cpuUsageSleepTime))):
+			// sleep a random time between cpuUsageSleepTime and 2*cpuUsageSleepTime
 		}
-
-		// sleep a random time between cpuUsageSleepTime and 2*cpuUsageSleepTime
-		time.Sleep(time.Duration(cpuUsageSleepTime + rand.Intn(cpuUsageSleepTime)))
 	}
 
 	return nil

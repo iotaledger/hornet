@@ -78,29 +78,45 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 	}
 
 	refreshTips := len(refreshTipsFunc) > 0 && refreshTipsFunc[0] != nil
-	for {
+
+	doPow := func(ctx context.Context) (uint64, error) {
 		powCtx, powCancel := context.WithCancel(ctx)
+		defer powCancel()
+
 		if refreshTips {
-			powCtx, powCancel = context.WithTimeout(powCtx, h.refreshTipsInterval)
+			var powTimeoutCancel context.CancelFunc
+			powCtx, powTimeoutCancel = context.WithTimeout(powCtx, h.refreshTipsInterval)
+			defer powTimeoutCancel()
 		}
 
 		nonce, err := h.localPoWFunc(powCtx, powData, parallelism)
-		powCancel()
-
 		if err != nil {
 			if errors.Is(err, pow.ErrCancelled) && refreshTips {
 				// context was canceled and tips can be refreshed
 				tips, err := refreshTipsFunc[0]()
 				if err != nil {
-					return err
+					return 0, err
 				}
 				msg.Parents = tips.ToSliceOfArrays()
 
+				// replace the powData to update the new tips
 				powData, err = getPoWData(msg)
 				if err != nil {
-					return err
+					return 0, err
 				}
 
+				return 0, pow.ErrCancelled
+			}
+			return 0, err
+		}
+
+		return nonce, nil
+	}
+
+	for {
+		nonce, err := doPow(ctx)
+		if err != nil {
+			if errors.Is(err, pow.ErrCancelled) {
 				// redo the PoW with new tips
 				continue
 			}
