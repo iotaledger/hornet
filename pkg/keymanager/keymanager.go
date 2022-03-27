@@ -45,12 +45,14 @@ func (k *KeyManager) PublicKeysForMilestoneIndex(msIndex milestone.Index) []iota
 
 	for _, pubKeyRange := range k.keyRanges {
 		if pubKeyRange.StartIndex <= msIndex {
-			if pubKeyRange.EndIndex >= msIndex || pubKeyRange.StartIndex == pubKeyRange.EndIndex {
-				// startIndex == endIndex means the key is valid forever
+			if pubKeyRange.EndIndex >= msIndex || pubKeyRange.EndIndex == 0 {
+				// EndIndex == 0 means the key is valid forever
 				pubKeys = append(pubKeys, pubKeyRange.PublicKey)
 			}
 			continue
 		}
+
+		// no need to search further because the keys are sorted by StartIndex
 		break
 	}
 
