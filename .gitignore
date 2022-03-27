@@ -30,7 +30,6 @@ testnetdb*/
 mainnetdb*/
 p2pstore*/
 stardust_testnet
-testdbs*/
 
 # snapshot dir
 snapshots/

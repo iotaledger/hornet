@@ -2,11 +2,11 @@ package dag
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"runtime"
 	"sync"
 
+	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/common"

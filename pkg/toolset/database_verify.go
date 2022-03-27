@@ -3,11 +3,11 @@ package toolset
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
 	iotago "github.com/iotaledger/iota.go/v3"
