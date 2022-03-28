@@ -14,10 +14,8 @@ keywords:
 
 ![Hornet Logo](/img/logo/HORNET_logo.svg)
 
-HORNET is a powerful, community driven IOTA node software written in Go. It is easy to install and runs on low-end
-devices, a group of community developers alongside the IOTA Foundation are responsible for building and maintaining
-Hornet. Hornet is a full-fledged software providing full node capabilities including full support of the Chrysalis
-network update.
+HORNET is a powerful, easy to install IOTA node software written in Go.
+It provides the full node capabilities including full support of the Chrysalis network update.
 
 You can find more information about IOTA network protocol on the [IOTA website](https://www.iota.org/). Technical
 information for developers is part of
