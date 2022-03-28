@@ -43,7 +43,7 @@ You can find the Hornet configuration files under the `/var/lib/hornet` director
 Additionally, the Environment file for configuring multiple default parameters can be found under the 
 `/etc/default/hornet` directory.
 
-### Start the node
+### Start the Node
 
 You can use  the `systemd` service to start running Hornet on the Mainnet by running the following command:
 ```bash
@@ -104,7 +104,7 @@ All installation methods mentioned in this article from this point should be con
    Please make sure to download the binaries for your system:
    
    * `HORNET-X.Y.Z_Linux_x86_64.tar.gz`: standard 64-bit-linux-based executable, such as Ubuntu, Debian, etc.
-   * `HORNET-X.Y.Z_Linux_arm64.tar.gz`: executable for Raspberry Pi 4.
+   * `HORNET-X.Y.Z_Linux_arm64.tar.gz`: executable for 64bit ARM based systems.
    * `HORNET-X.Y.Z_Windows_x86_64.zip`: executable for Windows 10-64-bit-based systems.
    * `HORNET-X.Y.Z_macOS_x86_64.tar.gz`: executable for macOS.
 

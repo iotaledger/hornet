@@ -1,4 +1,6 @@
 ---
+description: How to contribute to Hornet.
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node 
 - Hornet Node
@@ -6,14 +8,15 @@ keywords:
 - Pull request
 - GitHub
 - Fork
-description: How to contribute to Hornet.
-image: /img/logo/HornetLogo.png
+- reference
 ---
 
 # Contributing
 
-:::info
-By participating in this project, you agree to abide our [code of conduct](/code_of_conduct.md).
+:::note
+
+By participating in this project, you agree to abide our [code of conduct](https://wiki.iota.org/hornet/code_of_conduct).
+
 :::
 
 ## How to Contribute
@@ -37,8 +40,7 @@ Make your changes and test them sufficiently.
 
 Commit messages should be well formatted.
 
-You can use this as a guide:
-[Conventional Commits](https://www.conventionalcommits.org)
+You can use this as a guide: [Conventional Commits](https://www.conventionalcommits.org).
 
 ## Submit a Pull Request
 
