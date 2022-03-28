@@ -32,7 +32,6 @@ dist/
 
 # Database directory
 privatedb*/
-comnetdb*/
 devnetdb*/
 mainnetdb*/
 p2pstore*/

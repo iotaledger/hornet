@@ -73,7 +73,6 @@ archives:
       - LICENSE
       - config.json
       - config_devnet.json
-      - config_comnet.json
       - peering.json
       - profiles.json
       - private_tangle/config_private_tangle.json
@@ -110,10 +109,6 @@ nfpms:
 
       - src: "config_devnet.json"
         dst: "/var/lib/hornet/config_devnet.json"
-        type: config
-
-      - src: "config_comnet.json"
-        dst: "/var/lib/hornet/config_comnet.json"
         type: config
 
       - src: "peering.json"
