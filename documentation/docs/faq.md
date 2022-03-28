@@ -16,8 +16,8 @@ keywords:
 
 ## What is HORNET?
 
-HORNET is a community driven IOTA full node. It is written in Go which makes it lightweight and fast.
-
+HORNET is a powerful, easy to install IOTA node software written in Go.
+It provides the full node capabilities including full support of the Chrysalis network update.
 
 ## Does HORNET Run on the Mainnet?
 
