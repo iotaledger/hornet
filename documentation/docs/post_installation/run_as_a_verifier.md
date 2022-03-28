@@ -1,18 +1,19 @@
 ---
+description: How to configure a Hornet node as a verifier node.  
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node 
 - Hornet Node
 - verifier
 - Chrysalis Phase 2
 - receipts
-description: How to configure a Hornet node as a verifier node.  
-image: /img/logo/HornetLogo.png
+- how to
 ---
 
 
 # How to Run Hornet as a Verifier Node
 
- A verifier node is a node which validates receipts. Receipts are an integral component of the migration mechanism used to migrate funds from the legacy into the new Chrysalis Phase 2 network. You can find a more detailed explanation on how the migration mechanism works in the [Chrysalis documentation](https://wiki.iota.org/chrysalis-docs/guides/migration_mechanism).
+ A verifier node is a node which validates receipts. Receipts are an integral component of the migration mechanism used to migrate funds from the legacy network into the Chrysalis Phase 2 network. You can find a more detailed explanation on how the migration mechanism works in the [Chrysalis documentation](https://wiki.iota.org/chrysalis-docs/guides/migration_mechanism).
 
 This guide explains how to configure a Hornet node as a verifier node:
 
@@ -30,8 +31,10 @@ This guide explains how to configure a Hornet node as a verifier node:
    
 3. Run your Hornet verifier node and let it validate receipts.
 
-:::info
-We recommend that you use a load balanced endpoint to multiple legacy nodes for `receipts.validator.api.address` in order to obtain high availability.
+:::note
+
+We recommend that you use a load balanced endpoint to multiple legacy nodes for `receipts.validator.api.address` to obtain high availability.
+
 :::
 
-After this, if your verifier node panics because of an invalid receipt, it is clear that a one of the produced receipts is not valid. In this case, as a verifier node operator, you are invited to inform the community and the IOTA Foundation of your findings. This is, by the way, the same result as when the Coordinator issues a milestone, which diverges from a consistent ledger state.
+After this, if your verifier node panics because of an invalid receipt, it is clear that one of the produced receipts is not valid. In this case, as a verifier node operator, you are invited to inform the community and the IOTA Foundation of your findings. This is, by the way, the same result as when the Coordinator issues a milestone, which diverges from a consistent ledger state.
