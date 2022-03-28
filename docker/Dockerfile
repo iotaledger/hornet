@@ -53,7 +53,6 @@ COPY --chown=nonroot:nonroot --from=build /go/bin/hornet /app/hornet
 # Copy the assets
 COPY ./config.json /app/config.json
 COPY ./config_devnet.json /app/config_devnet.json
-COPY ./config_comnet.json /app/config_comnet.json
 COPY ./peering.json /app/peering.json
 COPY ./profiles.json /app/profiles.json
 

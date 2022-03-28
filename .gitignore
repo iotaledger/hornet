@@ -24,7 +24,6 @@ dist/
 
 # Database directory
 privatedb*/
-comnetdb*/
 devnetdb*/
 testnetdb*/
 mainnetdb*/
