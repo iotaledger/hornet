@@ -87,7 +87,7 @@ type TestEnvironment struct {
 	// OnMilestoneConfirmed callback that will be called at confirming a milestone. This is equivalent to the tangle.MilestoneConfirmed event.
 	OnMilestoneConfirmed OnMilestoneConfirmedFunc
 
-	// OnLedgerUpdatedFunc callback that will be called after the ledger gets updating during confirmation. This is equivalent to the tangle.LedgerUpdated event.
+	// OnLedgerUpdatedFunc callback that will be called after the ledger gets updated during confirmation. This is equivalent to the tangle.LedgerUpdated event.
 	OnLedgerUpdatedFunc OnLedgerUpdatedFunc
 }
 
