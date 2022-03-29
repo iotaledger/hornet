@@ -15,7 +15,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/gobuffalo/packr/v2 v2.8.3
-	github.com/gohornet/dashboard v0.0.0-20220323113555-6846eb3bc111
+	github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
@@ -46,7 +46,7 @@ require (
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.14.1
 	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
+	golang.org/x/net v0.0.0-20220325170049-de3da57026de
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
 	google.golang.org/grpc v1.45.0
@@ -208,7 +208,7 @@ require (
 	golang.org/x/exp v0.0.0-20220321124402-2d6d886f8a82 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
+	golang.org/x/sys v0.0.0-20220328115105-d36c6a25d886 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.10 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
