@@ -505,8 +505,8 @@ func (pm *ParticipationManager) RewardsForTrackedParticipation(trackedParticipat
 		return 0, ErrEventNotFound
 	}
 
-	if event.StartMilestoneIndex() >= atIndex {
-		// Event not yet started, so skip
+	if event.StartMilestoneIndex() > atIndex {
+		// Event not yet started counting, so skip
 		return 0, nil
 	}
 
