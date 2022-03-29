@@ -527,24 +527,22 @@ func (pm *ParticipationManager) RewardsForTrackedParticipation(trackedParticipat
 
 	eventMilestoneCountingStart := event.StartMilestoneIndex() + 1
 
-	var milestonesToCount uint64
-	var milestonesToSubtract uint64
-
-	if trackedParticipation.EndIndex == 0 || atIndex < trackedParticipation.EndIndex {
-		// Participation has not ended yet or we are asking for the past of an ended participation, so count including the atIndex milestone
-		milestonesToCount = uint64(atIndex + 1 - trackedParticipation.StartIndex)
-	} else {
-		// Participation ended
-		milestonesToCount = uint64(trackedParticipation.EndIndex - trackedParticipation.StartIndex)
+	if eventMilestoneCountingStart < trackedParticipation.StartIndex {
+		eventMilestoneCountingStart = trackedParticipation.StartIndex
 	}
 
-	if trackedParticipation.StartIndex < eventMilestoneCountingStart {
-		// Subtract the commencing milestones, minus the start itself
-		milestonesToSubtract = uint64(eventMilestoneCountingStart - trackedParticipation.StartIndex)
+	var milestonesToCount uint64
+
+	if trackedParticipation.EndIndex == 0 || atIndex < trackedParticipation.EndIndex {
+		// Participation has not ended yet, or we are asking for the past of an ended participation, so count including the atIndex milestone
+		milestonesToCount = uint64(atIndex + 1 - eventMilestoneCountingStart)
+	} else {
+		// Participation ended
+		milestonesToCount = uint64(trackedParticipation.EndIndex - eventMilestoneCountingStart)
 	}
 
 	rewardsPerMilestone := staking.rewardsPerMilestone(trackedParticipation.Amount)
-	rewardsForParticipation := rewardsPerMilestone * (milestonesToCount - milestonesToSubtract)
+	rewardsForParticipation := rewardsPerMilestone * milestonesToCount
 	return rewardsForParticipation, nil
 }
 
