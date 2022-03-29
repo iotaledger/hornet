@@ -172,6 +172,7 @@ func New(
 			ConfirmationMetricsUpdated:     events.NewEvent(ConfirmationMetricsCaller),
 			MilestoneSolidificationFailed:  events.NewEvent(milestone.IndexCaller),
 			MilestoneTimeout:               events.NewEvent(events.VoidCaller),
+			LedgerUpdated:                  events.NewEvent(LedgerUpdatedCaller),
 			NewUTXOOutput:                  events.NewEvent(UTXOOutputCaller),
 			NewUTXOSpent:                   events.NewEvent(UTXOSpentCaller),
 			NewReceipt:                     events.NewEvent(ReceiptCaller),

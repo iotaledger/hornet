@@ -280,8 +280,6 @@ func NewFaucetTestEnv(t *testing.T,
 
 	// Connect the callbacks from the testsuite to the Faucet
 	te.ConfigureUTXOCallbacks(
-		nil,
-		nil,
 		func(confirmation *whiteflag.Confirmation) {
 			require.NoError(t, f.ApplyConfirmation(confirmation))
 		},

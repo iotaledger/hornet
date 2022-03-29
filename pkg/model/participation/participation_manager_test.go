@@ -354,7 +354,7 @@ func TestSingleBallotVote(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, castVote.Message().StoredMessageID(), trackedVote.MessageID)
 	require.Equal(t, milestone.Index(6), trackedVote.StartIndex)
-	require.Equal(t, milestone.Index(10), trackedVote.EndIndex)
+	require.Equal(t, milestone.Index(11), trackedVote.EndIndex)
 
 	var messageFromParticipationStore *storage.Message
 	messageFromParticipationStore, err = env.ParticipationManager().MessageForEventAndMessageID(eventID, trackedVote.MessageID)
@@ -521,7 +521,7 @@ func TestBallotVoteCancel(t *testing.T) {
 	// Verify the vote history after the participation ended
 	env.AssertTrackedParticipation(eventID, castVote1, 6, 7, 1_000_000)
 	env.AssertTrackedParticipation(eventID, castVote2, 8, 9, 1_000_000)
-	env.AssertTrackedParticipation(eventID, castVote3, 11, 12, 1_000_000)
+	env.AssertTrackedParticipation(eventID, castVote3, 11, 13, 1_000_000)
 }
 
 func TestBallotAddVoteBalanceBySweeping(t *testing.T) {
@@ -709,9 +709,9 @@ func TestMultipleBallotVotes(t *testing.T) {
 	env.AssertBallotAnswerStatusAtConfirmedMilestoneIndex(eventID, 200_000, 1000_000, 0, 20)
 
 	// Verify all votes
-	env.AssertTrackedParticipation(eventID, wallet1Vote, 8, 12, 5_000_000)
-	env.AssertTrackedParticipation(eventID, wallet2Vote, 8, 12, 150_000_000)
-	env.AssertTrackedParticipation(eventID, wallet3Vote, 8, 12, 200_000_000)
+	env.AssertTrackedParticipation(eventID, wallet1Vote, 8, 13, 5_000_000)
+	env.AssertTrackedParticipation(eventID, wallet2Vote, 8, 13, 150_000_000)
+	env.AssertTrackedParticipation(eventID, wallet3Vote, 8, 13, 200_000_000)
 }
 
 func TestChangeOpinionMidVote(t *testing.T) {
@@ -936,12 +936,12 @@ func TestMultipleConcurrentEventsWithBallot(t *testing.T) {
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID1, wallet1Vote1, 6, 11, 5_000_000) // Voted 1
 	env.AssertInvalidParticipation(eventID2, wallet1Vote1)
-	env.AssertTrackedParticipation(eventID1, wallet1Vote2, 11, 12, 5_000_000)   // Voted 1
-	env.AssertTrackedParticipation(eventID2, wallet1Vote2, 11, 14, 5_000_000)   // Voted 2
-	env.AssertTrackedParticipation(eventID1, wallet2Vote1, 6, 12, 150_000_000)  // Voted 1
-	env.AssertTrackedParticipation(eventID2, wallet3Vote1, 8, 14, 200_000_000)  // Voted 2
-	env.AssertTrackedParticipation(eventID1, wallet4Vote1, 12, 12, 300_000_000) // Voted 0
-	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 14, 300_000_000) // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet1Vote2, 11, 13, 5_000_000)   // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet1Vote2, 11, 15, 5_000_000)   // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet2Vote1, 6, 13, 150_000_000)  // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet3Vote1, 8, 15, 200_000_000)  // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet4Vote1, 12, 13, 300_000_000) // Voted 0
+	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 15, 300_000_000) // Voted 2
 
 	// Verify end results
 	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 300_000, 300_000, 0, 0)
@@ -1070,12 +1070,12 @@ func TestMultipleConcurrentEventsWithBallotCalculatedAfterEventEnded(t *testing.
 	// Verify all votes
 	env.AssertTrackedParticipation(eventID1, wallet1Vote1, 6, 11, 5_000_000) // Voted 1
 	env.AssertInvalidParticipation(eventID2, wallet1Vote1)
-	env.AssertTrackedParticipation(eventID1, wallet1Vote2, 11, 12, 5_000_000)   // Voted 1
-	env.AssertTrackedParticipation(eventID2, wallet1Vote2, 11, 14, 5_000_000)   // Voted 2
-	env.AssertTrackedParticipation(eventID1, wallet2Vote1, 6, 12, 150_000_000)  // Voted 1
-	env.AssertTrackedParticipation(eventID2, wallet3Vote1, 8, 14, 200_000_000)  // Voted 2
-	env.AssertTrackedParticipation(eventID1, wallet4Vote1, 12, 12, 300_000_000) // Voted 0
-	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 14, 300_000_000) // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet1Vote2, 11, 13, 5_000_000)   // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet1Vote2, 11, 15, 5_000_000)   // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet2Vote1, 6, 13, 150_000_000)  // Voted 1
+	env.AssertTrackedParticipation(eventID2, wallet3Vote1, 8, 15, 200_000_000)  // Voted 2
+	env.AssertTrackedParticipation(eventID1, wallet4Vote1, 12, 13, 300_000_000) // Voted 0
+	env.AssertTrackedParticipation(eventID2, wallet4Vote2, 13, 15, 300_000_000) // Voted 2
 
 	// Verify end results
 	env.AssertBallotAnswerStatus(eventID1, event1.EndMilestoneIndex(), 300_000, 300_000, 0, 0)
@@ -1144,19 +1144,31 @@ func TestStakingRewards(t *testing.T) {
 		}).
 		Send()
 
-	env.IssueMilestone(stakeWallet1.Message().StoredMessageID(), stakeWallet2.Message().StoredMessageID(), stakeWallet3.Message().StoredMessageID()) // 6
+	preStakeWallet4 := env.NewParticipationHelper(env.Wallet4).
+		WholeWalletBalance().
+		AddParticipation(&participation.Participation{
+			EventID: eventID,
+			Answers: []byte{},
+		}).
+		Send()
+
+	env.IssueMilestone(stakeWallet1.Message().StoredMessageID(), stakeWallet2.Message().StoredMessageID(), stakeWallet3.Message().StoredMessageID(), preStakeWallet4.Message().StoredMessageID()) // 6
 	env.AssertEventsCount(1, 0)
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 0)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 0)
 
-	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 0)
+	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977+300_000_000, 0)
 
-	env.IssueMilestone() // 7
+	cancelPreStakeWallet4 := env.CancelParticipations(env.Wallet4)
+
+	env.IssueMilestone(cancelPreStakeWallet4.StoredMessageID()) // 7
 	env.AssertEventsCount(1, 1)
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 0)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 0)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 0)
 
 	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 0)
 
@@ -1164,6 +1176,7 @@ func TestStakingRewards(t *testing.T) {
 	env.AssertRewardBalance(eventID, env.Wallet1.Address(), 1_250_000)
 	env.AssertRewardBalance(eventID, env.Wallet2.Address(), 396_882)
 	env.AssertRewardBalance(eventID, env.Wallet3.Address(), 1_397_494)
+	env.AssertRewardBalance(eventID, env.Wallet4.Address(), 0)
 
 	env.AssertStakingRewardsStatusAtConfirmedMilestoneIndex(eventID, 5_000_000+1_587_529+5_589_977, 1_250_000+396_882+1_397_494)
 
@@ -1218,12 +1231,20 @@ func TestStakingRewards(t *testing.T) {
 	env.AssertStakingRewardsStatus(eventID, 12, 5_000_000+1_587_529+5_589_977, 6_250_000+1_984_410+6_987_470+75_000_000)
 
 	totalRewards := uint64(0)
-	addresses := make(map[string]struct{})
-	env.ParticipationManager().ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
+	addresses := make(map[string]uint64)
+	env.ParticipationManager().ForEachAddressStakingParticipation(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, _ *participation.TrackedParticipation, rewards uint64) bool {
 		totalRewards += rewards
-		addresses[address.String()] = struct{}{}
+		addresses[address.String()] += rewards
 		return true
-	}, participation.FilterRequiredMinimumRewards(true))
+	})
+
+	// Filter out minimum rewards
+	for addr, amount := range addresses {
+		if amount < event.Staking().RequiredMinimumRewards {
+			totalRewards -= amount
+			delete(addresses, addr)
+		}
+	}
 
 	require.Exactly(t, totalRewards, uint64(6_250_000+6_987_470+75_000_000))
 	_, wallet1Found := addresses[env.Wallet1.Address().String()]
@@ -1236,12 +1257,11 @@ func TestStakingRewards(t *testing.T) {
 	require.True(t, wallet4Found)
 
 	totalRewardsWithoutFilter := uint64(0)
-	env.ParticipationManager().ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
+	env.ParticipationManager().ForEachAddressStakingParticipation(eventID, env.ConfirmedMilestoneIndex(), func(address iotago.Address, _ *participation.TrackedParticipation, rewards uint64) bool {
 		totalRewardsWithoutFilter += rewards
 		return true
-	}, participation.FilterRequiredMinimumRewards(false))
+	})
 	require.Exactly(t, totalRewardsWithoutFilter, uint64(6_250_000+1_984_410+6_987_470+75_000_000))
-
 }
 
 func TestStakingRewardsCalculatedAfterEventEnded(t *testing.T) {
