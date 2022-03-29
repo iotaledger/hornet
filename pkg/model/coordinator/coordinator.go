@@ -96,7 +96,7 @@ type Coordinator struct {
 	// used to do the PoW for the coordinator messages.
 	powHandler *pow.Handler
 	// the function used to send a message.
-	sendMesssageFunc SendMessageFunc
+	sendMessageFunc SendMessageFunc
 	// holds the coordinator options.
 	opts *Options
 
@@ -234,16 +234,16 @@ func New(
 	options.apply(opts...)
 
 	result := &Coordinator{
-		storage:          dbStorage,
-		syncManager:      syncManager,
-		networkID:        networkID,
-		deSeriParas:      deSeriParas,
-		signerProvider:   signerProvider,
-		migratorService:  migratorService,
-		utxoManager:      utxoManager,
-		powHandler:       powHandler,
-		sendMesssageFunc: sendMessageFunc,
-		opts:             options,
+		storage:         dbStorage,
+		syncManager:     syncManager,
+		networkID:       networkID,
+		deSeriParas:     deSeriParas,
+		signerProvider:  signerProvider,
+		migratorService: migratorService,
+		utxoManager:     utxoManager,
+		powHandler:      powHandler,
+		sendMessageFunc: sendMessageFunc,
+		opts:            options,
 
 		Events: &Events{
 			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
@@ -408,7 +408,12 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
 	}
 
-	if err := coo.sendMesssageFunc(milestoneMsg, newMilestoneIndex); err != nil {
+	// rename the coordinator state file to mark the state as invalid
+	if err := os.Rename(coo.opts.stateFilePath, fmt.Sprintf("%s_old", coo.opts.stateFilePath)); err != nil && !os.IsNotExist(err) {
+		return common.CriticalError(fmt.Errorf("unable to rename old coordinator state file: %w", err))
+	}
+
+	if err := coo.sendMessageFunc(milestoneMsg, newMilestoneIndex); err != nil {
 		return common.CriticalError(fmt.Errorf("failed to send milestone: %w", err))
 	}
 
@@ -500,7 +505,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 			return nil, common.SoftError(fmt.Errorf("failed to create checkPoint: %w", err))
 		}
 
-		if err := coo.sendMesssageFunc(msg); err != nil {
+		if err := coo.sendMessageFunc(msg); err != nil {
 			return nil, common.SoftError(fmt.Errorf("failed to send checkPoint: %w", err))
 		}
 

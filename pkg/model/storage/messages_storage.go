@@ -66,7 +66,7 @@ func (cachedMsgs CachedMessages) Retain() CachedMessages {
 	return cachedResult
 }
 
-// Release releases the cached messsages, to be picked up by the persistence layer (as soon as all consumers are done).
+// Release releases the cached messages, to be picked up by the persistence layer (as soon as all consumers are done).
 // message -1
 func (cachedMsgs CachedMessages) Release(force ...bool) {
 	for _, cachedMsg := range cachedMsgs {
