@@ -40,6 +40,7 @@ integration-tests/logs/*.profile
 
 # coordinator files
 coordinator.state
+migrator.state
 
 # Docs
 book
