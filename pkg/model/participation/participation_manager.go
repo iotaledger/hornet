@@ -327,7 +327,9 @@ func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event)
 			}
 		}
 
-		pm.applyNewConfirmedMilestoneIndexForEvents(currentIndex, events)
+		if err := pm.applyNewConfirmedMilestoneIndexForEvents(currentIndex, events); err != nil {
+			return err
+		}
 
 		if currentIndex >= pm.syncManager.ConfirmedMilestoneIndex() || currentIndex >= event.EndMilestoneIndex() {
 			// We are done
@@ -339,15 +341,7 @@ func (pm *ParticipationManager) calculatePastParticipationForEvent(event *Event)
 	return nil
 }
 
-// ApplyNewUTXO checks if the new UTXO is part of a participation transaction.
-// The following rules must be satisfied:
-// 	- Must be a value transaction
-// 	- Inputs must all come from the same address. Multiple inputs are allowed.
-// 	- Has a singular output going to the same address as all input addresses.
-// 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
-// 	- The TaggedData must match the configured TaggedData.
-//  - The participation data must be parseable.
-func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *utxo.Output) error {
+func (pm *ParticipationManager) ApplyNewLedgerUpdate(index milestone.Index, created utxo.Outputs, consumed utxo.Spents) error {
 
 	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
 		return e.ShouldAcceptParticipation(index)
@@ -358,9 +352,28 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 		return nil
 	}
 
-	return pm.applyNewUTXOForEvents(index, newOutput, acceptingEvents)
+	for _, newOutput := range created {
+		if err := pm.applyNewUTXOForEvents(index, newOutput, acceptingEvents); err != nil {
+			return err
+		}
+	}
+	for _, spent := range consumed {
+		if err := pm.applySpentUTXOForEvents(index, spent, acceptingEvents); err != nil {
+			return err
+		}
+	}
+
+	return pm.applyNewConfirmedMilestoneIndexForEvents(index, acceptingEvents)
 }
 
+// applyNewUTXOForEvents checks if the new UTXO is part of a participation transaction.
+// The following rules must be satisfied:
+// 	- Must be a value transaction
+// 	- Inputs must all come from the same address. Multiple inputs are allowed.
+// 	- Has a singular output going to the same address as all input addresses.
+// 	- Output Type 0 (SigLockedSingleOutput) and Type 1 (SigLockedDustAllowanceOutput) are both valid for this.
+// 	- The Indexation must match the configured Indexation.
+//  - The participation data must be parseable.
 func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, newOutput *utxo.Output, events map[EventID]*Event) error {
 	messageID := newOutput.MessageID()
 
@@ -408,19 +421,25 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 
 		event, ok := events[participation.EventID]
 		if !ok {
+			mutations.Cancel()
 			return nil
 		}
 
-		switch event.payloadType() {
-		case BallotPayloadTypeID:
+		switch payload := event.Payload.(type) {
+		case *Ballot:
 			// Count the new ballot votes by increasing the current vote balance
 			if err := pm.startCountingBallotAnswers(event, participation, index, depositOutput.Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
-		case StakingPayloadTypeID:
+		case *Staking:
 			// Increase the staked amount
 			if err := pm.increaseStakedAmountForStakingEvent(participation.EventID, index, depositOutput.Deposit(), mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
+			// Increase the staking rewards
+			if err := pm.increaseCurrentRewardsPerMilestoneForStakingEvent(participation.EventID, index, payload.rewardsPerMilestone(depositOutput.Deposit()), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
@@ -430,21 +449,7 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 	return mutations.Commit()
 }
 
-// ApplySpentUTXO checks if the spent UTXO was part of a participation transaction.
-func (pm *ParticipationManager) ApplySpentUTXO(index milestone.Index, spent *utxo.Spent) error {
-
-	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
-		return e.ShouldAcceptParticipation(index)
-	})
-
-	// No events accepting participation, so no work to be done
-	if len(acceptingEvents) == 0 {
-		return nil
-	}
-
-	return pm.applySpentUTXOForEvents(index, spent, acceptingEvents)
-}
-
+// applySpentUTXOForEvents checks if the spent UTXO was part of a participation transaction.
 func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, spent *utxo.Spent, events map[EventID]*Event) error {
 
 	// Fetch the message, this must have been stored for at least one of the events
@@ -500,19 +505,25 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 
 		event, ok := events[participation.EventID]
 		if !ok {
+			mutations.Cancel()
 			return nil
 		}
 
-		switch event.payloadType() {
-		case BallotPayloadTypeID:
+		switch payload := event.Payload.(type) {
+		case *Ballot:
 			// Count the spent votes by decreasing the current vote balance
 			if err := pm.stopCountingBallotAnswers(event, participation, index, spent.Output().Deposit(), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
-		case StakingPayloadTypeID:
+		case *Staking:
 			// Decrease the staked amount
 			if err := pm.decreaseStakedAmountForStakingEvent(participation.EventID, index, spent.Output().Deposit(), mutations); err != nil {
+				mutations.Cancel()
+				return err
+			}
+			// Decrease the staking rewards
+			if err := pm.decreaseCurrentRewardsPerMilestoneForStakingEvent(participation.EventID, index, payload.rewardsPerMilestone(spent.Output().Deposit()), mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
@@ -522,21 +533,7 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 	return mutations.Commit()
 }
 
-// ApplyNewConfirmedMilestoneIndex iterates over each counting ballot participation and applies the current vote balance for each question to the total vote balance
-func (pm *ParticipationManager) ApplyNewConfirmedMilestoneIndex(index milestone.Index) error {
-
-	acceptingEvents := filterEvents(pm.Events(), index, func(e *Event, index milestone.Index) bool {
-		return e.ShouldAcceptParticipation(index)
-	})
-
-	// No events accepting participation, so no work to be done
-	if len(acceptingEvents) == 0 {
-		return nil
-	}
-
-	return pm.applyNewConfirmedMilestoneIndexForEvents(index, acceptingEvents)
-}
-
+// applyNewConfirmedMilestoneIndexForEvents iterates over each counting ballot participation and applies the current vote balance for each question to the total vote balance
 func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index milestone.Index, events map[EventID]*Event) error {
 
 	mutations := pm.participationStore.Batched()
@@ -603,6 +600,20 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 		staking := event.Staking()
 		if staking != nil {
 
+			currentRewardsPerMilestone, err := pm.currentRewardsPerMilestoneForStakingEvent(eventID, index)
+			if err != nil {
+				mutations.Cancel()
+				return err
+			}
+
+			if event.EndMilestoneIndex() > index {
+				// Event not ended yet, so copy the current rewards for the next milestone already
+				if err := pm.setCurrentRewardsPerMilestoneForStakingEvent(eventID, index+1, currentRewardsPerMilestone, mutations); err != nil {
+					mutations.Cancel()
+					return err
+				}
+			}
+
 			total, err := pm.totalStakingParticipationForEvent(eventID, index)
 			if err != nil {
 				mutations.Cancel()
@@ -610,54 +621,7 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 			}
 
 			if shouldCountParticipation {
-				utxoManager := pm.storage.UTXOManager()
-				addressRewardsIncreases := make(map[string]uint64)
-				var innerErr error
-				pm.ForEachActiveParticipation(eventID, func(trackedParticipation *TrackedParticipation) bool {
-					output, err := utxoManager.ReadOutputByOutputIDWithoutLocking(trackedParticipation.OutputID)
-					if err != nil {
-						// We should have the output in the ledger, if not, something happened
-						innerErr = err
-						return false
-					}
-
-					var addressBytes []byte
-					switch iotagoOutput := output.Output().(type) {
-					case *iotago.BasicOutput:
-						addressBytes, err = serializedAddressFromOutput(iotagoOutput)
-						if err != nil {
-							innerErr = err
-							return false
-						}
-					default:
-						innerErr = fmt.Errorf("invalid output type: %s", output.OutputType().String())
-						return false
-					}
-
-					// This should not overflow, since we did worst-case overflow checks before adding the event
-					increaseAmount := trackedParticipation.Amount * uint64(staking.Numerator) / uint64(staking.Denominator)
-
-					addr := string(addressBytes)
-					balance, found := addressRewardsIncreases[addr]
-					if !found {
-						addressRewardsIncreases[addr] = increaseAmount
-						return true
-					}
-					addressRewardsIncreases[addr] = balance + increaseAmount
-					return true
-				})
-				if innerErr != nil {
-					return innerErr
-				}
-
-				for addr, diff := range addressRewardsIncreases {
-					addrBytes := []byte(addr)
-					total.rewarded += diff
-					if err := pm.increaseStakingRewardForEventAndAddress(eventID, addrBytes, diff, mutations); err != nil {
-						mutations.Cancel()
-						return err
-					}
-				}
+				total.rewarded += currentRewardsPerMilestone
 			}
 
 			if err := pm.setTotalStakingParticipationForEvent(eventID, index, total, mutations); err != nil {
@@ -676,7 +640,7 @@ func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index m
 
 		// End all participation if event is ending this milestone
 		if event.EndMilestoneIndex() == index {
-			if err := pm.endAllParticipationsAtMilestone(eventID, index, mutations); err != nil {
+			if err := pm.endAllParticipationsAtMilestone(eventID, index+1, mutations); err != nil {
 				mutations.Cancel()
 				return err
 			}
