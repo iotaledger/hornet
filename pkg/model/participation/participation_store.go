@@ -776,5 +776,10 @@ func (pm *ParticipationManager) clearStorageForEventID(eventID EventID) error {
 	if err := pm.participationStore.DeletePrefix(messageKeyForEventPrefix(eventID)); err != nil {
 		return err
 	}
+
+	// Clean up old database keys
+	if err := pm.participationStore.DeletePrefix([]byte{ParticipationStoreKeyPrefixStakingAddress}); err != nil {
+		return err
+	}
 	return nil
 }
