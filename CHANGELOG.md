@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0-rc1] - 29.03.2022
+
+_**Note**: due to changes to the internal database structure it is recommended to remove the old `participation` database._
+
+### Fixed
+    - Fixed various memory leaks that could crash the node with OOM when using autopeering or the spammer plugins. (#1335, #1372) 
+
+### Changed
+    - Changed how the participation plugin calculates staking rewards. This improves the performance of the node when the plugin is enabled. (#1350)
+    - Changed the COO key validity indicator logic. (#1373)
+    - Updated to Go 1.18
+
+### Added
+    - Added support for multi-arch docker images (amd64+arm64). (#1240, #1301)
+    - Added JSON output support for the tools and refactoring the tool cli-flag handling. (#1289, #1301)
+    - Added `transactionIdSpent` and `milestoneIndexSpent` to the outputs API endpoint. (#1302)
+    - Added various new tools to work with database backups. (#1328, #1331, #1332, #1348)
+    - Added new COO keys. (#1375)
+
+### Removed
+    - Removed comnet configuration (#1374)
+
+
 ## [1.1.3] - 29.12.2021
 
 ### Added
