@@ -24,6 +24,37 @@ _**Note**: due to changes to the internal database structure it is recommended t
 ### Removed
     - Removed comnet configuration (#1374)
 
+`config.json`
+```diff
+  "protocol": {
+    ...
+    "publicKeyRanges": [
+      ...
+      {
+        "key": "7bac2209b576ea2235539358c7df8ca4d2f2fc35a663c760449e65eba9f8a6e7",
+        "start": 2108160,
+-       "end": 3666260
++       "end": 3359999
+      },
+      {
+        "key": "edd9c639a719325e465346b84133bf94740b7d476dd87fc949c0e8df516f9954",
+        "start": 2888660,
+-       "end": 4443860
++       "end": 3359999
++     },
++     {
++       "key": "47a5098c696e0fb53e6339edac574be4172cb4701a8210c2ae7469b536fd2c59",
++       "start": 3360000,
++       "end": 0
++     },
++     {
++       "key": "ae4e03072b4869e87dd4cd59315291a034493a8c202b43b257f9c07bc86a2f3e",
++       "start": 3360000,
++       "end": 0
+      }
+    ]
+  },
+```
 
 ## [1.1.3] - 29.12.2021
 
