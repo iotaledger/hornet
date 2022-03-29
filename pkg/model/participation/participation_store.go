@@ -156,7 +156,7 @@ func participationKeyForEventPrefix(eventID EventID) []byte {
 func participationKeyForEventAndAddressPrefix(eventID EventID, addressBytes []byte) []byte {
 	m := marshalutil.New(66)
 	m.WriteBytes(participationKeyForEventPrefix(eventID)) // 33 bytes
-	m.WriteBytes(addressBytes)                                     // 33 bytes
+	m.WriteBytes(addressBytes)                            // 33 bytes
 	return m.Bytes()
 }
 
