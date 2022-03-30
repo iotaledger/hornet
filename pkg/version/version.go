@@ -10,8 +10,13 @@ import (
 // fixVersion fixes broken version strings.
 func fixVersion(version string) string {
 	ver := strings.Replace(version, "v", "", 1)
-	if !strings.Contains(ver, "-rc.") {
-		ver = strings.Replace(ver, "-rc", "-rc.", 1)
+
+	for _, prerelease := range []string{"rc", "alpha", "beta"} {
+		prerelease = "-" + prerelease
+		prerelease_dot := prerelease + "."
+		if !strings.Contains(ver, prerelease_dot) {
+			ver = strings.Replace(ver, prerelease, prerelease_dot, 1)
+		}
 	}
 	return ver
 }
