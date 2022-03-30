@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
@@ -122,6 +123,15 @@ Command line flags:
 		panic(err)
 	}
 
+	versionString := Version
+	if _, err := goversion.NewSemver(Version); err == nil {
+		// version is a valid SemVer => release version
+		versionString = "       v" + versionString
+	} else {
+		// version is not a valid SemVer => maybe self-compiled
+		versionString = "commit: " + versionString
+	}
+
 	fmt.Printf(`
               ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
               ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
@@ -129,8 +139,8 @@ Command line flags:
               ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
               ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
               ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
-                                   v%s
-`+"\n", Version)
+                            %s
+`+"\n", versionString)
 
 	printConfig(maskedKeys)
 
