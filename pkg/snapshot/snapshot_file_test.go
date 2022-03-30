@@ -251,7 +251,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			count--
 
 			parents := iotago.MilestoneParentMessageIDs{utils.RandMessageID().ToArray()}
-			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint64(), parents, utils.Rand32ByteHash(), pubKeys)
+			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint64(), parents, utils.Rand32ByteHash())
 			if err != nil {
 				panic(err)
 			}
@@ -274,7 +274,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 
 			ms.Receipt = receipt
 
-			if err := ms.Sign(iotago.InMemoryEd25519MilestoneSigner(keyMapping)); err != nil {
+			if err := ms.Sign(pubKeys, iotago.InMemoryEd25519MilestoneSigner(keyMapping)); err != nil {
 				panic(err)
 			}
 

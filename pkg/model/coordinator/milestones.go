@@ -38,7 +38,7 @@ func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint64,
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
 	parentsSliceOfArray := parents.ToSliceOfArrays()
-	msPayload, err := iotago.NewMilestone(uint32(index), timestamp, parentsSliceOfArray, whiteFlagMerkleRootTreeHash, pubKeys)
+	msPayload, err := iotago.NewMilestone(uint32(index), timestamp, parentsSliceOfArray, whiteFlagMerkleRootTreeHash)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint64,
 		Payload:         msPayload,
 	}
 
-	if err := msPayload.Sign(coo.createSigningFuncWithRetries(milestoneIndexSigner.SigningFunc())); err != nil {
+	if err := msPayload.Sign(pubKeys, coo.createSigningFuncWithRetries(milestoneIndexSigner.SigningFunc())); err != nil {
 		return nil, err
 	}
 
