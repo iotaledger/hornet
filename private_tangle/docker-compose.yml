@@ -122,6 +122,7 @@ services:
       - "8081:8081/tcp"
       - "8091:8091/tcp"
       - "9311:9311/tcp"
+      - "9029:9029/tcp"
     cap_drop:
       - ALL
     volumes:
