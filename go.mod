@@ -10,7 +10,7 @@ require (
 	github.com/bits-and-blooms/bitset v1.2.2
 	github.com/blang/vfs v1.0.0
 	github.com/cockroachdb/pebble v0.0.0-20220318150003-0ad186894f6d
-	github.com/docker/docker v20.10.13+incompatible
+	github.com/docker/docker v20.10.14+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-echarts/go-echarts v1.0.0
