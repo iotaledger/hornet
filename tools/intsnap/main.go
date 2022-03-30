@@ -30,13 +30,15 @@ func blankMilestone(index uint32) *iotago.Milestone {
 			static32ByteID(1),
 		},
 		InclusionMerkleProof: static32ByteID(2),
-		PublicKeys: []iotago.MilestonePublicKey{
-			static32ByteID(0),
-			static32ByteID(1),
-		},
-		Signatures: []iotago.MilestoneSignature{
-			static64ByteID(0),
-			static64ByteID(1),
+		Signatures: []iotago.Signature{
+			&iotago.Ed25519Signature{
+				PublicKey: static32ByteID(0),
+				Signature: static64ByteID(0),
+			},
+			&iotago.Ed25519Signature{
+				PublicKey: static32ByteID(1),
+				Signature: static64ByteID(1),
+			},
 		},
 	}
 }

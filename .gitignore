@@ -29,7 +29,7 @@ devnetdb*/
 testnetdb*/
 mainnetdb*/
 p2pstore*/
-stardust_testnet
+alphanet*/
 
 # snapshot dir
 snapshots/

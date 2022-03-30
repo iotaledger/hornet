@@ -45,19 +45,20 @@
   },
   "db": {
     "engine": "rocksdb",
-    "path": "stardust_testnet/database",
+    "path": "alphanet/database",
     "autoRevalidation": false
   },
   "snapshots": {
     "depth": 50,
     "interval": 200,
-    "fullPath": "stardust_testnet/snapshots/full_snapshot.bin",
-    "deltaPath": "stardust_testnet/snapshots/delta_snapshot.bin",
+    "fullPath": "alphanet/snapshots/full_snapshot.bin",
+    "deltaPath": "alphanet/snapshots/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
+
     "downloadURLs": [
       {
-        "full": "https://files.stardust-testnet.iotaledger.net/snapshots/latest-full_snapshot.bin",
-        "delta": "https://files.stardust-testnet.iotaledger.net/snapshots/latest-delta_snapshot.bin"
+        "full": "https://files.alphanet.iotaledger.net/snapshots/latest-full_snapshot.bin",
+        "delta": "https://files.alphanet.iotaledger.net/snapshots/latest-delta_snapshot.bin"
       }
     ]
   },
@@ -75,7 +76,7 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "stardust-testnet-4",
+    "networkID": "alphanet-1",
     "bech32HRP": "atoi",
     "minPoWScore": 1000.0,
     "vByteCost": 500,
@@ -111,7 +112,7 @@
     ]
   },
   "node": {
-    "alias": "HORNET stardust-testnet node",
+    "alias": "HORNET alphanet node",
     "profile": "auto",
     "disablePlugins": [],
     "enablePlugins": [
@@ -138,14 +139,14 @@
       "streamWriteTimeout": "10s"
     },
     "db": {
-      "path": "stardust_testnet/p2pstore"
+      "path": "alphanet/p2pstore"
     },
     "reconnectInterval": "30s",
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
       "entryNodes": [
-        "/dns/entry-hornet-0.h.stardust-testnet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr",
-        "/dns/entry-hornet-1.h.stardust-testnet.iotaledger.net/udp/14626/autopeering/CbYtFzRQtqeNQJQFYRZk1WewxfKCmqXCHZ16od1d23PX"
+        "/dns/entry-hornet-0.h.alphanet.iotaledger.net/udp/14626/autopeering/Bv8UUxy81fqpttowiFiBsNT6mnGMFoFNjk79iG1f9nEr",
+        "/dns/entry-hornet-1.h.alphanet.iotaledger.net/udp/14626/autopeering/CbYtFzRQtqeNQJQFYRZk1WewxfKCmqXCHZ16od1d23PX"
       ],
       "entryNodesPreferIPv6": false,
       "runAsEntryNode": false
