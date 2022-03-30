@@ -50,7 +50,7 @@ services:
       - ./config.json:/app/config.json:ro
       - ./peering.json:/app/peering.json
       - ./profiles.json:/app/profiles.json:ro
-      - ./stardust_testnet:/app/stardust_testnet
+      - ./alphanet:/app/alphanet
     command:
       - "-c"
       - "config.json"
