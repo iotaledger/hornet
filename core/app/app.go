@@ -21,7 +21,7 @@ var (
 	Name = "HORNET"
 
 	// Version of the app.
-	Version = "1.1.3"
+	Version = "1.2.0-rc1"
 )
 
 var (

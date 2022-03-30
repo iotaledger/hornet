@@ -2,6 +2,64 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0-rc1] - 30.03.2022
+
+_**Note**: due to changes to the internal database structure it is recommended to remove the old `participation` database._
+
+### Fixed
+    - Fixed various memory leaks that could crash the node with OOM when using autopeering or the spammer plugins. (#1335, #1372)
+    - Fixed version check to only check for updates in the same major version (#1382)
+    - Fixed several race conditions in the participation endpoints (#1349)
+    - Fixed missing error returns in REST API (#1316)
+
+### Changed
+    - Changed how the participation plugin calculates staking rewards. This improves the performance of the node when the plugin is enabled. (#1350)
+    - Changed the COO key validity indicator logic. (#1373)
+    - Updated to Go 1.18
+
+### Added
+    - Added support for multi-arch docker images (amd64+arm64). (#1240, #1301)
+    - Added JSON output support for the tools and refactoring the tool cli-flag handling. (#1289, #1301)
+    - Added `transactionIdSpent` and `milestoneIndexSpent` to the outputs API endpoint. (#1302)
+    - Added various new tools to work with database backups. (#1326, #1328, #1331, #1332, #1348, #1355)
+    - Added new COO keys. (#1375)
+    - Added creating backups of the coordinator and migrator state files (#1381)
+
+### Removed
+    - Removed comnet configuration (#1374)
+
+`config.json`
+```diff
+  "protocol": {
+    ...
+    "publicKeyRanges": [
+      ...
+      {
+        "key": "7bac2209b576ea2235539358c7df8ca4d2f2fc35a663c760449e65eba9f8a6e7",
+        "start": 2108160,
+-       "end": 3666260
++       "end": 3359999
+      },
+      {
+        "key": "edd9c639a719325e465346b84133bf94740b7d476dd87fc949c0e8df516f9954",
+        "start": 2888660,
+-       "end": 4443860
++       "end": 3359999
++     },
++     {
++       "key": "47a5098c696e0fb53e6339edac574be4172cb4701a8210c2ae7469b536fd2c59",
++       "start": 3360000,
++       "end": 0
++     },
++     {
++       "key": "ae4e03072b4869e87dd4cd59315291a034493a8c202b43b257f9c07bc86a2f3e",
++       "start": 3360000,
++       "end": 0
+      }
+    ]
+  },
+```
+
 ## [1.1.3] - 29.12.2021
 
 ### Added
