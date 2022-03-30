@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha6] - 30.03.2022
+
+### Changed
+    - Removed built-in INX extensions support. Indexer and MQTT are now external dependencies. Use `docker-compose.yml` as a guide on how to setup your node.
+    - Foundry output supply fields are now part of the token scheme.
+    - Updated dashboard with an initial version supporting the new API routes.
+    - Added various tools ported from mainnet branch.
+
+### Fixed
+    - Ported memory leak fixes from mainnet branch.
+
+
 ## [2.0.0-alpha5] - 17.03.2022
 
 ### Changed
