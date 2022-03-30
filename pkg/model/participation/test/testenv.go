@@ -138,17 +138,10 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 
 	// Connect the callbacks from the testsuite to the ParticipationManager
 	te.ConfigureUTXOCallbacks(
-		func(index milestone.Index, output *utxo.Output) {
-			require.NoError(t, pm.ApplyNewUTXO(index, output))
-		},
-		func(index milestone.Index, spent *utxo.Spent) {
-			require.NoError(t, pm.ApplySpentUTXO(index, spent))
-		},
 		nil,
-		func(index milestone.Index) {
-			require.NoError(t, pm.ApplyNewConfirmedMilestoneIndex(index))
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+			require.NoError(t, pm.ApplyNewLedgerUpdate(index, newOutputs, newSpents))
 		},
-		nil,
 	)
 
 	return &ParticipationTestEnv{
@@ -345,7 +338,13 @@ func (env *ParticipationTestEnv) AssertStakingRewardsStatus(eventID participatio
 	status, err := env.ParticipationManager().EventStatus(eventID, milestone)
 	require.NoError(env.t, err)
 	env.PrintJSON(status)
-	require.Equal(env.t, milestone, status.MilestoneIndex)
+	event := env.ParticipationManager().Event(eventID)
+	require.NotNil(env.t, event)
+	requiredMilestone := milestone
+	if requiredMilestone > event.EndMilestoneIndex() {
+		requiredMilestone = event.EndMilestoneIndex()
+	}
+	require.Equal(env.t, requiredMilestone, status.MilestoneIndex)
 	require.Exactly(env.t, stakedAmount, status.Staking.Staked)
 	require.Exactly(env.t, rewardedAmount, status.Staking.Rewarded)
 }
@@ -366,8 +365,17 @@ func (env *ParticipationTestEnv) AssertInvalidParticipation(eventID participatio
 	require.ErrorIs(env.t, err, participation.ErrUnknownParticipation)
 }
 
-func (env *ParticipationTestEnv) AssertRewardBalance(eventID participation.EventID, address iotago.Address, balance uint64) {
-	rewards, err := env.ParticipationManager().StakingRewardForAddress(eventID, address)
+func (env *ParticipationTestEnv) AssertRewardBalance(eventID participation.EventID, address iotago.Address, balance uint64, milestoneIndex ...milestone.Index) {
+
+	msIndex := env.ConfirmedMilestoneIndex()
+	if len(milestoneIndex) > 0 {
+		msIndex = milestoneIndex[0]
+	}
+	rewards, err := env.ParticipationManager().StakingRewardForAddress(eventID, address, msIndex)
 	require.NoError(env.t, err)
 	require.Exactly(env.t, balance, rewards)
+}
+
+func (env *ParticipationTestEnv) AssertWalletBalance(wallet *utils.HDWallet, expectedBalance uint64) {
+	env.te.AssertWalletBalance(wallet, expectedBalance)
 }

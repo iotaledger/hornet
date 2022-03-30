@@ -238,27 +238,47 @@ func getRewardsByBech32Address(c echo.Context) (*AddressRewardsResponse, error) 
 		return nil, err
 	}
 
+	milestoneIndex, err := parseMilestoneIndexQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if milestoneIndex == 0 {
+		milestoneIndex = deps.SyncManager.ConfirmedMilestoneIndex()
+	}
+
 	switch address := bech32Address.(type) {
 	case *iotago.Ed25519Address:
-		return ed25519Rewards(address)
+		return ed25519Rewards(address, milestoneIndex)
 	default:
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", bech32Address.String())
 	}
 }
 
 func getRewardsByEd25519Address(c echo.Context) (*AddressRewardsResponse, error) {
+
+	milestoneIndex, err := parseMilestoneIndexQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if milestoneIndex == 0 {
+		milestoneIndex = deps.SyncManager.ConfirmedMilestoneIndex()
+	}
+
 	address, err := restapi.ParseEd25519AddressParam(c)
 	if err != nil {
 		return nil, err
 	}
-	return ed25519Rewards(address)
+	return ed25519Rewards(address, milestoneIndex)
 }
 
-func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, error) {
+func ed25519Rewards(address *iotago.Ed25519Address, msIndex milestone.Index) (*AddressRewardsResponse, error) {
 	eventIDs := deps.ParticipationManager.EventIDs(participation.StakingPayloadTypeID)
 
 	response := &AddressRewardsResponse{
-		Rewards: make(map[string]*AddressReward),
+		Rewards:        make(map[string]*AddressReward),
+		MilestoneIndex: msIndex,
 	}
 
 	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
@@ -277,7 +297,7 @@ func ed25519Rewards(address *iotago.Ed25519Address) (*AddressRewardsResponse, er
 			return nil, errors.WithMessage(echo.ErrInternalServerError, "staking payload not found")
 		}
 
-		amount, err := deps.ParticipationManager.StakingRewardForAddress(eventID, address)
+		amount, err := deps.ParticipationManager.StakingRewardForAddress(eventID, address, msIndex)
 		if err != nil {
 			return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)
 		}
@@ -308,44 +328,123 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
 
-	var addresses []string
-	rewardsByAddress := make(map[string]uint64)
-	if err := deps.ParticipationManager.ForEachStakingAddress(eventID, func(address iotago.Address, rewards uint64) bool {
-		addr := address.String()
-		addresses = append(addresses, addr)
-		rewardsByAddress[addr] = rewards
-		return true
-	}, participation.FilterRequiredMinimumRewards(true)); err != nil {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)
+	milestoneIndex, err := parseMilestoneIndexQueryParam(c)
+	if err != nil {
+		return nil, err
 	}
 
-	index := deps.SyncManager.ConfirmedMilestoneIndex()
-	if index > event.EndMilestoneIndex() {
-		index = event.EndMilestoneIndex()
+	if milestoneIndex == 0 {
+		milestoneIndex = deps.SyncManager.ConfirmedMilestoneIndex()
+	}
+
+	if milestoneIndex > event.EndMilestoneIndex() {
+		milestoneIndex = event.EndMilestoneIndex()
+	}
+
+	var addresses []string
+	rewardsByAddress := make(map[string]uint64)
+	if err := deps.ParticipationManager.ForEachAddressStakingParticipation(eventID, milestoneIndex, func(address iotago.Address, _ *participation.TrackedParticipation, rewards uint64) bool {
+		addr := address.String()
+		if _, has := rewardsByAddress[addr]; !has {
+			addresses = append(addresses, addr)
+		}
+		rewardsByAddress[addr] += rewards
+		return true
+	}); err != nil {
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching rewards: %s", err)
 	}
 
 	responseHash := sha256.New()
 	responseHash.Write(eventID[:])
-	binary.Write(responseHash, binary.LittleEndian, uint32(index))
+	binary.Write(responseHash, binary.LittleEndian, uint32(milestoneIndex))
 	responseHash.Write([]byte(event.Staking().Symbol))
 
 	response := &RewardsResponse{
 		Symbol:         event.Staking().Symbol,
-		MilestoneIndex: index,
+		MilestoneIndex: milestoneIndex,
 		TotalRewards:   0,
 		Rewards:        make(map[string]uint64),
 	}
 
 	sort.Strings(addresses)
 	for _, addr := range addresses {
-		responseHash.Write([]byte(addr))
 		amount := rewardsByAddress[addr]
+		if amount < event.Staking().RequiredMinimumRewards {
+			continue
+		}
+		responseHash.Write([]byte(addr))
 		binary.Write(responseHash, binary.LittleEndian, amount)
 		response.Rewards[addr] = amount
 		response.TotalRewards += amount
 	}
 
 	response.Checksum = iotago.EncodeHex(responseHash.Sum(nil))
+
+	return response, nil
+}
+
+func getOutputsByBech32Address(c echo.Context) (*AddressOutputsResponse, error) {
+	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
+	if err != nil {
+		return nil, err
+	}
+
+	switch address := bech32Address.(type) {
+	case *iotago.Ed25519Address:
+		return ed25519Outputs(address)
+	default:
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid address: %s, error: unknown address type", bech32Address.String())
+	}
+}
+
+func getOutputsByEd25519Address(c echo.Context) (*AddressOutputsResponse, error) {
+	address, err := restapi.ParseEd25519AddressParam(c)
+	if err != nil {
+		return nil, err
+	}
+	return ed25519Outputs(address)
+}
+
+func ed25519Outputs(address *iotago.Ed25519Address) (*AddressOutputsResponse, error) {
+	eventIDs := deps.ParticipationManager.EventIDs(participation.StakingPayloadTypeID)
+
+	response := &AddressOutputsResponse{
+		Outputs: make(map[string]*OutputStatusResponse),
+	}
+
+	// We need to lock the ledger here so that we don't get partial results while the next milestone is being confirmed
+	deps.UTXOManager.ReadLockLedger()
+	defer deps.UTXOManager.ReadUnlockLedger()
+
+	for _, eventID := range eventIDs {
+
+		event := deps.ParticipationManager.Event(eventID)
+		if event == nil {
+			return nil, errors.WithMessage(echo.ErrInternalServerError, "event not found")
+		}
+
+		participations, err := deps.ParticipationManager.ParticipationsForAddress(eventID, address)
+		if err != nil {
+			return nil, errors.WithMessagef(echo.ErrInternalServerError, "error fetching outputs: %s", err)
+		}
+		for _, trackedParticipation := range participations {
+
+			t := &TrackedParticipation{
+				MessageID:           trackedParticipation.MessageID.ToHex(),
+				Amount:              trackedParticipation.Amount,
+				StartMilestoneIndex: trackedParticipation.StartIndex,
+				EndMilestoneIndex:   trackedParticipation.EndIndex,
+			}
+			outputResponse := response.Outputs[trackedParticipation.OutputID.ToHex()]
+			if outputResponse == nil {
+				outputResponse = &OutputStatusResponse{
+					Participations: make(map[string]*TrackedParticipation),
+				}
+				response.Outputs[trackedParticipation.OutputID.ToHex()] = outputResponse
+			}
+			outputResponse.Participations[trackedParticipation.EventID.ToHex()] = t
+		}
+	}
 
 	return response, nil
 }

@@ -51,8 +51,14 @@ const (
 	// RouteAddressBech32Status is the route to get the staking rewards for the given bech32 address.
 	RouteAddressBech32Status = "/addresses/:" + restapipkg.ParameterAddress
 
+	// RouteAddressBech32Outputs is the route to get the outputs for the given bech32 address.
+	RouteAddressBech32Outputs = "/addresses/:" + restapipkg.ParameterAddress + "/outputs"
+
 	// RouteAddressEd25519Status is the route to get the staking rewards for the given ed25519 address.
 	RouteAddressEd25519Status = "/addresses/ed25519/:" + restapipkg.ParameterAddress
+
+	// RouteAddressEd25519Outputs is the route to get the outputs for the given ed25519 address.
+	RouteAddressEd25519Outputs = "/addresses/ed25519/:" + restapipkg.ParameterAddress + "/outputs"
 
 	// RouteAdminCreateEvent is the route the node operator can use to add events.
 	// POST creates a new event to track
@@ -92,9 +98,7 @@ var (
 	Plugin *node.Plugin
 	deps   dependencies
 
-	onUTXOOutput                     *events.Closure
-	onUTXOSpent                      *events.Closure
-	onConfirmedMilestoneIndexChanged *events.Closure
+	onLedgerUpdated *events.Closure
 )
 
 type dependencies struct {
@@ -213,8 +217,24 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	routeGroup.GET(RouteAddressBech32Outputs, func(c echo.Context) error {
+		resp, err := getOutputsByBech32Address(c)
+		if err != nil {
+			return err
+		}
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
 	routeGroup.GET(RouteAddressEd25519Status, func(c echo.Context) error {
 		resp, err := getRewardsByEd25519Address(c)
+		if err != nil {
+			return err
+		}
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.GET(RouteAddressEd25519Outputs, func(c echo.Context) error {
+		resp, err := getOutputsByEd25519Address(c)
 		if err != nil {
 			return err
 		}
@@ -275,33 +295,17 @@ func run() {
 
 func configureEvents() {
 
-	onUTXOOutput = events.NewClosure(func(index milestone.Index, output *utxo.Output) {
-		if err := deps.ParticipationManager.ApplyNewUTXO(index, output); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("participation plugin hit a critical error while applying new UTXO: %s", err.Error()))
-		}
-	})
-
-	onUTXOSpent = events.NewClosure(func(index milestone.Index, spent *utxo.Spent) {
-		if err := deps.ParticipationManager.ApplySpentUTXO(index, spent); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("participation plugin hit a critical error while applying spent TXO: %s", err.Error()))
-		}
-	})
-
-	onConfirmedMilestoneIndexChanged = events.NewClosure(func(index milestone.Index) {
-		if err := deps.ParticipationManager.ApplyNewConfirmedMilestoneIndex(index); err != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("participation plugin hit a critical error while applying new confirmed milestone index: %s", err.Error()))
+	onLedgerUpdated = events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+		if err := deps.ParticipationManager.ApplyNewLedgerUpdate(index, newOutputs, newSpents); err != nil {
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("participation plugin hit a critical error while applying new ledger update: %s", err.Error()))
 		}
 	})
 }
 
 func attachEvents() {
-	deps.Tangle.Events.NewUTXOOutput.Attach(onUTXOOutput)
-	deps.Tangle.Events.NewUTXOSpent.Attach(onUTXOSpent)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
+	deps.Tangle.Events.LedgerUpdated.Attach(onLedgerUpdated)
 }
 
 func detachEvents() {
-	deps.Tangle.Events.NewUTXOOutput.Detach(onUTXOOutput)
-	deps.Tangle.Events.NewUTXOSpent.Detach(onUTXOSpent)
-	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
+	deps.Tangle.Events.LedgerUpdated.Detach(onLedgerUpdated)
 }
