@@ -58,7 +58,7 @@ func databaseMigration(args []string) error {
 		return fmt.Errorf("'%s' (%s) already exist", FlagToolDatabasePathTarget, targetPath)
 	}
 
-	targetEngine, err := database.DatabaseEngine(*databaseEngineTargetFlag, database.EnginePebble, database.EngineRocksDB)
+	targetEngine, err := database.DatabaseEngineFromStringAllowed(*databaseEngineTargetFlag, database.EnginePebble, database.EngineRocksDB)
 	if err != nil {
 		return err
 	}

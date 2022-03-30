@@ -175,11 +175,11 @@ func TestHeaviestSelector_SelectTipsCheckThresholds(t *testing.T) {
 			tip,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMetadata.Release(true) // meta -1
+			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
 
 				// first check if the msg was referenced => update ycri and ocri with the confirmation index
-				if referenced, at := cachedMetadata.Metadata().ReferencedWithIndex(); referenced {
+				if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced {
 					updateIndexes(at, at)
 					return false, nil
 				}
@@ -192,10 +192,14 @@ func TestHeaviestSelector_SelectTipsCheckThresholds(t *testing.T) {
 			// return error on missing parents
 			nil,
 			// called on solid entry points
-			func(messageID hornet.MessageID) {
+			func(messageID hornet.MessageID) error {
 				// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
-				at, _ := te.Storage().SolidEntryPointsIndex(messageID)
+				at, _, err := te.Storage().SolidEntryPointsIndex(messageID)
+				if err != nil {
+					return err
+				}
 				updateIndexes(at, at)
+				return nil
 			}, false)
 		require.NoError(te.TestInterface, err)
 
@@ -262,7 +266,7 @@ func TestHeaviestSelector_SelectTipsCheckThresholds(t *testing.T) {
 			return tips
 		},
 		func(_ milestone.Index, _ hornet.MessageIDs, conf *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
-			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), nil, conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
+			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
 		},
 	)
 

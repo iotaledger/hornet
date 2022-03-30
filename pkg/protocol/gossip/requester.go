@@ -210,7 +210,11 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 	switch value := data.(type) {
 	case hornet.MessageID:
 		messageID := value
-		if r.storage.SolidEntryPointsContain(messageID) {
+		contains, err := r.storage.SolidEntryPointsContain(messageID)
+		if err != nil {
+			panic(err)
+		}
+		if contains {
 			return false
 		}
 		if r.storage.ContainsMessage(messageID) {
@@ -253,7 +257,11 @@ func (r *Requester) RequestParents(cachedMsg *storage.CachedMessage, msIndex mil
 	cachedMsg.ConsumeMetadata(func(metadata *storage.MessageMetadata) {
 		messageID := metadata.MessageID()
 
-		if r.storage.SolidEntryPointsContain(messageID) {
+		contains, err := r.storage.SolidEntryPointsContain(messageID)
+		if err != nil {
+			panic(err)
+		}
+		if contains {
 			return
 		}
 
@@ -266,17 +274,17 @@ func (r *Requester) RequestParents(cachedMsg *storage.CachedMessage, msIndex mil
 // RequestMilestoneParents enqueues requests for the parents of the given milestone to the request queue,
 // if the parents are not solid entry points and not already in the database.
 func (r *Requester) RequestMilestoneParents(cachedMilestone *storage.CachedMilestone) bool {
-	defer cachedMilestone.Release(true) // message -1
+	defer cachedMilestone.Release(true) // milestone -1
 
 	msIndex := cachedMilestone.Milestone().Index
 
-	cachedMilestoneMsgMeta := r.storage.CachedMessageMetadataOrNil(cachedMilestone.Milestone().MessageID) // meta +1
-	if cachedMilestoneMsgMeta == nil {
+	cachedMsgMetaMilestone := r.storage.CachedMessageMetadataOrNil(cachedMilestone.Milestone().MessageID) // meta +1
+	if cachedMsgMetaMilestone == nil {
 		panic("milestone metadata doesn't exist")
 	}
-	defer cachedMilestoneMsgMeta.Release(true) // meta -1
+	defer cachedMsgMetaMilestone.Release(true) // meta -1
 
-	txMeta := cachedMilestoneMsgMeta.Metadata()
+	txMeta := cachedMsgMetaMilestone.Metadata()
 
 	enqueued := false
 	for _, parent := range txMeta.Parents() {

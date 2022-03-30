@@ -55,6 +55,11 @@ func init() {
 var (
 	CorePlugin *node.CorePlugin
 	deps       dependencies
+
+	// closures
+	onGossipServiceProtocolStarted     *events.Closure
+	onGossipServiceProtocolTerminated  *events.Closure
+	onMessageProcessorBroadcastMessage *events.Closure
 )
 
 type dependencies struct {
@@ -191,72 +196,17 @@ func configure() {
 		return deps.SnapshotManager.IsSnapshottingOrPruning() || deps.Tangle.IsReceiveTxWorkerPoolBusy()
 	})
 
-	// register event handlers for messages
-	deps.GossipService.Events.ProtocolStarted.Attach(events.NewClosure(func(proto *gossip.Protocol) {
-		addMessageEventHandlers(proto)
-
-		// stream close handler
-		protocolTerminatedCtx, protocolTerminatedCtxCancel := context.WithCancel(context.Background())
-
-		deps.GossipService.Events.ProtocolTerminated.Attach(events.NewClosure(func(terminatedProto *gossip.Protocol) {
-			if terminatedProto != proto {
-				return
-			}
-			protocolTerminatedCtxCancel()
-		}))
-
-		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
-			buf := make([]byte, readBufSize)
-			// only way to break out is to Reset() the stream
-			for {
-				r, err := proto.Read(buf)
-				if err != nil {
-					proto.Parser.Events.Error.Trigger(err)
-					return
-				}
-				if _, err := proto.Parser.Read(buf[:r]); err != nil {
-					return
-				}
-			}
-		}, shutdown.PriorityPeerGossipProtocolRead); err != nil {
-			CorePlugin.LogWarnf("failed to start worker: %s", err)
-		}
-
-		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
-			// send heartbeat and latest milestone request
-			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
-				latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
-				syncedCount := deps.GossipService.SynchronizedCount(latestMilestoneIndex)
-				connectedCount := deps.PeeringManager.ConnectedCount()
-				// TODO: overflow not handled for synced/connected
-				proto.SendHeartbeat(deps.SyncManager.ConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
-				proto.SendLatestMilestoneRequest()
-			}
-
-			for {
-				select {
-				case <-protocolTerminatedCtx.Done():
-					return
-				case <-ctx.Done():
-					return
-				case data := <-proto.SendQueue:
-					if err := proto.Send(data); err != nil {
-						proto.Events.Errors.Trigger(err)
-						return
-					}
-				}
-			}
-		}, shutdown.PriorityPeerGossipProtocolWrite); err != nil {
-			CorePlugin.LogWarnf("failed to start worker: %s", err)
-		}
-	}))
+	configureEvents()
 }
 
 func run() {
 
 	if err := CorePlugin.Daemon().BackgroundWorker("GossipService", func(ctx context.Context) {
 		CorePlugin.LogInfo("Running GossipService")
+		attachEventsGossipService()
 		deps.GossipService.Start(ctx)
+
+		detachEventsGossipService()
 		CorePlugin.LogInfo("Stopped GossipService")
 	}, shutdown.PriorityGossipService); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
@@ -276,10 +226,10 @@ func run() {
 
 	if err := CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(ctx context.Context) {
 		CorePlugin.LogInfo("Running BroadcastQueue")
-		onBroadcastMessage := events.NewClosure(deps.Broadcaster.Broadcast)
-		deps.MessageProcessor.Events.BroadcastMessage.Attach(onBroadcastMessage)
-		defer deps.MessageProcessor.Events.BroadcastMessage.Detach(onBroadcastMessage)
+		attachEventsBroadcastQueue()
 		deps.Broadcaster.RunBroadcastQueueDrainer(ctx)
+
+		detachEventsBroadcastQueue()
 		CorePlugin.LogInfo("Stopped BroadcastQueue")
 	}, shutdown.PriorityBroadcastQueue); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
@@ -288,6 +238,7 @@ func run() {
 	if err := CorePlugin.Daemon().BackgroundWorker("MessageProcessor", func(ctx context.Context) {
 		CorePlugin.LogInfo("Running MessageProcessor")
 		deps.MessageProcessor.Run(ctx)
+
 		CorePlugin.LogInfo("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
@@ -353,4 +304,105 @@ func checkHeartbeats() {
 			_ = conn.Close()
 		}
 	}
+}
+
+func configureEvents() {
+
+	onGossipServiceProtocolStarted = events.NewClosure(func(proto *gossip.Protocol) {
+		attachEventsProtocolMessages(proto)
+
+		// attach protocol errors
+		closeConnectionDueToProtocolError := events.NewClosure(func(err error) {
+			CorePlugin.LogWarnf("closing connection to peer %s because of a protocol error: %s", proto.PeerID.ShortString(), err.Error())
+
+			if err := deps.GossipService.CloseStream(proto.PeerID); err != nil {
+				CorePlugin.LogWarnf("closing connection to peer %s failed, error: %s", proto.PeerID.ShortString(), err.Error())
+			}
+		})
+
+		proto.Events.Errors.Attach(closeConnectionDueToProtocolError)
+		proto.Parser.Events.Error.Attach(closeConnectionDueToProtocolError)
+
+		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
+			buf := make([]byte, readBufSize)
+			// only way to break out is to Reset() the stream
+			for {
+				r, err := proto.Read(buf)
+				if err != nil {
+					// proto.Events.Error is already triggered inside Read
+					return
+				}
+				if _, err := proto.Parser.Read(buf[:r]); err != nil {
+					// proto.Events.Error is already triggered inside Read
+					return
+				}
+			}
+		}, shutdown.PriorityPeerGossipProtocolRead); err != nil {
+			CorePlugin.LogWarnf("failed to start worker: %s", err)
+		}
+
+		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
+			// send heartbeat and latest milestone request
+			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
+				latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
+				syncedCount := deps.GossipService.SynchronizedCount(latestMilestoneIndex)
+				connectedCount := deps.PeeringManager.ConnectedCount()
+				// TODO: overflow not handled for synced/connected
+				proto.SendHeartbeat(deps.SyncManager.ConfirmedMilestoneIndex(), snapshotInfo.PruningIndex, latestMilestoneIndex, byte(connectedCount), byte(syncedCount))
+				proto.SendLatestMilestoneRequest()
+			}
+
+			for {
+				select {
+				case <-proto.Terminated():
+					return
+				case <-ctx.Done():
+					return
+				case data := <-proto.SendQueue:
+					if err := proto.Send(data); err != nil {
+						return
+					}
+				}
+			}
+		}, shutdown.PriorityPeerGossipProtocolWrite); err != nil {
+			CorePlugin.LogWarnf("failed to start worker: %s", err)
+		}
+	})
+
+	onGossipServiceProtocolTerminated = events.NewClosure(func(proto *gossip.Protocol) {
+		if proto == nil {
+			return
+		}
+
+		detachEventsProtocolMessages(proto)
+
+		// detach protocol errors
+		if proto.Events != nil && proto.Events.Errors != nil {
+			proto.Events.Errors.DetachAll()
+		}
+
+		if proto.Parser != nil && proto.Parser.Events.Error != nil {
+			proto.Parser.Events.Error.DetachAll()
+		}
+	})
+
+	onMessageProcessorBroadcastMessage = events.NewClosure(deps.Broadcaster.Broadcast)
+}
+
+func attachEventsGossipService() {
+	deps.GossipService.Events.ProtocolStarted.Attach(onGossipServiceProtocolStarted)
+	deps.GossipService.Events.ProtocolTerminated.Attach(onGossipServiceProtocolTerminated)
+}
+
+func attachEventsBroadcastQueue() {
+	deps.MessageProcessor.Events.BroadcastMessage.Attach(onMessageProcessorBroadcastMessage)
+}
+
+func detachEventsGossipService() {
+	deps.GossipService.Events.ProtocolStarted.Detach(onGossipServiceProtocolStarted)
+	deps.GossipService.Events.ProtocolTerminated.Detach(onGossipServiceProtocolTerminated)
+}
+
+func detachEventsBroadcastQueue() {
+	deps.MessageProcessor.Events.BroadcastMessage.Detach(onMessageProcessorBroadcastMessage)
 }

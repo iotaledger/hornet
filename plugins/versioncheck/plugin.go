@@ -2,15 +2,14 @@ package versioncheck
 
 import (
 	"context"
-	"strings"
 	"time"
 
-	"github.com/tcnksm/go-latest"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/version"
 	"github.com/iotaledger/hive.go/timeutil"
 )
 
@@ -20,6 +19,7 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "VersionCheck",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+			Provide:   provide,
 			Configure: configure,
 			Run:       run,
 		},
@@ -29,23 +29,23 @@ func init() {
 var (
 	Plugin *node.Plugin
 	deps   dependencies
-
-	githubTag *latest.GithubTag
 )
 
 type dependencies struct {
 	dig.In
-	AppInfo *app.AppInfo
+	AppInfo        *app.AppInfo
+	VersionChecker *version.VersionChecker
+}
+
+func provide(c *dig.Container) {
+	if err := c.Provide(func(appInfo *app.AppInfo) *version.VersionChecker {
+		return version.NewVersionChecker("gohornet", "hornet", appInfo.Version)
+	}); err != nil {
+		Plugin.LogPanic(err)
+	}
 }
 
 func configure() {
-	githubTag = &latest.GithubTag{
-		Owner:             "gohornet",
-		Repository:        "hornet",
-		FixVersionStrFunc: fixVersion,
-		TagFilterFunc:     includeVersionInCheck,
-	}
-
 	checkLatestVersion()
 }
 
@@ -59,33 +59,8 @@ func run() {
 	}
 }
 
-func fixVersion(version string) string {
-	ver := strings.Replace(version, "v", "", 1)
-	if !strings.Contains(ver, "-rc.") {
-		ver = strings.Replace(ver, "-rc", "-rc.", 1)
-	}
-	if !strings.Contains(ver, "-alpha.") {
-		ver = strings.Replace(ver, "-alpha", "-alpha.", 1)
-	}
-	return ver
-}
-
-func includeVersionInCheck(version string) bool {
-	isPrerelease := func(ver string) bool {
-		return strings.Contains(ver, "-rc") || strings.Contains(ver, "-alpha")
-	}
-
-	if isPrerelease(deps.AppInfo.Version) {
-		// When using pre-release versions, check for any updates
-		return true
-	}
-
-	return !isPrerelease(version)
-}
-
 func checkLatestVersion() {
-
-	res, err := latest.Check(githubTag, fixVersion(deps.AppInfo.Version))
+	res, err := deps.VersionChecker.CheckForUpdates()
 	if err != nil {
 		Plugin.LogWarnf("Update check failed: %s", err)
 		return

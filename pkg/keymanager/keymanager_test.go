@@ -21,10 +21,26 @@ func TestMilestoneKeyManager(t *testing.T) {
 	pubKey3, privKey3, err := ed25519.GenerateKey(nil)
 	assert.NoError(t, err)
 
+	pubKey4, privKey4, err := ed25519.GenerateKey(nil)
+	assert.NoError(t, err)
+
+	var msPubKey1 iotago.MilestonePublicKey
+	copy(msPubKey1[:], pubKey1)
+
+	var msPubKey2 iotago.MilestonePublicKey
+	copy(msPubKey2[:], pubKey2)
+
+	var msPubKey3 iotago.MilestonePublicKey
+	copy(msPubKey3[:], pubKey3)
+
+	var msPubKey4 iotago.MilestonePublicKey
+	copy(msPubKey4[:], pubKey4)
+
 	km := keymanager.New()
 	km.AddKeyRange(pubKey1, 0, 0)
 	km.AddKeyRange(pubKey2, 3, 10)
 	km.AddKeyRange(pubKey3, 8, 15)
+	km.AddKeyRange(pubKey4, 17, 0)
 
 	keysIndex0 := km.PublicKeysForMilestoneIndex(0)
 	assert.Len(t, keysIndex0, 1)
@@ -50,20 +66,14 @@ func TestMilestoneKeyManager(t *testing.T) {
 	keysIndex16 := km.PublicKeysForMilestoneIndex(16)
 	assert.Len(t, keysIndex16, 1)
 
+	keysIndex17 := km.PublicKeysForMilestoneIndex(17)
+	assert.Len(t, keysIndex17, 2)
+
 	keysIndex1000 := km.PublicKeysForMilestoneIndex(1000)
-	assert.Len(t, keysIndex1000, 1)
+	assert.Len(t, keysIndex1000, 2)
 
 	keysSet8 := km.PublicKeysSetForMilestoneIndex(8)
 	assert.Len(t, keysSet8, 3)
-
-	var msPubKey1 iotago.MilestonePublicKey
-	copy(msPubKey1[:], pubKey1)
-
-	var msPubKey2 iotago.MilestonePublicKey
-	copy(msPubKey2[:], pubKey2)
-
-	var msPubKey3 iotago.MilestonePublicKey
-	copy(msPubKey3[:], pubKey3)
 
 	assert.Contains(t, keysSet8, msPubKey1)
 	assert.Contains(t, keysSet8, msPubKey2)
@@ -74,4 +84,13 @@ func TestMilestoneKeyManager(t *testing.T) {
 
 	assert.Equal(t, keyMapping8[msPubKey1], privKey1)
 	assert.Equal(t, keyMapping8[msPubKey2], privKey2)
+
+	keyMapping17 := km.MilestonePublicKeyMappingForMilestoneIndex(17, []ed25519.PrivateKey{privKey1, privKey4}, 2)
+	assert.Len(t, keyMapping17, 2)
+
+	assert.Equal(t, keyMapping17[msPubKey1], privKey1)
+	assert.Equal(t, keyMapping17[msPubKey4], privKey4)
+
+	keysSet17 := km.PublicKeysSetForMilestoneIndex(17)
+	assert.Len(t, keysSet17, 2)
 }

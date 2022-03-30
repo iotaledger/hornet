@@ -1,6 +1,8 @@
 package utxo
 
 import (
+	"bytes"
+
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -10,6 +12,22 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
+
+// LexicalOrderedOutputs are outputs
+// ordered in lexical order by their outputID.
+type LexicalOrderedOutputs []*Output
+
+func (l LexicalOrderedOutputs) Len() int {
+	return len(l)
+}
+
+func (l LexicalOrderedOutputs) Less(i, j int) bool {
+	return bytes.Compare(l[i].outputID[:], l[j].outputID[:]) < 0
+}
+
+func (l LexicalOrderedOutputs) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
 
 type Output struct {
 	kvStorable

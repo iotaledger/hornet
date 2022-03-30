@@ -1,4 +1,6 @@
 ---
+description: Learn about key concepts to consider for Node maintenance. These include configuring storage, plugins, spammers, and how to work with snapshots.
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node 
 - Hornet Node
@@ -6,8 +8,7 @@ keywords:
 - configuration
 - spammer
 - snapshots
-description: Key concepts to consider for Node maintenance. Configuring storage, plugins, spammer and how to work with snapshots.
-image: /img/logo/HornetLogo.png
+- reference
 ---
 
 
@@ -15,7 +16,7 @@ image: /img/logo/HornetLogo.png
 In this section, you can find an overview of the key concepts that you should consider during your node's maintenance cycle.
 
 ## Storage
-Hornet uses embedded database engine that stores its data in a directory on file system. You can manage the location using the `config.json` file, under the `db` section, with the `path` key:
+Hornet uses an embedded database engine that stores its data in a directory in a file system. You can manage the location using the `config.json` file, under the `db` section, with the `path` key:
 
 ```json{3}
 "db": {
@@ -27,7 +28,7 @@ Hornet uses embedded database engine that stores its data in a directory on file
 
 By convention, you should name that directory after the network type: `mainnet` or `testnet`.
 
-Another important directory is the `snapshots` directory.  You can control the `snapshots` in the `snapshots` section of the `config.json` file, specifically the `fullPath` and `deltaPath` keys:
+Another important directory is the `snapshots` directory. You can control the `snapshots` in the `snapshots` section of the `config.json` file, specifically the `fullPath` and `deltaPath` keys:
 
 ```json
 "snapshots": {
@@ -46,7 +47,7 @@ Another important directory is the `snapshots` directory.  You can control the `
       }
     ]
 ```
-You should apply the same convention as with the database engine, and name the directories after the network type: `mainnet` or `testnet`.
+You should apply the same convention you use for the database engine to name the directories after the network type: `mainnet` or `testnet`.
 
 Here is the full overview of all files and directories that are leveraged by the Hornet:
 ```plaintext
@@ -75,17 +76,17 @@ Hornet can be extended by plugins. You can control plugins using the `node` sect
   },
 ```
 
-You can also control plugins using the [Dashboard/web interface](post_installation.md#Dashboard).
+You can also control plugins using the [Dashboard/web interface](https://wiki.iota.org/hornet/post_installation#dashboard).
 
 
 ## Spammer
-Hornet integrates a lightweight spamming plugin that spams the network with messages. The IOTA network is based on Directed Acyclic Graph. Therefore, new incoming messages are connected to previous messages (tips). It is healthy for the network to maintain some level of message rate.
+Hornet integrates a lightweight spamming plugin that spams the network with messages. The IOTA network is based on a Directed Acyclic Graph. So, new incoming messages are connected to previous messages (tips). It is healthy for the network to maintain some level of message rate.
 
-The Spammer plugin allows your node to send a number of data messages at regular interval. You can set the interval with the `mpsRateLimit` key, which is the number of messages per second (TPS) that the plugin should try to send.
+The Spammer plugin allows your node to send several data messages at regular intervals. You can set the interval with the `mpsRateLimit` key, which is the number of messages per second (TPS) that the plugin should try to send.
 
 For example, value `"mpsRateLimit": 0.1` would mean to send 1 message every 10 seconds.
 
-To enable this plugin, you will need to change the default configuration, as it is disabled by default.
+You can change the default configuration by enabling this plugin since it is usually disabled.
 
 ```json
  "spammer": {
@@ -99,12 +100,14 @@ To enable this plugin, you will need to change the default configuration, as it 
   }
 ```
 
-:::info
-This plugin can be also leveraged during a spamming event during which the community tests the throughput of the network.
+:::note
+
+This plugin can also be leveraged during a spamming event during which the community tests the throughput of the network.
+
 :::
 
 ## Snapshots
-Your node's ledger accumulates many messages, which uses a significant disk capacity over time. This section discusses how to configure local snapshots to prune old transactions from your node's database and create backup snapshot files.
+Your node's ledger accumulates many messages, which uses a significant disk capacity over time. This section discusses configuring local snapshots to prune old transactions from your node's database and create backup snapshot files.
 
 ```json
  "snapshots": {
@@ -143,7 +146,7 @@ During a snapshot, Hornet may delete messages from the ledger if they were confi
 
 * If you want to enable pruning, you should set the `pruning.milestones.enabled` or `pruning.size.enabled` keys to _enabled_.
 * The `pruning.milestones.maxMilestonesToKeep` defines how far back from the current confirmed milestone should be pruned.
-* The `pruning.size.targetSize` defines the maximum database size.  Old data will be pruned.
+* The `pruning.size.targetSize` defines the maximum database size. Old data will be pruned.
 
 There are two types of snapshots:
 
@@ -151,11 +154,11 @@ There are two types of snapshots:
 A delta snapshot points to a specific full snapshot, meaning a delta snapshot consists of the changes since the last full snapshot.
 
 #### Full snapshots
-The full snapshot includes the whole ledger state to a specific milestone, and a solid entry point.
+The full snapshot includes the whole ledger state to a specific milestone and a solid entry point.
 
 
 ### How to Work With Snapshots
-If you are running a Hornet node for the first time, you will need to start it with a full-snapshot. Hornet downloads it for you automatically from trusted sources.
+If you are running a Hornet node for the first time, you will need to start it with a full snapshot. Hornet automatically downloads this from trusted sources.
 
 Additionally, you can start Hornet with a specific delta snapshot using the `Hornet` tools:
 

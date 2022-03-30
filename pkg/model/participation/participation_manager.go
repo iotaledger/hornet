@@ -364,12 +364,12 @@ func (pm *ParticipationManager) ApplyNewUTXO(index milestone.Index, newOutput *u
 func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, newOutput *utxo.Output, events map[EventID]*Event) error {
 	messageID := newOutput.MessageID()
 
-	cachedMsg := pm.storage.CachedMessageOrNil(messageID)
+	cachedMsg := pm.storage.CachedMessageOrNil(messageID) // message +1
 	if cachedMsg == nil {
 		// if the message was included, there must be a message
 		return fmt.Errorf("message not found: %s", messageID.ToHex())
 	}
-	defer cachedMsg.Release(true)
+	defer cachedMsg.Release(true) // message -1
 
 	msg := cachedMsg.Message()
 

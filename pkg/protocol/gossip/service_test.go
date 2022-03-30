@@ -26,15 +26,20 @@ const protocolID = "/iota/abcdf/1.0.0"
 func newNode(name string, ctx context.Context, t *testing.T, mngOpts []p2p.ManagerOption, srvOpts []gossip.ServiceOption) (
 	host.Host, *p2p.Manager, *gossip.Service, peer.AddrInfo,
 ) {
-	cm, err := connmgr.NewConnManager(1, 100, connmgr.WithGracePeriod(0))
-	require.NoError(t, err)
-
 	// we use Ed25519 because otherwise it takes longer as the default is RSA
 	sk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
 	require.NoError(t, err)
+
+	connManager, err := connmgr.NewConnManager(
+		1,
+		100,
+		connmgr.WithGracePeriod(0),
+	)
+	require.NoError(t, err)
+
 	n, err := libp2p.New(
 		libp2p.Identity(sk),
-		libp2p.ConnectionManager(cm),
+		libp2p.ConnectionManager(connManager),
 	)
 	require.NoError(t, err)
 

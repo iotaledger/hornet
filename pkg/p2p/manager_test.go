@@ -26,12 +26,16 @@ func newNode(t require.TestingT) host.Host {
 	sk, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
 	require.NoError(t, err)
 
-	cm, err := connmgr.NewConnManager(1, 100, connmgr.WithGracePeriod(0))
+	connManager, err := connmgr.NewConnManager(
+		1,
+		100,
+		connmgr.WithGracePeriod(0),
+	)
 	require.NoError(t, err)
 
 	h, err := libp2p.New(
 		libp2p.Identity(sk),
-		libp2p.ConnectionManager(cm),
+		libp2p.ConnectionManager(connManager),
 	)
 	require.NoError(t, err)
 	return h

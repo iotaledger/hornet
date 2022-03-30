@@ -187,51 +187,75 @@ func (s *SnapshotManager) shouldTakeSnapshot(confirmedMilestoneIndex milestone.I
 	return confirmedMilestoneIndex-(s.snapshotDepth+s.snapshotInterval) >= snapshotInfo.SnapshotIndex
 }
 
-func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetIndex milestone.Index, solidEntryPointConsumer func(sep *storage.SolidEntryPoint) bool) error {
+func forEachSolidEntryPoint(
+	ctx context.Context,
+	dbStorage *storage.Storage,
+	targetIndex milestone.Index,
+	solidEntryPointCheckThresholdPast milestone.Index,
+	solidEntryPointConsumer func(sep *storage.SolidEntryPoint) bool) error {
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
-	metadataMemcache := storage.NewMetadataMemcache(s.storage)
-	defer metadataMemcache.Cleanup(true)
+	metadataMemcache := storage.NewMetadataMemcache(dbStorage.CachedMessageMetadata)
+	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(dbStorage, metadataMemcache)
+	memcachedChildrenTraverserStorage := dag.NewMemcachedChildrenTraverserStorage(dbStorage, metadataMemcache)
+
+	defer func() {
+		// all releases are forced since the cone is referenced and not needed anymore
+		memcachedParentsTraverserStorage.Cleanup(true)
+		memcachedChildrenTraverserStorage.Cleanup(true)
+
+		// Release all message metadata at the end
+		metadataMemcache.Cleanup(true)
+	}()
 
 	// we share the same traverser for all milestones, so we don't cleanup the cachedMessages in between.
-	// we don't need to call cleanup at the end, because we passed our own metadataMemcache.
-	parentsTraverser := dag.NewParentTraverser(s.storage, metadataMemcache)
+	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
 
 	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
-	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) bool {
-		for _, childMessageID := range s.storage.ChildrenMessageIDs(messageID) {
-			cachedMsgMeta := metadataMemcache.CachedMetadataOrNil(childMessageID) // meta +1
+	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) (bool, error) {
+		childMessageIDs, err := memcachedChildrenTraverserStorage.ChildrenMessageIDs(messageID)
+		if err != nil {
+			return false, err
+		}
+
+		for _, childMessageID := range childMessageIDs {
+			cachedMsgMeta, err := memcachedChildrenTraverserStorage.CachedMessageMetadata(childMessageID) // meta +1
+			if err != nil {
+				return false, err
+			}
+
 			if cachedMsgMeta == nil {
 				// Ignore this message since it doesn't exist anymore
-				s.LogWarnf("%s, msg ID: %v, child msg ID: %v", ErrChildMsgNotFound, messageID.ToHex(), childMessageID.ToHex())
 				continue
 			}
 
 			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
 				// referenced by a later milestone than targetIndex => solidEntryPoint
-				return true
+				cachedMsgMeta.Release(true) // meta -1
+				return true, nil
 			}
+			cachedMsgMeta.Release(true) // meta -1
 		}
-		return false
+		return false, nil
 	}
 
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
-	for milestoneIndex := targetIndex - s.solidEntryPointCheckThresholdPast; milestoneIndex <= targetIndex; milestoneIndex++ {
+	for milestoneIndex := targetIndex - solidEntryPointCheckThresholdPast; milestoneIndex <= targetIndex; milestoneIndex++ {
 
 		if err := utils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
 			// stop snapshot creation if node was shutdown
 			return err
 		}
 
-		cachedMilestone := s.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
+		cachedMilestone := dbStorage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
 		if cachedMilestone == nil {
 			return errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
 
 		// Get all parents of that milestone
 		milestoneMessageID := cachedMilestone.Milestone().MessageID
-		cachedMilestone.Release(true) // message -1
+		cachedMilestone.Release(true) // milestone -1
 
 		// traverse the milestone and collect all messages that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
@@ -239,16 +263,16 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 			hornet.MessageIDs{milestoneMessageID},
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // msg +1
-				defer cachedMsgMeta.Release(true) // msg -1
+			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
 
-				// collect all msg that were referenced by that milestone or newer
+				// collect all msgs that were referenced by that milestone or newer
 				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
 				return referenced && at >= milestoneIndex, nil
 			},
 			// consumer
-			func(cachedMsgMeta *storage.CachedMetadata) error { // msg +1
-				defer cachedMsgMeta.Release(true) // msg -1
+			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
+				defer cachedMsgMeta.Release(true) // meta -1
 
 				if err := utils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
 					// stop snapshot creation if node was shutdown
@@ -257,7 +281,12 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 
 				messageID := cachedMsgMeta.Metadata().MessageID()
 
-				if isEntryPoint := isSolidEntryPoint(messageID, targetIndex); !isEntryPoint {
+				isEntryPoint, err := isSolidEntryPoint(messageID, targetIndex)
+				if err != nil {
+					return err
+				}
+
+				if !isEntryPoint {
 					return nil
 				}
 
@@ -293,25 +322,28 @@ func (s *SnapshotManager) forEachSolidEntryPoint(ctx context.Context, targetInde
 	return nil
 }
 
-func (s *SnapshotManager) checkSnapshotLimits(targetIndex milestone.Index, snapshotInfo *storage.SnapshotInfo, writeToDatabase bool) error {
+func checkSnapshotLimits(
+	snapshotInfo *storage.SnapshotInfo,
+	confirmedMilestoneIndex milestone.Index,
+	targetIndex milestone.Index,
+	solidEntryPointCheckThresholdPast milestone.Index,
+	solidEntryPointCheckThresholdFuture milestone.Index,
+	checkIncreasingSnapshotIndex bool) error {
 
-	confirmedMilestoneIndex := s.syncManager.ConfirmedMilestoneIndex()
-
-	if confirmedMilestoneIndex < s.solidEntryPointCheckThresholdFuture {
-		return errors.Wrapf(ErrNotEnoughHistory, "minimum confirmed index: %d, actual confirmed index: %d", s.solidEntryPointCheckThresholdFuture+1, confirmedMilestoneIndex)
+	if confirmedMilestoneIndex < solidEntryPointCheckThresholdFuture {
+		return errors.Wrapf(ErrNotEnoughHistory, "minimum confirmed index: %d, actual confirmed index: %d", solidEntryPointCheckThresholdFuture+1, confirmedMilestoneIndex)
 	}
 
-	minimumIndex := s.solidEntryPointCheckThresholdPast + 1
-	maximumIndex := confirmedMilestoneIndex - s.solidEntryPointCheckThresholdFuture
+	minimumIndex := solidEntryPointCheckThresholdPast + 1
+	maximumIndex := confirmedMilestoneIndex - solidEntryPointCheckThresholdFuture
 
-	if writeToDatabase && minimumIndex < snapshotInfo.SnapshotIndex+1 {
-		// if we write the snapshot state to the database, the newly generated snapshot index must be greater than the last snapshot index
+	if checkIncreasingSnapshotIndex && minimumIndex < snapshotInfo.SnapshotIndex+1 {
 		minimumIndex = snapshotInfo.SnapshotIndex + 1
 	}
 
-	if minimumIndex < snapshotInfo.PruningIndex+1+s.solidEntryPointCheckThresholdPast {
+	if minimumIndex < snapshotInfo.PruningIndex+1+solidEntryPointCheckThresholdPast {
 		// since we always generate new solid entry points, we need enough history
-		minimumIndex = snapshotInfo.PruningIndex + 1 + s.solidEntryPointCheckThresholdPast
+		minimumIndex = snapshotInfo.PruningIndex + 1 + solidEntryPointCheckThresholdPast
 	}
 
 	switch {

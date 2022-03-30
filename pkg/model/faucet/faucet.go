@@ -893,7 +893,7 @@ func (f *Faucet) ApplyConfirmation(confirmation *whiteflag.Confirmation) error {
 			f.clearPendingTransactionWithoutLocking(msgID)
 			return
 		}
-		defer cachedMsgMeta.Release(true)
+		defer cachedMsgMeta.Release(true) // meta -1
 
 		metadata := cachedMsgMeta.Metadata()
 		if metadata.IsReferenced() {
@@ -912,7 +912,7 @@ func (f *Faucet) ApplyConfirmation(confirmation *whiteflag.Confirmation) error {
 		}
 
 		// check if message is "below max depth"
-		_, ocri, err := dag.ConeRootIndexes(f.daemon.ContextStopped(), f.storage, cachedMsgMeta.Retain(), cmi)
+		_, ocri, err := dag.ConeRootIndexes(f.daemon.ContextStopped(), f.storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
 		if err != nil {
 			// an error occurred => readd the items to the queue and delete the pending transaction
 			conflicting = true

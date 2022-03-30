@@ -14,7 +14,6 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -38,7 +37,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	if cachedMsgMeta == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
-	defer cachedMsgMeta.Release(true)
+	defer cachedMsgMeta.Release(true) // meta -1
 
 	metadata := cachedMsgMeta.Metadata()
 
@@ -111,14 +110,14 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 func messageByID(c echo.Context) (*iotago.Message, error) {
 	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
-	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
+	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
-	defer cachedMsg.Release(true)
+	defer cachedMsg.Release(true) // message -1
 
 	return cachedMsg.Message().Message(), nil
 }
@@ -129,11 +128,11 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 		return nil, err
 	}
 
-	cachedMsg := deps.Storage.CachedMessageOrNil(messageID)
+	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
 	if cachedMsg == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
 	}
-	defer cachedMsg.Release(true)
+	defer cachedMsg.Release(true) // message -1
 
 	return cachedMsg.Message().Data(), nil
 }
@@ -142,11 +141,14 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 
 	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults
-	childrenMessageIDs := deps.Storage.ChildrenMessageIDs(messageID, objectstorage.WithIteratorMaxIterations(maxResults))
+	childrenMessageIDs, err := deps.Storage.ChildrenMessageIDs(messageID, storage.WithIteratorMaxIterations(maxResults))
+	if err != nil {
+		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
+	}
 
 	return &childrenResponse{
 		MessageID:  messageID.ToHex(),

@@ -8,7 +8,7 @@ import (
 )
 
 // sets up the event handlers which propagate STING messages.
-func addMessageEventHandlers(proto *gossip.Protocol) {
+func attachEventsProtocolMessages(proto *gossip.Protocol) {
 
 	proto.Parser.Events.Received[gossip.MessageTypeMessage].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMessages.Inc()
@@ -53,7 +53,8 @@ func addMessageEventHandlers(proto *gossip.Protocol) {
 		proto.LatestHeartbeat = gossip.ParseHeartbeat(data)
 
 		/*
-			if p.Autopeering != nil && p.LatestHeartbeat.SolidMilestoneIndex < tangle.SnapshotInfo().PruningIndex {
+			// TODO: reintroduce
+			if proto.Autopeering != nil && p.LatestHeartbeat.SolidMilestoneIndex < tangle.SnapshotInfo().PruningIndex {
 				// peer is connected via autopeering and its solid milestone index is below our pruning index.
 				// we can't help this neighbor to become sync, so it's better to drop the connection and free the slots for other peers.
 				log.Infof("dropping autopeered neighbor %s / %s because SMI (%d) is below our pruning index (%d)", p.Autopeering.Address(), p.Autopeering.ID(), p.LatestHeartbeat.SolidMilestoneIndex, tangle.SnapshotInfo().PruningIndex)
@@ -74,10 +75,8 @@ func addMessageEventHandlers(proto *gossip.Protocol) {
 	}))
 }
 
-// ToDo: re-add this function and check why it deadlocks
-//nolint:deadcode,unused // should be added again later
-// removeMessageEventHandlers removes all the event handlers for sent and received messages.
-func removeMessageEventHandlers(proto *gossip.Protocol) {
+// detachEventsProtocolMessages removes all the event handlers for sent and received messages.
+func detachEventsProtocolMessages(proto *gossip.Protocol) {
 	if proto == nil {
 		return
 	}

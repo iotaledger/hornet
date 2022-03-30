@@ -13,11 +13,11 @@ import (
 )
 
 func MessageCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsg *CachedMessage))(params[0].(*CachedMessage).Retain())
+	handler.(func(cachedMsg *CachedMessage))(params[0].(*CachedMessage).Retain()) // message pass +1
 }
 
 func MessageMetadataCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsgMeta *CachedMetadata))(params[0].(*CachedMetadata).Retain())
+	handler.(func(cachedMsgMeta *CachedMetadata))(params[0].(*CachedMetadata).Retain()) // message pass +1
 }
 
 func MessageIDCaller(handler interface{}, params ...interface{}) {
@@ -25,11 +25,11 @@ func MessageIDCaller(handler interface{}, params ...interface{}) {
 }
 
 func NewMessageCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsg *CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index))(params[0].(*CachedMessage).Retain(), params[1].(milestone.Index), params[2].(milestone.Index))
+	handler.(func(cachedMsg *CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index))(params[0].(*CachedMessage).Retain(), params[1].(milestone.Index), params[2].(milestone.Index)) // message pass +1
 }
 
 func MessageReferencedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMeta *CachedMetadata, msIndex milestone.Index, confTime uint64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint64))
+	handler.(func(cachedMsgMeta *CachedMetadata, msIndex milestone.Index, confTime uint64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint64)) // message pass +1
 }
 
 // CachedMessage contains two cached objects, one for message data and one for metadata.
@@ -38,28 +38,39 @@ type CachedMessage struct {
 	metadata objectstorage.CachedObject
 }
 
+func NewCachedMessage(msg objectstorage.CachedObject, metadata objectstorage.CachedObject) *CachedMessage {
+	return &CachedMessage{
+		msg:      msg,
+		metadata: metadata,
+	}
+}
+
 // CachedMetadata contains the cached object only for metadata.
 type CachedMetadata struct {
 	objectstorage.CachedObject
 }
 
+func NewCachedMetadata(metadata objectstorage.CachedObject) *CachedMetadata {
+	return &CachedMetadata{CachedObject: metadata}
+}
+
 type CachedMessages []*CachedMessage
 
 // Retain registers a new consumer for the cached messages.
-// msg +1
+// message +1
 func (cachedMsgs CachedMessages) Retain() CachedMessages {
 	cachedResult := make(CachedMessages, len(cachedMsgs))
 	for i, cachedMsg := range cachedMsgs {
-		cachedResult[i] = cachedMsg.Retain()
+		cachedResult[i] = cachedMsg.Retain() // message +1
 	}
 	return cachedResult
 }
 
-// Release releases the cached messsages, to be picked up by the persistence layer (as soon as all consumers are done).
-// msg -1
+// Release releases the cached messages, to be picked up by the persistence layer (as soon as all consumers are done).
+// message -1
 func (cachedMsgs CachedMessages) Release(force ...bool) {
 	for _, cachedMsg := range cachedMsgs {
-		cachedMsg.Release(force...)
+		cachedMsg.Release(force...) // message -1
 	}
 }
 
@@ -71,7 +82,7 @@ func (c *CachedMessage) Message() *Message {
 // CachedMetadata returns the underlying cached metadata.
 // meta +1
 func (c *CachedMessage) CachedMetadata() *CachedMetadata {
-	return &CachedMetadata{c.metadata.Retain()}
+	return &CachedMetadata{c.metadata.Retain()} // meta +1
 }
 
 // Metadata retrieves the metadata, that is cached in this container.
@@ -85,17 +96,18 @@ func (c *CachedMetadata) Metadata() *MessageMetadata {
 }
 
 // Retain registers a new consumer for the cached message and metadata.
-// msg +1
+// message +1
 func (c *CachedMessage) Retain() *CachedMessage {
 	return &CachedMessage{
-		c.msg.Retain(),
-		c.metadata.Retain(),
+		c.msg.Retain(),      // message +1
+		c.metadata.Retain(), // meta +1
 	}
 }
 
 // Retain registers a new consumer for the cached metadata.
+// meta +1
 func (c *CachedMetadata) Retain() *CachedMetadata {
-	return &CachedMetadata{c.CachedObject.Retain()}
+	return &CachedMetadata{c.CachedObject.Retain()} // meta +1
 }
 
 // Exists returns true if the message in this container does exist
@@ -105,33 +117,33 @@ func (c *CachedMessage) Exists() bool {
 }
 
 // ConsumeMessageAndMetadata consumes the underlying message and metadata.
-// msg -1
+// message -1
 // meta -1
 func (c *CachedMessage) ConsumeMessageAndMetadata(consumer func(*Message, *MessageMetadata)) {
 
-	c.msg.Consume(func(txObject objectstorage.StorableObject) {
-		c.metadata.Consume(func(metadataObject objectstorage.StorableObject) {
+	c.msg.Consume(func(txObject objectstorage.StorableObject) { // message -1
+		c.metadata.Consume(func(metadataObject objectstorage.StorableObject) { // meta -1
 			consumer(txObject.(*Message), metadataObject.(*MessageMetadata))
 		}, true)
 	}, true)
 }
 
 // ConsumeMessage consumes the underlying message.
-// msg -1
+// message -1
 // meta -1
 func (c *CachedMessage) ConsumeMessage(consumer func(*Message)) {
-	defer c.metadata.Release(true)
-	c.msg.Consume(func(object objectstorage.StorableObject) {
+	defer c.metadata.Release(true)                            // meta -1
+	c.msg.Consume(func(object objectstorage.StorableObject) { // message -1
 		consumer(object.(*Message))
 	}, true)
 }
 
 // ConsumeMetadata consumes the underlying metadata.
-// msg -1
+// message -1
 // meta -1
 func (c *CachedMessage) ConsumeMetadata(consumer func(*MessageMetadata)) {
-	defer c.msg.Release(true)
-	c.metadata.Consume(func(object objectstorage.StorableObject) {
+	defer c.msg.Release(true)                                      // message -1
+	c.metadata.Consume(func(object objectstorage.StorableObject) { // meta -1
 		consumer(object.(*MessageMetadata))
 	}, true)
 }
@@ -139,19 +151,19 @@ func (c *CachedMessage) ConsumeMetadata(consumer func(*MessageMetadata)) {
 // ConsumeMetadata consumes the metadata.
 // meta -1
 func (c *CachedMetadata) ConsumeMetadata(consumer func(*MessageMetadata)) {
-	c.Consume(func(object objectstorage.StorableObject) {
+	c.Consume(func(object objectstorage.StorableObject) { // meta -1
 		consumer(object.(*MessageMetadata))
 	}, true)
 }
 
 // Release releases the cached message and metadata, to be picked up by the persistence layer (as soon as all consumers are done).
-// msg -1
+// message -1
 func (c *CachedMessage) Release(force ...bool) {
-	c.msg.Release(force...)
-	c.metadata.Release(force...)
+	c.msg.Release(force...)      // message -1
+	c.metadata.Release(force...) // meta -1
 }
 
-func messageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
+func MessageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	msg := &Message{
 		messageID: hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]),
 		data:      data,
@@ -182,7 +194,7 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 
 	s.messagesStorage = objectstorage.New(
 		store.WithRealm([]byte{common.StorePrefixMessages}),
-		messageFactory,
+		MessageFactory,
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
 		objectstorage.StoreOnCreation(true),
@@ -212,36 +224,63 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 }
 
 // CachedMessageOrNil returns a cached message object.
-// msg +1
+// message +1
 func (s *Storage) CachedMessageOrNil(messageID hornet.MessageID) *CachedMessage {
-	cachedMsg := s.messagesStorage.Load(messageID) // msg +1
+	cachedMsg := s.messagesStorage.Load(messageID) // message +1
 	if !cachedMsg.Exists() {
-		cachedMsg.Release(true) // msg -1
+		cachedMsg.Release(true) // message -1
 		return nil
 	}
 
-	cachedMeta := s.metadataStorage.Load(messageID) // meta +1
-	if !cachedMeta.Exists() {
-		cachedMsg.Release(true)  // msg -1
-		cachedMeta.Release(true) // meta -1
+	cachedMsgMeta := s.metadataStorage.Load(messageID) // meta +1
+	if !cachedMsgMeta.Exists() {
+		cachedMsg.Release(true)     // message -1
+		cachedMsgMeta.Release(true) // meta -1
 		return nil
 	}
 
 	return &CachedMessage{
 		msg:      cachedMsg,
-		metadata: cachedMeta,
+		metadata: cachedMsgMeta,
 	}
 }
 
+// CachedMessage returns a cached message object.
+// message +1
+func (s *Storage) CachedMessage(messageID hornet.MessageID) (*CachedMessage, error) {
+	return s.CachedMessageOrNil(messageID), nil // message +1
+}
+
+// Message returns an iotago message object.
+func (s *Storage) Message(messageID hornet.MessageID) (*iotago.Message, error) {
+	cachedMsg, err := s.CachedMessage(messageID)
+	if err != nil {
+		return nil, err
+	}
+
+	if cachedMsg == nil {
+		return nil, nil
+	}
+
+	defer cachedMsg.Release(true)
+	return cachedMsg.Message().Message(), nil
+}
+
 // CachedMessageMetadataOrNil returns a cached metadata object.
-// metadata +1
+// meta +1
 func (s *Storage) CachedMessageMetadataOrNil(messageID hornet.MessageID) *CachedMetadata {
-	cachedMeta := s.metadataStorage.Load(messageID) // meta +1
-	if !cachedMeta.Exists() {
-		cachedMeta.Release(true) // metadata -1
+	cachedMsgMeta := s.metadataStorage.Load(messageID) // meta +1
+	if !cachedMsgMeta.Exists() {
+		cachedMsgMeta.Release(true) // meta -1
 		return nil
 	}
-	return &CachedMetadata{CachedObject: cachedMeta}
+	return &CachedMetadata{CachedObject: cachedMsgMeta}
+}
+
+// CachedMessageMetadata returns a cached metadata object.
+// meta +1
+func (s *Storage) CachedMessageMetadata(messageID hornet.MessageID) (*CachedMetadata, error) {
+	return s.CachedMessageMetadataOrNil(messageID), nil
 }
 
 // StoredMetadataOrNil returns a metadata object without accessing the cache layer.
@@ -269,21 +308,21 @@ func (s *Storage) MessageMetadataExistsInStore(messageID hornet.MessageID) bool 
 }
 
 // StoreMessageIfAbsent returns a cached object and stores the message in the persistence layer if it was absent.
-// msg +1
+// message +1
 func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessage, newlyAdded bool) {
 
 	// Store msg + metadata atomically in the same callback
-	var cachedMeta objectstorage.CachedObject
+	var cachedMsgMeta objectstorage.CachedObject
 
-	cachedMsgData := s.messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(_ []byte) objectstorage.StorableObject { // msg +1
+	cachedMsgData := s.messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(_ []byte) objectstorage.StorableObject { // message +1
 		newlyAdded = true
 
 		metadata := &MessageMetadata{
 			messageID: message.MessageID(),
-			parents:   hornet.MessageIDsFromSliceOfArrays(message.message.Parents),
+			parents:   hornet.MessageIDsFromSliceOfArrays(message.Message().Parents),
 		}
 
-		cachedMeta = s.metadataStorage.Store(metadata) // meta +1
+		cachedMsgMeta = s.metadataStorage.Store(metadata) // meta +1
 
 		message.Persist(true)
 		message.SetModified(true)
@@ -292,10 +331,10 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 
 	// if we didn't create a new entry - retrieve the corresponding metadata (it should always exist since it gets created atomically)
 	if !newlyAdded {
-		cachedMeta = s.metadataStorage.Load(message.MessageID()) // meta +1
+		cachedMsgMeta = s.metadataStorage.Load(message.MessageID()) // meta +1
 	}
 
-	return &CachedMessage{msg: cachedMsgData, metadata: cachedMeta}, newlyAdded
+	return &CachedMessage{msg: cachedMsgData, metadata: cachedMsgMeta}, newlyAdded
 }
 
 // MessageIDConsumer consumes the given message ID during looping through all messages.
@@ -303,21 +342,39 @@ type MessageIDConsumer func(messageID hornet.MessageID) bool
 
 // ForEachMessageID loops over all message IDs.
 func (s *Storage) ForEachMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
+
 	s.messagesStorage.ForEachKeyOnly(func(messageID []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(messageID))
-	}, iteratorOptions...)
+	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
+}
+
+// ForEachMessageID loops over all message IDs.
+func (ns *NonCachedStorage) ForEachMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
+
+	ns.storage.messagesStorage.ForEachKeyOnly(func(messageID []byte) bool {
+		return consumer(hornet.MessageIDFromSlice(messageID))
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // ForEachMessageMetadataMessageID loops over all message metadata message IDs.
 func (s *Storage) ForEachMessageMetadataMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
+
 	s.metadataStorage.ForEachKeyOnly(func(messageID []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(messageID))
-	}, iteratorOptions...)
+	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
+}
+
+// ForEachMessageMetadataMessageID loops over all message metadata message IDs.
+func (ns *NonCachedStorage) ForEachMessageMetadataMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
+
+	ns.storage.metadataStorage.ForEachKeyOnly(func(messageID []byte) bool {
+		return consumer(hornet.MessageIDFromSlice(messageID))
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // DeleteMessage deletes the message and metadata in the cache/persistence layer.
 func (s *Storage) DeleteMessage(messageID hornet.MessageID) {
-	// metadata has to be deleted before the msg, otherwise we could run into a data race in the object storage
+	// meta has to be deleted before the msg, otherwise we could run into a data race in the object storage
 	s.metadataStorage.Delete(messageID)
 	s.messagesStorage.Delete(messageID)
 }

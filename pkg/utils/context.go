@@ -22,6 +22,16 @@ func ReturnErrIfCtxDone(ctx context.Context, err error) error {
 	}
 }
 
+// ReturnErrIfChannelClosed returns the given error if the provided channel was closed.
+func ReturnErrIfChannelClosed(channel <-chan struct{}, err error) error {
+	select {
+	case <-channel:
+		return err
+	default:
+		return nil
+	}
+}
+
 // mergedContext is a merged context based on two contexts.
 type mergedContext struct {
 	sync.RWMutex

@@ -20,17 +20,17 @@ func ShortenedHash(hash hornet.MessageID) string {
 
 // ShortenedTag returns a shortened tag or milestone index for the given message.
 // this is used for the dot file.
-func ShortenedTag(cachedMessage *storage.CachedMessage) string {
-	defer cachedMessage.Release(true)
+func ShortenedTag(cachedMsg *storage.CachedMessage) string {
+	defer cachedMsg.Release(true) // message -1
 
-	ms := cachedMessage.Message().Milestone()
+	ms := cachedMsg.Message().Milestone()
 	if ms != nil {
 		return fmt.Sprintf("%d", ms.Index)
 	}
 
-	taggedData := cachedMessage.Message().TransactionEssenceTaggedData()
+	taggedData := cachedMsg.Message().TransactionEssenceTaggedData()
 	if taggedData == nil {
-		taggedData = cachedMessage.Message().TaggedData()
+		taggedData = cachedMsg.Message().TaggedData()
 	}
 	if taggedData == nil {
 		panic("no taggedData found")
@@ -42,8 +42,8 @@ func ShortenedTag(cachedMessage *storage.CachedMessage) string {
 	}
 	tagHex := hex.EncodeToString(tag)
 
-	if cachedMessage.Metadata().IsConflictingTx() {
-		conflict := cachedMessage.Metadata().Conflict()
+	if cachedMsg.Metadata().IsConflictingTx() {
+		conflict := cachedMsg.Metadata().Conflict()
 		return fmt.Sprintf("%s (%d)", tagHex, conflict)
 	}
 

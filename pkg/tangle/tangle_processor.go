@@ -88,14 +88,14 @@ func (t *Tangle) RunTangleProcessor() {
 
 		if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 			// do not process the milestone if the node was shut down
-			cachedMilestone.Release(true) // message -1
+			cachedMilestone.Release(true) // milestone -1
 			return
 		}
 
 		_, added := t.processValidMilestoneWorkerPool.Submit(cachedMilestone, requested) // milestone pass +1
 		if !added {
 			// Release shouldn't be forced, to cache the latest milestones
-			cachedMilestone.Release() // message -1
+			cachedMilestone.Release() // milestone -1
 		}
 	})
 
@@ -195,10 +195,10 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 	requested := requests.HasRequest()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
-	cachedMsg, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // msg +1
+	cachedMsg, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // message +1
 
 	// Release shouldn't be forced, to cache the latest messages
-	defer cachedMsg.Release(!isNodeSyncedWithinBelowMaxDepth) // msg -1
+	defer cachedMsg.Release(!isNodeSyncedWithinBelowMaxDepth) // message -1
 
 	if !alreadyAdded {
 		t.serverMetrics.NewMessages.Inc()
@@ -212,7 +212,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 		for _, request := range requests {
 			// add this newly received message's parents to the request queue
 			if request.RequestType == gossip.RequestTypeMessageID {
-				t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true)
+				t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true) // message pass +1
 			}
 		}
 

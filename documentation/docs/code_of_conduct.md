@@ -1,11 +1,12 @@
 ---
+description: Contributors code of conduct.  
+image: /img/logo/HornetLogo.png
 keywords:
 - IOTA Node 
 - Hornet Node
 - conduct
 - code
-description: Contributors code of conduct.  
-image: /img/logo/HornetLogo.png
+- reference
 ---
 
 # Contributor Covenant Code of Conduct
@@ -49,7 +50,7 @@ Examples of unacceptable behavior by participants include:
 
 ## Our Responsibilities
 
-Project maintainers are responsible for clarifying the standards of acceptable behavior, and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behavior.
+Project maintainers are responsible for clarifying the standards of acceptable behavior and are expected to take appropriate and fair corrective action in response to any instances of unacceptable behavior.
 
 Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct. Project maintainers may temporarily or permanently ban any contributor for other behaviors that they deem inappropriate, threatening, offensive, or harmful.
 

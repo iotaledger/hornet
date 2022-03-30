@@ -1,21 +1,29 @@
 package toolset
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
+
+	"github.com/iotaledger/hive.go/configuration"
 
 	"github.com/gohornet/hornet/pkg/database"
 )
 
 const (
 	FlagToolDatabaseEngine       = "databaseEngine"
+	FlagToolDatabaseEngineSource = "sourceDatabaseEngine"
 	FlagToolDatabaseEngineTarget = "targetDatabaseEngine"
+
+	FlagToolConfigFilePath = "configFile"
 
 	FlagToolDatabasePath       = "databasePath"
 	FlagToolDatabasePathSource = "sourceDatabasePath"
@@ -48,6 +56,11 @@ const (
 
 	FlagToolSnapGenMintAddress        = "mintAddress"
 	FlagToolSnapGenTreasuryAllocation = "treasuryAllocation"
+
+	FlagToolDatabaseTargetIndex            = "targetIndex"
+	FlagToolDatabaseMergeNodeURL           = "nodeURL"
+	FlagToolDatabaseMergeChronicle         = "chronicleMode"
+	FlagToolDatabaseMergeChronicleKeyspace = "chronicleKeySpace"
 )
 
 const (
@@ -63,10 +76,13 @@ const (
 	ToolSnapHash                = "snap-hash"
 	ToolBenchmarkIO             = "bench-io"
 	ToolBenchmarkCPU            = "bench-cpu"
-	ToolDatabaseMigration       = "db-migration"
 	ToolDatabaseLedgerHash      = "db-hash"
 	ToolDatabaseHealth          = "db-health"
+	ToolDatabaseMerge           = "db-merge"
+	ToolDatabaseMigration       = "db-migration"
+	ToolDatabaseSnapshot        = "db-snapshot"
 	ToolDatabaseSplit           = "db-split"
+	ToolDatabaseVerify          = "db-verify"
 	ToolCoordinatorFixStateFile = "coo-fix-state"
 )
 
@@ -119,10 +135,13 @@ func HandleTools() {
 		ToolSnapHash:                snapshotHash,
 		ToolBenchmarkIO:             benchmarkIO,
 		ToolBenchmarkCPU:            benchmarkCPU,
-		ToolDatabaseMigration:       databaseMigration,
 		ToolDatabaseLedgerHash:      databaseLedgerHash,
 		ToolDatabaseHealth:          databaseHealth,
+		ToolDatabaseMerge:           databaseMerge,
+		ToolDatabaseMigration:       databaseMigration,
+		ToolDatabaseSnapshot:        databaseSnapshot,
 		ToolDatabaseSplit:           databaseSplit,
+		ToolDatabaseVerify:          databaseVerify,
 		ToolCoordinatorFixStateFile: coordinatorFixStateFile,
 	}
 
@@ -159,10 +178,13 @@ func listTools() {
 	fmt.Printf("%-20s calculates the sha256 hash of the ledger state inside a snapshot file\n", fmt.Sprintf("%s:", ToolSnapHash))
 	fmt.Printf("%-20s benchmarks the IO throughput\n", fmt.Sprintf("%s:", ToolBenchmarkIO))
 	fmt.Printf("%-20s benchmarks the CPU performance\n", fmt.Sprintf("%s:", ToolBenchmarkCPU))
-	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
 	fmt.Printf("%-20s calculates the sha256 hash of the ledger state of a database\n", fmt.Sprintf("%s:", ToolDatabaseLedgerHash))
 	fmt.Printf("%-20s checks the health status of the database\n", fmt.Sprintf("%s:", ToolDatabaseHealth))
+	fmt.Printf("%-20s merges missing tangle data from a database to another one\n", fmt.Sprintf("%s:", ToolDatabaseMerge))
+	fmt.Printf("%-20s migrates the database to another engine\n", fmt.Sprintf("%s:", ToolDatabaseMigration))
+	fmt.Printf("%-20s creates a full snapshot from a database\n", fmt.Sprintf("%s:", ToolDatabaseSnapshot))
 	fmt.Printf("%-20s split a legacy database into `tangle` and `utxo`\n", fmt.Sprintf("%s:", ToolDatabaseSplit))
+	fmt.Printf("%-20s verifies a valid ledger state and the existence of all messages`\n", fmt.Sprintf("%s:", ToolDatabaseVerify))
 	fmt.Printf("%-20s applies the latest milestone in the database to the coordinator state file\n", fmt.Sprintf("%s:", ToolCoordinatorFixStateFile))
 }
 
@@ -203,4 +225,30 @@ func printJSON(obj interface{}) error {
 
 	fmt.Println(string(output))
 	return nil
+}
+
+func loadConfigFile(filePath string) (*configuration.Configuration, error) {
+	config := configuration.New()
+
+	if err := config.LoadFile(filePath); err != nil {
+		return nil, fmt.Errorf("loading config file failed: %w", err)
+	}
+
+	return config, nil
+}
+
+func getGracefulStopContext() context.Context {
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	gracefulStop := make(chan os.Signal, 1)
+	signal.Notify(gracefulStop, syscall.SIGTERM)
+	signal.Notify(gracefulStop, syscall.SIGINT)
+
+	go func() {
+		<-gracefulStop
+		cancel()
+	}()
+
+	return ctx
 }

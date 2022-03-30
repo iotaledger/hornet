@@ -196,7 +196,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 	mngOpts.apply(opts...)
 
 	peeringManager := &Manager{
-		Events: ManagerEvents{
+		Events: &ManagerEvents{
 			Connect:            events.NewEvent(PeerCaller),
 			Disconnect:         events.NewEvent(PeerCaller),
 			Allowed:            events.NewEvent(PeerIDCaller),
@@ -228,7 +228,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 		callChan:           make(chan *callmsg, 10),
 	}
 	peeringManager.WrappedLogger = utils.NewWrappedLogger(peeringManager.opts.logger)
-	peeringManager.registerLoggerOnEvents()
+	peeringManager.configureEvents()
 	return peeringManager
 }
 
@@ -239,7 +239,7 @@ type Manager struct {
 	*utils.WrappedLogger
 
 	// Events happening around the Manager.
-	Events ManagerEvents
+	Events *ManagerEvents
 	// the libp2p host instance from which to work with.
 	host host.Host
 	// holds the set of peers.
@@ -262,11 +262,25 @@ type Manager struct {
 	reconnectChan      chan *reconnectmsg
 	forEachChan        chan *foreachmsg
 	callChan           chan *callmsg
+
+	// closures
+	onP2PManagerConnect            *events.Closure
+	onP2PManagerConnected          *events.Closure
+	onP2PManagerDisconnect         *events.Closure
+	onP2PManagerDisconnected       *events.Closure
+	onP2PManagerScheduledReconnect *events.Closure
+	onP2PManagerReconnecting       *events.Closure
+	onP2PManagerRelationUpdated    *events.Closure
+	onP2PManagerStateChange        *events.Closure
+	onP2PManagerError              *events.Closure
 }
 
 // Start starts the Manager's event loop.
 // This method blocks until the given context is done.
 func (m *Manager) Start(ctx context.Context) {
+
+	m.attachEvents()
+
 	// manage libp2p network events
 	m.host.Network().Notify((*netNotifiee)(m))
 
@@ -285,6 +299,8 @@ func (m *Manager) Start(ctx context.Context) {
 	// de-register libp2p network events
 	m.host.Network().StopNotify((*netNotifiee)(m))
 	m.Events.StateChange.Trigger(ManagerStateStopped)
+
+	m.detachEvents()
 }
 
 // shutdown sets the stopped flag and drains all outstanding requests of the event loop.
@@ -871,39 +887,72 @@ func (m *Manager) call(peerID peer.ID, f PeerFunc) {
 	f(p)
 }
 
-// registers the logger on the events of the Manager.
-func (m *Manager) registerLoggerOnEvents() {
-	m.Events.Connect.Attach(events.NewClosure(func(p *Peer) {
+func (m *Manager) configureEvents() {
+
+	// logger
+	m.onP2PManagerConnect = events.NewClosure(func(p *Peer) {
 		m.LogInfof("connecting %s: %s", p.ID.ShortString(), p.Addrs)
-	}))
-	m.Events.Connected.Attach(events.NewClosure(func(p *Peer, conn network.Conn) {
+	})
+
+	m.onP2PManagerConnected = events.NewClosure(func(p *Peer, conn network.Conn) {
 		m.LogInfof("connected %s (%s)", p.ID.ShortString(), conn.Stat().Direction.String())
-	}))
-	m.Events.Disconnect.Attach(events.NewClosure(func(p *Peer) {
+	})
+
+	m.onP2PManagerDisconnect = events.NewClosure(func(p *Peer) {
 		m.LogInfof("disconnecting %s", p.ID.ShortString())
-	}))
-	m.Events.Disconnected.Attach(events.NewClosure(func(peerErr *PeerOptError) {
+	})
+
+	m.onP2PManagerDisconnected = events.NewClosure(func(peerErr *PeerOptError) {
 		msg := fmt.Sprintf("disconnected %s", peerErr.Peer.ID.ShortString())
 		if peerErr.Error != nil {
 			msg = fmt.Sprintf("%s %s", msg, peerErr.Error)
 		}
 		m.LogInfof(msg)
-	}))
-	m.Events.ScheduledReconnect.Attach(events.NewClosure(func(p *Peer, dur time.Duration) {
+	})
+
+	m.onP2PManagerScheduledReconnect = events.NewClosure(func(p *Peer, dur time.Duration) {
 		m.LogInfof("scheduled reconnect in %v to %s", dur, p.ID.ShortString())
-	}))
-	m.Events.Reconnecting.Attach(events.NewClosure(func(p *Peer) {
+	})
+
+	m.onP2PManagerReconnecting = events.NewClosure(func(p *Peer) {
 		m.LogInfof("reconnecting %s", p.ID.ShortString())
-	}))
-	m.Events.RelationUpdated.Attach(events.NewClosure(func(p *Peer, oldRel PeerRelation) {
+	})
+
+	m.onP2PManagerRelationUpdated = events.NewClosure(func(p *Peer, oldRel PeerRelation) {
 		m.LogInfof("updated relation of %s from '%s' to '%s'", p.ID.ShortString(), oldRel, p.Relation)
-	}))
-	m.Events.StateChange.Attach(events.NewClosure(func(mngState ManagerState) {
+	})
+
+	m.onP2PManagerStateChange = events.NewClosure(func(mngState ManagerState) {
 		m.LogInfo(mngState)
-	}))
-	m.Events.Error.Attach(events.NewClosure(func(err error) {
+	})
+
+	m.onP2PManagerError = events.NewClosure(func(err error) {
 		m.LogWarn(err)
-	}))
+	})
+}
+
+func (m *Manager) attachEvents() {
+	m.Events.Connect.Attach(m.onP2PManagerConnect)
+	m.Events.Connected.Attach(m.onP2PManagerConnected)
+	m.Events.Disconnect.Attach(m.onP2PManagerDisconnect)
+	m.Events.Disconnected.Attach(m.onP2PManagerDisconnected)
+	m.Events.ScheduledReconnect.Attach(m.onP2PManagerScheduledReconnect)
+	m.Events.Reconnecting.Attach(m.onP2PManagerReconnecting)
+	m.Events.RelationUpdated.Attach(m.onP2PManagerRelationUpdated)
+	m.Events.StateChange.Attach(m.onP2PManagerStateChange)
+	m.Events.Error.Attach(m.onP2PManagerError)
+}
+
+func (m *Manager) detachEvents() {
+	m.Events.Connect.Detach(m.onP2PManagerConnect)
+	m.Events.Connected.Detach(m.onP2PManagerConnected)
+	m.Events.Disconnect.Detach(m.onP2PManagerDisconnect)
+	m.Events.Disconnected.Detach(m.onP2PManagerDisconnected)
+	m.Events.ScheduledReconnect.Detach(m.onP2PManagerScheduledReconnect)
+	m.Events.Reconnecting.Detach(m.onP2PManagerReconnecting)
+	m.Events.RelationUpdated.Detach(m.onP2PManagerRelationUpdated)
+	m.Events.StateChange.Detach(m.onP2PManagerStateChange)
+	m.Events.Error.Detach(m.onP2PManagerError)
 }
 
 // lets Manager implement network.Notifiee, we do this as a separate

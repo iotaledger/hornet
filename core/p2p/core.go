@@ -132,19 +132,20 @@ Your node identity private key can now be found at "%s".
 			CorePlugin.LogInfof(`loaded existing private key for peer identity from "%s"`, privKeyFilePath)
 		}
 
-		connmgr, err := connmgr.NewConnManager(
+		connManager, err := connmgr.NewConnManager(
 			deps.NodeConfig.Int(CfgP2PConnMngLowWatermark),
 			deps.NodeConfig.Int(CfgP2PConnMngHighWatermark),
+			connmgr.WithGracePeriod(time.Minute),
 		)
 		if err != nil {
-			CorePlugin.LogPanic(err)
+			CorePlugin.LogPanicf("unable to initialize connection manager: %s", err)
 		}
 
 		createdHost, err := libp2p.New(libp2p.Identity(privKey),
 			libp2p.ListenAddrStrings(deps.P2PBindMultiAddresses...),
 			libp2p.Peerstore(peerStoreContainer.Peerstore()),
 			libp2p.DefaultTransports,
-			libp2p.ConnectionManager(connmgr),
+			libp2p.ConnectionManager(connManager),
 			libp2p.NATPortMap(),
 		)
 		if err != nil {

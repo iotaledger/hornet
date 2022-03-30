@@ -19,10 +19,11 @@ type CachedChild struct {
 type CachedChildren []*CachedChild
 
 // Retain registers a new consumer for the cached children.
+// child +1
 func (cachedChildren CachedChildren) Retain() CachedChildren {
 	cachedResult := make(CachedChildren, len(cachedChildren))
 	for i, cachedChild := range cachedChildren {
-		cachedResult[i] = cachedChild.Retain()
+		cachedResult[i] = cachedChild.Retain() // child +1
 	}
 	return cachedResult
 }
@@ -30,13 +31,14 @@ func (cachedChildren CachedChildren) Retain() CachedChildren {
 // Release releases the cached children, to be picked up by the persistence layer (as soon as all consumers are done).
 func (cachedChildren CachedChildren) Release(force ...bool) {
 	for _, cachedChild := range cachedChildren {
-		cachedChild.Release(force...)
+		cachedChild.Release(force...) // child -1
 	}
 }
 
 // Retain registers a new consumer for the cached child.
+// child +1
 func (c *CachedChild) Retain() *CachedChild {
-	return &CachedChild{c.CachedObject.Retain()}
+	return &CachedChild{c.CachedObject.Retain()} // child +1
 }
 
 // Child retrieves the child, that is cached in this container.
@@ -86,15 +88,15 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 
 // ChildrenMessageIDs returns the message IDs of the children of the given message.
 // children +-0
-func (s *Storage) ChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...IteratorOption) hornet.MessageIDs {
+func (s *Storage) ChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...IteratorOption) (hornet.MessageIDs, error) {
 	var childrenMessageIDs hornet.MessageIDs
 
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		childrenMessageIDs = append(childrenMessageIDs, hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
 		return true
-	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(messageID))...)
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(messageID))...)
 
-	return childrenMessageIDs
+	return childrenMessageIDs, nil
 }
 
 // ContainsChild returns if the given child exists in the cache/persistence layer.
@@ -105,11 +107,12 @@ func (s *Storage) ContainsChild(messageID hornet.MessageID, childMessageID horne
 // CachedChildrenOfMessageID returns the cached children of a message.
 // children +1
 func (s *Storage) CachedChildrenOfMessageID(messageID hornet.MessageID, iteratorOptions ...IteratorOption) CachedChildren {
+
 	cachedChildren := make(CachedChildren, 0)
 	s.childrenStorage.ForEach(func(_ []byte, cachedObject objectstorage.CachedObject) bool {
 		cachedChildren = append(cachedChildren, &CachedChild{CachedObject: cachedObject})
 		return true
-	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(messageID))...)
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(messageID))...)
 	return cachedChildren
 }
 
@@ -118,9 +121,18 @@ type ChildConsumer func(messageID hornet.MessageID, childMessageID hornet.Messag
 
 // ForEachChild loops over all children.
 func (s *Storage) ForEachChild(consumer ChildConsumer, iteratorOptions ...IteratorOption) {
+
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]), hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
-	}, iteratorOptions...)
+	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
+}
+
+// ForEachChild loops over all children.
+func (ns *NonCachedStorage) ForEachChild(consumer ChildConsumer, iteratorOptions ...IteratorOption) {
+
+	ns.storage.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
+		return consumer(hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]), hornet.MessageIDFromSlice(key[iotago.MessageIDLength:iotago.MessageIDLength+iotago.MessageIDLength]))
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
 // StoreChild stores the child in the persistence layer and returns a cached object.
@@ -146,7 +158,7 @@ func (s *Storage) DeleteChildren(messageID hornet.MessageID, iteratorOptions ...
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
-	}, append(iteratorOptions, objectstorage.WithIteratorPrefix(messageID))...)
+	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(messageID))...)
 
 	for _, key := range keysToDelete {
 		s.childrenStorage.Delete(key)

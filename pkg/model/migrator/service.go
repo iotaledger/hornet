@@ -117,6 +117,12 @@ func (s *MigratorService) PersistState(sendingReceipt bool) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.state.SendingReceipt = sendingReceipt
+
+	// create a backup of the existing migrator state file
+	if err := os.Rename(s.stateFilePath, fmt.Sprintf("%s_old", s.stateFilePath)); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("unable to create backup of migrator state file: %w", err)
+	}
+
 	return utils.WriteJSONToFile(s.stateFilePath, &s.state, 0660)
 }
 

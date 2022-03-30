@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/utils"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -95,7 +96,7 @@ type Coordinator struct {
 	// used to do the PoW for the coordinator messages.
 	powHandler *pow.Handler
 	// the function used to send a message.
-	sendMesssageFunc SendMessageFunc
+	sendMessageFunc SendMessageFunc
 	// holds the coordinator options.
 	opts *Options
 
@@ -233,16 +234,16 @@ func New(
 	options.apply(opts...)
 
 	result := &Coordinator{
-		storage:          dbStorage,
-		syncManager:      syncManager,
-		networkID:        networkID,
-		deSeriParas:      deSeriParas,
-		signerProvider:   signerProvider,
-		migratorService:  migratorService,
-		utxoManager:      utxoManager,
-		powHandler:       powHandler,
-		sendMesssageFunc: sendMessageFunc,
-		opts:             options,
+		storage:         dbStorage,
+		syncManager:     syncManager,
+		networkID:       networkID,
+		deSeriParas:     deSeriParas,
+		signerProvider:  signerProvider,
+		migratorService: migratorService,
+		utxoManager:     utxoManager,
+		powHandler:      powHandler,
+		sendMessageFunc: sendMessageFunc,
+		opts:            options,
 
 		Events: &Events{
 			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
@@ -282,12 +283,12 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		latestMilestoneMessageID := hornet.NullMessageID()
 		if startIndex != 1 {
 			// If we don't start a new network, the last milestone has to be referenced
-			cachedMilestoneMsg := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
-			if cachedMilestoneMsg == nil {
+			cachedMsgMilestone := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase) // message +1
+			if cachedMsgMilestone == nil {
 				return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 			}
-			latestMilestoneMessageID = cachedMilestoneMsg.Message().MessageID()
-			cachedMilestoneMsg.Release()
+			latestMilestoneMessageID = cachedMsgMilestone.Message().MessageID()
+			cachedMsgMilestone.Release() // message -1
 		}
 
 		// create a new coordinator state to bootstrap the network
@@ -314,11 +315,11 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 		return fmt.Errorf("previous milestone does not match latest milestone in database. previous: %d, database: %d", coo.state.LatestMilestoneIndex, latestMilestoneFromDatabase)
 	}
 
-	cachedMilestoneMsg := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase)
-	if cachedMilestoneMsg == nil {
+	cachedMsgMilestone := coo.storage.MilestoneCachedMessageOrNil(latestMilestoneFromDatabase) // message +1
+	if cachedMsgMilestone == nil {
 		return fmt.Errorf("latest milestone (%d) not found in database. database is corrupt", latestMilestoneFromDatabase)
 	}
-	cachedMilestoneMsg.Release()
+	cachedMsgMilestone.Release() // message -1
 
 	coo.bootstrapped = true
 	return nil
@@ -328,11 +329,15 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index) er
 // Returns non-critical and critical errors.
 func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMilestoneIndex milestone.Index) error {
 
-	messagesMemcache := storage.NewMessagesMemcache(coo.storage)
-	metadataMemcache := storage.NewMetadataMemcache(coo.storage)
+	parents = parents.RemoveDupsAndSortByLexicalOrder()
+
+	messagesMemcache := storage.NewMessagesMemcache(coo.storage.CachedMessage)
+	metadataMemcache := storage.NewMetadataMemcache(coo.storage.CachedMessageMetadata)
+	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(coo.storage, metadataMemcache)
 
 	defer func() {
-		// All releases are forced since the cone is referenced and not needed anymore
+		// all releases are forced since the cone is referenced and not needed anymore
+		memcachedParentsTraverserStorage.Cleanup(true)
 
 		// release all messages at the end
 		messagesMemcache.Cleanup(true)
@@ -341,7 +346,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		metadataMemcache.Cleanup(true)
 	}()
 
-	parents = parents.RemoveDupsAndSortByLexicalOrder()
+	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
 
 	// We have to set a timestamp for when we run the white-flag mutations due to the semantic validation.
 	// This should be exactly the same one used when issuing the milestone later on.
@@ -350,7 +355,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// compute merkle tree root
 	// we pass a background context here to not cancel the white-flag computation!
 	// otherwise the coordinator could panic at shutdown.
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage, coo.networkID, newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), metadataMemcache, messagesMemcache, parents)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(context.Background(), coo.storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, coo.networkID, newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents, whiteflag.DefaultWhiteFlagTraversalCondition)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}
@@ -403,7 +408,12 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
 	}
 
-	if err := coo.sendMesssageFunc(milestoneMsg, newMilestoneIndex); err != nil {
+	// rename the coordinator state file to mark the state as invalid
+	if err := os.Rename(coo.opts.stateFilePath, fmt.Sprintf("%s_old", coo.opts.stateFilePath)); err != nil && !os.IsNotExist(err) {
+		return common.CriticalError(fmt.Errorf("unable to rename old coordinator state file: %w", err))
+	}
+
+	if err := coo.sendMessageFunc(milestoneMsg, newMilestoneIndex); err != nil {
 		return common.CriticalError(fmt.Errorf("failed to send milestone: %w", err))
 	}
 
@@ -495,7 +505,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 			return nil, common.SoftError(fmt.Errorf("failed to create checkPoint: %w", err))
 		}
 
-		if err := coo.sendMesssageFunc(msg); err != nil {
+		if err := coo.sendMessageFunc(msg); err != nil {
 			return nil, common.SoftError(fmt.Errorf("failed to send checkPoint: %w", err))
 		}
 

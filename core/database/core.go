@@ -28,9 +28,10 @@ const (
 	CfgTangleDeleteDatabase = "deleteDatabase"
 	// whether to delete the database and snapshots at startup
 	CfgTangleDeleteAll = "deleteAll"
-
+	// subfolder for the tangle database
 	TangleDatabaseDirectoryName = "tangle"
-	UTXODatabaseDirectoryName   = "utxo"
+	// subfolder for the UTXO database
+	UTXODatabaseDirectoryName = "utxo"
 )
 
 func init() {
@@ -54,7 +55,7 @@ var (
 	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
 	deleteAll      = flag.Bool(CfgTangleDeleteAll, false, "whether to delete the database and snapshots at startup")
 
-	// Closures
+	// closures
 	onPruningStateChanged *events.Closure
 )
 
@@ -86,7 +87,7 @@ func initConfigPars(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
-		dbEngine, err := database.DatabaseEngine(deps.NodeConfig.String(CfgDatabaseEngine))
+		dbEngine, err := database.DatabaseEngineFromStringAllowed(deps.NodeConfig.String(CfgDatabaseEngine))
 		if err != nil {
 			CorePlugin.LogPanic(err)
 		}

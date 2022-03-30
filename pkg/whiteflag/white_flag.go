@@ -24,6 +24,15 @@ import (
 var (
 	// ErrIncludedMessagesSumDoesntMatch is returned when the sum of the included messages a milestone approves does not match the referenced messages minus the excluded messages.
 	ErrIncludedMessagesSumDoesntMatch = errors.New("the sum of the included messages doesn't match the referenced messages minus the excluded messages")
+
+	// traversal stops if no more messages pass the given condition
+	// Caution: condition func is not in DFS order
+	DefaultWhiteFlagTraversalCondition = func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+		defer cachedMsgMeta.Release(true) // meta -1
+
+		// only traverse and process the message if it was not referenced yet
+		return !cachedMsgMeta.Metadata().IsReferenced(), nil
+	}
 )
 
 // Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
@@ -66,8 +75,16 @@ type WhiteFlagMutations struct {
 // It also computes the merkle tree root hash consisting out of the IDs of the messages which are part of the set
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
-// metadataMemcache has to be cleaned up outside.
-func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, networkId uint64, msIndex milestone.Index, msTimestamp uint64, metadataMemcache *storage.MetadataMemcache, messagesMemcache *storage.MessagesMemcache, parents hornet.MessageIDs) (*WhiteFlagMutations, error) {
+func ComputeWhiteFlagMutations(ctx context.Context,
+	utxoManager *utxo.Manager,
+	parentsTraverser *dag.ParentsTraverser,
+	cachedMessageFunc storage.CachedMessageFunc,
+	networkId uint64,
+	msIndex milestone.Index,
+	msTimestamp uint64,
+	parents hornet.MessageIDs,
+	traversalCondition dag.Predicate) (*WhiteFlagMutations, error) {
+
 	wfConf := &WhiteFlagMutations{
 		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
@@ -84,31 +101,28 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		},
 	}
 
-	// traversal stops if no more messages pass the given condition
-	// Caution: condition func is not in DFS order
-	condition := func(cachedMetadata *storage.CachedMetadata) (bool, error) { // meta +1
-		defer cachedMetadata.Release(true) // meta -1
-
-		// only traverse and process the message if it was not referenced yet
-		return !cachedMetadata.Metadata().IsReferenced(), nil
-	}
-
 	// consumer
-	consumer := func(cachedMetadata *storage.CachedMetadata) error { // meta +1
-		defer cachedMetadata.Release(true) // meta -1
+	consumer := func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
+		defer cachedMsgMeta.Release(true) // meta -1
+
+		messageID := cachedMsgMeta.Metadata().MessageID()
 
 		// load up message
-		cachedMessage := messagesMemcache.CachedMessageOrNil(cachedMetadata.Metadata().MessageID())
-		if cachedMessage == nil {
-			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, cachedMetadata.Metadata().MessageID().ToHex(), cachedMetadata.Metadata().MessageID().ToHex())
+		cachedMsg, err := cachedMessageFunc(messageID) // message +1
+		if err != nil {
+			return err
 		}
+		if cachedMsg == nil {
+			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, messageID.ToHex(), messageID.ToHex())
+		}
+		defer cachedMsg.Release(true) // message -1
 
-		message := cachedMessage.Message()
+		message := cachedMsg.Message()
 
 		// exclude message without transactions
 		if !message.IsTransaction() {
-			wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, message.MessageID())
-			wfConf.MessagesExcludedWithoutTransactions = append(wfConf.MessagesExcludedWithoutTransactions, message.MessageID())
+			wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, messageID)
+			wfConf.MessagesExcludedWithoutTransactions = append(wfConf.MessagesExcludedWithoutTransactions, messageID)
 			return nil
 		}
 
@@ -147,7 +161,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 				}
 
 				// check current ledger for this input
-				output, err = dbStorage.UTXOManager().ReadOutputByOutputIDWithoutLocking(input)
+				output, err = utxoManager.ReadOutputByOutputIDWithoutLocking(input)
 				if err != nil {
 					if errors.Is(err, kvstore.ErrKeyNotFound) {
 						// input not found, so mark as invalid tx
@@ -158,7 +172,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 				}
 
 				// check if this output is unspent
-				unspent, err := dbStorage.UTXOManager().IsOutputUnspentWithoutLocking(output)
+				unspent, err := utxoManager.IsOutputUnspentWithoutLocking(output)
 				if err != nil {
 					return err
 				}
@@ -198,7 +212,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 			}
 
 			for i := 0; i < len(transactionEssence.Outputs); i++ {
-				output, err := utxo.NewOutput(message.MessageID(), msIndex, msTimestamp, transaction, uint16(i))
+				output, err := utxo.NewOutput(messageID, msIndex, msTimestamp, transaction, uint16(i))
 				if err != nil {
 					return err
 				}
@@ -206,18 +220,18 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 			}
 		}
 
-		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, cachedMetadata.Metadata().MessageID())
+		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, messageID)
 
 		if conflict != storage.ConflictNone {
 			wfConf.MessagesExcludedWithConflictingTransactions = append(wfConf.MessagesExcludedWithConflictingTransactions, MessageWithConflict{
-				MessageID: cachedMetadata.Metadata().MessageID(),
+				MessageID: messageID,
 				Conflict:  conflict,
 			})
 			return nil
 		}
 
 		// mark the given message to be part of milestone ledger by changing message inclusion set
-		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, cachedMetadata.Metadata().MessageID())
+		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, messageID)
 
 		newSpents := make(utxo.Spents, len(inputOutputs))
 
@@ -236,9 +250,6 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 		return nil
 	}
 
-	// we don't need to call cleanup at the end, because we pass our own metadataMemcache.
-	parentsTraverser := dag.NewParentTraverser(dbStorage, metadataMemcache)
-
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If the parents are SEPs, are already processed or already referenced,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
@@ -246,7 +257,7 @@ func ComputeWhiteFlagMutations(ctx context.Context, dbStorage *storage.Storage, 
 	if err := parentsTraverser.Traverse(
 		ctx,
 		parents,
-		condition,
+		traversalCondition,
 		consumer,
 		// called on missing parents
 		// return error on missing parents

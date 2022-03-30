@@ -22,7 +22,7 @@ import (
 func NewWarpSync(advRange int, advanceCheckpointCriteriaFunc ...AdvanceCheckpointCriteria) *WarpSync {
 	ws := &WarpSync{
 		AdvancementRange: advRange,
-		Events: Events{
+		Events: &Events{
 			CheckpointUpdated: events.NewEvent(CheckpointCaller),
 			TargetUpdated:     events.NewEvent(TargetCaller),
 			Start:             events.NewEvent(SyncStartCaller),
@@ -95,7 +95,7 @@ type WarpSync struct {
 	// The used advancement range per checkpoint.
 	AdvancementRange int
 	// The Events of the warpsync.
-	Events Events
+	Events *Events
 	// The criteria whether to advance to the next checkpoint.
 	advCheckpointCriteria AdvanceCheckpointCriteria
 
@@ -275,19 +275,19 @@ func NewWarpSyncMilestoneRequester(
 // RequestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
 // Already requested milestones or traversed messages will be ignored, to circumvent requesting
 // the same parents multiple times.
-func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.Context, cachedMs *storage.CachedMilestone) error {
-	defer cachedMs.Release(true) // milestone -1
+func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.Context, cachedMilestone *storage.CachedMilestone) error {
+	defer cachedMilestone.Release(true) // milestone -1
 
 	w.Lock()
 	defer w.Unlock()
 
-	msIndex := cachedMs.Milestone().Index
+	msIndex := cachedMilestone.Milestone().Index
 
 	if msIndex <= w.syncManager.ConfirmedMilestoneIndex() {
 		return nil
 	}
 
-	milestoneMessageID := cachedMs.Milestone().MessageID
+	milestoneMessageID := cachedMilestone.Milestone().MessageID
 
 	return dag.TraverseParentsOfMessage(
 		ctx,
@@ -345,8 +345,8 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 	for i := 1; i <= rangeToRequest; i++ {
 		toReq := startingPoint + milestone.Index(i)
 
-		cachedMs := w.storage.CachedMilestoneOrNil(toReq) // milestone +1
-		if cachedMs == nil {
+		cachedMilestone := w.storage.CachedMilestoneOrNil(toReq) // milestone +1
+		if cachedMilestone == nil {
 			// only request if we do not have the milestone
 			requested++
 			msIndexes = append(msIndexes, toReq)
@@ -355,14 +355,14 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 
 		// milestone already exists
 		if onExistingMilestoneInRange != nil {
-			if err := onExistingMilestoneInRange(ctx, cachedMs.Retain()); err != nil && errors.Is(err, common.ErrOperationAborted) {
+			if err := onExistingMilestoneInRange(ctx, cachedMilestone.Retain()); err != nil && errors.Is(err, common.ErrOperationAborted) { // milestone pass +1
 				// do not proceed if the node was shut down
-				cachedMs.Release(true) // milestone -1
+				cachedMilestone.Release(true) // milestone -1
 				return 0
 			}
 		}
 
-		cachedMs.Release(true) // milestone -1
+		cachedMilestone.Release(true) // milestone -1
 	}
 
 	if len(msIndexes) == 0 {

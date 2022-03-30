@@ -88,7 +88,7 @@ type MessageProcessor struct {
 	opts Options
 
 	// events of the message processor.
-	Events MessageProcessorEvents
+	Events *MessageProcessorEvents
 	// cache that holds processed incomming messages.
 	workUnits *objectstorage.ObjectStorage
 	// worker pool for incomming messages.
@@ -118,7 +118,7 @@ func NewMessageProcessor(
 		serverMetrics:  serverMetrics,
 		deSeriParas:    deSeriParas,
 		opts:           *opts,
-		Events: MessageProcessorEvents{
+		Events: &MessageProcessorEvents{
 			MessageProcessed: events.NewEvent(MessageProcessedCaller),
 			BroadcastMessage: events.NewEvent(BroadcastCaller),
 		},
@@ -222,7 +222,10 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		cachedMsgMeta := proc.storage.CachedMessageMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			// parent not found
-			entryPointIndex, exists := proc.storage.SolidEntryPointsIndex(messageID)
+			entryPointIndex, exists, err := proc.storage.SolidEntryPointsIndex(messageID)
+			if err != nil {
+				return err
+			}
 			if !exists {
 				return ErrMessageNotSolid
 			}
@@ -235,7 +238,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 			// message is a SEP and not below max depth
 			return nil
 		}
-		defer cachedMsgMeta.Release(true)
+		defer cachedMsgMeta.Release(true) // meta -1
 
 		if !cachedMsgMeta.Metadata().IsSolid() {
 			// if the parent is not solid, the message itself can't be solid
@@ -243,7 +246,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		}
 
 		// we pass a background context here to not prevent emitting messages at shutdown (COO etc).
-		_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), cmi) // meta +
+		_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
 		if err != nil {
 			return err
 		}
@@ -300,20 +303,20 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 		msIndex = proc.syncManager.LatestMilestoneIndex()
 	}
 
-	cachedMessage := proc.storage.MilestoneCachedMessageOrNil(msIndex) // message +1
-	if cachedMessage == nil {
+	cachedMsgMilestone := proc.storage.MilestoneCachedMessageOrNil(msIndex) // message +1
+	if cachedMsgMilestone == nil {
 		// can't reply if we don't have the wanted milestone
 		return
 	}
-	defer cachedMessage.Release(true) // message -1
+	defer cachedMsgMilestone.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	requestedData, err := cachedMsgMilestone.Message().Message().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	if err != nil {
 		// can't reply if serialization fails
 		return
 	}
 
-	msg, err := NewMessageMsg(cachedRequestedData)
+	msg, err := NewMessageMsg(requestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -328,20 +331,20 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	cachedMessage := proc.storage.CachedMessageOrNil(hornet.MessageIDFromSlice(data)) // message +1
-	if cachedMessage == nil {
+	cachedMsg := proc.storage.CachedMessageOrNil(hornet.MessageIDFromSlice(data)) // message +1
+	if cachedMsg == nil {
 		// can't reply if we don't have the requested message
 		return
 	}
-	defer cachedMessage.Release(true) // message -1
+	defer cachedMsg.Release(true) // message -1
 
-	cachedRequestedData, err := cachedMessage.Message().Message().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	requestedData, err := cachedMsg.Message().Message().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
 	if err != nil {
 		// can't reply if serialization fails
 		return
 	}
 
-	msg, err := NewMessageMsg(cachedRequestedData)
+	msg, err := NewMessageMsg(requestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -483,7 +486,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 	proc.shutdownMutex.RLock()
 	defer proc.shutdownMutex.RUnlock()
-	defer cachedMsgMeta.Release(true)
+	defer cachedMsgMeta.Release(true) // meta -1
 
 	if proc.shutdown {
 		// do not broadcast if the message processor was shut down
@@ -496,7 +499,7 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 	}
 
 	// we pass a background context here to not prevent broadcasting messages at shutdown (COO etc).
-	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex())
+	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex()) // meta pass +1
 	if err != nil {
 		return
 	}
@@ -506,11 +509,11 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 		return
 	}
 
-	cachedMsg := proc.storage.CachedMessageOrNil(cachedMsgMeta.Metadata().MessageID())
+	cachedMsg := proc.storage.CachedMessageOrNil(cachedMsgMeta.Metadata().MessageID()) // message +1
 	if cachedMsg == nil {
 		return
 	}
-	defer cachedMsg.Release(true)
+	defer cachedMsg.Release(true) // message -1
 
 	cachedWorkUnit, _ := proc.workUnitFor(cachedMsg.Message().Data()) // workUnit +1
 	defer cachedWorkUnit.Release(true)                                // workUnit -1

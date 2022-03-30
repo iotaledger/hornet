@@ -3,6 +3,7 @@ package utxo
 import (
 	"encoding/binary"
 	"math/rand"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -172,9 +173,15 @@ func TestMilestoneDiffSerialization(t *testing.T) {
 	readDiff, err := utxo.MilestoneDiffWithoutLocking(msIndex)
 	require.NoError(t, err)
 
+	var sortedOutputs LexicalOrderedOutputs = LexicalOrderedOutputs(outputs)
+	sort.Sort(sortedOutputs)
+
+	var sortedSpents LexicalOrderedSpents = LexicalOrderedSpents(spents)
+	sort.Sort(sortedSpents)
+
 	require.Equal(t, msIndex, readDiff.Index)
-	EqualOutputs(t, outputs, readDiff.Outputs)
-	EqualSpents(t, spents, readDiff.Spents)
+	EqualOutputs(t, Outputs(sortedOutputs), readDiff.Outputs)
+	EqualSpents(t, Spents(sortedSpents), readDiff.Spents)
 	require.Equal(t, treasuryOutput, readDiff.TreasuryOutput)
 	require.Equal(t, spentTreasuryOutput, readDiff.SpentTreasuryOutput)
 }

@@ -9,22 +9,21 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/utils"
 )
 
+// ChildrenTraverser can be used to walk the dag in direction of the tips (future cone).
 type ChildrenTraverser struct {
-	storage          *storage.Storage
-	metadataMemcache *storage.MetadataMemcache
+	// interface to the used storage.
+	childrenTraverserStorage ChildrenTraverserStorage
 
-	// stack holding the ordered msg to process
+	// stack holding the ordered msg to process.
 	stack *list.List
 
-	// discovers map with already found messages
+	// discovers map with already found messages.
 	discovered map[string]struct{}
 
 	ctx                   context.Context
-	iteratorOptions       []storage.IteratorOption
 	condition             Predicate
 	consumer              Consumer
 	walkAlreadyDiscovered bool
@@ -33,39 +32,28 @@ type ChildrenTraverser struct {
 }
 
 // NewChildrenTraverser create a new traverser to traverse the children (future cone)
-func NewChildrenTraverser(dbStorage *storage.Storage, metadataMemcache ...*storage.MetadataMemcache) *ChildrenTraverser {
+func NewChildrenTraverser(childrenTraverserStorage ChildrenTraverserStorage) *ChildrenTraverser {
 
 	t := &ChildrenTraverser{
-		storage:          dbStorage,
-		metadataMemcache: storage.NewMetadataMemcache(dbStorage),
-		stack:            list.New(),
-		discovered:       make(map[string]struct{}),
-	}
-
-	if len(metadataMemcache) > 0 && metadataMemcache[0] != nil {
-		// use the memcache from outside to share the same cached metadata
-		t.metadataMemcache = metadataMemcache[0]
+		childrenTraverserStorage: childrenTraverserStorage,
+		stack:                    list.New(),
+		discovered:               make(map[string]struct{}),
 	}
 
 	return t
 }
 
+// reset the traverser for the next walk.
 func (t *ChildrenTraverser) reset() {
 
 	t.discovered = make(map[string]struct{})
 	t.stack = list.New()
 }
 
-// Cleanup releases all the cached objects that have been traversed.
-// This MUST be called by the user at the end.
-func (t *ChildrenTraverser) Cleanup(forceRelease bool) {
-	t.metadataMemcache.Cleanup(forceRelease)
-}
-
 // Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(ctx context.Context, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool, iteratorOptions ...storage.IteratorOption) error {
+func (t *ChildrenTraverser) Traverse(ctx context.Context, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -74,7 +62,6 @@ func (t *ChildrenTraverser) Traverse(ctx context.Context, startMessageID hornet.
 	defer t.traverserLock.Unlock()
 
 	t.ctx = ctx
-	t.iteratorOptions = iteratorOptions
 	t.condition = condition
 	t.consumer = consumer
 	t.walkAlreadyDiscovered = walkAlreadyDiscovered
@@ -111,14 +98,19 @@ func (t *ChildrenTraverser) processStackChildren() error {
 	// remove the message from the stack
 	t.stack.Remove(ele)
 
-	cachedMsgMeta := t.metadataMemcache.CachedMetadataOrNil(currentMessageID) // meta +1
+	cachedMsgMeta, err := t.childrenTraverserStorage.CachedMessageMetadata(currentMessageID) // meta +1
+	if err != nil {
+		return err
+	}
+
 	if cachedMsgMeta == nil {
 		// there was an error, stop processing the stack
 		return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.ToHex())
 	}
+	defer cachedMsgMeta.Release(true) // meta -1
 
 	// check condition to decide if msg should be consumed and traversed
-	traverse, err := t.condition(cachedMsgMeta.Retain()) // meta + 1
+	traverse, err := t.condition(cachedMsgMeta.Retain()) // meta pass +1
 	if err != nil {
 		// there was an error, stop processing the stack
 		return err
@@ -131,13 +123,18 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	if t.consumer != nil {
 		// consume the message
-		if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta +1
+		if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta pass +1
 			// there was an error, stop processing the stack
 			return err
 		}
 	}
 
-	for _, childMessageID := range t.storage.ChildrenMessageIDs(currentMessageID, t.iteratorOptions...) {
+	childrenMessageIDs, err := t.childrenTraverserStorage.ChildrenMessageIDs(currentMessageID)
+	if err != nil {
+		return err
+	}
+
+	for _, childMessageID := range childrenMessageIDs {
 		if !t.walkAlreadyDiscovered {
 			childMessageIDMapKey := childMessageID.ToMapKey()
 			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {
