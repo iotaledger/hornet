@@ -1,27 +1,10 @@
 version: "3.9"
 services:
-  cleanup:
-    image: alpine:latest
-    volumes:
-      - ./snapshots:/snapshots
-      - ./privatedb:/privatedb
-    command: >
-      /bin/ash -c "
-        rm -Rf /snapshots/*
-        rm -Rf /privatedb/*
-        mkdir -p /snapshots/coo
-        chown -R 65532:65532 /snapshots
-      "
-    profiles:
-      - donotstart
-
   create-snapshots:
     build:
       context: ../
       dockerfile: docker/Dockerfile
     image: hornet:dev
-    depends_on:
-      - cleanup
     volumes:
       - ./snapshots:/app/snapshots
     command:
@@ -33,35 +16,11 @@ services:
     profiles:
       - donotstart
 
-  prepare_files:
-    image: alpine:latest
-    volumes:
-      - ./snapshots:/snapshots
-      - ./privatedb:/privatedb
-    command: >
-      /bin/ash -c "
-        rm -Rf /privatedb
-        cp -R /snapshots/coo /snapshots/hornet-2
-        cp -R /snapshots/coo /snapshots/hornet-3
-        cp -R /snapshots/coo /snapshots/hornet-4
-        mkdir -p /privatedb/coo
-        mkdir -p /privatedb/state
-        mkdir -p /privatedb/hornet-2
-        mkdir -p /privatedb/hornet-3
-        mkdir -p /privatedb/hornet-4
-        chown -R 65532:65532 /privatedb
-        chown -R 65532:65532 /snapshots
-      "
-    profiles:
-      - donotstart
-
   coo-bootstrap:
     build:
       context: ../
       dockerfile: docker/Dockerfile
     image: hornet:dev
-    depends_on:
-      - prepare_files
     ulimits:
       nofile:
         soft: 8192

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 if [ ! -d "privatedb" ]; then
-  echo "Please run ./bootstrap.sh first"
-  exit 1
+  echo "Please run './bootstrap.sh' first"
+  exit
 fi
 
 if [ $# -eq 0 ]; then
