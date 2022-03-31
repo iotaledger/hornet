@@ -45,6 +45,7 @@ services:
         cp -R /snapshots/coo /snapshots/hornet-3
         cp -R /snapshots/coo /snapshots/hornet-4
         mkdir -p /privatedb/coo
+        mkdir -p /privatedb/state
         mkdir -p /privatedb/hornet-2
         mkdir -p /privatedb/hornet-3
         mkdir -p /privatedb/hornet-4
