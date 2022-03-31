@@ -10,6 +10,7 @@ services:
         rm -Rf /snapshots/*
         rm -Rf /privatedb/*
         mkdir -p /snapshots/coo
+        chown -R 65532:65532 /snapshots
       "
     profiles:
       - donotstart
@@ -43,6 +44,9 @@ services:
         cp -R /snapshots/coo /snapshots/hornet-2
         cp -R /snapshots/coo /snapshots/hornet-3
         cp -R /snapshots/coo /snapshots/hornet-4
+        mkdir -p /privatedb
+        chown -R 65532:65532 /privatedb
+        chown -R 65532:65532 /snapshots
       "
     profiles:
       - donotstart
