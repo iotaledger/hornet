@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ ! -d "privatedb" ]; then
+  echo "Please run ./bootstrap.sh first"
+  exit 1
+fi
+
 if [ $# -eq 0 ]; then
     docker-compose up
 elif [[ $1 = "3" || $1 = "4" ]]; then
