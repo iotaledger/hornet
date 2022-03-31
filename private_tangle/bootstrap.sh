@@ -1,6 +1,9 @@
 #!/bin/bash
 
-./cleanup.sh
+if [ -d "privatedb" ]; then
+  echo "Please run 'sudo ./cleanup.sh' first"
+  exit 1
+fi
 
 mkdir -p privatedb
 mkdir -p snapshots
