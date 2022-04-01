@@ -14,7 +14,7 @@ fi
 docker-compose build
 
 # Create snapshot
-mkdir -p snapshots
+mkdir -p snapshots/coo
 chown -R 65532:65532 snapshots
 docker-compose run create-snapshots
 
