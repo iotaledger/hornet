@@ -11,7 +11,7 @@ if [ -d "privatedb" ]; then
 fi
 
 # Build latest code
-#docker-compose build
+docker-compose build
 
 # Pull latest images
 docker-compose pull
