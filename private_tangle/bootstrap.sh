@@ -10,12 +10,14 @@ if [ -d "privatedb" ]; then
   ./cleanup.sh
 fi
 
-# Build latest code
-docker-compose build
+if [[ $1 = "build" ]]; then
+  # Build latest code
+  docker-compose build
 
-# Pull latest images
-docker-compose pull inx-indexer
-docker-compose pull inx-mqtt
+  # Pull latest images
+  docker-compose pull inx-indexer
+  docker-compose pull inx-mqtt
+fi
 
 # Create snapshot
 mkdir -p snapshots/coo
