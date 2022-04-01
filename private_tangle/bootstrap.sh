@@ -14,7 +14,8 @@ fi
 docker-compose build
 
 # Pull latest images
-docker-compose pull
+docker-compose pull inx-indexer
+docker-compose pull inx-mqtt
 
 # Create snapshot
 mkdir -p snapshots/coo
