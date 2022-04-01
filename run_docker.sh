@@ -5,12 +5,14 @@ if [[ "$OSTYPE" != "darwin"* && "$EUID" -ne 0 ]]; then
   exit
 fi
 
-# Build latest code
-docker-compose build
+if [[ $1 = "build" ]]; then
+  # Build latest code
+  docker-compose build
 
-# Pull latest images
-docker-compose pull inx-indexer
-docker-compose pull inx-mqtt
+  # Pull latest images
+  docker-compose pull inx-indexer
+  docker-compose pull inx-mqtt
+fi
 
 # Prepare db directory
 mkdir -p alphanet
