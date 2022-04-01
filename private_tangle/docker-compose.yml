@@ -45,27 +45,17 @@ services:
     profiles:
       - donotstart
 
-  wait_for_inx:
-    image: dadarek/wait-for-dependencies
-    depends_on:
-      - hornet-coo
-    command: hornet-coo:9029
-
   inx-indexer:
-    image: iotaledger/inx-indexer:latest
+    image: iotaledger/inx-indexer:0.1
     restart: on-failure
-    depends_on:
-      - wait_for_inx
     command:
       - "--inx.address=hornet-coo:9029"
       - "--indexer.bindAddress=inx-indexer:9091"
       - "--prometheus.bindAddress=inx-indexer:9312"
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:latest
+    image: iotaledger/inx-mqtt:0.1
     restart: on-failure
-    depends_on:
-      - wait_for_inx
     command:
       - "--inx.address=hornet-coo:9029"
       - "--mqtt.bindAddress=inx-mqtt:1883"
