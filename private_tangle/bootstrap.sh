@@ -13,6 +13,9 @@ fi
 # Build latest code
 docker-compose build
 
+# Pull latest images
+docker-compose pull
+
 # Create snapshot
 mkdir -p snapshots/coo
 chown -R 65532:65532 snapshots
@@ -24,8 +27,12 @@ cp -R snapshots/coo snapshots/hornet-3
 cp -R snapshots/coo snapshots/hornet-4
 chown -R 65532:65532 snapshots
 
-# Prepate database directory
-mkdir -p privatedb
+# Prepare database directory
+mkdir -p privatedb/coo
+mkdir -p privatedb/state
+mkdir -p privatedb/hornet-2
+mkdir -p privatedb/hornet-3
+mkdir -p privatedb/hornet-4
 chown -R 65532:65532 privatedb
 
 # Bootstrap coordinator
