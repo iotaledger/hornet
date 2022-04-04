@@ -52,7 +52,10 @@ func databaseHealth(args []string) error {
 		}
 		defer func() { _ = dbStore.Close() }()
 
-		healthTracker := storage.NewStoreHealthTracker(dbStore)
+		healthTracker, err := storage.NewStoreHealthTracker(dbStore)
+		if err != nil {
+			return err
+		}
 
 		dbVersion, err := healthTracker.DatabaseVersion()
 		if err != nil {

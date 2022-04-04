@@ -95,7 +95,10 @@ func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex milestone.Index, pru
 		return err
 	}
 
-	mutations := u.utxoStorage.Batched()
+	mutations, err := u.utxoStorage.Batched()
+	if err != nil {
+		return err
+	}
 
 	for _, spent := range diff.Spents {
 		if err := deleteOutput(spent.output, mutations); err != nil {
@@ -181,7 +184,10 @@ type TreasuryMutationTuple struct {
 
 func (u *Manager) ApplyConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 
-	mutations := u.utxoStorage.Batched()
+	mutations, err := u.utxoStorage.Batched()
+	if err != nil {
+		return err
+	}
 
 	for _, output := range newOutputs {
 		if err := storeOutput(output, mutations); err != nil {
@@ -252,7 +258,10 @@ func (u *Manager) ApplyConfirmation(msIndex milestone.Index, newOutputs Outputs,
 
 func (u *Manager) RollbackConfirmationWithoutLocking(msIndex milestone.Index, newOutputs Outputs, newSpents Spents, tm *TreasuryMutationTuple, rt *ReceiptTuple) error {
 
-	mutations := u.utxoStorage.Batched()
+	mutations, err := u.utxoStorage.Batched()
+	if err != nil {
+		return err
+	}
 
 	// we have to store the spents as output and mark them as unspent
 	for _, spent := range newSpents {
@@ -343,7 +352,10 @@ func (u *Manager) AddUnspentOutput(unspentOutput *Output) error {
 	u.WriteLockLedger()
 	defer u.WriteUnlockLedger()
 
-	mutations := u.utxoStorage.Batched()
+	mutations, err := u.utxoStorage.Batched()
+	if err != nil {
+		return err
+	}
 
 	if err := storeOutput(unspentOutput, mutations); err != nil {
 		mutations.Cancel()

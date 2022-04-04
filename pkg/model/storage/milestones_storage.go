@@ -50,8 +50,13 @@ func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile
 		return err
 	}
 
+	milestonesStore, err := store.WithRealm([]byte{common.StorePrefixMilestones})
+	if err != nil {
+		return err
+	}
+
 	s.milestoneStorage = objectstorage.New(
-		store.WithRealm([]byte{common.StorePrefixMilestones}),
+		milestonesStore,
 		milestoneFactory,
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),

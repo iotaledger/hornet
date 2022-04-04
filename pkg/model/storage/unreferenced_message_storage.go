@@ -53,8 +53,13 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 		return err
 	}
 
+	unreferencedMessagesStore, err := store.WithRealm([]byte{common.StorePrefixUnreferencedMessages})
+	if err != nil {
+		return err
+	}
+
 	s.unreferencedMessagesStorage = objectstorage.New(
-		store.WithRealm([]byte{common.StorePrefixUnreferencedMessages}),
+		unreferencedMessagesStore,
 		unreferencedMessageFactory,
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),

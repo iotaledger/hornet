@@ -87,16 +87,21 @@ func NewManager(
 	options.apply(defaultOptions...)
 	options.apply(opts...)
 
+	healthTracker, err := storage.NewStoreHealthTracker(participationStore)
+	if err != nil {
+		return nil, err
+	}
+
 	manager := &ParticipationManager{
 		storage:                  dbStorage,
 		syncManager:              syncManager,
 		participationStore:       participationStore,
-		participationStoreHealth: storage.NewStoreHealthTracker(participationStore),
+		participationStoreHealth: healthTracker,
 		deSeriParas:              deSeriParas,
 		opts:                     options,
 	}
 
-	err := manager.init()
+	err = manager.init()
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +408,10 @@ func (pm *ParticipationManager) applyNewUTXOForEvents(index milestone.Index, new
 		return nil
 	}
 
-	mutations := pm.participationStore.Batched()
+	mutations, err := pm.participationStore.Batched()
+	if err != nil {
+		return err
+	}
 
 	for _, participation := range validParticipations {
 
@@ -489,7 +497,10 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 		return nil
 	}
 
-	mutations := pm.participationStore.Batched()
+	mutations, err := pm.participationStore.Batched()
+	if err != nil {
+		return err
+	}
 
 	for _, participation := range validParticipations {
 
@@ -536,7 +547,10 @@ func (pm *ParticipationManager) applySpentUTXOForEvents(index milestone.Index, s
 // applyNewConfirmedMilestoneIndexForEvents iterates over each counting ballot participation and applies the current vote balance for each question to the total vote balance
 func (pm *ParticipationManager) applyNewConfirmedMilestoneIndexForEvents(index milestone.Index, events map[EventID]*Event) error {
 
-	mutations := pm.participationStore.Batched()
+	mutations, err := pm.participationStore.Batched()
+	if err != nil {
+		return err
+	}
 
 	// Iterate over all known events and increase the one that are currently counting
 	for eventID, event := range events {
