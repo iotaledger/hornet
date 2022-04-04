@@ -192,8 +192,13 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 		return err
 	}
 
+	messagesStore, err := store.WithRealm([]byte{common.StorePrefixMessages})
+	if err != nil {
+		return err
+	}
+
 	s.messagesStorage = objectstorage.New(
-		store.WithRealm([]byte{common.StorePrefixMessages}),
+		messagesStore,
 		MessageFactory,
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
@@ -206,8 +211,13 @@ func (s *Storage) configureMessageStorage(store kvstore.KVStore, opts *profile.C
 			}),
 	)
 
+	metadataStore, err := store.WithRealm([]byte{common.StorePrefixMessageMetadata})
+	if err != nil {
+		return err
+	}
+
 	s.metadataStorage = objectstorage.New(
-		store.WithRealm([]byte{common.StorePrefixMessageMetadata}),
+		metadataStore,
 		MetadataFactory,
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),

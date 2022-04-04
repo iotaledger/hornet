@@ -142,7 +142,10 @@ func (u *Manager) StoreUnspentTreasuryOutput(to *TreasuryOutput) error {
 		panic("provided spent output to persist as new unspent treasury output")
 	}
 
-	mutations := u.utxoStorage.Batched()
+	mutations, err := u.utxoStorage.Batched()
+	if err != nil {
+		return err
+	}
 
 	existing, err := u.UnspentTreasuryOutputWithoutLocking()
 	if err == nil {

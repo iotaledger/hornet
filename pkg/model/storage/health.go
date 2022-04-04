@@ -11,12 +11,19 @@ type StoreHealthTracker struct {
 	store kvstore.KVStore
 }
 
-func NewStoreHealthTracker(store kvstore.KVStore) *StoreHealthTracker {
+func NewStoreHealthTracker(store kvstore.KVStore) (*StoreHealthTracker, error) {
+
+	healthStore, err := store.WithRealm([]byte{common.StorePrefixHealth})
+	if err != nil {
+		return nil, err
+	}
+
 	s := &StoreHealthTracker{
-		store: store.WithRealm([]byte{common.StorePrefixHealth}),
+		store: healthStore,
 	}
 	s.setDatabaseVersion(DBVersion)
-	return s
+
+	return s, nil
 }
 
 func (s *StoreHealthTracker) MarkCorrupted() error {
