@@ -1,26 +1,10 @@
 version: "3.9"
 services:
-  cleanup:
-    image: alpine:latest
-    volumes:
-      - ./snapshots:/snapshots
-      - ./privatedb:/privatedb
-    command: >
-      /bin/ash -c "
-        rm -Rf /snapshots/*
-        rm -Rf /privatedb/*
-        mkdir -p /snapshots/coo
-      "
-    profiles:
-      - donotstart
-
   create-snapshots:
     build:
       context: ../
       dockerfile: docker/Dockerfile
     image: hornet:dev
-    depends_on:
-      - cleanup
     volumes:
       - ./snapshots:/app/snapshots
     command:
@@ -32,28 +16,11 @@ services:
     profiles:
       - donotstart
 
-  prepare_files:
-    image: alpine:latest
-    volumes:
-      - ./snapshots:/snapshots
-      - ./privatedb:/privatedb
-    command: >
-      /bin/ash -c "
-        rm -Rf /privatedb
-        cp -R /snapshots/coo /snapshots/hornet-2
-        cp -R /snapshots/coo /snapshots/hornet-3
-        cp -R /snapshots/coo /snapshots/hornet-4
-      "
-    profiles:
-      - donotstart
-
   coo-bootstrap:
     build:
       context: ../
       dockerfile: docker/Dockerfile
     image: hornet:dev
-    depends_on:
-      - prepare_files
     ulimits:
       nofile:
         soft: 8192
@@ -78,27 +45,17 @@ services:
     profiles:
       - donotstart
 
-  wait_for_inx:
-    image: dadarek/wait-for-dependencies
-    depends_on:
-      - hornet-coo
-    command: hornet-coo:9029
-
   inx-indexer:
-    image: iotaledger/inx-indexer:latest
+    image: iotaledger/inx-indexer:0.1
     restart: on-failure
-    depends_on:
-      - wait_for_inx
     command:
       - "--inx.address=hornet-coo:9029"
       - "--indexer.bindAddress=inx-indexer:9091"
       - "--prometheus.bindAddress=inx-indexer:9312"
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:latest
+    image: iotaledger/inx-mqtt:0.1
     restart: on-failure
-    depends_on:
-      - wait_for_inx
     command:
       - "--inx.address=hornet-coo:9029"
       - "--mqtt.bindAddress=inx-mqtt:1883"
