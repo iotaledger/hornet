@@ -66,10 +66,7 @@ func snapshotHash(args []string) error {
 
 	// clean up temp db
 	defer func() {
-		tangleStore.Shutdown()
 		_ = tangleStore.Close()
-
-		utxoStore.Shutdown()
 		_ = utxoStore.Close()
 
 		_ = os.RemoveAll(tempDir)

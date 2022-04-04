@@ -61,10 +61,7 @@ func coordinatorFixStateFile(args []string) error {
 
 	// clean up store
 	defer func() {
-		tangleStore.Shutdown()
 		_ = tangleStore.Close()
-
-		utxoStore.Shutdown()
 		_ = utxoStore.Close()
 	}()
 

@@ -244,7 +244,6 @@ func databaseLedgerHash(args []string) error {
 
 	// clean up store
 	defer func() {
-		tangleStore.Shutdown()
 		_ = tangleStore.Close()
 	}()
 
@@ -255,7 +254,6 @@ func databaseLedgerHash(args []string) error {
 
 	// clean up store
 	defer func() {
-		utxoStore.Shutdown()
 		_ = utxoStore.Close()
 	}()
 

@@ -44,8 +44,13 @@ func (s *Storage) configureIndexationStorage(store kvstore.KVStore, opts *profil
 		return err
 	}
 
+	indexationStore, err := store.WithRealm([]byte{common.StorePrefixIndexation})
+	if err != nil {
+		return err
+	}
+
 	s.indexationStorage = objectstorage.New(
-		store.WithRealm([]byte{common.StorePrefixIndexation}),
+		indexationStore,
 		indexationFactory,
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
