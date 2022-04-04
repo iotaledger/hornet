@@ -7,8 +7,14 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
-func (s *Storage) configureSnapshotStore(store kvstore.KVStore) {
-	s.snapshotStore = store.WithRealm([]byte{common.StorePrefixSnapshot})
+func (s *Storage) configureSnapshotStore(snapshotStore kvstore.KVStore) error {
+	snapshotStore, err := snapshotStore.WithRealm([]byte{common.StorePrefixSnapshot})
+	if err != nil {
+		return err
+	}
+
+	s.snapshotStore = snapshotStore
+	return nil
 }
 
 func (s *Storage) storeSnapshotInfo(snapshot *SnapshotInfo) error {

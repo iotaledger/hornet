@@ -110,12 +110,22 @@ type Storage struct {
 
 func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, error) {
 
+	healthTrackerTangle, err := NewStoreHealthTracker(tangleStore)
+	if err != nil {
+		return nil, err
+	}
+
+	healthTrackerUTXO, err := NewStoreHealthTracker(utxoStore)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Storage{
 		tangleStore: tangleStore,
 		utxoStore:   utxoStore,
 		healthTrackers: []*StoreHealthTracker{
-			NewStoreHealthTracker(tangleStore),
-			NewStoreHealthTracker(utxoStore),
+			healthTrackerTangle,
+			healthTrackerUTXO,
 		},
 		utxoManager: utxo.New(utxoStore),
 		Events: &packageEvents{
@@ -392,7 +402,9 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 		return err
 	}
 
-	s.configureSnapshotStore(tangleStore)
+	if err := s.configureSnapshotStore(tangleStore); err != nil {
+		return err
+	}
 
 	return nil
 }

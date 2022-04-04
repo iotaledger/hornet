@@ -67,8 +67,13 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 		return err
 	}
 
+	childrenStore, err := store.WithRealm([]byte{common.StorePrefixChildren})
+	if err != nil {
+		return err
+	}
+
 	s.childrenStorage = objectstorage.New(
-		store.WithRealm([]byte{common.StorePrefixChildren}),
+		childrenStore,
 		childrenFactory,
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PersistenceEnabled(true),
