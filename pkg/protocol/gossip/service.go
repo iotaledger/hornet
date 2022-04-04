@@ -330,7 +330,6 @@ drainLoop:
 
 		case <-s.connectedChan:
 
-		case <-s.closeStreamChan:
 		case disconnectMsg := <-s.closeStreamChan:
 			disconnectMsg.back <- nil
 
