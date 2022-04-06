@@ -32,7 +32,7 @@ func (api *DebugNodeAPIClient) BalanceByAddress(ctx context.Context, addr iotago
 		return 0, err
 	}
 
-	result, err := indexer.Outputs(ctx, &nodeclient.OutputsQuery{AddressBech32: addr.Bech32(iotago.PrefixTestnet)})
+	result, err := indexer.Outputs(ctx, &nodeclient.BasicOutputsQuery{AddressBech32: addr.Bech32(iotago.PrefixTestnet)})
 	if err != nil {
 		return 0, err
 	}

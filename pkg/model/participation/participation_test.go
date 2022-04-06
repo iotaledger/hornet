@@ -18,9 +18,6 @@ func RandParticipation(answerCount int) (*participation.Participation, []byte) {
 
 func RandParticipationWithEventID(eventID participation.EventID, answerCount int) (*participation.Participation, []byte) {
 	answers := utils.RandBytes(answerCount)
-	if answerCount == 0 {
-		answers = []byte{} // RandBytes returns nil if empty
-	}
 
 	p := &participation.Participation{
 		EventID: eventID,
