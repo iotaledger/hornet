@@ -2,13 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0-rc2] - 04.04.2022
+## [1.2.0-rc3] - 07.04.2022
 
 _**Note**: due to changes to the internal database structure it is recommended to remove the old `participation` database._
 
 ### Fixed
-    - Fixed deadlock while shutting down the node (#1392)
+    - Fixed dangling open connection to peer which prevented reconnect (#1398)
 
+## [1.2.0-rc2] - 04.04.2022
+
+### Fixed
+    - Fixed deadlock while shutting down the node (#1392)
 
 ## [1.2.0-rc1] - 30.03.2022
 
