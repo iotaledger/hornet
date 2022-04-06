@@ -49,7 +49,7 @@ const (
 	// GET returns the message IDs of all children.
 	RouteMessageChildren = "/messages/:" + restapipkg.ParameterMessageID + "/children"
 
-	// RouteMessages is the route for getting message IDs or creating new messages.
+	// RouteMessages is the route for creating new messages.
 	// POST creates a single new message and returns the new message ID.
 	RouteMessages = "/messages"
 
@@ -66,7 +66,7 @@ const (
 	RouteMilestoneUTXOChanges = "/milestones/:" + restapipkg.ParameterMilestoneIndex + "/utxo-changes"
 
 	// RouteOutput is the route for getting an output by its outputID (transactionHash + outputIndex).
-	// GET returns the output.
+	// GET returns the output (json).
 	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
 
 	// RouteOutputMetadata is the route for getting output metadata by its outputID (transactionHash + outputIndex) without getting the data again.
@@ -78,12 +78,15 @@ const (
 	RouteOutputBytes = "/outputs/:" + restapipkg.ParameterOutputID + "/raw"
 
 	// RouteTreasury is the route for getting the current treasury output.
+	// GET returns the treasury.
 	RouteTreasury = "/treasury"
 
-	// RouteReceipts is the route for getting all stored receipts.
+	// RouteReceipts is the route for getting all persisted receipts on a node.
+	// GET returns the receipts.
 	RouteReceipts = "/receipts"
 
-	// RouteReceiptsMigratedAtIndex is the route for getting all receipts for a given migrated at index.
+	// RouteReceiptsMigratedAtIndex is the route for getting all persisted receipts for a given migrated at index on a node.
+	// GET returns the receipts for the given migrated at index.
 	RouteReceiptsMigratedAtIndex = "/receipts/:" + restapipkg.ParameterMilestoneIndex
 
 	// RoutePeer is the route for getting peers by their peerID.
