@@ -498,6 +498,7 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
 
 		if peer.Relation == p2p.PeerRelationUnknown {
 			if len(s.unknownPeers) >= s.opts.unknownPeersLimit {
+				conn.Close()
 				return nil
 			}
 			s.unknownPeers[peer.ID] = struct{}{}
