@@ -505,6 +505,7 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
 
 		stream, err := s.openStream(peer.ID)
 		if err != nil {
+			conn.Close()
 			return err
 		}
 
