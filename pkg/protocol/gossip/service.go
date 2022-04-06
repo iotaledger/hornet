@@ -487,26 +487,29 @@ func (s *Service) handleConnected(peer *p2p.Peer, conn network.Conn) {
 	connect := func() error {
 		// don't create a new protocol if one is already ongoing
 		if _, ongoing := s.streams[peer.ID]; ongoing {
+			// keep the connection open in that case
 			return nil
 		}
 
 		// only initiate protocol if we connected outbound:
 		// aka, handleInboundStream will be called for this connection
 		if conn.Stat().Direction != network.DirOutbound {
+			// keep the connection open in that case
 			return nil
 		}
 
 		if peer.Relation == p2p.PeerRelationUnknown {
 			if len(s.unknownPeers) >= s.opts.unknownPeersLimit {
-				conn.Close()
-				return nil
+				// close the connection to the peer
+				return conn.Close()
 			}
 			s.unknownPeers[peer.ID] = struct{}{}
 		}
 
 		stream, err := s.openStream(peer.ID)
 		if err != nil {
-			conn.Close()
+			// close the connection to the peer
+			_ = conn.Close()
 			return err
 		}
 
