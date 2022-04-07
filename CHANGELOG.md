@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha7] - 07.04.2022
+
+### Changed
+    - Changed bech32 prefix for the testnet to `rms`
+    - Milestone payloads now contain an optional metadata field according to TIP-29.
+    - Now using `rms` bech32 prefix according to TIP-31
+
+### Fixed
+    - Fixed deadlock while shutting down the node
+    - Fixed stale connections to peers when the initial stream establishment fails.
+
 ## [2.0.0-alpha6] - 30.03.2022
 
 ### Changed

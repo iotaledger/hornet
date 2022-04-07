@@ -284,9 +284,8 @@ func TestAliasOutputSerialization(t *testing.T) {
 	msTimestamp := rand.Uint64()
 
 	iotaOutput := &iotago.AliasOutput{
-		Amount:        amount,
-		AliasID:       aliasID,
-		StateMetadata: []byte{},
+		Amount:  amount,
+		AliasID: aliasID,
 		Blocks: iotago.FeatureBlocks{
 			&iotago.SenderFeatureBlock{
 				Address: sender.ToAddress(),

@@ -112,9 +112,8 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 		}
 	case iotago.OutputAlias:
 		iotaOutput = &iotago.AliasOutput{
-			Amount:        amount,
-			AliasID:       RandAliasID(),
-			StateMetadata: []byte{},
+			Amount:  amount,
+			AliasID: RandAliasID(),
 			Conditions: iotago.UnlockConditions{
 				&iotago.StateControllerAddressUnlockCondition{
 					Address: address,
