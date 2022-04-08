@@ -70,6 +70,23 @@ func NewLedgerUpdate(index milestone.Index, newOutputs utxo.Outputs, newSpents u
 	return u, nil
 }
 
+func NewTreasuryUpdate(index milestone.Index, created *utxo.TreasuryOutput, consumed *utxo.TreasuryOutput) (*inx.TreasuryUpdate, error) {
+	u := &inx.TreasuryUpdate{
+		MilestoneIndex: uint32(index),
+		Created: &inx.TreasuryOutput{
+			MilestoneId: inx.NewMilestoneId(created.MilestoneID),
+			Amount:      created.Amount,
+		},
+	}
+	if consumed != nil {
+		u.Consumed = &inx.TreasuryOutput{
+			MilestoneId: inx.NewMilestoneId(consumed.MilestoneID),
+			Amount:      consumed.Amount,
+		}
+	}
+	return u, nil
+}
+
 func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.OutputResponse, error) {
 	deps.UTXOManager.ReadLockLedger()
 	defer deps.UTXOManager.ReadUnlockLedger()
@@ -151,7 +168,7 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 	return err
 }
 
-func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerUpdateRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
+func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerRequest, srv inx.INX_ListenToLedgerUpdatesServer) error {
 
 	sendPreviousMilestoneDiffs := func(startIndex milestone.Index) error {
 		if startIndex > 0 {
@@ -212,6 +229,88 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerUpdateRequest, srv inx.
 	deps.Tangle.Events.LedgerUpdated.Attach(closure)
 	<-ctx.Done()
 	deps.Tangle.Events.LedgerUpdated.Detach(closure)
+	wp.Stop()
+	return ctx.Err()
+}
+
+func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_ListenToTreasuryUpdatesServer) error {
+	var sentTreasuryUpdate bool
+	sendPreviousMilestoneDiffs := func(startIndex milestone.Index) error {
+		deps.UTXOManager.ReadLockLedger()
+		defer deps.UTXOManager.ReadUnlockLedger()
+
+		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
+
+		if startIndex > 0 {
+			// Stream all available milestone diffs first
+			pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
+			if startIndex <= pruningIndex {
+				return status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
+			}
+
+			if err != nil {
+				return status.Error(codes.Unavailable, "error accessing the UTXO ledger")
+			}
+			for currentIndex := startIndex; currentIndex <= ledgerIndex; currentIndex++ {
+				msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+				if err != nil {
+					return status.Errorf(codes.NotFound, "treasury update for milestoneIndex %d not found", currentIndex)
+				}
+				if msDiff.TreasuryOutput != nil {
+					payload, err := NewTreasuryUpdate(msDiff.Index, msDiff.TreasuryOutput, msDiff.SpentTreasuryOutput)
+					if err != nil {
+						return err
+					}
+					if err := srv.Send(payload); err != nil {
+						return err
+					}
+					sentTreasuryUpdate = true
+				}
+			}
+		}
+		if !sentTreasuryUpdate {
+			// Since treasury mutations do not happen on every milestone, send the stored unspent output that we have
+			treasuryOutput, err := deps.UTXOManager.UnspentTreasuryOutputWithoutLocking()
+			if err != nil {
+				return err
+			}
+			payload, err := NewTreasuryUpdate(ledgerIndex, treasuryOutput, treasuryOutput)
+			if err != nil {
+				return err
+			}
+			if err := srv.Send(payload); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	if err := sendPreviousMilestoneDiffs(milestone.Index(req.GetStartMilestoneIndex())); err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	wp := workerpool.New(func(task workerpool.Task) {
+		index := task.Param(0).(milestone.Index)
+		tm := task.Param(1).(*utxo.TreasuryMutationTuple)
+		payload, err := NewTreasuryUpdate(index, tm.NewOutput, tm.SpentOutput)
+		if err != nil {
+			Plugin.LogInfof("Send error: %v", err)
+			cancel()
+		}
+		if err := srv.Send(payload); err != nil {
+			Plugin.LogInfof("Send error: %v", err)
+			cancel()
+		}
+		task.Return(nil)
+	})
+	closure := events.NewClosure(func(index milestone.Index, tuple *utxo.TreasuryMutationTuple) {
+		wp.Submit(index, tuple)
+	})
+	wp.Start()
+	deps.Tangle.Events.TreasuryMutated.Attach(closure)
+	<-ctx.Done()
+	deps.Tangle.Events.TreasuryMutated.Detach(closure)
 	wp.Stop()
 	return ctx.Err()
 }
