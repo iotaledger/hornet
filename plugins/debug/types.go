@@ -10,7 +10,7 @@ type computeWhiteFlagMutationsRequest struct {
 	// The index of the milestone.
 	Index milestone.Index `json:"index"`
 	// The timestamp of the milestone.
-	Timestamp uint64 `json:"timestamp"`
+	Timestamp uint32 `json:"timestamp"`
 	// The hex encoded message IDs of the parents the milestone references.
 	Parents []string `json:"parentMessageIds"`
 }
