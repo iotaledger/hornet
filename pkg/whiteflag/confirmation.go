@@ -30,12 +30,11 @@ type ConfirmationMetrics struct {
 	DurationReceipts                                 time.Duration
 	DurationConfirmation                             time.Duration
 	DurationLedgerUpdated                            time.Duration
+	DurationTreasuryMutated                          time.Duration
 	DurationApplyIncludedWithTransactions            time.Duration
 	DurationApplyExcludedWithoutTransactions         time.Duration
 	DurationApplyMilestone                           time.Duration
 	DurationApplyExcludedWithConflictingTransactions time.Duration
-	DurationForEachNewOutput                         time.Duration
-	DurationForEachNewSpent                          time.Duration
 	DurationOnMilestoneConfirmed                     time.Duration
 	DurationSetConfirmedMilestoneIndex               time.Duration
 	DurationUpdateConeRootIndexes                    time.Duration
@@ -75,8 +74,7 @@ func ConfirmMilestone(
 	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64),
 	onMilestoneConfirmed func(confirmation *Confirmation),
 	onLedgerUpdated func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents),
-	forEachNewOutput func(index milestone.Index, output *utxo.Output),
-	forEachNewSpent func(index milestone.Index, spent *utxo.Spent),
+	onTreasuryMutated func(index milestone.Index, tuple *utxo.TreasuryMutationTuple),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, *ConfirmationMetrics, error) {
 
 	cachedMsgMilestone, err := cachedMessageFunc(milestoneMessageID) // message +1
@@ -195,6 +193,11 @@ func ConfirmMilestone(
 	}
 	timeLedgerUpdated := time.Now()
 
+	if onTreasuryMutated != nil && tm != nil {
+		onTreasuryMutated(milestoneIndex, tm)
+	}
+	timeTreasuryMutated := time.Now()
+
 	// load the message for the given id
 	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
 		cachedMsgMeta, err := parentsTraverserStorage.CachedMessageMetadata(messageID) // meta +1
@@ -304,20 +307,6 @@ func ConfirmMilestone(
 	}
 	timeApplyExcludedWithConflictingTransactions := time.Now()
 
-	if forEachNewOutput != nil {
-		for _, output := range newOutputs {
-			forEachNewOutput(milestoneIndex, output)
-		}
-	}
-	timeForEachNewOutput := time.Now()
-
-	if forEachNewSpent != nil {
-		for _, spent := range newSpents {
-			forEachNewSpent(milestoneIndex, spent)
-		}
-	}
-	timeForEachNewSpent := time.Now()
-
 	if onMilestoneConfirmed != nil {
 		onMilestoneConfirmed(confirmation)
 	}
@@ -328,12 +317,11 @@ func ConfirmMilestone(
 		DurationReceipts:                                 timeReceipts.Sub(timeWhiteflag),
 		DurationConfirmation:                             timeConfirmation.Sub(timeReceipts),
 		DurationLedgerUpdated:                            timeLedgerUpdated.Sub(timeConfirmation),
-		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeLedgerUpdated),
+		DurationTreasuryMutated:                          timeTreasuryMutated.Sub(timeLedgerUpdated),
+		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeTreasuryMutated),
 		DurationApplyExcludedWithoutTransactions:         timeApplyExcludedWithoutTransactions.Sub(timeApplyIncludedWithTransactions),
 		DurationApplyMilestone:                           timeApplyMilestone.Sub(timeApplyExcludedWithoutTransactions),
 		DurationApplyExcludedWithConflictingTransactions: timeApplyExcludedWithConflictingTransactions.Sub(timeApplyMilestone),
-		DurationForEachNewOutput:                         timeForEachNewOutput.Sub(timeApplyExcludedWithConflictingTransactions),
-		DurationForEachNewSpent:                          timeForEachNewSpent.Sub(timeForEachNewOutput),
-		DurationOnMilestoneConfirmed:                     timeOnMilestoneConfirmed.Sub(timeForEachNewSpent),
+		DurationOnMilestoneConfirmed:                     timeOnMilestoneConfirmed.Sub(timeApplyExcludedWithConflictingTransactions),
 	}, nil
 }

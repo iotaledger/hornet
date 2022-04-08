@@ -317,7 +317,6 @@ func copyAndVerifyMilestoneCone(
 		nil,
 		nil,
 		nil,
-		nil,
 	)
 	if err != nil {
 		return nil, err

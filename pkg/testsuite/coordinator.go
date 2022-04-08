@@ -145,7 +145,6 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		nil,
 		nil,
 		nil,
-		nil,
 	)
 	require.NoError(te.TestInterface, err)
 	require.Equal(te.TestInterface, 1, confirmedMilestoneStats.MessagesReferenced)
@@ -209,7 +208,6 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 				te.OnLedgerUpdatedFunc(index, newOutputs, newSpents)
 			}
 		},
-		nil,
 		nil,
 		nil,
 	)

@@ -35,12 +35,8 @@ func LedgerUpdatedCaller(handler interface{}, params ...interface{}) {
 	handler.(func(milestone.Index, utxo.Outputs, utxo.Spents))(params[0].(milestone.Index), params[1].(utxo.Outputs), params[2].(utxo.Spents))
 }
 
-func UTXOOutputCaller(handler interface{}, params ...interface{}) {
-	handler.(func(milestone.Index, *utxo.Output))(params[0].(milestone.Index), params[1].(*utxo.Output))
-}
-
-func UTXOSpentCaller(handler interface{}, params ...interface{}) {
-	handler.(func(milestone.Index, *utxo.Spent))(params[0].(milestone.Index), params[1].(*utxo.Spent))
+func TreasuryMutationCaller(handler interface{}, params ...interface{}) {
+	handler.(func(milestone.Index, *utxo.TreasuryMutationTuple))(params[0].(milestone.Index), params[1].(*utxo.TreasuryMutationTuple))
 }
 
 func ReceiptCaller(handler interface{}, params ...interface{}) {
@@ -65,7 +61,6 @@ type Events struct {
 	MilestoneSolidificationFailed  *events.Event
 	MilestoneTimeout               *events.Event
 	LedgerUpdated                  *events.Event
-	NewUTXOOutput                  *events.Event
-	NewUTXOSpent                   *events.Event
+	TreasuryMutated                *events.Event
 	NewReceipt                     *events.Event
 }

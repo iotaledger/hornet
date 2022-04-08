@@ -333,11 +333,8 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 			t.Events.LedgerUpdated.Trigger(index, newOutputs, newSpents)
 		},
-		func(index milestone.Index, output *utxo.Output) {
-			t.Events.NewUTXOOutput.Trigger(index, output)
-		},
-		func(index milestone.Index, spent *utxo.Spent) {
-			t.Events.NewUTXOSpent.Trigger(index, spent)
+		func(index milestone.Index, tuple *utxo.TreasuryMutationTuple) {
+			t.Events.TreasuryMutated.Trigger(index, tuple)
 		},
 		func(rt *utxo.ReceiptTuple) error {
 			if t.receiptService != nil {
