@@ -12,7 +12,7 @@ fi
 
 if [[ $1 = "build" ]]; then
   # Build latest code
-  docker-compose build
+  docker-compose --profile "bootstrap" build
 
   # Pull latest images
   docker-compose pull inx-indexer
@@ -24,7 +24,7 @@ mkdir -p snapshots/coo
 if [[ "$OSTYPE" != "darwin"* ]]; then
   chown -R 65532:65532 snapshots
 fi
-docker-compose run create-snapshots
+docker-compose --profile "snapshots" up
 
 # Duplicate snapshot for all nodes
 cp -R snapshots/coo snapshots/hornet-2
@@ -45,4 +45,4 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
 fi
 
 # Bootstrap coordinator
-docker-compose run coo-bootstrap
+docker-compose --profile "bootstrap" up

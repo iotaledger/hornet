@@ -13,7 +13,7 @@ require (
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418
-	github.com/gohornet/inx-coordinator v0.0.0-20220408152851-63679dcc0e63
+	github.com/gohornet/inx-coordinator v0.0.0-20220408154148-7da4432edb1d
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0

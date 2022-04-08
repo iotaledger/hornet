@@ -606,8 +606,8 @@ github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418 h1:Jz+dbKADaT0q
 github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418/go.mod h1:XTiVam/ezIKtSln67bhgQnIGAv2+5hemis7B/6CrT9I=
 github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260 h1:Pf6oR/aezlojjxzaNqIZa5q1+LKFgePrH+E9B57sKiE=
 github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260/go.mod h1:/+iSQrn7Izt6kFhHBQvcE6FkklsKXa8hc35pFyFDrDw=
-github.com/gohornet/inx-coordinator v0.0.0-20220408152851-63679dcc0e63 h1:OrMhc49QvkKAF1+iuAGIiADuMsQw22VqiAWcgTAMp2k=
-github.com/gohornet/inx-coordinator v0.0.0-20220408152851-63679dcc0e63/go.mod h1:wUUMPoLs4NOD7Ass08Pl/xB/OsfFA8L0PTh4mzfEDIg=
+github.com/gohornet/inx-coordinator v0.0.0-20220408154148-7da4432edb1d h1:Ps+EfP9tQSW0FSPxhg8MsE9yHHoIvBPSdyMomn42Nl8=
+github.com/gohornet/inx-coordinator v0.0.0-20220408154148-7da4432edb1d/go.mod h1:sDAkCvsRJeTNgzVx3EFQJ/dgCIErciwHyfYlA+2qy8k=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
 github.com/golang-jwt/jwt/v4 v4.3.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=

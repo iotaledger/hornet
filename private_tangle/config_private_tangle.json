@@ -82,63 +82,6 @@
     "discardOlderThan": "15s",
     "pendingReEnqueueInterval": "5s"
   },
-  "coordinator": {
-    "stateFilePath": "state/coordinator.state",
-    "interval": "10s",
-    "powWorkerCount": 0,
-    "checkpoints": {
-      "maxTrackedMessages": 10000
-    },
-    "tipsel": {
-      "minHeaviestBranchUnreferencedMessagesThreshold": 20,
-      "maxHeaviestBranchTipsPerCheckpoint": 10,
-      "randomTipsPerCheckpoint": 3,
-      "heaviestBranchSelectionTimeout": "100ms"
-    },
-    "signing": {
-      "provider": "local",
-      "remoteAddress": "localhost:12345",
-      "retryAmount": 10,
-      "retryTimeout": "2s"
-    },
-    "quorum": {
-      "enabled": false,
-      "groups": {
-        "hornet": [
-          {
-            "alias": "test01",
-            "baseURL": "http://localhost:14265",
-            "userName": "",
-            "password": ""
-          }
-        ]
-      },
-      "timeout": "2s"
-    }
-  },
-  "migrator": {
-    "stateFilePath": "state/migrator.state",
-    "receiptMaxEntries": 110,
-    "queryCooldownPeriod": "5s"
-  },
-  "receipts": {
-    "backup": {
-      "enabled": false,
-      "path": "receipts"
-    },
-    "validator": {
-      "validate": false,
-      "ignoreSoftErrors": false,
-      "api": {
-        "address": "http://localhost:14266",
-        "timeout": "5s"
-      },
-      "coordinator": {
-        "address": "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ",
-        "merkleTreeDepth": 24
-      }
-    }
-  },
   "tangle": {
     "milestoneTimeout": "30s",
     "maxDeltaMsgYoungestConeRootIndexToCMI": 2,
