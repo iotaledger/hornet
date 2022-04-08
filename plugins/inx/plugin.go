@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -51,11 +52,13 @@ type dependencies struct {
 	Tangle                    *tangle.Tangle
 	TipScoreCalculator        *tangle.TipScoreCalculator
 	Storage                   *storage.Storage
-	NetworkIDName             string               `name:"networkIdName"`
-	Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
-	ShutdownHandler           *shutdown.ShutdownHandler
+	KeyManager                *keymanager.KeyManager
+	NetworkID                 uint64                 `name:"networkId"`
+	NetworkIDName             string                 `name:"networkIdName"`
+	Bech32HRP                 iotago.NetworkPrefix   `name:"bech32HRP"`
 	TipSelector               *tipselect.TipSelector `optional:"true"`
 	MinPoWScore               float64                `name:"minPoWScore"`
+	MilestonePublicKeyCount   int                    `name:"milestonePublicKeyCount"`
 	DeserializationParameters *iotago.DeSerializationParameters
 	PoWHandler                *pow.Handler
 	INXServer                 *INXServer

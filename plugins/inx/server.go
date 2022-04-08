@@ -98,6 +98,16 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 }
 
 func (s *INXServer) ReadProtocolParameters(context.Context, *inx.NoParams) (*inx.ProtocolParameters, error) {
+
+	var keyRanges []*inx.MilestoneKeyRange
+	for _, r := range deps.KeyManager.KeyRanges() {
+		keyRanges = append(keyRanges, &inx.MilestoneKeyRange{
+			PublicKey:  r.PublicKey[:],
+			StartIndex: uint32(r.StartIndex),
+			EndIndex:   uint32(r.EndIndex),
+		})
+	}
+
 	return &inx.ProtocolParameters{
 		NetworkName:     deps.NetworkIDName,
 		ProtocolVersion: iotago.ProtocolVersion,
@@ -108,5 +118,7 @@ func (s *INXServer) ReadProtocolParameters(context.Context, *inx.NoParams) (*inx
 			VByteFactorData: uint64(deps.DeserializationParameters.RentStructure.VBFactorData),
 			VByteFactorKey:  uint64(deps.DeserializationParameters.RentStructure.VBFactorKey),
 		},
+		MilestonePublicKeyCount: uint32(deps.MilestonePublicKeyCount),
+		MilestoneKeyRanges:      keyRanges,
 	}, nil
 }
