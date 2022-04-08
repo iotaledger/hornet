@@ -13,6 +13,7 @@ require (
 	github.com/go-echarts/go-echarts v1.0.0
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418
+	github.com/gohornet/inx-coordinator v0.0.0-20220408152851-63679dcc0e63
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
@@ -20,7 +21,7 @@ require (
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf
 	github.com/iotaledger/hive.go v0.0.0-20220408130540-d344e455dd23
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220406082310-fa38df493f6b
-	github.com/iotaledger/inx/go v0.0.0-20220406090321-aa4431f2d3d4
+	github.com/iotaledger/inx/go v0.0.0-20220408151502-6ecfda661ea3
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v3 v3.0.0-20220406190958-4df31d06c4a0
 	github.com/ipfs/go-datastore v0.5.1
@@ -57,6 +58,7 @@ require (
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/bits-and-blooms/bitset v1.2.2 // indirect
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.1.3 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
@@ -99,6 +101,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
 	github.com/ipfs/go-cid v0.1.0 // indirect
@@ -175,7 +178,6 @@ require (
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oasisprotocol/ed25519 v0.0.0-20210505154701-76d8c688d86e // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
@@ -205,7 +207,7 @@ require (
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/exp v0.0.0-20220407100705-7b9b53b0aca4 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
-	golang.org/x/net v0.0.0-20220403103023-749bd193bc2b // indirect
+	golang.org/x/net v0.0.0-20220407224826-aac1ed45d8e3 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220408201424-a24fb2fb8a0f // indirect
 	golang.org/x/text v0.3.7 // indirect

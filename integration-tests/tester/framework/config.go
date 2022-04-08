@@ -14,16 +14,15 @@ import (
 	"github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/core/snapshot"
-	coopkg "github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/autopeering"
-	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/inx"
-	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
+	"github.com/gohornet/inx-coordinator/plugin/coordinator"
+	"github.com/gohornet/inx-coordinator/plugin/migrator"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -527,7 +526,7 @@ type ProtocolConfig struct {
 	// The minimum PoW score needed.
 	MinPoWScore float64
 	// The coo public key ranges.
-	PublicKeyRanges []coopkg.PublicKeyRange
+	PublicKeyRanges []protocfg.ConfigPublicKeyRange
 	// The network ID on which this node operates on.
 	NetworkIDName string
 	// The HRP which should be used for Bech32 addresses.
@@ -554,7 +553,7 @@ func (protoConfig *ProtocolConfig) CLIFlags() []string {
 func DefaultProtocolConfig() ProtocolConfig {
 	return ProtocolConfig{
 		MinPoWScore: 100,
-		PublicKeyRanges: []coopkg.PublicKeyRange{
+		PublicKeyRanges: []protocfg.ConfigPublicKeyRange{
 			{
 				Key:        "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 				StartIndex: 0,
