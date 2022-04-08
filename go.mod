@@ -5,7 +5,6 @@ go 1.18
 replace github.com/linxGnu/grocksdb => github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260
 
 require (
-	github.com/bits-and-blooms/bitset v1.2.2
 	github.com/blang/vfs v1.0.0
 	github.com/cockroachdb/pebble v0.0.0-20220408205130-c55c1d80c374
 	github.com/docker/docker v20.10.14+incompatible
