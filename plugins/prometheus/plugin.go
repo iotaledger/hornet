@@ -78,7 +78,6 @@ type dependencies struct {
 	GossipService        *gossip.Service
 	ReceiptService       *migrator.ReceiptService `optional:"true"`
 	Tangle               *tangle.Tangle
-	MigratorService      *migrator.MigratorService `optional:"true"`
 	PeeringManager       *p2p.Manager
 	RequestQueue         gossip.RequestQueue
 	MessageProcessor     *gossip.MessageProcessor
@@ -141,9 +140,6 @@ func configure() {
 	if deps.NodeConfig.Bool(CfgPrometheusMigration) {
 		if deps.ReceiptService != nil {
 			configureReceipts()
-		}
-		if deps.MigratorService != nil {
-			configureMigrator()
 		}
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusDebug) {

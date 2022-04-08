@@ -17,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/faucet"
 	"github.com/gohornet/hornet/plugins/inx"
-	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/participation"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
@@ -54,7 +53,6 @@ func main() {
 			urts.Plugin,
 			dashboard.Plugin,
 			spammer.Plugin,
-			migrator.Plugin,
 			receipt.Plugin,
 			prometheus.Plugin,
 			inx.Plugin,

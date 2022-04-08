@@ -26,7 +26,6 @@ import (
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/faucet"
 	"github.com/gohornet/hornet/plugins/inx"
-	"github.com/gohornet/hornet/plugins/migrator"
 	"github.com/gohornet/hornet/plugins/participation"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
@@ -133,7 +132,6 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 		initConfig.ForceDisablePluggable(urts.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(dashboard.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(spammer.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(migrator.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(receipt.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(prometheus.Plugin.Identifier())
 		initConfig.ForceDisablePluggable(inx.Plugin.Identifier())
