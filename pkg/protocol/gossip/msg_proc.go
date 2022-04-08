@@ -406,7 +406,6 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		// between processing received messages and enqueuing requests.
 		requests := processRequests(wu, wu.msg, wu.msg.IsMilestone())
 		if wu.requested {
-			wu.requested = true
 			proc.Events.MessageProcessed.Trigger(wu.msg, requests, p)
 		}
 
