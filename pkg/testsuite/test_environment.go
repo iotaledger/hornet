@@ -13,7 +13,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
@@ -23,6 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/gohornet/inx-coordinator/pkg/coordinator"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
@@ -100,6 +100,7 @@ var (
 		},
 	}
 )
+
 type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)
 type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents)
 

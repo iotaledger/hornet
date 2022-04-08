@@ -12,15 +12,12 @@ import (
 	databasecore "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -37,23 +34,17 @@ func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.Miles
 		return nil, err
 	}
 
-	var coordinatorPublicKeyRanges coordinator.PublicKeyRanges
+	var coordinatorPublicKeyRanges protocfg.ConfigPublicKeyRanges
 
 	// load from config
 	if err := nodeConfig.Unmarshal(protocfg.CfgProtocolPublicKeyRanges, &coordinatorPublicKeyRanges); err != nil {
 		return nil, err
 	}
 
-	keyManager := keymanager.New()
-	for _, keyRange := range coordinatorPublicKeyRanges {
-		pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
-		if err != nil {
-			return nil, fmt.Errorf("can't load public key ranges: %w", err)
-		}
-
-		keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
+	keyManager, err := protocfg.KeyManagerWithConfigPublicKeyRanges(coordinatorPublicKeyRanges)
+	if err != nil {
+		return nil, err
 	}
-
 	return milestonemanager.New(nil, nil, keyManager, nodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount)), nil
 }
 

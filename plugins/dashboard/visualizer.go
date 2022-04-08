@@ -3,13 +3,11 @@ package dashboard
 import (
 	"context"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	coordinatorPlugin "github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/iotaledger/hive.go/events"
 )
 
@@ -108,22 +106,6 @@ func runVisualizer() {
 		)
 	})
 
-	// show checkpoints as milestones in the coordinator node
-	onIssuedCheckpointMessage := events.NewClosure(func(_ int, _ int, _ int, messageID hornet.MessageID) {
-		if !deps.SyncManager.IsNodeAlmostSynced() {
-			return
-		}
-
-		hub.BroadcastMsg(
-			&Msg{
-				Type: MsgTypeMilestoneInfo,
-				Data: &metainfo{
-					ID: messageID.ToHex()[:VisualizerIDLength],
-				},
-			},
-		)
-	})
-
 	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
@@ -184,10 +166,6 @@ func runVisualizer() {
 		defer deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
 		deps.Tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
 		defer deps.Tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
-		if cooEvents := coordinatorPlugin.Events(); cooEvents != nil {
-			cooEvents.IssuedCheckpointMessage.Attach(onIssuedCheckpointMessage)
-			defer cooEvents.IssuedCheckpointMessage.Detach(onIssuedCheckpointMessage)
-		}
 		deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 		defer deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 

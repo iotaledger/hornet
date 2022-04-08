@@ -1,6 +1,7 @@
 package testsuite
 
 import (
+	"context"
 	"crypto/ed25519"
 	"fmt"
 	"time"
@@ -9,20 +10,26 @@ import (
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/gohornet/inx-coordinator/pkg/coordinator"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // configureCoordinator configures a new coordinator with clean state for the tests.
 // the node is initialized, the network is bootstrapped and the first milestone is confirmed.
 func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager) {
 
-	storeMessageFunc := func(msg *storage.Message, _ ...milestone.Index) error {
+	storeMessageFunc := func(message *iotago.Message, _ ...milestone.Index) error {
+		msg, err := storage.NewMessage(message, serializer.DeSeriModeNoValidation, iotago.ZeroRentParas) // no need to validate bytes, they come pre-validated from the coo
+		if err != nil {
+			return err
+		}
 		cachedMsg := te.StoreMessage(msg) // message +1, no need to release, since we remember all the messages for later cleanup
 
 		ms := cachedMsg.Message().Milestone()
@@ -35,9 +42,41 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(cooPrivateKeys, keyManager, len(cooPrivateKeys))
 
+	computeWhiteFlag := func(ctx context.Context, index milestone.Index, timestamp uint64, parents hornet.MessageIDs) (*coordinator.MerkleTreeHash, error) {
+		messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
+		metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
+		memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(te.storage, metadataMemcache)
+
+		defer func() {
+			// all releases are forced since the cone is referenced and not needed anymore
+			memcachedTraverserStorage.Cleanup(true)
+
+			// release all messages at the end
+			messagesMemcache.Cleanup(true)
+
+			// Release all message metadata at the end
+			metadataMemcache.Cleanup(true)
+		}()
+
+		parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
+
+		// compute merkle tree root
+		mutations, err := whiteflag.ComputeWhiteFlagMutations(ctx, te.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, te.NetworkID(), index, timestamp, parents, whiteflag.DefaultWhiteFlagTraversalCondition)
+		if err != nil {
+			return nil, err
+		}
+		merkleTreeHash := &coordinator.MerkleTreeHash{}
+		copy(merkleTreeHash[:], mutations.MerkleTreeHash[:])
+		return merkleTreeHash, nil
+	}
+
+	nodeSync := func() bool {
+		return true
+	}
+
 	coo, err := coordinator.New(
-		te.storage,
-		te.syncManager,
+		computeWhiteFlag,
+		nodeSync,
 		te.networkID,
 		DeSerializationParameters,
 		inMemoryEd25519MilestoneSignerProvider,
@@ -52,7 +91,11 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	require.NotNil(te.TestInterface, coo)
 	te.coo = coo
 
-	err = te.coo.InitState(true, 0)
+	err = te.coo.InitState(true, 0, &coordinator.LatestMilestone{
+		Index:     0,
+		Timestamp: 0,
+		MessageID: hornet.NullMessageID(),
+	})
 	require.NoError(te.TestInterface, err)
 
 	// save snapshot info

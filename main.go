@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/plugins/autopeering"
-	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/faucet"
@@ -55,7 +54,6 @@ func main() {
 			urts.Plugin,
 			dashboard.Plugin,
 			spammer.Plugin,
-			coordinator.Plugin,
 			migrator.Plugin,
 			receipt.Plugin,
 			prometheus.Plugin,

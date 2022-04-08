@@ -39,6 +39,18 @@ func (k *KeyManager) AddKeyRange(publicKey ed25519.PublicKey, startIndex milesto
 	})
 }
 
+func (k *KeyManager) KeyRanges() []*KeyRange {
+	keyRanges := []*KeyRange{}
+	for _, r := range k.keyRanges {
+		keyRanges = append(keyRanges, &KeyRange{
+			PublicKey:  r.PublicKey,
+			StartIndex: r.StartIndex,
+			EndIndex:   r.EndIndex,
+		})
+	}
+	return keyRanges
+}
+
 // PublicKeysForMilestoneIndex returns the valid public keys for a certain milestone index.
 func (k *KeyManager) PublicKeysForMilestoneIndex(msIndex milestone.Index) []iotago.MilestonePublicKey {
 	var pubKeys []iotago.MilestonePublicKey

@@ -20,7 +20,6 @@ import (
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -85,10 +84,9 @@ type dependencies struct {
 	MessageProcessor     *gossip.MessageProcessor
 	TipSelector          *tipselect.TipSelector `optional:"true"`
 	SnapshotManager      *snapshot.SnapshotManager
-	Coordinator          *coordinator.Coordinator `optional:"true"`
-	PrometheusEcho       *echo.Echo               `name:"prometheusEcho"`
-	ExternalMetricsProxy *restapi.DynamicProxy    `name:"externalMetricsProxy"`
-	INXServer            *inx.INXServer           `optional:"true"`
+	PrometheusEcho       *echo.Echo            `name:"prometheusEcho"`
+	ExternalMetricsProxy *restapi.DynamicProxy `name:"externalMetricsProxy"`
+	INXServer            *inx.INXServer        `optional:"true"`
 }
 
 func provide(c *dig.Container) {
@@ -136,12 +134,10 @@ func configure() {
 	if deps.NodeConfig.Bool(CfgPrometheusRestAPI) && deps.RestAPIMetrics != nil {
 		configureRestAPI()
 	}
-
 	if deps.NodeConfig.Bool(CfgPrometheusINX) && deps.INXServer != nil {
 		deps.INXServer.ConfigurePrometheus()
 		registry.MustRegister(grpc_prometheus.DefaultServerMetrics)
 	}
-
 	if deps.NodeConfig.Bool(CfgPrometheusMigration) {
 		if deps.ReceiptService != nil {
 			configureReceipts()
@@ -149,9 +145,6 @@ func configure() {
 		if deps.MigratorService != nil {
 			configureMigrator()
 		}
-	}
-	if deps.NodeConfig.Bool(CfgPrometheusCoordinator) && deps.Coordinator != nil {
-		configureCoordinator()
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusDebug) {
 		configureDebug()

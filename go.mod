@@ -27,7 +27,7 @@ require (
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger v0.3.0
 	github.com/labstack/echo/v4 v4.7.2
-	github.com/labstack/gommon v0.3.2-0.20220410183028-64116baad496
+	github.com/labstack/gommon v0.3.1
 	github.com/libp2p/go-libp2p v0.18.0
 	github.com/libp2p/go-libp2p-connmgr v0.3.1
 	github.com/libp2p/go-libp2p-core v0.14.0
@@ -45,7 +45,6 @@ require (
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.14.1
 	golang.org/x/crypto v0.0.0-20220408190544-5352b0902921
-	golang.org/x/net v0.0.0-20220407224826-aac1ed45d8e3
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
 	google.golang.org/grpc v1.45.0
@@ -207,6 +206,7 @@ require (
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/exp v0.0.0-20220407100705-7b9b53b0aca4 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
+	golang.org/x/net v0.0.0-20220403103023-749bd193bc2b // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220408201424-a24fb2fb8a0f // indirect
 	golang.org/x/text v0.3.7 // indirect

@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
@@ -62,7 +62,7 @@ func initTest(testInterface testing.TB) (*testsuite.TestEnvironment, *milestonem
 	te := testsuite.SetupTestEnvironment(testInterface, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
 
 	getKeyManager := func() *keymanager.KeyManager {
-		var coordinatorPublicKeyRanges coordinator.PublicKeyRanges
+		var coordinatorPublicKeyRanges protocfg.ConfigPublicKeyRanges
 
 		err := json.Unmarshal([]byte(coordinatorPublicKeyRangesJSON), &coordinatorPublicKeyRanges)
 		require.NoError(te.TestInterface, err)
