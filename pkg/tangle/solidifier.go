@@ -283,6 +283,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 				t.LogInfof("Aborted search for missing milestones between (%d) and (%d).", currentConfirmedIndex, milestoneIndexClosestNext)
 			}
 		}
+		// Release shouldn't be forced, to cache the latest milestones
 		cachedMilestoneClosestNext.Release() // milestone -1
 
 		// rerun to solidify the older one

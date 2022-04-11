@@ -88,7 +88,7 @@ const DefaultLatencyResolution = 100
 // NewRequestQueue creates a new RequestQueue where request are prioritized over their milestone index (lower = higher priority).
 func NewRequestQueue(latencyResolution ...int32) RequestQueue {
 	q := &priorityqueue{
-		queue:      make([]*Request, 0),
+		queue:      &requestHeap{},
 		queued:     make(map[string]*Request),
 		pending:    make(map[string]*Request),
 		processing: make(map[string]*Request),
@@ -108,8 +108,6 @@ type Request struct {
 	MessageID hornet.MessageID
 	// The milestone index under which this request is linked.
 	MilestoneIndex milestone.Index
-	// internal to the priority queue
-	index int
 	// Tells the request queue to not remove this request if the enqueue time is
 	// over the given threshold.
 	PreventDiscard bool
@@ -152,7 +150,7 @@ type priorityqueue struct {
 	// otherwise it crashes under 32-bit ARM systems
 	// see: https://golang.org/pkg/sync/atomic/#pkg-note-BUG
 	avgLatency        atomic.Int64
-	queue             []*Request
+	queue             *requestHeap
 	queued            map[string]*Request
 	pending           map[string]*Request
 	processing        map[string]*Request
@@ -168,10 +166,16 @@ func (pq *priorityqueue) Next() (r *Request) {
 	defer pq.Unlock()
 
 	// Pop() doesn't gracefully handle empty queues, so we check it ourselves
-	if len(pq.queued) == 0 {
+	if pq.Len() == 0 {
 		return nil
 	}
-	return heap.Pop(pq).(*Request)
+
+	next := heap.Pop(pq)
+	if next == nil {
+		return nil
+	}
+
+	return next.(*Request)
 }
 
 func (pq *priorityqueue) Enqueue(r *Request) bool {
@@ -181,15 +185,19 @@ func (pq *priorityqueue) Enqueue(r *Request) bool {
 	requestMapKey := r.MapKey()
 
 	if _, queued := pq.queued[requestMapKey]; queued {
+		// do not enqueue because it was already queued.
 		return false
 	}
 	if _, pending := pq.pending[requestMapKey]; pending {
+		// do not enqueue because it was already pending.
 		return false
 	}
 	if _, processing := pq.processing[requestMapKey]; processing {
+		// do not enqueue because it was already processing.
 		return false
 	}
 	if pq.filter != nil && !pq.filter(r) {
+		// do not enqueue because it doesn't match the filter.
 		return false
 	}
 	r.EnqueueTime = time.Now()
@@ -277,21 +285,21 @@ func (pq *priorityqueue) EnqueuePending(discardOlderThan time.Duration) int {
 	pq.Lock()
 	defer pq.Unlock()
 
-	if len(pq.queued) != 0 {
-		return len(pq.queued)
-	}
 	enqueued := len(pq.pending)
 	s := time.Now()
 	for k, v := range pq.pending {
-		if pq.filter != nil && !pq.filter(v) {
+		value := v
+
+		if pq.filter != nil && !pq.filter(value) {
+			// discard request from the queue, because it didn't match the filter
 			delete(pq.pending, k)
 			enqueued--
 			continue
 		}
-		if discardOlderThan == 0 || v.PreventDiscard || s.Sub(v.EnqueueTime) < discardOlderThan {
+		if discardOlderThan == 0 || value.PreventDiscard || s.Sub(value.EnqueueTime) < discardOlderThan {
 			// no need to examine the queued set
 			// as addition and removal are synced over Push and Pops
-			heap.Push(pq, v)
+			heap.Push(pq, value)
 			continue
 		}
 		// discard request from the queue
@@ -330,19 +338,22 @@ func (pq *priorityqueue) Requests() (queued []*Request, pending []*Request, proc
 	queued = make([]*Request, len(pq.queued))
 	var i int
 	for _, v := range pq.queued {
-		queued[i] = v
+		value := v
+		queued[i] = value
 		i++
 	}
 	pending = make([]*Request, len(pq.pending))
 	var j int
 	for _, v := range pq.pending {
-		pending[j] = v
+		value := v
+		pending[j] = value
 		j++
 	}
 	processing = make([]*Request, len(pq.processing))
 	var k int
 	for _, v := range pq.processing {
-		processing[k] = v
+		value := v
+		processing[k] = value
 		k++
 	}
 	return queued, pending, processing
@@ -353,17 +364,22 @@ func (pq *priorityqueue) Filter(f FilterFunc) {
 	defer pq.Unlock()
 
 	if f != nil {
-		filteredQueue := make([]*Request, 0)
-		for _, r := range pq.queued {
-			if !f(r) {
-				delete(pq.queued, r.MapKey())
+		filteredQueue := requestHeap{}
+		for _, v := range pq.queued {
+			value := v
+			if !f(value) {
+				// discard request from the queue, because it didn't match the filter
+				delete(pq.queued, value.MapKey())
 				continue
 			}
-			filteredQueue = append(filteredQueue, r)
+			filteredQueue.Push(value)
 		}
-		pq.queue = filteredQueue
+		pq.queue = &filteredQueue
+
 		for k, v := range pq.pending {
-			if !f(v) {
+			value := v
+			if !f(value) {
+				// discard request from the queue, because it didn't match the filter
 				delete(pq.pending, k)
 			}
 		}
@@ -371,23 +387,22 @@ func (pq *priorityqueue) Filter(f FilterFunc) {
 	pq.filter = f
 }
 
-func (pq *priorityqueue) Len() int { return len(pq.queue) }
+func (pq *priorityqueue) Len() int {
+	return pq.queue.Len()
+}
 
 func (pq *priorityqueue) Less(i, j int) bool {
-	// requests for older milestones (lower number) have priority
-	return pq.queue[i].MilestoneIndex < pq.queue[j].MilestoneIndex
+	return pq.queue.Less(i, j)
 }
 
 func (pq *priorityqueue) Swap(i, j int) {
-	pq.queue[i], pq.queue[j] = pq.queue[j], pq.queue[i]
-	pq.queue[i].index = i
-	pq.queue[j].index = j
+	pq.queue.Swap(i, j)
 }
 
 func (pq *priorityqueue) Push(x interface{}) {
-	r := x.(*Request)
-	pq.queue = append(pq.queue, r)
+	pq.queue.Push(x)
 
+	r := x.(*Request)
 	requestMapKey := r.MapKey()
 
 	// mark as queued and remove from pending
@@ -396,17 +411,9 @@ func (pq *priorityqueue) Push(x interface{}) {
 }
 
 func (pq *priorityqueue) Pop() interface{} {
-	for {
-		old := pq.queue
-		n := len(pq.queue)
-		if n == 0 {
-			// queue is empty
-			return nil
-		}
-		r := old[n-1]
-		old[n-1] = nil // avoid memory leak
-		pq.queue = old[0 : n-1]
 
+	for pq.queue.Len() > 0 {
+		r := pq.queue.Pop().(*Request)
 		requestMapKey := r.MapKey()
 		if _, queued := pq.queued[requestMapKey]; !queued {
 			// the request is not queued anymore
@@ -419,14 +426,56 @@ func (pq *priorityqueue) Pop() interface{} {
 		pq.pending[requestMapKey] = r
 		return r
 	}
+
+	return nil
 }
 
 func (pq *priorityqueue) Peek() *Request {
 	pq.Lock()
 	defer pq.Unlock()
 
-	if len(pq.queued) == 0 {
+	return pq.queue.Peek()
+}
+
+type requestHeap []*Request
+
+func (rh requestHeap) Len() int {
+	return len(rh)
+}
+
+func (rh requestHeap) Less(i, j int) bool {
+	// requests for older milestones (lower number) have priority
+	return rh[i].MilestoneIndex <= rh[j].MilestoneIndex
+}
+
+func (rh requestHeap) Swap(i, j int) {
+	rh[i], rh[j] = rh[j], rh[i]
+}
+
+func (rh *requestHeap) Push(x any) {
+	// Push uses pointer receivers because it modifies the slice's length,
+	// not just its contents.
+	*rh = append(*rh, x.(*Request))
+}
+
+func (rh *requestHeap) Pop() interface{} {
+	// Pop uses pointer receivers because it modifies the slice's length,
+	// not just its contents.
+	old := *rh
+	n := len(old)
+	if n == 0 {
+		// queue is empty
 		return nil
 	}
-	return pq.queue[len(pq.queue)-1]
+	x := old[n-1]
+	old[n-1] = nil // avoid memory leak
+	*rh = old[0 : n-1]
+	return x
+}
+
+func (rh *requestHeap) Peek() *Request {
+	if len(*rh) == 0 {
+		return nil
+	}
+	return (*rh)[0]
 }
