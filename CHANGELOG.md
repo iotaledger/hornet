@@ -2,9 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0-rc3] - 07.04.2022
+## [1.2.0-rc4] - 11.04.2022
 
 _**Note**: due to changes to the internal database structure it is recommended to remove the old `participation` database._
+
+### Fixed
+    - Fixed temporary increased memory usage after snapshot creation (#1403)
+    - Fixed request queue behavior and test cases (#1403)
+
+### Changed
+    - Adapted ed25519-key tool to print mnemonic and derived keys using slip10 (#1409)
+
+## [1.2.0-rc3] - 07.04.2022
 
 ### Fixed
     - Fixed dangling open connection to peer which prevented reconnect (#1398)
