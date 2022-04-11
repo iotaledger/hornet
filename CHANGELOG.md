@@ -2,50 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2.0-rc4] - 11.04.2022
+## [1.2.0] - 13.04.2022
 
 _**Note**: due to changes to the internal database structure it is recommended to remove the old `participation` database._
 
 ### Fixed
-    - Fixed temporary increased memory usage after snapshot creation (#1403)
+    - Fixed missing error returns in REST API (#1316)
+    - Fixed various memory leaks that could crash the node with OOM when using autopeering or the spammer plugins (#1335, #1372)
+    - Fixed several race conditions in the participation endpoints (#1349)
+    - Fixed dangling open connection to peer which prevented reconnect (#1398)
+    - Fixed version check to only check for updates in the same major version (#1382)
+    - Fixed deadlock while shutting down the node (#1392)
     - Fixed request queue behavior and test cases (#1403)
+    - Fixed temporary increased memory usage after snapshot creation (#1403)
 
 ### Changed
+    - Updated to Go 1.18
+    - Changed how the participation plugin calculates staking rewards. This improves the performance of the node when the plugin is enabled (#1350)
+    - Changed the COO key validity indicator logic (#1373)
     - Adapted ed25519-key tool to print mnemonic and derived keys using slip10 (#1409)
 
-## [1.2.0-rc3] - 07.04.2022
-
-### Fixed
-    - Fixed dangling open connection to peer which prevented reconnect (#1398)
-
-## [1.2.0-rc2] - 04.04.2022
-
-### Fixed
-    - Fixed deadlock while shutting down the node (#1392)
-
-## [1.2.0-rc1] - 30.03.2022
-
-### Fixed
-    - Fixed various memory leaks that could crash the node with OOM when using autopeering or the spammer plugins. (#1335, #1372)
-    - Fixed version check to only check for updates in the same major version (#1382)
-    - Fixed several race conditions in the participation endpoints (#1349)
-    - Fixed missing error returns in REST API (#1316)
-
-### Changed
-    - Changed how the participation plugin calculates staking rewards. This improves the performance of the node when the plugin is enabled. (#1350)
-    - Changed the COO key validity indicator logic. (#1373)
-    - Updated to Go 1.18
-
 ### Added
-    - Added support for multi-arch docker images (amd64+arm64). (#1240, #1301)
-    - Added JSON output support for the tools and refactoring the tool cli-flag handling. (#1289, #1301)
-    - Added `transactionIdSpent` and `milestoneIndexSpent` to the outputs API endpoint. (#1302)
-    - Added various new tools to work with database backups. (#1326, #1328, #1331, #1332, #1348, #1355)
-    - Added new COO keys. (#1375)
+    - Added support for multi-arch docker images (amd64+arm64) (#1240, #1301)
+    - Added JSON output support for the tools and refactoring the tool cli-flag handling (#1289, #1300)
+    - Added `transactionIdSpent` and `milestoneIndexSpent` to the outputs API endpoint (#1302)
+    - Added various new tools to work with database backups (#1326, #1328, #1331, #1332, #1348, #1355)
+    - Added new COO keys (#1375)
     - Added creating backups of the coordinator and migrator state files (#1381)
+    - Added support for mapdb (in-memory) (#1306)
 
 ### Removed
     - Removed comnet configuration (#1374)
+
+### Cleanups
+    - Added traverser storage interfaces (#1319)
+    - Cleanup cache object names and comments (#1323)
+    - Update KVStore interface (#1391)
+    - Update gommon and remove replace in go.mod (#1408) 
+
+### Config file changes
 
 `config.json`
 ```diff
