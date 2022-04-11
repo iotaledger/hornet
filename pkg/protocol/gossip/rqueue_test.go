@@ -37,22 +37,27 @@ func TestRequestQueue(t *testing.T) {
 
 	requests := []*gossip.Request{
 		{
+			// 0
 			MessageID:      hashA,
 			MilestoneIndex: 10,
 		},
 		{
+			// 1
 			MessageID:      hashB,
 			MilestoneIndex: 7,
 		},
 		{
+			// 2
 			MessageID:      hashZ,
 			MilestoneIndex: 7,
 		},
 		{
+			// 3
 			MessageID:      hashC,
 			MilestoneIndex: 5,
 		},
 		{
+			// 4
 			MessageID:      hashD,
 			MilestoneIndex: 2,
 		},
@@ -125,7 +130,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, queued)
 
 	// request with the highest priority should be in the front
-	assert.Equal(t, requests[0], q.Peek())
+	assert.Equal(t, requests[3], q.Peek())
 
 	// mark last from test set as received and processed
 	q.Received(requests[len(requests)-1].MessageID)
