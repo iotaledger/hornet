@@ -5,6 +5,9 @@ services:
       context: ../
       dockerfile: docker/Dockerfile
     image: hornet:dev
+    networks:
+      peering_net:
+        ipv4_address: "172.18.211.11"
     volumes:
       - ./snapshots:/app/snapshots
     command:
