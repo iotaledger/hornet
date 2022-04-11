@@ -40,6 +40,7 @@ const (
 	FlagToolPublicKey  = "publicKey"
 
 	FlagToolHRP       = "hrp"
+	FlagToolBIP32Path = "bip32Path"
 	FlagToolNetworkID = "networkID"
 	FlagToolPassword  = "password"
 	FlagToolSalt      = "salt"

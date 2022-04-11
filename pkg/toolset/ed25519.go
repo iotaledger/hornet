@@ -8,17 +8,22 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/wollac/iota-crypto-demo/pkg/bip32path"
+	"github.com/wollac/iota-crypto-demo/pkg/bip39"
+	"github.com/wollac/iota-crypto-demo/pkg/slip10"
+
 	"github.com/gohornet/hornet/pkg/utils"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp iotago.NetworkPrefix, outputJSON bool) error {
+func printEd25519Info(mnemonic bip39.Mnemonic, path bip32path.Path, pubKey ed25519.PublicKey, hrp iotago.NetworkPrefix, outputJSON bool) error {
 
 	addr := iotago.Ed25519AddressFromPubKey(pubKey)
 
 	type keys struct {
+		BIP39          string `json:"mnemonic,omitempty"`
+		BIP32          string `json:"path,omitempty"`
 		PublicKey      string `json:"publicKey"`
-		PrivateKey     string `json:"privateKey,omitempty"`
 		Ed25519Address string `json:"ed25519"`
 		Bech32Address  string `json:"bech32"`
 	}
@@ -29,16 +34,19 @@ func printEd25519Info(pubKey ed25519.PublicKey, privKey ed25519.PrivateKey, hrp 
 		Bech32Address:  addr.Bech32(hrp),
 	}
 
-	if privKey != nil {
-		k.PrivateKey = hex.EncodeToString(privKey)
+	if mnemonic != nil {
+		k.BIP39 = mnemonic.String()
+		k.BIP32 = path.String()
 	}
 
 	if outputJSON {
 		return printJSON(k)
 	}
 
-	if len(k.PrivateKey) > 0 {
-		fmt.Println("Your ed25519 private key: ", k.PrivateKey)
+	if len(k.BIP39) > 0 {
+		fmt.Println("Your seed BIP39 mnemonic: ", k.BIP39)
+		fmt.Println()
+		fmt.Println("Your BIP32 path:          ", k.BIP32)
 	}
 	fmt.Println("Your ed25519 public key:  ", k.PublicKey)
 	fmt.Println("Your ed25519 address:     ", k.Ed25519Address)
@@ -51,6 +59,7 @@ func generateEd25519Key(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	hrpFlag := fs.String(FlagToolHRP, string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
+	bip32Path := fs.String(FlagToolBIP32Path, "m/44'/4218'/0'/0'/0'", "the BIP32 path that should be used to derive keys from seed")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
 	fs.Usage = func() {
@@ -70,12 +79,38 @@ func generateEd25519Key(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolHRP)
 	}
 
-	pubKey, privKey, err := ed25519.GenerateKey(nil)
+	if len(*bip32Path) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolBIP32Path)
+	}
+
+	path, err := bip32path.ParsePath(*bip32Path)
 	if err != nil {
 		return err
 	}
 
-	return printEd25519Info(pubKey, privKey, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
+	// Generate random entropy by using ed25519 key generation and using the private key seed (32 bytes)
+	_, random, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		return err
+	}
+	entropy := random.Seed()
+
+	mnemonic, err := bip39.EntropyToMnemonic(entropy)
+	if err != nil {
+		return err
+	}
+
+	seed, err := bip39.MnemonicToSeed(mnemonic, "")
+	if err != nil {
+		return err
+	}
+
+	key, err := slip10.DeriveKeyFromPath(seed, slip10.Ed25519(), path)
+	if err != nil {
+		return err
+	}
+	pubKey, _ := slip10.Ed25519Key(key)
+	return printEd25519Info(mnemonic, path, ed25519.PublicKey(pubKey), iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
 }
 
 func generateEd25519Address(args []string) error {
@@ -111,5 +146,5 @@ func generateEd25519Address(args []string) error {
 		return fmt.Errorf("can't decode '%s': %w", FlagToolPublicKey, err)
 	}
 
-	return printEd25519Info(pubKey, nil, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
+	return printEd25519Info(nil, nil, pubKey, iotago.NetworkPrefix(*hrpFlag), *outputJSONFlag)
 }
