@@ -259,7 +259,7 @@ func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieve
 		if cachedMsgMilestone == nil {
 			return nil, fmt.Errorf("message for milestone with index %d is not stored in the database", index)
 		}
-		defer cachedMsgMilestone.Release() // message -1
+		defer cachedMsgMilestone.Release(true) // message -1
 		return cachedMsgMilestone.Message().Milestone(), nil
 	}
 }
