@@ -23,7 +23,7 @@ require (
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220406082310-fa38df493f6b
 	github.com/iotaledger/inx/go v0.0.0-20220408172648-c7009c177b5b
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v3 v3.0.0-20220406190958-4df31d06c4a0
+	github.com/iotaledger/iota.go/v3 v3.0.0-20220411105505-949902d5bb94
 	github.com/ipfs/go-datastore v0.5.1
 	github.com/ipfs/go-ds-badger v0.3.0
 	github.com/labstack/echo/v4 v4.7.2

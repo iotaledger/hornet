@@ -318,7 +318,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_
 func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_ListenToMigrationReceiptsServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		receipt := task.Param(0).(*iotago.Receipt)
+		receipt := task.Param(0).(*iotago.ReceiptMilestoneOpt)
 		payload, err := inx.WrapReceipt(receipt)
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
@@ -330,7 +330,7 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 		}
 		task.Return(nil)
 	})
-	closure := events.NewClosure(func(receipt *iotago.Receipt) {
+	closure := events.NewClosure(func(receipt *iotago.ReceiptMilestoneOpt) {
 		wp.Submit(receipt)
 	})
 	wp.Start()

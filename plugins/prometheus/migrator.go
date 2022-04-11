@@ -35,7 +35,7 @@ func configureReceipts() {
 	registry.MustRegister(receiptCount)
 	registry.MustRegister(receiptMigrationEntriesApplied)
 
-	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.Receipt) {
+	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.ReceiptMilestoneOpt) {
 		receiptCount.Inc()
 		receiptMigrationEntriesApplied.Add(float64(len(r.Funds)))
 	}))

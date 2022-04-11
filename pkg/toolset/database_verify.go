@@ -391,7 +391,7 @@ func compareLedgerState(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.M
 func cleanupMilestoneFromUTXOManager(utxoManager *utxo.Manager, msMsg *storage.Message, msIndex milestone.Index) error {
 
 	var receiptMigratedAtIndex []uint32
-	if r, ok := msMsg.Milestone().Receipt.(*iotago.Receipt); ok {
+	if r := msMsg.Milestone().Opts.MustSet().Receipt(); r != nil {
 		receiptMigratedAtIndex = append(receiptMigratedAtIndex, r.MigratedAt)
 	}
 

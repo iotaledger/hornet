@@ -9,6 +9,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func snapshotMerge(args []string) error {
@@ -87,7 +88,7 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 		var treasury *treasuryStruct
 		if header.TreasuryOutput != nil {
 			treasury = &treasuryStruct{
-				MilestoneID: header.TreasuryOutput.MilestoneID.ToHex(),
+				MilestoneID: iotago.EncodeHex(header.TreasuryOutput.MilestoneID[:]),
 				Tokens:      header.TreasuryOutput.Amount,
 			}
 		}
@@ -143,7 +144,7 @@ func printSnapshotHeaderInfo(name string, path string, header *snapshot.ReadFile
 			if header.TreasuryOutput == nil {
 				return "no treasury output in header"
 			}
-			return fmt.Sprintf("milestone ID %s, tokens %d", header.TreasuryOutput.MilestoneID.ToHex(), header.TreasuryOutput.Amount)
+			return fmt.Sprintf("milestone ID %s, tokens %d", iotago.EncodeHex(header.TreasuryOutput.MilestoneID[:]), header.TreasuryOutput.Amount)
 		}(),
 		header.LedgerMilestoneIndex,
 		header.SEPMilestoneIndex,

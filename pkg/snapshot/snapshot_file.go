@@ -91,10 +91,11 @@ type MilestoneDiff struct {
 // TreasuryOutput extracts the new treasury output from within the milestone receipt.
 // Might return nil if there is no receipt within the milestone.
 func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
-	if md.Milestone.Receipt == nil {
+	receipt := md.Milestone.Opts.MustSet().Receipt()
+	if receipt == nil {
 		return nil
 	}
-	to := md.Milestone.Receipt.(*iotago.Receipt).Transaction.Output
+	to := receipt.Transaction.Output
 	msID, err := md.Milestone.ID()
 	if err != nil {
 		panic(err)
@@ -121,7 +122,8 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 	}
 
 	// write in spent treasury output
-	if md.Milestone.Receipt != nil {
+	opts := md.Milestone.Opts.MustSet()
+	if opts.Receipt() != nil {
 		if md.SpentTreasuryOutput == nil {
 			panic("milestone diff includes a receipt but no spent treasury output is set")
 		}
@@ -525,7 +527,7 @@ func readMilestoneDiff(reader io.ReadSeeker, deSeriParas *iotago.DeSerialization
 
 	msDiff.Milestone = ms
 
-	if ms.Receipt != nil {
+	if ms.Opts.MustSet().Receipt() != nil {
 		spentTreasuryOutput := &utxo.TreasuryOutput{Spent: true}
 		if _, err := io.ReadFull(reader, spentTreasuryOutput.MilestoneID[:]); err != nil {
 			return nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone hash: %w", err)

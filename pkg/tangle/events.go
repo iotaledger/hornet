@@ -40,7 +40,7 @@ func TreasuryMutationCaller(handler interface{}, params ...interface{}) {
 }
 
 func ReceiptCaller(handler interface{}, params ...interface{}) {
-	handler.(func(*iotago.Receipt))(params[0].(*iotago.Receipt))
+	handler.(func(*iotago.ReceiptMilestoneOpt))(params[0].(*iotago.ReceiptMilestoneOpt))
 }
 
 type Events struct {

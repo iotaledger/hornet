@@ -15,7 +15,7 @@ import (
 // which contained the receipt.
 type ReceiptTuple struct {
 	// The actual receipt.
-	Receipt *iotago.Receipt `json:"receipt"`
+	Receipt *iotago.ReceiptMilestoneOpt `json:"receipt"`
 	// The index of the milestone which included the receipt.
 	MilestoneIndex milestone.Index `json:"milestoneIndex"`
 }
@@ -54,7 +54,7 @@ func (rt *ReceiptTuple) kvStorableLoad(_ *Manager, key []byte, value []byte) err
 		return err
 	}
 
-	r := &iotago.Receipt{}
+	r := &iotago.ReceiptMilestoneOpt{}
 	if _, err := r.Deserialize(value, serializer.DeSeriModeNoValidation, iotago.ZeroRentParas); err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex milestone.Index,
 }
 
 // ReceiptToOutputs extracts the migrated funds to outputs.
-func ReceiptToOutputs(r *iotago.Receipt, msgID hornet.MessageID, msID *iotago.MilestoneID, msIndex milestone.Index, msTimestamp uint64) ([]*Output, error) {
+func ReceiptToOutputs(r *iotago.ReceiptMilestoneOpt, msgID hornet.MessageID, msID *iotago.MilestoneID, msIndex milestone.Index, msTimestamp uint64) ([]*Output, error) {
 	outputs := make([]*Output, len(r.Funds))
 	for outputIndex, migFundsEntry := range r.Funds {
 		entry := migFundsEntry
@@ -192,7 +192,7 @@ func OutputIDForMigratedFunds(milestoneHash iotago.MilestoneID, outputIndex uint
 }
 
 // ReceiptToTreasuryMutation converts a receipt to a treasury mutation tuple.
-func ReceiptToTreasuryMutation(r *iotago.Receipt, unspentTreasuryOutput *TreasuryOutput, newMsID *iotago.MilestoneID) (*TreasuryMutationTuple, error) {
+func ReceiptToTreasuryMutation(r *iotago.ReceiptMilestoneOpt, unspentTreasuryOutput *TreasuryOutput, newMsID *iotago.MilestoneID) (*TreasuryMutationTuple, error) {
 	newOutput := &TreasuryOutput{
 		Amount: r.Transaction.Output.Amount,
 		Spent:  false,

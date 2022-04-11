@@ -20,6 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) error {
@@ -136,7 +137,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		var treasury *treasuryStruct
 		if treasuryOutput != nil {
 			treasury = &treasuryStruct{
-				MilestoneID: treasuryOutput.MilestoneID.ToHex(),
+				MilestoneID: iotago.EncodeHex(treasuryOutput.MilestoneID[:]),
 				Tokens:      treasuryOutput.Amount,
 			}
 		}
@@ -190,7 +191,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			if treasuryOutput == nil {
 				return "no treasury output found"
 			}
-			return fmt.Sprintf("milestone ID %s, tokens %d", treasuryOutput.MilestoneID.ToHex(), treasuryOutput.Amount)
+			return fmt.Sprintf("milestone ID %s, tokens %d", iotago.EncodeHex(treasuryOutput.MilestoneID[:]), treasuryOutput.Amount)
 		}(),
 		ledgerIndex,
 		snapshotInfo.SnapshotIndex,

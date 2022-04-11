@@ -91,7 +91,7 @@ func newMsDiffConsumer(utxoManager *utxo.Manager) MilestoneDiffConsumerFunc {
 				SpentOutput: msDiff.SpentTreasuryOutput,
 			}
 			rt = &utxo.ReceiptTuple{
-				Receipt:        msDiff.Milestone.Receipt.(*iotago.Receipt),
+				Receipt:        msDiff.Milestone.Opts.MustSet().Receipt(),
 				MilestoneIndex: msIndex,
 			}
 		}

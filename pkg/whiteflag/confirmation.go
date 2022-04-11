@@ -134,15 +134,13 @@ func ConfirmMilestone(
 		newOutputs = append(newOutputs, output)
 	}
 
-	var receipt *iotago.Receipt
 	var tm *utxo.TreasuryMutationTuple
 	var rt *utxo.ReceiptTuple
 
 	// validate receipt and extract migrated funds
-	if ms.Receipt != nil {
+	receipt := ms.Opts.MustSet().Receipt()
+	if receipt != nil {
 		var err error
-
-		receipt = ms.Receipt.(*iotago.Receipt)
 
 		rt = &utxo.ReceiptTuple{
 			Receipt:        receipt,
