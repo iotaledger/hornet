@@ -300,6 +300,19 @@ func copyAndVerifyMilestoneCone(
 		return nil, err
 	}
 
+	lastMilestoneID := iotago.MilestoneID{}
+	if msIndex > 1 {
+		previousMilestoneMessage, _, err := getMilestoneAndMessageID(msIndex - 1)
+		if err != nil {
+			return nil, err
+		}
+
+		milestoneID, err := previousMilestoneMessage.Milestone().ID()
+		if err != nil {
+			return nil, err
+		}
+		lastMilestoneID = *milestoneID
+	}
 	timeCopyMilestoneCone := time.Now()
 
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
@@ -308,6 +321,7 @@ func copyAndVerifyMilestoneCone(
 		cachedMessageFuncTarget,
 		networkID,
 		milestoneMessageID,
+		lastMilestoneID,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
 		whiteflag.DefaultSetMessageReferencedFunc,

@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -293,6 +294,22 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
+	previousMilestoneID := iotago.MilestoneID{}
+	if milestoneIndexToSolidify > 1 {
+		// The first milestones references the genesis, so we won't be able to load it
+		cachedMsgPreviousMilestone := t.storage.MilestoneCachedMessageOrNil(milestoneIndexToSolidify - 1) // message +1
+		if cachedMsgPreviousMilestone == nil {
+			return
+		}
+		defer cachedMsgPreviousMilestone.Release(true) // message -1
+
+		milestoneID, err := cachedMsgPreviousMilestone.Message().Milestone().ID()
+		if err != nil {
+			return
+		}
+		previousMilestoneID = *milestoneID
+	}
+
 	var timeStartConfirmation, timeSetConfirmedMilestoneIndex, timeUpdateConeRootIndexes, timeConfirmedMilestoneChanged, timeConfirmedMilestoneIndexChanged, timeMilestoneConfirmedSyncEvent, timeMilestoneConfirmed time.Time
 
 	timeStart := time.Now()
@@ -302,6 +319,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		messagesMemcache.CachedMessage,
 		t.networkId,
 		cachedMilestoneToSolidify.Milestone().MessageID,
+		previousMilestoneID,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
 		whiteflag.DefaultSetMessageReferencedFunc,

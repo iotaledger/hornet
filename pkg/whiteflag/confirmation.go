@@ -67,6 +67,7 @@ func ConfirmMilestone(
 	cachedMessageFunc storage.CachedMessageFunc,
 	networkId uint64,
 	milestoneMessageID hornet.MessageID,
+	lastMilestoneID iotago.MilestoneID,
 	whiteFlagTraversalCondition dag.Predicate,
 	checkMessageReferencedFunc CheckMessageReferencedFunc,
 	setMessageReferencedFunc SetMessageReferencedFunc,
@@ -108,7 +109,7 @@ func ConfirmMilestone(
 
 	// we pass a background context here to not cancel the whiteflag computation!
 	// otherwise the node could panic at shutdown.
-	mutations, err := ComputeWhiteFlagMutations(context.Background(), utxoManager, parentsTraverser, cachedMessageFunc, networkId, milestoneIndex, ms.Timestamp, message.Parents(), whiteFlagTraversalCondition)
+	mutations, err := ComputeWhiteFlagMutations(context.Background(), utxoManager, parentsTraverser, cachedMessageFunc, networkId, milestoneIndex, ms.Timestamp, message.Parents(), lastMilestoneID, whiteFlagTraversalCondition)
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
@@ -120,13 +121,18 @@ func ConfirmMilestone(
 		Mutations:          mutations,
 	}
 
-	// Verify the calculated MerkleTreeHash with the one inside the milestone
-	merkleTreeHash := ms.InclusionMerkleProof
-	if mutations.MerkleTreeHash != merkleTreeHash {
-		mutationsMerkleTreeHashSlice := mutations.MerkleTreeHash[:]
-		milestoneMerkleTreeHashSlice := merkleTreeHash[:]
-		return nil, nil, fmt.Errorf("confirmMilestone: computed MerkleTreeHash %s does not match the value in the milestone %s", hex.EncodeToString(mutationsMerkleTreeHashSlice), hex.EncodeToString(milestoneMerkleTreeHashSlice))
+	// Verify the calculated PastConeMerkleProof with the one inside the milestone
+	pastConeMerkleTreeHash := ms.PastConeMerkleProof
+	if mutations.PastConeMerkleProof != pastConeMerkleTreeHash {
+		return nil, nil, fmt.Errorf("confirmMilestone: computed InclusionMerkleProof %s does not match the value in the milestone %s", hex.EncodeToString(mutations.PastConeMerkleProof[:]), hex.EncodeToString(pastConeMerkleTreeHash[:]))
 	}
+
+	// Verify the calculated InclusionMerkleProof with the one inside the milestone
+	inclusionMerkleTreeHash := ms.InclusionMerkleProof
+	if mutations.InclusionMerkleProof != inclusionMerkleTreeHash {
+		return nil, nil, fmt.Errorf("confirmMilestone: computed InclusionMerkleProof %s does not match the value in the milestone %s", hex.EncodeToString(mutations.InclusionMerkleProof[:]), hex.EncodeToString(inclusionMerkleTreeHash[:]))
+	}
+
 	timeWhiteflag := time.Now()
 
 	newOutputs := make(utxo.Outputs, 0, len(mutations.NewOutputs))

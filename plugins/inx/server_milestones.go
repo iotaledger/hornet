@@ -26,14 +26,36 @@ var (
 	ComputeWhiteFlagTimeout = 2 * time.Second
 )
 
+func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, error) {
+	defer ms.Release(true)
+
+	milestone := ms.Milestone()
+
+	milestoneMsg := deps.Storage.CachedMessageOrNil(milestone.MessageID) // message + 1
+	if milestoneMsg == nil {
+		return nil, status.Errorf(codes.NotFound, "milestone message for %d not found", milestone.Index)
+	}
+	defer milestoneMsg.Release(true)
+
+	milestonePayload := milestoneMsg.Message().Milestone()
+	if milestone == nil {
+		return nil, status.Errorf(codes.Internal, "milestone message for %d does not contain a milestone", milestone.Index)
+	}
+	milestoneID, err := milestonePayload.ID()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "error computing milestone ID: %s", err)
+	}
+
+	return inx.NewMilestone(*milestoneID, ms.Milestone().MessageID.ToArray(), uint32(milestone.Index), uint32(milestone.Timestamp.Unix())), nil
+}
+
 func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
 	cachedMilestone := deps.Storage.CachedMilestoneOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, status.Errorf(codes.NotFound, "milestone %d not found", msIndex)
 	}
-	defer cachedMilestone.Release(true) // milestone -1
-	ms := cachedMilestone.Milestone()
-	return inx.NewMilestone(ms.MessageID.ToArray(), uint32(ms.Index), uint32(ms.Timestamp.Unix())), nil
+	defer cachedMilestone.Release(true)                          // milestone -1
+	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone + 1
 }
 
 func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*inx.Milestone, error) {
@@ -44,9 +66,13 @@ func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenT
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
-		defer cachedMilestone.Release(true) // milestone -1
-		ms := cachedMilestone.Milestone()
-		payload := inx.NewMilestone(ms.MessageID.ToArray(), uint32(ms.Index), uint32(ms.Timestamp.Unix()))
+		defer cachedMilestone.Release(true)                                   // milestone -1
+		payload, err := milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
+		if err != nil {
+			Plugin.LogInfof("Send error: %v", err)
+			cancel()
+			return
+		}
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -68,9 +94,13 @@ func (s *INXServer) ListenToConfirmedMilestone(_ *inx.NoParams, srv inx.INX_List
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMilestone := task.Param(0).(*storage.CachedMilestone)
-		defer cachedMilestone.Release(true) // milestone -1
-		ms := cachedMilestone.Milestone()
-		payload := inx.NewMilestone(ms.MessageID.ToArray(), uint32(ms.Index), uint32(ms.Timestamp.Unix()))
+		defer cachedMilestone.Release(true)                                   // milestone -1
+		payload, err := milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
+		if err != nil {
+			Plugin.LogInfof("Send error: %v", err)
+			cancel()
+			return
+		}
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -93,6 +123,7 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 	requestedIndex := milestone.Index(req.GetMilestoneIndex())
 	requestedTimestamp := uint64(req.GetMilestoneTimestamp())
 	requestedParents := hornet.MessageIDsFromSliceOfSlices(req.GetParents())
+	requestedLastMilestoneID := req.GetLastMilestoneId().Unwrap()
 
 	// check if the requested milestone index would be the next one
 	if requestedIndex > deps.SyncManager.ConfirmedMilestoneIndex()+1 {
@@ -181,7 +212,8 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 
 	// at this point all parents are solid
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(),
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(
+		Plugin.Daemon().ContextStopped(),
 		deps.Storage.UTXOManager(),
 		parentsTraverser,
 		messagesMemcache.CachedMessage,
@@ -189,7 +221,9 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 		requestedIndex,
 		requestedTimestamp,
 		requestedParents,
-		whiteflag.DefaultWhiteFlagTraversalCondition)
+		requestedLastMilestoneID,
+		whiteflag.DefaultWhiteFlagTraversalCondition,
+	)
 	if err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return nil, status.Errorf(codes.Unavailable, "failed to compute white flag mutations: %s", err)
@@ -198,6 +232,7 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 	}
 
 	return &inx.WhiteFlagResponse{
-		MilestoneInclusionMerkleRoot: mutations.MerkleTreeHash[:],
+		MilestonePastConeMerkleProof:  mutations.PastConeMerkleProof[:],
+		MilestoneInclusionMerkleProof: mutations.InclusionMerkleProof[:],
 	}, nil
 }

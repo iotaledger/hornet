@@ -20,9 +20,9 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsResponse, error) {
+func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsResponse, error) {
 
-	request := &computeWhiteFlagMutationsRequest{}
+	request := &ComputeWhiteFlagMutationsRequest{}
 	if err := c.Bind(request); err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
 	}
@@ -39,6 +39,18 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 	parents, err := hornet.MessageIDsFromHex(request.Parents)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid parents, error: %s", err)
+	}
+
+	lastMilestoneID := iotago.MilestoneID{}
+	if len(request.LastMilestoneID) > 0 {
+		lastMilestoneIDBytes, err := iotago.DecodeHex(request.LastMilestoneID)
+		if err != nil {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid lastMilestoneID, error: %s", err)
+		}
+		if len(lastMilestoneIDBytes) != iotago.MilestoneIDLength {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid lastMilestoneID, length should be %d bytes", iotago.MilestoneIDLength)
+		}
+		copy(lastMilestoneID[:], lastMilestoneIDBytes)
 	}
 
 	// register all parents for message solid events
@@ -116,7 +128,18 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 
 	// at this point all parents are solid
 	// compute merkle tree root
-	mutations, err := whiteflag.ComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), deps.Storage.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, deps.NetworkID, request.Index, uint64(request.Timestamp), parents, whiteflag.DefaultWhiteFlagTraversalCondition)
+	mutations, err := whiteflag.ComputeWhiteFlagMutations(
+		Plugin.Daemon().ContextStopped(),
+		deps.Storage.UTXOManager(),
+		parentsTraverser,
+		messagesMemcache.CachedMessage,
+		deps.NetworkID,
+		request.Index,
+		uint64(request.Timestamp),
+		parents,
+		lastMilestoneID,
+		whiteflag.DefaultWhiteFlagTraversalCondition,
+	)
 	if err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "failed to compute white flag mutations: %s", err)
@@ -124,8 +147,9 @@ func computeWhiteFlagMutations(c echo.Context) (*computeWhiteFlagMutationsRespon
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to compute white flag mutations: %s", err)
 	}
 
-	return &computeWhiteFlagMutationsResponse{
-		MerkleTreeHash: iotago.EncodeHex(mutations.MerkleTreeHash[:]),
+	return &ComputeWhiteFlagMutationsResponse{
+		InclusionMerkleProof: iotago.EncodeHex(mutations.InclusionMerkleProof[:]),
+		PastConeMerkleProof:  iotago.EncodeHex(mutations.PastConeMerkleProof[:]),
 	}, nil
 }
 
