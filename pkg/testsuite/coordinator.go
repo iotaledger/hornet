@@ -42,7 +42,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(cooPrivateKeys, keyManager, len(cooPrivateKeys))
 
-	computeWhiteFlag := func(ctx context.Context, index milestone.Index, timestamp uint64, parents hornet.MessageIDs) (*coordinator.MerkleTreeHash, error) {
+	computeWhiteFlag := func(ctx context.Context, index milestone.Index, timestamp uint64, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleProof, error) {
 		messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
 		metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
 		memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(te.storage, metadataMemcache)
@@ -61,12 +61,16 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
 
 		// compute merkle tree root
-		mutations, err := whiteflag.ComputeWhiteFlagMutations(ctx, te.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, te.NetworkID(), index, timestamp, parents, whiteflag.DefaultWhiteFlagTraversalCondition)
+		mutations, err := whiteflag.ComputeWhiteFlagMutations(ctx, te.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, te.NetworkID(), index, timestamp, parents, lastMilestoneID, whiteflag.DefaultWhiteFlagTraversalCondition)
 		if err != nil {
 			return nil, err
 		}
-		merkleTreeHash := &coordinator.MerkleTreeHash{}
-		copy(merkleTreeHash[:], mutations.MerkleTreeHash[:])
+		merkleTreeHash := &coordinator.MilestoneMerkleProof{
+			PastConeMerkleProof:  &coordinator.MerkleTreeHash{},
+			InclusionMerkleProof: &coordinator.MerkleTreeHash{},
+		}
+		copy(merkleTreeHash.PastConeMerkleProof[:], mutations.PastConeMerkleProof[:])
+		copy(merkleTreeHash.InclusionMerkleProof[:], mutations.InclusionMerkleProof[:])
 		return merkleTreeHash, nil
 	}
 
@@ -133,6 +137,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		messagesMemcache.CachedMessage,
 		te.networkID,
 		cachedMilestone.Milestone().MessageID,
+		iotago.MilestoneID{}, // first milestone does not have a last milestone ID
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
 		whiteflag.DefaultSetMessageReferencedFunc,
@@ -148,6 +153,16 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	)
 	require.NoError(te.TestInterface, err)
 	require.Equal(te.TestInterface, 1, confirmedMilestoneStats.MessagesReferenced)
+}
+
+func (te *TestEnvironment) milestoneIDForIndex(msIndex milestone.Index) iotago.MilestoneID {
+	msgMilestone := te.storage.MilestoneCachedMessageOrNil(msIndex)
+	require.NotNil(te.TestInterface, msgMilestone)
+	defer msgMilestone.Release(true)
+
+	milestoneID, err := msgMilestone.Message().Milestone().ID()
+	require.NoError(te.TestInterface, err)
+	return *milestoneID
 }
 
 // IssueAndConfirmMilestoneOnTips creates a milestone on top of the given tips.
@@ -190,6 +205,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		messagesMemcache.CachedMessage,
 		te.networkID,
 		cachedMilestone.Milestone().MessageID,
+		te.milestoneIDForIndex(currentIndex),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
 		whiteflag.DefaultSetMessageReferencedFunc,

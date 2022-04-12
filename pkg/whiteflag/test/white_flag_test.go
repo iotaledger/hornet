@@ -301,3 +301,6 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 3+1, confStats.MessagesExcludedWithoutTransactions) // 1 is for the milestone itself
 }
+
+//TODO: add test case where last milestone is not in past cone
+//TODO: add test case where last milestone is reattached and the wrong one is referenced

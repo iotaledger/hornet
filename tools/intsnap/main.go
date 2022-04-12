@@ -24,7 +24,6 @@ func blankMilestone(index uint32) *iotago.Milestone {
 	return &iotago.Milestone{
 		Index:     index,
 		Timestamp: 0,
-		Receipt:   nil,
 		Parents: iotago.MilestoneParentMessageIDs{
 			static32ByteID(0),
 			static32ByteID(1),
@@ -171,7 +170,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 			if err != nil {
 				panic(err)
 			}
-			ms.Receipt = receipt
+			ms.Opts = iotago.MilestoneOpts{receipt}
 			return ms
 		}(),
 		SpentTreasuryOutput: &utxo.TreasuryOutput{
