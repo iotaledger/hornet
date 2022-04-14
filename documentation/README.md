@@ -19,10 +19,10 @@ This command checks out a local copy of the wiki and creates links to the conten
 ## Local Development
 
 ```console
-npm start
+yarn iota-wiki start
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+This command starts a local, wiki themed, development server and opens up a browser window. Most changes are reflected live without having to restart the server.
 
 ## Tear Down
 

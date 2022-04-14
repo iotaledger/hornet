@@ -12,7 +12,8 @@
   "engines": {
     "node": ">=14.14.0"
   },
-  "dependencies": {
-    "iota-wiki-cli": "git+https://github.com/iota-community/iota-wiki-cli.git#v1.7.1"
-  }
+  "devDependencies": {
+    "iota-wiki-cli": "iota-community/iota-wiki-cli#v2"
+  },
+  "packageManager": "yarn@3.2.0"
 }
