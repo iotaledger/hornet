@@ -118,7 +118,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	// Skip this check for the first milestone
 	seenLastMilestoneID := isFirstMilestone
 	internalTraversalCondition := func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-		if !seenLastMilestoneID && cachedMsgMeta.Metadata().IsMilestone() && cachedMsgMeta.Metadata().IsReferenced() {
+		if !seenLastMilestoneID && cachedMsgMeta.Metadata().IsMilestone() {
 			msgMilestone, err := cachedMessageFunc(cachedMsgMeta.Metadata().MessageID()) // message +1
 			if err != nil {
 				return false, err

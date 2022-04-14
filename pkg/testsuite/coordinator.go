@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/inx-coordinator/pkg/coordinator"
@@ -152,7 +153,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		nil,
 	)
 	require.NoError(te.TestInterface, err)
-	require.Equal(te.TestInterface, 1, confirmedMilestoneStats.MessagesReferenced)
+	require.Equal(te.TestInterface, 0, confirmedMilestoneStats.MessagesReferenced)
 }
 
 func (te *TestEnvironment) milestoneIDForIndex(msIndex milestone.Index) iotago.MilestoneID {
@@ -172,8 +173,47 @@ func (te *TestEnvironment) milestoneForIndex(msIndex milestone.Index) *storage.M
 	return ms.Milestone()
 }
 
+func (te *TestEnvironment) ReattachMessage(messageID hornet.MessageID, parents ...hornet.MessageID) hornet.MessageID {
+	message := te.storage.CachedMessageOrNil(messageID)
+	require.NotNil(te.TestInterface, message)
+	defer message.Release(true)
+
+	iotagoMessage := message.Message().Message()
+
+	newParents := iotagoMessage.Parents
+	if len(parents) > 0 {
+		newParents = hornet.MessageIDs(parents).RemoveDupsAndSortByLexicalOrder().ToSliceOfArrays()
+	}
+
+	newMessage := &iotago.Message{
+		ProtocolVersion: iotagoMessage.ProtocolVersion,
+		Parents:         newParents,
+		Payload:         iotagoMessage.Payload,
+		Nonce:           iotagoMessage.Nonce,
+	}
+
+	err := te.PoWHandler.DoPoW(context.Background(), newMessage, 1)
+	require.NoError(te.TestInterface, err)
+
+	// We brute-force a new nonce until it is different than the original one (this is important when reattaching valid milestones)
+	for newMessage.Nonce == iotagoMessage.Nonce {
+		// Use a higher PowScore to force a different nonce
+		handler := pow.New(te.PoWMinScore+10.0, 5*time.Minute)
+		err := handler.DoPoW(context.Background(), newMessage, 1)
+		require.NoError(te.TestInterface, err)
+	}
+
+	storedMessage, err := storage.NewMessage(newMessage, serializer.DeSeriModePerformValidation, DeSerializationParameters)
+	require.NoError(te.TestInterface, err)
+
+	cachedMessage := te.StoreMessage(storedMessage)
+	require.NotNil(te.TestInterface, cachedMessage)
+
+	return storedMessage.MessageID()
+}
+
 // IssueMilestoneOnTips creates a milestone on top of the given tips.
-func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) milestone.Index {
+func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) (*storage.Milestone, error) {
 
 	currentIndex := te.syncManager.LatestMilestoneIndex()
 	te.VerifyLMI(currentIndex)
@@ -185,7 +225,9 @@ func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.MessageIDs, addLastM
 	}
 
 	milestoneMessageID, err := te.coo.IssueMilestone(tips)
-	require.NoError(te.TestInterface, err)
+	if err != nil {
+		return nil, err
+	}
 	te.LastMilestoneMessageID = milestoneMessageID
 
 	te.VerifyLMI(currentIndex + 1)
@@ -196,12 +238,10 @@ func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.MessageIDs, addLastM
 
 	te.Milestones = append(te.Milestones, cachedMilestone)
 
-	return cachedMilestone.Milestone().Index
+	return cachedMilestone.Milestone(), nil
 }
 
-func (te *TestEnvironment) PerformWhiteFlagConfirmation(msIndex milestone.Index) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats, error) {
-
-	milestoneForIndex := te.milestoneForIndex(msIndex)
+func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestoneMessageID hornet.MessageID, msIndex milestone.Index) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats, error) {
 
 	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
@@ -224,7 +264,7 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(msIndex milestone.Index)
 		memcachedParentsTraverserStorage,
 		messagesMemcache.CachedMessage,
 		te.networkID,
-		milestoneForIndex.MessageID,
+		milestoneMessageID,
 		te.milestoneIDForIndex(msIndex-1),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
@@ -251,15 +291,15 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(msIndex milestone.Index)
 }
 
 // ConfirmMilestone confirms the milestone for the given index.
-func (te *TestEnvironment) ConfirmMilestone(msIndex milestone.Index, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
+func (te *TestEnvironment) ConfirmMilestone(ms *storage.Milestone, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
 
 	// Verify that we are properly synced and confirming the next milestone
 	currentIndex := te.syncManager.LatestMilestoneIndex()
-	require.GreaterOrEqual(te.TestInterface, msIndex, currentIndex)
+	require.GreaterOrEqual(te.TestInterface, ms.Index, currentIndex)
 	confirmedIndex := te.syncManager.ConfirmedMilestoneIndex()
-	require.Equal(te.TestInterface, msIndex, confirmedIndex+1)
+	require.Equal(te.TestInterface, ms.Index, confirmedIndex+1)
 
-	wfConf, confirmedMilestoneStats, err := te.PerformWhiteFlagConfirmation(msIndex)
+	wfConf, confirmedMilestoneStats, err := te.PerformWhiteFlagConfirmation(ms.MessageID, ms.Index)
 	require.NoError(te.TestInterface, err)
 
 	require.Equal(te.TestInterface, confirmedIndex+1, confirmedMilestoneStats.Index)
@@ -286,6 +326,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 	currentIndex := te.syncManager.ConfirmedMilestoneIndex()
 	te.VerifyLMI(currentIndex)
 
-	msIndex := te.IssueMilestoneOnTips(tips, true)
-	return te.ConfirmMilestone(msIndex, createConfirmationGraph)
+	milestone, err := te.IssueMilestoneOnTips(tips, true)
+	require.NoError(te.TestInterface, err)
+	return te.ConfirmMilestone(milestone, createConfirmationGraph)
 }

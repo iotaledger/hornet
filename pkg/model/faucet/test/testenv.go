@@ -396,9 +396,6 @@ func (env *FaucetTestEnv) FlushRequestsAndConfirmNewFaucetMessage() error {
 }
 
 func (env *FaucetTestEnv) IssueMilestone(onTips ...hornet.MessageID) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
-	if len(onTips) == 0 {
-		return env.TestEnv.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{env.TestEnv.LastMilestoneMessageID}, false)
-	}
 	return env.TestEnv.IssueAndConfirmMilestoneOnTips(onTips, false)
 }
 
