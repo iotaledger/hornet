@@ -271,9 +271,6 @@ func (env *ParticipationTestEnv) IssueDefaultBallotVoteAndMilestone(eventID part
 }
 
 func (env *ParticipationTestEnv) IssueMilestone(onTips ...hornet.MessageID) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
-	if len(onTips) == 0 {
-		return env.te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{env.te.LastMilestoneMessageID}, false)
-	}
 	return env.te.IssueAndConfirmMilestoneOnTips(onTips, false)
 }
 

@@ -37,17 +37,17 @@ func ShortenedTag(cachedMsg *storage.CachedMessage) string {
 	}
 
 	tag := taggedData.Tag
+	tagString := string(tag)
 	if len(tag) > 4 {
-		tag = tag[:4]
+		tagString = hex.EncodeToString(tag[:4])
 	}
-	tagHex := hex.EncodeToString(tag)
 
 	if cachedMsg.Metadata().IsConflictingTx() {
 		conflict := cachedMsg.Metadata().Conflict()
-		return fmt.Sprintf("%s (%d)", tagHex, conflict)
+		return fmt.Sprintf("%s (%d)", tagString, conflict)
 	}
 
-	return tagHex
+	return tagString
 }
 
 // ShowDotFile creates a png file with dot and shows it in an external application.

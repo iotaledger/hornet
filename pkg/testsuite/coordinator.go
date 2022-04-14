@@ -165,15 +165,26 @@ func (te *TestEnvironment) milestoneIDForIndex(msIndex milestone.Index) iotago.M
 	return *milestoneID
 }
 
-// IssueAndConfirmMilestoneOnTips creates a milestone on top of the given tips.
-func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
+func (te *TestEnvironment) milestoneForIndex(msIndex milestone.Index) *storage.Milestone {
+	ms := te.storage.CachedMilestoneOrNil(msIndex)
+	require.NotNil(te.TestInterface, ms)
+	defer ms.Release(true)
+	return ms.Milestone()
+}
 
-	currentIndex := te.syncManager.ConfirmedMilestoneIndex()
+// IssueMilestoneOnTips creates a milestone on top of the given tips.
+func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) milestone.Index {
+
+	currentIndex := te.syncManager.LatestMilestoneIndex()
 	te.VerifyLMI(currentIndex)
 
 	fmt.Printf("Issue milestone %v\n", currentIndex+1)
 
-	milestoneMessageID, err := te.coo.IssueMilestone(append(tips, te.LastMilestoneMessageID))
+	if addLastMilestoneAsParent {
+		tips = append(tips, te.LastMilestoneMessageID)
+	}
+
+	milestoneMessageID, err := te.coo.IssueMilestone(tips)
 	require.NoError(te.TestInterface, err)
 	te.LastMilestoneMessageID = milestoneMessageID
 
@@ -182,6 +193,15 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 	milestoneIndex := currentIndex + 1
 	cachedMilestone := te.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
 	require.NotNil(te.TestInterface, cachedMilestone)
+
+	te.Milestones = append(te.Milestones, cachedMilestone)
+
+	return cachedMilestone.Milestone().Index
+}
+
+func (te *TestEnvironment) PerformWhiteFlagConfirmation(msIndex milestone.Index) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats, error) {
+
+	milestoneForIndex := te.milestoneForIndex(msIndex)
 
 	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
@@ -204,8 +224,8 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		memcachedParentsTraverserStorage,
 		messagesMemcache.CachedMessage,
 		te.networkID,
-		cachedMilestone.Milestone().MessageID,
-		te.milestoneIDForIndex(currentIndex),
+		milestoneForIndex.MessageID,
+		te.milestoneIDForIndex(msIndex-1),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
 		whiteflag.DefaultSetMessageReferencedFunc,
@@ -213,7 +233,7 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
 			wfConf = confirmation
-			err = te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
+			err := te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
 			if te.OnMilestoneConfirmed != nil {
 				te.OnMilestoneConfirmed(confirmation)
@@ -227,9 +247,22 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		nil,
 		nil,
 	)
+	return wfConf, confirmedMilestoneStats, err
+}
+
+// ConfirmMilestone confirms the milestone for the given index.
+func (te *TestEnvironment) ConfirmMilestone(msIndex milestone.Index, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
+
+	// Verify that we are properly synced and confirming the next milestone
+	currentIndex := te.syncManager.LatestMilestoneIndex()
+	require.GreaterOrEqual(te.TestInterface, msIndex, currentIndex)
+	confirmedIndex := te.syncManager.ConfirmedMilestoneIndex()
+	require.Equal(te.TestInterface, msIndex, confirmedIndex+1)
+
+	wfConf, confirmedMilestoneStats, err := te.PerformWhiteFlagConfirmation(msIndex)
 	require.NoError(te.TestInterface, err)
 
-	require.Equal(te.TestInterface, currentIndex+1, confirmedMilestoneStats.Index)
+	require.Equal(te.TestInterface, confirmedIndex+1, confirmedMilestoneStats.Index)
 	te.VerifyCMI(confirmedMilestoneStats.Index)
 
 	te.AssertTotalSupplyStillValid()
@@ -244,7 +277,15 @@ func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs
 		}
 	}
 
-	te.Milestones = append(te.Milestones, cachedMilestone)
-
 	return wfConf, confirmedMilestoneStats
+}
+
+// IssueAndConfirmMilestoneOnTips creates a milestone on top of the given tips and confirms it.
+func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
+
+	currentIndex := te.syncManager.ConfirmedMilestoneIndex()
+	te.VerifyLMI(currentIndex)
+
+	msIndex := te.IssueMilestoneOnTips(tips, true)
+	return te.ConfirmMilestone(msIndex, createConfirmationGraph)
 }

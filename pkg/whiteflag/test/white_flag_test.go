@@ -21,7 +21,7 @@ var (
 	seed4, _ = hex.DecodeString("bd6fe09d8a309ca309c5db7b63513240490109cd0ac6b123551e9da0d5c8916c4a5a4f817e4b4e9df89885ce1af0986da9f1e56b65153c2af1e87ab3b11dabb4")
 
 	showConfirmationGraphs = false
-	MinPoWScore            = 100.0
+	MinPoWScore            = 1.0
 	BelowMaxDepth          = 15
 )
 
