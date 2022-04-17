@@ -4,12 +4,14 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
+func storageMessageByTransactionID(c echo.Context) (*storage.Message, error) {
+
 	transactionID, err := restapi.ParseTransactionIDParam(c)
 	if err != nil {
 		return nil, err
@@ -33,5 +35,21 @@ func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
 	}
 	defer cachedMsg.Release(true) // message -1
 
-	return cachedMsg.Message().Message(), nil
+	return cachedMsg.Message(), nil
+}
+
+func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
+	message, err := storageMessageByTransactionID(c)
+	if err != nil {
+		return nil, err
+	}
+	return message.Message(), nil
+}
+
+func messageBytesByTransactionID(c echo.Context) ([]byte, error) {
+	message, err := storageMessageByTransactionID(c)
+	if err != nil {
+		return nil, err
+	}
+	return message.Data(), nil
 }

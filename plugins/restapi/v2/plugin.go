@@ -26,6 +26,10 @@ import (
 )
 
 const (
+	MIMEApplicationVendorIOTASerializer = "application/vnd.iota.serializer-v1"
+)
+
+const (
 	// RouteInfo is the route for getting the node info.
 	// GET returns the node info.
 	RouteInfo = "/info"
@@ -34,17 +38,15 @@ const (
 	// GET returns the tips.
 	RouteTips = "/tips"
 
-	// RouteMessageData is the route for getting message data by its messageID.
-	// GET returns message data (json).
-	RouteMessageData = "/messages/:" + restapipkg.ParameterMessageID
+	// RouteMessage is the route for getting a message by its messageID.
+	// GET returns the message based on the given type in the request "Accept" header.
+	// MIMEApplicationJSON => json
+	// MIMEVendorIOTASerializer => bytes
+	RouteMessage = "/messages/:" + restapipkg.ParameterMessageID
 
 	// RouteMessageMetadata is the route for getting message metadata by its messageID.
 	// GET returns message metadata (including info about "promotion/reattachment needed").
 	RouteMessageMetadata = "/messages/:" + restapipkg.ParameterMessageID + "/metadata"
-
-	// RouteMessageBytes is the route for getting message raw data by its messageID.
-	// GET returns raw message data (bytes).
-	RouteMessageBytes = "/messages/:" + restapipkg.ParameterMessageID + "/raw"
 
 	// RouteMessageChildren is the route for getting message IDs of the children of a message, identified by its messageID.
 	// GET returns the message IDs of all children.
@@ -52,10 +54,15 @@ const (
 
 	// RouteMessages is the route for creating new messages.
 	// POST creates a single new message and returns the new message ID.
+	// The message is parsed based on the given type in the request "Content-Type" header.
+	// MIMEApplicationJSON => json
+	// MIMEVendorIOTASerializer => bytes
 	RouteMessages = "/messages"
 
 	// RouteTransactionsIncludedMessage is the route for getting the message that was included in the ledger for a given transaction ID.
-	// GET returns message data (json).
+	// GET returns the message based on the given type in the request "Accept" header.
+	// MIMEApplicationJSON => json
+	// MIMEVendorIOTASerializer => bytes
 	RouteTransactionsIncludedMessage = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-message"
 
 	// RouteMilestone is the route for getting a milestone by its milestoneIndex.
@@ -67,16 +74,14 @@ const (
 	RouteMilestoneUTXOChanges = "/milestones/:" + restapipkg.ParameterMilestoneIndex + "/utxo-changes"
 
 	// RouteOutput is the route for getting an output by its outputID (transactionHash + outputIndex).
-	// GET returns the output (json).
+	// GET returns the output based on the given type in the request "Accept" header.
+	// MIMEApplicationJSON => json
+	// MIMEVendorIOTASerializer => bytes
 	RouteOutput = "/outputs/:" + restapipkg.ParameterOutputID
 
 	// RouteOutputMetadata is the route for getting output metadata by its outputID (transactionHash + outputIndex) without getting the data again.
 	// GET returns the output metadata.
 	RouteOutputMetadata = "/outputs/:" + restapipkg.ParameterOutputID + "/metadata"
-
-	// RouteOutputBytes is the route for getting output raw data by its outputID (transactionHash + outputIndex).
-	// GET returns the raw output data (bytes).
-	RouteOutputBytes = "/outputs/:" + restapipkg.ParameterOutputID + "/raw"
 
 	// RouteTreasury is the route for getting the current treasury output.
 	// GET returns the treasury.
@@ -218,21 +223,28 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteMessageData, func(c echo.Context) error {
-		resp, err := messageByID(c)
-		if err != nil {
-			return err
-		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteMessageBytes, func(c echo.Context) error {
-		resp, err := messageBytesByID(c)
-		if err != nil {
+	routeGroup.GET(RouteMessage, func(c echo.Context) error {
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+		if err != nil && err != echo.ErrUnsupportedMediaType {
 			return err
 		}
 
-		return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
+		switch mimeType {
+		case MIMEApplicationVendorIOTASerializer:
+			resp, err := messageBytesByID(c)
+			if err != nil {
+				return err
+			}
+			return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
+
+		default:
+			// default to echo.MIMEApplicationJSON
+			resp, err := messageByID(c)
+			if err != nil {
+				return err
+			}
+			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		}
 	})
 
 	routeGroup.GET(RouteMessageChildren, func(c echo.Context) error {
@@ -254,11 +266,27 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteTransactionsIncludedMessage, func(c echo.Context) error {
-		resp, err := messageByTransactionID(c)
-		if err != nil {
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+		if err != nil && err != echo.ErrUnsupportedMediaType {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+
+		switch mimeType {
+		case MIMEApplicationVendorIOTASerializer:
+			resp, err := messageBytesByTransactionID(c)
+			if err != nil {
+				return err
+			}
+			return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
+
+		default:
+			// default to echo.MIMEApplicationJSON
+			resp, err := messageByTransactionID(c)
+			if err != nil {
+				return err
+			}
+			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		}
 	})
 
 	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
@@ -278,11 +306,27 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
-		resp, err := outputByID(c, false)
-		if err != nil {
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+		if err != nil && err != echo.ErrUnsupportedMediaType {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+
+		switch mimeType {
+		case MIMEApplicationVendorIOTASerializer:
+			resp, err := rawOutputByID(c)
+			if err != nil {
+				return err
+			}
+			return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
+
+		default:
+			// default to echo.MIMEApplicationJSON
+			resp, err := outputByID(c, false)
+			if err != nil {
+				return err
+			}
+			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		}
 	})
 
 	routeGroup.GET(RouteOutputMetadata, func(c echo.Context) error {
@@ -291,14 +335,6 @@ func configure() {
 			return err
 		}
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.GET(RouteOutputBytes, func(c echo.Context) error {
-		resp, err := rawOutputByID(c)
-		if err != nil {
-			return err
-		}
-		return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
 	})
 
 	routeGroup.GET(RouteTreasury, func(c echo.Context) error {

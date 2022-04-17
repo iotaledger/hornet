@@ -86,6 +86,26 @@ func ErrorHandler() func(error, echo.Context) {
 	}
 }
 
+func GetAcceptHeaderContentType(c echo.Context, supportedContentTypes ...string) (string, error) {
+	ctype := c.Request().Header.Get(echo.HeaderAccept)
+	for _, supportedContentType := range supportedContentTypes {
+		if strings.HasPrefix(ctype, supportedContentType) {
+			return supportedContentType, nil
+		}
+	}
+	return "", echo.ErrUnsupportedMediaType
+}
+
+func GetRequestContentType(c echo.Context, supportedContentTypes ...string) (string, error) {
+	ctype := c.Request().Header.Get(echo.HeaderContentType)
+	for _, supportedContentType := range supportedContentTypes {
+		if strings.HasPrefix(ctype, supportedContentType) {
+			return supportedContentType, nil
+		}
+	}
+	return "", echo.ErrUnsupportedMediaType
+}
+
 func ParseMessageIDParam(c echo.Context) (hornet.MessageID, error) {
 	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
