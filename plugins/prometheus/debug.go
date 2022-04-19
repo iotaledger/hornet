@@ -149,7 +149,6 @@ func collectDebug() {
 		milestoneConfirmationDurations.WithLabelValues("confirmation").Set(lastConfirmationMetrics.DurationConfirmation.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("apply_included_with_transactions").Set(lastConfirmationMetrics.DurationApplyIncludedWithTransactions.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("apply_excluded_without_transactions").Set(lastConfirmationMetrics.DurationApplyExcludedWithoutTransactions.Seconds())
-		milestoneConfirmationDurations.WithLabelValues("apply_milestone").Set(lastConfirmationMetrics.DurationApplyMilestone.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("apply_excluded_with_conflicting_transactions").Set(lastConfirmationMetrics.DurationApplyExcludedWithConflictingTransactions.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("on_ledger_updated").Set(lastConfirmationMetrics.DurationLedgerUpdated.Seconds())
 		milestoneConfirmationDurations.WithLabelValues("on_treasury_updated").Set(lastConfirmationMetrics.DurationTreasuryMutated.Seconds())

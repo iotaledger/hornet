@@ -33,7 +33,6 @@ type ConfirmationMetrics struct {
 	DurationTreasuryMutated                          time.Duration
 	DurationApplyIncludedWithTransactions            time.Duration
 	DurationApplyExcludedWithoutTransactions         time.Duration
-	DurationApplyMilestone                           time.Duration
 	DurationApplyExcludedWithConflictingTransactions time.Duration
 	DurationOnMilestoneConfirmed                     time.Duration
 	DurationSetConfirmedMilestoneIndex               time.Duration
@@ -266,28 +265,6 @@ func ConfirmMilestone(
 	}
 	timeApplyExcludedWithoutTransactions := time.Now()
 
-	// confirm the milestone itself
-	//if err := forMessageMetadataWithMessageID(milestoneMessageID, func(meta *storage.CachedMetadata) {
-	//	meta.Metadata().SetIsNoTransaction(true)
-	//	if !checkMessageReferencedFunc(meta.Metadata()) {
-	//		setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
-	//		meta.Metadata().SetMilestone(true)
-	//		meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-	//		confirmedMilestoneStats.MessagesReferenced++
-	//		confirmedMilestoneStats.MessagesExcludedWithoutTransactions++
-	//		if serverMetrics != nil {
-	//			serverMetrics.NoTransactionMessages.Inc()
-	//			serverMetrics.ReferencedMessages.Inc()
-	//		}
-	//		if forEachReferencedMessage != nil {
-	//			forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
-	//		}
-	//	}
-	//}); err != nil {
-	//	return nil, nil, err
-	//}
-	timeApplyMilestone := time.Now()
-
 	// confirm all conflicting messages
 	for _, conflictedMessage := range mutations.MessagesExcludedWithConflictingTransactions {
 		if err := forMessageMetadataWithMessageID(conflictedMessage.MessageID, func(meta *storage.CachedMetadata) {
@@ -324,8 +301,7 @@ func ConfirmMilestone(
 		DurationTreasuryMutated:                          timeTreasuryMutated.Sub(timeLedgerUpdated),
 		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeTreasuryMutated),
 		DurationApplyExcludedWithoutTransactions:         timeApplyExcludedWithoutTransactions.Sub(timeApplyIncludedWithTransactions),
-		DurationApplyMilestone:                           timeApplyMilestone.Sub(timeApplyExcludedWithoutTransactions),
-		DurationApplyExcludedWithConflictingTransactions: timeApplyExcludedWithConflictingTransactions.Sub(timeApplyMilestone),
+		DurationApplyExcludedWithConflictingTransactions: timeApplyExcludedWithConflictingTransactions.Sub(timeApplyExcludedWithoutTransactions),
 		DurationOnMilestoneConfirmed:                     timeOnMilestoneConfirmed.Sub(timeApplyExcludedWithConflictingTransactions),
 	}, nil
 }
