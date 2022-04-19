@@ -43,7 +43,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(cooPrivateKeys, keyManager, len(cooPrivateKeys))
 
-	computeWhiteFlag := func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleProof, error) {
+	computeWhiteFlag := func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
 		messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
 		metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
 		memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(te.storage, metadataMemcache)
@@ -66,7 +66,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		if err != nil {
 			return nil, err
 		}
-		merkleTreeHash := &coordinator.MilestoneMerkleProof{
+		merkleTreeHash := &coordinator.MilestoneMerkleRoots{
 			ConfirmedMerkleRoot: &coordinator.MerkleTreeHash{},
 			AppliedMerkleRoot:   &coordinator.MerkleTreeHash{},
 		}
@@ -96,9 +96,10 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	require.NotNil(te.TestInterface, coo)
 	te.coo = coo
 
-	err = te.coo.InitState(true, 0, &coordinator.LatestMilestone{
-		Index:     0,
-		Timestamp: 0,
+	err = te.coo.InitState(true, 0, &coordinator.LatestMilestoneInfo{
+		Index:       0,
+		Timestamp:   0,
+		MilestoneID: iotago.MilestoneID{},
 	})
 	require.NoError(te.TestInterface, err)
 

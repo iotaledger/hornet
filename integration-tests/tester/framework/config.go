@@ -21,7 +21,7 @@ import (
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
-	"github.com/gohornet/inx-coordinator/plugin/coordinator"
+	"github.com/gohornet/inx-coordinator/core/coordinator"
 	"github.com/gohornet/inx-coordinator/plugin/migrator"
 	iotago "github.com/iotaledger/iota.go/v3"
 )

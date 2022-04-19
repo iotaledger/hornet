@@ -257,8 +257,8 @@ github.com/cockroachdb/errors v1.9.0/go.mod h1:vaNcEYYqbIqB5JhKBhFV9CneUqeuEbB2O
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f h1:6jduT9Hfc0njg5jJ1DdKCFPdMBrp/mdZfCpa5h+WM74=
 github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f/go.mod h1:Vz9DsVWQQhf3vs21MhPMZpMGSht7O/2vFW2xusFUVOs=
-github.com/cockroachdb/pebble v0.0.0-20220418214258-194770c84de5 h1:Q7MgwHiNF8m/AQE8tE1TdstP2HOOEX75AvHxtWX/1Fw=
-github.com/cockroachdb/pebble v0.0.0-20220418214258-194770c84de5/go.mod h1:buxOO9GBtOcq1DiXDpIPYrmxY020K2A8lOrwno5FetU=
+github.com/cockroachdb/pebble v0.0.0-20220419145443-4a0889f8bd4e h1:iUgqCv9Uokm6oZ/eLerWRsZdH7qgs8bHBAIks1Dfn2w=
+github.com/cockroachdb/pebble v0.0.0-20220419145443-4a0889f8bd4e/go.mod h1:buxOO9GBtOcq1DiXDpIPYrmxY020K2A8lOrwno5FetU=
 github.com/cockroachdb/redact v1.0.8/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZZ2lK+dpvRg=
 github.com/cockroachdb/redact v1.1.3 h1:AKZds10rFSIj7qADf0g46UixK8NNLwWTNdCIGS5wfSQ=
 github.com/cockroachdb/redact v1.1.3/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZZ2lK+dpvRg=
@@ -587,8 +587,8 @@ github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418 h1:Jz+dbKADaT0q
 github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418/go.mod h1:XTiVam/ezIKtSln67bhgQnIGAv2+5hemis7B/6CrT9I=
 github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260 h1:Pf6oR/aezlojjxzaNqIZa5q1+LKFgePrH+E9B57sKiE=
 github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260/go.mod h1:/+iSQrn7Izt6kFhHBQvcE6FkklsKXa8hc35pFyFDrDw=
-github.com/gohornet/inx-coordinator v0.0.0-20220419124816-503b9d45ede9 h1:B9/uJSqZE/NSovtBL5lt4qR6SXri88G0ML0TIb4UuGk=
-github.com/gohornet/inx-coordinator v0.0.0-20220419124816-503b9d45ede9/go.mod h1:VmtJ+/jl/NL45uXS2+l/uaxuwEfgRuX7pet7unYrp+s=
+github.com/gohornet/inx-coordinator v0.1.0 h1:vEngguqmAXLSCeoYa1KboRipF7iTEkPeXkT4IliRTp0=
+github.com/gohornet/inx-coordinator v0.1.0/go.mod h1:VmtJ+/jl/NL45uXS2+l/uaxuwEfgRuX7pet7unYrp+s=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
 github.com/golang-jwt/jwt/v4 v4.3.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=
@@ -802,8 +802,8 @@ github.com/iotaledger/hive.go v0.0.0-20220408130540-d344e455dd23 h1:YIIS4RcTXKRc
 github.com/iotaledger/hive.go v0.0.0-20220408130540-d344e455dd23/go.mod h1:YKe8Y/+kiF1oZWnu6p67QEzofFNxNsAMpP6MpcvbnNM=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220406082310-fa38df493f6b h1:mqrzjajY0gyIPPiA715TNlZMt7YF6NWtMePSF+SXa/4=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220406082310-fa38df493f6b/go.mod h1:O18k+0+qtbHfk8AYI+dgMOoDBDKy9vwXk2ocyD7MyRI=
-github.com/iotaledger/inx/go v0.0.0-20220419123923-d31617129cdc h1:qBwV+baVzLwjE2Qn43UucjYDiQYynSSTdAXkZLngIao=
-github.com/iotaledger/inx/go v0.0.0-20220419123923-d31617129cdc/go.mod h1:OflGJzQ6RM1UPoOYutB0cJneV6i2v712JXcotE8hxgg=
+github.com/iotaledger/inx/go v0.0.0-20220419135047-ffc33b55140e h1:4MkLRjDN2j5KCWKPFXvMDSLuo5aogpKmP6loSKYfVX8=
+github.com/iotaledger/inx/go v0.0.0-20220419135047-ffc33b55140e/go.mod h1:OflGJzQ6RM1UPoOYutB0cJneV6i2v712JXcotE8hxgg=
 github.com/iotaledger/iota.go v1.0.0 h1:tqm1FxJ/zOdzbrAaQ5BQpVF8dUy2eeGlSeWlNG8GoXY=
 github.com/iotaledger/iota.go v1.0.0/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
 github.com/iotaledger/iota.go/v3 v3.0.0-20220419063054-a9fef1da7ef1 h1:Jt6H57hDNtnA8OjLgfiwFjus+Oek6XoTIoAxiKopASo=
