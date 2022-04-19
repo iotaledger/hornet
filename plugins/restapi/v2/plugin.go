@@ -26,10 +26,6 @@ import (
 )
 
 const (
-	MIMEApplicationVendorIOTASerializer = "application/vnd.iota.serializer-v1"
-)
-
-const (
 	// RouteInfo is the route for getting the node info.
 	// GET returns the node info.
 	RouteInfo = "/info"
@@ -224,18 +220,18 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteMessage, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
-		if err != nil && err != echo.ErrUnsupportedMediaType {
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+		if err != nil && err != restapipkg.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case MIMEApplicationVendorIOTASerializer:
+		case restapipkg.MIMEApplicationVendorIOTASerializer:
 			resp, err := messageBytesByID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
+			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializer, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
@@ -266,18 +262,18 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteTransactionsIncludedMessage, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
-		if err != nil && err != echo.ErrUnsupportedMediaType {
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+		if err != nil && err != restapipkg.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case MIMEApplicationVendorIOTASerializer:
+		case restapipkg.MIMEApplicationVendorIOTASerializer:
 			resp, err := messageBytesByTransactionID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
+			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializer, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
@@ -306,18 +302,18 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
-		if err != nil && err != echo.ErrUnsupportedMediaType {
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+		if err != nil && err != restapipkg.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case MIMEApplicationVendorIOTASerializer:
+		case restapipkg.MIMEApplicationVendorIOTASerializer:
 			resp, err := rawOutputByID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, echo.MIMEOctetStream, resp)
+			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializer, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON

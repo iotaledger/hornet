@@ -16,6 +16,10 @@ import (
 )
 
 const (
+	MIMEApplicationVendorIOTASerializer = "application/vnd.iota.serializer-v1"
+)
+
+const (
 	// ParameterMessageID is used to identify a message by its ID.
 	ParameterMessageID = "messageID"
 
@@ -44,6 +48,9 @@ var (
 
 	// ErrServiceNotImplemented defines the service not implemented error.
 	ErrServiceNotImplemented = echo.NewHTTPError(http.StatusNotImplemented, "service not implemented")
+
+	// ErrNotAcceptable defines the not acceptable error.
+	ErrNotAcceptable = echo.NewHTTPError(http.StatusNotAcceptable)
 )
 
 // JSONResponse sends the JSON response with status code.
@@ -93,7 +100,7 @@ func GetAcceptHeaderContentType(c echo.Context, supportedContentTypes ...string)
 			return supportedContentType, nil
 		}
 	}
-	return "", echo.ErrUnsupportedMediaType
+	return "", ErrNotAcceptable
 }
 
 func GetRequestContentType(c echo.Context, supportedContentTypes ...string) (string, error) {
