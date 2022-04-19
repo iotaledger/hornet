@@ -118,13 +118,19 @@ func (f *Framework) CreateStaticNetwork(name string, intNetCfg *IntegrationNetwo
 		}
 
 		if cfg.Plugins.ContainsINX() {
-			// TODO: remove when the INX-Indexer waits until the node is reachable, else the container will fail becore the Node it wants to connect to is not yet started.
-			time.Sleep(5 * time.Second)
+			inxAddress := fmt.Sprintf("%s:9029", cfg.Name)
+
+			if cfg.INXCoo.RunAsCoo {
+				cfg.INXCoo.INXAddress = inxAddress
+
+				if _, err := network.CreateCoordinator(cfg.INXCoo); err != nil {
+					return nil, err
+				}
+			}
 
 			// Setup an indexer container for this node
-			indexerCfg := &IndexerConfig{
-				INXAddress: fmt.Sprintf("%s:9029", cfg.Name),
-			}
+			indexerCfg := DefaultINXIndexerConfig()
+			indexerCfg.INXAddress = inxAddress
 			if _, err := network.CreateIndexer(indexerCfg); err != nil {
 				return nil, err
 			}

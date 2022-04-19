@@ -15,6 +15,7 @@ if [[ $1 = "build" ]]; then
   docker-compose --profile "bootstrap" build
 
   # Pull latest images
+  docker-compose pull inx-coordinator
   docker-compose pull inx-indexer
   docker-compose pull inx-mqtt
 fi

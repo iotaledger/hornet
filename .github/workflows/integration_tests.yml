@@ -23,6 +23,10 @@ jobs:
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile -t hornet:dev .
 
+      - name: Pull additional Docker images
+        run: |
+          docker pull iotaledger/inx-coordinator:latest
+
       - name: Run integration tests
         run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
 
@@ -53,6 +57,7 @@ jobs:
 
       - name: Pull additional Docker images
         run: |
+          docker pull iotaledger/inx-coordinator:latest
           docker pull iotaledger/inx-indexer:latest
 
       - name: Run integration tests
@@ -85,6 +90,7 @@ jobs:
 
       - name: Pull additional Docker images
         run: |
+          docker pull iotaledger/inx-coordinator:latest
           docker pull iotaledger/inx-indexer:latest
           docker build github.com/iotaledger/chrysalis-tools#:wfmock -t wfmock:latest
 
@@ -116,6 +122,10 @@ jobs:
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile -t hornet:dev .
 
+      - name: Pull additional Docker images
+        run: |
+          docker pull iotaledger/inx-coordinator:latest
+
       - name: Run integration tests
         run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build
 
@@ -143,6 +153,10 @@ jobs:
 
       - name: Build HORNET image
         run: docker build -f docker/Dockerfile -t hornet:dev .
+
+      - name: Pull additional Docker images
+        run: |
+          docker pull iotaledger/inx-coordinator:latest
 
       - name: Run integration tests
         run: docker-compose -f integration-tests/tester/docker-compose.yml up --abort-on-container-exit --exit-code-from tester --build

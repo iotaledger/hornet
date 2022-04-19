@@ -20,9 +20,7 @@ services:
       - snapshots
 
   inx-coordinator-bootstrap:
-    image: iotaledger/inx-coordinator:dev
-    build:
-      context: ../../inx-coordinator
+    image: iotaledger/inx-coordinator:0.1
     networks:
       peering_net:
         ipv4_address: 172.18.211.20

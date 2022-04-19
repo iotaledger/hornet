@@ -37,6 +37,7 @@ const (
 	autopeeringMaxTries = 50
 
 	containerNodeImage           = "hornet:dev"
+	coordinatorImage             = "iotaledger/inx-coordinator:latest"
 	indexerImage                 = "iotaledger/inx-indexer:latest"
 	containerWhiteFlagMockServer = "wfmock:latest"
 
@@ -80,16 +81,15 @@ func DefaultConfig() *NodeConfig {
 		},
 		Network:     DefaultNetworkConfig(),
 		Snapshot:    DefaultSnapshotConfig(),
-		Coordinator: DefaultCoordinatorConfig(),
 		Protocol:    DefaultProtocolConfig(),
 		RestAPI:     DefaultRestAPIConfig(),
 		INX:         DefaultINXConfig(),
 		Plugins:     DefaultPluginConfig(),
 		Profiling:   DefaultProfilingConfig(),
 		Dashboard:   DefaultDashboardConfig(),
-		Receipts:    DefaultReceiptValidatorConfig(),
-		Migrator:    DefaultMigratorConfig(),
+		Receipts:    DefaultNodeReceiptValidatorConfig(),
 		Autopeering: DefaultAutopeeringConfig(),
+		INXCoo:      DefaultINXCoordinatorConfig(),
 	}
 	cfg.ExposedPorts = nat.PortSet{
 		nat.Port(fmt.Sprintf("%s/tcp", strings.Split(cfg.RestAPI.BindAddress, ":")[1])): {},
@@ -122,14 +122,82 @@ func DefaultWhiteFlagMockServerConfig(name string, configFileName string) *White
 	}
 }
 
-// IndexerConfig defines the config of an INX-Indexer.
-type IndexerConfig struct {
-	Name        string
+type INXCoordinatorConfig struct {
+	// Whether to let the node run as the coordinator.
+	RunAsCoo bool
+	// The name of this node.
+	Name string
+	// Environment variables.
+	Envs []string
+	// Binds for the container.
+	Binds []string
+	// INXAddress is the INX address of the node.
+	INXAddress string
+	// Coordinator config.
+	Coordinator CoordinatorConfig
+	// Plugin config.
+	Plugins PluginConfig
+	// Migrator config.
+	Migrator MigratorConfig
+	// Receipt validator config.
+	Validator ReceiptValidatorConfig
+}
+
+// DefaultINXCoordinatorConfig returns the default INX coordinator config.
+func DefaultINXCoordinatorConfig() *INXCoordinatorConfig {
+	return &INXCoordinatorConfig{
+		RunAsCoo: false,
+		Name:     "",
+		Envs:     []string{"LOGGER_LEVEL=debug"},
+		Binds: []string{
+			fmt.Sprintf("hornet-testing-assets:%s:rw", assetsDir),
+		},
+		Coordinator: DefaultCoordinatorConfig(),
+		Migrator:    DefaultMigratorConfig(),
+		Validator:   DefaultReceiptValidatorConfig(),
+	}
+}
+
+// WithMigration adjusts the config to activate the migrator plugin.
+func (cfg *INXCoordinatorConfig) WithMigration() {
+	cfg.Migrator.Bootstrap = true
+	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Migrator")
+}
+
+// CLIFlags returns the config as CLI flags.
+func (cfg *INXCoordinatorConfig) CLIFlags() []string {
+	var cliFlags []string
+	cliFlags = append(cliFlags, fmt.Sprintf("--inx.address=%s", cfg.INXAddress))
+	cliFlags = append(cliFlags, cfg.Coordinator.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.Plugins.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.Migrator.CLIFlags()...)
+	cliFlags = append(cliFlags, cfg.Validator.CLIFlags()...)
+	return cliFlags
+}
+
+// INXIndexerConfig defines the config of an INX-Indexer.
+type INXIndexerConfig struct {
+	// The name of this node.
+	Name string
+	// Environment variables.
+	Envs []string
+	// Binds for the container.
+	Binds       []string
 	INXAddress  string
 	BindAddress string
 }
 
-func (cfg *IndexerConfig) CLIFlags() []string {
+func DefaultINXIndexerConfig() *INXIndexerConfig {
+	return &INXIndexerConfig{
+		Name: "",
+		Envs: []string{"LOGGER_LEVEL=debug"},
+		Binds: []string{
+			fmt.Sprintf("hornet-testing-assets:%s:rw", assetsDir),
+		},
+	}
+}
+
+func (cfg *INXIndexerConfig) CLIFlags() []string {
 	var cliFlags []string
 	cliFlags = append(cliFlags, fmt.Sprintf("--inx.address=%s", cfg.INXAddress))
 	cliFlags = append(cliFlags, fmt.Sprintf("--indexer.bindAddress=%s", cfg.BindAddress))
@@ -154,8 +222,6 @@ type NodeConfig struct {
 	INX INXConfig
 	// Snapshot config.
 	Snapshot SnapshotConfig
-	// Coordinator config.
-	Coordinator CoordinatorConfig
 	// Protocol config.
 	Protocol ProtocolConfig
 	// Plugin config.
@@ -170,20 +236,21 @@ type NodeConfig struct {
 	Migrator MigratorConfig
 	// Autopeering config.
 	Autopeering AutopeeringConfig
+	// INXCoo inx-coordinator config.
+	INXCoo *INXCoordinatorConfig
 }
 
 // AsCoo adjusts the config to make it usable as the Coordinator's config.
 func (cfg *NodeConfig) AsCoo() {
-	cfg.Coordinator.Bootstrap = true
-	cfg.Coordinator.RunAsCoo = true
-	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Coordinator")
-	cfg.Envs = append(cfg.Envs, fmt.Sprintf("COO_PRV_KEYS=%s", strings.Join(cfg.Coordinator.PrivateKeys, ",")))
+	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "INX")
+	cfg.INXCoo.RunAsCoo = true
+	cfg.INXCoo.Envs = append(cfg.INXCoo.Envs, fmt.Sprintf("COO_PRV_KEYS=%s", strings.Join(cfg.INXCoo.Coordinator.PrivateKeys, ",")))
 }
 
 // WithMigration adjusts the config to activate the migrator plugin.
 func (cfg *NodeConfig) WithMigration() {
-	cfg.Migrator.Bootstrap = true
-	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Migrator", "Receipts")
+	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
+	cfg.INXCoo.WithMigration()
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -191,7 +258,6 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	var cliFlags []string
 	cliFlags = append(cliFlags, cfg.Network.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Snapshot.CLIFlags()...)
-	cliFlags = append(cliFlags, cfg.Coordinator.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Protocol.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.RestAPI.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.INX.CLIFlags()...)
@@ -199,7 +265,6 @@ func (cfg *NodeConfig) CLIFlags() []string {
 	cliFlags = append(cliFlags, cfg.Profiling.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Dashboard.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Receipts.CLIFlags()...)
-	cliFlags = append(cliFlags, cfg.Migrator.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Autopeering.CLIFlags()...)
 	return cliFlags
 }
@@ -413,8 +478,6 @@ func DefaultSnapshotConfig() SnapshotConfig {
 
 // CoordinatorConfig defines coordinator specific configuration.
 type CoordinatorConfig struct {
-	// Whether to let the node run as the coordinator.
-	RunAsCoo bool
 	// The coo private keys.
 	PrivateKeys []string
 	// Whether to run the coordinator in bootstrap node.
@@ -434,8 +497,7 @@ func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 // DefaultCoordinatorConfig returns the default coordinator config.
 func DefaultCoordinatorConfig() CoordinatorConfig {
 	return CoordinatorConfig{
-		RunAsCoo:  false,
-		Bootstrap: false,
+		Bootstrap: true,
 		PrivateKeys: []string{"651941eddb3e68cb1f6ef4ef5b04625dcf5c70de1fdc4b1c9eadb2c219c074e0ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
 			"0e324c6ff069f31890d496e9004636fd73d8e8b5bea08ec58a4178ca85462325f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c"},
 		IssuanceInterval: 10 * time.Second,
@@ -452,6 +514,22 @@ type ReceiptsConfig struct {
 	Validate bool
 	// Whether to ignore soft errors or not.
 	IgnoreSoftErrors bool
+	// The validator config
+	Validator ReceiptValidatorConfig
+}
+
+func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
+	flags := []string{
+		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsBackupEnabled, receiptsConfig.BackupEnabled),
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsBackupPath, receiptsConfig.BackupFolder),
+		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorValidate, receiptsConfig.Validate),
+		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorIgnoreSoftErrors, receiptsConfig.IgnoreSoftErrors),
+	}
+	flags = append(flags, receiptsConfig.Validator.CLIFlags()...)
+	return flags
+}
+
+type ReceiptValidatorConfig struct {
 	// The API to query.
 	APIAddress string
 	// The API timeout.
@@ -462,26 +540,28 @@ type ReceiptsConfig struct {
 	CoordinatorMerkleTreeDepth int
 }
 
-func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
-	return []string{
-		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsBackupEnabled, receiptsConfig.BackupEnabled),
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsBackupPath, receiptsConfig.BackupFolder),
-		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorValidate, receiptsConfig.Validate),
-		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorIgnoreSoftErrors, receiptsConfig.IgnoreSoftErrors),
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPIAddress, receiptsConfig.APIAddress),
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPITimeout, receiptsConfig.APITimeout),
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorCoordinatorAddress, receiptsConfig.CoordinatorAddress),
-		fmt.Sprintf("--%s=%d", receipt.CfgReceiptsValidatorCoordinatorMerkleTreeDepth, receiptsConfig.CoordinatorMerkleTreeDepth),
+func DefaultNodeReceiptValidatorConfig() ReceiptsConfig {
+	return ReceiptsConfig{
+		BackupEnabled:    false,
+		BackupFolder:     "receipts",
+		Validate:         false,
+		IgnoreSoftErrors: false,
+		Validator:        DefaultReceiptValidatorConfig(),
 	}
 }
 
-// DefaultReceiptValidatorConfig returns the default migrator plugin config.
-func DefaultReceiptValidatorConfig() ReceiptsConfig {
-	return ReceiptsConfig{
-		BackupEnabled:              false,
-		BackupFolder:               "receipts",
-		Validate:                   false,
-		IgnoreSoftErrors:           false,
+func (validatorConfig *ReceiptValidatorConfig) CLIFlags() []string {
+	return []string{
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPIAddress, validatorConfig.APIAddress),
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPITimeout, validatorConfig.APITimeout),
+		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorCoordinatorAddress, validatorConfig.CoordinatorAddress),
+		fmt.Sprintf("--%s=%d", receipt.CfgReceiptsValidatorCoordinatorMerkleTreeDepth, validatorConfig.CoordinatorMerkleTreeDepth),
+	}
+}
+
+// DefaultReceiptValidatorConfig returns the default receipt validator config.
+func DefaultReceiptValidatorConfig() ReceiptValidatorConfig {
+	return ReceiptValidatorConfig{
 		APIAddress:                 "http://localhost:14265",
 		APITimeout:                 5 * time.Second,
 		CoordinatorAddress:         "JFQ999DVN9CBBQX9DSAIQRAFRALIHJMYOXAQSTCJLGA9DLOKIWHJIFQKMCQ9QHWW9RXQMDBVUIQNIY9GZ",

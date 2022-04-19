@@ -161,8 +161,40 @@ func (n *Network) CreateNode(cfg *NodeConfig, optPrvKey ...crypto.PrivKey) (*Nod
 	return peer, nil
 }
 
+// CreateCoordinator creates a new INX-Coordinator in the network.
+func (n *Network) CreateCoordinator(cfg *INXCoordinatorConfig) (*INXExtension, error) {
+	name := n.PrefixName(fmt.Sprintf("%s%d", containerNameINX, len(n.INXExtensions)))
+
+	cfg.Name = name
+
+	// create Docker container
+	container := NewDockerContainer(n.dockerClient)
+	if err := container.CreateCoordinatorContainer(cfg); err != nil {
+		return nil, err
+	}
+	if err := container.ConnectToNetwork(n.ID); err != nil {
+		return nil, err
+	}
+	if err := container.Start(); err != nil {
+		return nil, err
+	}
+
+	ip, err := container.IP(n.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	ext := &INXExtension{
+		Name:            cfg.Name,
+		IP:              ip,
+		DockerContainer: container,
+	}
+	n.INXExtensions = append(n.INXExtensions, ext)
+	return ext, nil
+}
+
 // CreateIndexer creates a new INX-Indexer in the network.
-func (n *Network) CreateIndexer(cfg *IndexerConfig) (*INXExtension, error) {
+func (n *Network) CreateIndexer(cfg *INXIndexerConfig) (*INXExtension, error) {
 	name := n.PrefixName(fmt.Sprintf("%s%d", containerNameINX, len(n.INXExtensions)))
 
 	cfg.Name = name
