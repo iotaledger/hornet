@@ -122,6 +122,31 @@ func DefaultWhiteFlagMockServerConfig(name string, configFileName string) *White
 	}
 }
 
+//TODO: remove when we rename the node config to app in HORNET
+// AppPluginConfig defines plugin specific configuration.
+type AppPluginConfig struct {
+	// Holds explicitly enabled plugins.
+	Enabled []string
+	// Holds explicitly disabled plugins.
+	Disabled []string
+}
+
+// CLIFlags returns the config as CLI flags.
+func (pluginConfig *AppPluginConfig) CLIFlags() []string {
+	return []string{
+		fmt.Sprintf("--%s=%s", "app.enablePlugins", strings.Join(pluginConfig.Enabled, ",")),
+		fmt.Sprintf("--%s=%s", "app.disablePlugins", strings.Join(pluginConfig.Disabled, ",")),
+	}
+}
+
+// DefaultAppPluginConfig returns the default plugin config.
+func DefaultAppPluginConfig() AppPluginConfig {
+	return AppPluginConfig{
+		Enabled:  []string{},
+		Disabled: []string{},
+	}
+}
+
 type INXCoordinatorConfig struct {
 	// Whether to let the node run as the coordinator.
 	RunAsCoo bool
@@ -136,7 +161,7 @@ type INXCoordinatorConfig struct {
 	// Coordinator config.
 	Coordinator CoordinatorConfig
 	// Plugin config.
-	Plugins PluginConfig
+	Plugins AppPluginConfig
 	// Migrator config.
 	Migrator MigratorConfig
 	// Receipt validator config.
@@ -153,6 +178,7 @@ func DefaultINXCoordinatorConfig() *INXCoordinatorConfig {
 			fmt.Sprintf("hornet-testing-assets:%s:rw", assetsDir),
 		},
 		Coordinator: DefaultCoordinatorConfig(),
+		Plugins:     DefaultAppPluginConfig(),
 		Migrator:    DefaultMigratorConfig(),
 		Validator:   DefaultReceiptValidatorConfig(),
 	}
@@ -232,8 +258,6 @@ type NodeConfig struct {
 	Dashboard DashboardConfig
 	// Receipts config
 	Receipts ReceiptsConfig
-	// Migrator config.
-	Migrator MigratorConfig
 	// Autopeering config.
 	Autopeering AutopeeringConfig
 	// INXCoo inx-coordinator config.

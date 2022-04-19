@@ -47,7 +47,7 @@ func TestBatch(t *testing.T) {
 		case index == 0:
 			cfg.WithMigration()
 			cfg.INXCoo.Validator = cfg.Receipts.Validator
-			cfg.Migrator.StartIndex = 1
+			cfg.INXCoo.Migrator.StartIndex = 1
 		default:
 			cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
 		}
