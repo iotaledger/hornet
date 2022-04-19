@@ -67,11 +67,11 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 			return nil, err
 		}
 		merkleTreeHash := &coordinator.MilestoneMerkleProof{
-			PastConeMerkleProof:  &coordinator.MerkleTreeHash{},
-			InclusionMerkleProof: &coordinator.MerkleTreeHash{},
+			ConfirmedMerkleRoot: &coordinator.MerkleTreeHash{},
+			AppliedMerkleRoot:   &coordinator.MerkleTreeHash{},
 		}
-		copy(merkleTreeHash.PastConeMerkleProof[:], mutations.ConfirmedMerkleRoot[:])
-		copy(merkleTreeHash.InclusionMerkleProof[:], mutations.AppliedMerkleRoot[:])
+		copy(merkleTreeHash.ConfirmedMerkleRoot[:], mutations.ConfirmedMerkleRoot[:])
+		copy(merkleTreeHash.AppliedMerkleRoot[:], mutations.AppliedMerkleRoot[:])
 		return merkleTreeHash, nil
 	}
 
@@ -99,7 +99,6 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	err = te.coo.InitState(true, 0, &coordinator.LatestMilestone{
 		Index:     0,
 		Timestamp: 0,
-		MessageID: hornet.NullMessageID(),
 	})
 	require.NoError(te.TestInterface, err)
 

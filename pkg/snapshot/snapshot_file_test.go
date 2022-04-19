@@ -251,7 +251,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			count--
 
 			parents := iotago.MilestoneParentMessageIDs{utils.RandMessageID().ToArray()}
-			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint64(), utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
+			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
 			if err != nil {
 				panic(err)
 			}
@@ -330,11 +330,11 @@ func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *u
 }
 
 func randLSTransactionUnspentOutputs() *utxo.Output {
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), utils.RandOutput(utils.RandOutputType()))
+	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType()))
 }
 
 func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
-	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex, rand.Uint64())
+	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex, rand.Uint32())
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {

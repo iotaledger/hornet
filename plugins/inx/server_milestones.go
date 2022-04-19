@@ -243,7 +243,7 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 	}
 
 	return &inx.WhiteFlagResponse{
-		MilestoneConfirmedMerkleProof: mutations.ConfirmedMerkleRoot[:],
-		MilestoneAppliedMerkleProof:   mutations.AppliedMerkleRoot[:],
+		MilestoneConfirmedMerkleRoot: mutations.ConfirmedMerkleRoot[:],
+		MilestoneAppliedMerkleRoot:   mutations.AppliedMerkleRoot[:],
 	}, nil
 }
