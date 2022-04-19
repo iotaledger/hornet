@@ -61,7 +61,7 @@ func TestTipSelect(t *testing.T) {
 	// fill the storage with some messages to fill the tipselect pool
 	msgCount := 0
 	for i := 0; i < 100; i++ {
-		msgMeta := te.NewTestMessage(msgCount, hornet.MessageIDs{te.Milestones[0].Milestone().MessageID})
+		msgMeta := te.NewTestMessage(msgCount, hornet.MessageIDs{te.LastMilestoneMessageID})
 		ts.AddTip(msgMeta)
 		msgCount++
 	}
@@ -124,12 +124,12 @@ func TestTipSelect(t *testing.T) {
 				}, false)
 			require.NoError(te.TestInterface, err)
 
-			minOldestConeRootIndex := milestone.Index(1)
+			minOldestConeRootIndex := milestone.Index(0)
 			if cmi > milestone.Index(MaxDeltaMsgOldestConeRootIndexToCMI) {
 				minOldestConeRootIndex = cmi - milestone.Index(MaxDeltaMsgOldestConeRootIndexToCMI)
 			}
 
-			minYoungestConeRootIndex := milestone.Index(1)
+			minYoungestConeRootIndex := milestone.Index(0)
 			if cmi > milestone.Index(MaxDeltaMsgYoungestConeRootIndexToCMI) {
 				minYoungestConeRootIndex = cmi - milestone.Index(MaxDeltaMsgYoungestConeRootIndexToCMI)
 			}
