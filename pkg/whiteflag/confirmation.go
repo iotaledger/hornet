@@ -72,7 +72,7 @@ func ConfirmMilestone(
 	checkMessageReferencedFunc CheckMessageReferencedFunc,
 	setMessageReferencedFunc SetMessageReferencedFunc,
 	serverMetrics *metrics.ServerMetrics,
-	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint64),
+	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint32),
 	onMilestoneConfirmed func(confirmation *Confirmation),
 	onLedgerUpdated func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents),
 	onTreasuryMutated func(index milestone.Index, tuple *utxo.TreasuryMutationTuple),
@@ -121,16 +121,16 @@ func ConfirmMilestone(
 		Mutations:          mutations,
 	}
 
-	// Verify the calculated PastConeMerkleProof with the one inside the milestone
-	pastConeMerkleTreeHash := ms.PastConeMerkleProof
-	if mutations.PastConeMerkleProof != pastConeMerkleTreeHash {
-		return nil, nil, fmt.Errorf("confirmMilestone: computed InclusionMerkleProof %s does not match the value in the milestone %s", hex.EncodeToString(mutations.PastConeMerkleProof[:]), hex.EncodeToString(pastConeMerkleTreeHash[:]))
+	// Verify the calculated ConfirmedMerkleRoot with the one inside the milestone
+	confirmedMerkleTreeHash := ms.ConfirmedMerkleRoot
+	if mutations.ConfirmedMerkleRoot != confirmedMerkleTreeHash {
+		return nil, nil, fmt.Errorf("confirmMilestone: computed AppliedMerkleRoot %s does not match the value in the milestone %s", hex.EncodeToString(mutations.ConfirmedMerkleRoot[:]), hex.EncodeToString(confirmedMerkleTreeHash[:]))
 	}
 
-	// Verify the calculated InclusionMerkleProof with the one inside the milestone
-	inclusionMerkleTreeHash := ms.InclusionMerkleProof
-	if mutations.InclusionMerkleProof != inclusionMerkleTreeHash {
-		return nil, nil, fmt.Errorf("confirmMilestone: computed InclusionMerkleProof %s does not match the value in the milestone %s", hex.EncodeToString(mutations.InclusionMerkleProof[:]), hex.EncodeToString(inclusionMerkleTreeHash[:]))
+	// Verify the calculated AppliedMerkleRoot with the one inside the milestone
+	appliedMerkleTreeHash := ms.AppliedMerkleRoot
+	if mutations.AppliedMerkleRoot != appliedMerkleTreeHash {
+		return nil, nil, fmt.Errorf("confirmMilestone: computed AppliedMerkleRoot %s does not match the value in the milestone %s", hex.EncodeToString(mutations.AppliedMerkleRoot[:]), hex.EncodeToString(appliedMerkleTreeHash[:]))
 	}
 
 	timeWhiteflag := time.Now()

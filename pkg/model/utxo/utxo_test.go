@@ -26,7 +26,7 @@ func TestConfirmationApplyAndRollbackToEmptyLedger(t *testing.T) {
 	}
 
 	msIndex := milestone.Index(756)
-	msTimestamp := rand.Uint64()
+	msTimestamp := rand.Uint32()
 
 	spents := Spents{
 		RandUTXOSpent(outputs[3], msIndex, msTimestamp),
@@ -85,7 +85,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 	}
 
 	previousMsIndex := milestone.Index(48)
-	previousMsTimestamp := rand.Uint64()
+	previousMsTimestamp := rand.Uint32()
 	previousSpents := Spents{
 		RandUTXOSpent(previousOutputs[1], previousMsIndex, previousMsTimestamp),
 	}
@@ -102,7 +102,7 @@ func TestConfirmationApplyAndRollbackToPreviousLedger(t *testing.T) {
 		RandUTXOOutput(iotago.OutputAlias),
 	}
 	msIndex := milestone.Index(49)
-	msTimestamp := rand.Uint64()
+	msTimestamp := rand.Uint32()
 	spents := Spents{
 		RandUTXOSpent(previousOutputs[2], msIndex, msTimestamp),
 		RandUTXOSpent(outputs[2], msIndex, msTimestamp),

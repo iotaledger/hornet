@@ -43,7 +43,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(cooPrivateKeys, keyManager, len(cooPrivateKeys))
 
-	computeWhiteFlag := func(ctx context.Context, index milestone.Index, timestamp uint64, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleProof, error) {
+	computeWhiteFlag := func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleProof, error) {
 		messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
 		metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
 		memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(te.storage, metadataMemcache)
@@ -70,8 +70,8 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 			PastConeMerkleProof:  &coordinator.MerkleTreeHash{},
 			InclusionMerkleProof: &coordinator.MerkleTreeHash{},
 		}
-		copy(merkleTreeHash.PastConeMerkleProof[:], mutations.PastConeMerkleProof[:])
-		copy(merkleTreeHash.InclusionMerkleProof[:], mutations.InclusionMerkleProof[:])
+		copy(merkleTreeHash.PastConeMerkleProof[:], mutations.ConfirmedMerkleRoot[:])
+		copy(merkleTreeHash.InclusionMerkleProof[:], mutations.AppliedMerkleRoot[:])
 		return merkleTreeHash, nil
 	}
 

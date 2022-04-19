@@ -324,7 +324,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		whiteflag.DefaultCheckMessageReferencedFunc,
 		whiteflag.DefaultSetMessageReferencedFunc,
 		t.serverMetrics,
-		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
+		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 		},
 		func(confirmation *whiteflag.Confirmation) {

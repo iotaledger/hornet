@@ -6,20 +6,20 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/pkg/whiteflag"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
 	inx "github.com/iotaledger/inx/go"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -46,7 +46,17 @@ func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, e
 		return nil, status.Errorf(codes.Internal, "error computing milestone ID: %s", err)
 	}
 
-	return inx.NewMilestone(*milestoneID, ms.Milestone().MessageID.ToArray(), uint32(milestone.Index), uint32(milestone.Timestamp.Unix())), nil
+	bytes, err := milestonePayload.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "error serializing milestone payload: %s", err)
+	}
+
+	return &inx.Milestone{
+		MilestoneInfo: inx.NewMilestoneInfo(*milestoneID, uint32(milestone.Index), uint32(milestone.Timestamp.Unix())),
+		Milestone: &inx.RawMilestone{
+			Data: bytes,
+		},
+	}, nil
 }
 
 func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
@@ -54,7 +64,8 @@ func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
 	if cachedMilestone == nil {
 		return nil, status.Errorf(codes.NotFound, "milestone %d not found", msIndex)
 	}
-	defer cachedMilestone.Release(true)                          // milestone -1
+	defer cachedMilestone.Release(true) // milestone -1
+
 	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone + 1
 }
 
@@ -121,8 +132,8 @@ func (s *INXServer) ListenToConfirmedMilestone(_ *inx.NoParams, srv inx.INX_List
 func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequest) (*inx.WhiteFlagResponse, error) {
 
 	requestedIndex := milestone.Index(req.GetMilestoneIndex())
-	requestedTimestamp := uint64(req.GetMilestoneTimestamp())
-	requestedParents := hornet.MessageIDsFromSliceOfSlices(req.GetParents())
+	requestedTimestamp := req.GetMilestoneTimestamp()
+	requestedParents := MessageIDsFromINXMessageIDs(req.GetParents())
 	requestedLastMilestoneID := req.GetLastMilestoneId().Unwrap()
 
 	// check if the requested milestone index would be the next one
@@ -232,7 +243,7 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 	}
 
 	return &inx.WhiteFlagResponse{
-		MilestonePastConeMerkleProof:  mutations.PastConeMerkleProof[:],
-		MilestoneInclusionMerkleProof: mutations.InclusionMerkleProof[:],
+		MilestoneConfirmedMerkleProof: mutations.ConfirmedMerkleRoot[:],
+		MilestoneAppliedMerkleProof:   mutations.AppliedMerkleRoot[:],
 	}, nil
 }

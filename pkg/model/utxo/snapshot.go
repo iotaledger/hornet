@@ -77,7 +77,7 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, deSeriParas *iotago.DeSerial
 		return nil, fmt.Errorf("invalid LS output length: %w", err)
 	}
 
-	return CreateOutput(&outputID, hornet.MessageIDFromArray(messageID), milestone.Index(confirmationIndex), uint64(milestoneTimestamp), output), nil
+	return CreateOutput(&outputID, hornet.MessageIDFromArray(messageID), milestone.Index(confirmationIndex), milestoneTimestamp, output), nil
 }
 
 func (s *Spent) SnapshotBytes() []byte {
@@ -87,7 +87,7 @@ func (s *Spent) SnapshotBytes() []byte {
 	return m.Bytes()
 }
 
-func SpentFromSnapshotReader(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters, msIndex milestone.Index, msTimestamp uint64) (*Spent, error) {
+func SpentFromSnapshotReader(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters, msIndex milestone.Index, msTimestamp uint32) (*Spent, error) {
 	output, err := OutputFromSnapshotReader(reader, deSeriParas)
 	if err != nil {
 		return nil, err

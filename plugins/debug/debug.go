@@ -135,7 +135,7 @@ func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsRespon
 		messagesMemcache.CachedMessage,
 		deps.NetworkID,
 		request.Index,
-		uint64(request.Timestamp),
+		request.Timestamp,
 		parents,
 		lastMilestoneID,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
@@ -148,8 +148,8 @@ func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsRespon
 	}
 
 	return &ComputeWhiteFlagMutationsResponse{
-		InclusionMerkleProof: iotago.EncodeHex(mutations.InclusionMerkleProof[:]),
-		PastConeMerkleProof:  iotago.EncodeHex(mutations.PastConeMerkleProof[:]),
+		ConfirmedMerkleRoot: iotago.EncodeHex(mutations.ConfirmedMerkleRoot[:]),
+		AppliedMerkleRoot:   iotago.EncodeHex(mutations.AppliedMerkleRoot[:]),
 	}, nil
 }
 

@@ -24,7 +24,7 @@ func TestUTXOComputeBalance(t *testing.T) {
 	require.NoError(t, utxo.AddUnspentOutput(RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, utils.RandAddress(iotago.AddressAlias), 626_659_696)))
 
 	msIndex := milestone.Index(756)
-	msTimestamp := rand.Uint64()
+	msTimestamp := rand.Uint32()
 
 	outputs := Outputs{
 		RandUTXOOutputOnAddressWithAmount(iotago.OutputBasic, utils.RandAddress(iotago.AddressNFT), 2_134_656_365),
@@ -73,7 +73,7 @@ func TestUTXOIteration(t *testing.T) {
 	}
 
 	msIndex := milestone.Index(756)
-	msTimestamp := rand.Uint64()
+	msTimestamp := rand.Uint32()
 
 	spents := Spents{
 		RandUTXOSpent(outputs[3], msIndex, msTimestamp),

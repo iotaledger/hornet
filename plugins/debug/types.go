@@ -17,12 +17,12 @@ type ComputeWhiteFlagMutationsRequest struct {
 	LastMilestoneID string `json:"lastMilestoneId"`
 }
 
-// ComputeWhiteFlagMutationsRequest defines the response for a POST debugComputeWhiteFlagMutations REST API call.
+// ComputeWhiteFlagMutationsResponse defines the response for a POST debugComputeWhiteFlagMutations REST API call.
 type ComputeWhiteFlagMutationsResponse struct {
-	// The hex encoded inclusion merkle tree hash as a result of the white flag computation.
-	InclusionMerkleProof string `json:"inclusionMerkleProof"`
-	// The hex encoded past cone merkle tree hash as a result of the white flag computation.
-	PastConeMerkleProof string `json:"pastConeMerkleProof"`
+	// The hex encoded confirmed merkle tree root as a result of the white flag computation.
+	ConfirmedMerkleRoot string `json:"confirmedMerkleRoot"`
+	// The hex encoded applied merkle tree root as a result of the white flag computation.
+	AppliedMerkleRoot string `json:"appliedMerkleRoot"`
 }
 
 // outputIDsResponse defines the response of a GET debug outputs REST API call.

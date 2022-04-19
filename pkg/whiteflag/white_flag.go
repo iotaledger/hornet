@@ -67,9 +67,9 @@ type WhiteFlagMutations struct {
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
 	// The merkle tree root hash of all referenced messages in the past cone.
-	PastConeMerkleProof [iotago.MilestoneMerkleProofLength]byte
+	ConfirmedMerkleRoot [iotago.MilestoneMerkleProofLength]byte
 	// The merkle tree root hash of all included transaction messages.
-	InclusionMerkleProof [iotago.MilestoneMerkleProofLength]byte
+	AppliedMerkleRoot [iotago.MilestoneMerkleProofLength]byte
 }
 
 // ComputeWhiteFlagMutations computes the ledger changes in accordance to the white-flag rules for the cone referenced by the parents.
@@ -85,7 +85,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	cachedMessageFunc storage.CachedMessageFunc,
 	networkId uint64,
 	msIndex milestone.Index,
-	msTimestamp uint64,
+	msTimestamp uint32,
 	parents hornet.MessageIDs,
 	lastMilestoneID iotago.MilestoneID,
 	traversalCondition dag.Predicate) (*WhiteFlagMutations, error) {
@@ -102,7 +102,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	semValCtx := &iotago.SemanticValidationContext{
 		ExtParas: &iotago.ExternalUnlockParameters{
 			ConfMsIndex: uint32(msIndex),
-			ConfUnix:    uint32(msTimestamp),
+			ConfUnix:    msTimestamp,
 		},
 	}
 
@@ -314,26 +314,26 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	}
 
 	// compute past cone merkle tree root hash
-	pastConeMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesReferenced))
+	confirmedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesReferenced))
 	for i := range wfConf.MessagesReferenced {
-		pastConeMarshalers[i] = wfConf.MessagesReferenced[i]
+		confirmedMarshalers[i] = wfConf.MessagesReferenced[i]
 	}
-	pastConeMerkleProofHasher, err := NewHasher(crypto.BLAKE2b_256).Hash(pastConeMarshalers)
+	confirmedMerkleHasher, err := NewHasher(crypto.BLAKE2b_256).Hash(confirmedMarshalers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute past cone Merkle tree hash: %w", err)
+		return nil, fmt.Errorf("failed to compute confirmed Merkle tree root: %w", err)
 	}
-	copy(wfConf.PastConeMerkleProof[:], pastConeMerkleProofHasher)
+	copy(wfConf.ConfirmedMerkleRoot[:], confirmedMerkleHasher)
 
 	// compute inclusion merkle tree root hash
-	includedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesIncludedWithTransactions))
+	appliedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesIncludedWithTransactions))
 	for i := range wfConf.MessagesIncludedWithTransactions {
-		includedMarshalers[i] = wfConf.MessagesIncludedWithTransactions[i]
+		appliedMarshalers[i] = wfConf.MessagesIncludedWithTransactions[i]
 	}
-	inclusionMerkleProofHasher, err := NewHasher(crypto.BLAKE2b_256).Hash(includedMarshalers)
+	appliedMerkleHasher, err := NewHasher(crypto.BLAKE2b_256).Hash(appliedMarshalers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute inclusion Merkle tree hash: %w", err)
+		return nil, fmt.Errorf("failed to compute applied Merkle tree root: %w", err)
 	}
-	copy(wfConf.InclusionMerkleProof[:], inclusionMerkleProofHasher)
+	copy(wfConf.AppliedMerkleRoot[:], appliedMerkleHasher)
 
 	if len(wfConf.MessagesIncludedWithTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
 		return nil, ErrIncludedMessagesSumDoesntMatch

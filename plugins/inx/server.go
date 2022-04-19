@@ -63,27 +63,29 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 	}
 
 	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
-	var lmi *inx.Milestone
+	var lmi *inx.MilestoneInfo
 	if latestMilestoneIndex > pruningIndex {
-		lmi, err = milestoneForIndex(latestMilestoneIndex)
+		milestone, err := milestoneForIndex(latestMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}
+		lmi = milestone.GetMilestoneInfo()
 	} else {
-		lmi = &inx.Milestone{
+		lmi = &inx.MilestoneInfo{
 			MilestoneIndex: uint32(latestMilestoneIndex),
 		}
 	}
 
 	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
-	var cmi *inx.Milestone
+	var cmi *inx.MilestoneInfo
 	if confirmedMilestoneIndex > pruningIndex {
-		cmi, err = milestoneForIndex(confirmedMilestoneIndex)
+		milestone, err := milestoneForIndex(confirmedMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}
+		cmi = milestone.GetMilestoneInfo()
 	} else {
-		cmi = &inx.Milestone{
+		cmi = &inx.MilestoneInfo{
 			MilestoneIndex: uint32(confirmedMilestoneIndex),
 		}
 	}

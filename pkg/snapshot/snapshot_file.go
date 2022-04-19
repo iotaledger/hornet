@@ -575,7 +575,7 @@ func readOutput(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParamet
 	return utxo.OutputFromSnapshotReader(reader, deSeriParas)
 }
 
-func readSpent(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters, msIndex milestone.Index, msTimestamp uint64) (*utxo.Spent, error) {
+func readSpent(reader io.ReadSeeker, deSeriParas *iotago.DeSerializationParameters, msIndex milestone.Index, msTimestamp uint32) (*utxo.Spent, error) {
 	return utxo.SpentFromSnapshotReader(reader, deSeriParas, msIndex, msTimestamp)
 }
 
