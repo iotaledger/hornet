@@ -318,22 +318,22 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	for i := range wfConf.MessagesReferenced {
 		confirmedMarshalers[i] = wfConf.MessagesReferenced[i]
 	}
-	confirmedMerkleHasher, err := NewHasher(crypto.BLAKE2b_256).Hash(confirmedMarshalers)
+	confirmedMerkleHash, err := NewHasher(crypto.BLAKE2b_256).Hash(confirmedMarshalers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute confirmed Merkle tree root: %w", err)
+		return nil, fmt.Errorf("failed to compute confirmed merkle tree root: %w", err)
 	}
-	copy(wfConf.ConfirmedMerkleRoot[:], confirmedMerkleHasher)
+	copy(wfConf.ConfirmedMerkleRoot[:], confirmedMerkleHash)
 
 	// compute inclusion merkle tree root hash
 	appliedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesIncludedWithTransactions))
 	for i := range wfConf.MessagesIncludedWithTransactions {
 		appliedMarshalers[i] = wfConf.MessagesIncludedWithTransactions[i]
 	}
-	appliedMerkleHasher, err := NewHasher(crypto.BLAKE2b_256).Hash(appliedMarshalers)
+	appliedMerkleHash, err := NewHasher(crypto.BLAKE2b_256).Hash(appliedMarshalers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute applied Merkle tree root: %w", err)
+		return nil, fmt.Errorf("failed to compute applied merkle tree root: %w", err)
 	}
-	copy(wfConf.AppliedMerkleRoot[:], appliedMerkleHasher)
+	copy(wfConf.AppliedMerkleRoot[:], appliedMerkleHash)
 
 	if len(wfConf.MessagesIncludedWithTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
 		return nil, ErrIncludedMessagesSumDoesntMatch

@@ -80,12 +80,12 @@ func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenT
 		defer cachedMilestone.Release(true)                                   // milestone -1
 		payload, err := milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
 		if err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("error creating milestone: %v", err)
 			cancel()
 			return
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)
@@ -108,12 +108,12 @@ func (s *INXServer) ListenToConfirmedMilestone(_ *inx.NoParams, srv inx.INX_List
 		defer cachedMilestone.Release(true)                                   // milestone -1
 		payload, err := milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone +1
 		if err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("error creating milestone: %v", err)
 			cancel()
 			return
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)

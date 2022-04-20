@@ -196,9 +196,11 @@ func (te *TestEnvironment) ReattachMessage(messageID hornet.MessageID, parents .
 	require.NoError(te.TestInterface, err)
 
 	// We brute-force a new nonce until it is different than the original one (this is important when reattaching valid milestones)
+	powMinScore := te.PoWMinScore
 	for newMessage.Nonce == iotagoMessage.Nonce {
-		// Use a higher PowScore to force a different nonce
-		handler := pow.New(te.PoWMinScore+10.0, 5*time.Minute)
+		powMinScore += 10.0
+		// Use a higher PowScore on every iteration to force a different nonce
+		handler := pow.New(powMinScore, 5*time.Minute)
 		err := handler.DoPoW(context.Background(), newMessage, 1)
 		require.NoError(te.TestInterface, err)
 	}

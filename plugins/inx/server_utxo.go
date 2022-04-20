@@ -241,6 +241,9 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_
 		defer deps.UTXOManager.ReadUnlockLedger()
 
 		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
+		if err != nil {
+			return status.Error(codes.Unavailable, "error accessing the UTXO ledger")
+		}
 
 		if startIndex > 0 {
 			// Stream all available milestone diffs first
@@ -249,9 +252,6 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_
 				return status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
 			}
 
-			if err != nil {
-				return status.Error(codes.Unavailable, "error accessing the UTXO ledger")
-			}
 			for currentIndex := startIndex; currentIndex <= ledgerIndex; currentIndex++ {
 				msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
 				if err != nil {

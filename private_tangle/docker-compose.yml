@@ -39,7 +39,7 @@ services:
       - bootstrap
 
   inx-coordinator:
-    image: iotaledger/inx-coordinator:dev
+    image: iotaledger/inx-coordinator:0.1
     build:
       context: ../../inx-coordinator
     networks:
