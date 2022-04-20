@@ -40,8 +40,6 @@ services:
 
   inx-coordinator:
     image: iotaledger/inx-coordinator:0.1
-    build:
-      context: ../../inx-coordinator
     networks:
       peering_net:
         ipv4_address: 172.18.211.20
