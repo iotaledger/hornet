@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
-	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	"github.com/stretchr/testify/require"
 
 	"github.com/gohornet/hornet/pkg/metrics"
