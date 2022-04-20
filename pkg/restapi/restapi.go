@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	MIMEApplicationVendorIOTASerializer = "application/vnd.iota.serializer-v1"
+	MIMEApplicationVendorIOTASerializerV1 = "application/vnd.iota.serializer-v1"
 )
 
 const (

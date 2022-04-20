@@ -164,7 +164,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	mimeType, err := restapi.GetRequestContentType(c, restapi.MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+	mimeType, err := restapi.GetRequestContentType(c, restapi.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
-	case restapi.MIMEApplicationVendorIOTASerializer:
+	case restapi.MIMEApplicationVendorIOTASerializerV1:
 		if c.Request().Body == nil {
 			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: request body missing")
 			// bad request

@@ -220,18 +220,18 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteMessage, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
 		if err != nil && err != restapipkg.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case restapipkg.MIMEApplicationVendorIOTASerializer:
+		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
 			resp, err := messageBytesByID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializer, resp)
+			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
@@ -262,18 +262,18 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteTransactionsIncludedMessage, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
 		if err != nil && err != restapipkg.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case restapipkg.MIMEApplicationVendorIOTASerializer:
+		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
 			resp, err := messageBytesByTransactionID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializer, resp)
+			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
@@ -302,18 +302,18 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteOutput, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializer, echo.MIMEApplicationJSON)
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
 		if err != nil && err != restapipkg.ErrNotAcceptable {
 			return err
 		}
 
 		switch mimeType {
-		case restapipkg.MIMEApplicationVendorIOTASerializer:
+		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
 			resp, err := rawOutputByID(c)
 			if err != nil {
 				return err
 			}
-			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializer, resp)
+			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
 
 		default:
 			// default to echo.MIMEApplicationJSON
