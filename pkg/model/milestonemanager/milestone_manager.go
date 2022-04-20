@@ -108,6 +108,7 @@ func (m *MilestoneManager) VerifyMilestone(message *storage.Message) *iotago.Mil
 func (m *MilestoneManager) StoreMilestone(cachedMsg *storage.CachedMessage, ms *iotago.Milestone, requested bool) {
 	defer cachedMsg.Release(true) // message -1
 
+	// Mark every valid milestone message as milestone in the database (needed for whiteflag to find last milestone)
 	cachedMsg.Metadata().SetMilestone(true)
 
 	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestone.Index(ms.Index), cachedMsg.Message().MessageID(), time.Unix(int64(ms.Timestamp), 0)) // milestone +1
