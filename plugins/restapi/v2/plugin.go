@@ -90,9 +90,9 @@ const (
 	// GET returns the receipts for the given migrated at index.
 	RouteReceiptsMigratedAtIndex = "/receipts/:" + restapipkg.ParameterMilestoneIndex
 
-	// RouteComputeWhiteFlag is the debug route to compute the white flag confirmation for the cone of the given parents.
-	// POST computes the white flag confirmation.
-	RouteComputeWhiteFlag = "/whiteflag"
+	// RouteComputeWhiteFlagMutations is the route to compute the white flag mutations for the cone of the given parents.
+	// POST computes the white flag mutations.
+	RouteComputeWhiteFlagMutations = "/whiteflag"
 
 	// RoutePeer is the route for getting peers by their peerID.
 	// GET returns the peer
@@ -348,7 +348,7 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.POST(RouteComputeWhiteFlag, func(c echo.Context) error {
+	routeGroup.POST(RouteComputeWhiteFlagMutations, func(c echo.Context) error {
 		resp, err := computeWhiteFlagMutations(c)
 		if err != nil {
 			return err
