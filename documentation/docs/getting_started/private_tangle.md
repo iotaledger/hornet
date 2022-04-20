@@ -1,6 +1,6 @@
 ---
 description: How to run your own private Chrysalis Tangle
-image: /img/logo/HornetLogo.png
+image: /img/Banner/banner_hornet_private_tangle.png
 keywords:
 - IOTA Node 
 - Hornet Node
@@ -13,6 +13,8 @@ keywords:
 ---
 
 # Private Tangle
+
+![Hornet Node Private Tangle](/img/Banner/banner_hornet_private_tangle.png)
 
 This is a small tutorial on how to run your own private [Chrysalis](https://chrysalis.iota.org/) tangle.
 
