@@ -257,8 +257,8 @@ github.com/cockroachdb/errors v1.9.0/go.mod h1:vaNcEYYqbIqB5JhKBhFV9CneUqeuEbB2O
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f h1:6jduT9Hfc0njg5jJ1DdKCFPdMBrp/mdZfCpa5h+WM74=
 github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f/go.mod h1:Vz9DsVWQQhf3vs21MhPMZpMGSht7O/2vFW2xusFUVOs=
-github.com/cockroachdb/pebble v0.0.0-20220419145443-4a0889f8bd4e h1:iUgqCv9Uokm6oZ/eLerWRsZdH7qgs8bHBAIks1Dfn2w=
-github.com/cockroachdb/pebble v0.0.0-20220419145443-4a0889f8bd4e/go.mod h1:buxOO9GBtOcq1DiXDpIPYrmxY020K2A8lOrwno5FetU=
+github.com/cockroachdb/pebble v0.0.0-20220419171548-8b3db52b6e3c h1:M2GWMrDaEEdotTrmFKQ318P0pSuDmI0lnIqwo+R4V+s=
+github.com/cockroachdb/pebble v0.0.0-20220419171548-8b3db52b6e3c/go.mod h1:buxOO9GBtOcq1DiXDpIPYrmxY020K2A8lOrwno5FetU=
 github.com/cockroachdb/redact v1.0.8/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZZ2lK+dpvRg=
 github.com/cockroachdb/redact v1.1.3 h1:AKZds10rFSIj7qADf0g46UixK8NNLwWTNdCIGS5wfSQ=
 github.com/cockroachdb/redact v1.1.3/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZZ2lK+dpvRg=
@@ -587,8 +587,8 @@ github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418 h1:Jz+dbKADaT0q
 github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418/go.mod h1:XTiVam/ezIKtSln67bhgQnIGAv2+5hemis7B/6CrT9I=
 github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260 h1:Pf6oR/aezlojjxzaNqIZa5q1+LKFgePrH+E9B57sKiE=
 github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260/go.mod h1:/+iSQrn7Izt6kFhHBQvcE6FkklsKXa8hc35pFyFDrDw=
-github.com/gohornet/inx-coordinator v0.1.0 h1:vEngguqmAXLSCeoYa1KboRipF7iTEkPeXkT4IliRTp0=
-github.com/gohornet/inx-coordinator v0.1.0/go.mod h1:VmtJ+/jl/NL45uXS2+l/uaxuwEfgRuX7pet7unYrp+s=
+github.com/gohornet/inx-coordinator v0.1.1 h1:Ws0361WYQP5hYCyiIIrPFhN2xnL1XZKeP+60AVk0rvQ=
+github.com/gohornet/inx-coordinator v0.1.1/go.mod h1:TcF61YMPaPgccbVZrf2nR8lWjdUPCBQ5ZEiLPGyzDNU=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
 github.com/golang-jwt/jwt/v4 v4.3.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=
@@ -806,8 +806,8 @@ github.com/iotaledger/inx/go v0.0.0-20220419135047-ffc33b55140e h1:4MkLRjDN2j5KC
 github.com/iotaledger/inx/go v0.0.0-20220419135047-ffc33b55140e/go.mod h1:OflGJzQ6RM1UPoOYutB0cJneV6i2v712JXcotE8hxgg=
 github.com/iotaledger/iota.go v1.0.0 h1:tqm1FxJ/zOdzbrAaQ5BQpVF8dUy2eeGlSeWlNG8GoXY=
 github.com/iotaledger/iota.go v1.0.0/go.mod h1:RiKYwDyY7aCD1L0YRzHSjOsJ5mUR9yvQpvhZncNcGQI=
-github.com/iotaledger/iota.go/v3 v3.0.0-20220419063054-a9fef1da7ef1 h1:Jt6H57hDNtnA8OjLgfiwFjus+Oek6XoTIoAxiKopASo=
-github.com/iotaledger/iota.go/v3 v3.0.0-20220419063054-a9fef1da7ef1/go.mod h1:GMXWLKvIlIknUCjXyCcYipq3uWDqAjJQ75ylkgQFQ1I=
+github.com/iotaledger/iota.go/v3 v3.0.0-20220420101933-6a932df49bc4 h1:nWMZBrvG8r5DGl66zxD4lbaUeRk6NXHRcKr5JUO2uTA=
+github.com/iotaledger/iota.go/v3 v3.0.0-20220420101933-6a932df49bc4/go.mod h1:GMXWLKvIlIknUCjXyCcYipq3uWDqAjJQ75ylkgQFQ1I=
 github.com/ipfs/go-cid v0.0.2/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
 github.com/ipfs/go-cid v0.0.3/go.mod h1:GHWU/WuQdMPmIosc4Yn1bcCT7dSeX4lBafM7iqUPQvM=
 github.com/ipfs/go-cid v0.0.5/go.mod h1:plgt+Y5MnOey4vO4UlUazGqdbEXuFYitED67FexhXog=
@@ -1425,8 +1425,8 @@ github.com/prometheus/common v0.15.0/go.mod h1:U+gB1OBLb1lF3O42bTCL+FK18tX9Oar16
 github.com/prometheus/common v0.18.0/go.mod h1:U+gB1OBLb1lF3O42bTCL+FK18tX9Oar16Clt/msog/s=
 github.com/prometheus/common v0.26.0/go.mod h1:M7rCNAaPfAosfx8veZJCuw84e35h3Cfd9VFqTh1DIvc=
 github.com/prometheus/common v0.32.1/go.mod h1:vu+V0TpY+O6vW9J44gczi3Ap/oXXR10b+M/gUGO4Hls=
-github.com/prometheus/common v0.33.0 h1:rHgav/0a6+uYgGdNt3jwz8FNSesO/Hsang3O0T9A5SE=
-github.com/prometheus/common v0.33.0/go.mod h1:gB3sOl7P0TvJabZpLY5uQMpUqRCPPCyRLCZYc7JZTNE=
+github.com/prometheus/common v0.34.0 h1:RBmGO9d/FVjqHT0yUGQwBJhkwKV+wPCn7KGpvfab0uE=
+github.com/prometheus/common v0.34.0/go.mod h1:gB3sOl7P0TvJabZpLY5uQMpUqRCPPCyRLCZYc7JZTNE=
 github.com/prometheus/procfs v0.0.0-20180125133057-cb4147076ac7/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
 github.com/prometheus/procfs v0.0.0-20180725123919-05ee40e3a273/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
 github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=

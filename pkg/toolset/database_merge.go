@@ -361,13 +361,7 @@ func mergeViaAPI(
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		var err error
-		var msg *iotago.Message
-		if !chronicleMode {
-			msg, err = client.MessageByMessageID(ctx, messageID.ToArray(), iotago.ZeroRentParas)
-		} else {
-			msg, err = client.MessageJSONByMessageID(ctx, messageID.ToArray(), iotago.ZeroRentParas)
-		}
+		msg, err := client.MessageByMessageID(ctx, messageID.ToArray(), iotago.ZeroRentParas)
 		if err != nil {
 			return nil, err
 		}

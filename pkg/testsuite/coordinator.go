@@ -67,8 +67,8 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 			return nil, err
 		}
 		merkleTreeHash := &coordinator.MilestoneMerkleRoots{
-			ConfirmedMerkleRoot: &coordinator.MerkleTreeHash{},
-			AppliedMerkleRoot:   &coordinator.MerkleTreeHash{},
+			ConfirmedMerkleRoot: iotago.MilestoneMerkleProof{},
+			AppliedMerkleRoot:   iotago.MilestoneMerkleProof{},
 		}
 		copy(merkleTreeHash.ConfirmedMerkleRoot[:], mutations.ConfirmedMerkleRoot[:])
 		copy(merkleTreeHash.AppliedMerkleRoot[:], mutations.AppliedMerkleRoot[:])

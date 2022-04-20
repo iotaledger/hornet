@@ -86,36 +86,36 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	defer te.CleanupTestEnvironment(true)
 
 	jsonString := `
-    {
-      "protocolVersion": 2,
-      "parentMessageIds": [
-        "0x288bae9cf495bfa8dc10cb69f92995119952f32eb84122dd925d4b750a2bbc0d"
-      ],
-      "payload": {
-        "type": 7,
-        "index": 3,
-        "timestamp": 1650373039,
-        "lastMilestone": "0xea69e4d7c7d5796b8811d037022ca1ade509fb7aed61ffdfcde67a48930a56da",
-        "parentMessageIds": [
-          "0x288bae9cf495bfa8dc10cb69f92995119952f32eb84122dd925d4b750a2bbc0d"
-        ],
-        "confirmedMerkleRoot": "0x116e745362e089c3d92e68db006920582df62ca8d40f1d93c98100209e8fa707",
-        "appliedMerkleRoot": "0x0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
-        "signatures": [
-          {
-            "type": 0,
-            "publicKey": "0xed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
-            "signature": "0x6ffecf4d02b5d917d39b5c66a774c11d599f9e892156a82e758a9433f83d98a43d2e850e50efe7b4cc8618c7a8f393136f378dd78fe4b819aebdd0146c304209"
-          },
-          {
-            "type": 0,
-            "publicKey": "0xf6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
-            "signature": "0xb5b8e5a6d0fd66e442200096befb01c8325db7a140ab1f7e87fc7e4559aaf99856c4729c77155e7daea6c8f2c96acec11c50f6fdfb50c7720980c845828b1d01"
-          }
-        ]
-      },
-      "nonce": "13835058055282164128"
-    }
+	{
+	  "protocolVersion": 2,
+	  "parentMessageIds": [
+	    "0x1c77435ecd0f9c1fb9ad4179c6f12c9daf1e38051fe9b5bdf5325578b2d508aa"
+	  ],
+	  "payload": {
+	    "type": 7,
+	    "index": 3,
+	    "timestamp": 1650451900,
+	    "lastMilestoneId": "0x35339a1bbb8ab044ae8490442fa0d511efa0994f59746ebbee642ac799a4d1f1",
+	    "parentMessageIds": [
+	      "0x1c77435ecd0f9c1fb9ad4179c6f12c9daf1e38051fe9b5bdf5325578b2d508aa"
+	    ],
+	    "confirmedMerkleRoot": "0xc29fd0895481e630fa6dea5f06cfb07048ec641cf9e3d39e528b0df09f0af7ea",
+	    "appliedMerkleRoot": "0x0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
+	    "signatures": [
+	      {
+	        "type": 0,
+	        "publicKey": "0xed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+	        "signature": "0xbe83584cc1223327156a667f8f2e0813db850e1d2acdacecd76439bd8da0a18f1c21a8dd6982340890d48cb53100bd39fe70c38a9a13199bd6baed4ee09e3d02"
+	      },
+	      {
+	        "type": 0,
+	        "publicKey": "0xf6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
+	        "signature": "0x4ac5c7b70c1ec21e702847baad4717c20f0fbc4f8c252ef86ef01cf4a65b2a536c77c30b8dd6a062c47947037745676c7a6fb274cd2151f3e1063a18274b5308"
+	      }
+	    ]
+	  },
+	  "nonce": "13835058055282164240"
+	}
 	`
 	jsonMsg := &iotago.Message{}
 	err := json.Unmarshal([]byte(jsonString), jsonMsg)
