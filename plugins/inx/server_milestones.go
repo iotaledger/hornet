@@ -27,7 +27,7 @@ var (
 )
 
 func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, error) {
-	defer ms.Release(true)
+	defer ms.Release(true) // milestone -1
 
 	milestone := ms.Milestone()
 
