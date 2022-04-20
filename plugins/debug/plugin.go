@@ -2,7 +2,6 @@ package debug
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
@@ -19,10 +18,6 @@ import (
 )
 
 const (
-	// RouteDebugComputeWhiteFlag is the debug route to compute the white flag confirmation for the cone of the given parents.
-	// POST computes the white flag confirmation.
-	RouteDebugComputeWhiteFlag = "/whiteflag"
-
 	// RouteDebugSolidifier is the debug route to manually trigger the solidifier.
 	// POST triggers the solidifier.
 	RouteDebugSolidifier = "/solidifier"
@@ -59,7 +54,6 @@ func init() {
 		Pluggable: node.Pluggable{
 			Name:      "Debug",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
 			Configure: configure,
 		},
 	}
@@ -68,8 +62,6 @@ func init() {
 var (
 	Plugin *node.Plugin
 	deps   dependencies
-
-	whiteflagParentsSolidTimeout time.Duration
 )
 
 type dependencies struct {
@@ -90,18 +82,7 @@ func configure() {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
 
-	whiteflagParentsSolidTimeout = deps.NodeConfig.Duration(CfgDebugWhiteFlagParentsSolidTimeout)
-
 	routeGroup := deps.RestPluginManager.AddPlugin("debug/v1")
-
-	routeGroup.POST(RouteDebugComputeWhiteFlag, func(c echo.Context) error {
-		resp, err := computeWhiteFlagMutations(c)
-		if err != nil {
-			return err
-		}
-
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
 
 	routeGroup.POST(RouteDebugSolidifier, func(c echo.Context) error {
 		deps.Tangle.TriggerSolidifier()

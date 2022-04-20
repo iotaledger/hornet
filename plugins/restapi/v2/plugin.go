@@ -2,6 +2,7 @@ package v2
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -106,6 +107,10 @@ const (
 	// RouteControlSnapshotsCreate is the control route to manually create a snapshot files.
 	// POST creates a snapshot (full, delta or both).
 	RouteControlSnapshotsCreate = "/control/snapshots/create"
+
+	// RouteComputeWhiteFlag is the debug route to compute the white flag confirmation for the cone of the given parents.
+	// POST computes the white flag confirmation.
+	RouteComputeWhiteFlag = "/whiteflag"
 )
 
 func init() {
@@ -150,6 +155,7 @@ type dependencies struct {
 	MaxDeltaMsgYoungestConeRootIndexToCMI int                        `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
 	MaxDeltaMsgOldestConeRootIndexToCMI   int                        `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
 	BelowMaxDepth                         int                        `name:"belowMaxDepth"`
+	WhiteFlagParentsSolidTimeout          time.Duration              `name:"whiteFlagParentsSolidTimeout"`
 	MinPoWScore                           float64                    `name:"minPoWScore"`
 	Bech32HRP                             iotago.NetworkPrefix       `name:"bech32HRP"`
 	RestAPILimitsMaxResults               int                        `name:"restAPILimitsMaxResults"`
@@ -363,6 +369,15 @@ func configure() {
 		if err != nil {
 			return err
 		}
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.POST(RouteComputeWhiteFlag, func(c echo.Context) error {
+		resp, err := computeWhiteFlagMutations(c)
+		if err != nil {
+			return err
+		}
+
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 }

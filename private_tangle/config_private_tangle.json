@@ -86,7 +86,8 @@
     "milestoneTimeout": "30s",
     "maxDeltaMsgYoungestConeRootIndexToCMI": 2,
     "maxDeltaMsgOldestConeRootIndexToCMI": 7,
-    "belowMaxDepth": 15
+    "belowMaxDepth": 15,
+    "whiteFlagParentsSolidTimeout": "2s"
   },
   "tipsel": {
     "nonLazy": {
@@ -193,8 +194,5 @@
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
-  },
-  "debug": {
-    "whiteFlagParentsSolidTimeout": "2s"
   }
 }

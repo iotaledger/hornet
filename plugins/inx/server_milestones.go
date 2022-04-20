@@ -2,7 +2,6 @@ package inx
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -20,10 +19,6 @@ import (
 	"github.com/iotaledger/hive.go/workerpool"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
-)
-
-var (
-	ComputeWhiteFlagTimeout = 2 * time.Second
 )
 
 func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, error) {
@@ -208,7 +203,7 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 
 	if !solid {
 		// wait for at most "ComputeWhiteFlagTimeout" for the parents to become solid
-		ctx, cancel := context.WithTimeout(context.Background(), ComputeWhiteFlagTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), deps.WhiteFlagParentsSolidTimeout)
 		defer cancel()
 
 		for _, msgSolidEventChan := range msgSolidEventChans {
