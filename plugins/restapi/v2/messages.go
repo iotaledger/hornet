@@ -2,7 +2,6 @@ package v2
 
 import (
 	"io/ioutil"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -107,7 +106,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	return messageMetadataResponse, nil
 }
 
-func messageByID(c echo.Context) (*iotago.Message, error) {
+func storageMessageByID(c echo.Context) (*storage.Message, error) {
 	messageID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
 		return nil, err
@@ -119,22 +118,23 @@ func messageByID(c echo.Context) (*iotago.Message, error) {
 	}
 	defer cachedMsg.Release(true) // message -1
 
-	return cachedMsg.Message().Message(), nil
+	return cachedMsg.Message(), nil
+}
+
+func messageByID(c echo.Context) (*iotago.Message, error) {
+	message, err := storageMessageByID(c)
+	if err != nil {
+		return nil, err
+	}
+	return message.Message(), nil
 }
 
 func messageBytesByID(c echo.Context) ([]byte, error) {
-	messageID, err := restapi.ParseMessageIDParam(c)
+	message, err := storageMessageByID(c)
 	if err != nil {
 		return nil, err
 	}
-
-	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
-	if cachedMsg == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
-	}
-	defer cachedMsg.Release(true) // message -1
-
-	return cachedMsg.Message().Data(), nil
+	return message.Data(), nil
 }
 
 func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
@@ -164,15 +164,20 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
+	mimeType, err := restapi.GetRequestContentType(c, restapi.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+	if err != nil {
+		return nil, err
+	}
+
 	msg := &iotago.Message{}
 
-	contentType := c.Request().Header.Get(echo.HeaderContentType)
-
-	if strings.HasPrefix(contentType, echo.MIMEApplicationJSON) {
+	switch mimeType {
+	case echo.MIMEApplicationJSON:
 		if err := c.Bind(msg); err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
-	} else {
+
+	case restapi.MIMEApplicationVendorIOTASerializerV1:
 		if c.Request().Body == nil {
 			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: request body missing")
 			// bad request
@@ -187,6 +192,9 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.DeserializationParameters); err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
+
+	default:
+		return nil, echo.ErrUnsupportedMediaType
 	}
 
 	if msg.ProtocolVersion != iotago.ProtocolVersion {

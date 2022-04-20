@@ -16,6 +16,10 @@ import (
 )
 
 const (
+	MIMEApplicationVendorIOTASerializerV1 = "application/vnd.iota.serializer-v1"
+)
+
+const (
 	// ParameterMessageID is used to identify a message by its ID.
 	ParameterMessageID = "messageID"
 
@@ -44,6 +48,9 @@ var (
 
 	// ErrServiceNotImplemented defines the service not implemented error.
 	ErrServiceNotImplemented = echo.NewHTTPError(http.StatusNotImplemented, "service not implemented")
+
+	// ErrNotAcceptable defines the not acceptable error.
+	ErrNotAcceptable = echo.NewHTTPError(http.StatusNotAcceptable)
 )
 
 // JSONResponse sends the JSON response with status code.
@@ -84,6 +91,26 @@ func ErrorHandler() func(error, echo.Context) {
 
 		_ = c.JSON(statusCode, HTTPErrorResponseEnvelope{Error: HTTPErrorResponse{Code: strconv.Itoa(statusCode), Message: message}})
 	}
+}
+
+func GetAcceptHeaderContentType(c echo.Context, supportedContentTypes ...string) (string, error) {
+	ctype := c.Request().Header.Get(echo.HeaderAccept)
+	for _, supportedContentType := range supportedContentTypes {
+		if strings.HasPrefix(ctype, supportedContentType) {
+			return supportedContentType, nil
+		}
+	}
+	return "", ErrNotAcceptable
+}
+
+func GetRequestContentType(c echo.Context, supportedContentTypes ...string) (string, error) {
+	ctype := c.Request().Header.Get(echo.HeaderContentType)
+	for _, supportedContentType := range supportedContentTypes {
+		if strings.HasPrefix(ctype, supportedContentType) {
+			return supportedContentType, nil
+		}
+	}
+	return "", echo.ErrUnsupportedMediaType
 }
 
 func ParseMessageIDParam(c echo.Context) (hornet.MessageID, error) {
