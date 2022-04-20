@@ -138,7 +138,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			// Compare this milestones ID with the lastMilestoneID
 			seenLastMilestoneID = *milestoneID == lastMilestoneID
 		}
-		return traversalCondition(cachedMsgMeta)
+		return traversalCondition(cachedMsgMeta) // meta pass +1
 	}
 
 	// consumer
