@@ -126,7 +126,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			if msgMilestone == nil {
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: message not found for milestone message ID: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
 			}
-			defer msgMilestone.Release(true)
+			defer msgMilestone.Release(true) // message -1
 			milestone := msgMilestone.Message().Milestone()
 			if milestone == nil {
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
