@@ -50,7 +50,7 @@ func TestMigration(t *testing.T) {
 
 		switch {
 		case index == 0:
-			cfg.WithMigration()
+			cfg.WithReceipts()
 			cfg.INXCoo.Migrator.StartIndex = 1
 			cfg.INXCoo.Validator = cfg.Receipts.Validator
 		default:
@@ -129,7 +129,7 @@ func TestAPIError(t *testing.T) {
 
 			switch {
 			case index == 0:
-				cfg.WithMigration()
+				cfg.WithReceipts()
 				cfg.INXCoo.Migrator.StartIndex = 1
 				cfg.INXCoo.Validator = cfg.Receipts.Validator
 			default:

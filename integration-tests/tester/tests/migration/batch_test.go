@@ -45,7 +45,7 @@ func TestBatch(t *testing.T) {
 
 		switch {
 		case index == 0:
-			cfg.WithMigration()
+			cfg.WithReceipts()
 			cfg.INXCoo.Validator = cfg.Receipts.Validator
 			cfg.INXCoo.Migrator.StartIndex = 1
 		default:

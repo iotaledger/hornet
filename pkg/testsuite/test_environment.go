@@ -191,7 +191,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	for i := 1; i <= numberOfMilestones; i++ {
 		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{hornet.NullMessageID()}, false)
 		require.Equal(te.TestInterface, 1, confStats.MessagesReferenced)                  // 1 for previous milestone
-		require.Equal(te.TestInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for prefious milestone
+		require.Equal(te.TestInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for previous milestone
 		require.Equal(te.TestInterface, 0, confStats.MessagesIncludedWithTransactions)
 		require.Equal(te.TestInterface, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	}

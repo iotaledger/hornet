@@ -271,8 +271,8 @@ func (cfg *NodeConfig) AsCoo() {
 	cfg.INXCoo.Envs = append(cfg.INXCoo.Envs, fmt.Sprintf("COO_PRV_KEYS=%s", strings.Join(cfg.INXCoo.Coordinator.PrivateKeys, ",")))
 }
 
-// WithMigration adjusts the config to activate the migrator plugin.
-func (cfg *NodeConfig) WithMigration() {
+// WithReceipts adjusts the config to activate the receipts plugin.
+func (cfg *NodeConfig) WithReceipts() {
 	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
 	cfg.INXCoo.WithMigration()
 }

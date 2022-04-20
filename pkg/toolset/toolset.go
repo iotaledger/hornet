@@ -65,26 +65,25 @@ const (
 )
 
 const (
-	ToolPwdHash                 = "pwd-hash"
-	ToolP2PIdentityGen          = "p2pidentity-gen"
-	ToolP2PExtractIdentity      = "p2pidentity-extract"
-	ToolEd25519Key              = "ed25519-key"
-	ToolEd25519Addr             = "ed25519-addr"
-	ToolJWTApi                  = "jwt-api"
-	ToolSnapGen                 = "snap-gen"
-	ToolSnapMerge               = "snap-merge"
-	ToolSnapInfo                = "snap-info"
-	ToolSnapHash                = "snap-hash"
-	ToolBenchmarkIO             = "bench-io"
-	ToolBenchmarkCPU            = "bench-cpu"
-	ToolDatabaseLedgerHash      = "db-hash"
-	ToolDatabaseHealth          = "db-health"
-	ToolDatabaseMerge           = "db-merge"
-	ToolDatabaseMigration       = "db-migration"
-	ToolDatabaseSnapshot        = "db-snapshot"
-	ToolDatabaseSplit           = "db-split"
-	ToolDatabaseVerify          = "db-verify"
-	ToolCoordinatorFixStateFile = "coo-fix-state"
+	ToolPwdHash            = "pwd-hash"
+	ToolP2PIdentityGen     = "p2pidentity-gen"
+	ToolP2PExtractIdentity = "p2pidentity-extract"
+	ToolEd25519Key         = "ed25519-key"
+	ToolEd25519Addr        = "ed25519-addr"
+	ToolJWTApi             = "jwt-api"
+	ToolSnapGen            = "snap-gen"
+	ToolSnapMerge          = "snap-merge"
+	ToolSnapInfo           = "snap-info"
+	ToolSnapHash           = "snap-hash"
+	ToolBenchmarkIO        = "bench-io"
+	ToolBenchmarkCPU       = "bench-cpu"
+	ToolDatabaseLedgerHash = "db-hash"
+	ToolDatabaseHealth     = "db-health"
+	ToolDatabaseMerge      = "db-merge"
+	ToolDatabaseMigration  = "db-migration"
+	ToolDatabaseSnapshot   = "db-snapshot"
+	ToolDatabaseSplit      = "db-split"
+	ToolDatabaseVerify     = "db-verify"
 )
 
 const (
@@ -185,7 +184,6 @@ func listTools() {
 	fmt.Printf("%-20s creates a full snapshot from a database\n", fmt.Sprintf("%s:", ToolDatabaseSnapshot))
 	fmt.Printf("%-20s split a legacy database into `tangle` and `utxo`\n", fmt.Sprintf("%s:", ToolDatabaseSplit))
 	fmt.Printf("%-20s verifies a valid ledger state and the existence of all messages`\n", fmt.Sprintf("%s:", ToolDatabaseVerify))
-	fmt.Printf("%-20s applies the latest milestone in the database to the coordinator state file\n", fmt.Sprintf("%s:", ToolCoordinatorFixStateFile))
 }
 
 func yesOrNo(value bool) string {

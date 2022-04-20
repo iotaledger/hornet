@@ -204,12 +204,12 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) err
 		spammerWorkerCount = 1
 	}
 
-	startSpammerWorkers(mpsRateLimitCfg, cpuMaxUsageCfg, spammerWorkerCount, true)
+	startSpammerWorkers(mpsRateLimitCfg, cpuMaxUsageCfg, spammerWorkerCount)
 
 	return nil
 }
 
-func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorkerCount int, checkPeersConnected bool) {
+func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorkerCount int) {
 	mpsRateLimitRunning = mpsRateLimit
 	cpuMaxUsageRunning = cpuMaxUsage
 	spammerWorkersRunning = spammerWorkerCount
@@ -316,7 +316,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						continue
 					}
 
-					if checkPeersConnected && deps.PeeringManager.ConnectedCount() == 0 {
+					if deps.PeeringManager.ConnectedCount() == 0 {
 						time.Sleep(time.Second)
 						continue
 					}

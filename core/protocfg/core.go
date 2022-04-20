@@ -106,7 +106,7 @@ func initConfigPars(c *dig.Container) {
 					Key:        "ae4e03072b4869e87dd4cd59315291a034493a8c202b43b257f9c07bc86a2f3e",
 					StartIndex: 3360000,
 					EndIndex:   0,
-				}, {
+				},
 			}); err != nil {
 				CorePlugin.LogPanic(err)
 			}

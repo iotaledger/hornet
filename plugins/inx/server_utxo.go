@@ -2,6 +2,7 @@ package inx
 
 import (
 	"context"
+	"fmt"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -104,7 +105,7 @@ func (s *INXServer) ReadOutput(_ context.Context, id *inx.OutputId) (*inx.Output
 	}
 
 	if unspent {
-		output, err := deps.UTXOManager.ReadOutputByOutputID(outputID)
+		output, err := deps.UTXOManager.ReadOutputByOutputIDWithoutLocking(outputID)
 		if err != nil {
 			return nil, err
 		}
@@ -157,11 +158,11 @@ func (s *INXServer) ReadUnspentOutputs(_ *inx.NoParams, srv inx.INX_ReadUnspentO
 			Output:      ledgerOutput,
 		}
 		if err := srv.Send(payload); err != nil {
-			innerErr = err
+			innerErr = fmt.Errorf("send error: %w", err)
 			return false
 		}
 		return true
-	})
+	}, utxo.ReadLockLedger(false))
 	if innerErr != nil {
 		return innerErr
 	}
@@ -181,12 +182,12 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerRequest, srv inx.INX_Li
 				return status.Errorf(codes.InvalidArgument, "given startMilestoneIndex %d is older than the current pruningIndex %d", startIndex, pruningIndex)
 			}
 
-			ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
+			ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 			if err != nil {
 				return status.Error(codes.Unavailable, "error accessing the UTXO ledger")
 			}
 			for currentIndex := startIndex; currentIndex <= ledgerIndex; currentIndex++ {
-				msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+				msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
 				if err != nil {
 					return status.Errorf(codes.NotFound, "ledger update for milestoneIndex %d not found", currentIndex)
 				}
@@ -195,7 +196,7 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerRequest, srv inx.INX_Li
 					return err
 				}
 				if err := srv.Send(payload); err != nil {
-					return err
+					return fmt.Errorf("send error: %w", err)
 				}
 			}
 		}
@@ -213,11 +214,11 @@ func (s *INXServer) ListenToLedgerUpdates(req *inx.LedgerRequest, srv inx.INX_Li
 		newSpents := task.Param(2).(utxo.Spents)
 		payload, err := NewLedgerUpdate(index, newOutputs, newSpents)
 		if err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)
@@ -239,7 +240,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_
 		deps.UTXOManager.ReadLockLedger()
 		defer deps.UTXOManager.ReadUnlockLedger()
 
-		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndex()
+		ledgerIndex, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
 
 		if startIndex > 0 {
 			// Stream all available milestone diffs first
@@ -252,7 +253,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_
 				return status.Error(codes.Unavailable, "error accessing the UTXO ledger")
 			}
 			for currentIndex := startIndex; currentIndex <= ledgerIndex; currentIndex++ {
-				msDiff, err := deps.UTXOManager.MilestoneDiff(currentIndex)
+				msDiff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(currentIndex)
 				if err != nil {
 					return status.Errorf(codes.NotFound, "treasury update for milestoneIndex %d not found", currentIndex)
 				}
@@ -262,7 +263,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_
 						return err
 					}
 					if err := srv.Send(payload); err != nil {
-						return err
+						return fmt.Errorf("send error: %w", err)
 					}
 					sentTreasuryUpdate = true
 				}
@@ -279,7 +280,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_
 				return err
 			}
 			if err := srv.Send(payload); err != nil {
-				return err
+				return fmt.Errorf("send error: %w", err)
 			}
 		}
 		return nil
@@ -299,7 +300,7 @@ func (s *INXServer) ListenToTreasuryUpdates(req *inx.LedgerRequest, srv inx.INX_
 			cancel()
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)
@@ -321,11 +322,11 @@ func (s *INXServer) ListenToMigrationReceipts(_ *inx.NoParams, srv inx.INX_Liste
 		receipt := task.Param(0).(*iotago.ReceiptMilestoneOpt)
 		payload, err := inx.WrapReceipt(receipt)
 		if err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		if err := srv.Send(payload); err != nil {
-			Plugin.LogInfof("Send error: %v", err)
+			Plugin.LogInfof("send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)

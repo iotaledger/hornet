@@ -409,7 +409,7 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 		Store().
 		BookOnWallets()
 
-	// Issue milestone 5 that does not include the milestone 4 in the past
+	// Issue milestone 5
 	milestone5, err := te.IssueMilestoneOnTips(hornet.MessageIDs{messageB.StoredMessageID()}, true)
 	require.NoError(t, err)
 

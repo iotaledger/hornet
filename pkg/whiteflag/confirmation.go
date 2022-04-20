@@ -143,7 +143,11 @@ func ConfirmMilestone(
 	var rt *utxo.ReceiptTuple
 
 	// validate receipt and extract migrated funds
-	receipt := ms.Opts.MustSet().Receipt()
+	opts, err := ms.Opts.Set()
+	if err != nil {
+		return nil, nil, err
+	}
+	receipt := opts.Receipt()
 	if receipt != nil {
 		var err error
 
