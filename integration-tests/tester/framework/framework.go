@@ -116,24 +116,8 @@ func (f *Framework) CreateStaticNetwork(name string, intNetCfg *IntegrationNetwo
 		if _, err = network.CreateNode(cfg); err != nil {
 			return nil, err
 		}
-
-		if cfg.Plugins.ContainsINX() {
-			inxAddress := fmt.Sprintf("%s:9029", cfg.Name)
-
-			if cfg.INXCoo.RunAsCoo {
-				cfg.INXCoo.INXAddress = inxAddress
-
-				if _, err := network.CreateCoordinator(cfg.INXCoo); err != nil {
-					return nil, err
-				}
-			}
-
-			// Setup an indexer container for this node
-			indexerCfg := DefaultINXIndexerConfig()
-			indexerCfg.INXAddress = inxAddress
-			if _, err := network.CreateIndexer(indexerCfg); err != nil {
-				return nil, err
-			}
+		if err := setupINX(network, cfg); err != nil {
+			return nil, err
 		}
 	}
 
@@ -178,6 +162,9 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumP
 		if _, err = autoNetwork.CreatePeer(cfg); err != nil {
 			return nil, err
 		}
+		if err := setupINX(network, cfg); err != nil {
+			return nil, err
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -192,4 +179,24 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumP
 	}
 
 	return autoNetwork, nil
+}
+
+func setupINX(network *Network, cfg *NodeConfig) error {
+	if cfg.Plugins.ContainsINX() {
+		inxAddress := fmt.Sprintf("%s:9029", cfg.Name)
+		if cfg.INXCoo.RunAsCoo {
+			cfg.INXCoo.INXAddress = inxAddress
+			if _, err := network.CreateCoordinator(cfg.INXCoo); err != nil {
+				return err
+			}
+		}
+
+		// Setup an indexer container for this node
+		indexerCfg := DefaultINXIndexerConfig()
+		indexerCfg.INXAddress = inxAddress
+		if _, err := network.CreateIndexer(indexerCfg); err != nil {
+			return err
+		}
+	}
+	return nil
 }
