@@ -35,7 +35,7 @@ func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, e
 	if milestoneMsg == nil {
 		return nil, status.Errorf(codes.NotFound, "milestone message for %d not found", milestone.Index)
 	}
-	defer milestoneMsg.Release(true)
+	defer milestoneMsg.Release(true) // message -1
 
 	milestonePayload := milestoneMsg.Message().Milestone()
 	if milestone == nil {
