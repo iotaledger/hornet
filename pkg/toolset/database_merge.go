@@ -300,6 +300,19 @@ func copyAndVerifyMilestoneCone(
 		return nil, err
 	}
 
+	lastMilestoneID := iotago.MilestoneID{}
+	if msIndex > 1 {
+		previousMilestoneMessage, _, err := getMilestoneAndMessageID(msIndex - 1)
+		if err != nil {
+			return nil, err
+		}
+
+		milestoneID, err := previousMilestoneMessage.Milestone().ID()
+		if err != nil {
+			return nil, err
+		}
+		lastMilestoneID = *milestoneID
+	}
 	timeCopyMilestoneCone := time.Now()
 
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
@@ -308,10 +321,10 @@ func copyAndVerifyMilestoneCone(
 		cachedMessageFuncTarget,
 		networkID,
 		milestoneMessageID,
+		lastMilestoneID,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
 		whiteflag.DefaultSetMessageReferencedFunc,
-		nil,
 		nil,
 		nil,
 		nil,
@@ -348,13 +361,7 @@ func mergeViaAPI(
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		var err error
-		var msg *iotago.Message
-		if !chronicleMode {
-			msg, err = client.MessageByMessageID(ctx, messageID.ToArray(), iotago.ZeroRentParas)
-		} else {
-			msg, err = client.MessageJSONByMessageID(ctx, messageID.ToArray(), iotago.ZeroRentParas)
-		}
+		msg, err := client.MessageByMessageID(ctx, messageID.ToArray(), iotago.ZeroRentParas)
 		if err != nil {
 			return nil, err
 		}

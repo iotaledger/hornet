@@ -119,7 +119,7 @@ func (u *Manager) PruneMilestoneIndexWithoutLocking(msIndex milestone.Index, pru
 
 	if len(receiptMigratedAtIndex) > 0 {
 		if pruneReceipts {
-			placeHolder := &ReceiptTuple{Receipt: &iotago.Receipt{MigratedAt: receiptMigratedAtIndex[0]}, MilestoneIndex: msIndex}
+			placeHolder := &ReceiptTuple{Receipt: &iotago.ReceiptMilestoneOpt{MigratedAt: receiptMigratedAtIndex[0]}, MilestoneIndex: msIndex}
 			if err := deleteReceipt(placeHolder, mutations); err != nil {
 				mutations.Cancel()
 				return err

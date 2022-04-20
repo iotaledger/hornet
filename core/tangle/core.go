@@ -110,9 +110,10 @@ func provide(c *dig.Container) {
 
 	type cfgResult struct {
 		dig.Out
-		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
-		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-		BelowMaxDepth                         int `name:"belowMaxDepth"`
+		MaxDeltaMsgYoungestConeRootIndexToCMI int           `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+		MaxDeltaMsgOldestConeRootIndexToCMI   int           `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+		BelowMaxDepth                         int           `name:"belowMaxDepth"`
+		WhiteFlagParentsSolidTimeout          time.Duration `name:"whiteFlagParentsSolidTimeout"`
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
@@ -120,6 +121,7 @@ func provide(c *dig.Container) {
 			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.NodeConfig.Int(CfgTangleMaxDeltaMsgYoungestConeRootIndexToCMI),
 			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.NodeConfig.Int(CfgTangleMaxDeltaMsgOldestConeRootIndexToCMI),
 			BelowMaxDepth:                         deps.NodeConfig.Int(CfgTangleBelowMaxDepth),
+			WhiteFlagParentsSolidTimeout:          deps.NodeConfig.Duration(CfgTangleWhiteFlagParentsSolidTimeout),
 		}
 	}); err != nil {
 		CorePlugin.LogPanic(err)

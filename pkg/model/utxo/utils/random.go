@@ -56,6 +56,12 @@ func RandMilestoneIndex() milestone.Index {
 	return milestone.Index(rand.Uint32())
 }
 
+func RandMilestoneID() iotago.MilestoneID {
+	id := iotago.MilestoneID{}
+	copy(id[:], RandBytes(iotago.MilestoneIDLength))
+	return id
+}
+
 func RandAddress(addressType iotago.AddressType) iotago.Address {
 	switch addressType {
 	case iotago.AddressEd25519:

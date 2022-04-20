@@ -23,7 +23,7 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo
 	} else {
 		output = utils.RandOutput(outputType)
 	}
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint64(), output)
+	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), output)
 }
 
 func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
@@ -31,7 +31,7 @@ func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
 	if len(msIndex) > 0 {
 		confirmationIndex = msIndex[0]
 	}
-	return utxo.NewSpent(output, utils.RandTransactionID(), confirmationIndex, rand.Uint64())
+	return utxo.NewSpent(output, utils.RandTransactionID(), confirmationIndex, rand.Uint32())
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {

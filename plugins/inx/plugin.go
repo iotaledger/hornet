@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -45,23 +46,26 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
-	SyncManager               *syncmanager.SyncManager
-	UTXOManager               *utxo.Manager
-	Tangle                    *tangle.Tangle
-	TipScoreCalculator        *tangle.TipScoreCalculator
-	Storage                   *storage.Storage
-	NetworkIDName             string               `name:"networkIdName"`
-	Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
-	ShutdownHandler           *shutdown.ShutdownHandler
-	TipSelector               *tipselect.TipSelector `optional:"true"`
-	MinPoWScore               float64                `name:"minPoWScore"`
-	DeserializationParameters *iotago.DeSerializationParameters
-	PoWHandler                *pow.Handler
-	INXServer                 *INXServer
-	Echo                      *echo.Echo                 `optional:"true"`
-	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
-	ExternalMetricsProxy      *restapipkg.DynamicProxy   `name:"externalMetricsProxy" optional:"true"`
+	NodeConfig                   *configuration.Configuration `name:"nodeConfig"`
+	SyncManager                  *syncmanager.SyncManager
+	UTXOManager                  *utxo.Manager
+	Tangle                       *tangle.Tangle
+	TipScoreCalculator           *tangle.TipScoreCalculator
+	Storage                      *storage.Storage
+	KeyManager                   *keymanager.KeyManager
+	NetworkID                    uint64                 `name:"networkId"`
+	NetworkIDName                string                 `name:"networkIdName"`
+	Bech32HRP                    iotago.NetworkPrefix   `name:"bech32HRP"`
+	TipSelector                  *tipselect.TipSelector `optional:"true"`
+	WhiteFlagParentsSolidTimeout time.Duration          `name:"whiteFlagParentsSolidTimeout"`
+	MinPoWScore                  float64                `name:"minPoWScore"`
+	MilestonePublicKeyCount      int                    `name:"milestonePublicKeyCount"`
+	DeserializationParameters    *iotago.DeSerializationParameters
+	PoWHandler                   *pow.Handler
+	INXServer                    *INXServer
+	Echo                         *echo.Echo                 `optional:"true"`
+	RestPluginManager            *restapi.RestPluginManager `optional:"true"`
+	ExternalMetricsProxy         *restapipkg.DynamicProxy   `name:"externalMetricsProxy" optional:"true"`
 }
 
 func provide(c *dig.Container) {

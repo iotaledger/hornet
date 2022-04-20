@@ -117,7 +117,7 @@ func treasury(_ echo.Context) (*treasuryResponse, error) {
 	}
 
 	return &treasuryResponse{
-		MilestoneID: treasuryOutput.MilestoneID.ToHex(),
+		MilestoneID: iotago.EncodeHex(treasuryOutput.MilestoneID[:]),
 		Amount:      iotago.EncodeUint64(treasuryOutput.Amount),
 	}, nil
 }

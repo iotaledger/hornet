@@ -66,14 +66,30 @@ func (d *DockerContainer) CreateNodeContainer(cfg *NodeConfig) error {
 	})
 }
 
-// CreateIndexerContainer creates a new indexer container.
-func (d *DockerContainer) CreateIndexerContainer(cfg *IndexerConfig) error {
+// CreateCoordinatorContainer creates a new coordinator container.
+func (d *DockerContainer) CreateCoordinatorContainer(cfg *INXCoordinatorConfig) error {
 	containerConfig := &container.Config{
-		Image: indexerImage,
+		Image: coordinatorImage,
+		Env:   cfg.Envs,
 		Cmd:   cfg.CLIFlags(),
 	}
 
-	return d.CreateContainer(cfg.Name, containerConfig)
+	return d.CreateContainer(cfg.Name, containerConfig, &container.HostConfig{
+		Binds: cfg.Binds,
+	})
+}
+
+// CreateIndexerContainer creates a new indexer container.
+func (d *DockerContainer) CreateIndexerContainer(cfg *INXIndexerConfig) error {
+	containerConfig := &container.Config{
+		Image: indexerImage,
+		Env:   cfg.Envs,
+		Cmd:   cfg.CLIFlags(),
+	}
+
+	return d.CreateContainer(cfg.Name, containerConfig, &container.HostConfig{
+		Binds: cfg.Binds,
+	})
 }
 
 // CreateWhiteFlagMockContainer creates a new white-flag mock container.

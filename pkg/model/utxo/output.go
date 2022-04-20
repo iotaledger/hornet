@@ -83,7 +83,7 @@ func (o Outputs) ToOutputSet() iotago.OutputSet {
 	return outputSet
 }
 
-func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint64, output iotago.Output) *Output {
+func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
 	return &Output{
 		outputID:           outputID,
 		messageID:          messageID,
@@ -93,7 +93,7 @@ func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milesto
 	}
 }
 
-func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint64, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	txID, err := transaction.ID()
 	if err != nil {

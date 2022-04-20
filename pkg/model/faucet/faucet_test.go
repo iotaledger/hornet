@@ -279,8 +279,12 @@ func TestBelowMaxDepth(t *testing.T) {
 	_, err := env.RequestFunds(env.Wallet1)
 	require.NoError(t, err)
 
-	// issue several milestones, so that the faucet message gets below max depth
-	for i := 0; i <= test.BelowMaxDepth; i++ {
+	// issue several milestones, so that the faucet message gets below max depth.
+	// hint: we need to issue BelowMaxDepth+1 milestones, because we use the
+	// LastMilestoneMessageID as a tip for the faucet, but the milestone message
+	// itself is part of the future cone, so it needs to be BMD+1 milestones
+	// to become below max depth.
+	for i := 0; i <= test.BelowMaxDepth+1; i++ {
 		_, _ = env.IssueMilestone()
 	}
 
@@ -346,8 +350,12 @@ func TestBelowMaxDepthAfterRequest(t *testing.T) {
 	env.TestEnv.AssertLedgerBalance(env.FaucetWallet, faucetBalance)
 	env.TestEnv.AssertLedgerBalance(env.Wallet1, calculatedWallet1Balance)
 
-	// issue several milestones, so that the faucet message gets below max depth
-	for i := 0; i <= test.BelowMaxDepth; i++ {
+	// issue several milestones, so that the faucet message gets below max depth.
+	// hint: we need to issue BelowMaxDepth+1 milestones, because we use the
+	// LastMilestoneMessageID as a tip for the faucet, but the milestone message
+	// itself is part of the future cone, so it needs to be BMD+1 milestones
+	// to become below max depth.
+	for i := 0; i <= test.BelowMaxDepth+1; i++ {
 		_, _ = env.IssueMilestone()
 	}
 

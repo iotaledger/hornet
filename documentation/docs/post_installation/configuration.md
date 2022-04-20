@@ -484,12 +484,13 @@ Example:
 
 ## 12. Tangle
 
-| Name                                  | Description                                                                                                             | Type     |
-|:--------------------------------------|:------------------------------------------------------------------------------------------------------------------------|:---------|
-| milestoneTimeout                      | The interval milestone timeout events are fired if no new milestones are received                                       | string   |
-| maxDeltaMsgYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | integer  |
-| maxDeltaMsgOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | integer  |
-| belowMaxDepth                         | The maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy      | integer  |
+| Name                                  | Description                                                                                                             | Type    |
+|:--------------------------------------|:------------------------------------------------------------------------------------------------------------------------|:--------|
+| milestoneTimeout                      | The interval milestone timeout events are fired if no new milestones are received                                       | string  |
+| maxDeltaMsgYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | integer |
+| maxDeltaMsgOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | integer |
+| belowMaxDepth                         | The maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy      | integer |
+| whiteFlagParentsSolidTimeout          | Defines the the maximum duration for the parents to become solid during white flag confirmation API call                | string  |
 
 Example:
 
@@ -499,6 +500,7 @@ Example:
     "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
     "maxDeltaMsgOldestConeRootIndexToCMI": 13,
     "belowMaxDepth": 15,
+    "whiteFlagParentsSolidTimeout": "2s",
   },
 ```
 
@@ -829,19 +831,5 @@ Example:
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
-  },
-```
-
-## 23. Debug
-
-| Name                         | Description                                                                                              | Type   |
-|:-----------------------------|:---------------------------------------------------------------------------------------------------------|:-------|
-| whiteFlagParentsSolidTimeout | Defines the the maximum duration for the parents to become solid during white flag confirmation API call | string |
-
-Example:
-
-```json
-  "debug": {
-    "whiteFlagParentsSolidTimeout": "2s"
   },
 ```

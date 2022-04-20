@@ -2,6 +2,7 @@ package v2
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
@@ -89,6 +90,10 @@ const (
 	// GET returns the receipts for the given migrated at index.
 	RouteReceiptsMigratedAtIndex = "/receipts/:" + restapipkg.ParameterMilestoneIndex
 
+	// RouteComputeWhiteFlagMutations is the route to compute the white flag mutations for the cone of the given parents.
+	// POST computes the white flag mutations.
+	RouteComputeWhiteFlagMutations = "/whiteflag"
+
 	// RoutePeer is the route for getting peers by their peerID.
 	// GET returns the peer
 	// DELETE deletes the peer.
@@ -150,6 +155,7 @@ type dependencies struct {
 	MaxDeltaMsgYoungestConeRootIndexToCMI int                        `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
 	MaxDeltaMsgOldestConeRootIndexToCMI   int                        `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
 	BelowMaxDepth                         int                        `name:"belowMaxDepth"`
+	WhiteFlagParentsSolidTimeout          time.Duration              `name:"whiteFlagParentsSolidTimeout"`
 	MinPoWScore                           float64                    `name:"minPoWScore"`
 	Bech32HRP                             iotago.NetworkPrefix       `name:"bech32HRP"`
 	RestAPILimitsMaxResults               int                        `name:"restAPILimitsMaxResults"`
@@ -339,6 +345,15 @@ func configure() {
 		if err != nil {
 			return err
 		}
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	routeGroup.POST(RouteComputeWhiteFlagMutations, func(c echo.Context) error {
+		resp, err := computeWhiteFlagMutations(c)
+		if err != nil {
+			return err
+		}
+
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 

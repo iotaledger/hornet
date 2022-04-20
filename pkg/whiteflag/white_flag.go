@@ -33,6 +33,8 @@ var (
 		// only traverse and process the message if it was not referenced yet
 		return !cachedMsgMeta.Metadata().IsReferenced(), nil
 	}
+
+	emptyMilestoneID = iotago.MilestoneID{}
 )
 
 // Confirmation represents a confirmation done via a milestone under the "white-flag" approach.
@@ -64,8 +66,10 @@ type WhiteFlagMutations struct {
 	NewOutputs map[string]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
-	// The merkle tree root hash of all messages.
-	MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
+	// The merkle tree root hash of all referenced messages in the past cone.
+	ConfirmedMerkleRoot [iotago.MilestoneMerkleProofLength]byte
+	// The merkle tree root hash of all included transaction messages.
+	AppliedMerkleRoot [iotago.MilestoneMerkleProofLength]byte
 }
 
 // ComputeWhiteFlagMutations computes the ledger changes in accordance to the white-flag rules for the cone referenced by the parents.
@@ -81,8 +85,9 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	cachedMessageFunc storage.CachedMessageFunc,
 	networkId uint64,
 	msIndex milestone.Index,
-	msTimestamp uint64,
+	msTimestamp uint32,
 	parents hornet.MessageIDs,
+	lastMilestoneID iotago.MilestoneID,
 	traversalCondition dag.Predicate) (*WhiteFlagMutations, error) {
 
 	wfConf := &WhiteFlagMutations{
@@ -97,8 +102,43 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	semValCtx := &iotago.SemanticValidationContext{
 		ExtParas: &iotago.ExternalUnlockParameters{
 			ConfMsIndex: uint32(msIndex),
-			ConfUnix:    uint32(msTimestamp),
+			ConfUnix:    msTimestamp,
 		},
+	}
+
+	isFirstMilestone := msIndex == 1
+	if isFirstMilestone && lastMilestoneID != emptyMilestoneID {
+		return nil, fmt.Errorf("invalid lastMilestoneID for initial milestone: %s", iotago.EncodeHex(lastMilestoneID[:]))
+	}
+	if !isFirstMilestone && lastMilestoneID == emptyMilestoneID {
+		return nil, fmt.Errorf("missing lastMilestoneID for milestone: %d", msIndex)
+	}
+
+	// Use a custom traversal condition that tracks if the lastMilestoneID was seen in the past cone
+	// Skip this check for the first milestone
+	seenLastMilestoneID := isFirstMilestone
+	internalTraversalCondition := func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
+		if !seenLastMilestoneID && cachedMsgMeta.Metadata().IsMilestone() {
+			msgMilestone, err := cachedMessageFunc(cachedMsgMeta.Metadata().MessageID()) // message +1
+			if err != nil {
+				return false, err
+			}
+			if msgMilestone == nil {
+				return false, fmt.Errorf("ComputeWhiteFlagMutations: message not found for milestone message ID: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
+			}
+			defer msgMilestone.Release(true) // message -1
+			milestone := msgMilestone.Message().Milestone()
+			if milestone == nil {
+				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
+			}
+			milestoneID, err := milestone.ID()
+			if err != nil {
+				return false, err
+			}
+			// Compare this milestones ID with the lastMilestoneID
+			seenLastMilestoneID = *milestoneID == lastMilestoneID
+		}
+		return traversalCondition(cachedMsgMeta) // meta pass +1
 	}
 
 	// consumer
@@ -257,7 +297,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	if err := parentsTraverser.Traverse(
 		ctx,
 		parents,
-		traversalCondition,
+		internalTraversalCondition,
 		consumer,
 		// called on missing parents
 		// return error on missing parents
@@ -269,16 +309,31 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 		return nil, err
 	}
 
-	// compute merkle tree root hash
-	marshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesIncludedWithTransactions))
-	for i := range wfConf.MessagesIncludedWithTransactions {
-		marshalers[i] = wfConf.MessagesIncludedWithTransactions[i]
+	if !seenLastMilestoneID {
+		return nil, fmt.Errorf("lastMilestoneID %s not referenced in past cone", iotago.EncodeHex(lastMilestoneID[:]))
 	}
-	merkleTreeHash, err := NewHasher(crypto.BLAKE2b_256).Hash(marshalers)
+
+	// compute past cone merkle tree root hash
+	confirmedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesReferenced))
+	for i := range wfConf.MessagesReferenced {
+		confirmedMarshalers[i] = wfConf.MessagesReferenced[i]
+	}
+	confirmedMerkleHash, err := NewHasher(crypto.BLAKE2b_256).Hash(confirmedMarshalers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute Merkle tree hash: %w", err)
+		return nil, fmt.Errorf("failed to compute confirmed merkle tree root: %w", err)
 	}
-	copy(wfConf.MerkleTreeHash[:], merkleTreeHash)
+	copy(wfConf.ConfirmedMerkleRoot[:], confirmedMerkleHash)
+
+	// compute inclusion merkle tree root hash
+	appliedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesIncludedWithTransactions))
+	for i := range wfConf.MessagesIncludedWithTransactions {
+		appliedMarshalers[i] = wfConf.MessagesIncludedWithTransactions[i]
+	}
+	appliedMerkleHash, err := NewHasher(crypto.BLAKE2b_256).Hash(appliedMarshalers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute applied merkle tree root: %w", err)
+	}
+	copy(wfConf.AppliedMerkleRoot[:], appliedMerkleHash)
 
 	if len(wfConf.MessagesIncludedWithTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
 		return nil, ErrIncludedMessagesSumDoesntMatch

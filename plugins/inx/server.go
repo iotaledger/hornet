@@ -63,27 +63,29 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 	}
 
 	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
-	var lmi *inx.Milestone
+	var lmi *inx.MilestoneInfo
 	if latestMilestoneIndex > pruningIndex {
-		lmi, err = milestoneForIndex(latestMilestoneIndex)
+		milestone, err := milestoneForIndex(latestMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}
+		lmi = milestone.GetMilestoneInfo()
 	} else {
-		lmi = &inx.Milestone{
+		lmi = &inx.MilestoneInfo{
 			MilestoneIndex: uint32(latestMilestoneIndex),
 		}
 	}
 
 	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
-	var cmi *inx.Milestone
+	var cmi *inx.MilestoneInfo
 	if confirmedMilestoneIndex > pruningIndex {
-		cmi, err = milestoneForIndex(confirmedMilestoneIndex)
+		milestone, err := milestoneForIndex(confirmedMilestoneIndex)
 		if err != nil {
 			return nil, err
 		}
+		cmi = milestone.GetMilestoneInfo()
 	} else {
-		cmi = &inx.Milestone{
+		cmi = &inx.MilestoneInfo{
 			MilestoneIndex: uint32(confirmedMilestoneIndex),
 		}
 	}
@@ -98,6 +100,16 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 }
 
 func (s *INXServer) ReadProtocolParameters(context.Context, *inx.NoParams) (*inx.ProtocolParameters, error) {
+
+	var keyRanges []*inx.MilestoneKeyRange
+	for _, r := range deps.KeyManager.KeyRanges() {
+		keyRanges = append(keyRanges, &inx.MilestoneKeyRange{
+			PublicKey:  r.PublicKey[:],
+			StartIndex: uint32(r.StartIndex),
+			EndIndex:   uint32(r.EndIndex),
+		})
+	}
+
 	return &inx.ProtocolParameters{
 		NetworkName:     deps.NetworkIDName,
 		ProtocolVersion: iotago.ProtocolVersion,
@@ -108,5 +120,7 @@ func (s *INXServer) ReadProtocolParameters(context.Context, *inx.NoParams) (*inx
 			VByteFactorData: uint64(deps.DeserializationParameters.RentStructure.VBFactorData),
 			VByteFactorKey:  uint64(deps.DeserializationParameters.RentStructure.VBFactorKey),
 		},
+		MilestonePublicKeyCount: uint32(deps.MilestonePublicKeyCount),
+		MilestoneKeyRanges:      keyRanges,
 	}, nil
 }

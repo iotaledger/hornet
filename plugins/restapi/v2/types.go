@@ -225,3 +225,23 @@ type createSnapshotsResponse struct {
 	// The file path of the delta snapshot file.
 	DeltaFilePath string `json:"deltaFilePath,omitempty"`
 }
+
+// ComputeWhiteFlagMutationsRequest defines the request for a POST debugComputeWhiteFlagMutations REST API call.
+type ComputeWhiteFlagMutationsRequest struct {
+	// The index of the milestone.
+	Index milestone.Index `json:"index"`
+	// The timestamp of the milestone.
+	Timestamp uint32 `json:"timestamp"`
+	// The hex encoded message IDs of the parents the milestone references.
+	Parents []string `json:"parentMessageIds"`
+	// The hex encoded milestone ID of the previous milestone.
+	LastMilestoneID string `json:"lastMilestoneId"`
+}
+
+// ComputeWhiteFlagMutationsResponse defines the response for a POST debugComputeWhiteFlagMutations REST API call.
+type ComputeWhiteFlagMutationsResponse struct {
+	// The hex encoded confirmed merkle tree root as a result of the white flag computation.
+	ConfirmedMerkleRoot string `json:"confirmedMerkleRoot"`
+	// The hex encoded applied merkle tree root as a result of the white flag computation.
+	AppliedMerkleRoot string `json:"appliedMerkleRoot"`
+}

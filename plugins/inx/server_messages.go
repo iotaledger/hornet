@@ -20,10 +20,26 @@ import (
 	inx "github.com/iotaledger/inx/go"
 )
 
+func INXMessageIDsFromMessageIDs(messageIDs hornet.MessageIDs) []*inx.MessageId {
+	result := make([]*inx.MessageId, len(messageIDs))
+	for i := range messageIDs {
+		result[i] = inx.NewMessageId(messageIDs[i].ToArray())
+	}
+	return result
+}
+
+func MessageIDsFromINXMessageIDs(messageIDs []*inx.MessageId) hornet.MessageIDs {
+	result := make([]hornet.MessageID, len(messageIDs))
+	for i := range messageIDs {
+		result[i] = hornet.MessageIDFromArray(messageIDs[i].Unwrap())
+	}
+	return result
+}
+
 func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.MessageMetadata) (*inx.MessageMetadata, error) {
 	m := &inx.MessageMetadata{
 		MessageId: inx.NewMessageId(messageID.ToArray()),
-		Parents:   metadata.Parents().ToSliceOfSlices(),
+		Parents:   INXMessageIDsFromMessageIDs(metadata.Parents()),
 		Solid:     metadata.IsSolid(),
 	}
 

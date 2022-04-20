@@ -9,16 +9,13 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
@@ -199,22 +196,6 @@ func provide(c *dig.Container) {
 			CorePlugin.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", targetEngine)
 			return databaseOut{}
 		}
-	}); err != nil {
-		CorePlugin.LogPanic(err)
-	}
-
-	if err := c.Provide(func(coordinatorPublicKeyRanges coordinator.PublicKeyRanges) *keymanager.KeyManager {
-		keyManager := keymanager.New()
-		for _, keyRange := range coordinatorPublicKeyRanges {
-			pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
-			if err != nil {
-				CorePlugin.LogPanicf("can't load public key ranges: %s", err)
-			}
-
-			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
-		}
-
-		return keyManager
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}

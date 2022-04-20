@@ -23,9 +23,7 @@ func TestSnapshot(t *testing.T) {
 	n, err := f.CreateStaticNetwork("test_snapshot", nil, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.NodeConfig) {
 		// run network without a coordinator
 		if index == 0 {
-			cfg.Coordinator.Bootstrap = false
-			cfg.Coordinator.RunAsCoo = false
-			cfg.Plugins.Enabled = []string{}
+			cfg.INXCoo.RunAsCoo = false
 		}
 		// modify to use different snapshot files
 		cfg.Snapshot.FullSnapshotFilePath = "/assets/test_full_snapshot.bin"

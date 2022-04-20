@@ -13,23 +13,6 @@ var (
 	receiptMigrationEntriesApplied prometheus.Counter
 )
 
-func configureMigrator() {
-	migratorSoftErrEncountered = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Namespace: "iota",
-			Subsystem: "migrator",
-			Name:      "soft_error_count",
-			Help:      "The migrator service's encountered soft error count.",
-		},
-	)
-
-	registry.MustRegister(migratorSoftErrEncountered)
-
-	deps.MigratorService.Events.SoftError.Attach(events.NewClosure(func(_ error) {
-		migratorSoftErrEncountered.Inc()
-	}))
-}
-
 func configureReceipts() {
 	receiptCount = prometheus.NewCounter(
 		prometheus.CounterOpts{
@@ -52,7 +35,7 @@ func configureReceipts() {
 	registry.MustRegister(receiptCount)
 	registry.MustRegister(receiptMigrationEntriesApplied)
 
-	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.Receipt) {
+	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.ReceiptMilestoneOpt) {
 		receiptCount.Inc()
 		receiptMigrationEntriesApplied.Add(float64(len(r.Funds)))
 	}))

@@ -52,6 +52,11 @@ func (m MessageID) MarshalBinary() ([]byte, error) {
 	return m, nil
 }
 
+// IsNullMessageID returns the true if it is the genesis message ID.
+func (m MessageID) IsNullMessageID() bool {
+	return bytes.Equal(m[:], NullMessageID()[:])
+}
+
 // NullMessageID returns the ID of the genesis message.
 func NullMessageID() MessageID {
 	nullMessageID := make(MessageID, 32)

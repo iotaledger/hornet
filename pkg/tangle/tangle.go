@@ -172,8 +172,7 @@ func New(
 			MilestoneSolidificationFailed:  events.NewEvent(milestone.IndexCaller),
 			MilestoneTimeout:               events.NewEvent(events.VoidCaller),
 			LedgerUpdated:                  events.NewEvent(LedgerUpdatedCaller),
-			NewUTXOOutput:                  events.NewEvent(UTXOOutputCaller),
-			NewUTXOSpent:                   events.NewEvent(UTXOSpentCaller),
+			TreasuryMutated:                events.NewEvent(TreasuryMutationCaller),
 			NewReceipt:                     events.NewEvent(ReceiptCaller),
 		},
 	}

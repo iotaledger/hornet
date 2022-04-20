@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -293,6 +294,22 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
+	previousMilestoneID := iotago.MilestoneID{}
+	if milestoneIndexToSolidify > 1 {
+		// The first milestones references the genesis, so we won't be able to load it
+		cachedMsgPreviousMilestone := t.storage.MilestoneCachedMessageOrNil(milestoneIndexToSolidify - 1) // message +1
+		if cachedMsgPreviousMilestone == nil {
+			return
+		}
+		defer cachedMsgPreviousMilestone.Release(true) // message -1
+
+		milestoneID, err := cachedMsgPreviousMilestone.Message().Milestone().ID()
+		if err != nil {
+			return
+		}
+		previousMilestoneID = *milestoneID
+	}
+
 	var timeStartConfirmation, timeSetConfirmedMilestoneIndex, timeUpdateConeRootIndexes, timeConfirmedMilestoneChanged, timeConfirmedMilestoneIndexChanged, timeMilestoneConfirmedSyncEvent, timeMilestoneConfirmed time.Time
 
 	timeStart := time.Now()
@@ -302,11 +319,12 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		messagesMemcache.CachedMessage,
 		t.networkId,
 		cachedMilestoneToSolidify.Milestone().MessageID,
+		previousMilestoneID,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
 		whiteflag.DefaultSetMessageReferencedFunc,
 		t.serverMetrics,
-		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
+		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
 			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
 		},
 		func(confirmation *whiteflag.Confirmation) {
@@ -333,11 +351,8 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 			t.Events.LedgerUpdated.Trigger(index, newOutputs, newSpents)
 		},
-		func(index milestone.Index, output *utxo.Output) {
-			t.Events.NewUTXOOutput.Trigger(index, output)
-		},
-		func(index milestone.Index, spent *utxo.Spent) {
-			t.Events.NewUTXOSpent.Trigger(index, spent)
+		func(index milestone.Index, tuple *utxo.TreasuryMutationTuple) {
+			t.Events.TreasuryMutated.Trigger(index, tuple)
 		},
 		func(rt *utxo.ReceiptTuple) error {
 			if t.receiptService != nil {

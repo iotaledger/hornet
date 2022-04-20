@@ -23,9 +23,11 @@ func ShortenedHash(hash hornet.MessageID) string {
 func ShortenedTag(cachedMsg *storage.CachedMessage) string {
 	defer cachedMsg.Release(true) // message -1
 
+	hash := ShortenedHash(cachedMsg.Message().MessageID())
+
 	ms := cachedMsg.Message().Milestone()
 	if ms != nil {
-		return fmt.Sprintf("%d", ms.Index)
+		return fmt.Sprintf("%d-%s", ms.Index, hash)
 	}
 
 	taggedData := cachedMsg.Message().TransactionEssenceTaggedData()
@@ -37,17 +39,17 @@ func ShortenedTag(cachedMsg *storage.CachedMessage) string {
 	}
 
 	tag := taggedData.Tag
+	tagString := string(tag)
 	if len(tag) > 4 {
-		tag = tag[:4]
+		tagString = hex.EncodeToString(tag[:4])
 	}
-	tagHex := hex.EncodeToString(tag)
 
 	if cachedMsg.Metadata().IsConflictingTx() {
 		conflict := cachedMsg.Metadata().Conflict()
-		return fmt.Sprintf("%s (%d)", tagHex, conflict)
+		return fmt.Sprintf("%s (%d)", tagString, conflict)
 	}
 
-	return tagHex
+	return fmt.Sprintf("%s-%s", tagString, hash)
 }
 
 // ShowDotFile creates a png file with dot and shows it in an external application.

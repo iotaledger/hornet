@@ -3,6 +3,7 @@ package protocfg
 import (
 	flag "github.com/spf13/pflag"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/node"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -44,3 +45,11 @@ var params = &node.PluginParams{
 	},
 	Masked: nil,
 }
+
+type ConfigPublicKeyRange struct {
+	Key        string          `json:"key" koanf:"key"`
+	StartIndex milestone.Index `json:"start" koanf:"start"`
+	EndIndex   milestone.Index `json:"end" koanf:"end"`
+}
+
+type ConfigPublicKeyRanges []*ConfigPublicKeyRange

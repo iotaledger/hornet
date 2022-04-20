@@ -1,14 +1,13 @@
 package milestonemanager_test
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
@@ -62,7 +61,7 @@ func initTest(testInterface testing.TB) (*testsuite.TestEnvironment, *milestonem
 	te := testsuite.SetupTestEnvironment(testInterface, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
 
 	getKeyManager := func() *keymanager.KeyManager {
-		var coordinatorPublicKeyRanges coordinator.PublicKeyRanges
+		var coordinatorPublicKeyRanges protocfg.ConfigPublicKeyRanges
 
 		err := json.Unmarshal([]byte(coordinatorPublicKeyRangesJSON), &coordinatorPublicKeyRanges)
 		require.NoError(te.TestInterface, err)
@@ -86,42 +85,43 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	te, milestoneManager := initTest(t)
 	defer te.CleanupTestEnvironment(true)
 
-	/*
-		{
-		  "protocolVersion": 2,
-		  "parentMessageIds": [
-		    "0x4500be17d84dde04179a9619e202ba618da21debf6b7d07bbdcd22b9f7c41abf"
-		  ],
-		  "payload": {
-		    "type": 7,
-		    "index": 3,
-		    "timestamp": 1649079954,
-		    "parentMessageIds": [
-		      "0x4500be17d84dde04179a9619e202ba618da21debf6b7d07bbdcd22b9f7c41abf"
-		    ],
-		    "inclusionMerkleProof": "0x0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
-		    "nextPoWScore": 0,
-		    "nextPoWScoreMilestoneIndex": 0,
-		    "signatures": [
-		      {
-		        "type": 0,
-		        "publicKey": "0xed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
-		        "signature": "0x4d690e7b869670cdb384c15987acf6cc0ade58232a8bbbe88d52ba12443fbc8bc90d2469d4973c643f8d0dce4afd2dced4c305add4c2c42a02aaa237b08d990a"
-		      },
-		      {
-		        "type": 0,
-		        "publicKey": "0xf6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
-		        "signature": "0x12007c19da4aaa90da5aa2ae6351de7c8c77cd5bdca02b1ae5a3462ef0cce7aa7458c570f5d5cc0b0a573253e6d61d542dd53dbd569988673f4f9d30a435c30a"
-		      }
-		    ]
-		  },
-		  "nonce": "9223372036854786502"
-		}
-	*/
-
-	milestoneMessageHex := "02014500be17d84dde04179a9619e202ba618da21debf6b7d07bbdcd22b9f7c41abf22010000070000000300000092f64a6200000000014500be17d84dde04179a9619e202ba618da21debf6b7d07bbdcd22b9f7c41abf0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a800000000000000000000000000000200ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c4d690e7b869670cdb384c15987acf6cc0ade58232a8bbbe88d52ba12443fbc8bc90d2469d4973c643f8d0dce4afd2dced4c305add4c2c42a02aaa237b08d990a00f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c12007c19da4aaa90da5aa2ae6351de7c8c77cd5bdca02b1ae5a3462ef0cce7aa7458c570f5d5cc0b0a573253e6d61d542dd53dbd569988673f4f9d30a435c30ac629000000000080"
-	milestoneMessageBytes, err := hex.DecodeString(milestoneMessageHex)
-	require.NoError(te.TestInterface, err)
+	jsonString := `
+	{
+	  "protocolVersion": 2,
+	  "parentMessageIds": [
+	    "0x1c77435ecd0f9c1fb9ad4179c6f12c9daf1e38051fe9b5bdf5325578b2d508aa"
+	  ],
+	  "payload": {
+	    "type": 7,
+	    "index": 3,
+	    "timestamp": 1650451900,
+	    "lastMilestoneId": "0x35339a1bbb8ab044ae8490442fa0d511efa0994f59746ebbee642ac799a4d1f1",
+	    "parentMessageIds": [
+	      "0x1c77435ecd0f9c1fb9ad4179c6f12c9daf1e38051fe9b5bdf5325578b2d508aa"
+	    ],
+	    "confirmedMerkleRoot": "0xc29fd0895481e630fa6dea5f06cfb07048ec641cf9e3d39e528b0df09f0af7ea",
+	    "appliedMerkleRoot": "0x0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
+	    "signatures": [
+	      {
+	        "type": 0,
+	        "publicKey": "0xed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+	        "signature": "0xbe83584cc1223327156a667f8f2e0813db850e1d2acdacecd76439bd8da0a18f1c21a8dd6982340890d48cb53100bd39fe70c38a9a13199bd6baed4ee09e3d02"
+	      },
+	      {
+	        "type": 0,
+	        "publicKey": "0xf6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
+	        "signature": "0x4ac5c7b70c1ec21e702847baad4717c20f0fbc4f8c252ef86ef01cf4a65b2a536c77c30b8dd6a062c47947037745676c7a6fb274cd2151f3e1063a18274b5308"
+	      }
+	    ]
+	  },
+	  "nonce": "13835058055282164240"
+	}
+	`
+	jsonMsg := &iotago.Message{}
+	err := json.Unmarshal([]byte(jsonString), jsonMsg)
+	require.NoError(t, err)
+	milestoneMessageBytes, err := jsonMsg.Serialize(serializer.DeSeriModePerformValidation, iotago.ZeroRentParas)
+	require.NoError(t, err)
 
 	// build HORNET representation of the message
 	msg, err := storage.MessageFromBytes(milestoneMessageBytes, serializer.DeSeriModePerformValidation, testsuite.DeSerializationParameters)

@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/utils"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func (s *SnapshotManager) setIsPruning(value bool) {
@@ -286,7 +285,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		}
 
 		var migratedAtIndex []uint32
-		if r, ok := cachedMsgMilestone.Message().Milestone().Receipt.(*iotago.Receipt); ok {
+		if r := cachedMsgMilestone.Message().Milestone().Opts.MustSet().Receipt(); r != nil {
 			migratedAtIndex = append(migratedAtIndex, r.MigratedAt)
 		}
 

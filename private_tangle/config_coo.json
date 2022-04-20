@@ -1,0 +1,19 @@
+{
+  "coordinator": {
+    "stateFilePath": "state/coordinator.state",
+    "interval": "10s",
+    "powWorkerCount": 0,
+    "checkpoints": {
+      "maxTrackedMessages": 10000
+    },
+    "tipsel": {
+      "minHeaviestBranchUnreferencedMessagesThreshold": 20,
+      "maxHeaviestBranchTipsPerCheckpoint": 10,
+      "randomTipsPerCheckpoint": 3,
+      "heaviestBranchSelectionTimeout": "100ms"
+    },
+    "signing": {
+      "provider": "local"
+    }
+  }
+}

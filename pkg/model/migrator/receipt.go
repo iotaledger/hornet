@@ -27,10 +27,10 @@ var (
 )
 
 // ReceiptPersistFunc is a function which persists a receipt.
-type ReceiptPersistFunc func(r *iotago.Receipt) error
+type ReceiptPersistFunc func(r *iotago.ReceiptMilestoneOpt) error
 
 // ReceiptValidateFunc is a function which validates a receipt.
-type ReceiptValidateFunc func(r *iotago.Receipt) error
+type ReceiptValidateFunc func(r *iotago.ReceiptMilestoneOpt) error
 
 // ReceiptService is in charge of persisting and validating a batch of receipts.
 type ReceiptService struct {
@@ -89,7 +89,7 @@ func (rs *ReceiptService) Backup(r *utxo.ReceiptTuple) error {
 // The UTXO ledger should be locked outside of this function.
 // If the receipt has the final flag set to true, then the entire batch of receipts with the same migrated_at index
 // are collected and it is checked whether they migrated all the funds of the given white-flag confirmation.
-func (rs *ReceiptService) ValidateWithoutLocking(r *iotago.Receipt) error {
+func (rs *ReceiptService) ValidateWithoutLocking(r *iotago.ReceiptMilestoneOpt) error {
 	if !rs.ValidationEnabled {
 		panic("receipt service is not configured to validate receipts")
 	}
@@ -106,7 +106,7 @@ func (rs *ReceiptService) ValidateWithoutLocking(r *iotago.Receipt) error {
 	return rs.validateAgainstWhiteFlagData(r)
 }
 
-func (rs *ReceiptService) validateAgainstWhiteFlagData(r *iotago.Receipt) error {
+func (rs *ReceiptService) validateAgainstWhiteFlagData(r *iotago.ReceiptMilestoneOpt) error {
 	// validate
 	wfEntries, err := rs.validator.QueryMigratedFunds(r.MigratedAt)
 	if err != nil {
@@ -124,7 +124,7 @@ func (rs *ReceiptService) validateAgainstWhiteFlagData(r *iotago.Receipt) error 
 
 // validates the given non final receipt by checking whether the entries of migrated funds all exist
 // within the given white-flag confirmation data.
-func (rs *ReceiptService) validateNonFinalReceipt(r *iotago.Receipt, wfEntries []*iotago.MigratedFundsEntry) error {
+func (rs *ReceiptService) validateNonFinalReceipt(r *iotago.ReceiptMilestoneOpt, wfEntries []*iotago.MigratedFundsEntry) error {
 	if r.Final {
 		panic("final receipt given")
 	}
@@ -154,7 +154,7 @@ func (rs *ReceiptService) validateNonFinalReceipt(r *iotago.Receipt, wfEntries [
 
 // adds the entries within the receipt to the given map by their tail tx hash.
 // it returns an error in case an entry for a given tail tx already exists.
-func addReceiptEntriesToMap(r *iotago.Receipt, m map[string]*iotago.MigratedFundsEntry) error {
+func addReceiptEntriesToMap(r *iotago.ReceiptMilestoneOpt, m map[string]*iotago.MigratedFundsEntry) error {
 	for _, migFundEntry := range r.Funds {
 		k := string(migFundEntry.TailTransactionHash[:])
 		if _, has := m[k]; has {
@@ -166,11 +166,11 @@ func addReceiptEntriesToMap(r *iotago.Receipt, m map[string]*iotago.MigratedFund
 }
 
 // validates a complete batch of receipts for a given migrated_at index against the data retrieved from legacy nodes.
-func (rs *ReceiptService) validateCompleteReceiptBatch(finalReceipt *iotago.Receipt, wfEntries []*iotago.MigratedFundsEntry) error {
-	receipts := []*iotago.Receipt{finalReceipt}
+func (rs *ReceiptService) validateCompleteReceiptBatch(finalReceipt *iotago.ReceiptMilestoneOpt, wfEntries []*iotago.MigratedFundsEntry) error {
+	receipts := []*iotago.ReceiptMilestoneOpt{finalReceipt}
 
 	// collect migrated funds from previous receipt
-	receiptsWithSameIndex := make([]*iotago.Receipt, 0)
+	receiptsWithSameIndex := make([]*iotago.ReceiptMilestoneOpt, 0)
 	if err := rs.utxoManager.ForEachReceiptTupleMigratedAt(milestone.Index(finalReceipt.MigratedAt), func(rt *utxo.ReceiptTuple) bool {
 		receiptsWithSameIndex = append(receiptsWithSameIndex, rt.Receipt)
 		return true

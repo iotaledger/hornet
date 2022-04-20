@@ -13,7 +13,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/coordinator"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
@@ -23,6 +22,7 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/gohornet/inx-coordinator/pkg/coordinator"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
@@ -46,6 +46,9 @@ type TestEnvironment struct {
 
 	// PoWHandler holds the PoWHandler instance.
 	PoWHandler *pow.Handler
+
+	// PoWMinScore used in the PoWHandler instance.
+	PoWMinScore float64
 
 	// networkID is the network ID used for this test network.
 	networkID uint64
@@ -100,6 +103,7 @@ var (
 		},
 	}
 )
+
 type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)
 type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents)
 
@@ -113,6 +117,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(targetScore, 5*time.Second),
+		PoWMinScore:            targetScore,
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
 		belowMaxDepth:          milestone.Index(belowMaxDepth),
 		LastMilestoneMessageID: hornet.NullMessageID(),
@@ -185,8 +190,8 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 
 	for i := 1; i <= numberOfMilestones; i++ {
 		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{hornet.NullMessageID()}, false)
-		require.Equal(te.TestInterface, 1, confStats.MessagesReferenced)                  // 1 for milestone
-		require.Equal(te.TestInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for milestone
+		require.Equal(te.TestInterface, 1, confStats.MessagesReferenced)                  // 1 for previous milestone
+		require.Equal(te.TestInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for previous milestone
 		require.Equal(te.TestInterface, 0, confStats.MessagesIncludedWithTransactions)
 		require.Equal(te.TestInterface, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	}

@@ -23,7 +23,6 @@ import (
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/plugins/coordinator"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/configuration"
@@ -175,7 +174,6 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) err
 	mpsRateLimitCfg := deps.NodeConfig.Float64(CfgSpammerMPSRateLimit)
 	cpuMaxUsageCfg := deps.NodeConfig.Float64(CfgSpammerCPUMaxUsage)
 	spammerWorkerCount := deps.NodeConfig.Int(CfgSpammerWorkers)
-	checkPeersConnected := Plugin.Node.IsSkipped(coordinator.Plugin)
 
 	if mpsRateLimit != nil {
 		mpsRateLimitCfg = *mpsRateLimit
@@ -206,12 +204,12 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) err
 		spammerWorkerCount = 1
 	}
 
-	startSpammerWorkers(mpsRateLimitCfg, cpuMaxUsageCfg, spammerWorkerCount, checkPeersConnected)
+	startSpammerWorkers(mpsRateLimitCfg, cpuMaxUsageCfg, spammerWorkerCount)
 
 	return nil
 }
 
-func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorkerCount int, checkPeersConnected bool) {
+func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorkerCount int) {
 	mpsRateLimitRunning = mpsRateLimit
 	cpuMaxUsageRunning = cpuMaxUsage
 	spammerWorkersRunning = spammerWorkerCount
@@ -318,7 +316,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						continue
 					}
 
-					if checkPeersConnected && deps.PeeringManager.ConnectedCount() == 0 {
+					if deps.PeeringManager.ConnectedCount() == 0 {
 						time.Sleep(time.Second)
 						continue
 					}

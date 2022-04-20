@@ -24,12 +24,12 @@ func blankMilestone(index uint32) *iotago.Milestone {
 	return &iotago.Milestone{
 		Index:     index,
 		Timestamp: 0,
-		Receipt:   nil,
 		Parents: iotago.MilestoneParentMessageIDs{
 			static32ByteID(0),
 			static32ByteID(1),
 		},
-		InclusionMerkleProof: static32ByteID(2),
+		ConfirmedMerkleRoot: static32ByteID(2),
+		AppliedMerkleRoot:   static32ByteID(2),
 		Signatures: []iotago.Signature{
 			&iotago.Ed25519Signature{
 				PublicKey: static32ByteID(0),
@@ -171,7 +171,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 			if err != nil {
 				panic(err)
 			}
-			ms.Receipt = receipt
+			ms.Opts = iotago.MilestoneOpts{receipt}
 			return ms
 		}(),
 		SpentTreasuryOutput: &utxo.TreasuryOutput{

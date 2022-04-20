@@ -10,8 +10,6 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/hornet"
@@ -20,6 +18,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func databaseVerify(args []string) error {
@@ -219,6 +218,26 @@ func verifyDatabase(
 			return err
 		}
 
+		previousMilestoneID := iotago.MilestoneID{}
+		if msIndex > 1 {
+
+			previousMilestoneMessageID, err := getMilestoneMessageIDFromStorage(storeSource, msIndex-1)
+			if err != nil {
+				return err
+			}
+
+			previousMilestoneMessage, err := getMilestoneMessageFromStorage(storeSource, previousMilestoneMessageID)
+			if err != nil {
+				return err
+			}
+
+			milestoneID, err := previousMilestoneMessage.Milestone().ID()
+			if err != nil {
+				return err
+			}
+			previousMilestoneID = *milestoneID
+		}
+
 		referencedMessages := make(map[string]struct{})
 
 		// confirm the milestone with the help of a special walker condition.
@@ -230,6 +249,7 @@ func verifyDatabase(
 			storeSource.CachedMessage,
 			storeSource.SnapshotInfo().NetworkID,
 			milestoneMessageID,
+			previousMilestoneID,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -254,7 +274,6 @@ func verifyDatabase(
 					meta.SetReferenced(referenced, msIndex)
 				}
 			},
-			nil,
 			nil,
 			nil,
 			nil,
@@ -392,7 +411,7 @@ func compareLedgerState(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.M
 func cleanupMilestoneFromUTXOManager(utxoManager *utxo.Manager, msMsg *storage.Message, msIndex milestone.Index) error {
 
 	var receiptMigratedAtIndex []uint32
-	if r, ok := msMsg.Milestone().Receipt.(*iotago.Receipt); ok {
+	if r := msMsg.Milestone().Opts.MustSet().Receipt(); r != nil {
 		receiptMigratedAtIndex = append(receiptMigratedAtIndex, r.MigratedAt)
 	}
 

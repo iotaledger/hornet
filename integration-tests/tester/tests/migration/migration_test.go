@@ -41,21 +41,22 @@ func TestMigration(t *testing.T) {
 		SpawnWhiteFlagMockServer:  true,
 		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock", "wfmock_config.json"),
 	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.NodeConfig) {
+		cfg.Receipts.IgnoreSoftErrors = false
+		cfg.Receipts.Validate = true
+		cfg.Receipts.Validator.APIAddress = "http://wfmock:14265"
+		cfg.Receipts.Validator.APITimeout = 5 * time.Second
+		cfg.Receipts.Validator.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
+		cfg.Receipts.Validator.CoordinatorMerkleTreeDepth = 8
+
 		switch {
 		case index == 0:
-			cfg.WithMigration()
-			cfg.Migrator.StartIndex = 1
-			cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "INX")
+			cfg.WithReceipts()
+			cfg.INXCoo.Migrator.StartIndex = 1
+			cfg.INXCoo.Validator = cfg.Receipts.Validator
 		default:
 			cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
 		}
 
-		cfg.Receipts.IgnoreSoftErrors = false
-		cfg.Receipts.Validate = true
-		cfg.Receipts.APIAddress = "http://wfmock:14265"
-		cfg.Receipts.APITimeout = 5 * time.Second
-		cfg.Receipts.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
-		cfg.Receipts.CoordinatorMerkleTreeDepth = 8
 		cfg.Snapshot.FullSnapshotFilePath = "/assets/migration_full_snapshot.bin"
 		cfg.Snapshot.DeltaSnapshotFilePath = "/assets/migration_delta_snapshot.bin" // doesn't exist so the node will only load the full one
 	})
@@ -119,20 +120,21 @@ func TestAPIError(t *testing.T) {
 	// start a network without a mock
 	n, err := f.CreateStaticNetwork("test_migration_api_error", nil, framework.DefaultStaticPeeringLayout(),
 		func(index int, cfg *framework.NodeConfig) {
+			cfg.Receipts.IgnoreSoftErrors = true
+			cfg.Receipts.Validate = true
+			cfg.Receipts.Validator.APIAddress = "http://localhost:14265"
+			cfg.Receipts.Validator.APITimeout = 5 * time.Second
+			cfg.Receipts.Validator.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
+			cfg.Receipts.Validator.CoordinatorMerkleTreeDepth = 8
+
 			switch {
 			case index == 0:
-				cfg.WithMigration()
-				cfg.Migrator.StartIndex = 1
+				cfg.WithReceipts()
+				cfg.INXCoo.Migrator.StartIndex = 1
+				cfg.INXCoo.Validator = cfg.Receipts.Validator
 			default:
 				cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
 			}
-
-			cfg.Receipts.IgnoreSoftErrors = true
-			cfg.Receipts.Validate = true
-			cfg.Receipts.APIAddress = "http://localhost:14265"
-			cfg.Receipts.APITimeout = 5 * time.Second
-			cfg.Receipts.CoordinatorAddress = "QYO9OXGLVLUKMCEONVAPEWXUFQTGTTHPZZOTOFHYUFVPJJLLFAYBIOFMTUSVXVRQFSUIQXJUGZQDDDULY"
-			cfg.Receipts.CoordinatorMerkleTreeDepth = 8
 			cfg.Snapshot.FullSnapshotFilePath = "/assets/migration_full_snapshot.bin"
 			cfg.Snapshot.DeltaSnapshotFilePath = "/assets/migration_delta_snapshot.bin" // doesn't exist so the node will only load the full one
 		})
