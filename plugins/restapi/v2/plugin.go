@@ -90,6 +90,10 @@ const (
 	// GET returns the receipts for the given migrated at index.
 	RouteReceiptsMigratedAtIndex = "/receipts/:" + restapipkg.ParameterMilestoneIndex
 
+	// RouteComputeWhiteFlag is the debug route to compute the white flag confirmation for the cone of the given parents.
+	// POST computes the white flag confirmation.
+	RouteComputeWhiteFlag = "/whiteflag"
+
 	// RoutePeer is the route for getting peers by their peerID.
 	// GET returns the peer
 	// DELETE deletes the peer.
@@ -107,10 +111,6 @@ const (
 	// RouteControlSnapshotsCreate is the control route to manually create a snapshot files.
 	// POST creates a snapshot (full, delta or both).
 	RouteControlSnapshotsCreate = "/control/snapshots/create"
-
-	// RouteComputeWhiteFlag is the debug route to compute the white flag confirmation for the cone of the given parents.
-	// POST computes the white flag confirmation.
-	RouteComputeWhiteFlag = "/whiteflag"
 )
 
 func init() {
@@ -348,6 +348,15 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	routeGroup.POST(RouteComputeWhiteFlag, func(c echo.Context) error {
+		resp, err := computeWhiteFlagMutations(c)
+		if err != nil {
+			return err
+		}
+
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
 	routeGroup.POST(RoutePeers, func(c echo.Context) error {
 		resp, err := addPeer(c)
 		if err != nil {
@@ -369,15 +378,6 @@ func configure() {
 		if err != nil {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	routeGroup.POST(RouteComputeWhiteFlag, func(c echo.Context) error {
-		resp, err := computeWhiteFlagMutations(c)
-		if err != nil {
-			return err
-		}
-
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 }
