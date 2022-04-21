@@ -484,7 +484,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 	}
 
 	// stream data into snapshot file
-	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint64(targetMsTimestamp.Unix()), header, newSEPsProducer(ctx, s.storage, targetIndex, s.solidEntryPointCheckThresholdPast), utxoProducer, milestoneDiffProducer)
+	snapshotMetrics, err := StreamSnapshotDataTo(snapshotFile, uint32(targetMsTimestamp.Unix()), header, newSEPsProducer(ctx, s.storage, targetIndex, s.solidEntryPointCheckThresholdPast), utxoProducer, milestoneDiffProducer)
 	if err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate %s snapshot file: %w", snapshotNames[snapshotType], err)
@@ -619,7 +619,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 	// stream data into snapshot file
 	if _, err := StreamSnapshotDataTo(
 		snapshotFile,
-		uint64(snapshotInfo.Timestamp.Unix()),
+		uint32(snapshotInfo.Timestamp.Unix()),
 		snapshotFileHeader,
 		sepProducer,
 		countingOutputProducer,
@@ -635,7 +635,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 
 	return &ReadFileHeader{
 		FileHeader:         *snapshotFileHeader,
-		Timestamp:          uint64(snapshotInfo.Timestamp.Unix()),
+		Timestamp:          uint32(snapshotInfo.Timestamp.Unix()),
 		SEPCount:           uint64(sepsCount),
 		OutputCount:        uint64(unspentOutputsCount),
 		MilestoneDiffCount: 0,
@@ -772,7 +772,7 @@ func CreateSnapshotFromStorage(
 	// stream data into snapshot file
 	if _, err := StreamSnapshotDataTo(
 		snapshotFile,
-		uint64(targetMsTimestamp.Unix()),
+		uint32(targetMsTimestamp.Unix()),
 		snapshotFileHeader,
 		countingSepProducer,
 		countingOutputProducer,
@@ -788,7 +788,7 @@ func CreateSnapshotFromStorage(
 
 	return &ReadFileHeader{
 		FileHeader:         *snapshotFileHeader,
-		Timestamp:          uint64(targetMsTimestamp.Unix()),
+		Timestamp:          uint32(targetMsTimestamp.Unix()),
 		SEPCount:           uint64(sepsCount),
 		OutputCount:        uint64(unspentOutputsCount),
 		MilestoneDiffCount: 0,

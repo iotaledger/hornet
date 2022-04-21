@@ -30,7 +30,7 @@ func milestoneFactory(key []byte, data []byte) (objectstorage.StorableObject, er
 	return &Milestone{
 		Index:     milestoneIndexFromDatabaseKey(key),
 		MessageID: hornet.MessageIDFromSlice(data[:iotago.MessageIDLength]),
-		Timestamp: time.Unix(int64(binary.LittleEndian.Uint64(data[iotago.MessageIDLength:iotago.MessageIDLength+serializer.UInt64ByteSize])), 0),
+		Timestamp: time.Unix(int64(binary.LittleEndian.Uint32(data[iotago.MessageIDLength:iotago.MessageIDLength+serializer.UInt32ByteSize])), 0),
 	}, nil
 }
 
@@ -93,11 +93,11 @@ func (ms *Milestone) ObjectStorageKey() []byte {
 func (ms *Milestone) ObjectStorageValue() (data []byte) {
 	/*
 		32 byte message ID
-		8  byte timestamp
+		4  byte timestamp
 	*/
 
 	value := make([]byte, 8)
-	binary.LittleEndian.PutUint64(value, uint64(ms.Timestamp.Unix()))
+	binary.LittleEndian.PutUint32(value, uint32(ms.Timestamp.Unix()))
 
 	return byteutils.ConcatBytes(ms.MessageID, value)
 }

@@ -29,7 +29,7 @@ func NewMessageCaller(handler interface{}, params ...interface{}) {
 }
 
 func MessageReferencedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(cachedMsgMeta *CachedMetadata, msIndex milestone.Index, confTime uint64))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint64)) // message pass +1
+	handler.(func(cachedMsgMeta *CachedMetadata, msIndex milestone.Index, confTime uint32))(params[0].(*CachedMetadata).Retain(), params[1].(milestone.Index), params[2].(uint32)) // message pass +1
 }
 
 // CachedMessage contains two cached objects, one for message data and one for metadata.
