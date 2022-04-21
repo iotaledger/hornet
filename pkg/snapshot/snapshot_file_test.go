@@ -27,7 +27,7 @@ type test struct {
 	name                          string
 	snapshotFileName              string
 	originHeader                  *snapshot.FileHeader
-	originTimestamp               uint64
+	originTimestamp               uint32
 	sepGenerator                  snapshot.SEPProducerFunc
 	sepGenRetriever               sepRetrieverFunc
 	outputGenerator               snapshot.OutputProducerFunc
@@ -61,7 +61,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				TreasuryOutput:       &utxo.TreasuryOutput{MilestoneID: iotago.MilestoneID{}, Amount: 13337},
 			}
 
-			originTimestamp := uint64(time.Now().Unix())
+			originTimestamp := uint32(time.Now().Unix())
 
 			// create generators and consumers
 			sepIterFunc, sepGenRetriever := newSEPGenerator(150)
@@ -104,7 +104,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 				LedgerMilestoneIndex: milestone.Index(rand.Intn(10000)),
 			}
 
-			originTimestamp := uint64(time.Now().Unix())
+			originTimestamp := uint32(time.Now().Unix())
 
 			// create generators and consumers
 			sepIterFunc, sepGenRetriever := newSEPGenerator(150)

@@ -32,10 +32,9 @@ func (l LexicalOrderedOutputs) Swap(i, j int) {
 type Output struct {
 	kvStorable
 
-	outputID       *iotago.OutputID
-	messageID      hornet.MessageID
-	milestoneIndex milestone.Index
-	// We are saving space by just storing uint32 instead of the uint64 from the Milestone. This is good for the next 80 years.
+	outputID           *iotago.OutputID
+	messageID          hornet.MessageID
+	milestoneIndex     milestone.Index
 	milestoneTimestamp uint32
 
 	output iotago.Output
@@ -88,7 +87,7 @@ func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milesto
 		outputID:           outputID,
 		messageID:          messageID,
 		milestoneIndex:     milestoneIndex,
-		milestoneTimestamp: uint32(milestoneTimestamp),
+		milestoneTimestamp: milestoneTimestamp,
 		output:             output,
 	}
 }

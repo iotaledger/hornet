@@ -25,7 +25,7 @@ const (
 
 	// The offset of counters within a snapshot file:
 	// version + type + timestamp + network-id + sep-ms-index + ledger-ms-index
-	countersOffset = serializer.OneByte + serializer.OneByte + serializer.UInt64ByteSize + serializer.UInt64ByteSize +
+	countersOffset = serializer.OneByte + serializer.OneByte + serializer.UInt32ByteSize + serializer.UInt64ByteSize +
 		serializer.UInt32ByteSize + serializer.UInt32ByteSize
 )
 
@@ -211,7 +211,7 @@ type FileHeader struct {
 type ReadFileHeader struct {
 	FileHeader
 	// The time at which the snapshot was taken.
-	Timestamp uint64
+	Timestamp uint32
 	// The count of solid entry points.
 	SEPCount uint64
 	// The count of outputs. This count is zero if a delta snapshot has been read.
@@ -237,7 +237,7 @@ func getSnapshotFilesLedgerIndex(fullHeader *ReadFileHeader, deltaHeader *ReadFi
 // StreamSnapshotDataTo streams a snapshot data into the given io.WriteSeeker.
 // FileHeader.Type is used to determine whether to write a full or delta snapshot.
 // If the type of the snapshot is Full, then OutputProducerFunc must be provided.
-func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint64, header *FileHeader,
+func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint32, header *FileHeader,
 	sepProd SEPProducerFunc, outputProd OutputProducerFunc, msDiffProd MilestoneDiffProducerFunc) (*SnapshotMetrics, error) {
 
 	if header.Type == Full {

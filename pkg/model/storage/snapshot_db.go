@@ -5,6 +5,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 func (s *Storage) configureSnapshotStore(snapshotStore kvstore.KVStore) error {
@@ -19,7 +20,12 @@ func (s *Storage) configureSnapshotStore(snapshotStore kvstore.KVStore) error {
 
 func (s *Storage) storeSnapshotInfo(snapshot *SnapshotInfo) error {
 
-	if err := s.snapshotStore.Set([]byte("snapshotInfo"), snapshot.Bytes()); err != nil {
+	data, err := snapshot.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return errors.Wrap(NewDatabaseError(err), "failed to serialize snapshot info")
+	}
+
+	if err := s.snapshotStore.Set([]byte("snapshotInfo"), data); err != nil {
 		return errors.Wrap(NewDatabaseError(err), "failed to store snapshot info")
 	}
 
@@ -27,7 +33,7 @@ func (s *Storage) storeSnapshotInfo(snapshot *SnapshotInfo) error {
 }
 
 func (s *Storage) readSnapshotInfo() (*SnapshotInfo, error) {
-	value, err := s.snapshotStore.Get([]byte("snapshotInfo"))
+	data, err := s.snapshotStore.Get([]byte("snapshotInfo"))
 	if err != nil {
 		if !errors.Is(err, kvstore.ErrKeyNotFound) {
 			return nil, errors.Wrap(NewDatabaseError(err), "failed to retrieve snapshot info")
@@ -35,10 +41,11 @@ func (s *Storage) readSnapshotInfo() (*SnapshotInfo, error) {
 		return nil, nil
 	}
 
-	info, err := SnapshotInfoFromBytes(value)
-	if err != nil {
-		return nil, errors.Wrap(NewDatabaseError(err), "failed to convert snapshot info")
+	info := &SnapshotInfo{}
+	if _, err := info.Deserialize(data, serializer.DeSeriModeNoValidation, nil); err != nil {
+		return nil, errors.Wrap(NewDatabaseError(err), "failed to deserialize snapshot info")
 	}
+
 	return info, nil
 }
 

@@ -7,8 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/iotaledger/hive.go/bitmask"
-	"github.com/iotaledger/hive.go/marshalutil"
+	"github.com/iotaledger/hive.go/serializer/v2"
 )
 
 var (
@@ -21,7 +20,6 @@ type SnapshotInfo struct {
 	EntryPointIndex milestone.Index
 	PruningIndex    milestone.Index
 	Timestamp       time.Time
-	Metadata        bitmask.BitMask
 }
 
 func (s *Storage) loadSnapshotInfo() error {
@@ -45,65 +43,53 @@ func (s *Storage) PrintSnapshotInfo() {
 	}
 }
 
-func SnapshotInfoFromBytes(bytes []byte) (*SnapshotInfo, error) {
+func (i *SnapshotInfo) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
+	var timestamp uint32
 
-	if len(bytes) != 29 {
-		return nil, errors.Wrapf(ErrParseSnapshotInfoFailed, "invalid length %d != %d", len(bytes), 54)
-	}
-
-	marshalUtil := marshalutil.New(bytes)
-
-	networkID, err := marshalUtil.ReadUint64()
+	offset, err := serializer.NewDeserializer(data).
+		ReadNum(&i.NetworkID, func(err error) error {
+			return fmt.Errorf("unable to deserialize network ID: %w", err)
+		}).
+		ReadNum(&i.SnapshotIndex, func(err error) error {
+			return fmt.Errorf("unable to deserialize snapshot index: %w", err)
+		}).
+		ReadNum(&i.EntryPointIndex, func(err error) error {
+			return fmt.Errorf("unable to deserialize entry point index: %w", err)
+		}).
+		ReadNum(&i.PruningIndex, func(err error) error {
+			return fmt.Errorf("unable to deserialize pruning index: %w", err)
+		}).
+		ReadNum(&timestamp, func(err error) error {
+			return fmt.Errorf("unable to deserialize timestamp: %w", err)
+		}).
+		Done()
 	if err != nil {
-		return nil, err
+		return offset, err
 	}
 
-	snapshotIndex, err := marshalUtil.ReadUint32()
-	if err != nil {
-		return nil, err
-	}
+	i.Timestamp = time.Unix(int64(timestamp), 0)
 
-	entryPointIndex, err := marshalUtil.ReadUint32()
-	if err != nil {
-		return nil, err
-	}
-
-	pruningIndex, err := marshalUtil.ReadUint32()
-	if err != nil {
-		return nil, err
-	}
-
-	timestamp, err := marshalUtil.ReadUint64()
-	if err != nil {
-		return nil, err
-	}
-
-	metadata, err := marshalUtil.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-
-	return &SnapshotInfo{
-		NetworkID:       networkID,
-		SnapshotIndex:   milestone.Index(snapshotIndex),
-		EntryPointIndex: milestone.Index(entryPointIndex),
-		PruningIndex:    milestone.Index(pruningIndex),
-		Timestamp:       time.Unix(int64(timestamp), 0),
-		Metadata:        bitmask.BitMask(metadata),
-	}, nil
+	return offset, nil
 }
 
-func (i *SnapshotInfo) Bytes() []byte {
-	marshalUtil := marshalutil.New()
-
-	marshalUtil.WriteUint64(i.NetworkID)
-	marshalUtil.WriteUint32(uint32(i.SnapshotIndex))
-	marshalUtil.WriteUint32(uint32(i.EntryPointIndex))
-	marshalUtil.WriteUint32(uint32(i.PruningIndex))
-	marshalUtil.WriteUint64(uint64(i.Timestamp.Unix()))
-	marshalUtil.WriteByte(byte(i.Metadata))
-
-	return marshalUtil.Bytes()
+func (i *SnapshotInfo) Serialize(deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) ([]byte, error) {
+	return serializer.NewSerializer().
+		WriteNum(i.NetworkID, func(err error) error {
+			return fmt.Errorf("unable to serialize network ID: %w", err)
+		}).
+		WriteNum(i.SnapshotIndex, func(err error) error {
+			return fmt.Errorf("unable to serialize snapshot index: %w", err)
+		}).
+		WriteNum(i.EntryPointIndex, func(err error) error {
+			return fmt.Errorf("unable to serialize entry point index: %w", err)
+		}).
+		WriteNum(i.PruningIndex, func(err error) error {
+			return fmt.Errorf("unable to serialize pruning index: %w", err)
+		}).
+		WriteNum(uint32(i.Timestamp.Unix()), func(err error) error {
+			return fmt.Errorf("unable to serialize timestamp: %w", err)
+		}).
+		Serialize()
 }
 
 func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone.Index, entryPointIndex milestone.Index, pruningIndex milestone.Index, timestamp time.Time) error {
@@ -114,7 +100,6 @@ func (s *Storage) SetSnapshotMilestone(networkID uint64, snapshotIndex milestone
 		EntryPointIndex: entryPointIndex,
 		PruningIndex:    pruningIndex,
 		Timestamp:       timestamp,
-		Metadata:        bitmask.BitMask(0),
 	}
 
 	return s.SetSnapshotInfo(sn)

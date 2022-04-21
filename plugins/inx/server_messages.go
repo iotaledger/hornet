@@ -186,7 +186,7 @@ func (s *INXServer) ListenToReferencedMessages(filter *inx.MessageFilter, srv in
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint64) {
+	closure := events.NewClosure(func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
 		//TODO: apply filter?
 		wp.Submit(msgMeta)
 	})

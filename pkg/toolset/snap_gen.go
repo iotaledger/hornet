@@ -136,7 +136,7 @@ func snapshotGen(args []string) error {
 		return nil, nil
 	}
 
-	if _, err := snapshot.StreamSnapshotDataTo(snapshotFile, uint64(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
+	if _, err := snapshot.StreamSnapshotDataTo(snapshotFile, uint32(time.Now().Unix()), header, solidEntryPointProducerFunc, outputProducerFunc, milestoneDiffProducerFunc); err != nil {
 		_ = snapshotFile.Close()
 		return fmt.Errorf("couldn't generate snapshot file: %w", err)
 	}
