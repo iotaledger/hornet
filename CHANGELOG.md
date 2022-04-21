@@ -2,16 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.0-alpha7] - 07.04.2022
+## [2.0.0-alpha7] - 21.04.2022
 
 ### Changed
-    - Changed bech32 prefix for the testnet to `rms`
-    - Milestone payloads now contain an optional metadata field according to TIP-29.
+    - Milestone payloads now contain an optional metadata field according to TIP-29. (#1404)
     - Now using `rms` bech32 prefix according to TIP-31
+    - Private tangle improvements (#1390, #1395)
+    - Adapted ed25519-key tool to print mnemonic and derived keys using slip10 (#1407)
+    - Removed coordinator plugin (#1404)
+    - Encode Messages and Outputs based on the given Accept Header MIME type (#1427)
 
 ### Fixed
-    - Fixed deadlock while shutting down the node
-    - Fixed stale connections to peers when the initial stream establishment fails.
+    - Fixed deadlock while shutting down the node (#1394)
+    - Fixed stale connections to peers when the initial stream establishment fails. (#1395)
+    - Fixed request queue behavior and test cases (#1412)
+    - Fix wrong timestamp data type (#1438)
 
 ## [2.0.0-alpha6] - 30.03.2022
 

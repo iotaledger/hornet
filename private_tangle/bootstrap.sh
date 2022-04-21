@@ -6,7 +6,7 @@ if [[ "$OSTYPE" != "darwin"* && "$EUID" -ne 0 ]]; then
 fi
 
 # Cleanup if necessary
-if [ -d "privatedb" ]; then
+if [ -d "privatedb" ] || [ -d "snapshots"]; then
   ./cleanup.sh
 fi
 

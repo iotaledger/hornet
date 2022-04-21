@@ -44,19 +44,25 @@ func (s *Storage) PrintSnapshotInfo() {
 }
 
 func (i *SnapshotInfo) Deserialize(data []byte, deSeriMode serializer.DeSerializationMode, deSeriCtx interface{}) (int, error) {
-	var timestamp uint32
+
+	var (
+		snapshotIndex   uint32
+		entryPointIndex uint32
+		pruningIndex    uint32
+		timestamp       uint32
+	)
 
 	offset, err := serializer.NewDeserializer(data).
 		ReadNum(&i.NetworkID, func(err error) error {
 			return fmt.Errorf("unable to deserialize network ID: %w", err)
 		}).
-		ReadNum(&i.SnapshotIndex, func(err error) error {
+		ReadNum(&snapshotIndex, func(err error) error {
 			return fmt.Errorf("unable to deserialize snapshot index: %w", err)
 		}).
-		ReadNum(&i.EntryPointIndex, func(err error) error {
+		ReadNum(&entryPointIndex, func(err error) error {
 			return fmt.Errorf("unable to deserialize entry point index: %w", err)
 		}).
-		ReadNum(&i.PruningIndex, func(err error) error {
+		ReadNum(&pruningIndex, func(err error) error {
 			return fmt.Errorf("unable to deserialize pruning index: %w", err)
 		}).
 		ReadNum(&timestamp, func(err error) error {
@@ -67,6 +73,9 @@ func (i *SnapshotInfo) Deserialize(data []byte, deSeriMode serializer.DeSerializ
 		return offset, err
 	}
 
+	i.SnapshotIndex = milestone.Index(snapshotIndex)
+	i.EntryPointIndex = milestone.Index(entryPointIndex)
+	i.PruningIndex = milestone.Index(pruningIndex)
 	i.Timestamp = time.Unix(int64(timestamp), 0)
 
 	return offset, nil
