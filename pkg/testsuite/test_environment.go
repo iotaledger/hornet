@@ -87,9 +87,6 @@ type TestEnvironment struct {
 	// GenesisOutput marks the initial output created when bootstrapping the tangle.
 	GenesisOutput *utxo.Output
 
-	// OnMilestoneConfirmed callback that will be called at confirming a milestone. This is equivalent to the tangle.MilestoneConfirmed event.
-	OnMilestoneConfirmed OnMilestoneConfirmedFunc
-
 	// OnLedgerUpdatedFunc callback that will be called after the ledger gets updated during confirmation. This is equivalent to the tangle.LedgerUpdated event.
 	OnLedgerUpdatedFunc OnLedgerUpdatedFunc
 }
@@ -199,8 +196,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	return te
 }
 
-func (te *TestEnvironment) ConfigureUTXOCallbacks(onMilestoneConfirmedFunc OnMilestoneConfirmedFunc, onLedgerUpdatedFunc OnLedgerUpdatedFunc) {
-	te.OnMilestoneConfirmed = onMilestoneConfirmedFunc
+func (te *TestEnvironment) ConfigureUTXOCallbacks(onLedgerUpdatedFunc OnLedgerUpdatedFunc) {
 	te.OnLedgerUpdatedFunc = onLedgerUpdatedFunc
 }
 
