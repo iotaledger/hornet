@@ -248,19 +248,19 @@ func forEachSolidEntryPoint(
 			return err
 		}
 
-		cachedMilestone := dbStorage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
-		if cachedMilestone == nil {
+		// Get all parents of that milestone
+		cachedMsgMetaMilestone := dbStorage.MilestoneCachedMessageMetadataOrNil(milestoneIndex) // meta +1
+		if cachedMsgMetaMilestone == nil {
 			return errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
 
-		// Get all parents of that milestone
-		milestoneMessageID := cachedMilestone.Milestone().MessageID
-		cachedMilestone.Release(true) // milestone -1
+		milestoneParents := cachedMsgMetaMilestone.Metadata().Parents()
+		cachedMsgMetaMilestone.Release(true) // meta -1
 
 		// traverse the milestone and collect all messages that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
 			ctx,
-			hornet.MessageIDs{milestoneMessageID},
+			milestoneParents,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1

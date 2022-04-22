@@ -24,3 +24,16 @@ func (s *Storage) MilestoneCachedMessageOrNil(milestoneIndex milestone.Index) *C
 
 	return s.CachedMessageOrNil(cachedMilestone.Milestone().MessageID) // message +1
 }
+
+// MilestoneCachedMessageMetadataOrNil returns the cached metadata of a milestone index or nil if it doesn't exist.
+// meta +1
+func (s *Storage) MilestoneCachedMessageMetadataOrNil(milestoneIndex milestone.Index) *CachedMetadata {
+
+	cachedMilestone := s.CachedMilestoneOrNil(milestoneIndex) // milestone +1
+	if cachedMilestone == nil {
+		return nil
+	}
+	defer cachedMilestone.Release(true) // milestone -1
+
+	return s.CachedMessageMetadataOrNil(cachedMilestone.Milestone().MessageID) // meta +1
+}

@@ -235,19 +235,23 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		txCountDeleted, msgCountChecked := s.pruneUnreferencedMessages(milestoneIndex)
 		timePruneUnreferencedMessages := time.Now()
 
-		cachedMilestone := s.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
-		if cachedMilestone == nil {
+		// Get all parents of that milestone
+		cachedMsgMetaMilestone := s.storage.MilestoneCachedMessageMetadataOrNil(milestoneIndex) // meta +1
+		if cachedMsgMetaMilestone == nil {
 			// Milestone not found, pruning impossible
 			s.LogWarnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
 			continue
 		}
 
+		milestoneParents := cachedMsgMetaMilestone.Metadata().Parents()
+		cachedMsgMetaMilestone.Release(true) // meta -1
+
 		messageIDsToDeleteMap := make(map[string]struct{})
 
-		err := dag.TraverseParentsOfMessage(
+		if err := dag.TraverseParents(
 			ctx,
 			s.storage,
-			cachedMilestone.Milestone().MessageID,
+			milestoneParents,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -267,14 +271,11 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
 			// the pruning target index is also a solid entry point => traverse it anyways
-			true)
-		timeTraverseMilestoneCone := time.Now()
-
-		cachedMilestone.Release(true) // milestone -1
-		if err != nil {
+			true); err != nil {
 			s.LogWarnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 			continue
 		}
+		timeTraverseMilestoneCone := time.Now()
 
 		// check whether milestone contained receipt and delete it accordingly
 		cachedMsgMilestone := s.storage.MilestoneCachedMessageOrNil(milestoneIndex) // message +1
