@@ -139,15 +139,6 @@ var dashboardAllowedRoutes = map[string][]string{
 	},
 }
 
-var faucetAllowedRoutes = map[string][]string{
-	http.MethodGet: {
-		"/api/plugins/faucet/v1/info",
-	},
-	http.MethodPost: {
-		"/api/plugins/faucet/v1/enqueue",
-	},
-}
-
 func checkAllowedAPIRoute(context echo.Context, allowedRoutes map[string][]string) bool {
 
 	// Check for which route we will allow to access the API
@@ -168,8 +159,4 @@ func checkAllowedAPIRoute(context echo.Context, allowedRoutes map[string][]strin
 
 func dashboardAllowedAPIRoute(context echo.Context) bool {
 	return checkAllowedAPIRoute(context, dashboardAllowedRoutes)
-}
-
-func faucetAllowedAPIRoute(context echo.Context) bool {
-	return checkAllowedAPIRoute(context, faucetAllowedRoutes)
 }
