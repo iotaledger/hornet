@@ -88,6 +88,26 @@ services:
       - 3-nodes
       - 4-nodes
 
+  inx-faucet:
+    image: iotaledger/inx-faucet:0.1
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.23
+    restart: on-failure
+    environment:
+      - "FAUCET_PRV_KEY=52d23081a626b1eca34b63f1eaeeafcbd66bf545635befc12cd0f19926efefb031f176dadf38cdec0eadd1d571394be78f0bbee3ed594316678dffc162a095cb"
+    volumes:
+      - ./config_faucet.json:/app/config.json:ro
+    command:
+      - "-c"
+      - "config.json"
+      - "--inx.address=172.18.211.11:9029"
+      - "--faucet.website.bindAddress=172.18.211.23:8091"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
   hornet-coo:
     build:
       context: ../

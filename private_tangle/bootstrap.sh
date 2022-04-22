@@ -18,6 +18,7 @@ if [[ $1 = "build" ]]; then
   docker-compose pull inx-coordinator
   docker-compose pull inx-indexer
   docker-compose pull inx-mqtt
+  docker-compose pull inx-faucet
 fi
 
 # Create snapshot
