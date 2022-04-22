@@ -16,6 +16,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
@@ -280,10 +281,9 @@ func NewFaucetTestEnv(t *testing.T,
 
 	// Connect the callbacks from the testsuite to the Faucet
 	te.ConfigureUTXOCallbacks(
-		func(confirmation *whiteflag.Confirmation) {
-			require.NoError(t, f.ApplyConfirmation(confirmation))
+		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+			require.NoError(t, f.ApplyNewLedgerUpdate(index, newOutputs, newSpents))
 		},
-		nil,
 	)
 
 	return &FaucetTestEnv{

@@ -17,6 +17,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/faucet"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -28,7 +29,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -65,7 +65,7 @@ var (
 	deps   dependencies
 
 	// closures
-	onMilestoneConfirmed *events.Closure
+	onLedgerUpdated *events.Closure
 )
 
 type dependencies struct {
@@ -271,17 +271,17 @@ func run() {
 }
 
 func configureEvents() {
-	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		if err := deps.Faucet.ApplyConfirmation(confirmation); err != nil && common.IsCriticalError(err) != nil {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("faucet plugin hit a critical error: %s", err.Error()))
+	onLedgerUpdated = events.NewClosure(func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
+		if err := deps.Faucet.ApplyNewLedgerUpdate(index, newOutputs, newSpents); err != nil {
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("faucet plugin hit a critical error while applying new ledger update: %s", err.Error()))
 		}
 	})
 }
 
 func attachEvents() {
-	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	deps.Tangle.Events.LedgerUpdated.Attach(onLedgerUpdated)
 }
 
 func detachEvents() {
-	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+	deps.Tangle.Events.LedgerUpdated.Detach(onLedgerUpdated)
 }

@@ -277,9 +277,6 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestoneMessageID horne
 			wfConf = confirmation
 			err := te.syncManager.SetConfirmedMilestoneIndex(confirmation.MilestoneIndex, true)
 			require.NoError(te.TestInterface, err)
-			if te.OnMilestoneConfirmed != nil {
-				te.OnMilestoneConfirmed(confirmation)
-			}
 		},
 		func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) {
 			if te.OnLedgerUpdatedFunc != nil {

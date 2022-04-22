@@ -9,13 +9,13 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
@@ -39,8 +39,8 @@ var (
 	deps   dependencies
 
 	// closures
-	onMessageSolid       *events.Closure
-	onMilestoneConfirmed *events.Closure
+	onMessageSolid                   *events.Closure
+	onConfirmedMilestoneIndexChanged *events.Closure
 )
 
 type dependencies struct {
@@ -125,7 +125,7 @@ func configureEvents() {
 		})
 	})
 
-	onMilestoneConfirmed = events.NewClosure(func(_ *whiteflag.Confirmation) {
+	onConfirmedMilestoneIndexChanged = events.NewClosure(func(_ milestone.Index) {
 		// do not update tip scores during syncing, because it is not needed at all
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
@@ -142,10 +142,10 @@ func configureEvents() {
 
 func attachEvents() {
 	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
-	deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 }
 
 func detachEvents() {
 	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
-	deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
+	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 }

@@ -20,7 +20,6 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/utils"
-	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -60,8 +59,10 @@ type queueItem struct {
 
 // pendingTransaction holds info about a sent transaction that is pending.
 type pendingTransaction struct {
-	MessageID   hornet.MessageID
-	QueuedItems []*queueItem
+	MessageID      hornet.MessageID
+	QueuedItems    []*queueItem
+	ConsumedInputs []iotago.OutputID
+	TransactionID  iotago.TransactionID
 }
 
 // FaucetInfoResponse defines the response of a GET RouteFaucetInfo REST API call.
@@ -504,7 +505,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload iotago.Payload, ti
 }
 
 // buildTransactionPayload creates a signed transaction payload with all UTXO and batched requests.
-func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedRequests []*queueItem) (*iotago.Transaction, *iotago.UTXOInput, uint64, error) {
+func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedRequests []*queueItem) (*iotago.Transaction, *iotago.TransactionID, []iotago.OutputID, *iotago.UTXOInput, uint64, error) {
 
 	txBuilder := builder.NewTransactionBuilder(f.networkID)
 	txBuilder.AddTaggedDataPayload(&iotago.TaggedData{Tag: f.opts.tagMessage, Data: nil})
@@ -513,10 +514,12 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	var remainderAmount int64 = 0
 
 	// collect all unspent output of the faucet address
+	consumedInputs := []iotago.OutputID{}
 	for _, unspentOutput := range unspentOutputs {
 		outputCount++
 		remainderAmount += int64(unspentOutput.Deposit())
 		txBuilder.AddInput(&builder.ToBeSignedUTXOInput{Address: f.address, OutputID: *unspentOutput.OutputID(), Output: unspentOutput.Output()})
+		consumedInputs = append(consumedInputs, *unspentOutput.OutputID())
 	}
 
 	// add all requests as outputs
@@ -560,17 +563,17 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 
 	txPayload, err := txBuilder.Build(f.deSeriParas, f.addressSigner)
 	if err != nil {
-		return nil, nil, 0, err
-	}
-
-	if remainderAmount == 0 {
-		// no remainder available
-		return txPayload, nil, 0, nil
+		return nil, nil, nil, nil, 0, err
 	}
 
 	transactionID, err := txPayload.ID()
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("can't compute the transaction ID, error: %w", err)
+		return nil, nil, nil, nil, 0, fmt.Errorf("can't compute the transaction ID, error: %w", err)
+	}
+
+	if remainderAmount == 0 {
+		// no remainder available
+		return txPayload, transactionID, consumedInputs, nil, 0, nil
 	}
 
 	remainderOutput := &iotago.UTXOInput{}
@@ -583,7 +586,7 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 		basicOutput := output.(*iotago.BasicOutput)
 		conditions, err := basicOutput.UnlockConditions().Set()
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, nil, nil, nil, 0, err
 		}
 		addr := conditions.Address().Address
 
@@ -597,16 +600,16 @@ func (f *Faucet) buildTransactionPayload(unspentOutputs []*utxo.Output, batchedR
 	}
 
 	if !found {
-		return nil, nil, 0, errors.New("can't find the faucet remainder output")
+		return nil, nil, nil, nil, 0, errors.New("can't find the faucet remainder output")
 	}
 
-	return txPayload, remainderOutput, uint64(remainderAmount), nil
+	return txPayload, transactionID, consumedInputs, remainderOutput, uint64(remainderAmount), nil
 }
 
 // sendFaucetMessage creates a faucet transaction payload and remembers the last sent messageID and the lastRemainderOutput.
 func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.Output, batchedRequests []*queueItem, tip ...hornet.MessageID) error {
 
-	txPayload, remainderIotaGoOutput, remainderAmount, err := f.buildTransactionPayload(unspentOutputs, batchedRequests)
+	txPayload, transactionID, consumedInputs, remainderIotaGoOutput, remainderAmount, err := f.buildTransactionPayload(unspentOutputs, batchedRequests)
 	if err != nil {
 		return fmt.Errorf("build transaction payload failed, error: %w", err)
 	}
@@ -622,7 +625,13 @@ func (f *Faucet) sendFaucetMessage(ctx context.Context, unspentOutputs []*utxo.O
 
 	f.Lock()
 	f.lastMessageID = msg.MessageID()
-	f.addPendingTransactionWithoutLocking(&pendingTransaction{MessageID: msg.MessageID(), QueuedItems: batchedRequests})
+	f.addPendingTransactionWithoutLocking(&pendingTransaction{
+		MessageID:      msg.MessageID(),
+		QueuedItems:    batchedRequests,
+		ConsumedInputs: consumedInputs,
+		TransactionID:  *transactionID,
+	})
+
 	if remainderIotaGoOutput != nil {
 		remainderIotaGoOutputID := remainderIotaGoOutput.ID()
 		output := &iotago.BasicOutput{
@@ -838,47 +847,73 @@ func (f *Faucet) RunFaucetLoop(ctx context.Context, initDoneCallback func()) err
 	}
 }
 
-// ApplyConfirmation applies new milestone confirmations to the faucet.
+// ApplyNewLedgerUpdate applies a new ledger update to the faucet.
 // Pending transactions are checked for their current state and either removed, readded, or left pending.
 // If a conflict is found, all remaining pending transactions are readded to the queue.
 // no need to ReadLockLedger, because this function should be called from milestone confirmation event anyway.
-func (f *Faucet) ApplyConfirmation(confirmation *whiteflag.Confirmation) error {
-	if confirmation == nil {
-		return nil
-	}
-
+func (f *Faucet) ApplyNewLedgerUpdate(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents) error {
 	f.Lock()
 	defer f.Unlock()
 
 	conflicting := false
-	cmi := confirmation.MilestoneIndex
+	cmi := index
 
-	// check pending transactions for confirmation
-	for _, msgID := range confirmation.Mutations.MessagesIncludedWithTransactions {
-		if pendingTx, pending := f.pendingTransactionsMap[msgID.ToMapKey()]; pending {
-			// transaction was confirmed => delete the requests and the pending transaction
-			f.clearRequestsWithoutLocking(pendingTx.QueuedItems)
-			f.clearPendingTransactionWithoutLocking(msgID)
+	// create maps for faster lookup.
+	// outputs that are created and consumed in the same milestone exist in both maps.
+	newSpentsMap := make(map[string]struct{})
+	for _, spent := range newSpents {
+		newSpentsMap[spent.OutputID().ToHex()] = struct{}{}
+	}
 
-			if f.lastMessageID != nil && bytes.Equal(f.lastMessageID[:], msgID[:]) {
-				// the latest message got confirmed, reset the lastMessageID
-				f.lastMessageID = nil
-			}
+	newOutputsMap := make(map[string]struct{})
+	for _, output := range newOutputs {
+		newOutputsMap[output.OutputID().ToHex()] = struct{}{}
+	}
 
-			if f.lastRemainderOutput != nil && bytes.Equal(f.lastRemainderOutput.MessageID()[:], msgID[:]) {
-				// the latest transaction got confirmed, reset the lastRemainderOutput
-				f.lastRemainderOutput = nil
-			}
+	if f.lastRemainderOutput != nil {
+		if _, created := newOutputsMap[f.lastRemainderOutput.OutputID().ToHex()]; created {
+			// the latest transaction got confirmed, reset the lastRemainderOutput
+			f.lastRemainderOutput = nil
 		}
 	}
 
-	// check pending transactions for conflicts
-	for _, conflict := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
-		if pendingTx, pending := f.pendingTransactionsMap[conflict.MessageID.ToMapKey()]; pending {
-			// transaction was conflicting => readd the items to the queue and delete the pending transaction
-			conflicting = true
-			f.readdRequestsWithoutLocking(pendingTx.QueuedItems)
-			f.clearPendingTransactionWithoutLocking(conflict.MessageID)
+	// check if pending transactions were affected by the ledger update.
+	for _, pendingTx := range f.pendingTransactionsMap {
+
+		inputWasSpent := false
+		for _, consumedInput := range pendingTx.ConsumedInputs {
+			if _, spent := newSpentsMap[consumedInput.ToHex()]; spent {
+				inputWasSpent = true
+				break
+			}
+		}
+
+		if inputWasSpent {
+			// a referenced input of this transaction was spent, so the pending transaction is affected by this ledger update.
+			// => we need to check if the outputs were created, otherwise this is a conflicting transaction.
+
+			// we can easily check this by searching for output index 0.
+			// if this was created, the rest was created as well because transactions are atomic.
+			txOutputIndexZero := iotago.UTXOInput{
+				TransactionID:          pendingTx.TransactionID,
+				TransactionOutputIndex: 0,
+			}
+
+			if _, created := newOutputsMap[txOutputIndexZero.ID().ToHex()]; !created {
+				// transaction was conflicting => readd the items to the queue and delete the pending transaction
+				conflicting = true
+				f.readdRequestsWithoutLocking(pendingTx.QueuedItems)
+				f.clearPendingTransactionWithoutLocking(pendingTx.MessageID)
+			} else {
+				// transaction was confirmed => delete the requests and the pending transaction
+				f.clearRequestsWithoutLocking(pendingTx.QueuedItems)
+				f.clearPendingTransactionWithoutLocking(pendingTx.MessageID)
+
+				if f.lastMessageID != nil && bytes.Equal(f.lastMessageID[:], pendingTx.MessageID[:]) {
+					// the latest message got confirmed, reset the lastMessageID
+					f.lastMessageID = nil
+				}
+			}
 		}
 	}
 
