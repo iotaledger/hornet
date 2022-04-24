@@ -11,6 +11,11 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
+const (
+	DBVersionTangle byte = 2
+	DBVersionUTXO   byte = 2
+)
+
 type packageEvents struct {
 	PruningStateChanged *events.Event
 }
@@ -109,12 +114,12 @@ type Storage struct {
 
 func New(tangleStore kvstore.KVStore, utxoStore kvstore.KVStore, cachesProfile ...*profile.Caches) (*Storage, error) {
 
-	healthTrackerTangle, err := NewStoreHealthTracker(tangleStore)
+	healthTrackerTangle, err := NewStoreHealthTracker(tangleStore, DBVersionTangle)
 	if err != nil {
 		return nil, err
 	}
 
-	healthTrackerUTXO, err := NewStoreHealthTracker(utxoStore)
+	healthTrackerUTXO, err := NewStoreHealthTracker(utxoStore, DBVersionUTXO)
 	if err != nil {
 		return nil, err
 	}

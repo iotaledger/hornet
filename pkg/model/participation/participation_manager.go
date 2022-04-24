@@ -87,7 +87,7 @@ func NewManager(
 	options.apply(defaultOptions...)
 	options.apply(opts...)
 
-	healthTracker, err := storage.NewStoreHealthTracker(participationStore)
+	healthTracker, err := storage.NewStoreHealthTracker(participationStore, DBVersionParticipation)
 	if err != nil {
 		return nil, err
 	}

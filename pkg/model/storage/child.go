@@ -36,6 +36,6 @@ func (a *Child) ObjectStorageKey() []byte {
 	return append(a.parentMessageID, a.childMessageID...)
 }
 
-func (a *Child) ObjectStorageValue() (_ []byte) {
+func (a *Child) ObjectStorageValue() []byte {
 	return nil
 }

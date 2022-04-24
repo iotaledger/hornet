@@ -41,6 +41,6 @@ func (t *UnreferencedMessage) ObjectStorageKey() []byte {
 	return append(key, t.messageID...)
 }
 
-func (t *UnreferencedMessage) ObjectStorageValue() (_ []byte) {
+func (t *UnreferencedMessage) ObjectStorageValue() []byte {
 	return nil
 }
