@@ -1,9 +1,5 @@
 package storage
 
-const (
-	DBVersion = 1
-)
-
 func (s *Storage) MarkDatabasesCorrupted() error {
 
 	var markingErr error

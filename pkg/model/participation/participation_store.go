@@ -13,6 +13,10 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+const (
+	DBVersionParticipation byte = 1
+)
+
 var (
 	ErrUnknownParticipation                  = errors.New("no participation found")
 	ErrEventNotFound                         = errors.New("referenced event does not exist")

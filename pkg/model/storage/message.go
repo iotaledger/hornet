@@ -211,6 +211,6 @@ func (msg *Message) ObjectStorageKey() []byte {
 	return msg.messageID
 }
 
-func (msg *Message) ObjectStorageValue() (_ []byte) {
+func (msg *Message) ObjectStorageValue() []byte {
 	return msg.data
 }

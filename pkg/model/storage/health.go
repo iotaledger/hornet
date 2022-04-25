@@ -7,11 +7,21 @@ import (
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
+const (
+	// DBVersionNone is used to load an existing database without a version check (e.g. in the tools)
+	DBVersionNone byte = 0
+)
+
+var (
+	ErrDBVersionCheckNotSupported = errors.New("database version check not supported")
+)
+
 type StoreHealthTracker struct {
-	store kvstore.KVStore
+	store     kvstore.KVStore
+	dbVersion byte
 }
 
-func NewStoreHealthTracker(store kvstore.KVStore) (*StoreHealthTracker, error) {
+func NewStoreHealthTracker(store kvstore.KVStore, dbVersion byte) (*StoreHealthTracker, error) {
 
 	healthStore, err := store.WithRealm([]byte{common.StorePrefixHealth})
 	if err != nil {
@@ -19,9 +29,13 @@ func NewStoreHealthTracker(store kvstore.KVStore) (*StoreHealthTracker, error) {
 	}
 
 	s := &StoreHealthTracker{
-		store: healthStore,
+		store:     healthStore,
+		dbVersion: dbVersion,
 	}
-	s.setDatabaseVersion(DBVersion)
+
+	if dbVersion != DBVersionNone {
+		s.setDatabaseVersion(dbVersion)
+	}
 
 	return s, nil
 }
@@ -98,13 +112,17 @@ func (s *StoreHealthTracker) setDatabaseVersion(version byte) error {
 
 func (s *StoreHealthTracker) CheckCorrectDatabaseVersion() (bool, error) {
 
+	if s.dbVersion == DBVersionNone {
+		return false, ErrDBVersionCheckNotSupported
+	}
+
 	value, err := s.store.Get([]byte("dbVersion"))
 	if err != nil {
 		return false, errors.Wrap(NewDatabaseError(err), "failed to read database version")
 	}
 
 	if len(value) > 0 {
-		return value[0] == DBVersion, nil
+		return value[0] == s.dbVersion, nil
 	}
 
 	return false, nil
