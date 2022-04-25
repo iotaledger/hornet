@@ -7,9 +7,6 @@
     "tagMessage": "HORNET FAUCET",
     "batchTimeout": "2s",
     "powWorkerCount": 0,
-    "website": {
-      "bindAddress": "0.0.0.0:8091",
-      "enabled": true
-    }
+    "bindAddress": "0.0.0.0:8091"
   }
 }

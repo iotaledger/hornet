@@ -104,7 +104,7 @@ services:
       - "-c"
       - "config.json"
       - "--inx.address=172.18.211.11:9029"
-      - "--faucet.website.bindAddress=172.18.211.23:8091"
+      - "--faucet.bindAddress=172.18.211.23:8091"
     profiles:
       - 2-nodes
       - 3-nodes
