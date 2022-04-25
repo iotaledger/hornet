@@ -173,7 +173,7 @@ func NewFaucetTestEnv(t *testing.T,
 
 	var tipselFunc faucet.TipselFunc = func() (tips hornet.MessageIDs, err error) {
 		// issue all faucet messages on the latest milestone
-		return hornet.MessageIDs{te.LastMilestoneMessageID}, nil
+		return hornet.MessageIDs{te.LastMilestoneMessageID()}, nil
 	}
 
 	storeMessageFunc := func(msg *storage.Message) error {
