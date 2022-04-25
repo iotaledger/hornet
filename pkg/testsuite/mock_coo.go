@@ -164,6 +164,7 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.MessageIDs, addLastMileston
 
 	coo.LastMilestoneID = *milestoneId
 	coo.LastMilestoneIndex = milestoneIndex
+	coo.LastMilestoneTimestamp = milestonePayload.Timestamp
 
 	return cachedMilestone.Milestone(), nil
 }
