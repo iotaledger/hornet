@@ -199,7 +199,7 @@ func (s *INXServer) ListenToReferencedMessages(filter *inx.MessageFilter, srv in
 }
 
 func (s *INXServer) SubmitMessage(context context.Context, message *inx.RawMessage) (*inx.MessageId, error) {
-	msg, err := message.UnwrapMessage(serializer.DeSeriModePerformValidation)
+	msg, err := message.UnwrapMessage(serializer.DeSeriModeNoValidation)
 	if err != nil {
 		return nil, err
 	}

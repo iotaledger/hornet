@@ -714,63 +714,7 @@ Example:
   },
 ```
 
-## 19. Faucet
-
-| Name                | Description                                                                                                                  | Type    |
-|:--------------------|:-----------------------------------------------------------------------------------------------------------------------------|:--------|
-| amount              | The amount of funds the requester receives                                                                                   | integer |
-| smallAmount         | The amount of funds the requester receives if the target address has more funds than the faucet amount and less than maximum | integer |
-| maxAddressBalance   | The maximum allowed amount of funds on the target address                                                                    | integer |
-| maxOutputCount      | The maximum output count per faucet message                                                                                  | integer |
-| tagMessage          | The faucet transaction tag payload                                                                                           | string  |
-| batchTimeout        | The maximum duration for collecting faucet batches                                                                           | string  |
-| powWorkerCount      | The amount of workers used for calculating PoW when issuing faucet messages                                                  | integer |
-| [website](#website) | Configuration for the faucet website                                                                                         | object  |
-
-### Website
-
-| Name        | Description                                                       | Type   |
-|:------------|:------------------------------------------------------------------|:-------|
-| bindAddress | The bind address on which the faucet website can be accessed from | string |
-| enabled     | Whether to host the faucet website                                | bool   |
-
-Example:
-
-```json
-  "faucet": {
-    "amount": 10000000,
-    "smallAmount": 1000000,
-    "maxAddressBalance": 20000000,
-    "maxOutputCount": 127,
-    "tagMessage": "HORNET FAUCET",
-    "batchTimeout": "2s",
-    "powWorkerCount": 0,
-    "website": {
-      "bindAddress": "localhost:8091",
-      "enabled": true
-    }
-  },
-```
-
-## 20. MQTT
-
-| Name        | Description                                                         | Type    |
-|:------------|:--------------------------------------------------------------------|:--------|
-| bindAddress | Bind address on which the MQTT broker listens on                    | string  |
-| wsPort      | Port of the WebSocket MQTT broker                                   | integer |
-| workerCount | Number of parallel workers the MQTT broker uses to publish messages | integer |
-
-Example:
-
-```json
-  "mqtt": {
-    "bindAddress": "localhost:1883",
-    "wsPort": 1888,
-    "workerCount": 100
-  },
-```
-
-## 21. Profiling
+## 19. Profiling
 
 | Name        | Description                                       | Type   |
 |:------------|:--------------------------------------------------|:-------|
@@ -784,7 +728,7 @@ Example:
   },
 ```
 
-## 22. Prometheus
+## 20. Prometheus
 
 | Name                                          | Description                                                  | Type   |
 |:----------------------------------------------|:-------------------------------------------------------------|:-------|

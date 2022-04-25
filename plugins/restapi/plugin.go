@@ -96,7 +96,6 @@ func provide(c *dig.Container) {
 		dig.Out
 		Echo                     *echo.Echo
 		DashboardAllowedAPIRoute restapi.AllowedRoute `name:"dashboardAllowedAPIRoute"`
-		FaucetAllowedAPIRoute    restapi.AllowedRoute `name:"faucetAllowedAPIRoute"`
 	}
 
 	if err := c.Provide(func(deps echoDeps) echoResult {
@@ -110,7 +109,6 @@ func provide(c *dig.Container) {
 		return echoResult{
 			Echo:                     e,
 			DashboardAllowedAPIRoute: dashboardAllowedAPIRoute,
-			FaucetAllowedAPIRoute:    faucetAllowedAPIRoute,
 		}
 	}); err != nil {
 		Plugin.LogPanic(err)

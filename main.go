@@ -15,7 +15,6 @@ import (
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/debug"
-	"github.com/gohornet/hornet/plugins/faucet"
 	"github.com/gohornet/hornet/plugins/inx"
 	"github.com/gohornet/hornet/plugins/participation"
 	"github.com/gohornet/hornet/plugins/profiling"
@@ -57,7 +56,6 @@ func main() {
 			prometheus.Plugin,
 			inx.Plugin,
 			debug.Plugin,
-			faucet.Plugin,
 			participation.Plugin,
 		}...),
 	)
