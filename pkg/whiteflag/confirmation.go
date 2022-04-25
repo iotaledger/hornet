@@ -195,16 +195,6 @@ func ConfirmMilestone(
 	}
 	timeConfirmation := time.Now()
 
-	if onLedgerUpdated != nil {
-		onLedgerUpdated(milestoneIndex, newOutputs, newSpents)
-	}
-	timeLedgerUpdated := time.Now()
-
-	if onTreasuryMutated != nil && tm != nil {
-		onTreasuryMutated(milestoneIndex, tm)
-	}
-	timeTreasuryMutated := time.Now()
-
 	// load the message for the given id
 	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
 		cachedMsgMeta, err := parentsTraverserStorage.CachedMessageMetadata(messageID) // meta +1
@@ -297,15 +287,25 @@ func ConfirmMilestone(
 	}
 	timeOnMilestoneConfirmed := time.Now()
 
+	if onLedgerUpdated != nil {
+		onLedgerUpdated(milestoneIndex, newOutputs, newSpents)
+	}
+	timeLedgerUpdated := time.Now()
+
+	if onTreasuryMutated != nil && tm != nil {
+		onTreasuryMutated(milestoneIndex, tm)
+	}
+	timeTreasuryMutated := time.Now()
+
 	return confirmedMilestoneStats, &ConfirmationMetrics{
 		DurationWhiteflag:                                timeWhiteflag.Sub(timeStart),
 		DurationReceipts:                                 timeReceipts.Sub(timeWhiteflag),
 		DurationConfirmation:                             timeConfirmation.Sub(timeReceipts),
-		DurationLedgerUpdated:                            timeLedgerUpdated.Sub(timeConfirmation),
-		DurationTreasuryMutated:                          timeTreasuryMutated.Sub(timeLedgerUpdated),
-		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeTreasuryMutated),
+		DurationApplyIncludedWithTransactions:            timeApplyIncludedWithTransactions.Sub(timeConfirmation),
 		DurationApplyExcludedWithoutTransactions:         timeApplyExcludedWithoutTransactions.Sub(timeApplyIncludedWithTransactions),
 		DurationApplyExcludedWithConflictingTransactions: timeApplyExcludedWithConflictingTransactions.Sub(timeApplyExcludedWithoutTransactions),
 		DurationOnMilestoneConfirmed:                     timeOnMilestoneConfirmed.Sub(timeApplyExcludedWithConflictingTransactions),
+		DurationLedgerUpdated:                            timeLedgerUpdated.Sub(timeOnMilestoneConfirmed),
+		DurationTreasuryMutated:                          timeTreasuryMutated.Sub(timeLedgerUpdated),
 	}, nil
 }
