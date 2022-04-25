@@ -21,6 +21,21 @@ func outputHasSpendingConstraint(output *utxo.Output) bool {
 	return conditions.HasStorageDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
 }
 
+func (te *TestEnvironment) UnspentAddressOutputsWithoutConstraints(address iotago.Address, options ...utxo.UTXOIterateOption) (utxo.Outputs, error) {
+	outputs := utxo.Outputs{}
+	consumerFunc := func(output *utxo.Output) bool {
+		ownerAddress := ouputOwnerAddress(output)
+		if ownerAddress != nil && address.Equal(ownerAddress) && !outputHasSpendingConstraint(output) {
+			outputs = append(outputs, output)
+		}
+		return true
+	}
+	if err := te.UTXOManager().ForEachUnspentOutput(consumerFunc, options...); err != nil {
+		return nil, err
+	}
+	return outputs, nil
+}
+
 func (te *TestEnvironment) ComputeAddressBalanceWithoutConstraints(address iotago.Address, options ...utxo.UTXOIterateOption) (balance uint64, count int, err error) {
 	balance = 0
 	count = 0

@@ -123,7 +123,7 @@ func (coo *MockCoo) milestonePayload(parents hornet.MessageIDs) (*iotago.Milesto
 // issueMilestoneOnTips creates a milestone on top of the given tips.
 func (coo *MockCoo) issueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) (*storage.Milestone, error) {
 
-	currentIndex := coo.te.syncManager.LatestMilestoneIndex()
+	currentIndex := coo.LastMilestoneIndex
 	coo.te.VerifyLMI(currentIndex)
 	milestoneIndex := currentIndex + 1
 
