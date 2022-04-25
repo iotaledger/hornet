@@ -50,8 +50,9 @@ type Tangle struct {
 	receiptService *migrator.ReceiptService
 	networkId      uint64
 
-	milestoneTimeout      time.Duration
-	updateSyncedAtStartup bool
+	milestoneTimeout             time.Duration
+	whiteFlagParentsSolidTimeout time.Duration
+	updateSyncedAtStartup        bool
 
 	milestoneTimeoutTicker *timeutil.Ticker
 
@@ -122,24 +123,26 @@ func New(
 	receiptService *migrator.ReceiptService,
 	networkId uint64,
 	milestoneTimeout time.Duration,
+	whiteFlagParentsSolidTimeout time.Duration,
 	updateSyncedAtStartup bool) *Tangle {
 
 	t := &Tangle{
-		WrappedLogger:         utils.NewWrappedLogger(log),
-		daemon:                daemon,
-		shutdownCtx:           shutdownCtx,
-		storage:               dbStorage,
-		syncManager:           syncManager,
-		milestoneManager:      milestoneManager,
-		requestQueue:          requestQueue,
-		gossipService:         gossipService,
-		messageProcessor:      messageProcessor,
-		serverMetrics:         serverMetrics,
-		requester:             requester,
-		receiptService:        receiptService,
-		networkId:             networkId,
-		milestoneTimeout:      milestoneTimeout,
-		updateSyncedAtStartup: updateSyncedAtStartup,
+		WrappedLogger:                utils.NewWrappedLogger(log),
+		daemon:                       daemon,
+		shutdownCtx:                  shutdownCtx,
+		storage:                      dbStorage,
+		syncManager:                  syncManager,
+		milestoneManager:             milestoneManager,
+		requestQueue:                 requestQueue,
+		gossipService:                gossipService,
+		messageProcessor:             messageProcessor,
+		serverMetrics:                serverMetrics,
+		requester:                    requester,
+		receiptService:               receiptService,
+		networkId:                    networkId,
+		milestoneTimeout:             milestoneTimeout,
+		whiteFlagParentsSolidTimeout: whiteFlagParentsSolidTimeout,
+		updateSyncedAtStartup:        updateSyncedAtStartup,
 
 		milestoneTimeoutTicker:           nil,
 		futureConeSolidifier:             nil,

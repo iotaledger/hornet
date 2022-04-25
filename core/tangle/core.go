@@ -110,10 +110,9 @@ func provide(c *dig.Container) {
 
 	type cfgResult struct {
 		dig.Out
-		MaxDeltaMsgYoungestConeRootIndexToCMI int           `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
-		MaxDeltaMsgOldestConeRootIndexToCMI   int           `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-		BelowMaxDepth                         int           `name:"belowMaxDepth"`
-		WhiteFlagParentsSolidTimeout          time.Duration `name:"whiteFlagParentsSolidTimeout"`
+		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+		BelowMaxDepth                         int `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
@@ -121,7 +120,6 @@ func provide(c *dig.Container) {
 			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.NodeConfig.Int(CfgTangleMaxDeltaMsgYoungestConeRootIndexToCMI),
 			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.NodeConfig.Int(CfgTangleMaxDeltaMsgOldestConeRootIndexToCMI),
 			BelowMaxDepth:                         deps.NodeConfig.Int(CfgTangleBelowMaxDepth),
-			WhiteFlagParentsSolidTimeout:          deps.NodeConfig.Duration(CfgTangleWhiteFlagParentsSolidTimeout),
 		}
 	}); err != nil {
 		CorePlugin.LogPanic(err)
@@ -172,6 +170,7 @@ func provide(c *dig.Container) {
 			deps.ReceiptService,
 			deps.NetworkID,
 			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
+			deps.NodeConfig.Duration(CfgTangleWhiteFlagParentsSolidTimeout),
 			*syncedAtStartup)
 	}); err != nil {
 		CorePlugin.LogPanic(err)
