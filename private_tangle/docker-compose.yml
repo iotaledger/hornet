@@ -94,6 +94,8 @@ services:
       peering_net:
         ipv4_address: 172.18.211.23
     restart: on-failure
+    ports:
+      - "8091:8091/tcp"
     environment:
       - "FAUCET_PRV_KEY=52d23081a626b1eca34b63f1eaeeafcbd66bf545635befc12cd0f19926efefb031f176dadf38cdec0eadd1d571394be78f0bbee3ed594316678dffc162a095cb"
     volumes:
@@ -126,7 +128,6 @@ services:
       - "14626:14626/udp"
       - "14265:14265/tcp"
       - "8081:8081/tcp"
-      - "8091:8091/tcp"
       - "9311:9311/tcp"
       - "9029:9029/tcp"
     cap_drop:
