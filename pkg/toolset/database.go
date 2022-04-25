@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -97,28 +96,16 @@ func checkDatabaseHealth(storage *storage.Storage, markTainted bool) error {
 	return nil
 }
 
-// getMilestoneMessageIDFromStorage returns the messageID of a milestone in the storage.
-func getMilestoneMessageIDFromStorage(tangleStore *storage.Storage, msIndex milestone.Index) (hornet.MessageID, error) {
+// getMilestonePayloadFromStorage returns the milestone payload from the storage.
+func getMilestonePayloadFromStorage(tangleStore *storage.Storage, msIndex milestone.Index) (*iotago.Milestone, error) {
 
-	cachedMilestone := tangleStore.CachedMilestoneOrNil(msIndex) // milestone +1
+	cachedMilestone := tangleStore.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, fmt.Errorf("milestone not found! %d", msIndex)
 	}
 	defer cachedMilestone.Release(true) // milestone -1
 
-	return cachedMilestone.Milestone().MessageID, nil
-}
-
-// getMilestoneMessageFromStorage returns the message of a milestone in the storage.
-func getMilestoneMessageFromStorage(tangleStore *storage.Storage, milestoneMessageID hornet.MessageID) (*storage.Message, error) {
-
-	cachedMsg := tangleStore.CachedMessageOrNil(milestoneMessageID) // message +1
-	if cachedMsg == nil {
-		return nil, fmt.Errorf("milestone message not found! %s", milestoneMessageID.ToHex())
-	}
-	defer cachedMsg.Release(true) // message -1
-
-	return cachedMsg.Message(), nil
+	return cachedMilestone.Milestone().Milestone(), nil
 }
 
 // getStorageMilestoneRange returns the range of milestones that are found in the storage.
@@ -147,7 +134,7 @@ func getStorageMilestoneRange(tangleStore *storage.Storage) (milestone.Index, mi
 type StoreMessageInterface interface {
 	StoreMessageIfAbsent(message *storage.Message) (cachedMsg *storage.CachedMessage, newlyAdded bool)
 	StoreChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *storage.CachedChild
-	StoreMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (*storage.CachedMilestone, bool)
+	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone) (*storage.CachedMilestone, bool)
 }
 
 // storeMessage adds a new message to the storage,
@@ -171,12 +158,11 @@ func storeMessage(protoParas *iotago.ProtocolParameters, dbStorage StoreMessageI
 		dbStorage.StoreChild(parent, cachedMsg.Message().MessageID()).Release(true) // child +-0
 	}
 
-	if ms := milestoneManager.VerifyMilestone(message); ms != nil {
-		cachedMilestone, newlyAdded := dbStorage.StoreMilestoneIfAbsent(milestone.Index(ms.Index), cachedMsg.Message().MessageID(), time.Unix(int64(ms.Timestamp), 0)) // milestone +1
-		if newlyAdded {
-			// Force release to store milestones without caching
-			cachedMilestone.Release(true) // milestone -1
-		}
+	if milestonePayload := milestoneManager.VerifyMilestoneMessage(message.Message()); milestonePayload != nil {
+		cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload) // milestone +1
+
+		// Force release to store milestones without caching
+		cachedMilestone.Release(true) // milestone -1
 	}
 
 	return cachedMsg, nil

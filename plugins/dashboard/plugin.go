@@ -20,7 +20,6 @@ import (
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -242,14 +241,14 @@ func run() {
 	runSpammerMetricWorker()
 }
 
-func getMilestoneMessageID(index milestone.Index) hornet.MessageID {
-	cachedMsgMilestone := deps.Storage.MilestoneCachedMessageOrNil(index) // message +1
-	if cachedMsgMilestone == nil {
-		return nil
+func getMilestoneIDHex(index milestone.Index) (string, error) {
+	cachedMilestone := deps.Storage.CachedMilestoneByIndexOrNil(index) // milestone +1
+	if cachedMilestone == nil {
+		return "", storage.ErrMilestoneNotFound
 	}
-	defer cachedMsgMilestone.Release(true) // message -1
+	defer cachedMilestone.Release(true) // milestone -1
 
-	return cachedMsgMilestone.Message().MessageID()
+	return cachedMilestone.Milestone().MilestoneIDHex(), nil
 }
 
 // Msg represents a websocket message.
@@ -260,8 +259,8 @@ type Msg struct {
 
 // LivefeedMilestone represents a milestone for the livefeed.
 type LivefeedMilestone struct {
-	MessageID string          `json:"messageID"`
-	Index     milestone.Index `json:"index"`
+	MilestoneID string          `json:"milestoneId"`
+	Index       milestone.Index `json:"index"`
 }
 
 // SyncStatus represents the node sync status.

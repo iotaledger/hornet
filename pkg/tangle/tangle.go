@@ -166,7 +166,7 @@ func New(
 			ProcessedMessage:               events.NewEvent(storage.MessageIDCaller),
 			MessageSolid:                   events.NewEvent(storage.MessageMetadataCaller),
 			MessageReferenced:              events.NewEvent(storage.MessageReferencedCaller),
-			ReceivedNewMilestone:           events.NewEvent(storage.MilestoneCaller),
+			ReceivedNewMilestoneMessage:    events.NewEvent(storage.MessageIDCaller),
 			LatestMilestoneChanged:         events.NewEvent(storage.MilestoneCaller),
 			LatestMilestoneIndexChanged:    events.NewEvent(milestone.IndexCaller),
 			MilestoneConfirmed:             events.NewEvent(ConfirmedMilestoneCaller),

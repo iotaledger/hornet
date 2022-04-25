@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -275,24 +276,24 @@ func NewWarpSyncMilestoneRequester(
 // RequestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
 // Already requested milestones or traversed messages will be ignored, to circumvent requesting
 // the same parents multiple times.
-func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.Context, cachedMilestone *storage.CachedMilestone) error {
-	defer cachedMilestone.Release(true) // milestone -1
-
+func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.Context, msIndex milestone.Index) error {
 	w.Lock()
 	defer w.Unlock()
-
-	msIndex := cachedMilestone.Milestone().Index
 
 	if msIndex <= w.syncManager.ConfirmedMilestoneIndex() {
 		return nil
 	}
 
-	milestoneMessageID := cachedMilestone.Milestone().MessageID
+	// get all parents of that milestone
+	milestoneParents, err := w.storage.MilestoneParentsByIndex(msIndex)
+	if err != nil {
+		return fmt.Errorf("milestone doesn't exist (%d)", msIndex)
+	}
 
-	return dag.TraverseParentsOfMessage(
+	return dag.TraverseParents(
 		ctx,
 		w.storage,
-		milestoneMessageID,
+		milestoneParents,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -333,7 +334,7 @@ func (w *WarpSyncMilestoneRequester) Cleanup() {
 
 // RequestMilestoneRange requests up to N milestones nearest to the current confirmed milestone index.
 // Returns the number of milestones requested.
-func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, rangeToRequest int, onExistingMilestoneInRange func(ctx context.Context, milestone *storage.CachedMilestone) error, from ...milestone.Index) int {
+func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, rangeToRequest int, onExistingMilestoneInRange func(ctx context.Context, msIndex milestone.Index) error, from ...milestone.Index) int {
 	var requested int
 
 	startingPoint := w.syncManager.ConfirmedMilestoneIndex()
@@ -343,26 +344,22 @@ func (w *WarpSyncMilestoneRequester) RequestMilestoneRange(ctx context.Context, 
 
 	var msIndexes []milestone.Index
 	for i := 1; i <= rangeToRequest; i++ {
-		toReq := startingPoint + milestone.Index(i)
+		msIndexToRequest := startingPoint + milestone.Index(i)
 
-		cachedMilestone := w.storage.CachedMilestoneOrNil(toReq) // milestone +1
-		if cachedMilestone == nil {
+		if !w.storage.ContainsMilestoneIndex(msIndexToRequest) {
 			// only request if we do not have the milestone
 			requested++
-			msIndexes = append(msIndexes, toReq)
+			msIndexes = append(msIndexes, msIndexToRequest)
 			continue
 		}
 
 		// milestone already exists
 		if onExistingMilestoneInRange != nil {
-			if err := onExistingMilestoneInRange(ctx, cachedMilestone.Retain()); err != nil && errors.Is(err, common.ErrOperationAborted) { // milestone pass +1
+			if err := onExistingMilestoneInRange(ctx, msIndexToRequest); err != nil && errors.Is(err, common.ErrOperationAborted) {
 				// do not proceed if the node was shut down
-				cachedMilestone.Release(true) // milestone -1
 				return 0
 			}
 		}
-
-		cachedMilestone.Release(true) // milestone -1
 	}
 
 	if len(msIndexes) == 0 {

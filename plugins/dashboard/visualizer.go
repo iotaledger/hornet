@@ -3,6 +3,7 @@ package dashboard
 import (
 	"context"
 
+	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -32,7 +33,7 @@ type metainfo struct {
 
 // confirmationinfo signals confirmation of a milestone msg with a list of exluded msgs in the past cone.
 type confirmationinfo struct {
-	ID          string   `json:"id"`
+	IDs         []string `json:"ids"`
 	ExcludedIDs []string `json:"excluded_ids"`
 }
 
@@ -89,9 +90,7 @@ func runVisualizer() {
 		})
 	})
 
-	onReceivedNewMilestone := events.NewClosure(func(cachedMilestone *storage.CachedMilestone) {
-		defer cachedMilestone.Release(true) // milestone -1
-
+	onReceivedNewMilestoneMessage := events.NewClosure(func(messageID hornet.MessageID) {
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
@@ -100,7 +99,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: cachedMilestone.Milestone().MessageID.ToHex()[:VisualizerIDLength],
+					ID: messageID.ToHex()[:VisualizerIDLength],
 				},
 			},
 		)
@@ -109,6 +108,11 @@ func runVisualizer() {
 	onMilestoneConfirmed := events.NewClosure(func(confirmation *whiteflag.Confirmation) {
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
+		}
+
+		milestoneParents := make([]string, len(confirmation.MilestoneParents))
+		for i, parent := range confirmation.MilestoneParents {
+			milestoneParents[i] = parent.ToHex()[:VisualizerIDLength]
 		}
 
 		excludedIDs := make([]string, len(confirmation.Mutations.MessagesExcludedWithConflictingTransactions))
@@ -120,7 +124,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeConfirmedInfo,
 				Data: &confirmationinfo{
-					ID:          confirmation.MilestoneMessageID.ToHex()[:VisualizerIDLength],
+					IDs:         milestoneParents,
 					ExcludedIDs: excludedIDs,
 				},
 			},
@@ -164,8 +168,8 @@ func runVisualizer() {
 		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
 		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
 		defer deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
-		deps.Tangle.Events.ReceivedNewMilestone.Attach(onReceivedNewMilestone)
-		defer deps.Tangle.Events.ReceivedNewMilestone.Detach(onReceivedNewMilestone)
+		deps.Tangle.Events.ReceivedNewMilestoneMessage.Attach(onReceivedNewMilestoneMessage)
+		defer deps.Tangle.Events.ReceivedNewMilestoneMessage.Detach(onReceivedNewMilestoneMessage)
 		deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 		defer deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 

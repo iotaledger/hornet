@@ -105,8 +105,8 @@ type childrenResponse struct {
 type milestoneResponse struct {
 	// The index of the milestone.
 	Index uint32 `json:"index"`
-	// The hex encoded ID of the message containing the milestone.
-	MessageID string `json:"messageId"`
+	// The hex encoded ID of the milestone.
+	MilestoneID string `json:"milestoneId"`
 	// The unix time of the milestone payload.
 	Time uint32 `json:"timestamp"`
 }

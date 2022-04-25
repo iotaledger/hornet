@@ -16,16 +16,16 @@ func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
 		return nil, err
 	}
 
-	cachedMilestone := deps.Storage.CachedMilestoneOrNil(msIndex) // milestone +1
+	cachedMilestone := deps.Storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "milestone not found: %d", msIndex)
 	}
 	defer cachedMilestone.Release(true) // milestone -1
 
 	return &milestoneResponse{
-		Index:     uint32(cachedMilestone.Milestone().Index),
-		MessageID: cachedMilestone.Milestone().MessageID.ToHex(),
-		Time:      uint32(cachedMilestone.Milestone().Timestamp.Unix()),
+		Index:       uint32(cachedMilestone.Milestone().Index()),
+		MilestoneID: cachedMilestone.Milestone().MilestoneIDHex(),
+		Time:        cachedMilestone.Milestone().TimestampUnix(),
 	}, nil
 }
 

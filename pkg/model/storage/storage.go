@@ -94,6 +94,7 @@ type Storage struct {
 	childrenStorage             *objectstorage.ObjectStorage
 	messagesStorage             *objectstorage.ObjectStorage
 	metadataStorage             *objectstorage.ObjectStorage
+	milestoneIndexStorage       *objectstorage.ObjectStorage
 	milestoneStorage            *objectstorage.ObjectStorage
 	unreferencedMessagesStorage *objectstorage.ObjectStorage
 

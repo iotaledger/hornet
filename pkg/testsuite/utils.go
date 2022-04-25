@@ -56,7 +56,7 @@ func (te *TestEnvironment) NewMessageBuilder(optionalTag ...string) *MessageBuil
 }
 
 func (b *MessageBuilder) LatestMilestonesAsParents() *MessageBuilder {
-	return b.Parents(hornet.MessageIDs{b.te.Milestones[len(b.te.Milestones)-1].Milestone().MessageID, b.te.Milestones[len(b.te.Milestones)-2].Milestone().MessageID})
+	return b.Parents(hornet.MessageIDs{b.te.coo.lastMilestoneMessageID})
 }
 
 func (b *MessageBuilder) Parents(parents hornet.MessageIDs) *MessageBuilder {

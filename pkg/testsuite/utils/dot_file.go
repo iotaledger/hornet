@@ -25,9 +25,9 @@ func ShortenedTag(cachedMsg *storage.CachedMessage) string {
 
 	hash := ShortenedHash(cachedMsg.Message().MessageID())
 
-	ms := cachedMsg.Message().Milestone()
-	if ms != nil {
-		return fmt.Sprintf("%d-%s", ms.Index, hash)
+	milestonePayload := cachedMsg.Message().Milestone()
+	if milestonePayload != nil {
+		return fmt.Sprintf("%d-%s", milestonePayload.Index, hash)
 	}
 
 	taggedData := cachedMsg.Message().TransactionEssenceTaggedData()

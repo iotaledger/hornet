@@ -329,7 +329,7 @@ func (s *Storage) StoreMessageIfAbsent(message *Message) (cachedMsg *CachedMessa
 
 		metadata := &MessageMetadata{
 			messageID: message.MessageID(),
-			parents:   hornet.MessageIDsFromSliceOfArrays(message.Message().Parents),
+			parents:   message.Parents(),
 		}
 
 		cachedMsgMeta = s.metadataStorage.Store(metadata) // meta +1

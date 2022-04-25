@@ -259,7 +259,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			count--
 
 			parents := iotago.MilestoneParentMessageIDs{utils.RandMessageID().ToArray()}
-			ms, err := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
+			milestonePayload, err := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
 			if err != nil {
 				panic(err)
 			}
@@ -269,7 +269,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			ed25519Addr := utils.RandAddress(iotago.AddressEd25519)
 			migratedFundsEntry := &iotago.MigratedFundsEntry{Address: ed25519Addr, Deposit: rand.Uint64()}
 			copy(migratedFundsEntry.TailTransactionHash[:], utils.RandBytes(49))
-			receipt, err := iotago.NewReceiptBuilder(ms.Index).
+			receipt, err := iotago.NewReceiptBuilder(milestonePayload.Index).
 				AddTreasuryTransaction(&iotago.TreasuryTransaction{
 					Input:  treasuryInput,
 					Output: &iotago.TreasuryOutput{Amount: rand.Uint64()},
@@ -280,14 +280,14 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 				panic(err)
 			}
 
-			ms.Opts = iotago.MilestoneOpts{receipt}
+			milestonePayload.Opts = iotago.MilestoneOpts{receipt}
 
-			if err := ms.Sign(pubKeys, iotago.InMemoryEd25519MilestoneSigner(keyMapping)); err != nil {
+			if err := milestonePayload.Sign(pubKeys, iotago.InMemoryEd25519MilestoneSigner(keyMapping)); err != nil {
 				panic(err)
 			}
 
 			msDiff := &snapshot.MilestoneDiff{
-				Milestone: ms,
+				Milestone: milestonePayload,
 			}
 
 			createdCount := rand.Intn(500) + 1
@@ -297,7 +297,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 
 			consumedCount := rand.Intn(500) + 1
 			for i := 0; i < consumedCount; i++ {
-				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents(milestone.Index(ms.Index)))
+				msDiff.Consumed = append(msDiff.Consumed, randLSTransactionSpents(milestone.Index(milestonePayload.Index)))
 			}
 
 			msDiff.SpentTreasuryOutput = &utxo.TreasuryOutput{

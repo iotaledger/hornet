@@ -105,10 +105,10 @@ func (msg *Message) IsMilestone() bool {
 	return false
 }
 
-func (msg *Message) Milestone() (ms *iotago.Milestone) {
-	switch ms := msg.Message().Payload.(type) {
+func (msg *Message) Milestone() *iotago.Milestone {
+	switch milestonePayload := msg.Message().Payload.(type) {
 	case *iotago.Milestone:
-		return ms
+		return milestonePayload
 	default:
 	}
 

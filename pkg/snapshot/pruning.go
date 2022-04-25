@@ -235,23 +235,20 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		txCountDeleted, msgCountChecked := s.pruneUnreferencedMessages(milestoneIndex)
 		timePruneUnreferencedMessages := time.Now()
 
-		// Get all parents of that milestone
-		cachedMsgMetaMilestone := s.storage.MilestoneCachedMessageMetadataOrNil(milestoneIndex) // meta +1
-		if cachedMsgMetaMilestone == nil {
+		// get all parents of that milestone
+		cachedMilestone := s.storage.CachedMilestoneByIndexOrNil(milestoneIndex) // milestone +1
+		if cachedMilestone == nil {
 			// Milestone not found, pruning impossible
 			s.LogWarnf("Pruning milestone (%d) failed! Milestone not found!", milestoneIndex)
 			continue
 		}
-
-		milestoneParents := cachedMsgMetaMilestone.Metadata().Parents()
-		cachedMsgMetaMilestone.Release(true) // meta -1
 
 		messageIDsToDeleteMap := make(map[string]struct{})
 
 		if err := dag.TraverseParents(
 			ctx,
 			s.storage,
-			milestoneParents,
+			cachedMilestone.Milestone().Parents(),
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -272,30 +269,28 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			nil,
 			// the pruning target index is also a solid entry point => traverse it anyways
 			true); err != nil {
+			cachedMilestone.Release(true) // milestone -1
 			s.LogWarnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 			continue
 		}
 		timeTraverseMilestoneCone := time.Now()
 
 		// check whether milestone contained receipt and delete it accordingly
-		cachedMsgMilestone := s.storage.MilestoneCachedMessageOrNil(milestoneIndex) // message +1
-		if cachedMsgMilestone == nil {
-			// no message for milestone persisted
-			s.LogWarnf("Pruning milestone (%d) failed! Milestone message not found!", milestoneIndex)
-			continue
+		var migratedAtIndex []uint32
+
+		opts, err := cachedMilestone.Milestone().Milestone().Opts.Set()
+		if err == nil && opts != nil {
+			if r := opts.Receipt(); r != nil {
+				migratedAtIndex = append(migratedAtIndex, r.MigratedAt)
+			}
 		}
 
-		var migratedAtIndex []uint32
-		if r := cachedMsgMilestone.Message().Milestone().Opts.MustSet().Receipt(); r != nil {
-			migratedAtIndex = append(migratedAtIndex, r.MigratedAt)
-		}
+		cachedMilestone.Release(true) // milestone -1
 
 		if err := s.pruneMilestone(milestoneIndex, migratedAtIndex...); err != nil {
 			s.LogWarnf("Pruning milestone (%d) failed! %s", milestoneIndex, err)
 		}
 		timePruneMilestone := time.Now()
-
-		cachedMsgMilestone.Release(true) // message -1
 
 		msgCountChecked += len(messageIDsToDeleteMap)
 		txCountDeleted += s.pruneMessages(messageIDsToDeleteMap)
