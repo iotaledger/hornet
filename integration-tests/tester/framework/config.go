@@ -21,8 +21,6 @@ import (
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
-	"github.com/gohornet/inx-coordinator/core/coordinator"
-	"github.com/gohornet/inx-coordinator/plugin/migrator"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -514,7 +512,7 @@ type CoordinatorConfig struct {
 func (cooConfig *CoordinatorConfig) CLIFlags() []string {
 	return []string{
 		fmt.Sprintf("--cooBootstrap=%v", cooConfig.Bootstrap),
-		fmt.Sprintf("--%s=%s", coordinator.CfgCoordinatorInterval, cooConfig.IssuanceInterval),
+		fmt.Sprintf("--coordinator.interval=%s", cooConfig.IssuanceInterval),
 	}
 }
 
@@ -608,10 +606,10 @@ type MigratorConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (migConfig *MigratorConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%v", migrator.CfgMigratorBootstrap, migConfig.Bootstrap),
-		fmt.Sprintf("--%s=%v", migrator.CfgMigratorReceiptMaxEntries, migConfig.MaxEntries),
-		fmt.Sprintf("--%s=%d", migrator.CfgMigratorStartIndex, migConfig.StartIndex),
-		fmt.Sprintf("--%s=%s", migrator.CfgMigratorStateFilePath, migConfig.StateFilePath),
+		fmt.Sprintf("--migratorBootstrap=%v", migConfig.Bootstrap),
+		fmt.Sprintf("--migrator.receiptMaxEntries=%v", migConfig.MaxEntries),
+		fmt.Sprintf("--migratorStartIndex=%d", migConfig.StartIndex),
+		fmt.Sprintf("--migrator.stateFilePath=%s", migConfig.StateFilePath),
 	}
 }
 

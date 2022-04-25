@@ -61,7 +61,7 @@ func TestTipSelect(t *testing.T) {
 	// fill the storage with some messages to fill the tipselect pool
 	msgCount := 0
 	for i := 0; i < 100; i++ {
-		msgMeta := te.NewTestMessage(msgCount, hornet.MessageIDs{te.LastMilestoneMessageID})
+		msgMeta := te.NewTestMessage(msgCount, hornet.MessageIDs{te.LastMilestoneMessageID()})
 		ts.AddTip(msgMeta)
 		msgCount++
 	}

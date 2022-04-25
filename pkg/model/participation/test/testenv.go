@@ -169,7 +169,7 @@ func (env *ParticipationTestEnv) ConfirmedMilestoneIndex() milestone.Index {
 }
 
 func (env *ParticipationTestEnv) LastMilestoneMessageID() hornet.MessageID {
-	return env.te.LastMilestoneMessageID
+	return env.te.LastMilestoneMessageID()
 }
 
 func (env *ParticipationTestEnv) Cleanup() {
