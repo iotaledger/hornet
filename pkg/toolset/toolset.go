@@ -41,6 +41,7 @@ const (
 
 	FlagToolHRP       = "hrp"
 	FlagToolBIP32Path = "bip32Path"
+	FlagToolMnemonic  = "mnemonic"
 	FlagToolNetworkID = "networkID"
 	FlagToolPassword  = "password"
 	FlagToolSalt      = "salt"
