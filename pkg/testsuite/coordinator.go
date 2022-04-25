@@ -17,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	"github.com/gohornet/inx-coordinator/pkg/coordinator"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -26,96 +25,17 @@ import (
 // the node is initialized, the network is bootstrapped and the first milestone is confirmed.
 func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.PrivateKey, keyManager *keymanager.KeyManager) {
 
-	storeMessageFunc := func(message *iotago.Message, _ ...milestone.Index) error {
-		msg, err := storage.NewMessage(message, serializer.DeSeriModeNoValidation, iotago.ZeroRentParas) // no need to validate bytes, they come pre-validated from the coo
-		if err != nil {
-			return err
-		}
-		cachedMsg := te.StoreMessage(msg) // message +1, no need to release, since we remember all the messages for later cleanup
-
-		ms := cachedMsg.Message().Milestone()
-		if ms != nil {
-			te.syncManager.SetLatestMilestoneIndex(milestone.Index(ms.Index))
-		}
-
-		return nil
+	te.coo = &MockCoo{
+		te:             te,
+		cooPrivateKeys: cooPrivateKeys,
+		keyManager:     keyManager,
 	}
-
-	inMemoryEd25519MilestoneSignerProvider := coordinator.NewInMemoryEd25519MilestoneSignerProvider(cooPrivateKeys, keyManager, len(cooPrivateKeys))
-
-	computeWhiteFlag := func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
-		messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
-		metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
-		memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(te.storage, metadataMemcache)
-
-		defer func() {
-			// all releases are forced since the cone is referenced and not needed anymore
-			memcachedTraverserStorage.Cleanup(true)
-
-			// release all messages at the end
-			messagesMemcache.Cleanup(true)
-
-			// Release all message metadata at the end
-			metadataMemcache.Cleanup(true)
-		}()
-
-		parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
-
-		// compute merkle tree root
-		mutations, err := whiteflag.ComputeWhiteFlagMutations(ctx, te.UTXOManager(), parentsTraverser, messagesMemcache.CachedMessage, te.NetworkID(), index, timestamp, parents, lastMilestoneID, whiteflag.DefaultWhiteFlagTraversalCondition)
-		if err != nil {
-			return nil, err
-		}
-		merkleTreeHash := &coordinator.MilestoneMerkleRoots{
-			ConfirmedMerkleRoot: iotago.MilestoneMerkleProof{},
-			AppliedMerkleRoot:   iotago.MilestoneMerkleProof{},
-		}
-		copy(merkleTreeHash.ConfirmedMerkleRoot[:], mutations.ConfirmedMerkleRoot[:])
-		copy(merkleTreeHash.AppliedMerkleRoot[:], mutations.AppliedMerkleRoot[:])
-		return merkleTreeHash, nil
-	}
-
-	nodeSync := func() bool {
-		return true
-	}
-
-	coo, err := coordinator.New(
-		computeWhiteFlag,
-		nodeSync,
-		te.networkID,
-		DeSerializationParameters,
-		inMemoryEd25519MilestoneSignerProvider,
-		nil,
-		nil,
-		te.PoWHandler,
-		storeMessageFunc,
-		coordinator.WithStateFilePath(fmt.Sprintf("%s/coordinator.state", te.TempDir)),
-		coordinator.WithMilestoneInterval(time.Duration(10)*time.Second),
-	)
-	require.NoError(te.TestInterface, err)
-	require.NotNil(te.TestInterface, coo)
-	te.coo = coo
-
-	err = te.coo.InitState(true, 0, &coordinator.LatestMilestoneInfo{
-		Index:       0,
-		Timestamp:   0,
-		MilestoneID: iotago.MilestoneID{},
-	})
-	require.NoError(te.TestInterface, err)
 
 	// save snapshot info
-	err = te.storage.SetSnapshotMilestone(te.networkID, 0, 0, 0, time.Now())
+	err := te.storage.SetSnapshotMilestone(te.networkID, 0, 0, 0, time.Now())
 	require.NoError(te.TestInterface, err)
 
-	milestoneMessageID, err := te.coo.Bootstrap()
-	require.NoError(te.TestInterface, err)
-
-	te.LastMilestoneMessageID = milestoneMessageID
-
-	cachedMilestone := te.storage.CachedMilestoneOrNil(1) // milestone +1
-	require.NotNil(te.TestInterface, cachedMilestone)
-
-	te.Milestones = append(te.Milestones, cachedMilestone)
+	te.coo.bootstrap()
 
 	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
@@ -137,7 +57,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		memcachedParentsTraverserStorage,
 		messagesMemcache.CachedMessage,
 		te.networkID,
-		cachedMilestone.Milestone().MessageID,
+		te.coo.LastMilestoneMessageID,
 		iotago.MilestoneID{}, // first milestone does not have a last milestone ID
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
@@ -212,35 +132,6 @@ func (te *TestEnvironment) ReattachMessage(messageID hornet.MessageID, parents .
 	require.NotNil(te.TestInterface, cachedMessage)
 
 	return storedMessage.MessageID()
-}
-
-// IssueMilestoneOnTips creates a milestone on top of the given tips.
-func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) (*storage.Milestone, error) {
-
-	currentIndex := te.syncManager.LatestMilestoneIndex()
-	te.VerifyLMI(currentIndex)
-
-	fmt.Printf("Issue milestone %v\n", currentIndex+1)
-
-	if addLastMilestoneAsParent {
-		tips = append(tips, te.LastMilestoneMessageID)
-	}
-
-	milestoneMessageID, err := te.coo.IssueMilestone(tips)
-	if err != nil {
-		return nil, err
-	}
-	te.LastMilestoneMessageID = milestoneMessageID
-
-	te.VerifyLMI(currentIndex + 1)
-
-	milestoneIndex := currentIndex + 1
-	cachedMilestone := te.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
-	require.NotNil(te.TestInterface, cachedMilestone)
-
-	te.Milestones = append(te.Milestones, cachedMilestone)
-
-	return cachedMilestone.Milestone(), nil
 }
 
 func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestoneMessageID hornet.MessageID, msIndex milestone.Index) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats, error) {
@@ -319,13 +210,18 @@ func (te *TestEnvironment) ConfirmMilestone(ms *storage.Milestone, createConfirm
 	return wfConf, confirmedMilestoneStats
 }
 
+// IssueMilestoneOnTips creates a milestone on top of the given tips.
+func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) (*storage.Milestone, error) {
+	return te.coo.issueMilestoneOnTips(tips, addLastMilestoneAsParent)
+}
+
 // IssueAndConfirmMilestoneOnTips creates a milestone on top of the given tips and confirms it.
 func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
 
 	currentIndex := te.syncManager.ConfirmedMilestoneIndex()
 	te.VerifyLMI(currentIndex)
 
-	milestone, err := te.IssueMilestoneOnTips(tips, true)
+	milestone, err := te.coo.issueMilestoneOnTips(tips, true)
 	require.NoError(te.TestInterface, err)
 	return te.ConfirmMilestone(milestone, createConfirmationGraph)
 }

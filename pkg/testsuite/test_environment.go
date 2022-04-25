@@ -22,7 +22,6 @@ import (
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
-	"github.com/gohornet/inx-coordinator/pkg/coordinator"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
@@ -58,10 +57,7 @@ type TestEnvironment struct {
 	belowMaxDepth milestone.Index
 
 	// coo holds the coordinator instance.
-	coo *coordinator.Coordinator
-
-	// LastMilestoneMessageID is the message ID of the last issued milestone.
-	LastMilestoneMessageID hornet.MessageID
+	coo *MockCoo
 
 	// TempDir is the directory that contains the temporary files for the test.
 	TempDir string
@@ -117,7 +113,6 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		PoWMinScore:            targetScore,
 		networkID:              iotago.NetworkIDFromString("alphanet1"),
 		belowMaxDepth:          milestone.Index(belowMaxDepth),
-		LastMilestoneMessageID: hornet.NullMessageID(),
 		serverMetrics:          &metrics.ServerMetrics{},
 	}
 
@@ -220,8 +215,14 @@ func (te *TestEnvironment) BelowMaxDepth() milestone.Index {
 	return te.belowMaxDepth
 }
 
+// LastMilestoneMessageID is the message ID of the last issued milestone.
+func (te *TestEnvironment) LastMilestoneMessageID() hornet.MessageID {
+	return te.coo.LastMilestoneMessageID
+}
+
+// LastMilestoneIndex is the index of the last issued milestone.
 func (te *TestEnvironment) LastMilestoneIndex() milestone.Index {
-	return te.Milestones[len(te.Milestones)-1].Milestone().Index
+	return te.coo.LastMilestoneIndex
 }
 
 // CleanupTestEnvironment cleans up everything at the end of the test.
