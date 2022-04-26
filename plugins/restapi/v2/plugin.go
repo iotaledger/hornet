@@ -60,9 +60,13 @@ const (
 	// MIMEVendorIOTASerializer => bytes
 	RouteTransactionsIncludedMessage = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-message"
 
-	// RouteMilestone is the route for getting a milestone by its milestoneIndex.
+	// RouteMilestoneByIndex is the route for getting a milestone by its milestoneIndex.
 	// GET returns the milestone.
-	RouteMilestone = "/milestones/:" + restapipkg.ParameterMilestoneIndex
+	RouteMilestoneByIndex = "/milestones/index/:" + restapipkg.ParameterMilestoneIndex
+
+	// RouteMilestone is the route for getting a milestone by its ID.
+	// GET returns the milestone.
+	RouteMilestone = "/milestones/milestoneId/:" + restapipkg.ParameterMilestoneID
 
 	// RouteMilestoneUTXOChanges is the route for getting all UTXO changes of a milestone by its milestoneIndex.
 	// GET returns the output IDs of all UTXO changes.
@@ -274,12 +278,52 @@ func configure() {
 		}
 	})
 
-	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
-		resp, err := milestoneByIndex(c)
-		if err != nil {
+	routeGroup.GET(RouteMilestoneByIndex, func(c echo.Context) error {
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+		if err != nil && err != restapipkg.ErrNotAcceptable {
 			return err
 		}
-		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+
+		switch mimeType {
+		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
+			resp, err := milestoneBytesByIndex(c)
+			if err != nil {
+				return err
+			}
+			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
+
+		default:
+			// default to echo.MIMEApplicationJSON
+			resp, err := milestoneByIndex(c)
+			if err != nil {
+				return err
+			}
+			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		}
+	})
+
+	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+		if err != nil && err != restapipkg.ErrNotAcceptable {
+			return err
+		}
+
+		switch mimeType {
+		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
+			resp, err := milestoneBytesByID(c)
+			if err != nil {
+				return err
+			}
+			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
+
+		default:
+			// default to echo.MIMEApplicationJSON
+			resp, err := milestoneByID(c)
+			if err != nil {
+				return err
+			}
+			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		}
 	})
 
 	routeGroup.GET(RouteMilestoneUTXOChanges, func(c echo.Context) error {

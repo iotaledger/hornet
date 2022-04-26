@@ -32,8 +32,11 @@ const (
 	// ParameterAddress is used to identify an address.
 	ParameterAddress = "address"
 
-	// ParameterMilestoneIndex is used to identify a milestone.
+	// ParameterMilestoneIndex is used to identify a milestone by index.
 	ParameterMilestoneIndex = "milestoneIndex"
+
+	// ParameterMilestoneID is used to identify a milestone by its ID.
+	ParameterMilestoneID = "milestoneID"
 
 	// ParameterPeerID is used to identify a peer.
 	ParameterPeerID = "peerID"
@@ -195,6 +198,23 @@ func ParseMilestoneIndexParam(c echo.Context, paramName string) (milestone.Index
 	}
 
 	return milestone.Index(msIndex), nil
+}
+
+func ParseMilestoneIDParam(c echo.Context) (*iotago.MilestoneID, error) {
+	milestoneIDHex := strings.ToLower(c.Param(ParameterMilestoneID))
+
+	milestoneIDBytes, err := iotago.DecodeHex(milestoneIDHex)
+	if err != nil {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid milestone ID: %s, error: %s", milestoneIDHex, err)
+	}
+
+	if len(milestoneIDBytes) != iotago.MilestoneIDLength {
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid milestone ID: %s, invalid length: %d", milestoneIDHex, len(milestoneIDBytes))
+	}
+
+	var milestoneID iotago.MilestoneID
+	copy(milestoneID[:], milestoneIDBytes)
+	return &milestoneID, nil
 }
 
 func ParsePeerIDParam(c echo.Context) (peer.ID, error) {
