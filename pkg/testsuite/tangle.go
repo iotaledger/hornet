@@ -79,7 +79,7 @@ func (te *TestEnvironment) AssertWalletBalance(wallet *utils.HDWallet, expectedB
 
 // AssertTotalSupplyStillValid checks if the total supply in the database is still correct.
 func (te *TestEnvironment) AssertTotalSupplyStillValid() {
-	err := te.storage.UTXOManager().CheckLedgerState()
+	err := te.storage.UTXOManager().CheckLedgerState(te.protoParas)
 	require.NoError(te.TestInterface, err)
 }
 

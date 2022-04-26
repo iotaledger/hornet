@@ -317,7 +317,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		t.storage.UTXOManager(),
 		memcachedTraverserStorage,
 		messagesMemcache.CachedMessage,
-		t.networkId,
+		t.protoParas,
 		cachedMilestoneToSolidify.Milestone().MessageID,
 		previousMilestoneID,
 		whiteflag.DefaultWhiteFlagTraversalCondition,

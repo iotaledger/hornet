@@ -352,34 +352,34 @@ func (e *Event) IsCountingParticipation(atIndex milestone.Index) bool {
 }
 
 // BallotCanOverflow returns whether a Ballot event can overflow.
-func (e *Event) BallotCanOverflow() bool {
+func (e *Event) BallotCanOverflow(protoParas *iotago.ProtocolParameters) bool {
 	ballot := e.Ballot()
 	if ballot == nil {
 		return false
 	}
 
 	// Check if total-supply / denominator * number of milestones can overflow uint64
-	maxWeightPerMilestone := uint64(iotago.TokenSupply) / uint64(BallotDenominator)
+	maxWeightPerMilestone := uint64(protoParas.TokenSupply) / uint64(BallotDenominator)
 	maxNumberOfMilestones := math.MaxUint64 / maxWeightPerMilestone
 
 	return uint64(e.MilestoneIndexEnd-e.MilestoneIndexStart) > maxNumberOfMilestones
 }
 
 // StakingCanOverflow returns whether a Staking event can overflow.
-func (e *Event) StakingCanOverflow() bool {
+func (e *Event) StakingCanOverflow(protoParas *iotago.ProtocolParameters) bool {
 	staking := e.Staking()
 	if staking == nil {
 		return false
 	}
 
 	// Check if numerator * total-supply can overflow uint64
-	maxNumerator := math.MaxUint64 / uint64(iotago.TokenSupply)
+	maxNumerator := math.MaxUint64 / uint64(protoParas.TokenSupply)
 	if uint64(staking.Numerator) > maxNumerator {
 		return true
 	}
 
 	// Check if total-supply * numerator/denominator * number of milestones can overflow uint64
-	maxRewardPerMilestone := staking.rewardsPerMilestone(iotago.TokenSupply)
+	maxRewardPerMilestone := staking.rewardsPerMilestone(protoParas.TokenSupply)
 	maxNumberOfMilestones := math.MaxUint64 / maxRewardPerMilestone
 
 	return uint64(e.MilestoneIndexEnd-e.MilestoneIndexStart) > maxNumberOfMilestones

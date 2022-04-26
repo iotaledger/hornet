@@ -27,6 +27,10 @@ func TestValue(t *testing.T) {
 	defer syncCtxCancel()
 	assert.NoError(t, n.AwaitAllSync(syncCtx))
 
+	infoRes, err := n.Coordinator().DebugNodeAPIClient.Info(context.Background())
+	require.NoError(t, err)
+	protoParas := &infoRes.Protocol
+
 	// create two targets
 	target1 := ed25519.NewKeyFromSeed(randSeed())
 	target1Addr := iotago.Ed25519AddressFromPubKey(target1.Public().(ed25519.PublicKey))
@@ -34,21 +38,18 @@ func TestValue(t *testing.T) {
 	target2 := ed25519.NewKeyFromSeed(randSeed())
 	target2Addr := iotago.Ed25519AddressFromPubKey(target2.Public().(ed25519.PublicKey))
 
-	var target1Deposit, target2Deposit uint64 = 10_000_000, iotago.TokenSupply - 10_000_000
+	var target1Deposit, target2Deposit uint64 = 10_000_000, protoParas.TokenSupply - 10_000_000
 
 	genesisAddrKey := iotago.AddressKeys{Address: &framework.GenesisAddress, Keys: framework.GenesisSeed}
 	genesisInputID := &iotago.UTXOInput{TransactionID: [32]byte{}, TransactionOutputIndex: 0}
 
-	//TODO: this should be read from the node
-	deSeriParas := iotago.ZeroRentParas
-
 	// build and sign transaction spending the total supply
-	tx, err := builder.NewTransactionBuilder(iotago.NetworkIDFromString(n.Coordinator().Config.Protocol.NetworkIDName)).
+	tx, err := builder.NewTransactionBuilder(protoParas.NetworkID()).
 		AddInput(&builder.ToBeSignedUTXOInput{
 			Address:  &framework.GenesisAddress,
 			OutputID: genesisInputID.ID(),
 			Output: &iotago.BasicOutput{
-				Amount: iotago.TokenSupply,
+				Amount: protoParas.TokenSupply,
 				Conditions: iotago.UnlockConditions{
 					&iotago.AddressUnlockCondition{
 						Address: &framework.GenesisAddress,
@@ -72,16 +73,16 @@ func TestValue(t *testing.T) {
 				},
 			},
 		}).
-		Build(deSeriParas, iotago.NewInMemoryAddressSigner(genesisAddrKey))
+		Build(protoParas, iotago.NewInMemoryAddressSigner(genesisAddrKey))
 	require.NoError(t, err)
 
 	// build message
-	msg, err := builder.NewMessageBuilder().Payload(tx).Build()
+	msg, err := builder.NewMessageBuilder(protoParas.Version).Payload(tx).Build()
 	require.NoError(t, err)
 
 	// broadcast to a node
 	log.Println("submitting transaction...")
-	submittedMsg, err := n.Nodes[2].DebugNodeAPIClient.SubmitMessage(context.Background(), msg, iotago.ZeroRentParas)
+	submittedMsg, err := n.Nodes[2].DebugNodeAPIClient.SubmitMessage(context.Background(), msg, protoParas)
 	require.NoError(t, err)
 
 	// eventually the message should be confirmed

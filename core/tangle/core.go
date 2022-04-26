@@ -26,6 +26,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -141,17 +142,17 @@ func provide(c *dig.Container) {
 
 	type tangleDeps struct {
 		dig.In
-		Storage          *storage.Storage
-		SyncManager      *syncmanager.SyncManager
-		MilestoneManager *milestonemanager.MilestoneManager
-		RequestQueue     gossip.RequestQueue
-		Service          *gossip.Service
-		Requester        *gossip.Requester
-		MessageProcessor *gossip.MessageProcessor
-		ServerMetrics    *metrics.ServerMetrics
-		ReceiptService   *migrator.ReceiptService     `optional:"true"`
-		NodeConfig       *configuration.Configuration `name:"nodeConfig"`
-		NetworkID        uint64                       `name:"networkId"`
+		Storage            *storage.Storage
+		SyncManager        *syncmanager.SyncManager
+		MilestoneManager   *milestonemanager.MilestoneManager
+		RequestQueue       gossip.RequestQueue
+		Service            *gossip.Service
+		Requester          *gossip.Requester
+		MessageProcessor   *gossip.MessageProcessor
+		ServerMetrics      *metrics.ServerMetrics
+		ReceiptService     *migrator.ReceiptService     `optional:"true"`
+		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		ProtocolParameters *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps tangleDeps) *tangle.Tangle {
@@ -168,7 +169,7 @@ func provide(c *dig.Container) {
 			deps.ServerMetrics,
 			deps.Requester,
 			deps.ReceiptService,
-			deps.NetworkID,
+			deps.ProtocolParameters,
 			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			deps.NodeConfig.Duration(CfgTangleWhiteFlagParentsSolidTimeout),
 			*syncedAtStartup)

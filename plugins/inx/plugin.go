@@ -46,24 +46,21 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
-	SyncManager               *syncmanager.SyncManager
-	UTXOManager               *utxo.Manager
-	Tangle                    *tangle.Tangle
-	TipScoreCalculator        *tangle.TipScoreCalculator
-	Storage                   *storage.Storage
-	KeyManager                *keymanager.KeyManager
-	NetworkIDName             string                 `name:"networkIdName"`
-	Bech32HRP                 iotago.NetworkPrefix   `name:"bech32HRP"`
-	TipSelector               *tipselect.TipSelector `optional:"true"`
-	MinPoWScore               float64                `name:"minPoWScore"`
-	MilestonePublicKeyCount   int                    `name:"milestonePublicKeyCount"`
-	DeserializationParameters *iotago.DeSerializationParameters
-	PoWHandler                *pow.Handler
-	INXServer                 *INXServer
-	Echo                      *echo.Echo                 `optional:"true"`
-	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
-	ExternalMetricsProxy      *restapipkg.DynamicProxy   `name:"externalMetricsProxy" optional:"true"`
+	NodeConfig              *configuration.Configuration `name:"nodeConfig"`
+	SyncManager             *syncmanager.SyncManager
+	UTXOManager             *utxo.Manager
+	Tangle                  *tangle.Tangle
+	TipScoreCalculator      *tangle.TipScoreCalculator
+	Storage                 *storage.Storage
+	KeyManager              *keymanager.KeyManager
+	TipSelector             *tipselect.TipSelector `optional:"true"`
+	MilestonePublicKeyCount int                    `name:"milestonePublicKeyCount"`
+	ProtocolParameters      *iotago.ProtocolParameters
+	PoWHandler              *pow.Handler
+	INXServer               *INXServer
+	Echo                    *echo.Echo                 `optional:"true"`
+	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
+	ExternalMetricsProxy    *restapipkg.DynamicProxy   `name:"externalMetricsProxy" optional:"true"`
 }
 
 func provide(c *dig.Container) {
@@ -78,8 +75,6 @@ func configure() {
 
 	attacherOpts := []tangle.MessageAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
-		tangle.WithDeserializationParameters(deps.DeserializationParameters),
-		tangle.WithMinPoWScore(deps.MinPoWScore),
 	}
 	if deps.TipSelector != nil {
 		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))

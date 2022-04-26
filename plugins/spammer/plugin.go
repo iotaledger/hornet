@@ -80,15 +80,15 @@ var (
 
 type dependencies struct {
 	dig.In
-	MessageProcessor          *gossip.MessageProcessor
-	SyncManager               *syncmanager.SyncManager
-	ServerMetrics             *metrics.ServerMetrics
-	PoWHandler                *pow.Handler
-	PeeringManager            *p2p.Manager
-	TipSelector               *tipselect.TipSelector       `optional:"true"`
-	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
-	DeserializationParameters *iotago.DeSerializationParameters
-	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
+	MessageProcessor   *gossip.MessageProcessor
+	SyncManager        *syncmanager.SyncManager
+	ServerMetrics      *metrics.ServerMetrics
+	PoWHandler         *pow.Handler
+	PeeringManager     *p2p.Manager
+	TipSelector        *tipselect.TipSelector       `optional:"true"`
+	NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+	ProtocolParameters *iotago.ProtocolParameters
+	RestPluginManager  *restapi.RestPluginManager `optional:"true"`
 }
 
 func configure() {
@@ -129,7 +129,7 @@ func configure() {
 	isRunning = false
 
 	spammerInstance = spammer.New(
-		deps.DeserializationParameters,
+		deps.ProtocolParameters,
 		deps.NodeConfig.String(CfgSpammerMessage),
 		deps.NodeConfig.String(CfgSpammerTag),
 		deps.NodeConfig.String(CfgSpammerTagSemiLazy),

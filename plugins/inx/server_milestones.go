@@ -16,7 +16,6 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
 	inx "github.com/iotaledger/inx/go"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, error) {
@@ -39,7 +38,7 @@ func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, e
 		return nil, status.Errorf(codes.Internal, "error computing milestone ID: %s", err)
 	}
 
-	bytes, err := milestonePayload.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	bytes, err := milestonePayload.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error serializing milestone payload: %s", err)
 	}
@@ -127,9 +126,9 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 	requestedIndex := milestone.Index(req.GetMilestoneIndex())
 	requestedTimestamp := req.GetMilestoneTimestamp()
 	requestedParents := MessageIDsFromINXMessageIDs(req.GetParents())
-	requestedLastMilestoneID := req.GetLastMilestoneId().Unwrap()
+	requestedPreviousMilestoneID := req.GetPreviousMilestoneId().Unwrap()
 
-	mutations, err := deps.Tangle.CheckSolidityAndComputeWhiteFlagMutations(ctx, requestedIndex, requestedTimestamp, requestedParents, requestedLastMilestoneID)
+	mutations, err := deps.Tangle.CheckSolidityAndComputeWhiteFlagMutations(ctx, requestedIndex, requestedTimestamp, requestedParents, requestedPreviousMilestoneID)
 	if err != nil {
 		switch {
 		case errors.Is(err, common.ErrNodeNotSynced):

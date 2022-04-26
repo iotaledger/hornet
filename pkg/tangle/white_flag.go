@@ -21,10 +21,10 @@ var (
 )
 
 // CheckSolidityAndComputeWhiteFlagMutations waits until all given parents are solid, an then calculates the white flag mutations
-// with given milestone index, timestamp and lastMilestoneID.
+// with given milestone index, timestamp and previousMilestoneID.
 // Attention: this call puts missing parents of the cone as undiscardable requests into the request queue.
 // Therefore the caller needs to be trustful (e.g. coordinator plugin).
-func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
+func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, previousMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
 
 	// check if the requested milestone index would be the next one
 	if index > t.syncManager.ConfirmedMilestoneIndex()+1 {
@@ -118,11 +118,11 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		t.storage.UTXOManager(),
 		parentsTraverser,
 		messagesMemcache.CachedMessage,
-		t.networkId,
+		t.protoParas.NetworkID(),
 		index,
 		timestamp,
 		parents,
-		lastMilestoneID,
+		previousMilestoneID,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 	)
 }

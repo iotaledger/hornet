@@ -113,8 +113,7 @@ func loadSnapshotFileToStorage(
 	dbStorage *storage.Storage,
 	snapshotType Type,
 	filePath string,
-	deSeriParas *iotago.DeSerializationParameters,
-	networkID ...uint64) (header *ReadFileHeader, err error) {
+	protoParas *iotago.ProtocolParameters) (header *ReadFileHeader, err error) {
 
 	dbStorage.WriteLockSolidEntryPoints()
 	dbStorage.ResetSolidEntryPointsWithoutLocking()
@@ -133,7 +132,7 @@ func loadSnapshotFileToStorage(
 	defer func() { _ = lsFile.Close() }()
 
 	header = &ReadFileHeader{}
-	headerConsumer := newFileHeaderConsumer(header, dbStorage.UTXOManager(), snapshotType, networkID...)
+	headerConsumer := newFileHeaderConsumer(header, dbStorage.UTXOManager(), snapshotType, protoParas.NetworkID())
 	sepConsumer := newSEPsConsumer(dbStorage, header)
 	var outputConsumer OutputConsumerFunc
 	var treasuryOutputConsumer UnspentTreasuryOutputConsumerFunc
@@ -144,11 +143,11 @@ func loadSnapshotFileToStorage(
 	}
 	msDiffConsumer := newMsDiffConsumer(dbStorage.UTXOManager())
 
-	if err = StreamSnapshotDataFrom(lsFile, deSeriParas, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
+	if err = StreamSnapshotDataFrom(lsFile, protoParas, headerConsumer, sepConsumer, outputConsumer, treasuryOutputConsumer, msDiffConsumer); err != nil {
 		return nil, fmt.Errorf("unable to import %s snapshot file: %w", snapshotNames[snapshotType], err)
 	}
 
-	if err = dbStorage.UTXOManager().CheckLedgerState(); err != nil {
+	if err = dbStorage.UTXOManager().CheckLedgerState(protoParas); err != nil {
 		return nil, err
 	}
 
@@ -170,7 +169,7 @@ func loadSnapshotFileToStorage(
 }
 
 // LoadSnapshotFilesToStorage loads the snapshot files from the given file paths into the storage.
-func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, deSeriParas *iotago.DeSerializationParameters, fullPath string, deltaPath ...string) (*ReadFileHeader, *ReadFileHeader, error) {
+func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage, protoParas *iotago.ProtocolParameters, fullPath string, deltaPath ...string) (*ReadFileHeader, *ReadFileHeader, error) {
 
 	if len(deltaPath) > 0 && deltaPath[0] != "" {
 
@@ -192,13 +191,13 @@ func LoadSnapshotFilesToStorage(ctx context.Context, dbStorage *storage.Storage,
 	}
 
 	var fullSnapshotHeader, deltaSnapshotHeader *ReadFileHeader
-	fullSnapshotHeader, err := loadSnapshotFileToStorage(ctx, dbStorage, Full, fullPath, deSeriParas)
+	fullSnapshotHeader, err := loadSnapshotFileToStorage(ctx, dbStorage, Full, fullPath, protoParas)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if len(deltaPath) > 0 && deltaPath[0] != "" {
-		deltaSnapshotHeader, err = loadSnapshotFileToStorage(ctx, dbStorage, Delta, deltaPath[0], deSeriParas)
+		deltaSnapshotHeader, err = loadSnapshotFileToStorage(ctx, dbStorage, Delta, deltaPath[0], protoParas)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -135,7 +135,7 @@ type StoreMessageInterface interface {
 // message +1
 func storeMessage(dbStorage StoreMessageInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Message) (*storage.CachedMessage, error) {
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, iotago.ZeroRentParas)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
@@ -258,7 +258,7 @@ func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath strin
 		return fmt.Errorf("source storage networkID not equal to genesis snapshot networkID (%d != %d)", sourceNetworkID, fullHeader.NetworkID)
 	}
 
-	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, iotago.ZeroRentParas, genesisSnapshotFilePath); err != nil {
+	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, nil, genesisSnapshotFilePath); err != nil {
 		return err
 	}
 

@@ -108,7 +108,7 @@ type dependencies struct {
 	UTXOManager          *utxo.Manager
 	SyncManager          *syncmanager.SyncManager
 	Tangle               *tangle.Tangle
-	Bech32HRP            iotago.NetworkPrefix `name:"bech32HRP"`
+	ProtocolParameters   *iotago.ProtocolParameters
 	ShutdownHandler      *shutdown.ShutdownHandler
 	RestPluginManager    *restapi.RestPluginManager `optional:"true"`
 }
@@ -117,12 +117,12 @@ func provide(c *dig.Container) {
 
 	type participationDeps struct {
 		dig.In
-		Storage                   *storage.Storage
-		SyncManager               *syncmanager.SyncManager
-		DatabasePath              string                       `name:"databasePath"`
-		DatabaseEngine            database.Engine              `name:"databaseEngine"`
-		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
-		DeSerializationParameters *iotago.DeSerializationParameters
+		Storage            *storage.Storage
+		SyncManager        *syncmanager.SyncManager
+		DatabasePath       string                       `name:"databasePath"`
+		DatabaseEngine     database.Engine              `name:"databaseEngine"`
+		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		ProtocolParameters *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps participationDeps) *participation.ParticipationManager {
@@ -136,7 +136,7 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.SyncManager,
 			participationStore,
-			deps.DeSerializationParameters,
+			deps.ProtocolParameters,
 		)
 		if err != nil {
 			Plugin.LogPanic(err)

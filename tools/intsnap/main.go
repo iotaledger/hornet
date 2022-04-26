@@ -43,10 +43,23 @@ func blankMilestone(index uint32) *iotago.Milestone {
 	}
 }
 
+var protoParas = &iotago.ProtocolParameters{
+	Version:     2,
+	NetworkName: "alphanet1",
+	Bech32HRP:   iotago.PrefixDevnet,
+	MinPowScore: 10,
+	RentStructure: iotago.RentStructure{
+		VByteCost:    0,
+		VBFactorKey:  0,
+		VBFactorData: 0,
+	},
+	TokenSupply: 2_779_530_283_277_761,
+}
+
 var fullSnapshotHeader = &snapshot.FileHeader{
 	Version:              snapshot.SupportedFormatVersion,
 	Type:                 snapshot.Full,
-	NetworkID:            iotago.NetworkIDFromString("alphanet1"),
+	NetworkID:            protoParas.NetworkID(),
 	SEPMilestoneIndex:    1,
 	LedgerMilestoneIndex: 3,
 	TreasuryOutput: &utxo.TreasuryOutput{
@@ -55,7 +68,7 @@ var fullSnapshotHeader = &snapshot.FileHeader{
 	},
 }
 
-var originTreasurySupply = iotago.TokenSupply - fullSnapshotOutputs[0].Deposit() - fullSnapshotOutputs[1].Deposit()
+var originTreasurySupply = protoParas.TokenSupply - fullSnapshotOutputs[0].Deposit() - fullSnapshotOutputs[1].Deposit()
 
 var fullSnapshotOutputs = utxo.Outputs{
 	utxoOutput(6, 10_000_000, 3),
@@ -167,7 +180,7 @@ var deltaSnapshotMsDiffs = []*snapshot.MilestoneDiff{
 					Address:             &iotago.Ed25519Address{},
 					Deposit:             10_000_000,
 				}).
-				Build(iotago.ZeroRentParas)
+				Build(protoParas)
 			if err != nil {
 				panic(err)
 			}

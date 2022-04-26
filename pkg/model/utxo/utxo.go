@@ -327,7 +327,7 @@ func (u *Manager) RollbackConfirmation(msIndex milestone.Index, newOutputs Outpu
 	return u.RollbackConfirmationWithoutLocking(msIndex, newOutputs, newSpents, tm, rt)
 }
 
-func (u *Manager) CheckLedgerState() error {
+func (u *Manager) CheckLedgerState(protoParas *iotago.ProtocolParameters) error {
 
 	total, _, err := u.ComputeLedgerBalance()
 	if err != nil {
@@ -340,7 +340,7 @@ func (u *Manager) CheckLedgerState() error {
 	}
 	total += treasuryOutput.Amount
 
-	if total != iotago.TokenSupply {
+	if total != protoParas.TokenSupply {
 		return ErrOutputsSumNotEqualTotalSupply
 	}
 

@@ -13,9 +13,9 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/configuration"
-
 	"github.com/gohornet/hornet/pkg/database"
+	"github.com/iotaledger/hive.go/configuration"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -93,6 +93,11 @@ const (
 	DefaultValueP2PDatabasePath          = "p2pstore"
 	DefaultValueCoordinatorStateFilePath = "coordinator.state"
 	DefaultValueDatabaseEngine           = database.EngineRocksDB
+)
+
+var (
+	//TODO: come up with a solution for this values (NetworkName, TotalSupply)
+	EmptyProtocolParameters = &iotago.ProtocolParameters{}
 )
 
 const (

@@ -19,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/model/utxo/utils"
 	"github.com/gohornet/hornet/pkg/snapshot"
-	"github.com/gohornet/hornet/pkg/testsuite"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -42,6 +41,15 @@ type test struct {
 	unspentTreasuryOutputConsumer snapshot.UnspentTreasuryOutputConsumerFunc
 	msDiffConsumer                snapshot.MilestoneDiffConsumerFunc
 	msDiffConRetriever            msDiffRetrieverFunc
+}
+
+var protoParas = &iotago.ProtocolParameters{
+	Version:       2,
+	NetworkName:   "testnet",
+	Bech32HRP:     iotago.PrefixTestnet,
+	MinPowScore:   0,
+	RentStructure: iotago.RentStructure{},
+	TokenSupply:   0,
 }
 
 func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
@@ -151,7 +159,7 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 			snapshotFileRead, err := fs.OpenFile(filePath, os.O_RDONLY, 0666)
 			require.NoError(t, err)
 
-			require.NoError(t, snapshot.StreamSnapshotDataFrom(snapshotFileRead, testsuite.DeSerializationParameters, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.unspentTreasuryOutputConsumer, tt.msDiffConsumer))
+			require.NoError(t, snapshot.StreamSnapshotDataFrom(snapshotFileRead, protoParas, tt.headerConsumer, tt.sepConsumer, tt.outputConsumer, tt.unspentTreasuryOutputConsumer, tt.msDiffConsumer))
 
 			// verify that what has been written also has been read again
 			require.EqualValues(t, tt.sepGenRetriever(), tt.sepConRetriever())
@@ -267,7 +275,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 					Output: &iotago.TreasuryOutput{Amount: rand.Uint64()},
 				}).
 				AddEntry(migratedFundsEntry).
-				Build(testsuite.DeSerializationParameters)
+				Build(protoParas)
 			if err != nil {
 				panic(err)
 			}

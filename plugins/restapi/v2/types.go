@@ -10,19 +10,6 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-type protocolParameters struct {
-	// The Name of the network from which the networkId is derived.
-	NetworkName string `json:"networkName"`
-	// The protocol version this node supports
-	ProtocolVersion byte `json:"protocolVersion"`
-	// The Bech32 HRP used.
-	Bech32HRP string `json:"bech32HRP"`
-	// The minimum pow score of the network.
-	MinPoWScore float64 `json:"minPoWScore"`
-	// The rent structure according to TIP-19
-	RentStructure *iotago.RentStructure `json:"rentStructure"`
-}
-
 type nodeStatus struct {
 	// Whether the node is healthy.
 	IsHealthy bool `json:"isHealthy"`
@@ -56,7 +43,7 @@ type infoResponse struct {
 	// The metrics of this node.
 	Metrics nodeMetrics `json:"metrics"`
 	// The protocol parameters used by this node.
-	Protocol protocolParameters `json:"protocol"`
+	Protocol *iotago.ProtocolParameters `json:"protocol"`
 	// The features this node exposes.
 	Features []string `json:"features"`
 	// The plugins this node exposes.
@@ -235,7 +222,7 @@ type ComputeWhiteFlagMutationsRequest struct {
 	// The hex encoded message IDs of the parents the milestone references.
 	Parents []string `json:"parentMessageIds"`
 	// The hex encoded milestone ID of the previous milestone.
-	LastMilestoneID string `json:"lastMilestoneId"`
+	PreviousMilestoneID string `json:"previousMilestoneId"`
 }
 
 // ComputeWhiteFlagMutationsResponse defines the response for a POST debugComputeWhiteFlagMutations REST API call.

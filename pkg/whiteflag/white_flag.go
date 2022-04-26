@@ -87,7 +87,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	msIndex milestone.Index,
 	msTimestamp uint32,
 	parents hornet.MessageIDs,
-	lastMilestoneID iotago.MilestoneID,
+	previousMilestoneID iotago.MilestoneID,
 	traversalCondition dag.Predicate) (*WhiteFlagMutations, error) {
 
 	wfConf := &WhiteFlagMutations{
@@ -107,18 +107,18 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	}
 
 	isFirstMilestone := msIndex == 1
-	if isFirstMilestone && lastMilestoneID != emptyMilestoneID {
-		return nil, fmt.Errorf("invalid lastMilestoneID for initial milestone: %s", iotago.EncodeHex(lastMilestoneID[:]))
+	if isFirstMilestone && previousMilestoneID != emptyMilestoneID {
+		return nil, fmt.Errorf("invalid previousMilestoneID for initial milestone: %s", iotago.EncodeHex(previousMilestoneID[:]))
 	}
-	if !isFirstMilestone && lastMilestoneID == emptyMilestoneID {
-		return nil, fmt.Errorf("missing lastMilestoneID for milestone: %d", msIndex)
+	if !isFirstMilestone && previousMilestoneID == emptyMilestoneID {
+		return nil, fmt.Errorf("missing previousMilestoneID for milestone: %d", msIndex)
 	}
 
-	// Use a custom traversal condition that tracks if the lastMilestoneID was seen in the past cone
+	// Use a custom traversal condition that tracks if the previousMilestoneID was seen in the past cone
 	// Skip this check for the first milestone
-	seenLastMilestoneID := isFirstMilestone
+	seenPreviousMilestoneID := isFirstMilestone
 	internalTraversalCondition := func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-		if !seenLastMilestoneID && cachedMsgMeta.Metadata().IsMilestone() {
+		if !seenPreviousMilestoneID && cachedMsgMeta.Metadata().IsMilestone() {
 			msgMilestone, err := cachedMessageFunc(cachedMsgMeta.Metadata().MessageID()) // message +1
 			if err != nil {
 				return false, err
@@ -135,8 +135,8 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			if err != nil {
 				return false, err
 			}
-			// Compare this milestones ID with the lastMilestoneID
-			seenLastMilestoneID = *milestoneID == lastMilestoneID
+			// Compare this milestones ID with the previousMilestoneID
+			seenPreviousMilestoneID = *milestoneID == previousMilestoneID
 		}
 		return traversalCondition(cachedMsgMeta) // meta pass +1
 	}
@@ -309,8 +309,8 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 		return nil, err
 	}
 
-	if !seenLastMilestoneID {
-		return nil, fmt.Errorf("lastMilestoneID %s not referenced in past cone", iotago.EncodeHex(lastMilestoneID[:]))
+	if !seenPreviousMilestoneID {
+		return nil, fmt.Errorf("previousMilestoneID %s not referenced in past cone", iotago.EncodeHex(previousMilestoneID[:]))
 	}
 
 	// compute past cone merkle tree root hash

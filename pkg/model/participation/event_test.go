@@ -13,9 +13,14 @@ import (
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/testutil"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+var protoParas = &iotago.ProtocolParameters{
+	TokenSupply: 2_779_530_283_277_761,
+}
 
 func RandString(strLen int) string {
 	b := make([]byte, strLen)
@@ -195,23 +200,23 @@ func RandStakingEvent(nominator uint32, denominator uint32, duration uint32) *pa
 }
 
 func TestEventBallotCanOverflow(t *testing.T) {
-	require.True(t, RandBallotEventWithIndexes(1, 5, 10000000).BallotCanOverflow())
-	require.False(t, RandBallotEventWithIndexes(1, 5, 10).BallotCanOverflow())
+	require.True(t, RandBallotEventWithIndexes(1, 5, 10000000).BallotCanOverflow(protoParas))
+	require.False(t, RandBallotEventWithIndexes(1, 5, 10).BallotCanOverflow(protoParas))
 }
 
 func TestEventStakingCanOverflow(t *testing.T) {
-	require.False(t, RandStakingEvent(6_636, 1, 1).StakingCanOverflow())
-	require.True(t, RandStakingEvent(6_637, 1, 1).StakingCanOverflow())
+	require.False(t, RandStakingEvent(6_636, 1, 1).StakingCanOverflow(protoParas))
+	require.True(t, RandStakingEvent(6_637, 1, 1).StakingCanOverflow(protoParas))
 
-	require.True(t, RandStakingEvent(6_636, 1, 2).StakingCanOverflow())
+	require.True(t, RandStakingEvent(6_636, 1, 2).StakingCanOverflow(protoParas))
 
-	require.False(t, RandStakingEvent(6_636, 10, 10).StakingCanOverflow())
-	require.True(t, RandStakingEvent(6_636, 10, 11).StakingCanOverflow())
+	require.False(t, RandStakingEvent(6_636, 10, 10).StakingCanOverflow(protoParas))
+	require.True(t, RandStakingEvent(6_636, 10, 11).StakingCanOverflow(protoParas))
 
-	require.False(t, RandStakingEvent(1, 1, 6_636).StakingCanOverflow())
-	require.True(t, RandStakingEvent(1, 1, 6_637).StakingCanOverflow())
+	require.False(t, RandStakingEvent(1, 1, 6_636).StakingCanOverflow(protoParas))
+	require.True(t, RandStakingEvent(1, 1, 6_637).StakingCanOverflow(protoParas))
 
-	require.True(t, RandStakingEvent(1, 10, 66_367).StakingCanOverflow())
+	require.True(t, RandStakingEvent(1, 10, 66_367).StakingCanOverflow(protoParas))
 
-	require.False(t, RandStakingEvent(1, 1_000_000, 777_600).StakingCanOverflow())
+	require.False(t, RandStakingEvent(1, 1_000_000, 777_600).StakingCanOverflow(protoParas))
 }

@@ -233,7 +233,7 @@ func getOutputStatus(c echo.Context) (*OutputStatusResponse, error) {
 }
 
 func getRewardsByBech32Address(c echo.Context) (*AddressRewardsResponse, error) {
-	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
+	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.ProtocolParameters.Bech32HRP)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +384,7 @@ func getRewards(c echo.Context) (*RewardsResponse, error) {
 }
 
 func getOutputsByBech32Address(c echo.Context) (*AddressOutputsResponse, error) {
-	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.Bech32HRP)
+	bech32Address, err := restapi.ParseBech32AddressParam(c, deps.ProtocolParameters.Bech32HRP)
 	if err != nil {
 		return nil, err
 	}

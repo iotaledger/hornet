@@ -70,7 +70,6 @@ type dependencies struct {
 	UTXOManager          *utxo.Manager
 	SnapshotManager      *snapshot.SnapshotManager
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
-	NetworkID            uint64                       `name:"networkId"`
 	DeleteAllFlag        bool                         `name:"deleteAll"`
 	PruningPruneReceipts bool                         `name:"pruneReceipts"`
 	SnapshotsFullPath    string                       `name:"snapshotsFullPath"`
@@ -107,24 +106,20 @@ func provide(c *dig.Container) {
 
 	type snapshotDeps struct {
 		dig.In
-		TangleDatabase            *database.Database `name:"tangleDatabase"`
-		UTXODatabase              *database.Database `name:"utxoDatabase"`
-		Storage                   *storage.Storage
-		SyncManager               *syncmanager.SyncManager
-		UTXOManager               *utxo.Manager
-		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
-		BelowMaxDepth             int                          `name:"belowMaxDepth"`
-		NetworkID                 uint64                       `name:"networkId"`
-		NetworkIDName             string                       `name:"networkIdName"`
-		DeserializationParameters *iotago.DeSerializationParameters
-		PruningPruneReceipts      bool   `name:"pruneReceipts"`
-		SnapshotsFullPath         string `name:"snapshotsFullPath"`
-		SnapshotsDeltaPath        string `name:"snapshotsDeltaPath"`
+		TangleDatabase       *database.Database `name:"tangleDatabase"`
+		UTXODatabase         *database.Database `name:"utxoDatabase"`
+		Storage              *storage.Storage
+		SyncManager          *syncmanager.SyncManager
+		UTXOManager          *utxo.Manager
+		NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+		BelowMaxDepth        int                          `name:"belowMaxDepth"`
+		ProtocolParameters   *iotago.ProtocolParameters
+		PruningPruneReceipts bool   `name:"pruneReceipts"`
+		SnapshotsFullPath    string `name:"snapshotsFullPath"`
+		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
 	}
 
 	if err := c.Provide(func(deps snapshotDeps) *snapshot.SnapshotManager {
-
-		networkIDSource := deps.NetworkIDName
 
 		if err := deps.NodeConfig.SetDefault(CfgSnapshotsDownloadURLs, []snapshot.DownloadTarget{
 			{
@@ -183,9 +178,7 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.SyncManager,
 			deps.UTXOManager,
-			deps.NetworkID,
-			networkIDSource,
-			deps.DeserializationParameters,
+			deps.ProtocolParameters,
 			deps.SnapshotsFullPath,
 			deps.SnapshotsDeltaPath,
 			deps.NodeConfig.Float64(CfgSnapshotsDeltaSizeThresholdPercentage),

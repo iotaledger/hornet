@@ -49,8 +49,8 @@ type TestEnvironment struct {
 	// PoWMinScore used in the PoWHandler instance.
 	PoWMinScore float64
 
-	// networkID is the network ID used for this test network.
-	networkID uint64
+	// protoParas are the protocol parameters of the network.
+	protoParas *iotago.ProtocolParameters
 
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
@@ -87,16 +87,6 @@ type TestEnvironment struct {
 	OnLedgerUpdatedFunc OnLedgerUpdatedFunc
 }
 
-var (
-	DeSerializationParameters = &iotago.DeSerializationParameters{
-		RentStructure: &iotago.RentStructure{
-			VByteCost:    500,
-			VBFactorData: 1,
-			VBFactorKey:  10,
-		},
-	}
-)
-
 type OnMilestoneConfirmedFunc func(confirmation *whiteflag.Confirmation)
 type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents)
 
@@ -110,10 +100,20 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		cachedMessages:         make(storage.CachedMessages, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(targetScore, 5*time.Second),
-		PoWMinScore:            targetScore,
-		networkID:              iotago.NetworkIDFromString("alphanet1"),
-		belowMaxDepth:          milestone.Index(belowMaxDepth),
-		serverMetrics:          &metrics.ServerMetrics{},
+		protoParas: &iotago.ProtocolParameters{
+			Version:     2,
+			NetworkName: "alphapnet1",
+			Bech32HRP:   iotago.PrefixTestnet,
+			MinPowScore: targetScore,
+			RentStructure: iotago.RentStructure{
+				VByteCost:    500,
+				VBFactorData: 1,
+				VBFactorKey:  10,
+			},
+			TokenSupply: 2_779_530_283_277_761,
+		},
+		belowMaxDepth: milestone.Index(belowMaxDepth),
+		serverMetrics: &metrics.ServerMetrics{},
 	}
 
 	cfg := configuration.New()
@@ -158,7 +158,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 
 	// Initialize UTXO
 	output := &iotago.BasicOutput{
-		Amount: iotago.TokenSupply,
+		Amount: te.protoParas.TokenSupply,
 		Conditions: iotago.UnlockConditions{
 			&iotago.AddressUnlockCondition{
 				Address: genesisAddress,
@@ -195,8 +195,8 @@ func (te *TestEnvironment) ConfigureUTXOCallbacks(onLedgerUpdatedFunc OnLedgerUp
 	te.OnLedgerUpdatedFunc = onLedgerUpdatedFunc
 }
 
-func (te *TestEnvironment) NetworkID() iotago.NetworkID {
-	return te.networkID
+func (te *TestEnvironment) ProtocolParameters() *iotago.ProtocolParameters {
+	return te.protoParas
 }
 
 func (te *TestEnvironment) Storage() *storage.Storage {

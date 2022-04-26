@@ -120,11 +120,11 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	jsonMsg := &iotago.Message{}
 	err := json.Unmarshal([]byte(jsonString), jsonMsg)
 	require.NoError(t, err)
-	milestoneMessageBytes, err := jsonMsg.Serialize(serializer.DeSeriModePerformValidation, iotago.ZeroRentParas)
+	milestoneMessageBytes, err := jsonMsg.Serialize(serializer.DeSeriModePerformValidation, te.ProtocolParameters())
 	require.NoError(t, err)
 
 	// build HORNET representation of the message
-	msg, err := storage.MessageFromBytes(milestoneMessageBytes, serializer.DeSeriModePerformValidation, testsuite.DeSerializationParameters)
+	msg, err := storage.MessageFromBytes(milestoneMessageBytes, serializer.DeSeriModePerformValidation, te.ProtocolParameters())
 	require.NoError(te.TestInterface, err)
 
 	// parse the milestone payload

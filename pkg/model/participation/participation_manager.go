@@ -35,8 +35,8 @@ type ParticipationManager struct {
 	// used to sync with the nodes status.
 	syncManager *syncmanager.SyncManager
 
-	// Deserialization parameters including byte costs
-	deSeriParas *iotago.DeSerializationParameters
+	// ProtocolParameters parameters including byte costs
+	protoParas *iotago.ProtocolParameters
 
 	// holds the ParticipationManager options.
 	opts *Options
@@ -80,7 +80,7 @@ func NewManager(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	participationStore kvstore.KVStore,
-	deSeriParas *iotago.DeSerializationParameters,
+	protoParas *iotago.ProtocolParameters,
 	opts ...Option) (*ParticipationManager, error) {
 
 	options := &Options{}
@@ -97,7 +97,7 @@ func NewManager(
 		syncManager:              syncManager,
 		participationStore:       participationStore,
 		participationStoreHealth: healthTracker,
-		deSeriParas:              deSeriParas,
+		protoParas:               protoParas,
 		opts:                     options,
 	}
 
@@ -236,11 +236,11 @@ func (pm *ParticipationManager) StoreEvent(event *Event) (EventID, error) {
 		return NullEventID, ErrParticipationEventAlreadyExists
 	}
 
-	if event.BallotCanOverflow() {
+	if event.BallotCanOverflow(pm.protoParas) {
 		return NullEventID, ErrParticipationEventBallotCanOverflow
 	}
 
-	if event.StakingCanOverflow() {
+	if event.StakingCanOverflow(pm.protoParas) {
 		return NullEventID, ErrParticipationEventStakingCanOverflow
 	}
 

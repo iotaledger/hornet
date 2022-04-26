@@ -247,7 +247,7 @@ func verifyDatabase(
 			utxoManagerTemp,
 			storeSource,
 			storeSource.CachedMessage,
-			storeSource.SnapshotInfo().NetworkID,
+			EmptyProtocolParameters, //TODO: find out how to pass storeSource.SnapshotInfo().ProtocolParameters,
 			milestoneMessageID,
 			previousMilestoneID,
 			// traversal stops if no more messages pass the given condition

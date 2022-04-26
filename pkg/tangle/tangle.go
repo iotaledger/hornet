@@ -20,6 +20,7 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hive.go/workerpool"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type Tangle struct {
@@ -48,7 +49,8 @@ type Tangle struct {
 	requester *gossip.Requester
 	// used to persist and validate batches of receipts.
 	receiptService *migrator.ReceiptService
-	networkId      uint64
+	// the protocol parameters
+	protoParas *iotago.ProtocolParameters
 
 	milestoneTimeout             time.Duration
 	whiteFlagParentsSolidTimeout time.Duration
@@ -121,7 +123,7 @@ func New(
 	serverMetrics *metrics.ServerMetrics,
 	requester *gossip.Requester,
 	receiptService *migrator.ReceiptService,
-	networkId uint64,
+	protoParas *iotago.ProtocolParameters,
 	milestoneTimeout time.Duration,
 	whiteFlagParentsSolidTimeout time.Duration,
 	updateSyncedAtStartup bool) *Tangle {
@@ -139,7 +141,7 @@ func New(
 		serverMetrics:                serverMetrics,
 		requester:                    requester,
 		receiptService:               receiptService,
-		networkId:                    networkId,
+		protoParas:                   protoParas,
 		milestoneTimeout:             milestoneTimeout,
 		whiteFlagParentsSolidTimeout: whiteFlagParentsSolidTimeout,
 		updateSyncedAtStartup:        updateSyncedAtStartup,

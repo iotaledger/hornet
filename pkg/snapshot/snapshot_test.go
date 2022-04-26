@@ -168,7 +168,7 @@ func TestSnapshotOutputProducerAndConsumer(t *testing.T) {
 		outputBytes := output.SnapshotBytes()
 
 		// Unmarshal the output again
-		newOutput, err := readOutput(bytes.NewReader(outputBytes), iotago.ZeroRentParas)
+		newOutput, err := readOutput(bytes.NewReader(outputBytes), nil)
 		require.NoError(t, err)
 
 		err = consumer(newOutput)

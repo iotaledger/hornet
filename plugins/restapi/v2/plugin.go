@@ -137,29 +137,25 @@ var (
 
 type dependencies struct {
 	dig.In
-	Storage                   *storage.Storage
-	SyncManager               *syncmanager.SyncManager
-	Tangle                    *tangle.Tangle
-	TipScoreCalculator        *tangle.TipScoreCalculator
-	PeeringManager            *p2p.Manager
-	GossipService             *gossip.Service
-	UTXOManager               *utxo.Manager
-	PoWHandler                *pow.Handler
-	SnapshotManager           *snapshot.SnapshotManager
-	AppInfo                   *app.AppInfo
-	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
-	PeeringConfigManager      *p2p.ConfigManager
-	NetworkID                 uint64 `name:"networkId"`
-	NetworkIDName             string `name:"networkIdName"`
-	DeserializationParameters *iotago.DeSerializationParameters
-	MinPoWScore               float64                    `name:"minPoWScore"`
-	Bech32HRP                 iotago.NetworkPrefix       `name:"bech32HRP"`
-	RestAPILimitsMaxResults   int                        `name:"restAPILimitsMaxResults"`
-	SnapshotsFullPath         string                     `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath        string                     `name:"snapshotsDeltaPath"`
-	TipSelector               *tipselect.TipSelector     `optional:"true"`
-	Echo                      *echo.Echo                 `optional:"true"`
-	RestPluginManager         *restapi.RestPluginManager `optional:"true"`
+	Storage                 *storage.Storage
+	SyncManager             *syncmanager.SyncManager
+	Tangle                  *tangle.Tangle
+	TipScoreCalculator      *tangle.TipScoreCalculator
+	PeeringManager          *p2p.Manager
+	GossipService           *gossip.Service
+	UTXOManager             *utxo.Manager
+	PoWHandler              *pow.Handler
+	SnapshotManager         *snapshot.SnapshotManager
+	AppInfo                 *app.AppInfo
+	NodeConfig              *configuration.Configuration `name:"nodeConfig"`
+	PeeringConfigManager    *p2p.ConfigManager
+	ProtocolParameters      *iotago.ProtocolParameters
+	RestAPILimitsMaxResults int                        `name:"restAPILimitsMaxResults"`
+	SnapshotsFullPath       string                     `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath      string                     `name:"snapshotsDeltaPath"`
+	TipSelector             *tipselect.TipSelector     `optional:"true"`
+	Echo                    *echo.Echo                 `optional:"true"`
+	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
 }
 
 func configure() {
@@ -172,8 +168,6 @@ func configure() {
 
 	attacherOpts := []tangle.MessageAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
-		tangle.WithDeserializationParameters(deps.DeserializationParameters),
-		tangle.WithMinPoWScore(deps.MinPoWScore),
 	}
 	if deps.TipSelector != nil {
 		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))

@@ -65,7 +65,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 	//Add token supply to our local HDWallet
 	genesisWallet.BookOutput(te.GenesisOutput)
 	if assertSteps {
-		te.AssertWalletBalance(genesisWallet, iotago.TokenSupply)
+		te.AssertWalletBalance(genesisWallet, te.ProtocolParameters().TokenSupply)
 	}
 
 	// Fund Wallet1
@@ -118,7 +118,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // the milestone
 
 		// Verify balances
-		te.AssertWalletBalance(genesisWallet, iotago.TokenSupply-wallet1Balance-wallet2Balance-wallet3Balance-wallet4Balance)
+		te.AssertWalletBalance(genesisWallet, te.ProtocolParameters().TokenSupply-wallet1Balance-wallet2Balance-wallet3Balance-wallet4Balance)
 		te.AssertWalletBalance(seed1Wallet, wallet1Balance)
 		te.AssertWalletBalance(seed2Wallet, wallet2Balance)
 		te.AssertWalletBalance(seed3Wallet, wallet3Balance)
@@ -131,7 +131,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 		te.Storage(),
 		te.SyncManager(),
 		store,
-		testsuite.DeSerializationParameters,
+		te.ProtocolParameters(),
 		participation.WithTagMessage(ParticipationTag),
 	)
 	require.NoError(t, err)
@@ -156,8 +156,8 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 	}
 }
 
-func (env *ParticipationTestEnv) NetworkID() iotago.NetworkID {
-	return env.te.NetworkID()
+func (env *ParticipationTestEnv) ProtocolParameters() *iotago.ProtocolParameters {
+	return env.te.ProtocolParameters()
 }
 
 func (env *ParticipationTestEnv) ParticipationManager() *participation.ParticipationManager {

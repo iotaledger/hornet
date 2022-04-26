@@ -117,7 +117,7 @@ func (pm *ParticipationManager) MessageForEventAndMessageID(eventID EventID, mes
 		return nil, err
 	}
 
-	return storage.MessageFromBytes(value, serializer.DeSeriModeNoValidation, pm.deSeriParas)
+	return storage.MessageFromBytes(value, serializer.DeSeriModeNoValidation, nil)
 }
 
 // Outputs
@@ -173,7 +173,7 @@ func participationKeyForEventAndAddressOutputID(eventID EventID, addressBytes []
 
 func (pm *ParticipationManager) ParticipationsForAddress(eventID EventID, address iotago.Address) ([]*TrackedParticipation, error) {
 
-	addressBytes, err := address.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	addressBytes, err := address.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +350,7 @@ func (pm *ParticipationManager) startParticipationAtMilestone(eventID EventID, o
 		return err
 	}
 
-	addressBytes, err := unlockConditions.Address().Address.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	addressBytes, err := unlockConditions.Address().Address.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return err
 	}
@@ -733,7 +733,7 @@ func (pm *ParticipationManager) ForEachAddressStakingParticipation(eventID Event
 			return false
 		}
 
-		addrLen, err := addr.Deserialize(addressBytes, serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+		addrLen, err := addr.Deserialize(addressBytes, serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
 			innerErr = err
 			return false

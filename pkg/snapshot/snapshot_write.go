@@ -168,8 +168,8 @@ func newMsIndexIterator(direction MsDiffDirection, ledgerIndex milestone.Index, 
 
 // returns a milestone diff producer which first reads out milestone diffs from an existing delta
 // snapshot file and then the remaining diffs from the database up to the target index.
-func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index, deSeriParas *iotago.DeSerializationParameters) (MilestoneDiffProducerFunc, error) {
-	prevDeltaFileMsDiffsProducer, err := newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath, ledgerIndex, deSeriParas)
+func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage *storage.Storage, utxoManager *utxo.Manager, ledgerIndex milestone.Index, targetIndex milestone.Index, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
+	prevDeltaFileMsDiffsProducer, err := newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath, ledgerIndex, protoParas)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func newMsDiffsProducerDeltaFileAndDatabase(snapshotDeltaPath string, dbStorage 
 
 // returns a milestone diff producer which reads out the milestone diffs from an existing delta snapshot file.
 // the existing delta snapshot file is closed as soon as its milestone diffs are read.
-func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerIndex milestone.Index, deSeriParas *iotago.DeSerializationParameters) (MilestoneDiffProducerFunc, error) {
+func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerIndex milestone.Index, protoParas *iotago.ProtocolParameters) (MilestoneDiffProducerFunc, error) {
 	existingDeltaFile, err := os.OpenFile(snapshotDeltaPath, os.O_RDONLY, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read previous delta snapshot file for milestone diffs: %w", err)
@@ -217,7 +217,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 		defer func() { _ = existingDeltaFile.Close() }()
 
 		if err := StreamSnapshotDataFrom(existingDeltaFile,
-			deSeriParas,
+			protoParas,
 			func(header *ReadFileHeader) error {
 				// check that the ledger index matches
 				if header.LedgerMilestoneIndex != originLedgerIndex {
@@ -469,7 +469,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 		default:
 			// as the needed milestone diffs are pruned from the database, we need to use
 			// the previous delta snapshot file to extract those in conjunction with what the database has available
-			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxoManager, header.LedgerMilestoneIndex, targetIndex, s.deSeriParas)
+			milestoneDiffProducer, err = newMsDiffsProducerDeltaFileAndDatabase(s.snapshotDeltaPath, s.storage, s.utxoManager, header.LedgerMilestoneIndex, targetIndex, s.protoParas)
 			if err != nil {
 				return err
 			}
@@ -801,7 +801,7 @@ func CreateSnapshotFromStorage(
 // and the ledger and snapshot index are equal.
 // This function consumes disk space over memory by importing the full snapshot into a temporary database,
 // applying the delta diffs onto it and then writing out the merged state.
-func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName string, deSeriParas *iotago.DeSerializationParameters) (*MergeInfo, error) {
+func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName string, protoParas *iotago.ProtocolParameters) (*MergeInfo, error) {
 
 	targetEngine, err := database.DatabaseEngineAllowed(database.EnginePebble)
 	if err != nil {
@@ -836,7 +836,7 @@ func MergeSnapshotsFiles(fullPath string, deltaPath string, targetFileName strin
 		return nil, err
 	}
 
-	fullSnapshotHeader, deltaSnapshotHeader, err := LoadSnapshotFilesToStorage(context.Background(), dbStorage, deSeriParas, fullPath, deltaPath)
+	fullSnapshotHeader, deltaSnapshotHeader, err := LoadSnapshotFilesToStorage(context.Background(), dbStorage, protoParas, fullPath, deltaPath)
 	if err != nil {
 		return nil, err
 	}

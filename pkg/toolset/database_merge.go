@@ -263,7 +263,7 @@ type confStats struct {
 // target storage, confirms the milestone and applies the ledger changes.
 func copyAndVerifyMilestoneCone(
 	ctx context.Context,
-	networkID uint64,
+	protoParas *iotago.ProtocolParameters,
 	msIndex milestone.Index,
 	getMilestoneAndMessageID func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error),
 	parentsTraverserInterfaceSource dag.ParentsTraverserInterface,
@@ -319,7 +319,7 @@ func copyAndVerifyMilestoneCone(
 		utxoManagerTarget,
 		parentsTraverserStorageTarget,
 		cachedMessageFuncTarget,
-		networkID,
+		protoParas,
 		milestoneMessageID,
 		lastMilestoneID,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
@@ -349,7 +349,7 @@ func copyAndVerifyMilestoneCone(
 // mergeViaAPI copies a milestone from a remote node to the target database via API.
 func mergeViaAPI(
 	ctx context.Context,
-	networkID uint64,
+	protoParas *iotago.ProtocolParameters,
 	msIndex milestone.Index,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
@@ -361,7 +361,7 @@ func mergeViaAPI(
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		msg, err := client.MessageByMessageID(ctx, messageID.ToArray(), iotago.ZeroRentParas)
+		msg, err := client.MessageByMessageID(ctx, messageID.ToArray(), protoParas)
 		if err != nil {
 			return nil, err
 		}
@@ -370,18 +370,19 @@ func mergeViaAPI(
 	}
 
 	getMilestoneAndMessageIDViaAPI := func(client *nodeclient.Client, getCachedMessageViaAPI storage.CachedMessageFunc, msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		ms, err := client.MilestoneByIndex(ctx, uint32(msIndex))
-		if err != nil {
-			return nil, nil, err
-		}
-
-		messageID, err := hornet.MessageIDFromHex(ms.MessageID)
-		if err != nil {
-			return nil, nil, err
-		}
+		messageID := hornet.NullMessageID() //TODO: fix this with the milestone refactor
+		//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		//defer cancel()
+		//
+		//ms, err := client.MilestoneByIndex(ctx, uint32(msIndex))
+		//if err != nil {
+		//	return nil, nil, err
+		//}
+		//
+		//messageID, err := hornet.MessageIDFromHex(ms.MessageID)
+		//if err != nil {
+		//	return nil, nil, err
+		//}
 
 		cachedMsg, err := getCachedMessageViaAPI(messageID) // message +1
 		if err != nil {
@@ -405,7 +406,7 @@ func mergeViaAPI(
 
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
-		networkID,
+		protoParas,
 		msIndex,
 		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
 			return getMilestoneAndMessageIDViaAPI(client, proxyStorage.CachedMessage, msIndex)
@@ -443,7 +444,7 @@ func mergeViaAPI(
 // mergeViaSourceDatabase copies a milestone from the source database to the target database.
 func mergeViaSourceDatabase(
 	ctx context.Context,
-	networkID uint64,
+	protoParas *iotago.ProtocolParameters,
 	msIndex milestone.Index,
 	storeSource *storage.Storage,
 	storeTarget *storage.Storage,
@@ -459,7 +460,7 @@ func mergeViaSourceDatabase(
 
 	confStats, err := copyAndVerifyMilestoneCone(
 		ctx,
-		networkID,
+		protoParas,
 		msIndex,
 		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
 			milestoneMessageID, err := getMilestoneMessageIDFromStorage(storeSource, msIndex)
@@ -574,7 +575,7 @@ func mergeDatabase(
 			print(fmt.Sprintf("get milestone %d via API... ", msIndex))
 			if err := mergeViaAPI(
 				ctx,
-				sourceNetworkID,
+				EmptyProtocolParameters,
 				msIndex,
 				tangleStoreTarget,
 				milestoneManager,
@@ -591,7 +592,7 @@ func mergeDatabase(
 		print(fmt.Sprintf("get milestone %d via source database (source range: %d-%d)... ", msIndex, msIndexStartSource, msIndexEndSource))
 		if err := mergeViaSourceDatabase(
 			ctx,
-			sourceNetworkID,
+			EmptyProtocolParameters,
 			msIndex,
 			tangleStoreSource,
 			tangleStoreTarget,

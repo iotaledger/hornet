@@ -33,7 +33,7 @@ type MockCoo struct {
 }
 
 func (coo *MockCoo) storeMessage(message *iotago.Message) hornet.MessageID {
-	msg, err := storage.NewMessage(message, serializer.DeSeriModeNoValidation, iotago.ZeroRentParas) // no need to validate bytes, they come pre-validated from the coo
+	msg, err := storage.NewMessage(message, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
 	require.NoError(coo.te.TestInterface, err)
 	cachedMsg := coo.te.StoreMessage(msg) // message +1, no need to release, since we remember all the messages for later cleanup
 
@@ -73,7 +73,7 @@ func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, pa
 		coo.te.UTXOManager(),
 		parentsTraverser,
 		messagesMemcache.CachedMessage,
-		coo.te.NetworkID(),
+		coo.te.protoParas.NetworkID(),
 		index,
 		timestamp,
 		parents,
@@ -138,10 +138,10 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.MessageIDs, addLastMileston
 		return nil, err
 	}
 
-	msg, err := builder.NewMessageBuilder().
+	msg, err := builder.NewMessageBuilder(coo.te.protoParas.Version).
 		ParentsMessageIDs(tips.ToSliceOfArrays()).
 		Payload(milestonePayload).
-		ProofOfWork(context.Background(), DeSerializationParameters, coo.te.PoWMinScore).
+		ProofOfWork(context.Background(), coo.te.protoParas, coo.te.PoWMinScore).
 		Build()
 	if err != nil {
 		return nil, err
