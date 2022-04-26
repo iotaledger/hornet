@@ -94,8 +94,21 @@ func (t *Tangle) SolidQueueCheck(
 			return nil
 		},
 		// called on solid entry points
-		// Ignore solid entry points (snapshot milestone included)
-		nil,
+		func(messageID hornet.MessageID) error {
+			entryPointIndex, _, err := memcachedTraverserStorage.SolidEntryPointsIndex(messageID)
+			if err != nil {
+				return err
+			}
+
+			// if the CMI to SEP index delta is below or equal BelowMaxDepth/below-max-depth,
+			// we also need to solidify its children
+			if (milestoneIndex - entryPointIndex) <= t.belowMaxDepth {
+				// solid entry points are only walked once, so its safe to add this here
+				messageIDsToSolidify = append(messageIDsToSolidify, messageID)
+			}
+
+			return nil
+		},
 		false); err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return false, true
@@ -118,6 +131,18 @@ func (t *Tangle) SolidQueueCheck(
 	// no messages to request => the whole cone is solid
 	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
 	for _, messageID := range messageIDsToSolidify {
+
+		// check if the message is a solid entry point
+		contains, err := memcachedTraverserStorage.SolidEntryPointsContain(messageID)
+		if err != nil {
+			t.LogPanicf("solidQueueCheck: Check solid entry point failed: %v, Error: %w", messageID.ToHex(), err)
+			return
+		}
+		if contains {
+			// ignore solid entry points
+			continue
+		}
+
 		cachedMsgMeta, err := memcachedTraverserStorage.CachedMessageMetadata(messageID)
 		if err != nil {
 			t.LogPanicf("solidQueueCheck: Get message metadata failed: %v, Error: %w", messageID.ToHex(), err)
@@ -134,7 +159,7 @@ func (t *Tangle) SolidQueueCheck(
 
 	tSolid := time.Now()
 
-	if t.syncManager.IsNodeAlmostSynced() {
+	if t.syncManager.IsNodeAlmostSynced() || (t.storage.SnapshotInfo().PruningIndex+1 == milestoneIndex) {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
 		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(ctx, memcachedTraverserStorage, messageIDsToSolidify); err != nil {
 			t.LogDebugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)

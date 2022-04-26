@@ -51,6 +51,9 @@ type Tangle struct {
 	receiptService *migrator.ReceiptService
 	// the protocol parameters
 	protoParas *iotago.ProtocolParameters
+	// belowMaxDepth is the maximum allowed delta
+	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
+	belowMaxDepth milestone.Index
 
 	milestoneTimeout             time.Duration
 	whiteFlagParentsSolidTimeout time.Duration
@@ -124,6 +127,7 @@ func New(
 	requester *gossip.Requester,
 	receiptService *migrator.ReceiptService,
 	protoParas *iotago.ProtocolParameters,
+	belowMaxDepth int,
 	milestoneTimeout time.Duration,
 	whiteFlagParentsSolidTimeout time.Duration,
 	updateSyncedAtStartup bool) *Tangle {
@@ -142,6 +146,7 @@ func New(
 		requester:                    requester,
 		receiptService:               receiptService,
 		protoParas:                   protoParas,
+		belowMaxDepth:                milestone.Index(belowMaxDepth),
 		milestoneTimeout:             milestoneTimeout,
 		whiteFlagParentsSolidTimeout: whiteFlagParentsSolidTimeout,
 		updateSyncedAtStartup:        updateSyncedAtStartup,
