@@ -141,7 +141,7 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.MessageIDs, addLastMileston
 	msg, err := builder.NewMessageBuilder(coo.te.protoParas.Version).
 		ParentsMessageIDs(tips.ToSliceOfArrays()).
 		Payload(milestonePayload).
-		ProofOfWork(context.Background(), coo.te.protoParas, coo.te.PoWMinScore).
+		ProofOfWork(context.Background(), coo.te.protoParas, coo.te.protoParas.MinPowScore).
 		Build()
 	if err != nil {
 		return nil, err

@@ -46,9 +46,6 @@ type TestEnvironment struct {
 	// PoWHandler holds the PoWHandler instance.
 	PoWHandler *pow.Handler
 
-	// PoWMinScore used in the PoWHandler instance.
-	PoWMinScore float64
-
 	// protoParas are the protocol parameters of the network.
 	protoParas *iotago.ProtocolParameters
 
