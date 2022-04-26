@@ -13,7 +13,7 @@ builds:
   - id: hornet-linux-amd64
     binary: hornet
     flags:
-      - -tags=builtin_static,rocksdb
+      - -tags=rocksdb
     ldflags:
       - -s -w -X github.com/gohornet/hornet/core/cli.AppVersion={{.Version}}
     main: main.go
@@ -25,7 +25,7 @@ builds:
   - id: hornet-linux-arm64
     binary: hornet
     flags:
-      - -tags=builtin_static,rocksdb
+      - -tags=rocksdb
     env:
       - CGO_ENABLED=1
       - CC=aarch64-linux-gnu-gcc
@@ -41,7 +41,7 @@ builds:
   #- id: hornet-windows-amd64
   #  binary: hornet
   #  flags:
-  #    - -tags=builtin_static,rocksdb
+  #    - -tags=rocksdb
   #  env:
   #    - CGO_ENABLED=1
   #    - CC=/usr/bin/x86_64-w64-mingw32-gcc-posix

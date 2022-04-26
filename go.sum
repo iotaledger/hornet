@@ -569,8 +569,8 @@ github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69
 github.com/gogo/status v1.1.0/go.mod h1:BFv9nrluPLmrS0EmGVvLaPNmRosr9KapBYd5/hpY1WM=
 github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418 h1:Jz+dbKADaT0q6Ej2x1QBi//mskXKleUNhS/bZOHEegw=
 github.com/gohornet/dashboard v0.0.0-20220329132716-011d38771418/go.mod h1:XTiVam/ezIKtSln67bhgQnIGAv2+5hemis7B/6CrT9I=
-github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260 h1:Pf6oR/aezlojjxzaNqIZa5q1+LKFgePrH+E9B57sKiE=
-github.com/gohornet/grocksdb v1.6.38-0.20211012114404-55f425442260/go.mod h1:/+iSQrn7Izt6kFhHBQvcE6FkklsKXa8hc35pFyFDrDw=
+github.com/gohornet/grocksdb v1.7.1-0.20220426081058-60f50d7c59e8 h1:JBcaA1xdFtalpZsMTYZuwUSOZxPAqqYAZa1gKYpK9nw=
+github.com/gohornet/grocksdb v1.7.1-0.20220426081058-60f50d7c59e8/go.mod h1:RlgTltBHJ3ha/p0pWAd1g2zjw/524L1Vw6pjBTYLdIA=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
 github.com/golang-jwt/jwt/v4 v4.3.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=
@@ -767,8 +767,8 @@ github.com/influxdata/tdigest v0.0.0-20181121200506-bf2b5ad3c0a9/go.mod h1:Js0mq
 github.com/influxdata/usage-client v0.0.0-20160829180054-6d3895376368/go.mod h1:Wbbw6tYNvwa5dlB6304Sd+82Z3f7PmVZHVKU637d4po=
 github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf h1:3LoDur2QvBLbyXrGubX6HmoP6x5pVn1KkheFonTa6Is=
 github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf/go.mod h1:KMsgDNZKM3kkaIAoIk/FZ6A1vfVPix91lx2dm3dA6g8=
-github.com/iotaledger/hive.go v0.0.0-20220408130540-d344e455dd23 h1:YIIS4RcTXKRcRHm2v9Dcf4pOaNColYHqoDB8rubUwGY=
-github.com/iotaledger/hive.go v0.0.0-20220408130540-d344e455dd23/go.mod h1:YKe8Y/+kiF1oZWnu6p67QEzofFNxNsAMpP6MpcvbnNM=
+github.com/iotaledger/hive.go v0.0.0-20220426085024-dfad09f16be5 h1:47QLJXomkUgpl+644fem4jA/2SBLOIudDvhw5pEqxw8=
+github.com/iotaledger/hive.go v0.0.0-20220426085024-dfad09f16be5/go.mod h1:LV9ljJR04O2Q1pktCHwW7vWVLKC76POv6sVT8wQ3/04=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220406082310-fa38df493f6b h1:mqrzjajY0gyIPPiA715TNlZMt7YF6NWtMePSF+SXa/4=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220406082310-fa38df493f6b/go.mod h1:O18k+0+qtbHfk8AYI+dgMOoDBDKy9vwXk2ocyD7MyRI=
 github.com/iotaledger/inx/go v0.0.0-20220419135047-ffc33b55140e h1:4MkLRjDN2j5KCWKPFXvMDSLuo5aogpKmP6loSKYfVX8=
