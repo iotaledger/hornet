@@ -81,7 +81,7 @@ func TestValue(t *testing.T) {
 
 	// broadcast to a node
 	log.Println("submitting transaction...")
-	submittedMsg, err := n.Nodes[0].DebugNodeAPIClient.SubmitMessage(context.Background(), msg, iotago.ZeroRentParas)
+	submittedMsg, err := n.Nodes[2].DebugNodeAPIClient.SubmitMessage(context.Background(), msg, iotago.ZeroRentParas)
 	require.NoError(t, err)
 
 	// eventually the message should be confirmed
