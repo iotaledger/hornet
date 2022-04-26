@@ -94,21 +94,8 @@ func (t *Tangle) SolidQueueCheck(
 			return nil
 		},
 		// called on solid entry points
-		func(messageID hornet.MessageID) error {
-			entryPointIndex, _, err := memcachedTraverserStorage.SolidEntryPointsIndex(messageID)
-			if err != nil {
-				return err
-			}
-
-			// if the CMI to SEP index delta is below or equal BelowMaxDepth/below-max-depth,
-			// we also need to solidify its children
-			if (milestoneIndex - entryPointIndex) <= t.belowMaxDepth {
-				// solid entry points are only walked once, so its safe to add this here
-				messageIDsToSolidify = append(messageIDsToSolidify, messageID)
-			}
-
-			return nil
-		},
+		// Ignore solid entry points (snapshot milestone included)
+		nil,
 		false); err != nil {
 		if errors.Is(err, common.ErrOperationAborted) {
 			return false, true
@@ -131,18 +118,6 @@ func (t *Tangle) SolidQueueCheck(
 	// no messages to request => the whole cone is solid
 	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
 	for _, messageID := range messageIDsToSolidify {
-
-		// check if the message is a solid entry point
-		contains, err := memcachedTraverserStorage.SolidEntryPointsContain(messageID)
-		if err != nil {
-			t.LogPanicf("solidQueueCheck: Check solid entry point failed: %v, Error: %w", messageID.ToHex(), err)
-			return
-		}
-		if contains {
-			// ignore solid entry points
-			continue
-		}
-
 		cachedMsgMeta, err := memcachedTraverserStorage.CachedMessageMetadata(messageID)
 		if err != nil {
 			t.LogPanicf("solidQueueCheck: Get message metadata failed: %v, Error: %w", messageID.ToHex(), err)
@@ -159,7 +134,7 @@ func (t *Tangle) SolidQueueCheck(
 
 	tSolid := time.Now()
 
-	if t.syncManager.IsNodeAlmostSynced() || (t.storage.SnapshotInfo().PruningIndex+1 == milestoneIndex) {
+	if t.syncManager.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
 		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(ctx, memcachedTraverserStorage, messageIDsToSolidify); err != nil {
 			t.LogDebugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)
@@ -253,6 +228,12 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
+	milestoneMessageIDToSolidify, err := t.storage.MilestoneMessageIDByIndex(milestoneIndexToSolidify)
+	if err != nil {
+		// Milestone not found
+		t.LogPanic(storage.ErrMilestoneNotFound)
+	}
+
 	cachedMilestoneToSolidify := t.storage.CachedMilestoneByIndexOrNil(milestoneIndexToSolidify)
 	if cachedMilestoneToSolidify == nil {
 		// Milestone not found
@@ -263,7 +244,6 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	defer cachedMilestoneToSolidify.Release() // milestone -1
 
 	milestonePayloadToSolidify := cachedMilestoneToSolidify.Milestone().Milestone()
-	milestoneParentsToSolidify := cachedMilestoneToSolidify.Milestone().Parents()
 
 	t.setSolidifierMilestoneIndex(milestoneIndexToSolidify)
 
@@ -290,7 +270,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		milestoneSolidificationCtx,
 		memcachedTraverserStorage,
 		milestoneIndexToSolidify,
-		milestoneParentsToSolidify,
+		hornet.MessageIDs{milestoneMessageIDToSolidify},
 	); !becameSolid {
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
@@ -321,7 +301,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 				milestoneSolidificationCtx,
 				currentConfirmedIndex,
 				milestoneIndexClosestNext,
-				milestoneParentsToSolidify,
+				cachedMilestoneToSolidify.Milestone().Parents(),
 			); !found {
 				if err != nil {
 					// no milestones found => this should not happen!

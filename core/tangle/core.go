@@ -153,7 +153,6 @@ func provide(c *dig.Container) {
 		ReceiptService     *migrator.ReceiptService     `optional:"true"`
 		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
-		BelowMaxDepth      int `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps tangleDeps) *tangle.Tangle {
@@ -171,7 +170,6 @@ func provide(c *dig.Container) {
 			deps.Requester,
 			deps.ReceiptService,
 			deps.ProtocolParameters,
-			deps.BelowMaxDepth,
 			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
 			deps.NodeConfig.Duration(CfgTangleWhiteFlagParentsSolidTimeout),
 			*syncedAtStartup)

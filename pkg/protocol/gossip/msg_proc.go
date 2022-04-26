@@ -212,16 +212,19 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		return fmt.Errorf("transaction contained in msg has invalid network ID %d instead of %d", essence.NetworkID, proc.networkID)
 	}
 
-	if !msg.IsMilestone() {
+	switch msg.Message().Payload.(type) {
+
+	case *iotago.Milestone:
+		// enforce milestone msg nonce == 0
+		if msg.Message().Nonce != 0 {
+			return errors.New("milestone msg nonce must be zero")
+		}
+
+	default:
 		// validate PoW score
 		score := pow.Score(msg.Data())
 		if score < proc.protoParas.MinPowScore {
 			return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
-		}
-	} else {
-		// enforce milestone msg nonce == 0
-		if msg.Message().Nonce != 0 {
-			return errors.New("milestone msg nonce must be zero")
 		}
 	}
 

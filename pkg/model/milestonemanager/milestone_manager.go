@@ -129,7 +129,7 @@ func (m *MilestoneManager) StoreMilestone(cachedMsg *storage.CachedMessage, mile
 	// Mark every valid milestone message as milestone in the database (needed for whiteflag to find last milestone)
 	cachedMsg.Metadata().SetMilestone(true)
 
-	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestonePayload) // milestone +1
+	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestonePayload, cachedMsg.Message().MessageID()) // milestone +1
 
 	// Force release to store milestones without caching
 	defer cachedMilestone.Release(true) // milestone -1

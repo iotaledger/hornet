@@ -702,6 +702,6 @@ func (s *ProxyStorage) StoreChild(parentMessageID hornet.MessageID, childMessage
 	return s.storeProxy.StoreChild(parentMessageID, childMessageID)
 }
 
-func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone) (*storage.CachedMilestone, bool) {
-	return s.storeProxy.StoreMilestoneIfAbsent(milestone)
+func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, messageID hornet.MessageID) (*storage.CachedMilestone, bool) {
+	return s.storeProxy.StoreMilestoneIfAbsent(milestone, messageID)
 }

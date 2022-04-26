@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/kvstore"
+	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/objectstorage"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -44,16 +45,6 @@ func milestoneIDFromDatabaseKey(key []byte) *iotago.MilestoneID {
 	return &milestoneID
 }
 
-func milestoneIDFromBytes(data []byte) *iotago.MilestoneID {
-	milestoneID := iotago.MilestoneID{}
-	copy(milestoneID[:], data)
-	return &milestoneID
-}
-
-func (s *Storage) MilestoneStorageSize() int {
-	return s.milestoneStorage.GetSize()
-}
-
 func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
 	cacheTime, err := time.ParseDuration(opts.CacheTime)
@@ -72,9 +63,26 @@ func (s *Storage) configureMilestoneStorage(store kvstore.KVStore, opts *profile
 	}
 
 	milestoneIndexFactory := func(key []byte, data []byte) (objectstorage.StorableObject, error) {
+
+		marshalUtil := marshalutil.New(data)
+
+		msID, err := marshalUtil.ReadBytes(32)
+		if err != nil {
+			return nil, err
+		}
+
+		messageID, err := marshalUtil.ReadBytes(32)
+		if err != nil {
+			return nil, err
+		}
+
+		milestoneID := iotago.MilestoneID{}
+		copy(milestoneID[:], msID)
+
 		return &MilestoneIndex{
 			Index:       milestoneIndexFromDatabaseKey(key),
-			milestoneID: milestoneIDFromBytes(data),
+			milestoneID: milestoneID,
+			messageID:   messageID,
 		}, nil
 	}
 
@@ -127,10 +135,11 @@ type MilestoneIndex struct {
 	objectstorage.StorableObjectFlags
 
 	Index       milestone.Index
-	milestoneID *iotago.MilestoneID
+	milestoneID iotago.MilestoneID
+	messageID   hornet.MessageID
 }
 
-func NewMilestoneIndex(milestonePayload *iotago.Milestone, milestoneID ...*iotago.MilestoneID) (*MilestoneIndex, error) {
+func NewMilestoneIndex(milestonePayload *iotago.Milestone, messageID hornet.MessageID, milestoneID ...*iotago.MilestoneID) (*MilestoneIndex, error) {
 
 	var msID *iotago.MilestoneID
 	if len(milestoneID) > 0 {
@@ -145,14 +154,15 @@ func NewMilestoneIndex(milestonePayload *iotago.Milestone, milestoneID ...*iotag
 
 	msIndex := &MilestoneIndex{
 		Index:       milestone.Index(milestonePayload.Index),
-		milestoneID: msID,
+		milestoneID: *msID,
+		messageID:   messageID,
 	}
 
 	return msIndex, nil
 }
 
 func (ms *MilestoneIndex) MilestoneID() iotago.MilestoneID {
-	return *ms.milestoneID
+	return ms.milestoneID
 }
 
 // ObjectStorage interface
@@ -168,11 +178,13 @@ func (ms *MilestoneIndex) ObjectStorageKey() []byte {
 func (ms *MilestoneIndex) ObjectStorageValue() (data []byte) {
 	/*
 		32 byte milestone ID
+		32 byte message ID
 	*/
 
-	value := make([]byte, iotago.MilestoneIDLength)
-	copy(value, ms.milestoneID[:])
-	return value
+	return marshalutil.New(64).
+		WriteBytes(ms.milestoneID[:]).
+		WriteBytes(ms.messageID[:iotago.MessageIDLength]).
+		Bytes()
 }
 
 // cachedMilestoneIndex represents a cached milestone index lookup.
@@ -384,6 +396,11 @@ func (c *CachedMilestone) Milestone() *Milestone {
 	return c.Get().(*Milestone)
 }
 
+// MilestoneStorageSize returns the size of the milestone storage.
+func (s *Storage) MilestoneStorageSize() int {
+	return s.milestoneStorage.GetSize()
+}
+
 // CachedMilestoneOrNil returns a cached milestone object.
 // milestone +1
 func (s *Storage) CachedMilestoneOrNil(msID iotago.MilestoneID) *CachedMilestone {
@@ -399,7 +416,6 @@ func (s *Storage) CachedMilestoneOrNil(msID iotago.MilestoneID) *CachedMilestone
 // CachedMilestoneByIndexOrNil returns a cached milestone object.
 // milestone +1
 func (s *Storage) CachedMilestoneByIndexOrNil(milestoneIndex milestone.Index) *CachedMilestone {
-
 	cachedMilestoneIdx := s.cachedMilestoneIndexOrNil(milestoneIndex) // milestoneIndex +1
 	if cachedMilestoneIdx == nil {
 		return nil
@@ -407,6 +423,19 @@ func (s *Storage) CachedMilestoneByIndexOrNil(milestoneIndex milestone.Index) *C
 	defer cachedMilestoneIdx.Release(true) // milestoneIndex -1
 
 	return s.CachedMilestoneOrNil(cachedMilestoneIdx.MilestoneIndex().MilestoneID()) // milestone +1
+}
+
+// MilestoneMessageIDByIndex returns the message ID of a milestone.
+// Attention: this can be different from node to node, because only the first seen reattachment of milestone payload
+// is stored in a node. This information should never be exposed via external API in any way.
+func (s *Storage) MilestoneMessageIDByIndex(milestoneIndex milestone.Index) (hornet.MessageID, error) {
+	cachedMilestoneIdx := s.cachedMilestoneIndexOrNil(milestoneIndex) // milestoneIndex +1
+	if cachedMilestoneIdx == nil {
+		return nil, ErrMilestoneNotFound
+	}
+	defer cachedMilestoneIdx.Release(true) // milestoneIndex -1
+
+	return cachedMilestoneIdx.MilestoneIndex().messageID, nil
 }
 
 // MilestoneParentsByIndex returns the parents of a milestone.
@@ -458,7 +487,7 @@ func (s *Storage) SearchLatestMilestoneIndexInStore() milestone.Index {
 }
 
 // milestone +1
-func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone) (cachedMilestone *CachedMilestone, newlyAdded bool) {
+func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, messageID hornet.MessageID) (cachedMilestone *CachedMilestone, newlyAdded bool) {
 
 	// compute the milestone ID
 	milestoneID, err := milestonePayload.ID()
@@ -466,7 +495,7 @@ func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone) (ca
 		return nil, false
 	}
 
-	msIndexLookup, err := NewMilestoneIndex(milestonePayload, milestoneID)
+	msIndexLookup, err := NewMilestoneIndex(milestonePayload, messageID, milestoneID)
 	if err != nil {
 		return nil, false
 	}
