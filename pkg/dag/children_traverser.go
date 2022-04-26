@@ -98,34 +98,42 @@ func (t *ChildrenTraverser) processStackChildren() error {
 	// remove the message from the stack
 	t.stack.Remove(ele)
 
-	cachedMsgMeta, err := t.childrenTraverserStorage.CachedMessageMetadata(currentMessageID) // meta +1
+	// we also need to walk the children of solid entry points, but we don't consume them
+	contains, err := t.childrenTraverserStorage.SolidEntryPointsContain(currentMessageID)
 	if err != nil {
 		return err
 	}
 
-	if cachedMsgMeta == nil {
-		// there was an error, stop processing the stack
-		return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.ToHex())
-	}
-	defer cachedMsgMeta.Release(true) // meta -1
+	if !contains {
+		cachedMsgMeta, err := t.childrenTraverserStorage.CachedMessageMetadata(currentMessageID) // meta +1
+		if err != nil {
+			return err
+		}
 
-	// check condition to decide if msg should be consumed and traversed
-	traverse, err := t.condition(cachedMsgMeta.Retain()) // meta pass +1
-	if err != nil {
-		// there was an error, stop processing the stack
-		return err
-	}
+		if cachedMsgMeta == nil {
+			// there was an error, stop processing the stack
+			return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.ToHex())
+		}
+		defer cachedMsgMeta.Release(true) // meta -1
 
-	if !traverse {
-		// message will not get consumed and children are not traversed
-		return nil
-	}
-
-	if t.consumer != nil {
-		// consume the message
-		if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta pass +1
+		// check condition to decide if msg should be consumed and traversed
+		traverse, err := t.condition(cachedMsgMeta.Retain()) // meta pass +1
+		if err != nil {
 			// there was an error, stop processing the stack
 			return err
+		}
+
+		if !traverse {
+			// message will not get consumed and children are not traversed
+			return nil
+		}
+
+		if t.consumer != nil {
+			// consume the message
+			if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta pass +1
+				// there was an error, stop processing the stack
+				return err
+			}
 		}
 	}
 
