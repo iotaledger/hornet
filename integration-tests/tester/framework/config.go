@@ -625,14 +625,20 @@ func DefaultMigratorConfig() MigratorConfig {
 
 // ProtocolConfig defines protocol specific configuration.
 type ProtocolConfig struct {
-	// The minimum PoW score needed.
-	MinPoWScore float64
-	// The coo public key ranges.
-	PublicKeyRanges []protocfg.ConfigPublicKeyRange
-	// The network ID on which this node operates on.
-	NetworkIDName string
+	// The protocol version.
+	ProtocolVersion byte
+	// The network name on which this node operates on.
+	NetworkName string
 	// The HRP which should be used for Bech32 addresses.
 	Bech32HRP iotago.NetworkPrefix
+	// The minimum PoW score needed.
+	MinPoWScore float64
+	// The storage deposit costs.
+	RentStructure iotago.RentStructure
+	// The supply of the native token.
+	TokenSupply uint64
+	// The coo public key ranges.
+	PublicKeyRanges []protocfg.ConfigPublicKeyRange
 }
 
 // CLIFlags returns the config as CLI flags.
@@ -644,17 +650,42 @@ func (protoConfig *ProtocolConfig) CLIFlags() []string {
 	}
 
 	return []string{
-		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, protoConfig.MinPoWScore),
-		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolPublicKeyRangesJSON, string(keyRangesJSON)),
-		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolNetworkIDName, protoConfig.NetworkIDName),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolVersion, protoConfig.ProtocolVersion),
+		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolNetworkIDName, protoConfig.NetworkName),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolBech32HRP, protoConfig.Bech32HRP),
+		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, protoConfig.MinPoWScore),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolRentStructureVByteCost, protoConfig.RentStructure.VByteCost),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolRentStructureVByteFactorData, protoConfig.RentStructure.VBFactorData),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolRentStructureVByteFactorKey, protoConfig.RentStructure.VBFactorKey),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolTokenSupply, protoConfig.TokenSupply),
+		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolPublicKeyRangesJSON, string(keyRangesJSON)),
+	}
+}
+
+func (protoConfig ProtocolConfig) ProtocolParameters() *iotago.ProtocolParameters {
+	return &iotago.ProtocolParameters{
+		Version:       protoConfig.ProtocolVersion,
+		NetworkName:   protoConfig.NetworkName,
+		Bech32HRP:     protoConfig.Bech32HRP,
+		MinPowScore:   protoConfig.MinPoWScore,
+		RentStructure: protoConfig.RentStructure,
+		TokenSupply:   protoConfig.TokenSupply,
 	}
 }
 
 // DefaultProtocolConfig returns the default protocol config.
 func DefaultProtocolConfig() ProtocolConfig {
 	return ProtocolConfig{
-		MinPoWScore: 100,
+		ProtocolVersion: 2,
+		NetworkName:     "alphanet1",
+		Bech32HRP:       iotago.PrefixTestnet,
+		MinPoWScore:     100,
+		RentStructure: iotago.RentStructure{
+			VByteCost:    500,
+			VBFactorData: 1,
+			VBFactorKey:  10,
+		},
+		TokenSupply: 2_779_530_283_277_761,
 		PublicKeyRanges: []protocfg.ConfigPublicKeyRange{
 			{
 				Key:        "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
@@ -667,8 +698,6 @@ func DefaultProtocolConfig() ProtocolConfig {
 				EndIndex:   0,
 			},
 		},
-		NetworkIDName: "alphanet1",
-		Bech32HRP:     iotago.PrefixTestnet,
 	}
 }
 
