@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha8] - 26.04.2022
+
+### Changed
+    - Extracted Faucet into a new INX module. (#1451)
+    - Add own DbVersion for every database. (#1446)
+    - Add mnemonic parameter to ed25519 key tool. (#1450)
+    - Updated RocksDB to 7.1.2. (#1455)
+    - Updated Milestone payloads according to TIP-29. (#1456)
+    - Added new protocol parameters to info endpoint and INX. (#1456)
+
+### Fixed
+    - Adapt pruning and snapshotting to new milestone logic. (#1442)
+
+
 ## [2.0.0-alpha7] - 21.04.2022
 
 ### Changed
@@ -17,6 +31,7 @@ All notable changes to this project will be documented in this file.
     - Fixed stale connections to peers when the initial stream establishment fails. (#1395)
     - Fixed request queue behavior and test cases (#1412)
     - Fix wrong timestamp data type (#1438)
+
 
 ## [2.0.0-alpha6] - 30.03.2022
 

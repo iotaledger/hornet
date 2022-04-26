@@ -76,7 +76,7 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "alphanet-2",
+    "networkID": "alphanet-3",
     "bech32HRP": "rms",
     "minPoWScore": 1000.0,
     "vByteCost": 500,
