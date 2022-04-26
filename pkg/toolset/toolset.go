@@ -39,12 +39,12 @@ const (
 	FlagToolPrivateKey = "privateKey"
 	FlagToolPublicKey  = "publicKey"
 
-	FlagToolHRP       = "hrp"
-	FlagToolBIP32Path = "bip32Path"
-	FlagToolMnemonic  = "mnemonic"
-	FlagToolNetworkID = "networkID"
-	FlagToolPassword  = "password"
-	FlagToolSalt      = "salt"
+	FlagToolHRP         = "hrp"
+	FlagToolBIP32Path   = "bip32Path"
+	FlagToolMnemonic    = "mnemonic"
+	FlagToolNetworkName = "networkName"
+	FlagToolPassword    = "password"
+	FlagToolSalt        = "salt"
 
 	FlagToolOutputJSON            = "json"
 	FlagToolDescriptionOutputJSON = "format output as JSON"
@@ -93,11 +93,6 @@ const (
 	DefaultValueP2PDatabasePath          = "p2pstore"
 	DefaultValueCoordinatorStateFilePath = "coordinator.state"
 	DefaultValueDatabaseEngine           = database.EngineRocksDB
-)
-
-var (
-	//TODO: come up with a solution for this values (NetworkName, TotalSupply)
-	EmptyProtocolParameters = &iotago.ProtocolParameters{}
 )
 
 const (
@@ -255,4 +250,19 @@ func getGracefulStopContext() context.Context {
 	}()
 
 	return ctx
+}
+
+func ProtocolParameters(networkName string, networkPrefix iotago.NetworkPrefix) *iotago.ProtocolParameters {
+	return &iotago.ProtocolParameters{
+		Version:     2,
+		NetworkName: networkName,
+		Bech32HRP:   networkPrefix,
+		MinPowScore: 0,
+		RentStructure: iotago.RentStructure{
+			VByteCost:    500,
+			VBFactorData: 1,
+			VBFactorKey:  10,
+		},
+		TokenSupply: 2_779_530_283_277_761,
+	}
 }

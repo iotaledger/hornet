@@ -94,6 +94,11 @@ func databaseMerge(args []string) error {
 		}
 	}
 
+	protoParas, err := getProtocolParametersFromConfigFile(*configFilePathFlag)
+	if err != nil {
+		return err
+	}
+
 	var tangleStoreSource *storage.Storage = nil
 	if len(*databasePathSourceFlag) > 0 {
 		var err error
@@ -149,6 +154,7 @@ func databaseMerge(args []string) error {
 
 	errMerge := mergeDatabase(
 		getGracefulStopContext(),
+		protoParas,
 		milestoneManager,
 		tangleStoreSource,
 		tangleStoreTarget,
@@ -182,6 +188,7 @@ func databaseMerge(args []string) error {
 // copyMilestoneCone copies all messages of a milestone cone to the target storage.
 func copyMilestoneCone(
 	ctx context.Context,
+	protoParas *iotago.ProtocolParameters,
 	msIndex milestone.Index,
 	milestoneMessageID hornet.MessageID,
 	parentsTraverserInterface dag.ParentsTraverserInterface,
@@ -218,7 +225,7 @@ func copyMilestoneCone(
 		defer cachedMsg.Release(true) // message -1
 
 		// store the message in the target storage
-		cachedMsgNew, err := storeMessage(storeMessageTarget, milestoneManager, cachedMsg.Message().Message()) // message +1
+		cachedMsgNew, err := storeMessage(protoParas, storeMessageTarget, milestoneManager, cachedMsg.Message().Message()) // message +1
 		if err != nil {
 			return false, err
 		}
@@ -291,6 +298,7 @@ func copyAndVerifyMilestoneCone(
 
 	if err := copyMilestoneCone(
 		context.Background(), // we do not want abort the copying of the messages itself
+		protoParas,
 		msIndex,
 		milestoneMessageID,
 		parentsTraverserInterfaceSource,
@@ -396,7 +404,7 @@ func mergeViaAPI(
 		return cachedMsg.Message(), cachedMsg.Message().MessageID(), nil
 	}
 
-	proxyStorage, err := NewProxyStorage(storeTarget, milestoneManager, getMessageViaAPI)
+	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getMessageViaAPI)
 	if err != nil {
 		return err
 	}
@@ -450,7 +458,7 @@ func mergeViaSourceDatabase(
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
-	proxyStorage, err := NewProxyStorage(storeTarget, milestoneManager, storeSource.Message)
+	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, storeSource.Message)
 	if err != nil {
 		return err
 	}
@@ -510,6 +518,7 @@ func mergeViaSourceDatabase(
 // if the target database has no history at all, a genesis snapshot is loaded.
 func mergeDatabase(
 	ctx context.Context,
+	protoParas *iotago.ProtocolParameters,
 	milestoneManager *milestonemanager.MilestoneManager,
 	tangleStoreSource *storage.Storage,
 	tangleStoreTarget *storage.Storage,
@@ -575,7 +584,7 @@ func mergeDatabase(
 			print(fmt.Sprintf("get milestone %d via API... ", msIndex))
 			if err := mergeViaAPI(
 				ctx,
-				EmptyProtocolParameters,
+				protoParas,
 				msIndex,
 				tangleStoreTarget,
 				milestoneManager,
@@ -592,7 +601,7 @@ func mergeDatabase(
 		print(fmt.Sprintf("get milestone %d via source database (source range: %d-%d)... ", msIndex, msIndexStartSource, msIndexEndSource))
 		if err := mergeViaSourceDatabase(
 			ctx,
-			EmptyProtocolParameters,
+			protoParas,
 			msIndex,
 			tangleStoreSource,
 			tangleStoreTarget,
@@ -630,6 +639,7 @@ type GetMessageFunc func(messageID hornet.MessageID) (*iotago.Message, error)
 // ProxyStorage is used to temporarily store changes to an intermediate storage,
 // which then can be merged with the target store in a single commit.
 type ProxyStorage struct {
+	protoParas       *iotago.ProtocolParameters
 	storeTarget      *storage.Storage
 	storeProxy       *storage.Storage
 	milestoneManager *milestonemanager.MilestoneManager
@@ -637,6 +647,7 @@ type ProxyStorage struct {
 }
 
 func NewProxyStorage(
+	protoParas *iotago.ProtocolParameters,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
 	getMessageFunc GetMessageFunc) (*ProxyStorage, error) {
@@ -647,6 +658,7 @@ func NewProxyStorage(
 	}
 
 	return &ProxyStorage{
+		protoParas:       protoParas,
 		storeTarget:      storeTarget,
 		storeProxy:       storeProxy,
 		milestoneManager: milestoneManager,
@@ -663,7 +675,7 @@ func (s *ProxyStorage) CachedMessage(messageID hornet.MessageID) (*storage.Cache
 				return nil, err
 			}
 
-			cachedMsg, err := storeMessage(s.storeProxy, s.milestoneManager, msg) // message +1
+			cachedMsg, err := storeMessage(s.protoParas, s.storeProxy, s.milestoneManager, msg) // message +1
 			if err != nil {
 				return nil, err
 			}
