@@ -46,7 +46,18 @@ func snapshotGen(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolNetworkName)
 	}
 
-	protoParas := ProtocolParameters(*networkNameFlag, iotago.PrefixTestnet)
+	protoParas := &iotago.ProtocolParameters{
+		Version:     2,
+		NetworkName: *networkNameFlag,
+		Bech32HRP:   iotago.PrefixTestnet,
+		MinPowScore: 0,
+		RentStructure: iotago.RentStructure{
+			VByteCost:    0,
+			VBFactorData: 0,
+			VBFactorKey:  0,
+		},
+		TokenSupply: 2_779_530_283_277_761,
+	}
 
 	// check mint address
 	if len(*mintAddressFlag) == 0 {

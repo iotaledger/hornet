@@ -15,7 +15,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/iotaledger/hive.go/configuration"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -250,19 +249,4 @@ func getGracefulStopContext() context.Context {
 	}()
 
 	return ctx
-}
-
-func ProtocolParameters(networkName string, networkPrefix iotago.NetworkPrefix) *iotago.ProtocolParameters {
-	return &iotago.ProtocolParameters{
-		Version:     2,
-		NetworkName: networkName,
-		Bech32HRP:   networkPrefix,
-		MinPowScore: 0,
-		RentStructure: iotago.RentStructure{
-			VByteCost:    500,
-			VBFactorData: 1,
-			VBFactorKey:  10,
-		},
-		TokenSupply: 2_779_530_283_277_761,
-	}
 }
