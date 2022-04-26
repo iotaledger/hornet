@@ -40,29 +40,26 @@ func initConfigPars(c *dig.Container) {
 
 	type cfgResult struct {
 		dig.Out
-		KeyManager                *keymanager.KeyManager
-		NetworkID                 uint64               `name:"networkId"`
-		NetworkIDName             string               `name:"networkIdName"`
-		Bech32HRP                 iotago.NetworkPrefix `name:"bech32HRP"`
-		MinPoWScore               float64              `name:"minPoWScore"`
-		MilestonePublicKeyCount   int                  `name:"milestonePublicKeyCount"`
-		DeSerializationParameters *iotago.DeSerializationParameters
+		KeyManager              *keymanager.KeyManager
+		MilestonePublicKeyCount int `name:"milestonePublicKeyCount"`
+		ProtocolParameters      *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 
 		res := cfgResult{
-			NetworkID:               iotago.NetworkIDFromString(deps.NodeConfig.String(CfgProtocolNetworkIDName)),
-			NetworkIDName:           deps.NodeConfig.String(CfgProtocolNetworkIDName),
-			Bech32HRP:               iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
-			MinPoWScore:             deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
 			MilestonePublicKeyCount: deps.NodeConfig.Int(CfgProtocolMilestonePublicKeyCount),
-			DeSerializationParameters: &iotago.DeSerializationParameters{
-				RentStructure: &iotago.RentStructure{
+			ProtocolParameters: &iotago.ProtocolParameters{
+				Version:     byte(deps.NodeConfig.Int(CfgProtocolVersion)),
+				NetworkName: deps.NodeConfig.String(CfgProtocolNetworkIDName),
+				Bech32HRP:   iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
+				MinPowScore: deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
+				RentStructure: iotago.RentStructure{
 					VByteCost:    uint64(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteCost)),
 					VBFactorData: iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorData)),
 					VBFactorKey:  iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorKey)),
 				},
+				TokenSupply: uint64(deps.NodeConfig.Int64(CfgProtocolTokenSupply)),
 			},
 		}
 

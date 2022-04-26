@@ -63,9 +63,6 @@ type MessageProcessorEvents struct {
 
 // The Options for the MessageProcessor.
 type Options struct {
-	MinPoWScore       float64
-	NetworkID         uint64
-	ProtocolVersion   byte
 	BelowMaxDepth     milestone.Index
 	WorkUnitCacheOpts *profile.CacheOpts
 }
@@ -82,8 +79,10 @@ type MessageProcessor struct {
 	peeringManager *p2p.Manager
 	// shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
-	// Deserialization parameters including byte costs
-	deSeriParas *iotago.DeSerializationParameters
+	// protocol parameters including byte costs
+	protoParas *iotago.ProtocolParameters
+	// the network id calculated from the ProtocolParameters
+	networkID uint64
 	// holds the message processor options.
 	opts Options
 
@@ -107,7 +106,7 @@ func NewMessageProcessor(
 	requestQueue RequestQueue,
 	peeringManager *p2p.Manager,
 	serverMetrics *metrics.ServerMetrics,
-	deSeriParas *iotago.DeSerializationParameters,
+	protoParas *iotago.ProtocolParameters,
 	opts *Options) (*MessageProcessor, error) {
 
 	proc := &MessageProcessor{
@@ -116,7 +115,8 @@ func NewMessageProcessor(
 		requestQueue:   requestQueue,
 		peeringManager: peeringManager,
 		serverMetrics:  serverMetrics,
-		deSeriParas:    deSeriParas,
+		protoParas:     protoParas,
+		networkID:      protoParas.NetworkID(),
 		opts:           *opts,
 		Events: &MessageProcessorEvents{
 			MessageProcessed: events.NewEvent(MessageProcessedCaller),
@@ -202,17 +202,17 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 // this message would be seen as invalid gossip by other peers.
 func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
-	if msg.ProtocolVersion() != proc.opts.ProtocolVersion {
-		return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), proc.opts.ProtocolVersion)
+	if msg.ProtocolVersion() != proc.protoParas.Version {
+		return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), proc.protoParas.Version)
 	}
 
 	essence := msg.TransactionEssence()
-	if essence != nil && essence.NetworkID != proc.opts.NetworkID {
-		return fmt.Errorf("transaction contained in msg has invalid network ID %d instead of %d", essence.NetworkID, proc.opts.NetworkID)
+	if essence != nil && essence.NetworkID != proc.networkID {
+		return fmt.Errorf("transaction contained in msg has invalid network ID %d instead of %d", essence.NetworkID, proc.networkID)
 	}
 
 	score := pow.Score(msg.Data())
-	if score < proc.opts.MinPoWScore {
+	if score < proc.protoParas.MinPowScore {
 		return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
 	}
 
@@ -310,7 +310,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	}
 	defer cachedMsgMilestone.Release(true) // message -1
 
-	requestedData, err := cachedMsgMilestone.Message().Message().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	requestedData, err := cachedMsgMilestone.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -338,7 +338,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 	}
 	defer cachedMsg.Release(true) // message -1
 
-	requestedData, err := cachedMsg.Message().Message().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	requestedData, err := cachedMsg.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -431,7 +431,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.processingLock.Unlock()
 
 	// build HORNET representation of the message
-	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation, proc.deSeriParas)
+	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation, proc.protoParas)
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.WithMessagef(err, "peer sent an invalid message"))
@@ -439,14 +439,14 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	}
 
 	// check the network ID of the message
-	if msg.ProtocolVersion() != proc.opts.ProtocolVersion {
+	if msg.ProtocolVersion() != proc.protoParas.Version {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a message with an invalid protocol version"))
 		return
 	}
 
 	essence := msg.TransactionEssence()
-	if essence != nil && essence.NetworkID != proc.opts.NetworkID {
+	if essence != nil && essence.NetworkID != proc.networkID {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a message containing a transaction with an invalid network ID"))
 		return
@@ -458,7 +458,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	requests := processRequests(wu, msg, isMilestonePayload)
 
 	// validate PoW score
-	if !wu.requested && pow.Score(wu.receivedMsgBytes) < proc.opts.MinPoWScore {
+	if !wu.requested && pow.Score(wu.receivedMsgBytes) < proc.protoParas.MinPowScore {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a message with insufficient PoW score"))
 		return

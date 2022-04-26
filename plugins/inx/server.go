@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc"
 
 	inx "github.com/iotaledger/inx/go"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -54,7 +53,6 @@ func (s *INXServer) Stop() {
 }
 
 func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeStatus, error) {
-
 	pruningIndex := deps.Storage.SnapshotInfo().PruningIndex
 
 	index, err := deps.UTXOManager.ReadLedgerIndexWithoutLocking()
@@ -99,8 +97,7 @@ func (s *INXServer) ReadNodeStatus(context.Context, *inx.NoParams) (*inx.NodeSta
 	}, nil
 }
 
-func (s *INXServer) ReadProtocolParameters(context.Context, *inx.NoParams) (*inx.ProtocolParameters, error) {
-
+func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.NodeConfiguration, error) {
 	var keyRanges []*inx.MilestoneKeyRange
 	for _, r := range deps.KeyManager.KeyRanges() {
 		keyRanges = append(keyRanges, &inx.MilestoneKeyRange{
@@ -109,17 +106,8 @@ func (s *INXServer) ReadProtocolParameters(context.Context, *inx.NoParams) (*inx
 			EndIndex:   uint32(r.EndIndex),
 		})
 	}
-
-	return &inx.ProtocolParameters{
-		NetworkName:     deps.NetworkIDName,
-		ProtocolVersion: iotago.ProtocolVersion,
-		Bech32HRP:       string(deps.Bech32HRP),
-		MinPoWScore:     float32(deps.MinPoWScore),
-		RentStructure: &inx.RentStructure{
-			VByteCost:       deps.DeserializationParameters.RentStructure.VByteCost,
-			VByteFactorData: uint64(deps.DeserializationParameters.RentStructure.VBFactorData),
-			VByteFactorKey:  uint64(deps.DeserializationParameters.RentStructure.VBFactorKey),
-		},
+	return &inx.NodeConfiguration{
+		ProtocolParameters:      inx.NewProtocolParameters(deps.ProtocolParameters),
 		MilestonePublicKeyCount: uint32(deps.MilestonePublicKeyCount),
 		MilestoneKeyRanges:      keyRanges,
 	}, nil

@@ -44,7 +44,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		msg := message.MustUnwrapMessage(serializer.DeSeriModeNoValidation)
+		msg := message.MustUnwrapMessage(serializer.DeSeriModeNoValidation, nil)
 		jsonMsg, err := json.Marshal(msg)
 		if err != nil {
 			panic(err)

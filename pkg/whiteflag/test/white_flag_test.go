@@ -11,7 +11,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -37,7 +36,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
-	te.AssertWalletBalance(seed1Wallet, iotago.TokenSupply)
+	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
@@ -47,7 +46,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 		Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
-		Amount(iotago.TokenSupply).
+		Amount(te.ProtocolParameters().TokenSupply).
 		Build().
 		Store().
 		BookOnWallets()
@@ -64,14 +63,14 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 0)
-	te.AssertWalletBalance(seed2Wallet, iotago.TokenSupply)
+	te.AssertWalletBalance(seed2Wallet, te.ProtocolParameters().TokenSupply)
 
 	// Issue some transactions
 	messageB := te.NewMessageBuilder("B").
 		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[2].Milestone().MessageID}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed1Wallet).
-		Amount(iotago.TokenSupply).
+		Amount(te.ProtocolParameters().TokenSupply).
 		Build().
 		Store().
 		BookOnWallets()
@@ -84,7 +83,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
 
 	// Verify balances
-	te.AssertWalletBalance(seed1Wallet, iotago.TokenSupply)
+	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 	te.AssertWalletBalance(seed2Wallet, 0)
 }
 
@@ -102,7 +101,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
-	te.AssertWalletBalance(seed1Wallet, iotago.TokenSupply)
+	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
@@ -314,7 +313,7 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
-	te.AssertWalletBalance(seed1Wallet, iotago.TokenSupply)
+	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
@@ -324,7 +323,7 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 		Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
-		Amount(iotago.TokenSupply).
+		Amount(te.ProtocolParameters().TokenSupply).
 		Build().
 		Store().
 		BookOnWallets()
@@ -341,14 +340,14 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 0)
-	te.AssertWalletBalance(seed2Wallet, iotago.TokenSupply)
+	te.AssertWalletBalance(seed2Wallet, te.ProtocolParameters().TokenSupply)
 
 	// Issue some transactions
 	messageB := te.NewMessageBuilder("B").
 		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[2].Milestone().MessageID}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed1Wallet).
-		Amount(iotago.TokenSupply).
+		Amount(te.ProtocolParameters().TokenSupply).
 		Build().
 		Store().
 		BookOnWallets()
@@ -370,7 +369,7 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 
 	//Add token supply to our local HDWallet
 	seed1Wallet.BookOutput(te.GenesisOutput)
-	te.AssertWalletBalance(seed1Wallet, iotago.TokenSupply)
+	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
 
 	seed1Wallet.PrintStatus()
 	seed2Wallet.PrintStatus()
@@ -380,7 +379,7 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 		Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
-		Amount(iotago.TokenSupply).
+		Amount(te.ProtocolParameters().TokenSupply).
 		Build().
 		Store().
 		BookOnWallets()
@@ -397,14 +396,14 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 0)
-	te.AssertWalletBalance(seed2Wallet, iotago.TokenSupply)
+	te.AssertWalletBalance(seed2Wallet, te.ProtocolParameters().TokenSupply)
 
 	// Issue some transactions
 	messageB := te.NewMessageBuilder("B").
 		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[2].Milestone().MessageID}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed1Wallet).
-		Amount(iotago.TokenSupply).
+		Amount(te.ProtocolParameters().TokenSupply).
 		Build().
 		Store().
 		BookOnWallets()
@@ -430,7 +429,7 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 		Parents(hornet.MessageIDs{messageB.StoredMessageID(), milestone5Reattachment}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
-		Amount(iotago.TokenSupply).
+		Amount(te.ProtocolParameters().TokenSupply).
 		Build().
 		Store().
 		BookOnWallets()

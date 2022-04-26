@@ -22,8 +22,9 @@ const (
 
 var (
 	// TODO: Use final values
-	deSeriParas = &iotago.DeSerializationParameters{
-		RentStructure: &iotago.RentStructure{
+	protoParas = &iotago.ProtocolParameters{
+		Version: 2,
+		RentStructure: iotago.RentStructure{
 			VByteCost:    0,
 			VBFactorData: 1,
 			VBFactorKey:  10,
@@ -49,7 +50,7 @@ func parseParticipationPayload(cfg *cfg) ([]byte, error) {
 
 func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClient, inputAddress *iotago.Ed25519Address, inputSigner iotago.AddressSigner, outputAddress *iotago.Ed25519Address, outputAmount uint64, taggedData *iotago.TaggedData) (*iotago.Transaction, error) {
 
-	minDustDeposit := deSeriParas.RentStructure.MinDustDeposit(inputAddress)
+	minDustDeposit := protoParas.RentStructure.MinDustDeposit(inputAddress)
 
 	if outputAmount < minDustDeposit {
 		return nil, fmt.Errorf("AMOUNT does not fulfill the dust requirement: %d, needed: %d", outputAmount, minDustDeposit)
@@ -121,12 +122,12 @@ func buildTransactionPayload(ctx context.Context, client *iotago.NodeHTTPAPIClie
 		txBuilder.AddTaggedDataPayload(taggedData)
 	}
 
-	return txBuilder.Build(deSeriParas, inputSigner)
+	return txBuilder.Build(protoParas, inputSigner)
 }
 
 func sendParticipationTransaction(cfg *cfg) (*iotago.MessageID, error) {
 
-	client := iotago.NewNodeHTTPAPIClient(cfg.nodeAPIAddress, deSeriParas)
+	client := iotago.NewNodeHTTPAPIClient(cfg.nodeAPIAddress, protoParas)
 
 	inputPublicKey := cfg.inputPrivateKey.Public().(ed25519.PublicKey)
 	inputAddress := iotago.Ed25519AddressFromPubKey(inputPublicKey)

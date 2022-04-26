@@ -64,9 +64,9 @@ func ConfirmMilestone(
 	utxoManager *utxo.Manager,
 	parentsTraverserStorage dag.ParentsTraverserStorage,
 	cachedMessageFunc storage.CachedMessageFunc,
-	networkId uint64,
+	protoParas *iotago.ProtocolParameters,
 	milestoneMessageID hornet.MessageID,
-	lastMilestoneID iotago.MilestoneID,
+	previousMilestoneID iotago.MilestoneID,
 	whiteFlagTraversalCondition dag.Predicate,
 	checkMessageReferencedFunc CheckMessageReferencedFunc,
 	setMessageReferencedFunc SetMessageReferencedFunc,
@@ -108,7 +108,7 @@ func ConfirmMilestone(
 
 	// we pass a background context here to not cancel the whiteflag computation!
 	// otherwise the node could panic at shutdown.
-	mutations, err := ComputeWhiteFlagMutations(context.Background(), utxoManager, parentsTraverser, cachedMessageFunc, networkId, milestoneIndex, ms.Timestamp, message.Parents(), lastMilestoneID, whiteFlagTraversalCondition)
+	mutations, err := ComputeWhiteFlagMutations(context.Background(), utxoManager, parentsTraverser, cachedMessageFunc, protoParas.NetworkID(), milestoneIndex, ms.Timestamp, message.Parents(), previousMilestoneID, whiteFlagTraversalCondition)
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
@@ -167,7 +167,7 @@ func ConfirmMilestone(
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to fetch previous unspent treasury output: %w", err)
 		}
-		if err := iotago.ValidateReceipt(receipt, &iotago.TreasuryOutput{Amount: unspentTreasuryOutput.Amount}); err != nil {
+		if err := iotago.ValidateReceipt(receipt, &iotago.TreasuryOutput{Amount: unspentTreasuryOutput.Amount}, protoParas.TokenSupply); err != nil {
 			return nil, nil, fmt.Errorf("invalid receipt contained within milestone: %w", err)
 		}
 

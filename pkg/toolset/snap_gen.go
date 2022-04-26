@@ -18,7 +18,7 @@ import (
 func snapshotGen(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	networkIDFlag := fs.String(FlagToolNetworkID, "", "the network ID for which this snapshot is meant for")
+	networkNameFlag := fs.String(FlagToolNetworkName, "", "the network ID for which this snapshot is meant for")
 	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial ed25519 address all the tokens will be minted to")
 	treasuryAllocationFlag := fs.Uint64(FlagToolSnapGenTreasuryAllocation, 0, "the amount of tokens to reside within the treasury, the delta from the supply will be allocated to 'mintAddress'")
 	outputFilePathFlag := fs.String(FlagToolOutputPath, "", "the file path to the generated snapshot file")
@@ -28,7 +28,7 @@ func snapshotGen(args []string) error {
 		fs.PrintDefaults()
 		println(fmt.Sprintf("\nexample: %s --%s %s --%s %s --%s %s --%s %s",
 			ToolSnapGen,
-			FlagToolNetworkID,
+			FlagToolNetworkName,
 			"private_tangle@1",
 			FlagToolSnapGenMintAddress,
 			"[MINT_ADDRESS]",
@@ -42,11 +42,22 @@ func snapshotGen(args []string) error {
 		return err
 	}
 
-	if len(*networkIDFlag) == 0 {
-		return fmt.Errorf("'%s' not specified", FlagToolNetworkID)
+	if len(*networkNameFlag) == 0 {
+		return fmt.Errorf("'%s' not specified", FlagToolNetworkName)
 	}
 
-	networkID := iotago.NetworkIDFromString(*networkIDFlag)
+	protoParas := &iotago.ProtocolParameters{
+		Version:     2,
+		NetworkName: *networkNameFlag,
+		Bech32HRP:   iotago.PrefixTestnet,
+		MinPowScore: 0,
+		RentStructure: iotago.RentStructure{
+			VByteCost:    0,
+			VBFactorData: 0,
+			VBFactorKey:  0,
+		},
+		TokenSupply: 2_779_530_283_277_761,
+	}
 
 	// check mint address
 	if len(*mintAddressFlag) == 0 {
@@ -91,7 +102,7 @@ func snapshotGen(args []string) error {
 	header := &snapshot.FileHeader{
 		Version:              snapshot.SupportedFormatVersion,
 		Type:                 snapshot.Full,
-		NetworkID:            networkID,
+		NetworkID:            protoParas.NetworkID(),
 		SEPMilestoneIndex:    milestone.Index(targetIndex),
 		LedgerMilestoneIndex: milestone.Index(targetIndex),
 		TreasuryOutput: &utxo.TreasuryOutput{
@@ -123,7 +134,7 @@ func snapshotGen(args []string) error {
 		outputAdded = true
 
 		return utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, 0, &iotago.BasicOutput{
-			Amount: iotago.TokenSupply - treasury,
+			Amount: protoParas.TokenSupply - treasury,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: &address},
 			},

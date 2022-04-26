@@ -13,14 +13,14 @@ services:
     command:
       - "tool"
       - "snap-gen"
-      - "--networkID=private_tangle1"
+      - "--networkName=private_tangle1"
       - "--mintAddress=60200bad8137a704216e84f8f9acfe65b972d9f4155becb4815282b03cef99fe"
       - "--outputPath=/app/snapshots/coo/full_snapshot.bin"
     profiles:
       - snapshots
 
   inx-coordinator-bootstrap:
-    image: iotaledger/inx-coordinator:0.1
+    image: iotaledger/inx-coordinator:0.2
     networks:
       peering_net:
         ipv4_address: 172.18.211.20
@@ -39,7 +39,7 @@ services:
       - bootstrap
 
   inx-coordinator:
-    image: iotaledger/inx-coordinator:0.1
+    image: iotaledger/inx-coordinator:0.2
     networks:
       peering_net:
         ipv4_address: 172.18.211.20
@@ -58,7 +58,7 @@ services:
       - 4-nodes
 
   inx-indexer:
-    image: iotaledger/inx-indexer:0.1
+    image: iotaledger/inx-indexer:0.2
     networks:
       peering_net:
         ipv4_address: 172.18.211.21
@@ -73,7 +73,7 @@ services:
       - 4-nodes
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.1
+    image: iotaledger/inx-mqtt:0.2
     networks:
       peering_net:
         ipv4_address: 172.18.211.22
@@ -89,7 +89,7 @@ services:
       - 4-nodes
 
   inx-faucet:
-    image: iotaledger/inx-faucet:0.1
+    image: iotaledger/inx-faucet:0.2
     networks:
       peering_net:
         ipv4_address: 172.18.211.23

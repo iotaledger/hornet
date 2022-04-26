@@ -10,8 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/crypto/ed25519"
-
 	databaseCore "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/pow"
@@ -32,12 +30,13 @@ import (
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
-
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/crypto/ed25519"
 	"github.com/iotaledger/hive.go/events"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
@@ -78,7 +77,6 @@ type dependencies struct {
 	P2PDatabasePath           string                       `name:"p2pDatabasePath"`
 	P2PBindMultiAddresses     []string                     `name:"p2pBindMultiAddresses"`
 	DatabaseEngine            database.Engine              `name:"databaseEngine"`
-	NetworkIDName             string                       `name:"networkIdName"`
 	AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
 	PeeringManager            *p2p.Manager                 `optional:"true"`
 	AutopeeringManager        *autopeering.AutopeeringManager
@@ -158,8 +156,8 @@ func provide(c *dig.Container) {
 
 	type autopeeringDeps struct {
 		dig.In
-		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
-		NetworkIDName string                       `name:"networkIdName"`
+		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		ProtocolParameters *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps autopeeringDeps) *autopeering.AutopeeringManager {
@@ -168,7 +166,7 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.String(CfgNetAutopeeringBindAddr),
 			deps.NodeConfig.Strings(CfgNetAutopeeringEntryNodes),
 			deps.NodeConfig.Bool(CfgNetAutopeeringEntryNodesPreferIPv6),
-			service.Key(deps.NetworkIDName),
+			service.Key(deps.ProtocolParameters.NetworkName),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)

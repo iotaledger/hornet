@@ -35,7 +35,7 @@ If you want to use an existing address, search for your address in [the explorer
 
 ```bash
 ...
-go run "..\main.go" tool snap-gen --networkID private_tangle1 --mintAddress [ADDRESS] --outputPath "snapshots\private_tangle1\full_snapshot.bin"
+go run "..\main.go" tool snap-gen --networkName private_tangle1 --mintAddress [ADDRESS] --outputPath "snapshots\private_tangle1\full_snapshot.bin"
 ...
 ```
 

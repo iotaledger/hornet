@@ -17,7 +17,7 @@ import (
 )
 
 func NewLedgerOutput(o *utxo.Output) (*inx.LedgerOutput, error) {
-	outputBytes, err := o.Output().Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	outputBytes, err := o.Output().Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, err
 	}

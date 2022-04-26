@@ -25,8 +25,8 @@ func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsRespon
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid parents, error: %s", err)
 	}
 	requestedLastMilestoneID := iotago.MilestoneID{}
-	if len(request.LastMilestoneID) > 0 {
-		lastMilestoneIDBytes, err := iotago.DecodeHex(request.LastMilestoneID)
+	if len(request.PreviousMilestoneID) > 0 {
+		lastMilestoneIDBytes, err := iotago.DecodeHex(request.PreviousMilestoneID)
 		if err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid lastMilestoneID, error: %s", err)
 		}

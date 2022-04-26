@@ -27,6 +27,27 @@ var (
 	ErrCritical = errors.New("critical error")
 )
 
+func getProtocolParametersFromConfigFile(filePath string) (*iotago.ProtocolParameters, error) {
+
+	nodeConfig, err := loadConfigFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &iotago.ProtocolParameters{
+		Version:     byte(nodeConfig.Int(protocfg.CfgProtocolVersion)),
+		NetworkName: nodeConfig.String(protocfg.CfgProtocolNetworkIDName),
+		Bech32HRP:   iotago.NetworkPrefix(nodeConfig.String(protocfg.CfgProtocolBech32HRP)),
+		MinPowScore: nodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
+		RentStructure: iotago.RentStructure{
+			VByteCost:    uint64(nodeConfig.Int64(protocfg.CfgProtocolRentStructureVByteCost)),
+			VBFactorData: iotago.VByteCostFactor(nodeConfig.Int64(protocfg.CfgProtocolRentStructureVByteFactorData)),
+			VBFactorKey:  iotago.VByteCostFactor(nodeConfig.Int64(protocfg.CfgProtocolRentStructureVByteFactorKey)),
+		},
+		TokenSupply: uint64(nodeConfig.Int64(protocfg.CfgProtocolTokenSupply)),
+	}, nil
+}
+
 func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.MilestoneManager, error) {
 
 	nodeConfig, err := loadConfigFile(filePath)
@@ -133,9 +154,9 @@ type StoreMessageInterface interface {
 // including all additional information like
 // metadata, children, indexation and milestone entries.
 // message +1
-func storeMessage(dbStorage StoreMessageInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Message) (*storage.CachedMessage, error) {
+func storeMessage(protoParas *iotago.ProtocolParameters, dbStorage StoreMessageInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Message) (*storage.CachedMessage, error) {
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, iotago.ZeroRentParas)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
@@ -258,7 +279,7 @@ func loadGenesisSnapshot(storage *storage.Storage, genesisSnapshotFilePath strin
 		return fmt.Errorf("source storage networkID not equal to genesis snapshot networkID (%d != %d)", sourceNetworkID, fullHeader.NetworkID)
 	}
 
-	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, iotago.ZeroRentParas, genesisSnapshotFilePath); err != nil {
+	if _, _, err := snapshot.LoadSnapshotFilesToStorage(context.Background(), storage, nil, genesisSnapshotFilePath); err != nil {
 		return err
 	}
 

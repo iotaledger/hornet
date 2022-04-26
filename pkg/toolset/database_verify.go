@@ -56,6 +56,11 @@ func databaseVerify(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPath)
 	}
 
+	protoParas, err := getProtocolParametersFromConfigFile(*configFilePathFlag)
+	if err != nil {
+		return err
+	}
+
 	// we don't need to check the health of the source db.
 	// it is fine as long as all messages in the cone are found.
 	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, true, false, false, true)
@@ -77,6 +82,7 @@ func databaseVerify(args []string) error {
 
 	if err := verifyDatabase(
 		getGracefulStopContext(),
+		protoParas,
 		milestoneManager,
 		tangleStoreSource,
 		*genesisSnapshotFilePathFlag,
@@ -94,6 +100,7 @@ func databaseVerify(args []string) error {
 // verifyDatabase checks if all messages in the cones of the existing milestones in the database are found.
 func verifyDatabase(
 	ctx context.Context,
+	protoParas *iotago.ProtocolParameters,
 	milestoneManager *milestonemanager.MilestoneManager,
 	tangleStoreSource *storage.Storage,
 	genesisSnapshotFilePath string) error {
@@ -247,7 +254,7 @@ func verifyDatabase(
 			utxoManagerTemp,
 			storeSource,
 			storeSource.CachedMessage,
-			storeSource.SnapshotInfo().NetworkID,
+			protoParas,
 			milestoneMessageID,
 			previousMilestoneID,
 			// traversal stops if no more messages pass the given condition

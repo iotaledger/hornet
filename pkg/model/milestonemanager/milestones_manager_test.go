@@ -89,42 +89,42 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	{
 	  "protocolVersion": 2,
 	  "parentMessageIds": [
-	    "0x1c77435ecd0f9c1fb9ad4179c6f12c9daf1e38051fe9b5bdf5325578b2d508aa"
+	    "0x3d2ff2e7fc5ed7bfefe6c04830fabdb2f7a54e24c5804094cf278be75daa5a8f"
 	  ],
 	  "payload": {
 	    "type": 7,
 	    "index": 3,
-	    "timestamp": 1650451900,
-	    "lastMilestoneId": "0x35339a1bbb8ab044ae8490442fa0d511efa0994f59746ebbee642ac799a4d1f1",
+	    "timestamp": 1650991380,
+	    "previousMilestoneId": "0x2db243660a17056f65a271173f98d8342f7a4fd248f345e0f2b3692b3d0b2d9e",
 	    "parentMessageIds": [
-	      "0x1c77435ecd0f9c1fb9ad4179c6f12c9daf1e38051fe9b5bdf5325578b2d508aa"
+	      "0x3d2ff2e7fc5ed7bfefe6c04830fabdb2f7a54e24c5804094cf278be75daa5a8f"
 	    ],
-	    "confirmedMerkleRoot": "0xc29fd0895481e630fa6dea5f06cfb07048ec641cf9e3d39e528b0df09f0af7ea",
+	    "confirmedMerkleRoot": "0x8b73cda5ef097a44ed6a709d8154e6ef52894f35cb8138aaf8009b734109d3cd",
 	    "appliedMerkleRoot": "0x0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
 	    "signatures": [
 	      {
 	        "type": 0,
 	        "publicKey": "0xed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
-	        "signature": "0xbe83584cc1223327156a667f8f2e0813db850e1d2acdacecd76439bd8da0a18f1c21a8dd6982340890d48cb53100bd39fe70c38a9a13199bd6baed4ee09e3d02"
+	        "signature": "0x186036b0d336cf4f0bd2e57c3e15fa475a6ea2eeee3abf613f2fde2cb5587fb43b0de17863f7a039f0eaf0f27002f57cc8674b4908117d1cc2314adbc2bb9102"
 	      },
 	      {
 	        "type": 0,
 	        "publicKey": "0xf6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
-	        "signature": "0x4ac5c7b70c1ec21e702847baad4717c20f0fbc4f8c252ef86ef01cf4a65b2a536c77c30b8dd6a062c47947037745676c7a6fb274cd2151f3e1063a18274b5308"
+	        "signature": "0x22cd0e53c17aed121b3b744a32fdcd8e4b944f65541bebebe6a25dc5eae53ad9b911dd534332e638479861bd751012b3b1991cf8cc9ee69ba2752e66d3e1a40f"
 	      }
 	    ]
 	  },
-	  "nonce": "13835058055282164240"
+	  "nonce": "293"
 	}
 	`
 	jsonMsg := &iotago.Message{}
 	err := json.Unmarshal([]byte(jsonString), jsonMsg)
 	require.NoError(t, err)
-	milestoneMessageBytes, err := jsonMsg.Serialize(serializer.DeSeriModePerformValidation, iotago.ZeroRentParas)
+	milestoneMessageBytes, err := jsonMsg.Serialize(serializer.DeSeriModePerformValidation, te.ProtocolParameters())
 	require.NoError(t, err)
 
 	// build HORNET representation of the message
-	msg, err := storage.MessageFromBytes(milestoneMessageBytes, serializer.DeSeriModePerformValidation, testsuite.DeSerializationParameters)
+	msg, err := storage.MessageFromBytes(milestoneMessageBytes, serializer.DeSeriModePerformValidation, te.ProtocolParameters())
 	require.NoError(te.TestInterface, err)
 
 	// parse the milestone payload

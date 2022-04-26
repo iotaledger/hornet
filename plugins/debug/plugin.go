@@ -72,7 +72,6 @@ type dependencies struct {
 	RequestQueue      gossip.RequestQueue
 	UTXOManager       *utxo.Manager
 	NodeConfig        *configuration.Configuration `name:"nodeConfig"`
-	NetworkID         uint64                       `name:"networkId"`
 	RestPluginManager *restapi.RestPluginManager   `optional:"true"`
 }
 

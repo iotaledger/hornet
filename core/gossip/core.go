@@ -88,17 +88,15 @@ func provide(c *dig.Container) {
 
 	type msgProcDeps struct {
 		dig.In
-		Storage                   *storage.Storage
-		SyncManager               *syncmanager.SyncManager
-		ServerMetrics             *metrics.ServerMetrics
-		RequestQueue              gossip.RequestQueue
-		PeeringManager            *p2p.Manager
-		NodeConfig                *configuration.Configuration `name:"nodeConfig"`
-		NetworkID                 uint64                       `name:"networkId"`
-		DeserializationParameters *iotago.DeSerializationParameters
-		BelowMaxDepth             int     `name:"belowMaxDepth"`
-		MinPoWScore               float64 `name:"minPoWScore"`
-		Profile                   *profile.Profile
+		Storage            *storage.Storage
+		SyncManager        *syncmanager.SyncManager
+		ServerMetrics      *metrics.ServerMetrics
+		RequestQueue       gossip.RequestQueue
+		PeeringManager     *p2p.Manager
+		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		ProtocolParameters *iotago.ProtocolParameters
+		BelowMaxDepth      int `name:"belowMaxDepth"`
+		Profile            *profile.Profile
 	}
 
 	if err := c.Provide(func(deps msgProcDeps) *gossip.MessageProcessor {
@@ -108,11 +106,8 @@ func provide(c *dig.Container) {
 			deps.RequestQueue,
 			deps.PeeringManager,
 			deps.ServerMetrics,
-			deps.DeserializationParameters,
+			deps.ProtocolParameters,
 			&gossip.Options{
-				MinPoWScore:       deps.MinPoWScore,
-				ProtocolVersion:   iotago.ProtocolVersion,
-				NetworkID:         deps.NetworkID,
 				BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 				WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 			})
@@ -127,17 +122,17 @@ func provide(c *dig.Container) {
 
 	type serviceDeps struct {
 		dig.In
-		Host           host.Host
-		PeeringManager *p2p.Manager
-		Storage        *storage.Storage
-		ServerMetrics  *metrics.ServerMetrics
-		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
-		NetworkID      uint64                       `name:"networkId"`
+		Host               host.Host
+		PeeringManager     *p2p.Manager
+		Storage            *storage.Storage
+		ServerMetrics      *metrics.ServerMetrics
+		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		ProtocolParameters *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps serviceDeps) *gossip.Service {
 		return gossip.NewService(
-			protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, deps.NetworkID)),
+			protocol.ID(fmt.Sprintf(iotaGossipProtocolIDTemplate, deps.ProtocolParameters.NetworkID())),
 			deps.Host,
 			deps.PeeringManager,
 			deps.ServerMetrics,

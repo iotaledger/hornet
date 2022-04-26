@@ -189,7 +189,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		}
 
 		// Do not validate here, the parents might need to be set
-		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.DeserializationParameters); err != nil {
+		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.ProtocolParameters); err != nil {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 		}
 
@@ -197,13 +197,13 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, echo.ErrUnsupportedMediaType
 	}
 
-	if msg.ProtocolVersion != iotago.ProtocolVersion {
+	if msg.ProtocolVersion != deps.ProtocolParameters.Version {
 		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: protocolVersion invalid")
 	}
 
 	switch payload := msg.Payload.(type) {
 	case *iotago.Transaction:
-		if payload.Essence.NetworkID != deps.NetworkID {
+		if payload.Essence.NetworkID != deps.ProtocolParameters.NetworkID() {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
 		}
 	default:

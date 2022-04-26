@@ -32,7 +32,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	}
 
 	// save snapshot info
-	err := te.storage.SetSnapshotMilestone(te.networkID, 0, 0, 0, time.Now())
+	err := te.storage.SetSnapshotMilestone(te.protoParas.NetworkID(), 0, 0, 0, time.Now())
 	require.NoError(te.TestInterface, err)
 
 	te.coo.bootstrap()
@@ -56,7 +56,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
 		messagesMemcache.CachedMessage,
-		te.networkID,
+		te.protoParas,
 		te.coo.LastMilestoneMessageID,
 		iotago.MilestoneID{}, // first milestone does not have a last milestone ID
 		whiteflag.DefaultWhiteFlagTraversalCondition,
@@ -116,7 +116,7 @@ func (te *TestEnvironment) ReattachMessage(messageID hornet.MessageID, parents .
 	require.NoError(te.TestInterface, err)
 
 	// We brute-force a new nonce until it is different than the original one (this is important when reattaching valid milestones)
-	powMinScore := te.PoWMinScore
+	powMinScore := te.protoParas.MinPowScore
 	for newMessage.Nonce == iotagoMessage.Nonce {
 		powMinScore += 10.0
 		// Use a higher PowScore on every iteration to force a different nonce
@@ -125,7 +125,7 @@ func (te *TestEnvironment) ReattachMessage(messageID hornet.MessageID, parents .
 		require.NoError(te.TestInterface, err)
 	}
 
-	storedMessage, err := storage.NewMessage(newMessage, serializer.DeSeriModePerformValidation, DeSerializationParameters)
+	storedMessage, err := storage.NewMessage(newMessage, serializer.DeSeriModePerformValidation, te.protoParas)
 	require.NoError(te.TestInterface, err)
 
 	cachedMessage := te.StoreMessage(storedMessage)
@@ -156,7 +156,7 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestoneMessageID horne
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
 		messagesMemcache.CachedMessage,
-		te.networkID,
+		te.protoParas,
 		milestoneMessageID,
 		te.milestoneIDForIndex(msIndex-1),
 		whiteflag.DefaultWhiteFlagTraversalCondition,

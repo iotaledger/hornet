@@ -13,9 +13,8 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
-	"github.com/iotaledger/hive.go/configuration"
-
 	"github.com/gohornet/hornet/pkg/database"
+	"github.com/iotaledger/hive.go/configuration"
 )
 
 const (
@@ -39,12 +38,12 @@ const (
 	FlagToolPrivateKey = "privateKey"
 	FlagToolPublicKey  = "publicKey"
 
-	FlagToolHRP       = "hrp"
-	FlagToolBIP32Path = "bip32Path"
-	FlagToolMnemonic  = "mnemonic"
-	FlagToolNetworkID = "networkID"
-	FlagToolPassword  = "password"
-	FlagToolSalt      = "salt"
+	FlagToolHRP         = "hrp"
+	FlagToolBIP32Path   = "bip32Path"
+	FlagToolMnemonic    = "mnemonic"
+	FlagToolNetworkName = "networkName"
+	FlagToolPassword    = "password"
+	FlagToolSalt        = "salt"
 
 	FlagToolOutputJSON            = "json"
 	FlagToolDescriptionOutputJSON = "format output as JSON"

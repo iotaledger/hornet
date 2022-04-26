@@ -23,10 +23,8 @@ var (
 type MessageAttacherOption func(opts *MessageAttacherOptions)
 
 type MessageAttacherOptions struct {
-	tipSelFunc                pow.RefreshTipsFunc
-	minPoWScore               float64
-	messageProcessedTimeout   time.Duration
-	deserializationParameters *iotago.DeSerializationParameters
+	tipSelFunc              pow.RefreshTipsFunc
+	messageProcessedTimeout time.Duration
 
 	powHandler     *pow.Handler
 	powWorkerCount int
@@ -34,12 +32,10 @@ type MessageAttacherOptions struct {
 
 func attacherOptions(opts []MessageAttacherOption) *MessageAttacherOptions {
 	result := &MessageAttacherOptions{
-		tipSelFunc:                nil,
-		minPoWScore:               0,
-		messageProcessedTimeout:   100 * time.Second,
-		deserializationParameters: iotago.ZeroRentParas,
-		powHandler:                nil,
-		powWorkerCount:            0,
+		tipSelFunc:              nil,
+		messageProcessedTimeout: 100 * time.Second,
+		powHandler:              nil,
+		powWorkerCount:          0,
 	}
 
 	for _, opt := range opts {
@@ -51,18 +47,6 @@ func attacherOptions(opts []MessageAttacherOption) *MessageAttacherOptions {
 func WithTimeout(messageProcessedTimeout time.Duration) MessageAttacherOption {
 	return func(opts *MessageAttacherOptions) {
 		opts.messageProcessedTimeout = messageProcessedTimeout
-	}
-}
-
-func WithMinPoWScore(minPoWScore float64) MessageAttacherOption {
-	return func(opts *MessageAttacherOptions) {
-		opts.minPoWScore = minPoWScore
-	}
-}
-
-func WithDeserializationParameters(deserializationParameters *iotago.DeSerializationParameters) MessageAttacherOption {
-	return func(opts *MessageAttacherOptions) {
-		opts.deserializationParameters = deserializationParameters
 	}
 }
 
@@ -110,7 +94,7 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message
 			return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
 		}
 
-		if score < a.opts.minPoWScore {
+		if score < a.tangle.protoParas.MinPowScore {
 			if a.opts.powHandler == nil {
 				return nil, ErrMessageAttacherPoWNotAvailable
 			}
@@ -124,7 +108,7 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message
 		}
 	}
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, a.opts.deserializationParameters)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, a.tangle.protoParas)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
 	}

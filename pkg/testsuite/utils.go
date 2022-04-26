@@ -105,7 +105,7 @@ func (b *MessageBuilder) BuildTaggedData() *Message {
 		parents = append(parents, parent[:])
 	}
 
-	msg, err := builder.NewMessageBuilder().
+	msg, err := builder.NewMessageBuilder(b.te.protoParas.Version).
 		Parents(parents).
 		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
@@ -114,7 +114,7 @@ func (b *MessageBuilder) BuildTaggedData() *Message {
 	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, DeSerializationParameters)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
 	require.NoError(b.te.TestInterface, err)
 
 	return &Message{
@@ -127,7 +127,7 @@ func (b *MessageBuilder) Build() *Message {
 
 	require.Greaterf(b.te.TestInterface, b.amount, uint64(0), "trying to send a transaction with no value")
 
-	txBuilder := builder.NewTransactionBuilder(b.te.networkID)
+	txBuilder := builder.NewTransactionBuilder(b.te.protoParas.NetworkID())
 
 	fromAddr := b.fromWallet.Address()
 	toAddr := b.toWallet.Address()
@@ -195,12 +195,12 @@ func (b *MessageBuilder) Build() *Message {
 	inputPrivateKey, _ := b.fromWallet.KeyPair()
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: fromAddr, Keys: inputPrivateKey})
 
-	transaction, err := txBuilder.Build(DeSerializationParameters, inputAddrSigner)
+	transaction, err := txBuilder.Build(b.te.protoParas, inputAddrSigner)
 	require.NoError(b.te.TestInterface, err)
 
 	require.NotNil(b.te.TestInterface, b.parents)
 
-	msg, err := builder.NewMessageBuilder().
+	msg, err := builder.NewMessageBuilder(b.te.protoParas.Version).
 		Parents(b.parents.ToSliceOfSlices()).
 		Payload(transaction).Build()
 	require.NoError(b.te.TestInterface, err)
@@ -208,7 +208,7 @@ func (b *MessageBuilder) Build() *Message {
 	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, DeSerializationParameters)
+	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
 	require.NoError(b.te.TestInterface, err)
 
 	log := fmt.Sprintf("Send %d iota from %s to %s and remaining %d iota to original wallet", b.amount, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount)

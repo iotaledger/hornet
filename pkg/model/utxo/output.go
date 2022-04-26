@@ -128,7 +128,7 @@ func (o *Output) kvStorableValue() (value []byte) {
 	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
 	ms.WriteUint32(o.milestoneTimestamp)     // 4 bytes
 
-	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	bytes, err := o.output.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -180,7 +180,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	if err != nil {
 		return err
 	}
-	_, err = o.output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, iotago.ZeroRentParas)
+	_, err = o.output.Deserialize(valueUtil.ReadRemainingBytes(), serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return err
 	}
