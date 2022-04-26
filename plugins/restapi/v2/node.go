@@ -6,6 +6,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -23,18 +25,27 @@ func info() (*infoResponse, error) {
 		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
 	}
 
-	// latest milestone index
-	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
-
-	// latest milestone timestamp
+	// latest milestone
+	var latestMilestoneIndex = deps.SyncManager.LatestMilestoneIndex()
 	var latestMilestoneTimestamp uint32 = 0
-	milestoneTimestamp, err := deps.Storage.MilestoneTimestampUnixByIndex(latestMilestoneIndex)
-	if err == nil {
-		latestMilestoneTimestamp = milestoneTimestamp
+	var latestMilestoneIDHex string
+	cachedMilestoneLatest := deps.Storage.CachedMilestoneByIndexOrNil(latestMilestoneIndex) // milestone +1
+	if cachedMilestoneLatest != nil {
+		latestMilestoneTimestamp = cachedMilestoneLatest.Milestone().TimestampUnix()
+		latestMilestoneIDHex = cachedMilestoneLatest.Milestone().MilestoneIDHex()
+		cachedMilestoneLatest.Release(true) // milestone -1
 	}
 
 	// confirmed milestone index
-	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
+	var confirmedMilestoneIndex = deps.SyncManager.ConfirmedMilestoneIndex()
+	var confirmedMilestoneTimestamp uint32 = 0
+	var confirmedMilestoneIDHex string
+	cachedMilestoneConfirmed := deps.Storage.CachedMilestoneByIndexOrNil(confirmedMilestoneIndex) // milestone +1
+	if cachedMilestoneConfirmed != nil {
+		confirmedMilestoneTimestamp = cachedMilestoneConfirmed.Milestone().TimestampUnix()
+		confirmedMilestoneIDHex = cachedMilestoneConfirmed.Milestone().MilestoneIDHex()
+		cachedMilestoneConfirmed.Release(true) // milestone -1
+	}
 
 	// pruning index
 	var pruningIndex milestone.Index
@@ -47,13 +58,27 @@ func info() (*infoResponse, error) {
 		Name:    deps.AppInfo.Name,
 		Version: deps.AppInfo.Version,
 		Status: nodeStatus{
-			IsHealthy:                deps.Tangle.IsNodeHealthy(),
-			LatestMilestoneTimestamp: latestMilestoneTimestamp,
-			LatestMilestoneIndex:     latestMilestoneIndex,
-			ConfirmedMilestoneIndex:  confirmedMilestoneIndex,
-			PruningIndex:             pruningIndex,
+			IsHealthy: deps.Tangle.IsNodeHealthy(),
+			LatestMilestone: milestoneInfoResponse{
+				Index:       latestMilestoneIndex,
+				Timestamp:   latestMilestoneTimestamp,
+				MilestoneID: latestMilestoneIDHex,
+			},
+			ConfirmedMilestone: milestoneInfoResponse{
+				Index:       confirmedMilestoneIndex,
+				Timestamp:   confirmedMilestoneTimestamp,
+				MilestoneID: confirmedMilestoneIDHex,
+			},
+			PruningIndex: pruningIndex,
 		},
-		Protocol: deps.ProtocolParameters,
+		Protocol: protocolResponse{
+			Version:       deps.ProtocolParameters.Version,
+			NetworkName:   deps.ProtocolParameters.NetworkName,
+			Bech32HRP:     string(deps.ProtocolParameters.Bech32HRP),
+			MinPowScore:   deps.ProtocolParameters.MinPowScore,
+			RentStructure: deps.ProtocolParameters.RentStructure,
+			TokenSupply:   iotago.EncodeUint64(deps.ProtocolParameters.TokenSupply),
+		},
 		Metrics: nodeMetrics{
 			MessagesPerSecond:           messagesPerSecond,
 			ReferencedMessagesPerSecond: referencedMessagesPerSecond,

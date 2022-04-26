@@ -10,15 +10,39 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+// milestoneInfoResponse defines the milestone info response.
+type milestoneInfoResponse struct {
+	// The index of the milestone.
+	Index milestone.Index `json:"index"`
+	// The unix time of the milestone payload.
+	Timestamp uint32 `json:"timestamp"`
+	// The ID of the milestone.
+	MilestoneID string `json:"milestoneId"`
+}
+
+// protocolResponse defines the protocol info response.
+type protocolResponse struct {
+	// The version of the protocol running.
+	Version byte `json:"version"`
+	// The human friendly name of the network.
+	NetworkName string `json:"networkName"`
+	// The HRP prefix used for Bech32 addresses in the network.
+	Bech32HRP string `json:"bech32HRP"`
+	// The minimum pow score of the network.
+	MinPowScore float64 `json:"minPoWScore"`
+	// The rent structure used by given node/network.
+	RentStructure iotago.RentStructure `json:"rentStructure"`
+	// TokenSupply defines the current token supply on the network.
+	TokenSupply string `json:"tokenSupply"`
+}
+
 type nodeStatus struct {
 	// Whether the node is healthy.
 	IsHealthy bool `json:"isHealthy"`
-	// The timestamp of the latest known milestone.
-	LatestMilestoneTimestamp uint32 `json:"latestMilestoneTimestamp"`
 	// The latest known milestone index.
-	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
+	LatestMilestone milestoneInfoResponse `json:"latestMilestone"`
 	// The current confirmed milestone's index.
-	ConfirmedMilestoneIndex milestone.Index `json:"confirmedMilestoneIndex"`
+	ConfirmedMilestone milestoneInfoResponse `json:"confirmedMilestone"`
 	// The milestone index at which the last pruning commenced.
 	PruningIndex milestone.Index `json:"pruningIndex"`
 }
@@ -40,10 +64,10 @@ type infoResponse struct {
 	Version string `json:"version"`
 	// The current status of this node.
 	Status nodeStatus `json:"status"`
+	// The protocol information of this node.
+	Protocol protocolResponse `json:"protocol"`
 	// The metrics of this node.
 	Metrics nodeMetrics `json:"metrics"`
-	// The protocol parameters used by this node.
-	Protocol *iotago.ProtocolParameters `json:"protocol"`
 	// The features this node exposes.
 	Features []string `json:"features"`
 	// The plugins this node exposes.
@@ -99,16 +123,6 @@ type childrenResponse struct {
 	Count uint32 `json:"count"`
 	// The hex encoded message IDs of the children of this message.
 	Children []string `json:"childrenMessageIds"`
-}
-
-// milestoneResponse defines the response of a GET milestones REST API call.
-type milestoneResponse struct {
-	// The index of the milestone.
-	Index uint32 `json:"index"`
-	// The hex encoded ID of the milestone.
-	MilestoneID string `json:"milestoneId"`
-	// The unix time of the milestone payload.
-	Time uint32 `json:"timestamp"`
 }
 
 // milestoneUTXOChangesResponse defines the response of a GET milestone UTXO changes REST API call.
