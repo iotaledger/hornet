@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	DeprecatedPubKeyFileName = "key.pub"
-	PrivKeyFileName          = "identity.key"
+	PrivKeyFileName = "identity.key"
 )
 
 var (
