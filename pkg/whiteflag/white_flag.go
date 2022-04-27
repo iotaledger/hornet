@@ -147,6 +147,9 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				if milestonePayload.Timestamp >= msTimestamp {
 					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone timestamp is smaller or equal to previous milestone timestamp (old: %d, new: %d): %v", milestonePayload.Timestamp, msTimestamp, cachedMsgMeta.Metadata().MessageID().ToHex())
 				}
+				if (milestonePayload.Index + 1) != uint32(msIndex) {
+					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone index did not increase by one compared to previous milestone index (old: %d, new: %d): %v", milestonePayload.Index, msIndex, cachedMsgMeta.Metadata().MessageID().ToHex())
+				}
 			}
 		}
 		return traversalCondition(cachedMsgMeta) // meta pass +1
