@@ -101,7 +101,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 			Version:     2,
 			NetworkName: "alphapnet1",
 			Bech32HRP:   iotago.PrefixTestnet,
-			MinPowScore: targetScore,
+			MinPoWScore: targetScore,
 			RentStructure: iotago.RentStructure{
 				VByteCost:    500,
 				VBFactorData: 1,

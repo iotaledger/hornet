@@ -61,7 +61,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 		Version:       ProtocolVersion,
 		NetworkName:   "testnet4",
 		Bech32HRP:     iotago.PrefixTestnet,
-		MinPowScore:   MinPoWScore,
+		MinPoWScore:   MinPoWScore,
 		RentStructure: iotago.RentStructure{},
 		TokenSupply:   0,
 	}

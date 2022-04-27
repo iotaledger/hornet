@@ -47,7 +47,7 @@ var protoParas = &iotago.ProtocolParameters{
 	Version:       2,
 	NetworkName:   "testnet",
 	Bech32HRP:     iotago.PrefixTestnet,
-	MinPowScore:   0,
+	MinPoWScore:   0,
 	RentStructure: iotago.RentStructure{},
 	TokenSupply:   0,
 }
@@ -259,10 +259,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			count--
 
 			parents := iotago.MilestoneParentMessageIDs{utils.RandMessageID().ToArray()}
-			milestonePayload, err := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
-			if err != nil {
-				panic(err)
-			}
+			milestonePayload := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
 
 			treasuryInput := &iotago.TreasuryInput{}
 			copy(treasuryInput[:], utils.RandBytes(32))

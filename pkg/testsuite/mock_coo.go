@@ -143,10 +143,7 @@ func (coo *MockCoo) milestonePayload(parents hornet.MessageIDs) (*iotago.Milesto
 		return nil, err
 	}
 
-	milestonePayload, err := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.LastMilestoneID(), sortedParents.ToSliceOfArrays(), mutations.ConfirmedMerkleRoot, mutations.AppliedMerkleRoot)
-	if err != nil {
-		return nil, err
-	}
+	milestonePayload := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.LastMilestoneID(), sortedParents.ToSliceOfArrays(), mutations.ConfirmedMerkleRoot, mutations.AppliedMerkleRoot)
 
 	keymapping := coo.keyManager.MilestonePublicKeyMappingForMilestoneIndex(milestoneIndex, coo.cooPrivateKeys, len(coo.cooPrivateKeys))
 
@@ -191,7 +188,7 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.MessageIDs, addLastMileston
 	msg, err := builder.NewMessageBuilder(coo.te.protoParas.Version).
 		ParentsMessageIDs(tips.ToSliceOfArrays()).
 		Payload(milestonePayload).
-		ProofOfWork(context.Background(), coo.te.protoParas, coo.te.protoParas.MinPowScore).
+		ProofOfWork(context.Background(), coo.te.protoParas, coo.te.protoParas.MinPoWScore).
 		Build()
 	if err != nil {
 		return nil, nil, err

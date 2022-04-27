@@ -104,7 +104,7 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message
 				return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
 			}
 
-			if score < a.tangle.protoParas.MinPowScore {
+			if score < a.tangle.protoParas.MinPoWScore {
 				if a.opts.powHandler == nil {
 					return nil, ErrMessageAttacherPoWNotAvailable
 				}

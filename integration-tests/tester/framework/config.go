@@ -650,14 +650,14 @@ func (protoConfig *ProtocolConfig) CLIFlags() []string {
 	}
 
 	return []string{
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolVersion, protoConfig.ProtocolVersion),
-		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolNetworkIDName, protoConfig.NetworkName),
-		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolBech32HRP, protoConfig.Bech32HRP),
-		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolMinPoWScore, protoConfig.MinPoWScore),
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolRentStructureVByteCost, protoConfig.RentStructure.VByteCost),
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolRentStructureVByteFactorData, protoConfig.RentStructure.VBFactorData),
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolRentStructureVByteFactorKey, protoConfig.RentStructure.VBFactorKey),
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolTokenSupply, protoConfig.TokenSupply),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersVersion, protoConfig.ProtocolVersion),
+		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolParametersNetworkName, protoConfig.NetworkName),
+		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolParametersBech32HRP, protoConfig.Bech32HRP),
+		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolParametersMinPoWScore, protoConfig.MinPoWScore),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersRentStructureVByteCost, protoConfig.RentStructure.VByteCost),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersRentStructureVByteFactorData, protoConfig.RentStructure.VBFactorData),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersRentStructureVByteFactorKey, protoConfig.RentStructure.VBFactorKey),
+		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersTokenSupply, protoConfig.TokenSupply),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolPublicKeyRangesJSON, string(keyRangesJSON)),
 	}
 }
@@ -667,7 +667,7 @@ func (protoConfig ProtocolConfig) ProtocolParameters() *iotago.ProtocolParameter
 		Version:       protoConfig.ProtocolVersion,
 		NetworkName:   protoConfig.NetworkName,
 		Bech32HRP:     protoConfig.Bech32HRP,
-		MinPowScore:   protoConfig.MinPoWScore,
+		MinPoWScore:   protoConfig.MinPoWScore,
 		RentStructure: protoConfig.RentStructure,
 		TokenSupply:   protoConfig.TokenSupply,
 	}

@@ -43,6 +43,7 @@ func initConfigPars(c *dig.Container) {
 		KeyManager              *keymanager.KeyManager
 		MilestonePublicKeyCount int `name:"milestonePublicKeyCount"`
 		ProtocolParameters      *iotago.ProtocolParameters
+		BaseToken               *BaseToken
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
@@ -50,16 +51,24 @@ func initConfigPars(c *dig.Container) {
 		res := cfgResult{
 			MilestonePublicKeyCount: deps.NodeConfig.Int(CfgProtocolMilestonePublicKeyCount),
 			ProtocolParameters: &iotago.ProtocolParameters{
-				Version:     byte(deps.NodeConfig.Int(CfgProtocolVersion)),
-				NetworkName: deps.NodeConfig.String(CfgProtocolNetworkIDName),
-				Bech32HRP:   iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolBech32HRP)),
-				MinPowScore: deps.NodeConfig.Float64(CfgProtocolMinPoWScore),
+				Version:     byte(deps.NodeConfig.Int(CfgProtocolParametersVersion)),
+				NetworkName: deps.NodeConfig.String(CfgProtocolParametersNetworkName),
+				Bech32HRP:   iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolParametersBech32HRP)),
+				MinPoWScore: deps.NodeConfig.Float64(CfgProtocolParametersMinPoWScore),
 				RentStructure: iotago.RentStructure{
-					VByteCost:    uint64(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteCost)),
-					VBFactorData: iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorData)),
-					VBFactorKey:  iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolRentStructureVByteFactorKey)),
+					VByteCost:    uint64(deps.NodeConfig.Int64(CfgProtocolParametersRentStructureVByteCost)),
+					VBFactorData: iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolParametersRentStructureVByteFactorData)),
+					VBFactorKey:  iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolParametersRentStructureVByteFactorKey)),
 				},
-				TokenSupply: uint64(deps.NodeConfig.Int64(CfgProtocolTokenSupply)),
+				TokenSupply: uint64(deps.NodeConfig.Int64(CfgProtocolParametersTokenSupply)),
+			},
+			BaseToken: &BaseToken{
+				Name:            deps.NodeConfig.String(CfgProtocolBaseTokenName),
+				TickerSymbol:    deps.NodeConfig.String(CfgProtocolBaseTokenTickerSymbol),
+				Unit:            deps.NodeConfig.String(CfgProtocolBaseTokenUnit),
+				Subunit:         deps.NodeConfig.String(CfgProtocolBaseTokenSubunit),
+				Decimals:        uint32(deps.NodeConfig.Int(CfgProtocolBaseTokenDecimals)),
+				UseMetricPrefix: deps.NodeConfig.Bool(CfgProtocolBaseTokenUseMetricPrefix),
 			},
 		}
 

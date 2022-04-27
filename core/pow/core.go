@@ -44,7 +44,7 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps handlerDeps) *pow.Handler {
 		// init the pow handler with all possible settings
-		return pow.New(deps.ProtocolParameters.MinPowScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval))
+		return pow.New(deps.ProtocolParameters.MinPoWScore, deps.NodeConfig.Duration(CfgPoWRefreshTipsInterval))
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}

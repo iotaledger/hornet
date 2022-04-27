@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -56,6 +57,7 @@ type dependencies struct {
 	TipSelector             *tipselect.TipSelector `optional:"true"`
 	MilestonePublicKeyCount int                    `name:"milestonePublicKeyCount"`
 	ProtocolParameters      *iotago.ProtocolParameters
+	BaseToken               *protocfg.BaseToken
 	PoWHandler              *pow.Handler
 	INXServer               *INXServer
 	Echo                    *echo.Echo                 `optional:"true"`

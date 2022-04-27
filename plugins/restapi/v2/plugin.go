@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -162,6 +163,7 @@ type dependencies struct {
 	NodeConfig              *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager    *p2p.ConfigManager
 	ProtocolParameters      *iotago.ProtocolParameters
+	BaseToken               *protocfg.BaseToken
 	RestAPILimitsMaxResults int                        `name:"restAPILimitsMaxResults"`
 	SnapshotsFullPath       string                     `name:"snapshotsFullPath"`
 	SnapshotsDeltaPath      string                     `name:"snapshotsDeltaPath"`

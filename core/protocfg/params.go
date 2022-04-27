@@ -10,42 +10,64 @@ import (
 
 const (
 	// the protocol version this node supports
-	CfgProtocolVersion = "protocol.version"
+	CfgProtocolParametersVersion = "protocol.parameters.version"
 	// the network ID on which this node operates on.
-	CfgProtocolNetworkIDName = "protocol.networkID"
+	CfgProtocolParametersNetworkName = "protocol.parameters.networkName"
 	// the HRP which should be used for Bech32 addresses.
-	CfgProtocolBech32HRP = "protocol.bech32HRP"
+	CfgProtocolParametersBech32HRP = "protocol.parameters.bech32HRP"
 	// the minimum PoW score required by the network.
-	CfgProtocolMinPoWScore = "protocol.minPoWScore"
+	CfgProtocolParametersMinPoWScore = "protocol.parameters.minPoWScore"
+	// the vByte cost used for the dust protection
+	CfgProtocolParametersRentStructureVByteCost = "protocol.parameters.vByteCost"
+	// the vByte factor used for data fields
+	CfgProtocolParametersRentStructureVByteFactorData = "protocol.parameters.vByteFactorData"
+	// the vByte factor used for key fields
+	CfgProtocolParametersRentStructureVByteFactorKey = "protocol.parameters.vByteFactorKey"
+	// the token supply of the base token
+	CfgProtocolParametersTokenSupply = "protocol.parameters.tokenSupply"
+
 	// the amount of public keys in a milestone.
 	CfgProtocolMilestonePublicKeyCount = "protocol.milestonePublicKeyCount"
 	// the ed25519 public key of the coordinator in hex representation.
 	CfgProtocolPublicKeyRanges = "protocol.publicKeyRanges"
 	// the ed25519 public key of the coordinator in hex representation.
 	CfgProtocolPublicKeyRangesJSON = "publicKeyRanges"
-	// the vByte cost used for the dust protection
-	CfgProtocolRentStructureVByteCost = "protocol.vByteCost"
-	// the vByte factor used for data fields
-	CfgProtocolRentStructureVByteFactorData = "protocol.vByteFactorData"
-	// the vByte factor used for key fields
-	CfgProtocolRentStructureVByteFactorKey = "protocol.vByteFactorKey"
-	// the token supply of the native protocol token
-	CfgProtocolTokenSupply = "protocol.tokenSupply"
+
+	// the base token name
+	CfgProtocolBaseTokenName = "protocol.baseToken.name"
+	// the base token ticker symbol
+	CfgProtocolBaseTokenTickerSymbol = "protocol.baseToken.tickerSymbol"
+	// the base token unit
+	CfgProtocolBaseTokenUnit = "protocol.baseToken.unit"
+	// the base token subunit
+	CfgProtocolBaseTokenSubunit = "protocol.baseToken.subunit"
+	// the base token amount of decimals
+	CfgProtocolBaseTokenDecimals = "protocol.baseToken.decimals"
+	// the base token uses the metric prefix
+	CfgProtocolBaseTokenUseMetricPrefix = "protocol.baseToken.useMetricPrefix"
 )
 
 var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
 		"nodeConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.Uint8(CfgProtocolVersion, 2, "the protocol version this node supports")
-			fs.String(CfgProtocolNetworkIDName, "chrysalis-mainnet", "the network ID on which this node operates on.")
-			fs.String(CfgProtocolBech32HRP, string(iotago.PrefixMainnet), "the HRP which should be used for Bech32 addresses.")
-			fs.Float64(CfgProtocolMinPoWScore, 4000, "the minimum PoW score required by the network.")
+			fs.Uint8(CfgProtocolParametersVersion, 2, "the protocol version this node supports")
+			fs.String(CfgProtocolParametersNetworkName, "chrysalis-mainnet", "the network ID on which this node operates on.")
+			fs.String(CfgProtocolParametersBech32HRP, string(iotago.PrefixMainnet), "the HRP which should be used for Bech32 addresses.")
+			fs.Float64(CfgProtocolParametersMinPoWScore, 4000, "the minimum PoW score required by the network.")
+			fs.Uint64(CfgProtocolParametersRentStructureVByteCost, 500, "the vByte cost used for the dust protection")
+			fs.Uint64(CfgProtocolParametersRentStructureVByteFactorData, 1, "the vByte factor used for data fields")
+			fs.Uint64(CfgProtocolParametersRentStructureVByteFactorKey, 10, "the vByte factor used for key fields")
+			fs.Uint64(CfgProtocolParametersTokenSupply, 2_779_530_283_277_761, "the token supply of the native protocol token")
+
 			fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
-			fs.Uint64(CfgProtocolRentStructureVByteCost, 500, "the vByte cost used for the dust protection")
-			fs.Uint64(CfgProtocolRentStructureVByteFactorData, 1, "the vByte factor used for data fields")
-			fs.Uint64(CfgProtocolRentStructureVByteFactorKey, 10, "the vByte factor used for key fields")
-			fs.Uint64(CfgProtocolTokenSupply, 2_779_530_283_277_761, "the token supply of the native protocol token")
+
+			fs.String(CfgProtocolBaseTokenName, "IOTA", "the base token name")
+			fs.String(CfgProtocolBaseTokenTickerSymbol, "MIOTA", "the base token ticker symbol")
+			fs.String(CfgProtocolBaseTokenUnit, "IOTA", "the base token unit")
+			fs.String(CfgProtocolBaseTokenSubunit, "", "the base token subunit")
+			fs.Uint32(CfgProtocolBaseTokenDecimals, 0, "the base token amount of decimals")
+			fs.Bool(CfgProtocolBaseTokenUseMetricPrefix, true, "the base token uses the metric prefix")
 			return fs
 		}(),
 	},
@@ -59,3 +81,12 @@ type ConfigPublicKeyRange struct {
 }
 
 type ConfigPublicKeyRanges []*ConfigPublicKeyRange
+
+type BaseToken struct {
+	Name            string `json:"name"`
+	TickerSymbol    string `json:"tickerSymbol"`
+	Unit            string `json:"unit"`
+	Subunit         string `json:"subunit,omitempty"`
+	Decimals        uint32 `json:"decimals"`
+	UseMetricPrefix bool   `json:"useMetricPrefix"`
+}

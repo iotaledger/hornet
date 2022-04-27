@@ -34,16 +34,16 @@ func getProtocolParametersFromConfigFile(filePath string) (*iotago.ProtocolParam
 	}
 
 	return &iotago.ProtocolParameters{
-		Version:     byte(nodeConfig.Int(protocfg.CfgProtocolVersion)),
-		NetworkName: nodeConfig.String(protocfg.CfgProtocolNetworkIDName),
-		Bech32HRP:   iotago.NetworkPrefix(nodeConfig.String(protocfg.CfgProtocolBech32HRP)),
-		MinPowScore: nodeConfig.Float64(protocfg.CfgProtocolMinPoWScore),
+		Version:     byte(nodeConfig.Int(protocfg.CfgProtocolParametersVersion)),
+		NetworkName: nodeConfig.String(protocfg.CfgProtocolParametersNetworkName),
+		Bech32HRP:   iotago.NetworkPrefix(nodeConfig.String(protocfg.CfgProtocolParametersBech32HRP)),
+		MinPoWScore: nodeConfig.Float64(protocfg.CfgProtocolParametersMinPoWScore),
 		RentStructure: iotago.RentStructure{
-			VByteCost:    uint64(nodeConfig.Int64(protocfg.CfgProtocolRentStructureVByteCost)),
-			VBFactorData: iotago.VByteCostFactor(nodeConfig.Int64(protocfg.CfgProtocolRentStructureVByteFactorData)),
-			VBFactorKey:  iotago.VByteCostFactor(nodeConfig.Int64(protocfg.CfgProtocolRentStructureVByteFactorKey)),
+			VByteCost:    uint64(nodeConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteCost)),
+			VBFactorData: iotago.VByteCostFactor(nodeConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteFactorData)),
+			VBFactorKey:  iotago.VByteCostFactor(nodeConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteFactorKey)),
 		},
-		TokenSupply: uint64(nodeConfig.Int64(protocfg.CfgProtocolTokenSupply)),
+		TokenSupply: uint64(nodeConfig.Int64(protocfg.CfgProtocolParametersTokenSupply)),
 	}, nil
 }
 

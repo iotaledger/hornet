@@ -173,7 +173,7 @@ func sendParticipationTransaction(cfg *cfg) (*iotago.MessageID, error) {
 
 	if !remotePoWEnabled {
 		// do local PoW
-		powManager := pow.New(nodeInfo.MinPowScore, 5*time.Second)
+		powManager := pow.New(nodeInfo.MinPoWScore, 5*time.Second)
 
 		getTipsFunc := func() (hornet.MessageIDs, error) {
 			tipsResponse, err := client.Tips(clientCtx)

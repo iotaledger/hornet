@@ -110,5 +110,13 @@ func (s *INXServer) ReadNodeConfiguration(context.Context, *inx.NoParams) (*inx.
 		ProtocolParameters:      inx.NewProtocolParameters(deps.ProtocolParameters),
 		MilestonePublicKeyCount: uint32(deps.MilestonePublicKeyCount),
 		MilestoneKeyRanges:      keyRanges,
+		BaseToken: &inx.BaseToken{
+			Name:            deps.BaseToken.Name,
+			TickerSymbol:    deps.BaseToken.TickerSymbol,
+			Unit:            deps.BaseToken.Unit,
+			Subunit:         deps.BaseToken.Subunit,
+			Decimals:        deps.BaseToken.Decimals,
+			UseMetricSystem: deps.BaseToken.UseMetricPrefix,
+		},
 	}, nil
 }
