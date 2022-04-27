@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha9] - 27.04.2022
+
+### Changed
+    - Adapt storage layer to new milestone ID based logic. (#1454)
+    - Handle SolidEntryPoints in solidification logic. (#1454)
+    - Enforce milestone msg nonce zero in attacher. (#1454)
+    - Add new milestone routes. (#1454)
+    - Adapt node info endpoint to latest changes. (#1454)
+    - Added BaseToken to config, restapi and INX. (#1462)
+    - Add check to verify that milestone index and timestamp have increased. (#1463)
+
+### Fixed
+    - Only refresh tips on remote pow if no parents were given. (#1460) 
+    - Fix database tool getMilestonePayloadViaAPI. (#1454)
+
+### Cleanup
+    - Chore/remove deprecated code. (#1461) 
+
 ## [2.0.0-alpha8] - 26.04.2022
 
 ### Changed
@@ -20,17 +38,17 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
     - Milestone payloads now contain an optional metadata field according to TIP-29. (#1404)
-    - Now using `rms` bech32 prefix according to TIP-31
-    - Private tangle improvements (#1390, #1395)
-    - Adapted ed25519-key tool to print mnemonic and derived keys using slip10 (#1407)
-    - Removed coordinator plugin (#1404)
-    - Encode Messages and Outputs based on the given Accept Header MIME type (#1427)
+    - Now using `rms` bech32 prefix according to TIP-31.
+    - Private tangle improvements. (#1390, #1395)
+    - Adapted ed25519-key tool to print mnemonic and derived keys using slip10. (#1407)
+    - Removed coordinator plugin. (#1404)
+    - Encode Messages and Outputs based on the given Accept Header MIME type. (#1427)
 
 ### Fixed
-    - Fixed deadlock while shutting down the node (#1394)
+    - Fixed deadlock while shutting down the node. (#1394)
     - Fixed stale connections to peers when the initial stream establishment fails. (#1395)
-    - Fixed request queue behavior and test cases (#1412)
-    - Fix wrong timestamp data type (#1438)
+    - Fixed request queue behavior and test cases. (#1412)
+    - Fix wrong timestamp data type. (#1438)
 
 
 ## [2.0.0-alpha6] - 30.03.2022
@@ -48,7 +66,7 @@ All notable changes to this project will be documented in this file.
 ## [2.0.0-alpha5] - 17.03.2022
 
 ### Changed
-    - Changed the snapshot format to simplify parsing for Bee
+    - Changed the snapshot format to simplify parsing for Bee.
     - Using default keepalive parameters for the Indexer to avoid disconnections due to too many pings.
 
 
@@ -56,10 +74,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
     - API now using hex-representation for bytes and uint256. Note: `0x` prefix is now required.
-    - Adapted to latest `FoundryOutput` changes according to TIP-18
+    - Adapted to latest `FoundryOutput` changes according to TIP-18.
     - Introduced new `INX` (IOTA Node Extension) feature. This allows the core HORNET node to be extended with plugins written in any language supporting gRPC.
     - Re-implemented Indexer and MQTT plugins as INX extensions. (Note: MQTT over WebSockets is now available under `/api/plugins/mqtt/v1` instead of `/mqtt`)
-    - Implemented new MQTT topics acccording to TIP-28
+    - Implemented new MQTT topics acccording to TIP-28.
     - Added two new endpoints to the API `/api/v2/outputs/raw` to fetch the raw bytes of an output, and `/api/v2/outputs/metadata` to fetch metadata only.
 
 
@@ -72,7 +90,7 @@ All notable changes to this project will be documented in this file.
 ## [1.1.3] - 29.12.2021
 
 ### Added
-    - Add new db-health tool (#1255)
+    - Add new db-health tool. (#1255)
 
 ### Config file changes
 
