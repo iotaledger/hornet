@@ -54,7 +54,6 @@
     "fullPath": "alphanet/snapshots/full_snapshot.bin",
     "deltaPath": "alphanet/snapshots/delta_snapshot.bin",
     "deltaSizeThresholdPercentage": 50.0,
-
     "downloadURLs": [
       {
         "full": "https://files.alphanet.iotaledger.net/snapshots/latest-full_snapshot.bin",
@@ -76,12 +75,23 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "alphanet-3",
-    "bech32HRP": "rms",
-    "minPoWScore": 1000.0,
-    "vByteCost": 500,
-    "vByteFactorData": 1,
-    "vByteFactorKey": 10,
+    "parameters": {
+      "networkName": "alphanet-4",
+      "bech32HRP": "rms",
+      "minPoWScore": 1000.0,
+      "vByteCost": 500,
+      "vByteFactorData": 1,
+      "vByteFactorKey": 10,
+      "tokenSupply": 2779530283277761
+    },
+    "baseToken" : {
+      "name": "Shimmer",
+      "tickerSymbol": "SMR",
+      "unit": "SMR",
+      "decimals": 6,
+      "subunit": "glow",
+      "useMetricPrefix": false
+    },
     "milestonePublicKeyCount": 3,
     "publicKeyRanges": [
       {

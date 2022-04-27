@@ -55,12 +55,23 @@
     "pruneReceipts": false
   },
   "protocol": {
-    "networkID": "private_tangle1",
-    "bech32HRP": "atoi",
-    "minPoWScore": 1.0,
-    "vByteCost": 500,
-    "vByteFactorData": 1,
-    "vByteFactorKey": 10,
+    "parameters": {
+      "networkName": "private_tangle1",
+      "bech32HRP": "tst",
+      "minPoWScore": 1.0,
+      "vByteCost": 500,
+      "vByteFactorData": 1,
+      "vByteFactorKey": 10,
+      "tokenSupply": 2779530283277761
+    },
+    "baseToken" : {
+      "name": "TestCoin",
+      "tickerSymbol": "TEST",
+      "unit": "TEST",
+      "decimals": 6,
+      "subunit": "testies",
+      "useMetricPrefix": false
+    },
     "milestonePublicKeyCount": 2,
     "publicKeyRanges": [
       {

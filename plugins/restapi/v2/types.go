@@ -3,6 +3,7 @@ package v2
 import (
 	"encoding/json"
 
+	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -50,6 +51,8 @@ type infoResponse struct {
 	Status nodeStatus `json:"status"`
 	// The protocol parameters used by this node.
 	Protocol *iotago.ProtocolParameters `json:"protocol"`
+	// The base token of the network.
+	BaseToken *protocfg.BaseToken `json:"baseToken"`
 	// The metrics of this node.
 	Metrics nodeMetrics `json:"metrics"`
 	// The features this node exposes.

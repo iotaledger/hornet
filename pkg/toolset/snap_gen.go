@@ -50,7 +50,7 @@ func snapshotGen(args []string) error {
 		Version:     2,
 		NetworkName: *networkNameFlag,
 		Bech32HRP:   iotago.PrefixTestnet,
-		MinPowScore: 0,
+		MinPoWScore: 0,
 		RentStructure: iotago.RentStructure{
 			VByteCost:    0,
 			VBFactorData: 0,

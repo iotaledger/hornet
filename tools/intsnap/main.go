@@ -47,7 +47,7 @@ var protoParas = &iotago.ProtocolParameters{
 	Version:     2,
 	NetworkName: "alphanet1",
 	Bech32HRP:   iotago.PrefixDevnet,
-	MinPowScore: 10,
+	MinPoWScore: 10,
 	RentStructure: iotago.RentStructure{
 		VByteCost:    0,
 		VBFactorKey:  0,

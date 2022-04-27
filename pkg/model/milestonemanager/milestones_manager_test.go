@@ -18,7 +18,7 @@ import (
 
 const (
 	BelowMaxDepth           = 15
-	MinPowScore             = 1.0
+	MinPoWScore             = 1.0
 	MilestonePublicKeyCount = 2
 )
 
@@ -58,7 +58,7 @@ var (
 
 func initTest(testInterface testing.TB) (*testsuite.TestEnvironment, *milestonemanager.MilestoneManager) {
 
-	te := testsuite.SetupTestEnvironment(testInterface, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPowScore, false)
+	te := testsuite.SetupTestEnvironment(testInterface, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
 
 	getKeyManager := func() *keymanager.KeyManager {
 		var coordinatorPublicKeyRanges protocfg.ConfigPublicKeyRanges
