@@ -4,29 +4,21 @@ const (
 	UTXOStoreKeyPrefixLedgerMilestoneIndex byte = 0
 
 	// Output and Spent storage
-	UTXOStoreKeyPrefixOutput byte = 1 //TODO: iterate over all values and map to basic outputs
+	UTXOStoreKeyPrefixOutput byte = 1
 
 	// Track spent/unspent Outputs
-	UTXOStoreKeyPrefixOutputSpent   byte = 8
-	UTXOStoreKeyPrefixOutputUnspent byte = 9
+	UTXOStoreKeyPrefixOutputSpent   byte = 2
+	UTXOStoreKeyPrefixOutputUnspent byte = 3
 
 	// Milestone diffs
 	UTXOStoreKeyPrefixMilestoneDiffs byte = 4
 
 	// Chrysalis Migration
-	UTXOStoreKeyPrefixTreasuryOutput byte = 6
-	UTXOStoreKeyPrefixReceipts       byte = 7
-)
-
-// Deprecated keys, just used for migration purposes
-const (
-	UTXOStoreKeyPrefixUnspent  byte = 2 //TODO: migrate to UTXOStoreKeyPrefixOutputUnspent, then drop
-	UTXOStoreKeyPrefixSpent    byte = 3 //TODO: migrate to UTXOStoreKeyPrefixOutputSpent, then drop
-	UTXOStoreKeyPrefixBalances byte = 5 //TODO: deprecate and drop
+	UTXOStoreKeyPrefixTreasuryOutput byte = 5
+	UTXOStoreKeyPrefixReceipts       byte = 6
 )
 
 /*
-
    UTXO Database
 
    MilestoneIndex:
@@ -39,54 +31,35 @@ const (
        milestone.Index
           4 bytes
 
-
    Output:
    =======
    Key:
-       UTXOStoreKeyPrefixOutput + iotago.UTXOInputID
-                   1 byte       + 32 bytes + 2 bytes
+       UTXOStoreKeyPrefixOutput + iotago.OutputID
+                1 byte          +     34 bytes
 
    Value:
-       MessageID + iotago.Output.Serialized()
-        32 bytes +    4 bytes type + X bytes
-
-
-   Unspent Output:
-   ===============
-   Key:
-       UTXOStoreKeyPrefixUnspent +     iotago.Address.Serialized()       + iotago.OutputType + iotago.OutputID
-                 1 byte          +       1 byte type + 20-32 bytes       +       1 bytes     + 32 bytes + 2 bytes
-
-   Value:
-       Empty
-
+       MessageID + MilestoneIndex + MilestoneTimestamp + iotago.Output.Serialized()
+        32 bytes +    4 bytes     +      4 bytes       +   1 byte type + X bytes
 
    Spent Output:
    ================
    Key:
-       UTXOStoreKeyPrefixSpent +       iotago.Address.Serialized()     + iotago.OutputType + iotago.OutputID
-                 1 byte        +       1 byte type + 20-32 bytes       +       1 byte      + 32 bytes + 2 bytes
+       UTXOStoreKeyPrefixSpent + iotago.OutputID
+                 1 byte        +     34 bytes
 
    Value:
-       TargetTransactionID (iotago.TransactionID) + ConfirmationIndex (milestone.Index)
-                  32 bytes                        +            4 bytes
+       TargetTransactionID (iotago.TransactionID) + ConfirmationIndex (milestone.Index) + ConfirmationTimestamp
+                  32 bytes                        +            4 bytes                  +       4 bytes
 
-
-   Treasury Output:
-   =======
+   Unspent Output:
+   ===============
    Key:
-       UTXOStoreKeyPrefixTreasuryOutput + spent  + milestone hash
-                   1 byte               + 1 byte +    32 bytes
-
-   Receipts:
-   =======
-   Key:
-       UTXOStoreKeyPrefixReceipts + migrated_at_index  + milestone_index
-                   1 byte         +      32 byte       +    32 bytes
+       UTXOStoreKeyPrefixUnspent + iotago.OutputID
+                 1 byte          +     34 bytes
 
    Value:
-       Amount
-       8 bytes
+       Empty
+
 
    Milestone diffs:
    ================
@@ -95,7 +68,26 @@ const (
                  1 byte                 +     4 bytes
 
    Value:
-       OutputCount  +  OutputCount *  iotago.OutputID   + SpentCount + SpentCount *    iotago.OutputID    + has treasury +  TreasuryOutputMilestoneID  + SpentTreasuryOutputMilestoneID
-         4 bytes    +  OutputCount * (32 byte + 2 byte) +   4 bytes  + SpentCount *  (32 bytes + 2 bytes) +    1 byte    +          32 bytes           +          32 bytes
+       OutputCount  +  OutputCount  *  iotago.OutputID   + SpentCount +  SpentCount *    iotago.OutputID    + has treasury +  TreasuryOutputMilestoneID  + SpentTreasuryOutputMilestoneID
+         4 bytes    +  (OutputCount *    34 bytes)       +   4 bytes  + (SpentCount *       34 bytes)       +    1 byte    +          32 bytes           +          32 bytes
 
+   Treasury Output:
+   =======
+   Key:
+       UTXOStoreKeyPrefixTreasuryOutput + spent  + iotago.MilestoneID
+                   1 byte               + 1 byte +    32 bytes
+
+   Value:
+       Amount
+       8 bytes
+
+   Receipts:
+   =======
+   Key:
+       UTXOStoreKeyPrefixReceipts + migrated_at_index  + milestone_index
+                   1 byte         +      4 byte        +    4 bytes
+
+   Value:
+       Receipt (iotago.ReceiptMilestoneOpt.Serialized())
+                1 byte type + X bytes
 */
