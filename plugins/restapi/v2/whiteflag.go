@@ -24,19 +24,19 @@ func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsRespon
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid parents, error: %s", err)
 	}
-	requestedLastMilestoneID := iotago.MilestoneID{}
+	requestedPreviousMilestoneID := iotago.MilestoneID{}
 	if len(request.PreviousMilestoneID) > 0 {
-		lastMilestoneIDBytes, err := iotago.DecodeHex(request.PreviousMilestoneID)
+		previousMilestoneIDBytes, err := iotago.DecodeHex(request.PreviousMilestoneID)
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid lastMilestoneID, error: %s", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid previousMilestoneID, error: %s", err)
 		}
-		if len(lastMilestoneIDBytes) != iotago.MilestoneIDLength {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid lastMilestoneID, length should be %d bytes", iotago.MilestoneIDLength)
+		if len(previousMilestoneIDBytes) != iotago.MilestoneIDLength {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid previousMilestoneID, length should be %d bytes", iotago.MilestoneIDLength)
 		}
-		copy(requestedLastMilestoneID[:], lastMilestoneIDBytes)
+		copy(requestedPreviousMilestoneID[:], previousMilestoneIDBytes)
 	}
 
-	mutations, err := deps.Tangle.CheckSolidityAndComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), requestedIndex, requestedTimestamp, requestedParents, requestedLastMilestoneID)
+	mutations, err := deps.Tangle.CheckSolidityAndComputeWhiteFlagMutations(Plugin.Daemon().ContextStopped(), requestedIndex, requestedTimestamp, requestedParents, requestedPreviousMilestoneID)
 	if err != nil {
 		switch {
 		case errors.Is(err, common.ErrNodeNotSynced):

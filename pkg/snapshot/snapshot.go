@@ -242,14 +242,11 @@ func forEachSolidEntryPoint(
 			return err
 		}
 
-		// Get all parents of that milestone
-		cachedMsgMetaMilestone := dbStorage.MilestoneCachedMessageMetadataOrNil(milestoneIndex) // meta +1
-		if cachedMsgMetaMilestone == nil {
+		// get all parents of that milestone
+		milestoneParents, err := dbStorage.MilestoneParentsByIndex(milestoneIndex)
+		if err != nil {
 			return errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
-
-		milestoneParents := cachedMsgMetaMilestone.Metadata().Parents()
-		cachedMsgMetaMilestone.Release(true) // meta -1
 
 		// traverse the milestone and collect all messages that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(

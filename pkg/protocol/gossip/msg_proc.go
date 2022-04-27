@@ -23,6 +23,7 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/workerpool"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/builder"
 	"github.com/iotaledger/iota.go/v3/pow"
 )
 
@@ -211,9 +212,20 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 		return fmt.Errorf("transaction contained in msg has invalid network ID %d instead of %d", essence.NetworkID, proc.networkID)
 	}
 
-	score := pow.Score(msg.Data())
-	if score < proc.protoParas.MinPowScore {
-		return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
+	switch msg.Message().Payload.(type) {
+
+	case *iotago.Milestone:
+		// enforce milestone msg nonce == 0
+		if msg.Message().Nonce != 0 {
+			return errors.New("milestone msg nonce must be zero")
+		}
+
+	default:
+		// validate PoW score
+		score := pow.Score(msg.Data())
+		if score < proc.protoParas.MinPowScore {
+			return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
+		}
 	}
 
 	cmi := proc.syncManager.ConfirmedMilestoneIndex()
@@ -303,14 +315,20 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 		msIndex = proc.syncManager.LatestMilestoneIndex()
 	}
 
-	cachedMsgMilestone := proc.storage.MilestoneCachedMessageOrNil(msIndex) // message +1
-	if cachedMsgMilestone == nil {
+	cachedMilestone := proc.storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
+	if cachedMilestone == nil {
 		// can't reply if we don't have the wanted milestone
 		return
 	}
-	defer cachedMsgMilestone.Release(true) // message -1
+	defer cachedMilestone.Release(true) // milestone -1
 
-	requestedData, err := cachedMsgMilestone.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
+	milestoneMsg, err := constructMilestoneMessage(proc.protoParas, cachedMilestone.Retain()) // milestone +1
+	if err != nil {
+		// can't reply if creating milestone message fails
+		return
+	}
+
+	requestedData, err := milestoneMsg.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -323,6 +341,18 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	}
 
 	p.Enqueue(msg)
+}
+
+// TODO: this is a workaround, we need to create a different channel for milestone payloads in STING instead.
+func constructMilestoneMessage(protoParas *iotago.ProtocolParameters, cachedMilestone *storage.CachedMilestone) (*iotago.Message, error) {
+	defer cachedMilestone.Release(true) // milestone -1
+
+	// we don't need to do proof of work for milestone messages because milestones have Nonce = 0.
+	// TODO: this is enforced by TIP-???
+	return builder.NewMessageBuilder(protoParas.Version).
+		Payload(cachedMilestone.Milestone().Milestone()).
+		ParentsMessageIDs(cachedMilestone.Milestone().Milestone().Parents).
+		Build()
 }
 
 // processes the given message request by parsing it and then replying to the peer with it.
@@ -457,11 +487,20 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	// mark the message as received
 	requests := processRequests(wu, msg, isMilestonePayload)
 
-	// validate PoW score
-	if !wu.requested && pow.Score(wu.receivedMsgBytes) < proc.protoParas.MinPowScore {
-		wu.UpdateState(Invalid)
-		wu.punish(errors.New("peer sent a message with insufficient PoW score"))
-		return
+	if !isMilestonePayload {
+		// validate PoW score
+		if !wu.requested && pow.Score(wu.receivedMsgBytes) < proc.protoParas.MinPowScore {
+			wu.UpdateState(Invalid)
+			wu.punish(errors.New("peer sent a msg with insufficient PoW score"))
+			return
+		}
+	} else {
+		// enforce milestone msg nonce == 0
+		if msg.Message().Nonce != 0 {
+			wu.punish(errors.New("milestone msg nonce must be zero"))
+		}
+
+		// TODO: refactor data flow
 	}
 
 	// safe to set the msg here, because it is protected by the state "Hashing"

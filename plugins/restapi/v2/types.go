@@ -10,15 +10,23 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+// milestoneInfoResponse defines the milestone info response.
+type milestoneInfoResponse struct {
+	// The index of the milestone.
+	Index milestone.Index `json:"index"`
+	// The unix time of the milestone payload.
+	Timestamp uint32 `json:"timestamp"`
+	// The ID of the milestone.
+	MilestoneID string `json:"milestoneId"`
+}
+
 type nodeStatus struct {
 	// Whether the node is healthy.
 	IsHealthy bool `json:"isHealthy"`
-	// The timestamp of the latest known milestone.
-	LatestMilestoneTimestamp uint32 `json:"latestMilestoneTimestamp"`
 	// The latest known milestone index.
-	LatestMilestoneIndex milestone.Index `json:"latestMilestoneIndex"`
+	LatestMilestone milestoneInfoResponse `json:"latestMilestone"`
 	// The current confirmed milestone's index.
-	ConfirmedMilestoneIndex milestone.Index `json:"confirmedMilestoneIndex"`
+	ConfirmedMilestone milestoneInfoResponse `json:"confirmedMilestone"`
 	// The milestone index at which the last pruning commenced.
 	PruningIndex milestone.Index `json:"pruningIndex"`
 }
@@ -40,10 +48,10 @@ type infoResponse struct {
 	Version string `json:"version"`
 	// The current status of this node.
 	Status nodeStatus `json:"status"`
-	// The metrics of this node.
-	Metrics nodeMetrics `json:"metrics"`
 	// The protocol parameters used by this node.
 	Protocol *iotago.ProtocolParameters `json:"protocol"`
+	// The metrics of this node.
+	Metrics nodeMetrics `json:"metrics"`
 	// The features this node exposes.
 	Features []string `json:"features"`
 	// The plugins this node exposes.
@@ -99,16 +107,6 @@ type childrenResponse struct {
 	Count uint32 `json:"count"`
 	// The hex encoded message IDs of the children of this message.
 	Children []string `json:"childrenMessageIds"`
-}
-
-// milestoneResponse defines the response of a GET milestones REST API call.
-type milestoneResponse struct {
-	// The index of the milestone.
-	Index uint32 `json:"index"`
-	// The hex encoded ID of the message containing the milestone.
-	MessageID string `json:"messageId"`
-	// The unix time of the milestone payload.
-	Time uint32 `json:"timestamp"`
 }
 
 // milestoneUTXOChangesResponse defines the response of a GET milestone UTXO changes REST API call.

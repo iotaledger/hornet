@@ -37,7 +37,7 @@ func TestConeRootIndexes(t *testing.T) {
 		},
 		func(msIndex milestone.Index, messages hornet.MessageIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
-			cmi := latestMilestone.Milestone().Index
+			cmi := latestMilestone.Milestone().Index()
 
 			cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(messages[len(messages)-1])
 			ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta, cmi)
@@ -57,10 +57,10 @@ func TestConeRootIndexes(t *testing.T) {
 	)
 
 	latestMilestone := te.Milestones[len(te.Milestones)-1]
-	cmi := latestMilestone.Milestone().Index
+	cmi := latestMilestone.Milestone().Index()
 
 	// Use Null hash and last milestone hash as parents
-	parents := hornet.MessageIDs{latestMilestone.Milestone().MessageID, hornet.NullMessageID()}
+	parents := append(latestMilestone.Milestone().Parents(), hornet.NullMessageID())
 	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
 
 	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID())

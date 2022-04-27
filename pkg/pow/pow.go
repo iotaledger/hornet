@@ -63,6 +63,12 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 		return err
 	}
 
+	// enforce milestone msg nonce == 0
+	if _, isMilestone := msg.Payload.(*iotago.Milestone); isMilestone {
+		msg.Nonce = 0
+		return nil
+	}
+
 	getPoWData := func(msg *iotago.Message) (powData []byte, err error) {
 		msgData, err := msg.Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {

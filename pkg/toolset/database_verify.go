@@ -190,7 +190,7 @@ func verifyDatabase(
 
 		parentsTraverser := dag.NewConcurrentParentsTraverser(tangleStoreSource)
 
-		milestoneMessageID, err := getMilestoneMessageIDFromStorage(tangleStoreSource, msIndex)
+		milestonePayload, err := getMilestonePayloadFromStorage(tangleStoreSource, msIndex)
 		if err != nil {
 			return err
 		}
@@ -198,7 +198,7 @@ func verifyDatabase(
 		// traverse the milestone and collect all messages that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
 			ctx,
-			hornet.MessageIDs{milestoneMessageID},
+			hornet.MessageIDsFromSliceOfArrays(milestonePayload.Parents),
 			condition,
 			nil,
 			// called on missing parents
@@ -220,29 +220,9 @@ func verifyDatabase(
 		utxoManagerTemp *utxo.Manager,
 		msIndex milestone.Index) error {
 
-		milestoneMessageID, err := getMilestoneMessageIDFromStorage(storeSource, msIndex)
+		milestonePayload, err := getMilestonePayloadFromStorage(storeSource, msIndex)
 		if err != nil {
 			return err
-		}
-
-		previousMilestoneID := iotago.MilestoneID{}
-		if msIndex > 1 {
-
-			previousMilestoneMessageID, err := getMilestoneMessageIDFromStorage(storeSource, msIndex-1)
-			if err != nil {
-				return err
-			}
-
-			previousMilestoneMessage, err := getMilestoneMessageFromStorage(storeSource, previousMilestoneMessageID)
-			if err != nil {
-				return err
-			}
-
-			milestoneID, err := previousMilestoneMessage.Milestone().ID()
-			if err != nil {
-				return err
-			}
-			previousMilestoneID = *milestoneID
 		}
 
 		referencedMessages := make(map[string]struct{})
@@ -255,8 +235,7 @@ func verifyDatabase(
 			storeSource,
 			storeSource.CachedMessage,
 			protoParas,
-			milestoneMessageID,
-			previousMilestoneID,
+			milestonePayload,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -297,13 +276,8 @@ func verifyDatabase(
 			return err
 		}
 
-		msMsg, err := getMilestoneMessageFromStorage(storeSource, milestoneMessageID)
-		if err != nil {
-			return err
-		}
-
 		// cleanup the state changes from the temporary UTXOManager to save memory
-		if err := cleanupMilestoneFromUTXOManager(utxoManagerTemp, msMsg, msIndex); err != nil {
+		if err := cleanupMilestoneFromUTXOManager(utxoManagerTemp, milestonePayload, msIndex); err != nil {
 			return err
 		}
 
@@ -415,11 +389,15 @@ func compareLedgerState(utxoManagerSource *utxo.Manager, utxoManagerTemp *utxo.M
 	return nil
 }
 
-func cleanupMilestoneFromUTXOManager(utxoManager *utxo.Manager, msMsg *storage.Message, msIndex milestone.Index) error {
+func cleanupMilestoneFromUTXOManager(utxoManager *utxo.Manager, milestonePayload *iotago.Milestone, msIndex milestone.Index) error {
 
 	var receiptMigratedAtIndex []uint32
-	if r := msMsg.Milestone().Opts.MustSet().Receipt(); r != nil {
-		receiptMigratedAtIndex = append(receiptMigratedAtIndex, r.MigratedAt)
+
+	opts, err := milestonePayload.Opts.Set()
+	if err == nil && opts != nil {
+		if r := opts.Receipt(); r != nil {
+			receiptMigratedAtIndex = append(receiptMigratedAtIndex, r.MigratedAt)
+		}
 	}
 
 	if err := utxoManager.PruneMilestoneIndexWithoutLocking(msIndex, true, receiptMigratedAtIndex...); err != nil {

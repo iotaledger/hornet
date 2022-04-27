@@ -224,7 +224,7 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 
 	case milestone.Index:
 		msIndex := value
-		if r.storage.ContainsMilestone(msIndex) {
+		if r.storage.ContainsMilestoneIndex(msIndex) {
 			return false
 		}
 		request = NewMilestoneIndexRequest(msIndex)
@@ -276,18 +276,11 @@ func (r *Requester) RequestParents(cachedMsg *storage.CachedMessage, msIndex mil
 func (r *Requester) RequestMilestoneParents(cachedMilestone *storage.CachedMilestone) bool {
 	defer cachedMilestone.Release(true) // milestone -1
 
-	msIndex := cachedMilestone.Milestone().Index
-
-	cachedMsgMetaMilestone := r.storage.CachedMessageMetadataOrNil(cachedMilestone.Milestone().MessageID) // meta +1
-	if cachedMsgMetaMilestone == nil {
-		panic("milestone metadata doesn't exist")
-	}
-	defer cachedMsgMetaMilestone.Release(true) // meta -1
-
-	txMeta := cachedMsgMetaMilestone.Metadata()
+	msIndex := cachedMilestone.Milestone().Index()
+	parents := cachedMilestone.Milestone().Parents()
 
 	enqueued := false
-	for _, parent := range txMeta.Parents() {
+	for _, parent := range parents {
 		if r.Request(parent, msIndex, true) {
 			enqueued = true
 		}

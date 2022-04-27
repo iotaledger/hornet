@@ -41,8 +41,10 @@ var (
 type Confirmation struct {
 	// The index of the milestone that got confirmed.
 	MilestoneIndex milestone.Index
-	// The message ID of the milestone that got confirmed.
-	MilestoneMessageID hornet.MessageID
+	// The milestone ID of the milestone that got confirmed.
+	MilestoneID iotago.MilestoneID
+	// The parents of the milestone that got confirmed.
+	MilestoneParents hornet.MessageIDs
 	// The ledger mutations and referenced messages of this milestone.
 	Mutations *WhiteFlagMutations
 }
@@ -127,11 +129,11 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: message not found for milestone message ID: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
 			}
 			defer msgMilestone.Release(true) // message -1
-			milestone := msgMilestone.Message().Milestone()
-			if milestone == nil {
+			milestonePayload := msgMilestone.Message().Milestone()
+			if milestonePayload == nil {
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
 			}
-			milestoneID, err := milestone.ID()
+			milestoneID, err := milestonePayload.ID()
 			if err != nil {
 				return false, err
 			}

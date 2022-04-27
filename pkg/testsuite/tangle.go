@@ -109,10 +109,13 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 
 	visitedCachedMessages := make(map[string]*storage.CachedMessage)
 
-	err := dag.TraverseParentsOfMessage(
+	milestoneParents, err := te.storage.MilestoneParentsByIndex(conf.MilestoneIndex)
+	require.NoError(te.TestInterface, err, "milestone doesn't exist (%d)", conf.MilestoneIndex)
+
+	err = dag.TraverseParents(
 		context.Background(),
 		te.storage,
-		conf.MilestoneMessageID,
+		milestoneParents,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -171,9 +174,9 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			cachedMsgParent.Release(true)                                                                                                       // message -1
 		}
 
-		ms := message.Milestone()
-		if ms != nil {
-			if conf != nil && milestone.Index(ms.Index) == conf.MilestoneIndex {
+		milestonePayload := message.Milestone()
+		if milestonePayload != nil {
+			if conf != nil && milestone.Index(milestonePayload.Index) == conf.MilestoneIndex {
 				dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gold];\n", shortIndex)
 			}
 			milestoneMsgs = append(milestoneMsgs, shortIndex)

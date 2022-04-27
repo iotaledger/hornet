@@ -178,7 +178,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.VerifyCMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
-		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{hornet.NullMessageID()}, false)
+		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{}, false)
 		require.Equal(te.TestInterface, 1, confStats.MessagesReferenced)                  // 1 for previous milestone
 		require.Equal(te.TestInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for previous milestone
 		require.Equal(te.TestInterface, 0, confStats.MessagesIncludedWithTransactions)
@@ -212,14 +212,28 @@ func (te *TestEnvironment) BelowMaxDepth() milestone.Index {
 	return te.belowMaxDepth
 }
 
-// LastMilestoneMessageID is the message ID of the last issued milestone.
-func (te *TestEnvironment) LastMilestoneMessageID() hornet.MessageID {
-	return te.coo.LastMilestoneMessageID
+func (te *TestEnvironment) LastMilestonePayload() *iotago.Milestone {
+	return te.coo.LastMilestonePayload()
 }
 
-// LastMilestoneIndex is the index of the last issued milestone.
 func (te *TestEnvironment) LastMilestoneIndex() milestone.Index {
-	return te.coo.LastMilestoneIndex
+	return te.coo.LastMilestoneIndex()
+}
+
+func (te *TestEnvironment) LastMilestoneID() iotago.MilestoneID {
+	return te.coo.LastMilestoneID()
+}
+
+func (te *TestEnvironment) LastPreviousMilestoneID() iotago.MilestoneID {
+	return te.coo.LastPreviousMilestoneID()
+}
+
+func (te *TestEnvironment) LastMilestoneMessageID() hornet.MessageID {
+	return te.coo.LastMilestoneMessageID()
+}
+
+func (te *TestEnvironment) LastMilestoneParents() hornet.MessageIDs {
+	return te.coo.LastMilestoneParents()
 }
 
 // CleanupTestEnvironment cleans up everything at the end of the test.
@@ -228,7 +242,7 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	te.cachedMessages = nil
 
 	te.Milestones.Release(true) // milestone -1
-	te.cachedMessages = nil
+	te.Milestones = nil
 
 	// this should not hang, i.e. all objects should be released
 	te.storage.ShutdownStorages()
@@ -270,7 +284,7 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 
 		if len(messages) < initMessagesCount {
 			// reference the first milestone at the beginning
-			return hornet.MessageIDs{te.Milestones[0].Milestone().MessageID}
+			return hornet.MessageIDs{te.LastMilestoneMessageID()}
 		}
 
 		parents := hornet.MessageIDs{}
@@ -281,8 +295,8 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 			}
 			milestoneMessages := messagesPerMilestones[len(messagesPerMilestones)-1-msIndex]
 			if len(milestoneMessages) == 0 {
-				// use the milestone hash
-				parents = append(parents, te.Milestones[len(te.Milestones)-1-msIndex].Milestone().MessageID)
+				// use the last milestone message id
+				parents = append(parents, te.LastMilestoneMessageID())
 				continue
 			}
 			parents = append(parents, milestoneMessages[rand.Intn(len(milestoneMessages))])

@@ -255,12 +255,12 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 // If it can not retrieve a wanted milestone it panics.
 func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieverFunc {
 	return func(index milestone.Index) (*iotago.Milestone, error) {
-		cachedMsgMilestone := dbStorage.MilestoneCachedMessageOrNil(index) // message +1
-		if cachedMsgMilestone == nil {
+		cachedMilestone := dbStorage.CachedMilestoneByIndexOrNil(index) // milestone +1
+		if cachedMilestone == nil {
 			return nil, fmt.Errorf("message for milestone with index %d is not stored in the database", index)
 		}
-		defer cachedMsgMilestone.Release(true) // message -1
-		return cachedMsgMilestone.Message().Milestone(), nil
+		defer cachedMilestone.Release(true) // milestone -1
+		return cachedMilestone.Milestone().Milestone(), nil
 	}
 }
 
@@ -284,14 +284,14 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 				return
 			}
 
-			ms, err := mrf(msIndex)
+			milestonePayload, err := mrf(msIndex)
 			if err != nil {
 				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved: %w", msIndex, err)
 				close(prodChan)
 				close(errChan)
 				return
 			}
-			if ms == nil {
+			if milestonePayload == nil {
 				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved", msIndex)
 				close(prodChan)
 				close(errChan)
@@ -299,7 +299,7 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 			}
 
 			prodChan <- &MilestoneDiff{
-				Milestone:           ms,
+				Milestone:           milestonePayload,
 				Created:             diff.Outputs,
 				Consumed:            diff.Spents,
 				SpentTreasuryOutput: diff.SpentTreasuryOutput,
@@ -327,11 +327,10 @@ func (s *SnapshotManager) readLedgerIndex() (milestone.Index, error) {
 		return 0, fmt.Errorf("unable to read current ledger index: %w", err)
 	}
 
-	cachedMilestone := s.storage.CachedMilestoneOrNil(ledgerMilestoneIndex) // milestone +1
-	if cachedMilestone == nil {
+	if !s.storage.ContainsMilestoneIndex(ledgerMilestoneIndex) {
 		return 0, errors.Wrapf(ErrCritical, "milestone (%d) not found!", ledgerMilestoneIndex)
 	}
-	cachedMilestone.Release(true) // milestone -1
+
 	return ledgerMilestoneIndex, nil
 }
 
@@ -351,18 +350,6 @@ func (s *SnapshotManager) readSnapshotIndexFromFullSnapshotFile(snapshotFullPath
 	// however, the state is rolled backed to the snapshot index, therefore, the snapshot index
 	// is the actual point from which on the delta snapshot should contain milestone diffs
 	return fullSnapshotHeader.SEPMilestoneIndex, nil
-}
-
-// returns the timestamp of the target milestone.
-func readTargetMilestoneTimestamp(dbStorage *storage.Storage, targetIndex milestone.Index) (time.Time, error) {
-	cachedMilestoneTarget := dbStorage.CachedMilestoneOrNil(targetIndex) // milestone +1
-	if cachedMilestoneTarget == nil {
-		return time.Time{}, errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
-	}
-	defer cachedMilestoneTarget.Release(true) // milestone -1
-
-	ts := cachedMilestoneTarget.Milestone().Timestamp
-	return ts, nil
 }
 
 // creates a snapshot file by streaming data from the database into a snapshot file.
@@ -415,9 +402,9 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 		SEPMilestoneIndex: targetIndex,
 	}
 
-	targetMsTimestamp, err := readTargetMilestoneTimestamp(s.storage, targetIndex)
+	targetMsTimestamp, err := s.storage.MilestoneTimestampByIndex(targetIndex)
 	if err != nil {
-		return err
+		return errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
 	}
 
 	// generate producers
@@ -510,9 +497,9 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 	timeSnapshotMilestoneIndexChanged := timeStreamSnapshotData
 	if writeToDatabase {
 		// since we write to the database, the targetIndex should exist
-		targetMsTimestamp, err := readTargetMilestoneTimestamp(s.storage, targetIndex)
+		targetMsTimestamp, err := s.storage.MilestoneTimestampByIndex(targetIndex)
 		if err != nil {
-			return err
+			return errors.Wrapf(ErrCritical, "target milestone (%d) not found", targetIndex)
 		}
 
 		snapshotInfo.SnapshotIndex = targetIndex
@@ -732,7 +719,7 @@ func CreateSnapshotFromStorage(
 		TreasuryOutput:       unspentTreasuryOutput,
 	}
 
-	targetMsTimestamp, err := readTargetMilestoneTimestamp(dbStorage, targetIndex)
+	targetMsTimestamp, err := dbStorage.MilestoneTimestampByIndex(targetIndex)
 	if err != nil {
 		return nil, fmt.Errorf("read target milestone timestamp failed: %w", err)
 	}

@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -59,9 +58,6 @@ type MessageMetadata struct {
 	// Metadata
 	metadata bitmask.BitMask
 
-	// Unix time when the Tx became solid (needed for local modifiers for tipselection)
-	solidificationTimestamp int32
-
 	// The index of the milestone which referenced this msg
 	referencedIndex milestone.Index
 
@@ -95,13 +91,6 @@ func (m *MessageMetadata) Parents() hornet.MessageIDs {
 	return m.parents
 }
 
-func (m *MessageMetadata) SolidificationTimestamp() int32 {
-	m.RLock()
-	defer m.RUnlock()
-
-	return m.solidificationTimestamp
-}
-
 func (m *MessageMetadata) IsSolid() bool {
 	m.RLock()
 	defer m.RUnlock()
@@ -114,11 +103,6 @@ func (m *MessageMetadata) SetSolid(solid bool) {
 	defer m.Unlock()
 
 	if solid != m.metadata.HasBit(MessageMetadataSolid) {
-		if solid {
-			m.solidificationTimestamp = int32(time.Now().Unix())
-		} else {
-			m.solidificationTimestamp = 0
-		}
 		m.metadata = m.metadata.ModifyBit(MessageMetadataSolid, solid)
 		m.SetModified(true)
 	}
@@ -262,7 +246,6 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 
 	/*
 		1 byte  metadata bitmask
-		4 bytes uint32 solidificationTimestamp
 		4 bytes uint32 referencedIndex
 		1 byte  uint8 conflict
 		4 bytes uint32 youngestConeRootIndex
@@ -272,10 +255,9 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 		parents count * 32 bytes parent id
 	*/
 
-	marshalUtil := marshalutil.New(23 + len(m.parents)*iotago.MessageIDLength)
+	marshalUtil := marshalutil.New(19 + len(m.parents)*iotago.MessageIDLength)
 
 	marshalUtil.WriteByte(byte(m.metadata))
-	marshalUtil.WriteUint32(uint32(m.solidificationTimestamp))
 	marshalUtil.WriteUint32(uint32(m.referencedIndex))
 	marshalUtil.WriteByte(byte(m.conflict))
 	marshalUtil.WriteUint32(uint32(m.youngestConeRootIndex))
@@ -293,7 +275,6 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 
 	/*
 		1 byte  metadata bitmask
-		4 bytes uint32 solidificationTimestamp
 		4 bytes uint32 referencedIndex
 		1 byte  uint8 conflict
 		4 bytes uint32 youngestConeRootIndex
@@ -306,11 +287,6 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	marshalUtil := marshalutil.New(data)
 
 	metadataByte, err := marshalUtil.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-
-	solidificationTimestamp, err := marshalUtil.ReadUint32()
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +321,6 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	}
 
 	m.metadata = bitmask.BitMask(metadataByte)
-	m.solidificationTimestamp = int32(solidificationTimestamp)
 	m.referencedIndex = milestone.Index(referencedIndex)
 	m.conflict = Conflict(conflict)
 	m.youngestConeRootIndex = milestone.Index(youngestConeRootIndex)

@@ -70,7 +70,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 
 	// Fund Wallet1
 	messageA := te.NewMessageBuilder("A").
-		Parents(hornet.MessageIDs{te.Milestones[0].Milestone().MessageID, te.Milestones[1].Milestone().MessageID}).
+		Parents(te.LastMilestoneParents()).
 		FromWallet(genesisWallet).
 		ToWallet(seed1Wallet).
 		Amount(wallet1Balance).
@@ -80,7 +80,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 
 	// Fund Wallet2
 	messageB := te.NewMessageBuilder("B").
-		Parents(hornet.MessageIDs{messageA.StoredMessageID(), te.Milestones[1].Milestone().MessageID}).
+		Parents(append(te.LastMilestoneParents(), messageA.StoredMessageID())).
 		FromWallet(genesisWallet).
 		ToWallet(seed2Wallet).
 		Amount(wallet2Balance).
@@ -90,7 +90,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 
 	// Fund Wallet3
 	messageC := te.NewMessageBuilder("C").
-		Parents(hornet.MessageIDs{messageB.StoredMessageID(), te.Milestones[1].Milestone().MessageID}).
+		Parents(append(te.LastMilestoneParents(), messageB.StoredMessageID())).
 		FromWallet(genesisWallet).
 		ToWallet(seed3Wallet).
 		Amount(wallet3Balance).
@@ -100,7 +100,7 @@ func NewParticipationTestEnv(t *testing.T, wallet1Balance uint64, wallet2Balance
 
 	// Fund Wallet4
 	messageD := te.NewMessageBuilder("D").
-		Parents(hornet.MessageIDs{messageC.StoredMessageID(), te.Milestones[1].Milestone().MessageID}).
+		Parents(append(te.LastMilestoneParents(), messageC.StoredMessageID())).
 		FromWallet(genesisWallet).
 		ToWallet(seed4Wallet).
 		Amount(wallet4Balance).
@@ -168,8 +168,8 @@ func (env *ParticipationTestEnv) ConfirmedMilestoneIndex() milestone.Index {
 	return env.te.SyncManager().ConfirmedMilestoneIndex()
 }
 
-func (env *ParticipationTestEnv) LastMilestoneMessageID() hornet.MessageID {
-	return env.te.LastMilestoneMessageID()
+func (env *ParticipationTestEnv) LastMilestoneParents() hornet.MessageIDs {
+	return env.te.LastMilestoneParents()
 }
 
 func (env *ParticipationTestEnv) Cleanup() {
@@ -242,7 +242,7 @@ func (env *ParticipationTestEnv) NewMessageBuilder(optionalTag ...string) *tests
 
 func (env *ParticipationTestEnv) Transfer(fromWallet *utils.HDWallet, toWallet *utils.HDWallet, amount uint64) *testsuite.Message {
 	return env.te.NewMessageBuilder("Not a vote").
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(fromWallet).
 		ToWallet(toWallet).
 		Amount(amount).

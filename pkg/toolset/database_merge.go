@@ -190,7 +190,7 @@ func copyMilestoneCone(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
 	msIndex milestone.Index,
-	milestoneMessageID hornet.MessageID,
+	milestonePayload *iotago.Milestone,
 	parentsTraverserInterface dag.ParentsTraverserInterface,
 	cachedMessageFuncSource storage.CachedMessageFunc,
 	storeMessageTarget StoreMessageInterface,
@@ -243,7 +243,7 @@ func copyMilestoneCone(
 	// traverse the milestone and collect all messages that were referenced by this milestone or newer
 	if err := parentsTraverserInterface.Traverse(
 		ctx,
-		hornet.MessageIDs{milestoneMessageID},
+		hornet.MessageIDsFromSliceOfArrays(milestonePayload.Parents),
 		condition,
 		nil,
 		// called on missing parents
@@ -272,7 +272,7 @@ func copyAndVerifyMilestoneCone(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
 	msIndex milestone.Index,
-	getMilestoneAndMessageID func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error),
+	getMilestonePayload func(msIndex milestone.Index) (*iotago.Milestone, error),
 	parentsTraverserInterfaceSource dag.ParentsTraverserInterface,
 	cachedMessageFuncSource storage.CachedMessageFunc,
 	cachedMessageFuncTarget storage.CachedMessageFunc,
@@ -285,12 +285,13 @@ func copyAndVerifyMilestoneCone(
 		return nil, err
 	}
 
-	msMsg, milestoneMessageID, err := getMilestoneAndMessageID(msIndex)
+	milestonePayloadUnverified, err := getMilestonePayload(msIndex)
 	if err != nil {
 		return nil, err
 	}
 
-	if ms := milestoneManager.VerifyMilestone(msMsg); ms == nil {
+	milestonePayload := milestoneManager.VerifyMilestonePayload(milestonePayloadUnverified)
+	if milestonePayload == nil {
 		return nil, fmt.Errorf("source milestone not valid! %d", msIndex)
 	}
 
@@ -300,7 +301,7 @@ func copyAndVerifyMilestoneCone(
 		context.Background(), // we do not want abort the copying of the messages itself
 		protoParas,
 		msIndex,
-		milestoneMessageID,
+		milestonePayload,
 		parentsTraverserInterfaceSource,
 		cachedMessageFuncSource,
 		storeMessageTarget,
@@ -308,19 +309,6 @@ func copyAndVerifyMilestoneCone(
 		return nil, err
 	}
 
-	lastMilestoneID := iotago.MilestoneID{}
-	if msIndex > 1 {
-		previousMilestoneMessage, _, err := getMilestoneAndMessageID(msIndex - 1)
-		if err != nil {
-			return nil, err
-		}
-
-		milestoneID, err := previousMilestoneMessage.Milestone().ID()
-		if err != nil {
-			return nil, err
-		}
-		lastMilestoneID = *milestoneID
-	}
 	timeCopyMilestoneCone := time.Now()
 
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
@@ -328,8 +316,7 @@ func copyAndVerifyMilestoneCone(
 		parentsTraverserStorageTarget,
 		cachedMessageFuncTarget,
 		protoParas,
-		milestoneMessageID,
-		lastMilestoneID,
+		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
 		whiteflag.DefaultCheckMessageReferencedFunc,
 		whiteflag.DefaultSetMessageReferencedFunc,
@@ -377,31 +364,16 @@ func mergeViaAPI(
 		return msg, nil
 	}
 
-	getMilestoneAndMessageIDViaAPI := func(client *nodeclient.Client, getCachedMessageViaAPI storage.CachedMessageFunc, msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
-		messageID := hornet.NullMessageID() //TODO: fix this with the milestone refactor
-		//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		//defer cancel()
-		//
-		//ms, err := client.MilestoneByIndex(ctx, uint32(msIndex))
-		//if err != nil {
-		//	return nil, nil, err
-		//}
-		//
-		//messageID, err := hornet.MessageIDFromHex(ms.MessageID)
-		//if err != nil {
-		//	return nil, nil, err
-		//}
+	getMilestonePayloadViaAPI := func(client *nodeclient.Client, msIndex milestone.Index) (*iotago.Milestone, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-		cachedMsg, err := getCachedMessageViaAPI(messageID) // message +1
+		milestone, err := client.MilestoneByIndex(ctx, uint32(msIndex))
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		if cachedMsg == nil {
-			return nil, nil, fmt.Errorf("message not found: %s", messageID.ToHex())
-		}
-		defer cachedMsg.Release(true) // message -1
 
-		return cachedMsg.Message(), cachedMsg.Message().MessageID(), nil
+		return milestone, nil
 	}
 
 	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getMessageViaAPI)
@@ -416,8 +388,8 @@ func mergeViaAPI(
 		ctx,
 		protoParas,
 		msIndex,
-		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
-			return getMilestoneAndMessageIDViaAPI(client, proxyStorage.CachedMessage, msIndex)
+		func(msIndex milestone.Index) (*iotago.Milestone, error) {
+			return getMilestonePayloadViaAPI(client, msIndex)
 		},
 		dag.NewConcurrentParentsTraverser(proxyStorage, apiParallelism),
 		proxyStorage.CachedMessage,
@@ -470,18 +442,8 @@ func mergeViaSourceDatabase(
 		ctx,
 		protoParas,
 		msIndex,
-		func(msIndex milestone.Index) (*storage.Message, hornet.MessageID, error) {
-			milestoneMessageID, err := getMilestoneMessageIDFromStorage(storeSource, msIndex)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			msMsg, err := getMilestoneMessageFromStorage(storeSource, milestoneMessageID)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			return msMsg, milestoneMessageID, nil
+		func(msIndex milestone.Index) (*iotago.Milestone, error) {
+			return getMilestonePayloadFromStorage(storeSource, msIndex)
 		},
 		dag.NewConcurrentParentsTraverser(storeSource),
 		storeSource.CachedMessage,
@@ -739,6 +701,6 @@ func (s *ProxyStorage) StoreChild(parentMessageID hornet.MessageID, childMessage
 	return s.storeProxy.StoreChild(parentMessageID, childMessageID)
 }
 
-func (s *ProxyStorage) StoreMilestoneIfAbsent(index milestone.Index, messageID hornet.MessageID, timestamp time.Time) (*storage.CachedMilestone, bool) {
-	return s.storeProxy.StoreMilestoneIfAbsent(index, messageID, timestamp)
+func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, messageID hornet.MessageID) (*storage.CachedMilestone, bool) {
+	return s.storeProxy.StoreMilestoneIfAbsent(milestone, messageID)
 }

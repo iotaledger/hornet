@@ -65,8 +65,7 @@ func ConfirmMilestone(
 	parentsTraverserStorage dag.ParentsTraverserStorage,
 	cachedMessageFunc storage.CachedMessageFunc,
 	protoParas *iotago.ProtocolParameters,
-	milestoneMessageID hornet.MessageID,
-	previousMilestoneID iotago.MilestoneID,
+	milestonePayload *iotago.Milestone,
 	whiteFlagTraversalCondition dag.Predicate,
 	checkMessageReferencedFunc CheckMessageReferencedFunc,
 	setMessageReferencedFunc SetMessageReferencedFunc,
@@ -77,30 +76,17 @@ func ConfirmMilestone(
 	onTreasuryMutated func(index milestone.Index, tuple *utxo.TreasuryMutationTuple),
 	onReceipt func(r *utxo.ReceiptTuple) error) (*ConfirmedMilestoneStats, *ConfirmationMetrics, error) {
 
-	cachedMsgMilestone, err := cachedMessageFunc(milestoneMessageID) // message +1
-	if err != nil {
-		return nil, nil, fmt.Errorf("get milestone message failed: %v, error: %w", milestoneMessageID.ToHex(), err)
-	}
-	if cachedMsgMilestone == nil {
-		return nil, nil, fmt.Errorf("milestone message not found: %v", milestoneMessageID.ToHex())
-	}
-	defer cachedMsgMilestone.Release(true) // message -1
-
 	utxoManager.WriteLockLedger()
 	defer utxoManager.WriteUnlockLedger()
-	message := cachedMsgMilestone.Message()
 
-	ms := message.Milestone()
-	if ms == nil {
-		return nil, nil, fmt.Errorf("confirmMilestone: message does not contain a milestone payload: %v", message.MessageID().ToHex())
-	}
-
-	msID, err := ms.ID()
+	msID, err := milestonePayload.ID()
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to compute milestone Id: %w", err)
 	}
-
-	milestoneIndex := milestone.Index(ms.Index)
+	previousMilestoneID := milestonePayload.PreviousMilestoneID
+	milestoneIndex := milestone.Index(milestonePayload.Index)
+	milestoneTimestamp := milestonePayload.Timestamp
+	milestoneParents := hornet.MessageIDsFromSliceOfArrays(milestonePayload.Parents)
 
 	timeStart := time.Now()
 
@@ -108,26 +94,37 @@ func ConfirmMilestone(
 
 	// we pass a background context here to not cancel the whiteflag computation!
 	// otherwise the node could panic at shutdown.
-	mutations, err := ComputeWhiteFlagMutations(context.Background(), utxoManager, parentsTraverser, cachedMessageFunc, protoParas.NetworkID(), milestoneIndex, ms.Timestamp, message.Parents(), previousMilestoneID, whiteFlagTraversalCondition)
+	mutations, err := ComputeWhiteFlagMutations(
+		context.Background(),
+		utxoManager,
+		parentsTraverser,
+		cachedMessageFunc,
+		protoParas.NetworkID(),
+		milestoneIndex,
+		milestoneTimestamp,
+		milestoneParents,
+		previousMilestoneID,
+		whiteFlagTraversalCondition)
 	if err != nil {
 		// According to the RFC we should panic if we encounter any invalid messages during confirmation
 		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
 	}
 
 	confirmation := &Confirmation{
-		MilestoneIndex:     milestoneIndex,
-		MilestoneMessageID: message.MessageID(),
-		Mutations:          mutations,
+		MilestoneIndex:   milestoneIndex,
+		MilestoneID:      *msID,
+		MilestoneParents: milestoneParents,
+		Mutations:        mutations,
 	}
 
 	// Verify the calculated ConfirmedMerkleRoot with the one inside the milestone
-	confirmedMerkleTreeHash := ms.ConfirmedMerkleRoot
+	confirmedMerkleTreeHash := milestonePayload.ConfirmedMerkleRoot
 	if mutations.ConfirmedMerkleRoot != confirmedMerkleTreeHash {
 		return nil, nil, fmt.Errorf("confirmMilestone: computed AppliedMerkleRoot %s does not match the value in the milestone %s", hex.EncodeToString(mutations.ConfirmedMerkleRoot[:]), hex.EncodeToString(confirmedMerkleTreeHash[:]))
 	}
 
 	// Verify the calculated AppliedMerkleRoot with the one inside the milestone
-	appliedMerkleTreeHash := ms.AppliedMerkleRoot
+	appliedMerkleTreeHash := milestonePayload.AppliedMerkleRoot
 	if mutations.AppliedMerkleRoot != appliedMerkleTreeHash {
 		return nil, nil, fmt.Errorf("confirmMilestone: computed AppliedMerkleRoot %s does not match the value in the milestone %s", hex.EncodeToString(mutations.AppliedMerkleRoot[:]), hex.EncodeToString(appliedMerkleTreeHash[:]))
 	}
@@ -143,17 +140,18 @@ func ConfirmMilestone(
 	var rt *utxo.ReceiptTuple
 
 	// validate receipt and extract migrated funds
-	opts, err := ms.Opts.Set()
+	opts, err := milestonePayload.Opts.Set()
 	if err != nil {
 		return nil, nil, err
 	}
+
 	receipt := opts.Receipt()
 	if receipt != nil {
 		var err error
 
 		rt = &utxo.ReceiptTuple{
 			Receipt:        receipt,
-			MilestoneIndex: milestone.Index(ms.Index),
+			MilestoneIndex: milestoneIndex,
 		}
 
 		// receipt validation is optional
@@ -171,7 +169,7 @@ func ConfirmMilestone(
 			return nil, nil, fmt.Errorf("invalid receipt contained within milestone: %w", err)
 		}
 
-		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, message.MessageID(), msID, milestoneIndex, ms.Timestamp)
+		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, msID, milestoneIndex, milestoneTimestamp)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to extract migrated outputs from receipt: %w", err)
 		}
@@ -212,7 +210,8 @@ func ConfirmMilestone(
 	confirmedMilestoneStats := &ConfirmedMilestoneStats{
 		Index: milestoneIndex,
 	}
-	confirmationTime := ms.Timestamp
+
+	confirmationTime := milestonePayload.Timestamp
 
 	// confirm all included messages
 	for _, messageID := range mutations.MessagesIncludedWithTransactions {

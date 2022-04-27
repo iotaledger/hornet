@@ -50,7 +50,7 @@ type Events struct {
 	ProcessedMessage               *events.Event
 	MessageSolid                   *events.Event
 	MessageReferenced              *events.Event
-	ReceivedNewMilestone           *events.Event
+	ReceivedNewMilestoneMessage    *events.Event
 	LatestMilestoneChanged         *events.Event
 	LatestMilestoneIndexChanged    *events.Event
 	MilestoneConfirmed             *events.Event

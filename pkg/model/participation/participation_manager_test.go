@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/model/participation/test"
@@ -166,14 +165,14 @@ func TestTaggedDataPayloads(t *testing.T) {
 		Build()
 
 	noTaggedDataMessage := env.NewMessageBuilder().
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet2).
 		Amount(env.Wallet2.Balance()).
 		Build()
 
 	invalidPayloadMessage := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet2).
 		Amount(env.Wallet2.Balance()).
@@ -181,7 +180,7 @@ func TestTaggedDataPayloads(t *testing.T) {
 		Build()
 
 	emptyTaggedDataMessage := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet2).
 		Amount(env.Wallet2.Balance()).
@@ -198,7 +197,7 @@ func TestTaggedDataPayloads(t *testing.T) {
 	require.NoError(t, err)
 
 	wrongAddressMessage := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet3).
 		Amount(env.Wallet2.Balance()).
@@ -206,7 +205,7 @@ func TestTaggedDataPayloads(t *testing.T) {
 		Build()
 
 	multipleOutputsMessage := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet3).
 		Amount(10_000_000).
@@ -225,7 +224,7 @@ func TestTaggedDataPayloads(t *testing.T) {
 	wallet4PrivKey, _ := env.Wallet4.KeyPair()
 	inputAddrSigner := iotago.NewInMemoryAddressSigner(iotago.AddressKeys{Address: env.Wallet3.Address(), Keys: wallet3PrivKey}, iotago.AddressKeys{Address: env.Wallet4.Address(), Keys: wallet4PrivKey})
 	msgBuilder := txBuilder.BuildAndSwapToMessageBuilder(env.ProtocolParameters(), inputAddrSigner, nil)
-	msgBuilder.Parents(hornet.MessageIDs{env.LastMilestoneMessageID()}.ToSliceOfSlices())
+	msgBuilder.Parents(env.LastMilestoneParents().ToSliceOfSlices())
 
 	msg, err := msgBuilder.Build()
 	require.NoError(t, err)
@@ -426,7 +425,7 @@ func TestInvalidVoteHandling(t *testing.T) {
 
 	// Send an invalid participation
 	invalidParticipation := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet1).
 		ToWallet(env.Wallet1).
 		Amount(env.Wallet1.Balance()).
@@ -478,7 +477,7 @@ func TestBallotVoteCancel(t *testing.T) {
 
 	// Cancel vote
 	cancelVote1Msg := env.CancelParticipations(env.Wallet1)
-	env.IssueMilestone(cancelVote1Msg.StoredMessageID(), env.LastMilestoneMessageID()) // 7
+	env.IssueMilestone(append(env.LastMilestoneParents(), cancelVote1Msg.StoredMessageID())...) // 7
 
 	// Verify vote
 	env.AssertDefaultBallotAnswerStatus(eventID, 0, 0)
@@ -491,7 +490,7 @@ func TestBallotVoteCancel(t *testing.T) {
 
 	// Cancel vote
 	cancelVote2Msg := env.CancelParticipations(env.Wallet1)
-	env.IssueMilestone(cancelVote2Msg.StoredMessageID(), env.LastMilestoneMessageID()) // 9
+	env.IssueMilestone(append(env.LastMilestoneParents(), cancelVote2Msg.StoredMessageID())...) // 9
 
 	// Verify vote
 	env.AssertDefaultBallotAnswerStatus(eventID, 0, 1_000)
@@ -1396,7 +1395,7 @@ func TestMultipleParticipationsAreNotCounted(t *testing.T) {
 	ms.WriteUint8(0)
 
 	doubleStakeWallet1 := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet1).
 		ToWallet(env.Wallet1).
 		Amount(env.Wallet1.Balance()).

@@ -128,7 +128,9 @@ func (t *ParentsTraverser) processStackParents() error {
 
 	if contains {
 		if t.onSolidEntryPoint != nil {
-			t.onSolidEntryPoint(currentMessageID)
+			if err := t.onSolidEntryPoint(currentMessageID); err != nil {
+				return err
+			}
 		}
 
 		if !t.traverseSolidEntryPoints {

@@ -32,7 +32,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	t.processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.processValidMilestone(task.Param(0).(*storage.CachedMilestone), task.Param(1).(bool)) // milestone pass +1
+		t.processValidMilestone(task.Param(0).(hornet.MessageID), task.Param(1).(*storage.CachedMilestone), task.Param(2).(bool)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.processValidMilestoneWorkerCount), workerpool.QueueSize(t.processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -84,7 +84,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.messageProcessor.Broadcast(cachedMsgMeta) // meta pass +1
 	})
 
-	onReceivedValidMilestone := events.NewClosure(func(cachedMilestone *storage.CachedMilestone, requested bool) {
+	onReceivedValidMilestone := events.NewClosure(func(messageID hornet.MessageID, cachedMilestone *storage.CachedMilestone, requested bool) {
 
 		if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 			// do not process the milestone if the node was shut down
@@ -92,7 +92,7 @@ func (t *Tangle) RunTangleProcessor() {
 			return
 		}
 
-		_, added := t.processValidMilestoneWorkerPool.Submit(cachedMilestone, requested) // milestone pass +1
+		_, added := t.processValidMilestoneWorkerPool.Submit(messageID, cachedMilestone, requested) // milestone pass +1
 		if !added {
 			// Release shouldn't be forced, to cache the latest milestones
 			cachedMilestone.Release() // milestone -1

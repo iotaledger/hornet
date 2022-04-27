@@ -4,38 +4,79 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
+	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/restapi"
 
 	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func milestoneByIndex(c echo.Context) (*milestoneResponse, error) {
+func storageMilestoneByIndex(c echo.Context) (*storage.Milestone, error) {
 
 	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
 	if err != nil {
 		return nil, err
 	}
 
-	cachedMilestone := deps.Storage.CachedMilestoneOrNil(msIndex) // milestone +1
+	cachedMilestone := deps.Storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "milestone not found: %d", msIndex)
+		return nil, errors.WithMessagef(echo.ErrNotFound, "milestone index not found: %d", msIndex)
 	}
 	defer cachedMilestone.Release(true) // milestone -1
 
-	return &milestoneResponse{
-		Index:     uint32(cachedMilestone.Milestone().Index),
-		MessageID: cachedMilestone.Milestone().MessageID.ToHex(),
-		Time:      uint32(cachedMilestone.Milestone().Timestamp.Unix()),
-	}, nil
+	return cachedMilestone.Milestone(), nil
 }
 
-func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse, error) {
+func storageMilestoneByID(c echo.Context) (*storage.Milestone, error) {
 
-	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
+	milestoneID, err := restapi.ParseMilestoneIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
+	cachedMilestone := deps.Storage.CachedMilestoneOrNil(*milestoneID) // milestone +1
+	if cachedMilestone == nil {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "milestone not found: %s", iotago.EncodeHex((*milestoneID)[:]))
+	}
+	defer cachedMilestone.Release(true) // milestone -1
+
+	return cachedMilestone.Milestone(), nil
+}
+
+func milestoneByIndex(c echo.Context) (*iotago.Milestone, error) {
+	milestone, err := storageMilestoneByIndex(c)
+	if err != nil {
+		return nil, err
+	}
+	return milestone.Milestone(), nil
+}
+
+func milestoneByID(c echo.Context) (*iotago.Milestone, error) {
+	milestone, err := storageMilestoneByID(c)
+	if err != nil {
+		return nil, err
+	}
+	return milestone.Milestone(), nil
+}
+
+func milestoneBytesByIndex(c echo.Context) ([]byte, error) {
+	milestone, err := storageMilestoneByIndex(c)
+	if err != nil {
+		return nil, err
+	}
+	return milestone.Data(), nil
+}
+
+func milestoneBytesByID(c echo.Context) ([]byte, error) {
+	milestone, err := storageMilestoneByID(c)
+	if err != nil {
+		return nil, err
+	}
+	return milestone.Data(), nil
+}
+
+func milestoneUTXOChanges(msIndex milestone.Index) (*milestoneUTXOChangesResponse, error) {
 	diff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -60,4 +101,22 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 		CreatedOutputs:  createdOutputs,
 		ConsumedOutputs: consumedOutputs,
 	}, nil
+}
+
+func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse, error) {
+	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	return milestoneUTXOChanges(msIndex)
+}
+
+func milestoneUTXOChangesByID(c echo.Context) (*milestoneUTXOChangesResponse, error) {
+	milestone, err := storageMilestoneByID(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return milestoneUTXOChanges(milestone.Index())
 }

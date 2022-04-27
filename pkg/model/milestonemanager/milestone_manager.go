@@ -1,7 +1,7 @@
 package milestonemanager
 
 import (
-	"time"
+	"math"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -43,7 +43,7 @@ func New(
 		milestonePublicKeyCount: milestonePublicKeyCount,
 
 		Events: &packageEvents{
-			ReceivedValidMilestone: events.NewEvent(storage.MilestoneWithRequestedCaller),
+			ReceivedValidMilestone: events.NewEvent(storage.MilestoneWithMessageIdAndRequestedCaller),
 		},
 	}
 	return t
@@ -54,70 +54,89 @@ func (m *MilestoneManager) KeyManager() *keymanager.KeyManager {
 	return m.keyManager
 }
 
-// FindClosestNextMilestoneOrNil searches for the next known cached milestone in the persistence layer.
-// milestone +1
-func (m *MilestoneManager) FindClosestNextMilestoneOrNil(index milestone.Index) *storage.CachedMilestone {
+// FindClosestNextMilestoneIndex searches for the next known milestone in the persistence layer.
+func (m *MilestoneManager) FindClosestNextMilestoneIndex(index milestone.Index) (milestone.Index, error) {
 	lmi := m.syncManager.LatestMilestoneIndex()
 	if lmi == 0 {
 		// no milestone received yet, check the next 100 milestones as a workaround
 		lmi = m.syncManager.ConfirmedMilestoneIndex() + 100
 	}
 
-	if index == 4294967295 {
+	if index == math.MaxUint32 {
 		// prevent overflow (2**32 -1)
-		return nil
+		return 0, storage.ErrMilestoneNotFound
 	}
 
 	for {
 		index++
 
 		if index > lmi {
-			return nil
+			return 0, storage.ErrMilestoneNotFound
 		}
 
-		cachedMilestone := m.storage.CachedMilestoneOrNil(index) // milestone +1
-		if cachedMilestone != nil {
-			return cachedMilestone
+		if m.storage.ContainsMilestoneIndex(index) {
+			return index, nil
 		}
 	}
 }
 
-// VerifyMilestone checks if the message contains a valid milestone payload.
+// VerifyMilestoneMessage checks if the message contains a valid milestone payload.
 // Returns a milestone payload if the signature is valid.
-func (m *MilestoneManager) VerifyMilestone(message *storage.Message) *iotago.Milestone {
-	ms := message.Milestone()
-	if ms == nil {
+func (m *MilestoneManager) VerifyMilestoneMessage(message *iotago.Message) *iotago.Milestone {
+
+	milestonePayload, ok := message.Payload.(*iotago.Milestone)
+	if !ok {
+		// not a milestone payload
 		return nil
 	}
 
-	for idx, parent := range message.Message().Parents {
-		if parent != ms.Parents[idx] {
+	for idx, parent := range message.Parents {
+		if parent != milestonePayload.Parents[idx] {
 			// parents in message and payload have to be equal
 			return nil
 		}
 	}
 
-	if err := ms.VerifySignatures(m.milestonePublicKeyCount, m.keyManager.PublicKeysSetForMilestoneIndex(milestone.Index(ms.Index))); err != nil {
+	if err := milestonePayload.VerifySignatures(m.milestonePublicKeyCount, m.keyManager.PublicKeysSetForMilestoneIndex(milestone.Index(milestonePayload.Index))); err != nil {
 		return nil
 	}
 
-	return ms
+	return milestonePayload
+}
+
+// VerifyMilestonePayload checks if milestone payload is valid.
+// Attention: It does not check if the milestone payload parents match the message parents.
+// Returns a milestone payload if the signature is valid.
+func (m *MilestoneManager) VerifyMilestonePayload(payload iotago.Payload) *iotago.Milestone {
+
+	milestonePayload, ok := payload.(*iotago.Milestone)
+	if !ok {
+		// not a milestone payload
+		return nil
+	}
+
+	if err := milestonePayload.VerifySignatures(m.milestonePublicKeyCount, m.keyManager.PublicKeysSetForMilestoneIndex(milestone.Index(milestonePayload.Index))); err != nil {
+		return nil
+	}
+
+	return milestonePayload
 }
 
 // StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
-func (m *MilestoneManager) StoreMilestone(cachedMsg *storage.CachedMessage, ms *iotago.Milestone, requested bool) {
+func (m *MilestoneManager) StoreMilestone(cachedMsg *storage.CachedMessage, milestonePayload *iotago.Milestone, requested bool) {
 	defer cachedMsg.Release(true) // message -1
 
 	// Mark every valid milestone message as milestone in the database (needed for whiteflag to find last milestone)
 	cachedMsg.Metadata().SetMilestone(true)
 
-	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestone.Index(ms.Index), cachedMsg.Message().MessageID(), time.Unix(int64(ms.Timestamp), 0)) // milestone +1
-	if !newlyAdded {
-		return
-	}
+	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestonePayload, cachedMsg.Message().MessageID()) // milestone +1
 
 	// Force release to store milestones without caching
 	defer cachedMilestone.Release(true) // milestone -1
 
-	m.Events.ReceivedValidMilestone.Trigger(cachedMilestone, requested) // milestone pass +1
+	if !newlyAdded {
+		return
+	}
+
+	m.Events.ReceivedValidMilestone.Trigger(cachedMsg.Metadata().MessageID(), cachedMilestone, requested) // milestone pass +1
 }

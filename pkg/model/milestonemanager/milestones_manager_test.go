@@ -128,9 +128,9 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	require.NoError(te.TestInterface, err)
 
 	// parse the milestone payload
-	ms := msg.Milestone()
-	require.NotNil(te.TestInterface, ms)
+	milestonePayload := msg.Milestone()
+	require.NotNil(te.TestInterface, milestonePayload)
 
-	verifiedMilestone := milestoneManager.VerifyMilestone(msg)
+	verifiedMilestone := milestoneManager.VerifyMilestoneMessage(msg.Message())
 	require.NotNil(te.TestInterface, verifiedMilestone)
 }

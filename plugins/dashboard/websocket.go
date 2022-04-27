@@ -102,9 +102,9 @@ func websocketRoute(ctx echo.Context) error {
 
 		case MsgTypeMs:
 			start := deps.SyncManager.LatestMilestoneIndex()
-			for i := start - 10; i <= start; i++ {
-				if milestoneMessageID := getMilestoneMessageID(i); milestoneMessageID != nil {
-					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MessageID: milestoneMessageID.ToHex(), Index: i}})
+			for msIndex := start - 10; msIndex <= start; msIndex++ {
+				if milestoneIDHex, err := getMilestoneIDHex(msIndex); err != nil {
+					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MilestoneID: milestoneIDHex, Index: msIndex}})
 				} else {
 					break
 				}

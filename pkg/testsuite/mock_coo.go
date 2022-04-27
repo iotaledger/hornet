@@ -25,11 +25,60 @@ type MockCoo struct {
 	cooPrivateKeys []ed25519.PrivateKey
 	keyManager     *keymanager.KeyManager
 
-	LastMilestoneIndex     milestone.Index
-	LastMilestoneTimestamp uint32
-	LastMilestoneID        iotago.MilestoneID
+	lastMilestonePayload   *iotago.Milestone
+	lastMilestoneMessageID hornet.MessageID
+}
 
-	LastMilestoneMessageID hornet.MessageID
+func (coo *MockCoo) LastMilestonePayload() *iotago.Milestone {
+	return coo.lastMilestonePayload
+}
+
+func (coo *MockCoo) LastMilestoneIndex() milestone.Index {
+	lastMilestonePayload := coo.LastMilestonePayload()
+	if lastMilestonePayload == nil {
+		return 0
+	}
+	return milestone.Index(lastMilestonePayload.Index)
+}
+
+// LastMilestoneID calculates the milestone ID of the last issued milestone.
+func (coo *MockCoo) LastMilestoneID() iotago.MilestoneID {
+	lastMilestonePayload := coo.LastMilestonePayload()
+	if lastMilestonePayload == nil {
+		// return null milestone ID
+		return iotago.MilestoneID{}
+	}
+
+	msID, err := lastMilestonePayload.ID()
+	if err != nil {
+		panic(err)
+	}
+
+	return *msID
+}
+
+// LastPreviousMilestoneID returns the PreviousMilestoneID of the last issued milestone.
+func (coo *MockCoo) LastPreviousMilestoneID() iotago.MilestoneID {
+	lastMilestonePayload := coo.LastMilestonePayload()
+	if lastMilestonePayload == nil {
+		// return null milestone ID
+		return iotago.MilestoneID{}
+	}
+
+	return lastMilestonePayload.PreviousMilestoneID
+}
+
+func (coo *MockCoo) LastMilestoneMessageID() hornet.MessageID {
+	return coo.lastMilestoneMessageID
+}
+
+func (coo *MockCoo) LastMilestoneParents() hornet.MessageIDs {
+	lastMilestonePayload := coo.LastMilestonePayload()
+	if lastMilestonePayload == nil {
+		// return genesis hash
+		return hornet.MessageIDs{hornet.NullMessageID()}
+	}
+	return hornet.MessageIDsFromSliceOfArrays(lastMilestonePayload.Parents)
 }
 
 func (coo *MockCoo) storeMessage(message *iotago.Message) hornet.MessageID {
@@ -37,17 +86,18 @@ func (coo *MockCoo) storeMessage(message *iotago.Message) hornet.MessageID {
 	require.NoError(coo.te.TestInterface, err)
 	cachedMsg := coo.te.StoreMessage(msg) // message +1, no need to release, since we remember all the messages for later cleanup
 
-	ms := cachedMsg.Message().Milestone()
-	if ms != nil {
-		coo.te.syncManager.SetLatestMilestoneIndex(milestone.Index(ms.Index))
+	milestonePayload := cachedMsg.Message().Milestone()
+	if milestonePayload != nil {
+		// message is a milestone
+		coo.te.syncManager.SetLatestMilestoneIndex(milestone.Index(milestonePayload.Index))
 	}
 	return msg.MessageID()
 }
 
 func (coo *MockCoo) bootstrap() {
-	coo.LastMilestoneMessageID = hornet.NullMessageID()
-	coo.LastMilestoneID = iotago.MilestoneID{}
-	coo.issueMilestoneOnTips(hornet.MessageIDs{coo.LastMilestoneMessageID}, false)
+	coo.lastMilestonePayload = nil
+	coo.lastMilestoneMessageID = hornet.NullMessageID()
+	coo.issueMilestoneOnTips(hornet.MessageIDs{}, true)
 }
 
 func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
@@ -85,15 +135,15 @@ func (coo *MockCoo) milestonePayload(parents hornet.MessageIDs) (*iotago.Milesto
 
 	sortedParents := parents.RemoveDupsAndSortByLexicalOrder()
 
-	milestoneIndex := coo.LastMilestoneIndex + 1
+	milestoneIndex := coo.LastMilestoneIndex() + 1
 	milestoneTimestamp := uint32(time.Now().Unix())
 
-	mutations, err := coo.computeWhiteflag(milestoneIndex, milestoneTimestamp, sortedParents, coo.LastMilestoneID)
+	mutations, err := coo.computeWhiteflag(milestoneIndex, milestoneTimestamp, sortedParents, coo.LastMilestoneID())
 	if err != nil {
 		return nil, err
 	}
 
-	payload, err := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.LastMilestoneID, sortedParents.ToSliceOfArrays(), mutations.ConfirmedMerkleRoot, mutations.AppliedMerkleRoot)
+	milestonePayload, err := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.LastMilestoneID(), sortedParents.ToSliceOfArrays(), mutations.ConfirmedMerkleRoot, mutations.AppliedMerkleRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -107,35 +157,35 @@ func (coo *MockCoo) milestonePayload(parents hornet.MessageIDs) (*iotago.Milesto
 		pubKeysSet[k] = struct{}{}
 	}
 
-	err = payload.Sign(pubKeys, iotago.InMemoryEd25519MilestoneSigner(keymapping))
+	err = milestonePayload.Sign(pubKeys, iotago.InMemoryEd25519MilestoneSigner(keymapping))
 	if err != nil {
 		return nil, err
 	}
 
-	err = payload.VerifySignatures(len(coo.cooPrivateKeys), pubKeysSet)
+	err = milestonePayload.VerifySignatures(len(coo.cooPrivateKeys), pubKeysSet)
 	if err != nil {
 		return nil, err
 	}
 
-	return payload, nil
+	return milestonePayload, nil
 }
 
 // issueMilestoneOnTips creates a milestone on top of the given tips.
-func (coo *MockCoo) issueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) (*storage.Milestone, error) {
+func (coo *MockCoo) issueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) (*storage.Milestone, hornet.MessageID, error) {
 
-	currentIndex := coo.LastMilestoneIndex
+	currentIndex := coo.LastMilestoneIndex()
 	coo.te.VerifyLMI(currentIndex)
 	milestoneIndex := currentIndex + 1
 
 	fmt.Printf("Issue milestone %v\n", milestoneIndex)
 
 	if addLastMilestoneAsParent {
-		tips = append(tips, coo.LastMilestoneMessageID)
+		tips = append(tips, coo.LastMilestoneMessageID())
 	}
 
 	milestonePayload, err := coo.milestonePayload(tips)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	msg, err := builder.NewMessageBuilder(coo.te.protoParas.Version).
@@ -144,27 +194,21 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.MessageIDs, addLastMileston
 		ProofOfWork(context.Background(), coo.te.protoParas, coo.te.protoParas.MinPowScore).
 		Build()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	milestoneMessageID := coo.storeMessage(msg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	coo.LastMilestoneMessageID = milestoneMessageID
+	coo.lastMilestoneMessageID = milestoneMessageID
 
 	coo.te.VerifyLMI(milestoneIndex)
-	cachedMilestone := coo.te.storage.CachedMilestoneOrNil(milestoneIndex) // milestone +1
+	cachedMilestone := coo.te.storage.CachedMilestoneByIndexOrNil(milestoneIndex) // milestone +1
 	require.NotNil(coo.te.TestInterface, cachedMilestone)
 
 	coo.te.Milestones = append(coo.te.Milestones, cachedMilestone)
+	coo.lastMilestonePayload = cachedMilestone.Milestone().Milestone()
 
-	milestoneId, err := milestonePayload.ID()
-	require.NoError(coo.te.TestInterface, err)
-
-	coo.LastMilestoneID = *milestoneId
-	coo.LastMilestoneIndex = milestoneIndex
-	coo.LastMilestoneTimestamp = milestonePayload.Timestamp
-
-	return cachedMilestone.Milestone(), nil
+	return cachedMilestone.Milestone(), milestoneMessageID, nil
 }

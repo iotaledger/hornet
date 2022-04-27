@@ -516,18 +516,18 @@ func readMilestoneDiff(reader io.ReadSeeker, protoParas *iotago.ProtocolParamete
 	}
 
 	msBytes := make([]byte, msLength)
-	ms := &iotago.Milestone{}
+	milestonePayload := &iotago.Milestone{}
 	if _, err := io.ReadFull(reader, msBytes); err != nil {
 		return nil, fmt.Errorf("unable to read LS ms-diff ms: %w", err)
 	}
 
-	if _, err := ms.Deserialize(msBytes, serializer.DeSeriModePerformValidation, protoParas); err != nil {
+	if _, err := milestonePayload.Deserialize(msBytes, serializer.DeSeriModePerformValidation, protoParas); err != nil {
 		return nil, fmt.Errorf("unable to deserialize LS ms-diff ms: %w", err)
 	}
 
-	msDiff.Milestone = ms
+	msDiff.Milestone = milestonePayload
 
-	if ms.Opts.MustSet().Receipt() != nil {
+	if milestonePayload.Opts.MustSet().Receipt() != nil {
 		spentTreasuryOutput := &utxo.TreasuryOutput{Spent: true}
 		if _, err := io.ReadFull(reader, spentTreasuryOutput.MilestoneID[:]); err != nil {
 			return nil, fmt.Errorf("unable to read LS ms-diff treasury input milestone hash: %w", err)
@@ -560,7 +560,7 @@ func readMilestoneDiff(reader io.ReadSeeker, protoParas *iotago.ProtocolParamete
 
 	msDiff.Consumed = make(utxo.Spents, consumedCount)
 	for i := uint64(0); i < consumedCount; i++ {
-		diffConsumedSpent, err := readSpent(reader, protoParas, milestone.Index(ms.Index), ms.Timestamp)
+		diffConsumedSpent, err := readSpent(reader, protoParas, milestone.Index(milestonePayload.Index), milestonePayload.Timestamp)
 		if err != nil {
 			return nil, fmt.Errorf("(ms-diff consumed-output) at pos %d: %w", i, err)
 		}

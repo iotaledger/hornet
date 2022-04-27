@@ -91,22 +91,30 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message
 		msg.Parents = tips.ToSliceOfArrays()
 	}
 
-	if msg.Nonce == 0 {
-		score, err := msg.POW()
-		if err != nil {
-			return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
-		}
+	switch msg.Payload.(type) {
 
-		if score < a.tangle.protoParas.MinPowScore {
-			if a.opts.powHandler == nil {
-				return nil, ErrMessageAttacherPoWNotAvailable
+	case *iotago.Milestone:
+		// enforce milestone msg nonce == 0
+		msg.Nonce = 0
+
+	default:
+		if msg.Nonce == 0 {
+			score, err := msg.POW()
+			if err != nil {
+				return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
 			}
 
-			powCtx, ctxCancel := context.WithCancel(ctx)
-			defer ctxCancel()
+			if score < a.tangle.protoParas.MinPowScore {
+				if a.opts.powHandler == nil {
+					return nil, ErrMessageAttacherPoWNotAvailable
+				}
 
-			if err := a.opts.powHandler.DoPoW(powCtx, msg, a.opts.powWorkerCount, tipSelFunc); err != nil {
-				return nil, err
+				powCtx, ctxCancel := context.WithCancel(ctx)
+				defer ctxCancel()
+
+				if err := a.opts.powHandler.DoPoW(powCtx, msg, a.opts.powWorkerCount, tipSelFunc); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}

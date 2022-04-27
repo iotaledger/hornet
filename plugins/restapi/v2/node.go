@@ -23,19 +23,27 @@ func info() (*infoResponse, error) {
 		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
 	}
 
-	// latest milestone index
-	latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
-
-	// latest milestone timestamp
+	// latest milestone
+	var latestMilestoneIndex = deps.SyncManager.LatestMilestoneIndex()
 	var latestMilestoneTimestamp uint32 = 0
-	cachedMilestoneLatest := deps.Storage.CachedMilestoneOrNil(latestMilestoneIndex) // milestone +1
+	var latestMilestoneIDHex string
+	cachedMilestoneLatest := deps.Storage.CachedMilestoneByIndexOrNil(latestMilestoneIndex) // milestone +1
 	if cachedMilestoneLatest != nil {
-		latestMilestoneTimestamp = uint32(cachedMilestoneLatest.Milestone().Timestamp.Unix())
+		latestMilestoneTimestamp = cachedMilestoneLatest.Milestone().TimestampUnix()
+		latestMilestoneIDHex = cachedMilestoneLatest.Milestone().MilestoneIDHex()
 		cachedMilestoneLatest.Release(true) // milestone -1
 	}
 
 	// confirmed milestone index
-	confirmedMilestoneIndex := deps.SyncManager.ConfirmedMilestoneIndex()
+	var confirmedMilestoneIndex = deps.SyncManager.ConfirmedMilestoneIndex()
+	var confirmedMilestoneTimestamp uint32 = 0
+	var confirmedMilestoneIDHex string
+	cachedMilestoneConfirmed := deps.Storage.CachedMilestoneByIndexOrNil(confirmedMilestoneIndex) // milestone +1
+	if cachedMilestoneConfirmed != nil {
+		confirmedMilestoneTimestamp = cachedMilestoneConfirmed.Milestone().TimestampUnix()
+		confirmedMilestoneIDHex = cachedMilestoneConfirmed.Milestone().MilestoneIDHex()
+		cachedMilestoneConfirmed.Release(true) // milestone -1
+	}
 
 	// pruning index
 	var pruningIndex milestone.Index
@@ -48,11 +56,18 @@ func info() (*infoResponse, error) {
 		Name:    deps.AppInfo.Name,
 		Version: deps.AppInfo.Version,
 		Status: nodeStatus{
-			IsHealthy:                deps.Tangle.IsNodeHealthy(),
-			LatestMilestoneTimestamp: latestMilestoneTimestamp,
-			LatestMilestoneIndex:     latestMilestoneIndex,
-			ConfirmedMilestoneIndex:  confirmedMilestoneIndex,
-			PruningIndex:             pruningIndex,
+			IsHealthy: deps.Tangle.IsNodeHealthy(),
+			LatestMilestone: milestoneInfoResponse{
+				Index:       latestMilestoneIndex,
+				Timestamp:   latestMilestoneTimestamp,
+				MilestoneID: latestMilestoneIDHex,
+			},
+			ConfirmedMilestone: milestoneInfoResponse{
+				Index:       confirmedMilestoneIndex,
+				Timestamp:   confirmedMilestoneTimestamp,
+				MilestoneID: confirmedMilestoneIDHex,
+			},
+			PruningIndex: pruningIndex,
 		},
 		Protocol: deps.ProtocolParameters,
 		Metrics: nodeMetrics{

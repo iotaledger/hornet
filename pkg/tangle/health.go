@@ -28,13 +28,12 @@ func (t *Tangle) IsNodeHealthy() bool {
 
 	// latest milestone timestamp
 	lmi := t.syncManager.LatestMilestoneIndex()
-	cachedMilestone := t.storage.CachedMilestoneOrNil(lmi) // milestone +1
-	if cachedMilestone == nil {
+
+	milestoneTimestamp, err := t.storage.MilestoneTimestampByIndex(lmi)
+	if err != nil {
 		return false
 	}
-	defer cachedMilestone.Release(true) // milestone -1
 
 	// check whether the milestone is older than 5 minutes
-	timeMs := cachedMilestone.Milestone().Timestamp
-	return time.Since(timeMs) < maxAllowedMilestoneAge
+	return time.Since(milestoneTimestamp) < maxAllowedMilestoneAge
 }

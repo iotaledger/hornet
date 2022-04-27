@@ -11,7 +11,7 @@ import (
 func TestParticipationTestEnv(t *testing.T) {
 
 	randomBalance := func() uint64 {
-		return uint64(rand.Intn(256)) * 1_000_000
+		return uint64(1+rand.Intn(255)) * 1_000_000
 	}
 
 	env := NewParticipationTestEnv(t, randomBalance(), randomBalance(), randomBalance(), randomBalance(), true)

@@ -16,6 +16,7 @@ type ParentsTraverserStorage interface {
 // ChildrenTraverserStorage provides the interface to the used storage in the ChildrenTraverser.
 type ChildrenTraverserStorage interface {
 	CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error)
+	SolidEntryPointsContain(messageID hornet.MessageID) (bool, error)
 	ChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...storage.IteratorOption) (hornet.MessageIDs, error)
 }
 
