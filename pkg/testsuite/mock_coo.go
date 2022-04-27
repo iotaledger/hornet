@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ed25519"
 	"fmt"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -136,7 +135,7 @@ func (coo *MockCoo) milestonePayload(parents hornet.MessageIDs) (*iotago.Milesto
 	sortedParents := parents.RemoveDupsAndSortByLexicalOrder()
 
 	milestoneIndex := coo.LastMilestoneIndex() + 1
-	milestoneTimestamp := uint32(time.Now().Unix())
+	milestoneTimestamp := uint32(milestoneIndex * 100)
 
 	mutations, err := coo.computeWhiteflag(milestoneIndex, milestoneTimestamp, sortedParents, coo.LastMilestoneID())
 	if err != nil {
