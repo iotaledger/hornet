@@ -3,6 +3,7 @@ are:
 
 1. `./bootstrap.sh` this will bootstrap your own private tangle by creating the genesis snapshot and required files. It
    will start up the coordinator. You should then use Ctrl-C to gracefully shut it down.
+   - _**Note:** You should run `./bootstrap.sh build` to re-build the docker images after any updates to the HORNET codebase (e.g. changing files or pulling git changes)_ 
 2. Run:
    - `./run.sh` to run COO + 1 additional node.
    - `./run.sh 3` to run COO + 2 additional nodes.
