@@ -102,25 +102,11 @@ func provide(c *dig.Container) {
 		}
 		res.PeerStoreContainer = peerStoreContainer
 
-		// TODO: temporary migration logic
-		// this should be removed after some time / hornet versions (20.08.21: muXxer)
-		identityPrivKey := deps.NodeConfig.String(CfgP2PIdentityPrivKey)
-		migrated, err := p2p.MigrateDeprecatedPeerStore(deps.P2PDatabasePath, identityPrivKey, peerStoreContainer)
-		if err != nil {
-			CorePlugin.LogPanicf("migration of deprecated peer store failed: %s", err)
-		}
-		if migrated {
-			CorePlugin.LogInfof(`The peer store was migrated successfully!
-
-Your node identity private key can now be found at "%s".
-`, privKeyFilePath)
-		}
-
 		// make sure nobody copies around the peer store since it contains the private key of the node
 		CorePlugin.LogInfof(`WARNING: never share your "%s" folder as it contains your node's private key!`, deps.P2PDatabasePath)
 
 		// load up the previously generated identity or create a new one
-		privKey, newlyCreated, err := p2p.LoadOrCreateIdentityPrivateKey(deps.P2PDatabasePath, identityPrivKey)
+		privKey, newlyCreated, err := p2p.LoadOrCreateIdentityPrivateKey(deps.P2PDatabasePath, deps.NodeConfig.String(CfgP2PIdentityPrivKey))
 		if err != nil {
 			CorePlugin.LogPanic(err)
 		}
