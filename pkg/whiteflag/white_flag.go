@@ -129,16 +129,28 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: message not found for milestone message ID: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
 			}
 			defer msgMilestone.Release(true) // message -1
+
 			milestonePayload := msgMilestone.Message().Milestone()
 			if milestonePayload == nil {
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
 			}
+
 			milestoneID, err := milestonePayload.ID()
 			if err != nil {
 				return false, err
 			}
+
 			// Compare this milestones ID with the previousMilestoneID
 			seenPreviousMilestoneID = *milestoneID == previousMilestoneID
+			if seenPreviousMilestoneID {
+				// Check that the milestone timestamp has increased
+				if milestonePayload.Timestamp >= msTimestamp {
+					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone timestamp is smaller or equal to previous milestone timestamp (old: %d, new: %d): %v", milestonePayload.Timestamp, msTimestamp, cachedMsgMeta.Metadata().MessageID().ToHex())
+				}
+				if (milestonePayload.Index + 1) != uint32(msIndex) {
+					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone index did not increase by one compared to previous milestone index (old: %d, new: %d): %v", milestonePayload.Index, msIndex, cachedMsgMeta.Metadata().MessageID().ToHex())
+				}
+			}
 		}
 		return traversalCondition(cachedMsgMeta) // meta pass +1
 	}
