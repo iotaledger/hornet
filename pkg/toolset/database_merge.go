@@ -368,13 +368,12 @@ func mergeViaAPI(
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		_, err := client.MilestoneByIndex(ctx, uint32(msIndex))
+		milestone, err := client.MilestoneByIndex(ctx, uint32(msIndex))
 		if err != nil {
 			return nil, err
 		}
 
-		// TODO: after iota.go changes
-		return &iotago.Milestone{}, nil
+		return milestone, nil
 	}
 
 	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getMessageViaAPI)
