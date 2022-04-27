@@ -76,11 +76,14 @@ func (t *Tangle) MessageAttacher(opts ...MessageAttacherOption) *MessageAttacher
 }
 
 func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message) (hornet.MessageID, error) {
+
+	var tipSelFunc pow.RefreshTipsFunc
+
 	if len(msg.Parents) == 0 {
 		if a.opts.tipSelFunc == nil {
 			return nil, errors.WithMessage(ErrMessageAttacherInvalidMessage, "no parents given and node tipselection disabled")
 		}
-
+		tipSelFunc = a.opts.tipSelFunc
 		tips, err := a.opts.tipSelFunc()
 		if err != nil {
 			return nil, errors.WithMessage(ErrMessageAttacherAttachingNotPossible, err.Error())
@@ -102,7 +105,7 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message
 			powCtx, ctxCancel := context.WithCancel(ctx)
 			defer ctxCancel()
 
-			if err := a.opts.powHandler.DoPoW(powCtx, msg, a.opts.powWorkerCount, a.opts.tipSelFunc); err != nil {
+			if err := a.opts.powHandler.DoPoW(powCtx, msg, a.opts.powWorkerCount, tipSelFunc); err != nil {
 				return nil, err
 			}
 		}
