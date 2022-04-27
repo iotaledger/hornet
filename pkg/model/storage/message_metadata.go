@@ -255,7 +255,7 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 		parents count * 32 bytes parent id
 	*/
 
-	marshalUtil := marshalutil.New(23 + len(m.parents)*iotago.MessageIDLength)
+	marshalUtil := marshalutil.New(19 + len(m.parents)*iotago.MessageIDLength)
 
 	marshalUtil.WriteByte(byte(m.metadata))
 	marshalUtil.WriteUint32(uint32(m.referencedIndex))

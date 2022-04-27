@@ -4,6 +4,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/restapi"
 
@@ -75,13 +76,7 @@ func milestoneBytesByID(c echo.Context) ([]byte, error) {
 	return milestone.Data(), nil
 }
 
-func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse, error) {
-
-	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
-	if err != nil {
-		return nil, err
-	}
-
+func milestoneUTXOChanges(msIndex milestone.Index) (*milestoneUTXOChangesResponse, error) {
 	diff, err := deps.UTXOManager.MilestoneDiffWithoutLocking(msIndex)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -106,4 +101,22 @@ func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse,
 		CreatedOutputs:  createdOutputs,
 		ConsumedOutputs: consumedOutputs,
 	}, nil
+}
+
+func milestoneUTXOChangesByIndex(c echo.Context) (*milestoneUTXOChangesResponse, error) {
+	msIndex, err := restapi.ParseMilestoneIndexParam(c, restapi.ParameterMilestoneIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	return milestoneUTXOChanges(msIndex)
+}
+
+func milestoneUTXOChangesByID(c echo.Context) (*milestoneUTXOChangesResponse, error) {
+	milestone, err := storageMilestoneByID(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return milestoneUTXOChanges(milestone.Index())
 }

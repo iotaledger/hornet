@@ -242,7 +242,7 @@ func (env *ParticipationTestEnv) NewMessageBuilder(optionalTag ...string) *tests
 
 func (env *ParticipationTestEnv) Transfer(fromWallet *utils.HDWallet, toWallet *utils.HDWallet, amount uint64) *testsuite.Message {
 	return env.te.NewMessageBuilder("Not a vote").
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(fromWallet).
 		ToWallet(toWallet).
 		Amount(amount).

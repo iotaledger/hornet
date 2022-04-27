@@ -6,8 +6,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -71,14 +69,7 @@ func info() (*infoResponse, error) {
 			},
 			PruningIndex: pruningIndex,
 		},
-		Protocol: protocolResponse{
-			Version:       deps.ProtocolParameters.Version,
-			NetworkName:   deps.ProtocolParameters.NetworkName,
-			Bech32HRP:     string(deps.ProtocolParameters.Bech32HRP),
-			MinPowScore:   deps.ProtocolParameters.MinPowScore,
-			RentStructure: deps.ProtocolParameters.RentStructure,
-			TokenSupply:   iotago.EncodeUint64(deps.ProtocolParameters.TokenSupply),
-		},
+		Protocol: deps.ProtocolParameters,
 		Metrics: nodeMetrics{
 			MessagesPerSecond:           messagesPerSecond,
 			ReferencedMessagesPerSecond: referencedMessagesPerSecond,

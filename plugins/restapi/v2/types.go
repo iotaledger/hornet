@@ -20,22 +20,6 @@ type milestoneInfoResponse struct {
 	MilestoneID string `json:"milestoneId"`
 }
 
-// protocolResponse defines the protocol info response.
-type protocolResponse struct {
-	// The version of the protocol running.
-	Version byte `json:"version"`
-	// The human friendly name of the network.
-	NetworkName string `json:"networkName"`
-	// The HRP prefix used for Bech32 addresses in the network.
-	Bech32HRP string `json:"bech32HRP"`
-	// The minimum pow score of the network.
-	MinPowScore float64 `json:"minPoWScore"`
-	// The rent structure used by given node/network.
-	RentStructure iotago.RentStructure `json:"rentStructure"`
-	// TokenSupply defines the current token supply on the network.
-	TokenSupply string `json:"tokenSupply"`
-}
-
 type nodeStatus struct {
 	// Whether the node is healthy.
 	IsHealthy bool `json:"isHealthy"`
@@ -64,8 +48,8 @@ type infoResponse struct {
 	Version string `json:"version"`
 	// The current status of this node.
 	Status nodeStatus `json:"status"`
-	// The protocol information of this node.
-	Protocol protocolResponse `json:"protocol"`
+	// The protocol parameters used by this node.
+	Protocol *iotago.ProtocolParameters `json:"protocol"`
 	// The metrics of this node.
 	Metrics nodeMetrics `json:"metrics"`
 	// The features this node exposes.

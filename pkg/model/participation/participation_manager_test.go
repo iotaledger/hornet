@@ -165,14 +165,14 @@ func TestTaggedDataPayloads(t *testing.T) {
 		Build()
 
 	noTaggedDataMessage := env.NewMessageBuilder().
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet2).
 		Amount(env.Wallet2.Balance()).
 		Build()
 
 	invalidPayloadMessage := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet2).
 		Amount(env.Wallet2.Balance()).
@@ -180,7 +180,7 @@ func TestTaggedDataPayloads(t *testing.T) {
 		Build()
 
 	emptyTaggedDataMessage := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet2).
 		Amount(env.Wallet2.Balance()).
@@ -197,7 +197,7 @@ func TestTaggedDataPayloads(t *testing.T) {
 	require.NoError(t, err)
 
 	wrongAddressMessage := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet3).
 		Amount(env.Wallet2.Balance()).
@@ -205,7 +205,7 @@ func TestTaggedDataPayloads(t *testing.T) {
 		Build()
 
 	multipleOutputsMessage := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet2).
 		ToWallet(env.Wallet3).
 		Amount(10_000_000).
@@ -425,7 +425,7 @@ func TestInvalidVoteHandling(t *testing.T) {
 
 	// Send an invalid participation
 	invalidParticipation := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet1).
 		ToWallet(env.Wallet1).
 		Amount(env.Wallet1.Balance()).
@@ -1395,7 +1395,7 @@ func TestMultipleParticipationsAreNotCounted(t *testing.T) {
 	ms.WriteUint8(0)
 
 	doubleStakeWallet1 := env.NewMessageBuilder(test.ParticipationTag).
-		LatestMilestonesAsParents().
+		LatestMilestoneAsParents().
 		FromWallet(env.Wallet1).
 		ToWallet(env.Wallet1).
 		Amount(env.Wallet1.Balance()).

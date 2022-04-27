@@ -15,6 +15,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/workerpool"
 	inx "github.com/iotaledger/inx/go"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, error) {
@@ -34,7 +35,17 @@ func milestoneForCachedMilestone(ms *storage.CachedMilestone) (*inx.Milestone, e
 func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
 	cachedMilestone := deps.Storage.CachedMilestoneByIndexOrNil(msIndex) // milestone +1
 	if cachedMilestone == nil {
-		return nil, status.Errorf(codes.NotFound, "milestone %d not found", msIndex)
+		return nil, status.Errorf(codes.NotFound, "milestone index %d not found", msIndex)
+	}
+	defer cachedMilestone.Release(true) // milestone -1
+
+	return milestoneForCachedMilestone(cachedMilestone.Retain()) // milestone + 1
+}
+
+func milestoneForID(milestoneID iotago.MilestoneID) (*inx.Milestone, error) {
+	cachedMilestone := deps.Storage.CachedMilestoneOrNil(milestoneID) // milestone +1
+	if cachedMilestone == nil {
+		return nil, status.Errorf(codes.NotFound, "milestone %s not found", iotago.EncodeHex(milestoneID[:]))
 	}
 	defer cachedMilestone.Release(true) // milestone -1
 
@@ -42,7 +53,12 @@ func milestoneForIndex(msIndex milestone.Index) (*inx.Milestone, error) {
 }
 
 func (s *INXServer) ReadMilestone(_ context.Context, req *inx.MilestoneRequest) (*inx.Milestone, error) {
-	return milestoneForIndex(milestone.Index(req.GetMilestoneIndex()))
+	msIndex := milestone.Index(req.GetMilestoneIndex())
+	if msIndex == 0 {
+		return milestoneForID(req.GetMilestoneId().Unwrap())
+	}
+
+	return milestoneForIndex(msIndex)
 }
 
 func (s *INXServer) ListenToLatestMilestone(_ *inx.NoParams, srv inx.INX_ListenToLatestMilestoneServer) error {

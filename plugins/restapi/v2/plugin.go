@@ -60,17 +60,25 @@ const (
 	// MIMEVendorIOTASerializer => bytes
 	RouteTransactionsIncludedMessage = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-message"
 
+	// RouteMilestoneByID is the route for getting a milestone by its ID.
+	// GET returns the milestone.
+	// MIMEApplicationJSON => json
+	// MIMEVendorIOTASerializer => bytes
+	RouteMilestoneByID = "/milestones/:" + restapipkg.ParameterMilestoneID
+
+	// RouteMilestoneByIDUTXOChanges is the route for getting all UTXO changes of a milestone by its ID.
+	// GET returns the output IDs of all UTXO changes.
+	RouteMilestoneByIDUTXOChanges = "/milestones/:" + restapipkg.ParameterMilestoneID + "/utxo-changes"
+
 	// RouteMilestoneByIndex is the route for getting a milestone by its milestoneIndex.
 	// GET returns the milestone.
-	RouteMilestoneByIndex = "/milestones/index/:" + restapipkg.ParameterMilestoneIndex
+	// MIMEApplicationJSON => json
+	// MIMEVendorIOTASerializer => bytes
+	RouteMilestoneByIndex = "/milestones/by-index/:" + restapipkg.ParameterMilestoneIndex
 
-	// RouteMilestone is the route for getting a milestone by its ID.
-	// GET returns the milestone.
-	RouteMilestone = "/milestones/milestoneId/:" + restapipkg.ParameterMilestoneID
-
-	// RouteMilestoneUTXOChanges is the route for getting all UTXO changes of a milestone by its milestoneIndex.
+	// RouteMilestoneByIndexUTXOChanges is the route for getting all UTXO changes of a milestone by its milestoneIndex.
 	// GET returns the output IDs of all UTXO changes.
-	RouteMilestoneUTXOChanges = "/milestones/:" + restapipkg.ParameterMilestoneIndex + "/utxo-changes"
+	RouteMilestoneByIndexUTXOChanges = "/milestones/by-index/:" + restapipkg.ParameterMilestoneIndex + "/utxo-changes"
 
 	// RouteOutput is the route for getting an output by its outputID (transactionHash + outputIndex).
 	// GET returns the output based on the given type in the request "Accept" header.
@@ -278,6 +286,38 @@ func configure() {
 		}
 	})
 
+	routeGroup.GET(RouteMilestoneByID, func(c echo.Context) error {
+		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
+		if err != nil && err != restapipkg.ErrNotAcceptable {
+			return err
+		}
+
+		switch mimeType {
+		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
+			resp, err := milestoneBytesByID(c)
+			if err != nil {
+				return err
+			}
+			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
+
+		default:
+			// default to echo.MIMEApplicationJSON
+			resp, err := milestoneByID(c)
+			if err != nil {
+				return err
+			}
+			return restapipkg.JSONResponse(c, http.StatusOK, resp)
+		}
+	})
+
+	routeGroup.GET(RouteMilestoneByIDUTXOChanges, func(c echo.Context) error {
+		resp, err := milestoneUTXOChangesByID(c)
+		if err != nil {
+			return err
+		}
+		return restapipkg.JSONResponse(c, http.StatusOK, resp)
+	})
+
 	routeGroup.GET(RouteMilestoneByIndex, func(c echo.Context) error {
 		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
 		if err != nil && err != restapipkg.ErrNotAcceptable {
@@ -302,31 +342,7 @@ func configure() {
 		}
 	})
 
-	routeGroup.GET(RouteMilestone, func(c echo.Context) error {
-		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
-		if err != nil && err != restapipkg.ErrNotAcceptable {
-			return err
-		}
-
-		switch mimeType {
-		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
-			resp, err := milestoneBytesByID(c)
-			if err != nil {
-				return err
-			}
-			return c.Blob(http.StatusOK, restapipkg.MIMEApplicationVendorIOTASerializerV1, resp)
-
-		default:
-			// default to echo.MIMEApplicationJSON
-			resp, err := milestoneByID(c)
-			if err != nil {
-				return err
-			}
-			return restapipkg.JSONResponse(c, http.StatusOK, resp)
-		}
-	})
-
-	routeGroup.GET(RouteMilestoneUTXOChanges, func(c echo.Context) error {
+	routeGroup.GET(RouteMilestoneByIndexUTXOChanges, func(c echo.Context) error {
 		resp, err := milestoneUTXOChangesByIndex(c)
 		if err != nil {
 			return err
