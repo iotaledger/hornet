@@ -8,15 +8,10 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 
-	"github.com/ipfs/go-datastore/query"
-	badger "github.com/ipfs/go-ds-badger"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/peerstore"
 	"github.com/libp2p/go-libp2p-peerstore/pstoreds"
 	"github.com/pkg/errors"
@@ -28,8 +23,7 @@ import (
 )
 
 const (
-	DeprecatedPubKeyFileName = "key.pub"
-	PrivKeyFileName          = "identity.key"
+	PrivKeyFileName = "identity.key"
 )
 
 var (
@@ -238,110 +232,4 @@ func LoadOrCreateIdentityPrivateKey(p2pStorePath string, identityPrivKey string)
 	default:
 		return nil, false, fmt.Errorf("unable to check private key file for peer identity (%s): %w", privKeyFilePath, err)
 	}
-}
-
-// MigrateDeprecatedPeerStore extracts the old peer identity private key from the configuration or peer store,
-// migrates the old database and stores the private key in a new file with PEM format.
-func MigrateDeprecatedPeerStore(p2pStorePath string, identityPrivKey string, newPeerStoreContainer *PeerStoreContainer) (bool, error) {
-
-	privKeyFilePath := filepath.Join(p2pStorePath, PrivKeyFileName)
-
-	_, err := os.Stat(privKeyFilePath)
-	switch {
-	case err == nil || os.IsExist(err):
-		// migration not necessary since the private key file already exists
-		return false, nil
-	case os.IsNotExist(err):
-		// migration maybe necessary
-	default:
-		return false, fmt.Errorf("unable to check private key file for peer identity (%s): %w", privKeyFilePath, err)
-	}
-
-	deprecatedPubKeyFilePath := filepath.Join(p2pStorePath, DeprecatedPubKeyFileName)
-	if _, err := os.Stat(deprecatedPubKeyFilePath); err != nil {
-		if os.IsNotExist(err) {
-			// migration not necessary since no old public key file exists
-			return false, nil
-		}
-
-		return false, fmt.Errorf("unable to check deprecated public key file for peer identity (%s): %w", deprecatedPubKeyFilePath, err)
-	}
-
-	// migrates the deprecated badger DB peerstore to the new kvstore based peerstore.
-	migrateDeprecatedPeerStore := func(deprecatedPeerStorePath string, newStore kvstore.KVStore) error {
-		defaultOpts := badger.DefaultOptions
-
-		// needed under Windows otherwise peer store is 'corrupted' after a restart
-		defaultOpts.Truncate = runtime.GOOS == "windows"
-
-		badgerStore, err := badger.NewDatastore(deprecatedPeerStorePath, &defaultOpts)
-		if err != nil {
-			return fmt.Errorf("unable to initialize data store for deprecated peer store: %w", err)
-		}
-		defer func() { _ = badgerStore.Close() }()
-
-		results, err := badgerStore.Query(context.Background(), query.Query{})
-		if err != nil {
-			return fmt.Errorf("unable to query deprecated peer store: %w", err)
-		}
-
-		for res := range results.Next() {
-			if err := newStore.Set([]byte(res.Key), res.Value); err != nil {
-				return fmt.Errorf("unable to migrate data to new peer store: %w", err)
-			}
-		}
-		if err := newStore.Flush(); err != nil {
-			return fmt.Errorf("unable to flush new peer store: %w", err)
-		}
-
-		return nil
-	}
-
-	if err := migrateDeprecatedPeerStore(p2pStorePath, newPeerStoreContainer.store); err != nil {
-		return false, err
-	}
-
-	privKey, err := parseEd25519PrivateKeyFromString(identityPrivKey)
-	if err != nil {
-		if errors.Is(err, ErrPrivKeyInvalid) {
-			return false, errors.New("configuration contains an invalid private key")
-		}
-
-		if !errors.Is(err, ErrNoPrivKeyFound) {
-			return false, fmt.Errorf("unable to parse private key from config: %w", err)
-		}
-
-		// there was no private key specified, retrieve it from the peer store with the public key from the deprecated file
-		existingPubKeyBytes, err := ioutil.ReadFile(deprecatedPubKeyFilePath)
-		if err != nil {
-			return false, fmt.Errorf("unable to read deprecated public key file for peer identity: %w", err)
-		}
-
-		pubKey, err := crypto.UnmarshalPublicKey(existingPubKeyBytes)
-		if err != nil {
-			return false, fmt.Errorf("unable to unmarshal deprecated public key for peer identity: %w", err)
-		}
-
-		peerID, err := peer.IDFromPublicKey(pubKey)
-		if err != nil {
-			return false, fmt.Errorf("unable to get peer identity from deprecated public key: %w", err)
-		}
-
-		// retrieve this node's private key from the new peer store
-		privKey = newPeerStoreContainer.peerStore.PrivKey(peerID)
-		if privKey == nil {
-			return false, errors.New("error while fetching private key for peer identity from peer store")
-		}
-	}
-
-	if err := WriteEd25519PrivateKeyToPEMFile(privKeyFilePath, privKey); err != nil {
-		return false, err
-	}
-
-	// delete the deprecated public key file
-	if err := os.Remove(deprecatedPubKeyFilePath); err != nil {
-		return false, fmt.Errorf("unable to remove deprecated public key file for peer identity: %w", err)
-	}
-
-	return true, nil
 }

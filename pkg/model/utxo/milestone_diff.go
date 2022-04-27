@@ -40,7 +40,7 @@ func (d *MilestoneDiff) kvStorableKey() []byte {
 
 func (d *MilestoneDiff) kvStorableValue() []byte {
 
-	m := marshalutil.New()
+	m := marshalutil.New(9)
 
 	m.WriteUint32(uint32(len(d.Outputs)))
 	for _, output := range d.sortedOutputs() {

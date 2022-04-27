@@ -123,7 +123,7 @@ func (o *Output) kvStorableKey() (key []byte) {
 }
 
 func (o *Output) kvStorableValue() (value []byte) {
-	ms := marshalutil.New(40)
+	ms := marshalutil.New(41)
 	ms.WriteBytes(o.messageID)               // 32 bytes
 	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
 	ms.WriteUint32(o.milestoneTimestamp)     // 4 bytes
