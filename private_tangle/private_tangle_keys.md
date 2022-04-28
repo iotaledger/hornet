@@ -12,8 +12,6 @@ token mnemonic:            giant dynamic museum toddler six deny defense ostrich
 token ed25519 private key: 52d23081a626b1eca34b63f1eaeeafcbd66bf545635befc12cd0f19926efefb031f176dadf38cdec0eadd1d571394be78f0bbee3ed594316678dffc162a095cb <br>
 token ed25519 public key:              31f176dadf38cdec0eadd1d571394be78f0bbee3ed594316678dffc162a095cb <br>
 token ed25519 address:                 60200bad8137a704216e84f8f9acfe65b972d9f4155becb4815282b03cef99fe <br>
-token bech32 address with `atoi` HRP:  atoi1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vluehe53e <br>
-token bech32 address with `rms` HRP:   rms1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vluaw60xue <br>
 token bech32 address with `tst` HRP:   tst1qpszqzadsym6wpppd6z037dvlejmjuke7s24hm95s9fg9vpua7vlupxvxq2
 
 ## P2P Identities
