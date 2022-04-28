@@ -67,6 +67,7 @@ func readPasswordFromStdin() ([]byte, error) {
 func hashPasswordAndSalt(args []string) error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	saltFlag := fs.String(FlagToolSalt, "", "salt used to hash the password (optional)")
 	passwordFlag := fs.String(FlagToolPassword, "", fmt.Sprintf("password to hash. Can also be passed as %s environment variable.", passwordEnvKey))
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 
@@ -84,8 +85,25 @@ func hashPasswordAndSalt(args []string) error {
 		return err
 	}
 
-	var password []byte
+	var err error
+	var passwordSalt []byte
+	if len(*saltFlag) > 0 {
+		// Salt passed over flag
+		if len(*saltFlag) != 64 {
+			return errors.New("the given salt must be 64 (hex encoded) in length")
+		}
+		passwordSalt, err = hex.DecodeString(*saltFlag)
+		if err != nil {
+			return fmt.Errorf("parsing given salt failed: %w", err)
+		}
+	} else {
+		passwordSalt, err = basicauth.SaltGenerator(32)
+		if err != nil {
+			return fmt.Errorf("generating random salt failed: %w", err)
+		}
+	}
 
+	var password []byte
 	if p, err := readPasswordFromEnv(); err == nil {
 		// Password passed over the environment
 		password = p
@@ -99,11 +117,6 @@ func hashPasswordAndSalt(args []string) error {
 			return err
 		}
 		password = p
-	}
-
-	passwordSalt, err := basicauth.SaltGenerator(32)
-	if err != nil {
-		return fmt.Errorf("generating random salt failed: %w", err)
 	}
 
 	passwordKey, err := basicauth.DerivePasswordKey(password, passwordSalt)
