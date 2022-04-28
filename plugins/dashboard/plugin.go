@@ -16,7 +16,6 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/app"
-	"github.com/gohornet/hornet/pkg/basicauth"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/metrics"
@@ -32,6 +31,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
+	"github.com/iotaledger/hive.go/basicauth"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/websockethub"

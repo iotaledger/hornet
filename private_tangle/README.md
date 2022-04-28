@@ -29,7 +29,7 @@ The nodes will then be reachable under these ports:
     - External Peering: 15602/tcp
     - Dashboard: http://localhost:8083
     - Prometheus: http://localhost:9313/metrics
-- Hornet-2:
+- Hornet-4:
     - API: http://localhost:14268
     - External Peering: 15603/tcp
     - Dashboard: http://localhost:8084

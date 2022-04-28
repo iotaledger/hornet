@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/blang/vfs v1.0.0
-	github.com/cockroachdb/pebble v0.0.0-20220426173801-b33d6e173cae
+	github.com/cockroachdb/pebble v0.0.0-20220428002600-b9e970a83ddd
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dustin/go-humanize v1.0.0
@@ -15,9 +15,9 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-version v1.4.0
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf
-	github.com/iotaledger/hive.go v0.0.0-20220426085024-dfad09f16be5
-	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220426085024-dfad09f16be5
-	github.com/iotaledger/inx/go v0.0.0-20220427161459-11a9fd08b222
+	github.com/iotaledger/hive.go v0.0.0-20220428112623-2973f4f91b77
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220428112623-2973f4f91b77
+	github.com/iotaledger/inx/go v0.0.0-20220428092912-caf17b6413a6
 	github.com/iotaledger/iota.go v1.0.0
 	github.com/iotaledger/iota.go/v3 v3.0.0-20220427162019-fb89ca0738f2
 	github.com/labstack/echo/v4 v4.7.2
@@ -27,7 +27,7 @@ require (
 	github.com/libp2p/go-libp2p-peerstore v0.6.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/multiformats/go-multiaddr v0.5.0
-	github.com/pelletier/go-toml/v2 v2.0.0-beta.8
+	github.com/pelletier/go-toml/v2 v2.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
@@ -37,7 +37,7 @@ require (
 	github.com/wollac/iota-crypto-demo v0.0.0-20220407192531-0c9bc107c733
 	go.uber.org/atomic v1.9.0
 	go.uber.org/dig v1.14.1
-	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
+	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
 	golang.org/x/term v0.0.0-20220411215600-e5f449aeb171
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306
 	google.golang.org/grpc v1.46.0
@@ -103,7 +103,7 @@ require (
 	github.com/klauspost/compress v1.15.2 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/knadh/koanf v1.4.1 // indirect
-	github.com/koron/go-ssdp v0.0.2 // indirect
+	github.com/koron/go-ssdp v0.0.3 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/libp2p/go-buffer-pool v0.0.2 // indirect
