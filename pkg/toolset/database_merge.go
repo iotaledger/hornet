@@ -231,10 +231,20 @@ func copyMilestoneCone(
 		}
 		defer cachedMsgNew.Release(true) // message -1
 
-		// set the new message as solid
 		cachedMsgMetaNew := cachedMsgNew.CachedMetadata() // meta +1
 		defer cachedMsgMetaNew.Release(true)              // meta -1
 
+		// we need mark all messages that contain a milestone payload,
+		// but we can not trust the metadata of the parentsTraverserInterface for correct info about milestones
+		// because it could be a proxystorage, which doesn't know the correct milestones yet.
+		if cachedMsgNew.Message().IsMilestone() {
+			milestonePayload := milestoneManager.VerifyMilestonePayload(cachedMsgNew.Message().Milestone())
+			if milestonePayload != nil {
+				cachedMsgMetaNew.Metadata().SetMilestone(true)
+			}
+		}
+
+		// set the new message as solid
 		cachedMsgMetaNew.Metadata().SetSolid(true)
 
 		return true, nil
