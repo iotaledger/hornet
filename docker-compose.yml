@@ -1,7 +1,7 @@
 version: '3'
 services:
   inx-indexer:
-    image: iotaledger/inx-indexer:0.2
+    image: iotaledger/inx-indexer:0.3
     restart: on-failure
     command:
       - "--inx.address=hornet:9029"
@@ -9,12 +9,12 @@ services:
       - "--prometheus.bindAddress=inx-indexer:9312"
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.2
+    image: iotaledger/inx-mqtt:0.3
     restart: on-failure
     command:
       - "--inx.address=hornet:9029"
-      - "--mqtt.bindAddress=inx-mqtt:1883"
-      - "--mqtt.wsPort=1888"
+      - "--mqtt.websocket.bindAddress=inx-mqtt:1888"
+      - "--prometheus.enabled=true"
       - "--prometheus.bindAddress=inx-mqtt:9313"
 
   hornet:
