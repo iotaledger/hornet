@@ -385,16 +385,20 @@ func (u *Manager) LedgerStateSHA256Sum() ([]byte, error) {
 	}
 
 	// get all UTXOs and sort them by outputID
-	var outputs LexicalOrderedOutputs
-	if err := u.ForEachUnspentOutput(func(output *Output) bool {
-		outputs = append(outputs, output)
-		return true
-	}, ReadLockLedger(false)); err != nil {
+	var outputIDs LexicalOrderedOutputIDs
+	outputIDs, err = u.UnspentOutputsIDs(ReadLockLedger(false))
+	if err != nil {
 		return nil, err
 	}
-	sort.Sort(outputs)
 
-	for _, output := range outputs {
+	sort.Sort(outputIDs)
+
+	for _, outputID := range outputIDs {
+		output, err := u.ReadOutputByOutputID(outputID)
+		if err != nil {
+			return nil, err
+		}
+
 		if _, err := ledgerStateHash.Write(output.outputID[:]); err != nil {
 			return nil, err
 		}

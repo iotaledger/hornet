@@ -6,6 +6,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+type OutputIDConsumer func(outputID *iotago.OutputID) bool
 type OutputConsumer func(output *Output) bool
 
 type lookupKey []byte

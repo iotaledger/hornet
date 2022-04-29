@@ -2,6 +2,7 @@ package utxo
 
 import (
 	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type UTXOIterateOptions struct {
@@ -110,7 +111,7 @@ func (u *Manager) SpentOutputs(options ...UTXOIterateOption) (Spents, error) {
 	return spents, nil
 }
 
-func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+func (u *Manager) ForEachUnspentOutputID(consumer OutputIDConsumer, options ...UTXOIterateOption) error {
 	opt := iterateOptions(options)
 
 	if opt.readLockLedger {
@@ -131,6 +132,19 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 			innerErr = err
 			return false
 		}
+
+		return consumer(outputID)
+	}); err != nil {
+		return err
+	}
+
+	return innerErr
+}
+
+func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOIterateOption) error {
+
+	var innerErr error
+	if err := u.ForEachUnspentOutputID(func(outputID *iotago.OutputID) bool {
 		outputKey := outputStorageKeyForOutputID(outputID)
 
 		value, err := u.utxoStorage.Get(outputKey)
@@ -151,6 +165,19 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 	}
 
 	return innerErr
+}
+
+func (u *Manager) UnspentOutputsIDs(options ...UTXOIterateOption) ([]*iotago.OutputID, error) {
+	var outputIDs []*iotago.OutputID
+	consumerFunc := func(outputID *iotago.OutputID) bool {
+		outputIDs = append(outputIDs, outputID)
+		return true
+	}
+
+	if err := u.ForEachUnspentOutputID(consumerFunc, options...); err != nil {
+		return nil, err
+	}
+	return outputIDs, nil
 }
 
 func (u *Manager) UnspentOutputs(options ...UTXOIterateOption) (Outputs, error) {
