@@ -82,8 +82,6 @@ type MessageProcessor struct {
 	serverMetrics *metrics.ServerMetrics
 	// protocol parameters including byte costs
 	protoParas *iotago.ProtocolParameters
-	// the network id calculated from the ProtocolParameters
-	networkID uint64
 	// holds the message processor options.
 	opts Options
 
@@ -117,7 +115,6 @@ func NewMessageProcessor(
 		peeringManager: peeringManager,
 		serverMetrics:  serverMetrics,
 		protoParas:     protoParas,
-		networkID:      protoParas.NetworkID(),
 		opts:           *opts,
 		Events: &MessageProcessorEvents{
 			MessageProcessed: events.NewEvent(MessageProcessedCaller),
@@ -205,11 +202,6 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
 	if msg.ProtocolVersion() != proc.protoParas.Version {
 		return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), proc.protoParas.Version)
-	}
-
-	essence := msg.TransactionEssence()
-	if essence != nil && essence.NetworkID != proc.networkID {
-		return fmt.Errorf("transaction contained in msg has invalid network ID %d instead of %d", essence.NetworkID, proc.networkID)
 	}
 
 	switch msg.Message().Payload.(type) {
@@ -472,13 +464,6 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	if msg.ProtocolVersion() != proc.protoParas.Version {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a message with an invalid protocol version"))
-		return
-	}
-
-	essence := msg.TransactionEssence()
-	if essence != nil && essence.NetworkID != proc.networkID {
-		wu.UpdateState(Invalid)
-		wu.punish(errors.New("peer sent a message containing a transaction with an invalid network ID"))
 		return
 	}
 
