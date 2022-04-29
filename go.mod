@@ -17,9 +17,9 @@ require (
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf
 	github.com/iotaledger/hive.go v0.0.0-20220428170023-7fb77d7475d8
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220428170023-7fb77d7475d8
-	github.com/iotaledger/inx/go v0.0.0-20220428154111-868c18cc2750
+	github.com/iotaledger/inx/go v0.0.0-20220429132348-4229a45554c1
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v3 v3.0.0-20220429092212-d275a7831f6a
+	github.com/iotaledger/iota.go/v3 v3.0.0-20220429152429-63458675d51e
 	github.com/labstack/echo/v4 v4.7.2
 	github.com/labstack/gommon v0.3.1
 	github.com/libp2p/go-libp2p v0.19.0
@@ -194,7 +194,7 @@ require (
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
+	golang.org/x/sys v0.0.0-20220429121018-84afa8d3f7b3 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.10 // indirect
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect

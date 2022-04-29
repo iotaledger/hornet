@@ -14,7 +14,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/pow"
-	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
@@ -62,7 +61,6 @@ type dependencies struct {
 	INXServer               *INXServer
 	Echo                    *echo.Echo                 `optional:"true"`
 	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
-	ExternalMetricsProxy    *restapipkg.DynamicProxy   `name:"externalMetricsProxy" optional:"true"`
 }
 
 func provide(c *dig.Container) {
@@ -77,12 +75,10 @@ func configure() {
 
 	attacherOpts := []tangle.MessageAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
+		tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(CfgINXPoWWorkerCount)),
 	}
 	if deps.TipSelector != nil {
 		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))
-	}
-	if deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled) {
-		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)))
 	}
 
 	attacher = deps.Tangle.MessageAttacher(attacherOpts...)

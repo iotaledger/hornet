@@ -2,6 +2,7 @@ package tangle
 
 import (
 	"context"
+	"runtime"
 	"time"
 
 	"github.com/pkg/errors"
@@ -112,7 +113,12 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message
 				powCtx, ctxCancel := context.WithCancel(ctx)
 				defer ctxCancel()
 
-				if err := a.opts.powHandler.DoPoW(powCtx, msg, a.opts.powWorkerCount, tipSelFunc); err != nil {
+				powWorkerCount := runtime.NumCPU() - 1
+				if a.opts.powWorkerCount > 0 {
+					powWorkerCount = a.opts.powWorkerCount
+				}
+
+				if err := a.opts.powHandler.DoPoW(powCtx, msg, powWorkerCount, tipSelFunc); err != nil {
 					return nil, err
 				}
 			}

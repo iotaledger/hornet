@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha10] - 29.04.2022
+
+### Changed
+    - AliasID and NFTID are now 32 bytes long instead of 20. (#1475)
+    - Prometheus is not exposing prometheus metrics from other INX plugins anymore. (#1475)
+    - TransactionEssence networkID check is now done during syntactical validation. (#1475)
+
+### Fixed
+    - Check if the external PoW context got cancelled. (#1470)
+    - Fixed dashboard milestone topic not sending the latest milestones. (#1474)
+    - Always allow remote PoW over INX. (#1475)
+    - Do not fully initialize the node (including the Participation database) if the snapshot download and import fails. (#1475)
+
+
 ## [2.0.0-alpha9] - 27.04.2022
 
 ### Changed
@@ -19,6 +33,7 @@ All notable changes to this project will be documented in this file.
 
 ### Cleanup
     - Chore/remove deprecated code. (#1461) 
+
 
 ## [2.0.0-alpha8] - 26.04.2022
 

@@ -50,7 +50,6 @@ func init() {
 			Params:         params,
 			InitConfigPars: initConfigPars,
 			Provide:        provide,
-			Configure:      configure,
 			Run:            run,
 		},
 	}
@@ -70,7 +69,6 @@ type dependencies struct {
 	UTXOManager          *utxo.Manager
 	SnapshotManager      *snapshot.SnapshotManager
 	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
-	DeleteAllFlag        bool                         `name:"deleteAll"`
 	PruningPruneReceipts bool                         `name:"pruneReceipts"`
 	SnapshotsFullPath    string                       `name:"snapshotsFullPath"`
 	SnapshotsDeltaPath   string                       `name:"snapshotsDeltaPath"`
@@ -115,6 +113,7 @@ func provide(c *dig.Container) {
 		BelowMaxDepth        int                          `name:"belowMaxDepth"`
 		ProtocolParameters   *iotago.ProtocolParameters
 		PruningPruneReceipts bool   `name:"pruneReceipts"`
+		DeleteAllFlag        bool   `name:"deleteAll"`
 		SnapshotsFullPath    string `name:"snapshotsFullPath"`
 		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
 	}
@@ -171,7 +170,7 @@ func provide(c *dig.Container) {
 			CorePlugin.LogPanicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
 		}
 
-		return snapshot.NewSnapshotManager(
+		snapshotManager := snapshot.NewSnapshotManager(
 			CorePlugin.Logger(),
 			deps.TangleDatabase,
 			deps.UTXODatabase,
@@ -196,37 +195,34 @@ func provide(c *dig.Container) {
 			deps.NodeConfig.Duration(CfgPruningSizeCooldownTime),
 			deps.PruningPruneReceipts,
 		)
+
+		if deps.DeleteAllFlag {
+			// delete old snapshot files
+			if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
+				CorePlugin.LogPanicf("deleting full snapshot file failed: %s", err)
+			}
+
+			if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
+				CorePlugin.LogPanicf("deleting delta snapshot file failed: %s", err)
+			}
+		}
+
+		snapshotInfo := deps.Storage.SnapshotInfo()
+
+		switch {
+		case snapshotInfo != nil && !*forceLoadingSnapshot:
+			if err := snapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
+				CorePlugin.LogPanic(err)
+			}
+		default:
+			if err := snapshotManager.ImportSnapshots(CorePlugin.Daemon().ContextStopped()); err != nil {
+				CorePlugin.LogPanic(err)
+			}
+		}
+		return snapshotManager
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}
-}
-
-func configure() {
-
-	if deps.DeleteAllFlag {
-		// delete old snapshot files
-		if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
-			CorePlugin.LogPanicf("deleting full snapshot file failed: %s", err)
-		}
-
-		if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
-			CorePlugin.LogPanicf("deleting delta snapshot file failed: %s", err)
-		}
-	}
-
-	snapshotInfo := deps.Storage.SnapshotInfo()
-
-	switch {
-	case snapshotInfo != nil && !*forceLoadingSnapshot:
-		if err := deps.SnapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
-			CorePlugin.LogPanic(err)
-		}
-	default:
-		if err := deps.SnapshotManager.ImportSnapshots(CorePlugin.Daemon().ContextStopped()); err != nil {
-			CorePlugin.LogPanic(err)
-		}
-	}
-
 }
 
 func run() {
