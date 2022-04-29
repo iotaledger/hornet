@@ -60,21 +60,6 @@ var snapshotNames = map[Type]string{
 	Delta: "delta",
 }
 
-// LexicalOrderedOutputs are Outputs ordered in lexical order by their OutputID.
-type LexicalOrderedOutputs utxo.Outputs
-
-func (l LexicalOrderedOutputs) Len() int {
-	return len(l)
-}
-
-func (l LexicalOrderedOutputs) Less(i, j int) bool {
-	return bytes.Compare(l[i].OutputID()[:], l[j].OutputID()[:]) < 0
-}
-
-func (l LexicalOrderedOutputs) Swap(i, j int) {
-	l[i], l[j] = l[j], l[i]
-}
-
 // MilestoneDiff represents the outputs which were created and consumed for the given milestone
 // and the message itself which contains the milestone.
 type MilestoneDiff struct {

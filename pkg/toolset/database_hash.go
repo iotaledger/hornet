@@ -19,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/snapshot"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -60,36 +59,18 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		return errors.New("no snapshot info found")
 	}
 
-	// read out treasury tx
-	treasuryOutput, err := dbStorage.UTXOManager().UnspentTreasuryOutputWithoutLocking()
-	if err != nil {
-		return err
-	}
-
-	var outputs snapshot.LexicalOrderedOutputs
-	if err := dbStorage.UTXOManager().ForEachUnspentOutput(func(output *utxo.Output) bool {
-		outputs = append(outputs, output)
-		return true
-	}); err != nil {
-		return err
-	}
-	// sort the outputs lexicographically by their OutputID
-	sort.Sort(outputs)
-
-	var solidEntryPoints hornet.LexicalOrderedMessageIDs
-	dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
-		solidEntryPoints = append(solidEntryPoints, sep.MessageID)
-		return true
-	})
-	// sort the solid entry points lexicographically by their MessageID
-	sort.Sort(solidEntryPoints)
-
 	// compute the sha256 of the ledger state
 	lsHash := sha256.New()
 
 	// write current ledger index
 	if err := binary.Write(lsHash, binary.LittleEndian, ledgerIndex); err != nil {
 		return fmt.Errorf("unable to serialize ledger index: %w", err)
+	}
+
+	// read out treasury tx
+	treasuryOutput, err := dbStorage.UTXOManager().UnspentTreasuryOutputWithoutLocking()
+	if err != nil {
+		return err
 	}
 
 	if treasuryOutput != nil {
@@ -102,16 +83,39 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		}
 	}
 
+	// get all UTXOs and sort them by outputID
+	var outputIDs utxo.LexicalOrderedOutputIDs
+	outputIDs, err = dbStorage.UTXOManager().UnspentOutputsIDs()
+	if err != nil {
+		return err
+	}
+
+	// sort the OutputIDs lexicographically by their ID
+	sort.Sort(outputIDs)
+
 	// write all unspent outputs in lexicographical order
-	for _, output := range outputs {
+	for _, outputID := range outputIDs {
+		output, err := dbStorage.UTXOManager().ReadOutputByOutputID(outputID)
+		if err != nil {
+			return err
+		}
+
 		outputBytes := output.SnapshotBytes()
 		if err = binary.Write(lsHash, binary.LittleEndian, outputBytes); err != nil {
-			return fmt.Errorf("unable to calculate snapshot hash: %w", err)
+			return err
 		}
 	}
 
 	// calculate sha256 hash of the current ledger state
 	snapshotHashSumWithoutSEPs := lsHash.Sum(nil)
+
+	var solidEntryPoints hornet.LexicalOrderedMessageIDs
+	dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
+		solidEntryPoints = append(solidEntryPoints, sep.MessageID)
+		return true
+	})
+	// sort the solid entry points lexicographically by their MessageID
+	sort.Sort(solidEntryPoints)
 
 	// write all solid entry points in lexicographical order
 	for _, solidEntryPoint := range solidEntryPoints {
@@ -162,7 +166,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 			Treasury:               treasury,
 			LedgerIndex:            ledgerIndex,
 			SnapshotIndex:          snapshotInfo.SnapshotIndex,
-			UTXOsCount:             len(outputs),
+			UTXOsCount:             len(outputIDs),
 			SEPsCount:              len(solidEntryPoints),
 			LedgerStateHash:        hex.EncodeToString(snapshotHashSumWithoutSEPs),
 			LedgerStateHashWithSEP: hex.EncodeToString(snapshotHashSumWithSEPs),
@@ -195,7 +199,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		}(),
 		ledgerIndex,
 		snapshotInfo.SnapshotIndex,
-		len(outputs),
+		len(outputIDs),
 		len(solidEntryPoints),
 		hex.EncodeToString(snapshotHashSumWithoutSEPs),
 		hex.EncodeToString(snapshotHashSumWithSEPs),

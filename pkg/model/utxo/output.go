@@ -13,6 +13,21 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
+// LexicalOrderedOutputIDs are ordered in lexical order by their ID.
+type LexicalOrderedOutputIDs []*iotago.OutputID
+
+func (l LexicalOrderedOutputIDs) Len() int {
+	return len(l)
+}
+
+func (l LexicalOrderedOutputIDs) Less(i, j int) bool {
+	return bytes.Compare(l[i][:], l[j][:]) < 0
+}
+
+func (l LexicalOrderedOutputIDs) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+
 // LexicalOrderedOutputs are outputs
 // ordered in lexical order by their outputID.
 type LexicalOrderedOutputs []*Output
