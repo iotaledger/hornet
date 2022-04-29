@@ -38,6 +38,7 @@ fi
 
 # Prepare database directory
 mkdir -p privatedb/coo
+mkdir -p privatedb/indexer
 mkdir -p privatedb/state
 mkdir -p privatedb/hornet-2
 mkdir -p privatedb/hornet-3

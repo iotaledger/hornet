@@ -58,11 +58,13 @@ services:
       - 4-nodes
 
   inx-indexer:
-    image: iotaledger/inx-indexer:0.3
+    image: iotaledger/inx-indexer:0.4
     networks:
       peering_net:
         ipv4_address: 172.18.211.21
     restart: on-failure
+    volumes:
+      - ./privatedb/indexer:/app/database
     command:
       - "--inx.address=172.18.211.11:9029"
       - "--indexer.bindAddress=172.18.211.21:9091"
@@ -73,7 +75,7 @@ services:
       - 4-nodes
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.3
+    image: iotaledger/inx-mqtt:0.4
     networks:
       peering_net:
         ipv4_address: 172.18.211.22
@@ -89,7 +91,7 @@ services:
       - 4-nodes
 
   inx-faucet:
-    image: iotaledger/inx-faucet:0.2
+    image: iotaledger/inx-faucet:0.3
     networks:
       peering_net:
         ipv4_address: 172.18.211.23
