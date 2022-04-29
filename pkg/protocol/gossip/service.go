@@ -29,7 +29,7 @@ type ServiceEvents struct {
 	// Fired when a protocol has ended.
 	ProtocolTerminated *events.Event
 	// Fired when an inbound stream gets canceled.
-	InboundStreamCancelled *events.Event
+	InboundStreamCanceled *events.Event
 	// Fired when an internal error happens.
 	Error *events.Event
 }
@@ -193,10 +193,10 @@ type Service struct {
 	onPeeringManagerRelationUpdated *events.Closure
 
 	// logger
-	onGossipServiceProtocolStarted        *events.Closure
-	onGossipServiceProtocolTerminated     *events.Closure
-	onGossipServiceInboundStreamCancelled *events.Closure
-	onGossipServiceError                  *events.Closure
+	onGossipServiceProtocolStarted       *events.Closure
+	onGossipServiceProtocolTerminated    *events.Closure
+	onGossipServiceInboundStreamCanceled *events.Closure
+	onGossipServiceError                 *events.Closure
 }
 
 // NewService creates a new Service.
@@ -212,10 +212,10 @@ func NewService(
 
 	gossipService := &Service{
 		Events: &ServiceEvents{
-			ProtocolStarted:        events.NewEvent(ProtocolCaller),
-			ProtocolTerminated:     events.NewEvent(ProtocolCaller),
-			InboundStreamCancelled: events.NewEvent(StreamCancelCaller),
-			Error:                  events.NewEvent(events.ErrorCaller),
+			ProtocolStarted:       events.NewEvent(ProtocolCaller),
+			ProtocolTerminated:    events.NewEvent(ProtocolCaller),
+			InboundStreamCanceled: events.NewEvent(StreamCancelCaller),
+			Error:                 events.NewEvent(events.ErrorCaller),
 		},
 		host:                host,
 		protocol:            protocol,
@@ -431,7 +431,7 @@ func (s *Service) handleInboundStream(stream network.Stream) {
 
 	// close if there is already one
 	if _, ongoing := s.streams[remotePeerID]; ongoing {
-		s.Events.InboundStreamCancelled.Trigger(stream, StreamCancelReasonDuplicated)
+		s.Events.InboundStreamCanceled.Trigger(stream, StreamCancelReasonDuplicated)
 		s.closeUnwantedStream(stream)
 		return
 	}
@@ -458,7 +458,7 @@ func (s *Service) handleInboundStream(stream network.Stream) {
 	}
 
 	if len(cancelReason) > 0 {
-		s.Events.InboundStreamCancelled.Trigger(stream, cancelReason)
+		s.Events.InboundStreamCanceled.Trigger(stream, cancelReason)
 		s.closeUnwantedStream(stream)
 		return
 	}
@@ -661,7 +661,7 @@ func (s *Service) configureEvents() {
 		s.LogInfof("terminated protocol with %s", proto.PeerID.ShortString())
 	})
 
-	s.onGossipServiceInboundStreamCancelled = events.NewClosure(func(stream network.Stream, reason StreamCancelReason) {
+	s.onGossipServiceInboundStreamCanceled = events.NewClosure(func(stream network.Stream, reason StreamCancelReason) {
 		remotePeer := stream.Conn().RemotePeer().ShortString()
 		s.LogInfof("canceled inbound protocol stream from %s: %s", remotePeer, reason)
 	})
@@ -680,7 +680,7 @@ func (s *Service) attachEvents() {
 	// logger
 	s.Events.ProtocolStarted.Attach(s.onGossipServiceProtocolStarted)
 	s.Events.ProtocolTerminated.Attach(s.onGossipServiceProtocolTerminated)
-	s.Events.InboundStreamCancelled.Attach(s.onGossipServiceInboundStreamCancelled)
+	s.Events.InboundStreamCanceled.Attach(s.onGossipServiceInboundStreamCanceled)
 	s.Events.Error.Attach(s.onGossipServiceError)
 }
 
@@ -693,7 +693,7 @@ func (s *Service) detachEvents() {
 	// logger
 	s.Events.ProtocolStarted.Detach(s.onGossipServiceProtocolStarted)
 	s.Events.ProtocolTerminated.Detach(s.onGossipServiceProtocolTerminated)
-	s.Events.InboundStreamCancelled.Detach(s.onGossipServiceInboundStreamCancelled)
+	s.Events.InboundStreamCanceled.Detach(s.onGossipServiceInboundStreamCanceled)
 	s.Events.Error.Detach(s.onGossipServiceError)
 }
 
