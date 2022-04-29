@@ -139,11 +139,6 @@ func provide(c *dig.Container) {
 				}
 			}
 
-			// Check if we need to migrate a legacy database into the split format
-			if err := SplitIntoTangleAndUTXO(deps.DatabasePath); err != nil {
-				CorePlugin.LogPanic(err)
-			}
-
 			tangleTargetEngine, err := database.CheckDatabaseEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine)
 			if err != nil {
 				CorePlugin.LogPanic(err)

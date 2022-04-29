@@ -174,7 +174,6 @@ func getTangleStorage(path string,
 	name string,
 	dbEngineStr string,
 	checkExist bool,
-	splitDB bool,
 	checkHealth bool,
 	markTainted bool,
 	checkSnapInfo bool) (*storage.Storage, error) {
@@ -192,12 +191,6 @@ func getTangleStorage(path string,
 
 		if !databaseExists {
 			return nil, fmt.Errorf("%s database does not exist (%s)", name, path)
-		}
-	}
-
-	if splitDB {
-		if err := databasecore.SplitIntoTangleAndUTXO(path, dbEngine); err != nil {
-			return nil, fmt.Errorf("splitting %s database failed: %w", name, err)
 		}
 	}
 

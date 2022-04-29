@@ -105,7 +105,7 @@ func databaseMerge(args []string) error {
 
 		// we don't need to check the health of the source db.
 		// it is fine as long as all messages in the cone are found.
-		tangleStoreSource, err = getTangleStorage(*databasePathSourceFlag, "source", *databaseEngineSourceFlag, true, true, false, false, true)
+		tangleStoreSource, err = getTangleStorage(*databasePathSourceFlag, "source", *databaseEngineSourceFlag, true, false, false, true)
 		if err != nil {
 			return err
 		}
@@ -116,7 +116,7 @@ func databaseMerge(args []string) error {
 	}
 
 	// we need to check the health of the target db, since we don't want use tainted/corrupted dbs.
-	tangleStoreTarget, err := getTangleStorage(*databasePathTargetFlag, "target", *databaseEngineTargetFlag, false, false, true, true, false)
+	tangleStoreTarget, err := getTangleStorage(*databasePathTargetFlag, "target", *databaseEngineTargetFlag, false, true, true, false)
 	if err != nil {
 		return err
 	}
@@ -231,10 +231,20 @@ func copyMilestoneCone(
 		}
 		defer cachedMsgNew.Release(true) // message -1
 
-		// set the new message as solid
 		cachedMsgMetaNew := cachedMsgNew.CachedMetadata() // meta +1
 		defer cachedMsgMetaNew.Release(true)              // meta -1
 
+		// we need to mark all messages that contain a milestone payload,
+		// but we can not trust the metadata of the parentsTraverserInterface for correct info about milestones
+		// because it could be a proxystorage, which doesn't know the correct milestones yet.
+		if cachedMsgNew.Message().IsMilestone() {
+			milestonePayload := milestoneManager.VerifyMilestonePayload(cachedMsgNew.Message().Milestone())
+			if milestonePayload != nil {
+				cachedMsgMetaNew.Metadata().SetMilestone(true)
+			}
+		}
+
+		// set the new message as solid
 		cachedMsgMetaNew.Metadata().SetSolid(true)
 
 		return true, nil

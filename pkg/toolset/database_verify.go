@@ -63,7 +63,7 @@ func databaseVerify(args []string) error {
 
 	// we don't need to check the health of the source db.
 	// it is fine as long as all messages in the cone are found.
-	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, true, false, false, true)
+	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, false, false, true)
 	if err != nil {
 		return err
 	}
