@@ -96,12 +96,12 @@ func (md *MilestoneDiff) TreasuryOutput() *utxo.TreasuryOutput {
 		return nil
 	}
 	to := receipt.Transaction.Output
-	msID, err := md.Milestone.ID()
+	msIDPtr, err := md.Milestone.ID()
 	if err != nil {
 		panic(err)
 	}
 	utxoTo := &utxo.TreasuryOutput{Amount: to.Amount}
-	copy(utxoTo.MilestoneID[:], msID[:])
+	copy(utxoTo.MilestoneID[:], msIDPtr[:])
 	return utxoTo
 }
 

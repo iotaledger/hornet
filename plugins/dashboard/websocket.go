@@ -103,7 +103,7 @@ func websocketRoute(ctx echo.Context) error {
 		case MsgTypeMs:
 			start := deps.SyncManager.LatestMilestoneIndex()
 			for msIndex := start - 10; msIndex <= start; msIndex++ {
-				if milestoneIDHex, err := getMilestoneIDHex(msIndex); err != nil {
+				if milestoneIDHex, err := getMilestoneIDHex(msIndex); err == nil {
 					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MilestoneID: milestoneIDHex, Index: msIndex}})
 				} else {
 					break

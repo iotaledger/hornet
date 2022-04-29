@@ -163,11 +163,11 @@ func (u *Manager) ForEachReceiptTupleMigratedAt(migratedAtIndex milestone.Index,
 }
 
 // ReceiptToOutputs extracts the migrated funds to outputs.
-func ReceiptToOutputs(r *iotago.ReceiptMilestoneOpt, msID *iotago.MilestoneID, msIndex milestone.Index, msTimestamp uint32) ([]*Output, error) {
+func ReceiptToOutputs(r *iotago.ReceiptMilestoneOpt, milestoneID iotago.MilestoneID, msIndex milestone.Index, msTimestamp uint32) ([]*Output, error) {
 	outputs := make([]*Output, len(r.Funds))
 	for outputIndex, migFundsEntry := range r.Funds {
 		entry := migFundsEntry
-		outputID := OutputIDForMigratedFunds(*msID, uint16(outputIndex))
+		outputID := OutputIDForMigratedFunds(milestoneID, uint16(outputIndex))
 		// we use the milestone hash as the "origin message"
 
 		output := &iotago.BasicOutput{
@@ -193,12 +193,12 @@ func OutputIDForMigratedFunds(milestoneHash iotago.MilestoneID, outputIndex uint
 }
 
 // ReceiptToTreasuryMutation converts a receipt to a treasury mutation tuple.
-func ReceiptToTreasuryMutation(r *iotago.ReceiptMilestoneOpt, unspentTreasuryOutput *TreasuryOutput, newMsID *iotago.MilestoneID) (*TreasuryMutationTuple, error) {
+func ReceiptToTreasuryMutation(r *iotago.ReceiptMilestoneOpt, unspentTreasuryOutput *TreasuryOutput, newMilestoneID iotago.MilestoneID) (*TreasuryMutationTuple, error) {
 	newOutput := &TreasuryOutput{
 		Amount: r.Transaction.Output.Amount,
 		Spent:  false,
 	}
-	copy(newOutput.MilestoneID[:], newMsID[:])
+	copy(newOutput.MilestoneID[:], newMilestoneID[:])
 
 	return &TreasuryMutationTuple{
 		NewOutput:   newOutput,
