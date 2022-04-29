@@ -27,6 +27,51 @@ func TestMergedContextCancel(t *testing.T) {
 	assert.Equal(t, utils.ErrMergedContextCanceled, mergedCtx.Err())
 }
 
+func TestMergedContextPrimaryCancel(t *testing.T) {
+
+	ctx1, cancel1 := context.WithCancel(context.WithValue(context.Background(), "one", 1))
+	defer cancel1()
+
+	ctx2, cancel2 := context.WithCancel(context.WithValue(context.Background(), "two", 2))
+	defer cancel2()
+
+	mergedCtx, _ := utils.MergeContexts(ctx1, ctx2)
+	cancel1()
+
+	assert.True(t, func() bool {
+		select {
+		case <-mergedCtx.Done():
+			return true
+		case <-time.After(1 * time.Second):
+			return false
+		}
+	}())
+
+	assert.Equal(t, ctx1.Err(), mergedCtx.Err())
+}
+
+func TestMergedContextSecondaryCancel(t *testing.T) {
+
+	ctx1, cancel1 := context.WithCancel(context.WithValue(context.Background(), "one", 1))
+	defer cancel1()
+
+	ctx2, cancel2 := context.WithCancel(context.WithValue(context.Background(), "two", 2))
+	defer cancel2()
+
+	mergedCtx, _ := utils.MergeContexts(ctx1, ctx2)
+	cancel2()
+
+	assert.True(t, func() bool {
+		select {
+		case <-mergedCtx.Done():
+			return true
+		case <-time.After(1 * time.Second):
+			return false
+		}
+	}())
+
+	assert.Equal(t, ctx2.Err(), mergedCtx.Err())
+}
 func TestMergedContextValues(t *testing.T) {
 
 	ctx1, cancel1 := context.WithCancel(context.WithValue(context.Background(), "one", 1))

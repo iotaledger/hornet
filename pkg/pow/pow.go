@@ -122,6 +122,11 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 	for {
 		nonce, err := doPow(ctx)
 		if err != nil {
+			// check if the external context got canceled.
+			if ctx.Err() != nil {
+				return common.ErrOperationAborted
+			}
+
 			if errors.Is(err, pow.ErrCancelled) {
 				// redo the PoW with new tips
 				continue
