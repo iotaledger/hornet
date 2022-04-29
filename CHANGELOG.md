@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 29.04.2022
+
+### Fixed
+    - Fixed high CPU usage due to missing check if the external PoW context got canceled (#1469)
+
+### Changed
+    - Added `privateKey` to ed25519 key tool json output (#1449) 
+ 
+### Added
+    - Added mnemonic parameter to ed25519 key tool (#1449) 
+
 ## [1.2.0] - 13.04.2022
 
 _**Note**: due to changes to the internal database structure it is recommended to remove the old `participation` database._
