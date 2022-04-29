@@ -79,10 +79,12 @@ func ConfirmMilestone(
 	utxoManager.WriteLockLedger()
 	defer utxoManager.WriteUnlockLedger()
 
-	msID, err := milestonePayload.ID()
+	msIDPtr, err := milestonePayload.ID()
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to compute milestone Id: %w", err)
 	}
+
+	milestoneID := *msIDPtr
 	previousMilestoneID := milestonePayload.PreviousMilestoneID
 	milestoneIndex := milestone.Index(milestonePayload.Index)
 	milestoneTimestamp := milestonePayload.Timestamp
@@ -112,7 +114,7 @@ func ConfirmMilestone(
 
 	confirmation := &Confirmation{
 		MilestoneIndex:   milestoneIndex,
-		MilestoneID:      *msID,
+		MilestoneID:      milestoneID,
 		MilestoneParents: milestoneParents,
 		Mutations:        mutations,
 	}
@@ -169,12 +171,12 @@ func ConfirmMilestone(
 			return nil, nil, fmt.Errorf("invalid receipt contained within milestone: %w", err)
 		}
 
-		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, msID, milestoneIndex, milestoneTimestamp)
+		migratedOutputs, err := utxo.ReceiptToOutputs(receipt, milestoneID, milestoneIndex, milestoneTimestamp)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to extract migrated outputs from receipt: %w", err)
 		}
 
-		tm, err = utxo.ReceiptToTreasuryMutation(receipt, unspentTreasuryOutput, msID)
+		tm, err = utxo.ReceiptToTreasuryMutation(receipt, unspentTreasuryOutput, milestoneID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to convert receipt to treasury mutation tuple: %w", err)
 		}

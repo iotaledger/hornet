@@ -48,12 +48,12 @@ func (coo *MockCoo) LastMilestoneID() iotago.MilestoneID {
 		return iotago.MilestoneID{}
 	}
 
-	msID, err := lastMilestonePayload.ID()
+	msIDPtr, err := lastMilestonePayload.ID()
 	if err != nil {
 		panic(err)
 	}
 
-	return *msID
+	return *msIDPtr
 }
 
 // LastPreviousMilestoneID returns the PreviousMilestoneID of the last issued milestone.

@@ -135,13 +135,13 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
 			}
 
-			milestoneID, err := milestonePayload.ID()
+			msIDPtr, err := milestonePayload.ID()
 			if err != nil {
 				return false, err
 			}
 
 			// Compare this milestones ID with the previousMilestoneID
-			seenPreviousMilestoneID = *milestoneID == previousMilestoneID
+			seenPreviousMilestoneID = *msIDPtr == previousMilestoneID
 			if seenPreviousMilestoneID {
 				// Check that the milestone timestamp has increased
 				if milestonePayload.Timestamp >= msTimestamp {
