@@ -26,7 +26,6 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -66,26 +65,25 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppInfo              *app.AppInfo
-	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
-	SyncManager          *syncmanager.SyncManager
-	ServerMetrics        *metrics.ServerMetrics
-	Storage              *storage.Storage
-	StorageMetrics       *metrics.StorageMetrics
-	TangleDatabase       *database.Database      `name:"tangleDatabase"`
-	UTXODatabase         *database.Database      `name:"utxoDatabase"`
-	RestAPIMetrics       *metrics.RestAPIMetrics `optional:"true"`
-	GossipService        *gossip.Service
-	ReceiptService       *migrator.ReceiptService `optional:"true"`
-	Tangle               *tangle.Tangle
-	PeeringManager       *p2p.Manager
-	RequestQueue         gossip.RequestQueue
-	MessageProcessor     *gossip.MessageProcessor
-	TipSelector          *tipselect.TipSelector `optional:"true"`
-	SnapshotManager      *snapshot.SnapshotManager
-	PrometheusEcho       *echo.Echo            `name:"prometheusEcho"`
-	ExternalMetricsProxy *restapi.DynamicProxy `name:"externalMetricsProxy"`
-	INXServer            *inx.INXServer        `optional:"true"`
+	AppInfo          *app.AppInfo
+	NodeConfig       *configuration.Configuration `name:"nodeConfig"`
+	SyncManager      *syncmanager.SyncManager
+	ServerMetrics    *metrics.ServerMetrics
+	Storage          *storage.Storage
+	StorageMetrics   *metrics.StorageMetrics
+	TangleDatabase   *database.Database      `name:"tangleDatabase"`
+	UTXODatabase     *database.Database      `name:"utxoDatabase"`
+	RestAPIMetrics   *metrics.RestAPIMetrics `optional:"true"`
+	GossipService    *gossip.Service
+	ReceiptService   *migrator.ReceiptService `optional:"true"`
+	Tangle           *tangle.Tangle
+	PeeringManager   *p2p.Manager
+	RequestQueue     gossip.RequestQueue
+	MessageProcessor *gossip.MessageProcessor
+	TipSelector      *tipselect.TipSelector `optional:"true"`
+	SnapshotManager  *snapshot.SnapshotManager
+	PrometheusEcho   *echo.Echo     `name:"prometheusEcho"`
+	INXServer        *inx.INXServer `optional:"true"`
 }
 
 func provide(c *dig.Container) {
@@ -97,8 +95,7 @@ func provide(c *dig.Container) {
 
 	type depsOut struct {
 		dig.Out
-		PrometheusEcho       *echo.Echo            `name:"prometheusEcho"`
-		ExternalMetricsProxy *restapi.DynamicProxy `name:"externalMetricsProxy"`
+		PrometheusEcho *echo.Echo `name:"prometheusEcho"`
 	}
 
 	if err := c.Provide(func(depsIn) depsOut {
@@ -106,8 +103,7 @@ func provide(c *dig.Container) {
 		e.HideBanner = true
 		e.Use(middleware.Recover())
 		return depsOut{
-			PrometheusEcho:       e,
-			ExternalMetricsProxy: restapi.NewDynamicProxy(e, "/external"),
+			PrometheusEcho: e,
 		}
 	}); err != nil {
 		Plugin.LogPanic(err)
