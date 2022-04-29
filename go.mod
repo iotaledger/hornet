@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/blang/vfs v1.0.0
-	github.com/cockroachdb/pebble v0.0.0-20220428002600-b9e970a83ddd
+	github.com/cockroachdb/pebble v0.0.0-20220428162328-d8f63bef04f9
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/dustin/go-humanize v1.0.0
@@ -15,11 +15,11 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/hashicorp/go-version v1.4.0
 	github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf
-	github.com/iotaledger/hive.go v0.0.0-20220428112623-2973f4f91b77
-	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220428112623-2973f4f91b77
-	github.com/iotaledger/inx/go v0.0.0-20220428092912-caf17b6413a6
+	github.com/iotaledger/hive.go v0.0.0-20220428170023-7fb77d7475d8
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220428170023-7fb77d7475d8
+	github.com/iotaledger/inx/go v0.0.0-20220428154111-868c18cc2750
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v3 v3.0.0-20220427162019-fb89ca0738f2
+	github.com/iotaledger/iota.go/v3 v3.0.0-20220429092212-d275a7831f6a
 	github.com/labstack/echo/v4 v4.7.2
 	github.com/labstack/gommon v0.3.1
 	github.com/libp2p/go-libp2p v0.19.0
@@ -50,8 +50,8 @@ require (
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/btcsuite/btcd v0.22.0-beta // indirect
-	github.com/btcsuite/btcd/btcec/v2 v2.1.3 // indirect
+	github.com/btcsuite/btcd v0.22.1 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cheekybits/genny v1.0.0 // indirect
@@ -190,7 +190,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
-	golang.org/x/exp v0.0.0-20220426173459-3bcf042a4bf5 // indirect
+	golang.org/x/exp v0.0.0-20220428152302-39d4317da171 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect

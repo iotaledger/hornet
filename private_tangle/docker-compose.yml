@@ -58,7 +58,7 @@ services:
       - 4-nodes
 
   inx-indexer:
-    image: iotaledger/inx-indexer:0.2
+    image: iotaledger/inx-indexer:0.3
     networks:
       peering_net:
         ipv4_address: 172.18.211.21
@@ -73,15 +73,15 @@ services:
       - 4-nodes
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.2
+    image: iotaledger/inx-mqtt:0.3
     networks:
       peering_net:
         ipv4_address: 172.18.211.22
     restart: on-failure
     command:
       - "--inx.address=172.18.211.11:9029"
-      - "--mqtt.bindAddress=172.18.211.22:1883"
-      - "--mqtt.wsPort=1888"
+      - "--mqtt.websocket.bindAddress=172.18.211.22:1888"
+      - "--prometheus.enabled=true"
       - "--prometheus.bindAddress=172.18.211.22:9313"
     profiles:
       - 2-nodes
