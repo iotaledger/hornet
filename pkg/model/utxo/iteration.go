@@ -160,7 +160,7 @@ func (u *Manager) ForEachUnspentOutput(consumer OutputConsumer, options ...UTXOI
 		}
 
 		return consumer(output)
-	}); err != nil {
+	}, options...); err != nil {
 		return err
 	}
 
