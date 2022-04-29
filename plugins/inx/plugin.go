@@ -75,12 +75,10 @@ func configure() {
 
 	attacherOpts := []tangle.MessageAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
+		tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(CfgINXPoWWorkerCount)),
 	}
 	if deps.TipSelector != nil {
 		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))
-	}
-	if deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled) {
-		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)))
 	}
 
 	attacher = deps.Tangle.MessageAttacher(attacherOpts...)

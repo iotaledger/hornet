@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
     - Check if the external PoW context got cancelled. (#1470)
     - Fixed dashboard milestone topic not sending the latest milestones. (#1474)
+    - Always allow remote PoW over INX. (#1475)
 
 
 ## [2.0.0-alpha9] - 27.04.2022
