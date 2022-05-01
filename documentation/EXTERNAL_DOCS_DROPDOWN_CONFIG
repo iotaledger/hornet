@@ -1,6 +1,0 @@
-{
-  label: "Hornet Node",
-  to: "hornet/welcome",
-  className: "icon-hornet",
-  activeBaseRegex: 'hornet/.*'
-},

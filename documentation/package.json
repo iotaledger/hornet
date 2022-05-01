@@ -1,7 +1,6 @@
 {
   "name": "hornet",
   "version": "0.0.0",
-  "private": "true",
   "scripts": {
     "start": "iota-wiki-cli start",
     "clean": "iota-wiki-cli clean",
