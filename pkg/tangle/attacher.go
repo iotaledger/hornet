@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
@@ -29,6 +30,7 @@ type MessageAttacherOptions struct {
 
 	powHandler     *pow.Handler
 	powWorkerCount int
+	powMetrics     metrics.PoWMetrics
 }
 
 func attacherOptions(opts []MessageAttacherOption) *MessageAttacherOptions {
@@ -61,6 +63,12 @@ func WithPoW(handler *pow.Handler, workerCount int) MessageAttacherOption {
 	return func(opts *MessageAttacherOptions) {
 		opts.powHandler = handler
 		opts.powWorkerCount = workerCount
+	}
+}
+
+func WithPoWMetrics(powMetrics metrics.PoWMetrics) MessageAttacherOption {
+	return func(opts *MessageAttacherOptions) {
+		opts.powMetrics = powMetrics
 	}
 }
 
@@ -118,8 +126,13 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Message
 					powWorkerCount = a.opts.powWorkerCount
 				}
 
-				if err := a.opts.powHandler.DoPoW(powCtx, msg, powWorkerCount, tipSelFunc); err != nil {
+				ts := time.Now()
+				messageSize, err := a.opts.powHandler.DoPoW(powCtx, msg, powWorkerCount, tipSelFunc)
+				if err != nil {
 					return nil, err
+				}
+				if a.opts.powMetrics != nil {
+					a.opts.powMetrics.PoWCompleted(messageSize, time.Since(ts))
 				}
 			}
 		}

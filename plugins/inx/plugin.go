@@ -9,6 +9,7 @@ import (
 
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/keymanager"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -19,6 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -59,11 +61,23 @@ type dependencies struct {
 	BaseToken               *protocfg.BaseToken
 	PoWHandler              *pow.Handler
 	INXServer               *INXServer
+	INXMetrics              *metrics.INXMetrics
 	Echo                    *echo.Echo                 `optional:"true"`
 	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
 }
 
 func provide(c *dig.Container) {
+
+	if err := c.Provide(func() *metrics.INXMetrics {
+		return &metrics.INXMetrics{
+			Events: &metrics.INXEvents{
+				PoWCompleted: events.NewEvent(metrics.PoWCompletedCaller),
+			},
+		}
+	}); err != nil {
+		Plugin.LogPanic(err)
+	}
+
 	if err := c.Provide(func() *INXServer {
 		return newINXServer()
 	}); err != nil {
@@ -76,6 +90,7 @@ func configure() {
 	attacherOpts := []tangle.MessageAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
 		tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(CfgINXPoWWorkerCount)),
+		tangle.WithPoWMetrics(deps.INXMetrics),
 	}
 	if deps.TipSelector != nil {
 		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))

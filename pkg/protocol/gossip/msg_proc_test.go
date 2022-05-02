@@ -103,7 +103,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.Parents = iotago.MessageIDs{[32]byte{}}
 
 	// pow again, so we have a valid message
-	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	_, err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
@@ -118,7 +118,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.ProtocolVersion = 1
 
 	// pow again, so we have a valid message
-	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	_, err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
@@ -133,7 +133,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.ProtocolVersion = ProtocolVersion
 
 	// pow again, so we have a valid message
-	err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	_, err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
