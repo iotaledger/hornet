@@ -57,16 +57,16 @@ func (h *Handler) PoWType() string {
 
 // DoPoW does the proof-of-work required to hit the target score configured on this Handler.
 // The given iota.Message's nonce is automatically updated.
-func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (err error) {
+func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (messageSize int, err error) {
 
 	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
-		return err
+		return 0, err
 	}
 
 	// enforce milestone msg nonce == 0
 	if _, isMilestone := msg.Payload.(*iotago.Milestone); isMilestone {
 		msg.Nonce = 0
-		return nil
+		return 0, nil
 	}
 
 	getPoWData := func(msg *iotago.Message) (powData []byte, err error) {
@@ -80,7 +80,7 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 
 	powData, err := getPoWData(msg)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	refreshTips := len(refreshTipsFunc) > 0 && refreshTipsFunc[0] != nil
@@ -124,17 +124,17 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 		if err != nil {
 			// check if the external context got canceled.
 			if ctx.Err() != nil {
-				return common.ErrOperationAborted
+				return 0, common.ErrOperationAborted
 			}
 
 			if errors.Is(err, pow.ErrCancelled) {
 				// redo the PoW with new tips
 				continue
 			}
-			return err
+			return 0, err
 		}
 
 		msg.Nonce = nonce
-		return nil
+		return len(powData) + nonceBytes, nil
 	}
 }

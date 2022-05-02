@@ -9,6 +9,7 @@ import (
 
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/app"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -170,6 +171,7 @@ type dependencies struct {
 	TipSelector             *tipselect.TipSelector     `optional:"true"`
 	Echo                    *echo.Echo                 `optional:"true"`
 	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
+	RestAPIMetrics          *metrics.RestAPIMetrics
 }
 
 func configure() {
@@ -182,6 +184,7 @@ func configure() {
 
 	attacherOpts := []tangle.MessageAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
+		tangle.WithPoWMetrics(deps.RestAPIMetrics),
 	}
 	if deps.TipSelector != nil {
 		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))

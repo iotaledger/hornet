@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/events"
 )
 
 func init() {
@@ -82,7 +83,11 @@ func initConfigPars(c *dig.Container) {
 func provide(c *dig.Container) {
 
 	if err := c.Provide(func() *metrics.RestAPIMetrics {
-		return &metrics.RestAPIMetrics{}
+		return &metrics.RestAPIMetrics{
+			Events: &metrics.RestAPIEvents{
+				PoWCompleted: events.NewEvent(metrics.PoWCompletedCaller),
+			},
+		}
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}

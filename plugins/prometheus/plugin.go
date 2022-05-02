@@ -74,6 +74,7 @@ type dependencies struct {
 	TangleDatabase   *database.Database      `name:"tangleDatabase"`
 	UTXODatabase     *database.Database      `name:"utxoDatabase"`
 	RestAPIMetrics   *metrics.RestAPIMetrics `optional:"true"`
+	INXMetrics       *metrics.INXMetrics     `optional:"true"`
 	GossipService    *gossip.Service
 	ReceiptService   *migrator.ReceiptService `optional:"true"`
 	Tangle           *tangle.Tangle
@@ -128,6 +129,9 @@ func configure() {
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusRestAPI) && deps.RestAPIMetrics != nil {
 		configureRestAPI()
+	}
+	if deps.NodeConfig.Bool(CfgPrometheusINX) && deps.INXMetrics != nil {
+		configureINX()
 	}
 	if deps.NodeConfig.Bool(CfgPrometheusINX) && deps.INXServer != nil {
 		deps.INXServer.ConfigurePrometheus()

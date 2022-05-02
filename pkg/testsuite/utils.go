@@ -111,7 +111,7 @@ func (b *MessageBuilder) BuildTaggedData() *Message {
 		Build()
 	require.NoError(b.te.TestInterface, err)
 
-	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	_, err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
 	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
@@ -205,7 +205,7 @@ func (b *MessageBuilder) Build() *Message {
 		Payload(transaction).Build()
 	require.NoError(b.te.TestInterface, err)
 
-	err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	_, err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
 	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
