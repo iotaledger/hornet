@@ -264,9 +264,12 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 			mergedCtx, mergedCtxCancel := utils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
 			defer mergedCtxCancel()
 
-			if err := deps.PoWHandler.DoPoW(mergedCtx, msg, powWorkerCount, refreshTipsFunc); err != nil {
+			ts := time.Now()
+			messageSize, err := deps.PoWHandler.DoPoW(mergedCtx, msg, powWorkerCount, refreshTipsFunc)
+			if err != nil {
 				return nil, err
 			}
+			deps.RestAPIMetrics.TriggerPoWCompleted(messageSize, time.Since(ts))
 		}
 	}
 

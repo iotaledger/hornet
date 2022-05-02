@@ -9,6 +9,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/app"
+	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -160,14 +161,15 @@ type dependencies struct {
 	AppInfo                               *app.AppInfo
 	NodeConfig                            *configuration.Configuration `name:"nodeConfig"`
 	PeeringConfigManager                  *p2p.ConfigManager
-	NetworkID                             uint64                 `name:"networkId"`
-	NetworkIDName                         string                 `name:"networkIdName"`
-	MaxDeltaMsgYoungestConeRootIndexToCMI int                    `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
-	MaxDeltaMsgOldestConeRootIndexToCMI   int                    `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-	BelowMaxDepth                         int                    `name:"belowMaxDepth"`
-	MinPoWScore                           float64                `name:"minPoWScore"`
-	Bech32HRP                             iotago.NetworkPrefix   `name:"bech32HRP"`
-	RestAPILimitsMaxResults               int                    `name:"restAPILimitsMaxResults"`
+	NetworkID                             uint64               `name:"networkId"`
+	NetworkIDName                         string               `name:"networkIdName"`
+	MaxDeltaMsgYoungestConeRootIndexToCMI int                  `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
+	MaxDeltaMsgOldestConeRootIndexToCMI   int                  `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+	BelowMaxDepth                         int                  `name:"belowMaxDepth"`
+	MinPoWScore                           float64              `name:"minPoWScore"`
+	Bech32HRP                             iotago.NetworkPrefix `name:"bech32HRP"`
+	RestAPILimitsMaxResults               int                  `name:"restAPILimitsMaxResults"`
+	RestAPIMetrics                        *metrics.RestAPIMetrics
 	SnapshotsFullPath                     string                 `name:"snapshotsFullPath"`
 	SnapshotsDeltaPath                    string                 `name:"snapshotsDeltaPath"`
 	TipSelector                           *tipselect.TipSelector `optional:"true"`
