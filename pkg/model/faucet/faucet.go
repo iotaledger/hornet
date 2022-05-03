@@ -460,7 +460,7 @@ func (f *Faucet) createMessage(ctx context.Context, txPayload serializer.Seriali
 		Payload:   txPayload,
 	}
 
-	if err := f.powHandler.DoPoW(ctx, iotaMsg, 1); err != nil {
+	if _, err := f.powHandler.DoPoW(ctx, iotaMsg, 1); err != nil {
 		return nil, err
 	}
 

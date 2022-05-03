@@ -20,7 +20,7 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*storage.Me
 	}
 
 	// we pass a background context here to not create invalid checkpoints at node shutdown.
-	if err := coo.powHandler.DoPoW(context.Background(), iotaMsg, coo.opts.powWorkerCount); err != nil {
+	if _, err := coo.powHandler.DoPoW(context.Background(), iotaMsg, coo.opts.powWorkerCount); err != nil {
 		return nil, err
 	}
 
@@ -62,7 +62,7 @@ func (coo *Coordinator) createMilestone(index milestone.Index, parents hornet.Me
 
 	// we pass a background context here to not create invalid milestones at node shutdown.
 	// otherwise the coordinator could panic at shutdown.
-	if err := coo.powHandler.DoPoW(context.Background(), iotaMsg, coo.opts.powWorkerCount); err != nil {
+	if _, err := coo.powHandler.DoPoW(context.Background(), iotaMsg, coo.opts.powWorkerCount); err != nil {
 		return nil, err
 	}
 

@@ -1,11 +1,35 @@
 package metrics
 
 import (
+	"time"
+
 	"go.uber.org/atomic"
+
+	"github.com/iotaledger/hive.go/events"
 )
+
+func PoWCompletedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(messageSize int, duration time.Duration))(params[0].(int), params[1].(time.Duration))
+}
+
+type RestAPIEvents struct {
+	// PoWCompleted is fired when a PoW request is completed.
+	PoWCompleted *events.Event
+}
 
 // RestAPIMetrics defines REST API metrics over the entire runtime of the node.
 type RestAPIMetrics struct {
 	// The total number HTTP request errors.
 	HTTPRequestErrorCounter atomic.Uint32
+	// The total number completed PoW requests.
+	PoWCompletedCounter atomic.Uint32
+
+	Events *RestAPIEvents
+}
+
+func (m *RestAPIMetrics) TriggerPoWCompleted(messageSize int, duration time.Duration) {
+	m.PoWCompletedCounter.Inc()
+	if m.Events != nil && m.Events.PoWCompleted != nil {
+		m.Events.PoWCompleted.Trigger(messageSize, duration)
+	}
 }

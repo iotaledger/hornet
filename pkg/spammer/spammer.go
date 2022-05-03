@@ -80,7 +80,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	}
 
 	timeStart = time.Now()
-	if err := s.powHandler.DoPoW(ctx, iotaMsg, 1, func() (tips hornet.MessageIDs, err error) {
+	if _, err := s.powHandler.DoPoW(ctx, iotaMsg, 1, func() (tips hornet.MessageIDs, err error) {
 		// refresh tips of the spammer if PoW takes longer than a configured duration.
 		_, refreshedTips, err := s.tipselFunc()
 		return refreshedTips, err
