@@ -50,8 +50,8 @@ const (
 	// ConflictInvalidNativeTokens the given native tokens are invalid.
 	ConflictInvalidNativeTokens = 7
 
-	// ConflictReturnAmountNotFulFilled return amount in a transaction is not fulfilled by the output side.
-	ConflictReturnAmountNotFulFilled = 8
+	// ConflictReturnAmountNotFulfilled return amount in a transaction is not fulfilled by the output side.
+	ConflictReturnAmountNotFulfilled = 8
 
 	// ConflictInvalidInputUnlock input unlock is invalid.
 	ConflictInvalidInputUnlock = 9
@@ -76,7 +76,7 @@ var errorToConflictMapping = map[error]Conflict{
 	iotago.ErrInvalidInputsCommitment: ConflictInvalidInputsCommitment,
 
 	// Deposit
-	iotago.ErrReturnAmountNotFulFilled: ConflictReturnAmountNotFulFilled,
+	iotago.ErrReturnAmountNotFulFilled: ConflictReturnAmountNotFulfilled,
 
 	// Signature validation
 	iotago.ErrEd25519SignatureInvalid:      ConflictInvalidSignature,
