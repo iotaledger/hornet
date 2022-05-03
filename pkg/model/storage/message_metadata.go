@@ -3,6 +3,8 @@ package storage
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/bitmask"
@@ -24,7 +26,7 @@ const (
 type Conflict uint8
 
 const (
-	//ConflictNone the message has no conflict.
+	// ConflictNone the message has no conflict.
 	ConflictNone Conflict = iota
 
 	// ConflictInputUTXOAlreadySpent the referenced UTXO was already spent.
@@ -42,9 +44,74 @@ const (
 	// ConflictInvalidSignature the unlock block signature is invalid.
 	ConflictInvalidSignature = 5
 
+	// ConflictTimelockNotExpired the configured timelock is not yet expired.
+	ConflictTimelockNotExpired = 6
+
+	// ConflictInvalidNativeTokens the given native tokens are invalid.
+	ConflictInvalidNativeTokens = 7
+
+	// ConflictReturnAmountNotFulFilled return amount in a transaction is not fulfilled by the output side.
+	ConflictReturnAmountNotFulFilled = 8
+
+	// ConflictInvalidInputUnlock input unlock is invalid.
+	ConflictInvalidInputUnlock = 9
+
+	// ConflictInvalidInputsCommitment the inputs commitment is invalid.
+	ConflictInvalidInputsCommitment = 10
+
+	// ConflictInvalidSender an output contains a Sender with an ident which is not unlocked.
+	ConflictInvalidSender = 11
+
+	// ConflictInvalidChainStateTransition the chain state transition is invalid.
+	ConflictInvalidChainStateTransition = 12
+
 	// ConflictSemanticValidationFailed the semantic validation failed.
 	ConflictSemanticValidationFailed = 255
 )
+
+var errorToConflictMapping = map[error]Conflict{
+	// Input validation
+	iotago.ErrMissingUTXO:             ConflictInputUTXONotFound,
+	iotago.ErrInputOutputSumMismatch:  ConflictInputOutputSumMismatch,
+	iotago.ErrInvalidInputsCommitment: ConflictInvalidInputsCommitment,
+
+	// Deposit
+	iotago.ErrReturnAmountNotFulFilled: ConflictReturnAmountNotFulFilled,
+
+	// Signature validation
+	iotago.ErrEd25519SignatureInvalid:      ConflictInvalidSignature,
+	iotago.ErrEd25519PubKeyAndAddrMismatch: ConflictInvalidSignature,
+
+	// Timelocks
+	iotago.ErrTimelockNotExpired: ConflictTimelockNotExpired,
+
+	// Native tokens
+	iotago.ErrNativeTokenAmountLessThanEqualZero: ConflictInvalidNativeTokens,
+	iotago.ErrNativeTokenSumExceedsUint256:       ConflictInvalidNativeTokens,
+	iotago.ErrMaxNativeTokensCountExceeded:       ConflictInvalidNativeTokens,
+	iotago.ErrNativeTokenSumUnbalanced:           ConflictInvalidNativeTokens,
+
+	// Sender validation
+	iotago.ErrSenderFeatureBlockNotUnlocked: ConflictInvalidSender,
+
+	// Unlock validation
+	iotago.ErrInvalidInputUnlock: ConflictInvalidInputUnlock,
+}
+
+func ConflictFromSemanticValidationError(err error) Conflict {
+	var chainError *iotago.ChainTransitionError
+	if errors.As(err, &chainError) {
+		return ConflictInvalidChainStateTransition
+	}
+
+	for errKind, conflict := range errorToConflictMapping {
+		if errors.Is(err, errKind) {
+			return conflict
+		}
+	}
+
+	return ConflictSemanticValidationFailed
+}
 
 type MessageMetadata struct {
 	objectstorage.StorableObjectFlags

@@ -101,7 +101,6 @@ func ConfirmMilestone(
 		utxoManager,
 		parentsTraverser,
 		cachedMessageFunc,
-		protoParas.NetworkID(),
 		milestoneIndex,
 		milestoneTimestamp,
 		milestoneParents,

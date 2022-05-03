@@ -85,7 +85,6 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	utxoManager *utxo.Manager,
 	parentsTraverser *dag.ParentsTraverser,
 	cachedMessageFunc storage.CachedMessageFunc,
-	networkId uint64,
 	msIndex milestone.Index,
 	msTimestamp uint32,
 	parents hornet.MessageIDs,
@@ -239,15 +238,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			if conflict == storage.ConflictNone {
 				// Verify that all outputs consume all inputs and have valid signatures. Also verify that the amounts match.
 				if err := transaction.SemanticallyValidate(semValCtx, inputOutputs.ToOutputSet()); err != nil {
-					if errors.Is(err, iotago.ErrMissingUTXO) {
-						conflict = storage.ConflictInputUTXONotFound
-					} else if errors.Is(err, iotago.ErrInputOutputSumMismatch) {
-						conflict = storage.ConflictInputOutputSumMismatch
-					} else if errors.Is(err, iotago.ErrEd25519SignatureInvalid) || errors.Is(err, iotago.ErrEd25519PubKeyAndAddrMismatch) {
-						conflict = storage.ConflictInvalidSignature
-					} else {
-						conflict = storage.ConflictSemanticValidationFailed
-					}
+					conflict = storage.ConflictFromSemanticValidationError(err)
 				}
 			}
 		}

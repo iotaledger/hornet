@@ -122,7 +122,6 @@ func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, pa
 		coo.te.UTXOManager(),
 		parentsTraverser,
 		messagesMemcache.CachedMessage,
-		coo.te.protoParas.NetworkID(),
 		index,
 		timestamp,
 		parents,
