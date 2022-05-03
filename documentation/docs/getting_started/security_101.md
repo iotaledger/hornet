@@ -1,6 +1,6 @@
 ---
 description: This section provides a checklist of steps for running a reliable and secure node.
-image: /img/logo/HornetLogo.png
+image: /img/Banner/banner_hornet_security_101.png
 keywords:
 - IOTA Node 
 - Hornet Node
@@ -11,6 +11,8 @@ keywords:
 
 
 # Security 101
+
+![Hornet Node Security 101](/img/Banner/banner_hornet_security_101.png)
 
 You can follow the checklists below to run your node securely.
 

@@ -1,6 +1,6 @@
 ---
 description: Frequently asked questions about the Hornet node. 
-image: /img/logo/HornetLogo.png
+image: /img/Banner/banner_faqs.png
 keywords:
 - IOTA Node 
 - Hornet Node
@@ -13,6 +13,8 @@ keywords:
 
 
 # Frequently Asked Questions
+
+![Frequently Asked Questions](/img/Banner/banner_faqs.png)
 
 ## What is HORNET?
 
