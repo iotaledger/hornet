@@ -99,7 +99,8 @@ var errorToConflictMapping = map[error]Conflict{
 }
 
 func ConflictFromSemanticValidationError(err error) Conflict {
-	if _, ok := err.(*iotago.ChainTransitionError); ok {
+	var chainError *iotago.ChainTransitionError
+	if errors.As(err, &chainError) {
 		return ConflictInvalidChainStateTransition
 	}
 
