@@ -33,7 +33,6 @@ Depending on the installation path you selected, default configuration files may
 ```bash
 config.json
 config_devnet.json
-config_comnet.json
 peering.json
 profiles.json
 ```
