@@ -62,7 +62,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
 
       - name: Prepare files
-        run: >
+        run: |
           yq -i 'del(.services.hornet.build)' docker-compose.yml
           yq -i '.services.hornet.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' docker-compose.yml
           yq -i 'del(.services.create-snapshots.build)' private_tangle/docker-compose.yml
