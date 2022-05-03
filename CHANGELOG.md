@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0-alpha11] - 03.05.2022
+
+### Changed
+    - Added remote PoW metrics to Prometheus. (#1481)
+    - Updated the whiteflag conflict reasons. (#1484, #1485)
+
+
 ## [2.0.0-alpha10] - 29.04.2022
 
 ### Changed
