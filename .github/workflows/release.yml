@@ -60,3 +60,42 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Prepare files
+        run: >
+          yq -i 'del(.services.hornet.build)' docker-compose.yml
+          yq -i '.services.hornet.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' docker-compose.yml
+          yq -i 'del(.services.create-snapshots.build)' private_tangle/docker-compose.yml
+          yq -i 'del(.services.hornet-coo.build)' private_tangle/docker-compose.yml
+          yq -i '.services.create-snapshots.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-coo.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-2.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-3.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+          yq -i '.services.hornet-4.image = "gohornet/hornet:${{ steps.meta.outputs.version }}"' private_tangle/docker-compose.yml
+
+      - name: Create docker-compose.zip
+        uses: vimtor/action-zip@v1
+        with:
+          files: .release/ config.json peering.json docker-compose.yml
+          recursive: true
+          dest: docker-compose.zip
+
+      - name: Upload docker-compose.zip file
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: docker-compose.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create private_tangle.zip file
+        uses: vimtor/action-zip@v1
+        with:
+          files: private_tangle/
+          recursive: true
+          dest: private_tangle.zip
+
+      - name: Upload private_tangle.zip file
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: private_tangle.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+
