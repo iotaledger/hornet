@@ -83,6 +83,7 @@ jobs:
       - name: Upload docker-compose.zip file
         uses: ncipollo/release-action@v1
         with:
+          allowUpdates: true
           artifacts: docker-compose.zip
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -96,6 +97,7 @@ jobs:
       - name: Upload private_tangle.zip file
         uses: ncipollo/release-action@v1
         with:
+          allowUpdates: true
           artifacts: private_tangle.zip
           token: ${{ secrets.GITHUB_TOKEN }}
 
