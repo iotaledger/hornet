@@ -10,9 +10,16 @@ keywords:
 - Reference
 ---
 
-# API Reference
+# API References
 
-You can find specifications for the REST API for the IOTA node software in the [IOTA REST API reference](https://editor.swagger.io/?url=https://raw.githubusercontent.com/rufsam/protocol-rfcs/master/text/0026-rest-api/0026-rest-api.yaml).
+You can find specifications for the REST and EVENT APIs for the IOTA node software within Chrysalis in the links below:
+
+- [Rest](https://github.com/iotaledger/tips/blob/main/tips/TIP-0013/tip-0013.md).
+- [EVENT API](https://github.com/iotaledger/tips/blob/main/tips/TIP-0016/tip-0016.md)
+
+You can find specifications for the REST and EVENT APIs for the IOTA node software within Stardust in the links below:
+
+- [Rest](https://github.com/iotaledger/tips/pull/57)
+- [EVENT API](https://github.com/iotaledger/tips/pull/66)
 
 
-The node event API is in charge of publishing information about events within the node software. You can find more information in the [Node event API reference](https://studio.asyncapi.com/?url=https://raw.githubusercontent.com/luca-moser/protocol-rfcs/rfc/node-event-api/text/0033-node-event-api/0033-node-event-api.yml). 
