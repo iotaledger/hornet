@@ -34,14 +34,12 @@ services:
       - "14626:14626/udp"
       - "14265:14265/tcp"
       - "8081:8081/tcp"
-      - "8091:8091/tcp"
       - "9311:9311/tcp"
     cap_drop:
       - ALL
     volumes:
       - ./config.json:/app/config.json:ro
       - ./peering.json:/app/peering.json
-      - ./profiles.json:/app/profiles.json:ro
       - ./alphanet:/app/alphanet
     command:
       - "-c"
