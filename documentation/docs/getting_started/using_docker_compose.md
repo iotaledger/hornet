@@ -13,7 +13,7 @@ keywords:
 
 # Using Docker Compose
 
-Make sure that you have read [Using Docker](using_docker.md) before you continue reading as this article is for advanced users. You can find more information on Docker Compose in the [official Docker Compose documentation](https://docs.docker.com/compose/).
+You can find more information on Docker Compose in the [official Docker Compose documentation](https://docs.docker.com/compose/).
 
 ## Requirements
 
@@ -141,7 +141,7 @@ You can edit `config.json` and customize the _dashboard_ section to your needs.
 
 Docker Compose is a tool on top of the Docker engine that helps you to define Docker parameters in a structured way using a `docker-compose.yaml` file. You can create and start the container with a single `docker-compose` command based on your configuration.
 
-To do so, you will need to create `docker-compose.yml` in the same directory as described in the [Prepare](#prepare) article:
+To do so, you will need to create `docker-compose.yml` in the same directory as described in the [Prepare](#prepare) section:
 
 ```plaintext{5}
 .
@@ -189,12 +189,6 @@ You can find more details on how to configure Hornet in the [post installation](
 
 ## Build Your Own Image Using Docker Compose
 
-:::note
-
-Follow this step only if you want to run Hornet via Docker Compose.
-
-:::
-
 If you are using any architecture other than `amd64/x86_64`, you should edit the `docker-compose.yml` file and set the correct architecture where noted.
 
 You can run the following command to build the image and run Hornet:
@@ -226,7 +220,7 @@ Hornet uses an in-memory cache so to save all data to the underlying persistent 
 You can start an existing Hornet container by running:
 
 ```bash
-docker start hornet
+docker-compose start hornet
 ```
 
 ### Restarting Hornet
@@ -234,36 +228,36 @@ docker start hornet
 You can restart an existing Hornet container by running:
 
 ```bash
-docker restart -t 300 hornet
+docker-compose restart -t 300 hornet
 ```
 
-* `-t 300` Instructs Docker to wait for a grace period before shutting down.
+* `-t 300` Instructs Docker compose to wait for a grace period before shutting down.
 
 ### Stopping Hornet
 
 You can stop an existing Hornet container by running:
 
 ```bash
-docker stop -t 300 hornet
+docker-compose stop -t 300 hornet
 ```
 
-* `-t 300` Instructs Docker to wait for a grace period before shutting down.
+* `-t 300` Instructs Docker compose to wait for a grace period before shutting down.
 
 ### Displaying Log Output
 
 You can display existing Hornet container logs by running:
 
 ```bash
-docker logs -f hornet
+docker-compose logs -f hornet
 ```
 
 * `-f`
-Instructs Docker to continue displaying the log to `stdout` until CTRL+C is pressed.
+Instructs Docker compose to continue displaying the log to `stdout` until CTRL+C is pressed.
 
 ## Removing a Container
 
 You can remove an existing Hornet container by running:
 
 ```bash
-docker container rm hornet
+docker-compose container rm hornet
 ```
