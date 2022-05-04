@@ -35,10 +35,6 @@ module.exports = {
         label: 'Hornet apt Repository',
       }, {
         type: 'doc',
-        id: 'getting_started/using_docker',
-        label: 'Using Docker',
-      }, {
-        type: 'doc',
         id: 'getting_started/using_docker_compose',
         label: 'Using Docker Compose',
       }, {
