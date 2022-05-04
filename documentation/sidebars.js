@@ -68,6 +68,10 @@ module.exports = {
         label: 'Configuration',
       }, {
         type: 'doc',
+        id: 'post_installation/inx_hornet',
+        label 'INX',
+      }, {
+        type: 'doc',
         id: 'post_installation/peering',
         label: 'Peering',
       }, {
