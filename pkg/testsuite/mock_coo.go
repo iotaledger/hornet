@@ -141,7 +141,7 @@ func (coo *MockCoo) milestonePayload(parents hornet.MessageIDs) (*iotago.Milesto
 		return nil, err
 	}
 
-	milestonePayload := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.LastMilestoneID(), sortedParents.ToSliceOfArrays(), mutations.ConfirmedMerkleRoot, mutations.AppliedMerkleRoot)
+	milestonePayload := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.te.protoParas.Version, coo.LastMilestoneID(), sortedParents.ToSliceOfArrays(), mutations.ConfirmedMerkleRoot, mutations.AppliedMerkleRoot)
 
 	keymapping := coo.keyManager.MilestonePublicKeyMappingForMilestoneIndex(milestoneIndex, coo.cooPrivateKeys, len(coo.cooPrivateKeys))
 
