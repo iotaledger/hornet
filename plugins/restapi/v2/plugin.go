@@ -371,7 +371,7 @@ func configure() {
 
 		default:
 			// default to echo.MIMEApplicationJSON
-			resp, err := outputByID(c, false)
+			resp, err := outputByID(c)
 			if err != nil {
 				return err
 			}
@@ -380,7 +380,7 @@ func configure() {
 	})
 
 	routeGroup.GET(RouteOutputMetadata, func(c echo.Context) error {
-		resp, err := outputByID(c, true)
+		resp, err := outputMetadataByID(c)
 		if err != nil {
 			return err
 		}

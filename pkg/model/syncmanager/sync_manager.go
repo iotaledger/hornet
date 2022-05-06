@@ -34,10 +34,10 @@ type SyncManager struct {
 	waitForNodeSyncedChannels       []chan struct{}
 }
 
-func New(utxoManager *utxo.Manager, belowMaxDepth int) (*SyncManager, error) {
+func New(utxoManager *utxo.Manager, belowMaxDepth milestone.Index) (*SyncManager, error) {
 	s := &SyncManager{
 		utxoManager:   utxoManager,
-		belowMaxDepth: milestone.Index(belowMaxDepth),
+		belowMaxDepth: belowMaxDepth,
 	}
 
 	if err := s.loadConfirmedMilestoneFromDatabase(); err != nil {

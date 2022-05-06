@@ -62,12 +62,12 @@ func TestMsgProcessorEmit(t *testing.T) {
 		NetworkName:   "testnet4",
 		Bech32HRP:     iotago.PrefixTestnet,
 		MinPoWScore:   MinPoWScore,
+		BelowMaxDepth: BelowMaxDepth,
 		RentStructure: iotago.RentStructure{},
 		TokenSupply:   0,
 	}
 
 	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, protoParas, &gossip.Options{
-		BelowMaxDepth:     BelowMaxDepth,
 		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingMessagesFilter,
 	})
 	require.NoError(t, err)

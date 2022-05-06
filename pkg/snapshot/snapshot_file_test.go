@@ -259,7 +259,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			count--
 
 			parents := iotago.MilestoneParentMessageIDs{utils.RandMessageID().ToArray()}
-			milestonePayload := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
+			milestonePayload := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), protoParas.Version, utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
 
 			treasuryInput := &iotago.TreasuryInput{}
 			copy(treasuryInput[:], utils.RandBytes(32))

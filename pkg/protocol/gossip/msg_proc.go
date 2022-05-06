@@ -64,7 +64,6 @@ type MessageProcessorEvents struct {
 
 // The Options for the MessageProcessor.
 type Options struct {
-	BelowMaxDepth     milestone.Index
 	WorkUnitCacheOpts *profile.CacheOpts
 }
 
@@ -234,7 +233,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 				return ErrMessageNotSolid
 			}
 
-			if (cmi - entryPointIndex) > proc.opts.BelowMaxDepth {
+			if (cmi - entryPointIndex) > milestone.Index(proc.protoParas.BelowMaxDepth) {
 				// the parent is below max depth
 				return ErrMessageBelowMaxDepth
 			}
@@ -255,7 +254,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 			return err
 		}
 
-		if (cmi - ocri) > proc.opts.BelowMaxDepth {
+		if (cmi - ocri) > milestone.Index(proc.protoParas.BelowMaxDepth) {
 			// the parent is below max depth
 			return ErrMessageBelowMaxDepth
 		}
@@ -527,7 +526,7 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 		return
 	}
 
-	if (proc.syncManager.LatestMilestoneIndex() - ocri) > proc.opts.BelowMaxDepth {
+	if (proc.syncManager.LatestMilestoneIndex() - ocri) > milestone.Index(proc.protoParas.BelowMaxDepth) {
 		// the solid message was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}

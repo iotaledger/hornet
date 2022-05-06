@@ -21,7 +21,7 @@ var (
 
 	showConfirmationGraphs = false
 	MinPoWScore            = 1.0
-	BelowMaxDepth          = 15
+	BelowMaxDepth          = uint16(15)
 )
 
 func TestWhiteFlagSendAllCoins(t *testing.T) {

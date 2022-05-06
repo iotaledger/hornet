@@ -117,7 +117,7 @@ func TestValue(t *testing.T) {
 	// the genesis output should be spent
 	outputRes, err := n.Coordinator().DebugNodeAPIClient.OutputByID(context.Background(), genesisInputID.ID())
 	require.NoError(t, err)
-	require.True(t, outputRes.Spent)
+	require.True(t, outputRes.Metadata.Spent)
 }
 
 const seedLength = ed25519.SeedSize

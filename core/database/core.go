@@ -10,6 +10,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -18,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -227,12 +229,12 @@ func provide(c *dig.Container) {
 
 	type syncManagerDeps struct {
 		dig.In
-		UTXOManager   *utxo.Manager
-		BelowMaxDepth int `name:"belowMaxDepth"`
+		UTXOManager        *utxo.Manager
+		ProtocolParameters *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps syncManagerDeps) *syncmanager.SyncManager {
-		sync, err := syncmanager.New(deps.UTXOManager, deps.BelowMaxDepth)
+		sync, err := syncmanager.New(deps.UTXOManager, milestone.Index(deps.ProtocolParameters.BelowMaxDepth))
 		if err != nil {
 			CorePlugin.LogPanicf("can't initialize sync manager: %s", err)
 		}

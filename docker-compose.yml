@@ -1,7 +1,7 @@
 version: '3'
 services:
   inx-indexer:
-    image: iotaledger/inx-indexer:0.4
+    image: iotaledger/inx-indexer:0.5
     restart: on-failure
     volumes:
       - ./alphanet/indexer:/app/database
@@ -11,7 +11,7 @@ services:
       - "--prometheus.bindAddress=inx-indexer:9312"
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.4
+    image: iotaledger/inx-mqtt:0.5
     restart: on-failure
     command:
       - "--inx.address=hornet:9029"

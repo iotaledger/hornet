@@ -89,7 +89,7 @@ type OnLedgerUpdatedFunc func(index milestone.Index, newOutputs utxo.Outputs, ne
 
 // SetupTestEnvironment initializes a clean database with initial snapshot,
 // configures a coordinator with a clean state, bootstraps the network and issues the first "numberOfMilestones" milestones.
-func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, belowMaxDepth int, targetScore float64, showConfirmationGraphs bool) *TestEnvironment {
+func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed25519Address, numberOfMilestones int, belowMaxDepth uint16, targetScore float64, showConfirmationGraphs bool) *TestEnvironment {
 
 	te := &TestEnvironment{
 		TestInterface:          testInterface,
@@ -98,10 +98,11 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(targetScore, 5*time.Second),
 		protoParas: &iotago.ProtocolParameters{
-			Version:     2,
-			NetworkName: "alphapnet1",
-			Bech32HRP:   iotago.PrefixTestnet,
-			MinPoWScore: targetScore,
+			Version:       2,
+			NetworkName:   "alphapnet1",
+			Bech32HRP:     iotago.PrefixTestnet,
+			MinPoWScore:   targetScore,
+			BelowMaxDepth: belowMaxDepth,
 			RentStructure: iotago.RentStructure{
 				VByteCost:    500,
 				VBFactorData: 1,
@@ -147,7 +148,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.storage.SolidEntryPointsAddWithoutLocking(hornet.NullMessageID(), 0)
 
 	// Initialize SyncManager
-	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), belowMaxDepth)
+	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), milestone.Index(belowMaxDepth))
 	require.NoError(te.TestInterface, err)
 
 	// Initialize MilestoneManager
