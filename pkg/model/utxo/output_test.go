@@ -326,7 +326,6 @@ func TestFoundryOutputSerialization(t *testing.T) {
 	iotaOutput := &iotago.FoundryOutput{
 		Amount:       amount,
 		SerialNumber: rand.Uint32(),
-		TokenTag:     utils.RandTokenTag(),
 		TokenScheme: &iotago.SimpleTokenScheme{
 			MintedTokens:  supply,
 			MeltedTokens:  new(big.Int).SetBytes([]byte{0}),

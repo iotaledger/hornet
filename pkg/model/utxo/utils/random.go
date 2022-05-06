@@ -46,12 +46,6 @@ func RandAliasID() iotago.AliasID {
 	return alias
 }
 
-func RandTokenTag() iotago.TokenTag {
-	tokenTag := iotago.TokenTag{}
-	copy(tokenTag[:], RandBytes(iotago.TokenTagLength))
-	return tokenTag
-}
-
 func RandMilestoneIndex() milestone.Index {
 	return milestone.Index(rand.Uint32())
 }
@@ -137,7 +131,6 @@ func RandOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.
 		iotaOutput = &iotago.FoundryOutput{
 			Amount:       amount,
 			SerialNumber: 0,
-			TokenTag:     RandTokenTag(),
 			TokenScheme: &iotago.SimpleTokenScheme{
 				MintedTokens:  supply,
 				MeltedTokens:  new(big.Int).SetBytes([]byte{0}),
