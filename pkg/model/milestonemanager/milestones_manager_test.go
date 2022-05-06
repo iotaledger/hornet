@@ -89,32 +89,33 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	{
 	  "protocolVersion": 2,
 	  "parentMessageIds": [
-	    "0x3d2ff2e7fc5ed7bfefe6c04830fabdb2f7a54e24c5804094cf278be75daa5a8f"
+	    "0x35fefbb0927ce9da0f4c6f5567ec9d390ec4f5dc88a610ecbd2aa6cb08628f5e"
 	  ],
 	  "payload": {
 	    "type": 7,
 	    "index": 3,
-	    "timestamp": 1650991380,
-	    "previousMilestoneId": "0x2db243660a17056f65a271173f98d8342f7a4fd248f345e0f2b3692b3d0b2d9e",
+	    "timestamp": 1651838930,
+	    "protocolVersion": 2,
+	    "previousMilestoneId": "0xd3732082d3aed87e6fc29c006c290a2dc708a3d3a7f1d30f5ed54ab6a511138b",
 	    "parentMessageIds": [
-	      "0x3d2ff2e7fc5ed7bfefe6c04830fabdb2f7a54e24c5804094cf278be75daa5a8f"
+	      "0x35fefbb0927ce9da0f4c6f5567ec9d390ec4f5dc88a610ecbd2aa6cb08628f5e"
 	    ],
-	    "confirmedMerkleRoot": "0x8b73cda5ef097a44ed6a709d8154e6ef52894f35cb8138aaf8009b734109d3cd",
+	    "confirmedMerkleRoot": "0xf4e43e9b04c116777a25a5f216855edf7ef6b4235685d15e51d6ed53a2c1c06d",
 	    "appliedMerkleRoot": "0x0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
 	    "signatures": [
 	      {
 	        "type": 0,
 	        "publicKey": "0xed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
-	        "signature": "0x186036b0d336cf4f0bd2e57c3e15fa475a6ea2eeee3abf613f2fde2cb5587fb43b0de17863f7a039f0eaf0f27002f57cc8674b4908117d1cc2314adbc2bb9102"
+	        "signature": "0xad41bb0fd27b03ffd4fd8cdbf1cdcb8d3b3ab27b304f2779663a26c7a98283e9417cbdc207a0d040d1298e30365250148a597d65d46c7da7400e115cec80870e"
 	      },
 	      {
 	        "type": 0,
 	        "publicKey": "0xf6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
-	        "signature": "0x22cd0e53c17aed121b3b744a32fdcd8e4b944f65541bebebe6a25dc5eae53ad9b911dd534332e638479861bd751012b3b1991cf8cc9ee69ba2752e66d3e1a40f"
+	        "signature": "0xa2d80950f636c5e21d73780d7240c0b12a5224037d97ea2e32b3dcea4aa70f9b9de71c1361912a126d15c4581a2d15953a0056126b92e94ce36cd1fdddbffa09"
 	      }
 	    ]
 	  },
-	  "nonce": "293"
+	  "nonce": "0"
 	}
 	`
 	jsonMsg := &iotago.Message{}
