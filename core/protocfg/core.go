@@ -51,10 +51,11 @@ func initConfigPars(c *dig.Container) {
 		res := cfgResult{
 			MilestonePublicKeyCount: deps.NodeConfig.Int(CfgProtocolMilestonePublicKeyCount),
 			ProtocolParameters: &iotago.ProtocolParameters{
-				Version:     byte(deps.NodeConfig.Int(CfgProtocolParametersVersion)),
-				NetworkName: deps.NodeConfig.String(CfgProtocolParametersNetworkName),
-				Bech32HRP:   iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolParametersBech32HRP)),
-				MinPoWScore: deps.NodeConfig.Float64(CfgProtocolParametersMinPoWScore),
+				Version:       byte(deps.NodeConfig.Int(CfgProtocolParametersVersion)),
+				NetworkName:   deps.NodeConfig.String(CfgProtocolParametersNetworkName),
+				Bech32HRP:     iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolParametersBech32HRP)),
+				MinPoWScore:   deps.NodeConfig.Float64(CfgProtocolParametersMinPoWScore),
+				BelowMaxDepth: uint16(deps.NodeConfig.Int(CfgProtocolParametersBelowMaxDepth)),
 				RentStructure: iotago.RentStructure{
 					VByteCost:    uint64(deps.NodeConfig.Int64(CfgProtocolParametersRentStructureVByteCost)),
 					VBFactorData: iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolParametersRentStructureVByteFactorData)),
