@@ -110,7 +110,6 @@ func provide(c *dig.Container) {
 		SyncManager          *syncmanager.SyncManager
 		UTXOManager          *utxo.Manager
 		NodeConfig           *configuration.Configuration `name:"nodeConfig"`
-		BelowMaxDepth        int                          `name:"belowMaxDepth"`
 		ProtocolParameters   *iotago.ProtocolParameters
 		PruningPruneReceipts bool   `name:"pruneReceipts"`
 		DeleteAllFlag        bool   `name:"deleteAll"`
@@ -138,9 +137,9 @@ func provide(c *dig.Container) {
 			CorePlugin.LogPanic(err)
 		}
 
-		solidEntryPointCheckThresholdPast := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
-		solidEntryPointCheckThresholdFuture := milestone.Index(deps.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
-		pruningThreshold := milestone.Index(deps.BelowMaxDepth + AdditionalPruningThreshold)
+		solidEntryPointCheckThresholdPast := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
+		solidEntryPointCheckThresholdFuture := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
+		pruningThreshold := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + AdditionalPruningThreshold)
 
 		snapshotDepth := milestone.Index(deps.NodeConfig.Int(CfgSnapshotsDepth))
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {

@@ -17,6 +17,9 @@ const (
 	CfgProtocolParametersBech32HRP = "protocol.parameters.bech32HRP"
 	// the minimum PoW score required by the network.
 	CfgProtocolParametersMinPoWScore = "protocol.parameters.minPoWScore"
+	// CfgProtocolParametersBelowMaxDepth is the maximum allowed delta
+	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
+	CfgProtocolParametersBelowMaxDepth = "protocol.parameters.belowMaxDepth"
 	// the vByte cost used for the dust protection
 	CfgProtocolParametersRentStructureVByteCost = "protocol.parameters.vByteCost"
 	// the vByte factor used for data fields
@@ -55,6 +58,7 @@ var params = &node.PluginParams{
 			fs.String(CfgProtocolParametersNetworkName, "chrysalis-mainnet", "the network ID on which this node operates on.")
 			fs.String(CfgProtocolParametersBech32HRP, string(iotago.PrefixMainnet), "the HRP which should be used for Bech32 addresses.")
 			fs.Float64(CfgProtocolParametersMinPoWScore, 4000, "the minimum PoW score required by the network.")
+			fs.Uint16(CfgProtocolParametersBelowMaxDepth, 15, "the maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy")
 			fs.Uint64(CfgProtocolParametersRentStructureVByteCost, 500, "the vByte cost used for the dust protection")
 			fs.Uint64(CfgProtocolParametersRentStructureVByteFactorData, 1, "the vByte factor used for data fields")
 			fs.Uint64(CfgProtocolParametersRentStructureVByteFactorKey, 10, "the vByte factor used for key fields")

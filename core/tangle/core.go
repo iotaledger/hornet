@@ -113,14 +113,12 @@ func provide(c *dig.Container) {
 		dig.Out
 		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
 		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-		BelowMaxDepth                         int `name:"belowMaxDepth"`
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 		return cfgResult{
 			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.NodeConfig.Int(CfgTangleMaxDeltaMsgYoungestConeRootIndexToCMI),
 			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.NodeConfig.Int(CfgTangleMaxDeltaMsgOldestConeRootIndexToCMI),
-			BelowMaxDepth:                         deps.NodeConfig.Int(CfgTangleBelowMaxDepth),
 		}
 	}); err != nil {
 		CorePlugin.LogPanic(err)
@@ -131,11 +129,11 @@ func provide(c *dig.Container) {
 		Storage                               *storage.Storage
 		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
 		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-		BelowMaxDepth                         int `name:"belowMaxDepth"`
+		ProtocolParameters                    *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps tipScoreDeps) *tangle.TipScoreCalculator {
-		return tangle.NewTipScoreCalculator(deps.Storage, deps.MaxDeltaMsgYoungestConeRootIndexToCMI, deps.MaxDeltaMsgOldestConeRootIndexToCMI, deps.BelowMaxDepth)
+		return tangle.NewTipScoreCalculator(deps.Storage, deps.MaxDeltaMsgYoungestConeRootIndexToCMI, deps.MaxDeltaMsgOldestConeRootIndexToCMI, int(deps.ProtocolParameters.BelowMaxDepth))
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}

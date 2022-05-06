@@ -11,7 +11,6 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/node"
@@ -95,7 +94,6 @@ func provide(c *dig.Container) {
 		PeeringManager     *p2p.Manager
 		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
-		BelowMaxDepth      int `name:"belowMaxDepth"`
 		Profile            *profile.Profile
 	}
 
@@ -108,7 +106,6 @@ func provide(c *dig.Container) {
 			deps.ServerMetrics,
 			deps.ProtocolParameters,
 			&gossip.Options{
-				BelowMaxDepth:     milestone.Index(deps.BelowMaxDepth),
 				WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 			})
 		if err != nil {
