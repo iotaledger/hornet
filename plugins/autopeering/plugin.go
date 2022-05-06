@@ -119,11 +119,11 @@ func preProvide(c *dig.Container, application *app.App, initConfig *app.InitConf
 		// - autopeering
 
 		// disable the other plugins if the node runs as an entry node for autopeering
-		initConfig.ForceDisableComponent(databaseCore.CorePlugin.Identifier())
-		initConfig.ForceDisableComponent(pow.CorePlugin.Identifier())
-		initConfig.ForceDisableComponent(gossip.CorePlugin.Identifier())
-		initConfig.ForceDisableComponent(tangle.CorePlugin.Identifier())
-		initConfig.ForceDisableComponent(snapshot.CorePlugin.Identifier())
+		initConfig.ForceDisableComponent(databaseCore.CoreComponent.Identifier())
+		initConfig.ForceDisableComponent(pow.CoreComponent.Identifier())
+		initConfig.ForceDisableComponent(gossip.CoreComponent.Identifier())
+		initConfig.ForceDisableComponent(tangle.CoreComponent.Identifier())
+		initConfig.ForceDisableComponent(snapshot.CoreComponent.Identifier())
 		initConfig.ForceDisableComponent(restapiv2.Plugin.Identifier())
 		initConfig.ForceDisableComponent(warpsync.Plugin.Identifier())
 		initConfig.ForceDisableComponent(urts.Plugin.Identifier())

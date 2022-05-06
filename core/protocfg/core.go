@@ -16,7 +16,7 @@ import (
 func init() {
 	_ = flag.CommandLine.MarkHidden(CfgProtocolPublicKeyRangesJSON)
 
-	CorePlugin = &app.CoreComponent{
+	CoreComponent = &app.CoreComponent{
 		Component: &app.Component{
 			Name:           "ProtoCfg",
 			Params:         params,
@@ -26,7 +26,7 @@ func init() {
 }
 
 var (
-	CorePlugin *app.CoreComponent
+	CoreComponent *app.CoreComponent
 
 	cooPubKeyRangesFlag = flag.String(CfgProtocolPublicKeyRangesJSON, "", "overwrite public key ranges (JSON)")
 )
@@ -77,7 +77,7 @@ func initConfigPars(c *dig.Container) error {
 		if *cooPubKeyRangesFlag != "" {
 			// load from special CLI flag
 			if err := json.Unmarshal([]byte(*cooPubKeyRangesFlag), &keyRanges); err != nil {
-				CorePlugin.LogPanic(err)
+				CoreComponent.LogPanic(err)
 			}
 		} else {
 			if err := deps.AppConfig.SetDefault(CfgProtocolPublicKeyRanges, ConfigPublicKeyRanges{
@@ -115,23 +115,23 @@ func initConfigPars(c *dig.Container) error {
 					EndIndex:   0,
 				},
 			}); err != nil {
-				CorePlugin.LogPanic(err)
+				CoreComponent.LogPanic(err)
 			}
 
 			// load from config
 			if err := deps.AppConfig.Unmarshal(CfgProtocolPublicKeyRanges, &keyRanges); err != nil {
-				CorePlugin.LogPanic(err)
+				CoreComponent.LogPanic(err)
 			}
 		}
 
 		keyManager, err := KeyManagerWithConfigPublicKeyRanges(keyRanges)
 		if err != nil {
-			CorePlugin.LogPanicf("can't load public key ranges: %s", err)
+			CoreComponent.LogPanicf("can't load public key ranges: %s", err)
 		}
 		res.KeyManager = keyManager
 		return res
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	return nil

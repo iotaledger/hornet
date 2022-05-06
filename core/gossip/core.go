@@ -39,7 +39,7 @@ const (
 )
 
 func init() {
-	CorePlugin = &app.CoreComponent{
+	CoreComponent = &app.CoreComponent{
 		Component: &app.Component{
 			Name:      "Gossip",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -52,8 +52,8 @@ func init() {
 }
 
 var (
-	CorePlugin *app.CoreComponent
-	deps       dependencies
+	CoreComponent *app.CoreComponent
+	deps          dependencies
 
 	// closures
 	onGossipServiceProtocolStarted     *events.Closure
@@ -82,7 +82,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func() gossip.RequestQueue {
 		return gossip.NewRequestQueue()
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	type msgProcDeps struct {
@@ -109,12 +109,12 @@ func provide(c *dig.Container) error {
 				WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
 			})
 		if err != nil {
-			CorePlugin.LogPanicf("MessageProcessor initialization failed: %s", err)
+			CoreComponent.LogPanicf("MessageProcessor initialization failed: %s", err)
 		}
 
 		return msgProc
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	type serviceDeps struct {
@@ -139,7 +139,7 @@ func provide(c *dig.Container) error {
 			gossip.WithStreamWriteTimeout(deps.AppConfig.Duration(CfgP2PGossipStreamWriteTimeout)),
 		)
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	type requesterDeps struct {
@@ -158,7 +158,7 @@ func provide(c *dig.Container) error {
 			gossip.WithRequesterDiscardRequestsOlderThan(deps.AppConfig.Duration(CfgRequestsDiscardOlderThan)),
 			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.AppConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	type broadcasterDeps struct {
@@ -177,7 +177,7 @@ func provide(c *dig.Container) error {
 			deps.GossipService,
 			1000)
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	return nil
@@ -197,54 +197,54 @@ func configure() error {
 
 func run() error {
 
-	if err := CorePlugin.Daemon().BackgroundWorker("GossipService", func(ctx context.Context) {
-		CorePlugin.LogInfo("Running GossipService")
+	if err := CoreComponent.Daemon().BackgroundWorker("GossipService", func(ctx context.Context) {
+		CoreComponent.LogInfo("Running GossipService")
 		attachEventsGossipService()
 		deps.GossipService.Start(ctx)
 
 		detachEventsGossipService()
-		CorePlugin.LogInfo("Stopped GossipService")
+		CoreComponent.LogInfo("Stopped GossipService")
 	}, shutdown.PriorityGossipService); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(ctx context.Context) {
+	if err := CoreComponent.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(ctx context.Context) {
 		deps.Requester.RunPendingRequestEnqueuer(ctx)
 	}, shutdown.PriorityRequestsProcessor); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("RequestQueueDrainer", func(ctx context.Context) {
+	if err := CoreComponent.Daemon().BackgroundWorker("RequestQueueDrainer", func(ctx context.Context) {
 		deps.Requester.RunRequestQueueDrainer(ctx)
 	}, shutdown.PriorityRequestsProcessor); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("BroadcastQueue", func(ctx context.Context) {
-		CorePlugin.LogInfo("Running BroadcastQueue")
+	if err := CoreComponent.Daemon().BackgroundWorker("BroadcastQueue", func(ctx context.Context) {
+		CoreComponent.LogInfo("Running BroadcastQueue")
 		attachEventsBroadcastQueue()
 		deps.Broadcaster.RunBroadcastQueueDrainer(ctx)
 
 		detachEventsBroadcastQueue()
-		CorePlugin.LogInfo("Stopped BroadcastQueue")
+		CoreComponent.LogInfo("Stopped BroadcastQueue")
 	}, shutdown.PriorityBroadcastQueue); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("MessageProcessor", func(ctx context.Context) {
-		CorePlugin.LogInfo("Running MessageProcessor")
+	if err := CoreComponent.Daemon().BackgroundWorker("MessageProcessor", func(ctx context.Context) {
+		CoreComponent.LogInfo("Running MessageProcessor")
 		deps.MessageProcessor.Run(ctx)
 
-		CorePlugin.LogInfo("Stopped MessageProcessor")
+		CoreComponent.LogInfo("Stopped MessageProcessor")
 	}, shutdown.PriorityMessageProcessor); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CorePlugin.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(ctx context.Context) {
+	if err := CoreComponent.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, shutdown.PriorityHeartbeats); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
@@ -277,13 +277,13 @@ func checkHeartbeats() {
 			if p.Autopeering != nil {
 				// it's better to drop the connection to autopeered peers and free the slots for other peers
 				peerIDsToRemove[p.ID] = struct{}{}
-				CorePlugin.LogInfof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
+				CoreComponent.LogInfof("dropping autopeered neighbor %s / %s because we didn't receive heartbeats anymore", p.Autopeering.ID(), p.Autopeering.ID())
 				return true
 			}
 		*/
 
 		// close the connection to static connected peers, so they will be moved into reconnect pool to reestablish the connection
-		CorePlugin.LogInfof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
+		CoreComponent.LogInfof("closing connection to peer %s because we didn't receive heartbeats anymore", proto.PeerID.ShortString())
 		peersToReconnect[proto.PeerID] = struct{}{}
 		return true
 	})
@@ -311,17 +311,17 @@ func configureEvents() {
 
 		// attach protocol errors
 		closeConnectionDueToProtocolError := events.NewClosure(func(err error) {
-			CorePlugin.LogWarnf("closing connection to peer %s because of a protocol error: %s", proto.PeerID.ShortString(), err.Error())
+			CoreComponent.LogWarnf("closing connection to peer %s because of a protocol error: %s", proto.PeerID.ShortString(), err.Error())
 
 			if err := deps.GossipService.CloseStream(proto.PeerID); err != nil {
-				CorePlugin.LogWarnf("closing connection to peer %s failed, error: %s", proto.PeerID.ShortString(), err.Error())
+				CoreComponent.LogWarnf("closing connection to peer %s failed, error: %s", proto.PeerID.ShortString(), err.Error())
 			}
 		})
 
 		proto.Events.Errors.Attach(closeConnectionDueToProtocolError)
 		proto.Parser.Events.Error.Attach(closeConnectionDueToProtocolError)
 
-		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
+		if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-read-%s-%s", proto.PeerID, proto.Stream.ID()), func(_ context.Context) {
 			buf := make([]byte, readBufSize)
 			// only way to break out is to Reset() the stream
 			for {
@@ -336,10 +336,10 @@ func configureEvents() {
 				}
 			}
 		}, shutdown.PriorityPeerGossipProtocolRead); err != nil {
-			CorePlugin.LogWarnf("failed to start worker: %s", err)
+			CoreComponent.LogWarnf("failed to start worker: %s", err)
 		}
 
-		if err := CorePlugin.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
+		if err := CoreComponent.Daemon().BackgroundWorker(fmt.Sprintf("gossip-protocol-write-%s-%s", proto.PeerID, proto.Stream.ID()), func(ctx context.Context) {
 			// send heartbeat and latest milestone request
 			if snapshotInfo := deps.Storage.SnapshotInfo(); snapshotInfo != nil {
 				latestMilestoneIndex := deps.SyncManager.LatestMilestoneIndex()
@@ -363,7 +363,7 @@ func configureEvents() {
 				}
 			}
 		}, shutdown.PriorityPeerGossipProtocolWrite); err != nil {
-			CorePlugin.LogWarnf("failed to start worker: %s", err)
+			CoreComponent.LogWarnf("failed to start worker: %s", err)
 		}
 	})
 

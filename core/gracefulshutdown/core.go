@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	CorePlugin = &app.CoreComponent{
+	CoreComponent = &app.CoreComponent{
 		Component: &app.Component{
 			Name:      "Graceful Shutdown",
 			Provide:   provide,
@@ -19,8 +19,8 @@ func init() {
 }
 
 var (
-	CorePlugin *app.CoreComponent
-	deps       dependencies
+	CoreComponent *app.CoreComponent
+	deps          dependencies
 )
 
 type dependencies struct {
@@ -31,9 +31,9 @@ type dependencies struct {
 func provide(c *dig.Container) error {
 
 	if err := c.Provide(func() *shutdown.ShutdownHandler {
-		return shutdown.NewShutdownHandler(CorePlugin.Logger(), CorePlugin.Daemon())
+		return shutdown.NewShutdownHandler(CoreComponent.Logger(), CoreComponent.Daemon())
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	return nil

@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	CorePlugin = &app.CoreComponent{
+	CoreComponent = &app.CoreComponent{
 		Component: &app.Component{
 			Name:     "PoW",
 			DepsFunc: func(cDeps dependencies) { deps = cDeps },
@@ -25,8 +25,8 @@ func init() {
 }
 
 var (
-	CorePlugin *app.CoreComponent
-	deps       dependencies
+	CoreComponent *app.CoreComponent
+	deps          dependencies
 )
 
 type dependencies struct {
@@ -46,7 +46,7 @@ func provide(c *dig.Container) error {
 		// init the pow handler with all possible settings
 		return pow.New(deps.ProtocolParameters.MinPoWScore, deps.AppConfig.Duration(CfgPoWRefreshTipsInterval))
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	return nil
@@ -55,13 +55,13 @@ func provide(c *dig.Container) error {
 func run() error {
 
 	// close the PoW handler on shutdown
-	if err := CorePlugin.Daemon().BackgroundWorker("PoW Handler", func(ctx context.Context) {
-		CorePlugin.LogInfo("Starting PoW Handler ... done")
+	if err := CoreComponent.Daemon().BackgroundWorker("PoW Handler", func(ctx context.Context) {
+		CoreComponent.LogInfo("Starting PoW Handler ... done")
 		<-ctx.Done()
-		CorePlugin.LogInfo("Stopping PoW Handler ...")
-		CorePlugin.LogInfo("Stopping PoW Handler ... done")
+		CoreComponent.LogInfo("Stopping PoW Handler ...")
+		CoreComponent.LogInfo("Stopping PoW Handler ... done")
 	}, shutdown.PriorityPoWHandler); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil

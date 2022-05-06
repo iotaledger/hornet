@@ -17,7 +17,7 @@ var (
 )
 
 func init() {
-	CorePlugin = &app.CoreComponent{
+	CoreComponent = &app.CoreComponent{
 		Component: &app.Component{
 			Name:      "Profile",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -29,8 +29,8 @@ func init() {
 }
 
 var (
-	CorePlugin *app.CoreComponent
-	deps       dependencies
+	CoreComponent *app.CoreComponent
+	deps          dependencies
 )
 
 type dependencies struct {
@@ -49,7 +49,7 @@ func provide(c *dig.Container) error {
 	if err := c.Provide(func(d profileDeps) *profile.Profile {
 		return loadProfile(d.AppConfig, d.ProfilesConfig)
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	return nil
@@ -58,9 +58,9 @@ func provide(c *dig.Container) error {
 func configure() error {
 
 	if deps.AppConfig.String(CfgAppProfile) == AutoProfileName {
-		CorePlugin.LogInfof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
+		CoreComponent.LogInfof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
 	} else {
-		CorePlugin.LogInfof("Using profile '%s'", deps.Profile.Name)
+		CoreComponent.LogInfof("Using profile '%s'", deps.Profile.Name)
 	}
 
 	return nil
@@ -73,7 +73,7 @@ func loadProfile(appConfig *configuration.Configuration, profilesConfig *configu
 	if profileName == AutoProfileName {
 		v, err := mem.VirtualMemory()
 		if err != nil {
-			CorePlugin.LogPanic(err)
+			CoreComponent.LogPanic(err)
 		}
 
 		if v.Total >= 8000000000*0.95 {
@@ -85,7 +85,7 @@ func loadProfile(appConfig *configuration.Configuration, profilesConfig *configu
 		} else if v.Total >= 1000000000*0.95 {
 			profileName = "1gb"
 		} else {
-			CorePlugin.LogPanic(ErrNotEnoughMemory)
+			CoreComponent.LogPanic(ErrNotEnoughMemory)
 		}
 	}
 
@@ -106,10 +106,10 @@ func loadProfile(appConfig *configuration.Configuration, profilesConfig *configu
 	default:
 		p = &profile.Profile{}
 		if !profilesConfig.Exists(profileName) {
-			CorePlugin.LogPanicf("profile '%s' is not defined in the config", profileName)
+			CoreComponent.LogPanicf("profile '%s' is not defined in the config", profileName)
 		}
 		if err := profilesConfig.Unmarshal(profileName, p); err != nil {
-			CorePlugin.LogPanic(err)
+			CoreComponent.LogPanic(err)
 		}
 		p.Name = profileName
 	}

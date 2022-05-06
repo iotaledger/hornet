@@ -43,7 +43,7 @@ const (
 func init() {
 	_ = flag.CommandLine.MarkHidden(CfgSnapshotsForceLoadingSnapshot)
 
-	CorePlugin = &app.CoreComponent{
+	CoreComponent = &app.CoreComponent{
 		Component: &app.Component{
 			Name:           "Snapshot",
 			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
@@ -56,8 +56,8 @@ func init() {
 }
 
 var (
-	CorePlugin *app.CoreComponent
-	deps       dependencies
+	CoreComponent *app.CoreComponent
+	deps          dependencies
 
 	forceLoadingSnapshot = flag.Bool(CfgSnapshotsForceLoadingSnapshot, false, "force loading of a snapshot, even if a database already exists")
 )
@@ -96,7 +96,7 @@ func initConfigPars(c *dig.Container) error {
 			SnapshotsDeltaPath:   deps.AppConfig.String(CfgSnapshotsDeltaPath),
 		}
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	return nil
@@ -131,12 +131,12 @@ func provide(c *dig.Container) error {
 				Delta: "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin",
 			},
 		}); err != nil {
-			CorePlugin.LogPanic(err)
+			CoreComponent.LogPanic(err)
 		}
 
 		var downloadTargets []*snapshot.DownloadTarget
 		if err := deps.AppConfig.Unmarshal(CfgSnapshotsDownloadURLs, &downloadTargets); err != nil {
-			CorePlugin.LogPanic(err)
+			CoreComponent.LogPanic(err)
 		}
 
 		solidEntryPointCheckThresholdPast := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
@@ -145,7 +145,7 @@ func provide(c *dig.Container) error {
 
 		snapshotDepth := milestone.Index(deps.AppConfig.Int(CfgSnapshotsDepth))
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {
-			CorePlugin.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CfgSnapshotsDepth, snapshotDepth, solidEntryPointCheckThresholdFuture)
+			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CfgSnapshotsDepth, snapshotDepth, solidEntryPointCheckThresholdFuture)
 			snapshotDepth = solidEntryPointCheckThresholdFuture
 		}
 
@@ -153,26 +153,26 @@ func provide(c *dig.Container) error {
 		pruningMilestonesMaxMilestonesToKeep := milestone.Index(deps.AppConfig.Int(CfgPruningMilestonesMaxMilestonesToKeep))
 		pruningMilestonesMaxMilestonesToKeepMin := snapshotDepth + solidEntryPointCheckThresholdPast + pruningThreshold + 1
 		if pruningMilestonesMaxMilestonesToKeep != 0 && pruningMilestonesMaxMilestonesToKeep < pruningMilestonesMaxMilestonesToKeepMin {
-			CorePlugin.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CfgPruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeepMin)
+			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CfgPruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeepMin)
 			pruningMilestonesMaxMilestonesToKeep = pruningMilestonesMaxMilestonesToKeepMin
 		}
 
 		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
-			CorePlugin.LogPanicf("%s has to be specified if %s is enabled", CfgPruningMilestonesMaxMilestonesToKeep, CfgPruningMilestonesEnabled)
+			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CfgPruningMilestonesMaxMilestonesToKeep, CfgPruningMilestonesEnabled)
 		}
 
 		pruningSizeEnabled := deps.AppConfig.Bool(CfgPruningSizeEnabled)
 		pruningTargetDatabaseSizeBytes, err := bytes.Parse(deps.AppConfig.String(CfgPruningSizeTargetSize))
 		if err != nil {
-			CorePlugin.LogPanicf("parameter %s invalid", CfgPruningSizeTargetSize)
+			CoreComponent.LogPanicf("parameter %s invalid", CfgPruningSizeTargetSize)
 		}
 
 		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
-			CorePlugin.LogPanicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
+			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
 		}
 
 		snapshotManager := snapshot.NewSnapshotManager(
-			CorePlugin.Logger(),
+			CoreComponent.Logger(),
 			deps.TangleDatabase,
 			deps.UTXODatabase,
 			deps.Storage,
@@ -200,11 +200,11 @@ func provide(c *dig.Container) error {
 		if deps.DeleteAllFlag {
 			// delete old snapshot files
 			if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
-				CorePlugin.LogPanicf("deleting full snapshot file failed: %s", err)
+				CoreComponent.LogPanicf("deleting full snapshot file failed: %s", err)
 			}
 
 			if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
-				CorePlugin.LogPanicf("deleting delta snapshot file failed: %s", err)
+				CoreComponent.LogPanicf("deleting delta snapshot file failed: %s", err)
 			}
 		}
 
@@ -213,16 +213,16 @@ func provide(c *dig.Container) error {
 		switch {
 		case snapshotInfo != nil && !*forceLoadingSnapshot:
 			if err := snapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
-				CorePlugin.LogPanic(err)
+				CoreComponent.LogPanic(err)
 			}
 		default:
-			if err := snapshotManager.ImportSnapshots(CorePlugin.Daemon().ContextStopped()); err != nil {
-				CorePlugin.LogPanic(err)
+			if err := snapshotManager.ImportSnapshots(CoreComponent.Daemon().ContextStopped()); err != nil {
+				CoreComponent.LogPanic(err)
 			}
 		}
 		return snapshotManager
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	return nil
@@ -238,8 +238,8 @@ func run() error {
 		}
 	})
 
-	if err := CorePlugin.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
-		CorePlugin.LogInfo("Starting Snapshots ... done")
+	if err := CoreComponent.Daemon().BackgroundWorker("Snapshots", func(ctx context.Context) {
+		CoreComponent.LogInfo("Starting Snapshots ... done")
 
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 		defer deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
@@ -247,8 +247,8 @@ func run() error {
 		for {
 			select {
 			case <-ctx.Done():
-				CorePlugin.LogInfo("Stopping Snapshots...")
-				CorePlugin.LogInfo("Stopping Snapshots... done")
+				CoreComponent.LogInfo("Stopping Snapshots...")
+				CoreComponent.LogInfo("Stopping Snapshots... done")
 				return
 
 			case confirmedMilestoneIndex := <-newConfirmedMilestoneSignal:
@@ -256,7 +256,7 @@ func run() error {
 			}
 		}
 	}, shutdown.PrioritySnapshots); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
