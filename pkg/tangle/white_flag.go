@@ -10,8 +10,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -103,7 +103,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 
 		for _, msgSolidEventChan := range msgSolidEventChans {
 			// wait until the message is solid
-			if err := utils.WaitForChannelClosed(ctx, msgSolidEventChan); err != nil {
+			if err := events.WaitForChannelClosed(ctx, msgSolidEventChan); err != nil {
 				return nil, ErrParentsNotSolid
 			}
 		}

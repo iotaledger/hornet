@@ -244,8 +244,8 @@ github.com/cockroachdb/errors v1.9.0/go.mod h1:vaNcEYYqbIqB5JhKBhFV9CneUqeuEbB2O
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f h1:6jduT9Hfc0njg5jJ1DdKCFPdMBrp/mdZfCpa5h+WM74=
 github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f/go.mod h1:Vz9DsVWQQhf3vs21MhPMZpMGSht7O/2vFW2xusFUVOs=
-github.com/cockroachdb/pebble v0.0.0-20220429211633-e6c60c719402 h1:UHfKmUfzRLevFQwGtHkgUFG30HVSijJL8EUGpBU262Q=
-github.com/cockroachdb/pebble v0.0.0-20220429211633-e6c60c719402/go.mod h1:buxOO9GBtOcq1DiXDpIPYrmxY020K2A8lOrwno5FetU=
+github.com/cockroachdb/pebble v0.0.0-20220505215428-5ae2174691bd h1:3qO4dmd3HiXbvMARYe3EYOAjCw4m5vKIurbqOkc6JAQ=
+github.com/cockroachdb/pebble v0.0.0-20220505215428-5ae2174691bd/go.mod h1:buxOO9GBtOcq1DiXDpIPYrmxY020K2A8lOrwno5FetU=
 github.com/cockroachdb/redact v1.0.8/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZZ2lK+dpvRg=
 github.com/cockroachdb/redact v1.1.3 h1:AKZds10rFSIj7qADf0g46UixK8NNLwWTNdCIGS5wfSQ=
 github.com/cockroachdb/redact v1.1.3/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZZ2lK+dpvRg=
@@ -764,8 +764,10 @@ github.com/influxdata/tdigest v0.0.0-20181121200506-bf2b5ad3c0a9/go.mod h1:Js0mq
 github.com/influxdata/usage-client v0.0.0-20160829180054-6d3895376368/go.mod h1:Wbbw6tYNvwa5dlB6304Sd+82Z3f7PmVZHVKU637d4po=
 github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf h1:3LoDur2QvBLbyXrGubX6HmoP6x5pVn1KkheFonTa6Is=
 github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf/go.mod h1:KMsgDNZKM3kkaIAoIk/FZ6A1vfVPix91lx2dm3dA6g8=
-github.com/iotaledger/hive.go v0.0.0-20220428170023-7fb77d7475d8 h1:zB7SBufjt5iCNUW1hHiXK+U2WvlNNZM9WwbqGUsD1XY=
-github.com/iotaledger/hive.go v0.0.0-20220428170023-7fb77d7475d8/go.mod h1:PSbT+4OUC3XLyV347amUHRIKbh9UJbfq2aKLgOHnFUU=
+github.com/iotaledger/hive.go v0.0.0-20220506133510-ef2e113d6665 h1:p+0UAbcmuRw6HLxt/8YSAzW8z5OyKaHPkeC0x91Hgwc=
+github.com/iotaledger/hive.go v0.0.0-20220506133510-ef2e113d6665/go.mod h1:fqZ0XbOseVQHXh9TmN80X8y5p2QVGzWz6aC0Cz9owwE=
+github.com/iotaledger/hive.go/app v0.0.0-20220506133510-ef2e113d6665 h1:/qNqg+qbJDU8Fd8Pg81ujEuNH1Z3qfGHW2HMYbfU9RQ=
+github.com/iotaledger/hive.go/app v0.0.0-20220506133510-ef2e113d6665/go.mod h1:WVC7IMzvxiYz3TLjHOlgNHK2P1A4t+yhJ68BblOLKhY=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220504130911-9e8278f09723 h1:W4X7sg6m3Iwi0sQ2XA9KauRh11eJr57Lug4IjdKe/Go=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220504130911-9e8278f09723/go.mod h1:O18k+0+qtbHfk8AYI+dgMOoDBDKy9vwXk2ocyD7MyRI=
 github.com/iotaledger/inx/go v0.0.0-20220506113305-665a887924b0 h1:UXigGnwaGbwkZrZ3yLkc4S8Ne7MzLqmaExhvKm5hClw=

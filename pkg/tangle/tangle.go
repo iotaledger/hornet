@@ -13,7 +13,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -25,7 +24,7 @@ import (
 
 type Tangle struct {
 	// the logger used to log events.
-	*utils.WrappedLogger
+	*logger.WrappedLogger
 
 	// used to access the global daemon.
 	daemon daemon.Daemon
@@ -86,9 +85,9 @@ type Tangle struct {
 
 	startWaitGroup sync.WaitGroup
 
-	messageProcessedSyncEvent   *utils.SyncEvent
-	messageSolidSyncEvent       *utils.SyncEvent
-	milestoneConfirmedSyncEvent *utils.SyncEvent
+	messageProcessedSyncEvent   *events.SyncEvent
+	messageSolidSyncEvent       *events.SyncEvent
+	milestoneConfirmedSyncEvent *events.SyncEvent
 
 	milestoneSolidificationCtxLock    syncutils.Mutex
 	milestoneSolidificationCancelFunc context.CancelFunc
@@ -129,7 +128,7 @@ func New(
 	updateSyncedAtStartup bool) *Tangle {
 
 	t := &Tangle{
-		WrappedLogger:                utils.NewWrappedLogger(log),
+		WrappedLogger:                logger.NewWrappedLogger(log),
 		daemon:                       daemon,
 		shutdownCtx:                  shutdownCtx,
 		storage:                      dbStorage,
@@ -156,9 +155,9 @@ func New(
 		processValidMilestoneQueueSize:   1000,
 		milestoneSolidifierWorkerCount:   2, // must be two, so a new request can abort another, in case it is an older milestone
 		milestoneSolidifierQueueSize:     2,
-		messageProcessedSyncEvent:        utils.NewSyncEvent(),
-		messageSolidSyncEvent:            utils.NewSyncEvent(),
-		milestoneConfirmedSyncEvent:      utils.NewSyncEvent(),
+		messageProcessedSyncEvent:        events.NewSyncEvent(),
+		messageSolidSyncEvent:            events.NewSyncEvent(),
+		milestoneConfirmedSyncEvent:      events.NewSyncEvent(),
 		Events: &Events{
 			MPSMetricsUpdated:              events.NewEvent(MPSMetricsCaller),
 			ReceivedNewMessage:             events.NewEvent(storage.NewMessageCaller),

@@ -7,8 +7,8 @@ import (
 	"github.com/shirou/gopsutil/mem"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/profile"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -17,8 +17,8 @@ var (
 )
 
 func init() {
-	CorePlugin = &node.CorePlugin{
-		Pluggable: node.Pluggable{
+	CorePlugin = &app.CoreComponent{
+		Component: &app.Component{
 			Name:      "Profile",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
@@ -29,43 +29,47 @@ func init() {
 }
 
 var (
-	CorePlugin *node.CorePlugin
+	CorePlugin *app.CoreComponent
 	deps       dependencies
 )
 
 type dependencies struct {
 	dig.In
-	Profile    *profile.Profile
-	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	Profile   *profile.Profile
+	AppConfig *configuration.Configuration `name:"appConfig"`
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	type profileDeps struct {
 		dig.In
-		NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+		AppConfig      *configuration.Configuration `name:"appConfig"`
 		ProfilesConfig *configuration.Configuration `name:"profilesConfig"`
 	}
 	if err := c.Provide(func(d profileDeps) *profile.Profile {
-		return loadProfile(d.NodeConfig, d.ProfilesConfig)
+		return loadProfile(d.AppConfig, d.ProfilesConfig)
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 
-	if deps.NodeConfig.String(CfgNodeProfile) == AutoProfileName {
+	if deps.AppConfig.String(CfgAppProfile) == AutoProfileName {
 		CorePlugin.LogInfof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
 	} else {
 		CorePlugin.LogInfof("Using profile '%s'", deps.Profile.Name)
 	}
+
+	return nil
 }
 
 // loadProfile automatically loads the appropriate profile (given the system memory) if the config value
 // is set to 'auto' or the one specified in the config.
-func loadProfile(nodeConfig *configuration.Configuration, profilesConfig *configuration.Configuration) *profile.Profile {
-	profileName := strings.ToLower(nodeConfig.String(CfgNodeProfile))
+func loadProfile(appConfig *configuration.Configuration, profilesConfig *configuration.Configuration) *profile.Profile {
+	profileName := strings.ToLower(appConfig.String(CfgAppProfile))
 	if profileName == AutoProfileName {
 		v, err := mem.VirtualMemory()
 		if err != nil {

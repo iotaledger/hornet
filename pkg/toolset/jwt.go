@@ -8,13 +8,15 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/configuration"
+
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/p2p"
 )
 
 func generateJWTApiToken(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, DefaultValueP2PDatabasePath, "the path to the p2p database folder")
 	apiJWTSaltFlag := fs.String(FlagToolSalt, DefaultValueAPIJWTTokenSalt, "salt used inside the JWT tokens for the REST API")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)

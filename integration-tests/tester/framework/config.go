@@ -9,18 +9,18 @@ import (
 
 	"github.com/docker/go-connections/nat"
 
-	"github.com/gohornet/hornet/core/app"
 	"github.com/gohornet/hornet/core/gossip"
 	"github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/core/snapshot"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/autopeering"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/inx"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/crypto"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -61,7 +61,7 @@ var (
 )
 
 func init() {
-	prvkey, err := utils.ParseEd25519PrivateKeyFromString("256a818b2aac458941f7274985a410e57fb750f3a3a67969ece5bd9ae7eef5b2f7868ab6bb55800b77b8b74191ad8285a9bf428ace579d541fda47661803ff44")
+	prvkey, err := crypto.ParseEd25519PrivateKeyFromString("256a818b2aac458941f7274985a410e57fb750f3a3a67969ece5bd9ae7eef5b2f7868ab6bb55800b77b8b74191ad8285a9bf428ace579d541fda47661803ff44")
 	if err != nil {
 		panic(err)
 	}
@@ -69,9 +69,9 @@ func init() {
 	GenesisAddress = iotago.Ed25519AddressFromPubKey(GenesisSeed.Public().(ed25519.PublicKey))
 }
 
-// DefaultConfig returns the default NodeConfig.
-func DefaultConfig() *NodeConfig {
-	cfg := &NodeConfig{
+// DefaultConfig returns the default AppConfig.
+func DefaultConfig() *AppConfig {
+	cfg := &AppConfig{
 		Name: "",
 		Envs: []string{"LOGGER_LEVEL=debug"},
 		Binds: []string{
@@ -228,8 +228,8 @@ func (cfg *INXIndexerConfig) CLIFlags() []string {
 	return cliFlags
 }
 
-// NodeConfig defines the config of a HORNET node.
-type NodeConfig struct {
+// AppConfig defines the config of a HORNET node.
+type AppConfig struct {
 	// The name of this node.
 	Name string
 	// Environment variables.
@@ -263,20 +263,20 @@ type NodeConfig struct {
 }
 
 // AsCoo adjusts the config to make it usable as the Coordinator's config.
-func (cfg *NodeConfig) AsCoo() {
+func (cfg *AppConfig) AsCoo() {
 	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "INX")
 	cfg.INXCoo.RunAsCoo = true
 	cfg.INXCoo.Envs = append(cfg.INXCoo.Envs, fmt.Sprintf("COO_PRV_KEYS=%s", strings.Join(cfg.INXCoo.Coordinator.PrivateKeys, ",")))
 }
 
 // WithReceipts adjusts the config to activate the receipts plugin.
-func (cfg *NodeConfig) WithReceipts() {
+func (cfg *AppConfig) WithReceipts() {
 	cfg.Plugins.Enabled = append(cfg.Plugins.Enabled, "Receipts")
 	cfg.INXCoo.WithMigration()
 }
 
 // CLIFlags returns the config as CLI flags.
-func (cfg *NodeConfig) CLIFlags() []string {
+func (cfg *AppConfig) CLIFlags() []string {
 	var cliFlags []string
 	cliFlags = append(cliFlags, cfg.Network.CLIFlags()...)
 	cliFlags = append(cliFlags, cfg.Snapshot.CLIFlags()...)
@@ -459,8 +459,8 @@ func (pluginConfig *PluginConfig) ContainsINX() bool {
 // CLIFlags returns the config as CLI flags.
 func (pluginConfig *PluginConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", app.CfgNodeEnablePlugins, strings.Join(pluginConfig.Enabled, ",")),
-		fmt.Sprintf("--%s=%s", app.CfgNodeDisablePlugins, strings.Join(pluginConfig.Disabled, ",")),
+		fmt.Sprintf("--%s=%s", app.CfgAppEnablePlugins, strings.Join(pluginConfig.Enabled, ",")),
+		fmt.Sprintf("--%s=%s", app.CfgAppDisablePlugins, strings.Join(pluginConfig.Disabled, ",")),
 	}
 }
 
@@ -637,6 +637,8 @@ type ProtocolConfig struct {
 	RentStructure iotago.RentStructure
 	// The supply of the native token.
 	TokenSupply uint64
+	// The maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy
+	BelowMaxDepth uint16
 	// The coo public key ranges.
 	PublicKeyRanges []protocfg.ConfigPublicKeyRange
 }
@@ -670,6 +672,7 @@ func (protoConfig ProtocolConfig) ProtocolParameters() *iotago.ProtocolParameter
 		MinPoWScore:   protoConfig.MinPoWScore,
 		RentStructure: protoConfig.RentStructure,
 		TokenSupply:   protoConfig.TokenSupply,
+		BelowMaxDepth: protoConfig.BelowMaxDepth,
 	}
 }
 
@@ -685,7 +688,8 @@ func DefaultProtocolConfig() ProtocolConfig {
 			VBFactorData: 1,
 			VBFactorKey:  10,
 		},
-		TokenSupply: 2_779_530_283_277_761,
+		BelowMaxDepth: 15,
+		TokenSupply:   2_779_530_283_277_761,
 		PublicKeyRanges: []protocfg.ConfigPublicKeyRange{
 			{
 				Key:        "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",

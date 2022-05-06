@@ -9,7 +9,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/pow"
@@ -59,7 +59,7 @@ func (h *Handler) PoWType() string {
 // The given iota.Message's nonce is automatically updated.
 func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (messageSize int, err error) {
 
-	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		return 0, err
 	}
 

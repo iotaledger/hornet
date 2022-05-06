@@ -17,8 +17,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/utils"
 	kvstoreds "github.com/iotaledger/go-ds-kvstore"
+	hivecrypto "github.com/iotaledger/hive.go/crypto"
+	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
@@ -91,7 +92,7 @@ func parseEd25519PrivateKeyFromString(identityPrivKey string) (crypto.PrivKey, e
 		return nil, ErrNoPrivKeyFound
 	}
 
-	hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(identityPrivKey)
+	hivePrivKey, err := hivecrypto.ParseEd25519PrivateKeyFromString(identityPrivKey)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse private key: %w", ErrPrivKeyInvalid)
 	}
@@ -164,7 +165,7 @@ func WriteEd25519PrivateKeyToPEMFile(filepath string, privateKey crypto.PrivKey)
 		return fmt.Errorf("unable to encode private key: %w", err)
 	}
 
-	if err := utils.WriteToFile(filepath, pemBuffer.Bytes(), 0660); err != nil {
+	if err := ioutils.WriteToFile(filepath, pemBuffer.Bytes(), 0660); err != nil {
 		return fmt.Errorf("unable to write private key: %w", err)
 	}
 

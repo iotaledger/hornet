@@ -15,11 +15,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/restapi"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -82,9 +82,9 @@ const (
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusDisabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusDisabled,
+		Component: &app.Component{
 			Name:      "Participation",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Provide:   provide,
@@ -95,7 +95,7 @@ func init() {
 }
 
 var (
-	Plugin *node.Plugin
+	Plugin *app.Plugin
 	deps   dependencies
 
 	onLedgerUpdated *events.Closure
@@ -103,7 +103,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	AppConfig            *configuration.Configuration `name:"appConfig"`
 	ParticipationManager *participation.ParticipationManager
 	UTXOManager          *utxo.Manager
 	SyncManager          *syncmanager.SyncManager
@@ -113,7 +113,7 @@ type dependencies struct {
 	RestPluginManager    *restapi.RestPluginManager `optional:"true"`
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	type participationDeps struct {
 		dig.In
@@ -121,7 +121,7 @@ func provide(c *dig.Container) {
 		SyncManager        *syncmanager.SyncManager
 		DatabasePath       string                       `name:"databasePath"`
 		DatabaseEngine     database.Engine              `name:"databaseEngine"`
-		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
@@ -145,12 +145,14 @@ func provide(c *dig.Container) {
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 
 	// check if RestAPI plugin is disabled
-	if Plugin.Node.IsSkipped(restapi.Plugin) {
+	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
 
@@ -265,7 +267,7 @@ func configure() {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	if err := Plugin.Node.Daemon().BackgroundWorker("Close Participation database", func(ctx context.Context) {
+	if err := Plugin.App.Daemon().BackgroundWorker("Close Participation database", func(ctx context.Context) {
 		<-ctx.Done()
 
 		Plugin.LogInfo("Syncing Participation database to disk...")
@@ -278,9 +280,11 @@ func configure() {
 	}
 
 	configureEvents()
+
+	return nil
 }
 
-func run() {
+func run() error {
 	// create a background worker that handles the participation events
 	if err := Plugin.Daemon().BackgroundWorker("Participation", func(ctx context.Context) {
 		Plugin.LogInfo("Starting Participation ... done")
@@ -291,6 +295,8 @@ func run() {
 	}, shutdown.PriorityParticipation); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }
 
 func configureEvents() {

@@ -17,7 +17,8 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/contextutils"
+	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -372,7 +373,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 	s.utxoManager.ReadLockLedger()
 	defer s.utxoManager.ReadUnlockLedger()
 
-	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		// do not create the snapshot if the node was shut down
 		return err
 	}
@@ -465,7 +466,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 
 	timeInit := time.Now()
 
-	snapshotFile, tempFilePath, err := utils.CreateTempFile(filePath)
+	snapshotFile, tempFilePath, err := ioutils.CreateTempFile(filePath)
 	if err != nil {
 		return err
 	}
@@ -480,7 +481,7 @@ func (s *SnapshotManager) createSnapshotWithoutLocking(
 	timeStreamSnapshotData := time.Now()
 
 	// finalize file
-	if err := utils.CloseFileAndRename(snapshotFile, tempFilePath, filePath); err != nil {
+	if err := ioutils.CloseFileAndRename(snapshotFile, tempFilePath, filePath); err != nil {
 		return err
 	}
 
@@ -598,7 +599,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 		return nil, nil
 	}
 
-	snapshotFile, tempFilePath, err := utils.CreateTempFile(filePath)
+	snapshotFile, tempFilePath, err := ioutils.CreateTempFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -616,7 +617,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 	}
 
 	// finalize file
-	if err := utils.CloseFileAndRename(snapshotFile, tempFilePath, filePath); err != nil {
+	if err := ioutils.CloseFileAndRename(snapshotFile, tempFilePath, filePath); err != nil {
 		return nil, err
 	}
 
@@ -751,7 +752,7 @@ func CreateSnapshotFromStorage(
 		return nil, nil
 	}
 
-	snapshotFile, tempFilePath, err := utils.CreateTempFile(filePath)
+	snapshotFile, tempFilePath, err := ioutils.CreateTempFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -769,7 +770,7 @@ func CreateSnapshotFromStorage(
 	}
 
 	// finalize file
-	if err := utils.CloseFileAndRename(snapshotFile, tempFilePath, filePath); err != nil {
+	if err := ioutils.CloseFileAndRename(snapshotFile, tempFilePath, filePath); err != nil {
 		return nil, err
 	}
 

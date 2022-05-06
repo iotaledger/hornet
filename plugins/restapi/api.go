@@ -38,8 +38,8 @@ func compileRoutesAsRegexes(routes []string) []*regexp.Regexp {
 
 func apiMiddleware() echo.MiddlewareFunc {
 
-	publicRoutes := compileRoutesAsRegexes(deps.NodeConfig.Strings(CfgRestAPIPublicRoutes))
-	protectedRoutes := compileRoutesAsRegexes(deps.NodeConfig.Strings(CfgRestAPIProtectedRoutes))
+	publicRoutes := compileRoutesAsRegexes(deps.AppConfig.Strings(CfgRestAPIPublicRoutes))
+	protectedRoutes := compileRoutesAsRegexes(deps.AppConfig.Strings(CfgRestAPIProtectedRoutes))
 
 	matchPublic := func(c echo.Context) bool {
 		for _, reg := range publicRoutes {
@@ -60,7 +60,7 @@ func apiMiddleware() echo.MiddlewareFunc {
 	}
 
 	// configure JWT auth
-	salt := deps.NodeConfig.String(CfgRestAPIJWTAuthSalt)
+	salt := deps.AppConfig.String(CfgRestAPIJWTAuthSalt)
 	if len(salt) == 0 {
 		Plugin.LogFatalf("'%s' should not be empty", CfgRestAPIJWTAuthSalt)
 	}

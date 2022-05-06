@@ -68,7 +68,7 @@ func newFramework() (*Framework, error) {
 }
 
 // CfgOverrideFunc is a function which overrides configuration values.
-type CfgOverrideFunc func(index int, cfg *NodeConfig)
+type CfgOverrideFunc func(index int, cfg *AppConfig)
 
 // IntegrationNetworkConfig holds configuration for a network.
 type IntegrationNetworkConfig struct {
@@ -181,7 +181,7 @@ func (f *Framework) CreateAutopeeredNetwork(name string, peerCount int, minimumP
 	return autoNetwork, nil
 }
 
-func setupINX(network *Network, cfg *NodeConfig) error {
+func setupINX(network *Network, cfg *AppConfig) error {
 	if cfg.Plugins.ContainsINX() {
 		inxAddress := fmt.Sprintf("%s:9029", cfg.Name)
 		if cfg.INXCoo.RunAsCoo {

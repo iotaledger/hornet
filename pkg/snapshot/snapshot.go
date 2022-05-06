@@ -20,7 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -67,7 +67,7 @@ const (
 // SnapshotManager handles reading and writing snapshot data.
 type SnapshotManager struct {
 	// the logger used to log events.
-	*utils.WrappedLogger
+	*logger.WrappedLogger
 
 	tangleDatabase                       *database.Database
 	utxoDatabase                         *database.Database
@@ -128,7 +128,7 @@ func NewSnapshotManager(
 	pruneReceipts bool) *SnapshotManager {
 
 	return &SnapshotManager{
-		WrappedLogger:                        utils.NewWrappedLogger(log),
+		WrappedLogger:                        logger.NewWrappedLogger(log),
 		tangleDatabase:                       tangleDatabase,
 		utxoDatabase:                         utxoDatabase,
 		storage:                              storage,
@@ -237,7 +237,7 @@ func forEachSolidEntryPoint(
 	// Iterate from a reasonable old milestone to the target index to check for solid entry points
 	for milestoneIndex := targetIndex - solidEntryPointCheckThresholdPast; milestoneIndex <= targetIndex; milestoneIndex++ {
 
-		if err := utils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
 			// stop snapshot creation if node was shutdown
 			return err
 		}
@@ -265,7 +265,7 @@ func forEachSolidEntryPoint(
 			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
 				defer cachedMsgMeta.Release(true) // meta -1
 
-				if err := utils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
+				if err := contextutils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
 					// stop snapshot creation if node was shutdown
 					return err
 				}

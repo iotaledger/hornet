@@ -7,6 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/contextutils"
+	"github.com/iotaledger/hive.go/math"
 	iotago "github.com/iotaledger/iota.go/v3"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -15,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
@@ -435,7 +436,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	// Run check for next milestone
 	t.setSolidifierMilestoneIndex(0)
 
-	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		// do not trigger the next solidification if the node was shut down
 		return
 	}
@@ -462,11 +463,11 @@ func (t *Tangle) calcConfirmedMilestoneMetric(milestonePayloadToSolidify *iotago
 	timeDiffFloat := float64(timeDiff)
 
 	newNewMsgCount := t.serverMetrics.NewMessages.Load()
-	newMsgDiff := utils.Uint32Diff(newNewMsgCount, t.oldNewMsgCount)
+	newMsgDiff := math.Uint32Diff(newNewMsgCount, t.oldNewMsgCount)
 	t.oldNewMsgCount = newNewMsgCount
 
 	newReferencedMsgCount := t.serverMetrics.ReferencedMessages.Load()
-	referencedMsgDiff := utils.Uint32Diff(newReferencedMsgCount, t.oldReferencedMsgCount)
+	referencedMsgDiff := math.Uint32Diff(newReferencedMsgCount, t.oldReferencedMsgCount)
 	t.oldReferencedMsgCount = newReferencedMsgCount
 
 	referencedRate := 0.0

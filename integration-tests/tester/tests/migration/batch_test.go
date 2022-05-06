@@ -34,7 +34,7 @@ func TestBatch(t *testing.T) {
 	n, err := f.CreateStaticNetwork("test_migration_batch", &framework.IntegrationNetworkConfig{
 		SpawnWhiteFlagMockServer:  true,
 		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock_batch", "wfmock_config_batch.json"),
-	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.NodeConfig) {
+	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.AppConfig) {
 
 		cfg.Receipts.IgnoreSoftErrors = false
 		cfg.Receipts.Validate = true

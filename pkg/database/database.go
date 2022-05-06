@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
@@ -125,5 +125,5 @@ func (db *Database) Size() (int64, error) {
 		// in-memory database does not support this method.
 		return 0, nil
 	}
-	return utils.FolderSize(db.databaseDir)
+	return ioutils.FolderSize(db.databaseDir)
 }

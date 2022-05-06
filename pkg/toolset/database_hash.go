@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
+	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -212,7 +213,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 
 func databaseLedgerHash(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, DefaultValueMainnetDatabasePath, "the path to the database")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 

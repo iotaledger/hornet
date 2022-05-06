@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/kvstore/mapdb"
 	"github.com/iotaledger/hive.go/kvstore/pebble"
@@ -159,7 +159,7 @@ func LoadDatabaseEngineFromFile(path string) (Engine, error) {
 
 	var info databaseInfo
 
-	if err := utils.ReadTOMLFromFile(path, &info); err != nil {
+	if err := ioutils.ReadTOMLFromFile(path, &info); err != nil {
 		return "", fmt.Errorf("unable to read database info file: %w", err)
 	}
 
@@ -178,7 +178,7 @@ func storeDatabaseInfoToFile(filePath string, engine Engine) error {
 		Engine: string(engine),
 	}
 
-	return utils.WriteTOMLToFile(filePath, info, 0660, "# auto-generated\n# !!! do not modify this file !!!")
+	return ioutils.WriteTOMLToFile(filePath, info, 0660, "# auto-generated\n# !!! do not modify this file !!!")
 }
 
 // StoreWithDefaultSettings returns a kvstore with default settings.

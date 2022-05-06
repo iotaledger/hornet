@@ -15,14 +15,12 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
@@ -31,6 +29,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/basicauth"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -38,9 +37,9 @@ import (
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusEnabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusEnabled,
+		Component: &app.Component{
 			Name:           "Dashboard",
 			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
 			Params:         params,
@@ -59,7 +58,7 @@ const (
 var (
 	maxWebsocketMessageSize int64 = 400 + maxDashboardAuthUsernameSize + 10 // 10 buffer due to variable JWT lengths
 
-	Plugin *node.Plugin
+	Plugin *app.Plugin
 	deps   dependencies
 
 	nodeStartAt = time.Now()
@@ -87,7 +86,7 @@ type dependencies struct {
 	PeeringManager           *p2p.Manager
 	MessageProcessor         *gossip.MessageProcessor
 	TipSelector              *tipselect.TipSelector       `optional:"true"`
-	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
+	AppConfig                *configuration.Configuration `name:"appConfig"`
 	RestAPIBindAddress       string                       `name:"restAPIBindAddress"`
 	AppInfo                  *app.AppInfo
 	Host                     host.Host
@@ -95,11 +94,11 @@ type dependencies struct {
 	DashboardAllowedAPIRoute restapipkg.AllowedRoute `name:"dashboardAllowedAPIRoute" optional:"true"`
 }
 
-func initConfigPars(c *dig.Container) {
+func initConfigPars(c *dig.Container) error {
 
 	type cfgDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	type cfgResult struct {
@@ -109,7 +108,7 @@ func initConfigPars(c *dig.Container) {
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 
-		username := deps.NodeConfig.String(CfgDashboardAuthUsername)
+		username := deps.AppConfig.String(CfgDashboardAuthUsername)
 		if len(username) == 0 {
 			Plugin.LogPanicf("%s cannot be empty", CfgDashboardAuthUsername)
 		}
@@ -123,17 +122,19 @@ func initConfigPars(c *dig.Container) {
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 
 	// check if RestAPI plugin is disabled
-	if Plugin.Node.IsSkipped(restapi.Plugin) {
+	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Dashboard plugin")
 	}
 
 	// check if RestAPIV2 plugin is disabled
-	if Plugin.Node.IsSkipped(restapiv2.Plugin) {
+	if Plugin.App.IsPluginSkipped(restapiv2.Plugin) {
 		Plugin.LogPanic("RestAPIV2 plugin needs to be enabled to use the Dashboard plugin")
 	}
 
@@ -149,32 +150,34 @@ func configure() {
 	hub = websockethub.NewHub(Plugin.Logger(), upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
 
 	var err error
-	basicAuth, err = basicauth.NewBasicAuth(deps.NodeConfig.String(CfgDashboardAuthUsername),
-		deps.NodeConfig.String(CfgDashboardAuthPasswordHash),
-		deps.NodeConfig.String(CfgDashboardAuthPasswordSalt))
+	basicAuth, err = basicauth.NewBasicAuth(deps.AppConfig.String(CfgDashboardAuthUsername),
+		deps.AppConfig.String(CfgDashboardAuthPasswordHash),
+		deps.AppConfig.String(CfgDashboardAuthPasswordSalt))
 	if err != nil {
 		Plugin.LogPanicf("basic auth initialization failed: %w", err)
 	}
 
 	jwtAuth, err = jwt.NewJWTAuth(
-		deps.NodeConfig.String(CfgDashboardAuthUsername),
-		deps.NodeConfig.Duration(CfgDashboardAuthSessionTimeout),
+		deps.AppConfig.String(CfgDashboardAuthUsername),
+		deps.AppConfig.Duration(CfgDashboardAuthSessionTimeout),
 		deps.Host.ID().String(),
 		deps.NodePrivateKey,
 	)
 	if err != nil {
 		Plugin.LogPanicf("JWT auth initialization failed: %w", err)
 	}
+
+	return nil
 }
 
-func run() {
+func run() error {
 
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 
 	setupRoutes(e)
-	bindAddr := deps.NodeConfig.String(CfgDashboardBindAddress)
+	bindAddr := deps.AppConfig.String(CfgDashboardBindAddress)
 
 	go func() {
 		Plugin.LogInfof("You can now access the dashboard using: http://%s", bindAddr)
@@ -239,6 +242,8 @@ func run() {
 	runDatabaseSizeCollector()
 	// run the spammer feed
 	runSpammerMetricWorker()
+
+	return nil
 }
 
 func getMilestoneIDHex(index milestone.Index) (string, error) {
@@ -387,7 +392,7 @@ func currentNodeStatus() *NodeStatus {
 	status.Version = deps.AppInfo.Version
 	status.LatestVersion = deps.AppInfo.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
-	status.NodeAlias = deps.NodeConfig.String(CfgNodeAlias)
+	status.NodeAlias = deps.AppConfig.String(CfgAppAlias)
 	status.NodeID = deps.Host.ID().String()
 
 	status.ConnectedPeersCount = deps.PeeringManager.ConnectedCount()

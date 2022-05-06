@@ -12,7 +12,8 @@ import (
 	"github.com/wollac/iota-crypto-demo/pkg/bip39"
 	"github.com/wollac/iota-crypto-demo/pkg/slip10"
 
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/crypto"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -67,7 +68,7 @@ func printEd25519Info(mnemonic bip39.Mnemonic, path bip32path.Path, prvKey ed255
 
 func generateEd25519Key(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	hrpFlag := fs.String(FlagToolHRP, string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
 	bip32Path := fs.String(FlagToolBIP32Path, "m/44'/4218'/0'/0'/0'", "the BIP32 path that should be used to derive keys from seed")
 	mnemonicFlag := fs.String(FlagToolMnemonic, "", "the BIP-39 mnemonic sentence that should be used to derive the seed from (optional)")
@@ -135,7 +136,7 @@ func generateEd25519Key(args []string) error {
 
 func generateEd25519Address(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	hrpFlag := fs.String(FlagToolHRP, string(iotago.PrefixTestnet), "the HRP which should be used for the Bech32 address")
 	publicKeyFlag := fs.String(FlagToolPublicKey, "", "an ed25519 public key")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
@@ -161,7 +162,7 @@ func generateEd25519Address(args []string) error {
 	}
 
 	// parse pubkey
-	pubKey, err := utils.ParseEd25519PublicKeyFromString(*publicKeyFlag)
+	pubKey, err := crypto.ParseEd25519PublicKeyFromString(*publicKeyFlag)
 	if err != nil {
 		return fmt.Errorf("can't decode '%s': %w", FlagToolPublicKey, err)
 	}

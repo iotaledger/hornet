@@ -149,7 +149,7 @@ func setupRoutes(e *echo.Echo) {
 	e.Use(middleware.CSRF())
 
 	mw := dashboard.FrontendMiddleware()
-	if deps.NodeConfig.Bool(CfgDashboardDevMode) {
+	if deps.AppConfig.Bool(CfgDashboardDevMode) {
 		mw = devModeReverseProxyMiddleware()
 	}
 	e.Group("/*").Use(mw)

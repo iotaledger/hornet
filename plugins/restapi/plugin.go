@@ -14,18 +14,18 @@ import (
 
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusEnabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusEnabled,
+		Component: &app.Component{
 			Name:           "RestAPI",
 			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
 			Params:         params,
@@ -38,7 +38,7 @@ func init() {
 }
 
 var (
-	Plugin             *node.Plugin
+	Plugin             *app.Plugin
 	deps               dependencies
 	nodeAPIHealthRoute = "/health"
 
@@ -47,7 +47,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig            *configuration.Configuration `name:"nodeConfig"`
+	AppConfig             *configuration.Configuration `name:"appConfig"`
 	Tangle                *tangle.Tangle               `optional:"true"`
 	Echo                  *echo.Echo
 	RestAPIMetrics        *metrics.RestAPIMetrics
@@ -57,11 +57,11 @@ type dependencies struct {
 	DashboardAuthUsername string         `name:"dashboardAuthUsername" optional:"true"`
 }
 
-func initConfigPars(c *dig.Container) {
+func initConfigPars(c *dig.Container) error {
 
 	type cfgDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	type cfgResult struct {
@@ -72,15 +72,17 @@ func initConfigPars(c *dig.Container) {
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 		return cfgResult{
-			RestAPIBindAddress:      deps.NodeConfig.String(CfgRestAPIBindAddress),
-			RestAPILimitsMaxResults: deps.NodeConfig.Int(CfgRestAPILimitsMaxResults),
+			RestAPIBindAddress:      deps.AppConfig.String(CfgRestAPIBindAddress),
+			RestAPILimitsMaxResults: deps.AppConfig.Int(CfgRestAPILimitsMaxResults),
 		}
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	if err := c.Provide(func() *metrics.RestAPIMetrics {
 		return &metrics.RestAPIMetrics{
@@ -94,7 +96,7 @@ func provide(c *dig.Container) {
 
 	type echoDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	type echoResult struct {
@@ -109,7 +111,7 @@ func provide(c *dig.Container) {
 		e.Use(middleware.Recover())
 		e.Use(middleware.CORS())
 		e.Use(middleware.Gzip())
-		e.Use(middleware.BodyLimit(deps.NodeConfig.String(CfgRestAPILimitsMaxBodyLength)))
+		e.Use(middleware.BodyLimit(deps.AppConfig.String(CfgRestAPILimitsMaxBodyLength)))
 
 		return echoResult{
 			Echo:                     e,
@@ -129,14 +131,18 @@ func provide(c *dig.Container) {
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 	deps.Echo.Use(apiMiddleware())
 	setupRoutes()
+
+	return nil
 }
 
-func run() {
+func run() error {
 
 	Plugin.LogInfo("Starting REST-API server ...")
 
@@ -164,6 +170,8 @@ func run() {
 	}, shutdown.PriorityRestAPI); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }
 
 func setupRoutes() {

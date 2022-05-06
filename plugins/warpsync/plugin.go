@@ -9,19 +9,19 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/whiteflag"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusEnabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusEnabled,
+		Component: &app.Component{
 			Name:      "WarpSync",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
@@ -32,7 +32,7 @@ func init() {
 }
 
 var (
-	Plugin *node.Plugin
+	Plugin *app.Plugin
 	deps   dependencies
 
 	warpSync                   *gossip.WarpSync
@@ -56,16 +56,17 @@ type dependencies struct {
 	RequestQueue  gossip.RequestQueue
 	GossipService *gossip.Service
 	Requester     *gossip.Requester
-	NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+	AppConfig     *configuration.Configuration `name:"appConfig"`
 }
 
-func configure() {
-	warpSync = gossip.NewWarpSync(deps.NodeConfig.Int(CfgWarpSyncAdvancementRange))
+func configure() error {
+	warpSync = gossip.NewWarpSync(deps.AppConfig.Int(CfgWarpSyncAdvancementRange))
 	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.SyncManager, deps.Requester, true)
 	configureEvents()
+	return nil
 }
 
-func run() {
+func run() error {
 	if err := Plugin.Daemon().BackgroundWorker("WarpSync[PeerEvents]", func(ctx context.Context) {
 		attachEvents()
 		<-ctx.Done()
@@ -73,6 +74,7 @@ func run() {
 	}, shutdown.PriorityWarpSync); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
+	return nil
 }
 
 func configureEvents() {

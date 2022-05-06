@@ -9,12 +9,13 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func snapshotMerge(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	snapshotPathFullFlag := fs.String(FlagToolSnapshotPathFull, "", "the path to the full snapshot file")
 	snapshotPathDeltaFlag := fs.String(FlagToolSnapshotPathDelta, "", "the path to the delta snapshot file")
 	snapshotPathTargetFlag := fs.String(FlagToolSnapshotPathTarget, "", "the path to the target/merged snapshot file")

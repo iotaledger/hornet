@@ -13,13 +13,13 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -39,8 +39,8 @@ const (
 )
 
 func init() {
-	CorePlugin = &node.CorePlugin{
-		Pluggable: node.Pluggable{
+	CorePlugin = &app.CoreComponent{
+		Component: &app.Component{
 			Name:      "Gossip",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
@@ -52,7 +52,7 @@ func init() {
 }
 
 var (
-	CorePlugin *node.CorePlugin
+	CorePlugin *app.CoreComponent
 	deps       dependencies
 
 	// closures
@@ -77,7 +77,7 @@ type dependencies struct {
 	Host             host.Host
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	if err := c.Provide(func() gossip.RequestQueue {
 		return gossip.NewRequestQueue()
@@ -92,7 +92,7 @@ func provide(c *dig.Container) {
 		ServerMetrics      *metrics.ServerMetrics
 		RequestQueue       gossip.RequestQueue
 		PeeringManager     *p2p.Manager
-		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 		Profile            *profile.Profile
 	}
@@ -123,7 +123,7 @@ func provide(c *dig.Container) {
 		PeeringManager     *p2p.Manager
 		Storage            *storage.Storage
 		ServerMetrics      *metrics.ServerMetrics
-		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
@@ -134,9 +134,9 @@ func provide(c *dig.Container) {
 			deps.PeeringManager,
 			deps.ServerMetrics,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
-			gossip.WithUnknownPeersLimit(deps.NodeConfig.Int(CfgP2PGossipUnknownPeersLimit)),
-			gossip.WithStreamReadTimeout(deps.NodeConfig.Duration(CfgP2PGossipStreamReadTimeout)),
-			gossip.WithStreamWriteTimeout(deps.NodeConfig.Duration(CfgP2PGossipStreamWriteTimeout)),
+			gossip.WithUnknownPeersLimit(deps.AppConfig.Int(CfgP2PGossipUnknownPeersLimit)),
+			gossip.WithStreamReadTimeout(deps.AppConfig.Duration(CfgP2PGossipStreamReadTimeout)),
+			gossip.WithStreamWriteTimeout(deps.AppConfig.Duration(CfgP2PGossipStreamWriteTimeout)),
 		)
 	}); err != nil {
 		CorePlugin.LogPanic(err)
@@ -144,7 +144,7 @@ func provide(c *dig.Container) {
 
 	type requesterDeps struct {
 		dig.In
-		NodeConfig    *configuration.Configuration `name:"nodeConfig"`
+		AppConfig     *configuration.Configuration `name:"appConfig"`
 		Storage       *storage.Storage
 		GossipService *gossip.Service
 		RequestQueue  gossip.RequestQueue
@@ -155,8 +155,8 @@ func provide(c *dig.Container) {
 			deps.Storage,
 			deps.GossipService,
 			deps.RequestQueue,
-			gossip.WithRequesterDiscardRequestsOlderThan(deps.NodeConfig.Duration(CfgRequestsDiscardOlderThan)),
-			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.NodeConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
+			gossip.WithRequesterDiscardRequestsOlderThan(deps.AppConfig.Duration(CfgRequestsDiscardOlderThan)),
+			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.AppConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}
@@ -179,9 +179,11 @@ func provide(c *dig.Container) {
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 
 	// don't re-enqueue pending requests in case the node is running hot
 	deps.Requester.AddBackPressureFunc(func() bool {
@@ -189,9 +191,11 @@ func configure() {
 	})
 
 	configureEvents()
+
+	return nil
 }
 
-func run() {
+func run() error {
 
 	if err := CorePlugin.Daemon().BackgroundWorker("GossipService", func(ctx context.Context) {
 		CorePlugin.LogInfo("Running GossipService")
@@ -242,6 +246,8 @@ func run() {
 	}, shutdown.PriorityHeartbeats); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }
 
 // checkHeartbeats sends a heartbeat to each peer and also checks

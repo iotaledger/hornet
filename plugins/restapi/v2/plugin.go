@@ -8,12 +8,10 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/protocfg"
-	"github.com/gohornet/hornet/pkg/app"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
@@ -22,6 +20,7 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -128,9 +127,9 @@ const (
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusEnabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusEnabled,
+		Component: &app.Component{
 			Name:      "RestAPIV2",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Configure: configure,
@@ -139,7 +138,7 @@ func init() {
 }
 
 var (
-	Plugin   *node.Plugin
+	Plugin   *app.Plugin
 	features = []string{}
 	attacher *tangle.MessageAttacher
 
@@ -161,7 +160,7 @@ type dependencies struct {
 	PoWHandler              *pow.Handler
 	SnapshotManager         *snapshot.SnapshotManager
 	AppInfo                 *app.AppInfo
-	NodeConfig              *configuration.Configuration `name:"nodeConfig"`
+	AppConfig               *configuration.Configuration `name:"appConfig"`
 	PeeringConfigManager    *p2p.ConfigManager
 	ProtocolParameters      *iotago.ProtocolParameters
 	BaseToken               *protocfg.BaseToken
@@ -174,9 +173,9 @@ type dependencies struct {
 	RestAPIMetrics          *metrics.RestAPIMetrics
 }
 
-func configure() {
+func configure() error {
 	// check if RestAPI plugin is disabled
-	if Plugin.Node.IsSkipped(restapi.Plugin) {
+	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the RestAPIV2 plugin")
 	}
 
@@ -191,9 +190,9 @@ func configure() {
 	}
 
 	// Check for features
-	if deps.NodeConfig.Bool(restapi.CfgRestAPIPoWEnabled) {
+	if deps.AppConfig.Bool(restapi.CfgRestAPIPoWEnabled) {
 		AddFeature("PoW")
-		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(restapi.CfgRestAPIPoWWorkerCount)))
+		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, deps.AppConfig.Int(restapi.CfgRestAPIPoWWorkerCount)))
 	}
 
 	attacher = deps.Tangle.MessageAttacher(attacherOpts...)
@@ -466,6 +465,8 @@ func configure() {
 		}
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
+
+	return nil
 }
 
 // AddFeature adds a feature to the RouteInfo endpoint.

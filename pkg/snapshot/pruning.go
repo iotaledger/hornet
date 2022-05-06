@@ -7,12 +7,13 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/contextutils"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/utils"
 )
 
 func (s *SnapshotManager) setIsPruning(value bool) {
@@ -148,7 +149,7 @@ func (s *SnapshotManager) pruneMessages(messageIDsToDeleteMap map[string]struct{
 
 func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milestone.Index) (milestone.Index, error) {
 
-	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		// do not prune the database if the node was shut down
 		return 0, err
 	}
@@ -224,7 +225,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 	// Iterate through all milestones that have to be pruned
 	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
 
-		if err := utils.ReturnErrIfCtxDone(ctx, ErrPruningAborted); err != nil {
+		if err := contextutils.ReturnErrIfCtxDone(ctx, ErrPruningAborted); err != nil {
 			// stop pruning if node was shutdown
 			return 0, err
 		}

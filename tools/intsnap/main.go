@@ -44,10 +44,11 @@ func blankMilestone(index uint32) *iotago.Milestone {
 }
 
 var protoParas = &iotago.ProtocolParameters{
-	Version:     2,
-	NetworkName: "alphanet1",
-	Bech32HRP:   iotago.PrefixDevnet,
-	MinPoWScore: 10,
+	Version:       2,
+	NetworkName:   "alphanet1",
+	Bech32HRP:     iotago.PrefixDevnet,
+	MinPoWScore:   10,
+	BelowMaxDepth: 15,
 	RentStructure: iotago.RentStructure{
 		VByteCost:    0,
 		VBFactorKey:  0,

@@ -7,6 +7,8 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/configuration"
+
 	snapCore "github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -19,7 +21,7 @@ const (
 
 func databaseSnapshot(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	snapshotPathTargetFlag := fs.String(FlagToolSnapshotPathTarget, "", "the path to the target snapshot file")
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
 	targetIndexFlag := fs.Uint32(FlagToolDatabaseTargetIndex, 0, "the target index")

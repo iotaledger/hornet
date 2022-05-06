@@ -16,7 +16,6 @@ import (
 	"github.com/multiformats/go-multiaddr"
 
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
@@ -285,7 +284,7 @@ func parseEntryNode(entryNodeMultiAddrStr string, preferIPv6 bool) (entryNode *p
 
 type AutopeeringManager struct {
 	// the logger used to log events.
-	*utils.WrappedLogger
+	*logger.WrappedLogger
 
 	// bindAddress is the bind address for autopeering.
 	bindAddress string
@@ -306,7 +305,7 @@ type AutopeeringManager struct {
 func NewAutopeeringManager(log *logger.Logger, bindAddress string, entryNodes []string, preferIPv6 bool, p2pServiceKey service.Key) *AutopeeringManager {
 
 	return &AutopeeringManager{
-		WrappedLogger:      utils.NewWrappedLogger(log),
+		WrappedLogger:      logger.NewWrappedLogger(log),
 		bindAddress:        bindAddress,
 		entryNodes:         entryNodes,
 		preferIPv6:         preferIPv6,

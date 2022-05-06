@@ -12,10 +12,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/contextutils"
+
 	"github.com/dustin/go-humanize"
 
 	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/utils"
 )
 
 const (
@@ -47,7 +48,7 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	n := len(p)
 	wc.total += uint64(n)
 
-	if err := utils.ReturnErrIfCtxDone(wc.shutdownCtx, ErrSnapshotDownloadWasAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(wc.shutdownCtx, ErrSnapshotDownloadWasAborted); err != nil {
 		return n, err
 	}
 

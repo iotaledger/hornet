@@ -9,9 +9,10 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
+	"github.com/iotaledger/hive.go/contextutils"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/utils"
 )
 
 var (
@@ -202,11 +203,11 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 	// we do not walk in any order, we just process every
 	// single message and traverse their parents afterwards.
 	processStackParents := func(currentMessageID hornet.MessageID) error {
-		if err := utils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
+		if err := contextutils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
 			return err
 		}
 
-		if err := utils.ReturnErrIfChannelClosed(doneChan, ErrTraversalDone); err != nil {
+		if err := contextutils.ReturnErrIfChannelClosed(doneChan, ErrTraversalDone); err != nil {
 			return err
 		}
 
@@ -277,7 +278,7 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 		for _, parentMessageID := range cachedMsgMeta.Metadata().Parents() {
 			if !wasProcessed(parentMessageID) {
 				// do not walk further parents if the traversal was already done
-				if err := utils.ReturnErrIfChannelClosed(doneChan, ErrTraversalDone); err != nil {
+				if err := contextutils.ReturnErrIfChannelClosed(doneChan, ErrTraversalDone); err != nil {
 					return err
 				}
 

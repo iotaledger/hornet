@@ -11,7 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -68,7 +68,7 @@ func initTest(testInterface testing.TB) (*testsuite.TestEnvironment, *milestonem
 
 		keyManager := keymanager.New()
 		for _, keyRange := range coordinatorPublicKeyRanges {
-			pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
+			pubKey, err := crypto.ParseEd25519PublicKeyFromString(keyRange.Key)
 			require.NoError(te.TestInterface, err, "can't load public key ranges")
 			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
 		}

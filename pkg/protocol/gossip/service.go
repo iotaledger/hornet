@@ -16,7 +16,6 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/typeutils"
@@ -157,7 +156,7 @@ type ServiceOption func(opts *ServiceOptions)
 // Service handles ongoing gossip streams.
 type Service struct {
 	// the logger used to log events.
-	*utils.WrappedLogger
+	*logger.WrappedLogger
 
 	// Events happening around a Service.
 	Events *ServiceEvents
@@ -234,7 +233,7 @@ func NewService(
 		streamReqChan:       make(chan *streamreqmsg, 10),
 		forEachChan:         make(chan *foreachmsg, 10),
 	}
-	gossipService.WrappedLogger = utils.NewWrappedLogger(gossipService.opts.logger)
+	gossipService.WrappedLogger = logger.NewWrappedLogger(gossipService.opts.logger)
 	gossipService.configureEvents()
 	return gossipService
 }

@@ -17,11 +17,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
@@ -39,8 +39,8 @@ const (
 func init() {
 	_ = flag.CommandLine.MarkHidden(CfgTangleSyncedAtStartup)
 
-	CorePlugin = &node.CorePlugin{
-		Pluggable: node.Pluggable{
+	CorePlugin = &app.CoreComponent{
+		Component: &app.Component{
 			Name:      "Tangle",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
@@ -52,7 +52,7 @@ func init() {
 }
 
 var (
-	CorePlugin *node.CorePlugin
+	CorePlugin *app.CoreComponent
 	deps       dependencies
 
 	syncedAtStartup    = flag.Bool(CfgTangleSyncedAtStartup, false, "LMI is set to CMI at startup")
@@ -72,13 +72,13 @@ type dependencies struct {
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
 	SnapshotManager          *snapshot.SnapshotManager
-	NodeConfig               *configuration.Configuration `name:"nodeConfig"`
+	AppConfig                *configuration.Configuration `name:"appConfig"`
 	DatabaseDebug            bool                         `name:"databaseDebug"`
 	DatabaseAutoRevalidation bool                         `name:"databaseAutoRevalidation"`
 	PruneReceipts            bool                         `name:"pruneReceipts"`
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	if err := c.Provide(func() *metrics.ServerMetrics {
 		return &metrics.ServerMetrics{}
@@ -106,7 +106,7 @@ func provide(c *dig.Container) {
 
 	type cfgDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	type cfgResult struct {
@@ -117,8 +117,8 @@ func provide(c *dig.Container) {
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 		return cfgResult{
-			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.NodeConfig.Int(CfgTangleMaxDeltaMsgYoungestConeRootIndexToCMI),
-			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.NodeConfig.Int(CfgTangleMaxDeltaMsgOldestConeRootIndexToCMI),
+			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.AppConfig.Int(CfgTangleMaxDeltaMsgYoungestConeRootIndexToCMI),
+			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.AppConfig.Int(CfgTangleMaxDeltaMsgOldestConeRootIndexToCMI),
 		}
 	}); err != nil {
 		CorePlugin.LogPanic(err)
@@ -149,7 +149,7 @@ func provide(c *dig.Container) {
 		MessageProcessor   *gossip.MessageProcessor
 		ServerMetrics      *metrics.ServerMetrics
 		ReceiptService     *migrator.ReceiptService     `optional:"true"`
-		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
@@ -168,15 +168,17 @@ func provide(c *dig.Container) {
 			deps.Requester,
 			deps.ReceiptService,
 			deps.ProtocolParameters,
-			deps.NodeConfig.Duration(CfgTangleMilestoneTimeout),
-			deps.NodeConfig.Duration(CfgTangleWhiteFlagParentsSolidTimeout),
+			deps.AppConfig.Duration(CfgTangleMilestoneTimeout),
+			deps.AppConfig.Duration(CfgTangleWhiteFlagParentsSolidTimeout),
 			*syncedAtStartup)
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 	// Create a background worker that marks the database as corrupted at clean startup.
 	// This has to be done in a background worker, because the Daemon could receive
 	// a shutdown signal during startup. If that is the case, the BackgroundWorker will never be started
@@ -223,9 +225,11 @@ Please restart HORNET with one of the following flags or enable "db.autoRevalida
 
 	configureEvents()
 	deps.Tangle.ConfigureTangleProcessor()
+
+	return nil
 }
 
-func run() {
+func run() error {
 
 	if err := CorePlugin.Daemon().BackgroundWorker("Tangle[HeartbeatEvents]", func(ctx context.Context) {
 		attachHeartbeatEvents()
@@ -257,6 +261,7 @@ func run() {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
+	return nil
 }
 
 func configureEvents() {

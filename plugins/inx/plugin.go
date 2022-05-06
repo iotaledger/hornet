@@ -13,21 +13,21 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusDisabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusDisabled,
+		Component: &app.Component{
 			Name:      "INX",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
@@ -39,7 +39,7 @@ func init() {
 }
 
 var (
-	Plugin   *node.Plugin
+	Plugin   *app.Plugin
 	deps     dependencies
 	attacher *tangle.MessageAttacher
 
@@ -48,7 +48,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig              *configuration.Configuration `name:"nodeConfig"`
+	AppConfig               *configuration.Configuration `name:"appConfig"`
 	SyncManager             *syncmanager.SyncManager
 	UTXOManager             *utxo.Manager
 	Tangle                  *tangle.Tangle
@@ -66,7 +66,7 @@ type dependencies struct {
 	RestPluginManager       *restapi.RestPluginManager `optional:"true"`
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	if err := c.Provide(func() *metrics.INXMetrics {
 		return &metrics.INXMetrics{
@@ -83,13 +83,15 @@ func provide(c *dig.Container) {
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 
 	attacherOpts := []tangle.MessageAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
-		tangle.WithPoW(deps.PoWHandler, deps.NodeConfig.Int(CfgINXPoWWorkerCount)),
+		tangle.WithPoW(deps.PoWHandler, deps.AppConfig.Int(CfgINXPoWWorkerCount)),
 		tangle.WithPoWMetrics(deps.INXMetrics),
 	}
 	if deps.TipSelector != nil {
@@ -97,9 +99,11 @@ func configure() {
 	}
 
 	attacher = deps.Tangle.MessageAttacher(attacherOpts...)
+
+	return nil
 }
 
-func run() {
+func run() error {
 	if err := Plugin.Daemon().BackgroundWorker("INX", func(ctx context.Context) {
 		Plugin.LogInfo("Starting INX ... done")
 		deps.INXServer.Start()
@@ -110,4 +114,6 @@ func run() {
 	}, shutdown.PriorityIndexer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }

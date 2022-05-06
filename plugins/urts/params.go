@@ -5,7 +5,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/app"
 )
 
 const (
@@ -28,26 +28,22 @@ const (
 	CfgTipSelSpammerTipsThreshold = "spammerTipsThreshold"
 )
 
-var params = &node.PluginParams{
-	Params: map[string]*flag.FlagSet{
-		"nodeConfig": func() *flag.FlagSet {
-			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
-			fs.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge, 3*time.Second, "the maximum time a tip remains in the tip pool "+
-				"after it was referenced by the first message (non-lazy)")
-			fs.Int(CfgTipSelNonLazy+CfgTipSelMaxChildren, 30, "the maximum amount of references by other messages "+
-				"before the tip is removed from the tip pool (non-lazy)")
-			fs.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold, 0, "the maximum amount of tips in a tip-pool (non-lazy) before "+
-				"the spammer tries to reduce these (0 = always)")
-			fs.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
-			fs.Duration(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAge, 3*time.Second, "the maximum time a tip remains in the tip pool "+
-				"after it was referenced by the first message (semi-lazy)")
-			fs.Int(CfgTipSelSemiLazy+CfgTipSelMaxChildren, 2, "the maximum amount of references by other messages "+
-				"before the tip is removed from the tip pool (semi-lazy)")
-			fs.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold, 30, "the maximum amount of tips in a tip-pool (semi-lazy) before "+
-				"the spammer tries to reduce these (0 = disable)")
-			return fs
-		}(),
+var params = &app.ComponentParams{
+	Params: func(fs *flag.FlagSet) {
+		fs.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
+		fs.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge, 3*time.Second, "the maximum time a tip remains in the tip pool "+
+			"after it was referenced by the first message (non-lazy)")
+		fs.Int(CfgTipSelNonLazy+CfgTipSelMaxChildren, 30, "the maximum amount of references by other messages "+
+			"before the tip is removed from the tip pool (non-lazy)")
+		fs.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold, 0, "the maximum amount of tips in a tip-pool (non-lazy) before "+
+			"the spammer tries to reduce these (0 = always)")
+		fs.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
+		fs.Duration(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAge, 3*time.Second, "the maximum time a tip remains in the tip pool "+
+			"after it was referenced by the first message (semi-lazy)")
+		fs.Int(CfgTipSelSemiLazy+CfgTipSelMaxChildren, 2, "the maximum amount of references by other messages "+
+			"before the tip is removed from the tip pool (semi-lazy)")
+		fs.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold, 30, "the maximum amount of tips in a tip-pool (semi-lazy) before "+
+			"the spammer tries to reduce these (0 = disable)")
 	},
 	Masked: nil,
 }

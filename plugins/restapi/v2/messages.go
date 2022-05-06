@@ -12,7 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -209,7 +209,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	default:
 	}
 
-	mergedCtx, mergedCtxCancel := utils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
+	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
 	messageID, err := attacher.AttachMessage(mergedCtx, msg)

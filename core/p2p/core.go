@@ -14,16 +14,16 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
-	CorePlugin = &node.CorePlugin{
-		Pluggable: node.Pluggable{
+	CorePlugin = &app.CoreComponent{
+		Component: &app.Component{
 			Name:           "P2P",
 			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
 			Params:         params,
@@ -36,7 +36,7 @@ func init() {
 }
 
 var (
-	CorePlugin *node.CorePlugin
+	CorePlugin *app.CoreComponent
 	deps       dependencies
 )
 
@@ -44,17 +44,17 @@ type dependencies struct {
 	dig.In
 	PeeringManager       *p2p.Manager
 	Host                 host.Host
-	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	AppConfig            *configuration.Configuration `name:"appConfig"`
 	PeerStoreContainer   *p2p.PeerStoreContainer
 	PeeringConfig        *configuration.Configuration `name:"peeringConfig"`
 	PeeringConfigManager *p2p.ConfigManager
 }
 
-func initConfigPars(c *dig.Container) {
+func initConfigPars(c *dig.Container) error {
 
 	type cfgDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	type cfgResult struct {
@@ -65,19 +65,21 @@ func initConfigPars(c *dig.Container) {
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 		return cfgResult{
-			P2PDatabasePath:       deps.NodeConfig.String(CfgP2PDatabasePath),
-			P2PBindMultiAddresses: deps.NodeConfig.Strings(CfgP2PBindMultiAddresses),
+			P2PDatabasePath:       deps.AppConfig.String(CfgP2PDatabasePath),
+			P2PBindMultiAddresses: deps.AppConfig.Strings(CfgP2PBindMultiAddresses),
 		}
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	type hostDeps struct {
 		dig.In
-		NodeConfig            *configuration.Configuration `name:"nodeConfig"`
+		AppConfig             *configuration.Configuration `name:"appConfig"`
 		DatabaseEngine        database.Engine              `name:"databaseEngine"`
 		P2PDatabasePath       string                       `name:"p2pDatabasePath"`
 		P2PBindMultiAddresses []string                     `name:"p2pBindMultiAddresses"`
@@ -106,7 +108,7 @@ func provide(c *dig.Container) {
 		CorePlugin.LogInfof(`WARNING: never share your "%s" folder as it contains your node's private key!`, deps.P2PDatabasePath)
 
 		// load up the previously generated identity or create a new one
-		privKey, newlyCreated, err := p2p.LoadOrCreateIdentityPrivateKey(deps.P2PDatabasePath, deps.NodeConfig.String(CfgP2PIdentityPrivKey))
+		privKey, newlyCreated, err := p2p.LoadOrCreateIdentityPrivateKey(deps.P2PDatabasePath, deps.AppConfig.String(CfgP2PIdentityPrivKey))
 		if err != nil {
 			CorePlugin.LogPanic(err)
 		}
@@ -119,8 +121,8 @@ func provide(c *dig.Container) {
 		}
 
 		connManager, err := connmgr.NewConnManager(
-			deps.NodeConfig.Int(CfgP2PConnMngLowWatermark),
-			deps.NodeConfig.Int(CfgP2PConnMngHighWatermark),
+			deps.AppConfig.Int(CfgP2PConnMngLowWatermark),
+			deps.AppConfig.Int(CfgP2PConnMngHighWatermark),
 			connmgr.WithGracePeriod(time.Minute),
 		)
 		if err != nil {
@@ -147,7 +149,7 @@ func provide(c *dig.Container) {
 	type mngDeps struct {
 		dig.In
 		Host                      host.Host
-		Config                    *configuration.Configuration `name:"nodeConfig"`
+		Config                    *configuration.Configuration `name:"appConfig"`
 		AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
 	}
 
@@ -166,7 +168,7 @@ func provide(c *dig.Container) {
 	type configManagerDeps struct {
 		dig.In
 		PeeringConfig         *configuration.Configuration `name:"peeringConfig"`
-		PeeringConfigFilePath string                       `name:"peeringConfigFilePath"`
+		PeeringConfigFilePath *string                      `name:"peeringConfigFilePath"`
 	}
 
 	if err := c.Provide(func(deps configManagerDeps) *p2p.ConfigManager {
@@ -176,7 +178,7 @@ func provide(c *dig.Container) {
 				return err
 			}
 
-			return deps.PeeringConfig.StoreFile(deps.PeeringConfigFilePath, []string{"p2p"})
+			return deps.PeeringConfig.StoreFile(*deps.PeeringConfigFilePath, []string{"p2p"})
 		})
 
 		// peers from peering config
@@ -228,9 +230,11 @@ func provide(c *dig.Container) {
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 
 	CorePlugin.LogInfof("peer configured, ID: %s", deps.Host.ID())
 
@@ -253,12 +257,14 @@ func configure() {
 	}, shutdown.PriorityCloseDatabase); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }
 
-func run() {
+func run() error {
 	if deps.PeeringManager == nil {
 		// Manager is optional, due to autopeering entry node
-		return
+		return nil
 	}
 
 	// register a daemon to disconnect all peers up on shutdown
@@ -273,6 +279,8 @@ func run() {
 	}, shutdown.PriorityP2PManager); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }
 
 // connects to the peers defined in the config.

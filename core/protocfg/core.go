@@ -7,17 +7,17 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/crypto"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
 	_ = flag.CommandLine.MarkHidden(CfgProtocolPublicKeyRangesJSON)
 
-	CorePlugin = &node.CorePlugin{
-		Pluggable: node.Pluggable{
+	CorePlugin = &app.CoreComponent{
+		Component: &app.Component{
 			Name:           "ProtoCfg",
 			Params:         params,
 			InitConfigPars: initConfigPars,
@@ -26,16 +26,16 @@ func init() {
 }
 
 var (
-	CorePlugin *node.CorePlugin
+	CorePlugin *app.CoreComponent
 
 	cooPubKeyRangesFlag = flag.String(CfgProtocolPublicKeyRangesJSON, "", "overwrite public key ranges (JSON)")
 )
 
-func initConfigPars(c *dig.Container) {
+func initConfigPars(c *dig.Container) error {
 
 	type cfgDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	type cfgResult struct {
@@ -49,27 +49,27 @@ func initConfigPars(c *dig.Container) {
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 
 		res := cfgResult{
-			MilestonePublicKeyCount: deps.NodeConfig.Int(CfgProtocolMilestonePublicKeyCount),
+			MilestonePublicKeyCount: deps.AppConfig.Int(CfgProtocolMilestonePublicKeyCount),
 			ProtocolParameters: &iotago.ProtocolParameters{
-				Version:       byte(deps.NodeConfig.Int(CfgProtocolParametersVersion)),
-				NetworkName:   deps.NodeConfig.String(CfgProtocolParametersNetworkName),
-				Bech32HRP:     iotago.NetworkPrefix(deps.NodeConfig.String(CfgProtocolParametersBech32HRP)),
-				MinPoWScore:   deps.NodeConfig.Float64(CfgProtocolParametersMinPoWScore),
-				BelowMaxDepth: uint16(deps.NodeConfig.Int(CfgProtocolParametersBelowMaxDepth)),
+				Version:       byte(deps.AppConfig.Int(CfgProtocolParametersVersion)),
+				NetworkName:   deps.AppConfig.String(CfgProtocolParametersNetworkName),
+				Bech32HRP:     iotago.NetworkPrefix(deps.AppConfig.String(CfgProtocolParametersBech32HRP)),
+				MinPoWScore:   deps.AppConfig.Float64(CfgProtocolParametersMinPoWScore),
+				BelowMaxDepth: uint16(deps.AppConfig.Int(CfgProtocolParametersBelowMaxDepth)),
 				RentStructure: iotago.RentStructure{
-					VByteCost:    uint64(deps.NodeConfig.Int64(CfgProtocolParametersRentStructureVByteCost)),
-					VBFactorData: iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolParametersRentStructureVByteFactorData)),
-					VBFactorKey:  iotago.VByteCostFactor(deps.NodeConfig.Int64(CfgProtocolParametersRentStructureVByteFactorKey)),
+					VByteCost:    uint64(deps.AppConfig.Int64(CfgProtocolParametersRentStructureVByteCost)),
+					VBFactorData: iotago.VByteCostFactor(deps.AppConfig.Int64(CfgProtocolParametersRentStructureVByteFactorData)),
+					VBFactorKey:  iotago.VByteCostFactor(deps.AppConfig.Int64(CfgProtocolParametersRentStructureVByteFactorKey)),
 				},
-				TokenSupply: uint64(deps.NodeConfig.Int64(CfgProtocolParametersTokenSupply)),
+				TokenSupply: uint64(deps.AppConfig.Int64(CfgProtocolParametersTokenSupply)),
 			},
 			BaseToken: &BaseToken{
-				Name:            deps.NodeConfig.String(CfgProtocolBaseTokenName),
-				TickerSymbol:    deps.NodeConfig.String(CfgProtocolBaseTokenTickerSymbol),
-				Unit:            deps.NodeConfig.String(CfgProtocolBaseTokenUnit),
-				Subunit:         deps.NodeConfig.String(CfgProtocolBaseTokenSubunit),
-				Decimals:        uint32(deps.NodeConfig.Int(CfgProtocolBaseTokenDecimals)),
-				UseMetricPrefix: deps.NodeConfig.Bool(CfgProtocolBaseTokenUseMetricPrefix),
+				Name:            deps.AppConfig.String(CfgProtocolBaseTokenName),
+				TickerSymbol:    deps.AppConfig.String(CfgProtocolBaseTokenTickerSymbol),
+				Unit:            deps.AppConfig.String(CfgProtocolBaseTokenUnit),
+				Subunit:         deps.AppConfig.String(CfgProtocolBaseTokenSubunit),
+				Decimals:        uint32(deps.AppConfig.Int(CfgProtocolBaseTokenDecimals)),
+				UseMetricPrefix: deps.AppConfig.Bool(CfgProtocolBaseTokenUseMetricPrefix),
 			},
 		}
 
@@ -80,7 +80,7 @@ func initConfigPars(c *dig.Container) {
 				CorePlugin.LogPanic(err)
 			}
 		} else {
-			if err := deps.NodeConfig.SetDefault(CfgProtocolPublicKeyRanges, ConfigPublicKeyRanges{
+			if err := deps.AppConfig.SetDefault(CfgProtocolPublicKeyRanges, ConfigPublicKeyRanges{
 				{
 					Key:        "a9b46fe743df783dedd00c954612428b34241f5913cf249d75bed3aafd65e4cd",
 					StartIndex: 0,
@@ -119,7 +119,7 @@ func initConfigPars(c *dig.Container) {
 			}
 
 			// load from config
-			if err := deps.NodeConfig.Unmarshal(CfgProtocolPublicKeyRanges, &keyRanges); err != nil {
+			if err := deps.AppConfig.Unmarshal(CfgProtocolPublicKeyRanges, &keyRanges); err != nil {
 				CorePlugin.LogPanic(err)
 			}
 		}
@@ -133,12 +133,14 @@ func initConfigPars(c *dig.Container) {
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}
+
+	return nil
 }
 
 func KeyManagerWithConfigPublicKeyRanges(coordinatorPublicKeyRanges ConfigPublicKeyRanges) (*keymanager.KeyManager, error) {
 	keyManager := keymanager.New()
 	for _, keyRange := range coordinatorPublicKeyRanges {
-		pubKey, err := utils.ParseEd25519PublicKeyFromString(keyRange.Key)
+		pubKey, err := crypto.ParseEd25519PublicKeyFromString(keyRange.Key)
 		if err != nil {
 			return nil, err
 		}

@@ -9,11 +9,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	restapipkg "github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/restapi"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 )
 
@@ -49,9 +49,9 @@ const (
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusDisabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusDisabled,
+		Component: &app.Component{
 			Name:      "Debug",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Configure: configure,
@@ -60,7 +60,7 @@ func init() {
 }
 
 var (
-	Plugin *node.Plugin
+	Plugin *app.Plugin
 	deps   dependencies
 )
 
@@ -71,13 +71,13 @@ type dependencies struct {
 	Tangle            *tangle.Tangle
 	RequestQueue      gossip.RequestQueue
 	UTXOManager       *utxo.Manager
-	NodeConfig        *configuration.Configuration `name:"nodeConfig"`
+	AppConfig         *configuration.Configuration `name:"appConfig"`
 	RestPluginManager *restapi.RestPluginManager   `optional:"true"`
 }
 
-func configure() {
+func configure() error {
 	// check if RestAPI plugin is disabled
-	if Plugin.Node.IsSkipped(restapi.Plugin) {
+	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Debug plugin")
 	}
 
@@ -142,4 +142,6 @@ func configure() {
 
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
+
+	return nil
 }

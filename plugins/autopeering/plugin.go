@@ -16,7 +16,6 @@ import (
 	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/p2p/autopeering"
 	"github.com/gohornet/hornet/pkg/shutdown"
@@ -30,6 +29,7 @@ import (
 	"github.com/gohornet/hornet/plugins/spammer"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
@@ -40,9 +40,9 @@ import (
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusDisabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusDisabled,
+		Component: &app.Component{
 			Name:       "Autopeering",
 			DepsFunc:   func(cDeps dependencies) { deps = cDeps },
 			Params:     params,
@@ -55,7 +55,7 @@ func init() {
 }
 
 var (
-	Plugin *node.Plugin
+	Plugin *app.Plugin
 	deps   dependencies
 
 	localPeerContainer *autopeering.LocalPeerContainer
@@ -72,7 +72,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig                *configuration.Configuration `name:"nodeConfig"`
+	AppConfig                 *configuration.Configuration `name:"appConfig"`
 	NodePrivateKey            crypto.PrivKey               `name:"nodePrivateKey"`
 	P2PDatabasePath           string                       `name:"p2pDatabasePath"`
 	P2PBindMultiAddresses     []string                     `name:"p2pBindMultiAddresses"`
@@ -82,7 +82,7 @@ type dependencies struct {
 	AutopeeringManager        *autopeering.AutopeeringManager
 }
 
-func preProvide(c *dig.Container, configs map[string]*configuration.Configuration, initConfig *node.InitConfig) {
+func preProvide(c *dig.Container, application *app.App, initConfig *app.InitConfig) error {
 
 	pluginEnabled := true
 
@@ -107,7 +107,7 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 		pluginEnabled = false
 	}
 
-	runAsEntryNode := pluginEnabled && configs["nodeConfig"].Bool(CfgNetAutopeeringRunAsEntryNode)
+	runAsEntryNode := pluginEnabled && application.Config().Bool(CfgNetAutopeeringRunAsEntryNode)
 	if runAsEntryNode {
 		// the following pluggables stay enabled
 		// - profile
@@ -119,21 +119,21 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 		// - autopeering
 
 		// disable the other plugins if the node runs as an entry node for autopeering
-		initConfig.ForceDisablePluggable(databaseCore.CorePlugin.Identifier())
-		initConfig.ForceDisablePluggable(pow.CorePlugin.Identifier())
-		initConfig.ForceDisablePluggable(gossip.CorePlugin.Identifier())
-		initConfig.ForceDisablePluggable(tangle.CorePlugin.Identifier())
-		initConfig.ForceDisablePluggable(snapshot.CorePlugin.Identifier())
-		initConfig.ForceDisablePluggable(restapiv2.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(warpsync.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(urts.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(dashboard.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(spammer.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(receipt.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(prometheus.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(inx.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(debug.Plugin.Identifier())
-		initConfig.ForceDisablePluggable(participation.Plugin.Identifier())
+		initConfig.ForceDisableComponent(databaseCore.CorePlugin.Identifier())
+		initConfig.ForceDisableComponent(pow.CorePlugin.Identifier())
+		initConfig.ForceDisableComponent(gossip.CorePlugin.Identifier())
+		initConfig.ForceDisableComponent(tangle.CorePlugin.Identifier())
+		initConfig.ForceDisableComponent(snapshot.CorePlugin.Identifier())
+		initConfig.ForceDisableComponent(restapiv2.Plugin.Identifier())
+		initConfig.ForceDisableComponent(warpsync.Plugin.Identifier())
+		initConfig.ForceDisableComponent(urts.Plugin.Identifier())
+		initConfig.ForceDisableComponent(dashboard.Plugin.Identifier())
+		initConfig.ForceDisableComponent(spammer.Plugin.Identifier())
+		initConfig.ForceDisableComponent(receipt.Plugin.Identifier())
+		initConfig.ForceDisableComponent(prometheus.Plugin.Identifier())
+		initConfig.ForceDisableComponent(inx.Plugin.Identifier())
+		initConfig.ForceDisableComponent(debug.Plugin.Identifier())
+		initConfig.ForceDisableComponent(participation.Plugin.Identifier())
 	}
 
 	// the parameter has to be provided in the preProvide stage.
@@ -150,34 +150,38 @@ func preProvide(c *dig.Container, configs map[string]*configuration.Configuratio
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	type autopeeringDeps struct {
 		dig.In
-		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps autopeeringDeps) *autopeering.AutopeeringManager {
 		return autopeering.NewAutopeeringManager(
 			Plugin.Logger(),
-			deps.NodeConfig.String(CfgNetAutopeeringBindAddr),
-			deps.NodeConfig.Strings(CfgNetAutopeeringEntryNodes),
-			deps.NodeConfig.Bool(CfgNetAutopeeringEntryNodesPreferIPv6),
+			deps.AppConfig.String(CfgNetAutopeeringBindAddr),
+			deps.AppConfig.Strings(CfgNetAutopeeringEntryNodes),
+			deps.AppConfig.Bool(CfgNetAutopeeringEntryNodesPreferIPv6),
 			service.Key(deps.ProtocolParameters.NetworkName),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 	selection.SetParameters(selection.Parameters{
-		InboundNeighborSize:  deps.NodeConfig.Int(CfgNetAutopeeringInboundPeers),
-		OutboundNeighborSize: deps.NodeConfig.Int(CfgNetAutopeeringOutboundPeers),
-		SaltLifetime:         deps.NodeConfig.Duration(CfgNetAutopeeringSaltLifetime),
+		InboundNeighborSize:  deps.AppConfig.Int(CfgNetAutopeeringInboundPeers),
+		OutboundNeighborSize: deps.AppConfig.Int(CfgNetAutopeeringOutboundPeers),
+		SaltLifetime:         deps.AppConfig.Duration(CfgNetAutopeeringSaltLifetime),
 	})
 
 	if err := autopeering.RegisterAutopeeringProtocolInMultiAddresses(); err != nil {
@@ -195,7 +199,7 @@ func configure() {
 		deps.P2PDatabasePath,
 		deps.DatabaseEngine,
 		deps.P2PBindMultiAddresses,
-		deps.NodeConfig.String(CfgNetAutopeeringBindAddr),
+		deps.AppConfig.String(CfgNetAutopeeringBindAddr),
 		deps.AutopeeringRunAsEntryNode,
 	)
 	if err != nil {
@@ -218,16 +222,20 @@ func configure() {
 
 	deps.AutopeeringManager.Init(localPeerContainer, initSelection)
 	configureEvents()
+
+	return nil
 }
 
-func run() {
-	if err := Plugin.Node.Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
+func run() error {
+	if err := Plugin.App.Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
 		attachEvents()
 		deps.AutopeeringManager.Run(ctx)
 		detachEvents()
 	}, shutdown.PriorityAutopeering); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }
 
 func configureEvents() {

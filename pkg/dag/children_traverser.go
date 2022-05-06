@@ -7,9 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/contextutils"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/utils"
 )
 
 // ChildrenTraverser can be used to walk the dag in direction of the tips (future cone).
@@ -87,7 +88,7 @@ func (t *ChildrenTraverser) Traverse(ctx context.Context, startMessageID hornet.
 // current element gets consumed first, afterwards it's children get traversed in random order.
 func (t *ChildrenTraverser) processStackChildren() error {
 
-	if err := utils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
 		return err
 	}
 

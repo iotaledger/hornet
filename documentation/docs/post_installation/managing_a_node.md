@@ -68,7 +68,7 @@ Here is the full overview of all files and directories that are leveraged by the
 Hornet can be extended by plugins. You can control plugins using the `node` section in the `config.json` file, specifically `disablePlugins` and `enablePlugins` keys:
 
 ```json
-"node": {
+"app": {
     "alias": "Mainnet",
     "profile": "auto",
     "disablePlugins": [],

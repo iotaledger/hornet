@@ -40,7 +40,7 @@ func TestMigration(t *testing.T) {
 	n, err := f.CreateStaticNetwork("test_migration", &framework.IntegrationNetworkConfig{
 		SpawnWhiteFlagMockServer:  true,
 		WhiteFlagMockServerConfig: framework.DefaultWhiteFlagMockServerConfig("wfmock", "wfmock_config.json"),
-	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.NodeConfig) {
+	}, framework.DefaultStaticPeeringLayout(), func(index int, cfg *framework.AppConfig) {
 		cfg.Receipts.IgnoreSoftErrors = false
 		cfg.Receipts.Validate = true
 		cfg.Receipts.Validator.APIAddress = "http://wfmock:14265"
@@ -119,7 +119,7 @@ func TestMigration(t *testing.T) {
 func TestAPIError(t *testing.T) {
 	// start a network without a mock
 	n, err := f.CreateStaticNetwork("test_migration_api_error", nil, framework.DefaultStaticPeeringLayout(),
-		func(index int, cfg *framework.NodeConfig) {
+		func(index int, cfg *framework.AppConfig) {
 			cfg.Receipts.IgnoreSoftErrors = true
 			cfg.Receipts.Validate = true
 			cfg.Receipts.Validator.APIAddress = "http://localhost:14265"

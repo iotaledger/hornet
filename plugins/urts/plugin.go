@@ -12,18 +12,18 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusEnabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusEnabled,
+		Component: &app.Component{
 			Name:      "URTS",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
@@ -35,7 +35,7 @@ func init() {
 }
 
 var (
-	Plugin *node.Plugin
+	Plugin *app.Plugin
 	deps   dependencies
 
 	// closures
@@ -51,14 +51,14 @@ type dependencies struct {
 	ShutdownHandler *shutdown.ShutdownHandler
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	type tipselDeps struct {
 		dig.In
 		TipScoreCalculator *tangle.TipScoreCalculator
 		SyncManager        *syncmanager.SyncManager
 		ServerMetrics      *metrics.ServerMetrics
-		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		AppConfig          *configuration.Configuration `name:"appConfig"`
 	}
 
 	if err := c.Provide(func(deps tipselDeps) *tipselect.TipSelector {
@@ -68,26 +68,28 @@ func provide(c *dig.Container) {
 			deps.SyncManager,
 			deps.ServerMetrics,
 
-			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),
-			deps.NodeConfig.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge),
-			uint32(deps.NodeConfig.Int64(CfgTipSelNonLazy+CfgTipSelMaxChildren)),
-			deps.NodeConfig.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold),
+			deps.AppConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),
+			deps.AppConfig.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge),
+			uint32(deps.AppConfig.Int64(CfgTipSelNonLazy+CfgTipSelMaxChildren)),
+			deps.AppConfig.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold),
 
-			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit),
-			deps.NodeConfig.Duration(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAge),
-			uint32(deps.NodeConfig.Int64(CfgTipSelSemiLazy+CfgTipSelMaxChildren)),
-			deps.NodeConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
+			deps.AppConfig.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit),
+			deps.AppConfig.Duration(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAge),
+			uint32(deps.AppConfig.Int64(CfgTipSelSemiLazy+CfgTipSelMaxChildren)),
+			deps.AppConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+	return nil
 }
 
-func configure() {
+func configure() error {
 	configureEvents()
+	return nil
 }
 
-func run() {
+func run() error {
 
 	if err := Plugin.Daemon().BackgroundWorker("Tipselection[Events]", func(ctx context.Context) {
 		attachEvents()
@@ -111,6 +113,7 @@ func run() {
 	}, shutdown.PriorityTipselection); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
+	return nil
 }
 
 func configureEvents() {

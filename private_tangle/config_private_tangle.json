@@ -1,4 +1,17 @@
 {
+  "app": {
+    "alias": "HORNET private-tangle node",
+    "checkForUpdates": true,
+    "profile": "auto",
+    "disablePlugins": [
+      "Autopeering"
+    ],
+    "enablePlugins": [
+      "Spammer",
+      "Debug",
+      "Prometheus"
+    ]
+  },
   "restAPI": {
     "bindAddress": "0.0.0.0:14265",
     "jwtAuth": {
@@ -113,18 +126,6 @@
       "maxChildren": 2,
       "spammerTipsThreshold": 30
     }
-  },
-  "node": {
-    "alias": "HORNET private-tangle node",
-    "profile": "auto",
-    "disablePlugins": [
-      "Autopeering"
-    ],
-    "enablePlugins": [
-      "Spammer",
-      "Debug",
-      "Prometheus"
-    ]
   },
   "p2p": {
     "bindMultiAddresses": [

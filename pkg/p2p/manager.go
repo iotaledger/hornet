@@ -12,7 +12,6 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/typeutils"
@@ -227,7 +226,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 		forEachChan:        make(chan *foreachmsg, 10),
 		callChan:           make(chan *callmsg, 10),
 	}
-	peeringManager.WrappedLogger = utils.NewWrappedLogger(peeringManager.opts.logger)
+	peeringManager.WrappedLogger = logger.NewWrappedLogger(peeringManager.opts.logger)
 	peeringManager.configureEvents()
 	return peeringManager
 }
@@ -236,7 +235,7 @@ func NewManager(host host.Host, opts ...ManagerOption) *Manager {
 // It also provides the functionality to reconnect to known peers.
 type Manager struct {
 	// the logger used to log events.
-	*utils.WrappedLogger
+	*logger.WrappedLogger
 
 	// Events happening around the Manager.
 	Events *ManagerEvents
