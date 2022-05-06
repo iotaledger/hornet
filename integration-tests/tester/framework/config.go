@@ -36,7 +36,7 @@ const (
 
 	containerNodeImage           = "hornet:dev"
 	coordinatorImage             = "iotaledger/inx-coordinator:0.3"
-	indexerImage                 = "iotaledger/inx-indexer:0.4"
+	indexerImage                 = "iotaledger/inx-indexer:0.5"
 	containerWhiteFlagMockServer = "wfmock:latest"
 
 	containerNameTester  = "/tester"

@@ -58,7 +58,7 @@ services:
       - 4-nodes
 
   inx-indexer:
-    image: iotaledger/inx-indexer:0.4
+    image: iotaledger/inx-indexer:0.5
     networks:
       peering_net:
         ipv4_address: 172.18.211.21
@@ -75,7 +75,7 @@ services:
       - 4-nodes
 
   inx-mqtt:
-    image: iotaledger/inx-mqtt:0.4
+    image: iotaledger/inx-mqtt:0.5
     networks:
       peering_net:
         ipv4_address: 172.18.211.22
@@ -91,7 +91,7 @@ services:
       - 4-nodes
 
   inx-faucet:
-    image: iotaledger/inx-faucet:0.3
+    image: iotaledger/inx-faucet:0.4
     networks:
       peering_net:
         ipv4_address: 172.18.211.23
