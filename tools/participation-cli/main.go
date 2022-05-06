@@ -12,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/participation"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -233,7 +234,7 @@ func parseCfgFromArgs() (*cfg, error) {
 
 	nodeAPIAddress := args[0]
 
-	inputPrivateKey, err := utils.ParseEd25519PrivateKeyFromString(args[1])
+	inputPrivateKey, err := crypto.ParseEd25519PrivateKeyFromString(args[1])
 	if err != nil {
 		return nil, fmt.Errorf("can't parse SENDER_PRIVATE_KEY: %w", err)
 	}

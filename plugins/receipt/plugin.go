@@ -7,8 +7,8 @@ import (
 
 	"github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/tangle"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/iota.go/api"
@@ -16,9 +16,9 @@ import (
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusEnabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusEnabled,
+		Component: &app.Component{
 			Name:      "Receipts",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
@@ -29,7 +29,7 @@ func init() {
 }
 
 var (
-	Plugin *node.Plugin
+	Plugin *app.Plugin
 
 	deps dependencies
 )
@@ -38,29 +38,29 @@ type dependencies struct {
 	dig.In
 	ReceiptService *migrator.ReceiptService
 	Tangle         *tangle.Tangle
-	NodeConfig     *configuration.Configuration `name:"nodeConfig"`
+	AppConfig      *configuration.Configuration `name:"appConfig"`
 }
 
 // provide provides the ReceiptService as a singleton.
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	type validatorDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	if err := c.Provide(func(deps validatorDeps) *migrator.Validator {
 		iotaAPI, err := api.ComposeAPI(api.HTTPClientSettings{
-			URI:    deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress),
-			Client: &http.Client{Timeout: deps.NodeConfig.Duration(CfgReceiptsValidatorAPITimeout)},
+			URI:    deps.AppConfig.String(CfgReceiptsValidatorAPIAddress),
+			Client: &http.Client{Timeout: deps.AppConfig.Duration(CfgReceiptsValidatorAPITimeout)},
 		})
 		if err != nil {
 			Plugin.LogPanicf("failed to initialize API: %s", err)
 		}
 		return migrator.NewValidator(
 			iotaAPI,
-			deps.NodeConfig.String(CfgReceiptsValidatorCoordinatorAddress),
-			deps.NodeConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
+			deps.AppConfig.String(CfgReceiptsValidatorCoordinatorAddress),
+			deps.AppConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)
@@ -68,7 +68,7 @@ func provide(c *dig.Container) {
 
 	type serviceDeps struct {
 		dig.In
-		NodeConfig  *configuration.Configuration `name:"nodeConfig"`
+		AppConfig   *configuration.Configuration `name:"appConfig"`
 		Validator   *migrator.Validator
 		UTXOManager *utxo.Manager
 	}
@@ -77,26 +77,30 @@ func provide(c *dig.Container) {
 		return migrator.NewReceiptService(
 			deps.Validator,
 			deps.UTXOManager,
-			deps.NodeConfig.Bool(CfgReceiptsValidatorValidate),
-			deps.NodeConfig.Bool(CfgReceiptsBackupEnabled),
-			deps.NodeConfig.Bool(CfgReceiptsValidatorIgnoreSoftErrors),
-			deps.NodeConfig.String(CfgReceiptsBackupPath),
+			deps.AppConfig.Bool(CfgReceiptsValidatorValidate),
+			deps.AppConfig.Bool(CfgReceiptsBackupEnabled),
+			deps.AppConfig.Bool(CfgReceiptsValidatorIgnoreSoftErrors),
+			deps.AppConfig.String(CfgReceiptsBackupPath),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 
 	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.ReceiptMilestoneOpt) {
 		if deps.ReceiptService.ValidationEnabled {
-			Plugin.LogInfof("receipt passed validation against %s", deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress))
+			Plugin.LogInfof("receipt passed validation against %s", deps.AppConfig.String(CfgReceiptsValidatorAPIAddress))
 		}
 		Plugin.LogInfof("new receipt processed (migrated_at %d, final %v, entries %d),", r.MigratedAt, r.Final, len(r.Funds))
 	}))
-	Plugin.LogInfof("storing receipt backups in %s", deps.NodeConfig.String(CfgReceiptsBackupPath))
+	Plugin.LogInfof("storing receipt backups in %s", deps.AppConfig.String(CfgReceiptsBackupPath))
 	if err := deps.ReceiptService.Init(); err != nil {
 		Plugin.LogPanic(err)
 	}
+
+	return nil
 }

@@ -49,6 +49,7 @@ var protoParas = &iotago.ProtocolParameters{
 	Bech32HRP:     iotago.PrefixTestnet,
 	MinPoWScore:   0,
 	RentStructure: iotago.RentStructure{},
+	BelowMaxDepth: 15,
 	TokenSupply:   0,
 }
 

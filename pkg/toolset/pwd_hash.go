@@ -14,6 +14,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/basicauth"
+	"github.com/iotaledger/hive.go/configuration"
 )
 
 func readPasswordFromEnv() ([]byte, error) {
@@ -66,7 +67,7 @@ func readPasswordFromStdin() ([]byte, error) {
 
 func hashPasswordAndSalt(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	saltFlag := fs.String(FlagToolSalt, "", "salt used to hash the password (optional)")
 	passwordFlag := fs.String(FlagToolPassword, "", fmt.Sprintf("password to hash. Can also be passed as %s environment variable.", passwordEnvKey))
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)

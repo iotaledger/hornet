@@ -11,7 +11,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hive.go/workerpool"
@@ -86,7 +86,7 @@ func (t *Tangle) RunTangleProcessor() {
 
 	onReceivedValidMilestone := events.NewClosure(func(messageID hornet.MessageID, cachedMilestone *storage.CachedMilestone, requested bool) {
 
-		if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+		if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 			// do not process the milestone if the node was shut down
 			cachedMilestone.Release(true) // milestone -1
 			return

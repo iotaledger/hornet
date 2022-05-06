@@ -36,7 +36,7 @@ func (s *INXServer) ConfigurePrometheus() {
 
 func (s *INXServer) Start() {
 	go func() {
-		lis, err := net.Listen("tcp", deps.NodeConfig.String(CfgINXBindAddress))
+		lis, err := net.Listen("tcp", deps.AppConfig.String(CfgINXBindAddress))
 		if err != nil {
 			Plugin.LogFatalf("failed to listen: %v", err)
 		}

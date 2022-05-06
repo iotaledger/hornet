@@ -14,9 +14,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -34,8 +34,8 @@ const (
 )
 
 func init() {
-	CorePlugin = &node.CorePlugin{
-		Pluggable: node.Pluggable{
+	CoreComponent = &app.CoreComponent{
+		Component: &app.Component{
 			Name:           "Database",
 			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
 			Params:         params,
@@ -48,8 +48,8 @@ func init() {
 }
 
 var (
-	CorePlugin *node.CorePlugin
-	deps       dependencies
+	CoreComponent *app.CoreComponent
+	deps          dependencies
 
 	deleteDatabase = flag.Bool(CfgTangleDeleteDatabase, false, "whether to delete the database at startup")
 	deleteAll      = flag.Bool(CfgTangleDeleteAll, false, "whether to delete the database and snapshots at startup")
@@ -66,11 +66,11 @@ type dependencies struct {
 	StorageMetrics *metrics.StorageMetrics
 }
 
-func initConfigPars(c *dig.Container) {
+func initConfigPars(c *dig.Container) error {
 
 	type cfgDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	type cfgResult struct {
@@ -86,12 +86,12 @@ func initConfigPars(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
-		dbEngine, err := database.DatabaseEngineFromStringAllowed(deps.NodeConfig.String(CfgDatabaseEngine))
+		dbEngine, err := database.DatabaseEngineFromStringAllowed(deps.AppConfig.String(CfgDatabaseEngine))
 		if err != nil {
-			CorePlugin.LogPanic(err)
+			CoreComponent.LogPanic(err)
 		}
 
-		databasePath := deps.NodeConfig.String(CfgDatabasePath)
+		databasePath := deps.AppConfig.String(CfgDatabasePath)
 
 		return cfgResult{
 			DatabaseEngine:           dbEngine,
@@ -100,21 +100,23 @@ func initConfigPars(c *dig.Container) {
 			UTXODatabasePath:         filepath.Join(databasePath, UTXODatabaseDirectoryName),
 			DeleteDatabaseFlag:       *deleteDatabase,
 			DeleteAllFlag:            *deleteAll,
-			DatabaseDebug:            deps.NodeConfig.Bool(CfgDatabaseDebug),
-			DatabaseAutoRevalidation: deps.NodeConfig.Bool(CfgDatabaseAutoRevalidation),
+			DatabaseDebug:            deps.AppConfig.Bool(CfgDatabaseDebug),
+			DatabaseAutoRevalidation: deps.AppConfig.Bool(CfgDatabaseAutoRevalidation),
 		}
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
+
+	return nil
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	type databaseDeps struct {
 		dig.In
 		DeleteDatabaseFlag bool                         `name:"deleteDatabase"`
 		DeleteAllFlag      bool                         `name:"deleteAll"`
-		NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+		AppConfig          *configuration.Configuration `name:"appConfig"`
 		DatabaseEngine     database.Engine              `name:"databaseEngine"`
 		DatabasePath       string                       `name:"databasePath"`
 		UTXODatabasePath   string                       `name:"utxoDatabasePath"`
@@ -137,22 +139,22 @@ func provide(c *dig.Container) {
 			if deps.DeleteDatabaseFlag || deps.DeleteAllFlag {
 				// delete old database folder
 				if err := os.RemoveAll(deps.DatabasePath); err != nil {
-					CorePlugin.LogPanicf("deleting database folder failed: %s", err)
+					CoreComponent.LogPanicf("deleting database folder failed: %s", err)
 				}
 			}
 
 			tangleTargetEngine, err := database.CheckDatabaseEngine(deps.TangleDatabasePath, true, deps.DatabaseEngine)
 			if err != nil {
-				CorePlugin.LogPanic(err)
+				CoreComponent.LogPanic(err)
 			}
 
 			utxoTargetEngine, err := database.CheckDatabaseEngine(deps.UTXODatabasePath, true, deps.DatabaseEngine)
 			if err != nil {
-				CorePlugin.LogPanic(err)
+				CoreComponent.LogPanic(err)
 			}
 
 			if tangleTargetEngine != utxoTargetEngine {
-				CorePlugin.LogPanicf("Tangle database engine does not match UTXO database engine (%s != %s)", tangleTargetEngine, utxoTargetEngine)
+				CoreComponent.LogPanicf("Tangle database engine does not match UTXO database engine (%s != %s)", tangleTargetEngine, utxoTargetEngine)
 			}
 
 			return tangleTargetEngine
@@ -190,11 +192,11 @@ func provide(c *dig.Container) {
 			}
 
 		default:
-			CorePlugin.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", targetEngine)
+			CoreComponent.LogPanicf("unknown database engine: %s, supported engines: pebble/rocksdb/mapdb", targetEngine)
 			return databaseOut{}
 		}
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	type storageDeps struct {
@@ -214,7 +216,7 @@ func provide(c *dig.Container) {
 
 		store, err := storage.New(deps.TangleDatabase.KVStore(), deps.UTXODatabase.KVStore(), deps.Profile.Caches)
 		if err != nil {
-			CorePlugin.LogPanicf("can't initialize storage: %s", err)
+			CoreComponent.LogPanicf("can't initialize storage: %s", err)
 		}
 
 		store.PrintSnapshotInfo()
@@ -224,7 +226,7 @@ func provide(c *dig.Container) {
 			UTXOManager: store.UTXOManager(),
 		}
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	type syncManagerDeps struct {
@@ -236,59 +238,65 @@ func provide(c *dig.Container) {
 	if err := c.Provide(func(deps syncManagerDeps) *syncmanager.SyncManager {
 		sync, err := syncmanager.New(deps.UTXOManager, milestone.Index(deps.ProtocolParameters.BelowMaxDepth))
 		if err != nil {
-			CorePlugin.LogPanicf("can't initialize sync manager: %s", err)
+			CoreComponent.LogPanicf("can't initialize sync manager: %s", err)
 		}
 		return sync
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 
 	correctDatabasesVersion, err := deps.Storage.CheckCorrectDatabasesVersion()
 	if err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	if !correctDatabasesVersion {
 		databaseVersionUpdated, err := deps.Storage.UpdateDatabasesVersion()
 		if err != nil {
-			CorePlugin.LogPanic(err)
+			CoreComponent.LogPanic(err)
 		}
 
 		if !databaseVersionUpdated {
-			CorePlugin.LogPanic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
+			CoreComponent.LogPanic("HORNET database version mismatch. The database scheme was updated. Please delete the database folder and start with a new snapshot.")
 		}
 	}
 
-	if err = CorePlugin.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
+	if err = CoreComponent.Daemon().BackgroundWorker("Close database", func(ctx context.Context) {
 		<-ctx.Done()
 
 		if err = deps.Storage.MarkDatabasesHealthy(); err != nil {
-			CorePlugin.LogPanic(err)
+			CoreComponent.LogPanic(err)
 		}
 
-		CorePlugin.LogInfo("Syncing databases to disk...")
+		CoreComponent.LogInfo("Syncing databases to disk...")
 		if err = deps.Storage.FlushAndCloseStores(); err != nil {
-			CorePlugin.LogPanicf("Syncing databases to disk... failed: %s", err)
+			CoreComponent.LogPanicf("Syncing databases to disk... failed: %s", err)
 		}
-		CorePlugin.LogInfo("Syncing databases to disk... done")
+		CoreComponent.LogInfo("Syncing databases to disk... done")
 	}, shutdown.PriorityCloseDatabase); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
 	configureEvents()
+
+	return nil
 }
 
-func run() {
-	if err := CorePlugin.Daemon().BackgroundWorker("Database[Events]", func(ctx context.Context) {
+func run() error {
+	if err := CoreComponent.Daemon().BackgroundWorker("Database[Events]", func(ctx context.Context) {
 		attachEvents()
 		<-ctx.Done()
 		detachEvents()
 	}, shutdown.PriorityMetricsUpdater); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }
 
 func configureEvents() {

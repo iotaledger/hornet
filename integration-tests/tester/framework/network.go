@@ -119,7 +119,7 @@ func generatePrivateKey(optPrvKey ...crypto.PrivKey) (crypto.PrivKey, error) {
 }
 
 // CreateNode creates a new HORNET node in the network and returns it.
-func (n *Network) CreateNode(cfg *NodeConfig, optPrvKey ...crypto.PrivKey) (*Node, error) {
+func (n *Network) CreateNode(cfg *AppConfig, optPrvKey ...crypto.PrivKey) (*Node, error) {
 	name := n.PrefixName(fmt.Sprintf("%s%d", containerNameReplica, len(n.Nodes)))
 
 	privateKey, err := generatePrivateKey(optPrvKey...)

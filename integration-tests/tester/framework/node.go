@@ -21,7 +21,7 @@ type Node struct {
 	// the IP address of this node within the network.
 	IP string
 	// The configuration with which the node was started.
-	Config *NodeConfig
+	Config *AppConfig
 	// The libp2p identifier of the peer.
 	ID peer.ID
 	// The iota.go web API instance with additional information used to communicate with the node.
@@ -42,7 +42,7 @@ type INXExtension struct {
 
 // newNode creates a new instance of Node with the given information.
 // dockerContainer needs to be started in order to determine the container's (and therefore peer's) IP correctly.
-func newNode(name string, id peer.ID, cfg *NodeConfig, dockerContainer *DockerContainer, network *Network) (*Node, error) {
+func newNode(name string, id peer.ID, cfg *AppConfig, dockerContainer *DockerContainer, network *Network) (*Node, error) {
 	// after container is started we can get its IP
 	ip, err := dockerContainer.IP(network.Name)
 	if err != nil {

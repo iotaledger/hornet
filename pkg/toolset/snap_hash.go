@@ -9,6 +9,8 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/configuration"
+
 	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -17,7 +19,7 @@ import (
 
 func snapshotHash(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	fullSnapshotPathFlag := fs.String(FlagToolSnapshotPathFull, "snapshots/mainnet/full_snapshot.bin", "the path to the full snapshot file")
 	deltaSnapshotPathFlag := fs.String(FlagToolSnapshotPathDelta, "snapshots/mainnet/delta_snapshot.bin", "the path to the delta snapshot file (optional)")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)

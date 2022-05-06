@@ -1,4 +1,18 @@
 {
+  "app": {
+    "alias": "HORNET alphanet node",
+    "checkForUpdates": true,
+    "profile": "auto",
+    "disablePlugins": [],
+    "enablePlugins": [
+      "Autopeering",
+      "Debug",
+      "Participation",
+      "Prometheus",
+      "Spammer",
+      "INX"
+    ]
+  },
   "restAPI": {
     "bindAddress": "0.0.0.0:14265",
     "jwtAuth": {
@@ -119,19 +133,6 @@
         "start": 0,
         "end": 0
       }
-    ]
-  },
-  "node": {
-    "alias": "HORNET alphanet node",
-    "profile": "auto",
-    "disablePlugins": [],
-    "enablePlugins": [
-      "Autopeering",
-      "Debug",
-      "Participation",
-      "Prometheus",
-      "Spammer",
-      "INX"
     ]
   },
   "p2p": {

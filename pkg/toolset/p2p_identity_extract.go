@@ -7,12 +7,14 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/configuration"
+
 	"github.com/gohornet/hornet/pkg/p2p"
 )
 
 func extractP2PIdentity(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolDatabasePath, DefaultValueP2PDatabasePath, "the path to the p2p database folder")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 

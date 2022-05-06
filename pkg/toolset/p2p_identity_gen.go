@@ -11,15 +11,18 @@ import (
 	"github.com/mr-tron/base58"
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/configuration"
+
 	"github.com/libp2p/go-libp2p-core/crypto"
 
+	hivecrypto "github.com/iotaledger/hive.go/crypto"
+
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/utils"
 )
 
 func generateP2PIdentity(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	databasePathFlag := fs.String(FlagToolOutputPath, DefaultValueP2PDatabasePath, "the path to the output folder")
 	privateKeyFlag := fs.String(FlagToolPrivateKey, "", "the p2p private key")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
@@ -68,7 +71,7 @@ func generateP2PIdentity(args []string) error {
 	var publicKey crypto.PubKey
 
 	if privateKeyFlag != nil && len(*privateKeyFlag) > 0 {
-		hivePrivKey, err := utils.ParseEd25519PrivateKeyFromString(*privateKeyFlag)
+		hivePrivKey, err := hivecrypto.ParseEd25519PrivateKeyFromString(*privateKeyFlag)
 		if err != nil {
 			return fmt.Errorf("invalid private key given '%s': %w", *privateKeyFlag, err)
 		}

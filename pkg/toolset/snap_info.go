@@ -6,12 +6,14 @@ import (
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/configuration"
+
 	"github.com/gohornet/hornet/pkg/snapshot"
 )
 
 func snapshotInfo(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	snapshotPathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the snapshot file")
 	outputJSONFlag := fs.Bool(FlagToolOutputJSON, false, FlagToolDescriptionOutputJSON)
 

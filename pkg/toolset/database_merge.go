@@ -10,6 +10,8 @@ import (
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/contextutils"
 	"github.com/iotaledger/hive.go/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
@@ -22,7 +24,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
@@ -33,7 +34,7 @@ var (
 
 func databaseMerge(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	configFilePathFlag := fs.String(FlagToolConfigFilePath, "", "the path to the config file")
 	genesisSnapshotFilePathFlag := fs.String(FlagToolSnapshotPath, "", "the path to the genesis snapshot file (optional)")
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
@@ -291,7 +292,7 @@ func copyAndVerifyMilestoneCone(
 	parentsTraverserStorageTarget dag.ParentsTraverserStorage,
 	milestoneManager *milestonemanager.MilestoneManager) (*confStats, error) {
 
-	if err := utils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		return nil, err
 	}
 

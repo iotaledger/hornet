@@ -28,28 +28,29 @@ var (
 
 func getProtocolParametersFromConfigFile(filePath string) (*iotago.ProtocolParameters, error) {
 
-	nodeConfig, err := loadConfigFile(filePath)
+	appConfig, err := loadConfigFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
 	return &iotago.ProtocolParameters{
-		Version:     byte(nodeConfig.Int(protocfg.CfgProtocolParametersVersion)),
-		NetworkName: nodeConfig.String(protocfg.CfgProtocolParametersNetworkName),
-		Bech32HRP:   iotago.NetworkPrefix(nodeConfig.String(protocfg.CfgProtocolParametersBech32HRP)),
-		MinPoWScore: nodeConfig.Float64(protocfg.CfgProtocolParametersMinPoWScore),
+		Version:       byte(appConfig.Int(protocfg.CfgProtocolParametersVersion)),
+		NetworkName:   appConfig.String(protocfg.CfgProtocolParametersNetworkName),
+		Bech32HRP:     iotago.NetworkPrefix(appConfig.String(protocfg.CfgProtocolParametersBech32HRP)),
+		MinPoWScore:   appConfig.Float64(protocfg.CfgProtocolParametersMinPoWScore),
+		BelowMaxDepth: uint16(appConfig.Int(protocfg.CfgProtocolParametersBelowMaxDepth)),
 		RentStructure: iotago.RentStructure{
-			VByteCost:    uint64(nodeConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteCost)),
-			VBFactorData: iotago.VByteCostFactor(nodeConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteFactorData)),
-			VBFactorKey:  iotago.VByteCostFactor(nodeConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteFactorKey)),
+			VByteCost:    uint64(appConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteCost)),
+			VBFactorData: iotago.VByteCostFactor(appConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteFactorData)),
+			VBFactorKey:  iotago.VByteCostFactor(appConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteFactorKey)),
 		},
-		TokenSupply: uint64(nodeConfig.Int64(protocfg.CfgProtocolParametersTokenSupply)),
+		TokenSupply: uint64(appConfig.Int64(protocfg.CfgProtocolParametersTokenSupply)),
 	}, nil
 }
 
 func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.MilestoneManager, error) {
 
-	nodeConfig, err := loadConfigFile(filePath)
+	appConfig, err := loadConfigFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +58,7 @@ func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.Miles
 	var coordinatorPublicKeyRanges protocfg.ConfigPublicKeyRanges
 
 	// load from config
-	if err := nodeConfig.Unmarshal(protocfg.CfgProtocolPublicKeyRanges, &coordinatorPublicKeyRanges); err != nil {
+	if err := appConfig.Unmarshal(protocfg.CfgProtocolPublicKeyRanges, &coordinatorPublicKeyRanges); err != nil {
 		return nil, err
 	}
 
@@ -65,7 +66,7 @@ func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.Miles
 	if err != nil {
 		return nil, err
 	}
-	return milestonemanager.New(nil, nil, keyManager, nodeConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount)), nil
+	return milestonemanager.New(nil, nil, keyManager, appConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount)), nil
 }
 
 func checkDatabaseHealth(storage *storage.Storage, markTainted bool) error {

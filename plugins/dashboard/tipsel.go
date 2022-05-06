@@ -12,7 +12,7 @@ import (
 func runTipSelMetricWorker() {
 
 	// check if URTS plugin is enabled
-	if Plugin.Node.IsSkipped(urts.Plugin) {
+	if Plugin.App.IsPluginSkipped(urts.Plugin) {
 		return
 	}
 

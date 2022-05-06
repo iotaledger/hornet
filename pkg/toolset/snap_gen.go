@@ -12,12 +12,13 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/snapshot"
+	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func snapshotGen(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	networkNameFlag := fs.String(FlagToolNetworkName, "", "the network ID for which this snapshot is meant for")
 	mintAddressFlag := fs.String(FlagToolSnapGenMintAddress, "", "the initial ed25519 address all the tokens will be minted to")
 	treasuryAllocationFlag := fs.Uint64(FlagToolSnapGenTreasuryAllocation, 0, "the amount of tokens to reside within the treasury, the delta from the supply will be allocated to 'mintAddress'")
@@ -47,10 +48,11 @@ func snapshotGen(args []string) error {
 	}
 
 	protoParas := &iotago.ProtocolParameters{
-		Version:     2,
-		NetworkName: *networkNameFlag,
-		Bech32HRP:   iotago.PrefixTestnet,
-		MinPoWScore: 0,
+		Version:       2,
+		NetworkName:   *networkNameFlag,
+		Bech32HRP:     iotago.PrefixTestnet,
+		MinPoWScore:   0,
+		BelowMaxDepth: 15,
 		RentStructure: iotago.RentStructure{
 			VByteCost:    0,
 			VBFactorData: 0,

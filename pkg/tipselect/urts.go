@@ -16,7 +16,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/tangle"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -291,7 +290,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 	}
 
 	// get a random number between 0 and the amount of tips-1
-	randTip := utils.RandomInsecure(0, len(tipsMap)-1)
+	randTip := RandomInsecure(0, len(tipsMap)-1)
 
 	// iterate over the tipsMap and subtract each tip from randTip
 	for _, tip := range tipsMap {

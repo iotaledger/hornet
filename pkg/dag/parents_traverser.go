@@ -8,7 +8,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/contextutils"
 )
 
 type ParentsTraverserInterface interface {
@@ -104,7 +104,7 @@ func (t *ParentsTraverser) Traverse(ctx context.Context, parents hornet.MessageI
 // the paths of the parents are traversed one after another.
 func (t *ParentsTraverser) processStackParents() error {
 
-	if err := utils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
 		return err
 	}
 

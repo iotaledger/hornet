@@ -3,7 +3,7 @@ package prometheus
 import (
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/app"
 )
 
 const (
@@ -39,27 +39,23 @@ const (
 	CfgPrometheusPromhttpMetrics = "prometheus.promhttpMetrics"
 )
 
-var params = &node.PluginParams{
-	Params: map[string]*flag.FlagSet{
-		"nodeConfig": func() *flag.FlagSet {
-			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgPrometheusBindAddress, "localhost:9311", "the bind address on which the Prometheus exporter listens on")
-			fs.Bool(CfgPrometheusFileServiceDiscoveryEnabled, false, "whether the plugin should write a Prometheus 'file SD' file")
-			fs.String(CfgPrometheusFileServiceDiscoveryPath, "target.json", "the path where to write the 'file SD' file to")
-			fs.String(CfgPrometheusFileServiceDiscoveryTarget, "localhost:9311", "the target to write into the 'file SD' file")
-			fs.Bool(CfgPrometheusDatabase, true, "include database metrics")
-			fs.Bool(CfgPrometheusNode, true, "include node metrics")
-			fs.Bool(CfgPrometheusGossip, true, "include gossip metrics")
-			fs.Bool(CfgPrometheusCaches, true, "include caches metrics")
-			fs.Bool(CfgPrometheusRestAPI, true, "include restAPI metrics")
-			fs.Bool(CfgPrometheusINX, true, "include INX metrics")
-			fs.Bool(CfgPrometheusMigration, true, "include migration metrics")
-			fs.Bool(CfgPrometheusDebug, false, "include debug metrics")
-			fs.Bool(CfgPrometheusGoMetrics, false, "include go metrics")
-			fs.Bool(CfgPrometheusProcessMetrics, false, "include process metrics")
-			fs.Bool(CfgPrometheusPromhttpMetrics, false, "include promhttp metrics")
-			return fs
-		}(),
+var params = &app.ComponentParams{
+	Params: func(fs *flag.FlagSet) {
+		fs.String(CfgPrometheusBindAddress, "localhost:9311", "the bind address on which the Prometheus exporter listens on")
+		fs.Bool(CfgPrometheusFileServiceDiscoveryEnabled, false, "whether the plugin should write a Prometheus 'file SD' file")
+		fs.String(CfgPrometheusFileServiceDiscoveryPath, "target.json", "the path where to write the 'file SD' file to")
+		fs.String(CfgPrometheusFileServiceDiscoveryTarget, "localhost:9311", "the target to write into the 'file SD' file")
+		fs.Bool(CfgPrometheusDatabase, true, "include database metrics")
+		fs.Bool(CfgPrometheusNode, true, "include node metrics")
+		fs.Bool(CfgPrometheusGossip, true, "include gossip metrics")
+		fs.Bool(CfgPrometheusCaches, true, "include caches metrics")
+		fs.Bool(CfgPrometheusRestAPI, true, "include restAPI metrics")
+		fs.Bool(CfgPrometheusINX, true, "include INX metrics")
+		fs.Bool(CfgPrometheusMigration, true, "include migration metrics")
+		fs.Bool(CfgPrometheusDebug, false, "include debug metrics")
+		fs.Bool(CfgPrometheusGoMetrics, false, "include go metrics")
+		fs.Bool(CfgPrometheusProcessMetrics, false, "include process metrics")
+		fs.Bool(CfgPrometheusPromhttpMetrics, false, "include promhttp metrics")
 	},
 	Masked: nil,
 }

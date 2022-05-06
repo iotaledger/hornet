@@ -1,8 +1,6 @@
 package tangle
 
-import (
-	"github.com/gohornet/hornet/pkg/utils"
-)
+import "github.com/iotaledger/hive.go/math"
 
 func (t *Tangle) LastConfirmedMilestoneMetric() *ConfirmedMilestoneMetric {
 	t.lastConfirmedMilestoneMetricLock.RLock()
@@ -18,9 +16,9 @@ func (t *Tangle) measureMPS() {
 	outgoingMsgCnt := t.serverMetrics.SentMessages.Load()
 
 	mpsMetrics := &MPSMetrics{
-		Incoming: utils.Uint32Diff(incomingMsgCnt, t.lastIncomingMsgCnt),
-		New:      utils.Uint32Diff(incomingNewMsgCnt, t.lastIncomingNewMsgCnt),
-		Outgoing: utils.Uint32Diff(outgoingMsgCnt, t.lastOutgoingMsgCnt),
+		Incoming: math.Uint32Diff(incomingMsgCnt, t.lastIncomingMsgCnt),
+		New:      math.Uint32Diff(incomingNewMsgCnt, t.lastIncomingNewMsgCnt),
+		Outgoing: math.Uint32Diff(outgoingMsgCnt, t.lastOutgoingMsgCnt),
 	}
 
 	// store the new counters

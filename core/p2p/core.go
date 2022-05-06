@@ -14,16 +14,16 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
 )
 
 func init() {
-	CorePlugin = &node.CorePlugin{
-		Pluggable: node.Pluggable{
+	CoreComponent = &app.CoreComponent{
+		Component: &app.Component{
 			Name:           "P2P",
 			DepsFunc:       func(cDeps dependencies) { deps = cDeps },
 			Params:         params,
@@ -36,25 +36,25 @@ func init() {
 }
 
 var (
-	CorePlugin *node.CorePlugin
-	deps       dependencies
+	CoreComponent *app.CoreComponent
+	deps          dependencies
 )
 
 type dependencies struct {
 	dig.In
 	PeeringManager       *p2p.Manager
 	Host                 host.Host
-	NodeConfig           *configuration.Configuration `name:"nodeConfig"`
+	AppConfig            *configuration.Configuration `name:"appConfig"`
 	PeerStoreContainer   *p2p.PeerStoreContainer
 	PeeringConfig        *configuration.Configuration `name:"peeringConfig"`
 	PeeringConfigManager *p2p.ConfigManager
 }
 
-func initConfigPars(c *dig.Container) {
+func initConfigPars(c *dig.Container) error {
 
 	type cfgDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	type cfgResult struct {
@@ -65,19 +65,21 @@ func initConfigPars(c *dig.Container) {
 
 	if err := c.Provide(func(deps cfgDeps) cfgResult {
 		return cfgResult{
-			P2PDatabasePath:       deps.NodeConfig.String(CfgP2PDatabasePath),
-			P2PBindMultiAddresses: deps.NodeConfig.Strings(CfgP2PBindMultiAddresses),
+			P2PDatabasePath:       deps.AppConfig.String(CfgP2PDatabasePath),
+			P2PBindMultiAddresses: deps.AppConfig.Strings(CfgP2PBindMultiAddresses),
 		}
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
+
+	return nil
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	type hostDeps struct {
 		dig.In
-		NodeConfig            *configuration.Configuration `name:"nodeConfig"`
+		AppConfig             *configuration.Configuration `name:"appConfig"`
 		DatabaseEngine        database.Engine              `name:"databaseEngine"`
 		P2PDatabasePath       string                       `name:"p2pDatabasePath"`
 		P2PBindMultiAddresses []string                     `name:"p2pBindMultiAddresses"`
@@ -98,33 +100,33 @@ func provide(c *dig.Container) {
 
 		peerStoreContainer, err := p2p.NewPeerStoreContainer(filepath.Join(deps.P2PDatabasePath, "peers"), deps.DatabaseEngine, true)
 		if err != nil {
-			CorePlugin.LogPanic(err)
+			CoreComponent.LogPanic(err)
 		}
 		res.PeerStoreContainer = peerStoreContainer
 
 		// make sure nobody copies around the peer store since it contains the private key of the node
-		CorePlugin.LogInfof(`WARNING: never share your "%s" folder as it contains your node's private key!`, deps.P2PDatabasePath)
+		CoreComponent.LogInfof(`WARNING: never share your "%s" folder as it contains your node's private key!`, deps.P2PDatabasePath)
 
 		// load up the previously generated identity or create a new one
-		privKey, newlyCreated, err := p2p.LoadOrCreateIdentityPrivateKey(deps.P2PDatabasePath, deps.NodeConfig.String(CfgP2PIdentityPrivKey))
+		privKey, newlyCreated, err := p2p.LoadOrCreateIdentityPrivateKey(deps.P2PDatabasePath, deps.AppConfig.String(CfgP2PIdentityPrivKey))
 		if err != nil {
-			CorePlugin.LogPanic(err)
+			CoreComponent.LogPanic(err)
 		}
 		res.NodePrivateKey = privKey
 
 		if newlyCreated {
-			CorePlugin.LogInfof(`stored new private key for peer identity under "%s"`, privKeyFilePath)
+			CoreComponent.LogInfof(`stored new private key for peer identity under "%s"`, privKeyFilePath)
 		} else {
-			CorePlugin.LogInfof(`loaded existing private key for peer identity from "%s"`, privKeyFilePath)
+			CoreComponent.LogInfof(`loaded existing private key for peer identity from "%s"`, privKeyFilePath)
 		}
 
 		connManager, err := connmgr.NewConnManager(
-			deps.NodeConfig.Int(CfgP2PConnMngLowWatermark),
-			deps.NodeConfig.Int(CfgP2PConnMngHighWatermark),
+			deps.AppConfig.Int(CfgP2PConnMngLowWatermark),
+			deps.AppConfig.Int(CfgP2PConnMngHighWatermark),
 			connmgr.WithGracePeriod(time.Minute),
 		)
 		if err != nil {
-			CorePlugin.LogPanicf("unable to initialize connection manager: %s", err)
+			CoreComponent.LogPanicf("unable to initialize connection manager: %s", err)
 		}
 
 		createdHost, err := libp2p.New(libp2p.Identity(privKey),
@@ -135,19 +137,19 @@ func provide(c *dig.Container) {
 			libp2p.NATPortMap(),
 		)
 		if err != nil {
-			CorePlugin.LogPanicf("unable to initialize peer: %s", err)
+			CoreComponent.LogPanicf("unable to initialize peer: %s", err)
 		}
 		res.Host = createdHost
 
 		return res
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	type mngDeps struct {
 		dig.In
 		Host                      host.Host
-		Config                    *configuration.Configuration `name:"nodeConfig"`
+		Config                    *configuration.Configuration `name:"appConfig"`
 		AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
 	}
 
@@ -160,13 +162,13 @@ func provide(c *dig.Container) {
 		}
 		return nil
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
 
 	type configManagerDeps struct {
 		dig.In
 		PeeringConfig         *configuration.Configuration `name:"peeringConfig"`
-		PeeringConfigFilePath string                       `name:"peeringConfigFilePath"`
+		PeeringConfigFilePath *string                      `name:"peeringConfigFilePath"`
 	}
 
 	if err := c.Provide(func(deps configManagerDeps) *p2p.ConfigManager {
@@ -176,23 +178,23 @@ func provide(c *dig.Container) {
 				return err
 			}
 
-			return deps.PeeringConfig.StoreFile(deps.PeeringConfigFilePath, []string{"p2p"})
+			return deps.PeeringConfig.StoreFile(*deps.PeeringConfigFilePath, []string{"p2p"})
 		})
 
 		// peers from peering config
 		var peers []*p2p.PeerConfig
 		if err := deps.PeeringConfig.Unmarshal(CfgPeers, &peers); err != nil {
-			CorePlugin.LogPanicf("invalid peer config: %s", err)
+			CoreComponent.LogPanicf("invalid peer config: %s", err)
 		}
 
 		for i, p := range peers {
 			multiAddr, err := multiaddr.NewMultiaddr(p.MultiAddress)
 			if err != nil {
-				CorePlugin.LogPanicf("invalid config peer address at pos %d: %s", i, err)
+				CoreComponent.LogPanicf("invalid config peer address at pos %d: %s", i, err)
 			}
 
 			if err = p2pConfigManager.AddPeer(multiAddr, p.Alias); err != nil {
-				CorePlugin.LogWarnf("unable to add peer to config manager %s: %s", p.MultiAddress, err)
+				CoreComponent.LogWarnf("unable to add peer to config manager %s: %s", p.MultiAddress, err)
 			}
 		}
 
@@ -202,14 +204,14 @@ func provide(c *dig.Container) {
 
 		applyAliases := true
 		if len(peerIDsStr) != len(peerAliases) {
-			CorePlugin.LogWarnf("won't apply peer aliases: you must define aliases for all defined static peers (got %d aliases, %d peers).", len(peerAliases), len(peerIDsStr))
+			CoreComponent.LogWarnf("won't apply peer aliases: you must define aliases for all defined static peers (got %d aliases, %d peers).", len(peerAliases), len(peerIDsStr))
 			applyAliases = false
 		}
 
 		for i, peerIDStr := range peerIDsStr {
 			multiAddr, err := multiaddr.NewMultiaddr(peerIDStr)
 			if err != nil {
-				CorePlugin.LogPanicf("invalid CLI peer address at pos %d: %s", i, err)
+				CoreComponent.LogPanicf("invalid CLI peer address at pos %d: %s", i, err)
 			}
 
 			var alias string
@@ -218,7 +220,7 @@ func provide(c *dig.Container) {
 			}
 
 			if err = p2pConfigManager.AddPeer(multiAddr, alias); err != nil {
-				CorePlugin.LogWarnf("unable to add peer to config manager %s: %s", peerIDStr, err)
+				CoreComponent.LogWarnf("unable to add peer to config manager %s: %s", peerIDStr, err)
 			}
 		}
 
@@ -226,15 +228,17 @@ func provide(c *dig.Container) {
 
 		return p2pConfigManager
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 
-	CorePlugin.LogInfof("peer configured, ID: %s", deps.Host.ID())
+	CoreComponent.LogInfof("peer configured, ID: %s", deps.Host.ID())
 
-	if err := CorePlugin.Daemon().BackgroundWorker("Close p2p peer database", func(ctx context.Context) {
+	if err := CoreComponent.Daemon().BackgroundWorker("Close p2p peer database", func(ctx context.Context) {
 		<-ctx.Done()
 
 		closeDatabases := func() error {
@@ -245,34 +249,38 @@ func configure() {
 			return deps.PeerStoreContainer.Close()
 		}
 
-		CorePlugin.LogInfo("Syncing p2p peer database to disk...")
+		CoreComponent.LogInfo("Syncing p2p peer database to disk...")
 		if err := closeDatabases(); err != nil {
-			CorePlugin.LogPanicf("Syncing p2p peer database to disk... failed: %s", err)
+			CoreComponent.LogPanicf("Syncing p2p peer database to disk... failed: %s", err)
 		}
-		CorePlugin.LogInfo("Syncing p2p peer database to disk... done")
+		CoreComponent.LogInfo("Syncing p2p peer database to disk... done")
 	}, shutdown.PriorityCloseDatabase); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }
 
-func run() {
+func run() error {
 	if deps.PeeringManager == nil {
 		// Manager is optional, due to autopeering entry node
-		return
+		return nil
 	}
 
 	// register a daemon to disconnect all peers up on shutdown
-	if err := CorePlugin.Daemon().BackgroundWorker("Manager", func(ctx context.Context) {
-		CorePlugin.LogInfof("listening on: %s", deps.Host.Addrs())
+	if err := CoreComponent.Daemon().BackgroundWorker("Manager", func(ctx context.Context) {
+		CoreComponent.LogInfof("listening on: %s", deps.Host.Addrs())
 		go deps.PeeringManager.Start(ctx)
 		connectConfigKnownPeers()
 		<-ctx.Done()
 		if err := deps.Host.Peerstore().Close(); err != nil {
-			CorePlugin.LogError("unable to cleanly closing peer store: %s", err)
+			CoreComponent.LogError("unable to cleanly closing peer store: %s", err)
 		}
 	}, shutdown.PriorityP2PManager); err != nil {
-		CorePlugin.LogPanicf("failed to start worker: %s", err)
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
+
+	return nil
 }
 
 // connects to the peers defined in the config.
@@ -280,16 +288,16 @@ func connectConfigKnownPeers() {
 	for _, p := range deps.PeeringConfigManager.Peers() {
 		multiAddr, err := multiaddr.NewMultiaddr(p.MultiAddress)
 		if err != nil {
-			CorePlugin.LogPanicf("invalid peer address: %s", err)
+			CoreComponent.LogPanicf("invalid peer address: %s", err)
 		}
 
 		addrInfo, err := peer.AddrInfoFromP2pAddr(multiAddr)
 		if err != nil {
-			CorePlugin.LogPanicf("invalid peer address info: %s", err)
+			CoreComponent.LogPanicf("invalid peer address info: %s", err)
 		}
 
 		if err = deps.PeeringManager.ConnectPeer(addrInfo, p2p.PeerRelationKnown, p.Alias); err != nil {
-			CorePlugin.LogInfof("can't connect to peer (%s): %s", multiAddr.String(), err)
+			CoreComponent.LogInfof("can't connect to peer (%s): %s", multiAddr.String(), err)
 		}
 	}
 }

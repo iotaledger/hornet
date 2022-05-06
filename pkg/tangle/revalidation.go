@@ -6,6 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/iotaledger/hive.go/contextutils"
+
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -159,7 +161,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
@@ -176,7 +178,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 		return true
 	})
 
-	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
 	}
 
@@ -188,7 +190,7 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return err
 			}
 
@@ -224,7 +226,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
@@ -255,7 +257,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 	})
 	t.LogInfof("analyzed %d messages", txsCounter)
 
-	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
 	}
 
@@ -267,7 +269,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return err
 			}
 
@@ -300,7 +302,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
@@ -316,7 +318,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 	})
 	t.LogInfof("analyzed %d message metadata", metadataCounter)
 
-	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
 	}
 
@@ -328,7 +330,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return err
 			}
 
@@ -366,7 +368,7 @@ func (t *Tangle) cleanupChildren() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
@@ -394,7 +396,7 @@ func (t *Tangle) cleanupChildren() error {
 	})
 	t.LogInfof("analyzed %d children", childCounter)
 
-	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
 	}
 
@@ -406,7 +408,7 @@ func (t *Tangle) cleanupChildren() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return err
 			}
 
@@ -439,7 +441,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return false
 			}
 
@@ -452,7 +454,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 	})
 	t.LogInfof("analyzed %d unreferenced messages", unreferencedTxsCounter)
 
-	if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
 	}
 
@@ -464,7 +466,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			if err := utils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
+			if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 				return err
 			}
 

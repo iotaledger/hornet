@@ -11,12 +11,14 @@ import (
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
 func databaseMigration(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	databasePathSourceFlag := fs.String(FlagToolDatabasePathSource, "", "the path to the source database")
 	databasePathTargetFlag := fs.String(FlagToolDatabasePathTarget, "", "the path to the target database")
 	databaseEngineTargetFlag := fs.String(FlagToolDatabaseEngineTarget, string(DefaultValueDatabaseEngine), "the engine of the target database (values: pebble, rocksdb)")
@@ -107,8 +109,8 @@ func databaseMigration(args []string) error {
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
 
-			sourceSizeBytes, _ := utils.FolderSize(sourcePath)
-			targetSizeBytes, _ := utils.FolderSize(targetPath)
+			sourceSizeBytes, _ := ioutils.FolderSize(sourcePath)
+			targetSizeBytes, _ := ioutils.FolderSize(targetPath)
 
 			percentage, remaining := utils.EstimateRemainingTime(ts, targetSizeBytes, sourceSizeBytes)
 			fmt.Printf("Source database size: %s, target database size: %s, estimated percentage: %0.2f%%. %v elapsed, %v left...)\n", humanize.Bytes(uint64(sourceSizeBytes)), humanize.Bytes(uint64(targetSizeBytes)), percentage, time.Since(ts).Truncate(time.Second), remaining.Truncate(time.Second))

@@ -95,7 +95,7 @@ func (n *AutopeeredNetwork) AwaitPeering(minimumPeers int) error {
 }
 
 // CreatePeer creates a new HORNET node initialized with the right entry node.
-func (n *AutopeeredNetwork) CreatePeer(cfg *NodeConfig) (*Node, error) {
+func (n *AutopeeredNetwork) CreatePeer(cfg *AppConfig) (*Node, error) {
 	ip, err := n.entryNode.IP(n.Name)
 	if err != nil {
 		return nil, err

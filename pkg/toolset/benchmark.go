@@ -16,12 +16,13 @@ import (
 
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/kvstore"
 )
 
 func benchmarkIO(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	objectsCountFlag := fs.Int(FlagToolBenchmarkCount, 500000, "objects count")
 	objectsSizeFlag := fs.Int(FlagToolBenchmarkSize, 1000, "objects size in bytes")
 	databaseEngineFlag := fs.String(FlagToolDatabaseEngine, string(DefaultValueDatabaseEngine), "database engine (optional, values: pebble, rocksdb)")
@@ -110,7 +111,7 @@ func benchmarkIO(args []string) error {
 
 func benchmarkCPU(args []string) error {
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
 	cpuThreadsFlag := fs.Int(FlagToolBenchmarkThreads, runtime.NumCPU(), "thread count")
 	durationFlag := fs.Duration(FlagToolBenchmarkDuration, 1*time.Minute, "duration")
 

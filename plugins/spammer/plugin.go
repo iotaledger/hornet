@@ -15,27 +15,28 @@ import (
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/tipselect"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/datastructure/timeheap"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/math"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func init() {
-	Plugin = &node.Plugin{
-		Status: node.StatusDisabled,
-		Pluggable: node.Pluggable{
+	Plugin = &app.Plugin{
+		Status: app.StatusDisabled,
+		Component: &app.Component{
 			Name:      "Spammer",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
 			Params:    params,
@@ -46,14 +47,14 @@ func init() {
 }
 
 var (
-	Plugin *node.Plugin
+	Plugin *app.Plugin
 	deps   dependencies
 
 	spammerInstance *spammer.Spammer
 	spammerLock     syncutils.RWMutex
 
 	spammerStartTime    time.Time
-	spammerAvgHeap      *utils.TimeHeap
+	spammerAvgHeap      *timeheap.TimeHeap
 	lastSentSpamMsgsCnt uint32
 
 	isRunning             bool
@@ -86,26 +87,26 @@ type dependencies struct {
 	PoWHandler         *pow.Handler
 	PeeringManager     *p2p.Manager
 	TipSelector        *tipselect.TipSelector       `optional:"true"`
-	NodeConfig         *configuration.Configuration `name:"nodeConfig"`
+	AppConfig          *configuration.Configuration `name:"appConfig"`
 	ProtocolParameters *iotago.ProtocolParameters
 	RestPluginManager  *restapi.RestPluginManager `optional:"true"`
 }
 
-func configure() {
+func configure() error {
 	// check if RestAPI plugin is disabled
-	if Plugin.Node.IsSkipped(restapi.Plugin) {
+	if Plugin.App.IsPluginSkipped(restapi.Plugin) {
 		Plugin.LogPanic("RestAPI plugin needs to be enabled to use the Spammer plugin")
 	}
 
 	// check if URTS plugin is disabled
-	if Plugin.Node.IsSkipped(urts.Plugin) {
+	if Plugin.App.IsPluginSkipped(urts.Plugin) {
 		Plugin.LogPanic("URTS plugin needs to be enabled to use the Spammer plugin")
 	}
 
 	routeGroup := deps.RestPluginManager.AddPlugin("spammer/v1")
 	setupRoutes(routeGroup)
 
-	spammerAvgHeap = utils.NewTimeHeap()
+	spammerAvgHeap = timeheap.NewTimeHeap()
 
 	// start the CPU usage updater
 	cpuUsageUpdater()
@@ -120,9 +121,9 @@ func configure() {
 		return nil
 	}
 
-	mpsRateLimitRunning = deps.NodeConfig.Float64(CfgSpammerMPSRateLimit)
-	cpuMaxUsageRunning = deps.NodeConfig.Float64(CfgSpammerCPUMaxUsage)
-	spammerWorkersRunning = deps.NodeConfig.Int(CfgSpammerWorkers)
+	mpsRateLimitRunning = deps.AppConfig.Float64(CfgSpammerMPSRateLimit)
+	cpuMaxUsageRunning = deps.AppConfig.Float64(CfgSpammerCPUMaxUsage)
+	spammerWorkersRunning = deps.AppConfig.Int(CfgSpammerWorkers)
 	if spammerWorkersRunning == 0 {
 		spammerWorkersRunning = runtime.NumCPU() - 1
 	}
@@ -130,20 +131,21 @@ func configure() {
 
 	spammerInstance = spammer.New(
 		deps.ProtocolParameters,
-		deps.NodeConfig.String(CfgSpammerMessage),
-		deps.NodeConfig.String(CfgSpammerTag),
-		deps.NodeConfig.String(CfgSpammerTagSemiLazy),
+		deps.AppConfig.String(CfgSpammerMessage),
+		deps.AppConfig.String(CfgSpammerTag),
+		deps.AppConfig.String(CfgSpammerTagSemiLazy),
 		deps.TipSelector.SelectSpammerTips,
 		deps.PoWHandler,
 		sendMessage,
 		deps.ServerMetrics,
 	)
+	return nil
 }
 
-func run() {
+func run() error {
 	// do not enable the spammer if URTS is disabled
-	if Plugin.Node.IsSkipped(urts.Plugin) {
-		return
+	if Plugin.App.IsPluginSkipped(urts.Plugin) {
+		return nil
 	}
 
 	// create a background worker that "measures" the spammer averages values every second
@@ -155,9 +157,11 @@ func run() {
 	}
 
 	// automatically start the spammer on node startup if the flag is set
-	if deps.NodeConfig.Bool(CfgSpammerAutostart) {
+	if deps.AppConfig.Bool(CfgSpammerAutostart) {
 		_ = start(nil, nil, nil)
 	}
+
+	return nil
 }
 
 // start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.
@@ -171,9 +175,9 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) err
 
 	stopWithoutLocking()
 
-	mpsRateLimitCfg := deps.NodeConfig.Float64(CfgSpammerMPSRateLimit)
-	cpuMaxUsageCfg := deps.NodeConfig.Float64(CfgSpammerCPUMaxUsage)
-	spammerWorkerCount := deps.NodeConfig.Int(CfgSpammerWorkers)
+	mpsRateLimitCfg := deps.AppConfig.Float64(CfgSpammerMPSRateLimit)
+	cpuMaxUsageCfg := deps.AppConfig.Float64(CfgSpammerCPUMaxUsage)
+	spammerWorkerCount := deps.AppConfig.Int(CfgSpammerWorkers)
 
 	if mpsRateLimit != nil {
 		mpsRateLimitCfg = *mpsRateLimit
@@ -389,7 +393,7 @@ func measureSpammerMetrics() {
 	}
 
 	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamMessages.Load()
-	newMessagesCnt := utils.Uint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
+	newMessagesCnt := math.Uint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
 	lastSentSpamMsgsCnt = sentSpamMsgsCnt
 
 	spammerAvgHeap.Add(uint64(newMessagesCnt))

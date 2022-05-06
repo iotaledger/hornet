@@ -53,7 +53,7 @@ func NewDockerContainerFromExisting(c *client.Client, name string) (*DockerConta
 }
 
 // CreateNodeContainer creates a new node container.
-func (d *DockerContainer) CreateNodeContainer(cfg *NodeConfig) error {
+func (d *DockerContainer) CreateNodeContainer(cfg *AppConfig) error {
 	containerConfig := &container.Config{
 		Image:        containerNodeImage,
 		ExposedPorts: cfg.ExposedPorts,

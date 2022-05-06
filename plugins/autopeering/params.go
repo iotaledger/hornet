@@ -5,7 +5,7 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/iotaledger/hive.go/app"
 )
 
 const (
@@ -25,19 +25,15 @@ const (
 	CfgNetAutopeeringSaltLifetime = "p2p.autopeering.saltLifetime"
 )
 
-var params = &node.PluginParams{
-	Params: map[string]*flag.FlagSet{
-		"nodeConfig": func() *flag.FlagSet {
-			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.String(CfgNetAutopeeringBindAddr, "0.0.0.0:14626", "bind address for autopeering")
-			fs.StringSlice(CfgNetAutopeeringEntryNodes, []string{}, "list of autopeering entry nodes to use")
-			fs.Bool(CfgNetAutopeeringEntryNodesPreferIPv6, false, "defines if connecting over IPv6 is preferred for entry nodes")
-			fs.Bool(CfgNetAutopeeringRunAsEntryNode, false, "whether the node should act as an autopeering entry node")
-			fs.Int(CfgNetAutopeeringInboundPeers, 2, "the number of inbound autopeers")
-			fs.Int(CfgNetAutopeeringOutboundPeers, 2, "the number of outbound autopeers")
-			fs.Duration(CfgNetAutopeeringSaltLifetime, 2*time.Hour, "lifetime of the private and public local salt")
-			return fs
-		}(),
+var params = &app.ComponentParams{
+	Params: func(fs *flag.FlagSet) {
+		fs.String(CfgNetAutopeeringBindAddr, "0.0.0.0:14626", "bind address for autopeering")
+		fs.StringSlice(CfgNetAutopeeringEntryNodes, []string{}, "list of autopeering entry nodes to use")
+		fs.Bool(CfgNetAutopeeringEntryNodesPreferIPv6, false, "defines if connecting over IPv6 is preferred for entry nodes")
+		fs.Bool(CfgNetAutopeeringRunAsEntryNode, false, "whether the node should act as an autopeering entry node")
+		fs.Int(CfgNetAutopeeringInboundPeers, 2, "the number of inbound autopeers")
+		fs.Int(CfgNetAutopeeringOutboundPeers, 2, "the number of outbound autopeers")
+		fs.Duration(CfgNetAutopeeringSaltLifetime, 2*time.Hour, "lifetime of the private and public local salt")
 	},
 	Masked: nil,
 }

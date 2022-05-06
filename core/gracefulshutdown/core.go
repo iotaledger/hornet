@@ -3,13 +3,13 @@ package gracefulshutdown
 import (
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/iotaledger/hive.go/app"
 )
 
 func init() {
-	CorePlugin = &node.CorePlugin{
-		Pluggable: node.Pluggable{
+	CoreComponent = &app.CoreComponent{
+		Component: &app.Component{
 			Name:      "Graceful Shutdown",
 			Provide:   provide,
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -19,8 +19,8 @@ func init() {
 }
 
 var (
-	CorePlugin *node.CorePlugin
-	deps       dependencies
+	CoreComponent *app.CoreComponent
+	deps          dependencies
 )
 
 type dependencies struct {
@@ -28,15 +28,19 @@ type dependencies struct {
 	ShutdownHandler *shutdown.ShutdownHandler
 }
 
-func provide(c *dig.Container) {
+func provide(c *dig.Container) error {
 
 	if err := c.Provide(func() *shutdown.ShutdownHandler {
-		return shutdown.NewShutdownHandler(CorePlugin.Logger(), CorePlugin.Daemon())
+		return shutdown.NewShutdownHandler(CoreComponent.Logger(), CoreComponent.Daemon())
 	}); err != nil {
-		CorePlugin.LogPanic(err)
+		CoreComponent.LogPanic(err)
 	}
+
+	return nil
 }
 
-func configure() {
+func configure() error {
 	deps.ShutdownHandler.Run()
+
+	return nil
 }

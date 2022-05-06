@@ -7,7 +7,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/daemon"
 	"github.com/iotaledger/hive.go/logger"
 )
@@ -21,7 +20,7 @@ const (
 // and shuts down all processes gracefully.
 type ShutdownHandler struct {
 	// the logger used to log events.
-	*utils.WrappedLogger
+	*logger.WrappedLogger
 
 	daemon           daemon.Daemon
 	gracefulStop     chan os.Signal
@@ -32,7 +31,7 @@ type ShutdownHandler struct {
 func NewShutdownHandler(log *logger.Logger, daemon daemon.Daemon) *ShutdownHandler {
 
 	gs := &ShutdownHandler{
-		WrappedLogger:    utils.NewWrappedLogger(log),
+		WrappedLogger:    logger.NewWrappedLogger(log),
 		daemon:           daemon,
 		gracefulStop:     make(chan os.Signal, 1),
 		nodeSelfShutdown: make(chan string),

@@ -1,4 +1,4 @@
-package utils
+package tipselect
 
 import (
 	"math/rand"

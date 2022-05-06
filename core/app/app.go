@@ -4,16 +4,31 @@ import (
 	"fmt"
 	"os"
 
-	goversion "github.com/hashicorp/go-version"
-	"github.com/pkg/errors"
-	flag "github.com/spf13/pflag"
-	"go.uber.org/dig"
-
-	"github.com/gohornet/hornet/pkg/app"
-	"github.com/gohornet/hornet/pkg/node"
+	"github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/core/gossip"
+	"github.com/gohornet/hornet/core/gracefulshutdown"
+	"github.com/gohornet/hornet/core/p2p"
+	"github.com/gohornet/hornet/core/pow"
+	"github.com/gohornet/hornet/core/profile"
+	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/core/snapshot"
+	"github.com/gohornet/hornet/core/tangle"
 	"github.com/gohornet/hornet/pkg/toolset"
-	"github.com/iotaledger/hive.go/configuration"
-	"github.com/iotaledger/hive.go/logger"
+
+	"github.com/gohornet/hornet/plugins/autopeering"
+	"github.com/gohornet/hornet/plugins/dashboard"
+	"github.com/gohornet/hornet/plugins/debug"
+	"github.com/gohornet/hornet/plugins/inx"
+	"github.com/gohornet/hornet/plugins/participation"
+	"github.com/gohornet/hornet/plugins/profiling"
+	"github.com/gohornet/hornet/plugins/prometheus"
+	"github.com/gohornet/hornet/plugins/receipt"
+	"github.com/gohornet/hornet/plugins/restapi"
+	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
+	"github.com/gohornet/hornet/plugins/spammer"
+	"github.com/gohornet/hornet/plugins/urts"
+	"github.com/gohornet/hornet/plugins/warpsync"
+	"github.com/iotaledger/hive.go/app"
 )
 
 var (
@@ -24,167 +39,82 @@ var (
 	Version = "2.0.0-alpha11"
 )
 
+func App() *app.App {
+	return app.New(Name, Version,
+		app.WithVersionCheck("gohornet", "hornet"),
+		app.WithUsageText(fmt.Sprintf(`Usage of %s (%s %s):
+
+Run '%s tools' to list all available tools.
+		
+Command line flags:
+`, os.Args[0], Name, Version, os.Args[0])),
+		app.WithInitComponent(InitComponent),
+		app.WithCoreComponents([]*app.CoreComponent{
+			profile.CoreComponent,
+			protocfg.CoreComponent,
+			gracefulshutdown.CoreComponent,
+			database.CoreComponent,
+			pow.CoreComponent,
+			p2p.CoreComponent,
+			gossip.CoreComponent,
+			tangle.CoreComponent,
+			snapshot.CoreComponent,
+		}...),
+		app.WithPlugins([]*app.Plugin{
+			profiling.Plugin,
+			restapi.Plugin,
+			restapiv2.Plugin,
+			autopeering.Plugin,
+			warpsync.Plugin,
+			urts.Plugin,
+			dashboard.Plugin,
+			spammer.Plugin,
+			receipt.Plugin,
+			prometheus.Plugin,
+			inx.Plugin,
+			debug.Plugin,
+			participation.Plugin,
+		}...),
+	)
+}
+
 var (
-	version  = flag.BoolP("version", "v", false, "Prints the HORNET version")
-	help     = flag.BoolP("help", "h", false, "Prints the HORNET help (--full for all parameters)")
-	helpFull = flag.Bool("full", false, "Prints full HORNET help (only in combination with -h)")
-
-	// configs
-	nodeConfig    = configuration.New()
-	peeringConfig = configuration.New()
-	profileConfig = configuration.New()
-
-	// config file flags
-	configFilesFlagSet  = flag.NewFlagSet("config_files", flag.ContinueOnError)
-	nodeCfgFilePath     = configFilesFlagSet.StringP(CfgConfigFilePathNodeConfig, "c", "config.json", "file path of the config file")
-	peeringCfgFilePath  = configFilesFlagSet.StringP(CfgConfigFilePathPeeringConfig, "n", "peering.json", "file path of the peering config file")
-	profilesCfgFilePath = configFilesFlagSet.String(CfgConfigFilePathProfilesConfig, "profiles.json", "file path of the profiles config file")
-
-	nonHiddenFlag = map[string]struct{}{
-		"config":              {},
-		"config-dir":          {},
-		"node.profile":        {},
-		"node.disablePlugins": {},
-		"node.enablePlugins":  {},
-		"peeringConfig":       {},
-		"profilesConfig":      {},
-		"version":             {},
-		"help":                {},
-	}
-
-	cfgNames = map[string]struct{}{
-		"nodeConfig":    {},
-		"peeringConfig": {},
-		"profileConfig": {},
-	}
-
-	ErrConfigDoesNotExist = errors.New("config does not exist")
+	InitComponent *app.InitComponent
 )
 
 func init() {
-	InitPlugin = &node.InitPlugin{
-		Pluggable: node.Pluggable{
-			Name:           "App",
-			Params:         params,
-			InitConfigPars: initConfigPars,
-			Provide:        provide,
-			Configure:      configure,
+	InitComponent = &app.InitComponent{
+		Component: &app.Component{
+			Name: "App",
 		},
-		Configs: map[string]*configuration.Configuration{
-			"nodeConfig":    nodeConfig,
-			"peeringConfig": peeringConfig,
-			"profileConfig": profileConfig,
+		NonHiddenFlags: []string{
+			"app.checkForUpdates",
+			"app.disablePlugins",
+			"app.enablePlugins",
+			"app.profile",
+			"config",
+			"help",
+			"peering",
+			"profiles",
+			"version",
+			"deleteAll",
+			"deleteDatabase",
+			"revalidate",
+		},
+		AdditionalConfigs: []*app.ConfigurationSet{
+			app.NewConfigurationSet("peering", "peering", "peeringConfigFilePath", "peeringConfig", false, true, false, "peering.json", "n"),
+			app.NewConfigurationSet("profiles", "profiles", "profilesConfigFilePath", "profilesConfig", false, false, false, "profiles.json", ""),
 		},
 		Init: initialize,
 	}
 }
 
-var (
-	InitPlugin *node.InitPlugin
-)
-
-func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.InitConfig, error) {
+func initialize(application *app.App) error {
 
 	if toolset.ShouldHandleTools() {
 		toolset.HandleTools()
 		// HandleTools will call os.Exit
 	}
 
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `Usage of %s (%s %s):
-
-Run '%s tools' to list all available tools.
-
-Command line flags:
-`, os.Args[0], Name, Version, os.Args[0])
-		flag.PrintDefaults()
-	}
-
-	configFlagSets, err := normalizeFlagSets(params)
-	if err != nil {
-		return nil, err
-	}
-
-	var flagSetsToParse = configFlagSets
-	flagSetsToParse["config_files"] = configFilesFlagSet
-
-	parseFlags(flagSetsToParse)
-	printVersion(flagSetsToParse)
-
-	if err = loadCfg(configFlagSets); err != nil {
-		return nil, err
-	}
-
-	if err = nodeConfig.SetDefault(logger.ConfigurationKeyDisableCaller, true); err != nil {
-		panic(err)
-	}
-
-	if err = logger.InitGlobalLogger(nodeConfig); err != nil {
-		panic(err)
-	}
-
-	versionString := Version
-	if _, err := goversion.NewSemver(Version); err == nil {
-		// version is a valid SemVer => release version
-		versionString = "       v" + versionString
-	} else {
-		// version is not a valid SemVer => maybe self-compiled
-		versionString = "commit: " + versionString
-	}
-
-	fmt.Printf(`
-              ██╗  ██╗ ██████╗ ██████╗ ███╗   ██╗███████╗████████╗
-              ██║  ██║██╔═══██╗██╔══██╗████╗  ██║██╔════╝╚══██╔══╝
-              ███████║██║   ██║██████╔╝██╔██╗ ██║█████╗     ██║
-              ██╔══██║██║   ██║██╔══██╗██║╚██╗██║██╔══╝     ██║
-              ██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗   ██║
-              ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝
-                            %s
-`+"\n", versionString)
-
-	printConfig(maskedKeys)
-
-	return &node.InitConfig{
-		EnabledPlugins:  nodeConfig.Strings(CfgNodeEnablePlugins),
-		DisabledPlugins: nodeConfig.Strings(CfgNodeDisablePlugins),
-	}, nil
-}
-
-func initConfigPars(c *dig.Container) {
-
-	type cfgResult struct {
-		dig.Out
-		NodeConfig            *configuration.Configuration `name:"nodeConfig"`
-		PeeringConfig         *configuration.Configuration `name:"peeringConfig"`
-		ProfileConfig         *configuration.Configuration `name:"profilesConfig"`
-		PeeringConfigFilePath string                       `name:"peeringConfigFilePath"`
-	}
-
-	if err := c.Provide(func() cfgResult {
-		return cfgResult{
-			NodeConfig:            nodeConfig,
-			PeeringConfig:         peeringConfig,
-			ProfileConfig:         profileConfig,
-			PeeringConfigFilePath: *peeringCfgFilePath,
-		}
-	}); err != nil {
-		InitPlugin.LogPanic(err)
-	}
-}
-
-func provide(c *dig.Container) {
-
-	if err := c.Provide(func() *app.AppInfo {
-		return &app.AppInfo{
-			Name:                Name,
-			Version:             Version,
-			LatestGitHubVersion: "",
-		}
-	}); err != nil {
-		InitPlugin.LogPanic(err)
-	}
-}
-
-func configure() {
-	InitPlugin.LogInfo("Loading plugins ...")
+	return nil
 }
