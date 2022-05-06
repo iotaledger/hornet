@@ -122,8 +122,8 @@ type milestoneUTXOChangesResponse struct {
 	ConsumedOutputs []string `json:"consumedOutputs"`
 }
 
-// OutputResponse defines the response of a GET outputs REST API call.
-type OutputResponse struct {
+// OutputMetadataResponse defines the response of a GET outputs metadata REST API call.
+type OutputMetadataResponse struct {
 	// The hex encoded message ID of the message.
 	MessageID string `json:"messageId"`
 	// The hex encoded transaction id from which this output originated.
@@ -144,8 +144,13 @@ type OutputResponse struct {
 	MilestoneTimestampBooked uint32 `json:"milestoneTimestampBooked"`
 	// The ledger index at which this output was available at.
 	LedgerIndex milestone.Index `json:"ledgerIndex"`
+}
+
+// OutputResponse defines the response of a GET outputs REST API call.
+type OutputResponse struct {
+	Metadata *OutputMetadataResponse `json:"metadata"`
 	// The output in its serialized form.
-	RawOutput *json.RawMessage `json:"output,omitempty"`
+	RawOutput *json.RawMessage `json:"output"`
 }
 
 // treasuryResponse defines the response of a GET treasury REST API call.
