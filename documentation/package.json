@@ -2,10 +2,7 @@
   "name": "hornet",
   "version": "0.0.0",
   "scripts": {
-    "start": "iota-wiki-cli start",
-    "clean": "iota-wiki-cli clean",
-    "setup": "iota-wiki-cli setup",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "iota-wiki start"
   },
   "license": "UNLICENSED",
   "engines": {
