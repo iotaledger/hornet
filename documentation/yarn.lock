@@ -1997,6 +1997,36 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@iota-community/iota-wiki-cli@iota-community/iota-wiki-cli#v2":
+  version: 1.7.0
+  resolution: "@iota-community/iota-wiki-cli@https://github.com/iota-community/iota-wiki-cli.git#commit=2b5004a55516a90ab9a507718c75077eb8b6cee9"
+  dependencies:
+    "@babel/generator": ^7.17.9
+    "@babel/parser": ^7.17.9
+    "@babel/types": ^7.17.0
+    "@docusaurus/core": ^2.0.0-beta.20
+    "@docusaurus/plugin-content-blog": ^2.0.0-beta.20
+    "@docusaurus/plugin-content-docs": ^2.0.0-beta.20
+    "@docusaurus/plugin-content-pages": ^2.0.0-beta.20
+    "@docusaurus/theme-classic": ^2.0.0-beta.20
+    "@iota-wiki/plugin-tutorial": ^1.0.4
+    "@yarnpkg/shell": ^3.2.0
+    axios: ^0.26.1
+    clipanion: ^3.2.0-rc.10
+    ink: ^3.2.0
+    ink-multi-select: ^2.0.0
+    ink-select-input: ^4.2.1
+    ink-spinner: ^4.0.3
+    ink-text-input: ^4.0.3
+    plugin-image-zoom: flexanalytics/plugin-image-zoom
+    react: ^17.0.2
+    react-dom: ^17.0.2
+  bin:
+    iota-wiki: dist/index.js
+  checksum: 7e96831806ef1e33dc2edd920639a97aaf50dcaf47691f93736b87caacc301fb1952a77bc7253dbd05b86064ba6489eed2f3294437a4cae54808eba672ffe8f5
+  languageName: node
+  linkType: hard
+
 "@iota-wiki/plugin-tutorial@npm:^1.0.4":
   version: 1.0.4
   resolution: "@iota-wiki/plugin-tutorial@npm:1.0.4"
@@ -2049,12 +2079,12 @@ __metadata:
   linkType: hard
 
 "@jridgewell/trace-mapping@npm:^0.3.9":
-  version: 0.3.12
-  resolution: "@jridgewell/trace-mapping@npm:0.3.12"
+  version: 0.3.13
+  resolution: "@jridgewell/trace-mapping@npm:0.3.13"
   dependencies:
     "@jridgewell/resolve-uri": ^3.0.3
     "@jridgewell/sourcemap-codec": ^1.4.10
-  checksum: 746a44f868e90c79ff940d7772d0a473e4580f40af246c46bee14b6b047265963c8fe3e4726b3f362913dc69f021f1389da707aa4ea4b5a34eb6bdc7309657fd
+  checksum: e38254e830472248ca10a6ed1ae75af5e8514f0680245a5e7b53bc3c030fd8691d4d3115d80595b45d3badead68269769ed47ecbbdd67db1343a11f05700e75a
   languageName: node
   linkType: hard
 
@@ -6004,7 +6034,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "hornet@workspace:."
   dependencies:
-    iota-wiki-cli: "iota-community/iota-wiki-cli#v2"
+    "@iota-community/iota-wiki-cli": "iota-community/iota-wiki-cli#v2"
   languageName: unknown
   linkType: soft
 
@@ -6264,9 +6294,9 @@ __metadata:
   linkType: hard
 
 "immer@npm:^9.0.7":
-  version: 9.0.12
-  resolution: "immer@npm:9.0.12"
-  checksum: bcbec6d76dac65e49068eb67ece4d407116e62b8cde3126aa89c801e408f5047763ba0aeb62f1938c1aa704bb6612f1d8302bb2a86fa1fc60fcc12d8b25dc895
+  version: 9.0.13
+  resolution: "immer@npm:9.0.13"
+  checksum: cd3b82d4f4e9ad61879ab27071855224665fd8b5893ecc42a267f8965a7f75bcceae24e47244c826768124e95a3ae0a4a15a0dfd034a9efae4298936e162c7d7
   languageName: node
   linkType: hard
 
@@ -6461,36 +6491,6 @@ __metadata:
   dependencies:
     loose-envify: ^1.0.0
   checksum: cc3182d793aad82a8d1f0af697b462939cb46066ec48bbf1707c150ad5fad6406137e91a262022c269702e01621f35ef60269f6c0d7fd178487959809acdfb14
-  languageName: node
-  linkType: hard
-
-"iota-wiki-cli@iota-community/iota-wiki-cli#v2":
-  version: 1.7.0
-  resolution: "iota-wiki-cli@https://github.com/iota-community/iota-wiki-cli.git#commit=2b5004a55516a90ab9a507718c75077eb8b6cee9"
-  dependencies:
-    "@babel/generator": ^7.17.9
-    "@babel/parser": ^7.17.9
-    "@babel/types": ^7.17.0
-    "@docusaurus/core": ^2.0.0-beta.20
-    "@docusaurus/plugin-content-blog": ^2.0.0-beta.20
-    "@docusaurus/plugin-content-docs": ^2.0.0-beta.20
-    "@docusaurus/plugin-content-pages": ^2.0.0-beta.20
-    "@docusaurus/theme-classic": ^2.0.0-beta.20
-    "@iota-wiki/plugin-tutorial": ^1.0.4
-    "@yarnpkg/shell": ^3.2.0
-    axios: ^0.26.1
-    clipanion: ^3.2.0-rc.10
-    ink: ^3.2.0
-    ink-multi-select: ^2.0.0
-    ink-select-input: ^4.2.1
-    ink-spinner: ^4.0.3
-    ink-text-input: ^4.0.3
-    plugin-image-zoom: flexanalytics/plugin-image-zoom
-    react: ^17.0.2
-    react-dom: ^17.0.2
-  bin:
-    iota-wiki: dist/index.js
-  checksum: ac04ce3653f5f1e3a664970ca0c84770cd4109389554d5477bab06803a2f881f055aeaa8260839947ed8c0b414fe2412778a067e0db15cd8eff51fc036be9ae7
   languageName: node
   linkType: hard
 
@@ -7217,9 +7217,9 @@ __metadata:
   linkType: hard
 
 "lru-cache@npm:^7.7.1":
-  version: 7.9.0
-  resolution: "lru-cache@npm:7.9.0"
-  checksum: c91a293a103d11ea4f07de4122ba4f73d8203d0de51852fb612b1764296aebf623a3e11dddef1b3aefdc8d71af97d52b222dad5459dcb967713bbab9a19fed7d
+  version: 7.10.0
+  resolution: "lru-cache@npm:7.10.0"
+  checksum: b88d1cdb2cd698b28bc263ed0fbc3add05bd71df587b4811a1c3522edcd2205dca904c889d65e74cd2a685227f7bcb5b375d3e9f18af6d4760e89b683f90fd1b
   languageName: node
   linkType: hard
 
