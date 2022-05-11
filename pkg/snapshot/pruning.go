@@ -125,14 +125,14 @@ func (s *SnapshotManager) pruneMessages(messageIDsToDeleteMap map[string]struct{
 
 		msgID := hornet.MessageIDFromMapKey(messageIDToDelete)
 
-		cachedMsg := s.storage.CachedMessageOrNil(msgID) // message +1
-		if cachedMsg == nil {
+		cachedMsgMeta := s.storage.CachedMessageMetadataOrNil(msgID) // meta +1
+		if cachedMsgMeta == nil {
 			continue
 		}
 
-		cachedMsg.ConsumeMessage(func(msg *storage.Message) { // message -1
+		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
 			// Delete the reference in the parents
-			for _, parent := range msg.Parents() {
+			for _, parent := range metadata.Parents() {
 				s.storage.DeleteChild(parent, msgID)
 			}
 
