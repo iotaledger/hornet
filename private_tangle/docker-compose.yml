@@ -112,6 +112,26 @@ services:
       - 3-nodes
       - 4-nodes
 
+  inx-participation:
+    image: iotaledger/inx-participation:0.1
+    networks:
+      peering_net:
+        ipv4_address: 172.18.211.24
+    restart: on-failure
+    ports:
+      - "9892:9892/tcp"
+    volumes:
+      - ./privatedb/participation:/app/database
+    command:
+      - "-c"
+      - "config.json"
+      - "--inx.address=172.18.211.11:9029"
+      - "--participation.bindAddress=172.18.211.24:9892"
+    profiles:
+      - 2-nodes
+      - 3-nodes
+      - 4-nodes
+
   hornet-coo:
     build:
       context: ../

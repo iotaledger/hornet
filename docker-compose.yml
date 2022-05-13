@@ -19,6 +19,15 @@ services:
       - "--prometheus.enabled=true"
       - "--prometheus.bindAddress=inx-mqtt:9313"
 
+  inx-participation:
+    image: iotaledger/inx-participation:0.1
+    restart: on-failure
+    volumes:
+      - ./alphanet/participation:/app/database
+    command:
+      - "--inx.address=hornet:9029"
+      - "--participation.bindAddress=inx-participation:9892"
+
   hornet:
     build:
       context: .

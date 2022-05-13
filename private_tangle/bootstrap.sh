@@ -19,6 +19,7 @@ if [[ $1 = "build" ]]; then
   docker-compose pull inx-indexer
   docker-compose pull inx-mqtt
   docker-compose pull inx-faucet
+  docker-compose pull inx-participation
 fi
 
 # Create snapshot
@@ -39,6 +40,7 @@ fi
 # Prepare database directory
 mkdir -p privatedb/coo
 mkdir -p privatedb/indexer
+mkdir -p privatedb/participation
 mkdir -p privatedb/state
 mkdir -p privatedb/hornet-2
 mkdir -p privatedb/hornet-3

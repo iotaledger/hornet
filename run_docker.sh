@@ -12,6 +12,7 @@ if [[ $1 = "build" ]]; then
   # Pull latest images
   docker-compose pull inx-indexer
   docker-compose pull inx-mqtt
+  docker-compose pull inx-participation
 fi
 
 # Prepare db directory
