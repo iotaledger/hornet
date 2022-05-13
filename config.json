@@ -7,7 +7,6 @@
     "enablePlugins": [
       "Autopeering",
       "Debug",
-      "Participation",
       "Prometheus",
       "Spammer",
       "INX"
