@@ -19,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/inx"
-	"github.com/gohornet/hornet/plugins/participation"
 	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
@@ -73,7 +72,6 @@ Command line flags:
 			prometheus.Plugin,
 			inx.Plugin,
 			debug.Plugin,
-			participation.Plugin,
 		}...),
 	)
 }

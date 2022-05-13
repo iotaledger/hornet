@@ -22,7 +22,6 @@ import (
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/inx"
-	"github.com/gohornet/hornet/plugins/participation"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
@@ -133,7 +132,6 @@ func preProvide(c *dig.Container, application *app.App, initConfig *app.InitConf
 		initConfig.ForceDisableComponent(prometheus.Plugin.Identifier())
 		initConfig.ForceDisableComponent(inx.Plugin.Identifier())
 		initConfig.ForceDisableComponent(debug.Plugin.Identifier())
-		initConfig.ForceDisableComponent(participation.Plugin.Identifier())
 	}
 
 	// the parameter has to be provided in the preProvide stage.
