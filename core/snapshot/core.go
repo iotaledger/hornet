@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/labstack/gommon/bytes"
@@ -50,6 +51,7 @@ func init() {
 			Params:         params,
 			InitConfigPars: initConfigPars,
 			Provide:        provide,
+			Configure:      configure,
 			Run:            run,
 		},
 	}
@@ -69,6 +71,7 @@ type dependencies struct {
 	UTXOManager          *utxo.Manager
 	SnapshotManager      *snapshot.SnapshotManager
 	AppConfig            *configuration.Configuration `name:"appConfig"`
+	DeleteAllFlag        bool                         `name:"deleteAll"`
 	PruningPruneReceipts bool                         `name:"pruneReceipts"`
 	SnapshotsFullPath    string                       `name:"snapshotsFullPath"`
 	SnapshotsDeltaPath   string                       `name:"snapshotsDeltaPath"`
@@ -89,17 +92,13 @@ func initConfigPars(c *dig.Container) error {
 		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
 	}
 
-	if err := c.Provide(func(deps cfgDeps) cfgResult {
+	return c.Provide(func(deps cfgDeps) cfgResult {
 		return cfgResult{
 			PruningPruneReceipts: deps.AppConfig.Bool(CfgPruningPruneReceipts),
 			SnapshotsFullPath:    deps.AppConfig.String(CfgSnapshotsFullPath),
 			SnapshotsDeltaPath:   deps.AppConfig.String(CfgSnapshotsDeltaPath),
 		}
-	}); err != nil {
-		CoreComponent.LogPanic(err)
-	}
-
-	return nil
+	})
 }
 
 func provide(c *dig.Container) error {
@@ -114,12 +113,11 @@ func provide(c *dig.Container) error {
 		AppConfig            *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters   *iotago.ProtocolParameters
 		PruningPruneReceipts bool   `name:"pruneReceipts"`
-		DeleteAllFlag        bool   `name:"deleteAll"`
 		SnapshotsFullPath    string `name:"snapshotsFullPath"`
 		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
 	}
 
-	if err := c.Provide(func(deps snapshotDeps) *snapshot.SnapshotManager {
+	return c.Provide(func(deps snapshotDeps) *snapshot.SnapshotManager {
 
 		if err := deps.AppConfig.SetDefault(CfgSnapshotsDownloadURLs, []snapshot.DownloadTarget{
 			{
@@ -171,7 +169,7 @@ func provide(c *dig.Container) error {
 			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
 		}
 
-		snapshotManager := snapshot.NewSnapshotManager(
+		return snapshot.NewSnapshotManager(
 			CoreComponent.Logger(),
 			deps.TangleDatabase,
 			deps.UTXODatabase,
@@ -196,33 +194,33 @@ func provide(c *dig.Container) error {
 			deps.AppConfig.Duration(CfgPruningSizeCooldownTime),
 			deps.PruningPruneReceipts,
 		)
+	})
+}
 
-		if deps.DeleteAllFlag {
-			// delete old snapshot files
-			if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
-				CoreComponent.LogPanicf("deleting full snapshot file failed: %s", err)
-			}
+func configure() error {
 
-			if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
-				CoreComponent.LogPanicf("deleting delta snapshot file failed: %s", err)
-			}
+	if deps.DeleteAllFlag {
+		// delete old snapshot files
+		if err := os.Remove(deps.SnapshotsFullPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("deleting full snapshot file failed: %w", err)
 		}
 
-		snapshotInfo := deps.Storage.SnapshotInfo()
-
-		switch {
-		case snapshotInfo != nil && !*forceLoadingSnapshot:
-			if err := snapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
-				CoreComponent.LogPanic(err)
-			}
-		default:
-			if err := snapshotManager.ImportSnapshots(CoreComponent.Daemon().ContextStopped()); err != nil {
-				CoreComponent.LogPanic(err)
-			}
+		if err := os.Remove(deps.SnapshotsDeltaPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("deleting delta snapshot file failed: %w", err)
 		}
-		return snapshotManager
-	}); err != nil {
-		CoreComponent.LogPanic(err)
+	}
+
+	snapshotInfo := deps.Storage.SnapshotInfo()
+
+	switch {
+	case snapshotInfo != nil && !*forceLoadingSnapshot:
+		if err := deps.SnapshotManager.CheckCurrentSnapshot(snapshotInfo); err != nil {
+			return err
+		}
+	default:
+		if err := deps.SnapshotManager.ImportSnapshots(CoreComponent.Daemon().ContextStopped()); err != nil {
+			return err
+		}
 	}
 
 	return nil
