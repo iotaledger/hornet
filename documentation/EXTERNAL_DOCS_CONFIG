@@ -1,9 +1,0 @@
-[
-    "@docusaurus/plugin-content-docs",
-    {
-        id: "hornet",
-        path: "external/hornet/documentation/docs",
-        routeBasePath: "hornet",
-        sidebarPath: require.resolve("./external/hornet/documentation/sidebars.js"),
-    }
-],
