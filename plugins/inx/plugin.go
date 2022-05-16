@@ -8,18 +8,17 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -48,7 +47,6 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppConfig               *configuration.Configuration `name:"appConfig"`
 	SyncManager             *syncmanager.SyncManager
 	UTXOManager             *utxo.Manager
 	Tangle                  *tangle.Tangle
@@ -91,7 +89,7 @@ func configure() error {
 
 	attacherOpts := []tangle.MessageAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
-		tangle.WithPoW(deps.PoWHandler, deps.AppConfig.Int(CfgINXPoWWorkerCount)),
+		tangle.WithPoW(deps.PoWHandler, ParamsINX.PoW.WorkerCount),
 		tangle.WithPoWMetrics(deps.INXMetrics),
 	}
 	if deps.TipSelector != nil {
@@ -111,7 +109,7 @@ func run() error {
 		Plugin.LogInfo("Stopping INX ...")
 		deps.INXServer.Stop()
 		Plugin.LogInfo("Stopping INX ... done")
-	}, shutdown.PriorityIndexer); err != nil {
+	}, daemon.PriorityIndexer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 

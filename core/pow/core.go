@@ -5,10 +5,9 @@ import (
 
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -38,13 +37,12 @@ func provide(c *dig.Container) error {
 
 	type handlerDeps struct {
 		dig.In
-		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps handlerDeps) *pow.Handler {
 		// init the pow handler with all possible settings
-		return pow.New(deps.ProtocolParameters.MinPoWScore, deps.AppConfig.Duration(CfgPoWRefreshTipsInterval))
+		return pow.New(deps.ProtocolParameters.MinPoWScore, ParamsPoW.RefreshTipsInterval)
 	}); err != nil {
 		CoreComponent.LogPanic(err)
 	}
@@ -60,7 +58,7 @@ func run() error {
 		<-ctx.Done()
 		CoreComponent.LogInfo("Stopping PoW Handler ...")
 		CoreComponent.LogInfo("Stopping PoW Handler ... done")
-	}, shutdown.PriorityPoWHandler); err != nil {
+	}, daemon.PriorityPoWHandler); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 

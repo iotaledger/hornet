@@ -12,19 +12,18 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/datastructure/timeheap"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/math"
@@ -86,8 +85,7 @@ type dependencies struct {
 	ServerMetrics      *metrics.ServerMetrics
 	PoWHandler         *pow.Handler
 	PeeringManager     *p2p.Manager
-	TipSelector        *tipselect.TipSelector       `optional:"true"`
-	AppConfig          *configuration.Configuration `name:"appConfig"`
+	TipSelector        *tipselect.TipSelector `optional:"true"`
 	ProtocolParameters *iotago.ProtocolParameters
 	RestPluginManager  *restapi.RestPluginManager `optional:"true"`
 }
@@ -121,9 +119,9 @@ func configure() error {
 		return nil
 	}
 
-	mpsRateLimitRunning = deps.AppConfig.Float64(CfgSpammerMPSRateLimit)
-	cpuMaxUsageRunning = deps.AppConfig.Float64(CfgSpammerCPUMaxUsage)
-	spammerWorkersRunning = deps.AppConfig.Int(CfgSpammerWorkers)
+	mpsRateLimitRunning = ParamsSpammer.MPSRateLimit
+	cpuMaxUsageRunning = ParamsSpammer.CPUMaxUsage
+	spammerWorkersRunning = ParamsSpammer.Workers
 	if spammerWorkersRunning == 0 {
 		spammerWorkersRunning = runtime.NumCPU() - 1
 	}
@@ -131,9 +129,9 @@ func configure() error {
 
 	spammerInstance = spammer.New(
 		deps.ProtocolParameters,
-		deps.AppConfig.String(CfgSpammerMessage),
-		deps.AppConfig.String(CfgSpammerTag),
-		deps.AppConfig.String(CfgSpammerTagSemiLazy),
+		ParamsSpammer.Message,
+		ParamsSpammer.Tag,
+		ParamsSpammer.TagSemiLazy,
 		deps.TipSelector.SelectSpammerTips,
 		deps.PoWHandler,
 		sendMessage,
@@ -152,12 +150,12 @@ func run() error {
 	if err := Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PrioritySpammer); err != nil {
+	}, daemon.PrioritySpammer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
 	// automatically start the spammer on node startup if the flag is set
-	if deps.AppConfig.Bool(CfgSpammerAutostart) {
+	if ParamsSpammer.Autostart {
 		_ = start(nil, nil, nil)
 	}
 
@@ -175,9 +173,9 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) err
 
 	stopWithoutLocking()
 
-	mpsRateLimitCfg := deps.AppConfig.Float64(CfgSpammerMPSRateLimit)
-	cpuMaxUsageCfg := deps.AppConfig.Float64(CfgSpammerCPUMaxUsage)
-	spammerWorkerCount := deps.AppConfig.Int(CfgSpammerWorkers)
+	mpsRateLimitCfg := ParamsSpammer.MPSRateLimit
+	cpuMaxUsageCfg := ParamsSpammer.CPUMaxUsage
+	spammerWorkerCount := ParamsSpammer.Workers
 
 	if mpsRateLimit != nil {
 		mpsRateLimitCfg = *mpsRateLimit
@@ -277,7 +275,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 				lastDuration = time.Since(timeStart)
 			}
 
-		}, shutdown.PrioritySpammer); err != nil {
+		}, daemon.PrioritySpammer); err != nil {
 			Plugin.LogWarnf("failed to start worker: %s", err)
 		}
 	}
@@ -347,7 +345,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 
 			Plugin.LogInfof("Stopping Spammer %d...", spammerIndex)
 			Plugin.LogInfof("Stopping Spammer %d... done", spammerIndex)
-		}, shutdown.PrioritySpammer); err != nil {
+		}, daemon.PrioritySpammer); err != nil {
 			Plugin.LogWarnf("failed to start worker: %s", err)
 		}
 	}

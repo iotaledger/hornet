@@ -1,29 +1,26 @@
 package database
 
 import (
-	flag "github.com/spf13/pflag"
-
-	"github.com/gohornet/hornet/pkg/database"
 	"github.com/iotaledger/hive.go/app"
 )
 
-const (
+// ParametersDatabase contains the definition of the parameters used by the ParametersDatabase.
+type ParametersDatabase struct {
 	// the used database engine (pebble/rocksdb/mapdb).
-	CfgDatabaseEngine = "db.engine"
+	Engine string `default:"rocksdb" usage:"the used database engine (pebble/rocksdb/mapdb)"`
 	// the path to the database folder.
-	CfgDatabasePath = "db.path"
+	Path string `default:"mainnetdb" usage:"the path to the database folder"`
 	// whether to automatically start revalidation on startup if the database is corrupted.
-	CfgDatabaseAutoRevalidation = "db.autoRevalidation"
+	AutoRevalidation bool `default:"false" usage:"whether to automatically start revalidation on startup if the database is corrupted"`
 	// ignore the check for corrupted databases (should only be used for debug reasons).
-	CfgDatabaseDebug = "db.debug"
-)
+	Debug bool `default:"false" usage:"ignore the check for corrupted databases (should only be used for debug reasons)"`
+}
+
+var ParamsDatabase = &ParametersDatabase{}
 
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.String(CfgDatabaseEngine, string(database.EngineRocksDB), "the used database engine (pebble/rocksdb/mapdb)")
-		fs.String(CfgDatabasePath, "mainnetdb", "the path to the database folder")
-		fs.Bool(CfgDatabaseAutoRevalidation, false, "whether to automatically start revalidation on startup if the database is corrupted")
-		fs.Bool(CfgDatabaseDebug, false, "ignore the check for corrupted databases (should only be used for debug reasons)")
+	Params: map[string]any{
+		"db": ParamsDatabase,
 	},
 	Masked: nil,
 }

@@ -3,47 +3,51 @@ package urts
 import (
 	"time"
 
-	flag "github.com/spf13/pflag"
-
 	"github.com/iotaledger/hive.go/app"
 )
 
-const (
+// ParametersTipsel contains the definition of the parameters used by Tipselection.
+type ParametersTipsel struct {
 	// the config group used for the non-lazy tip-pool
-	CfgTipSelNonLazy = "tipsel.nonLazy."
+	NonLazy struct {
+		// Defines the maximum amount of current tips for which "CfgTipSelMaxReferencedTipAge"
+		// and "CfgTipSelMaxChildren" are checked. if the amount of tips exceeds this limit,
+		// referenced tips get removed directly to reduce the amount of tips in the network.
+		RetentionRulesTipsLimit int `default:"100" usage:"the maximum number of current tips for which the retention rules are checked (non-lazy)"`
+		// Defines the maximum time a tip remains in the tip pool
+		// after it was referenced by the first message.
+		MaxReferencedTipAge time.Duration `default:"3s" usage:"the maximum time a tip remains in the tip pool after it was referenced by the first message (non-lazy)"`
+		// Defines the maximum amount of references by other messages
+		// before the tip is removed from the tip pool.
+		MaxChildren uint32 `default:"30" usage:"the maximum amount of references by other messages before the tip is removed from the tip pool (non-lazy)"`
+		// Defines the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable (semi-lazy), 0 = always (non-lazy))
+		// this is used to support the network if someone attacks the tangle by spamming a lot of tips
+		SpammerTipsThreshold int `default:"0" usage:"the maximum amount of tips in a tip-pool (non-lazy) before the spammer tries to reduce these (0 = always)"`
+	}
+
 	// the config group used for the semi-lazy tip-pool
-	CfgTipSelSemiLazy = "tipsel.semiLazy."
-	// CfgTipSelRetentionRulesTipsLimit is the maximum amount of current tips for which "CfgTipSelMaxReferencedTipAge"
-	// and "CfgTipSelMaxChildren" are checked. if the amount of tips exceeds this limit,
-	// referenced tips get removed directly to reduce the amount of tips in the network.
-	CfgTipSelRetentionRulesTipsLimit = "retentionRulesTipsLimit"
-	// CfgTipSelMaxReferencedTipAge is the maximum time a tip remains in the tip pool
-	// after it was referenced by the first message.
-	CfgTipSelMaxReferencedTipAge = "maxReferencedTipAge"
-	// CfgTipSelMaxChildren is the maximum amount of references by other messages
-	// before the tip is removed from the tip pool.
-	CfgTipSelMaxChildren = "maxChildren"
-	// CfgTipSelSpammerTipsThreshold is the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable (semi-lazy), 0 = always (non-lazy))
-	// this is used to support the network if someone attacks the tangle by spamming a lot of tips
-	CfgTipSelSpammerTipsThreshold = "spammerTipsThreshold"
-)
+	SemiLazy struct {
+		// Defines the maximum amount of current tips for which "CfgTipSelMaxReferencedTipAge"
+		// and "CfgTipSelMaxChildren" are checked. if the amount of tips exceeds this limit,
+		// referenced tips get removed directly to reduce the amount of tips in the network.
+		RetentionRulesTipsLimit int `default:"20" usage:"the maximum number of current tips for which the retention rules are checked (semi-lazy)"`
+		// Defines the maximum time a tip remains in the tip pool
+		// after it was referenced by the first message.
+		MaxReferencedTipAge time.Duration `default:"3s" usage:"the maximum time a tip remains in the tip pool after it was referenced by the first message (semi-lazy)"`
+		// Defines the maximum amount of references by other messages
+		// before the tip is removed from the tip pool.
+		MaxChildren uint32 `default:"2" usage:"the maximum amount of references by other messages before the tip is removed from the tip pool (semi-lazy)"`
+		// Defines the maximum amount of tips in a tip-pool before the spammer tries to reduce these (0 = disable (semi-lazy), 0 = always (non-lazy))
+		// this is used to support the network if someone attacks the tangle by spamming a lot of tips
+		SpammerTipsThreshold int `default:"30" usage:"the maximum amount of tips in a tip-pool (semi-lazy) before the spammer tries to reduce these (0 = disable)"`
+	}
+}
+
+var ParamsTipsel = &ParametersTipsel{}
 
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit, 100, "the maximum number of current tips for which the retention rules are checked (non-lazy)")
-		fs.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge, 3*time.Second, "the maximum time a tip remains in the tip pool "+
-			"after it was referenced by the first message (non-lazy)")
-		fs.Int(CfgTipSelNonLazy+CfgTipSelMaxChildren, 30, "the maximum amount of references by other messages "+
-			"before the tip is removed from the tip pool (non-lazy)")
-		fs.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold, 0, "the maximum amount of tips in a tip-pool (non-lazy) before "+
-			"the spammer tries to reduce these (0 = always)")
-		fs.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit, 20, "the maximum number of current tips for which the retention rules are checked (semi-lazy)")
-		fs.Duration(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAge, 3*time.Second, "the maximum time a tip remains in the tip pool "+
-			"after it was referenced by the first message (semi-lazy)")
-		fs.Int(CfgTipSelSemiLazy+CfgTipSelMaxChildren, 2, "the maximum amount of references by other messages "+
-			"before the tip is removed from the tip pool (semi-lazy)")
-		fs.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold, 30, "the maximum amount of tips in a tip-pool (semi-lazy) before "+
-			"the spammer tries to reduce these (0 = disable)")
+	Params: map[string]any{
+		"tipsel": ParamsTipsel,
 	},
 	Masked: nil,
 }

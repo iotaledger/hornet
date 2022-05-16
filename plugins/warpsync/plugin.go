@@ -6,15 +6,14 @@ import (
 
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
 
@@ -56,11 +55,10 @@ type dependencies struct {
 	RequestQueue  gossip.RequestQueue
 	GossipService *gossip.Service
 	Requester     *gossip.Requester
-	AppConfig     *configuration.Configuration `name:"appConfig"`
 }
 
 func configure() error {
-	warpSync = gossip.NewWarpSync(deps.AppConfig.Int(CfgWarpSyncAdvancementRange))
+	warpSync = gossip.NewWarpSync(ParamsWarpSync.AdvancementRange)
 	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.SyncManager, deps.Requester, true)
 	configureEvents()
 	return nil
@@ -71,7 +69,7 @@ func run() error {
 		attachEvents()
 		<-ctx.Done()
 		detachEvents()
-	}, shutdown.PriorityWarpSync); err != nil {
+	}, daemon.PriorityWarpSync); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 	return nil

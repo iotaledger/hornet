@@ -9,7 +9,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/iota.go/api"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -38,29 +37,23 @@ type dependencies struct {
 	dig.In
 	ReceiptService *migrator.ReceiptService
 	Tangle         *tangle.Tangle
-	AppConfig      *configuration.Configuration `name:"appConfig"`
 }
 
 // provide provides the ReceiptService as a singleton.
 func provide(c *dig.Container) error {
 
-	type validatorDeps struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
-
-	if err := c.Provide(func(deps validatorDeps) *migrator.Validator {
+	if err := c.Provide(func() *migrator.Validator {
 		iotaAPI, err := api.ComposeAPI(api.HTTPClientSettings{
-			URI:    deps.AppConfig.String(CfgReceiptsValidatorAPIAddress),
-			Client: &http.Client{Timeout: deps.AppConfig.Duration(CfgReceiptsValidatorAPITimeout)},
+			URI:    ParamsReceipts.Validator.API.Address,
+			Client: &http.Client{Timeout: ParamsReceipts.Validator.API.Timeout},
 		})
 		if err != nil {
 			Plugin.LogPanicf("failed to initialize API: %s", err)
 		}
 		return migrator.NewValidator(
 			iotaAPI,
-			deps.AppConfig.String(CfgReceiptsValidatorCoordinatorAddress),
-			deps.AppConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
+			ParamsReceipts.Validator.Coordinator.Address,
+			ParamsReceipts.Validator.Coordinator.MerkleTreeDepth,
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)
@@ -68,7 +61,6 @@ func provide(c *dig.Container) error {
 
 	type serviceDeps struct {
 		dig.In
-		AppConfig   *configuration.Configuration `name:"appConfig"`
 		Validator   *migrator.Validator
 		UTXOManager *utxo.Manager
 	}
@@ -77,10 +69,10 @@ func provide(c *dig.Container) error {
 		return migrator.NewReceiptService(
 			deps.Validator,
 			deps.UTXOManager,
-			deps.AppConfig.Bool(CfgReceiptsValidatorValidate),
-			deps.AppConfig.Bool(CfgReceiptsBackupEnabled),
-			deps.AppConfig.Bool(CfgReceiptsValidatorIgnoreSoftErrors),
-			deps.AppConfig.String(CfgReceiptsBackupPath),
+			ParamsReceipts.Validator.Validate,
+			ParamsReceipts.Backup.Enabled,
+			ParamsReceipts.Validator.IgnoreSoftErrors,
+			ParamsReceipts.Backup.Path,
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)
@@ -93,11 +85,11 @@ func configure() error {
 
 	deps.Tangle.Events.NewReceipt.Attach(events.NewClosure(func(r *iotago.ReceiptMilestoneOpt) {
 		if deps.ReceiptService.ValidationEnabled {
-			Plugin.LogInfof("receipt passed validation against %s", deps.AppConfig.String(CfgReceiptsValidatorAPIAddress))
+			Plugin.LogInfof("receipt passed validation against %s", ParamsReceipts.Validator.API.Address)
 		}
 		Plugin.LogInfof("new receipt processed (migrated_at %d, final %v, entries %d),", r.MigratedAt, r.Final, len(r.Funds))
 	}))
-	Plugin.LogInfof("storing receipt backups in %s", deps.AppConfig.String(CfgReceiptsBackupPath))
+	Plugin.LogInfof("storing receipt backups in %s", ParamsReceipts.Backup.Path)
 	if err := deps.ReceiptService.Init(); err != nil {
 		Plugin.LogPanic(err)
 	}

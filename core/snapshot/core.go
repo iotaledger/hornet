@@ -9,17 +9,16 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -70,20 +69,14 @@ type dependencies struct {
 	Tangle               *tangle.Tangle
 	UTXOManager          *utxo.Manager
 	SnapshotManager      *snapshot.SnapshotManager
-	AppConfig            *configuration.Configuration `name:"appConfig"`
-	DeleteAllFlag        bool                         `name:"deleteAll"`
-	PruningPruneReceipts bool                         `name:"pruneReceipts"`
-	SnapshotsFullPath    string                       `name:"snapshotsFullPath"`
-	SnapshotsDeltaPath   string                       `name:"snapshotsDeltaPath"`
+	DeleteAllFlag        bool   `name:"deleteAll"`
+	PruningPruneReceipts bool   `name:"pruneReceipts"`
+	SnapshotsFullPath    string `name:"snapshotsFullPath"`
+	SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
 	StorageMetrics       *metrics.StorageMetrics
 }
 
 func initConfigPars(c *dig.Container) error {
-
-	type cfgDeps struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
 
 	type cfgResult struct {
 		dig.Out
@@ -92,11 +85,11 @@ func initConfigPars(c *dig.Container) error {
 		SnapshotsDeltaPath   string `name:"snapshotsDeltaPath"`
 	}
 
-	return c.Provide(func(deps cfgDeps) cfgResult {
+	return c.Provide(func() cfgResult {
 		return cfgResult{
-			PruningPruneReceipts: deps.AppConfig.Bool(CfgPruningPruneReceipts),
-			SnapshotsFullPath:    deps.AppConfig.String(CfgSnapshotsFullPath),
-			SnapshotsDeltaPath:   deps.AppConfig.String(CfgSnapshotsDeltaPath),
+			PruningPruneReceipts: ParamsPruning.PruneReceipts,
+			SnapshotsFullPath:    ParamsSnapshots.FullPath,
+			SnapshotsDeltaPath:   ParamsSnapshots.DeltaPath,
 		}
 	})
 }
@@ -110,7 +103,6 @@ func provide(c *dig.Container) error {
 		Storage              *storage.Storage
 		SyncManager          *syncmanager.SyncManager
 		UTXOManager          *utxo.Manager
-		AppConfig            *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters   *iotago.ProtocolParameters
 		PruningPruneReceipts bool   `name:"pruneReceipts"`
 		SnapshotsFullPath    string `name:"snapshotsFullPath"`
@@ -119,54 +111,36 @@ func provide(c *dig.Container) error {
 
 	return c.Provide(func(deps snapshotDeps) *snapshot.SnapshotManager {
 
-		if err := deps.AppConfig.SetDefault(CfgSnapshotsDownloadURLs, []snapshot.DownloadTarget{
-			{
-				Full:  "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
-				Delta: "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin",
-			},
-			{
-				Full:  "https://cdn.tanglebay.com/snapshots/mainnet/full_snapshot.bin",
-				Delta: "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin",
-			},
-		}); err != nil {
-			CoreComponent.LogPanic(err)
-		}
-
-		var downloadTargets []*snapshot.DownloadTarget
-		if err := deps.AppConfig.Unmarshal(CfgSnapshotsDownloadURLs, &downloadTargets); err != nil {
-			CoreComponent.LogPanic(err)
-		}
-
 		solidEntryPointCheckThresholdPast := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdPast)
 		solidEntryPointCheckThresholdFuture := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + SolidEntryPointCheckAdditionalThresholdFuture)
 		pruningThreshold := milestone.Index(deps.ProtocolParameters.BelowMaxDepth + AdditionalPruningThreshold)
 
-		snapshotDepth := milestone.Index(deps.AppConfig.Int(CfgSnapshotsDepth))
+		snapshotDepth := milestone.Index(ParamsSnapshots.Depth)
 		if snapshotDepth < solidEntryPointCheckThresholdFuture {
-			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CfgSnapshotsDepth, snapshotDepth, solidEntryPointCheckThresholdFuture)
+			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CoreComponent.App.Config().GetParameterPath(&(ParamsSnapshots.Depth)), snapshotDepth, solidEntryPointCheckThresholdFuture)
 			snapshotDepth = solidEntryPointCheckThresholdFuture
 		}
 
-		pruningMilestonesEnabled := deps.AppConfig.Bool(CfgPruningMilestonesEnabled)
-		pruningMilestonesMaxMilestonesToKeep := milestone.Index(deps.AppConfig.Int(CfgPruningMilestonesMaxMilestonesToKeep))
+		pruningMilestonesEnabled := ParamsPruning.Milestones.Enabled
+		pruningMilestonesMaxMilestonesToKeep := milestone.Index(ParamsPruning.Milestones.MaxMilestonesToKeep)
 		pruningMilestonesMaxMilestonesToKeepMin := snapshotDepth + solidEntryPointCheckThresholdPast + pruningThreshold + 1
 		if pruningMilestonesMaxMilestonesToKeep != 0 && pruningMilestonesMaxMilestonesToKeep < pruningMilestonesMaxMilestonesToKeepMin {
-			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CfgPruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeepMin)
+			CoreComponent.LogWarnf("parameter '%s' is too small (%d). value was changed to %d", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), pruningMilestonesMaxMilestonesToKeep, pruningMilestonesMaxMilestonesToKeepMin)
 			pruningMilestonesMaxMilestonesToKeep = pruningMilestonesMaxMilestonesToKeepMin
 		}
 
 		if pruningMilestonesEnabled && pruningMilestonesMaxMilestonesToKeep == 0 {
-			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CfgPruningMilestonesMaxMilestonesToKeep, CfgPruningMilestonesEnabled)
+			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.MaxMilestonesToKeep)), CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Milestones.Enabled)))
 		}
 
-		pruningSizeEnabled := deps.AppConfig.Bool(CfgPruningSizeEnabled)
-		pruningTargetDatabaseSizeBytes, err := bytes.Parse(deps.AppConfig.String(CfgPruningSizeTargetSize))
+		pruningSizeEnabled := ParamsPruning.Size.Enabled
+		pruningTargetDatabaseSizeBytes, err := bytes.Parse(ParamsPruning.Size.TargetSize)
 		if err != nil {
-			CoreComponent.LogPanicf("parameter %s invalid", CfgPruningSizeTargetSize)
+			CoreComponent.LogPanicf("parameter %s invalid", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)))
 		}
 
 		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
-			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CfgPruningSizeTargetSize, CfgPruningSizeEnabled)
+			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)), CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.Enabled)))
 		}
 
 		return snapshot.NewSnapshotManager(
@@ -179,19 +153,19 @@ func provide(c *dig.Container) error {
 			deps.ProtocolParameters,
 			deps.SnapshotsFullPath,
 			deps.SnapshotsDeltaPath,
-			deps.AppConfig.Float64(CfgSnapshotsDeltaSizeThresholdPercentage),
-			downloadTargets,
+			ParamsSnapshots.DeltaSizeThresholdPercentage,
+			ParamsSnapshots.DownloadURLs,
 			solidEntryPointCheckThresholdPast,
 			solidEntryPointCheckThresholdFuture,
 			pruningThreshold,
 			snapshotDepth,
-			milestone.Index(deps.AppConfig.Int(CfgSnapshotsInterval)),
+			milestone.Index(ParamsSnapshots.Interval),
 			pruningMilestonesEnabled,
 			pruningMilestonesMaxMilestonesToKeep,
 			pruningSizeEnabled,
 			pruningTargetDatabaseSizeBytes,
-			deps.AppConfig.Float64(CfgPruningSizeThresholdPercentage),
-			deps.AppConfig.Duration(CfgPruningSizeCooldownTime),
+			ParamsPruning.Size.ThresholdPercentage,
+			ParamsPruning.Size.CooldownTime,
 			deps.PruningPruneReceipts,
 		)
 	})
@@ -253,7 +227,7 @@ func run() error {
 				deps.SnapshotManager.HandleNewConfirmedMilestoneEvent(ctx, confirmedMilestoneIndex)
 			}
 		}
-	}, shutdown.PrioritySnapshots); err != nil {
+	}, daemon.PrioritySnapshots); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 

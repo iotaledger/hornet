@@ -3,55 +3,69 @@ package snapshot
 import (
 	"time"
 
-	flag "github.com/spf13/pflag"
-
+	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/iotaledger/hive.go/app"
 )
 
-const (
+// ParametersSnapshots contains the definition of the parameters used by snapshots.
+type ParametersSnapshots struct {
 	// the depth, respectively the starting point, at which a snapshot of the ledger is generated
-	CfgSnapshotsDepth = "snapshots.depth"
+	Depth int `default:"50" usage:"the depth, respectively the starting point, at which a snapshot of the ledger is generated"`
 	// interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)
-	CfgSnapshotsInterval = "snapshots.interval"
+	Interval int `default:"200" usage:"interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)"`
 	// path to the full snapshot file
-	CfgSnapshotsFullPath = "snapshots.fullPath"
+	FullPath string `default:"snapshots/mainnet/full_snapshot.bin" usage:"path to the full snapshot file"`
 	// path to the delta snapshot file
-	CfgSnapshotsDeltaPath = "snapshots.deltaPath"
+	DeltaPath string `default:"snapshots/mainnet/delta_snapshot.bin" usage:"path to the delta snapshot file"`
 	// create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot
 	// (0.0 = always create delta snapshot to keep ms diff history)
-	CfgSnapshotsDeltaSizeThresholdPercentage = "snapshots.deltaSizeThresholdPercentage"
+	DeltaSizeThresholdPercentage float64 `default:"50.0" usage:"create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history)"`
 	// URLs to load the snapshot files from.
-	CfgSnapshotsDownloadURLs = "snapshots.downloadURLs"
-	// whether to delete old message data from the database based on maximum milestones to keep
-	CfgPruningMilestonesEnabled = "pruning.milestones.enabled"
-	// maximum amount of milestone cones to keep in the database
-	CfgPruningMilestonesMaxMilestonesToKeep = "pruning.milestones.maxMilestonesToKeep"
-	// whether to delete old message data from the database based on maximum database size
-	CfgPruningSizeEnabled = "pruning.size.enabled"
-	// target size of the database
-	CfgPruningSizeTargetSize = "pruning.size.targetSize"
-	// the percentage the database size gets reduced if the target size is reached
-	CfgPruningSizeThresholdPercentage = "pruning.size.thresholdPercentage"
-	// cooldown time between two pruning by database size events
-	CfgPruningSizeCooldownTime = "pruning.size.cooldownTime"
+	DownloadURLs []*snapshot.DownloadTarget `noflag:"true" usage:"URLs to load the snapshot files from"`
+}
+
+// ParametersPruning contains the definition of the parameters used by pruning.
+type ParametersPruning struct {
+	Milestones struct {
+		// whether to delete old message data from the database based on maximum milestones to keep
+		Enabled bool `default:"false" usage:"whether to delete old message data from the database based on maximum milestones to keep"`
+		// maximum amount of milestone cones to keep in the database
+		MaxMilestonesToKeep int `default:"60480" usage:"maximum amount of milestone cones to keep in the database"`
+	}
+	Size struct {
+		// whether to delete old message data from the database based on maximum database size
+		Enabled bool `default:"true" usage:"whether to delete old message data from the database based on maximum database size"`
+		// target size of the database
+		TargetSize string `default:"30GB" usage:"target size of the database"`
+		// the percentage the database size gets reduced if the target size is reached
+		ThresholdPercentage float64 `default:"10.0" usage:"the percentage the database size gets reduced if the target size is reached"`
+		// cooldown time between two pruning by database size events
+		CooldownTime time.Duration `default:"5m" usage:"cooldown time between two pruning by database size events"`
+	}
+
 	// whether to delete old receipts data from the database
-	CfgPruningPruneReceipts = "pruning.pruneReceipts"
-)
+	PruneReceipts bool `default:"false" usage:"whether to delete old receipts data from the database"`
+}
+
+var ParamsSnapshots = &ParametersSnapshots{
+	DownloadURLs: []*snapshot.DownloadTarget{
+		{
+			Full:  "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-full_snapshot.bin",
+			Delta: "https://chrysalis-dbfiles.iota.org/snapshots/hornet/latest-delta_snapshot.bin",
+		},
+		{
+			Full:  "https://cdn.tanglebay.com/snapshots/mainnet/full_snapshot.bin",
+			Delta: "https://cdn.tanglebay.com/snapshots/mainnet/delta_snapshot.bin",
+		},
+	},
+}
+
+var ParamsPruning = &ParametersPruning{}
 
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.Int(CfgSnapshotsDepth, 50, "the depth, respectively the starting point, at which a snapshot of the ledger is generated")
-		fs.Int(CfgSnapshotsInterval, 200, "interval, in milestones, at which snapshot files are created (snapshots are only created if the node is synced)")
-		fs.String(CfgSnapshotsFullPath, "snapshots/mainnet/full_snapshot.bin", "path to the full snapshot file")
-		fs.String(CfgSnapshotsDeltaPath, "snapshots/mainnet/delta_snapshot.bin", "path to the delta snapshot file")
-		fs.Float64(CfgSnapshotsDeltaSizeThresholdPercentage, 50.0, "create a full snapshot if the size of a delta snapshot reaches a certain percentage of the full snapshot (0.0 = always create delta snapshot to keep ms diff history)")
-		fs.Bool(CfgPruningMilestonesEnabled, false, "whether to delete old message data from the database based on maximum milestones to keep")
-		fs.Int(CfgPruningMilestonesMaxMilestonesToKeep, 60480, "maximum amount of milestone cones to keep in the database")
-		fs.Bool(CfgPruningSizeEnabled, true, "whether to delete old message data from the database based on maximum database size")
-		fs.String(CfgPruningSizeTargetSize, "30GB", "target size of the database")
-		fs.Float64(CfgPruningSizeThresholdPercentage, 10.0, "the percentage the database size gets reduced if the target size is reached")
-		fs.Duration(CfgPruningSizeCooldownTime, 5*time.Minute, "cooldown time between two pruning by database size events")
-		fs.Bool(CfgPruningPruneReceipts, false, "whether to delete old receipts data from the database")
+	Params: map[string]any{
+		"snapshots": ParamsSnapshots,
+		"pruning":   ParamsPruning,
 	},
 	Masked: nil,
 }

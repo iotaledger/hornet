@@ -35,19 +35,17 @@ var (
 
 type dependencies struct {
 	dig.In
-	Profile   *profile.Profile
-	AppConfig *configuration.Configuration `name:"appConfig"`
+	Profile *profile.Profile
 }
 
 func provide(c *dig.Container) error {
 
 	type profileDeps struct {
 		dig.In
-		AppConfig      *configuration.Configuration `name:"appConfig"`
 		ProfilesConfig *configuration.Configuration `name:"profilesConfig"`
 	}
 	if err := c.Provide(func(d profileDeps) *profile.Profile {
-		return loadProfile(d.AppConfig, d.ProfilesConfig)
+		return loadProfile(d.ProfilesConfig)
 	}); err != nil {
 		CoreComponent.LogPanic(err)
 	}
@@ -57,7 +55,7 @@ func provide(c *dig.Container) error {
 
 func configure() error {
 
-	if deps.AppConfig.String(CfgAppProfile) == AutoProfileName {
+	if ParamsNode.Profile == AutoProfileName {
 		CoreComponent.LogInfof("Profile mode 'auto', Using profile '%s'", deps.Profile.Name)
 	} else {
 		CoreComponent.LogInfof("Using profile '%s'", deps.Profile.Name)
@@ -68,8 +66,8 @@ func configure() error {
 
 // loadProfile automatically loads the appropriate profile (given the system memory) if the config value
 // is set to 'auto' or the one specified in the config.
-func loadProfile(appConfig *configuration.Configuration, profilesConfig *configuration.Configuration) *profile.Profile {
-	profileName := strings.ToLower(appConfig.String(CfgAppProfile))
+func loadProfile(profilesConfig *configuration.Configuration) *profile.Profile {
+	profileName := strings.ToLower(ParamsNode.Profile)
 	if profileName == AutoProfileName {
 		v, err := mem.VirtualMemory()
 		if err != nil {

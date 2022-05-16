@@ -10,17 +10,16 @@ import (
 	"github.com/libp2p/go-libp2p-core/protocol"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
@@ -92,7 +91,6 @@ func provide(c *dig.Container) error {
 		ServerMetrics      *metrics.ServerMetrics
 		RequestQueue       gossip.RequestQueue
 		PeeringManager     *p2p.Manager
-		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 		Profile            *profile.Profile
 	}
@@ -123,7 +121,6 @@ func provide(c *dig.Container) error {
 		PeeringManager     *p2p.Manager
 		Storage            *storage.Storage
 		ServerMetrics      *metrics.ServerMetrics
-		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
@@ -134,9 +131,9 @@ func provide(c *dig.Container) error {
 			deps.PeeringManager,
 			deps.ServerMetrics,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
-			gossip.WithUnknownPeersLimit(deps.AppConfig.Int(CfgP2PGossipUnknownPeersLimit)),
-			gossip.WithStreamReadTimeout(deps.AppConfig.Duration(CfgP2PGossipStreamReadTimeout)),
-			gossip.WithStreamWriteTimeout(deps.AppConfig.Duration(CfgP2PGossipStreamWriteTimeout)),
+			gossip.WithUnknownPeersLimit(ParamsGossip.UnknownPeersLimit),
+			gossip.WithStreamReadTimeout(ParamsGossip.StreamReadTimeout),
+			gossip.WithStreamWriteTimeout(ParamsGossip.StreamWriteTimeout),
 		)
 	}); err != nil {
 		CoreComponent.LogPanic(err)
@@ -144,7 +141,6 @@ func provide(c *dig.Container) error {
 
 	type requesterDeps struct {
 		dig.In
-		AppConfig     *configuration.Configuration `name:"appConfig"`
 		Storage       *storage.Storage
 		GossipService *gossip.Service
 		RequestQueue  gossip.RequestQueue
@@ -155,8 +151,9 @@ func provide(c *dig.Container) error {
 			deps.Storage,
 			deps.GossipService,
 			deps.RequestQueue,
-			gossip.WithRequesterDiscardRequestsOlderThan(deps.AppConfig.Duration(CfgRequestsDiscardOlderThan)),
-			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.AppConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
+			gossip.WithRequesterDiscardRequestsOlderThan(ParamsRequests.DiscardOlderThan),
+			gossip.WithRequesterPendingRequestReEnqueueInterval(ParamsRequests.PendingReEnqueueInterval),
+		)
 	}); err != nil {
 		CoreComponent.LogPanic(err)
 	}
@@ -204,19 +201,19 @@ func run() error {
 
 		detachEventsGossipService()
 		CoreComponent.LogInfo("Stopped GossipService")
-	}, shutdown.PriorityGossipService); err != nil {
+	}, daemon.PriorityGossipService); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := CoreComponent.Daemon().BackgroundWorker("PendingRequestsEnqueuer", func(ctx context.Context) {
 		deps.Requester.RunPendingRequestEnqueuer(ctx)
-	}, shutdown.PriorityRequestsProcessor); err != nil {
+	}, daemon.PriorityRequestsProcessor); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := CoreComponent.Daemon().BackgroundWorker("RequestQueueDrainer", func(ctx context.Context) {
 		deps.Requester.RunRequestQueueDrainer(ctx)
-	}, shutdown.PriorityRequestsProcessor); err != nil {
+	}, daemon.PriorityRequestsProcessor); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -227,7 +224,7 @@ func run() error {
 
 		detachEventsBroadcastQueue()
 		CoreComponent.LogInfo("Stopped BroadcastQueue")
-	}, shutdown.PriorityBroadcastQueue); err != nil {
+	}, daemon.PriorityBroadcastQueue); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -236,14 +233,14 @@ func run() error {
 		deps.MessageProcessor.Run(ctx)
 
 		CoreComponent.LogInfo("Stopped MessageProcessor")
-	}, shutdown.PriorityMessageProcessor); err != nil {
+	}, daemon.PriorityMessageProcessor); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if err := CoreComponent.Daemon().BackgroundWorker("HeartbeatBroadcaster", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(checkHeartbeats, checkHeartbeatsInterval, ctx)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityHeartbeats); err != nil {
+	}, daemon.PriorityHeartbeats); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -335,7 +332,7 @@ func configureEvents() {
 					return
 				}
 			}
-		}, shutdown.PriorityPeerGossipProtocolRead); err != nil {
+		}, daemon.PriorityPeerGossipProtocolRead); err != nil {
 			CoreComponent.LogWarnf("failed to start worker: %s", err)
 		}
 
@@ -362,7 +359,7 @@ func configureEvents() {
 					}
 				}
 			}
-		}, shutdown.PriorityPeerGossipProtocolWrite); err != nil {
+		}, daemon.PriorityPeerGossipProtocolWrite); err != nil {
 			CoreComponent.LogWarnf("failed to start worker: %s", err)
 		}
 	})

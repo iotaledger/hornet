@@ -10,6 +10,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -18,11 +19,9 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
@@ -72,10 +71,9 @@ type dependencies struct {
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
 	SnapshotManager          *snapshot.SnapshotManager
-	AppConfig                *configuration.Configuration `name:"appConfig"`
-	DatabaseDebug            bool                         `name:"databaseDebug"`
-	DatabaseAutoRevalidation bool                         `name:"databaseAutoRevalidation"`
-	PruneReceipts            bool                         `name:"pruneReceipts"`
+	DatabaseDebug            bool `name:"databaseDebug"`
+	DatabaseAutoRevalidation bool `name:"databaseAutoRevalidation"`
+	PruneReceipts            bool `name:"pruneReceipts"`
 }
 
 func provide(c *dig.Container) error {
@@ -104,21 +102,16 @@ func provide(c *dig.Container) error {
 		CoreComponent.LogPanic(err)
 	}
 
-	type cfgDeps struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
-
 	type cfgResult struct {
 		dig.Out
 		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
 		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
 	}
 
-	if err := c.Provide(func(deps cfgDeps) cfgResult {
+	if err := c.Provide(func() cfgResult {
 		return cfgResult{
-			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.AppConfig.Int(CfgTangleMaxDeltaMsgYoungestConeRootIndexToCMI),
-			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.AppConfig.Int(CfgTangleMaxDeltaMsgOldestConeRootIndexToCMI),
+			MaxDeltaMsgYoungestConeRootIndexToCMI: ParamsTangle.MaxDeltaMsgYoungestConeRootIndexToCMI,
+			MaxDeltaMsgOldestConeRootIndexToCMI:   ParamsTangle.MaxDeltaMsgOldestConeRootIndexToCMI,
 		}
 	}); err != nil {
 		CoreComponent.LogPanic(err)
@@ -148,8 +141,7 @@ func provide(c *dig.Container) error {
 		Requester          *gossip.Requester
 		MessageProcessor   *gossip.MessageProcessor
 		ServerMetrics      *metrics.ServerMetrics
-		ReceiptService     *migrator.ReceiptService     `optional:"true"`
-		AppConfig          *configuration.Configuration `name:"appConfig"`
+		ReceiptService     *migrator.ReceiptService `optional:"true"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
@@ -168,8 +160,8 @@ func provide(c *dig.Container) error {
 			deps.Requester,
 			deps.ReceiptService,
 			deps.ProtocolParameters,
-			deps.AppConfig.Duration(CfgTangleMilestoneTimeout),
-			deps.AppConfig.Duration(CfgTangleWhiteFlagParentsSolidTimeout),
+			ParamsTangle.MilestoneTimeout,
+			ParamsTangle.WhiteFlagParentsSolidTimeout,
 			*syncedAtStartup)
 	}); err != nil {
 		CoreComponent.LogPanic(err)
@@ -187,7 +179,7 @@ func configure() error {
 		if err := deps.Storage.MarkDatabasesCorrupted(); err != nil {
 			CoreComponent.LogPanic(err)
 		}
-	}, shutdown.PriorityDatabaseHealth); err != nil {
+	}, daemon.PriorityDatabaseHealth); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -235,7 +227,7 @@ func run() error {
 		attachHeartbeatEvents()
 		<-ctx.Done()
 		detachHeartbeatEvents()
-	}, shutdown.PriorityHeartbeats); err != nil {
+	}, daemon.PriorityHeartbeats); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -247,7 +239,7 @@ func run() error {
 		deps.Storage.ShutdownStorages()
 		CoreComponent.LogInfo("Flushing caches to database... done")
 
-	}, shutdown.PriorityFlushToDatabase); err != nil {
+	}, daemon.PriorityFlushToDatabase); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -257,7 +249,7 @@ func run() error {
 	if err := CoreComponent.Daemon().BackgroundWorker("Tangle status reporter", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityStatusReport); err != nil {
+	}, daemon.PriorityStatusReport); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 

@@ -3,31 +3,34 @@ package gossip
 import (
 	"time"
 
-	flag "github.com/spf13/pflag"
-
 	"github.com/iotaledger/hive.go/app"
 )
 
-const (
+// ParametersRequests contains the definition of the parameters used by the requests.
+type ParametersRequests struct {
 	// Defines the maximum time a request stays in the request queue.
-	CfgRequestsDiscardOlderThan = "requests.discardOlderThan"
+	DiscardOlderThan time.Duration `default:"15s" usage:"the maximum time a request stays in the request queue"`
 	// Defines the interval the pending requests are re-enqueued.
-	CfgRequestsPendingReEnqueueInterval = "requests.pendingReEnqueueInterval"
+	PendingReEnqueueInterval time.Duration `default:"5s" usage:"the interval the pending requests are re-enqueued"`
+}
+
+// ParametersGossip contains the definition of the parameters used by gossip.
+type ParametersGossip struct {
 	// Defines the maximum amount of unknown peers a gossip protocol connection is established to.
-	CfgP2PGossipUnknownPeersLimit = "p2p.gossip.unknownPeersLimit"
-	// Defines the read timeout for subsequent reads.
-	CfgP2PGossipStreamReadTimeout = "p2p.gossip.streamReadTimeout"
-	// Defines the write timeout for writes to the stream.
-	CfgP2PGossipStreamWriteTimeout = "p2p.gossip.streamWriteTimeout"
-)
+	UnknownPeersLimit int `default:"4" usage:"maximum amount of unknown peers a gossip protocol connection is established to"`
+	// Defines the read timeout for reads from the gossip stream.
+	StreamReadTimeout time.Duration `default:"60s" usage:"the read timeout for reads from the gossip stream"`
+	// Defines the write timeout for writes to the gossip stream.
+	StreamWriteTimeout time.Duration `default:"10s" usage:"the write timeout for writes to the gossip stream"`
+}
+
+var ParamsRequests = &ParametersRequests{}
+var ParamsGossip = &ParametersGossip{}
 
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.Duration(CfgRequestsDiscardOlderThan, 15*time.Second, "the maximum time a request stays in the request queue")
-		fs.Duration(CfgRequestsPendingReEnqueueInterval, 5*time.Second, "the interval the pending requests are re-enqueued")
-		fs.Int(CfgP2PGossipUnknownPeersLimit, 4, "maximum amount of unknown peers a gossip protocol connection is established to")
-		fs.Duration(CfgP2PGossipStreamReadTimeout, 60*time.Second, "the read timeout for reads from the gossip stream")
-		fs.Duration(CfgP2PGossipStreamWriteTimeout, 10*time.Second, "the write timeout for writes to the gossip stream")
+	Params: map[string]any{
+		"requests":   ParamsRequests,
+		"p2p.gossip": ParamsGossip,
 	},
 	Masked: nil,
 }

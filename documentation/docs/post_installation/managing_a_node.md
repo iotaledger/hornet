@@ -90,7 +90,7 @@ You can change the default configuration by enabling this plugin since it is usu
 
 ```json
  "spammer": {
-    "message": "IOTA - A new dawn",
+    "message": "We are all made of stardust.",
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,

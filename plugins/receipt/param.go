@@ -3,40 +3,45 @@ package receipt
 import (
 	"time"
 
-	flag "github.com/spf13/pflag"
-
 	"github.com/iotaledger/hive.go/app"
 )
 
-const (
-	// CfgReceiptsBackupEnabled configures whether receipts are additionally stored in the specified folder.
-	CfgReceiptsBackupEnabled = "receipts.backup.enabled"
-	// CfgReceiptsBackupPath configures the path to the receipts backup folder.
-	CfgReceiptsBackupPath = "receipts.backup.path"
-	// CfgReceiptsValidatorValidate configures whether to validate receipts.
-	CfgReceiptsValidatorValidate = "receipts.validator.validate"
-	// CfgReceiptsValidatorIgnoreSoftErrors configures the node to not panic if a soft error is encountered.
-	CfgReceiptsValidatorIgnoreSoftErrors = "receipts.validator.ignoreSoftErrors"
-	// CfgReceiptsValidatorAPIAddress configures the address of the legacy node API to query for white-flag confirmation data.
-	CfgReceiptsValidatorAPIAddress = "receipts.validator.api.address"
-	// CfgReceiptsValidatorAPITimeout configures the timeout of API calls.
-	CfgReceiptsValidatorAPITimeout = "receipts.validator.api.timeout"
-	// CfgReceiptsValidatorCoordinatorAddress configures the address of the legacy coordinator.
-	CfgReceiptsValidatorCoordinatorAddress = "receipts.validator.coordinator.address"
-	// CfgReceiptsValidatorCoordinatorMerkleTreeDepth configures the depth of the Merkle tree of the legacy coordinator.
-	CfgReceiptsValidatorCoordinatorMerkleTreeDepth = "receipts.validator.coordinator.merkleTreeDepth"
-)
+// ParametersReceipts contains the definition of the parameters used by receipts.
+type ParametersReceipts struct {
+	Backup struct {
+		// CfgReceiptsBackupEnabled configures whether receipts are additionally stored in the specified folder.
+		Enabled bool `default:"false" usage:"whether to backup receipts in the backup folder"`
+		// CfgReceiptsBackupPath configures the path to the receipts backup folder.
+		Path string `default:"receipts" usage:"path to the receipts backup folder"`
+	}
+
+	Validator struct {
+		// CfgReceiptsValidatorValidate configures whether to validate receipts.
+		Validate bool `default:"false" usage:"whether to validate receipts"`
+		// CfgReceiptsValidatorIgnoreSoftErrors configures the node to not panic if a soft error is encountered.
+		IgnoreSoftErrors bool `default:"false" usage:"whether to ignore soft errors and not panic if one is encountered"`
+
+		API struct {
+			// CfgReceiptsValidatorAPIAddress configures the address of the legacy node API to query for white-flag confirmation data.
+			Address string `default:"http://localhost:14266" usage:"address of the legacy node API"`
+			// CfgReceiptsValidatorAPITimeout configures the timeout of API calls.
+			Timeout time.Duration `default:"5s" usage:"timeout of API calls"`
+		} `name:"api"`
+
+		Coordinator struct {
+			// Address configures the address of the legacy coordinator.
+			Address string `default:"UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ" usage:"address of the legacy coordinator"`
+			// MerkleTreeDepth configures the depth of the Merkle tree of the legacy coordinator.
+			MerkleTreeDepth int `default:"24" usage:"depth of the Merkle tree of the coordinator"`
+		}
+	}
+}
+
+var ParamsReceipts = &ParametersReceipts{}
 
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.Bool(CfgReceiptsBackupEnabled, false, "whether to backup receipts in the backup folder")
-		fs.String(CfgReceiptsBackupPath, "receipts", "path to the receipts backup folder")
-		fs.Bool(CfgReceiptsValidatorValidate, false, "whether to validate receipts")
-		fs.Bool(CfgReceiptsValidatorIgnoreSoftErrors, false, "whether to ignore soft errors and not panic if one is encountered")
-		fs.String(CfgReceiptsValidatorAPIAddress, "http://localhost:14266", "address of the legacy node API")
-		fs.Duration(CfgReceiptsValidatorAPITimeout, 5*time.Second, "timeout of API calls")
-		fs.String(CfgReceiptsValidatorCoordinatorAddress, "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ", "address of the legacy coordinator")
-		fs.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth, 24, "depth of the Merkle tree of the coordinator")
+	Params: map[string]any{
+		"receipts": ParamsReceipts,
 	},
 	Masked: nil,
 }

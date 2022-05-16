@@ -17,6 +17,7 @@ import (
 	"go.uber.org/dig"
 
 	coreDatabase "github.com/gohornet/hornet/core/database"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -24,13 +25,11 @@ import (
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/inx"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
 // RouteMetrics is the route for getting the prometheus metrics.
@@ -65,7 +64,6 @@ var (
 type dependencies struct {
 	dig.In
 	AppInfo          *app.AppInfo
-	AppConfig        *configuration.Configuration `name:"appConfig"`
 	SyncManager      *syncmanager.SyncManager
 	ServerMetrics    *metrics.ServerMetrics
 	Storage          *storage.Storage
@@ -88,17 +86,12 @@ type dependencies struct {
 
 func provide(c *dig.Container) error {
 
-	type depsIn struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
-
 	type depsOut struct {
 		dig.Out
 		PrometheusEcho *echo.Echo `name:"prometheusEcho"`
 	}
 
-	if err := c.Provide(func(depsIn) depsOut {
+	if err := c.Provide(func() depsOut {
 		e := echo.New()
 		e.HideBanner = true
 		e.Use(middleware.Recover())
@@ -113,43 +106,43 @@ func provide(c *dig.Container) error {
 }
 
 func configure() error {
-	if deps.AppConfig.Bool(CfgPrometheusDatabase) {
+	if ParamsPrometheus.DatabaseMetrics {
 		configureDatabase(coreDatabase.TangleDatabaseDirectoryName, deps.TangleDatabase)
 		configureDatabase(coreDatabase.UTXODatabaseDirectoryName, deps.UTXODatabase)
 		configureStorage(deps.Storage, deps.StorageMetrics)
 	}
-	if deps.AppConfig.Bool(CfgPrometheusNode) {
+	if ParamsPrometheus.NodeMetrics {
 		configureNode()
 	}
-	if deps.AppConfig.Bool(CfgPrometheusGossip) {
+	if ParamsPrometheus.GossipMetrics {
 		configureGossipPeers()
 		configureGossipNode()
 	}
-	if deps.AppConfig.Bool(CfgPrometheusCaches) {
+	if ParamsPrometheus.CachesMetrics {
 		configureCaches()
 	}
-	if deps.AppConfig.Bool(CfgPrometheusRestAPI) && deps.RestAPIMetrics != nil {
+	if ParamsPrometheus.RestAPIMetrics && deps.RestAPIMetrics != nil {
 		configureRestAPI()
 	}
-	if deps.AppConfig.Bool(CfgPrometheusINX) && deps.INXMetrics != nil {
+	if ParamsPrometheus.INXMetrics && deps.INXMetrics != nil {
 		configureINX()
 	}
-	if deps.AppConfig.Bool(CfgPrometheusINX) && deps.INXServer != nil {
+	if ParamsPrometheus.INXMetrics && deps.INXServer != nil {
 		deps.INXServer.ConfigurePrometheus()
 		registry.MustRegister(grpc_prometheus.DefaultServerMetrics)
 	}
-	if deps.AppConfig.Bool(CfgPrometheusMigration) {
+	if ParamsPrometheus.MigrationMetrics {
 		if deps.ReceiptService != nil {
 			configureReceipts()
 		}
 	}
-	if deps.AppConfig.Bool(CfgPrometheusDebug) {
+	if ParamsPrometheus.DebugMetrics {
 		configureDebug()
 	}
-	if deps.AppConfig.Bool(CfgPrometheusGoMetrics) {
+	if ParamsPrometheus.GoMetrics {
 		registry.MustRegister(collectors.NewGoCollector())
 	}
-	if deps.AppConfig.Bool(CfgPrometheusProcessMetrics) {
+	if ParamsPrometheus.ProcessMetrics {
 		registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	}
 
@@ -166,9 +159,9 @@ type fileservicediscovery struct {
 }
 
 func writeFileServiceDiscoveryFile() {
-	path := deps.AppConfig.String(CfgPrometheusFileServiceDiscoveryPath)
+	path := ParamsPrometheus.FileServiceDiscovery.Path
 	d := []fileservicediscovery{{
-		Targets: []string{deps.AppConfig.String(CfgPrometheusFileServiceDiscoveryTarget)},
+		Targets: []string{ParamsPrometheus.FileServiceDiscovery.Target},
 		Labels:  make(map[string]string),
 	}}
 	j, err := json.MarshalIndent(d, "", "  ")
@@ -188,7 +181,7 @@ func writeFileServiceDiscoveryFile() {
 func run() error {
 	Plugin.LogInfo("Starting Prometheus exporter ...")
 
-	if deps.AppConfig.Bool(CfgPrometheusFileServiceDiscoveryEnabled) {
+	if ParamsPrometheus.FileServiceDiscovery.Enabled {
 		writeFileServiceDiscoveryFile()
 	}
 
@@ -205,7 +198,7 @@ func run() error {
 					EnableOpenMetrics: true,
 				},
 			)
-			if deps.AppConfig.Bool(CfgPrometheusPromhttpMetrics) {
+			if ParamsPrometheus.PromhttpMetrics {
 				handler = promhttp.InstrumentMetricHandler(registry, handler)
 			}
 
@@ -213,7 +206,7 @@ func run() error {
 			return nil
 		})
 
-		bindAddr := deps.AppConfig.String(CfgPrometheusBindAddress)
+		bindAddr := ParamsPrometheus.BindAddress
 
 		go func() {
 			Plugin.LogInfof("You can now access the Prometheus exporter using: http://%s/metrics", bindAddr)
@@ -232,7 +225,7 @@ func run() error {
 		}
 		shutdownCtxCancel()
 		Plugin.LogInfo("Stopping Prometheus exporter ... done")
-	}, shutdown.PriorityPrometheus); err != nil {
+	}, daemon.PriorityPrometheus); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 

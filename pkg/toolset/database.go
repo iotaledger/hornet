@@ -26,47 +26,21 @@ var (
 	ErrCritical = errors.New("critical error")
 )
 
-func getProtocolParametersFromConfigFile(filePath string) (*iotago.ProtocolParameters, error) {
-
-	appConfig, err := loadConfigFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return &iotago.ProtocolParameters{
-		Version:       byte(appConfig.Int(protocfg.CfgProtocolParametersVersion)),
-		NetworkName:   appConfig.String(protocfg.CfgProtocolParametersNetworkName),
-		Bech32HRP:     iotago.NetworkPrefix(appConfig.String(protocfg.CfgProtocolParametersBech32HRP)),
-		MinPoWScore:   appConfig.Float64(protocfg.CfgProtocolParametersMinPoWScore),
-		BelowMaxDepth: uint16(appConfig.Int(protocfg.CfgProtocolParametersBelowMaxDepth)),
-		RentStructure: iotago.RentStructure{
-			VByteCost:    uint64(appConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteCost)),
-			VBFactorData: iotago.VByteCostFactor(appConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteFactorData)),
-			VBFactorKey:  iotago.VByteCostFactor(appConfig.Int64(protocfg.CfgProtocolParametersRentStructureVByteFactorKey)),
-		},
-		TokenSupply: uint64(appConfig.Int64(protocfg.CfgProtocolParametersTokenSupply)),
-	}, nil
-}
-
 func getMilestoneManagerFromConfigFile(filePath string) (*milestonemanager.MilestoneManager, error) {
 
-	appConfig, err := loadConfigFile(filePath)
+	_, err := loadConfigFile(filePath, map[string]any{
+		"protocol": protocfg.ParamsProtocol,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	var coordinatorPublicKeyRanges protocfg.ConfigPublicKeyRanges
-
-	// load from config
-	if err := appConfig.Unmarshal(protocfg.CfgProtocolPublicKeyRanges, &coordinatorPublicKeyRanges); err != nil {
-		return nil, err
-	}
-
-	keyManager, err := protocfg.KeyManagerWithConfigPublicKeyRanges(coordinatorPublicKeyRanges)
+	keyManager, err := protocfg.KeyManagerWithConfigPublicKeyRanges(protocfg.ParamsProtocol.PublicKeyRanges)
 	if err != nil {
 		return nil, err
 	}
-	return milestonemanager.New(nil, nil, keyManager, appConfig.Int(protocfg.CfgProtocolMilestonePublicKeyCount)), nil
+
+	return milestonemanager.New(nil, nil, keyManager, protocfg.ParamsProtocol.MilestonePublicKeyCount), nil
 }
 
 func checkDatabaseHealth(storage *storage.Storage, markTainted bool) error {

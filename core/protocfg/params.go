@@ -1,92 +1,110 @@
 package protocfg
 
 import (
-	flag "github.com/spf13/pflag"
-
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/app"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
-	// the protocol version this node supports
-	CfgProtocolParametersVersion = "protocol.parameters.version"
-	// the network ID on which this node operates on.
-	CfgProtocolParametersNetworkName = "protocol.parameters.networkName"
-	// the HRP which should be used for Bech32 addresses.
-	CfgProtocolParametersBech32HRP = "protocol.parameters.bech32HRP"
-	// the minimum PoW score required by the network.
-	CfgProtocolParametersMinPoWScore = "protocol.parameters.minPoWScore"
-	// CfgProtocolParametersBelowMaxDepth is the maximum allowed delta
-	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
-	CfgProtocolParametersBelowMaxDepth = "protocol.parameters.belowMaxDepth"
-	// the vByte cost used for the dust protection
-	CfgProtocolParametersRentStructureVByteCost = "protocol.parameters.vByteCost"
-	// the vByte factor used for data fields
-	CfgProtocolParametersRentStructureVByteFactorData = "protocol.parameters.vByteFactorData"
-	// the vByte factor used for key fields
-	CfgProtocolParametersRentStructureVByteFactorKey = "protocol.parameters.vByteFactorKey"
-	// the token supply of the base token
-	CfgProtocolParametersTokenSupply = "protocol.parameters.tokenSupply"
-
-	// the amount of public keys in a milestone.
-	CfgProtocolMilestonePublicKeyCount = "protocol.milestonePublicKeyCount"
-	// the ed25519 public key of the coordinator in hex representation.
-	CfgProtocolPublicKeyRanges = "protocol.publicKeyRanges"
 	// the ed25519 public key of the coordinator in hex representation.
 	CfgProtocolPublicKeyRangesJSON = "publicKeyRanges"
-
-	// the base token name
-	CfgProtocolBaseTokenName = "protocol.baseToken.name"
-	// the base token ticker symbol
-	CfgProtocolBaseTokenTickerSymbol = "protocol.baseToken.tickerSymbol"
-	// the base token unit
-	CfgProtocolBaseTokenUnit = "protocol.baseToken.unit"
-	// the base token subunit
-	CfgProtocolBaseTokenSubunit = "protocol.baseToken.subunit"
-	// the base token amount of decimals
-	CfgProtocolBaseTokenDecimals = "protocol.baseToken.decimals"
-	// the base token uses the metric prefix
-	CfgProtocolBaseTokenUseMetricPrefix = "protocol.baseToken.useMetricPrefix"
 )
 
-var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.Uint8(CfgProtocolParametersVersion, 2, "the protocol version this node supports")
-		fs.String(CfgProtocolParametersNetworkName, "chrysalis-mainnet", "the network ID on which this node operates on.")
-		fs.String(CfgProtocolParametersBech32HRP, string(iotago.PrefixMainnet), "the HRP which should be used for Bech32 addresses.")
-		fs.Float64(CfgProtocolParametersMinPoWScore, 4000, "the minimum PoW score required by the network.")
-		fs.Uint16(CfgProtocolParametersBelowMaxDepth, 15, "the maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy")
-		fs.Uint64(CfgProtocolParametersRentStructureVByteCost, 500, "the vByte cost used for the dust protection")
-		fs.Uint64(CfgProtocolParametersRentStructureVByteFactorData, 1, "the vByte factor used for data fields")
-		fs.Uint64(CfgProtocolParametersRentStructureVByteFactorKey, 10, "the vByte factor used for key fields")
-		fs.Uint64(CfgProtocolParametersTokenSupply, 2_779_530_283_277_761, "the token supply of the native protocol token")
-
-		fs.Int(CfgProtocolMilestonePublicKeyCount, 2, "the amount of public keys in a milestone")
-
-		fs.String(CfgProtocolBaseTokenName, "IOTA", "the base token name")
-		fs.String(CfgProtocolBaseTokenTickerSymbol, "MIOTA", "the base token ticker symbol")
-		fs.String(CfgProtocolBaseTokenUnit, "IOTA", "the base token unit")
-		fs.String(CfgProtocolBaseTokenSubunit, "", "the base token subunit")
-		fs.Uint32(CfgProtocolBaseTokenDecimals, 0, "the base token amount of decimals")
-		fs.Bool(CfgProtocolBaseTokenUseMetricPrefix, true, "the base token uses the metric prefix")
-	},
-	Masked: nil,
-}
-
 type ConfigPublicKeyRange struct {
-	Key        string          `json:"key" koanf:"key"`
-	StartIndex milestone.Index `json:"start" koanf:"start"`
-	EndIndex   milestone.Index `json:"end" koanf:"end"`
+	Key        string `default:"0000000000000000000000000000000000000000000000000000000000000000" usage:"the ed25519 public key of the coordinator in hex representation" json:"key" koanf:"key"`
+	StartIndex uint32 `default:"0" usage:"the start milestone index of the public key" json:"start" koanf:"start"`
+	EndIndex   uint32 `default:"0" usage:"the end milestone index of the public key" json:"end" koanf:"end"`
 }
 
 type ConfigPublicKeyRanges []*ConfigPublicKeyRange
 
 type BaseToken struct {
-	Name            string `json:"name"`
-	TickerSymbol    string `json:"tickerSymbol"`
-	Unit            string `json:"unit"`
-	Subunit         string `json:"subunit,omitempty"`
-	Decimals        uint32 `json:"decimals"`
-	UseMetricPrefix bool   `json:"useMetricPrefix"`
+	// the base token name
+	Name string `default:"IOTA" usage:"the base token name" json:"name"`
+	// the base token ticker symbol
+	TickerSymbol string `default:"MIOTA" usage:"the base token ticker symbol" json:"tickerSymbol"`
+	// the base token unit
+	Unit string `default:"i" usage:"the base token unit" json:"unit"`
+	// the base token subunit
+	Subunit string `default:"" usage:"the base token subunit" json:"subunit,omitempty"`
+	// the base token amount of decimals
+	Decimals uint32 `default:"0" usage:"the base token amount of decimals" json:"decimals"`
+	// the base token uses the metric prefix
+	UseMetricPrefix bool `default:"true" usage:"the base token uses the metric prefix" json:"useMetricPrefix"`
+}
+
+// ParametersProtocol contains the definition of the parameters used by protocol.
+type ParametersProtocol struct {
+	Parameters struct {
+		// the protocol version this node supports
+		Version byte `default:"2" usage:"the protocol version this node supports"`
+		// the network ID on which this node operates on.
+		NetworkName string `default:"chrysalis-mainnet" usage:"the network ID on which this node operates on"`
+		// the HRP which should be used for Bech32 addresses.
+		Bech32HRP string `default:"iota" usage:"the HRP which should be used for Bech32 addresses"`
+		// the minimum PoW score required by the network.
+		MinPoWScore float64 `default:"4000" usage:"the minimum PoW score required by the network"`
+		// BelowMaxDepth is the maximum allowed delta
+		// value between OCRI of a given message in relation to the current CMI before it gets lazy.
+		BelowMaxDepth uint16 `default:"15" usage:"the maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy"`
+		// the vByte cost used for the storage deposit
+		RentStructureVByteCost uint64 `name:"vByteCost" default:"500" usage:"the vByte cost used for the storage deposit"`
+		// the vByte factor used for data fields
+		RentStructureVByteFactorData uint64 `name:"vByteFactorData" default:"1" usage:"the vByte factor used for data fields"`
+		// the vByte factor used for key fields
+		RentStructureVByteFactorKey uint64 `name:"vByteFactorKey" default:"10" usage:"the vByte factor used for key fields"`
+		// the token supply of the base token
+		TokenSupply uint64 `default:"2779530283277761" usage:"the token supply of the native protocol token"`
+	}
+
+	// the amount of public keys in a milestone.
+	MilestonePublicKeyCount int `default:"2" usage:"the amount of public keys in a milestone"`
+	// the ed25519 public key of the coordinator in hex representation.
+	PublicKeyRanges ConfigPublicKeyRanges `noflag:"true"`
+
+	BaseToken BaseToken `usage:"the network base token properties"`
+}
+
+var ParamsProtocol = &ParametersProtocol{
+	PublicKeyRanges: ConfigPublicKeyRanges{
+		{
+			Key:        "a9b46fe743df783dedd00c954612428b34241f5913cf249d75bed3aafd65e4cd",
+			StartIndex: 0,
+			EndIndex:   777600,
+		}, {
+			Key:        "365fb85e7568b9b32f7359d6cbafa9814472ad0ecbad32d77beaf5dd9e84c6ba",
+			StartIndex: 0,
+			EndIndex:   1555200,
+		}, {
+			Key:        "ba6d07d1a1aea969e7e435f9f7d1b736ea9e0fcb8de400bf855dba7f2a57e947",
+			StartIndex: 552960,
+			EndIndex:   2108160,
+		}, {
+			Key:        "760d88e112c0fd210cf16a3dce3443ecf7e18c456c2fb9646cabb2e13e367569",
+			StartIndex: 1333460,
+			EndIndex:   2888660,
+		}, {
+			Key:        "7bac2209b576ea2235539358c7df8ca4d2f2fc35a663c760449e65eba9f8a6e7",
+			StartIndex: 2108160,
+			EndIndex:   3359999,
+		}, {
+			Key:        "edd9c639a719325e465346b84133bf94740b7d476dd87fc949c0e8df516f9954",
+			StartIndex: 2888660,
+			EndIndex:   3359999,
+		}, {
+			Key:        "47a5098c696e0fb53e6339edac574be4172cb4701a8210c2ae7469b536fd2c59",
+			StartIndex: 3360000,
+			EndIndex:   0,
+		}, {
+			Key:        "ae4e03072b4869e87dd4cd59315291a034493a8c202b43b257f9c07bc86a2f3e",
+			StartIndex: 3360000,
+			EndIndex:   0,
+		},
+	},
+}
+
+var params = &app.ComponentParams{
+	Params: map[string]any{
+		"protocol": ParamsProtocol,
+	},
+	Masked: nil,
 }

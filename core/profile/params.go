@@ -1,22 +1,25 @@
 package profile
 
 import (
-	flag "github.com/spf13/pflag"
-
 	"github.com/iotaledger/hive.go/app"
 )
 
 const (
-	// CfgAppProfile is the key to set the profile to use.
-	CfgAppProfile = "app.profile"
-
 	// AutoProfileName is the name of the automatic profile.
 	AutoProfileName = "auto"
 )
 
+// ParametersNode contains the definition of the parameters used by the node.
+type ParametersNode struct {
+	// Profile is the key to set the profile to use.
+	Profile string `default:"auto" usage:"the profile the node runs with" shorthand:"p"`
+}
+
+var ParamsNode = &ParametersNode{}
+
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.StringP(CfgAppProfile, "p", AutoProfileName, "the profile the node runs with")
+	Params: map[string]any{
+		"node": ParamsNode,
 	},
 	Masked: nil,
 }

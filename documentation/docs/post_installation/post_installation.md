@@ -140,8 +140,10 @@ You can find the HTTP REST API related options in the `restAPI` section within t
       "/api/plugins/*"
     ],
     "bindAddress": "0.0.0.0:14265",
-    "powEnabled": true,
-    "powWorkerCount": 1,
+    "pow": {
+      "enabled": true,
+      "workerCount": 1
+    },
     "limits": {
       "bodyLength": "1M",
       "maxResults": 1000
@@ -153,7 +155,7 @@ If you want to make the HTTP REST API only accessible from localhost, you change
 
 `restAPI.publicRoutes` defines which routes can be called without JWT authorization. `restAPI.protectedRoutes` defines which routes require JWT authorization. All other routes will not be exposed.
 
-If you are concerned with resource consumption, consider turning off `restAPI.powEnabled`. This way, the clients must perform proof of work locally before submitting a message for broadcast. If you would like to offer proof of work to clients, consider increasing the `restAPI.powWorkerCount` to provide a faster message submission experience.
+If you are concerned with resource consumption, consider turning off `restAPI.pow.enabled`. This way, the clients must perform proof of work locally before submitting a message for broadcast. If you would like to offer proof of work to clients, consider increasing the `restAPI.pow.workerCount` to provide a faster message submission experience.
 
 We recommend that you provide your HTTP REST API behind a reverse proxy, such as [HAProxy](http://www.haproxy.org/), [Traefik](https://traefik.io/), [Nginx](https://www.nginx.com/), or [Apache](https://www.apache.org/) configured with TLS.
 

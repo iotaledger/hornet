@@ -8,6 +8,7 @@ import (
 
 	"github.com/gohornet/hornet/core/protocfg"
 	"github.com/gohornet/hornet/pkg/keymanager"
+	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/testsuite"
@@ -70,7 +71,7 @@ func initTest(testInterface testing.TB) (*testsuite.TestEnvironment, *milestonem
 		for _, keyRange := range coordinatorPublicKeyRanges {
 			pubKey, err := crypto.ParseEd25519PublicKeyFromString(keyRange.Key)
 			require.NoError(te.TestInterface, err, "can't load public key ranges")
-			keyManager.AddKeyRange(pubKey, keyRange.StartIndex, keyRange.EndIndex)
+			keyManager.AddKeyRange(pubKey, milestone.Index(keyRange.StartIndex), milestone.Index(keyRange.EndIndex))
 		}
 
 		return keyManager

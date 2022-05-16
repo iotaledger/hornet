@@ -3,7 +3,7 @@ package dashboard
 import (
 	"context"
 
-	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/spammer"
 	spammerplugin "github.com/gohornet/hornet/plugins/spammer"
 	"github.com/iotaledger/hive.go/events"
@@ -27,7 +27,7 @@ func runSpammerMetricWorker() {
 		spammerplugin.Events.SpamPerformed.Detach(onSpamPerformed)
 		spammerplugin.Events.AvgSpamMetricsUpdated.Detach(onAvgSpamMetricsUpdated)
 		Plugin.LogInfo("Stopping Dashboard[SpammerMetricUpdater] ... done")
-	}, shutdown.PriorityDashboard); err != nil {
+	}, daemon.PriorityDashboard); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

@@ -1,8 +1,6 @@
 {
   "app": {
-    "alias": "HORNET alphanet node",
     "checkForUpdates": true,
-    "profile": "auto",
     "disablePlugins": [],
     "enablePlugins": [
       "Autopeering",
@@ -10,102 +8,34 @@
       "Prometheus",
       "Spammer",
       "INX"
-    ]
-  },
-  "restAPI": {
-    "bindAddress": "0.0.0.0:14265",
-    "jwtAuth": {
-      "salt": "HORNET"
-    },
-    "publicRoutes": [
-      "/health",
-      "/api/v2/info",
-      "/api/v2/tips",
-      "/api/v2/messages*",
-      "/api/v2/transactions*",
-      "/api/v2/milestones*",
-      "/api/v2/outputs*",
-      "/api/v2/addresses*",
-      "/api/v2/treasury",
-      "/api/v2/receipts*",
-      "/api/plugins/debug/v1/*",
-      "/api/plugins/indexer/v1/*",
-      "/api/plugins/mqtt/v1",
-      "/api/plugins/participation/v1/events*",
-      "/api/plugins/participation/v1/outputs*",
-      "/api/plugins/participation/v1/addresses*"
     ],
-    "protectedRoutes": [
-      "/api/v2/*",
-      "/api/plugins/*"
-    ],
-    "powEnabled": true,
-    "powWorkerCount": 1,
-    "limits": {
-      "bodyLength": "1M",
-      "maxResults": 1000
-    }
+    "stopGracePeriod": "5m"
   },
-  "dashboard": {
-    "bindAddress": "localhost:8081",
-    "dev": false,
-    "auth": {
-      "sessionTimeout": "72h",
-      "username": "admin",
-      "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
-    }
-  },
-  "db": {
-    "engine": "rocksdb",
-    "path": "alphanet/database",
-    "autoRevalidation": false
-  },
-  "snapshots": {
-    "depth": 50,
-    "interval": 200,
-    "fullPath": "alphanet/snapshots/full_snapshot.bin",
-    "deltaPath": "alphanet/snapshots/delta_snapshot.bin",
-    "deltaSizeThresholdPercentage": 50.0,
-    "downloadURLs": [
-      {
-        "full": "https://files.alphanet.iotaledger.net/snapshots/latest-full_snapshot.bin",
-        "delta": "https://files.alphanet.iotaledger.net/snapshots/latest-delta_snapshot.bin"
-      }
-    ]
-  },
-  "pruning": {
-    "milestones": {
-      "enabled": false,
-      "maxMilestonesToKeep": 60480
-    },
-    "size": {
-      "enabled": true,
-      "targetSize": "30GB",
-      "thresholdPercentage": 10.0,
-      "cooldownTime": "5m"
-    },
-    "pruneReceipts": false
+  "node": {
+    "profile": "auto",
+    "alias": "HORNET node"
   },
   "protocol": {
     "parameters": {
+      "version": 2,
       "networkName": "alphanet-5",
       "bech32HRP": "rms",
       "minPoWScore": 1000.0,
+      "belowMaxDepth": 15,
       "vByteCost": 500,
       "vByteFactorData": 1,
       "vByteFactorKey": 10,
       "tokenSupply": 2779530283277761
     },
-    "baseToken" : {
+    "milestonePublicKeyCount": 3,
+    "baseToken": {
       "name": "Shimmer",
       "tickerSymbol": "SMR",
       "unit": "SMR",
-      "decimals": 6,
       "subunit": "glow",
+      "decimals": 6,
       "useMetricPrefix": false
     },
-    "milestonePublicKeyCount": 3,
     "publicKeyRanges": [
       {
         "key": "d9922819a39e94ddf3907f4b9c8df93f39f026244fcb609205b9a879022599f2",
@@ -134,6 +64,14 @@
       }
     ]
   },
+  "db": {
+    "engine": "rocksdb",
+    "path": "alphanet/database",
+    "autoRevalidation": false
+  },
+  "pow": {
+    "refreshTipsInterval": "5s"
+  },
   "p2p": {
     "bindMultiAddresses": [
       "/ip4/0.0.0.0/tcp/15600",
@@ -143,15 +81,16 @@
       "highWatermark": 10,
       "lowWatermark": 5
     },
-    "gossip": {
-      "unknownPeersLimit": 4,
-      "streamReadTimeout": "1m0s",
-      "streamWriteTimeout": "10s"
-    },
+    "identityPrivateKey": "",
     "db": {
       "path": "alphanet/p2pstore"
     },
     "reconnectInterval": "30s",
+    "gossip": {
+      "unknownPeersLimit": 4,
+      "streamReadTimeout": "1m",
+      "streamWriteTimeout": "10s"
+    },
     "autopeering": {
       "bindAddress": "0.0.0.0:14626",
       "entryNodes": [
@@ -162,16 +101,107 @@
       "runAsEntryNode": false
     }
   },
-  "logger": {
-    "level": "info",
-    "disableCaller": true,
-    "encoding": "console",
-    "outputPaths": [
-      "stdout"
+  "requests": {
+    "discardOlderThan": "15s",
+    "pendingReEnqueueInterval": "5s"
+  },
+  "tangle": {
+    "milestoneTimeout": "30s",
+    "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
+    "maxDeltaMsgOldestConeRootIndexToCMI": 13,
+    "whiteFlagParentsSolidTimeout": "2s"
+  },
+  "snapshots": {
+    "depth": 50,
+    "interval": 200,
+    "fullPath": "alphanet/snapshots/full_snapshot.bin",
+    "deltaPath": "alphanet/snapshots/delta_snapshot.bin",
+    "deltaSizeThresholdPercentage": 50.0,
+    "downloadURLs": [
+      {
+        "full": "https://files.alphanet.iotaledger.net/snapshots/latest-full_snapshot.bin",
+        "delta": "https://files.alphanet.iotaledger.net/snapshots/latest-delta_snapshot.bin"
+      }
     ]
+  },
+  "pruning": {
+    "milestones": {
+      "enabled": false,
+      "maxMilestonesToKeep": 60480
+    },
+    "size": {
+      "enabled": true,
+      "targetSize": "30GB",
+      "thresholdPercentage": 10.0,
+      "cooldownTime": "5m"
+    },
+    "pruneReceipts": false
+  },
+  "profiling": {
+    "bindAddress": "localhost:6060"
+  },
+  "restAPI": {
+    "bindAddress": "0.0.0.0:14265",
+    "publicRoutes": [
+      "/health",
+      "/api/v2/info",
+      "/api/v2/tips",
+      "/api/v2/messages*",
+      "/api/v2/transactions*",
+      "/api/v2/milestones*",
+      "/api/v2/outputs*",
+      "/api/v2/addresses*",
+      "/api/v2/treasury",
+      "/api/v2/receipts*",
+      "/api/plugins/debug/v1/*",
+      "/api/plugins/indexer/v1/*",
+      "/api/plugins/mqtt/v1",
+      "/api/plugins/participation/v1/events*",
+      "/api/plugins/participation/v1/outputs*",
+      "/api/plugins/participation/v1/addresses*"
+    ],
+    "protectedRoutes": [
+      "/api/v2/*",
+      "/api/plugins/*"
+    ],
+    "jwtAuth": {
+      "salt": "HORNET"
+    },
+    "pow": {
+      "enabled": false,
+      "workerCount": 1
+    },
+    "limits": {
+      "maxBodyLength": "1M",
+      "maxResults": 1000
+    }
   },
   "warpsync": {
     "advancementRange": 150
+  },
+  "tipsel": {
+    "nonLazy": {
+      "retentionRulesTipsLimit": 100,
+      "maxReferencedTipAge": "3s",
+      "maxChildren": 30,
+      "spammerTipsThreshold": 0
+    },
+    "semiLazy": {
+      "retentionRulesTipsLimit": 20,
+      "maxReferencedTipAge": "3s",
+      "maxChildren": 2,
+      "spammerTipsThreshold": 30
+    }
+  },
+  "dashboard": {
+    "bindAddress": "localhost:8081",
+    "dev": false,
+    "auth": {
+      "sessionTimeout": "72h",
+      "username": "admin",
+      "passwordHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "passwordSalt": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
   },
   "spammer": {
     "message": "We are all made of stardust.",
@@ -182,8 +212,23 @@
     "workers": 0,
     "autostart": false
   },
-  "profiling": {
-    "bindAddress": "localhost:6060"
+  "receipts": {
+    "backup": {
+      "enabled": false,
+      "path": "receipts"
+    },
+    "validator": {
+      "validate": false,
+      "ignoreSoftErrors": false,
+      "api": {
+        "address": "http://localhost:14266",
+        "timeout": "5s"
+      },
+      "coordinator": {
+        "address": "UDYXTZBE9GZGPM9SSQV9LTZNDLJIZMPUVVXYXFYVBLIEUHLSEWFTKZZLXYRHHWVQV9MNNX9KZC9D9UZWZ",
+        "merkleTreeDepth": 24
+      }
+    }
   },
   "prometheus": {
     "bindAddress": "localhost:9311",
@@ -199,13 +244,15 @@
     "restAPIMetrics": true,
     "inxMetrics": true,
     "migrationMetrics": true,
-    "coordinatorMetrics": true,
     "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
   },
-  "debug": {
-    "whiteFlagParentsSolidTimeout": "2s"
+  "inx": {
+    "bindAddress": "localhost:9029",
+    "pow": {
+      "workerCount": 0
+    }
   }
 }

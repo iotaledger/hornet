@@ -14,7 +14,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 )
 
 const (
@@ -71,8 +70,7 @@ type dependencies struct {
 	Tangle            *tangle.Tangle
 	RequestQueue      gossip.RequestQueue
 	UTXOManager       *utxo.Manager
-	AppConfig         *configuration.Configuration `name:"appConfig"`
-	RestPluginManager *restapi.RestPluginManager   `optional:"true"`
+	RestPluginManager *restapi.RestPluginManager `optional:"true"`
 }
 
 func configure() error {

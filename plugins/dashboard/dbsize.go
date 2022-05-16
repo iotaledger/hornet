@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/timeutil"
 )
@@ -89,7 +89,7 @@ func runDatabaseSizeCollector() {
 			hub.BroadcastMsg(&Msg{Type: MsgTypeDatabaseSizeMetric, Data: []*DBSizeMetric{dbSizeMetric}})
 		}, 1*time.Minute, ctx)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityDashboard); err != nil {
+	}, daemon.PriorityDashboard); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

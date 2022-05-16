@@ -6,7 +6,6 @@ import (
 
 	"github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/core/gossip"
-	"github.com/gohornet/hornet/core/gracefulshutdown"
 	"github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/core/profile"
@@ -19,7 +18,6 @@ import (
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/inx"
-	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/hornet/plugins/prometheus"
 	"github.com/gohornet/hornet/plugins/receipt"
 	"github.com/gohornet/hornet/plugins/restapi"
@@ -28,6 +26,8 @@ import (
 	"github.com/gohornet/hornet/plugins/urts"
 	"github.com/gohornet/hornet/plugins/warpsync"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/core/shutdown"
+	"github.com/iotaledger/hive.go/app/plugins/profiling"
 )
 
 var (
@@ -51,7 +51,7 @@ Command line flags:
 		app.WithCoreComponents([]*app.CoreComponent{
 			profile.CoreComponent,
 			protocfg.CoreComponent,
-			gracefulshutdown.CoreComponent,
+			shutdown.CoreComponent,
 			database.CoreComponent,
 			pow.CoreComponent,
 			p2p.CoreComponent,

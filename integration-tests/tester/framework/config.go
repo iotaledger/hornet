@@ -9,17 +9,7 @@ import (
 
 	"github.com/docker/go-connections/nat"
 
-	"github.com/gohornet/hornet/core/gossip"
-	"github.com/gohornet/hornet/core/p2p"
 	"github.com/gohornet/hornet/core/protocfg"
-	"github.com/gohornet/hornet/core/snapshot"
-	"github.com/gohornet/hornet/plugins/autopeering"
-	"github.com/gohornet/hornet/plugins/dashboard"
-	"github.com/gohornet/hornet/plugins/inx"
-	"github.com/gohornet/hornet/plugins/profiling"
-	"github.com/gohornet/hornet/plugins/receipt"
-	"github.com/gohornet/hornet/plugins/restapi"
-	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/crypto"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -316,15 +306,15 @@ type NetworkConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (netConfig *NetworkConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", p2p.CfgP2PIdentityPrivKey, netConfig.IdentityPrivKey),
-		fmt.Sprintf("--%s=%s", p2p.CfgP2PBindMultiAddresses, strings.Join(netConfig.BindMultiAddresses, ",")),
-		fmt.Sprintf("--%s=%s", p2p.CfgP2PDatabasePath, netConfig.DatabasePath),
-		fmt.Sprintf("--%s=%d", p2p.CfgP2PConnMngHighWatermark, netConfig.ConnMngHighWatermark),
-		fmt.Sprintf("--%s=%d", p2p.CfgP2PConnMngLowWatermark, netConfig.ConnMngLowWatermark),
-		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeers, strings.Join(netConfig.Peers, ",")),
-		fmt.Sprintf("--%s=%s", p2p.CfgP2PPeerAliases, strings.Join(netConfig.PeerAliases, ",")),
-		fmt.Sprintf("--%s=%s", p2p.CfgP2PReconnectInterval, netConfig.ReconnectInterval),
-		fmt.Sprintf("--%s=%d", gossip.CfgP2PGossipUnknownPeersLimit, netConfig.GossipUnknownPeersLimit),
+		fmt.Sprintf("--%s=%s", "p2p.identityPrivateKey", netConfig.IdentityPrivKey),
+		fmt.Sprintf("--%s=%s", "p2p.bindMultiAddresses", strings.Join(netConfig.BindMultiAddresses, ",")),
+		fmt.Sprintf("--%s=%s", "p2p.db.path", netConfig.DatabasePath),
+		fmt.Sprintf("--%s=%d", "p2p.connectionManager.highWatermark", netConfig.ConnMngHighWatermark),
+		fmt.Sprintf("--%s=%d", "p2p.connectionManager.lowWatermark", netConfig.ConnMngLowWatermark),
+		fmt.Sprintf("--%s=%s", "p2p.peers", strings.Join(netConfig.Peers, ",")),
+		fmt.Sprintf("--%s=%s", "p2p.peerAliases", strings.Join(netConfig.PeerAliases, ",")),
+		fmt.Sprintf("--%s=%s", "p2p.reconnectInterval", netConfig.ReconnectInterval),
+		fmt.Sprintf("--%s=%d", "p2p.gossip.unknownPeersLimit", netConfig.GossipUnknownPeersLimit),
 	}
 }
 
@@ -362,12 +352,12 @@ type AutopeeringConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (autoConfig *AutopeeringConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringEntryNodes, strings.Join(autoConfig.EntryNodes, ",")),
-		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringBindAddr, autoConfig.BindAddr),
-		fmt.Sprintf("--%s=%v", autopeering.CfgNetAutopeeringRunAsEntryNode, autoConfig.RunAsEntryNode),
-		fmt.Sprintf("--%s=%d", autopeering.CfgNetAutopeeringInboundPeers, autoConfig.InboundPeers),
-		fmt.Sprintf("--%s=%d", autopeering.CfgNetAutopeeringOutboundPeers, autoConfig.OutboundPeers),
-		fmt.Sprintf("--%s=%s", autopeering.CfgNetAutopeeringSaltLifetime, autoConfig.SaltLifetime),
+		fmt.Sprintf("--%s=%s", "p2p.autopeering.entryNodes", strings.Join(autoConfig.EntryNodes, ",")),
+		fmt.Sprintf("--%s=%s", "p2p.autopeering.bindAddress", autoConfig.BindAddr),
+		fmt.Sprintf("--%s=%v", "p2p.autopeering.runAsEntryNode", autoConfig.RunAsEntryNode),
+		fmt.Sprintf("--%s=%d", "p2p.autopeering.inboundPeers", autoConfig.InboundPeers),
+		fmt.Sprintf("--%s=%d", "p2p.autopeering.outboundPeers", autoConfig.OutboundPeers),
+		fmt.Sprintf("--%s=%s", "p2p.autopeering.saltLifetime", autoConfig.SaltLifetime),
 	}
 }
 
@@ -398,10 +388,10 @@ type RestAPIConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (restAPIConfig *RestAPIConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIBindAddress, restAPIConfig.BindAddress),
-		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIPublicRoutes, strings.Join(restAPIConfig.PublicRoutes, ",")),
-		fmt.Sprintf("--%s=%s", restapi.CfgRestAPIProtectedRoutes, strings.Join(restAPIConfig.ProtectedRoutes, ",")),
-		fmt.Sprintf("--%s=%v", restapi.CfgRestAPIPoWEnabled, restAPIConfig.PoWEnabled),
+		fmt.Sprintf("--%s=%s", "restAPI.bindAddress", restAPIConfig.BindAddress),
+		fmt.Sprintf("--%s=%s", "restAPI.publicRoutes", strings.Join(restAPIConfig.PublicRoutes, ",")),
+		fmt.Sprintf("--%s=%s", "restAPI.protectedRoutes", strings.Join(restAPIConfig.ProtectedRoutes, ",")),
+		fmt.Sprintf("--%s=%v", "restAPI.pow.enabled", restAPIConfig.PoWEnabled),
 	}
 }
 
@@ -428,7 +418,7 @@ type INXConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (inxConfig *INXConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", inx.CfgINXBindAddress, inxConfig.BindAddress),
+		fmt.Sprintf("--%s=%s", "inx.bindAddress", inxConfig.BindAddress),
 	}
 }
 
@@ -459,8 +449,8 @@ func (pluginConfig *PluginConfig) ContainsINX() bool {
 // CLIFlags returns the config as CLI flags.
 func (pluginConfig *PluginConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", app.CfgAppEnablePlugins, strings.Join(pluginConfig.Enabled, ",")),
-		fmt.Sprintf("--%s=%s", app.CfgAppDisablePlugins, strings.Join(pluginConfig.Disabled, ",")),
+		fmt.Sprintf("--%s=%s", "app.enablePlugins", strings.Join(pluginConfig.Enabled, ",")),
+		fmt.Sprintf("--%s=%s", "app.disablePlugins", strings.Join(pluginConfig.Disabled, ",")),
 	}
 }
 
@@ -485,8 +475,8 @@ type SnapshotConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (snapshotConfig *SnapshotConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", snapshot.CfgSnapshotsFullPath, snapshotConfig.FullSnapshotFilePath),
-		fmt.Sprintf("--%s=%s", snapshot.CfgSnapshotsDeltaPath, snapshotConfig.DeltaSnapshotFilePath),
+		fmt.Sprintf("--%s=%s", "snapshots.fullPath", snapshotConfig.FullSnapshotFilePath),
+		fmt.Sprintf("--%s=%s", "snapshots.deltaPath", snapshotConfig.DeltaSnapshotFilePath),
 	}
 }
 
@@ -542,10 +532,10 @@ type ReceiptsConfig struct {
 
 func (receiptsConfig *ReceiptsConfig) CLIFlags() []string {
 	flags := []string{
-		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsBackupEnabled, receiptsConfig.BackupEnabled),
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsBackupPath, receiptsConfig.BackupFolder),
-		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorValidate, receiptsConfig.Validate),
-		fmt.Sprintf("--%s=%v", receipt.CfgReceiptsValidatorIgnoreSoftErrors, receiptsConfig.IgnoreSoftErrors),
+		fmt.Sprintf("--%s=%v", "receipts.backup.enabled", receiptsConfig.BackupEnabled),
+		fmt.Sprintf("--%s=%s", "receipts.backup.path", receiptsConfig.BackupFolder),
+		fmt.Sprintf("--%s=%v", "receipts.validator.validate", receiptsConfig.Validate),
+		fmt.Sprintf("--%s=%v", "receipts.validator.ignoreSoftErrors", receiptsConfig.IgnoreSoftErrors),
 	}
 	flags = append(flags, receiptsConfig.Validator.CLIFlags()...)
 	return flags
@@ -574,10 +564,10 @@ func DefaultNodeReceiptValidatorConfig() ReceiptsConfig {
 
 func (validatorConfig *ReceiptValidatorConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPIAddress, validatorConfig.APIAddress),
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorAPITimeout, validatorConfig.APITimeout),
-		fmt.Sprintf("--%s=%s", receipt.CfgReceiptsValidatorCoordinatorAddress, validatorConfig.CoordinatorAddress),
-		fmt.Sprintf("--%s=%d", receipt.CfgReceiptsValidatorCoordinatorMerkleTreeDepth, validatorConfig.CoordinatorMerkleTreeDepth),
+		fmt.Sprintf("--%s=%s", "receipts.validator.api.address", validatorConfig.APIAddress),
+		fmt.Sprintf("--%s=%s", "receipts.validator.api.timeout", validatorConfig.APITimeout),
+		fmt.Sprintf("--%s=%s", "receipts.validator.coordinator.address", validatorConfig.CoordinatorAddress),
+		fmt.Sprintf("--%s=%d", "receipts.validator.coordinator.merkleTreeDepth", validatorConfig.CoordinatorMerkleTreeDepth),
 	}
 }
 
@@ -652,14 +642,14 @@ func (protoConfig *ProtocolConfig) CLIFlags() []string {
 	}
 
 	return []string{
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersVersion, protoConfig.ProtocolVersion),
-		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolParametersNetworkName, protoConfig.NetworkName),
-		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolParametersBech32HRP, protoConfig.Bech32HRP),
-		fmt.Sprintf("--%s=%0.0f", protocfg.CfgProtocolParametersMinPoWScore, protoConfig.MinPoWScore),
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersRentStructureVByteCost, protoConfig.RentStructure.VByteCost),
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersRentStructureVByteFactorData, protoConfig.RentStructure.VBFactorData),
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersRentStructureVByteFactorKey, protoConfig.RentStructure.VBFactorKey),
-		fmt.Sprintf("--%s=%d", protocfg.CfgProtocolParametersTokenSupply, protoConfig.TokenSupply),
+		fmt.Sprintf("--%s=%d", "protocol.parameters.version", protoConfig.ProtocolVersion),
+		fmt.Sprintf("--%s=%s", "protocol.parameters.networkName", protoConfig.NetworkName),
+		fmt.Sprintf("--%s=%s", "protocol.parameters.bech32HRP", protoConfig.Bech32HRP),
+		fmt.Sprintf("--%s=%0.0f", "protocol.parameters.minPoWScore", protoConfig.MinPoWScore),
+		fmt.Sprintf("--%s=%d", "protocol.parameters.vByteCost", protoConfig.RentStructure.VByteCost),
+		fmt.Sprintf("--%s=%d", "protocol.parameters.vByteFactorData", protoConfig.RentStructure.VBFactorData),
+		fmt.Sprintf("--%s=%d", "protocol.parameters.vByteFactorKey", protoConfig.RentStructure.VBFactorKey),
+		fmt.Sprintf("--%s=%d", "protocol.parameters.tokenSupply", protoConfig.TokenSupply),
 		fmt.Sprintf("--%s=%s", protocfg.CfgProtocolPublicKeyRangesJSON, string(keyRangesJSON)),
 	}
 }
@@ -714,7 +704,7 @@ type ProfilingConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (profilingConfig *ProfilingConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", profiling.CfgProfilingBindAddress, profilingConfig.BindAddress),
+		fmt.Sprintf("--%s=%s", "profiling.bindAddress", profilingConfig.BindAddress),
 	}
 }
 
@@ -734,7 +724,7 @@ type DashboardConfig struct {
 // CLIFlags returns the config as CLI flags.
 func (dashboardConfig *DashboardConfig) CLIFlags() []string {
 	return []string{
-		fmt.Sprintf("--%s=%s", dashboard.CfgDashboardBindAddress, dashboardConfig.BindAddress),
+		fmt.Sprintf("--%s=%s", "dashboard.bindAddress", dashboardConfig.BindAddress),
 	}
 }
 

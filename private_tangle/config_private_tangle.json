@@ -1,8 +1,6 @@
 {
   "app": {
-    "alias": "HORNET private-tangle node",
     "checkForUpdates": true,
-    "profile": "auto",
     "disablePlugins": [
       "Autopeering"
     ],
@@ -10,41 +8,90 @@
       "Spammer",
       "Debug",
       "Prometheus"
-    ]
+    ],
+    "stopGracePeriod": "5m"
   },
-  "restAPI": {
-    "bindAddress": "0.0.0.0:14265",
-    "jwtAuth": {
-      "salt": "HORNET"
+  "node": {
+    "profile": "auto",
+    "alias": "HORNET private-tangle node"
+  },
+  "protocol": {
+    "parameters": {
+      "version": 2,
+      "networkName": "private_tangle1",
+      "bech32HRP": "tst",
+      "minPoWScore": 1.0,
+      "belowMaxDepth": 15,
+      "vByteCost": 500,
+      "vByteFactorData": 1,
+      "vByteFactorKey": 10,
+      "tokenSupply": 2779530283277761
     },
-    "publicRoutes": [
-      "/health",
-      "/api/v2/*",
-      "/api/plugins/*"
-    ],
-    "protectedRoutes": [
-    ],
-    "powEnabled": true,
-    "powWorkerCount": 1,
-    "limits": {
-      "bodyLength": "1M",
-      "maxResults": 1000
-    }
-  },
-  "dashboard": {
-    "bindAddress": "0.0.0.0:8081",
-    "dev": false,
-    "auth": {
-      "sessionTimeout": "72h",
-      "username": "admin",
-      "passwordHash": "a5c5c6949e5259b6f74b08019da0b54b056473d2ed4712d8590682e6bd46876b",
-      "passwordSalt": "b5769c198c45b84bf502ed0dde3b698eb885a527dca5bd5b0cd015992157cc79"
-    }
+    "milestonePublicKeyCount": 2,
+    "baseToken" : {
+      "name": "TestCoin",
+      "tickerSymbol": "TEST",
+      "unit": "TEST",
+      "subunit": "testies",
+      "decimals": 6,
+      "useMetricPrefix": false
+    },
+    "publicKeyRanges": [
+      {
+        "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
+        "start": 0,
+        "end": 0
+      },
+      {
+        "key": "f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
+        "start": 0,
+        "end": 0
+      }
+    ]
   },
   "db": {
     "engine": "rocksdb",
     "path": "privatedb",
     "autoRevalidation": false
+  },
+  "pow": {
+    "refreshTipsInterval": "5s"
+  },
+  "p2p": {
+    "bindMultiAddresses": [
+      "/ip4/0.0.0.0/tcp/15600",
+      "/ip6/::/tcp/15600"
+    ],
+    "connectionManager": {
+      "highWatermark": 10,
+      "lowWatermark": 5
+    },
+    "identityPrivateKey": "",
+    "db": {
+      "path": "p2pstore"
+    },
+    "reconnectInterval": "30s",
+    "gossip": {
+      "unknownPeersLimit": 4,
+      "streamReadTimeout": "1m",
+      "streamWriteTimeout": "10s"
+    },
+    "autopeering": {
+      "bindAddress": "0.0.0.0:14626",
+      "entryNodes": [],
+      "entryNodesPreferIPv6": false,
+      "runAsEntryNode": false
+    }
+  },
+  "requests": {
+    "discardOlderThan": "15s",
+    "pendingReEnqueueInterval": "5s"
+  },
+  "tangle": {
+    "milestoneTimeout": "30s",
+    "maxDeltaMsgYoungestConeRootIndexToCMI": 2,
+    "maxDeltaMsgOldestConeRootIndexToCMI": 7,
+    "whiteFlagParentsSolidTimeout": "2s"
   },
   "snapshots": {
     "depth": 50,
@@ -67,51 +114,32 @@
     },
     "pruneReceipts": false
   },
-  "protocol": {
-    "parameters": {
-      "networkName": "private_tangle1",
-      "bech32HRP": "tst",
-      "minPoWScore": 1.0,
-      "vByteCost": 500,
-      "vByteFactorData": 1,
-      "vByteFactorKey": 10,
-      "tokenSupply": 2779530283277761
+  "profiling": {
+    "bindAddress": "localhost:6060"
+  },
+  "restAPI": {
+    "bindAddress": "0.0.0.0:14265",
+    "publicRoutes": [
+      "/health",
+      "/api/v2/*",
+      "/api/plugins/*"
+    ],
+    "protectedRoutes": [
+    ],
+    "jwtAuth": {
+      "salt": "HORNET"
     },
-    "baseToken" : {
-      "name": "TestCoin",
-      "tickerSymbol": "TEST",
-      "unit": "TEST",
-      "decimals": 6,
-      "subunit": "testies",
-      "useMetricPrefix": false
+    "pow": {
+      "enabled": true,
+      "workerCount": 1
     },
-    "milestonePublicKeyCount": 2,
-    "publicKeyRanges": [
-      {
-        "key": "ed3c3f1a319ff4e909cf2771d79fece0ac9bd9fd2ee49ea6c0885c9cb3b1248c",
-        "start": 0,
-        "end": 0
-      },
-      {
-        "key": "f6752f5f46a53364e2ee9c4d662d762a81efd51010282a75cd6bd03f28ef349c",
-        "start": 0,
-        "end": 0
-      }
-    ]
+    "limits": {
+      "maxBodyLength": "1M",
+      "maxResults": 1000
+    }
   },
-  "pow": {
-    "refreshTipsInterval": "5s"
-  },
-  "requests": {
-    "discardOlderThan": "15s",
-    "pendingReEnqueueInterval": "5s"
-  },
-  "tangle": {
-    "milestoneTimeout": "30s",
-    "maxDeltaMsgYoungestConeRootIndexToCMI": 2,
-    "maxDeltaMsgOldestConeRootIndexToCMI": 7,
-    "belowMaxDepth": 15,
-    "whiteFlagParentsSolidTimeout": "2s"
+  "warpsync": {
+    "advancementRange": 150
   },
   "tipsel": {
     "nonLazy": {
@@ -127,53 +155,24 @@
       "spammerTipsThreshold": 30
     }
   },
-  "p2p": {
-    "bindMultiAddresses": [
-      "/ip4/0.0.0.0/tcp/15600",
-      "/ip6/::/tcp/15600"
-    ],
-    "connectionManager": {
-      "highWatermark": 10,
-      "lowWatermark": 5
-    },
-    "gossip": {
-      "unknownPeersLimit": 4,
-      "streamReadTimeout": "1m0s",
-      "streamWriteTimeout": "10s"
-    },
-    "db": {
-      "path": "p2pstore"
-    },
-    "reconnectInterval": "30s",
-    "autopeering": {
-      "bindAddress": "0.0.0.0:14626",
-      "entryNodes": [],
-      "entryNodesPreferIPv6": false,
-      "runAsEntryNode": false
+  "dashboard": {
+    "bindAddress": "0.0.0.0:8081",
+    "dev": false,
+    "auth": {
+      "sessionTimeout": "72h",
+      "username": "admin",
+      "passwordHash": "a5c5c6949e5259b6f74b08019da0b54b056473d2ed4712d8590682e6bd46876b",
+      "passwordSalt": "b5769c198c45b84bf502ed0dde3b698eb885a527dca5bd5b0cd015992157cc79"
     }
   },
-  "logger": {
-    "level": "info",
-    "disableCaller": true,
-    "encoding": "console",
-    "outputPaths": [
-      "stdout"
-    ]
-  },
-  "warpsync": {
-    "advancementRange": 150
-  },
   "spammer": {
-    "message": "IOTA - A new dawn",
-    "index": "HORNET Spammer",
-    "indexSemiLazy": "HORNET Spammer Semi-Lazy",
+    "message": "We are all made of stardust.",
+    "tag": "HORNET Spammer",
+    "tagSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
     "mpsRateLimit": 5.0,
     "workers": 0,
     "autostart": true
-  },
-  "profiling": {
-    "bindAddress": "localhost:6060"
   },
   "prometheus": {
     "bindAddress": "0.0.0.0:9311",
@@ -187,11 +186,17 @@
     "gossipMetrics": true,
     "cachesMetrics": true,
     "restAPIMetrics": true,
+    "inxMetrics": true,
     "migrationMetrics": true,
-    "coordinatorMetrics": true,
     "debugMetrics": false,
     "goMetrics": false,
     "processMetrics": false,
     "promhttpMetrics": false
+  },
+  "inx": {
+    "bindAddress": "localhost:9029",
+    "pow": {
+      "workerCount": 0
+    }
   }
 }

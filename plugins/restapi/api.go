@@ -38,8 +38,8 @@ func compileRoutesAsRegexes(routes []string) []*regexp.Regexp {
 
 func apiMiddleware() echo.MiddlewareFunc {
 
-	publicRoutes := compileRoutesAsRegexes(deps.AppConfig.Strings(CfgRestAPIPublicRoutes))
-	protectedRoutes := compileRoutesAsRegexes(deps.AppConfig.Strings(CfgRestAPIProtectedRoutes))
+	publicRoutes := compileRoutesAsRegexes(ParamsRestAPI.PublicRoutes)
+	protectedRoutes := compileRoutesAsRegexes(ParamsRestAPI.ProtectedRoutes)
 
 	matchPublic := func(c echo.Context) bool {
 		for _, reg := range publicRoutes {
@@ -60,9 +60,9 @@ func apiMiddleware() echo.MiddlewareFunc {
 	}
 
 	// configure JWT auth
-	salt := deps.AppConfig.String(CfgRestAPIJWTAuthSalt)
+	salt := ParamsRestAPI.JWTAuth.Salt
 	if len(salt) == 0 {
-		Plugin.LogFatalf("'%s' should not be empty", CfgRestAPIJWTAuthSalt)
+		Plugin.LogFatalf("'%s' should not be empty", Plugin.App.Config().GetParameterPath(&(ParamsRestAPI.JWTAuth.Salt)))
 	}
 
 	// API tokens do not expire.
