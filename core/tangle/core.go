@@ -10,6 +10,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/migrator"
@@ -18,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
@@ -187,7 +187,7 @@ func configure() error {
 		if err := deps.Storage.MarkDatabasesCorrupted(); err != nil {
 			CoreComponent.LogPanic(err)
 		}
-	}, shutdown.PriorityDatabaseHealth); err != nil {
+	}, daemon.PriorityDatabaseHealth); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -235,7 +235,7 @@ func run() error {
 		attachHeartbeatEvents()
 		<-ctx.Done()
 		detachHeartbeatEvents()
-	}, shutdown.PriorityHeartbeats); err != nil {
+	}, daemon.PriorityHeartbeats); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -247,7 +247,7 @@ func run() error {
 		deps.Storage.ShutdownStorages()
 		CoreComponent.LogInfo("Flushing caches to database... done")
 
-	}, shutdown.PriorityFlushToDatabase); err != nil {
+	}, daemon.PriorityFlushToDatabase); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -257,7 +257,7 @@ func run() error {
 	if err := CoreComponent.Daemon().BackgroundWorker("Tangle status reporter", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(deps.Tangle.PrintStatus, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityStatusReport); err != nil {
+	}, daemon.PriorityStatusReport); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 

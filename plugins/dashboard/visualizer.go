@@ -3,10 +3,10 @@ package dashboard
 import (
 	"context"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/events"
@@ -184,7 +184,7 @@ func runVisualizer() {
 
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ...")
 		Plugin.LogInfo("Stopping Dashboard[Visualizer] ... done")
-	}, shutdown.PriorityDashboard); err != nil {
+	}, daemon.PriorityDashboard); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

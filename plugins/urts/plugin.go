@@ -8,14 +8,15 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/core/shutdown"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
@@ -95,7 +96,7 @@ func run() error {
 		attachEvents()
 		<-ctx.Done()
 		detachEvents()
-	}, shutdown.PriorityTipselection); err != nil {
+	}, daemon.PriorityTipselection); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -110,7 +111,7 @@ func run() error {
 				Plugin.LogDebugf("CleanUpReferencedTips finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 			}
 		}
-	}, shutdown.PriorityTipselection); err != nil {
+	}, daemon.PriorityTipselection); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 	return nil
@@ -137,7 +138,7 @@ func configureEvents() {
 		ts := time.Now()
 		removedTipCount, err := deps.TipSelector.UpdateScores()
 		if err != nil && err != common.ErrOperationAborted {
-			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("urts tipselection plugin hit a critical error while updating scores: %s", err))
+			deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("urts tipselection plugin hit a critical error while updating scores: %s", err), true)
 		}
 		Plugin.LogDebugf("UpdateScores finished, removed: %d, took: %v", removedTipCount, time.Since(ts).Truncate(time.Millisecond))
 	})

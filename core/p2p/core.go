@@ -13,9 +13,9 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/p2p"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/logger"
@@ -254,7 +254,7 @@ func configure() error {
 			CoreComponent.LogPanicf("Syncing p2p peer database to disk... failed: %s", err)
 		}
 		CoreComponent.LogInfo("Syncing p2p peer database to disk... done")
-	}, shutdown.PriorityCloseDatabase); err != nil {
+	}, daemon.PriorityCloseDatabase); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -276,7 +276,7 @@ func run() error {
 		if err := deps.Host.Peerstore().Close(); err != nil {
 			CoreComponent.LogError("unable to cleanly closing peer store: %s", err)
 		}
-	}, shutdown.PriorityP2PManager); err != nil {
+	}, daemon.PriorityP2PManager); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 

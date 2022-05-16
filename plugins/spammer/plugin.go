@@ -12,13 +12,13 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/spammer"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
@@ -152,7 +152,7 @@ func run() error {
 	if err := Plugin.Daemon().BackgroundWorker("Spammer Metrics Updater", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(measureSpammerMetrics, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PrioritySpammer); err != nil {
+	}, daemon.PrioritySpammer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -277,7 +277,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 				lastDuration = time.Since(timeStart)
 			}
 
-		}, shutdown.PrioritySpammer); err != nil {
+		}, daemon.PrioritySpammer); err != nil {
 			Plugin.LogWarnf("failed to start worker: %s", err)
 		}
 	}
@@ -347,7 +347,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 
 			Plugin.LogInfof("Stopping Spammer %d...", spammerIndex)
 			Plugin.LogInfof("Stopping Spammer %d... done", spammerIndex)
-		}, shutdown.PrioritySpammer); err != nil {
+		}, daemon.PrioritySpammer); err != nil {
 			Plugin.LogWarnf("failed to start worker: %s", err)
 		}
 	}

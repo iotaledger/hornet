@@ -8,6 +8,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/milestone"
@@ -15,7 +16,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
@@ -278,7 +278,7 @@ func configure() error {
 			CoreComponent.LogPanicf("Syncing databases to disk... failed: %s", err)
 		}
 		CoreComponent.LogInfo("Syncing databases to disk... done")
-	}, shutdown.PriorityCloseDatabase); err != nil {
+	}, daemon.PriorityCloseDatabase); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -292,7 +292,7 @@ func run() error {
 		attachEvents()
 		<-ctx.Done()
 		detachEvents()
-	}, shutdown.PriorityMetricsUpdater); err != nil {
+	}, daemon.PriorityMetricsUpdater); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 

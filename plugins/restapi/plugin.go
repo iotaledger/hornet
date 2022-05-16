@@ -12,10 +12,10 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/jwt"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/restapi"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
@@ -167,7 +167,7 @@ func run() error {
 		}
 		shutdownCtxCancel()
 		Plugin.LogInfo("Stopping REST-API server ... done")
-	}, shutdown.PriorityRestAPI); err != nil {
+	}, daemon.PriorityRestAPI); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 

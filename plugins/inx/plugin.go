@@ -8,13 +8,13 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/protocfg"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/keymanager"
 	"github.com/gohornet/hornet/pkg/metrics"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
@@ -111,7 +111,7 @@ func run() error {
 		Plugin.LogInfo("Stopping INX ...")
 		deps.INXServer.Stop()
 		Plugin.LogInfo("Stopping INX ... done")
-	}, shutdown.PriorityIndexer); err != nil {
+	}, daemon.PriorityIndexer); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 

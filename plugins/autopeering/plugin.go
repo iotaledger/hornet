@@ -15,10 +15,10 @@ import (
 	"github.com/gohornet/hornet/core/pow"
 	"github.com/gohornet/hornet/core/snapshot"
 	"github.com/gohornet/hornet/core/tangle"
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/p2p"
 	"github.com/gohornet/hornet/pkg/p2p/autopeering"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/plugins/dashboard"
 	"github.com/gohornet/hornet/plugins/debug"
 	"github.com/gohornet/hornet/plugins/inx"
@@ -229,7 +229,7 @@ func run() error {
 		attachEvents()
 		deps.AutopeeringManager.Run(ctx)
 		detachEvents()
-	}, shutdown.PriorityAutopeering); err != nil {
+	}, daemon.PriorityAutopeering); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 

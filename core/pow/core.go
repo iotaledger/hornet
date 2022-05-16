@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/dig"
 
+	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/pow"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -60,7 +60,7 @@ func run() error {
 		<-ctx.Done()
 		CoreComponent.LogInfo("Stopping PoW Handler ...")
 		CoreComponent.LogInfo("Stopping PoW Handler ... done")
-	}, shutdown.PriorityPoWHandler); err != nil {
+	}, daemon.PriorityPoWHandler); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
