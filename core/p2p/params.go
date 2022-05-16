@@ -37,12 +37,10 @@ type ParametersP2P struct {
 
 // ParametersPeers contains the definition of the parameters used by peers.
 type ParametersPeers struct {
-	P2P struct {
-		// Defines the static peers this node should retain a connection to (CLI).
-		Peers []string `default:"" usage:"the static peers this node should retain a connection to (CLI)"`
-		// Defines the aliases of the static peers (must be the same length like CfgP2PPeers) (CLI).
-		PeerAliases []string `default:"" usage:"the aliases of the static peers (must be the same amount like \"p2p.peers\""`
-	}
+	// Defines the static peers this node should retain a connection to (CLI).
+	Peers []string `default:"" usage:"the static peers this node should retain a connection to (CLI)"`
+	// Defines the aliases of the static peers (must be the same length like CfgP2PPeers) (CLI).
+	PeerAliases []string `default:"" usage:"the aliases of the static peers (must be the same amount like \"p2p.peers\""`
 }
 
 var ParamsP2P = &ParametersP2P{}
@@ -54,7 +52,7 @@ var params = &app.ComponentParams{
 	},
 	AdditionalParams: map[string]map[string]any{
 		"peeringConfig": {
-			"": ParamsPeers,
+			"p2p": ParamsPeers,
 		},
 	},
 	Masked: []string{"p2p.identityPrivateKey"},

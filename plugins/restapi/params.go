@@ -62,5 +62,5 @@ var params = &app.ComponentParams{
 	Params: map[string]any{
 		"restAPI": ParamsRestAPI,
 	},
-	Masked: nil,
+	Masked: []string{"restAPI.jwtAuth.salt"},
 }

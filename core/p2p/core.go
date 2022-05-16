@@ -191,8 +191,8 @@ func provide(c *dig.Container) error {
 		}
 
 		// peers from CLI arguments
-		peerIDsStr := ParamsPeers.P2P.Peers
-		peerAliases := ParamsPeers.P2P.PeerAliases
+		peerIDsStr := ParamsPeers.Peers
+		peerAliases := ParamsPeers.PeerAliases
 
 		applyAliases := true
 		if len(peerIDsStr) != len(peerAliases) {

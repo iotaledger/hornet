@@ -140,7 +140,7 @@ func provide(c *dig.Container) error {
 		}
 
 		if pruningSizeEnabled && pruningTargetDatabaseSizeBytes == 0 {
-			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)), CoreComponent.App.Config().GetParameterPath(&ParamsPruning.Size.Enabled))
+			CoreComponent.LogPanicf("%s has to be specified if %s is enabled", CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.TargetSize)), CoreComponent.App.Config().GetParameterPath(&(ParamsPruning.Size.Enabled)))
 		}
 
 		return snapshot.NewSnapshotManager(

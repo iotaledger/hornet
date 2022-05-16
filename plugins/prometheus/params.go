@@ -29,7 +29,7 @@ type ParametersPrometheus struct {
 	// include restAPI metrics.
 	RestAPIMetrics bool `default:"true" usage:"include restAPI metrics"`
 	// include INXMetrics metrics.
-	INXMetrics bool `default:"true" usage:"include INX metrics"`
+	INXMetrics bool `name:"inxMetrics" default:"true" usage:"include INX metrics"`
 	// include migration metrics.
 	MigrationMetrics bool `default:"true" usage:"include migration metrics"`
 	// include debug metrics.
