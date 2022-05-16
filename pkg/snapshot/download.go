@@ -78,9 +78,9 @@ func (wc *WriteCounter) PrintProgress() {
 // DownloadTarget holds URLs to a full and delta snapshot.
 type DownloadTarget struct {
 	// URL of the full snapshot file.
-	Full string `json:"full"`
+	Full string `usage:"URL of the full snapshot file" json:"full"`
 	// URL of the delta snapshot file.
-	Delta string `json:"delta"`
+	Delta string `usage:"URL of the delta snapshot file" json:"delta"`
 }
 
 func (s *SnapshotManager) filterTargets(wantedNetworkID uint64, targets []*DownloadTarget) []*DownloadTarget {

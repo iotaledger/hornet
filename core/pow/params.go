@@ -3,19 +3,20 @@ package pow
 import (
 	"time"
 
-	flag "github.com/spf13/pflag"
-
 	"github.com/iotaledger/hive.go/app"
 )
 
-const (
-	// CfgPoWRefreshTipsInterval is the interval for refreshing tips during PoW for spammer messages and messages passed without parents via API.
-	CfgPoWRefreshTipsInterval = "pow.refreshTipsInterval"
-)
+// ParametersPoW contains the definition of the parameters used by PoW.
+type ParametersPoW struct {
+	// Defines the interval for refreshing tips during PoW for spammer messages and messages passed without parents via API.
+	RefreshTipsInterval time.Duration `default:"5s" usage:"interval for refreshing tips during PoW for spammer messages and messages passed without parents via API"`
+}
+
+var ParamsPoW = &ParametersPoW{}
 
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.Duration(CfgPoWRefreshTipsInterval, 5*time.Second, "interval for refreshing tips during PoW for spammer messages and messages passed without parents via API")
+	Params: map[string]any{
+		"pow": ParamsPoW,
 	},
 	Masked: nil,
 }

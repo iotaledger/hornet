@@ -8,7 +8,6 @@ import (
 	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -38,13 +37,12 @@ func provide(c *dig.Container) error {
 
 	type handlerDeps struct {
 		dig.In
-		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps handlerDeps) *pow.Handler {
 		// init the pow handler with all possible settings
-		return pow.New(deps.ProtocolParameters.MinPoWScore, deps.AppConfig.Duration(CfgPoWRefreshTipsInterval))
+		return pow.New(deps.ProtocolParameters.MinPoWScore, ParamsPoW.RefreshTipsInterval)
 	}); err != nil {
 		CoreComponent.LogPanic(err)
 	}

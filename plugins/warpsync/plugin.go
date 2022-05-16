@@ -14,7 +14,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
 
@@ -56,11 +55,10 @@ type dependencies struct {
 	RequestQueue  gossip.RequestQueue
 	GossipService *gossip.Service
 	Requester     *gossip.Requester
-	AppConfig     *configuration.Configuration `name:"appConfig"`
 }
 
 func configure() error {
-	warpSync = gossip.NewWarpSync(deps.AppConfig.Int(CfgWarpSyncAdvancementRange))
+	warpSync = gossip.NewWarpSync(ParamsWarpSync.AdvancementRange)
 	warpSyncMilestoneRequester = gossip.NewWarpSyncMilestoneRequester(deps.Storage, deps.SyncManager, deps.Requester, true)
 	configureEvents()
 	return nil

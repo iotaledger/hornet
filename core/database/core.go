@@ -17,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -68,11 +67,6 @@ type dependencies struct {
 
 func initConfigPars(c *dig.Container) error {
 
-	type cfgDeps struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
-
 	type cfgResult struct {
 		dig.Out
 		DatabaseEngine           database.Engine `name:"databaseEngine"`
@@ -85,23 +79,21 @@ func initConfigPars(c *dig.Container) error {
 		DatabaseAutoRevalidation bool            `name:"databaseAutoRevalidation"`
 	}
 
-	if err := c.Provide(func(deps cfgDeps) cfgResult {
-		dbEngine, err := database.DatabaseEngineFromStringAllowed(deps.AppConfig.String(CfgDatabaseEngine))
+	if err := c.Provide(func() cfgResult {
+		dbEngine, err := database.DatabaseEngineFromStringAllowed(ParamsDatabase.Engine)
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}
 
-		databasePath := deps.AppConfig.String(CfgDatabasePath)
-
 		return cfgResult{
 			DatabaseEngine:           dbEngine,
-			DatabasePath:             databasePath,
-			TangleDatabasePath:       filepath.Join(databasePath, TangleDatabaseDirectoryName),
-			UTXODatabasePath:         filepath.Join(databasePath, UTXODatabaseDirectoryName),
+			DatabasePath:             ParamsDatabase.Path,
+			TangleDatabasePath:       filepath.Join(ParamsDatabase.Path, TangleDatabaseDirectoryName),
+			UTXODatabasePath:         filepath.Join(ParamsDatabase.Path, UTXODatabaseDirectoryName),
 			DeleteDatabaseFlag:       *deleteDatabase,
 			DeleteAllFlag:            *deleteAll,
-			DatabaseDebug:            deps.AppConfig.Bool(CfgDatabaseDebug),
-			DatabaseAutoRevalidation: deps.AppConfig.Bool(CfgDatabaseAutoRevalidation),
+			DatabaseDebug:            ParamsDatabase.Debug,
+			DatabaseAutoRevalidation: ParamsDatabase.AutoRevalidation,
 		}
 	}); err != nil {
 		CoreComponent.LogPanic(err)
@@ -114,13 +106,12 @@ func provide(c *dig.Container) error {
 
 	type databaseDeps struct {
 		dig.In
-		DeleteDatabaseFlag bool                         `name:"deleteDatabase"`
-		DeleteAllFlag      bool                         `name:"deleteAll"`
-		AppConfig          *configuration.Configuration `name:"appConfig"`
-		DatabaseEngine     database.Engine              `name:"databaseEngine"`
-		DatabasePath       string                       `name:"databasePath"`
-		UTXODatabasePath   string                       `name:"utxoDatabasePath"`
-		TangleDatabasePath string                       `name:"tangleDatabasePath"`
+		DeleteDatabaseFlag bool            `name:"deleteDatabase"`
+		DeleteAllFlag      bool            `name:"deleteAll"`
+		DatabaseEngine     database.Engine `name:"databaseEngine"`
+		DatabasePath       string          `name:"databasePath"`
+		UTXODatabasePath   string          `name:"utxoDatabasePath"`
+		TangleDatabasePath string          `name:"tangleDatabasePath"`
 	}
 
 	type databaseOut struct {

@@ -21,7 +21,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -160,7 +159,6 @@ type dependencies struct {
 	PoWHandler              *pow.Handler
 	SnapshotManager         *snapshot.SnapshotManager
 	AppInfo                 *app.AppInfo
-	AppConfig               *configuration.Configuration `name:"appConfig"`
 	PeeringConfigManager    *p2p.ConfigManager
 	ProtocolParameters      *iotago.ProtocolParameters
 	BaseToken               *protocfg.BaseToken
@@ -190,9 +188,9 @@ func configure() error {
 	}
 
 	// Check for features
-	if deps.AppConfig.Bool(restapi.CfgRestAPIPoWEnabled) {
+	if restapi.ParamsRestAPI.PoW.Enabled {
 		AddFeature("PoW")
-		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, deps.AppConfig.Int(restapi.CfgRestAPIPoWWorkerCount)))
+		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, restapi.ParamsRestAPI.PoW.WorkerCount))
 	}
 
 	attacher = deps.Tangle.MessageAttacher(attacherOpts...)

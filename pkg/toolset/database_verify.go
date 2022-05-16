@@ -57,10 +57,8 @@ func databaseVerify(args []string) error {
 		return fmt.Errorf("'%s' not specified", FlagToolSnapshotPath)
 	}
 
-	protoParas, err := getProtocolParametersFromConfigFile(*configFilePathFlag)
-	if err != nil {
-		return err
-	}
+	// TODO: adapt to new protocol parameter logic
+	protoParas := &iotago.ProtocolParameters{}
 
 	// we don't need to check the health of the source db.
 	// it is fine as long as all messages in the cone are found.

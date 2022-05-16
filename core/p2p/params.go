@@ -3,44 +3,59 @@ package p2p
 import (
 	"time"
 
-	flag "github.com/spf13/pflag"
-
 	"github.com/iotaledger/hive.go/app"
 )
 
 const (
-	// Defines the bind addresses of this node.
-	CfgP2PBindMultiAddresses = "p2p.bindMultiAddresses"
-	// Defines the high watermark to use within the connection manager.
-	CfgP2PConnMngHighWatermark = "p2p.connectionManager.highWatermark"
-	// Defines the low watermark to use within the connection manager.
-	CfgP2PConnMngLowWatermark = "p2p.connectionManager.lowWatermark"
-	// Defines the private key used to derive the node identity (optional).
-	CfgP2PIdentityPrivKey = "p2p.identityPrivateKey"
-	// Defines the path to the p2p database.
-	CfgP2PDatabasePath = "p2p.db.path"
-	// Defines the time to wait before trying to reconnect to a disconnected peer.
-	CfgP2PReconnectInterval = "p2p.reconnectInterval"
-	// Defines the static peers this node should retain a connection to (config file).
-	CfgP2PPeers = "p2p.peers"
-	// Defines the aliases of the static peers (must be the same length like CfgP2PPeers) (CLI).
-	CfgP2PPeerAliases = "p2p.peerAliases"
 	// Defines the static peers this node should retain a connection to (CLI).
 	CfgPeers = "peers"
 )
 
+// ParametersP2P contains the definition of the parameters used by p2p.
+type ParametersP2P struct {
+	// Defines the bind addresses of this node.
+	BindMultiAddresses []string `default:"/ip4/0.0.0.0/tcp/15600,/ip6/::/tcp/15600" usage:"the bind addresses for this node"`
+
+	ConnectionManager struct {
+		// Defines the high watermark to use within the connection manager.
+		HighWatermark int `default:"10" usage:"the threshold up on which connections count truncates to the lower watermark"`
+		// Defines the low watermark to use within the connection manager.
+		LowWatermark int `default:"5" usage:"the minimum connections count to hold after the high watermark was reached"`
+	}
+
+	// Defines the private key used to derive the node identity (optional).
+	IdentityPrivateKey string `default:"" usage:"private key used to derive the node identity (optional)"`
+
+	Database struct {
+		// Defines the path to the p2p database.
+		Path string `default:"p2pstore" usage:"the path to the p2p database"`
+	} `name:"db"`
+
+	// Defines the time to wait before trying to reconnect to a disconnected peer.
+	ReconnectInterval time.Duration `default:"30s" usage:"the time to wait before trying to reconnect to a disconnected peer"`
+}
+
+// ParametersPeers contains the definition of the parameters used by peers.
+type ParametersPeers struct {
+	P2P struct {
+		// Defines the static peers this node should retain a connection to (CLI).
+		Peers []string `default:"" usage:"the static peers this node should retain a connection to (CLI)"`
+		// Defines the aliases of the static peers (must be the same length like CfgP2PPeers) (CLI).
+		PeerAliases []string `default:"" usage:"the aliases of the static peers (must be the same amount like \"p2p.peers\""`
+	}
+}
+
+var ParamsP2P = &ParametersP2P{}
+var ParamsPeers = &ParametersPeers{}
+
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.StringSlice(CfgP2PBindMultiAddresses, []string{"/ip4/127.0.0.1/tcp/15600"}, "the bind addresses for this node")
-		fs.Int(CfgP2PConnMngHighWatermark, 10, "the threshold up on which connections count truncates to the lower watermark")
-		fs.Int(CfgP2PConnMngLowWatermark, 5, "the minimum connections count to hold after the high watermark was reached")
-		fs.String(CfgP2PIdentityPrivKey, "", "private key used to derive the node identity (optional)")
-		fs.String(CfgP2PDatabasePath, "p2pstore", "the path to the p2p database")
-		fs.Duration(CfgP2PReconnectInterval, 30*time.Second, "the time to wait before trying to reconnect to a disconnected peer")
+	Params: map[string]any{
+		"p2p": ParamsP2P,
 	},
-	AdditionalParams: func(flagsets map[string]*flag.FlagSet) {
-		flagsets["peeringConfig"].StringSlice(CfgP2PPeers, []string{}, "the static peers this node should retain a connection to (CLI)")
-		flagsets["peeringConfig"].StringSlice(CfgP2PPeerAliases, []string{}, "the aliases of the static peers (must be the same amount like \"p2p.peers\") (CLI)")
+	AdditionalParams: map[string]map[string]any{
+		"peeringConfig": {
+			"": ParamsPeers,
+		},
 	},
-	Masked: []string{CfgP2PIdentityPrivKey},
+	Masked: []string{"p2p.identityPrivateKey"},
 }

@@ -31,7 +31,6 @@ import (
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/basicauth"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/websockethub"
 )
@@ -85,9 +84,8 @@ type dependencies struct {
 	RequestQueue             gossip.RequestQueue
 	PeeringManager           *p2p.Manager
 	MessageProcessor         *gossip.MessageProcessor
-	TipSelector              *tipselect.TipSelector       `optional:"true"`
-	AppConfig                *configuration.Configuration `name:"appConfig"`
-	RestAPIBindAddress       string                       `name:"restAPIBindAddress"`
+	TipSelector              *tipselect.TipSelector `optional:"true"`
+	RestAPIBindAddress       string                 `name:"restAPIBindAddress"`
 	AppInfo                  *app.AppInfo
 	Host                     host.Host
 	NodePrivateKey           crypto.PrivKey          `name:"nodePrivateKey"`
@@ -96,24 +94,19 @@ type dependencies struct {
 
 func initConfigPars(c *dig.Container) error {
 
-	type cfgDeps struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
-
 	type cfgResult struct {
 		dig.Out
 		DashboardAuthUsername string `name:"dashboardAuthUsername"`
 	}
 
-	if err := c.Provide(func(deps cfgDeps) cfgResult {
+	if err := c.Provide(func() cfgResult {
 
-		username := deps.AppConfig.String(CfgDashboardAuthUsername)
+		username := ParamsDashboard.Auth.Username
 		if len(username) == 0 {
-			Plugin.LogPanicf("%s cannot be empty", CfgDashboardAuthUsername)
+			Plugin.LogPanicf("%s cannot be empty", Plugin.App.Config().GetParameterPath(&(ParamsDashboard.Auth.Username)))
 		}
 		if len(username) > maxDashboardAuthUsernameSize {
-			Plugin.LogPanicf("%s has a max length of %d", CfgDashboardAuthUsername, maxDashboardAuthUsernameSize)
+			Plugin.LogPanicf("%s has a max length of %d", Plugin.App.Config().GetParameterPath(&(ParamsDashboard.Auth.Username)), maxDashboardAuthUsernameSize)
 		}
 
 		return cfgResult{
@@ -150,16 +143,16 @@ func configure() error {
 	hub = websockethub.NewHub(Plugin.Logger(), upgrader, broadcastQueueSize, clientSendChannelSize, maxWebsocketMessageSize)
 
 	var err error
-	basicAuth, err = basicauth.NewBasicAuth(deps.AppConfig.String(CfgDashboardAuthUsername),
-		deps.AppConfig.String(CfgDashboardAuthPasswordHash),
-		deps.AppConfig.String(CfgDashboardAuthPasswordSalt))
+	basicAuth, err = basicauth.NewBasicAuth(ParamsDashboard.Auth.Username,
+		ParamsDashboard.Auth.PasswordHash,
+		ParamsDashboard.Auth.PasswordSalt)
 	if err != nil {
 		Plugin.LogPanicf("basic auth initialization failed: %w", err)
 	}
 
 	jwtAuth, err = jwt.NewJWTAuth(
-		deps.AppConfig.String(CfgDashboardAuthUsername),
-		deps.AppConfig.Duration(CfgDashboardAuthSessionTimeout),
+		ParamsDashboard.Auth.Username,
+		ParamsDashboard.Auth.SessionTimeout,
 		deps.Host.ID().String(),
 		deps.NodePrivateKey,
 	)
@@ -177,7 +170,7 @@ func run() error {
 	e.Use(middleware.Recover())
 
 	setupRoutes(e)
-	bindAddr := deps.AppConfig.String(CfgDashboardBindAddress)
+	bindAddr := ParamsDashboard.BindAddress
 
 	go func() {
 		Plugin.LogInfof("You can now access the dashboard using: http://%s", bindAddr)
@@ -392,7 +385,7 @@ func currentNodeStatus() *NodeStatus {
 	status.Version = deps.AppInfo.Version
 	status.LatestVersion = deps.AppInfo.LatestGitHubVersion
 	status.Uptime = time.Since(nodeStartAt).Milliseconds()
-	status.NodeAlias = deps.AppConfig.String(CfgAppAlias)
+	status.NodeAlias = ParamsNode.Alias
 	status.NodeID = deps.Host.ID().String()
 
 	status.ConnectedPeersCount = deps.PeeringManager.ConnectedCount()

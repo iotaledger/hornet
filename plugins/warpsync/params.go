@@ -1,19 +1,20 @@
 package warpsync
 
 import (
-	flag "github.com/spf13/pflag"
-
 	"github.com/iotaledger/hive.go/app"
 )
 
-const (
-	// the used advancement range per warpsync checkpoint
-	CfgWarpSyncAdvancementRange = "warpsync.advancementRange"
-)
+// ParametersWarpSync contains the definition of the parameters used by WarpSync.
+type ParametersWarpSync struct {
+	// Defines the used advancement range per warpsync checkpoint
+	AdvancementRange int `default:"150" usage:"the used advancement range per warpsync checkpoint"`
+}
+
+var ParamsWarpSync = &ParametersWarpSync{}
 
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.Int(CfgWarpSyncAdvancementRange, 150, "the used advancement range per warpsync checkpoint")
+	Params: map[string]any{
+		"warpsync": ParamsWarpSync,
 	},
 	Masked: nil,
 }

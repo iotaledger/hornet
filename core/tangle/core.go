@@ -22,7 +22,6 @@ import (
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
@@ -72,10 +71,9 @@ type dependencies struct {
 	Requester                *gossip.Requester
 	Broadcaster              *gossip.Broadcaster
 	SnapshotManager          *snapshot.SnapshotManager
-	AppConfig                *configuration.Configuration `name:"appConfig"`
-	DatabaseDebug            bool                         `name:"databaseDebug"`
-	DatabaseAutoRevalidation bool                         `name:"databaseAutoRevalidation"`
-	PruneReceipts            bool                         `name:"pruneReceipts"`
+	DatabaseDebug            bool `name:"databaseDebug"`
+	DatabaseAutoRevalidation bool `name:"databaseAutoRevalidation"`
+	PruneReceipts            bool `name:"pruneReceipts"`
 }
 
 func provide(c *dig.Container) error {
@@ -104,21 +102,16 @@ func provide(c *dig.Container) error {
 		CoreComponent.LogPanic(err)
 	}
 
-	type cfgDeps struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
-
 	type cfgResult struct {
 		dig.Out
 		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
 		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
 	}
 
-	if err := c.Provide(func(deps cfgDeps) cfgResult {
+	if err := c.Provide(func() cfgResult {
 		return cfgResult{
-			MaxDeltaMsgYoungestConeRootIndexToCMI: deps.AppConfig.Int(CfgTangleMaxDeltaMsgYoungestConeRootIndexToCMI),
-			MaxDeltaMsgOldestConeRootIndexToCMI:   deps.AppConfig.Int(CfgTangleMaxDeltaMsgOldestConeRootIndexToCMI),
+			MaxDeltaMsgYoungestConeRootIndexToCMI: ParamsTangle.MaxDeltaMsgYoungestConeRootIndexToCMI,
+			MaxDeltaMsgOldestConeRootIndexToCMI:   ParamsTangle.MaxDeltaMsgOldestConeRootIndexToCMI,
 		}
 	}); err != nil {
 		CoreComponent.LogPanic(err)
@@ -148,8 +141,7 @@ func provide(c *dig.Container) error {
 		Requester          *gossip.Requester
 		MessageProcessor   *gossip.MessageProcessor
 		ServerMetrics      *metrics.ServerMetrics
-		ReceiptService     *migrator.ReceiptService     `optional:"true"`
-		AppConfig          *configuration.Configuration `name:"appConfig"`
+		ReceiptService     *migrator.ReceiptService `optional:"true"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
@@ -168,8 +160,8 @@ func provide(c *dig.Container) error {
 			deps.Requester,
 			deps.ReceiptService,
 			deps.ProtocolParameters,
-			deps.AppConfig.Duration(CfgTangleMilestoneTimeout),
-			deps.AppConfig.Duration(CfgTangleWhiteFlagParentsSolidTimeout),
+			ParamsTangle.MilestoneTimeout,
+			ParamsTangle.WhiteFlagParentsSolidTimeout,
 			*syncedAtStartup)
 	}); err != nil {
 		CoreComponent.LogPanic(err)

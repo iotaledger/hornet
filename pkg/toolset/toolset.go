@@ -222,12 +222,19 @@ func printJSON(obj interface{}) error {
 	return nil
 }
 
-func loadConfigFile(filePath string) (*configuration.Configuration, error) {
+func loadConfigFile(filePath string, parameters map[string]any) (*configuration.Configuration, error) {
 	config := configuration.New()
+	flagset := configuration.NewUnsortedFlagSet("", flag.ContinueOnError)
+
+	for namespace, pointerToStruct := range parameters {
+		config.BindParameters(flagset, namespace, pointerToStruct)
+	}
 
 	if err := config.LoadFile(filePath); err != nil {
 		return nil, fmt.Errorf("loading config file failed: %w", err)
 	}
+
+	config.UpdateBoundParameters()
 
 	return config, nil
 }

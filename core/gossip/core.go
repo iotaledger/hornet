@@ -20,7 +20,6 @@ import (
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	"github.com/iotaledger/hive.go/timeutil"
@@ -92,7 +91,6 @@ func provide(c *dig.Container) error {
 		ServerMetrics      *metrics.ServerMetrics
 		RequestQueue       gossip.RequestQueue
 		PeeringManager     *p2p.Manager
-		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 		Profile            *profile.Profile
 	}
@@ -123,7 +121,6 @@ func provide(c *dig.Container) error {
 		PeeringManager     *p2p.Manager
 		Storage            *storage.Storage
 		ServerMetrics      *metrics.ServerMetrics
-		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
@@ -134,9 +131,9 @@ func provide(c *dig.Container) error {
 			deps.PeeringManager,
 			deps.ServerMetrics,
 			gossip.WithLogger(logger.NewLogger("GossipService")),
-			gossip.WithUnknownPeersLimit(deps.AppConfig.Int(CfgP2PGossipUnknownPeersLimit)),
-			gossip.WithStreamReadTimeout(deps.AppConfig.Duration(CfgP2PGossipStreamReadTimeout)),
-			gossip.WithStreamWriteTimeout(deps.AppConfig.Duration(CfgP2PGossipStreamWriteTimeout)),
+			gossip.WithUnknownPeersLimit(ParamsGossip.UnknownPeersLimit),
+			gossip.WithStreamReadTimeout(ParamsGossip.StreamReadTimeout),
+			gossip.WithStreamWriteTimeout(ParamsGossip.StreamWriteTimeout),
 		)
 	}); err != nil {
 		CoreComponent.LogPanic(err)
@@ -144,7 +141,6 @@ func provide(c *dig.Container) error {
 
 	type requesterDeps struct {
 		dig.In
-		AppConfig     *configuration.Configuration `name:"appConfig"`
 		Storage       *storage.Storage
 		GossipService *gossip.Service
 		RequestQueue  gossip.RequestQueue
@@ -155,8 +151,9 @@ func provide(c *dig.Container) error {
 			deps.Storage,
 			deps.GossipService,
 			deps.RequestQueue,
-			gossip.WithRequesterDiscardRequestsOlderThan(deps.AppConfig.Duration(CfgRequestsDiscardOlderThan)),
-			gossip.WithRequesterPendingRequestReEnqueueInterval(deps.AppConfig.Duration(CfgRequestsPendingReEnqueueInterval)))
+			gossip.WithRequesterDiscardRequestsOlderThan(ParamsRequests.DiscardOlderThan),
+			gossip.WithRequesterPendingRequestReEnqueueInterval(ParamsRequests.PendingReEnqueueInterval),
+		)
 	}); err != nil {
 		CoreComponent.LogPanic(err)
 	}

@@ -1,37 +1,32 @@
 package spammer
 
 import (
-	flag "github.com/spf13/pflag"
-
 	"github.com/iotaledger/hive.go/app"
 )
 
-const (
+// ParametersSpammer contains the definition of the parameters used by WarpSync.
+type ParametersSpammer struct {
 	// the message to embed within the spam messages
-	CfgSpammerMessage = "spammer.message"
+	Message string `default:"We are all made of stardust." usage:"the message to embed within the spam messages"`
 	// the tag of the message
-	CfgSpammerTag = "spammer.tag"
+	Tag string `default:"HORNET Spammer" usage:"the tag of the message"`
 	// the tag of the message if the semi-lazy pool is used (uses "tag" if empty)
-	CfgSpammerTagSemiLazy = "spammer.tagSemiLazy"
+	TagSemiLazy string `default:"HORNET Spammer Semi-Lazy" usage:"the tag of the message if the semi-lazy pool is used (uses \"tag\" if empty)"`
 	// workers remains idle for a while when cpu usage gets over this limit (0 = disable)
-	CfgSpammerCPUMaxUsage = "spammer.cpuMaxUsage"
+	CPUMaxUsage float64 `default:"0.80" usage:"workers remains idle for a while when cpu usage gets over this limit (0 = disable)"`
 	// the rate limit for the spammer (0 = no limit)
-	CfgSpammerMPSRateLimit = "spammer.mpsRateLimit"
+	MPSRateLimit float64 `default:"0.0" usage:"the rate limit for the spammer (0 = no limit)"`
 	// the amount of parallel running spammers
-	CfgSpammerWorkers = "spammer.workers"
-	// CfgSpammerAutostart automatically starts the spammer on node startup
-	CfgSpammerAutostart = "spammer.autostart"
-)
+	Workers int `default:"0" usage:"the amount of parallel running spammers"`
+	// whether to automatically start the spammer on node startup
+	Autostart bool `default:"false" usage:"automatically start the spammer on node startup"`
+}
+
+var ParamsSpammer = &ParametersSpammer{}
 
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.String(CfgSpammerMessage, "IOTA - A new dawn", "the message to embed within the spam messages")
-		fs.String(CfgSpammerTag, "HORNET Spammer", "the tag of the message")
-		fs.String(CfgSpammerTagSemiLazy, "HORNET Spammer Semi-Lazy", "the tag of the message if the semi-lazy pool is used (uses \"tag\" if empty)")
-		fs.Float64(CfgSpammerCPUMaxUsage, 0.80, "workers remains idle for a while when cpu usage gets over this limit (0 = disable)")
-		fs.Float64(CfgSpammerMPSRateLimit, 0.0, "the rate limit for the spammer (0 = no limit)")
-		fs.Int(CfgSpammerWorkers, 0, "the amount of parallel running spammers")
-		fs.Bool(CfgSpammerAutostart, false, "automatically start the spammer on node startup")
+	Params: map[string]any{
+		"spammer": ParamsSpammer,
 	},
 	Masked: nil,
 }

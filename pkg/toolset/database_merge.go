@@ -95,10 +95,8 @@ func databaseMerge(args []string) error {
 		}
 	}
 
-	protoParas, err := getProtocolParametersFromConfigFile(*configFilePathFlag)
-	if err != nil {
-		return err
-	}
+	// TODO: adapt to new protocol parameter logic
+	protoParas := &iotago.ProtocolParameters{}
 
 	var tangleStoreSource *storage.Storage = nil
 	if len(*databasePathSourceFlag) > 0 {

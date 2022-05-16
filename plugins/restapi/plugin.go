@@ -18,7 +18,6 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
 
@@ -47,8 +46,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppConfig             *configuration.Configuration `name:"appConfig"`
-	Tangle                *tangle.Tangle               `optional:"true"`
+	Tangle                *tangle.Tangle `optional:"true"`
 	Echo                  *echo.Echo
 	RestAPIMetrics        *metrics.RestAPIMetrics
 	Host                  host.Host
@@ -59,21 +57,16 @@ type dependencies struct {
 
 func initConfigPars(c *dig.Container) error {
 
-	type cfgDeps struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
-
 	type cfgResult struct {
 		dig.Out
 		RestAPIBindAddress      string `name:"restAPIBindAddress"`
 		RestAPILimitsMaxResults int    `name:"restAPILimitsMaxResults"`
 	}
 
-	if err := c.Provide(func(deps cfgDeps) cfgResult {
+	if err := c.Provide(func() cfgResult {
 		return cfgResult{
-			RestAPIBindAddress:      deps.AppConfig.String(CfgRestAPIBindAddress),
-			RestAPILimitsMaxResults: deps.AppConfig.Int(CfgRestAPILimitsMaxResults),
+			RestAPIBindAddress:      ParamsRestAPI.BindAddress,
+			RestAPILimitsMaxResults: ParamsRestAPI.Limits.MaxResults,
 		}
 	}); err != nil {
 		Plugin.LogPanic(err)
@@ -94,24 +87,19 @@ func provide(c *dig.Container) error {
 		Plugin.LogPanic(err)
 	}
 
-	type echoDeps struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
-
 	type echoResult struct {
 		dig.Out
 		Echo                     *echo.Echo
 		DashboardAllowedAPIRoute restapi.AllowedRoute `name:"dashboardAllowedAPIRoute"`
 	}
 
-	if err := c.Provide(func(deps echoDeps) echoResult {
+	if err := c.Provide(func() echoResult {
 		e := echo.New()
 		e.HideBanner = true
 		e.Use(middleware.Recover())
 		e.Use(middleware.CORS())
 		e.Use(middleware.Gzip())
-		e.Use(middleware.BodyLimit(deps.AppConfig.String(CfgRestAPILimitsMaxBodyLength)))
+		e.Use(middleware.BodyLimit(ParamsRestAPI.Limits.MaxBodyLength))
 
 		return echoResult{
 			Echo:                     e,

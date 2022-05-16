@@ -19,7 +19,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/plugins/restapi"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -48,7 +47,6 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppConfig               *configuration.Configuration `name:"appConfig"`
 	SyncManager             *syncmanager.SyncManager
 	UTXOManager             *utxo.Manager
 	Tangle                  *tangle.Tangle
@@ -91,7 +89,7 @@ func configure() error {
 
 	attacherOpts := []tangle.MessageAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
-		tangle.WithPoW(deps.PoWHandler, deps.AppConfig.Int(CfgINXPoWWorkerCount)),
+		tangle.WithPoW(deps.PoWHandler, ParamsINX.PoW.WorkerCount),
 		tangle.WithPoWMetrics(deps.INXMetrics),
 	}
 	if deps.TipSelector != nil {

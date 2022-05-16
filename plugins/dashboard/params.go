@@ -1,42 +1,47 @@
 package dashboard
 
 import (
-	"fmt"
 	"time"
-
-	flag "github.com/spf13/pflag"
 
 	"github.com/iotaledger/hive.go/app"
 )
 
 const (
-	// CfgAppAlias set an alias to identify a node
-	CfgAppAlias = "app.alias"
-	// the bind address on which the dashboard can be accessed from
-	CfgDashboardBindAddress = "dashboard.bindAddress"
-	// whether to run the dashboard in dev mode
-	CfgDashboardDevMode = "dashboard.dev"
-	// how long the auth session should last before expiring
-	CfgDashboardAuthSessionTimeout = "dashboard.auth.sessionTimeout"
-	// the auth username
-	CfgDashboardAuthUsername = "dashboard.auth.username"
-	// the auth password+salt as a scrypt hash
-	CfgDashboardAuthPasswordHash = "dashboard.auth.passwordHash"
-	// the auth salt used for hashing the password
-	CfgDashboardAuthPasswordSalt = "dashboard.auth.passwordSalt"
-
 	maxDashboardAuthUsernameSize = 25
 )
 
+// ParamsDashboard contains the definition of the parameters used by WarpSync.
+type ParametersNode struct {
+	// CfgAppAlias set an alias to identify a node
+	Alias string `default:"HORNET node" usage:"set an alias to identify a node"`
+}
+
+// ParametersDashboard contains the definition of the parameters used by WarpSync.
+type ParametersDashboard struct {
+	// the bind address on which the dashboard can be accessed from
+	BindAddress string `default:"localhost:8081" usage:"the bind address on which the dashboard can be accessed from"`
+	// whether to run the dashboard in dev mode
+	DevMode bool `name:"dev" default:"false" usage:"whether to run the dashboard in dev mode"`
+
+	Auth struct {
+		// how long the auth session should last before expiring
+		SessionTimeout time.Duration `default:"72h" usage:"how long the auth session should last before expiring"`
+		// the auth username
+		Username string `default:"admin" usage:"the auth username (max 25 chars)"`
+		// the auth password+salt as a scrypt hash
+		PasswordHash string `default:"0000000000000000000000000000000000000000000000000000000000000000" usage:"the auth password+salt as a scrypt hash"`
+		// the auth salt used for hashing the password
+		PasswordSalt string `default:"0000000000000000000000000000000000000000000000000000000000000000" usage:"the auth salt used for hashing the password"`
+	}
+}
+
+var ParamsNode = &ParametersNode{}
+var ParamsDashboard = &ParametersDashboard{}
+
 var params = &app.ComponentParams{
-	Params: func(fs *flag.FlagSet) {
-		fs.String(CfgAppAlias, "HORNET node", "set an alias to identify a node")
-		fs.String(CfgDashboardBindAddress, "localhost:8081", "the bind address on which the dashboard can be accessed from")
-		fs.Bool(CfgDashboardDevMode, false, "whether to run the dashboard in dev mode")
-		fs.Duration(CfgDashboardAuthSessionTimeout, 72*time.Hour, "how long the auth session should last before expiring")
-		fs.String(CfgDashboardAuthUsername, "admin", fmt.Sprintf("the auth username (max %d chars)", maxDashboardAuthUsernameSize))
-		fs.String(CfgDashboardAuthPasswordHash, "0000000000000000000000000000000000000000000000000000000000000000", "the auth password+salt as a scrypt hash")
-		fs.String(CfgDashboardAuthPasswordSalt, "0000000000000000000000000000000000000000000000000000000000000000", "the auth salt used for hashing the password")
+	Params: map[string]any{
+		"node":      ParamsNode,
+		"dashboard": ParamsDashboard,
 	},
-	Masked: []string{CfgDashboardAuthPasswordHash, CfgDashboardAuthPasswordSalt},
+	Masked: []string{"dashboard.auth.passwordHash", "dashboard.auth.passwordSalt"},
 }

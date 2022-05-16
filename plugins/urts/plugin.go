@@ -17,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/app/core/shutdown"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/events"
 )
 
@@ -59,7 +58,6 @@ func provide(c *dig.Container) error {
 		TipScoreCalculator *tangle.TipScoreCalculator
 		SyncManager        *syncmanager.SyncManager
 		ServerMetrics      *metrics.ServerMetrics
-		AppConfig          *configuration.Configuration `name:"appConfig"`
 	}
 
 	if err := c.Provide(func(deps tipselDeps) *tipselect.TipSelector {
@@ -69,15 +67,15 @@ func provide(c *dig.Container) error {
 			deps.SyncManager,
 			deps.ServerMetrics,
 
-			deps.AppConfig.Int(CfgTipSelNonLazy+CfgTipSelRetentionRulesTipsLimit),
-			deps.AppConfig.Duration(CfgTipSelNonLazy+CfgTipSelMaxReferencedTipAge),
-			uint32(deps.AppConfig.Int64(CfgTipSelNonLazy+CfgTipSelMaxChildren)),
-			deps.AppConfig.Int(CfgTipSelNonLazy+CfgTipSelSpammerTipsThreshold),
+			ParamsTipsel.NonLazy.RetentionRulesTipsLimit,
+			ParamsTipsel.NonLazy.MaxReferencedTipAge,
+			ParamsTipsel.NonLazy.MaxChildren,
+			ParamsTipsel.NonLazy.SpammerTipsThreshold,
 
-			deps.AppConfig.Int(CfgTipSelSemiLazy+CfgTipSelRetentionRulesTipsLimit),
-			deps.AppConfig.Duration(CfgTipSelSemiLazy+CfgTipSelMaxReferencedTipAge),
-			uint32(deps.AppConfig.Int64(CfgTipSelSemiLazy+CfgTipSelMaxChildren)),
-			deps.AppConfig.Int(CfgTipSelSemiLazy+CfgTipSelSpammerTipsThreshold),
+			ParamsTipsel.SemiLazy.RetentionRulesTipsLimit,
+			ParamsTipsel.SemiLazy.MaxReferencedTipAge,
+			ParamsTipsel.SemiLazy.MaxChildren,
+			ParamsTipsel.SemiLazy.SpammerTipsThreshold,
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)

@@ -32,7 +32,6 @@ import (
 	"github.com/iotaledger/hive.go/autopeering/discover"
 	"github.com/iotaledger/hive.go/autopeering/peer/service"
 	"github.com/iotaledger/hive.go/autopeering/selection"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/crypto/ed25519"
 	"github.com/iotaledger/hive.go/events"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -71,13 +70,12 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppConfig                 *configuration.Configuration `name:"appConfig"`
-	NodePrivateKey            crypto.PrivKey               `name:"nodePrivateKey"`
-	P2PDatabasePath           string                       `name:"p2pDatabasePath"`
-	P2PBindMultiAddresses     []string                     `name:"p2pBindMultiAddresses"`
-	DatabaseEngine            database.Engine              `name:"databaseEngine"`
-	AutopeeringRunAsEntryNode bool                         `name:"autopeeringRunAsEntryNode"`
-	PeeringManager            *p2p.Manager                 `optional:"true"`
+	NodePrivateKey            crypto.PrivKey  `name:"nodePrivateKey"`
+	P2PDatabasePath           string          `name:"p2pDatabasePath"`
+	P2PBindMultiAddresses     []string        `name:"p2pBindMultiAddresses"`
+	DatabaseEngine            database.Engine `name:"databaseEngine"`
+	AutopeeringRunAsEntryNode bool            `name:"autopeeringRunAsEntryNode"`
+	PeeringManager            *p2p.Manager    `optional:"true"`
 	AutopeeringManager        *autopeering.AutopeeringManager
 }
 
@@ -106,7 +104,7 @@ func preProvide(c *dig.Container, application *app.App, initConfig *app.InitConf
 		pluginEnabled = false
 	}
 
-	runAsEntryNode := pluginEnabled && application.Config().Bool(CfgNetAutopeeringRunAsEntryNode)
+	runAsEntryNode := pluginEnabled && ParamsAutopeering.RunAsEntryNode
 	if runAsEntryNode {
 		// the following pluggables stay enabled
 		// - profile
@@ -156,16 +154,15 @@ func provide(c *dig.Container) error {
 
 	type autopeeringDeps struct {
 		dig.In
-		AppConfig          *configuration.Configuration `name:"appConfig"`
 		ProtocolParameters *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps autopeeringDeps) *autopeering.AutopeeringManager {
 		return autopeering.NewAutopeeringManager(
 			Plugin.Logger(),
-			deps.AppConfig.String(CfgNetAutopeeringBindAddr),
-			deps.AppConfig.Strings(CfgNetAutopeeringEntryNodes),
-			deps.AppConfig.Bool(CfgNetAutopeeringEntryNodesPreferIPv6),
+			ParamsAutopeering.BindAddress,
+			ParamsAutopeering.EntryNodes,
+			ParamsAutopeering.EntryNodesPreferIPv6,
 			service.Key(deps.ProtocolParameters.NetworkName),
 		)
 	}); err != nil {
@@ -177,9 +174,9 @@ func provide(c *dig.Container) error {
 
 func configure() error {
 	selection.SetParameters(selection.Parameters{
-		InboundNeighborSize:  deps.AppConfig.Int(CfgNetAutopeeringInboundPeers),
-		OutboundNeighborSize: deps.AppConfig.Int(CfgNetAutopeeringOutboundPeers),
-		SaltLifetime:         deps.AppConfig.Duration(CfgNetAutopeeringSaltLifetime),
+		InboundNeighborSize:  ParamsAutopeering.InboundPeers,
+		OutboundNeighborSize: ParamsAutopeering.OutboundPeers,
+		SaltLifetime:         ParamsAutopeering.SaltLifetime,
 	})
 
 	if err := autopeering.RegisterAutopeeringProtocolInMultiAddresses(); err != nil {
@@ -197,7 +194,7 @@ func configure() error {
 		deps.P2PDatabasePath,
 		deps.DatabaseEngine,
 		deps.P2PBindMultiAddresses,
-		deps.AppConfig.String(CfgNetAutopeeringBindAddr),
+		ParamsAutopeering.BindAddress,
 		deps.AutopeeringRunAsEntryNode,
 	)
 	if err != nil {
