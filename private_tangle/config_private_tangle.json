@@ -170,7 +170,7 @@
     "tag": "HORNET Spammer",
     "tagSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
-    "mpsRateLimit": 5.0,
+    "bpsRateLimit": 5.0,
     "workers": 0,
     "autostart": true
   },

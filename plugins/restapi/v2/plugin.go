@@ -180,7 +180,7 @@ func configure() error {
 	routeGroup := deps.Echo.Group("/api/v2")
 
 	attacherOpts := []tangle.BlockAttacherOption{
-		tangle.WithTimeout(messageProcessedTimeout),
+		tangle.WithTimeout(blockProcessedTimeout),
 		tangle.WithPoWMetrics(deps.RestAPIMetrics),
 	}
 	if deps.TipSelector != nil {
@@ -215,7 +215,7 @@ func configure() error {
 	}
 
 	routeGroup.GET(RouteBlockMetadata, func(c echo.Context) error {
-		resp, err := messageMetadataByID(c)
+		resp, err := blockMetadataByID(c)
 		if err != nil {
 			return err
 		}
@@ -230,7 +230,7 @@ func configure() error {
 
 		switch mimeType {
 		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
-			resp, err := messageBytesByID(c)
+			resp, err := blockBytesByID(c)
 			if err != nil {
 				return err
 			}
@@ -238,7 +238,7 @@ func configure() error {
 
 		default:
 			// default to echo.MIMEApplicationJSON
-			resp, err := messageByID(c)
+			resp, err := blockByID(c)
 			if err != nil {
 				return err
 			}
@@ -256,7 +256,7 @@ func configure() error {
 	})
 
 	routeGroup.POST(RouteBlocks, func(c echo.Context) error {
-		resp, err := sendMessage(c)
+		resp, err := sendBlock(c)
 		if err != nil {
 			return err
 		}
@@ -272,7 +272,7 @@ func configure() error {
 
 		switch mimeType {
 		case restapipkg.MIMEApplicationVendorIOTASerializerV1:
-			resp, err := messageBytesByTransactionID(c)
+			resp, err := blockBytesByTransactionID(c)
 			if err != nil {
 				return err
 			}
@@ -280,7 +280,7 @@ func configure() error {
 
 		default:
 			// default to echo.MIMEApplicationJSON
-			resp, err := messageByTransactionID(c)
+			resp, err := blockByTransactionID(c)
 			if err != nil {
 				return err
 			}

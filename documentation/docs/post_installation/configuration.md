@@ -610,12 +610,12 @@ Example:
 ## <a id="spammer"></a> 16. Spammer
 
 | Name         | Description                                                                        | Type    | Default value                  |
-| ------------ | ---------------------------------------------------------------------------------- | ------- | ------------------------------ |
+|--------------| ---------------------------------------------------------------------------------- | ------- | ------------------------------ |
 | message      | The message to embed within the spam messages                                      | string  | "We are all made of stardust." |
 | tag          | The tag of the message                                                             | string  | "HORNET Spammer"               |
 | tagSemiLazy  | The tag of the message if the semi-lazy pool is used (uses "tag" if empty)         | string  | "HORNET Spammer Semi-Lazy"     |
 | cpuMaxUsage  | Workers remains idle for a while when cpu usage gets over this limit (0 = disable) | float   | 0.8                            |
-| mpsRateLimit | The rate limit for the spammer (0 = no limit)                                      | float   | 0.0                            |
+| bpsRateLimit | The rate limit for the spammer (0 = no limit)                                      | float   | 0.0                            |
 | workers      | The amount of parallel running spammers                                            | int     | 0                              |
 | autostart    | Automatically start the spammer on node startup                                    | boolean | false                          |
 
@@ -628,7 +628,7 @@ Example:
       "tag": "HORNET Spammer",
       "tagSemiLazy": "HORNET Spammer Semi-Lazy",
       "cpuMaxUsage": 0.8,
-      "mpsRateLimit": 0,
+      "bpsRateLimit": 0,
       "workers": 0,
       "autostart": false
     }

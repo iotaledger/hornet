@@ -98,7 +98,7 @@ func INXNewBlockMetadata(blockID hornet.BlockID, metadata *storage.BlockMetadata
 func (s *INXServer) ReadBlock(_ context.Context, blockID *inx.BlockId) (*inx.RawBlock, error) {
 	cachedBlock := deps.Storage.CachedBlockOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // block +1
 	if cachedBlock == nil {
-		return nil, status.Errorf(codes.NotFound, "message %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
+		return nil, status.Errorf(codes.NotFound, "block %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
 	}
 	defer cachedBlock.Release(true) // block -1
 	return inx.WrapBlock(cachedBlock.Block().Block())
@@ -107,7 +107,7 @@ func (s *INXServer) ReadBlock(_ context.Context, blockID *inx.BlockId) (*inx.Raw
 func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (*inx.BlockMetadata, error) {
 	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // meta +1
 	if cachedBlockMeta == nil {
-		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
+		return nil, status.Errorf(codes.NotFound, "block metadata %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
 	}
 	defer cachedBlockMeta.Release(true) // meta -1
 	return INXNewBlockMetadata(cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
@@ -198,8 +198,8 @@ func (s *INXServer) ListenToReferencedBlocks(filter *inx.BlockFilter, srv inx.IN
 	return ctx.Err()
 }
 
-func (s *INXServer) SubmitBlock(context context.Context, message *inx.RawBlock) (*inx.BlockId, error) {
-	msg, err := message.UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
+func (s *INXServer) SubmitBlock(context context.Context, rawBlock *inx.RawBlock) (*inx.BlockId, error) {
+	block, err := rawBlock.UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (s *INXServer) SubmitBlock(context context.Context, message *inx.RawBlock) 
 	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(context, Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
-	blockID, err := attacher.AttachBlock(mergedCtx, msg)
+	blockID, err := attacher.AttachBlock(mergedCtx, block)
 	if err != nil {
 		return nil, err
 	}

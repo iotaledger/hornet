@@ -15,7 +15,7 @@ type ParametersSpammer struct {
 	// workers remains idle for a while when cpu usage gets over this limit (0 = disable)
 	CPUMaxUsage float64 `name:"cpuMaxUsage" default:"0.80" usage:"workers remains idle for a while when cpu usage gets over this limit (0 = disable)"`
 	// the rate limit for the spammer (0 = no limit)
-	MPSRateLimit float64 `name:"mpsRateLimit" default:"0.0" usage:"the rate limit for the spammer (0 = no limit)"`
+	BPSRateLimit float64 `name:"bpsRateLimit" default:"0.0" usage:"the rate limit for the spammer (0 = no limit)"`
 	// the amount of parallel running spammers
 	Workers int `default:"0" usage:"the amount of parallel running spammers"`
 	// whether to automatically start the spammer on node startup

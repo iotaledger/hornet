@@ -18,10 +18,10 @@ import (
 )
 
 var (
-	messageProcessedTimeout = 1 * time.Second
+	blockProcessedTimeout = 1 * time.Second
 )
 
-func messageMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
+func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
@@ -34,7 +34,7 @@ func messageMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(blockID)
 	if cachedBlockMeta == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", blockID.ToHex())
+		return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
 	}
 	defer cachedBlockMeta.Release(true) // meta -1
 
@@ -46,7 +46,7 @@ func messageMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 		referencedByMilestone = &referencedIndex
 	}
 
-	messageMetadataResponse := &blockMetadataResponse{
+	response := &blockMetadataResponse{
 		BlockID:                    metadata.BlockID().ToHex(),
 		Parents:                    metadata.Parents().ToHex(),
 		Solid:                      metadata.IsSolid(),
@@ -54,7 +54,7 @@ func messageMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 	}
 
 	if metadata.IsMilestone() {
-		messageMetadataResponse.MilestoneIndex = referencedByMilestone
+		response.MilestoneIndex = referencedByMilestone
 	}
 
 	if referenced {
@@ -64,12 +64,12 @@ func messageMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 		if conflict != storage.ConflictNone {
 			inclusionState = "conflicting"
-			messageMetadataResponse.ConflictReason = &conflict
+			response.ConflictReason = &conflict
 		} else if metadata.IsIncludedTxInLedger() {
 			inclusionState = "included"
 		}
 
-		messageMetadataResponse.LedgerInclusionState = &inclusionState
+		response.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
@@ -99,14 +99,14 @@ func messageMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 			shouldReattach = false
 		}
 
-		messageMetadataResponse.ShouldPromote = &shouldPromote
-		messageMetadataResponse.ShouldReattach = &shouldReattach
+		response.ShouldPromote = &shouldPromote
+		response.ShouldReattach = &shouldReattach
 	}
 
-	return messageMetadataResponse, nil
+	return response, nil
 }
 
-func storageMessageByID(c echo.Context) (*storage.Block, error) {
+func storageBlockByID(c echo.Context) (*storage.Block, error) {
 	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
@@ -114,27 +114,27 @@ func storageMessageByID(c echo.Context) (*storage.Block, error) {
 
 	cachedBlock := deps.Storage.CachedBlockOrNil(blockID) // block +1
 	if cachedBlock == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", blockID.ToHex())
+		return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
 	}
 	defer cachedBlock.Release(true) // block -1
 
 	return cachedBlock.Block(), nil
 }
 
-func messageByID(c echo.Context) (*iotago.Block, error) {
-	message, err := storageMessageByID(c)
+func blockByID(c echo.Context) (*iotago.Block, error) {
+	block, err := storageBlockByID(c)
 	if err != nil {
 		return nil, err
 	}
-	return message.Block(), nil
+	return block.Block(), nil
 }
 
-func messageBytesByID(c echo.Context) ([]byte, error) {
-	message, err := storageMessageByID(c)
+func blockBytesByID(c echo.Context) ([]byte, error) {
+	block, err := storageBlockByID(c)
 	if err != nil {
 		return nil, err
 	}
-	return message.Data(), nil
+	return block.Data(), nil
 }
 
 func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
@@ -158,7 +158,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}, nil
 }
 
-func sendMessage(c echo.Context) (*blockCreatedResponse, error) {
+func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
@@ -169,39 +169,39 @@ func sendMessage(c echo.Context) (*blockCreatedResponse, error) {
 		return nil, err
 	}
 
-	msg := &iotago.Block{}
+	iotaBlock := &iotago.Block{}
 
 	switch mimeType {
 	case echo.MIMEApplicationJSON:
-		if err := c.Bind(msg); err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
+		if err := c.Bind(iotaBlock); err != nil {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
 	case restapi.MIMEApplicationVendorIOTASerializerV1:
 		if c.Request().Body == nil {
-			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: request body missing")
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid block, error: request body missing")
 			// bad request
 		}
 
 		bytes, err := ioutil.ReadAll(c.Request().Body)
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
 		// Do not validate here, the parents might need to be set
-		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.ProtocolParameters); err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
+		if _, err := iotaBlock.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.ProtocolParameters); err != nil {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
 	default:
 		return nil, echo.ErrUnsupportedMediaType
 	}
 
-	if msg.ProtocolVersion != deps.ProtocolParameters.Version {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: protocolVersion invalid")
+	if iotaBlock.ProtocolVersion != deps.ProtocolParameters.Version {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid block, error: protocolVersion invalid")
 	}
 
-	switch payload := msg.Payload.(type) {
+	switch payload := iotaBlock.Payload.(type) {
 	case *iotago.Transaction:
 		if payload.Essence.NetworkID != deps.ProtocolParameters.NetworkID() {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
@@ -212,7 +212,7 @@ func sendMessage(c echo.Context) (*blockCreatedResponse, error) {
 	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
-	blockID, err := attacher.AttachBlock(mergedCtx, msg)
+	blockID, err := attacher.AttachBlock(mergedCtx, iotaBlock)
 	if err != nil {
 		if errors.Is(err, tangle.ErrBlockAttacherAttachingNotPossible) {
 			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())

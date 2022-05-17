@@ -42,7 +42,7 @@ var (
 	deps     dependencies
 	attacher *tangle.BlockAttacher
 
-	messageProcessedTimeout = 1 * time.Second
+	blockProcessedTimeout = 1 * time.Second
 )
 
 type dependencies struct {
@@ -88,7 +88,7 @@ func provide(c *dig.Container) error {
 func configure() error {
 
 	attacherOpts := []tangle.BlockAttacherOption{
-		tangle.WithTimeout(messageProcessedTimeout),
+		tangle.WithTimeout(blockProcessedTimeout),
 		tangle.WithPoW(deps.PoWHandler, ParamsINX.PoW.WorkerCount),
 		tangle.WithPoWMetrics(deps.INXMetrics),
 	}

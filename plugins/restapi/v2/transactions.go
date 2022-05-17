@@ -10,7 +10,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func storageMessageByTransactionID(c echo.Context) (*storage.Block, error) {
+func storageBlockByTransactionID(c echo.Context) (*storage.Block, error) {
 
 	transactionID, err := restapi.ParseTransactionIDParam(c)
 	if err != nil {
@@ -38,18 +38,18 @@ func storageMessageByTransactionID(c echo.Context) (*storage.Block, error) {
 	return cachedBlock.Block(), nil
 }
 
-func messageByTransactionID(c echo.Context) (*iotago.Block, error) {
-	message, err := storageMessageByTransactionID(c)
+func blockByTransactionID(c echo.Context) (*iotago.Block, error) {
+	block, err := storageBlockByTransactionID(c)
 	if err != nil {
 		return nil, err
 	}
-	return message.Block(), nil
+	return block.Block(), nil
 }
 
-func messageBytesByTransactionID(c echo.Context) ([]byte, error) {
-	message, err := storageMessageByTransactionID(c)
+func blockBytesByTransactionID(c echo.Context) ([]byte, error) {
+	block, err := storageBlockByTransactionID(c)
 	if err != nil {
 		return nil, err
 	}
-	return message.Data(), nil
+	return block.Data(), nil
 }
