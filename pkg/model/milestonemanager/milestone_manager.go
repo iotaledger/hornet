@@ -123,13 +123,13 @@ func (m *MilestoneManager) VerifyMilestonePayload(payload iotago.Payload) *iotag
 }
 
 // StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
-func (m *MilestoneManager) StoreMilestone(cachedBlock *storage.CachedMessage, milestonePayload *iotago.Milestone, requested bool) {
-	defer cachedBlock.Release(true) // message -1
+func (m *MilestoneManager) StoreMilestone(cachedBlock *storage.CachedBlock, milestonePayload *iotago.Milestone, requested bool) {
+	defer cachedBlock.Release(true) // block -1
 
 	// Mark every valid milestone message as milestone in the database (needed for whiteflag to find last milestone)
 	cachedBlock.Metadata().SetMilestone(true)
 
-	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestonePayload, cachedBlock.Message().MessageID()) // milestone +1
+	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestonePayload, cachedBlock.Block().BlockID()) // milestone +1
 
 	// Force release to store milestones without caching
 	defer cachedMilestone.Release(true) // milestone -1

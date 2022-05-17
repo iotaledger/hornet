@@ -20,19 +20,19 @@ func ShortenedHash(hash hornet.BlockID) string {
 
 // ShortenedTag returns a shortened tag or milestone index for the given message.
 // this is used for the dot file.
-func ShortenedTag(cachedBlock *storage.CachedMessage) string {
-	defer cachedBlock.Release(true) // message -1
+func ShortenedTag(cachedBlock *storage.CachedBlock) string {
+	defer cachedBlock.Release(true) // block -1
 
-	hash := ShortenedHash(cachedBlock.Message().MessageID())
+	hash := ShortenedHash(cachedBlock.Block().BlockID())
 
-	milestonePayload := cachedBlock.Message().Milestone()
+	milestonePayload := cachedBlock.Block().Milestone()
 	if milestonePayload != nil {
 		return fmt.Sprintf("%d-%s", milestonePayload.Index, hash)
 	}
 
-	taggedData := cachedBlock.Message().TransactionEssenceTaggedData()
+	taggedData := cachedBlock.Block().TransactionEssenceTaggedData()
 	if taggedData == nil {
-		taggedData = cachedBlock.Message().TaggedData()
+		taggedData = cachedBlock.Block().TaggedData()
 	}
 	if taggedData == nil {
 		panic("no taggedData found")

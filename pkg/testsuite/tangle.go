@@ -17,8 +17,8 @@ import (
 )
 
 // StoreMessage adds the message to the storage layer and solidifies it.
-// message +1
-func (te *TestEnvironment) StoreMessage(msg *storage.Message) *storage.CachedMessage {
+// block +1
+func (te *TestEnvironment) StoreMessage(msg *storage.Block) *storage.CachedBlock {
 
 	// Store message in the database
 	cachedBlock, alreadyAdded := tangle.AddMessageToStorage(te.storage, te.milestoneManager, msg, te.syncManager.LatestMilestoneIndex(), false, true)
@@ -84,7 +84,7 @@ func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 }
 
 func (te *TestEnvironment) AssertMessageConflictReason(blockID hornet.BlockID, conflict storage.Conflict) {
-	cachedBlockMeta := te.storage.CachedMessageMetadataOrNil(blockID)
+	cachedBlockMeta := te.storage.CachedBlockMetadataOrNil(blockID)
 	require.NotNil(te.TestInterface, cachedBlockMeta)
 	defer cachedBlockMeta.Release(true) // meta -1
 	require.Equal(te.TestInterface, cachedBlockMeta.Metadata().Conflict(), conflict)
@@ -107,7 +107,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		return -1
 	}
 
-	visitedCachedMessages := make(map[string]*storage.CachedMessage)
+	visitedCachedMessages := make(map[string]*storage.CachedBlock)
 
 	milestoneParents, err := te.storage.MilestoneParentsByIndex(conf.MilestoneIndex)
 	require.NoError(te.TestInterface, err, "milestone doesn't exist (%d)", conf.MilestoneIndex)
@@ -127,7 +127,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			defer cachedBlockMeta.Release(true) // meta -1
 
 			if _, visited := visitedCachedMessages[cachedBlockMeta.Metadata().BlockID().ToMapKey()]; !visited {
-				cachedBlock := te.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().BlockID()) // message +1
+				cachedBlock := te.storage.CachedBlockOrNil(cachedBlockMeta.Metadata().BlockID()) // block +1
 				require.NotNil(te.TestInterface, cachedBlock)
 				visitedCachedMessages[cachedBlockMeta.Metadata().BlockID().ToMapKey()] = cachedBlock
 			}
@@ -149,12 +149,12 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 
 	dotFile := fmt.Sprintf("digraph %s\n{\n", te.TestInterface.Name())
 	for _, cachedBlock := range visitedCachedMessages {
-		message := cachedBlock.Message()
+		message := cachedBlock.Block()
 		meta := cachedBlock.Metadata()
 
-		shortIndex := utils.ShortenedTag(cachedBlock.Retain()) // message pass +1
+		shortIndex := utils.ShortenedTag(cachedBlock.Retain()) // block pass +1
 
-		if index := indexOf(message.MessageID()); index != -1 {
+		if index := indexOf(message.BlockID()); index != -1 {
 			dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortIndex, index, shortIndex)
 		}
 
@@ -168,10 +168,10 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 				continue
 			}
 
-			cachedBlockParent := te.storage.CachedMessageOrNil(parent)
+			cachedBlockParent := te.storage.CachedBlockOrNil(parent)
 			require.NotNil(te.TestInterface, cachedBlockParent)
-			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedTag(cachedBlockParent.Retain()), i+1) // message pass +1
-			cachedBlockParent.Release(true)                                                                                                       // message -1
+			dotFile += fmt.Sprintf("\"%s\" -> \"%s\" [ label=\"Parent%d\" ];\n", shortIndex, utils.ShortenedTag(cachedBlockParent.Retain()), i+1) // block pass +1
+			cachedBlockParent.Release(true)                                                                                                       // block -1
 		}
 
 		milestonePayload := message.Milestone()
@@ -191,7 +191,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 				panic("unknown msg state")
 			}
 		}
-		cachedBlock.Release(true) // message -1
+		cachedBlock.Release(true) // block -1
 	}
 
 	for _, milestone := range milestoneMsgs {

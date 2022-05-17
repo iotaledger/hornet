@@ -38,7 +38,7 @@ type TestEnvironment struct {
 	Milestones storage.CachedMilestones
 
 	// cachedMessages is used to cleanup all messages at the end of a test.
-	cachedMessages storage.CachedMessages
+	cachedMessages storage.CachedBlocks
 
 	// showConfirmationGraphs is set if pictures of the confirmation graph should be externally opened during the test.
 	showConfirmationGraphs bool
@@ -94,7 +94,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te := &TestEnvironment{
 		TestInterface:          testInterface,
 		Milestones:             make(storage.CachedMilestones, 0),
-		cachedMessages:         make(storage.CachedMessages, 0),
+		cachedMessages:         make(storage.CachedBlocks, 0),
 		showConfirmationGraphs: showConfirmationGraphs,
 		PoWHandler:             pow.New(targetScore, 5*time.Second),
 		protoParas: &iotago.ProtocolParameters{
@@ -239,7 +239,7 @@ func (te *TestEnvironment) LastMilestoneParents() hornet.BlockIDs {
 
 // CleanupTestEnvironment cleans up everything at the end of the test.
 func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
-	te.cachedMessages.Release(true) // message -1
+	te.cachedMessages.Release(true) // block -1
 	te.cachedMessages = nil
 
 	te.Milestones.Release(true) // milestone -1
@@ -261,8 +261,8 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 
 func (te *TestEnvironment) NewTestMessage(index int, parents hornet.BlockIDs) *storage.BlockMetadata {
 	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
-	cachedBlockMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // meta +1
-	defer cachedBlockMeta.Release(true)                                               // meta -1
+	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(msg.StoredMessageID()) // meta +1
+	defer cachedBlockMeta.Release(true)                                             // meta -1
 	return cachedBlockMeta.Metadata()
 }
 

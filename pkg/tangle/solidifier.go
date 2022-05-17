@@ -125,7 +125,7 @@ func (t *Tangle) SolidQueueCheck(
 			return
 		}
 		if cachedBlockMeta == nil {
-			t.LogPanicf("solidQueueCheck: Message metadata not found: %v", blockID.ToHex())
+			t.LogPanicf("solidQueueCheck: Block metadata not found: %v", blockID.ToHex())
 			return
 		}
 
@@ -251,7 +251,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	milestoneSolidificationCtx, milestoneSolidificationCancelFunc := t.newMilestoneSolidificationCtx()
 	defer milestoneSolidificationCancelFunc()
 
-	messagesMemcache := storage.NewMessagesMemcache(t.storage.CachedMessage)
+	messagesMemcache := storage.NewBlocksMemcache(t.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(t.storage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(t.storage, metadataMemcache)
 
@@ -324,7 +324,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(
 		t.storage.UTXOManager(),
 		memcachedTraverserStorage,
-		messagesMemcache.CachedMessage,
+		messagesMemcache.CachedBlock,
 		t.protoParas,
 		milestonePayloadToSolidify,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
@@ -513,13 +513,13 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 				return false, nil
 			}
 
-			cachedBlock := t.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().BlockID()) // message +1
+			cachedBlock := t.storage.CachedBlockOrNil(cachedBlockMeta.Metadata().BlockID()) // block +1
 			if cachedBlock == nil {
 				return false, fmt.Errorf("%w message ID: %s", common.ErrBlockNotFound, cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
-			defer cachedBlock.Release(true) // message -1
+			defer cachedBlock.Release(true) // block -1
 
-			milestonePayload := t.milestoneManager.VerifyMilestoneMessage(cachedBlock.Message().Message())
+			milestonePayload := t.milestoneManager.VerifyMilestoneMessage(cachedBlock.Block().Block())
 			if milestonePayload == nil {
 				return true, nil
 			}
@@ -530,7 +530,7 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 			}
 
 			// milestone found!
-			t.milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, false) // message pass +1
+			t.milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, false) // block pass +1
 
 			milestoneFound = true
 			return true, nil // we keep searching for all missing milestones

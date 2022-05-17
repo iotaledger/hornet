@@ -92,7 +92,7 @@ type Storage struct {
 
 	// object storages
 	childrenStorage             *objectstorage.ObjectStorage
-	messagesStorage             *objectstorage.ObjectStorage
+	blocksStorage               *objectstorage.ObjectStorage
 	metadataStorage             *objectstorage.ObjectStorage
 	milestoneIndexStorage       *objectstorage.ObjectStorage
 	milestoneStorage            *objectstorage.ObjectStorage
@@ -360,7 +360,7 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 		cachesOpts = cachesProfile[0]
 	}
 
-	if err := s.configureMessageStorage(tangleStore, cachesOpts.Messages); err != nil {
+	if err := s.configureBlockStorage(tangleStore, cachesOpts.Messages); err != nil {
 		return err
 	}
 
@@ -404,7 +404,7 @@ func (s *Storage) FlushAndCloseStores() error {
 // FlushStorages flushes all storages.
 func (s *Storage) FlushStorages() {
 	s.FlushMilestoneStorage()
-	s.FlushMessagesStorage()
+	s.FlushBlocksStorage()
 	s.FlushChildrenStorage()
 	s.FlushUnreferencedMessagesStorage()
 }
@@ -412,7 +412,7 @@ func (s *Storage) FlushStorages() {
 // ShutdownStorages shuts down all storages.
 func (s *Storage) ShutdownStorages() {
 	s.ShutdownMilestoneStorage()
-	s.ShutdownMessagesStorage()
+	s.ShutdownBlocksStorage()
 	s.ShutdownChildrenStorage()
 	s.ShutdownUnreferencedMessagesStorage()
 }

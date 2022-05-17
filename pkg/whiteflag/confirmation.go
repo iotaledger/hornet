@@ -63,7 +63,7 @@ var (
 func ConfirmMilestone(
 	utxoManager *utxo.Manager,
 	parentsTraverserStorage dag.ParentsTraverserStorage,
-	cachedMessageFunc storage.CachedMessageFunc,
+	cachedMessageFunc storage.CachedBlockFunc,
 	protoParas *iotago.ProtocolParameters,
 	milestonePayload *iotago.Milestone,
 	whiteFlagTraversalCondition dag.Predicate,

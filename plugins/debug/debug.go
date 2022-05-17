@@ -204,7 +204,7 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		return nil, err
 	}
 
-	cachedBlockMetaStart := deps.Storage.CachedMessageMetadataOrNil(blockID) // meta +1
+	cachedBlockMetaStart := deps.Storage.CachedBlockMetadataOrNil(blockID) // meta +1
 	if cachedBlockMetaStart == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", blockID.ToHex())
 	}

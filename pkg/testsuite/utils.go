@@ -34,7 +34,7 @@ type MessageBuilder struct {
 
 type Message struct {
 	builder *MessageBuilder
-	block   *storage.Message
+	block   *storage.Block
 
 	consumedOutputs []*utxo.Output
 	sentOutput      *utxo.Output
@@ -224,7 +224,7 @@ func (b *MessageBuilder) Build() *Message {
 	messageTx := message.Transaction()
 	txEssence := messageTx.Essence
 	for i := range txEssence.Outputs {
-		output, err := utxo.NewOutput(message.MessageID(), b.te.LastMilestoneIndex()+1, 0, messageTx, uint16(i))
+		output, err := utxo.NewOutput(message.BlockID(), b.te.LastMilestoneIndex()+1, 0, messageTx, uint16(i))
 		require.NoError(b.te.TestInterface, err)
 
 		switch iotaOutput := output.Output().(type) {
@@ -254,7 +254,7 @@ func (b *MessageBuilder) Build() *Message {
 
 func (m *Message) Store() *Message {
 	require.Nil(m.builder.te.TestInterface, m.storedMessageID)
-	m.storedMessageID = m.builder.te.StoreMessage(m.message).Message().MessageID()
+	m.storedMessageID = m.builder.te.StoreMessage(m.message).Block().BlockID()
 	return m
 }
 
@@ -283,7 +283,7 @@ func (m *Message) IotaMessage() *iotago.Block {
 	return m.message.Message()
 }
 
-func (m *Message) StoredMessage() *storage.Message {
+func (m *Message) StoredMessage() *storage.Block {
 	return m.message
 }
 

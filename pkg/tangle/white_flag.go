@@ -44,7 +44,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 
 	// check all parents for solidity
 	for _, parent := range parents {
-		cachedBlockMeta := t.storage.CachedMessageMetadataOrNil(parent)
+		cachedBlockMeta := t.storage.CachedBlockMetadataOrNil(parent)
 		if cachedBlockMeta == nil {
 			contains, err := t.storage.SolidEntryPointsContain(parent)
 			if err != nil {
@@ -67,7 +67,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		})
 	}
 
-	messagesMemcache := storage.NewMessagesMemcache(t.storage.CachedMessage)
+	messagesMemcache := storage.NewBlocksMemcache(t.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(t.storage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(t.storage, metadataMemcache)
 
@@ -117,7 +117,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		ctx,
 		t.storage.UTXOManager(),
 		parentsTraverser,
-		messagesMemcache.CachedMessage,
+		messagesMemcache.CachedBlock,
 		index,
 		timestamp,
 		parents,

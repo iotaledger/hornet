@@ -155,7 +155,7 @@ func (p *Protocol) Send(message []byte) error {
 	return nil
 }
 
-// SendMessage sends a storage.Message to the given peer.
+// SendMessage sends a storage.Block to the given peer.
 func (p *Protocol) SendMessage(msgData []byte) {
 	messageMsg, err := NewMessageMsg(msgData)
 	if err != nil {
@@ -173,7 +173,7 @@ func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex mi
 	p.Enqueue(heartbeatData)
 }
 
-// SendMessageRequest sends a storage.Message request message to the given peer.
+// SendMessageRequest sends a storage.Block request message to the given peer.
 func (p *Protocol) SendMessageRequest(requestedMessageID hornet.BlockID) {
 	txReqData, err := NewMessageRequestMsg(requestedMessageID)
 	if err != nil {

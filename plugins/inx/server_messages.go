@@ -96,16 +96,16 @@ func INXNewBlockMetadata(blockID hornet.BlockID, metadata *storage.BlockMetadata
 }
 
 func (s *INXServer) ReadBlock(_ context.Context, blockID *inx.BlockId) (*inx.RawBlock, error) {
-	cachedBlock := deps.Storage.CachedMessageOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // message +1
+	cachedBlock := deps.Storage.CachedBlockOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // block +1
 	if cachedBlock == nil {
 		return nil, status.Errorf(codes.NotFound, "message %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
 	}
-	defer cachedBlock.Release(true) // message -1
-	return inx.WrapBlock(cachedBlock.Message().Message())
+	defer cachedBlock.Release(true) // block -1
+	return inx.WrapBlock(cachedBlock.Block().Block())
 }
 
 func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (*inx.BlockMetadata, error) {
-	cachedBlockMeta := deps.Storage.CachedMessageMetadataOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // meta +1
+	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // meta +1
 	if cachedBlockMeta == nil {
 		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
 	}
@@ -116,17 +116,17 @@ func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (
 func (s *INXServer) ListenToBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		cachedBlock := task.Param(0).(*storage.CachedMessage)
-		defer cachedBlock.Release(true) // message -1
+		cachedBlock := task.Param(0).(*storage.CachedBlock)
+		defer cachedBlock.Release(true) // block -1
 
-		payload := inx.NewBlockWithBytes(cachedBlock.Message().MessageID().ToArray(), cachedBlock.Message().Data())
+		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID().ToArray(), cachedBlock.Block().Data())
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)
 	})
-	closure := events.NewClosure(func(cachedBlock *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
+	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
 		//TODO: apply filter?
 		wp.Submit(cachedBlock)
 	})

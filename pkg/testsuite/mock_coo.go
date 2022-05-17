@@ -83,14 +83,14 @@ func (coo *MockCoo) LastMilestoneParents() hornet.BlockIDs {
 func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.BlockID {
 	msg, err := storage.NewMessage(message, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
 	require.NoError(coo.te.TestInterface, err)
-	cachedBlock := coo.te.StoreMessage(msg) // message +1, no need to release, since we remember all the messages for later cleanup
+	cachedBlock := coo.te.StoreMessage(msg) // block +1, no need to release, since we remember all the messages for later cleanup
 
-	milestonePayload := cachedBlock.Message().Milestone()
+	milestonePayload := cachedBlock.Block().Milestone()
 	if milestonePayload != nil {
 		// message is a milestone
 		coo.te.syncManager.SetLatestMilestoneIndex(milestone.Index(milestonePayload.Index))
 	}
-	return msg.MessageID()
+	return msg.BlockID()
 }
 
 func (coo *MockCoo) bootstrap() {
@@ -100,7 +100,7 @@ func (coo *MockCoo) bootstrap() {
 }
 
 func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, parents hornet.BlockIDs, lastMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
-	messagesMemcache := storage.NewMessagesMemcache(coo.te.storage.CachedMessage)
+	messagesMemcache := storage.NewBlocksMemcache(coo.te.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(coo.te.storage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(coo.te.storage, metadataMemcache)
 
@@ -121,7 +121,7 @@ func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, pa
 	return whiteflag.ComputeWhiteFlagMutations(context.Background(),
 		coo.te.UTXOManager(),
 		parentsTraverser,
-		messagesMemcache.CachedMessage,
+		messagesMemcache.CachedBlock,
 		index,
 		timestamp,
 		parents,

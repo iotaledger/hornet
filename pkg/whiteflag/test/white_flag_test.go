@@ -443,19 +443,19 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // reattachment
 
-	milestone5Metadata := te.Storage().CachedMessageMetadataOrNil(blockIDMilestone5)
+	milestone5Metadata := te.Storage().CachedBlockMetadataOrNil(blockIDMilestone5)
 	require.NotNil(t, milestone5Metadata)
 	defer milestone5Metadata.Release(true)
 	require.False(t, milestone5Metadata.Metadata().IsReferenced())
 	require.True(t, milestone5Metadata.Metadata().IsMilestone())
 
-	reattachmentMetadata := te.Storage().CachedMessageMetadataOrNil(milestone5Reattachment)
+	reattachmentMetadata := te.Storage().CachedBlockMetadataOrNil(milestone5Reattachment)
 	require.NotNil(t, reattachmentMetadata)
 	defer reattachmentMetadata.Release(true)
 	require.True(t, reattachmentMetadata.Metadata().IsReferenced())
 	require.True(t, reattachmentMetadata.Metadata().IsMilestone())
 
-	invalidMilestone5Metadata := te.Storage().CachedMessageMetadataOrNil(invalidMilestone5Reattachment)
+	invalidMilestone5Metadata := te.Storage().CachedBlockMetadataOrNil(invalidMilestone5Reattachment)
 	require.NotNil(t, invalidMilestone5Metadata)
 	defer invalidMilestone5Metadata.Release(true)
 	require.False(t, invalidMilestone5Metadata.Metadata().IsReferenced())

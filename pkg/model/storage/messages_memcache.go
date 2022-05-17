@@ -4,43 +4,43 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
-type CachedMessageFunc func(blockID hornet.BlockID) (*CachedMessage, error)
+type CachedBlockFunc func(blockID hornet.BlockID) (*CachedBlock, error)
 
-type MessagesMemcache struct {
-	cachedMessageFunc CachedMessageFunc
-	cachedBlocks      map[string]*CachedMessage
+type BlocksMemcache struct {
+	cachedBlockFunc CachedBlockFunc
+	cachedBlocks    map[string]*CachedBlock
 }
 
-// NewMessagesMemcache creates a new MessagesMemcache instance.
-func NewMessagesMemcache(cachedMessageFunc CachedMessageFunc) *MessagesMemcache {
-	return &MessagesMemcache{
-		cachedMessageFunc: cachedMessageFunc,
-		cachedBlocks:      make(map[string]*CachedMessage),
+// NewBlocksMemcache creates a new BlocksMemcache instance.
+func NewBlocksMemcache(cachedBlockFunc CachedBlockFunc) *BlocksMemcache {
+	return &BlocksMemcache{
+		cachedBlockFunc: cachedBlockFunc,
+		cachedBlocks:    make(map[string]*CachedBlock),
 	}
 }
 
 // Cleanup releases all the cached objects that have been used.
 // This MUST be called by the user at the end.
-func (c *MessagesMemcache) Cleanup(forceRelease bool) {
+func (c *BlocksMemcache) Cleanup(forceRelease bool) {
 
 	// release all msgs at the end
 	for _, cachedBlock := range c.cachedBlocks {
-		cachedBlock.Release(forceRelease) // message -1
+		cachedBlock.Release(forceRelease) // block -1
 	}
-	c.cachedBlocks = make(map[string]*CachedMessage)
+	c.cachedBlocks = make(map[string]*CachedBlock)
 }
 
-// CachedMessage returns a cached message object.
-// message +1
-func (c *MessagesMemcache) CachedMessage(blockID hornet.BlockID) (*CachedMessage, error) {
+// CachedBlock returns a cached block object.
+// block +1
+func (c *BlocksMemcache) CachedBlock(blockID hornet.BlockID) (*CachedBlock, error) {
 	blockIDMapKey := blockID.ToMapKey()
 
 	var err error
 
-	// load up msg
+	// load up block
 	cachedBlock, exists := c.cachedBlocks[blockIDMapKey]
 	if !exists {
-		cachedBlock, err = c.cachedMessageFunc(blockID) // message +1 (this is the one that gets cleared by "Cleanup")
+		cachedBlock, err = c.cachedBlockFunc(blockID) // block +1 (this is the one that gets cleared by "Cleanup")
 		if err != nil {
 			return nil, err
 		}
@@ -52,5 +52,5 @@ func (c *MessagesMemcache) CachedMessage(blockID hornet.BlockID) (*CachedMessage
 		c.cachedBlocks[blockIDMapKey] = cachedBlock
 	}
 
-	return cachedBlock.Retain(), nil // message +1
+	return cachedBlock.Retain(), nil // block +1
 }

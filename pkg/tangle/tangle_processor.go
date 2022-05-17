@@ -20,7 +20,7 @@ import (
 func (t *Tangle) ConfigureTangleProcessor() {
 
 	t.receiveMsgWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.processIncomingTx(task.Param(0).(*storage.Message), task.Param(1).(gossip.Requests), task.Param(2).(*gossip.Protocol))
+		t.processIncomingTx(task.Param(0).(*storage.Block), task.Param(1).(gossip.Requests), task.Param(2).(*gossip.Protocol))
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
 
@@ -55,7 +55,7 @@ func (t *Tangle) RunTangleProcessor() {
 
 	t.startWaitGroup.Add(5)
 
-	onMsgProcessed := events.NewClosure(func(block *storage.Message, requests gossip.Requests, proto *gossip.Protocol) {
+	onMsgProcessed := events.NewClosure(func(block *storage.Block, requests gossip.Requests, proto *gossip.Protocol) {
 		t.receiveMsgWorkerPool.Submit(block, requests, proto)
 	})
 
@@ -187,7 +187,7 @@ func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
 	return t.receiveMsgWorkerPool.GetPendingQueueSize() > (t.receiveMsgQueueSize / 2)
 }
 
-func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip.Requests, proto *gossip.Protocol) {
+func (t *Tangle) processIncomingTx(incomingMsg *storage.Block, requests gossip.Requests, proto *gossip.Protocol) {
 
 	latestMilestoneIndex := t.syncManager.LatestMilestoneIndex()
 	isNodeSyncedWithinBelowMaxDepth := t.syncManager.IsNodeSyncedWithinBelowMaxDepth()
@@ -195,10 +195,10 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 	requested := requests.HasRequest()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
-	cachedBlock, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // message +1
+	cachedBlock, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // block +1
 
 	// Release shouldn't be forced, to cache the latest messages
-	defer cachedBlock.Release(!isNodeSyncedWithinBelowMaxDepth) // message -1
+	defer cachedBlock.Release(!isNodeSyncedWithinBelowMaxDepth) // block -1
 
 	if !alreadyAdded {
 		t.serverMetrics.NewMessages.Inc()
@@ -212,7 +212,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 		for _, request := range requests {
 			// add this newly received message's parents to the request queue
 			if request.RequestType == gossip.RequestTypeMessageID {
-				t.requester.RequestParents(cachedBlock.Retain(), request.MilestoneIndex, true) // message pass +1
+				t.requester.RequestParents(cachedBlock.Retain(), request.MilestoneIndex, true) // block pass +1
 			}
 		}
 
@@ -240,8 +240,8 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
 	// with the message it issued itself because the message may be not solid yet and therefore their database entries
 	// are not created yet.
-	t.Events.ProcessedMessage.Trigger(incomingMsg.MessageID())
-	t.messageProcessedSyncEvent.Trigger(incomingMsg.MessageID().ToMapKey())
+	t.Events.ProcessedMessage.Trigger(incomingMsg.BlockID())
+	t.messageProcessedSyncEvent.Trigger(incomingMsg.BlockID().ToMapKey())
 
 	for _, request := range requests {
 		// mark the received request as processed

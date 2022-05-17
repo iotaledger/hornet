@@ -42,7 +42,7 @@ func NewTipScoreCalculator(storage *storage.Storage, maxDeltaMsgYoungestConeRoot
 }
 
 func (t *TipScoreCalculator) TipScore(ctx context.Context, blockID hornet.BlockID, cmi milestone.Index) (TipScore, error) {
-	cachedBlockMeta := t.storage.CachedMessageMetadataOrNil(blockID) // meta +1
+	cachedBlockMeta := t.storage.CachedBlockMetadataOrNil(blockID) // meta +1
 	if cachedBlockMeta == nil {
 		return TipScoreNotFound, nil
 	}

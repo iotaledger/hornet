@@ -110,7 +110,7 @@ func configure() error {
 	cpuUsageUpdater()
 
 	// helper function to send the message to the network
-	sendMessage := func(msg *storage.Message) error {
+	sendMessage := func(msg *storage.Block) error {
 		if err := deps.MessageProcessor.Emit(msg); err != nil {
 			return err
 		}

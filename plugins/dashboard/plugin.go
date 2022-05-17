@@ -407,7 +407,7 @@ func currentNodeStatus() *NodeStatus {
 			Size: deps.Storage.MilestoneStorageSize(),
 		},
 		Messages: Cache{
-			Size: deps.Storage.MessageStorageSize(),
+			Size: deps.Storage.BlockStorageSize(),
 		},
 		IncomingMessageWorkUnits: Cache{
 			Size: deps.MessageProcessor.WorkUnitsSize(),

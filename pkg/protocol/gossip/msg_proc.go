@@ -39,7 +39,7 @@ var (
 )
 
 func MessageProcessedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(msg *storage.Message, requests Requests, proto *Protocol))(params[0].(*storage.Message), params[1].(Requests), params[2].(*Protocol))
+	handler.(func(msg *storage.Block, requests Requests, proto *Protocol))(params[0].(*storage.Block), params[1].(Requests), params[2].(*Protocol))
 }
 
 // Broadcast defines a message which should be broadcasted.
@@ -197,17 +197,17 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 // All messages passed to this function must be checked with "DeSeriModePerformValidation" before.
 // We also check if the parents are solid and not BMD before we broadcast the message, otherwise
 // this message would be seen as invalid gossip by other peers.
-func (proc *MessageProcessor) Emit(msg *storage.Message) error {
+func (proc *MessageProcessor) Emit(msg *storage.Block) error {
 
 	if msg.ProtocolVersion() != proc.protoParas.Version {
 		return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), proc.protoParas.Version)
 	}
 
-	switch msg.Message().Payload.(type) {
+	switch msg.Block().Payload.(type) {
 
 	case *iotago.Milestone:
 		// enforce milestone msg nonce == 0
-		if msg.Message().Nonce != 0 {
+		if msg.Block().Nonce != 0 {
 			return errors.New("milestone msg nonce must be zero")
 		}
 
@@ -222,7 +222,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 	cmi := proc.syncManager.ConfirmedMilestoneIndex()
 
 	checkParentFunc := func(blockID hornet.BlockID) error {
-		cachedBlockMeta := proc.storage.CachedMessageMetadataOrNil(blockID) // meta +1
+		cachedBlockMeta := proc.storage.CachedBlockMetadataOrNil(blockID) // meta +1
 		if cachedBlockMeta == nil {
 			// parent not found
 			entryPointIndex, exists, err := proc.storage.SolidEntryPointsIndex(blockID)
@@ -352,14 +352,14 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	cachedBlock := proc.storage.CachedMessageOrNil(hornet.BlockIDFromSlice(data)) // message +1
+	cachedBlock := proc.storage.CachedBlockOrNil(hornet.BlockIDFromSlice(data)) // block +1
 	if cachedBlock == nil {
 		// can't reply if we don't have the requested message
 		return
 	}
-	defer cachedBlock.Release(true) // message -1
+	defer cachedBlock.Release(true) // block -1
 
-	requestedData, err := cachedBlock.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
+	requestedData, err := cachedBlock.Block().Block().Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -392,12 +392,12 @@ func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
 // it is safe to call this function for the same WorkUnit multiple times.
 func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
-	processRequests := func(wu *WorkUnit, msg *storage.Message, isMilestonePayload bool) Requests {
+	processRequests := func(wu *WorkUnit, msg *storage.Block, isMilestonePayload bool) Requests {
 
 		var requests Requests
 
 		// mark the message as received
-		request := proc.requestQueue.Received(msg.MessageID())
+		request := proc.requestQueue.Received(msg.BlockID())
 		if request != nil {
 			requests = append(requests, request)
 		}
@@ -440,7 +440,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 			proc.Events.MessageProcessed.Trigger(wu.msg, requests, p)
 		}
 
-		if proc.storage.ContainsBlock(wu.msg.MessageID()) {
+		if proc.storage.ContainsBlock(wu.msg.BlockID()) {
 			proc.serverMetrics.KnownMessages.Inc()
 			p.Metrics.KnownMessages.Inc()
 		}
@@ -480,7 +480,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		}
 	} else {
 		// enforce milestone msg nonce == 0
-		if msg.Message().Nonce != 0 {
+		if msg.Block().Nonce != 0 {
 			wu.punish(errors.New("milestone msg nonce must be zero"))
 		}
 
@@ -531,14 +531,14 @@ func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata)
 		return
 	}
 
-	cachedBlock := proc.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().BlockID()) // message +1
+	cachedBlock := proc.storage.CachedBlockOrNil(cachedBlockMeta.Metadata().BlockID()) // block +1
 	if cachedBlock == nil {
 		return
 	}
-	defer cachedBlock.Release(true) // message -1
+	defer cachedBlock.Release(true) // block -1
 
-	cachedWorkUnit, _ := proc.workUnitFor(cachedBlock.Message().Data()) // workUnit +1
-	defer cachedWorkUnit.Release(true)                                  // workUnit -1
+	cachedWorkUnit, _ := proc.workUnitFor(cachedBlock.Block().Data()) // workUnit +1
+	defer cachedWorkUnit.Release(true)                                // workUnit -1
 	wu := cachedWorkUnit.WorkUnit()
 
 	if wu.requested {

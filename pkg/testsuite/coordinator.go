@@ -37,7 +37,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	te.coo.bootstrap()
 
-	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
+	messagesMemcache := storage.NewBlocksMemcache(te.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
@@ -55,7 +55,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
-		messagesMemcache.CachedMessage,
+		messagesMemcache.CachedBlock,
 		te.protoParas,
 		te.LastMilestonePayload(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
@@ -90,11 +90,11 @@ func (te *TestEnvironment) milestoneForIndex(msIndex milestone.Index) *storage.M
 }
 
 func (te *TestEnvironment) ReattachMessage(blockID hornet.BlockID, parents ...hornet.BlockID) hornet.BlockID {
-	message := te.storage.CachedMessageOrNil(blockID)
+	message := te.storage.CachedBlockOrNil(blockID)
 	require.NotNil(te.TestInterface, message)
 	defer message.Release(true)
 
-	iotagoMessage := message.Message().Message()
+	iotagoMessage := message.Block().Block()
 
 	newParents := iotagoMessage.Parents
 	if len(parents) > 0 {
@@ -127,12 +127,12 @@ func (te *TestEnvironment) ReattachMessage(blockID hornet.BlockID, parents ...ho
 	cachedMessage := te.StoreMessage(storedMessage)
 	require.NotNil(te.TestInterface, cachedMessage)
 
-	return storedMessage.MessageID()
+	return storedMessage.BlockID()
 }
 
 func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago.Milestone) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats, error) {
 
-	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
+	messagesMemcache := storage.NewBlocksMemcache(te.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
@@ -151,7 +151,7 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
-		messagesMemcache.CachedMessage,
+		messagesMemcache.CachedBlock,
 		te.protoParas,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,

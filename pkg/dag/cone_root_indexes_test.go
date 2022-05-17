@@ -39,7 +39,7 @@ func TestConeRootIndexes(t *testing.T) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
 			cmi := latestMilestone.Milestone().Index()
 
-			cachedBlockMeta := te.Storage().CachedMessageMetadataOrNil(messages[len(messages)-1])
+			cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(messages[len(messages)-1])
 			ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 			require.NoError(te.TestInterface, err)
 
@@ -63,7 +63,7 @@ func TestConeRootIndexes(t *testing.T) {
 	parents := append(latestMilestone.Milestone().Parents(), hornet.NullBlockID())
 	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
 
-	cachedBlockMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID())
+	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(msg.StoredMessageID())
 	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 	require.NoError(te.TestInterface, err)
 

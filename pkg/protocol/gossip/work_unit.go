@@ -50,7 +50,7 @@ type WorkUnit struct {
 
 	// data
 	receivedMsgBytes []byte
-	msg              *storage.Message
+	msg              *storage.Block
 	requested        bool
 
 	// status

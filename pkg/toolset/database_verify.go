@@ -143,9 +143,9 @@ func verifyDatabase(
 	// checkMilestoneCone checks if all messages in the current milestone cone are found.
 	checkMilestoneCone := func(
 		ctx context.Context,
-		cachedMessageFunc storage.CachedMessageFunc,
+		cachedMessageFunc storage.CachedBlockFunc,
 		milestoneManager *milestonemanager.MilestoneManager,
-		onNewMilestoneConeMsg func(*storage.CachedMessage),
+		onNewMilestoneConeMsg func(*storage.CachedBlock),
 		msIndex milestone.Index) error {
 
 		// traversal stops if no more messages pass the given condition
@@ -171,17 +171,17 @@ func verifyDatabase(
 			}
 
 			// check if the message exists
-			cachedBlock, err := cachedMessageFunc(cachedBlockMeta.Metadata().BlockID()) // message +1
+			cachedBlock, err := cachedMessageFunc(cachedBlockMeta.Metadata().BlockID()) // block +1
 			if err != nil {
 				return false, err
 			}
 			if cachedBlock == nil {
 				return false, fmt.Errorf("message not found: %s", cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
-			defer cachedBlock.Release(true) // message -1
+			defer cachedBlock.Release(true) // block -1
 
 			if onNewMilestoneConeMsg != nil {
-				onNewMilestoneConeMsg(cachedBlock.Retain()) // message pass +1
+				onNewMilestoneConeMsg(cachedBlock.Retain()) // block pass +1
 			}
 
 			return true, nil
@@ -232,7 +232,7 @@ func verifyDatabase(
 		_, _, err = whiteflag.ConfirmMilestone(
 			utxoManagerTemp,
 			storeSource,
-			storeSource.CachedMessage,
+			storeSource.CachedBlock,
 			protoParas,
 			milestonePayload,
 			// traversal stops if no more messages pass the given condition
@@ -290,10 +290,10 @@ func verifyDatabase(
 
 		if err := checkMilestoneCone(
 			ctx,
-			tangleStoreSource.CachedMessage,
+			tangleStoreSource.CachedBlock,
 			milestoneManager,
-			func(cachedBlock *storage.CachedMessage) {
-				defer cachedBlock.Release(true) // message -1
+			func(cachedBlock *storage.CachedBlock) {
+				defer cachedBlock.Release(true) // block -1
 				msgsCount++
 			}, msIndex); err != nil {
 			return err

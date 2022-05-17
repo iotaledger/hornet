@@ -107,7 +107,7 @@ func getStorageMilestoneRange(tangleStore *storage.Storage) (milestone.Index, mi
 }
 
 type StoreBlockInterface interface {
-	StoreBlockIfAbsent(block *storage.Message) (cachedBlock *storage.CachedMessage, newlyAdded bool)
+	StoreBlockIfAbsent(block *storage.Block) (cachedBlock *storage.CachedBlock, newlyAdded bool)
 	StoreChild(parentBlockID hornet.BlockID, childBlockID hornet.BlockID) *storage.CachedChild
 	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blockID hornet.BlockID) (*storage.CachedMilestone, bool)
 }
@@ -115,26 +115,26 @@ type StoreBlockInterface interface {
 // storeBlock adds a new message to the storage,
 // including all additional information like
 // metadata, children, indexation and milestone entries.
-// message +1
-func storeBlock(protoParas *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Block) (*storage.CachedMessage, error) {
+// block +1
+func storeBlock(protoParas *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Block) (*storage.CachedBlock, error) {
 
 	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
-	cachedBlock, isNew := dbStorage.StoreBlockIfAbsent(message) // message +1
+	cachedBlock, isNew := dbStorage.StoreBlockIfAbsent(message) // block +1
 	if !isNew {
 		// no need to process known messages
 		return cachedBlock, nil
 	}
 
 	for _, parent := range message.Parents() {
-		dbStorage.StoreChild(parent, cachedBlock.Message().MessageID()).Release(true) // child +-0
+		dbStorage.StoreChild(parent, cachedBlock.Block().BlockID()).Release(true) // child +-0
 	}
 
-	if milestonePayload := milestoneManager.VerifyMilestoneMessage(message.Message()); milestonePayload != nil {
-		cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload, message.MessageID()) // milestone +1
+	if milestonePayload := milestoneManager.VerifyMilestoneMessage(message.Block()); milestonePayload != nil {
+		cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload, message.BlockID()) // milestone +1
 
 		// Force release to store milestones without caching
 		cachedMilestone.Release(true) // milestone -1

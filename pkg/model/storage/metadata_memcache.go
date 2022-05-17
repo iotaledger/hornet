@@ -23,7 +23,7 @@ func NewMetadataMemcache(cachedMessageMetadataFunc CachedMessageMetadataFunc) *M
 // This MUST be called by the user at the end.
 func (c *MetadataMemcache) Cleanup(forceRelease bool) {
 
-	// release all msg metadata at the end
+	// release all block metadata at the end
 	for _, cachedBlockMeta := range c.cachedBlockMetas {
 		cachedBlockMeta.Release(forceRelease) // meta -1
 	}
@@ -37,7 +37,7 @@ func (c *MetadataMemcache) CachedBlockMetadata(blockID hornet.BlockID) (*CachedM
 
 	var err error
 
-	// load up msg metadata
+	// load up block metadata
 	cachedBlockMeta, exists := c.cachedBlockMetas[blockIDMapKey]
 	if !exists {
 		cachedBlockMeta, err = c.cachedMessageMetadataFunc(blockID) // meta +1 (this is the one that gets cleared by "Cleanup")

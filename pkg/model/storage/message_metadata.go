@@ -122,7 +122,7 @@ type BlockMetadata struct {
 	// Metadata
 	metadata bitmask.BitMask
 
-	// The index of the milestone which referenced this msg
+	// The index of the milestone which referenced this block
 	referencedIndex milestone.Index
 
 	conflict Conflict

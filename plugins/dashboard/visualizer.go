@@ -45,8 +45,8 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewMessage := events.NewClosure(func(cachedBlock *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
-		cachedBlock.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.BlockMetadata) { // message -1
+	onReceivedNewMessage := events.NewClosure(func(cachedBlock *storage.CachedBlock, _ milestone.Index, _ milestone.Index) {
+		cachedBlock.ConsumeBlockAndMetadata(func(msg *storage.Block, metadata *storage.BlockMetadata) { // block -1
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
@@ -60,7 +60,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:           msg.MessageID().ToHex(),
+						ID:           msg.BlockID().ToHex(),
 						Parents:      parentsHex,
 						IsSolid:      metadata.IsSolid(),
 						IsReferenced: metadata.IsReferenced(),

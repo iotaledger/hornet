@@ -84,7 +84,7 @@ type WhiteFlagMutations struct {
 func ComputeWhiteFlagMutations(ctx context.Context,
 	utxoManager *utxo.Manager,
 	parentsTraverser *dag.ParentsTraverser,
-	cachedMessageFunc storage.CachedMessageFunc,
+	cachedMessageFunc storage.CachedBlockFunc,
 	msIndex milestone.Index,
 	msTimestamp uint32,
 	parents hornet.BlockIDs,
@@ -120,16 +120,16 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	seenPreviousMilestoneID := isFirstMilestone
 	internalTraversalCondition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 		if !seenPreviousMilestoneID && cachedBlockMeta.Metadata().IsMilestone() {
-			msgMilestone, err := cachedMessageFunc(cachedBlockMeta.Metadata().BlockID()) // message +1
+			msgMilestone, err := cachedMessageFunc(cachedBlockMeta.Metadata().BlockID()) // block +1
 			if err != nil {
 				return false, err
 			}
 			if msgMilestone == nil {
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: message not found for milestone message ID: %v", cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
-			defer msgMilestone.Release(true) // message -1
+			defer msgMilestone.Release(true) // block -1
 
-			milestonePayload := msgMilestone.Message().Milestone()
+			milestonePayload := msgMilestone.Block().Milestone()
 			if milestonePayload == nil {
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
@@ -161,16 +161,16 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 		blockID := cachedBlockMeta.Metadata().BlockID()
 
 		// load up message
-		cachedBlock, err := cachedMessageFunc(blockID) // message +1
+		cachedBlock, err := cachedMessageFunc(blockID) // block +1
 		if err != nil {
 			return err
 		}
 		if cachedBlock == nil {
 			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrBlockNotFound, blockID.ToHex(), blockID.ToHex())
 		}
-		defer cachedBlock.Release(true) // message -1
+		defer cachedBlock.Release(true) // block -1
 
-		message := cachedBlock.Message()
+		message := cachedBlock.Block()
 
 		// exclude message without transactions
 		if !message.IsTransaction() {

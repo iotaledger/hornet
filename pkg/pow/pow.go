@@ -56,7 +56,7 @@ func (h *Handler) PoWType() string {
 }
 
 // DoPoW does the proof-of-work required to hit the target score configured on this Handler.
-// The given iota.Message's nonce is automatically updated.
+// The given iota.Block's nonce is automatically updated.
 func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Block, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (messageSize int, err error) {
 
 	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {

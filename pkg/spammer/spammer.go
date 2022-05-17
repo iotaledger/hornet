@@ -14,7 +14,7 @@ import (
 )
 
 // SendMessageFunc is a function which sends a message to the network.
-type SendMessageFunc = func(msg *storage.Message) error
+type SendMessageFunc = func(msg *storage.Block) error
 
 // SpammerTipselFunc selects tips for the spammer.
 type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.BlockIDs, err error)

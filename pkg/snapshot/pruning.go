@@ -84,7 +84,7 @@ func (s *SnapshotManager) pruneUnreferencedMessages(targetIndex milestone.Index)
 			continue
 		}
 
-		cachedBlockMeta := s.storage.CachedMessageMetadataOrNil(blockID) // meta +1
+		cachedBlockMeta := s.storage.CachedBlockMetadataOrNil(blockID) // meta +1
 		if cachedBlockMeta == nil {
 			// message was already deleted or marked for deletion
 			continue
@@ -125,7 +125,7 @@ func (s *SnapshotManager) pruneMessages(blockIDsToDeleteMap map[string]struct{})
 
 		msgID := hornet.BlockIDFromMapKey(blockIDToDelete)
 
-		cachedBlockMeta := s.storage.CachedMessageMetadataOrNil(msgID) // meta +1
+		cachedBlockMeta := s.storage.CachedBlockMetadataOrNil(msgID) // meta +1
 		if cachedBlockMeta == nil {
 			continue
 		}
@@ -141,7 +141,7 @@ func (s *SnapshotManager) pruneMessages(blockIDsToDeleteMap map[string]struct{})
 			// and the references will be deleted together with the children messages when they are pruned.
 		})
 
-		s.storage.DeleteMessage(msgID)
+		s.storage.DeleteBlock(msgID)
 	}
 
 	return len(blockIDsToDeleteMap)

@@ -40,7 +40,7 @@ var (
 //
 // Object Storages:
 //		- Milestone							=> will be removed and added again if missing by receiving the msg
-//		- Message							=> will be removed and added again by requesting the msg at solidification
+//		- Block							=> will be removed and added again by requesting the msg at solidification
 //		- BlockMetadata   				=> will be removed and added again if missing by receiving the msg
 //		- Children							=> will be removed and added again if missing by receiving the msg
 //		- Indexation						=> will be removed and added again if missing by receiving the msg
@@ -220,7 +220,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
-	t.storage.NonCachedStorage().ForEachMessageID(func(blockID hornet.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachBlockID(func(blockID hornet.BlockID) bool {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -277,10 +277,10 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 			t.LogInfof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		t.storage.DeleteMessage(hornet.BlockIDFromMapKey(blockID))
+		t.storage.DeleteBlock(hornet.BlockIDFromMapKey(blockID))
 	}
 
-	t.storage.FlushMessagesStorage()
+	t.storage.FlushBlocksStorage()
 
 	t.LogInfof("deleting messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -296,7 +296,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 
 	lastStatusTime := time.Now()
 	var metadataCounter int64
-	t.storage.NonCachedStorage().ForEachMessageMetadataMessageID(func(blockID hornet.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachBlockMetadataBlockID(func(blockID hornet.BlockID) bool {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -310,7 +310,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 		}
 
 		// delete metadata if message doesn't exist
-		if !t.storage.MessageExistsInStore(blockID) {
+		if !t.storage.BlockExistsInStore(blockID) {
 			metadataToDelete[blockID.ToMapKey()] = struct{}{}
 		}
 
@@ -338,10 +338,10 @@ func (t *Tangle) cleanupMessageMetadata() error {
 			t.LogInfof("deleting message metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		t.storage.DeleteMessageMetadata(hornet.BlockIDFromMapKey(blockID))
+		t.storage.DeleteBlockMetadata(hornet.BlockIDFromMapKey(blockID))
 	}
 
-	t.storage.FlushMessagesStorage()
+	t.storage.FlushBlocksStorage()
 
 	t.LogInfof("deleting message metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
@@ -382,13 +382,13 @@ func (t *Tangle) cleanupChildren() error {
 		// parent message, since we always walk the future cone.
 		/*
 			// delete child if message metadata doesn't exist
-			if !t.storage.MessageMetadataExistsInStore(blockID) {
+			if !t.storage.BlockMetadataExistsInStore(blockID) {
 				childrenToDelete[childrenMapKey] = &child{blockID: blockID, childMessageID: childMessageID}
 			}
 		*/
 
 		// delete child if child message metadata doesn't exist
-		if !t.storage.MessageMetadataExistsInStore(childMessageID) {
+		if !t.storage.BlockMetadataExistsInStore(childMessageID) {
 			childrenToDelete[childrenMapKey] = &child{blockID: blockID, childMessageID: childMessageID}
 		}
 

@@ -32,7 +32,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		return nil, err
 	}
 
-	cachedBlockMeta := deps.Storage.CachedMessageMetadataOrNil(blockID)
+	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(blockID)
 	if cachedBlockMeta == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", blockID.ToHex())
 	}
@@ -106,19 +106,19 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	return messageMetadataResponse, nil
 }
 
-func storageMessageByID(c echo.Context) (*storage.Message, error) {
+func storageMessageByID(c echo.Context) (*storage.Block, error) {
 	blockID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	cachedBlock := deps.Storage.CachedMessageOrNil(blockID) // message +1
+	cachedBlock := deps.Storage.CachedBlockOrNil(blockID) // block +1
 	if cachedBlock == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", blockID.ToHex())
 	}
-	defer cachedBlock.Release(true) // message -1
+	defer cachedBlock.Release(true) // block -1
 
-	return cachedBlock.Message(), nil
+	return cachedBlock.Block(), nil
 }
 
 func messageByID(c echo.Context) (*iotago.Block, error) {
@@ -126,7 +126,7 @@ func messageByID(c echo.Context) (*iotago.Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	return message.Message(), nil
+	return message.Block(), nil
 }
 
 func messageBytesByID(c echo.Context) ([]byte, error) {

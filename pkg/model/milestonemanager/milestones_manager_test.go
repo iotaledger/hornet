@@ -133,6 +133,6 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	milestonePayload := msg.Milestone()
 	require.NotNil(te.TestInterface, milestonePayload)
 
-	verifiedMilestone := milestoneManager.VerifyMilestoneMessage(msg.Message())
+	verifiedMilestone := milestoneManager.VerifyMilestoneMessage(msg.Block())
 	require.NotNil(te.TestInterface, verifiedMilestone)
 }
