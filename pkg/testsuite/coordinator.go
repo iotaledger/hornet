@@ -37,7 +37,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	te.coo.bootstrap()
 
-	messagesMemcache := storage.NewBlocksMemcache(te.storage.CachedBlock)
+	blocksMemcache := storage.NewBlocksMemcache(te.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
@@ -45,17 +45,17 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		// all releases are forced since the cone is referenced and not needed anymore
 		memcachedParentsTraverserStorage.Cleanup(true)
 
-		// release all messages at the end
-		messagesMemcache.Cleanup(true)
+		// release all blocks at the end
+		blocksMemcache.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
-		messagesMemcache.CachedBlock,
+		blocksMemcache.CachedBlock,
 		te.protoParas,
 		te.LastMilestonePayload(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
@@ -89,50 +89,50 @@ func (te *TestEnvironment) milestoneForIndex(msIndex milestone.Index) *storage.M
 	return ms.Milestone()
 }
 
-func (te *TestEnvironment) ReattachMessage(blockID hornet.BlockID, parents ...hornet.BlockID) hornet.BlockID {
-	message := te.storage.CachedBlockOrNil(blockID)
-	require.NotNil(te.TestInterface, message)
-	defer message.Release(true)
+func (te *TestEnvironment) ReattachBlock(blockID hornet.BlockID, parents ...hornet.BlockID) hornet.BlockID {
+	block := te.storage.CachedBlockOrNil(blockID)
+	require.NotNil(te.TestInterface, block)
+	defer block.Release(true)
 
-	iotagoMessage := message.Block().Block()
+	iotaBlock := block.Block().Block()
 
-	newParents := iotagoMessage.Parents
+	newParents := iotaBlock.Parents
 	if len(parents) > 0 {
 		newParents = hornet.BlockIDs(parents).RemoveDupsAndSortByLexicalOrder().ToSliceOfArrays()
 	}
 
-	newMessage := &iotago.Block{
-		ProtocolVersion: iotagoMessage.ProtocolVersion,
+	newBlock := &iotago.Block{
+		ProtocolVersion: iotaBlock.ProtocolVersion,
 		Parents:         newParents,
-		Payload:         iotagoMessage.Payload,
-		Nonce:           iotagoMessage.Nonce,
+		Payload:         iotaBlock.Payload,
+		Nonce:           iotaBlock.Nonce,
 	}
 
-	_, err := te.PoWHandler.DoPoW(context.Background(), newMessage, 1)
+	_, err := te.PoWHandler.DoPoW(context.Background(), newBlock, 1)
 	require.NoError(te.TestInterface, err)
 
 	// We brute-force a new nonce until it is different than the original one (this is important when reattaching valid milestones)
 	powMinScore := te.protoParas.MinPoWScore
-	for newMessage.Nonce == iotagoMessage.Nonce {
+	for newBlock.Nonce == iotaBlock.Nonce {
 		powMinScore += 10.0
 		// Use a higher PowScore on every iteration to force a different nonce
 		handler := pow.New(powMinScore, 5*time.Minute)
-		_, err := handler.DoPoW(context.Background(), newMessage, 1)
+		_, err := handler.DoPoW(context.Background(), newBlock, 1)
 		require.NoError(te.TestInterface, err)
 	}
 
-	storedMessage, err := storage.NewBlock(newMessage, serializer.DeSeriModePerformValidation, te.protoParas)
+	storedBlock, err := storage.NewBlock(newBlock, serializer.DeSeriModePerformValidation, te.protoParas)
 	require.NoError(te.TestInterface, err)
 
-	cachedMessage := te.StoreMessage(storedMessage)
-	require.NotNil(te.TestInterface, cachedMessage)
+	cachedBlock := te.StoreBlock(storedBlock)
+	require.NotNil(te.TestInterface, cachedBlock)
 
-	return storedMessage.BlockID()
+	return storedBlock.BlockID()
 }
 
 func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago.Milestone) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats, error) {
 
-	messagesMemcache := storage.NewBlocksMemcache(te.storage.CachedBlock)
+	blocksMemcache := storage.NewBlocksMemcache(te.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
@@ -140,10 +140,10 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 		// all releases are forced since the cone is referenced and not needed anymore
 		memcachedParentsTraverserStorage.Cleanup(true)
 
-		// release all messages at the end
-		messagesMemcache.Cleanup(true)
+		// release all blocks at the end
+		blocksMemcache.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
@@ -151,7 +151,7 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
-		messagesMemcache.CachedBlock,
+		blocksMemcache.CachedBlock,
 		te.protoParas,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,

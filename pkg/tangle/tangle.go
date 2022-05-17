@@ -41,7 +41,7 @@ type Tangle struct {
 	// used to access gossip gossipService.
 	gossipService *gossip.Service
 	// used to parses and emit new blocks.
-	blockProcessor *gossip.BlockProcessor
+	messageProcessor *gossip.MessageProcessor
 	// shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
 	// used to request blocks from peers.
@@ -118,7 +118,7 @@ func New(
 	milestoneManager *milestonemanager.MilestoneManager,
 	requestQueue gossip.RequestQueue,
 	gossipService *gossip.Service,
-	blockProcessor *gossip.BlockProcessor,
+	messageProcessor *gossip.MessageProcessor,
 	serverMetrics *metrics.ServerMetrics,
 	requester *gossip.Requester,
 	receiptService *migrator.ReceiptService,
@@ -136,7 +136,7 @@ func New(
 		milestoneManager:             milestoneManager,
 		requestQueue:                 requestQueue,
 		gossipService:                gossipService,
-		blockProcessor:               blockProcessor,
+		messageProcessor:             messageProcessor,
 		serverMetrics:                serverMetrics,
 		requester:                    requester,
 		receiptService:               receiptService,

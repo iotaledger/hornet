@@ -103,7 +103,7 @@ func databaseMerge(args []string) error {
 		var err error
 
 		// we don't need to check the health of the source db.
-		// it is fine as long as all messages in the cone are found.
+		// it is fine as long as all blocks in the cone are found.
 		tangleStoreSource, err = getTangleStorage(*databasePathSourceFlag, "source", *databaseEngineSourceFlag, true, false, false, true)
 		if err != nil {
 			return err
@@ -184,18 +184,18 @@ func databaseMerge(args []string) error {
 	return nil
 }
 
-// copyMilestoneCone copies all messages of a milestone cone to the target storage.
+// copyMilestoneCone copies all blocks of a milestone cone to the target storage.
 func copyMilestoneCone(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
 	msIndex milestone.Index,
 	milestonePayload *iotago.Milestone,
 	parentsTraverserInterface dag.ParentsTraverserInterface,
-	cachedMessageFuncSource storage.CachedBlockFunc,
-	storeMessageTarget StoreBlockInterface,
+	cachedBlockFuncSource storage.CachedBlockFunc,
+	storeBlockTarget StoreBlockInterface,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
-	// traversal stops if no more messages pass the given condition
+	// traversal stops if no more blocks pass the given condition
 	// Caution: condition func is not in DFS order
 	condition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 		defer cachedBlockMeta.Release(true) // meta -1
@@ -209,22 +209,22 @@ func copyMilestoneCone(
 			}
 
 			if at < msIndex {
-				// do not traverse messages that were referenced by an older milestonee
+				// do not traverse blocks that were referenced by an older milestonee
 				return false, nil
 			}
 		}
 
-		cachedBlock, err := cachedMessageFuncSource(cachedBlockMeta.Metadata().BlockID()) // block +1
+		cachedBlock, err := cachedBlockFuncSource(cachedBlockMeta.Metadata().BlockID()) // block +1
 		if err != nil {
 			return false, err
 		}
 		if cachedBlock == nil {
-			return false, fmt.Errorf("message not found: %s", cachedBlockMeta.Metadata().BlockID().ToHex())
+			return false, fmt.Errorf("block not found: %s", cachedBlockMeta.Metadata().BlockID().ToHex())
 		}
 		defer cachedBlock.Release(true) // block -1
 
-		// store the message in the target storage
-		cachedBlockNew, err := storeBlock(protoParas, storeMessageTarget, milestoneManager, cachedBlock.Block().Block()) // block +1
+		// store the block in the target storage
+		cachedBlockNew, err := storeBlock(protoParas, storeBlockTarget, milestoneManager, cachedBlock.Block().Block()) // block +1
 		if err != nil {
 			return false, err
 		}
@@ -233,7 +233,7 @@ func copyMilestoneCone(
 		cachedBlockMetaNew := cachedBlockNew.CachedMetadata() // meta +1
 		defer cachedBlockMetaNew.Release(true)                // meta -1
 
-		// we need to mark all messages that contain a milestone payload,
+		// we need to mark all blocks that contain a milestone payload,
 		// but we can not trust the metadata of the parentsTraverserInterface for correct info about milestones
 		// because it could be a proxystorage, which doesn't know the correct milestones yet.
 		if cachedBlockNew.Block().IsMilestone() {
@@ -243,13 +243,13 @@ func copyMilestoneCone(
 			}
 		}
 
-		// set the new message as solid
+		// set the new block as solid
 		cachedBlockMetaNew.Metadata().SetSolid(true)
 
 		return true, nil
 	}
 
-	// traverse the milestone and collect all messages that were referenced by this milestone or newer
+	// traverse the milestone and collect all blocks that were referenced by this milestone or newer
 	if err := parentsTraverserInterface.Traverse(
 		ctx,
 		hornet.BlockIDsFromSliceOfArrays(milestonePayload.Parents),
@@ -270,7 +270,7 @@ func copyMilestoneCone(
 
 type confStats struct {
 	msIndex              milestone.Index
-	messagesReferenced   int
+	blocksReferenced     int
 	durationCopy         time.Duration
 	durationConfirmation time.Duration
 }
@@ -283,10 +283,10 @@ func copyAndVerifyMilestoneCone(
 	msIndex milestone.Index,
 	getMilestonePayload func(msIndex milestone.Index) (*iotago.Milestone, error),
 	parentsTraverserInterfaceSource dag.ParentsTraverserInterface,
-	cachedMessageFuncSource storage.CachedBlockFunc,
-	cachedMessageFuncTarget storage.CachedBlockFunc,
+	cachedBlockFuncSource storage.CachedBlockFunc,
+	cachedBlockFuncTarget storage.CachedBlockFunc,
 	utxoManagerTarget *utxo.Manager,
-	storeMessageTarget StoreBlockInterface,
+	storeBlockTarget StoreBlockInterface,
 	parentsTraverserStorageTarget dag.ParentsTraverserStorage,
 	milestoneManager *milestonemanager.MilestoneManager) (*confStats, error) {
 
@@ -307,13 +307,13 @@ func copyAndVerifyMilestoneCone(
 	ts := time.Now()
 
 	if err := copyMilestoneCone(
-		context.Background(), // we do not want abort the copying of the messages itself
+		context.Background(), // we do not want abort the copying of the blocks itself
 		protoParas,
 		msIndex,
 		milestonePayload,
 		parentsTraverserInterfaceSource,
-		cachedMessageFuncSource,
-		storeMessageTarget,
+		cachedBlockFuncSource,
+		storeBlockTarget,
 		milestoneManager); err != nil {
 		return nil, err
 	}
@@ -323,7 +323,7 @@ func copyAndVerifyMilestoneCone(
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		utxoManagerTarget,
 		parentsTraverserStorageTarget,
-		cachedMessageFuncTarget,
+		cachedBlockFuncTarget,
 		protoParas,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
@@ -344,7 +344,7 @@ func copyAndVerifyMilestoneCone(
 
 	return &confStats{
 		msIndex:              confirmedMilestoneStats.Index,
-		messagesReferenced:   confirmedMilestoneStats.BlocksReferenced,
+		blocksReferenced:     confirmedMilestoneStats.BlocksReferenced,
 		durationCopy:         timeCopyMilestoneCone.Sub(ts).Truncate(time.Millisecond),
 		durationConfirmation: timeConfirmMilestone.Sub(timeCopyMilestoneCone).Truncate(time.Millisecond),
 	}, nil
@@ -361,7 +361,7 @@ func mergeViaAPI(
 	chronicleMode bool,
 	apiParallelism int) error {
 
-	getMessageViaAPI := func(blockID hornet.BlockID) (*iotago.Block, error) {
+	getBlockViaAPI := func(blockID hornet.BlockID) (*iotago.Block, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
@@ -385,7 +385,7 @@ func mergeViaAPI(
 		return milestone, nil
 	}
 
-	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getMessageViaAPI)
+	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getBlockViaAPI)
 	if err != nil {
 		return err
 	}
@@ -419,9 +419,9 @@ func mergeViaAPI(
 
 	te := time.Now()
 
-	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
+	println(fmt.Sprintf("confirmed milestone %d, blocks: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
 		confStats.msIndex,
-		confStats.messagesReferenced,
+		confStats.blocksReferenced,
 		confStats.durationCopy,
 		confStats.durationConfirmation,
 		te.Sub(timeMergeStoragesStart).Truncate(time.Millisecond),
@@ -473,9 +473,9 @@ func mergeViaSourceDatabase(
 
 	te := time.Now()
 
-	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
+	println(fmt.Sprintf("confirmed milestone %d, blocks: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
 		confStats.msIndex,
-		confStats.messagesReferenced,
+		confStats.blocksReferenced,
 		confStats.durationCopy,
 		confStats.durationConfirmation,
 		te.Sub(timeMergeStoragesStart).Truncate(time.Millisecond),
@@ -605,7 +605,7 @@ func getNodeHTTPAPIClient(nodeURL string, chronicleMode bool, chronicleKeyspace 
 	return client
 }
 
-type GetMessageFunc func(blockID hornet.BlockID) (*iotago.Block, error)
+type GetBlockFunc func(blockID hornet.BlockID) (*iotago.Block, error)
 
 // ProxyStorage is used to temporarily store changes to an intermediate storage,
 // which then can be merged with the target store in a single commit.
@@ -614,14 +614,14 @@ type ProxyStorage struct {
 	storeTarget      *storage.Storage
 	storeProxy       *storage.Storage
 	milestoneManager *milestonemanager.MilestoneManager
-	getMessageFunc   GetMessageFunc
+	getBlockFunc     GetBlockFunc
 }
 
 func NewProxyStorage(
 	protoParas *iotago.ProtocolParameters,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
-	getMessageFunc GetMessageFunc) (*ProxyStorage, error) {
+	getBlockFunc GetBlockFunc) (*ProxyStorage, error) {
 
 	storeProxy, err := createTangleStorage("proxy", "", "", database.EngineMapDB)
 	if err != nil {
@@ -633,7 +633,7 @@ func NewProxyStorage(
 		storeTarget:      storeTarget,
 		storeProxy:       storeProxy,
 		milestoneManager: milestoneManager,
-		getMessageFunc:   getMessageFunc,
+		getBlockFunc:     getBlockFunc,
 	}, nil
 }
 
@@ -641,7 +641,7 @@ func NewProxyStorage(
 func (s *ProxyStorage) CachedBlock(blockID hornet.BlockID) (*storage.CachedBlock, error) {
 	if !s.storeTarget.ContainsBlock(blockID) {
 		if !s.storeProxy.ContainsBlock(blockID) {
-			msg, err := s.getMessageFunc(blockID)
+			msg, err := s.getBlockFunc(blockID)
 			if err != nil {
 				return nil, err
 			}
@@ -651,7 +651,7 @@ func (s *ProxyStorage) CachedBlock(blockID hornet.BlockID) (*storage.CachedBlock
 				return nil, err
 			}
 
-			// set the new message as solid
+			// set the new block as solid
 			cachedBlockMeta := cachedBlock.CachedMetadata() // meta +1
 			defer cachedBlockMeta.Release(true)             // meta -1
 
@@ -706,8 +706,8 @@ func (s *ProxyStorage) StoreBlockIfAbsent(block *storage.Block) (cachedBlock *st
 	return s.storeProxy.StoreBlockIfAbsent(block)
 }
 
-func (s *ProxyStorage) StoreChild(parentMessageID hornet.BlockID, childMessageID hornet.BlockID) *storage.CachedChild {
-	return s.storeProxy.StoreChild(parentMessageID, childMessageID)
+func (s *ProxyStorage) StoreChild(parentBlockID hornet.BlockID, childBlockID hornet.BlockID) *storage.CachedChild {
+	return s.storeProxy.StoreChild(parentBlockID, childBlockID)
 }
 
 func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, blockID hornet.BlockID) (*storage.CachedMilestone, bool) {

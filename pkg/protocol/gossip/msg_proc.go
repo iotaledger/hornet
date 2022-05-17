@@ -42,10 +42,10 @@ func BlockProcessedCaller(handler interface{}, params ...interface{}) {
 	handler.(func(block *storage.Block, requests Requests, proto *Protocol))(params[0].(*storage.Block), params[1].(Requests), params[2].(*Protocol))
 }
 
-// Broadcast defines a block which should be broadcasted.
+// Broadcast defines a data which should be broadcasted.
 type Broadcast struct {
-	// The block data to broadcast.
-	BlockData []byte
+	// The data to broadcast.
+	Data []byte
 	// The IDs of the peers to exclude from broadcasting.
 	ExcludePeers map[peer.ID]struct{}
 }
@@ -54,21 +54,21 @@ func BroadcastCaller(handler interface{}, params ...interface{}) {
 	handler.(func(b *Broadcast))(params[0].(*Broadcast))
 }
 
-// BlockProcessorEvents are the events fired by the BlockProcessor.
-type BlockProcessorEvents struct {
+// MessageProcessorEvents are the events fired by the MessageProcessor.
+type MessageProcessorEvents struct {
 	// Fired when a block was fully processed.
 	BlockProcessed *events.Event
 	// Fired when a block is meant to be broadcasted.
 	BroadcastBlock *events.Event
 }
 
-// The Options for the BlockProcessor.
+// The Options for the MessageProcessor.
 type Options struct {
 	WorkUnitCacheOpts *profile.CacheOpts
 }
 
-// BlockProcessor processes submitted blocks in parallel and fires appropriate completion events.
-type BlockProcessor struct {
+// MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
+type MessageProcessor struct {
 	// used to access the node storage.
 	storage *storage.Storage
 	// used to determine the sync status of the node.
@@ -85,10 +85,10 @@ type BlockProcessor struct {
 	opts Options
 
 	// events of the block processor.
-	Events *BlockProcessorEvents
-	// cache that holds processed incomming blocks.
+	Events *MessageProcessorEvents
+	// cache that holds processed incoming messages.
 	workUnits *objectstorage.ObjectStorage
-	// worker pool for incoming blocks.
+	// worker pool for incoming messages.
 	wp *workerpool.WorkerPool
 
 	// mutex to secure the shutdown flag.
@@ -97,17 +97,17 @@ type BlockProcessor struct {
 	shutdown bool
 }
 
-// NewBlockProcessor creates a new processor which parses blocks.
-func NewBlockProcessor(
+// NewMessageProcessor creates a new processor which parses blocks.
+func NewMessageProcessor(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	requestQueue RequestQueue,
 	peeringManager *p2p.Manager,
 	serverMetrics *metrics.ServerMetrics,
 	protoParas *iotago.ProtocolParameters,
-	opts *Options) (*BlockProcessor, error) {
+	opts *Options) (*MessageProcessor, error) {
 
-	proc := &BlockProcessor{
+	proc := &MessageProcessor{
 		storage:        dbStorage,
 		syncManager:    syncManager,
 		requestQueue:   requestQueue,
@@ -115,7 +115,7 @@ func NewBlockProcessor(
 		serverMetrics:  serverMetrics,
 		protoParas:     protoParas,
 		opts:           *opts,
-		Events: &BlockProcessorEvents{
+		Events: &MessageProcessorEvents{
 			BlockProcessed: events.NewEvent(BlockProcessedCaller),
 			BroadcastBlock: events.NewEvent(BroadcastCaller),
 		},
@@ -171,7 +171,7 @@ func NewBlockProcessor(
 }
 
 // Run runs the processor and blocks until the shutdown signal is triggered.
-func (proc *BlockProcessor) Run(ctx context.Context) {
+func (proc *MessageProcessor) Run(ctx context.Context) {
 	proc.wp.Start()
 	<-ctx.Done()
 	proc.Shutdown()
@@ -179,7 +179,7 @@ func (proc *BlockProcessor) Run(ctx context.Context) {
 
 // Shutdown signals the internal worker pool and object storage
 // to shut down and sets the shutdown flag.
-func (proc *BlockProcessor) Shutdown() {
+func (proc *MessageProcessor) Shutdown() {
 	proc.shutdownMutex.Lock()
 	defer proc.shutdownMutex.Unlock()
 
@@ -189,7 +189,7 @@ func (proc *BlockProcessor) Shutdown() {
 }
 
 // Process submits the given message to the processor for processing.
-func (proc *BlockProcessor) Process(p *Protocol, msgType message.Type, data []byte) {
+func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []byte) {
 	proc.wp.Submit(p, msgType, data)
 }
 
@@ -197,25 +197,25 @@ func (proc *BlockProcessor) Process(p *Protocol, msgType message.Type, data []by
 // All blocks passed to this function must be checked with "DeSeriModePerformValidation" before.
 // We also check if the parents are solid and not BMD before we broadcast the block, otherwise
 // this block would be seen as invalid gossip by other peers.
-func (proc *BlockProcessor) Emit(msg *storage.Block) error {
+func (proc *MessageProcessor) Emit(block *storage.Block) error {
 
-	if msg.ProtocolVersion() != proc.protoParas.Version {
-		return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), proc.protoParas.Version)
+	if block.ProtocolVersion() != proc.protoParas.Version {
+		return fmt.Errorf("block has invalid protocol version %d instead of %d", block.ProtocolVersion(), proc.protoParas.Version)
 	}
 
-	switch msg.Block().Payload.(type) {
+	switch block.Block().Payload.(type) {
 
 	case *iotago.Milestone:
-		// enforce milestone msg nonce == 0
-		if msg.Block().Nonce != 0 {
-			return errors.New("milestone msg nonce must be zero")
+		// enforce milestone block nonce == 0
+		if block.Block().Nonce != 0 {
+			return errors.New("milestone block nonce must be zero")
 		}
 
 	default:
 		// validate PoW score
-		score := pow.Score(msg.Data())
+		score := pow.Score(block.Data())
 		if score < proc.protoParas.MinPoWScore {
-			return fmt.Errorf("msg has insufficient PoW score %0.2f", score)
+			return fmt.Errorf("block has insufficient PoW score %0.2f", score)
 		}
 	}
 
@@ -262,26 +262,26 @@ func (proc *BlockProcessor) Emit(msg *storage.Block) error {
 		return nil
 	}
 
-	for _, parentMsgID := range msg.Parents() {
+	for _, parentMsgID := range block.Parents() {
 		err := checkParentFunc(parentMsgID)
 		if err != nil {
 			return err
 		}
 	}
 
-	proc.Events.BlockProcessed.Trigger(msg, (Requests)(nil), (*Protocol)(nil))
-	proc.Events.BroadcastBlock.Trigger(&Broadcast{BlockData: msg.Data()})
+	proc.Events.BlockProcessed.Trigger(block, (Requests)(nil), (*Protocol)(nil))
+	proc.Events.BroadcastBlock.Trigger(&Broadcast{Data: block.Data()})
 
 	return nil
 }
 
 // WorkUnitsSize returns the size of WorkUnits currently cached.
-func (proc *BlockProcessor) WorkUnitsSize() int {
+func (proc *MessageProcessor) WorkUnitsSize() int {
 	return proc.workUnits.GetSize()
 }
 
 // gets a CachedWorkUnit or creates a new one if it not existent.
-func (proc *BlockProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
+func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(_ []byte) objectstorage.StorableObject { // cachedWorkUnit +1
 			newlyAdded = true
@@ -291,7 +291,7 @@ func (proc *BlockProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit 
 }
 
 // processes the given milestone request by parsing it and then replying to the peer with it.
-func (proc *BlockProcessor) processMilestoneRequest(p *Protocol, data []byte) {
+func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) {
 	msIndex, err := ExtractRequestedMilestoneIndex(data)
 	if err != nil {
 		proc.serverMetrics.InvalidRequests.Inc()
@@ -347,7 +347,7 @@ func constructMilestoneBlock(protoParas *iotago.ProtocolParameters, cachedMilest
 }
 
 // processes the given block request by parsing it and then replying to the peer with it.
-func (proc *BlockProcessor) processBlockRequest(p *Protocol, data []byte) {
+func (proc *MessageProcessor) processBlockRequest(p *Protocol, data []byte) {
 	if len(data) != iotago.BlockIDLength {
 		return
 	}
@@ -375,7 +375,7 @@ func (proc *BlockProcessor) processBlockRequest(p *Protocol, data []byte) {
 }
 
 // gets or creates a new WorkUnit for the given block data and then processes the WorkUnit.
-func (proc *BlockProcessor) processBlockData(p *Protocol, data []byte) {
+func (proc *MessageProcessor) processBlockData(p *Protocol, data []byte) {
 	cachedWorkUnit, newlyAdded := proc.workUnitFor(data) // workUnit +1
 
 	// force release if not newly added, so the cache time is only active the first time the block is received.
@@ -390,7 +390,7 @@ func (proc *BlockProcessor) processBlockData(p *Protocol, data []byte) {
 // if the WorkUnit is invalid (because the underlying block is invalid), the given peer is punished.
 // if the WorkUnit is already completed, and the block was requested, this function emits a BlockProcessed event.
 // it is safe to call this function for the same WorkUnit multiple times.
-func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
+func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 	processRequests := func(wu *WorkUnit, msg *storage.Block, isMilestonePayload bool) Requests {
 
@@ -505,7 +505,7 @@ func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	proc.Events.BlockProcessed.Trigger(msg, requests, p)
 }
 
-func (proc *BlockProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {
+func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {
 	proc.shutdownMutex.RLock()
 	defer proc.shutdownMutex.RUnlock()
 	defer cachedBlockMeta.Release(true) // meta -1

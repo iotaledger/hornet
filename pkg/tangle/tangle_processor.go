@@ -81,7 +81,7 @@ func (t *Tangle) RunTangleProcessor() {
 	// send all solid blocks back to the block processor, which broadcasts them to other nodes
 	// after passing some additional rules.
 	onBlockSolid := events.NewClosure(func(cachedBlockMeta *storage.CachedMetadata) {
-		t.blockProcessor.Broadcast(cachedBlockMeta) // meta pass +1
+		t.messageProcessor.Broadcast(cachedBlockMeta) // meta pass +1
 	})
 
 	onReceivedValidMilestone := events.NewClosure(func(blockID hornet.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
@@ -118,13 +118,13 @@ func (t *Tangle) RunTangleProcessor() {
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(ctx context.Context) {
 		t.LogInfo("Starting TangleProcessor[ReceiveTx] ... done")
-		t.blockProcessor.Events.BlockProcessed.Attach(onBlockProcessed)
+		t.messageProcessor.Events.BlockProcessed.Attach(onBlockProcessed)
 		t.Events.BlockSolid.Attach(onBlockSolid)
 		t.receiveMsgWorkerPool.Start()
 		t.startWaitGroup.Done()
 		<-ctx.Done()
 		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ...")
-		t.blockProcessor.Events.BlockProcessed.Detach(onBlockProcessed)
+		t.messageProcessor.Events.BlockProcessed.Detach(onBlockProcessed)
 		t.Events.BlockSolid.Detach(onBlockSolid)
 		t.receiveMsgWorkerPool.StopAndWait()
 		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ... done")

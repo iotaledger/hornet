@@ -44,8 +44,8 @@ type ConfirmationMetrics struct {
 	DurationTotal                                    time.Duration
 }
 
-type CheckMessageReferencedFunc func(meta *storage.BlockMetadata) bool
-type SetMessageReferencedFunc func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index)
+type CheckBlockReferencedFunc func(meta *storage.BlockMetadata) bool
+type SetBlockReferencedFunc func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index)
 
 var (
 	DefaultCheckBlockReferencedFunc = func(meta *storage.BlockMetadata) bool {
@@ -63,14 +63,14 @@ var (
 func ConfirmMilestone(
 	utxoManager *utxo.Manager,
 	parentsTraverserStorage dag.ParentsTraverserStorage,
-	cachedMessageFunc storage.CachedBlockFunc,
+	cachedBlockFunc storage.CachedBlockFunc,
 	protoParas *iotago.ProtocolParameters,
 	milestonePayload *iotago.Milestone,
 	whiteFlagTraversalCondition dag.Predicate,
-	checkMessageReferencedFunc CheckMessageReferencedFunc,
-	setMessageReferencedFunc SetMessageReferencedFunc,
+	checkBlockReferencedFunc CheckBlockReferencedFunc,
+	setBlockReferencedFunc SetBlockReferencedFunc,
 	serverMetrics *metrics.ServerMetrics,
-	forEachReferencedMessage func(messageMetadata *storage.CachedMetadata, index milestone.Index, confTime uint32),
+	forEachReferencedBlock func(blockMetadata *storage.CachedMetadata, index milestone.Index, confTime uint32),
 	onMilestoneConfirmed func(confirmation *Confirmation),
 	onLedgerUpdated func(index milestone.Index, newOutputs utxo.Outputs, newSpents utxo.Spents),
 	onTreasuryMutated func(index milestone.Index, tuple *utxo.TreasuryMutationTuple),
@@ -100,14 +100,14 @@ func ConfirmMilestone(
 		context.Background(),
 		utxoManager,
 		parentsTraverser,
-		cachedMessageFunc,
+		cachedBlockFunc,
 		milestoneIndex,
 		milestoneTimestamp,
 		milestoneParents,
 		previousMilestoneID,
 		whiteFlagTraversalCondition)
 	if err != nil {
-		// According to the RFC we should panic if we encounter any invalid messages during confirmation
+		// According to the RFC we should panic if we encounter any invalid blocks during confirmation
 		return nil, nil, fmt.Errorf("confirmMilestone: whiteflag.ComputeConfirmation failed with Error: %w", err)
 	}
 
@@ -194,14 +194,14 @@ func ConfirmMilestone(
 	}
 	timeConfirmation := time.Now()
 
-	// load the message for the given id
-	forMessageMetadataWithMessageID := func(blockID hornet.BlockID, do func(meta *storage.CachedMetadata)) error {
+	// load the block for the given id
+	forBlockMetadataWithBlockID := func(blockID hornet.BlockID, do func(meta *storage.CachedMetadata)) error {
 		cachedBlockMeta, err := parentsTraverserStorage.CachedBlockMetadata(blockID) // meta +1
 		if err != nil {
-			return fmt.Errorf("confirmMilestone: get message failed: %v, Error: %w", blockID.ToHex(), err)
+			return fmt.Errorf("confirmMilestone: get block failed: %v, Error: %w", blockID.ToHex(), err)
 		}
 		if cachedBlockMeta == nil {
-			return fmt.Errorf("confirmMilestone: message not found: %v", blockID.ToHex())
+			return fmt.Errorf("confirmMilestone: block not found: %v", blockID.ToHex())
 		}
 		do(cachedBlockMeta)
 		cachedBlockMeta.Release(true) // meta -1
@@ -214,11 +214,11 @@ func ConfirmMilestone(
 
 	confirmationTime := milestonePayload.Timestamp
 
-	// confirm all included messages
-	for _, blockID := range mutations.MessagesIncludedWithTransactions {
-		if err := forMessageMetadataWithMessageID(blockID, func(meta *storage.CachedMetadata) {
-			if !checkMessageReferencedFunc(meta.Metadata()) {
-				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
+	// confirm all included blocks
+	for _, blockID := range mutations.BlocksIncludedWithTransactions {
+		if err := forBlockMetadataWithBlockID(blockID, func(meta *storage.CachedMetadata) {
+			if !checkBlockReferencedFunc(meta.Metadata()) {
+				setBlockReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.BlocksReferenced++
 				confirmedMilestoneStats.BlocksIncludedWithTransactions++
@@ -226,8 +226,8 @@ func ConfirmMilestone(
 					serverMetrics.IncludedTransactionBlocks.Inc()
 					serverMetrics.ReferencedBlocks.Inc()
 				}
-				if forEachReferencedMessage != nil {
-					forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+				if forEachReferencedBlock != nil {
+					forEachReferencedBlock(meta, milestoneIndex, confirmationTime)
 				}
 			}
 		}); err != nil {
@@ -236,12 +236,12 @@ func ConfirmMilestone(
 	}
 	timeApplyIncludedWithTransactions := time.Now()
 
-	// confirm all excluded messages not containing ledger transactions
-	for _, blockID := range mutations.MessagesExcludedWithoutTransactions {
-		if err := forMessageMetadataWithMessageID(blockID, func(meta *storage.CachedMetadata) {
+	// confirm all excluded blocks not containing ledger transactions
+	for _, blockID := range mutations.BlocksExcludedWithoutTransactions {
+		if err := forBlockMetadataWithBlockID(blockID, func(meta *storage.CachedMetadata) {
 			meta.Metadata().SetIsNoTransaction(true)
-			if !checkMessageReferencedFunc(meta.Metadata()) {
-				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
+			if !checkBlockReferencedFunc(meta.Metadata()) {
+				setBlockReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.BlocksReferenced++
 				confirmedMilestoneStats.BlocksExcludedWithoutTransactions++
@@ -249,8 +249,8 @@ func ConfirmMilestone(
 					serverMetrics.NoTransactionBlocks.Inc()
 					serverMetrics.ReferencedBlocks.Inc()
 				}
-				if forEachReferencedMessage != nil {
-					forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+				if forEachReferencedBlock != nil {
+					forEachReferencedBlock(meta, milestoneIndex, confirmationTime)
 				}
 			}
 		}); err != nil {
@@ -259,12 +259,12 @@ func ConfirmMilestone(
 	}
 	timeApplyExcludedWithoutTransactions := time.Now()
 
-	// confirm all conflicting messages
-	for _, conflictedMessage := range mutations.MessagesExcludedWithConflictingTransactions {
-		if err := forMessageMetadataWithMessageID(conflictedMessage.MessageID, func(meta *storage.CachedMetadata) {
-			meta.Metadata().SetConflictingTx(conflictedMessage.Conflict)
-			if !checkMessageReferencedFunc(meta.Metadata()) {
-				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
+	// confirm all conflicting blocks
+	for _, conflictedBlock := range mutations.BlocksExcludedWithConflictingTransactions {
+		if err := forBlockMetadataWithBlockID(conflictedBlock.BlockID, func(meta *storage.CachedMetadata) {
+			meta.Metadata().SetConflictingTx(conflictedBlock.Conflict)
+			if !checkBlockReferencedFunc(meta.Metadata()) {
+				setBlockReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
 				confirmedMilestoneStats.BlocksReferenced++
 				confirmedMilestoneStats.BlocksExcludedWithConflictingTransactions++
@@ -272,8 +272,8 @@ func ConfirmMilestone(
 					serverMetrics.ConflictingTransactionBlocks.Inc()
 					serverMetrics.ReferencedBlocks.Inc()
 				}
-				if forEachReferencedMessage != nil {
-					forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
+				if forEachReferencedBlock != nil {
+					forEachReferencedBlock(meta, milestoneIndex, confirmationTime)
 				}
 			}
 		}); err != nil {

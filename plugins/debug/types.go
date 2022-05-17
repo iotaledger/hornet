@@ -39,12 +39,12 @@ type milestoneDiffResponse struct {
 
 // request defines an request response.
 type request struct {
-	// The hex encoded message ID of the message.
-	MessageID string `json:"messageId"`
+	// The hex encoded block ID of the block.
+	BlockID string `json:"blockId"`
 	// The type of the request.
 	Type string `json:"type"`
-	// Whether the message already exists in the storage layer.
-	MessageExists bool `json:"txExists"`
+	// Whether the block already exists in the storage layer.
+	BlockExists bool `json:"txExists"`
 	// The time the request was enqueued.
 	EnqueueTimestamp string `json:"enqueueTimestamp"`
 	// The index of the milestone this request belongs to.
@@ -59,27 +59,27 @@ type requestsResponse struct {
 
 // entryPoint defines an entryPoint with information about the milestone index of the cone it references.
 type entryPoint struct {
-	// The hex encoded message ID of the message.
-	MessageID             string          `json:"messageId"`
+	// The hex encoded block ID of the block.
+	BlockID               string          `json:"blockId"`
 	ReferencedByMilestone milestone.Index `json:"referencedByMilestone"`
 }
 
-// messageWithParents defines a message with information about it's parents.
-type messageWithParents struct {
-	// The hex encoded message ID of the message.
-	MessageID string `json:"messageId"`
-	// The hex encoded message IDs of the parents the message references.
+// blockWithParents defines a block with information about it's parents.
+type blockWithParents struct {
+	// The hex encoded block ID of the block.
+	BlockID string `json:"blockId"`
+	// The hex encoded block IDs of the parents the block references.
 	Parents []string `json:"parents"`
 }
 
-// messageConeResponse defines the response of a GET debug message cone REST API call.
-type messageConeResponse struct {
+// blockConeResponse defines the response of a GET debug block cone REST API call.
+type blockConeResponse struct {
 	// The count of elements in the cone.
 	ConeElementsCount int `json:"coneElementsCount"`
 	// The count of found entry points.
 	EntryPointsCount int `json:"entryPointsCount"`
-	// The cone of the message.
-	Cone []*messageWithParents `json:"cone"`
-	// The entry points of the cone of this message.
+	// The cone of the block.
+	Cone []*blockWithParents `json:"cone"`
+	// The entry points of the cone of this block.
 	EntryPoints []*entryPoint `json:"entryPoints"`
 }

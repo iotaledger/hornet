@@ -12,7 +12,7 @@ func runLiveFeed() {
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		if milestoneIDHex, err := getMilestoneIDHex(msIndex); err == nil {
-			hub.BroadcastMsg(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MilestoneID: milestoneIDHex, Index: msIndex}})
+			hub.BroadcastMsg(&Msg{Type: MsgTypeMilestone, Data: &LivefeedMilestone{MilestoneID: milestoneIDHex, Index: msIndex}})
 		}
 	})
 

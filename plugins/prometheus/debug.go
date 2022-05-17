@@ -134,10 +134,10 @@ func collectDebug() {
 	}
 
 	if lastDatabasePruningMetrics != nil {
-		databasePruningDurations.WithLabelValues("prune_unreferenced_messages").Set(lastDatabasePruningMetrics.DurationPruneUnreferencedMessages.Seconds())
+		databasePruningDurations.WithLabelValues("prune_unreferenced_messages").Set(lastDatabasePruningMetrics.DurationPruneUnreferencedBlocks.Seconds())
 		databasePruningDurations.WithLabelValues("traverse_milestone_cone").Set(lastDatabasePruningMetrics.DurationTraverseMilestoneCone.Seconds())
 		databasePruningDurations.WithLabelValues("prune_milestone").Set(lastDatabasePruningMetrics.DurationPruneMilestone.Seconds())
-		databasePruningDurations.WithLabelValues("prune_messages").Set(lastDatabasePruningMetrics.DurationPruneMessages.Seconds())
+		databasePruningDurations.WithLabelValues("prune_messages").Set(lastDatabasePruningMetrics.DurationPruneBlocks.Seconds())
 		databasePruningDurations.WithLabelValues("set_snapshot_info").Set(lastDatabasePruningMetrics.DurationSetSnapshotInfo.Seconds())
 		databasePruningDurations.WithLabelValues("pruning_milestone_index_changed").Set(lastDatabasePruningMetrics.DurationPruningMilestoneIndexChanged.Seconds())
 		databasePruningDurations.WithLabelValues("total").Set(lastDatabasePruningMetrics.DurationTotal.Seconds())

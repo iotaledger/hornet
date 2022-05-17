@@ -18,7 +18,7 @@ func ShortenedHash(hash hornet.BlockID) string {
 	return hexHash[0:4] + "..." + hexHash[len(hexHash)-4:]
 }
 
-// ShortenedTag returns a shortened tag or milestone index for the given message.
+// ShortenedTag returns a shortened tag or milestone index for the given block.
 // this is used for the dot file.
 func ShortenedTag(cachedBlock *storage.CachedBlock) string {
 	defer cachedBlock.Release(true) // block -1

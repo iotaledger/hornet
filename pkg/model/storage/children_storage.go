@@ -91,7 +91,7 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 	return nil
 }
 
-// ChildrenMessageIDs returns the block IDs of the children of the given block.
+// ChildrenBlockIDs returns the block IDs of the children of the given block.
 // children +-0
 func (s *Storage) ChildrenBlockIDs(blockID hornet.BlockID, iteratorOptions ...IteratorOption) (hornet.BlockIDs, error) {
 	var childrenMessageIDs hornet.BlockIDs

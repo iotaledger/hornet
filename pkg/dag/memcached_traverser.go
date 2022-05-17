@@ -78,11 +78,11 @@ func NewMemcachedChildrenTraverserStorage(childrenTraverserStorage ChildrenTrave
 	}
 }
 
-func (m *MemcachedChildrenTraverserStorage) CachedMessageMetadata(blockID hornet.BlockID) (*storage.CachedMetadata, error) {
+func (m *MemcachedChildrenTraverserStorage) CachedBlockMetadata(blockID hornet.BlockID) (*storage.CachedMetadata, error) {
 	return m.metadataMemcache.CachedBlockMetadata(blockID)
 }
 
-func (m *MemcachedChildrenTraverserStorage) ChildrenMessageIDs(blockID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error) {
+func (m *MemcachedChildrenTraverserStorage) ChildrenBlockIDs(blockID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error) {
 	return m.childrenTraverserStorage.ChildrenBlockIDs(blockID, iteratorOptions...)
 }
 

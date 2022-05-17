@@ -80,7 +80,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	MessageProcessor   *gossip.BlockProcessor
+	MessageProcessor   *gossip.MessageProcessor
 	SyncManager        *syncmanager.SyncManager
 	ServerMetrics      *metrics.ServerMetrics
 	PoWHandler         *pow.Handler
@@ -404,7 +404,7 @@ func measureSpammerMetrics() {
 
 	// trigger events for outside listeners
 	Events.AvgSpamMetricsUpdated.Trigger(&spammer.AvgSpamMetrics{
-		NewMessages:              newMessagesCnt,
-		AverageMessagesPerSecond: spammerAvgHeap.AveragePerSecond(timeDiff),
+		NewBlocks:              newMessagesCnt,
+		AverageBlocksPerSecond: spammerAvgHeap.AveragePerSecond(timeDiff),
 	})
 }

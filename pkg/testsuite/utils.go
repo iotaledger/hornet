@@ -16,7 +16,7 @@ import (
 	"github.com/iotaledger/iota.go/v3/builder"
 )
 
-type MessageBuilder struct {
+type BlockBuilder struct {
 	te      *TestEnvironment
 	tag     string
 	tagData []byte
@@ -32,69 +32,69 @@ type MessageBuilder struct {
 	outputToUse *utxo.Output
 }
 
-type Message struct {
-	builder *MessageBuilder
+type Block struct {
+	builder *BlockBuilder
 	block   *storage.Block
 
 	consumedOutputs []*utxo.Output
 	sentOutput      *utxo.Output
 	remainderOutput *utxo.Output
 
-	booked          bool
-	storedMessageID hornet.BlockID
+	booked        bool
+	storedBlockID hornet.BlockID
 }
 
-func (te *TestEnvironment) NewBlockBuilder(optionalTag ...string) *MessageBuilder {
+func (te *TestEnvironment) NewBlockBuilder(optionalTag ...string) *BlockBuilder {
 	tag := ""
 	if len(optionalTag) > 0 {
 		tag = optionalTag[0]
 	}
-	return &MessageBuilder{
+	return &BlockBuilder{
 		te:  te,
 		tag: tag,
 	}
 }
 
-func (b *MessageBuilder) LatestMilestoneAsParents() *MessageBuilder {
-	return b.Parents(hornet.BlockIDs{b.te.coo.lastMilestoneMessageID})
+func (b *BlockBuilder) LatestMilestoneAsParents() *BlockBuilder {
+	return b.Parents(hornet.BlockIDs{b.te.coo.lastMilestoneBlockID})
 }
 
-func (b *MessageBuilder) Parents(parents hornet.BlockIDs) *MessageBuilder {
+func (b *BlockBuilder) Parents(parents hornet.BlockIDs) *BlockBuilder {
 	b.parents = parents
 	return b
 }
 
-func (b *MessageBuilder) FromWallet(wallet *utils.HDWallet) *MessageBuilder {
+func (b *BlockBuilder) FromWallet(wallet *utils.HDWallet) *BlockBuilder {
 	b.fromWallet = wallet
 	return b
 }
 
-func (b *MessageBuilder) ToWallet(wallet *utils.HDWallet) *MessageBuilder {
+func (b *BlockBuilder) ToWallet(wallet *utils.HDWallet) *BlockBuilder {
 	b.toWallet = wallet
 	return b
 }
 
-func (b *MessageBuilder) Amount(amount uint64) *MessageBuilder {
+func (b *BlockBuilder) Amount(amount uint64) *BlockBuilder {
 	b.amount = amount
 	return b
 }
 
-func (b *MessageBuilder) FakeInputs() *MessageBuilder {
+func (b *BlockBuilder) FakeInputs() *BlockBuilder {
 	b.fakeInputs = true
 	return b
 }
 
-func (b *MessageBuilder) UsingOutput(output *utxo.Output) *MessageBuilder {
+func (b *BlockBuilder) UsingOutput(output *utxo.Output) *BlockBuilder {
 	b.outputToUse = output
 	return b
 }
 
-func (b *MessageBuilder) TagData(data []byte) *MessageBuilder {
+func (b *BlockBuilder) TagData(data []byte) *BlockBuilder {
 	b.tagData = data
 	return b
 }
 
-func (b *MessageBuilder) BuildTaggedData() *Message {
+func (b *BlockBuilder) BuildTaggedData() *Block {
 
 	require.NotEmpty(b.te.TestInterface, b.tag)
 
@@ -105,7 +105,7 @@ func (b *MessageBuilder) BuildTaggedData() *Message {
 		parents = append(parents, parent[:])
 	}
 
-	msg, err := builder.NewMessageBuilder(b.te.protoParas.Version).
+	msg, err := builder.NewBlockBuilder(b.te.protoParas.Version).
 		Parents(parents).
 		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
@@ -114,16 +114,16 @@ func (b *MessageBuilder) BuildTaggedData() *Message {
 	_, err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewBlock(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
+	block, err := storage.NewBlock(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
 	require.NoError(b.te.TestInterface, err)
 
-	return &Message{
+	return &Block{
 		builder: b,
-		message: message,
+		block:   block,
 	}
 }
 
-func (b *MessageBuilder) Build() *Message {
+func (b *BlockBuilder) Build() *Block {
 
 	require.Greaterf(b.te.TestInterface, b.amount, uint64(0), "trying to send a transaction with no value")
 
@@ -200,15 +200,15 @@ func (b *MessageBuilder) Build() *Message {
 
 	require.NotNil(b.te.TestInterface, b.parents)
 
-	msg, err := builder.NewMessageBuilder(b.te.protoParas.Version).
+	iotaBlock, err := builder.NewBlockBuilder(b.te.protoParas.Version).
 		Parents(b.parents.ToSliceOfSlices()).
 		Payload(transaction).Build()
 	require.NoError(b.te.TestInterface, err)
 
-	_, err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	_, err = b.te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewBlock(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, b.te.protoParas)
 	require.NoError(b.te.TestInterface, err)
 
 	log := fmt.Sprintf("Send %d iota from %s to %s and remaining %d iota to original wallet", b.amount, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount)
@@ -221,15 +221,15 @@ func (b *MessageBuilder) Build() *Message {
 	var remainderOutput *utxo.Output
 
 	// Book the outputs in the wallets
-	messageTx := message.Transaction()
-	txEssence := messageTx.Essence
+	blockTx := block.Transaction()
+	txEssence := blockTx.Essence
 	for i := range txEssence.Outputs {
-		output, err := utxo.NewOutput(message.BlockID(), b.te.LastMilestoneIndex()+1, 0, messageTx, uint16(i))
+		output, err := utxo.NewOutput(block.BlockID(), b.te.LastMilestoneIndex()+1, 0, blockTx, uint16(i))
 		require.NoError(b.te.TestInterface, err)
 
 		switch iotaOutput := output.Output().(type) {
 		case *iotago.BasicOutput:
-			conditions := iotaOutput.UnlockConditions().MustSet()
+			conditions := iotaOutput.UnlockConditionsSet()
 			if conditions.Address().Address.Equal(toAddr) && output.Deposit() == b.amount {
 				sentOutput = output
 				continue
@@ -243,22 +243,22 @@ func (b *MessageBuilder) Build() *Message {
 		}
 	}
 
-	return &Message{
+	return &Block{
 		builder:         b,
-		message:         message,
+		block:           block,
 		consumedOutputs: consumedInputs,
 		sentOutput:      sentOutput,
 		remainderOutput: remainderOutput,
 	}
 }
 
-func (m *Message) Store() *Message {
-	require.Nil(m.builder.te.TestInterface, m.storedMessageID)
-	m.storedMessageID = m.builder.te.StoreMessage(m.message).Block().BlockID()
+func (m *Block) Store() *Block {
+	require.Nil(m.builder.te.TestInterface, m.storedBlockID)
+	m.storedBlockID = m.builder.te.StoreBlock(m.block).Block().BlockID()
 	return m
 }
 
-func (m *Message) BookOnWallets() *Message {
+func (m *Block) BookOnWallets() *Block {
 
 	require.False(m.builder.te.TestInterface, m.booked)
 	m.builder.fromWallet.BookSpents(m.consumedOutputs)
@@ -269,27 +269,27 @@ func (m *Message) BookOnWallets() *Message {
 	return m
 }
 
-func (m *Message) GeneratedUTXO() *utxo.Output {
+func (m *Block) GeneratedUTXO() *utxo.Output {
 	require.NotNil(m.builder.te.TestInterface, m.sentOutput)
 	return m.sentOutput
 }
 
-func (m *Message) RemainderUTXO() *utxo.Output {
+func (m *Block) RemainderUTXO() *utxo.Output {
 	require.NotNil(m.builder.te.TestInterface, m.remainderOutput)
 	return m.remainderOutput
 }
 
-func (m *Message) IotaMessage() *iotago.Block {
-	return m.message.Message()
+func (m *Block) IotaBlock() *iotago.Block {
+	return m.block.Block()
 }
 
-func (m *Message) StoredMessage() *storage.Block {
-	return m.message
+func (m *Block) StoredBlock() *storage.Block {
+	return m.block
 }
 
-func (m *Message) StoredBlockID() hornet.BlockID {
-	require.NotNil(m.builder.te.TestInterface, m.storedMessageID)
-	return m.storedMessageID
+func (m *Block) StoredBlockID() hornet.BlockID {
+	require.NotNil(m.builder.te.TestInterface, m.storedBlockID)
+	return m.storedBlockID
 }
 
 // returns length amount random bytes

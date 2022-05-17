@@ -91,7 +91,7 @@ func configureEvents() {
 	})
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		warpSync.AddReferencedMessagesCount(len(confirmation.Mutations.BlocksReferenced))
+		warpSync.AddReferencedBlocksCount(len(confirmation.Mutations.BlocksReferenced))
 		warpSync.UpdateCurrentConfirmedMilestone(confirmation.MilestoneIndex)
 	})
 

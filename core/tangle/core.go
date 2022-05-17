@@ -139,7 +139,7 @@ func provide(c *dig.Container) error {
 		RequestQueue       gossip.RequestQueue
 		Service            *gossip.Service
 		Requester          *gossip.Requester
-		MessageProcessor   *gossip.BlockProcessor
+		MessageProcessor   *gossip.MessageProcessor
 		ServerMetrics      *metrics.ServerMetrics
 		ReceiptService     *migrator.ReceiptService `optional:"true"`
 		ProtocolParameters *iotago.ProtocolParameters

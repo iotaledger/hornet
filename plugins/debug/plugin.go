@@ -41,10 +41,10 @@ const (
 	// GET returns a list of all pending requests.
 	RouteDebugRequests = "/requests"
 
-	// RouteDebugMessageCone is the debug route for traversing a cone of a message.
-	// it traverses the parents of a message until they reference an older milestone than the start message.
+	// RouteDebugBlockCone is the debug route for traversing a cone of a block.
+	// it traverses the parents of a block until they reference an older milestone than the start block.
 	// GET returns the path of this traversal and the "entry points".
-	RouteDebugMessageCone = "/message-cones/:" + restapipkg.ParameterMessageID
+	RouteDebugBlockCone = "/block-cones/:" + restapipkg.ParameterBlockID
 )
 
 func init() {
@@ -132,8 +132,8 @@ func configure() error {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteDebugMessageCone, func(c echo.Context) error {
-		resp, err := messageCone(c)
+	routeGroup.GET(RouteDebugBlockCone, func(c echo.Context) error {
+		resp, err := blockCone(c)
 		if err != nil {
 			return err
 		}

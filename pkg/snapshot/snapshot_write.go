@@ -258,7 +258,7 @@ func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieve
 	return func(index milestone.Index) (*iotago.Milestone, error) {
 		cachedMilestone := dbStorage.CachedMilestoneByIndexOrNil(index) // milestone +1
 		if cachedMilestone == nil {
-			return nil, fmt.Errorf("message for milestone with index %d is not stored in the database", index)
+			return nil, fmt.Errorf("block for milestone with index %d is not stored in the database", index)
 		}
 		defer cachedMilestone.Release(true) // milestone -1
 		return cachedMilestone.Milestone().Milestone(), nil
@@ -287,13 +287,13 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 
 			milestonePayload, err := mrf(msIndex)
 			if err != nil {
-				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved: %w", msIndex, err)
+				errChan <- fmt.Errorf("block for milestone with index %d could not be retrieved: %w", msIndex, err)
 				close(prodChan)
 				close(errChan)
 				return
 			}
 			if milestonePayload == nil {
-				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved", msIndex)
+				errChan <- fmt.Errorf("block for milestone with index %d could not be retrieved", msIndex)
 				close(prodChan)
 				close(errChan)
 				return

@@ -52,7 +52,7 @@ exit:
 					return true
 				}
 
-				proto.SendBlock(broadcast.BlockData)
+				proto.SendBlock(broadcast.Data)
 				return true
 			})
 		}

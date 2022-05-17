@@ -72,12 +72,12 @@ func (s *SnapshotManager) calcTargetIndexBySize(targetSizeBytes ...int64) (miles
 	return s.syncManager.ConfirmedMilestoneIndex() - milestoneDiff, nil
 }
 
-// pruneUnreferencedMessages prunes all unreferenced messages from the database for the given milestone
-func (s *SnapshotManager) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int, msgCountChecked int) {
+// pruneUnreferencedBlocks prunes all unreferenced blocks from the database for the given milestone
+func (s *SnapshotManager) pruneUnreferencedBlocks(targetIndex milestone.Index) (msgCountDeleted int, msgCountChecked int) {
 
 	blockIDsToDeleteMap := make(map[string]struct{})
 
-	// Check if message is still unreferenced
+	// Check if block is still unreferenced
 	for _, blockID := range s.storage.UnreferencedBlockIDs(targetIndex) {
 		blockIDMapKey := blockID.ToMapKey()
 		if _, exists := blockIDsToDeleteMap[blockIDMapKey]; exists {
@@ -86,12 +86,12 @@ func (s *SnapshotManager) pruneUnreferencedMessages(targetIndex milestone.Index)
 
 		cachedBlockMeta := s.storage.CachedBlockMetadataOrNil(blockID) // meta +1
 		if cachedBlockMeta == nil {
-			// message was already deleted or marked for deletion
+			// block was already deleted or marked for deletion
 			continue
 		}
 
 		if cachedBlockMeta.Metadata().IsReferenced() {
-			// message was already referenced
+			// block was already referenced
 			cachedBlockMeta.Release(true) // meta -1
 			continue
 		}
@@ -100,7 +100,7 @@ func (s *SnapshotManager) pruneUnreferencedMessages(targetIndex milestone.Index)
 		blockIDsToDeleteMap[blockIDMapKey] = struct{}{}
 	}
 
-	msgCountDeleted = s.pruneMessages(blockIDsToDeleteMap)
+	msgCountDeleted = s.pruneBlocks(blockIDsToDeleteMap)
 	s.storage.DeleteUnreferencedBlocks(targetIndex)
 
 	return msgCountDeleted, len(blockIDsToDeleteMap)
@@ -118,8 +118,8 @@ func (s *SnapshotManager) pruneMilestone(milestoneIndex milestone.Index, receipt
 	return nil
 }
 
-// pruneMessages removes all the associated data of the given message IDs from the database
-func (s *SnapshotManager) pruneMessages(blockIDsToDeleteMap map[string]struct{}) int {
+// pruneBlocks removes all the associated data of the given block IDs from the database
+func (s *SnapshotManager) pruneBlocks(blockIDsToDeleteMap map[string]struct{}) int {
 
 	for blockIDToDelete := range blockIDsToDeleteMap {
 
@@ -136,9 +136,9 @@ func (s *SnapshotManager) pruneMessages(blockIDsToDeleteMap map[string]struct{})
 				s.storage.DeleteChild(parent, msgID)
 			}
 
-			// We don't need to iterate through the children that reference this message,
-			// since we will never start the walk from this message anymore (we only walk the future cone)
-			// and the references will be deleted together with the children messages when they are pruned.
+			// We don't need to iterate through the children that reference this block,
+			// since we will never start the walk from this block anymore (we only walk the future cone)
+			// and the references will be deleted together with the children blocks when they are pruned.
 		})
 
 		s.storage.DeleteBlock(msgID)
@@ -220,7 +220,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 	}
 
 	// unreferenced msgs have to be pruned for PruningIndex as well, since this could be CMI at startup of the node
-	s.pruneUnreferencedMessages(snapshotInfo.PruningIndex)
+	s.pruneUnreferencedBlocks(snapshotInfo.PruningIndex)
 
 	// Iterate through all milestones that have to be pruned
 	for milestoneIndex := snapshotInfo.PruningIndex + 1; milestoneIndex <= targetIndex; milestoneIndex++ {
@@ -233,8 +233,8 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		s.LogInfof("Pruning milestone (%d)...", milestoneIndex)
 
 		timeStart := time.Now()
-		txCountDeleted, msgCountChecked := s.pruneUnreferencedMessages(milestoneIndex)
-		timePruneUnreferencedMessages := time.Now()
+		txCountDeleted, msgCountChecked := s.pruneUnreferencedBlocks(milestoneIndex)
+		timePruneUnreferencedBlocks := time.Now()
 
 		// get all parents of that milestone
 		cachedMilestone := s.storage.CachedMilestoneByIndexOrNil(milestoneIndex) // milestone +1
@@ -250,11 +250,11 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			ctx,
 			s.storage,
 			cachedMilestone.Milestone().Parents(),
-			// traversal stops if no more messages pass the given condition
+			// traversal stops if no more blocks pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
-				// everything that was referenced by that milestone can be pruned (even messages of older milestones)
+				// everything that was referenced by that milestone can be pruned (even blocks of older milestones)
 				return true, nil
 			},
 			// consumer
@@ -264,7 +264,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 				return nil
 			},
 			// called on missing parents
-			func(parentMessageID hornet.BlockID) error { return nil },
+			func(parentBlockID hornet.BlockID) error { return nil },
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,
@@ -294,8 +294,8 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		timePruneMilestone := time.Now()
 
 		msgCountChecked += len(blockIDsToDeleteMap)
-		txCountDeleted += s.pruneMessages(blockIDsToDeleteMap)
-		timePruneMessages := time.Now()
+		txCountDeleted += s.pruneBlocks(blockIDsToDeleteMap)
+		timePruneBlocks := time.Now()
 
 		snapshotInfo.PruningIndex = milestoneIndex
 		if err = s.storage.SetSnapshotInfo(snapshotInfo); err != nil {
@@ -303,17 +303,17 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		}
 		timeSetSnapshotInfo := time.Now()
 
-		s.LogInfof("Pruning milestone (%d) took %v. Pruned %d/%d messages. ", milestoneIndex, time.Since(timeStart).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
+		s.LogInfof("Pruning milestone (%d) took %v. Pruned %d/%d blocks. ", milestoneIndex, time.Since(timeStart).Truncate(time.Millisecond), txCountDeleted, msgCountChecked)
 
 		s.Events.PruningMilestoneIndexChanged.Trigger(milestoneIndex)
 		timePruningMilestoneIndexChanged := time.Now()
 
 		s.Events.PruningMetricsUpdated.Trigger(&PruningMetrics{
-			DurationPruneUnreferencedMessages:    timePruneUnreferencedMessages.Sub(timeStart),
-			DurationTraverseMilestoneCone:        timeTraverseMilestoneCone.Sub(timePruneUnreferencedMessages),
+			DurationPruneUnreferencedBlocks:      timePruneUnreferencedBlocks.Sub(timeStart),
+			DurationTraverseMilestoneCone:        timeTraverseMilestoneCone.Sub(timePruneUnreferencedBlocks),
 			DurationPruneMilestone:               timePruneMilestone.Sub(timeTraverseMilestoneCone),
-			DurationPruneMessages:                timePruneMessages.Sub(timePruneMilestone),
-			DurationSetSnapshotInfo:              timeSetSnapshotInfo.Sub(timePruneMessages),
+			DurationPruneBlocks:                  timePruneBlocks.Sub(timePruneMilestone),
+			DurationSetSnapshotInfo:              timeSetSnapshotInfo.Sub(timePruneBlocks),
 			DurationPruningMilestoneIndexChanged: timePruningMilestoneIndexChanged.Sub(timeSetSnapshotInfo),
 			DurationTotal:                        time.Since(timeStart),
 		})

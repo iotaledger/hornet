@@ -58,10 +58,10 @@ func TestTipSelect(t *testing.T) {
 		SpammerTipsThresholdSemiLazy,
 	)
 
-	// fill the storage with some messages to fill the tipselect pool
+	// fill the storage with some blocks to fill the tipselect pool
 	msgCount := 0
 	for i := 0; i < 100; i++ {
-		msgMeta := te.NewTestMessage(msgCount, te.LastMilestoneParents())
+		msgMeta := te.NewTestBlock(msgCount, te.LastMilestoneParents())
 		ts.AddTip(msgMeta)
 		msgCount++
 	}
@@ -94,7 +94,7 @@ func TestTipSelect(t *testing.T) {
 				context.Background(),
 				te.Storage(),
 				tip,
-				// traversal stops if no more messages pass the given condition
+				// traversal stops if no more blocks pass the given condition
 				// Caution: condition func is not in DFS order
 				func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 					defer cachedBlockMeta.Release(true) // meta -1
@@ -141,12 +141,12 @@ func TestTipSelect(t *testing.T) {
 			require.LessOrEqual(te.TestInterface, uint32(youngestConeRootIndex), uint32(cmi))
 		}
 
-		msgMeta := te.NewTestMessage(msgCount, tips)
+		msgMeta := te.NewTestBlock(msgCount, tips)
 		ts.AddTip(msgMeta)
 		msgCount++
 
 		if i%10 == 0 {
-			// Issue a new milestone every 10 messages
+			// Issue a new milestone every 10 blocks
 			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{msgMeta.BlockID()}, false)
 			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), conf.Mutations.BlocksReferenced, conf.MilestoneIndex)
 			ts.UpdateScores()

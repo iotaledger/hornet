@@ -100,12 +100,12 @@ func NewRequestQueue(latencyResolution ...int32) RequestQueue {
 	return q
 }
 
-// Request is a request for a particular message.
+// Request is a request for a particular block.
 type Request struct {
 	// The type of the request.
 	RequestType RequestType
-	// The MessageID of the message to request.
-	MessageID hornet.BlockID
+	// The BlockID of the block to request.
+	BlockID hornet.BlockID
 	// The milestone index under which this request is linked.
 	MilestoneIndex milestone.Index
 	// Tells the request queue to not remove this request if the enqueue time is
@@ -116,12 +116,12 @@ type Request struct {
 	EnqueueTime time.Time
 }
 
-// NewMessageIDRequest creates a new message request for a specific blockID.
-func NewMessageIDRequest(blockID hornet.BlockID, msIndex milestone.Index) *Request {
-	return &Request{RequestType: RequestTypeBlockID, MessageID: blockID, MilestoneIndex: msIndex}
+// NewBlockIDRequest creates a new block request for a specific blockID.
+func NewBlockIDRequest(blockID hornet.BlockID, msIndex milestone.Index) *Request {
+	return &Request{RequestType: RequestTypeBlockID, BlockID: blockID, MilestoneIndex: msIndex}
 }
 
-// NewMilestoneIndexRequest creates a new message request for a specific milestone index
+// NewMilestoneIndexRequest creates a new block request for a specific milestone index
 func NewMilestoneIndexRequest(msIndex milestone.Index) *Request {
 	return &Request{RequestType: RequestTypeMilestoneIndex, MilestoneIndex: msIndex}
 }
@@ -129,7 +129,7 @@ func NewMilestoneIndexRequest(msIndex milestone.Index) *Request {
 func (r *Request) MapKey() string {
 	switch r.RequestType {
 	case RequestTypeBlockID:
-		return r.MessageID.ToMapKey()
+		return r.BlockID.ToMapKey()
 	case RequestTypeMilestoneIndex:
 		return r.MilestoneIndex.String()
 	default:

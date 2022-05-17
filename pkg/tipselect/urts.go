@@ -63,11 +63,11 @@ var (
 type Tip struct {
 	// Score is the score of the tip.
 	Score Score
-	// MessageID is the message ID of the tip.
-	MessageID hornet.BlockID
-	// TimeFirstChild is the timestamp the tip was referenced for the first time by another message.
+	// BlockID is the block ID of the tip.
+	BlockID hornet.BlockID
+	// TimeFirstChild is the timestamp the tip was referenced for the first time by another block.
 	TimeFirstChild time.Time
-	// ChildrenCount is the amount the tip was referenced by other messages.
+	// ChildrenCount is the amount the tip was referenced by other blocks.
 	ChildrenCount *atomic.Uint32
 }
 
@@ -96,10 +96,10 @@ type TipSelector struct {
 	// referenced tips get removed directly to reduce the amount of tips in the network. (non-lazy pool)
 	retentionRulesTipsLimitNonLazy int
 	// maxReferencedTipAgeNonLazy is the maximum time a tip remains in the tip pool
-	// after it was referenced by the first message.
+	// after it was referenced by the first block.
 	// this is used to widen the cone of the tangle. (non-lazy pool)
 	maxReferencedTipAgeNonLazy time.Duration
-	// maxChildrenNonLazy is the maximum amount of references by other messages
+	// maxChildrenNonLazy is the maximum amount of references by other blocks
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (non-lazy pool)
 	maxChildrenNonLazy uint32
@@ -111,10 +111,10 @@ type TipSelector struct {
 	// referenced tips get removed directly to reduce the amount of tips in the network. (semi-lazy pool)
 	retentionRulesTipsLimitSemiLazy int
 	// maxReferencedTipAgeSemiLazy is the maximum time a tip remains in the tip pool
-	// after it was referenced by the first message.
+	// after it was referenced by the first block.
 	// this is used to widen the cone of the tangle. (semi-lazy pool)
 	maxReferencedTipAgeSemiLazy time.Duration
-	// maxChildrenSemiLazy is the maximum amount of references by other messages
+	// maxChildrenSemiLazy is the maximum amount of references by other blocks
 	// before the tip is removed from the tip pool.
 	// this is used to widen the cone of the tangle. (semi-lazy pool)
 	maxChildrenSemiLazy uint32
@@ -169,12 +169,12 @@ func New(
 	}
 }
 
-// AddTip adds the given message as a tip.
-func (ts *TipSelector) AddTip(messageMeta *storage.BlockMetadata) {
+// AddTip adds the given block as a tip.
+func (ts *TipSelector) AddTip(blockMeta *storage.BlockMetadata) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	blockID := messageMeta.BlockID()
+	blockID := blockMeta.BlockID()
 	blockIDMapKey := blockID.ToMapKey()
 
 	if _, exists := ts.nonLazyTipsMap[blockIDMapKey]; exists {
@@ -203,7 +203,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.BlockMetadata) {
 
 	tip := &Tip{
 		Score:          score,
-		MessageID:      blockID,
+		BlockID:        blockID,
 		TimeFirstChild: time.Time{},
 		ChildrenCount:  atomic.NewUint32(0),
 	}
@@ -219,22 +219,22 @@ func (ts *TipSelector) AddTip(messageMeta *storage.BlockMetadata) {
 
 	ts.Events.TipAdded.Trigger(tip)
 
-	// the parents are the messages this tip approves
+	// the parents are the blocks this tip approves
 	// remove them from the tip pool
-	parentMessageIDs := map[string]struct{}{}
-	for _, parent := range messageMeta.Parents() {
-		parentMessageIDs[parent.ToMapKey()] = struct{}{}
+	parentBlockIDs := map[string]struct{}{}
+	for _, parent := range blockMeta.Parents() {
+		parentBlockIDs[parent.ToMapKey()] = struct{}{}
 	}
 
 	checkTip := func(tipsMap map[string]*Tip, parentTip *Tip, retentionRulesTipsLimit int, maxChildren uint32, maxReferencedTipAge time.Duration) bool {
 		// if the amount of known tips is above the limit, remove the tip directly
 		if len(tipsMap) > retentionRulesTipsLimit {
-			return ts.removeTipWithoutLocking(tipsMap, parentTip.MessageID)
+			return ts.removeTipWithoutLocking(tipsMap, parentTip.BlockID)
 		}
 
 		// check if the maximum amount of children for this tip is reached
 		if parentTip.ChildrenCount.Add(1) >= maxChildren {
-			return ts.removeTipWithoutLocking(tipsMap, parentTip.MessageID)
+			return ts.removeTipWithoutLocking(tipsMap, parentTip.BlockID)
 		}
 
 		if maxReferencedTipAge == time.Duration(0) {
@@ -242,7 +242,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.BlockMetadata) {
 			return false
 		}
 
-		// check if the tip was referenced by another message before
+		// check if the tip was referenced by another block before
 		if parentTip.TimeFirstChild.IsZero() {
 			// mark the tip as referenced
 			parentTip.TimeFirstChild = time.Now()
@@ -251,17 +251,17 @@ func (ts *TipSelector) AddTip(messageMeta *storage.BlockMetadata) {
 		return false
 	}
 
-	for parentMessageID := range parentMessageIDs {
+	for parentBlockID := range parentBlockIDs {
 		// we have to separate between the pools, to prevent semi-lazy tips from emptying the non-lazy pool
 		switch tip.Score {
 		case ScoreNonLazy:
-			if parentTip, exists := ts.nonLazyTipsMap[parentMessageID]; exists {
+			if parentTip, exists := ts.nonLazyTipsMap[parentBlockID]; exists {
 				if checkTip(ts.nonLazyTipsMap, parentTip, ts.retentionRulesTipsLimitNonLazy, ts.maxChildrenNonLazy, ts.maxReferencedTipAgeNonLazy) {
 					ts.serverMetrics.TipsNonLazy.Sub(1)
 				}
 			}
 		case ScoreSemiLazy:
-			if parentTip, exists := ts.semiLazyTipsMap[parentMessageID]; exists {
+			if parentTip, exists := ts.semiLazyTipsMap[parentBlockID]; exists {
 				if checkTip(ts.semiLazyTipsMap, parentTip, ts.retentionRulesTipsLimitSemiLazy, ts.maxChildrenSemiLazy, ts.maxReferencedTipAgeSemiLazy) {
 					ts.serverMetrics.TipsSemiLazy.Sub(1)
 				}
@@ -270,7 +270,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.BlockMetadata) {
 	}
 }
 
-// removeTipWithoutLocking removes the given message from the tipsMap without acquiring the lock.
+// removeTipWithoutLocking removes the given block from the tipsMap without acquiring the lock.
 func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, blockID hornet.BlockID) bool {
 	blockIDMapKey := blockID.ToMapKey()
 	if tip, exists := tipsMap[blockIDMapKey]; exists {
@@ -299,7 +299,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 
 		// if randTip is below zero, we return the given tip
 		if randTip < 0 {
-			return tip.MessageID, nil
+			return tip.BlockID, nil
 		}
 	}
 
@@ -317,10 +317,10 @@ func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 	// record stats
 	start := time.Now()
 
-	tipMessageID, err := ts.randomTipWithoutLocking(tipsMap)
+	tipBlockID, err := ts.randomTipWithoutLocking(tipsMap)
 	ts.Events.TipSelPerformed.Trigger(&TipSelStats{Duration: time.Since(start)})
 
-	return tipMessageID, err
+	return tipBlockID, err
 }
 
 // SelectTips selects multiple tips.
@@ -432,7 +432,7 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 
 	checkTip := func(tipsMap map[string]*Tip, tip *Tip, maxReferencedTipAge time.Duration) bool {
 		if tip.TimeFirstChild.IsZero() {
-			// not referenced by another message
+			// not referenced by another block
 			return false
 		}
 
@@ -442,7 +442,7 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 		}
 
 		// remove the tip from the pool because it is outdated
-		return ts.removeTipWithoutLocking(tipsMap, tip.MessageID)
+		return ts.removeTipWithoutLocking(tipsMap, tip.BlockID)
 	}
 
 	count := 0
@@ -473,7 +473,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 	count := 0
 	for _, tip := range ts.nonLazyTipsMap {
 		// check the score of the tip again to avoid old tips
-		score, err := ts.calculateScore(tip.MessageID, cmi)
+		score, err := ts.calculateScore(tip.BlockID, cmi)
 		if err != nil {
 			// do not continue if calculation of the tip score failed
 			return count, err
@@ -482,7 +482,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
-			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.MessageID) {
+			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.BlockID) {
 				count++
 				ts.serverMetrics.TipsNonLazy.Sub(1)
 			}
@@ -491,12 +491,12 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 
 		if tip.Score == ScoreSemiLazy {
 			// remove the tip from the pool because it is outdated
-			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.MessageID) {
+			if ts.removeTipWithoutLocking(ts.nonLazyTipsMap, tip.BlockID) {
 				count++
 				ts.serverMetrics.TipsNonLazy.Sub(1)
 			}
 			// add the tip to the semi-lazy tips map
-			ts.semiLazyTipsMap[tip.MessageID.ToMapKey()] = tip
+			ts.semiLazyTipsMap[tip.BlockID.ToMapKey()] = tip
 			ts.Events.TipAdded.Trigger(tip)
 			ts.serverMetrics.TipsSemiLazy.Add(1)
 			count--
@@ -505,7 +505,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 
 	for _, tip := range ts.semiLazyTipsMap {
 		// check the score of the tip again to avoid old tips
-		score, err := ts.calculateScore(tip.MessageID, cmi)
+		score, err := ts.calculateScore(tip.BlockID, cmi)
 		if err != nil {
 			// do not continue if calculation of the tip score failed
 			return count, err
@@ -514,7 +514,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 
 		if tip.Score == ScoreLazy {
 			// remove the tip from the pool because it is outdated
-			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.MessageID) {
+			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.BlockID) {
 				count++
 				ts.serverMetrics.TipsSemiLazy.Sub(1)
 			}
@@ -523,12 +523,12 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 
 		if tip.Score == ScoreNonLazy {
 			// remove the tip from the pool because it is outdated
-			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.MessageID) {
+			if ts.removeTipWithoutLocking(ts.semiLazyTipsMap, tip.BlockID) {
 				count++
 				ts.serverMetrics.TipsSemiLazy.Sub(1)
 			}
 			// add the tip to the non-lazy tips map
-			ts.nonLazyTipsMap[tip.MessageID.ToMapKey()] = tip
+			ts.nonLazyTipsMap[tip.BlockID.ToMapKey()] = tip
 			ts.Events.TipAdded.Trigger(tip)
 			ts.serverMetrics.TipsNonLazy.Add(1)
 			count--
@@ -538,7 +538,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 	return count, nil
 }
 
-// calculateScore calculates the tip selection score of this message
+// calculateScore calculates the tip selection score of this block
 func (ts *TipSelector) calculateScore(blockID hornet.BlockID, cmi milestone.Index) (Score, error) {
 
 	tipScore, err := ts.tipScoreCalculator.TipScore(ts.shutdownCtx, blockID, cmi)
@@ -548,7 +548,7 @@ func (ts *TipSelector) calculateScore(blockID hornet.BlockID, cmi milestone.Inde
 
 	switch tipScore {
 	case tangle.TipScoreNotFound:
-		// we need to return lazy instead of panic here, because the message could have been pruned already
+		// we need to return lazy instead of panic here, because the block could have been pruned already
 		// if the node was not sync for a longer time and after the pruning "UpdateScores" is called.
 		return ScoreLazy, nil
 	case tangle.TipScoreYCRIThresholdReached:

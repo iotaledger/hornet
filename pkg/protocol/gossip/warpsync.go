@@ -43,7 +43,7 @@ func SyncStartCaller(handler interface{}, params ...interface{}) {
 }
 
 func SyncDoneCaller(handler interface{}, params ...interface{}) {
-	handler.(func(delta int, referencedMessagesTotal int, dur time.Duration))(params[0].(int), params[1].(int), params[2].(time.Duration))
+	handler.(func(delta int, referencedBlocksTotal int, dur time.Duration))(params[0].(int), params[1].(int), params[2].(time.Duration))
 }
 
 func CheckpointCaller(handler interface{}, params ...interface{}) {
@@ -112,8 +112,8 @@ type WarpSync struct {
 	PreviousCheckpoint milestone.Index
 	// The current checkpoint of the synchronization.
 	CurrentCheckpoint milestone.Index
-	// The amount of referenced messages during this warpsync run.
-	referencedMessagesTotal int
+	// The amount of referenced blocks during this warpsync run.
+	referencedBlocksTotal int
 }
 
 // UpdateCurrentConfirmedMilestone updates the current confirmed milestone index state.
@@ -133,7 +133,7 @@ func (ws *WarpSync) UpdateCurrentConfirmedMilestone(current milestone.Index) {
 
 	// finished
 	if ws.TargetMilestone != 0 && ws.CurrentConfirmedMilestone >= ws.TargetMilestone {
-		ws.Events.Done.Trigger(int(ws.TargetMilestone-ws.InitMilestone), ws.referencedMessagesTotal, time.Since(ws.StartTime))
+		ws.Events.Done.Trigger(int(ws.TargetMilestone-ws.InitMilestone), ws.referencedBlocksTotal, time.Since(ws.StartTime))
 		ws.reset()
 		return
 	}
@@ -193,12 +193,12 @@ func (ws *WarpSync) UpdateTargetMilestone(target milestone.Index) {
 	ws.Events.Start.Trigger(ws.TargetMilestone, ws.CurrentCheckpoint, advancementRange)
 }
 
-// AddReferencedMessagesCount adds the amount of referenced messages to collect stats.
-func (ws *WarpSync) AddReferencedMessagesCount(referencedMessagesCount int) {
+// AddReferencedBlocksCount adds the amount of referenced blocks to collect stats.
+func (ws *WarpSync) AddReferencedBlocksCount(referencedBlocksCount int) {
 	ws.Lock()
 	defer ws.Unlock()
 
-	ws.referencedMessagesTotal += referencedMessagesCount
+	ws.referencedBlocksTotal += referencedBlocksCount
 }
 
 // advances the next checkpoint by either incrementing from the current
@@ -238,10 +238,10 @@ func (ws *WarpSync) reset() {
 	ws.TargetMilestone = 0
 	ws.PreviousCheckpoint = 0
 	ws.CurrentCheckpoint = 0
-	ws.referencedMessagesTotal = 0
+	ws.referencedBlocksTotal = 0
 }
 
-// WarpSyncMilestoneRequester walks the cones of existing but non-solid milestones and memoizes already walked messages and milestones.
+// WarpSyncMilestoneRequester walks the cones of existing but non-solid milestones and memoizes already walked blocks and milestones.
 type WarpSyncMilestoneRequester struct {
 	syncutils.Mutex
 
@@ -249,11 +249,11 @@ type WarpSyncMilestoneRequester struct {
 	storage *storage.Storage
 	// used to determine the sync status of the node.
 	syncManager *syncmanager.SyncManager
-	// used to request messages from peers.
+	// used to request blocks from peers.
 	requester *Requester
 	// do not remove requests if the enqueue time is over the given threshold.
 	preventDiscard bool
-	// map of already traversed messages to to prevent traversing the same cones multiple times.
+	// map of already traversed blocks to to prevent traversing the same cones multiple times.
 	traversed map[string]struct{}
 }
 
@@ -274,7 +274,7 @@ func NewWarpSyncMilestoneRequester(
 }
 
 // RequestMissingMilestoneParents traverses the parents of a given milestone and requests each missing parent.
-// Already requested milestones or traversed messages will be ignored, to circumvent requesting
+// Already requested milestones or traversed blocks will be ignored, to circumvent requesting
 // the same parents multiple times.
 func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.Context, msIndex milestone.Index) error {
 	w.Lock()
@@ -294,7 +294,7 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 		ctx,
 		w.storage,
 		milestoneParents,
-		// traversal stops if no more messages pass the given condition
+		// traversal stops if no more blocks pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
@@ -314,8 +314,8 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 		// consumer
 		nil,
 		// called on missing parents
-		func(parentMessageID hornet.BlockID) error {
-			w.requester.Request(parentMessageID, msIndex, w.preventDiscard)
+		func(parentBlockID hornet.BlockID) error {
+			w.requester.Request(parentBlockID, msIndex, w.preventDiscard)
 			return nil
 		},
 		// called on solid entry points
@@ -324,7 +324,7 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 		false)
 }
 
-// Cleanup cleans up traversed messages to free memory.
+// Cleanup cleans up traversed blocks to free memory.
 func (w *WarpSyncMilestoneRequester) Cleanup() {
 	w.Lock()
 	defer w.Unlock()

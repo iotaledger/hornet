@@ -19,11 +19,11 @@ const (
 )
 
 // newWorkUnit creates a new WorkUnit and initializes values by unmarshaling key.
-func newWorkUnit(key []byte, blockProcessor *BlockProcessor) *WorkUnit {
+func newWorkUnit(key []byte, messageProcessor *MessageProcessor) *WorkUnit {
 	wu := &WorkUnit{
 		receivedMsgBytes: make([]byte, len(key)),
 		receivedFrom:     make([]*Protocol, 0),
-		blockProcessor:   blockProcessor,
+		messageProcessor: messageProcessor,
 	}
 	copy(wu.receivedMsgBytes, key)
 	return wu
@@ -46,7 +46,7 @@ type WorkUnit struct {
 	objectstorage.StorableObjectFlags
 	processingLock syncutils.Mutex
 
-	blockProcessor *BlockProcessor
+	messageProcessor *MessageProcessor
 
 	// data
 	receivedMsgBytes []byte
@@ -103,10 +103,10 @@ func (wu *WorkUnit) punish(reason error) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	for _, p := range wu.receivedFrom {
-		wu.blockProcessor.serverMetrics.InvalidBlocks.Inc()
+		wu.messageProcessor.serverMetrics.InvalidBlocks.Inc()
 
 		// drop the connection to the peer
-		_ = wu.blockProcessor.peeringManager.DisconnectPeer(p.PeerID, errors.WithMessagef(reason, "peer was punished"))
+		_ = wu.messageProcessor.peeringManager.DisconnectPeer(p.PeerID, errors.WithMessagef(reason, "peer was punished"))
 	}
 }
 
@@ -119,7 +119,7 @@ func (wu *WorkUnit) broadcast() *Broadcast {
 		exclude[p.PeerID] = struct{}{}
 	}
 	return &Broadcast{
-		BlockData:    wu.receivedMsgBytes,
+		Data:         wu.receivedMsgBytes,
 		ExcludePeers: exclude,
 	}
 }
@@ -134,7 +134,7 @@ func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *Protocol) {
 		if p.PeerID == excludedPeer.PeerID {
 			continue
 		}
-		wu.blockProcessor.serverMetrics.KnownBlocks.Inc()
+		wu.messageProcessor.serverMetrics.KnownBlocks.Inc()
 		p.Metrics.KnownBlocks.Inc()
 	}
 }

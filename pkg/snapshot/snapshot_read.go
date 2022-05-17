@@ -46,13 +46,13 @@ func newFileHeaderConsumer(targetHeader *ReadFileHeader, utxoManager *utxo.Manag
 // returns a solid entry point consumer which stores them into the database.
 // the SEPs are stored with the corresponding SEP milestone index from the snapshot.
 func newSEPsConsumer(dbStorage *storage.Storage, header *ReadFileHeader) SEPConsumerFunc {
-	// note that we only get the hash of the SEP message instead
+	// note that we only get the hash of the SEP block instead
 	// of also its associated oldest cone root index, since the index
 	// of the snapshot milestone will be below max depth anyway.
 	// this information was included in pre Chrysalis Phase 2 snapshots
 	// but has been deemed unnecessary for the reason mentioned above.
-	return func(solidEntryPointMessageID hornet.BlockID) error {
-		dbStorage.SolidEntryPointsAddWithoutLocking(solidEntryPointMessageID, header.SEPMilestoneIndex)
+	return func(solidEntryPointBlockID hornet.BlockID) error {
+		dbStorage.SolidEntryPointsAddWithoutLocking(solidEntryPointBlockID, header.SEPMilestoneIndex)
 		return nil
 	}
 }

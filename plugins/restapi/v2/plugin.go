@@ -37,15 +37,15 @@ const (
 	// GET returns the message based on the given type in the request "Accept" header.
 	// MIMEApplicationJSON => json
 	// MIMEVendorIOTASerializer => bytes
-	RouteMessage = "/messages/:" + restapipkg.ParameterMessageID
+	RouteMessage = "/messages/:" + restapipkg.ParameterBlockID
 
 	// RouteMessageMetadata is the route for getting message metadata by its blockID.
 	// GET returns message metadata (including info about "promotion/reattachment needed").
-	RouteMessageMetadata = "/messages/:" + restapipkg.ParameterMessageID + "/metadata"
+	RouteMessageMetadata = "/messages/:" + restapipkg.ParameterBlockID + "/metadata"
 
 	// RouteMessageChildren is the route for getting message IDs of the children of a message, identified by its blockID.
 	// GET returns the message IDs of all children.
-	RouteMessageChildren = "/messages/:" + restapipkg.ParameterMessageID + "/children"
+	RouteMessageChildren = "/messages/:" + restapipkg.ParameterBlockID + "/children"
 
 	// RouteMessages is the route for creating new messages.
 	// POST creates a single new message and returns the new message ID.

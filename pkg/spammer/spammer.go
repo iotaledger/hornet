@@ -13,23 +13,23 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// SendMessageFunc is a function which sends a message to the network.
-type SendMessageFunc = func(msg *storage.Block) error
+// SendBlockFunc is a function which sends a block to the network.
+type SendBlockFunc = func(msg *storage.Block) error
 
 // SpammerTipselFunc selects tips for the spammer.
 type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.BlockIDs, err error)
 
-// Spammer is used to issue messages to the IOTA network to create load on the tangle.
+// Spammer is used to issue blocks to the IOTA network to create load on the tangle.
 type Spammer struct {
 	// Deserialization parameters including byte costs
-	protoParas      *iotago.ProtocolParameters
-	message         string
-	tag             string
-	tagSemiLazy     string
-	tipselFunc      SpammerTipselFunc
-	powHandler      *pow.Handler
-	sendMessageFunc SendMessageFunc
-	serverMetrics   *metrics.ServerMetrics
+	protoParas    *iotago.ProtocolParameters
+	message       string
+	tag           string
+	tagSemiLazy   string
+	tipselFunc    SpammerTipselFunc
+	powHandler    *pow.Handler
+	sendBlockFunc SendBlockFunc
+	serverMetrics *metrics.ServerMetrics
 }
 
 // New creates a new spammer instance.
@@ -39,18 +39,18 @@ func New(protoParas *iotago.ProtocolParameters,
 	tagSemiLazy string,
 	tipselFunc SpammerTipselFunc,
 	powHandler *pow.Handler,
-	sendMessageFunc SendMessageFunc,
+	sendBlockFunc SendBlockFunc,
 	serverMetrics *metrics.ServerMetrics) *Spammer {
 
 	return &Spammer{
-		protoParas:      protoParas,
-		message:         message,
-		tag:             tag,
-		tagSemiLazy:     tagSemiLazy,
-		tipselFunc:      tipselFunc,
-		powHandler:      powHandler,
-		sendMessageFunc: sendMessageFunc,
-		serverMetrics:   serverMetrics,
+		protoParas:    protoParas,
+		message:       message,
+		tag:           tag,
+		tagSemiLazy:   tagSemiLazy,
+		tipselFunc:    tipselFunc,
+		powHandler:    powHandler,
+		sendBlockFunc: sendBlockFunc,
+		serverMetrics: serverMetrics,
 	}
 }
 
@@ -102,7 +102,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 		return time.Duration(0), time.Duration(0), err
 	}
 
-	if err := s.sendMessageFunc(msg); err != nil {
+	if err := s.sendBlockFunc(msg); err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}
 

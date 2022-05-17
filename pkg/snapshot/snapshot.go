@@ -27,17 +27,17 @@ import (
 )
 
 var (
-	// Returned when a critical error stops the execution of a task.
+	// ErrCritical is returned when a critical error stops the execution of a task.
 	ErrCritical = errors.New("critical error")
-	// Returned when unsupported snapshot data is read.
+	// ErrUnsupportedSnapshot is returned when unsupported snapshot data is read.
 	ErrUnsupportedSnapshot = errors.New("unsupported snapshot data")
-	// Returned when a child message wasn't found.
-	ErrChildMsgNotFound = errors.New("child message not found")
-	// Returned when the milestone diff that should be applied is not the current or next milestone.
+	// ErrChildBlockNotFound is returned when a child block wasn't found.
+	ErrChildBlockNotFound = errors.New("child block not found")
+	// ErrWrongMilestoneDiffIndex is returned when the milestone diff that should be applied is not the current or next milestone.
 	ErrWrongMilestoneDiffIndex = errors.New("wrong milestone diff index")
-	// Returned when the final milestone after loading the snapshot is not equal to the solid entry point index.
+	// ErrFinalLedgerIndexDoesNotMatchSEPIndex is returned when the final milestone after loading the snapshot is not equal to the solid entry point index.
 	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
-	// Returned when a delta snapshot is available, but no full snapshot is found.
+	// ErrInvalidSnapshotAvailabilityState is returned when a delta snapshot is available, but no full snapshot is found.
 	ErrInvalidSnapshotAvailabilityState = errors.New("invalid snapshot files availability")
 
 	ErrNoSnapshotSpecified                   = errors.New("no snapshot file was specified in the config")
@@ -199,28 +199,28 @@ func forEachSolidEntryPoint(
 		memcachedParentsTraverserStorage.Cleanup(true)
 		memcachedChildrenTraverserStorage.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
-	// we share the same traverser for all milestones, so we don't cleanup the cachedMessages in between.
+	// we share the same traverser for all milestones, so we don't cleanup the cachedBlocks in between.
 	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
 
-	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
+	// isSolidEntryPoint checks whether any direct child of the given block was referenced by a milestone which is above the target milestone.
 	isSolidEntryPoint := func(blockID hornet.BlockID, targetIndex milestone.Index) (bool, error) {
-		childMessageIDs, err := memcachedChildrenTraverserStorage.ChildrenMessageIDs(blockID)
+		childBlockIDs, err := memcachedChildrenTraverserStorage.ChildrenBlockIDs(blockID)
 		if err != nil {
 			return false, err
 		}
 
-		for _, childMessageID := range childMessageIDs {
-			cachedBlockMeta, err := memcachedChildrenTraverserStorage.CachedMessageMetadata(childMessageID) // meta +1
+		for _, childBlockID := range childBlockIDs {
+			cachedBlockMeta, err := memcachedChildrenTraverserStorage.CachedBlockMetadata(childBlockID) // meta +1
 			if err != nil {
 				return false, err
 			}
 
 			if cachedBlockMeta == nil {
-				// Ignore this message since it doesn't exist anymore
+				// Ignore this block since it doesn't exist anymore
 				continue
 			}
 
@@ -248,11 +248,11 @@ func forEachSolidEntryPoint(
 			return errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
 
-		// traverse the milestone and collect all messages that were referenced by this milestone or newer
+		// traverse the milestone and collect all blocks that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
 			ctx,
 			milestoneParents,
-			// traversal stops if no more messages pass the given condition
+			// traversal stops if no more blocks pass the given condition
 			// Caution: condition func is not in DFS order
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1

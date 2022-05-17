@@ -27,7 +27,7 @@ func messageMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	blockID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func messageMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 }
 
 func storageMessageByID(c echo.Context) (*storage.Block, error) {
-	blockID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 
 func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 
-	blockID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
 	}

@@ -71,7 +71,7 @@ type dependencies struct {
 	SnapshotManager  *snapshot.SnapshotManager
 	ServerMetrics    *metrics.ServerMetrics
 	RequestQueue     gossip.RequestQueue
-	MessageProcessor *gossip.BlockProcessor
+	MessageProcessor *gossip.MessageProcessor
 	PeeringManager   *p2p.Manager
 	Host             host.Host
 }
@@ -95,8 +95,8 @@ func provide(c *dig.Container) error {
 		Profile            *profile.Profile
 	}
 
-	if err := c.Provide(func(deps msgProcDeps) *gossip.BlockProcessor {
-		msgProc, err := gossip.NewBlockProcessor(
+	if err := c.Provide(func(deps msgProcDeps) *gossip.MessageProcessor {
+		msgProc, err := gossip.NewMessageProcessor(
 			deps.Storage,
 			deps.SyncManager,
 			deps.RequestQueue,
@@ -107,7 +107,7 @@ func provide(c *dig.Container) error {
 				WorkUnitCacheOpts: deps.Profile.Caches.IncomingBlocksFilter,
 			})
 		if err != nil {
-			CoreComponent.LogPanicf("BlockProcessor initialization failed: %s", err)
+			CoreComponent.LogPanicf("MessageProcessor initialization failed: %s", err)
 		}
 
 		return msgProc
@@ -228,12 +228,12 @@ func run() error {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CoreComponent.Daemon().BackgroundWorker("BlockProcessor", func(ctx context.Context) {
-		CoreComponent.LogInfo("Running BlockProcessor")
+	if err := CoreComponent.Daemon().BackgroundWorker("MessageProcessor", func(ctx context.Context) {
+		CoreComponent.LogInfo("Running MessageProcessor")
 		deps.MessageProcessor.Run(ctx)
 
-		CoreComponent.LogInfo("Stopped BlockProcessor")
-	}, daemon.PriorityBlockProcessor); err != nil {
+		CoreComponent.LogInfo("Stopped MessageProcessor")
+	}, daemon.PriorityMessageProcessor); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 

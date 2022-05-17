@@ -97,7 +97,7 @@ func (r *Requester) RunRequestQueueDrainer(ctx context.Context) {
 				sendRequest := func(request *Request, proto *Protocol) {
 					switch request.RequestType {
 					case RequestTypeBlockID:
-						proto.SendBlockRequest(request.MessageID)
+						proto.SendBlockRequest(request.BlockID)
 					case RequestTypeMilestoneIndex:
 						proto.SendMilestoneRequest(request.MilestoneIndex)
 					default:
@@ -107,7 +107,7 @@ func (r *Requester) RunRequestQueueDrainer(ctx context.Context) {
 
 				requested := false
 				r.service.ForEach(func(proto *Protocol) bool {
-					// we only send a request message if the peer actually has the data
+					// we only send a request block if the peer actually has the data
 					// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= SolidMilestoneIndex)
 					if !proto.HasDataForMilestone(request.MilestoneIndex) {
 						return true
@@ -123,7 +123,7 @@ func (r *Requester) RunRequestQueueDrainer(ctx context.Context) {
 					// so we ask all neighbors that could have the data
 					// (r.MilestoneIndex > PrunedMilestoneIndex && r.MilestoneIndex <= LatestMilestoneIndex)
 					r.service.ForEach(func(proto *Protocol) bool {
-						// we only send a request message if the peer could have the data
+						// we only send a request block if the peer could have the data
 						if !proto.CouldHaveDataForMilestone(request.MilestoneIndex) {
 							return true
 						}
@@ -201,7 +201,7 @@ func (r *Requester) AddBackPressureFunc(pressureFunc RequestBackPressureFunc) {
 	r.backPFuncs = append(r.backPFuncs, pressureFunc)
 }
 
-// Request enqueues a request to the request queue for the given message if it isn't a solid entry point
+// Request enqueues a request to the request queue for the given block if it isn't a solid entry point
 // and is not contained in the database already.
 func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDiscard ...bool) bool {
 
@@ -220,7 +220,7 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 		if r.storage.ContainsBlock(blockID) {
 			return false
 		}
-		request = NewMessageIDRequest(blockID, msIndex)
+		request = NewBlockIDRequest(blockID, msIndex)
 
 	case milestone.Index:
 		msIndex := value
@@ -240,7 +240,7 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 	return r.enqueueAndSignal(request)
 }
 
-// RequestMultiple works like Request but takes multiple message IDs.
+// RequestMultiple works like Request but takes multiple block IDs.
 func (r *Requester) RequestMultiple(blockIDs hornet.BlockIDs, msIndex milestone.Index, preventDiscard ...bool) int {
 	requested := 0
 	for _, blockID := range blockIDs {
@@ -251,8 +251,8 @@ func (r *Requester) RequestMultiple(blockIDs hornet.BlockIDs, msIndex milestone.
 	return requested
 }
 
-// RequestParents enqueues requests for the parents of the given message to the request queue, if the
-// given message is not a solid entry point and neither its parents are and also not in the database.
+// RequestParents enqueues requests for the parents of the given block to the request queue, if the
+// given block is not a solid entry point and neither its parents are and also not in the database.
 func (r *Requester) RequestParents(cachedBlock *storage.CachedBlock, msIndex milestone.Index, preventDiscard ...bool) {
 	cachedBlock.ConsumeMetadata(func(metadata *storage.BlockMetadata) {
 		blockID := metadata.BlockID()

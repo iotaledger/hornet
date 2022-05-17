@@ -24,8 +24,8 @@ type MockCoo struct {
 	cooPrivateKeys []ed25519.PrivateKey
 	keyManager     *keymanager.KeyManager
 
-	lastMilestonePayload   *iotago.Milestone
-	lastMilestoneMessageID hornet.BlockID
+	lastMilestonePayload *iotago.Milestone
+	lastMilestoneBlockID hornet.BlockID
 }
 
 func (coo *MockCoo) LastMilestonePayload() *iotago.Milestone {
@@ -67,8 +67,8 @@ func (coo *MockCoo) LastPreviousMilestoneID() iotago.MilestoneID {
 	return lastMilestonePayload.PreviousMilestoneID
 }
 
-func (coo *MockCoo) LastMilestoneMessageID() hornet.BlockID {
-	return coo.lastMilestoneMessageID
+func (coo *MockCoo) LastMilestoneBlockID() hornet.BlockID {
+	return coo.lastMilestoneBlockID
 }
 
 func (coo *MockCoo) LastMilestoneParents() hornet.BlockIDs {
@@ -83,7 +83,7 @@ func (coo *MockCoo) LastMilestoneParents() hornet.BlockIDs {
 func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.BlockID {
 	msg, err := storage.NewBlock(message, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
 	require.NoError(coo.te.TestInterface, err)
-	cachedBlock := coo.te.StoreMessage(msg) // block +1, no need to release, since we remember all the messages for later cleanup
+	cachedBlock := coo.te.StoreBlock(msg) // block +1, no need to release, since we remember all the messages for later cleanup
 
 	milestonePayload := cachedBlock.Block().Milestone()
 	if milestonePayload != nil {
@@ -95,7 +95,7 @@ func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.BlockID {
 
 func (coo *MockCoo) bootstrap() {
 	coo.lastMilestonePayload = nil
-	coo.lastMilestoneMessageID = hornet.NullBlockID()
+	coo.lastMilestoneBlockID = hornet.NullBlockID()
 	coo.issueMilestoneOnTips(hornet.BlockIDs{}, true)
 }
 
@@ -175,7 +175,7 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.BlockIDs, addLastMilestoneA
 	fmt.Printf("Issue milestone %v\n", milestoneIndex)
 
 	if addLastMilestoneAsParent {
-		tips = append(tips, coo.LastMilestoneMessageID())
+		tips = append(tips, coo.LastMilestoneBlockID())
 	}
 
 	milestonePayload, err := coo.milestonePayload(tips)
@@ -196,7 +196,7 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.BlockIDs, addLastMilestoneA
 	if err != nil {
 		return nil, nil, err
 	}
-	coo.lastMilestoneMessageID = milestoneMessageID
+	coo.lastMilestoneBlockID = milestoneMessageID
 
 	coo.te.VerifyLMI(milestoneIndex)
 	cachedMilestone := coo.te.storage.CachedMilestoneByIndexOrNil(milestoneIndex) // milestone +1

@@ -164,9 +164,9 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 
 	for _, req := range queued {
 		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.ToHex(),
+			BlockID:          req.BlockID.ToHex(),
 			Type:             "queued",
-			MessageExists:    deps.Storage.ContainsBlock(req.MessageID),
+			BlockExists:      deps.Storage.ContainsBlock(req.BlockID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -174,9 +174,9 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 
 	for _, req := range pending {
 		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.ToHex(),
+			BlockID:          req.BlockID.ToHex(),
 			Type:             "pending",
-			MessageExists:    deps.Storage.ContainsBlock(req.MessageID),
+			BlockExists:      deps.Storage.ContainsBlock(req.BlockID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -184,9 +184,9 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 
 	for _, req := range processing {
 		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.ToHex(),
+			BlockID:          req.BlockID.ToHex(),
 			Type:             "processing",
-			MessageExists:    deps.Storage.ContainsBlock(req.MessageID),
+			BlockExists:      deps.Storage.ContainsBlock(req.BlockID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -197,41 +197,41 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 	}, nil
 }
 
-func messageCone(c echo.Context) (*messageConeResponse, error) {
+func blockCone(c echo.Context) (*blockConeResponse, error) {
 
-	blockID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
 	cachedBlockMetaStart := deps.Storage.CachedBlockMetadataOrNil(blockID) // meta +1
 	if cachedBlockMetaStart == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", blockID.ToHex())
+		return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
 	}
 	defer cachedBlockMetaStart.Release(true) // meta -1
 
 	if !cachedBlockMetaStart.Metadata().IsSolid() {
-		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start message is not solid: %s", blockID.ToHex())
+		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start block is not solid: %s", blockID.ToHex())
 	}
 
 	startMsgReferened, startMsgReferenedAt := cachedBlockMetaStart.Metadata().ReferencedWithIndex()
 
 	entryPointIndex := deps.Storage.SnapshotInfo().EntryPointIndex
 	entryPoints := []*entryPoint{}
-	tanglePath := []*messageWithParents{}
+	tanglePath := []*blockWithParents{}
 
 	if err := dag.TraverseParentsOfBlock(
 		Plugin.Daemon().ContextStopped(),
 		deps.Storage,
 		blockID,
-		// traversal stops if no more messages pass the given condition
+		// traversal stops if no more blocks pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 				if !startMsgReferened || (at < startMsgReferenedAt) {
-					entryPoints = append(entryPoints, &entryPoint{MessageID: cachedBlockMeta.Metadata().BlockID().ToHex(), ReferencedByMilestone: at})
+					entryPoints = append(entryPoints, &entryPoint{BlockID: cachedBlockMeta.Metadata().BlockID().ToHex(), ReferencedByMilestone: at})
 					return false, nil
 				}
 			}
@@ -242,9 +242,9 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 			cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
 				tanglePath = append(tanglePath,
-					&messageWithParents{
-						MessageID: metadata.BlockID().ToHex(),
-						Parents:   metadata.Parents().ToHex(),
+					&blockWithParents{
+						BlockID: metadata.BlockID().ToHex(),
+						Parents: metadata.Parents().ToHex(),
 					},
 				)
 			})
@@ -256,7 +256,7 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		nil,
 		// called on solid entry points
 		func(blockID hornet.BlockID) error {
-			entryPoints = append(entryPoints, &entryPoint{MessageID: blockID.ToHex(), ReferencedByMilestone: entryPointIndex})
+			entryPoints = append(entryPoints, &entryPoint{BlockID: blockID.ToHex(), ReferencedByMilestone: entryPointIndex})
 			return nil
 		},
 		false); err != nil {
@@ -270,7 +270,7 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "no referenced parents found: %s", blockID.ToHex())
 	}
 
-	return &messageConeResponse{
+	return &blockConeResponse{
 		ConeElementsCount: len(tanglePath),
 		EntryPointsCount:  len(entryPoints),
 		Cone:              tanglePath,

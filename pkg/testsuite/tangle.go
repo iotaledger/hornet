@@ -16,11 +16,11 @@ import (
 	"github.com/gohornet/hornet/pkg/whiteflag"
 )
 
-// StoreMessage adds the message to the storage layer and solidifies it.
+// StoreBlock adds the block to the storage layer and solidifies it.
 // block +1
-func (te *TestEnvironment) StoreMessage(msg *storage.Block) *storage.CachedBlock {
+func (te *TestEnvironment) StoreBlock(msg *storage.Block) *storage.CachedBlock {
 
-	// Store message in the database
+	// Store block in the database
 	cachedBlock, alreadyAdded := tangle.AddBlockToStorage(te.storage, te.milestoneManager, msg, te.syncManager.LatestMilestoneIndex(), false, true)
 	require.NotNil(te.TestInterface, cachedBlock)
 	require.False(te.TestInterface, alreadyAdded)
@@ -29,7 +29,7 @@ func (te *TestEnvironment) StoreMessage(msg *storage.Block) *storage.CachedBlock
 	cachedBlock.Metadata().SetSolid(true)
 	require.True(te.TestInterface, cachedBlock.Metadata().IsSolid())
 
-	te.cachedMessages = append(te.cachedMessages, cachedBlock)
+	te.cachedBlocks = append(te.cachedBlocks, cachedBlock)
 
 	return cachedBlock
 }
@@ -83,7 +83,7 @@ func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 	require.NoError(te.TestInterface, err)
 }
 
-func (te *TestEnvironment) AssertMessageConflictReason(blockID hornet.BlockID, conflict storage.Conflict) {
+func (te *TestEnvironment) AssertBlockConflictReason(blockID hornet.BlockID, conflict storage.Conflict) {
 	cachedBlockMeta := te.storage.CachedBlockMetadataOrNil(blockID)
 	require.NotNil(te.TestInterface, cachedBlockMeta)
 	defer cachedBlockMeta.Release(true) // meta -1
@@ -107,7 +107,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		return -1
 	}
 
-	visitedCachedMessages := make(map[string]*storage.CachedBlock)
+	visitedCachedBlocks := make(map[string]*storage.CachedBlock)
 
 	milestoneParents, err := te.storage.MilestoneParentsByIndex(conf.MilestoneIndex)
 	require.NoError(te.TestInterface, err, "milestone doesn't exist (%d)", conf.MilestoneIndex)
@@ -116,7 +116,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		context.Background(),
 		te.storage,
 		milestoneParents,
-		// traversal stops if no more messages pass the given condition
+		// traversal stops if no more blocks pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
@@ -126,10 +126,10 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			if _, visited := visitedCachedMessages[cachedBlockMeta.Metadata().BlockID().ToMapKey()]; !visited {
+			if _, visited := visitedCachedBlocks[cachedBlockMeta.Metadata().BlockID().ToMapKey()]; !visited {
 				cachedBlock := te.storage.CachedBlockOrNil(cachedBlockMeta.Metadata().BlockID()) // block +1
 				require.NotNil(te.TestInterface, cachedBlock)
-				visitedCachedMessages[cachedBlockMeta.Metadata().BlockID().ToMapKey()] = cachedBlock
+				visitedCachedBlocks[cachedBlockMeta.Metadata().BlockID().ToMapKey()] = cachedBlock
 			}
 
 			return nil
@@ -148,17 +148,17 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 	var conflictingMsgs []string
 
 	dotFile := fmt.Sprintf("digraph %s\n{\n", te.TestInterface.Name())
-	for _, cachedBlock := range visitedCachedMessages {
-		message := cachedBlock.Block()
+	for _, cachedBlock := range visitedCachedBlocks {
+		block := cachedBlock.Block()
 		meta := cachedBlock.Metadata()
 
 		shortIndex := utils.ShortenedTag(cachedBlock.Retain()) // block pass +1
 
-		if index := indexOf(message.BlockID()); index != -1 {
+		if index := indexOf(block.BlockID()); index != -1 {
 			dotFile += fmt.Sprintf("\"%s\" [ label=\"[%d] %s\" ];\n", shortIndex, index, shortIndex)
 		}
 
-		for i, parent := range message.Parents() {
+		for i, parent := range block.Parents() {
 			contains, err := te.storage.SolidEntryPointsContain(parent)
 			if err != nil {
 				panic(err)
@@ -174,7 +174,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			cachedBlockParent.Release(true)                                                                                                       // block -1
 		}
 
-		milestonePayload := message.Milestone()
+		milestonePayload := block.Milestone()
 		if milestonePayload != nil {
 			if conf != nil && milestone.Index(milestonePayload.Index) == conf.MilestoneIndex {
 				dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gold];\n", shortIndex)

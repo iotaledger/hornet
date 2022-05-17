@@ -83,7 +83,7 @@ type dependencies struct {
 	ServerMetrics            *metrics.ServerMetrics
 	RequestQueue             gossip.RequestQueue
 	PeeringManager           *p2p.Manager
-	MessageProcessor         *gossip.BlockProcessor
+	MessageProcessor         *gossip.MessageProcessor
 	TipSelector              *tipselect.TipSelector `optional:"true"`
 	RestAPIBindAddress       string                 `name:"restAPIBindAddress"`
 	AppInfo                  *app.AppInfo
