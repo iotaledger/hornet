@@ -44,7 +44,7 @@ var (
 //		- BlockMetadata   				=> will be removed and added again if missing by receiving the msg
 //		- Children							=> will be removed and added again if missing by receiving the msg
 //		- Indexation						=> will be removed and added again if missing by receiving the msg
-//		- UnreferencedMessage 				=> will be removed at pruning anyway
+//		- UnreferencedBlock 				=> will be removed at pruning anyway
 //
 // Database:
 // 		- LedgerState
@@ -198,11 +198,11 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 			t.LogInfof("deleting milestones...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		t.storage.DeleteUnreferencedMessages(msIndex)
+		t.storage.DeleteUnreferencedBlocks(msIndex)
 		t.storage.DeleteMilestone(msIndex)
 	}
 
-	t.storage.FlushUnreferencedMessagesStorage()
+	t.storage.FlushUnreferencedBlocksStorage()
 	t.storage.FlushMilestoneStorage()
 
 	t.LogInfof("deleting milestones...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
@@ -435,7 +435,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 
 	lastStatusTime := time.Now()
 	var unreferencedTxsCounter int64
-	t.storage.NonCachedStorage().ForEachUnreferencedMessage(func(msIndex milestone.Index, _ hornet.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachUnreferencedBlock(func(msIndex milestone.Index, _ hornet.BlockID) bool {
 		unreferencedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -474,10 +474,10 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 			t.LogInfof("deleting unreferenced messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		t.storage.DeleteUnreferencedMessages(msIndex)
+		t.storage.DeleteUnreferencedBlocks(msIndex)
 	}
 
-	t.storage.FlushUnreferencedMessagesStorage()
+	t.storage.FlushUnreferencedBlocksStorage()
 
 	t.LogInfof("deleting unreferenced messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 

@@ -82,7 +82,7 @@ func newSEPsProducer(
 			targetIndex,
 			solidEntryPointCheckThresholdPast,
 			func(sep *storage.SolidEntryPoint) bool {
-				prodChan <- sep.MessageID
+				prodChan <- sep.BlockID
 				return true
 			}); err != nil {
 			errChan <- err
@@ -566,7 +566,7 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 
 		go func() {
 			dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
-				prodChan <- sep.MessageID
+				prodChan <- sep.BlockID
 				return true
 			})
 			close(prodChan)

@@ -289,7 +289,7 @@ func forEachSolidEntryPoint(
 				blockIDMapKey := blockID.ToMapKey()
 				if _, exists := solidEntryPoints[blockIDMapKey]; !exists {
 					solidEntryPoints[blockIDMapKey] = at
-					if !solidEntryPointConsumer(&storage.SolidEntryPoint{MessageID: blockID, Index: at}) {
+					if !solidEntryPointConsumer(&storage.SolidEntryPoint{BlockID: blockID, Index: at}) {
 						return ErrSnapshotCreationWasAborted
 					}
 				}

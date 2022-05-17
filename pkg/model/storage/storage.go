@@ -91,12 +91,12 @@ type Storage struct {
 	snapshotStore kvstore.KVStore
 
 	// object storages
-	childrenStorage             *objectstorage.ObjectStorage
-	blocksStorage               *objectstorage.ObjectStorage
-	metadataStorage             *objectstorage.ObjectStorage
-	milestoneIndexStorage       *objectstorage.ObjectStorage
-	milestoneStorage            *objectstorage.ObjectStorage
-	unreferencedMessagesStorage *objectstorage.ObjectStorage
+	childrenStorage           *objectstorage.ObjectStorage
+	blocksStorage             *objectstorage.ObjectStorage
+	metadataStorage           *objectstorage.ObjectStorage
+	milestoneIndexStorage     *objectstorage.ObjectStorage
+	milestoneStorage          *objectstorage.ObjectStorage
+	unreferencedBlocksStorage *objectstorage.ObjectStorage
 
 	// solid entry points
 	solidEntryPoints     *SolidEntryPoints
@@ -372,7 +372,7 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 		return err
 	}
 
-	if err := s.configureUnreferencedMessageStorage(tangleStore, cachesOpts.UnreferencedMessages); err != nil {
+	if err := s.configureUnreferencedBlocksStorage(tangleStore, cachesOpts.UnreferencedMessages); err != nil {
 		return err
 	}
 
@@ -406,7 +406,7 @@ func (s *Storage) FlushStorages() {
 	s.FlushMilestoneStorage()
 	s.FlushBlocksStorage()
 	s.FlushChildrenStorage()
-	s.FlushUnreferencedMessagesStorage()
+	s.FlushUnreferencedBlocksStorage()
 }
 
 // ShutdownStorages shuts down all storages.
@@ -414,5 +414,5 @@ func (s *Storage) ShutdownStorages() {
 	s.ShutdownMilestoneStorage()
 	s.ShutdownBlocksStorage()
 	s.ShutdownChildrenStorage()
-	s.ShutdownUnreferencedMessagesStorage()
+	s.ShutdownUnreferencedBlocksStorage()
 }

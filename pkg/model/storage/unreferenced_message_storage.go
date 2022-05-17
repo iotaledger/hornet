@@ -12,36 +12,36 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 )
 
-// CachedUnreferencedMessage represents a cached unreferenced message.
-type CachedUnreferencedMessage struct {
+// CachedUnreferencedBlock represents a cached unreferenced block.
+type CachedUnreferencedBlock struct {
 	objectstorage.CachedObject
 }
 
-type CachedUnreferencedMessages []*CachedUnreferencedMessage
+type CachedUnreferencedBlocks []*CachedUnreferencedBlock
 
-// Release releases the cached unreferenced messages, to be picked up by the persistence layer (as soon as all consumers are done).
-func (cachedUnreferencedMessages CachedUnreferencedMessages) Release(force ...bool) {
-	for _, cachedUnreferencedMessage := range cachedUnreferencedMessages {
-		cachedUnreferencedMessage.Release(force...) // unreferencedTx -1
+// Release releases the cached unreferenced blocks, to be picked up by the persistence layer (as soon as all consumers are done).
+func (cachedUnreferencedBlocks CachedUnreferencedBlocks) Release(force ...bool) {
+	for _, cachedUnreferencedBlock := range cachedUnreferencedBlocks {
+		cachedUnreferencedBlock.Release(force...) // unreferencedBlock -1
 	}
 }
 
-// UnreferencedMessage retrieves the unreferenced message, that is cached in this container.
-func (c *CachedUnreferencedMessage) UnreferencedMessage() *UnreferencedMessage {
-	return c.Get().(*UnreferencedMessage)
+// UnreferencedBlock retrieves the unreferenced block, that is cached in this container.
+func (c *CachedUnreferencedBlock) UnreferencedBlock() *UnreferencedBlock {
+	return c.Get().(*UnreferencedBlock)
 }
 
-func unreferencedMessageFactory(key []byte, _ []byte) (objectstorage.StorableObject, error) {
+func unreferencedBlockFactory(key []byte, _ []byte) (objectstorage.StorableObject, error) {
 
-	unreferencedTx := NewUnreferencedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.BlockIDFromSlice(key[4:36]))
-	return unreferencedTx, nil
+	unreferencedBlock := NewUnreferencedBlock(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.BlockIDFromSlice(key[4:36]))
+	return unreferencedBlock, nil
 }
 
-func (s *Storage) UnreferencedMessageStorageSize() int {
-	return s.unreferencedMessagesStorage.GetSize()
+func (s *Storage) UnreferencedBlocksStorageSize() int {
+	return s.unreferencedBlocksStorage.GetSize()
 }
 
-func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
+func (s *Storage) configureUnreferencedBlocksStorage(store kvstore.KVStore, opts *profile.CacheOpts) error {
 
 	cacheTime, err := time.ParseDuration(opts.CacheTime)
 	if err != nil {
@@ -53,14 +53,14 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 		return err
 	}
 
-	unreferencedMessagesStore, err := store.WithRealm([]byte{common.StorePrefixUnreferencedBlocks})
+	unreferencedBlocksStore, err := store.WithRealm([]byte{common.StorePrefixUnreferencedBlocks})
 	if err != nil {
 		return err
 	}
 
-	s.unreferencedMessagesStorage = objectstorage.New(
-		unreferencedMessagesStore,
-		unreferencedMessageFactory,
+	s.unreferencedBlocksStorage = objectstorage.New(
+		unreferencedBlocksStore,
+		unreferencedBlockFactory,
 		objectstorage.CacheTime(cacheTime),
 		objectstorage.PartitionKey(4, 32),
 		objectstorage.PersistenceEnabled(true),
@@ -77,72 +77,72 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 	return nil
 }
 
-// UnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
-func (s *Storage) UnreferencedMessageIDs(msIndex milestone.Index, iteratorOptions ...IteratorOption) hornet.BlockIDs {
+// UnreferencedBlockIDs returns all block IDs of unreferenced blocks for that milestone.
+func (s *Storage) UnreferencedBlockIDs(msIndex milestone.Index, iteratorOptions ...IteratorOption) hornet.BlockIDs {
 
-	var unreferencedMessageIDs hornet.BlockIDs
+	var unreferencedBlockIDs hornet.BlockIDs
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
-	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
-		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.BlockIDFromSlice(key[4:36]))
+	s.unreferencedBlocksStorage.ForEachKeyOnly(func(key []byte) bool {
+		unreferencedBlockIDs = append(unreferencedBlockIDs, hornet.BlockIDFromSlice(key[4:36]))
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(key))...)
 
-	return unreferencedMessageIDs
+	return unreferencedBlockIDs
 }
 
-// UnreferencedMessageConsumer consumes the given unreferenced message during looping through all unreferenced messages.
-type UnreferencedMessageConsumer func(msIndex milestone.Index, blockID hornet.BlockID) bool
+// UnreferencedBlockConsumer consumes the given unreferenced block during looping through all unreferenced blocks.
+type UnreferencedBlockConsumer func(msIndex milestone.Index, blockID hornet.BlockID) bool
 
-// ForEachUnreferencedMessage loops over all unreferenced messages.
-func (s *Storage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, iteratorOptions ...IteratorOption) {
-	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
+// ForEachUnreferencedBlock loops over all unreferenced blocks.
+func (s *Storage) ForEachUnreferencedBlock(consumer UnreferencedBlockConsumer, iteratorOptions ...IteratorOption) {
+	s.unreferencedBlocksStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.BlockIDFromSlice(key[4:36]))
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
 
-// ForEachUnreferencedMessage loops over all unreferenced messages.
-func (ns *NonCachedStorage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, iteratorOptions ...IteratorOption) {
-	ns.storage.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
+// ForEachUnreferencedBlock loops over all unreferenced blocks.
+func (ns *NonCachedStorage) ForEachUnreferencedBlock(consumer UnreferencedBlockConsumer, iteratorOptions ...IteratorOption) {
+	ns.storage.unreferencedBlocksStorage.ForEachKeyOnly(func(key []byte) bool {
 		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.BlockIDFromSlice(key[4:36]))
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
-// StoreUnreferencedMessage stores the unreferenced message in the persistence layer and returns a cached object.
+// StoreUnreferencedBlock stores the unreferenced block in the persistence layer and returns a cached object.
 // unreferencedTx +1
-func (s *Storage) StoreUnreferencedMessage(msIndex milestone.Index, blockID hornet.BlockID) *CachedUnreferencedMessage {
-	unreferencedTx := NewUnreferencedMessage(msIndex, blockID)
-	return &CachedUnreferencedMessage{CachedObject: s.unreferencedMessagesStorage.Store(unreferencedTx)}
+func (s *Storage) StoreUnreferencedBlock(msIndex milestone.Index, blockID hornet.BlockID) *CachedUnreferencedBlock {
+	unreferencedTx := NewUnreferencedBlock(msIndex, blockID)
+	return &CachedUnreferencedBlock{CachedObject: s.unreferencedBlocksStorage.Store(unreferencedTx)}
 }
 
-// DeleteUnreferencedMessages deletes unreferenced message entries in the cache/persistence layer.
-func (s *Storage) DeleteUnreferencedMessages(msIndex milestone.Index, iteratorOptions ...IteratorOption) int {
+// DeleteUnreferencedBlocks deletes unreferenced block entries in the cache/persistence layer.
+func (s *Storage) DeleteUnreferencedBlocks(msIndex milestone.Index, iteratorOptions ...IteratorOption) int {
 
 	msIndexBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(msIndexBytes, uint32(msIndex))
 
 	var keysToDelete [][]byte
 
-	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
+	s.unreferencedBlocksStorage.ForEachKeyOnly(func(key []byte) bool {
 		keysToDelete = append(keysToDelete, key)
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(msIndexBytes))...)
 
 	for _, key := range keysToDelete {
-		s.unreferencedMessagesStorage.Delete(key)
+		s.unreferencedBlocksStorage.Delete(key)
 	}
 
 	return len(keysToDelete)
 }
 
-// ShutdownUnreferencedMessagesStorage shuts down the unreferenced messages storage.
-func (s *Storage) ShutdownUnreferencedMessagesStorage() {
-	s.unreferencedMessagesStorage.Shutdown()
+// ShutdownUnreferencedBlocksStorage shuts down the unreferenced blocks storage.
+func (s *Storage) ShutdownUnreferencedBlocksStorage() {
+	s.unreferencedBlocksStorage.Shutdown()
 }
 
-// FlushUnreferencedMessagesStorage flushes the unreferenced messages storage.
-func (s *Storage) FlushUnreferencedMessagesStorage() {
-	s.unreferencedMessagesStorage.Flush()
+// FlushUnreferencedBlocksStorage flushes the unreferenced blocks storage.
+func (s *Storage) FlushUnreferencedBlocksStorage() {
+	s.unreferencedBlocksStorage.Flush()
 }

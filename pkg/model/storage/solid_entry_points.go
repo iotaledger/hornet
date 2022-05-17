@@ -13,8 +13,8 @@ import (
 )
 
 type SolidEntryPoint struct {
-	MessageID hornet.BlockID
-	Index     milestone.Index
+	BlockID hornet.BlockID
+	Index   milestone.Index
 }
 
 // LexicalOrderedSolidEntryPoints are solid entry points
@@ -26,7 +26,7 @@ func (l LexicalOrderedSolidEntryPoints) Len() int {
 }
 
 func (l LexicalOrderedSolidEntryPoints) Less(i, j int) bool {
-	return bytes.Compare(l[i].MessageID, l[j].MessageID) < 0
+	return bytes.Compare(l[i].BlockID, l[j].BlockID) < 0
 }
 
 func (l LexicalOrderedSolidEntryPoints) Swap(i, j int) {
@@ -56,8 +56,8 @@ func (s *SolidEntryPoints) copy() []*SolidEntryPoint {
 	for hash, msIndex := range s.entryPointsMap {
 		blockID := hornet.BlockIDFromMapKey(hash)
 		result[i] = &SolidEntryPoint{
-			MessageID: blockID,
-			Index:     msIndex,
+			BlockID: blockID,
+			Index:   msIndex,
 		}
 		i++
 	}
@@ -144,7 +144,7 @@ func (s *SolidEntryPoints) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(32+4)))
 
 	for _, sep := range s.Sorted() {
-		err := binary.Write(buf, binary.LittleEndian, sep.MessageID)
+		err := binary.Write(buf, binary.LittleEndian, sep.BlockID)
 		if err != nil {
 			return nil
 		}

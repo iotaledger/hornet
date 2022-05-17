@@ -8,39 +8,39 @@ import (
 	"github.com/iotaledger/hive.go/objectstorage"
 )
 
-type UnreferencedMessage struct {
+type UnreferencedBlock struct {
 	objectstorage.StorableObjectFlags
 	latestMilestoneIndex milestone.Index
 	blockID              hornet.BlockID
 }
 
-func NewUnreferencedMessage(msIndex milestone.Index, blockID hornet.BlockID) *UnreferencedMessage {
-	return &UnreferencedMessage{
+func NewUnreferencedBlock(msIndex milestone.Index, blockID hornet.BlockID) *UnreferencedBlock {
+	return &UnreferencedBlock{
 		latestMilestoneIndex: msIndex,
 		blockID:              blockID,
 	}
 }
 
-func (t *UnreferencedMessage) LatestMilestoneIndex() milestone.Index {
+func (t *UnreferencedBlock) LatestMilestoneIndex() milestone.Index {
 	return t.latestMilestoneIndex
 }
 
-func (t *UnreferencedMessage) MessageID() hornet.BlockID {
+func (t *UnreferencedBlock) BlockID() hornet.BlockID {
 	return t.blockID
 }
 
 // ObjectStorage interface
 
-func (t *UnreferencedMessage) Update(_ objectstorage.StorableObject) {
+func (t *UnreferencedBlock) Update(_ objectstorage.StorableObject) {
 	// do nothing, since the object is identical (consists of key only)
 }
 
-func (t *UnreferencedMessage) ObjectStorageKey() []byte {
+func (t *UnreferencedBlock) ObjectStorageKey() []byte {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(t.latestMilestoneIndex))
 	return append(key, t.blockID...)
 }
 
-func (t *UnreferencedMessage) ObjectStorageValue() []byte {
+func (t *UnreferencedBlock) ObjectStorageValue() []byte {
 	return nil
 }

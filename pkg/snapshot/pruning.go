@@ -78,7 +78,7 @@ func (s *SnapshotManager) pruneUnreferencedMessages(targetIndex milestone.Index)
 	blockIDsToDeleteMap := make(map[string]struct{})
 
 	// Check if message is still unreferenced
-	for _, blockID := range s.storage.UnreferencedMessageIDs(targetIndex) {
+	for _, blockID := range s.storage.UnreferencedBlockIDs(targetIndex) {
 		blockIDMapKey := blockID.ToMapKey()
 		if _, exists := blockIDsToDeleteMap[blockIDMapKey]; exists {
 			continue
@@ -101,7 +101,7 @@ func (s *SnapshotManager) pruneUnreferencedMessages(targetIndex milestone.Index)
 	}
 
 	msgCountDeleted = s.pruneMessages(blockIDsToDeleteMap)
-	s.storage.DeleteUnreferencedMessages(targetIndex)
+	s.storage.DeleteUnreferencedBlocks(targetIndex)
 
 	return msgCountDeleted, len(blockIDsToDeleteMap)
 }
@@ -205,7 +205,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 	// temporarily add the new solid entry points and keep the old ones
 	s.storage.WriteLockSolidEntryPoints()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAddWithoutLocking(sep.MessageID, sep.Index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.BlockID, sep.Index)
 	}
 	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
 		s.LogPanic(err)
@@ -323,7 +323,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 	s.storage.WriteLockSolidEntryPoints()
 	s.storage.ResetSolidEntryPointsWithoutLocking()
 	for _, sep := range solidEntryPoints {
-		s.storage.SolidEntryPointsAddWithoutLocking(sep.MessageID, sep.Index)
+		s.storage.SolidEntryPointsAddWithoutLocking(sep.BlockID, sep.Index)
 	}
 	if err = s.storage.StoreSolidEntryPointsWithoutLocking(); err != nil {
 		s.LogPanic(err)

@@ -31,7 +31,7 @@ func AddMessageToStorage(dbStorage *storage.Storage, milestoneManager *milestone
 	// Store only non-requested messages, since all requested messages are referenced by a milestone anyway
 	// This is only used to delete unreferenced messages from the database at pruning
 	if !requested {
-		dbStorage.StoreUnreferencedMessage(latestMilestoneIndex, cachedBlock.Block().BlockID()).Release(true) // unreferencedTx +-0
+		dbStorage.StoreUnreferencedBlock(latestMilestoneIndex, cachedBlock.Block().BlockID()).Release(true) // unreferencedTx +-0
 	}
 
 	if milestonePayload := milestoneManager.VerifyMilestoneMessage(block.Block()); milestonePayload != nil {
