@@ -5,14 +5,14 @@ import (
 )
 
 var (
-	appInfo                     *prometheus.GaugeVec
-	health                      prometheus.Gauge
-	messagesPerSecond           prometheus.Gauge
-	referencedMessagesPerSecond prometheus.Gauge
-	referencedRate              prometheus.Gauge
-	milestones                  *prometheus.GaugeVec
-	tips                        *prometheus.GaugeVec
-	requests                    *prometheus.GaugeVec
+	appInfo                   *prometheus.GaugeVec
+	health                    prometheus.Gauge
+	blocksPerSecond           prometheus.Gauge
+	referencedBlocksPerSecond prometheus.Gauge
+	referencedRate            prometheus.Gauge
+	milestones                *prometheus.GaugeVec
+	tips                      *prometheus.GaugeVec
+	requests                  *prometheus.GaugeVec
 )
 
 func configureNode() {
@@ -35,20 +35,20 @@ func configureNode() {
 			Help:      "Health of the node.",
 		})
 
-	messagesPerSecond = prometheus.NewGauge(
+	blocksPerSecond = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "node",
-			Name:      "messages_per_second",
-			Help:      "Current rate of new messages per second.",
+			Name:      "blocks_per_second",
+			Help:      "Current rate of new blocks per second.",
 		})
 
-	referencedMessagesPerSecond = prometheus.NewGauge(
+	referencedBlocksPerSecond = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "node",
-			Name:      "referenced_messages_per_second",
-			Help:      "Current rate of referenced messages per second.",
+			Name:      "referenced_blocks_per_second",
+			Help:      "Current rate of referenced blocks per second.",
 		})
 
 	referencedRate = prometheus.NewGauge(
@@ -56,7 +56,7 @@ func configureNode() {
 			Namespace: "iota",
 			Subsystem: "node",
 			Name:      "referenced_rate",
-			Help:      "Ratio of referenced messages in relation to new messages of the last confirmed milestone.",
+			Help:      "Ratio of referenced blocks in relation to new blocks of the last confirmed milestone.",
 		})
 
 	milestones = prometheus.NewGaugeVec(
@@ -85,7 +85,7 @@ func configureNode() {
 			Namespace: "iota",
 			Subsystem: "node",
 			Name:      "request_count",
-			Help:      "Number of messages to request.",
+			Help:      "Number of blocks to request.",
 		}, []string{"type"},
 	)
 
@@ -93,8 +93,8 @@ func configureNode() {
 
 	registry.MustRegister(appInfo)
 	registry.MustRegister(health)
-	registry.MustRegister(messagesPerSecond)
-	registry.MustRegister(referencedMessagesPerSecond)
+	registry.MustRegister(blocksPerSecond)
+	registry.MustRegister(referencedBlocksPerSecond)
 	registry.MustRegister(referencedRate)
 	registry.MustRegister(milestones)
 
@@ -113,14 +113,14 @@ func collectInfo() {
 		health.Set(1)
 	}
 
-	messagesPerSecond.Set(0)
-	referencedMessagesPerSecond.Set(0)
+	blocksPerSecond.Set(0)
+	referencedBlocksPerSecond.Set(0)
 	referencedRate.Set(0)
 
 	lastConfirmedMilestoneMetric := deps.Tangle.LastConfirmedMilestoneMetric()
 	if lastConfirmedMilestoneMetric != nil {
-		messagesPerSecond.Set(lastConfirmedMilestoneMetric.BPS)
-		referencedMessagesPerSecond.Set(lastConfirmedMilestoneMetric.RBPS)
+		blocksPerSecond.Set(lastConfirmedMilestoneMetric.BPS)
+		referencedBlocksPerSecond.Set(lastConfirmedMilestoneMetric.RBPS)
 		referencedRate.Set(lastConfirmedMilestoneMetric.ReferencedRate)
 	}
 
