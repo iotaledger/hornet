@@ -20,7 +20,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	milestoneTimestamp := rand.Uint32()
 
 	outputID := utils.RandOutputID()
-	blockID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandAddress(iotago.AddressEd25519)
 	amount := uint64(832493)
 	iotaOutput := &iotago.BasicOutput{
@@ -60,7 +60,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 
 func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	outputID := utils.RandOutputID()
-	blockID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandAddress(iotago.AddressEd25519)
 	amount := uint64(235234)
 	msIndex := utils.RandMilestoneIndex()

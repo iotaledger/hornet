@@ -18,7 +18,7 @@ type ChildrenTraverser struct {
 	// interface to the used storage.
 	childrenTraverserStorage ChildrenTraverserStorage
 
-	// stack holding the ordered msg to process.
+	// stack holding the ordered blocks to process.
 	stack *list.List
 
 	// discovers map with already found blocks.
@@ -117,7 +117,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 		defer cachedBlockMeta.Release(true) // meta -1
 
-		// check condition to decide if msg should be consumed and traversed
+		// check condition to decide if block should be consumed and traversed
 		traverse, err := t.condition(cachedBlockMeta.Retain()) // meta pass +1
 		if err != nil {
 			// there was an error, stop processing the stack

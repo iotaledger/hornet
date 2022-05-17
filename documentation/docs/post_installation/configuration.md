@@ -318,7 +318,7 @@ Example:
 | Name                                  | Description                                                                                                             | Type   | Default value |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
 | milestoneTimeout                      | The interval milestone timeout events are fired if no new milestones are received                                       | string | "30s"         |
-| maxDeltaMsgYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | int    | 8             |
+| maxDeltaBlockYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | int    | 8             |
 | maxDeltaMsgOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | int    | 13            |
 | whiteFlagParentsSolidTimeout          | Defines the the maximum duration for the parents to become solid during white flag confirmation API or INX call         | string | "2s"          |
 
@@ -328,7 +328,7 @@ Example:
   {
     "tangle": {
       "milestoneTimeout": "30s",
-      "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
+      "maxDeltaBlockYoungestConeRootIndexToCMI": 8,
       "maxDeltaMsgOldestConeRootIndexToCMI": 13,
       "whiteFlagParentsSolidTimeout": "2s"
     }

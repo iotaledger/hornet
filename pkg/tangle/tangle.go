@@ -59,9 +59,9 @@ type Tangle struct {
 
 	futureConeSolidifier *FutureConeSolidifier
 
-	receiveMsgWorkerPool  *workerpool.WorkerPool
-	receiveMsgWorkerCount int
-	receiveMsgQueueSize   int
+	receiveBlockWorkerPool  *workerpool.WorkerPool
+	receiveBlockWorkerCount int
+	receiveBlockQueueSize   int
 
 	futureConeSolidifierWorkerPool  *workerpool.WorkerPool
 	futureConeSolidifierWorkerCount int
@@ -75,9 +75,9 @@ type Tangle struct {
 	milestoneSolidifierWorkerCount int
 	milestoneSolidifierQueueSize   int
 
-	lastIncomingMsgCnt    uint32
-	lastIncomingNewMsgCnt uint32
-	lastOutgoingMsgCnt    uint32
+	lastIncomingBlocksCount    uint32
+	lastIncomingNewBlocksCount uint32
+	lastOutgoingBlocksCount    uint32
 
 	lastIncomingMPS uint32
 	lastNewMPS      uint32
@@ -97,8 +97,8 @@ type Tangle struct {
 
 	solidifierLock syncutils.RWMutex
 
-	oldNewMsgCount        uint32
-	oldReferencedMsgCount uint32
+	oldNewBlocksCount        uint32
+	oldReferencedBlocksCount uint32
 
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone milestone.Index
@@ -147,8 +147,8 @@ func New(
 
 		milestoneTimeoutTicker:           nil,
 		futureConeSolidifier:             nil,
-		receiveMsgWorkerCount:            2 * runtime.NumCPU(),
-		receiveMsgQueueSize:              10000,
+		receiveBlockWorkerCount:          2 * runtime.NumCPU(),
+		receiveBlockQueueSize:            10000,
 		futureConeSolidifierWorkerCount:  1, // must be one, so there are no parallel solidifications of the same cone
 		futureConeSolidifierQueueSize:    10000,
 		processValidMilestoneWorkerCount: 1, // must be one, so there are no parallel validations

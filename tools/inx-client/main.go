@@ -31,24 +31,24 @@ func main() {
 
 	client := inx.NewINXClient(conn)
 
-	filter := &inx.MessageFilter{}
-	stream, err := client.ListenToMessages(context.Background(), filter)
+	filter := &inx.BlockFilter{}
+	stream, err := client.ListenToBlocks(context.Background(), filter)
 	if err != nil {
 		panic(err)
 	}
 	for {
-		message, err := stream.Recv()
+		payload, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			panic(err)
 		}
-		msg := message.MustUnwrapMessage(serializer.DeSeriModeNoValidation, nil)
-		jsonMsg, err := json.Marshal(msg)
+		block := payload.MustUnwrapBlock(serializer.DeSeriModeNoValidation, nil)
+		jsonBlock, err := json.Marshal(block)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Rec: %s => %s\n", iotago.BlockIDToHexString(message.UnwrapMessageID()), string(jsonMsg))
+		fmt.Printf("Rec: %s => %s\n", iotago.BlockIDToHexString(payload.UnwrapBlockID()), string(jsonBlock))
 	}
 }

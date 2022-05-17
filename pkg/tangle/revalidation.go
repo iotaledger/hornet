@@ -39,11 +39,11 @@ var (
 // This way HORNET should be able to re-solidify the existing tangle in the database.
 //
 // Object Storages:
-//		- Milestone							=> will be removed and added again if missing by receiving the msg
-//		- Block							=> will be removed and added again by requesting the msg at solidification
-//		- BlockMetadata   				=> will be removed and added again if missing by receiving the msg
-//		- Children							=> will be removed and added again if missing by receiving the msg
-//		- Indexation						=> will be removed and added again if missing by receiving the msg
+//		- Milestone							=> will be removed and added again if missing by receiving the block
+//		- Block							=> will be removed and added again by requesting the block at solidification
+//		- BlockMetadata   				=> will be removed and added again if missing by receiving the block
+//		- Children							=> will be removed and added again if missing by receiving the block
+//		- Indexation						=> will be removed and added again if missing by receiving the block
 //		- UnreferencedBlock 				=> will be removed at pruning anyway
 //
 // Database:

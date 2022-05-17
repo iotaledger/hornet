@@ -257,7 +257,7 @@ func forEachSolidEntryPoint(
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 
-				// collect all msgs that were referenced by that milestone or newer
+				// collect all blocks that were referenced by that milestone or newer
 				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				return referenced && at >= milestoneIndex, nil
 			},

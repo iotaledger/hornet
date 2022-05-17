@@ -23,7 +23,7 @@ func NewBlocksMemcache(cachedBlockFunc CachedBlockFunc) *BlocksMemcache {
 // This MUST be called by the user at the end.
 func (c *BlocksMemcache) Cleanup(forceRelease bool) {
 
-	// release all msgs at the end
+	// release all blocks at the end
 	for _, cachedBlock := range c.cachedBlocks {
 		cachedBlock.Release(forceRelease) // block -1
 	}

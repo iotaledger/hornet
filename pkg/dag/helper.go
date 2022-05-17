@@ -16,7 +16,7 @@ type Consumer func(cachedBlockMeta *storage.CachedMetadata) error
 // OnMissingParent gets called when during traversal a parent is missing.
 type OnMissingParent func(parentBlockID hornet.BlockID) error
 
-// OnSolidEntryPoint gets called when during traversal the startMsg or parent is a solid entry point.
+// OnSolidEntryPoint gets called when during traversal the startBlock or parent is a solid entry point.
 type OnSolidEntryPoint func(blockID hornet.BlockID) error
 
 // TraverseParents starts to traverse the parents (past cone) in the given order until

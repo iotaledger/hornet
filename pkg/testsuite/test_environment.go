@@ -260,9 +260,9 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 }
 
 func (te *TestEnvironment) NewTestBlock(index int, parents hornet.BlockIDs) *storage.BlockMetadata {
-	msg := te.NewBlockBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
-	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(msg.StoredBlockID()) // meta +1
-	defer cachedBlockMeta.Release(true)                                           // meta -1
+	block := te.NewBlockBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
+	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(block.StoredBlockID()) // meta +1
+	defer cachedBlockMeta.Release(true)                                             // meta -1
 	return cachedBlockMeta.Metadata()
 }
 
@@ -273,7 +273,7 @@ func (te *TestEnvironment) BuildTangle(initBlocksCount int,
 	milestonesCount int,
 	minBlocksPerMilestone int,
 	maxBlocksPerMilestone int,
-	onNewBlock func(cmi milestone.Index, msgMeta *storage.BlockMetadata),
+	onNewBlock func(cmi milestone.Index, blockMetadata *storage.BlockMetadata),
 	milestoneTipSelectFunc func(blocksIDs hornet.BlockIDs, blockIDsPerMilestones []hornet.BlockIDs) hornet.BlockIDs,
 	onNewMilestone func(msIndex milestone.Index, blockIDs hornet.BlockIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats)) (blockIDs hornet.BlockIDs, blockIDsPerMilestones []hornet.BlockIDs) {
 
@@ -312,16 +312,16 @@ func (te *TestEnvironment) BuildTangle(initBlocksCount int,
 
 		cmi := te.SyncManager().ConfirmedMilestoneIndex()
 
-		msgsCount := minBlocksPerMilestone + rand.Intn(maxBlocksPerMilestone-minBlocksPerMilestone)
-		for msgCount := 0; msgCount < msgsCount; msgCount++ {
+		blocksCount := minBlocksPerMilestone + rand.Intn(maxBlocksPerMilestone-minBlocksPerMilestone)
+		for c := 0; c < blocksCount; c++ {
 			blockTotalCount++
-			msgMeta := te.NewTestBlock(blockTotalCount, getParents())
+			blockMeta := te.NewTestBlock(blockTotalCount, getParents())
 
-			blockIDs = append(blockIDs, msgMeta.BlockID())
-			blockIDsPerMilestones[len(blockIDsPerMilestones)-1] = append(blockIDsPerMilestones[len(blockIDsPerMilestones)-1], msgMeta.BlockID())
+			blockIDs = append(blockIDs, blockMeta.BlockID())
+			blockIDsPerMilestones[len(blockIDsPerMilestones)-1] = append(blockIDsPerMilestones[len(blockIDsPerMilestones)-1], blockMeta.BlockID())
 
 			if onNewBlock != nil {
-				onNewBlock(cmi, msgMeta)
+				onNewBlock(cmi, blockMeta)
 			}
 		}
 

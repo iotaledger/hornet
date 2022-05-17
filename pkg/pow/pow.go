@@ -57,28 +57,28 @@ func (h *Handler) PoWType() string {
 
 // DoPoW does the proof-of-work required to hit the target score configured on this Handler.
 // The given iota.Block's nonce is automatically updated.
-func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Block, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (blockSize int, err error) {
+func (h *Handler) DoPoW(ctx context.Context, block *iotago.Block, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (blockSize int, err error) {
 
 	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		return 0, err
 	}
 
-	// enforce milestone msg nonce == 0
-	if _, isMilestone := msg.Payload.(*iotago.Milestone); isMilestone {
-		msg.Nonce = 0
+	// enforce milestone block nonce == 0
+	if _, isMilestone := block.Payload.(*iotago.Milestone); isMilestone {
+		block.Nonce = 0
 		return 0, nil
 	}
 
-	getPoWData := func(msg *iotago.Block) (powData []byte, err error) {
-		msgData, err := msg.Serialize(serializer.DeSeriModeNoValidation, nil)
+	getPoWData := func(block *iotago.Block) (powData []byte, err error) {
+		blockData, err := block.Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
-			return nil, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
+			return nil, fmt.Errorf("unable to perform PoW as block can't be serialized: %w", err)
 		}
 
-		return msgData[:len(msgData)-nonceBytes], nil
+		return blockData[:len(blockData)-nonceBytes], nil
 	}
 
-	powData, err := getPoWData(msg)
+	powData, err := getPoWData(block)
 	if err != nil {
 		return 0, err
 	}
@@ -103,10 +103,10 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Block, parallelism int,
 				if err != nil {
 					return 0, err
 				}
-				msg.Parents = tips.ToSliceOfArrays()
+				block.Parents = tips.ToSliceOfArrays()
 
 				// replace the powData to update the new tips
-				powData, err = getPoWData(msg)
+				powData, err = getPoWData(block)
 				if err != nil {
 					return 0, err
 				}
@@ -134,7 +134,7 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Block, parallelism int,
 			return 0, err
 		}
 
-		msg.Nonce = nonce
+		block.Nonce = nonce
 		return len(powData) + nonceBytes, nil
 	}
 }

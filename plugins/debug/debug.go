@@ -214,7 +214,7 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start block is not solid: %s", blockID.ToHex())
 	}
 
-	startMsgReferened, startMsgReferenedAt := cachedBlockMetaStart.Metadata().ReferencedWithIndex()
+	startBlockReferenced, startBlockReferencedAt := cachedBlockMetaStart.Metadata().ReferencedWithIndex()
 
 	entryPointIndex := deps.Storage.SnapshotInfo().EntryPointIndex
 	entryPoints := []*entryPoint{}
@@ -230,7 +230,7 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 			defer cachedBlockMeta.Release(true) // meta -1
 
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
-				if !startMsgReferened || (at < startMsgReferenedAt) {
+				if !startBlockReferenced || (at < startBlockReferencedAt) {
 					entryPoints = append(entryPoints, &entryPoint{BlockID: cachedBlockMeta.Metadata().BlockID().ToHex(), ReferencedByMilestone: at})
 					return false, nil
 				}

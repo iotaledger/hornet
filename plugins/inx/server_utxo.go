@@ -23,7 +23,7 @@ func NewLedgerOutput(o *utxo.Output) (*inx.LedgerOutput, error) {
 	}
 	l := &inx.LedgerOutput{
 		OutputId:                 inx.NewOutputId(o.OutputID()),
-		BlockId:                  inx.NewBlockId(o.MessageID().ToArray()),
+		BlockId:                  inx.NewBlockId(o.BlockID().ToArray()),
 		MilestoneIndexBooked:     uint32(o.MilestoneIndex()),
 		MilestoneTimestampBooked: o.MilestoneTimestamp(),
 		Output:                   make([]byte, len(outputBytes)),

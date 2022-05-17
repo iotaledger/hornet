@@ -20,7 +20,7 @@ type ParentsTraverser struct {
 	// interface to the used storage.
 	parentsTraverserStorage ParentsTraverserStorage
 
-	// stack holding the ordered msg to process.
+	// stack holding the ordered blocks to process.
 	stack *list.List
 
 	// processed map with already processed blocks.
@@ -108,7 +108,7 @@ func (t *ParentsTraverser) processStackParents() error {
 		return err
 	}
 
-	// load candidate msg
+	// load candidate block
 	ele := t.stack.Front()
 	currentBlockID := ele.Value.(hornet.BlockID)
 	currentBlockIDMapKey := currentBlockID.ToMapKey()
@@ -167,7 +167,7 @@ func (t *ParentsTraverser) processStackParents() error {
 	if !checkedBefore {
 		var err error
 
-		// check condition to decide if msg should be consumed and traversed
+		// check condition to decide if block should be consumed and traversed
 		traverse, err = t.condition(cachedBlockMeta.Retain()) // meta pass +1
 		if err != nil {
 			// there was an error, stop processing the stack

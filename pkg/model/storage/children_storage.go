@@ -94,24 +94,24 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 // ChildrenBlockIDs returns the block IDs of the children of the given block.
 // children +-0
 func (s *Storage) ChildrenBlockIDs(blockID hornet.BlockID, iteratorOptions ...IteratorOption) (hornet.BlockIDs, error) {
-	var childrenMessageIDs hornet.BlockIDs
+	var childrenBlockIDs hornet.BlockIDs
 
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
-		childrenMessageIDs = append(childrenMessageIDs, hornet.BlockIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
+		childrenBlockIDs = append(childrenBlockIDs, hornet.BlockIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(blockID))...)
 
-	return childrenMessageIDs, nil
+	return childrenBlockIDs, nil
 }
 
 // ContainsChild returns if the given child exists in the cache/persistence layer.
-func (s *Storage) ContainsChild(blockID hornet.BlockID, childMessageID hornet.BlockID, readOptions ...ReadOption) bool {
-	return s.childrenStorage.Contains(append(blockID, childMessageID...), readOptions...)
+func (s *Storage) ContainsChild(blockID hornet.BlockID, childBlockID hornet.BlockID, readOptions ...ReadOption) bool {
+	return s.childrenStorage.Contains(append(blockID, childBlockID...), readOptions...)
 }
 
-// CachedChildrenOfMessageID returns the cached children of a block.
+// CachedChildrenOfBlockID returns the cached children of a block.
 // children +1
-func (s *Storage) CachedChildrenOfMessageID(blockID hornet.BlockID, iteratorOptions ...IteratorOption) CachedChildren {
+func (s *Storage) CachedChildrenOfBlockID(blockID hornet.BlockID, iteratorOptions ...IteratorOption) CachedChildren {
 
 	cachedChildren := make(CachedChildren, 0)
 	s.childrenStorage.ForEach(func(_ []byte, cachedObject objectstorage.CachedObject) bool {
@@ -122,7 +122,7 @@ func (s *Storage) CachedChildrenOfMessageID(blockID hornet.BlockID, iteratorOpti
 }
 
 // ChildConsumer consumes the given child during looping through all children.
-type ChildConsumer func(blockID hornet.BlockID, childMessageID hornet.BlockID) bool
+type ChildConsumer func(blockID hornet.BlockID, childBlockID hornet.BlockID) bool
 
 // ForEachChild loops over all children.
 func (s *Storage) ForEachChild(consumer ChildConsumer, iteratorOptions ...IteratorOption) {
@@ -142,15 +142,15 @@ func (ns *NonCachedStorage) ForEachChild(consumer ChildConsumer, iteratorOptions
 
 // StoreChild stores the child in the persistence layer and returns a cached object.
 // child +1
-func (s *Storage) StoreChild(parentMessageID hornet.BlockID, childMessageID hornet.BlockID) *CachedChild {
-	child := NewChild(parentMessageID, childMessageID)
+func (s *Storage) StoreChild(parentBlockID hornet.BlockID, childBlockID hornet.BlockID) *CachedChild {
+	child := NewChild(parentBlockID, childBlockID)
 	return &CachedChild{CachedObject: s.childrenStorage.Store(child)}
 }
 
 // DeleteChild deletes the child in the cache/persistence layer.
 // child +-0
-func (s *Storage) DeleteChild(blockID hornet.BlockID, childMessageID hornet.BlockID) {
-	child := NewChild(blockID, childMessageID)
+func (s *Storage) DeleteChild(blockID hornet.BlockID, childBlockID hornet.BlockID) {
+	child := NewChild(blockID, childBlockID)
 	s.childrenStorage.Delete(child.ObjectStorageKey())
 }
 

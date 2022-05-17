@@ -21,23 +21,23 @@ const (
 
 type TipScoreCalculator struct {
 	storage *storage.Storage
-	// maxDeltaMsgYoungestConeRootIndexToCMI is the maximum allowed delta
+	// maxDeltaBlockYoungestConeRootIndexToCMI is the maximum allowed delta
 	// value for the YCRI of a given message in relation to the current CMI before it gets lazy.
-	maxDeltaMsgYoungestConeRootIndexToCMI milestone.Index
-	// maxDeltaMsgOldestConeRootIndexToCMI is the maximum allowed delta
+	maxDeltaBlockYoungestConeRootIndexToCMI milestone.Index
+	// maxDeltaBlockOldestConeRootIndexToCMI is the maximum allowed delta
 	// value between OCRI of a given message in relation to the current CMI before it gets semi-lazy.
-	maxDeltaMsgOldestConeRootIndexToCMI milestone.Index
+	maxDeltaBlockOldestConeRootIndexToCMI milestone.Index
 	// belowMaxDepth is the maximum allowed delta
 	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
 	belowMaxDepth milestone.Index
 }
 
-func NewTipScoreCalculator(storage *storage.Storage, maxDeltaMsgYoungestConeRootIndexToCMI int, maxDeltaMsgOldestConeRootIndexToCMI int, belowMaxDepth int) *TipScoreCalculator {
+func NewTipScoreCalculator(storage *storage.Storage, maxDeltaBlockYoungestConeRootIndexToCMI int, maxDeltaBlockOldestConeRootIndexToCMI int, belowMaxDepth int) *TipScoreCalculator {
 	return &TipScoreCalculator{
-		storage:                               storage,
-		maxDeltaMsgYoungestConeRootIndexToCMI: milestone.Index(maxDeltaMsgYoungestConeRootIndexToCMI),
-		maxDeltaMsgOldestConeRootIndexToCMI:   milestone.Index(maxDeltaMsgOldestConeRootIndexToCMI),
-		belowMaxDepth:                         milestone.Index(belowMaxDepth),
+		storage:                                 storage,
+		maxDeltaBlockYoungestConeRootIndexToCMI: milestone.Index(maxDeltaBlockYoungestConeRootIndexToCMI),
+		maxDeltaBlockOldestConeRootIndexToCMI:   milestone.Index(maxDeltaBlockOldestConeRootIndexToCMI),
+		belowMaxDepth:                           milestone.Index(belowMaxDepth),
 	}
 }
 
@@ -58,13 +58,13 @@ func (t *TipScoreCalculator) TipScore(ctx context.Context, blockID hornet.BlockI
 		return TipScoreBelowMaxDepth, nil
 	}
 
-	// if the CMI to YCRI delta is over maxDeltaMsgYoungestConeRootIndexToCMI, then the tip is lazy
-	if (cmi - ycri) > t.maxDeltaMsgYoungestConeRootIndexToCMI {
+	// if the CMI to YCRI delta is over maxDeltaBlockYoungestConeRootIndexToCMI, then the tip is lazy
+	if (cmi - ycri) > t.maxDeltaBlockYoungestConeRootIndexToCMI {
 		return TipScoreYCRIThresholdReached, nil
 	}
 
-	// if the OCRI to CMI delta is over maxDeltaMsgOldestConeRootIndexToCMI, the tip is semi-lazy
-	if (cmi - ocri) > t.maxDeltaMsgOldestConeRootIndexToCMI {
+	// if the OCRI to CMI delta is over maxDeltaBlockOldestConeRootIndexToCMI, the tip is semi-lazy
+	if (cmi - ocri) > t.maxDeltaBlockOldestConeRootIndexToCMI {
 		return TipScoreOCRIThresholdReached, nil
 	}
 

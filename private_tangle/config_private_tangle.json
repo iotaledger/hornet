@@ -89,7 +89,7 @@
   },
   "tangle": {
     "milestoneTimeout": "30s",
-    "maxDeltaMsgYoungestConeRootIndexToCMI": 2,
+    "maxDeltaBlockYoungestConeRootIndexToCMI": 2,
     "maxDeltaMsgOldestConeRootIndexToCMI": 7,
     "whiteFlagParentsSolidTimeout": "2s"
   },

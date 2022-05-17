@@ -31,7 +31,7 @@ type metainfo struct {
 	ID string `json:"id"`
 }
 
-// confirmationinfo signals confirmation of a milestone msg with a list of exluded msgs in the past cone.
+// confirmationinfo signals confirmation of a milestone block with a list of exluded blocks in the past cone.
 type confirmationinfo struct {
 	IDs         []string `json:"ids"`
 	ExcludedIDs []string `json:"excluded_ids"`
@@ -46,13 +46,13 @@ type tipinfo struct {
 func runVisualizer() {
 
 	onReceivedNewBlock := events.NewClosure(func(cachedBlock *storage.CachedBlock, _ milestone.Index, _ milestone.Index) {
-		cachedBlock.ConsumeBlockAndMetadata(func(msg *storage.Block, metadata *storage.BlockMetadata) { // block -1
+		cachedBlock.ConsumeBlockAndMetadata(func(block *storage.Block, metadata *storage.BlockMetadata) { // block -1
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
 
-			parentsHex := make([]string, len(msg.Parents()))
-			for i, parent := range msg.Parents() {
+			parentsHex := make([]string, len(block.Parents()))
+			for i, parent := range block.Parents() {
 				parentsHex[i] = parent.ToHex()[:VisualizerIDLength]
 			}
 
@@ -60,7 +60,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:           msg.BlockID().ToHex(),
+						ID:           block.BlockID().ToHex(),
 						Parents:      parentsHex,
 						IsSolid:      metadata.IsSolid(),
 						IsReferenced: metadata.IsReferenced(),

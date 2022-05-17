@@ -61,9 +61,9 @@ func TestConeRootIndexes(t *testing.T) {
 
 	// Use Null hash and last milestone hash as parents
 	parents := append(latestMilestone.Milestone().Parents(), hornet.NullBlockID())
-	msg := te.NewBlockBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
+	block := te.NewBlockBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
 
-	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(msg.StoredBlockID())
+	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(block.StoredBlockID())
 	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 	require.NoError(te.TestInterface, err)
 

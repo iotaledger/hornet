@@ -23,7 +23,7 @@ func randomOutput(outputType iotago.OutputType, address ...iotago.Address) *utxo
 	} else {
 		output = utils.RandOutput(outputType)
 	}
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), output)
+	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), output)
 }
 
 func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
@@ -36,7 +36,7 @@ func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
-	require.Equal(t, expected.MessageID()[:], actual.MessageID()[:])
+	require.Equal(t, expected.BlockID()[:], actual.BlockID()[:])
 	require.Equal(t, expected.OutputType(), actual.OutputType())
 
 	var expectedIdent iotago.Address

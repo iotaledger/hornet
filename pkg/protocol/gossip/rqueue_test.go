@@ -20,7 +20,7 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func randMessageID() hornet.BlockID {
+func randBlockID() hornet.BlockID {
 	return hornet.BlockID(randBytes(iotago.BlockIDLength))
 }
 
@@ -28,11 +28,11 @@ func TestRequestQueue(t *testing.T) {
 	q := gossip.NewRequestQueue()
 
 	var (
-		hashA = randMessageID()
-		hashB = randMessageID()
-		hashZ = randMessageID()
-		hashC = randMessageID()
-		hashD = randMessageID()
+		hashA = randBlockID()
+		hashB = randBlockID()
+		hashZ = randBlockID()
+		hashC = randBlockID()
+		hashD = randBlockID()
 	)
 
 	requests := []*gossip.Request{

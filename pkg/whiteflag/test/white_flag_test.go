@@ -282,7 +282,7 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	blockD := te.NewBlockBuilder("D").Parents(hornet.BlockIDs{blockB.StoredBlockID(), blockC.StoredBlockID()}).BuildTaggedData().Store()
 	blockE := te.NewBlockBuilder("E").Parents(hornet.BlockIDs{blockB.StoredBlockID(), blockA.StoredBlockID()}).BuildTaggedData().Store()
 
-	// Confirming milestone include all msg up to block E. This should only include A, B and E
+	// Confirming milestone include all blocks up to block E. This should only include A, B and E
 	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{blockE.StoredBlockID()}, true)
 	require.Equal(t, 3+1, confStats.BlocksReferenced) // A, B, E + previous milestone
 	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)

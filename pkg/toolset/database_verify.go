@@ -145,7 +145,7 @@ func verifyDatabase(
 		ctx context.Context,
 		cachedBlockFunc storage.CachedBlockFunc,
 		milestoneManager *milestonemanager.MilestoneManager,
-		onNewMilestoneConeMsg func(*storage.CachedBlock),
+		onNewMilestoneConeBlock func(*storage.CachedBlock),
 		msIndex milestone.Index) error {
 
 		// traversal stops if no more blocks pass the given condition
@@ -153,12 +153,12 @@ func verifyDatabase(
 		condition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			// collect all msgs that were referenced by that milestone
+			// collect all blocks that were referenced by that milestone
 			referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 
 			if !referenced {
 				// all existing blocks in the database must be referenced by a milestone
-				return false, fmt.Errorf("block was not referenced (msIndex: %d, msgID: %s)", msIndex, cachedBlockMeta.Metadata().BlockID().ToHex())
+				return false, fmt.Errorf("block was not referenced (msIndex: %d, blockID: %s)", msIndex, cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
 
 			if at > msIndex {
@@ -180,8 +180,8 @@ func verifyDatabase(
 			}
 			defer cachedBlock.Release(true) // block -1
 
-			if onNewMilestoneConeMsg != nil {
-				onNewMilestoneConeMsg(cachedBlock.Retain()) // block pass +1
+			if onNewMilestoneConeBlock != nil {
+				onNewMilestoneConeBlock(cachedBlock.Retain()) // block pass +1
 			}
 
 			return true, nil
@@ -240,7 +240,7 @@ func verifyDatabase(
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 
-				// collect all msgs that were referenced by that milestone
+				// collect all blocks that were referenced by that milestone
 				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				return referenced && at == msIndex, nil
 			},
@@ -284,7 +284,7 @@ func verifyDatabase(
 	}
 
 	for msIndex := msIndexStart; msIndex <= msIndexEnd; msIndex++ {
-		msgsCount := 0
+		blocksCount := 0
 
 		ts := time.Now()
 
@@ -294,7 +294,7 @@ func verifyDatabase(
 			milestoneManager,
 			func(cachedBlock *storage.CachedBlock) {
 				defer cachedBlock.Release(true) // block -1
-				msgsCount++
+				blocksCount++
 			}, msIndex); err != nil {
 			return err
 		}
@@ -307,7 +307,7 @@ func verifyDatabase(
 			return err
 		}
 
-		println(fmt.Sprintf("successfully verified milestone cone %d, msgs: %d, total: %v", msIndex, msgsCount, time.Since(ts).Truncate(time.Millisecond)))
+		println(fmt.Sprintf("successfully verified milestone cone %d, blocks: %d, total: %v", msIndex, blocksCount, time.Since(ts).Truncate(time.Millisecond)))
 	}
 
 	println("verifying final ledger state...")

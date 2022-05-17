@@ -200,7 +200,7 @@ func copyMilestoneCone(
 	condition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 		defer cachedBlockMeta.Release(true) // meta -1
 
-		// collect all msgs that were referenced by that milestone
+		// collect all blocks that were referenced by that milestone
 		referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 
 		if referenced {
@@ -365,12 +365,12 @@ func mergeViaAPI(
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		msg, err := client.BlockByBlockID(ctx, blockID.ToArray(), protoParas)
+		block, err := client.BlockByBlockID(ctx, blockID.ToArray(), protoParas)
 		if err != nil {
 			return nil, err
 		}
 
-		return msg, nil
+		return block, nil
 	}
 
 	getMilestonePayloadViaAPI := func(client *nodeclient.Client, msIndex milestone.Index) (*iotago.Milestone, error) {
@@ -641,12 +641,12 @@ func NewProxyStorage(
 func (s *ProxyStorage) CachedBlock(blockID hornet.BlockID) (*storage.CachedBlock, error) {
 	if !s.storeTarget.ContainsBlock(blockID) {
 		if !s.storeProxy.ContainsBlock(blockID) {
-			msg, err := s.getBlockFunc(blockID)
+			block, err := s.getBlockFunc(blockID)
 			if err != nil {
 				return nil, err
 			}
 
-			cachedBlock, err := storeBlock(s.protoParas, s.storeProxy, s.milestoneManager, msg) // block +1
+			cachedBlock, err := storeBlock(s.protoParas, s.storeProxy, s.milestoneManager, block) // block +1
 			if err != nil {
 				return nil, err
 			}

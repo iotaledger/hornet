@@ -56,8 +56,8 @@ var (
 	}
 )
 
-// ConfirmMilestone traverses a milestone and collects all unreferenced msg,
-// then the ledger diffs are calculated, the ledger state is checked and all msg are marked as referenced.
+// ConfirmMilestone traverses a milestone and collects all unreferenced blocks,
+// then the ledger diffs are calculated, the ledger state is checked and all blocks are marked as referenced.
 // Additionally, this function also examines the milestone for a receipt and generates new migrated outputs
 // if one is present. The treasury is mutated accordingly.
 func ConfirmMilestone(

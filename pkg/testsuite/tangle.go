@@ -18,14 +18,14 @@ import (
 
 // StoreBlock adds the block to the storage layer and solidifies it.
 // block +1
-func (te *TestEnvironment) StoreBlock(msg *storage.Block) *storage.CachedBlock {
+func (te *TestEnvironment) StoreBlock(block *storage.Block) *storage.CachedBlock {
 
 	// Store block in the database
-	cachedBlock, alreadyAdded := tangle.AddBlockToStorage(te.storage, te.milestoneManager, msg, te.syncManager.LatestMilestoneIndex(), false, true)
+	cachedBlock, alreadyAdded := tangle.AddBlockToStorage(te.storage, te.milestoneManager, block, te.syncManager.LatestMilestoneIndex(), false, true)
 	require.NotNil(te.TestInterface, cachedBlock)
 	require.False(te.TestInterface, alreadyAdded)
 
-	// Solidify msg
+	// Solidify block
 	cachedBlock.Metadata().SetSolid(true)
 	require.True(te.TestInterface, cachedBlock.Metadata().IsSolid())
 
@@ -142,10 +142,10 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		false)
 	require.NoError(te.TestInterface, err)
 
-	var milestoneMsgs []string
-	var includedMsgs []string
-	var ignoredMsgs []string
-	var conflictingMsgs []string
+	var milestoneBlocks []string
+	var includedBlocks []string
+	var ignoredBlocks []string
+	var conflictingBlocks []string
 
 	dotFile := fmt.Sprintf("digraph %s\n{\n", te.TestInterface.Name())
 	for _, cachedBlock := range visitedCachedBlocks {
@@ -179,32 +179,32 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 			if conf != nil && milestone.Index(milestonePayload.Index) == conf.MilestoneIndex {
 				dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gold];\n", shortIndex)
 			}
-			milestoneMsgs = append(milestoneMsgs, shortIndex)
+			milestoneBlocks = append(milestoneBlocks, shortIndex)
 		} else if meta.IsReferenced() {
 			if meta.IsConflictingTx() {
-				conflictingMsgs = append(conflictingMsgs, shortIndex)
+				conflictingBlocks = append(conflictingBlocks, shortIndex)
 			} else if meta.IsNoTransaction() {
-				ignoredMsgs = append(ignoredMsgs, shortIndex)
+				ignoredBlocks = append(ignoredBlocks, shortIndex)
 			} else if meta.IsIncludedTxInLedger() {
-				includedMsgs = append(includedMsgs, shortIndex)
+				includedBlocks = append(includedBlocks, shortIndex)
 			} else {
-				panic("unknown msg state")
+				panic("unknown block state")
 			}
 		}
 		cachedBlock.Release(true) // block -1
 	}
 
-	for _, milestone := range milestoneMsgs {
+	for _, milestone := range milestoneBlocks {
 		dotFile += fmt.Sprintf("\"%s\" [shape=Msquare];\n", milestone)
 	}
-	for _, conflictingMsg := range conflictingMsgs {
-		dotFile += fmt.Sprintf("\"%s\" [style=filled,color=red];\n", conflictingMsg)
+	for _, conflictingBlock := range conflictingBlocks {
+		dotFile += fmt.Sprintf("\"%s\" [style=filled,color=red];\n", conflictingBlock)
 	}
-	for _, ignoredMsg := range ignoredMsgs {
-		dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gray];\n", ignoredMsg)
+	for _, ignoredBlock := range ignoredBlocks {
+		dotFile += fmt.Sprintf("\"%s\" [style=filled,color=gray];\n", ignoredBlock)
 	}
-	for _, includedMsg := range includedMsgs {
-		dotFile += fmt.Sprintf("\"%s\" [style=filled,color=green];\n", includedMsg)
+	for _, includedBlock := range includedBlocks {
+		dotFile += fmt.Sprintf("\"%s\" [style=filled,color=green];\n", includedBlock)
 	}
 
 	dotFile += "}\n"

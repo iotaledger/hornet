@@ -29,7 +29,7 @@ func storageMessageByTransactionID(c echo.Context) (*storage.Block, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", transactionID.ToHex())
 	}
 
-	cachedBlock := deps.Storage.CachedBlockOrNil(output.MessageID()) // block +1
+	cachedBlock := deps.Storage.CachedBlockOrNil(output.BlockID()) // block +1
 	if cachedBlock == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", transactionID.ToHex())
 	}

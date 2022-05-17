@@ -164,12 +164,12 @@ func (c *CachedBlock) Release(force ...bool) {
 }
 
 func BlockFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
-	msg := &Block{
+	block := &Block{
 		blockID: hornet.BlockIDFromSlice(key[:iotago.BlockIDLength]),
 		data:    data,
 	}
 
-	return msg, nil
+	return block, nil
 }
 
 func (s *Storage) BlockStorageSize() int {

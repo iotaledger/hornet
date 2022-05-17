@@ -7,23 +7,23 @@ import (
 
 type Child struct {
 	objectstorage.StorableObjectFlags
-	parentMessageID hornet.BlockID
-	childMessageID  hornet.BlockID
+	parentBlockID hornet.BlockID
+	childBlockID  hornet.BlockID
 }
 
-func NewChild(parentMessageID hornet.BlockID, childMessageID hornet.BlockID) *Child {
+func NewChild(parentBlockID hornet.BlockID, childBlockID hornet.BlockID) *Child {
 	return &Child{
-		parentMessageID: parentMessageID,
-		childMessageID:  childMessageID,
+		parentBlockID: parentBlockID,
+		childBlockID:  childBlockID,
 	}
 }
 
-func (a *Child) ParentMessageID() hornet.BlockID {
-	return a.parentMessageID
+func (a *Child) ParentBlockID() hornet.BlockID {
+	return a.parentBlockID
 }
 
-func (a *Child) ChildMessageID() hornet.BlockID {
-	return a.childMessageID
+func (a *Child) ChildBlockID() hornet.BlockID {
+	return a.childBlockID
 }
 
 // ObjectStorage interface
@@ -33,7 +33,7 @@ func (a *Child) Update(_ objectstorage.StorableObject) {
 }
 
 func (a *Child) ObjectStorageKey() []byte {
-	return append(a.parentMessageID, a.childMessageID...)
+	return append(a.parentBlockID, a.childBlockID...)
 }
 
 func (a *Child) ObjectStorageValue() []byte {

@@ -104,14 +104,14 @@ func provide(c *dig.Container) error {
 
 	type cfgResult struct {
 		dig.Out
-		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
-		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+		MaxDeltaBlockYoungestConeRootIndexToCMI int `name:"maxDeltaBlockYoungestConeRootIndexToCMI"`
+		MaxDeltaBlockOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
 	}
 
 	if err := c.Provide(func() cfgResult {
 		return cfgResult{
-			MaxDeltaMsgYoungestConeRootIndexToCMI: ParamsTangle.MaxDeltaMsgYoungestConeRootIndexToCMI,
-			MaxDeltaMsgOldestConeRootIndexToCMI:   ParamsTangle.MaxDeltaMsgOldestConeRootIndexToCMI,
+			MaxDeltaBlockYoungestConeRootIndexToCMI: ParamsTangle.MaxDeltaBlockYoungestConeRootIndexToCMI,
+			MaxDeltaBlockOldestConeRootIndexToCMI:   ParamsTangle.MaxDeltaBlockOldestConeRootIndexToCMI,
 		}
 	}); err != nil {
 		CoreComponent.LogPanic(err)
@@ -119,14 +119,14 @@ func provide(c *dig.Container) error {
 
 	type tipScoreDeps struct {
 		dig.In
-		Storage                               *storage.Storage
-		MaxDeltaMsgYoungestConeRootIndexToCMI int `name:"maxDeltaMsgYoungestConeRootIndexToCMI"`
-		MaxDeltaMsgOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
-		ProtocolParameters                    *iotago.ProtocolParameters
+		Storage                                 *storage.Storage
+		MaxDeltaBlockYoungestConeRootIndexToCMI int `name:"maxDeltaBlockYoungestConeRootIndexToCMI"`
+		MaxDeltaBlockOldestConeRootIndexToCMI   int `name:"maxDeltaBlockOldestConeRootIndexToCMI"`
+		ProtocolParameters                      *iotago.ProtocolParameters
 	}
 
 	if err := c.Provide(func(deps tipScoreDeps) *tangle.TipScoreCalculator {
-		return tangle.NewTipScoreCalculator(deps.Storage, deps.MaxDeltaMsgYoungestConeRootIndexToCMI, deps.MaxDeltaMsgOldestConeRootIndexToCMI, int(deps.ProtocolParameters.BelowMaxDepth))
+		return tangle.NewTipScoreCalculator(deps.Storage, deps.MaxDeltaBlockYoungestConeRootIndexToCMI, deps.MaxDeltaBlockOldestConeRootIndexToCMI, int(deps.ProtocolParameters.BelowMaxDepth))
 	}); err != nil {
 		CoreComponent.LogPanic(err)
 	}

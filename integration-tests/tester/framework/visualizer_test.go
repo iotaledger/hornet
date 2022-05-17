@@ -16,8 +16,8 @@ import (
 )
 
 type Vertex struct {
-	MessageID string   `json:"id"`
-	Parents   []string `json:"parents"`
+	BlockID string   `json:"id"`
+	Parents []string `json:"parents"`
 }
 
 // returns length amount random bytes
@@ -29,7 +29,7 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func randMessageID() hornet.BlockID {
+func randBlockID() hornet.BlockID {
 	return hornet.BlockID(randBytes(iotago.BlockIDLength))
 }
 
@@ -44,7 +44,7 @@ func TestVisualizer(t *testing.T) {
 	var vertices []Vertex
 	const getFromLast = 30
 	for i := 0; i < 1000; i++ {
-		v := Vertex{MessageID: randMessageID().ToHex()}
+		v := Vertex{BlockID: randBlockID().ToHex()}
 		if i <= getFromLast {
 			// only one parent at the beginning
 			v.Parents = hornet.BlockIDs{hornet.NullBlockID()}.ToHex()
@@ -55,7 +55,7 @@ func TestVisualizer(t *testing.T) {
 		l := len(vertices)
 		parents := hornet.BlockIDs{}
 		for j := 2; j <= 2+rand.Intn(7); j++ {
-			msgID, err := hornet.BlockIDFromHex(vertices[l-1-rand.Intn(getFromLast)].MessageID)
+			msgID, err := hornet.BlockIDFromHex(vertices[l-1-rand.Intn(getFromLast)].BlockID)
 			assert.NoError(t, err)
 			parents = append(parents, msgID)
 		}

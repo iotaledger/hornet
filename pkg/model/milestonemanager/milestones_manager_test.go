@@ -119,20 +119,20 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	  "nonce": "0"
 	}
 	`
-	jsonMsg := &iotago.Block{}
-	err := json.Unmarshal([]byte(jsonString), jsonMsg)
+	jsonBlock := &iotago.Block{}
+	err := json.Unmarshal([]byte(jsonString), jsonBlock)
 	require.NoError(t, err)
-	milestoneBlockBytes, err := jsonMsg.Serialize(serializer.DeSeriModePerformValidation, te.ProtocolParameters())
+	milestoneBlockBytes, err := jsonBlock.Serialize(serializer.DeSeriModePerformValidation, te.ProtocolParameters())
 	require.NoError(t, err)
 
 	// build HORNET representation of the block
-	msg, err := storage.BlockFromBytes(milestoneBlockBytes, serializer.DeSeriModePerformValidation, te.ProtocolParameters())
+	block, err := storage.BlockFromBytes(milestoneBlockBytes, serializer.DeSeriModePerformValidation, te.ProtocolParameters())
 	require.NoError(te.TestInterface, err)
 
 	// parse the milestone payload
-	milestonePayload := msg.Milestone()
+	milestonePayload := block.Milestone()
 	require.NotNil(te.TestInterface, milestonePayload)
 
-	verifiedMilestone := milestoneManager.VerifyMilestoneBlock(msg.Block())
+	verifiedMilestone := milestoneManager.VerifyMilestoneBlock(block.Block())
 	require.NotNil(te.TestInterface, verifiedMilestone)
 }

@@ -4,18 +4,18 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
-type CachedMessageMetadataFunc func(blockID hornet.BlockID) (*CachedMetadata, error)
+type CachedBlockMetadataFunc func(blockID hornet.BlockID) (*CachedMetadata, error)
 
 type MetadataMemcache struct {
-	cachedMessageMetadataFunc CachedMessageMetadataFunc
-	cachedBlockMetas          map[string]*CachedMetadata
+	cachedBlockMetadataFunc CachedBlockMetadataFunc
+	cachedBlockMetas        map[string]*CachedMetadata
 }
 
 // NewMetadataMemcache creates a new NewMetadataMemcache instance.
-func NewMetadataMemcache(cachedMessageMetadataFunc CachedMessageMetadataFunc) *MetadataMemcache {
+func NewMetadataMemcache(cachedBlockMetadataFunc CachedBlockMetadataFunc) *MetadataMemcache {
 	return &MetadataMemcache{
-		cachedMessageMetadataFunc: cachedMessageMetadataFunc,
-		cachedBlockMetas:          make(map[string]*CachedMetadata),
+		cachedBlockMetadataFunc: cachedBlockMetadataFunc,
+		cachedBlockMetas:        make(map[string]*CachedMetadata),
 	}
 }
 
@@ -40,7 +40,7 @@ func (c *MetadataMemcache) CachedBlockMetadata(blockID hornet.BlockID) (*CachedM
 	// load up block metadata
 	cachedBlockMeta, exists := c.cachedBlockMetas[blockIDMapKey]
 	if !exists {
-		cachedBlockMeta, err = c.cachedMessageMetadataFunc(blockID) // meta +1 (this is the one that gets cleared by "Cleanup")
+		cachedBlockMeta, err = c.cachedBlockMetadataFunc(blockID) // meta +1 (this is the one that gets cleared by "Cleanup")
 		if err != nil {
 			return nil, err
 		}

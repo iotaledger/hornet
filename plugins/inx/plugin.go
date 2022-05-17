@@ -40,7 +40,7 @@ func init() {
 var (
 	Plugin   *app.Plugin
 	deps     dependencies
-	attacher *tangle.MessageAttacher
+	attacher *tangle.BlockAttacher
 
 	messageProcessedTimeout = 1 * time.Second
 )
@@ -87,7 +87,7 @@ func provide(c *dig.Container) error {
 
 func configure() error {
 
-	attacherOpts := []tangle.MessageAttacherOption{
+	attacherOpts := []tangle.BlockAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
 		tangle.WithPoW(deps.PoWHandler, ParamsINX.PoW.WorkerCount),
 		tangle.WithPoWMetrics(deps.INXMetrics),
@@ -96,7 +96,7 @@ func configure() error {
 		attacherOpts = append(attacherOpts, tangle.WithTipSel(deps.TipSelector.SelectNonLazyTips))
 	}
 
-	attacher = deps.Tangle.MessageAttacher(attacherOpts...)
+	attacher = deps.Tangle.BlockAttacher(attacherOpts...)
 
 	return nil
 }

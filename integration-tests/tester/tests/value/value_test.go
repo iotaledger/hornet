@@ -76,13 +76,13 @@ func TestValue(t *testing.T) {
 		Build(protoParas, iotago.NewInMemoryAddressSigner(genesisAddrKey))
 	require.NoError(t, err)
 
-	// build message
-	msg, err := builder.NewMessageBuilder(protoParas.Version).Payload(tx).Build()
+	// build block
+	block, err := builder.NewBlockBuilder(protoParas.Version).Payload(tx).Build()
 	require.NoError(t, err)
 
 	// broadcast to a node
 	log.Println("submitting transaction...")
-	submittedMsg, err := n.Nodes[2].DebugNodeAPIClient.SubmitMessage(context.Background(), msg, protoParas)
+	submittedMsg, err := n.Nodes[2].DebugNodeAPIClient.SubmitBlock(context.Background(), block, protoParas)
 	require.NoError(t, err)
 
 	// eventually the message should be confirmed
@@ -91,7 +91,7 @@ func TestValue(t *testing.T) {
 
 	log.Println("checking that the transaction gets confirmed...")
 	require.Eventually(t, func() bool {
-		msgMeta, err := n.Coordinator().DebugNodeAPIClient.MessageMetadataByMessageID(context.Background(), *submittedMsgID)
+		msgMeta, err := n.Coordinator().DebugNodeAPIClient.BlockMetadataByBlockID(context.Background(), *submittedMsgID)
 		if err != nil {
 			return false
 		}

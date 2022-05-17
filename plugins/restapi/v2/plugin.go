@@ -33,32 +33,32 @@ const (
 	// GET returns the tips.
 	RouteTips = "/tips"
 
-	// RouteMessage is the route for getting a message by its blockID.
+	// RouteBlock is the route for getting a message by its blockID.
 	// GET returns the message based on the given type in the request "Accept" header.
 	// MIMEApplicationJSON => json
 	// MIMEVendorIOTASerializer => bytes
-	RouteMessage = "/messages/:" + restapipkg.ParameterBlockID
+	RouteBlock = "/blocks/:" + restapipkg.ParameterBlockID
 
-	// RouteMessageMetadata is the route for getting message metadata by its blockID.
+	// RouteBlockMetadata is the route for getting message metadata by its blockID.
 	// GET returns message metadata (including info about "promotion/reattachment needed").
-	RouteMessageMetadata = "/messages/:" + restapipkg.ParameterBlockID + "/metadata"
+	RouteBlockMetadata = "/blocks/:" + restapipkg.ParameterBlockID + "/metadata"
 
-	// RouteMessageChildren is the route for getting message IDs of the children of a message, identified by its blockID.
+	// RouteBlockChildren is the route for getting message IDs of the children of a message, identified by its blockID.
 	// GET returns the message IDs of all children.
-	RouteMessageChildren = "/messages/:" + restapipkg.ParameterBlockID + "/children"
+	RouteBlockChildren = "/blocks/:" + restapipkg.ParameterBlockID + "/children"
 
-	// RouteMessages is the route for creating new messages.
+	// RouteBlocks is the route for creating new messages.
 	// POST creates a single new message and returns the new message ID.
 	// The message is parsed based on the given type in the request "Content-Type" header.
 	// MIMEApplicationJSON => json
 	// MIMEVendorIOTASerializer => bytes
-	RouteMessages = "/messages"
+	RouteBlocks = "/blocks"
 
-	// RouteTransactionsIncludedMessage is the route for getting the message that was included in the ledger for a given transaction ID.
+	// RouteTransactionsIncludedBlock is the route for getting the message that was included in the ledger for a given transaction ID.
 	// GET returns the message based on the given type in the request "Accept" header.
 	// MIMEApplicationJSON => json
 	// MIMEVendorIOTASerializer => bytes
-	RouteTransactionsIncludedMessage = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-message"
+	RouteTransactionsIncludedBlock = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-block"
 
 	// RouteMilestoneByID is the route for getting a milestone by its ID.
 	// GET returns the milestone.
@@ -139,7 +139,7 @@ func init() {
 var (
 	Plugin   *app.Plugin
 	features = []string{}
-	attacher *tangle.MessageAttacher
+	attacher *tangle.BlockAttacher
 
 	// ErrNodeNotSync is returned when the node was not synced.
 	ErrNodeNotSync = errors.New("node not synced")
@@ -179,7 +179,7 @@ func configure() error {
 
 	routeGroup := deps.Echo.Group("/api/v2")
 
-	attacherOpts := []tangle.MessageAttacherOption{
+	attacherOpts := []tangle.BlockAttacherOption{
 		tangle.WithTimeout(messageProcessedTimeout),
 		tangle.WithPoWMetrics(deps.RestAPIMetrics),
 	}
@@ -193,7 +193,7 @@ func configure() error {
 		attacherOpts = append(attacherOpts, tangle.WithPoW(deps.PoWHandler, restapi.ParamsRestAPI.PoW.WorkerCount))
 	}
 
-	attacher = deps.Tangle.MessageAttacher(attacherOpts...)
+	attacher = deps.Tangle.BlockAttacher(attacherOpts...)
 
 	routeGroup.GET(RouteInfo, func(c echo.Context) error {
 		resp, err := info()
@@ -214,7 +214,7 @@ func configure() error {
 		})
 	}
 
-	routeGroup.GET(RouteMessageMetadata, func(c echo.Context) error {
+	routeGroup.GET(RouteBlockMetadata, func(c echo.Context) error {
 		resp, err := messageMetadataByID(c)
 		if err != nil {
 			return err
@@ -222,7 +222,7 @@ func configure() error {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.GET(RouteMessage, func(c echo.Context) error {
+	routeGroup.GET(RouteBlock, func(c echo.Context) error {
 		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
 		if err != nil && err != restapipkg.ErrNotAcceptable {
 			return err
@@ -246,7 +246,7 @@ func configure() error {
 		}
 	})
 
-	routeGroup.GET(RouteMessageChildren, func(c echo.Context) error {
+	routeGroup.GET(RouteBlockChildren, func(c echo.Context) error {
 		resp, err := childrenIDsByID(c)
 		if err != nil {
 			return err
@@ -255,7 +255,7 @@ func configure() error {
 		return restapipkg.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	routeGroup.POST(RouteMessages, func(c echo.Context) error {
+	routeGroup.POST(RouteBlocks, func(c echo.Context) error {
 		resp, err := sendMessage(c)
 		if err != nil {
 			return err
@@ -264,7 +264,7 @@ func configure() error {
 		return restapipkg.JSONResponse(c, http.StatusCreated, resp)
 	})
 
-	routeGroup.GET(RouteTransactionsIncludedMessage, func(c echo.Context) error {
+	routeGroup.GET(RouteTransactionsIncludedBlock, func(c echo.Context) error {
 		mimeType, err := restapipkg.GetAcceptHeaderContentType(c, restapipkg.MIMEApplicationVendorIOTASerializerV1, echo.MIMEApplicationJSON)
 		if err != nil && err != restapipkg.ErrNotAcceptable {
 			return err

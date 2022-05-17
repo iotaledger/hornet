@@ -207,7 +207,7 @@ func (s *INXServer) SubmitBlock(context context.Context, message *inx.RawBlock) 
 	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(context, Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
-	blockID, err := attacher.AttachMessage(mergedCtx, msg)
+	blockID, err := attacher.AttachBlock(mergedCtx, msg)
 	if err != nil {
 		return nil, err
 	}

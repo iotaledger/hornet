@@ -456,11 +456,11 @@ func StreamSnapshotDataFrom(reader io.ReadSeeker,
 	}
 
 	for i := uint64(0); i < readHeader.SEPCount; i++ {
-		solidEntryPointMessageID := make(hornet.BlockID, iotago.BlockIDLength)
-		if _, err := io.ReadFull(reader, solidEntryPointMessageID); err != nil {
+		solidEntryPointBlockID := make(hornet.BlockID, iotago.BlockIDLength)
+		if _, err := io.ReadFull(reader, solidEntryPointBlockID); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}
-		if err := sepConsumer(solidEntryPointMessageID); err != nil {
+		if err := sepConsumer(solidEntryPointBlockID); err != nil {
 			return fmt.Errorf("SEP consumer error at pos %d: %w", i, err)
 		}
 	}

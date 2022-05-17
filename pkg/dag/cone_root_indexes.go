@@ -37,7 +37,7 @@ func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage 
 func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, cachedBlockMeta *storage.CachedMetadata, cmi milestone.Index) (youngestConeRootIndex milestone.Index, oldestConeRootIndex milestone.Index, err error) {
 	defer cachedBlockMeta.Release(true) // meta -1
 
-	// if the msg already contains recent (calculation index matches CMI)
+	// if the block already contains recent (calculation index matches CMI)
 	// information about ycri and ocri, return that info
 	ycri, ocri, ci := cachedBlockMeta.Metadata().ConeRootIndexes()
 	if ci == cmi {
@@ -75,7 +75,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			// first check if the msg was referenced => update ycri and ocri with the confirmation index
+			// first check if the block was referenced => update ycri and ocri with the confirmation index
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 				updateIndexes(at, at)
 				return false, nil
@@ -86,7 +86,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 				return true, nil
 			}
 
-			// if the msg was not referenced yet, but already contains recent (calculation index matches CMI) information
+			// if the block was not referenced yet, but already contains recent (calculation index matches CMI) information
 			// about ycri and ocri, propagate that info
 			ycri, ocri, ci := cachedBlockMeta.Metadata().ConeRootIndexes()
 			if ci == cmi {
@@ -131,7 +131,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 		}
 	}
 
-	// update the outdated cone root indexes of all blocks in the cone in order from oldest msgs to latest.
+	// update the outdated cone root indexes of all blocks in the cone in order from oldest blocks to latest.
 	// this is an efficient way to update the whole cone, because updating from oldest to latest will not be recursive.
 	if err := updateOutdatedConeRootIndexes(ctx, parentsTraverserStorage, outdatedBlockIDs, cmi); err != nil {
 		return 0, 0, err

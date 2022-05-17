@@ -120,16 +120,16 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	seenPreviousMilestoneID := isFirstMilestone
 	internalTraversalCondition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 		if !seenPreviousMilestoneID && cachedBlockMeta.Metadata().IsMilestone() {
-			msgMilestone, err := cachedBlockFunc(cachedBlockMeta.Metadata().BlockID()) // block +1
+			blockMilestone, err := cachedBlockFunc(cachedBlockMeta.Metadata().BlockID()) // block +1
 			if err != nil {
 				return false, err
 			}
-			if msgMilestone == nil {
+			if blockMilestone == nil {
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: block not found for milestone block ID: %v", cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
-			defer msgMilestone.Release(true) // block -1
+			defer blockMilestone.Release(true) // block -1
 
-			milestonePayload := msgMilestone.Block().Milestone()
+			milestonePayload := blockMilestone.Block().Milestone()
 			if milestonePayload == nil {
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: block for milestone block ID does not contain a milestone payload: %v", cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
@@ -166,7 +166,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			return err
 		}
 		if cachedBlock == nil {
-			return fmt.Errorf("%w: block %s of candidate msg %s doesn't exist", common.ErrBlockNotFound, blockID.ToHex(), blockID.ToHex())
+			return fmt.Errorf("%w: block %s of candidate block %s doesn't exist", common.ErrBlockNotFound, blockID.ToHex(), blockID.ToHex())
 		}
 		defer cachedBlock.Release(true) // block -1
 

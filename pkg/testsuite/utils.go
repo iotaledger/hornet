@@ -105,16 +105,16 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 		parents = append(parents, parent[:])
 	}
 
-	msg, err := builder.NewBlockBuilder(b.te.protoParas.Version).
+	iotaBlock, err := builder.NewBlockBuilder(b.te.protoParas.Version).
 		Parents(parents).
 		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
 	require.NoError(b.te.TestInterface, err)
 
-	_, err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	_, err = b.te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	block, err := storage.NewBlock(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, b.te.protoParas)
 	require.NoError(b.te.TestInterface, err)
 
 	return &Block{

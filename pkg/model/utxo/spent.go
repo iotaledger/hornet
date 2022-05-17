@@ -52,8 +52,8 @@ func (s *Spent) mapKey() string {
 	return string(s.outputID[:])
 }
 
-func (s *Spent) MessageID() hornet.BlockID {
-	return s.output.MessageID()
+func (s *Spent) BlockID() hornet.BlockID {
+	return s.output.BlockID()
 }
 
 func (s *Spent) OutputType() iotago.OutputType {

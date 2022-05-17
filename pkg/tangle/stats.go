@@ -10,21 +10,21 @@ func (t *Tangle) LastConfirmedMilestoneMetric() *ConfirmedMilestoneMetric {
 }
 
 // measures the BPS values
-func (t *Tangle) measureMPS() {
-	incomingMsgCnt := t.serverMetrics.Blocks.Load()
-	incomingNewMsgCnt := t.serverMetrics.NewBlocks.Load()
-	outgoingMsgCnt := t.serverMetrics.SentBlocks.Load()
+func (t *Tangle) measureBPS() {
+	incomingBlocksCount := t.serverMetrics.Blocks.Load()
+	incomingNewBlocksCount := t.serverMetrics.NewBlocks.Load()
+	outgoingBlocksCount := t.serverMetrics.SentBlocks.Load()
 
 	mpsMetrics := &MPSMetrics{
-		Incoming: math.Uint32Diff(incomingMsgCnt, t.lastIncomingMsgCnt),
-		New:      math.Uint32Diff(incomingNewMsgCnt, t.lastIncomingNewMsgCnt),
-		Outgoing: math.Uint32Diff(outgoingMsgCnt, t.lastOutgoingMsgCnt),
+		Incoming: math.Uint32Diff(incomingBlocksCount, t.lastIncomingBlocksCount),
+		New:      math.Uint32Diff(incomingNewBlocksCount, t.lastIncomingNewBlocksCount),
+		Outgoing: math.Uint32Diff(outgoingBlocksCount, t.lastOutgoingBlocksCount),
 	}
 
 	// store the new counters
-	t.lastIncomingMsgCnt = incomingMsgCnt
-	t.lastIncomingNewMsgCnt = incomingNewMsgCnt
-	t.lastOutgoingMsgCnt = outgoingMsgCnt
+	t.lastIncomingBlocksCount = incomingBlocksCount
+	t.lastIncomingNewBlocksCount = incomingNewBlocksCount
+	t.lastOutgoingBlocksCount = outgoingBlocksCount
 
 	// trigger events for outside listeners
 	t.Events.MPSMetricsUpdated.Trigger(mpsMetrics)

@@ -63,7 +63,7 @@ func (o *Output) mapKey() string {
 	return string(o.outputID[:])
 }
 
-func (o *Output) MessageID() hornet.BlockID {
+func (o *Output) BlockID() hornet.BlockID {
 	return o.blockID
 }
 
@@ -172,7 +172,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	valueUtil := marshalutil.New(value)
 
 	// Read BlockID
-	if o.blockID, err = ParseMessageID(valueUtil); err != nil {
+	if o.blockID, err = ParseBlockID(valueUtil); err != nil {
 		return err
 	}
 

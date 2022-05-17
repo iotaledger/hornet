@@ -24,7 +24,7 @@ func Rand32ByteHash() [32]byte {
 	return h
 }
 
-func RandMessageID() hornet.BlockID {
+func RandBlockID() hornet.BlockID {
 	return RandBytes(iotago.BlockIDLength)
 }
 

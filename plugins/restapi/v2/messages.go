@@ -145,7 +145,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults
-	childrenMessageIDs, err := deps.Storage.ChildrenBlockIDs(blockID, storage.WithIteratorMaxIterations(maxResults))
+	childrenBlockIDs, err := deps.Storage.ChildrenBlockIDs(blockID, storage.WithIteratorMaxIterations(maxResults))
 	if err != nil {
 		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
@@ -153,8 +153,8 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	return &childrenResponse{
 		BlockID:    blockID.ToHex(),
 		MaxResults: uint32(maxResults),
-		Count:      uint32(len(childrenMessageIDs)),
-		Children:   childrenMessageIDs.ToHex(),
+		Count:      uint32(len(childrenBlockIDs)),
+		Children:   childrenBlockIDs.ToHex(),
 	}, nil
 }
 
@@ -212,12 +212,12 @@ func sendMessage(c echo.Context) (*blockCreatedResponse, error) {
 	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
-	blockID, err := attacher.AttachMessage(mergedCtx, msg)
+	blockID, err := attacher.AttachBlock(mergedCtx, msg)
 	if err != nil {
-		if errors.Is(err, tangle.ErrMessageAttacherAttachingNotPossible) {
+		if errors.Is(err, tangle.ErrBlockAttacherAttachingNotPossible) {
 			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 		}
-		if errors.Is(err, tangle.ErrMessageAttacherInvalidMessage) {
+		if errors.Is(err, tangle.ErrBlockAttacherInvalidBlock) {
 			return nil, errors.WithMessage(restapi.ErrInvalidParameter, err.Error())
 		}
 		return nil, err

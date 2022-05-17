@@ -19,10 +19,10 @@ import (
 
 func (t *Tangle) ConfigureTangleProcessor() {
 
-	t.receiveMsgWorkerPool = workerpool.New(func(task workerpool.Task) {
+	t.receiveBlockWorkerPool = workerpool.New(func(task workerpool.Task) {
 		t.processIncomingTx(task.Param(0).(*storage.Block), task.Param(1).(gossip.Requests), task.Param(2).(*gossip.Protocol))
 		task.Return(nil)
-	}, workerpool.WorkerCount(t.receiveMsgWorkerCount), workerpool.QueueSize(t.receiveMsgQueueSize))
+	}, workerpool.WorkerCount(t.receiveBlockWorkerCount), workerpool.QueueSize(t.receiveBlockQueueSize))
 
 	t.futureConeSolidifierWorkerPool = workerpool.New(func(task workerpool.Task) {
 		if err := t.futureConeSolidifier.SolidifyBlockAndFutureCone(t.shutdownCtx, task.Param(0).(*storage.CachedMetadata)); err != nil {
@@ -56,7 +56,7 @@ func (t *Tangle) RunTangleProcessor() {
 	t.startWaitGroup.Add(5)
 
 	onBlockProcessed := events.NewClosure(func(block *storage.Block, requests gossip.Requests, proto *gossip.Protocol) {
-		t.receiveMsgWorkerPool.Submit(block, requests, proto)
+		t.receiveBlockWorkerPool.Submit(block, requests, proto)
 	})
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
@@ -101,7 +101,7 @@ func (t *Tangle) RunTangleProcessor() {
 
 	// create a background worker that "measures" the BPS value every second
 	if err := t.daemon.BackgroundWorker("Metrics BPS Updater", func(ctx context.Context) {
-		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, ctx)
+		ticker := timeutil.NewTicker(t.measureBPS, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, daemon.PriorityMetricsUpdater); err != nil {
 		t.LogPanicf("failed to start worker: %s", err)
@@ -120,13 +120,13 @@ func (t *Tangle) RunTangleProcessor() {
 		t.LogInfo("Starting TangleProcessor[ReceiveTx] ... done")
 		t.messageProcessor.Events.BlockProcessed.Attach(onBlockProcessed)
 		t.Events.BlockSolid.Attach(onBlockSolid)
-		t.receiveMsgWorkerPool.Start()
+		t.receiveBlockWorkerPool.Start()
 		t.startWaitGroup.Done()
 		<-ctx.Done()
 		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ...")
 		t.messageProcessor.Events.BlockProcessed.Detach(onBlockProcessed)
 		t.Events.BlockSolid.Detach(onBlockSolid)
-		t.receiveMsgWorkerPool.StopAndWait()
+		t.receiveBlockWorkerPool.StopAndWait()
 		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, daemon.PriorityReceiveTxWorker); err != nil {
 		t.LogPanicf("failed to start worker: %s", err)
@@ -184,18 +184,18 @@ func (t *Tangle) WaitForTangleProcessorStartup() {
 }
 
 func (t *Tangle) IsReceiveTxWorkerPoolBusy() bool {
-	return t.receiveMsgWorkerPool.GetPendingQueueSize() > (t.receiveMsgQueueSize / 2)
+	return t.receiveBlockWorkerPool.GetPendingQueueSize() > (t.receiveBlockQueueSize / 2)
 }
 
-func (t *Tangle) processIncomingTx(incomingMsg *storage.Block, requests gossip.Requests, proto *gossip.Protocol) {
+func (t *Tangle) processIncomingTx(incomingBlock *storage.Block, requests gossip.Requests, proto *gossip.Protocol) {
 
 	latestMilestoneIndex := t.syncManager.LatestMilestoneIndex()
 	isNodeSyncedWithinBelowMaxDepth := t.syncManager.IsNodeSyncedWithinBelowMaxDepth()
 
 	requested := requests.HasRequest()
 
-	// The msg will be added to the storage inside this function, so the block object automatically updates
-	cachedBlock, alreadyAdded := AddBlockToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // block +1
+	// The block will be added to the storage inside this function, so the block object automatically updates
+	cachedBlock, alreadyAdded := AddBlockToStorage(t.storage, t.milestoneManager, incomingBlock, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // block +1
 
 	// Release shouldn't be forced, to cache the latest blocks
 	defer cachedBlock.Release(!isNodeSyncedWithinBelowMaxDepth) // block -1
@@ -240,8 +240,8 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Block, requests gossip.R
 	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
 	// with the block it issued itself because the block may be not solid yet and therefore their database entries
 	// are not created yet.
-	t.Events.ProcessedBlock.Trigger(incomingMsg.BlockID())
-	t.blockProcessedSyncEvent.Trigger(incomingMsg.BlockID().ToMapKey())
+	t.Events.ProcessedBlock.Trigger(incomingBlock.BlockID())
+	t.blockProcessedSyncEvent.Trigger(incomingBlock.BlockID().ToMapKey())
 
 	for _, request := range requests {
 		// mark the received request as processed
@@ -307,7 +307,7 @@ func (t *Tangle) PrintStatus() {
 				"Tips (non-/semi-lazy): %d/%d",
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,
-			t.receiveMsgWorkerPool.GetPendingQueueSize(),
+			t.receiveBlockWorkerPool.GetPendingQueueSize(),
 			t.syncManager.ConfirmedMilestoneIndex(),
 			t.syncManager.LatestMilestoneIndex(),
 			t.lastIncomingMPS,

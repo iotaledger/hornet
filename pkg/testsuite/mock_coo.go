@@ -80,7 +80,7 @@ func (coo *MockCoo) LastMilestoneParents() hornet.BlockIDs {
 	return hornet.BlockIDsFromSliceOfArrays(lastMilestonePayload.Parents)
 }
 
-func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.BlockID {
+func (coo *MockCoo) storeBlock(message *iotago.Block) hornet.BlockID {
 	msg, err := storage.NewBlock(message, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
 	require.NoError(coo.te.TestInterface, err)
 	cachedBlock := coo.te.StoreBlock(msg) // block +1, no need to release, since we remember all the messages for later cleanup
@@ -183,8 +183,8 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.BlockIDs, addLastMilestoneA
 		return nil, nil, err
 	}
 
-	msg, err := builder.NewMessageBuilder(coo.te.protoParas.Version).
-		ParentsMessageIDs(tips.ToSliceOfArrays()).
+	iotaBlock, err := builder.NewBlockBuilder(coo.te.protoParas.Version).
+		ParentsBlockIDs(tips.ToSliceOfArrays()).
 		Payload(milestonePayload).
 		ProofOfWork(context.Background(), coo.te.protoParas, coo.te.protoParas.MinPoWScore).
 		Build()
@@ -192,11 +192,11 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.BlockIDs, addLastMilestoneA
 		return nil, nil, err
 	}
 
-	milestoneMessageID := coo.storeMessage(msg)
+	milestoneBlockID := coo.storeBlock(iotaBlock)
 	if err != nil {
 		return nil, nil, err
 	}
-	coo.lastMilestoneBlockID = milestoneMessageID
+	coo.lastMilestoneBlockID = milestoneBlockID
 
 	coo.te.VerifyLMI(milestoneIndex)
 	cachedMilestone := coo.te.storage.CachedMilestoneByIndexOrNil(milestoneIndex) // milestone +1
@@ -205,5 +205,5 @@ func (coo *MockCoo) issueMilestoneOnTips(tips hornet.BlockIDs, addLastMilestoneA
 	coo.te.Milestones = append(coo.te.Milestones, cachedMilestone)
 	coo.lastMilestonePayload = cachedMilestone.Milestone().Milestone()
 
-	return cachedMilestone.Milestone(), milestoneMessageID, nil
+	return cachedMilestone.Milestone(), milestoneBlockID, nil
 }

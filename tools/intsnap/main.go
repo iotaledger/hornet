@@ -24,11 +24,11 @@ func blankMilestone(index uint32) *iotago.Milestone {
 	return &iotago.Milestone{
 		Index:     index,
 		Timestamp: 0,
-		Parents: iotago.MilestoneParentMessageIDs{
+		Parents: iotago.MilestoneParentBlockIDs{
 			static32ByteID(0),
 			static32ByteID(1),
 		},
-		ConfirmedMerkleRoot: static32ByteID(2),
+		InclusionMerkleRoot: static32ByteID(2),
 		AppliedMerkleRoot:   static32ByteID(2),
 		Signatures: []iotago.Signature{
 			&iotago.Ed25519Signature{
@@ -115,7 +115,7 @@ func writeFullSnapshot() {
 		if seps > sepsMax {
 			return nil, nil
 		}
-		return randMsgID(), nil
+		return randBlockID(), nil
 	}
 
 	var currentOutput int
@@ -214,7 +214,7 @@ func writeDeltaSnapshot() {
 		if seps > sepsMax {
 			return nil, nil
 		}
-		return randMsgID(), nil
+		return randBlockID(), nil
 	}
 
 	var currentMsDiff int
@@ -237,7 +237,7 @@ func must(err error) {
 	}
 }
 
-func randMsgID() hornet.BlockID {
+func randBlockID() hornet.BlockID {
 	b := make(hornet.BlockID, 32)
 	_, err := rand.Read(b[:])
 	must(err)
@@ -260,7 +260,7 @@ func static32ByteID(fill byte) [32]byte {
 	return b
 }
 
-func staticMessageID(fill byte) hornet.BlockID {
+func staticBlockID(fill byte) hornet.BlockID {
 	return hornet.BlockIDFromArray(static32ByteID(fill))
 }
 
@@ -282,7 +282,7 @@ func staticEd25519Address(fill byte) iotago.Address {
 func utxoOutput(fill byte, amount uint64, msIndex milestone.Index) *utxo.Output {
 	return utxo.CreateOutput(
 		staticOutputID(fill),
-		staticMessageID(fill),
+		staticBlockID(fill),
 		msIndex,
 		0,
 		&iotago.BasicOutput{

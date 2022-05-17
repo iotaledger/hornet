@@ -19,15 +19,15 @@ import (
 )
 
 func RandUTXOOutput(outputType iotago.OutputType) *Output {
-	return CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(outputType))
+	return CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(outputType))
 }
 
 func RandUTXOOutputOnAddress(outputType iotago.OutputType, address iotago.Address) *Output {
-	return CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddress(outputType, address))
+	return CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddress(outputType, address))
 }
 
 func RandUTXOOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.Address, amount uint64) *Output {
-	return CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddressWithAmount(outputType, address, amount))
+	return CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddressWithAmount(outputType, address, amount))
 }
 
 func RandUTXOSpent(output *Output, index milestone.Index, timestamp uint32) *Spent {
@@ -132,7 +132,7 @@ func CreateSpentAndAssertSerialization(t *testing.T, output *Output) *Spent {
 func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	blockID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	senderAddress := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	tag := utils.RandBytes(23)
@@ -167,7 +167,7 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	blockID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	senderAddress := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	amount := rand.Uint64()
@@ -201,7 +201,7 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 func TestNFTOutputSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	blockID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	nftID := utils.RandNFTID()
 	amount := rand.Uint64()
@@ -233,7 +233,7 @@ func TestNFTOutputSerialization(t *testing.T) {
 func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	blockID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandNFTID()
 	issuerAddress := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	nftID := utils.RandNFTID()
@@ -273,7 +273,7 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 func TestAliasOutputSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	blockID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	aliasID := utils.RandAliasID()
 	stateController := utils.RandAliasID()
 	governor := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
@@ -316,7 +316,7 @@ func TestAliasOutputSerialization(t *testing.T) {
 func TestFoundryOutputSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	blockID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	aliasID := utils.RandAliasID()
 	amount := rand.Uint64()
 	msIndex := utils.RandMilestoneIndex()
