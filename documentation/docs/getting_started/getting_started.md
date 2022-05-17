@@ -35,7 +35,7 @@ Versions below 0.6.0 (such as 0.5.x) target the legacy IOTA network which is not
 
 ## Recommended Requirements
 
-To handle a potential high rate of messages per second, nodes need enough computational power to run reliably, and
+To handle a potential high rate of blocks per second, nodes need enough computational power to run reliably, and
 should have the minimum specs:
 
 - 4 cores or 4 vCPU.

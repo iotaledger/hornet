@@ -18,27 +18,27 @@ import (
 )
 
 var (
-	messageProcessedTimeout = 1 * time.Second
+	blockProcessedTimeout = 1 * time.Second
 )
 
-func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
+func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	messageID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID)
-	if cachedMsgMeta == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
+	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(blockID)
+	if cachedBlockMeta == nil {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
 	}
-	defer cachedMsgMeta.Release(true) // meta -1
+	defer cachedBlockMeta.Release(true) // meta -1
 
-	metadata := cachedMsgMeta.Metadata()
+	metadata := cachedBlockMeta.Metadata()
 
 	var referencedByMilestone *milestone.Index = nil
 	referenced, referencedIndex := metadata.ReferencedWithIndex()
@@ -46,15 +46,15 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		referencedByMilestone = &referencedIndex
 	}
 
-	messageMetadataResponse := &messageMetadataResponse{
-		MessageID:                  metadata.MessageID().ToHex(),
+	response := &blockMetadataResponse{
+		BlockID:                    metadata.BlockID().ToHex(),
 		Parents:                    metadata.Parents().ToHex(),
 		Solid:                      metadata.IsSolid(),
 		ReferencedByMilestoneIndex: referencedByMilestone,
 	}
 
 	if metadata.IsMilestone() {
-		messageMetadataResponse.MilestoneIndex = referencedByMilestone
+		response.MilestoneIndex = referencedByMilestone
 	}
 
 	if referenced {
@@ -64,17 +64,17 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 
 		if conflict != storage.ConflictNone {
 			inclusionState = "conflicting"
-			messageMetadataResponse.ConflictReason = &conflict
+			response.ConflictReason = &conflict
 		} else if metadata.IsIncludedTxInLedger() {
 			inclusionState = "included"
 		}
 
-		messageMetadataResponse.LedgerInclusionState = &inclusionState
+		response.LedgerInclusionState = &inclusionState
 	} else if metadata.IsSolid() {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
-		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), cachedMsgMeta.Metadata().MessageID(), cmi)
+		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), cachedBlockMeta.Metadata().BlockID(), cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
@@ -99,66 +99,66 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 			shouldReattach = false
 		}
 
-		messageMetadataResponse.ShouldPromote = &shouldPromote
-		messageMetadataResponse.ShouldReattach = &shouldReattach
+		response.ShouldPromote = &shouldPromote
+		response.ShouldReattach = &shouldReattach
 	}
 
-	return messageMetadataResponse, nil
+	return response, nil
 }
 
-func storageMessageByID(c echo.Context) (*storage.Message, error) {
-	messageID, err := restapi.ParseMessageIDParam(c)
+func storageBlockByID(c echo.Context) (*storage.Block, error) {
+	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
-	if cachedMsg == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
+	cachedBlock := deps.Storage.CachedBlockOrNil(blockID) // block +1
+	if cachedBlock == nil {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
 	}
-	defer cachedMsg.Release(true) // message -1
+	defer cachedBlock.Release(true) // block -1
 
-	return cachedMsg.Message(), nil
+	return cachedBlock.Block(), nil
 }
 
-func messageByID(c echo.Context) (*iotago.Message, error) {
-	message, err := storageMessageByID(c)
+func blockByID(c echo.Context) (*iotago.Block, error) {
+	block, err := storageBlockByID(c)
 	if err != nil {
 		return nil, err
 	}
-	return message.Message(), nil
+	return block.Block(), nil
 }
 
-func messageBytesByID(c echo.Context) ([]byte, error) {
-	message, err := storageMessageByID(c)
+func blockBytesByID(c echo.Context) ([]byte, error) {
+	block, err := storageBlockByID(c)
 	if err != nil {
 		return nil, err
 	}
-	return message.Data(), nil
+	return block.Data(), nil
 }
 
 func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 
-	messageID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults
-	childrenMessageIDs, err := deps.Storage.ChildrenMessageIDs(messageID, storage.WithIteratorMaxIterations(maxResults))
+	childrenBlockIDs, err := deps.Storage.ChildrenBlockIDs(blockID, storage.WithIteratorMaxIterations(maxResults))
 	if err != nil {
 		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
 	return &childrenResponse{
-		MessageID:  messageID.ToHex(),
+		BlockID:    blockID.ToHex(),
 		MaxResults: uint32(maxResults),
-		Count:      uint32(len(childrenMessageIDs)),
-		Children:   childrenMessageIDs.ToHex(),
+		Count:      uint32(len(childrenBlockIDs)),
+		Children:   childrenBlockIDs.ToHex(),
 	}, nil
 }
 
-func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
+func sendBlock(c echo.Context) (*blockCreatedResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
@@ -169,39 +169,39 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, err
 	}
 
-	msg := &iotago.Message{}
+	iotaBlock := &iotago.Block{}
 
 	switch mimeType {
 	case echo.MIMEApplicationJSON:
-		if err := c.Bind(msg); err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
+		if err := c.Bind(iotaBlock); err != nil {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
 	case restapi.MIMEApplicationVendorIOTASerializerV1:
 		if c.Request().Body == nil {
-			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: request body missing")
+			return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid block, error: request body missing")
 			// bad request
 		}
 
 		bytes, err := ioutil.ReadAll(c.Request().Body)
 		if err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
 		// Do not validate here, the parents might need to be set
-		if _, err := msg.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.ProtocolParameters); err != nil {
-			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
+		if _, err := iotaBlock.Deserialize(bytes, serializer.DeSeriModeNoValidation, deps.ProtocolParameters); err != nil {
+			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 		}
 
 	default:
 		return nil, echo.ErrUnsupportedMediaType
 	}
 
-	if msg.ProtocolVersion != deps.ProtocolParameters.Version {
-		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid message, error: protocolVersion invalid")
+	if iotaBlock.ProtocolVersion != deps.ProtocolParameters.Version {
+		return nil, errors.WithMessage(restapi.ErrInvalidParameter, "invalid block, error: protocolVersion invalid")
 	}
 
-	switch payload := msg.Payload.(type) {
+	switch payload := iotaBlock.Payload.(type) {
 	case *iotago.Transaction:
 		if payload.Essence.NetworkID != deps.ProtocolParameters.NetworkID() {
 			return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid payload, error: wrong networkID: %d", payload.Essence.NetworkID)
@@ -212,18 +212,18 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
-	messageID, err := attacher.AttachMessage(mergedCtx, msg)
+	blockID, err := attacher.AttachBlock(mergedCtx, iotaBlock)
 	if err != nil {
-		if errors.Is(err, tangle.ErrMessageAttacherAttachingNotPossible) {
+		if errors.Is(err, tangle.ErrBlockAttacherAttachingNotPossible) {
 			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
 		}
-		if errors.Is(err, tangle.ErrMessageAttacherInvalidMessage) {
+		if errors.Is(err, tangle.ErrBlockAttacherInvalidBlock) {
 			return nil, errors.WithMessage(restapi.ErrInvalidParameter, err.Error())
 		}
 		return nil, err
 	}
 
-	return &messageCreatedResponse{
-		MessageID: messageID.ToHex(),
+	return &blockCreatedResponse{
+		BlockID: blockID.ToHex(),
 	}, nil
 }

@@ -13,26 +13,26 @@ import (
 
 // ShortenedHash returns a shortened hex encoded hash for the given hash.
 // this is used for the dot file.
-func ShortenedHash(hash hornet.MessageID) string {
+func ShortenedHash(hash hornet.BlockID) string {
 	hexHash := hash.ToHex()
 	return hexHash[0:4] + "..." + hexHash[len(hexHash)-4:]
 }
 
-// ShortenedTag returns a shortened tag or milestone index for the given message.
+// ShortenedTag returns a shortened tag or milestone index for the given block.
 // this is used for the dot file.
-func ShortenedTag(cachedMsg *storage.CachedMessage) string {
-	defer cachedMsg.Release(true) // message -1
+func ShortenedTag(cachedBlock *storage.CachedBlock) string {
+	defer cachedBlock.Release(true) // block -1
 
-	hash := ShortenedHash(cachedMsg.Message().MessageID())
+	hash := ShortenedHash(cachedBlock.Block().BlockID())
 
-	milestonePayload := cachedMsg.Message().Milestone()
+	milestonePayload := cachedBlock.Block().Milestone()
 	if milestonePayload != nil {
 		return fmt.Sprintf("%d-%s", milestonePayload.Index, hash)
 	}
 
-	taggedData := cachedMsg.Message().TransactionEssenceTaggedData()
+	taggedData := cachedBlock.Block().TransactionEssenceTaggedData()
 	if taggedData == nil {
-		taggedData = cachedMsg.Message().TaggedData()
+		taggedData = cachedBlock.Block().TaggedData()
 	}
 	if taggedData == nil {
 		panic("no taggedData found")
@@ -44,8 +44,8 @@ func ShortenedTag(cachedMsg *storage.CachedMessage) string {
 		tagString = hex.EncodeToString(tag[:4])
 	}
 
-	if cachedMsg.Metadata().IsConflictingTx() {
-		conflict := cachedMsg.Metadata().Conflict()
+	if cachedBlock.Metadata().IsConflictingTx() {
+		conflict := cachedBlock.Metadata().Conflict()
 		return fmt.Sprintf("%s (%d)", tagString, conflict)
 	}
 

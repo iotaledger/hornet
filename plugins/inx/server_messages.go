@@ -20,39 +20,39 @@ import (
 	inx "github.com/iotaledger/inx/go"
 )
 
-func INXMessageIDsFromMessageIDs(messageIDs hornet.MessageIDs) []*inx.MessageId {
-	result := make([]*inx.MessageId, len(messageIDs))
-	for i := range messageIDs {
-		result[i] = inx.NewMessageId(messageIDs[i].ToArray())
+func INXBlockIDsFromBlockIDs(blockIDs hornet.BlockIDs) []*inx.BlockId {
+	result := make([]*inx.BlockId, len(blockIDs))
+	for i := range blockIDs {
+		result[i] = inx.NewBlockId(blockIDs[i].ToArray())
 	}
 	return result
 }
 
-func MessageIDsFromINXMessageIDs(messageIDs []*inx.MessageId) hornet.MessageIDs {
-	result := make([]hornet.MessageID, len(messageIDs))
-	for i := range messageIDs {
-		result[i] = hornet.MessageIDFromArray(messageIDs[i].Unwrap())
+func BlockIDsFromINXBlockIDs(blockIDs []*inx.BlockId) hornet.BlockIDs {
+	result := make([]hornet.BlockID, len(blockIDs))
+	for i := range blockIDs {
+		result[i] = hornet.BlockIDFromArray(blockIDs[i].Unwrap())
 	}
 	return result
 }
 
-func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.MessageMetadata) (*inx.MessageMetadata, error) {
-	m := &inx.MessageMetadata{
-		MessageId: inx.NewMessageId(messageID.ToArray()),
-		Parents:   INXMessageIDsFromMessageIDs(metadata.Parents()),
-		Solid:     metadata.IsSolid(),
+func INXNewBlockMetadata(blockID hornet.BlockID, metadata *storage.BlockMetadata) (*inx.BlockMetadata, error) {
+	m := &inx.BlockMetadata{
+		BlockId: inx.NewBlockId(blockID.ToArray()),
+		Parents: INXBlockIDsFromBlockIDs(metadata.Parents()),
+		Solid:   metadata.IsSolid(),
 	}
 
 	referenced, msIndex := metadata.ReferencedWithIndex()
 	if referenced {
 		m.ReferencedByMilestoneIndex = uint32(msIndex)
-		inclusionState := inx.MessageMetadata_NO_TRANSACTION
+		inclusionState := inx.BlockMetadata_NO_TRANSACTION
 		conflict := metadata.Conflict()
 		if conflict != storage.ConflictNone {
-			inclusionState = inx.MessageMetadata_CONFLICTING
-			m.ConflictReason = inx.MessageMetadata_ConflictReason(conflict)
+			inclusionState = inx.BlockMetadata_CONFLICTING
+			m.ConflictReason = inx.BlockMetadata_ConflictReason(conflict)
 		} else if metadata.IsIncludedTxInLedger() {
-			inclusionState = inx.MessageMetadata_INCLUDED
+			inclusionState = inx.BlockMetadata_INCLUDED
 		}
 		m.LedgerInclusionState = inclusionState
 
@@ -63,7 +63,7 @@ func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.Message
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
-		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), messageID, cmi)
+		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), blockID, cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
@@ -95,56 +95,56 @@ func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.Message
 	return m, nil
 }
 
-func (s *INXServer) ReadMessage(_ context.Context, messageID *inx.MessageId) (*inx.RawMessage, error) {
-	cachedMsg := deps.Storage.CachedMessageOrNil(hornet.MessageIDFromArray(messageID.Unwrap())) // message +1
-	if cachedMsg == nil {
-		return nil, status.Errorf(codes.NotFound, "message %s not found", hornet.MessageIDFromArray(messageID.Unwrap()).ToHex())
+func (s *INXServer) ReadBlock(_ context.Context, blockID *inx.BlockId) (*inx.RawBlock, error) {
+	cachedBlock := deps.Storage.CachedBlockOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // block +1
+	if cachedBlock == nil {
+		return nil, status.Errorf(codes.NotFound, "block %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
 	}
-	defer cachedMsg.Release(true) // message -1
-	return inx.WrapMessage(cachedMsg.Message().Message())
+	defer cachedBlock.Release(true) // block -1
+	return inx.WrapBlock(cachedBlock.Block().Block())
 }
 
-func (s *INXServer) ReadMessageMetadata(_ context.Context, messageID *inx.MessageId) (*inx.MessageMetadata, error) {
-	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(hornet.MessageIDFromArray(messageID.Unwrap())) // meta +1
-	if cachedMsgMeta == nil {
-		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", hornet.MessageIDFromArray(messageID.Unwrap()).ToHex())
+func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (*inx.BlockMetadata, error) {
+	cachedBlockMeta := deps.Storage.CachedBlockMetadataOrNil(hornet.BlockIDFromArray(blockID.Unwrap())) // meta +1
+	if cachedBlockMeta == nil {
+		return nil, status.Errorf(codes.NotFound, "block metadata %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
 	}
-	defer cachedMsgMeta.Release(true) // meta -1
-	return INXNewMessageMetadata(cachedMsgMeta.Metadata().MessageID(), cachedMsgMeta.Metadata())
+	defer cachedBlockMeta.Release(true) // meta -1
+	return INXNewBlockMetadata(cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
 }
 
-func (s *INXServer) ListenToMessages(filter *inx.MessageFilter, srv inx.INX_ListenToMessagesServer) error {
+func (s *INXServer) ListenToBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		cachedMsg := task.Param(0).(*storage.CachedMessage)
-		defer cachedMsg.Release(true) // message -1
+		cachedBlock := task.Param(0).(*storage.CachedBlock)
+		defer cachedBlock.Release(true) // block -1
 
-		payload := inx.NewMessageWithBytes(cachedMsg.Message().MessageID().ToArray(), cachedMsg.Message().Data())
+		payload := inx.NewBlockWithBytes(cachedBlock.Block().BlockID().ToArray(), cachedBlock.Block().Data())
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
 		}
 		task.Return(nil)
 	})
-	closure := events.NewClosure(func(cachedMsg *storage.CachedMessage, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
+	closure := events.NewClosure(func(cachedBlock *storage.CachedBlock, latestMilestoneIndex milestone.Index, confirmedMilestoneIndex milestone.Index) {
 		//TODO: apply filter?
-		wp.Submit(cachedMsg)
+		wp.Submit(cachedBlock)
 	})
 	wp.Start()
-	deps.Tangle.Events.ReceivedNewMessage.Attach(closure)
+	deps.Tangle.Events.ReceivedNewBlock.Attach(closure)
 	<-ctx.Done()
-	deps.Tangle.Events.ReceivedNewMessage.Detach(closure)
+	deps.Tangle.Events.ReceivedNewBlock.Detach(closure)
 	wp.Stop()
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToSolidMessages(filter *inx.MessageFilter, srv inx.INX_ListenToSolidMessagesServer) error {
+func (s *INXServer) ListenToSolidBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToSolidBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		msgMeta := task.Param(0).(*storage.CachedMetadata)
-		defer msgMeta.Release(true) // meta -1
+		blockMeta := task.Param(0).(*storage.CachedMetadata)
+		defer blockMeta.Release(true) // meta -1
 
-		payload, err := INXNewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		payload, err := INXNewBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -156,25 +156,25 @@ func (s *INXServer) ListenToSolidMessages(filter *inx.MessageFilter, srv inx.INX
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(msgMeta *storage.CachedMetadata) {
+	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata) {
 		//TODO: apply filter?
-		wp.Submit(msgMeta)
+		wp.Submit(blockMeta)
 	})
 	wp.Start()
-	deps.Tangle.Events.MessageSolid.Attach(closure)
+	deps.Tangle.Events.BlockSolid.Attach(closure)
 	<-ctx.Done()
-	deps.Tangle.Events.MessageSolid.Detach(closure)
+	deps.Tangle.Events.BlockSolid.Detach(closure)
 	wp.Stop()
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToReferencedMessages(filter *inx.MessageFilter, srv inx.INX_ListenToReferencedMessagesServer) error {
+func (s *INXServer) ListenToReferencedBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToReferencedBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		msgMeta := task.Param(0).(*storage.CachedMetadata)
-		defer msgMeta.Release(true) // meta -1
+		blockMeta := task.Param(0).(*storage.CachedMetadata)
+		defer blockMeta.Release(true) // meta -1
 
-		payload, err := INXNewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		payload, err := INXNewBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -186,20 +186,20 @@ func (s *INXServer) ListenToReferencedMessages(filter *inx.MessageFilter, srv in
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
+	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
 		//TODO: apply filter?
-		wp.Submit(msgMeta)
+		wp.Submit(blockMeta)
 	})
 	wp.Start()
-	deps.Tangle.Events.MessageReferenced.Attach(closure)
+	deps.Tangle.Events.BlockReferenced.Attach(closure)
 	<-ctx.Done()
-	deps.Tangle.Events.MessageReferenced.Detach(closure)
+	deps.Tangle.Events.BlockReferenced.Detach(closure)
 	wp.Stop()
 	return ctx.Err()
 }
 
-func (s *INXServer) SubmitMessage(context context.Context, message *inx.RawMessage) (*inx.MessageId, error) {
-	msg, err := message.UnwrapMessage(serializer.DeSeriModeNoValidation, nil)
+func (s *INXServer) SubmitBlock(context context.Context, rawBlock *inx.RawBlock) (*inx.BlockId, error) {
+	block, err := rawBlock.UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -207,9 +207,9 @@ func (s *INXServer) SubmitMessage(context context.Context, message *inx.RawMessa
 	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(context, Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
-	messageID, err := attacher.AttachMessage(mergedCtx, msg)
+	blockID, err := attacher.AttachBlock(mergedCtx, block)
 	if err != nil {
 		return nil, err
 	}
-	return inx.NewMessageId(messageID.ToArray()), nil
+	return inx.NewBlockId(blockID.ToArray()), nil
 }

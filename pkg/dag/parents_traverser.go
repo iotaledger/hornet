@@ -12,7 +12,7 @@ import (
 )
 
 type ParentsTraverserInterface interface {
-	Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error
+	Traverse(ctx context.Context, parents hornet.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error
 }
 
 // ParentsTraverser can be used to walk the dag in direction of the parents (past cone).
@@ -20,10 +20,10 @@ type ParentsTraverser struct {
 	// interface to the used storage.
 	parentsTraverserStorage ParentsTraverserStorage
 
-	// stack holding the ordered msg to process.
+	// stack holding the ordered blocks to process.
 	stack *list.List
 
-	// processed map with already processed messages.
+	// processed map with already processed blocks.
 	processed map[string]struct{}
 
 	// checked map with result of traverse condition.
@@ -61,10 +61,10 @@ func (t *ParentsTraverser) reset() {
 }
 
 // Traverse starts to traverse the parents (past cone) in the given order until
-// the traversal stops due to no more messages passing the given condition.
+// the traversal stops due to no more blocks passing the given condition.
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func (t *ParentsTraverser) Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
+func (t *ParentsTraverser) Traverse(ctx context.Context, parents hornet.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -85,7 +85,7 @@ func (t *ParentsTraverser) Traverse(ctx context.Context, parents hornet.MessageI
 	// we feed the stack with the parents one after another,
 	// to make sure that we examine all paths.
 	// however, we only need to do it if the parent wasn't processed yet.
-	// the referenced parent message could for example already be processed
+	// the referenced parent block could for example already be processed
 	// if it is directly/indirectly approved by former parents.
 	for _, parent := range parents {
 		t.stack.PushFront(parent)
@@ -108,102 +108,102 @@ func (t *ParentsTraverser) processStackParents() error {
 		return err
 	}
 
-	// load candidate msg
+	// load candidate block
 	ele := t.stack.Front()
-	currentMessageID := ele.Value.(hornet.MessageID)
-	currentMessageIDMapKey := currentMessageID.ToMapKey()
+	currentBlockID := ele.Value.(hornet.BlockID)
+	currentBlockIDMapKey := currentBlockID.ToMapKey()
 
-	if _, wasProcessed := t.processed[currentMessageIDMapKey]; wasProcessed {
-		// message was already processed
-		// remove the message from the stack
+	if _, wasProcessed := t.processed[currentBlockIDMapKey]; wasProcessed {
+		// block was already processed
+		// remove the block from the stack
 		t.stack.Remove(ele)
 		return nil
 	}
 
-	// check if the message is a solid entry point
-	contains, err := t.parentsTraverserStorage.SolidEntryPointsContain(currentMessageID)
+	// check if the block is a solid entry point
+	contains, err := t.parentsTraverserStorage.SolidEntryPointsContain(currentBlockID)
 	if err != nil {
 		return err
 	}
 
 	if contains {
 		if t.onSolidEntryPoint != nil {
-			if err := t.onSolidEntryPoint(currentMessageID); err != nil {
+			if err := t.onSolidEntryPoint(currentBlockID); err != nil {
 				return err
 			}
 		}
 
 		if !t.traverseSolidEntryPoints {
-			// remove the message from the stack, the parents are not traversed
-			t.processed[currentMessageIDMapKey] = struct{}{}
-			delete(t.checked, currentMessageIDMapKey)
+			// remove the block from the stack, the parents are not traversed
+			t.processed[currentBlockIDMapKey] = struct{}{}
+			delete(t.checked, currentBlockIDMapKey)
 			t.stack.Remove(ele)
 			return nil
 		}
 	}
 
-	cachedMsgMeta, err := t.parentsTraverserStorage.CachedMessageMetadata(currentMessageID) // meta +1
+	cachedBlockMeta, err := t.parentsTraverserStorage.CachedBlockMetadata(currentBlockID) // meta +1
 	if err != nil {
 		return err
 	}
 
-	if cachedMsgMeta == nil {
-		// remove the message from the stack, the parents are not traversed
-		t.processed[currentMessageIDMapKey] = struct{}{}
-		delete(t.checked, currentMessageIDMapKey)
+	if cachedBlockMeta == nil {
+		// remove the block from the stack, the parents are not traversed
+		t.processed[currentBlockIDMapKey] = struct{}{}
+		delete(t.checked, currentBlockIDMapKey)
 		t.stack.Remove(ele)
 
 		if t.onMissingParent == nil {
 			// stop processing the stack with an error
-			return fmt.Errorf("%w: message %s", common.ErrMessageNotFound, currentMessageID.ToHex())
+			return fmt.Errorf("%w: block %s", common.ErrBlockNotFound, currentBlockID.ToHex())
 		}
 
 		// stop processing the stack if the caller returns an error
-		return t.onMissingParent(currentMessageID)
+		return t.onMissingParent(currentBlockID)
 	}
-	defer cachedMsgMeta.Release(true) // meta -1
+	defer cachedBlockMeta.Release(true) // meta -1
 
-	traverse, checkedBefore := t.checked[currentMessageIDMapKey]
+	traverse, checkedBefore := t.checked[currentBlockIDMapKey]
 	if !checkedBefore {
 		var err error
 
-		// check condition to decide if msg should be consumed and traversed
-		traverse, err = t.condition(cachedMsgMeta.Retain()) // meta pass +1
+		// check condition to decide if block should be consumed and traversed
+		traverse, err = t.condition(cachedBlockMeta.Retain()) // meta pass +1
 		if err != nil {
 			// there was an error, stop processing the stack
 			return err
 		}
 
-		// mark the message as checked and remember the result of the traverse condition
-		t.checked[currentMessageIDMapKey] = traverse
+		// mark the block as checked and remember the result of the traverse condition
+		t.checked[currentBlockIDMapKey] = traverse
 	}
 
 	if !traverse {
-		// remove the message from the stack, the parents are not traversed
+		// remove the block from the stack, the parents are not traversed
 		// parent will not get consumed
-		t.processed[currentMessageIDMapKey] = struct{}{}
-		delete(t.checked, currentMessageIDMapKey)
+		t.processed[currentBlockIDMapKey] = struct{}{}
+		delete(t.checked, currentBlockIDMapKey)
 		t.stack.Remove(ele)
 		return nil
 	}
 
-	for _, parentMessageID := range cachedMsgMeta.Metadata().Parents() {
-		if _, parentProcessed := t.processed[parentMessageID.ToMapKey()]; !parentProcessed {
+	for _, parentBlockID := range cachedBlockMeta.Metadata().Parents() {
+		if _, parentProcessed := t.processed[parentBlockID.ToMapKey()]; !parentProcessed {
 			// parent was not processed yet
-			// traverse this message
-			t.stack.PushFront(parentMessageID)
+			// traverse this block
+			t.stack.PushFront(parentBlockID)
 			return nil
 		}
 	}
 
-	// remove the message from the stack
-	t.processed[currentMessageIDMapKey] = struct{}{}
-	delete(t.checked, currentMessageIDMapKey)
+	// remove the block from the stack
+	t.processed[currentBlockIDMapKey] = struct{}{}
+	delete(t.checked, currentBlockIDMapKey)
 	t.stack.Remove(ele)
 
 	if t.consumer != nil {
-		// consume the message
-		if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta pass +1
+		// consume the block
+		if err := t.consumer(cachedBlockMeta.Retain()); err != nil { // meta pass +1
 			// there was an error, stop processing the stack
 			return err
 		}

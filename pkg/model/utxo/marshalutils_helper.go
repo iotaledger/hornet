@@ -28,12 +28,12 @@ func parseTransactionID(ms *marshalutil.MarshalUtil) (*iotago.TransactionID, err
 	return t, nil
 }
 
-func ParseMessageID(ms *marshalutil.MarshalUtil) (hornet.MessageID, error) {
-	bytes, err := ms.ReadBytes(iotago.MessageIDLength)
+func ParseBlockID(ms *marshalutil.MarshalUtil) (hornet.BlockID, error) {
+	bytes, err := ms.ReadBytes(iotago.BlockIDLength)
 	if err != nil {
 		return nil, err
 	}
-	return hornet.MessageIDFromSlice(bytes), nil
+	return hornet.BlockIDFromSlice(bytes), nil
 }
 
 func parseMilestoneIndex(ms *marshalutil.MarshalUtil) (milestone.Index, error) {

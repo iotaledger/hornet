@@ -20,7 +20,7 @@ func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsRespon
 
 	requestedIndex := request.Index
 	requestedTimestamp := request.Timestamp
-	requestedParents, err := hornet.MessageIDsFromHex(request.Parents)
+	requestedParents, err := hornet.BlockIDsFromHex(request.Parents)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid parents, error: %s", err)
 	}
@@ -53,7 +53,7 @@ func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsRespon
 	}
 
 	return &ComputeWhiteFlagMutationsResponse{
-		ConfirmedMerkleRoot: iotago.EncodeHex(mutations.ConfirmedMerkleRoot[:]),
+		InclusionMerkleRoot: iotago.EncodeHex(mutations.InclusionMerkleRoot[:]),
 		AppliedMerkleRoot:   iotago.EncodeHex(mutations.AppliedMerkleRoot[:]),
 	}, nil
 }

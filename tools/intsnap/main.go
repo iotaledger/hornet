@@ -24,11 +24,11 @@ func blankMilestone(index uint32) *iotago.Milestone {
 	return &iotago.Milestone{
 		Index:     index,
 		Timestamp: 0,
-		Parents: iotago.MilestoneParentMessageIDs{
+		Parents: iotago.MilestoneParentBlockIDs{
 			static32ByteID(0),
 			static32ByteID(1),
 		},
-		ConfirmedMerkleRoot: static32ByteID(2),
+		InclusionMerkleRoot: static32ByteID(2),
 		AppliedMerkleRoot:   static32ByteID(2),
 		Signatures: []iotago.Signature{
 			&iotago.Ed25519Signature{
@@ -107,15 +107,15 @@ func writeFullSnapshot() {
 	defer func() { _ = full.Close() }()
 
 	var seps, sepsMax = 0, 10
-	fullSnapSEPProd := func() (hornet.MessageID, error) {
+	fullSnapSEPProd := func() (hornet.BlockID, error) {
 		seps++
 		if seps == 1 {
-			return hornet.NullMessageID(), nil
+			return hornet.NullBlockID(), nil
 		}
 		if seps > sepsMax {
 			return nil, nil
 		}
-		return randMsgID(), nil
+		return randBlockID(), nil
 	}
 
 	var currentOutput int
@@ -209,12 +209,12 @@ func writeDeltaSnapshot() {
 	defer func() { _ = delta.Close() }()
 
 	var seps, sepsMax = 0, 10
-	deltaSnapSEPProd := func() (hornet.MessageID, error) {
+	deltaSnapSEPProd := func() (hornet.BlockID, error) {
 		seps++
 		if seps > sepsMax {
 			return nil, nil
 		}
-		return randMsgID(), nil
+		return randBlockID(), nil
 	}
 
 	var currentMsDiff int
@@ -237,8 +237,8 @@ func must(err error) {
 	}
 }
 
-func randMsgID() hornet.MessageID {
-	b := make(hornet.MessageID, 32)
+func randBlockID() hornet.BlockID {
+	b := make(hornet.BlockID, 32)
 	_, err := rand.Read(b[:])
 	must(err)
 	return b
@@ -260,8 +260,8 @@ func static32ByteID(fill byte) [32]byte {
 	return b
 }
 
-func staticMessageID(fill byte) hornet.MessageID {
-	return hornet.MessageIDFromArray(static32ByteID(fill))
+func staticBlockID(fill byte) hornet.BlockID {
+	return hornet.BlockIDFromArray(static32ByteID(fill))
 }
 
 func staticOutputID(fill byte) *iotago.OutputID {
@@ -282,7 +282,7 @@ func staticEd25519Address(fill byte) iotago.Address {
 func utxoOutput(fill byte, amount uint64, msIndex milestone.Index) *utxo.Output {
 	return utxo.CreateOutput(
 		staticOutputID(fill),
-		staticMessageID(fill),
+		staticBlockID(fill),
 		msIndex,
 		0,
 		&iotago.BasicOutput{

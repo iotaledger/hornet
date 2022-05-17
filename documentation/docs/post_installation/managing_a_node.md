@@ -82,9 +82,9 @@ You can also control plugins using the [Dashboard/web interface](https://wiki.io
 ## Spammer
 Hornet integrates a lightweight spamming plugin that spams the network with messages. The IOTA network is based on a Directed Acyclic Graph. So, new incoming messages are connected to previous messages (tips). It is healthy for the network to maintain some level of message rate.
 
-The Spammer plugin allows your node to send several data messages at regular intervals. You can set the interval with the `mpsRateLimit` key, which is the number of messages per second (TPS) that the plugin should try to send.
+The Spammer plugin allows your node to send several data messages at regular intervals. You can set the interval with the `bpsRateLimit` key, which is the number of messages per second (TPS) that the plugin should try to send.
 
-For example, value `"mpsRateLimit": 0.1` would mean to send 1 message every 10 seconds.
+For example, value `"bpsRateLimit": 0.1` would mean to send 1 message every 10 seconds.
 
 You can change the default configuration by enabling this plugin since it is usually disabled.
 
@@ -94,7 +94,7 @@ You can change the default configuration by enabling this plugin since it is usu
     "index": "HORNET Spammer",
     "indexSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
-    "mpsRateLimit": 0.0,
+    "bpsRateLimit": 0.0,
     "workers": 0,
     "autostart": false
   }

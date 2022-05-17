@@ -10,7 +10,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func storageMessageByTransactionID(c echo.Context) (*storage.Message, error) {
+func storageBlockByTransactionID(c echo.Context) (*storage.Block, error) {
 
 	transactionID, err := restapi.ParseTransactionIDParam(c)
 	if err != nil {
@@ -29,27 +29,27 @@ func storageMessageByTransactionID(c echo.Context) (*storage.Message, error) {
 		return nil, errors.WithMessagef(echo.ErrInternalServerError, "failed to load output for transaction: %s", transactionID.ToHex())
 	}
 
-	cachedMsg := deps.Storage.CachedMessageOrNil(output.MessageID()) // message +1
-	if cachedMsg == nil {
+	cachedBlock := deps.Storage.CachedBlockOrNil(output.BlockID()) // block +1
+	if cachedBlock == nil {
 		return nil, errors.WithMessagef(echo.ErrNotFound, "transaction not found: %s", transactionID.ToHex())
 	}
-	defer cachedMsg.Release(true) // message -1
+	defer cachedBlock.Release(true) // block -1
 
-	return cachedMsg.Message(), nil
+	return cachedBlock.Block(), nil
 }
 
-func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
-	message, err := storageMessageByTransactionID(c)
+func blockByTransactionID(c echo.Context) (*iotago.Block, error) {
+	block, err := storageBlockByTransactionID(c)
 	if err != nil {
 		return nil, err
 	}
-	return message.Message(), nil
+	return block.Block(), nil
 }
 
-func messageBytesByTransactionID(c echo.Context) ([]byte, error) {
-	message, err := storageMessageByTransactionID(c)
+func blockBytesByTransactionID(c echo.Context) ([]byte, error) {
+	block, err := storageBlockByTransactionID(c)
 	if err != nil {
 		return nil, err
 	}
-	return message.Data(), nil
+	return block.Data(), nil
 }

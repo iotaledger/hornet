@@ -61,7 +61,7 @@ func databaseVerify(args []string) error {
 	protoParas := &iotago.ProtocolParameters{}
 
 	// we don't need to check the health of the source db.
-	// it is fine as long as all messages in the cone are found.
+	// it is fine as long as all blocks in the cone are found.
 	tangleStoreSource, err := getTangleStorage(*databasePathSourceFlag, "source", string(database.EngineAuto), true, false, false, true)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func databaseVerify(args []string) error {
 	return nil
 }
 
-// verifyDatabase checks if all messages in the cones of the existing milestones in the database are found.
+// verifyDatabase checks if all blocks in the cones of the existing milestones in the database are found.
 func verifyDatabase(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
@@ -140,25 +140,25 @@ func verifyDatabase(
 		return nil
 	}
 
-	// checkMilestoneCone checks if all messages in the current milestone cone are found.
+	// checkMilestoneCone checks if all blocks in the current milestone cone are found.
 	checkMilestoneCone := func(
 		ctx context.Context,
-		cachedMessageFunc storage.CachedMessageFunc,
+		cachedBlockFunc storage.CachedBlockFunc,
 		milestoneManager *milestonemanager.MilestoneManager,
-		onNewMilestoneConeMsg func(*storage.CachedMessage),
+		onNewMilestoneConeBlock func(*storage.CachedBlock),
 		msIndex milestone.Index) error {
 
-		// traversal stops if no more messages pass the given condition
+		// traversal stops if no more blocks pass the given condition
 		// Caution: condition func is not in DFS order
-		condition := func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-			defer cachedMsgMeta.Release(true) // meta -1
+		condition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedBlockMeta.Release(true) // meta -1
 
-			// collect all msgs that were referenced by that milestone
-			referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+			// collect all blocks that were referenced by that milestone
+			referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 
 			if !referenced {
-				// all existing messages in the database must be referenced by a milestone
-				return false, fmt.Errorf("message was not referenced (msIndex: %d, msgID: %s)", msIndex, cachedMsgMeta.Metadata().MessageID().ToHex())
+				// all existing blocks in the database must be referenced by a milestone
+				return false, fmt.Errorf("block was not referenced (msIndex: %d, blockID: %s)", msIndex, cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
 
 			if at > msIndex {
@@ -166,22 +166,22 @@ func verifyDatabase(
 			}
 
 			if at < msIndex {
-				// do not traverse messages that were referenced by an older milestonee
+				// do not traverse blocks that were referenced by an older milestonee
 				return false, nil
 			}
 
-			// check if the message exists
-			cachedMsg, err := cachedMessageFunc(cachedMsgMeta.Metadata().MessageID()) // message +1
+			// check if the block exists
+			cachedBlock, err := cachedBlockFunc(cachedBlockMeta.Metadata().BlockID()) // block +1
 			if err != nil {
 				return false, err
 			}
-			if cachedMsg == nil {
-				return false, fmt.Errorf("message not found: %s", cachedMsgMeta.Metadata().MessageID().ToHex())
+			if cachedBlock == nil {
+				return false, fmt.Errorf("block not found: %s", cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
-			defer cachedMsg.Release(true) // message -1
+			defer cachedBlock.Release(true) // block -1
 
-			if onNewMilestoneConeMsg != nil {
-				onNewMilestoneConeMsg(cachedMsg.Retain()) // message pass +1
+			if onNewMilestoneConeBlock != nil {
+				onNewMilestoneConeBlock(cachedBlock.Retain()) // block pass +1
 			}
 
 			return true, nil
@@ -194,10 +194,10 @@ func verifyDatabase(
 			return err
 		}
 
-		// traverse the milestone and collect all messages that were referenced by this milestone or newer
+		// traverse the milestone and collect all blocks that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
 			ctx,
-			hornet.MessageIDsFromSliceOfArrays(milestonePayload.Parents),
+			hornet.BlockIDsFromSliceOfArrays(milestonePayload.Parents),
 			condition,
 			nil,
 			// called on missing parents
@@ -224,7 +224,7 @@ func verifyDatabase(
 			return err
 		}
 
-		referencedMessages := make(map[string]struct{})
+		referencedBlocks := make(map[string]struct{})
 
 		// confirm the milestone with the help of a special walker condition.
 		// we re-confirm the existing milestones in the source database, but apply the
@@ -232,30 +232,30 @@ func verifyDatabase(
 		_, _, err = whiteflag.ConfirmMilestone(
 			utxoManagerTemp,
 			storeSource,
-			storeSource.CachedMessage,
+			storeSource.CachedBlock,
 			protoParas,
 			milestonePayload,
-			// traversal stops if no more messages pass the given condition
+			// traversal stops if no more blocks pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
+			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
 
-				// collect all msgs that were referenced by that milestone
-				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+				// collect all blocks that were referenced by that milestone
+				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				return referenced && at == msIndex, nil
 			},
-			func(meta *storage.MessageMetadata) bool {
+			func(meta *storage.BlockMetadata) bool {
 				referenced, at := meta.ReferencedWithIndex()
 				if referenced && at == msIndex {
-					_, exists := referencedMessages[meta.MessageID().ToMapKey()]
+					_, exists := referencedBlocks[meta.BlockID().ToMapKey()]
 					return exists
 				}
 
 				return meta.IsReferenced()
 			},
-			func(meta *storage.MessageMetadata, referenced bool, msIndex milestone.Index) {
-				if _, exists := referencedMessages[meta.MessageID().ToMapKey()]; !exists {
-					referencedMessages[meta.MessageID().ToMapKey()] = struct{}{}
+			func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index) {
+				if _, exists := referencedBlocks[meta.BlockID().ToMapKey()]; !exists {
+					referencedBlocks[meta.BlockID().ToMapKey()] = struct{}{}
 					meta.SetReferenced(referenced, msIndex)
 				}
 			},
@@ -284,17 +284,17 @@ func verifyDatabase(
 	}
 
 	for msIndex := msIndexStart; msIndex <= msIndexEnd; msIndex++ {
-		msgsCount := 0
+		blocksCount := 0
 
 		ts := time.Now()
 
 		if err := checkMilestoneCone(
 			ctx,
-			tangleStoreSource.CachedMessage,
+			tangleStoreSource.CachedBlock,
 			milestoneManager,
-			func(cachedMsg *storage.CachedMessage) {
-				defer cachedMsg.Release(true) // message -1
-				msgsCount++
+			func(cachedBlock *storage.CachedBlock) {
+				defer cachedBlock.Release(true) // block -1
+				blocksCount++
 			}, msIndex); err != nil {
 			return err
 		}
@@ -307,7 +307,7 @@ func verifyDatabase(
 			return err
 		}
 
-		println(fmt.Sprintf("successfully verified milestone cone %d, msgs: %d, total: %v", msIndex, msgsCount, time.Since(ts).Truncate(time.Millisecond)))
+		println(fmt.Sprintf("successfully verified milestone cone %d, blocks: %d, total: %v", msIndex, blocksCount, time.Since(ts).Truncate(time.Millisecond)))
 	}
 
 	println("verifying final ledger state...")

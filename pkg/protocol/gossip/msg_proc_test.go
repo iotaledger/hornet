@@ -26,7 +26,7 @@ const (
 	ProtocolVersion = 99
 )
 
-func TestMsgProcessorEmit(t *testing.T) {
+func TestMessageProcessorEmit(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -68,13 +68,13 @@ func TestMsgProcessorEmit(t *testing.T) {
 	}
 
 	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, protoParas, &gossip.Options{
-		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingMessagesFilter,
+		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingBlocksFilter,
 	})
 	require.NoError(t, err)
 
-	msgData := `{
+	blockData := `{
 		  "protocolVersion": 99,
-		  "parentMessageIds": [
+		  "parents": [
 			"0x42e53f6bc0ecaf69f0f32dfbd838a0f96396c09b92e53225784ee9d269671939",
 			"0x77cfab5b59a894bd5992b303e93c126191257c025136c610dd351b06863a9ee3",
 			"0x912f97dd2b76ee450bf8495f2c1e47d4255482a5d62aba3bb30e5e2555dea164",
@@ -89,69 +89,69 @@ func TestMsgProcessorEmit(t *testing.T) {
 		}
 		`
 
-	msg := &iotago.Message{}
-	assert.NoError(t, json.Unmarshal([]byte(msgData), msg))
+	iotaBlock := &iotago.Block{}
+	assert.NoError(t, json.Unmarshal([]byte(blockData), iotaBlock))
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
 	// should fail because parents not solid
-	err = processor.Emit(message)
+	err = processor.Emit(block)
 	assert.Error(t, err)
 
 	// set valid parents
-	msg.Parents = iotago.MessageIDs{[32]byte{}}
+	iotaBlock.Parents = iotago.BlockIDs{[32]byte{}}
 
-	// pow again, so we have a valid message
-	_, err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	// pow again, so we have a valid block
+	_, err = te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)
 	assert.NoError(t, err)
 
-	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	// need to create a new block, so the iotago block is serialized again
+	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
 	// should not fail
-	err = processor.Emit(message)
+	err = processor.Emit(block)
 	assert.NoError(t, err)
 
 	// set wrong protocol version
-	msg.ProtocolVersion = 1
+	iotaBlock.ProtocolVersion = 1
 
-	// pow again, so we have a valid message
-	_, err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	// pow again, so we have a valid block
+	_, err = te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)
 	assert.NoError(t, err)
 
-	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	// need to create a new block, so the iotago block is serialized again
+	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
-	// message should fail because of wrong network ID
-	err = processor.Emit(message)
+	// block should fail because of wrong network ID
+	err = processor.Emit(block)
 	assert.Error(t, err)
 
 	// set valid protocol version again
-	msg.ProtocolVersion = ProtocolVersion
+	iotaBlock.ProtocolVersion = ProtocolVersion
 
-	// pow again, so we have a valid message
-	_, err = te.PoWHandler.DoPoW(context.Background(), msg, 1)
+	// pow again, so we have a valid block
+	_, err = te.PoWHandler.DoPoW(context.Background(), iotaBlock, 1)
 	assert.NoError(t, err)
 
-	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	// need to create a new block, so the iotago block is serialized again
+	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
 	// should not fail
-	err = processor.Emit(message)
+	err = processor.Emit(block)
 	assert.NoError(t, err)
 
 	// set wrong nonce
-	msg.Nonce = 123
+	iotaBlock.Nonce = 123
 
-	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	// need to create a new block, so the iotago block is serialized again
+	block, err = storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
 	// should fail because of wrong score
-	err = processor.Emit(message)
+	err = processor.Emit(block)
 	assert.Error(t, err)
 }

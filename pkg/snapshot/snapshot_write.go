@@ -82,7 +82,7 @@ func newSEPsProducer(
 			targetIndex,
 			solidEntryPointCheckThresholdPast,
 			func(sep *storage.SolidEntryPoint) bool {
-				prodChan <- sep.MessageID
+				prodChan <- sep.BlockID
 				return true
 			}); err != nil {
 			errChan <- err
@@ -93,12 +93,12 @@ func newSEPsProducer(
 	}()
 
 	binder := producerFromChannels(prodChan, errChan)
-	return func() (hornet.MessageID, error) {
+	return func() (hornet.BlockID, error) {
 		obj, err := binder()
 		if obj == nil || err != nil {
 			return nil, err
 		}
-		return obj.(hornet.MessageID), nil
+		return obj.(hornet.BlockID), nil
 	}
 }
 
@@ -226,7 +226,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 				}
 				return nil
 			},
-			func(id hornet.MessageID) error {
+			func(id hornet.BlockID) error {
 				// we don't care about solid entry points
 				return nil
 			}, nil, nil,
@@ -258,7 +258,7 @@ func MilestoneRetrieverFromStorage(dbStorage *storage.Storage) MilestoneRetrieve
 	return func(index milestone.Index) (*iotago.Milestone, error) {
 		cachedMilestone := dbStorage.CachedMilestoneByIndexOrNil(index) // milestone +1
 		if cachedMilestone == nil {
-			return nil, fmt.Errorf("message for milestone with index %d is not stored in the database", index)
+			return nil, fmt.Errorf("block for milestone with index %d is not stored in the database", index)
 		}
 		defer cachedMilestone.Release(true) // milestone -1
 		return cachedMilestone.Milestone().Milestone(), nil
@@ -287,13 +287,13 @@ func newMsDiffsProducer(mrf MilestoneRetrieverFunc, utxoManager *utxo.Manager, d
 
 			milestonePayload, err := mrf(msIndex)
 			if err != nil {
-				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved: %w", msIndex, err)
+				errChan <- fmt.Errorf("block for milestone with index %d could not be retrieved: %w", msIndex, err)
 				close(prodChan)
 				close(errChan)
 				return
 			}
 			if milestonePayload == nil {
-				errChan <- fmt.Errorf("message for milestone with index %d could not be retrieved", msIndex)
+				errChan <- fmt.Errorf("block for milestone with index %d could not be retrieved", msIndex)
 				close(prodChan)
 				close(errChan)
 				return
@@ -566,20 +566,20 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 
 		go func() {
 			dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
-				prodChan <- sep.MessageID
+				prodChan <- sep.BlockID
 				return true
 			})
 			close(prodChan)
 		}()
 
 		binder := producerFromChannels(prodChan, nil)
-		return func() (hornet.MessageID, error) {
+		return func() (hornet.BlockID, error) {
 			obj, err := binder()
 			if obj == nil || err != nil {
 				return nil, err
 			}
 			sepsCount++
-			return obj.(hornet.MessageID), nil
+			return obj.(hornet.BlockID), nil
 		}
 	}()
 
@@ -728,7 +728,7 @@ func CreateSnapshotFromStorage(
 	// create a prepped solid entry point producer which counts how many went through
 	sepsCount := 0
 	sepProducer := newSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
-	countingSepProducer := func() (hornet.MessageID, error) {
+	countingSepProducer := func() (hornet.BlockID, error) {
 		sep, err := sepProducer()
 		if sep != nil {
 			sepsCount++

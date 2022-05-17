@@ -36,15 +36,15 @@ type Tangle struct {
 	syncManager *syncmanager.SyncManager
 	// milestoneManager is used to retrieve, verify and store milestones.
 	milestoneManager *milestonemanager.MilestoneManager
-	// contains requests for needed messages.
+	// contains requests for needed blocks.
 	requestQueue gossip.RequestQueue
 	// used to access gossip gossipService.
 	gossipService *gossip.Service
-	// used to parses and emit new messages.
+	// used to parses and emit new blocks.
 	messageProcessor *gossip.MessageProcessor
 	// shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
-	// used to request messages from peers.
+	// used to request blocks from peers.
 	requester *gossip.Requester
 	// used to persist and validate batches of receipts.
 	receiptService *migrator.ReceiptService
@@ -59,9 +59,9 @@ type Tangle struct {
 
 	futureConeSolidifier *FutureConeSolidifier
 
-	receiveMsgWorkerPool  *workerpool.WorkerPool
-	receiveMsgWorkerCount int
-	receiveMsgQueueSize   int
+	receiveBlockWorkerPool  *workerpool.WorkerPool
+	receiveBlockWorkerCount int
+	receiveBlockQueueSize   int
 
 	futureConeSolidifierWorkerPool  *workerpool.WorkerPool
 	futureConeSolidifierWorkerCount int
@@ -75,18 +75,18 @@ type Tangle struct {
 	milestoneSolidifierWorkerCount int
 	milestoneSolidifierQueueSize   int
 
-	lastIncomingMsgCnt    uint32
-	lastIncomingNewMsgCnt uint32
-	lastOutgoingMsgCnt    uint32
+	lastIncomingBlocksCount    uint32
+	lastIncomingNewBlocksCount uint32
+	lastOutgoingBlocksCount    uint32
 
-	lastIncomingMPS uint32
-	lastNewMPS      uint32
-	lastOutgoingMPS uint32
+	lastIncomingBPS uint32
+	lastNewBPS      uint32
+	lastOutgoingBPS uint32
 
 	startWaitGroup sync.WaitGroup
 
-	messageProcessedSyncEvent   *events.SyncEvent
-	messageSolidSyncEvent       *events.SyncEvent
+	blockProcessedSyncEvent     *events.SyncEvent
+	blockSolidSyncEvent         *events.SyncEvent
 	milestoneConfirmedSyncEvent *events.SyncEvent
 
 	milestoneSolidificationCtxLock    syncutils.Mutex
@@ -97,8 +97,8 @@ type Tangle struct {
 
 	solidifierLock syncutils.RWMutex
 
-	oldNewMsgCount        uint32
-	oldReferencedMsgCount uint32
+	oldNewBlocksCount        uint32
+	oldReferencedBlocksCount uint32
 
 	// Index of the first milestone that was sync after node start
 	firstSyncedMilestone milestone.Index
@@ -147,25 +147,25 @@ func New(
 
 		milestoneTimeoutTicker:           nil,
 		futureConeSolidifier:             nil,
-		receiveMsgWorkerCount:            2 * runtime.NumCPU(),
-		receiveMsgQueueSize:              10000,
+		receiveBlockWorkerCount:          2 * runtime.NumCPU(),
+		receiveBlockQueueSize:            10000,
 		futureConeSolidifierWorkerCount:  1, // must be one, so there are no parallel solidifications of the same cone
 		futureConeSolidifierQueueSize:    10000,
 		processValidMilestoneWorkerCount: 1, // must be one, so there are no parallel validations
 		processValidMilestoneQueueSize:   1000,
 		milestoneSolidifierWorkerCount:   2, // must be two, so a new request can abort another, in case it is an older milestone
 		milestoneSolidifierQueueSize:     2,
-		messageProcessedSyncEvent:        events.NewSyncEvent(),
-		messageSolidSyncEvent:            events.NewSyncEvent(),
+		blockProcessedSyncEvent:          events.NewSyncEvent(),
+		blockSolidSyncEvent:              events.NewSyncEvent(),
 		milestoneConfirmedSyncEvent:      events.NewSyncEvent(),
 		Events: &Events{
-			MPSMetricsUpdated:              events.NewEvent(MPSMetricsCaller),
-			ReceivedNewMessage:             events.NewEvent(storage.NewMessageCaller),
-			ReceivedKnownMessage:           events.NewEvent(storage.MessageCaller),
-			ProcessedMessage:               events.NewEvent(storage.MessageIDCaller),
-			MessageSolid:                   events.NewEvent(storage.MessageMetadataCaller),
-			MessageReferenced:              events.NewEvent(storage.MessageReferencedCaller),
-			ReceivedNewMilestoneMessage:    events.NewEvent(storage.MessageIDCaller),
+			BPSMetricsUpdated:              events.NewEvent(BPSMetricsCaller),
+			ReceivedNewBlock:               events.NewEvent(storage.NewBlockCaller),
+			ReceivedKnownBlock:             events.NewEvent(storage.BlockCaller),
+			ProcessedBlock:                 events.NewEvent(storage.BlockIDCaller),
+			BlockSolid:                     events.NewEvent(storage.BlockMetadataCaller),
+			BlockReferenced:                events.NewEvent(storage.BlockReferencedCaller),
+			ReceivedNewMilestoneBlock:      events.NewEvent(storage.BlockIDCaller),
 			LatestMilestoneChanged:         events.NewEvent(storage.MilestoneCaller),
 			LatestMilestoneIndexChanged:    events.NewEvent(milestone.IndexCaller),
 			MilestoneConfirmed:             events.NewEvent(ConfirmedMilestoneCaller),
@@ -180,7 +180,7 @@ func New(
 			NewReceipt:                     events.NewEvent(ReceiptCaller),
 		},
 	}
-	t.futureConeSolidifier = NewFutureConeSolidifier(t.storage, t.markMessageAsSolid)
+	t.futureConeSolidifier = NewFutureConeSolidifier(t.storage, t.markBlockAsSolid)
 	t.ResetMilestoneTimeoutTicker()
 	return t
 }

@@ -20,18 +20,18 @@ import (
 )
 
 const (
-	MaxDeltaMsgYoungestConeRootIndexToCMI = 8
-	MaxDeltaMsgOldestConeRootIndexToCMI   = 13
-	BelowMaxDepth                         = 15
-	RetentionRulesTipsLimitNonLazy        = 100
-	MaxReferencedTipAgeNonLazy            = 3 * time.Second
-	MaxChildrenNonLazy                    = 100
-	SpammerTipsThresholdNonLazy           = 0
-	RetentionRulesTipsLimitSemiLazy       = 20
-	MaxReferencedTipAgeSemiLazy           = 3 * time.Second
-	MaxChildrenSemiLazy                   = 100
-	SpammerTipsThresholdSemiLazy          = 30
-	MinPoWScore                           = 1.0
+	MaxDeltaBlockYoungestConeRootIndexToCMI = 8
+	MaxDeltaBlockOldestConeRootIndexToCMI   = 13
+	BelowMaxDepth                           = 15
+	RetentionRulesTipsLimitNonLazy          = 100
+	MaxReferencedTipAgeNonLazy              = 3 * time.Second
+	MaxChildrenNonLazy                      = 100
+	SpammerTipsThresholdNonLazy             = 0
+	RetentionRulesTipsLimitSemiLazy         = 20
+	MaxReferencedTipAgeSemiLazy             = 3 * time.Second
+	MaxChildrenSemiLazy                     = 100
+	SpammerTipsThresholdSemiLazy            = 30
+	MinPoWScore                             = 1.0
 )
 
 func TestTipSelect(t *testing.T) {
@@ -41,7 +41,7 @@ func TestTipSelect(t *testing.T) {
 
 	serverMetrics := metrics.ServerMetrics{}
 
-	calculator := tangle.NewTipScoreCalculator(te.Storage(), MaxDeltaMsgYoungestConeRootIndexToCMI, MaxDeltaMsgOldestConeRootIndexToCMI, BelowMaxDepth)
+	calculator := tangle.NewTipScoreCalculator(te.Storage(), MaxDeltaBlockYoungestConeRootIndexToCMI, MaxDeltaBlockOldestConeRootIndexToCMI, BelowMaxDepth)
 
 	ts := tipselect.New(
 		context.Background(),
@@ -58,12 +58,12 @@ func TestTipSelect(t *testing.T) {
 		SpammerTipsThresholdSemiLazy,
 	)
 
-	// fill the storage with some messages to fill the tipselect pool
-	msgCount := 0
+	// fill the storage with some blocks to fill the tipselect pool
+	blockCount := 0
 	for i := 0; i < 100; i++ {
-		msgMeta := te.NewTestMessage(msgCount, te.LastMilestoneParents())
-		ts.AddTip(msgMeta)
-		msgCount++
+		blockMeta := te.NewTestBlock(blockCount, te.LastMilestoneParents())
+		ts.AddTip(blockMeta)
+		blockCount++
 	}
 
 	for i := 0; i < 1000; i++ {
@@ -90,17 +90,17 @@ func TestTipSelect(t *testing.T) {
 				}
 			}
 
-			err := dag.TraverseParentsOfMessage(
+			err := dag.TraverseParentsOfBlock(
 				context.Background(),
 				te.Storage(),
 				tip,
-				// traversal stops if no more messages pass the given condition
+				// traversal stops if no more blocks pass the given condition
 				// Caution: condition func is not in DFS order
-				func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-					defer cachedMsgMeta.Release(true) // meta -1
+				func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+					defer cachedBlockMeta.Release(true) // meta -1
 
-					// first check if the msg was referenced => update ycri and ocri with the confirmation index
-					if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced {
+					// first check if the block was referenced => update ycri and ocri with the confirmation index
+					if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 						updateIndexes(at, at)
 						return false, nil
 					}
@@ -113,9 +113,9 @@ func TestTipSelect(t *testing.T) {
 				// return error on missing parents
 				nil,
 				// called on solid entry points
-				func(messageID hornet.MessageID) error {
+				func(blockID hornet.BlockID) error {
 					// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
-					at, _, err := te.Storage().SolidEntryPointsIndex(messageID)
+					at, _, err := te.Storage().SolidEntryPointsIndex(blockID)
 					if err != nil {
 						return err
 					}
@@ -125,13 +125,13 @@ func TestTipSelect(t *testing.T) {
 			require.NoError(te.TestInterface, err)
 
 			minOldestConeRootIndex := milestone.Index(0)
-			if cmi > milestone.Index(MaxDeltaMsgOldestConeRootIndexToCMI) {
-				minOldestConeRootIndex = cmi - milestone.Index(MaxDeltaMsgOldestConeRootIndexToCMI)
+			if cmi > milestone.Index(MaxDeltaBlockOldestConeRootIndexToCMI) {
+				minOldestConeRootIndex = cmi - milestone.Index(MaxDeltaBlockOldestConeRootIndexToCMI)
 			}
 
 			minYoungestConeRootIndex := milestone.Index(0)
-			if cmi > milestone.Index(MaxDeltaMsgYoungestConeRootIndexToCMI) {
-				minYoungestConeRootIndex = cmi - milestone.Index(MaxDeltaMsgYoungestConeRootIndexToCMI)
+			if cmi > milestone.Index(MaxDeltaBlockYoungestConeRootIndexToCMI) {
+				minYoungestConeRootIndex = cmi - milestone.Index(MaxDeltaBlockYoungestConeRootIndexToCMI)
 			}
 
 			require.GreaterOrEqual(te.TestInterface, uint32(oldestConeRootIndex), uint32(minOldestConeRootIndex))
@@ -141,14 +141,14 @@ func TestTipSelect(t *testing.T) {
 			require.LessOrEqual(te.TestInterface, uint32(youngestConeRootIndex), uint32(cmi))
 		}
 
-		msgMeta := te.NewTestMessage(msgCount, tips)
-		ts.AddTip(msgMeta)
-		msgCount++
+		blockMeta := te.NewTestBlock(blockCount, tips)
+		ts.AddTip(blockMeta)
+		blockCount++
 
 		if i%10 == 0 {
-			// Issue a new milestone every 10 messages
-			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{msgMeta.MessageID()}, false)
-			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
+			// Issue a new milestone every 10 blocks
+			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{blockMeta.BlockID()}, false)
+			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), conf.Mutations.BlocksReferenced, conf.MilestoneIndex)
 			ts.UpdateScores()
 		}
 	}

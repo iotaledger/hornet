@@ -8,7 +8,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-type MPSMetrics struct {
+type BPSMetrics struct {
 	Incoming uint32 `json:"incoming"`
 	New      uint32 `json:"new"`
 	Outgoing uint32 `json:"outgoing"`
@@ -27,8 +27,8 @@ func ConfirmedMilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(confirmation *whiteflag.Confirmation))(params[0].(*whiteflag.Confirmation))
 }
 
-func MPSMetricsCaller(handler interface{}, params ...interface{}) {
-	handler.(func(*MPSMetrics))(params[0].(*MPSMetrics))
+func BPSMetricsCaller(handler interface{}, params ...interface{}) {
+	handler.(func(*BPSMetrics))(params[0].(*BPSMetrics))
 }
 
 func LedgerUpdatedCaller(handler interface{}, params ...interface{}) {
@@ -44,13 +44,13 @@ func ReceiptCaller(handler interface{}, params ...interface{}) {
 }
 
 type Events struct {
-	MPSMetricsUpdated              *events.Event
-	ReceivedNewMessage             *events.Event
-	ReceivedKnownMessage           *events.Event
-	ProcessedMessage               *events.Event
-	MessageSolid                   *events.Event
-	MessageReferenced              *events.Event
-	ReceivedNewMilestoneMessage    *events.Event
+	BPSMetricsUpdated              *events.Event
+	ReceivedNewBlock               *events.Event
+	ReceivedKnownBlock             *events.Event
+	ProcessedBlock                 *events.Event
+	BlockSolid                     *events.Event
+	BlockReferenced                *events.Event
+	ReceivedNewMilestoneBlock      *events.Event
 	LatestMilestoneChanged         *events.Event
 	LatestMilestoneIndexChanged    *events.Event
 	MilestoneConfirmed             *events.Event

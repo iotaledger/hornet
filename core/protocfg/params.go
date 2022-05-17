@@ -44,8 +44,8 @@ type ParametersProtocol struct {
 		// the minimum PoW score required by the network.
 		MinPoWScore float64 `default:"4000" usage:"the minimum PoW score required by the network"`
 		// BelowMaxDepth is the maximum allowed delta
-		// value between OCRI of a given message in relation to the current CMI before it gets lazy.
-		BelowMaxDepth uint16 `default:"15" usage:"the maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy"`
+		// value between OCRI of a given block in relation to the current CMI before it gets lazy.
+		BelowMaxDepth uint16 `default:"15" usage:"the maximum allowed delta value for the OCRI of a given block in relation to the current CMI before it gets lazy"`
 		// the vByte cost used for the storage deposit
 		RentStructureVByteCost uint64 `name:"vByteCost" default:"500" usage:"the vByte cost used for the storage deposit"`
 		// the vByte factor used for data fields

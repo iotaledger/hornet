@@ -19,10 +19,10 @@ type SnapshotMetrics struct {
 
 // PruningMetrics holds metrics about a database pruning run.
 type PruningMetrics struct {
-	DurationPruneUnreferencedMessages    time.Duration
+	DurationPruneUnreferencedBlocks      time.Duration
 	DurationTraverseMilestoneCone        time.Duration
 	DurationPruneMilestone               time.Duration
-	DurationPruneMessages                time.Duration
+	DurationPruneBlocks                  time.Duration
 	DurationSetSnapshotInfo              time.Duration
 	DurationPruningMilestoneIndexChanged time.Duration
 	DurationTotal                        time.Duration

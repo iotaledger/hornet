@@ -5,19 +5,19 @@ import (
 )
 
 var (
-	gossipMessages       *prometheus.GaugeVec
+	gossipBlocks         *prometheus.GaugeVec
 	gossipRequests       *prometheus.GaugeVec
 	gossipHeartbeats     *prometheus.GaugeVec
 	gossipDroppedPackets *prometheus.GaugeVec
 )
 
 func configureGossipNode() {
-	gossipMessages = prometheus.NewGaugeVec(
+	gossipBlocks = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "iota",
 			Subsystem: "gossip_node",
-			Name:      "message_count",
-			Help:      "Number of messages.",
+			Name:      "block_count",
+			Help:      "Number of blocks.",
 		},
 		[]string{"type"},
 	)
@@ -52,7 +52,7 @@ func configureGossipNode() {
 		[]string{"type"},
 	)
 
-	registry.MustRegister(gossipMessages)
+	registry.MustRegister(gossipBlocks)
 	registry.MustRegister(gossipRequests)
 	registry.MustRegister(gossipHeartbeats)
 	registry.MustRegister(gossipDroppedPackets)
@@ -61,23 +61,22 @@ func configureGossipNode() {
 }
 
 func collectServer() {
-	gossipMessages.WithLabelValues("all").Set(float64(deps.ServerMetrics.Messages.Load()))
-	gossipMessages.WithLabelValues("new").Set(float64(deps.ServerMetrics.NewMessages.Load()))
-	gossipMessages.WithLabelValues("known").Set(float64(deps.ServerMetrics.KnownMessages.Load()))
-	gossipMessages.WithLabelValues("referenced").Set(float64(deps.ServerMetrics.ReferencedMessages.Load()))
-	gossipMessages.WithLabelValues("invalid").Set(float64(deps.ServerMetrics.InvalidMessages.Load()))
-	gossipMessages.WithLabelValues("sent").Set(float64(deps.ServerMetrics.SentMessages.Load()))
-	gossipMessages.WithLabelValues("sent_spam").Set(float64(deps.ServerMetrics.SentSpamMessages.Load()))
-	gossipMessages.WithLabelValues("validated").Set(float64(deps.ServerMetrics.ValidatedMessages.Load()))
+	gossipBlocks.WithLabelValues("all").Set(float64(deps.ServerMetrics.Blocks.Load()))
+	gossipBlocks.WithLabelValues("new").Set(float64(deps.ServerMetrics.NewBlocks.Load()))
+	gossipBlocks.WithLabelValues("known").Set(float64(deps.ServerMetrics.KnownBlocks.Load()))
+	gossipBlocks.WithLabelValues("referenced").Set(float64(deps.ServerMetrics.ReferencedBlocks.Load()))
+	gossipBlocks.WithLabelValues("invalid").Set(float64(deps.ServerMetrics.InvalidBlocks.Load()))
+	gossipBlocks.WithLabelValues("sent").Set(float64(deps.ServerMetrics.SentBlocks.Load()))
+	gossipBlocks.WithLabelValues("sent_spam").Set(float64(deps.ServerMetrics.SentSpamBlocks.Load()))
 
 	gossipRequests.WithLabelValues("invalid").Set(float64(deps.ServerMetrics.InvalidRequests.Load()))
-	gossipRequests.WithLabelValues("received_message").Set(float64(deps.ServerMetrics.ReceivedMessageRequests.Load()))
-	gossipRequests.WithLabelValues("received_milestone").Set(float64(deps.ServerMetrics.ReceivedMilestoneRequests.Load()))
-	gossipRequests.WithLabelValues("sent_message").Set(float64(deps.ServerMetrics.SentMessageRequests.Load()))
-	gossipRequests.WithLabelValues("sent_milestone").Set(float64(deps.ServerMetrics.SentMilestoneRequests.Load()))
+	gossipRequests.WithLabelValues("received_blocks").Set(float64(deps.ServerMetrics.ReceivedBlockRequests.Load()))
+	gossipRequests.WithLabelValues("received_milestones").Set(float64(deps.ServerMetrics.ReceivedMilestoneRequests.Load()))
+	gossipRequests.WithLabelValues("sent_blocks").Set(float64(deps.ServerMetrics.SentBlockRequests.Load()))
+	gossipRequests.WithLabelValues("sent_milestones").Set(float64(deps.ServerMetrics.SentMilestoneRequests.Load()))
 
 	gossipHeartbeats.WithLabelValues("received").Set(float64(deps.ServerMetrics.ReceivedHeartbeats.Load()))
 	gossipHeartbeats.WithLabelValues("sent").Set(float64(deps.ServerMetrics.SentHeartbeats.Load()))
 
-	gossipDroppedPackets.WithLabelValues("sent").Set(float64(deps.ServerMetrics.DroppedMessages.Load()))
+	gossipDroppedPackets.WithLabelValues("sent").Set(float64(deps.ServerMetrics.DroppedPackets.Load()))
 }

@@ -10,28 +10,28 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
-type MarkMessageAsSolidFunc func(*storage.CachedMetadata)
+type MarkBlockAsSolidFunc func(*storage.CachedMetadata)
 
-// FutureConeSolidifier traverses the future cone of messages and updates their solidity.
+// FutureConeSolidifier traverses the future cone of blocks and updates their solidity.
 // It holds a reference to a traverser and a memcache, so that these can be reused for "gossip solidifcation".
 type FutureConeSolidifier struct {
 	syncutils.Mutex
 
 	dbStorage                 *storage.Storage
-	markMessageAsSolidFunc    MarkMessageAsSolidFunc
+	markBlockAsSolidFunc      MarkBlockAsSolidFunc
 	metadataMemcache          *storage.MetadataMemcache
 	memcachedTraverserStorage *dag.MemcachedTraverserStorage
 }
 
 // NewFutureConeSolidifier creates a new FutureConeSolidifier instance.
-func NewFutureConeSolidifier(dbStorage *storage.Storage, markMessageAsSolidFunc MarkMessageAsSolidFunc) *FutureConeSolidifier {
+func NewFutureConeSolidifier(dbStorage *storage.Storage, markBlockAsSolidFunc MarkBlockAsSolidFunc) *FutureConeSolidifier {
 
-	metadataMemcache := storage.NewMetadataMemcache(dbStorage.CachedMessageMetadata)
+	metadataMemcache := storage.NewMetadataMemcache(dbStorage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(dbStorage, metadataMemcache)
 
 	return &FutureConeSolidifier{
 		dbStorage:                 dbStorage,
-		markMessageAsSolidFunc:    markMessageAsSolidFunc,
+		markBlockAsSolidFunc:      markBlockAsSolidFunc,
 		metadataMemcache:          metadataMemcache,
 		memcachedTraverserStorage: memcachedTraverserStorage,
 	}
@@ -47,55 +47,55 @@ func (s *FutureConeSolidifier) Cleanup(forceRelease bool) {
 	s.metadataMemcache.Cleanup(true)
 }
 
-// SolidifyMessageAndFutureCone updates the solidity of the message and its future cone (messages approving the given message).
-// We keep on walking the future cone, if a message became newly solid during the walk.
-func (s *FutureConeSolidifier) SolidifyMessageAndFutureCone(ctx context.Context, cachedMsgMeta *storage.CachedMetadata) error {
+// SolidifyBlockAndFutureCone updates the solidity of the block and its future cone (blocks approving the given block).
+// We keep on walking the future cone, if a block became newly solid during the walk.
+func (s *FutureConeSolidifier) SolidifyBlockAndFutureCone(ctx context.Context, cachedBlockMeta *storage.CachedMetadata) error {
 	s.Lock()
 	defer s.Unlock()
 
-	defer cachedMsgMeta.Release(true) // meta -1
+	defer cachedBlockMeta.Release(true) // meta -1
 
-	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markMessageAsSolidFunc, hornet.MessageIDs{cachedMsgMeta.Metadata().MessageID()})
+	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markBlockAsSolidFunc, hornet.BlockIDs{cachedBlockMeta.Metadata().BlockID()})
 }
 
-// SolidifyFutureConesWithMetadataMemcache updates the solidity of the given messages and their future cones (messages approving the given messages).
+// SolidifyFutureConesWithMetadataMemcache updates the solidity of the given blocks and their future cones (blocks approving the given blocks).
 // This function doesn't use the same memcache nor traverser like the FutureConeSolidifier, but it holds the lock, so no other solidifications are done in parallel.
-func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(ctx context.Context, memcachedTraverserStorage dag.TraverserStorage, messageIDs hornet.MessageIDs) error {
+func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(ctx context.Context, memcachedTraverserStorage dag.TraverserStorage, blockIDs hornet.BlockIDs) error {
 	s.Lock()
 	defer s.Unlock()
 
-	return solidifyFutureCone(ctx, memcachedTraverserStorage, s.markMessageAsSolidFunc, messageIDs)
+	return solidifyFutureCone(ctx, memcachedTraverserStorage, s.markBlockAsSolidFunc, blockIDs)
 }
 
-// solidifyFutureCone updates the solidity of the future cone (messages approving the given messages).
-// We keep on walking the future cone, if a message became newly solid during the walk.
+// solidifyFutureCone updates the solidity of the future cone (blocks approving the given blocks).
+// We keep on walking the future cone, if a block became newly solid during the walk.
 func solidifyFutureCone(
 	ctx context.Context,
 	traverserStorage dag.TraverserStorage,
-	markMessageAsSolidFunc MarkMessageAsSolidFunc,
-	messageIDs hornet.MessageIDs) error {
+	markBlockAsSolidFunc MarkBlockAsSolidFunc,
+	blockIDs hornet.BlockIDs) error {
 
 	childrenTraverser := dag.NewChildrenTraverser(traverserStorage)
 
-	for _, messageID := range messageIDs {
+	for _, blockID := range blockIDs {
 
-		startMessageID := messageID
+		startBlockID := blockID
 
 		if err := childrenTraverser.Traverse(
 			ctx,
-			messageID,
-			// traversal stops if no more messages pass the given condition
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
+			blockID,
+			// traversal stops if no more blocks pass the given condition
+			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
 
-				if cachedMsgMeta.Metadata().IsSolid() && !bytes.Equal(startMessageID, cachedMsgMeta.Metadata().MessageID()) {
-					// do not walk the future cone if the current message is already solid, except it was the startTx
+				if cachedBlockMeta.Metadata().IsSolid() && !bytes.Equal(startBlockID, cachedBlockMeta.Metadata().BlockID()) {
+					// do not walk the future cone if the current block is already solid, except it was the startTx
 					return false, nil
 				}
 
-				// check if current message is solid by checking the solidity of its parents
-				for _, parentMessageID := range cachedMsgMeta.Metadata().Parents() {
-					contains, err := traverserStorage.SolidEntryPointsContain(parentMessageID)
+				// check if current block is solid by checking the solidity of its parents
+				for _, parentBlockID := range cachedBlockMeta.Metadata().Parents() {
+					contains, err := traverserStorage.SolidEntryPointsContain(parentBlockID)
 					if err != nil {
 						return false, err
 					}
@@ -104,29 +104,29 @@ func solidifyFutureCone(
 						continue
 					}
 
-					cachedMsgMetaParent, err := traverserStorage.CachedMessageMetadata(parentMessageID) // meta +1
+					cachedBlockMetaParent, err := traverserStorage.CachedBlockMetadata(parentBlockID) // meta +1
 					if err != nil {
 						return false, err
 					}
-					if cachedMsgMetaParent == nil {
-						// parent is missing => message is not solid
-						// do not walk the future cone if the current message is not solid
+					if cachedBlockMetaParent == nil {
+						// parent is missing => block is not solid
+						// do not walk the future cone if the current block is not solid
 						return false, nil
 					}
 
-					if !cachedMsgMetaParent.Metadata().IsSolid() {
-						// parent is not solid => message is not solid
-						// do not walk the future cone if the current message is not solid
-						cachedMsgMetaParent.Release(true) // meta -1
+					if !cachedBlockMetaParent.Metadata().IsSolid() {
+						// parent is not solid => block is not solid
+						// do not walk the future cone if the current block is not solid
+						cachedBlockMetaParent.Release(true) // meta -1
 						return false, nil
 					}
-					cachedMsgMetaParent.Release(true) // meta -1
+					cachedBlockMetaParent.Release(true) // meta -1
 				}
 
-				// mark current message as solid
-				markMessageAsSolidFunc(cachedMsgMeta.Retain()) // meta pass +1
+				// mark current block as solid
+				markBlockAsSolidFunc(cachedBlockMeta.Retain()) // meta pass +1
 
-				// walk the future cone since the message got newly solid
+				// walk the future cone since the block got newly solid
 				return true, nil
 			},
 			// consumer

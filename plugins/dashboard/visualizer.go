@@ -26,33 +26,33 @@ type vertex struct {
 	IsTip        bool     `json:"is_tip"`
 }
 
-// metainfo signals that metadata of a given message changed.
+// metainfo signals that metadata of a given block changed.
 type metainfo struct {
 	ID string `json:"id"`
 }
 
-// confirmationinfo signals confirmation of a milestone msg with a list of exluded msgs in the past cone.
+// confirmationinfo signals confirmation of a milestone block with a list of exluded blocks in the past cone.
 type confirmationinfo struct {
 	IDs         []string `json:"ids"`
 	ExcludedIDs []string `json:"excluded_ids"`
 }
 
-// tipinfo holds information about whether a given message is a tip or not.
+// tipinfo holds information about whether a given block is a tip or not.
 type tipinfo struct {
 	ID    string `json:"id"`
 	IsTip bool   `json:"is_tip"`
 }
 
-func runVisualizer() {
+func runVisualizerFeed() {
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
-		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // message -1
+	onReceivedNewBlock := events.NewClosure(func(cachedBlock *storage.CachedBlock, _ milestone.Index, _ milestone.Index) {
+		cachedBlock.ConsumeBlockAndMetadata(func(block *storage.Block, metadata *storage.BlockMetadata) { // block -1
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
 
-			parentsHex := make([]string, len(msg.Parents()))
-			for i, parent := range msg.Parents() {
+			parentsHex := make([]string, len(block.Parents()))
+			for i, parent := range block.Parents() {
 				parentsHex[i] = parent.ToHex()[:VisualizerIDLength]
 			}
 
@@ -60,7 +60,7 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:           msg.MessageID().ToHex(),
+						ID:           block.BlockID().ToHex(),
 						Parents:      parentsHex,
 						IsSolid:      metadata.IsSolid(),
 						IsReferenced: metadata.IsReferenced(),
@@ -72,8 +72,8 @@ func runVisualizer() {
 		})
 	})
 
-	onMessageSolid := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
+	onBlockSolid := events.NewClosure(func(cachedBlockMeta *storage.CachedMetadata) {
+		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
 
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
@@ -83,14 +83,14 @@ func runVisualizer() {
 				&Msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: metadata.MessageID().ToHex()[:VisualizerIDLength],
+						ID: metadata.BlockID().ToHex()[:VisualizerIDLength],
 					},
 				},
 			)
 		})
 	})
 
-	onReceivedNewMilestoneMessage := events.NewClosure(func(messageID hornet.MessageID) {
+	onReceivedNewMilestoneBlock := events.NewClosure(func(blockID hornet.BlockID) {
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
@@ -99,7 +99,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: messageID.ToHex()[:VisualizerIDLength],
+					ID: blockID.ToHex()[:VisualizerIDLength],
 				},
 			},
 		)
@@ -115,9 +115,9 @@ func runVisualizer() {
 			milestoneParents[i] = parent.ToHex()[:VisualizerIDLength]
 		}
 
-		excludedIDs := make([]string, len(confirmation.Mutations.MessagesExcludedWithConflictingTransactions))
-		for i, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
-			excludedIDs[i] = messageID.MessageID.ToHex()[:VisualizerIDLength]
+		excludedIDs := make([]string, len(confirmation.Mutations.BlocksExcludedWithConflictingTransactions))
+		for i, blockID := range confirmation.Mutations.BlocksExcludedWithConflictingTransactions {
+			excludedIDs[i] = blockID.BlockID.ToHex()[:VisualizerIDLength]
 		}
 
 		hub.BroadcastMsg(
@@ -140,7 +140,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.ToHex()[:VisualizerIDLength],
+					ID:    tip.BlockID.ToHex()[:VisualizerIDLength],
 					IsTip: true,
 				},
 			},
@@ -156,7 +156,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeTipInfo,
 				Data: &tipinfo{
-					ID:    tip.MessageID.ToHex()[:VisualizerIDLength],
+					ID:    tip.BlockID.ToHex()[:VisualizerIDLength],
 					IsTip: false,
 				},
 			},
@@ -164,12 +164,12 @@ func runVisualizer() {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(ctx context.Context) {
-		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
-		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
-		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
-		defer deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
-		deps.Tangle.Events.ReceivedNewMilestoneMessage.Attach(onReceivedNewMilestoneMessage)
-		defer deps.Tangle.Events.ReceivedNewMilestoneMessage.Detach(onReceivedNewMilestoneMessage)
+		deps.Tangle.Events.ReceivedNewBlock.Attach(onReceivedNewBlock)
+		defer deps.Tangle.Events.ReceivedNewBlock.Detach(onReceivedNewBlock)
+		deps.Tangle.Events.BlockSolid.Attach(onBlockSolid)
+		defer deps.Tangle.Events.BlockSolid.Detach(onBlockSolid)
+		deps.Tangle.Events.ReceivedNewMilestoneBlock.Attach(onReceivedNewMilestoneBlock)
+		defer deps.Tangle.Events.ReceivedNewMilestoneBlock.Detach(onReceivedNewMilestoneBlock)
 		deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 		defer deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 

@@ -164,9 +164,9 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 
 	for _, req := range queued {
 		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.ToHex(),
+			BlockID:          req.BlockID.ToHex(),
 			Type:             "queued",
-			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
+			BlockExists:      deps.Storage.ContainsBlock(req.BlockID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -174,9 +174,9 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 
 	for _, req := range pending {
 		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.ToHex(),
+			BlockID:          req.BlockID.ToHex(),
 			Type:             "pending",
-			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
+			BlockExists:      deps.Storage.ContainsBlock(req.BlockID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -184,9 +184,9 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 
 	for _, req := range processing {
 		debugReqs = append(debugReqs, &request{
-			MessageID:        req.MessageID.ToHex(),
+			BlockID:          req.BlockID.ToHex(),
 			Type:             "processing",
-			MessageExists:    deps.Storage.ContainsMessage(req.MessageID),
+			BlockExists:      deps.Storage.ContainsBlock(req.BlockID),
 			EnqueueTimestamp: req.EnqueueTime.Format(time.RFC3339),
 			MilestoneIndex:   req.MilestoneIndex,
 		})
@@ -197,41 +197,41 @@ func requests(_ echo.Context) (*requestsResponse, error) {
 	}, nil
 }
 
-func messageCone(c echo.Context) (*messageConeResponse, error) {
+func blockCone(c echo.Context) (*blockConeResponse, error) {
 
-	messageID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseBlockIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	cachedMsgMetaStart := deps.Storage.CachedMessageMetadataOrNil(messageID) // meta +1
-	if cachedMsgMetaStart == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
+	cachedBlockMetaStart := deps.Storage.CachedBlockMetadataOrNil(blockID) // meta +1
+	if cachedBlockMetaStart == nil {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "block not found: %s", blockID.ToHex())
 	}
-	defer cachedMsgMetaStart.Release(true) // meta -1
+	defer cachedBlockMetaStart.Release(true) // meta -1
 
-	if !cachedMsgMetaStart.Metadata().IsSolid() {
-		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start message is not solid: %s", messageID.ToHex())
+	if !cachedBlockMetaStart.Metadata().IsSolid() {
+		return nil, errors.WithMessagef(echo.ErrServiceUnavailable, "start block is not solid: %s", blockID.ToHex())
 	}
 
-	startMsgReferened, startMsgReferenedAt := cachedMsgMetaStart.Metadata().ReferencedWithIndex()
+	startBlockReferenced, startBlockReferencedAt := cachedBlockMetaStart.Metadata().ReferencedWithIndex()
 
 	entryPointIndex := deps.Storage.SnapshotInfo().EntryPointIndex
 	entryPoints := []*entryPoint{}
-	tanglePath := []*messageWithParents{}
+	tanglePath := []*blockWithParents{}
 
-	if err := dag.TraverseParentsOfMessage(
+	if err := dag.TraverseParentsOfBlock(
 		Plugin.Daemon().ContextStopped(),
 		deps.Storage,
-		messageID,
-		// traversal stops if no more messages pass the given condition
+		blockID,
+		// traversal stops if no more blocks pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-			defer cachedMsgMeta.Release(true) // meta -1
+		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedBlockMeta.Release(true) // meta -1
 
-			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced {
-				if !startMsgReferened || (at < startMsgReferenedAt) {
-					entryPoints = append(entryPoints, &entryPoint{MessageID: cachedMsgMeta.Metadata().MessageID().ToHex(), ReferencedByMilestone: at})
+			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
+				if !startBlockReferenced || (at < startBlockReferencedAt) {
+					entryPoints = append(entryPoints, &entryPoint{BlockID: cachedBlockMeta.Metadata().BlockID().ToHex(), ReferencedByMilestone: at})
 					return false, nil
 				}
 			}
@@ -239,12 +239,12 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 			return true, nil
 		},
 		// consumer
-		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
-			cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
+		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
+			cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
 				tanglePath = append(tanglePath,
-					&messageWithParents{
-						MessageID: metadata.MessageID().ToHex(),
-						Parents:   metadata.Parents().ToHex(),
+					&blockWithParents{
+						BlockID: metadata.BlockID().ToHex(),
+						Parents: metadata.Parents().ToHex(),
 					},
 				)
 			})
@@ -255,8 +255,8 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(messageID hornet.MessageID) error {
-			entryPoints = append(entryPoints, &entryPoint{MessageID: messageID.ToHex(), ReferencedByMilestone: entryPointIndex})
+		func(blockID hornet.BlockID) error {
+			entryPoints = append(entryPoints, &entryPoint{BlockID: blockID.ToHex(), ReferencedByMilestone: entryPointIndex})
 			return nil
 		},
 		false); err != nil {
@@ -267,10 +267,10 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 	}
 
 	if len(entryPoints) == 0 {
-		return nil, errors.WithMessagef(echo.ErrInternalServerError, "no referenced parents found: %s", messageID.ToHex())
+		return nil, errors.WithMessagef(echo.ErrInternalServerError, "no referenced parents found: %s", blockID.ToHex())
 	}
 
-	return &messageConeResponse{
+	return &blockConeResponse{
 		ConeElementsCount: len(tanglePath),
 		EntryPointsCount:  len(entryPoints),
 		Cone:              tanglePath,

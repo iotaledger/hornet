@@ -180,8 +180,8 @@ func run() error {
 		}
 	}()
 
-	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
-		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
+	onBPSMetricsUpdated := events.NewClosure(func(bpsMetrics *tangle.BPSMetrics) {
+		hub.BroadcastMsg(&Msg{Type: MsgTypeBPSMetric, Data: bpsMetrics})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePublicNodeStatus, Data: currentPublicNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
@@ -205,13 +205,13 @@ func run() error {
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(ctx context.Context) {
 		go hub.Run(ctx)
-		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
+		deps.Tangle.Events.BPSMetricsUpdated.Attach(onBPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[WSSend] ...")
-		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
+		deps.Tangle.Events.BPSMetricsUpdated.Detach(onBPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)
@@ -221,10 +221,10 @@ func run() error {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
-	// run the message live feed
-	runLiveFeed()
-	// run the visualizer message feed
-	runVisualizer()
+	// run the milestone live feed
+	runMilestoneLiveFeed()
+	// run the visualizer feed
+	runVisualizerFeed()
 
 	if deps.TipSelector != nil {
 		// run the tipselection feed
@@ -269,71 +269,70 @@ type SyncStatus struct {
 
 // PublicNodeStatus represents the public node status.
 type PublicNodeStatus struct {
-	SnapshotIndex milestone.Index `json:"snapshot_index"`
-	PruningIndex  milestone.Index `json:"pruning_index"`
-	IsHealthy     bool            `json:"is_healthy"`
-	IsSynced      bool            `json:"is_synced"`
+	SnapshotIndex milestone.Index `json:"snapshotIndex"`
+	PruningIndex  milestone.Index `json:"pruningIndex"`
+	IsHealthy     bool            `json:"isHealthy"`
+	IsSynced      bool            `json:"isSynced"`
 }
 
 // NodeStatus represents the node status.
 type NodeStatus struct {
 	Version                string          `json:"version"`
-	LatestVersion          string          `json:"latest_version"`
+	LatestVersion          string          `json:"latestVersion"`
 	Uptime                 int64           `json:"uptime"`
-	NodeID                 string          `json:"node_id"`
-	NodeAlias              string          `json:"node_alias"`
-	ConnectedPeersCount    int             `json:"connected_peers_count"`
-	CurrentRequestedMs     milestone.Index `json:"current_requested_ms"`
-	RequestQueueQueued     int             `json:"request_queue_queued"`
-	RequestQueuePending    int             `json:"request_queue_pending"`
-	RequestQueueProcessing int             `json:"request_queue_processing"`
-	RequestQueueAvgLatency int64           `json:"request_queue_avg_latency"`
-	ServerMetrics          *ServerMetrics  `json:"server_metrics"`
+	NodeID                 string          `json:"nodeId"`
+	NodeAlias              string          `json:"nodeAlias"`
+	ConnectedPeersCount    int             `json:"connectedPeersCount"`
+	CurrentRequestedMs     milestone.Index `json:"currentRequestedMs"`
+	RequestQueueQueued     int             `json:"requestQueueQueued"`
+	RequestQueuePending    int             `json:"requestQueuePending"`
+	RequestQueueProcessing int             `json:"requestQueueProcessing"`
+	RequestQueueAvgLatency int64           `json:"requestQueueAvgLatency"`
+	ServerMetrics          *ServerMetrics  `json:"serverMetrics"`
 	Mem                    *MemMetrics     `json:"mem"`
 	Caches                 *CachesMetric   `json:"caches"`
 }
 
 // ServerMetrics are global metrics of the server.
 type ServerMetrics struct {
-	AllMessages          uint32 `json:"all_msgs"`
-	NewMessages          uint32 `json:"new_msgs"`
-	KnownMessages        uint32 `json:"known_msgs"`
-	InvalidMessages      uint32 `json:"invalid_msgs"`
-	InvalidRequests      uint32 `json:"invalid_req"`
-	ReceivedMessageReq   uint32 `json:"rec_msg_req"`
-	ReceivedMilestoneReq uint32 `json:"rec_ms_req"`
-	ReceivedHeartbeats   uint32 `json:"rec_heartbeat"`
-	SentMessages         uint32 `json:"sent_msgs"`
-	SentMessageReq       uint32 `json:"sent_msg_req"`
-	SentMilestoneReq     uint32 `json:"sent_ms_req"`
-	SentHeartbeats       uint32 `json:"sent_heartbeat"`
-	DroppedSentPackets   uint32 `json:"dropped_sent_packets"`
-	SentSpamMsgsCount    uint32 `json:"sent_spam_messages"`
-	ValidatedMessages    uint32 `json:"validated_messages"`
+	AllBlocks                 uint32 `json:"allBlocks"`
+	NewBlocks                 uint32 `json:"newBlocks"`
+	KnownBlocks               uint32 `json:"knownBlocks"`
+	InvalidBlocks             uint32 `json:"invalidBlocks"`
+	InvalidRequests           uint32 `json:"invalidRequests"`
+	ReceivedBlockRequests     uint32 `json:"receivedBlockRequests"`
+	ReceivedMilestoneRequests uint32 `json:"receivedMilestoneRequests"`
+	ReceivedHeartbeats        uint32 `json:"receivedHeartbeats"`
+	SentBlocks                uint32 `json:"sentBlocks"`
+	SentBlockRequests         uint32 `json:"sentBlockRequests"`
+	SentMilestoneRequests     uint32 `json:"sentMilestoneRequests"`
+	SentHeartbeats            uint32 `json:"sentHeartbeats"`
+	DroppedSentPackets        uint32 `json:"droppedSentPackets"`
+	SentSpamBlocks            uint32 `json:"sentSpamBlocks"`
 }
 
 // MemMetrics represents memory metrics.
 type MemMetrics struct {
 	Sys          uint64 `json:"sys"`
-	HeapSys      uint64 `json:"heap_sys"`
-	HeapInuse    uint64 `json:"heap_inuse"`
-	HeapIdle     uint64 `json:"heap_idle"`
-	HeapReleased uint64 `json:"heap_released"`
-	HeapObjects  uint64 `json:"heap_objects"`
-	MSpanInuse   uint64 `json:"m_span_inuse"`
-	MCacheInuse  uint64 `json:"m_cache_inuse"`
-	StackSys     uint64 `json:"stack_sys"`
-	NumGC        uint32 `json:"num_gc"`
-	LastPauseGC  uint64 `json:"last_pause_gc"`
+	HeapSys      uint64 `json:"heapSys""`
+	HeapInuse    uint64 `json:"HeapInuse"`
+	HeapIdle     uint64 `json:"HeapIdle"`
+	HeapReleased uint64 `json:"heapReleased"`
+	HeapObjects  uint64 `json:"heapObjects"`
+	MSpanInuse   uint64 `json:"mSpanInuse"`
+	MCacheInuse  uint64 `json:"mCacheInuse"`
+	StackSys     uint64 `json:"stackSys"`
+	NumGC        uint32 `json:"numGC"`
+	LastPauseGC  uint64 `json:"lastPauseGC"`
 }
 
 // CachesMetric represents cache metrics.
 type CachesMetric struct {
-	RequestQueue             Cache `json:"request_queue"`
-	Children                 Cache `json:"children"`
-	Milestones               Cache `json:"milestones"`
-	Messages                 Cache `json:"messages"`
-	IncomingMessageWorkUnits Cache `json:"incoming_message_work_units"`
+	RequestQueue            Cache `json:"requestQueue"`
+	Children                Cache `json:"children"`
+	Milestones              Cache `json:"milestones"`
+	Blocks                  Cache `json:"blocks"`
+	IncomingBlocksWorkUnits Cache `json:"incomingBlocksWorkUnits"`
 }
 
 // Cache represents metrics about a cache.
@@ -406,31 +405,30 @@ func currentNodeStatus() *NodeStatus {
 		Milestones: Cache{
 			Size: deps.Storage.MilestoneStorageSize(),
 		},
-		Messages: Cache{
-			Size: deps.Storage.MessageStorageSize(),
+		Blocks: Cache{
+			Size: deps.Storage.BlockStorageSize(),
 		},
-		IncomingMessageWorkUnits: Cache{
+		IncomingBlocksWorkUnits: Cache{
 			Size: deps.MessageProcessor.WorkUnitsSize(),
 		},
 	}
 
 	// server metrics
 	status.ServerMetrics = &ServerMetrics{
-		AllMessages:          deps.ServerMetrics.Messages.Load(),
-		NewMessages:          deps.ServerMetrics.NewMessages.Load(),
-		KnownMessages:        deps.ServerMetrics.KnownMessages.Load(),
-		InvalidMessages:      deps.ServerMetrics.InvalidMessages.Load(),
-		InvalidRequests:      deps.ServerMetrics.InvalidRequests.Load(),
-		ReceivedMessageReq:   deps.ServerMetrics.ReceivedMessageRequests.Load(),
-		ReceivedMilestoneReq: deps.ServerMetrics.ReceivedMilestoneRequests.Load(),
-		ReceivedHeartbeats:   deps.ServerMetrics.ReceivedHeartbeats.Load(),
-		SentMessages:         deps.ServerMetrics.SentMessages.Load(),
-		SentMessageReq:       deps.ServerMetrics.SentMessageRequests.Load(),
-		SentMilestoneReq:     deps.ServerMetrics.SentMilestoneRequests.Load(),
-		SentHeartbeats:       deps.ServerMetrics.SentHeartbeats.Load(),
-		DroppedSentPackets:   deps.ServerMetrics.DroppedMessages.Load(),
-		SentSpamMsgsCount:    deps.ServerMetrics.SentSpamMessages.Load(),
-		ValidatedMessages:    deps.ServerMetrics.ValidatedMessages.Load(),
+		AllBlocks:                 deps.ServerMetrics.Blocks.Load(),
+		NewBlocks:                 deps.ServerMetrics.NewBlocks.Load(),
+		KnownBlocks:               deps.ServerMetrics.KnownBlocks.Load(),
+		InvalidBlocks:             deps.ServerMetrics.InvalidBlocks.Load(),
+		InvalidRequests:           deps.ServerMetrics.InvalidRequests.Load(),
+		ReceivedBlockRequests:     deps.ServerMetrics.ReceivedBlockRequests.Load(),
+		ReceivedMilestoneRequests: deps.ServerMetrics.ReceivedMilestoneRequests.Load(),
+		ReceivedHeartbeats:        deps.ServerMetrics.ReceivedHeartbeats.Load(),
+		SentBlocks:                deps.ServerMetrics.SentBlocks.Load(),
+		SentBlockRequests:         deps.ServerMetrics.SentBlockRequests.Load(),
+		SentMilestoneRequests:     deps.ServerMetrics.SentMilestoneRequests.Load(),
+		SentHeartbeats:            deps.ServerMetrics.SentHeartbeats.Load(),
+		DroppedSentPackets:        deps.ServerMetrics.DroppedPackets.Load(),
+		SentSpamBlocks:            deps.ServerMetrics.SentSpamBlocks.Load(),
 	}
 
 	// memory metrics

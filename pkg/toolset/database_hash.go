@@ -110,12 +110,12 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	// calculate sha256 hash of the current ledger state
 	snapshotHashSumWithoutSEPs := lsHash.Sum(nil)
 
-	var solidEntryPoints hornet.LexicalOrderedMessageIDs
+	var solidEntryPoints hornet.LexicalOrderedBlockIDs
 	dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
-		solidEntryPoints = append(solidEntryPoints, sep.MessageID)
+		solidEntryPoints = append(solidEntryPoints, sep.BlockID)
 		return true
 	})
-	// sort the solid entry points lexicographically by their MessageID
+	// sort the solid entry points lexicographically by their BlockID
 	sort.Sort(solidEntryPoints)
 
 	// write all solid entry points in lexicographical order

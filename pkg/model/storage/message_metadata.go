@@ -15,18 +15,18 @@ import (
 )
 
 const (
-	MessageMetadataSolid         = 0
-	MessageMetadataReferenced    = 1
-	MessageMetadataNoTx          = 2
-	MessageMetadataConflictingTx = 3
-	MessageMetadataMilestone     = 4
+	BlockMetadataSolid         = 0
+	BlockMetadataReferenced    = 1
+	BlockMetadataNoTx          = 2
+	BlockMetadataConflictingTx = 3
+	BlockMetadataMilestone     = 4
 )
 
-// Conflict defines the reason why a message is marked as conflicting.
+// Conflict defines the reason why a block is marked as conflicting.
 type Conflict uint8
 
 const (
-	// ConflictNone the message has no conflict.
+	// ConflictNone the block has no conflict.
 	ConflictNone Conflict = iota
 
 	// ConflictInputUTXOAlreadySpent the referenced UTXO was already spent.
@@ -92,7 +92,7 @@ var errorToConflictMapping = map[error]Conflict{
 	iotago.ErrNativeTokenSumUnbalanced:           ConflictInvalidNativeTokens,
 
 	// Sender validation
-	iotago.ErrSenderFeatureBlockNotUnlocked: ConflictInvalidSender,
+	iotago.ErrSenderFeatureNotUnlocked: ConflictInvalidSender,
 
 	// Unlock validation
 	iotago.ErrInvalidInputUnlock: ConflictInvalidInputUnlock,
@@ -113,164 +113,164 @@ func ConflictFromSemanticValidationError(err error) Conflict {
 	return ConflictSemanticValidationFailed
 }
 
-type MessageMetadata struct {
+type BlockMetadata struct {
 	objectstorage.StorableObjectFlags
 	syncutils.RWMutex
 
-	messageID hornet.MessageID
+	blockID hornet.BlockID
 
 	// Metadata
 	metadata bitmask.BitMask
 
-	// The index of the milestone which referenced this msg
+	// The index of the milestone which referenced this block
 	referencedIndex milestone.Index
 
 	conflict Conflict
 
-	// youngestConeRootIndex is the highest referenced index of the past cone of this message
+	// youngestConeRootIndex is the highest referenced index of the past cone of this block
 	youngestConeRootIndex milestone.Index
 
-	// oldestConeRootIndex is the lowest referenced index of the past cone of this message
+	// oldestConeRootIndex is the lowest referenced index of the past cone of this block
 	oldestConeRootIndex milestone.Index
 
 	// coneRootCalculationIndex is the confirmed milestone index ycri and ocri were calculated at
 	coneRootCalculationIndex milestone.Index
 
-	// parents are the parents of the message
-	parents hornet.MessageIDs
+	// parents are the parents of the block
+	parents hornet.BlockIDs
 }
 
-func NewMessageMetadata(messageID hornet.MessageID, parents hornet.MessageIDs) *MessageMetadata {
-	return &MessageMetadata{
-		messageID: messageID,
-		parents:   parents,
+func NewBlockMetadata(blockID hornet.BlockID, parents hornet.BlockIDs) *BlockMetadata {
+	return &BlockMetadata{
+		blockID: blockID,
+		parents: parents,
 	}
 }
 
-func (m *MessageMetadata) MessageID() hornet.MessageID {
-	return m.messageID
+func (m *BlockMetadata) BlockID() hornet.BlockID {
+	return m.blockID
 }
 
-func (m *MessageMetadata) Parents() hornet.MessageIDs {
+func (m *BlockMetadata) Parents() hornet.BlockIDs {
 	return m.parents
 }
 
-func (m *MessageMetadata) IsSolid() bool {
+func (m *BlockMetadata) IsSolid() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasBit(MessageMetadataSolid)
+	return m.metadata.HasBit(BlockMetadataSolid)
 }
 
-func (m *MessageMetadata) SetSolid(solid bool) {
+func (m *BlockMetadata) SetSolid(solid bool) {
 	m.Lock()
 	defer m.Unlock()
 
-	if solid != m.metadata.HasBit(MessageMetadataSolid) {
-		m.metadata = m.metadata.ModifyBit(MessageMetadataSolid, solid)
+	if solid != m.metadata.HasBit(BlockMetadataSolid) {
+		m.metadata = m.metadata.ModifyBit(BlockMetadataSolid, solid)
 		m.SetModified(true)
 	}
 }
 
-func (m *MessageMetadata) IsIncludedTxInLedger() bool {
+func (m *BlockMetadata) IsIncludedTxInLedger() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasBit(MessageMetadataReferenced) && !m.metadata.HasBit(MessageMetadataNoTx) && !m.metadata.HasBit(MessageMetadataConflictingTx)
+	return m.metadata.HasBit(BlockMetadataReferenced) && !m.metadata.HasBit(BlockMetadataNoTx) && !m.metadata.HasBit(BlockMetadataConflictingTx)
 }
 
-func (m *MessageMetadata) IsReferenced() bool {
+func (m *BlockMetadata) IsReferenced() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasBit(MessageMetadataReferenced)
+	return m.metadata.HasBit(BlockMetadataReferenced)
 }
 
-func (m *MessageMetadata) ReferencedWithIndex() (bool, milestone.Index) {
+func (m *BlockMetadata) ReferencedWithIndex() (bool, milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasBit(MessageMetadataReferenced), m.referencedIndex
+	return m.metadata.HasBit(BlockMetadataReferenced), m.referencedIndex
 }
 
-func (m *MessageMetadata) SetReferenced(referenced bool, referencedIndex milestone.Index) {
+func (m *BlockMetadata) SetReferenced(referenced bool, referencedIndex milestone.Index) {
 	m.Lock()
 	defer m.Unlock()
 
-	if referenced != m.metadata.HasBit(MessageMetadataReferenced) {
+	if referenced != m.metadata.HasBit(BlockMetadataReferenced) {
 		if referenced {
 			m.referencedIndex = referencedIndex
 		} else {
 			m.referencedIndex = 0
 		}
-		m.metadata = m.metadata.ModifyBit(MessageMetadataReferenced, referenced)
+		m.metadata = m.metadata.ModifyBit(BlockMetadataReferenced, referenced)
 		m.SetModified(true)
 	}
 }
 
-func (m *MessageMetadata) IsNoTransaction() bool {
+func (m *BlockMetadata) IsNoTransaction() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasBit(MessageMetadataNoTx)
+	return m.metadata.HasBit(BlockMetadataNoTx)
 }
 
-func (m *MessageMetadata) SetIsNoTransaction(noTx bool) {
+func (m *BlockMetadata) SetIsNoTransaction(noTx bool) {
 	m.Lock()
 	defer m.Unlock()
 
-	if noTx != m.metadata.HasBit(MessageMetadataNoTx) {
-		m.metadata = m.metadata.ModifyBit(MessageMetadataNoTx, noTx)
+	if noTx != m.metadata.HasBit(BlockMetadataNoTx) {
+		m.metadata = m.metadata.ModifyBit(BlockMetadataNoTx, noTx)
 		m.SetModified(true)
 	}
 }
 
-func (m *MessageMetadata) IsConflictingTx() bool {
+func (m *BlockMetadata) IsConflictingTx() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasBit(MessageMetadataConflictingTx)
+	return m.metadata.HasBit(BlockMetadataConflictingTx)
 }
 
-func (m *MessageMetadata) SetConflictingTx(conflict Conflict) {
+func (m *BlockMetadata) SetConflictingTx(conflict Conflict) {
 	m.Lock()
 	defer m.Unlock()
 
 	conflictingTx := conflict != ConflictNone
 
-	if conflictingTx != m.metadata.HasBit(MessageMetadataConflictingTx) ||
+	if conflictingTx != m.metadata.HasBit(BlockMetadataConflictingTx) ||
 		m.conflict != conflict {
-		m.metadata = m.metadata.ModifyBit(MessageMetadataConflictingTx, conflictingTx)
+		m.metadata = m.metadata.ModifyBit(BlockMetadataConflictingTx, conflictingTx)
 		m.conflict = conflict
 		m.SetModified(true)
 	}
 }
 
-func (m *MessageMetadata) Conflict() Conflict {
+func (m *BlockMetadata) Conflict() Conflict {
 	m.RLock()
 	defer m.RUnlock()
 
 	return m.conflict
 }
 
-func (m *MessageMetadata) IsMilestone() bool {
+func (m *BlockMetadata) IsMilestone() bool {
 	m.RLock()
 	defer m.RUnlock()
 
-	return m.metadata.HasBit(MessageMetadataMilestone)
+	return m.metadata.HasBit(BlockMetadataMilestone)
 }
 
-func (m *MessageMetadata) SetMilestone(milestone bool) {
+func (m *BlockMetadata) SetMilestone(milestone bool) {
 	m.Lock()
 	defer m.Unlock()
 
-	if milestone != m.metadata.HasBit(MessageMetadataMilestone) {
-		m.metadata = m.metadata.ModifyBit(MessageMetadataMilestone, milestone)
+	if milestone != m.metadata.HasBit(BlockMetadataMilestone) {
+		m.metadata = m.metadata.ModifyBit(BlockMetadataMilestone, milestone)
 		m.SetModified(true)
 	}
 }
 
-func (m *MessageMetadata) SetConeRootIndexes(ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
+func (m *BlockMetadata) SetConeRootIndexes(ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -280,14 +280,14 @@ func (m *MessageMetadata) SetConeRootIndexes(ycri milestone.Index, ocri mileston
 	m.SetModified(true)
 }
 
-func (m *MessageMetadata) ConeRootIndexes() (ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
+func (m *BlockMetadata) ConeRootIndexes() (ycri milestone.Index, ocri milestone.Index, ci milestone.Index) {
 	m.RLock()
 	defer m.RUnlock()
 
 	return m.youngestConeRootIndex, m.oldestConeRootIndex, m.coneRootCalculationIndex
 }
 
-func (m *MessageMetadata) Metadata() byte {
+func (m *BlockMetadata) Metadata() byte {
 	m.RLock()
 	defer m.RUnlock()
 
@@ -296,15 +296,15 @@ func (m *MessageMetadata) Metadata() byte {
 
 // ObjectStorage interface
 
-func (m *MessageMetadata) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("MessageMetadata should never be updated: %v", m.messageID.ToHex()))
+func (m *BlockMetadata) Update(_ objectstorage.StorableObject) {
+	panic(fmt.Sprintf("BlockMetadata should never be updated: %v", m.blockID.ToHex()))
 }
 
-func (m *MessageMetadata) ObjectStorageKey() []byte {
-	return m.messageID
+func (m *BlockMetadata) ObjectStorageKey() []byte {
+	return m.blockID
 }
 
-func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
+func (m *BlockMetadata) ObjectStorageValue() (data []byte) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -319,7 +319,7 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 		parents count * 32 bytes parent id
 	*/
 
-	marshalUtil := marshalutil.New(19 + len(m.parents)*iotago.MessageIDLength)
+	marshalUtil := marshalutil.New(19 + len(m.parents)*iotago.BlockIDLength)
 
 	marshalUtil.WriteByte(byte(m.metadata))
 	marshalUtil.WriteUint32(uint32(m.referencedIndex))
@@ -380,8 +380,8 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		return nil, err
 	}
 
-	m := &MessageMetadata{
-		messageID: hornet.MessageIDFromSlice(key[:32]),
+	m := &BlockMetadata{
+		blockID: hornet.BlockIDFromSlice(key[:32]),
 	}
 
 	m.metadata = bitmask.BitMask(metadataByte)
@@ -396,14 +396,14 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		return nil, err
 	}
 
-	m.parents = make(hornet.MessageIDs, parentsCount)
+	m.parents = make(hornet.BlockIDs, parentsCount)
 	for i := 0; i < int(parentsCount); i++ {
-		parentBytes, err := marshalUtil.ReadBytes(iotago.MessageIDLength)
+		parentBytes, err := marshalUtil.ReadBytes(iotago.BlockIDLength)
 		if err != nil {
 			return nil, err
 		}
 
-		parent := hornet.MessageIDFromSlice(parentBytes)
+		parent := hornet.BlockIDFromSlice(parentBytes)
 		m.parents[i] = parent
 	}
 

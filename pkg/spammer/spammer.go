@@ -13,23 +13,23 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// SendMessageFunc is a function which sends a message to the network.
-type SendMessageFunc = func(msg *storage.Message) error
+// SendBlockFunc is a function which sends a block to the network.
+type SendBlockFunc = func(block *storage.Block) error
 
 // SpammerTipselFunc selects tips for the spammer.
-type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.MessageIDs, err error)
+type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.BlockIDs, err error)
 
-// Spammer is used to issue messages to the IOTA network to create load on the tangle.
+// Spammer is used to issue blocks to the IOTA network to create load on the tangle.
 type Spammer struct {
 	// Deserialization parameters including byte costs
-	protoParas      *iotago.ProtocolParameters
-	message         string
-	tag             string
-	tagSemiLazy     string
-	tipselFunc      SpammerTipselFunc
-	powHandler      *pow.Handler
-	sendMessageFunc SendMessageFunc
-	serverMetrics   *metrics.ServerMetrics
+	protoParas    *iotago.ProtocolParameters
+	message       string
+	tag           string
+	tagSemiLazy   string
+	tipselFunc    SpammerTipselFunc
+	powHandler    *pow.Handler
+	sendBlockFunc SendBlockFunc
+	serverMetrics *metrics.ServerMetrics
 }
 
 // New creates a new spammer instance.
@@ -39,18 +39,18 @@ func New(protoParas *iotago.ProtocolParameters,
 	tagSemiLazy string,
 	tipselFunc SpammerTipselFunc,
 	powHandler *pow.Handler,
-	sendMessageFunc SendMessageFunc,
+	sendBlockFunc SendBlockFunc,
 	serverMetrics *metrics.ServerMetrics) *Spammer {
 
 	return &Spammer{
-		protoParas:      protoParas,
-		message:         message,
-		tag:             tag,
-		tagSemiLazy:     tagSemiLazy,
-		tipselFunc:      tipselFunc,
-		powHandler:      powHandler,
-		sendMessageFunc: sendMessageFunc,
-		serverMetrics:   serverMetrics,
+		protoParas:    protoParas,
+		message:       message,
+		tag:           tag,
+		tagSemiLazy:   tagSemiLazy,
+		tipselFunc:    tipselFunc,
+		powHandler:    powHandler,
+		sendBlockFunc: sendBlockFunc,
+		serverMetrics: serverMetrics,
 	}
 }
 
@@ -73,7 +73,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 		tagBytes = tagBytes[:iotago.MaxTagLength]
 	}
 
-	txCount := int(s.serverMetrics.SentSpamMessages.Load()) + 1
+	txCount := int(s.serverMetrics.SentSpamBlocks.Load()) + 1
 
 	now := time.Now()
 	messageString := s.message
@@ -81,14 +81,14 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	messageString += fmt.Sprintf("\nTimestamp: %s", now.Format(time.RFC3339))
 	messageString += fmt.Sprintf("\nTipselection: %v", durationGTTA.Truncate(time.Microsecond))
 
-	iotaMsg := &iotago.Message{
+	iotaBlock := &iotago.Block{
 		ProtocolVersion: s.protoParas.Version,
 		Parents:         tips.ToSliceOfArrays(),
 		Payload:         &iotago.TaggedData{Tag: tagBytes, Data: []byte(messageString)},
 	}
 
 	timeStart = time.Now()
-	if _, err := s.powHandler.DoPoW(ctx, iotaMsg, 1, func() (tips hornet.MessageIDs, err error) {
+	if _, err := s.powHandler.DoPoW(ctx, iotaBlock, 1, func() (tips hornet.BlockIDs, err error) {
 		// refresh tips of the spammer if PoW takes longer than a configured duration.
 		_, refreshedTips, err := s.tipselFunc()
 		return refreshedTips, err
@@ -97,12 +97,12 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	}
 	durationPOW := time.Since(timeStart)
 
-	msg, err := storage.NewMessage(iotaMsg, serializer.DeSeriModePerformValidation, s.protoParas)
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModePerformValidation, s.protoParas)
 	if err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}
 
-	if err := s.sendMessageFunc(msg); err != nil {
+	if err := s.sendBlockFunc(block); err != nil {
 		return time.Duration(0), time.Duration(0), err
 	}
 

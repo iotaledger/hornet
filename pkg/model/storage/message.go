@@ -10,93 +10,93 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-type Message struct {
+type Block struct {
 	objectstorage.StorableObjectFlags
 
 	// Key
-	messageID hornet.MessageID
+	blockID hornet.BlockID
 
 	// Value
-	data        []byte
-	messageOnce sync.Once
-	message     *iotago.Message
+	data      []byte
+	blockOnce sync.Once
+	block     *iotago.Block
 }
 
-func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Message, error) {
+func NewBlock(iotaBlock *iotago.Block, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Block, error) {
 
-	data, err := iotaMsg.Serialize(deSeriMode, protoParas)
+	data, err := iotaBlock.Serialize(deSeriMode, protoParas)
 	if err != nil {
 		return nil, err
 	}
 
-	msgHash, err := iotaMsg.ID()
+	blockHash, err := iotaBlock.ID()
 	if err != nil {
 		return nil, err
 	}
-	messageID := hornet.MessageIDFromArray(*msgHash)
+	blockID := hornet.BlockIDFromArray(*blockHash)
 
-	msg := &Message{messageID: messageID, data: data}
+	block := &Block{blockID: blockID, data: data}
 
-	msg.messageOnce.Do(func() {
-		msg.message = iotaMsg
+	block.blockOnce.Do(func() {
+		block.block = iotaBlock
 	})
 
-	return msg, nil
+	return block, nil
 }
 
-func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Message, error) {
+func BlockFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Block, error) {
 
-	iotaMsg := &iotago.Message{}
-	if _, err := iotaMsg.Deserialize(data, deSeriMode, protoParas); err != nil {
+	iotaBlock := &iotago.Block{}
+	if _, err := iotaBlock.Deserialize(data, deSeriMode, protoParas); err != nil {
 		return nil, err
 	}
 
-	msgHash, err := iotaMsg.ID()
+	blockHash, err := iotaBlock.ID()
 	if err != nil {
 		return nil, err
 	}
-	messageID := hornet.MessageIDFromArray(*msgHash)
+	blockID := hornet.BlockIDFromArray(*blockHash)
 
-	msg := &Message{messageID: messageID, data: data}
+	block := &Block{blockID: blockID, data: data}
 
-	msg.messageOnce.Do(func() {
-		msg.message = iotaMsg
+	block.blockOnce.Do(func() {
+		block.block = iotaBlock
 	})
 
-	return msg, nil
+	return block, nil
 }
 
-func (msg *Message) MessageID() hornet.MessageID {
-	return msg.messageID
+func (blk *Block) BlockID() hornet.BlockID {
+	return blk.blockID
 }
 
-func (msg *Message) Data() []byte {
-	return msg.data
+func (blk *Block) Data() []byte {
+	return blk.data
 }
 
-func (msg *Message) Message() *iotago.Message {
-	msg.messageOnce.Do(func() {
-		iotaMsg := &iotago.Message{}
-		// No need to verify the message again here
-		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation, nil); err != nil {
-			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.ToHex(), err))
+func (blk *Block) Block() *iotago.Block {
+	blk.blockOnce.Do(func() {
+		iotaBlock := &iotago.Block{}
+		// No need to verify the block again here
+		if _, err := iotaBlock.Deserialize(blk.data, serializer.DeSeriModeNoValidation, nil); err != nil {
+			panic(fmt.Sprintf("failed to deserialize block: %v, error: %s", blk.blockID.ToHex(), err))
 		}
 
-		msg.message = iotaMsg
+		blk.block = iotaBlock
 	})
-	return msg.message
+	return blk.block
 }
 
-func (msg *Message) ProtocolVersion() byte {
-	return msg.Message().ProtocolVersion
+func (blk *Block) ProtocolVersion() byte {
+	return blk.Block().ProtocolVersion
 }
 
-func (msg *Message) Parents() hornet.MessageIDs {
-	return hornet.MessageIDsFromSliceOfArrays(msg.Message().Parents)
+func (blk *Block) Parents() hornet.BlockIDs {
+	return hornet.BlockIDsFromSliceOfArrays(blk.Block().Parents)
 }
 
-func (msg *Message) IsMilestone() bool {
-	switch msg.Message().Payload.(type) {
+func (blk *Block) IsMilestone() bool {
+	switch blk.Block().Payload.(type) {
 	case *iotago.Milestone:
 		return true
 	default:
@@ -105,8 +105,8 @@ func (msg *Message) IsMilestone() bool {
 	return false
 }
 
-func (msg *Message) Milestone() *iotago.Milestone {
-	switch milestonePayload := msg.Message().Payload.(type) {
+func (blk *Block) Milestone() *iotago.Milestone {
+	switch milestonePayload := blk.Block().Payload.(type) {
 	case *iotago.Milestone:
 		return milestonePayload
 	default:
@@ -115,8 +115,8 @@ func (msg *Message) Milestone() *iotago.Milestone {
 	return nil
 }
 
-func (msg *Message) IsTransaction() bool {
-	switch msg.Message().Payload.(type) {
+func (blk *Block) IsTransaction() bool {
+	switch blk.Block().Payload.(type) {
 	case *iotago.Transaction:
 		return true
 	default:
@@ -125,9 +125,9 @@ func (msg *Message) IsTransaction() bool {
 	return false
 }
 
-func (msg *Message) TaggedData() *iotago.TaggedData {
+func (blk *Block) TaggedData() *iotago.TaggedData {
 
-	switch payload := msg.Message().Payload.(type) {
+	switch payload := blk.Block().Payload.(type) {
 	case *iotago.TaggedData:
 		return payload
 	default:
@@ -135,8 +135,8 @@ func (msg *Message) TaggedData() *iotago.TaggedData {
 	}
 }
 
-func (msg *Message) Transaction() *iotago.Transaction {
-	switch payload := msg.Message().Payload.(type) {
+func (blk *Block) Transaction() *iotago.Transaction {
+	switch payload := blk.Block().Payload.(type) {
 	case *iotago.Transaction:
 		return payload
 	default:
@@ -144,16 +144,16 @@ func (msg *Message) Transaction() *iotago.Transaction {
 	}
 }
 
-func (msg *Message) TransactionEssence() *iotago.TransactionEssence {
-	if transaction := msg.Transaction(); transaction != nil {
+func (blk *Block) TransactionEssence() *iotago.TransactionEssence {
+	if transaction := blk.Transaction(); transaction != nil {
 		return transaction.Essence
 	}
 	return nil
 }
 
-func (msg *Message) TransactionEssenceTaggedData() *iotago.TaggedData {
+func (blk *Block) TransactionEssenceTaggedData() *iotago.TaggedData {
 
-	if essence := msg.TransactionEssence(); essence != nil {
+	if essence := blk.TransactionEssence(); essence != nil {
 		switch payload := essence.Payload.(type) {
 		case *iotago.TaggedData:
 			return payload
@@ -164,10 +164,10 @@ func (msg *Message) TransactionEssenceTaggedData() *iotago.TaggedData {
 	return nil
 }
 
-func (msg *Message) TransactionEssenceUTXOInputs() []*iotago.OutputID {
+func (blk *Block) TransactionEssenceUTXOInputs() []*iotago.OutputID {
 
 	var inputs []*iotago.OutputID
-	if essence := msg.TransactionEssence(); essence != nil {
+	if essence := blk.TransactionEssence(); essence != nil {
 		for _, input := range essence.Inputs {
 			switch utxoInput := input.(type) {
 			case *iotago.UTXOInput:
@@ -181,19 +181,19 @@ func (msg *Message) TransactionEssenceUTXOInputs() []*iotago.OutputID {
 	return inputs
 }
 
-func (msg *Message) SignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Signature {
+func (blk *Block) SignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Signature {
 
-	if transaction := msg.Transaction(); transaction != nil {
-		switch unlockBlock := transaction.UnlockBlocks[inputIndex].(type) {
-		case *iotago.SignatureUnlockBlock:
+	if transaction := blk.Transaction(); transaction != nil {
+		switch unlockBlock := transaction.Unlocks[inputIndex].(type) {
+		case *iotago.SignatureUnlock:
 			switch signature := unlockBlock.Signature.(type) {
 			case *iotago.Ed25519Signature:
 				return signature
 			default:
 				return nil
 			}
-		case *iotago.ReferenceUnlockBlock:
-			return msg.SignatureForInputIndex(unlockBlock.Reference)
+		case *iotago.ReferenceUnlock:
+			return blk.SignatureForInputIndex(unlockBlock.Reference)
 		default:
 			return nil
 		}
@@ -203,14 +203,14 @@ func (msg *Message) SignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Sig
 
 // ObjectStorage interface
 
-func (msg *Message) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("Message should never be updated: %v", msg.messageID.ToHex()))
+func (blk *Block) Update(_ objectstorage.StorableObject) {
+	panic(fmt.Sprintf("Block should never be updated: %v", blk.blockID.ToHex()))
 }
 
-func (msg *Message) ObjectStorageKey() []byte {
-	return msg.messageID
+func (blk *Block) ObjectStorageKey() []byte {
+	return blk.blockID
 }
 
-func (msg *Message) ObjectStorageValue() []byte {
-	return msg.data
+func (blk *Block) ObjectStorageValue() []byte {
+	return blk.data
 }

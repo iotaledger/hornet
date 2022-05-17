@@ -21,11 +21,11 @@ const (
 
 type proofOfWorkFunc func(ctx context.Context, data []byte, parallelism ...int) (uint64, error)
 
-// RefreshTipsFunc refreshes tips of the message if PoW takes longer than a configured duration.
-type RefreshTipsFunc = func() (tips hornet.MessageIDs, err error)
+// RefreshTipsFunc refreshes tips of the block if PoW takes longer than a configured duration.
+type RefreshTipsFunc = func() (tips hornet.BlockIDs, err error)
 
 // Handler handles PoW requests of the node and uses local PoW.
-// It refreshes the tips of messages during PoW.
+// It refreshes the tips of blocks during PoW.
 type Handler struct {
 	targetScore         float64
 	refreshTipsInterval time.Duration
@@ -56,29 +56,29 @@ func (h *Handler) PoWType() string {
 }
 
 // DoPoW does the proof-of-work required to hit the target score configured on this Handler.
-// The given iota.Message's nonce is automatically updated.
-func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (messageSize int, err error) {
+// The given iota.Block's nonce is automatically updated.
+func (h *Handler) DoPoW(ctx context.Context, block *iotago.Block, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (blockSize int, err error) {
 
 	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		return 0, err
 	}
 
-	// enforce milestone msg nonce == 0
-	if _, isMilestone := msg.Payload.(*iotago.Milestone); isMilestone {
-		msg.Nonce = 0
+	// enforce milestone block nonce == 0
+	if _, isMilestone := block.Payload.(*iotago.Milestone); isMilestone {
+		block.Nonce = 0
 		return 0, nil
 	}
 
-	getPoWData := func(msg *iotago.Message) (powData []byte, err error) {
-		msgData, err := msg.Serialize(serializer.DeSeriModeNoValidation, nil)
+	getPoWData := func(block *iotago.Block) (powData []byte, err error) {
+		blockData, err := block.Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
-			return nil, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)
+			return nil, fmt.Errorf("unable to perform PoW as block can't be serialized: %w", err)
 		}
 
-		return msgData[:len(msgData)-nonceBytes], nil
+		return blockData[:len(blockData)-nonceBytes], nil
 	}
 
-	powData, err := getPoWData(msg)
+	powData, err := getPoWData(block)
 	if err != nil {
 		return 0, err
 	}
@@ -103,10 +103,10 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 				if err != nil {
 					return 0, err
 				}
-				msg.Parents = tips.ToSliceOfArrays()
+				block.Parents = tips.ToSliceOfArrays()
 
 				// replace the powData to update the new tips
-				powData, err = getPoWData(msg)
+				powData, err = getPoWData(block)
 				if err != nil {
 					return 0, err
 				}
@@ -134,7 +134,7 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 			return 0, err
 		}
 
-		msg.Nonce = nonce
+		block.Nonce = nonce
 		return len(powData) + nonceBytes, nil
 	}
 }

@@ -381,7 +381,7 @@ type RestAPIConfig struct {
 	PublicRoutes []string
 	// Protected REST API routes.
 	ProtectedRoutes []string
-	// Whether the node does proof-of-work for submitted messages.
+	// Whether the node does proof-of-work for submitted blocks.
 	PoWEnabled bool
 }
 
@@ -627,7 +627,7 @@ type ProtocolConfig struct {
 	RentStructure iotago.RentStructure
 	// The supply of the native token.
 	TokenSupply uint64
-	// The maximum allowed delta value for the OCRI of a given message in relation to the current CMI before it gets lazy
+	// The maximum allowed delta value for the OCRI of a given block in relation to the current CMI before it gets lazy
 	BelowMaxDepth uint16
 	// The coo public key ranges.
 	PublicKeyRanges []protocfg.ConfigPublicKeyRange

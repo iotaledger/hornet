@@ -318,8 +318,8 @@ Example:
 | Name                                  | Description                                                                                                             | Type   | Default value |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------ | ------------- |
 | milestoneTimeout                      | The interval milestone timeout events are fired if no new milestones are received                                       | string | "30s"         |
-| maxDeltaMsgYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | int    | 8             |
-| maxDeltaMsgOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | int    | 13            |
+| maxDeltaBlockYoungestConeRootIndexToCMI | The maximum allowed delta value for the YCRI of a given message in relation to the current CMI before it gets lazy      | int    | 8             |
+| maxDeltaBlockOldestConeRootIndexToCMI   | The maximum allowed delta value between OCRI of a given message in relation to the current CMI before it gets semi-lazy | int    | 13            |
 | whiteFlagParentsSolidTimeout          | Defines the the maximum duration for the parents to become solid during white flag confirmation API or INX call         | string | "2s"          |
 
 Example:
@@ -328,8 +328,8 @@ Example:
   {
     "tangle": {
       "milestoneTimeout": "30s",
-      "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
-      "maxDeltaMsgOldestConeRootIndexToCMI": 13,
+      "maxDeltaBlockYoungestConeRootIndexToCMI": 8,
+      "maxDeltaBlockOldestConeRootIndexToCMI": 13,
       "whiteFlagParentsSolidTimeout": "2s"
     }
   }
@@ -442,7 +442,7 @@ Example:
 | Name                        | Description                                                                                    | Type   | Default value                                                                                                                                                                                                                                                                                                                                                                                                  |
 | --------------------------- | ---------------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | bindAddress                 | The bind address on which the REST API listens on                                              | string | "0.0.0.0:14265"                                                                                                                                                                                                                                                                                                                                                                                                |
-| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using * are allowed  | array  | /health<br>/api/v2/info<br>/api/v2/tips<br>/api/v2/messages*<br>/api/v2/transactions*<br>/api/v2/milestones*<br>/api/v2/outputs*<br>/api/v2/addresses*<br>/api/v2/treasury<br>/api/v2/receipts*<br>/api/plugins/debug/v1/*<br>/api/plugins/indexer/v1/*<br>/api/plugins/mqtt/v1<br>/api/plugins/participation/v1/events*<br>/api/plugins/participation/v1/outputs*<br>/api/plugins/participation/v1/addresses* |
+| publicRoutes                | The HTTP REST routes which can be called without authorization. Wildcards using * are allowed  | array  | /health<br>/api/v2/info<br>/api/v2/tips<br>/api/v2/messages*<br>/api/v2/transactions*<br>/api/v2/milestones*<br>/api/v2/outputs*<br>/api/v2/addresses*<br>/api/v2/treasury<br>/api/v2/receipts*<br>/api/plugins/debug/v1/*<br>/api/plugins/indexer/v1/*<br>/api/plugins/mqtt/v1<br>/api/plugins/participation/v2/events*<br>/api/plugins/participation/v2/outputs*<br>/api/plugins/participation/v2/addresses* |
 | protectedRoutes             | The HTTP REST routes which need to be called with authorization. Wildcards using * are allowed | array  | /api/v2/*<br>/api/plugins/*                                                                                                                                                                                                                                                                                                                                                                                    |
 | [jwtAuth](#restapi_jwtauth) | Configuration for JWT Auth                                                                     | object |                                                                                                                                                                                                                                                                                                                                                                                                                |
 | [pow](#restapi_pow)         | Configuration for Proof of Work                                                                | object |                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -488,9 +488,9 @@ Example:
         "/api/plugins/debug/v1/*",
         "/api/plugins/indexer/v1/*",
         "/api/plugins/mqtt/v1",
-        "/api/plugins/participation/v1/events*",
-        "/api/plugins/participation/v1/outputs*",
-        "/api/plugins/participation/v1/addresses*"
+        "/api/plugins/participation/v2/events*",
+        "/api/plugins/participation/v2/outputs*",
+        "/api/plugins/participation/v2/addresses*"
       ],
       "protectedRoutes": [
         "/api/v2/*",
@@ -610,12 +610,12 @@ Example:
 ## <a id="spammer"></a> 16. Spammer
 
 | Name         | Description                                                                        | Type    | Default value                  |
-| ------------ | ---------------------------------------------------------------------------------- | ------- | ------------------------------ |
+|--------------| ---------------------------------------------------------------------------------- | ------- | ------------------------------ |
 | message      | The message to embed within the spam messages                                      | string  | "We are all made of stardust." |
 | tag          | The tag of the message                                                             | string  | "HORNET Spammer"               |
 | tagSemiLazy  | The tag of the message if the semi-lazy pool is used (uses "tag" if empty)         | string  | "HORNET Spammer Semi-Lazy"     |
 | cpuMaxUsage  | Workers remains idle for a while when cpu usage gets over this limit (0 = disable) | float   | 0.8                            |
-| mpsRateLimit | The rate limit for the spammer (0 = no limit)                                      | float   | 0.0                            |
+| bpsRateLimit | The rate limit for the spammer (0 = no limit)                                      | float   | 0.0                            |
 | workers      | The amount of parallel running spammers                                            | int     | 0                              |
 | autostart    | Automatically start the spammer on node startup                                    | boolean | false                          |
 
@@ -628,7 +628,7 @@ Example:
       "tag": "HORNET Spammer",
       "tagSemiLazy": "HORNET Spammer Semi-Lazy",
       "cpuMaxUsage": 0.8,
-      "mpsRateLimit": 0,
+      "bpsRateLimit": 0,
       "workers": 0,
       "autostart": false
     }

@@ -26,17 +26,17 @@ type ConcurrentParentsTraverser struct {
 	// interface to the used storage.
 	parentsTraverserStorage ParentsTraverserStorage
 
-	// processed map with already processed messages.
+	// processed map with already processed blocks.
 	processed *sync.Map
 
 	// used to count the remaining elements in the stack.
 	stackCounter *atomic.Uint64
 
 	// used to fill the pipeline with elements to traverse.
-	stackChanIn chan<- (hornet.MessageID)
+	stackChanIn chan<- (hornet.BlockID)
 
 	// used to get the next element from the pipeline to traverse.
-	stackChanOut <-chan (hornet.MessageID)
+	stackChanOut <-chan (hornet.BlockID)
 
 	ctx                      context.Context
 	parallelism              int
@@ -70,15 +70,15 @@ func NewConcurrentParentsTraverser(parentsTraverserStorage ParentsTraverserStora
 func (t *ConcurrentParentsTraverser) reset() {
 
 	// create an unbuffered channel because we don't know the size of the cone to walk upfront
-	unbufferedChannel := func() (chan<- hornet.MessageID, <-chan hornet.MessageID) {
+	unbufferedChannel := func() (chan<- hornet.BlockID, <-chan hornet.BlockID) {
 
-		inbound := make(chan hornet.MessageID)
-		outbound := make(chan hornet.MessageID)
+		inbound := make(chan hornet.BlockID)
+		outbound := make(chan hornet.BlockID)
 
 		go func() {
-			var inboundQueue hornet.MessageIDs
+			var inboundQueue hornet.BlockIDs
 
-			nextValue := func() hornet.MessageID {
+			nextValue := func() hornet.BlockID {
 				// in case the inbound queue is empty, we return nil to block the nil channel
 				// produced by "outboundChannel" until the next element flows in or the
 				// inbound channel is closed.
@@ -88,7 +88,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 				return inboundQueue[0]
 			}
 
-			outboundChannel := func(nextItem bool) chan hornet.MessageID {
+			outboundChannel := func(nextItem bool) chan hornet.BlockID {
 				// in case the inbound queue is empty, we return a nil channel to block
 				// until the next element flows in or the inbound channel is closed.
 				if len(inboundQueue) == 0 {
@@ -97,7 +97,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 				return outbound
 			}
 
-			var out chan hornet.MessageID = nil
+			var out chan hornet.BlockID = nil
 
 		inboundLoop:
 			for {
@@ -125,17 +125,17 @@ func (t *ConcurrentParentsTraverser) reset() {
 	t.processed = &sync.Map{}
 }
 
-// traverseMessage adds the messageID to the pipeline and increases the counter of remaining elements.
-func (t *ConcurrentParentsTraverser) traverseMessage(messageID hornet.MessageID) {
+// traverseBlock adds the blockID to the pipeline and increases the counter of remaining elements.
+func (t *ConcurrentParentsTraverser) traverseBlock(blockID hornet.BlockID) {
 	t.stackCounter.Inc()
-	t.stackChanIn <- messageID
+	t.stackChanIn <- blockID
 }
 
 // Traverse starts to traverse the parents (past cone) in a multihreaded but
 // unsorted way in direction of the parents.
-// the traversal stops due to no more messages passing the given condition.
+// the traversal stops due to no more blocks passing the given condition.
 // Caution: not in DFS order
-func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
+func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents hornet.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -156,10 +156,10 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents horne
 	// we feed the stack with the parents one after another,
 	// to make sure that we examine all paths.
 	// however, we only need to do it if the parent wasn't processed yet.
-	// the referenced parent message could for example already be processed
+	// the referenced parent block could for example already be processed
 	// if it is directly/indirectly approved by former parents.
 	for _, parent := range parents {
-		t.traverseMessage(parent)
+		t.traverseBlock(parent)
 	}
 
 	doneChan := make(chan struct{})
@@ -186,23 +186,23 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents horne
 // processStack processes elements from the pipeline until there are no elements left or an error occurs.
 func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errChan chan error) {
 
-	wasProcessed := func(messageID hornet.MessageID) bool {
+	wasProcessed := func(blockID hornet.BlockID) bool {
 
-		_, wasProcessed := t.processed.Load(messageID.ToMapKey())
+		_, wasProcessed := t.processed.Load(blockID.ToMapKey())
 		return wasProcessed
 	}
 
-	markAsProcessed := func(messageID hornet.MessageID) bool {
+	markAsProcessed := func(blockID hornet.BlockID) bool {
 
-		_, wasProcessed := t.processed.LoadOrStore(messageID.ToMapKey(), struct{}{})
+		_, wasProcessed := t.processed.LoadOrStore(blockID.ToMapKey(), struct{}{})
 		return wasProcessed
 	}
 
 	// processStackParents checks if the current element in the stack must be processed or traversed.
 	// the logic in this walker is quite different.
 	// we do not walk in any order, we just process every
-	// single message and traverse their parents afterwards.
-	processStackParents := func(currentMessageID hornet.MessageID) error {
+	// single block and traverse their parents afterwards.
+	processStackParents := func(currentBlockID hornet.BlockID) error {
 		if err := contextutils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
 			return err
 		}
@@ -211,20 +211,20 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 			return err
 		}
 
-		if markAsProcessed(currentMessageID) {
-			// message was already processed
+		if markAsProcessed(currentBlockID) {
+			// block was already processed
 			return nil
 		}
 
-		// check if the message is a solid entry point
-		contains, err := t.parentsTraverserStorage.SolidEntryPointsContain(currentMessageID)
+		// check if the block is a solid entry point
+		contains, err := t.parentsTraverserStorage.SolidEntryPointsContain(currentBlockID)
 		if err != nil {
 			return err
 		}
 
 		if contains {
 			if t.onSolidEntryPoint != nil {
-				t.onSolidEntryPoint(currentMessageID)
+				t.onSolidEntryPoint(currentBlockID)
 			}
 
 			if !t.traverseSolidEntryPoints {
@@ -233,30 +233,30 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 			}
 		}
 
-		cachedMsgMeta, err := t.parentsTraverserStorage.CachedMessageMetadata(currentMessageID) // meta +1
+		cachedBlockMeta, err := t.parentsTraverserStorage.CachedBlockMetadata(currentBlockID) // meta +1
 		if err != nil {
 			return err
 		}
 
-		if cachedMsgMeta == nil {
-			// message does not exist, the parents are not traversed
+		if cachedBlockMeta == nil {
+			// block does not exist, the parents are not traversed
 
 			if t.onMissingParent == nil {
 				// stop processing the stack with an error
-				return fmt.Errorf("%w: message %s", common.ErrMessageNotFound, currentMessageID.ToHex())
+				return fmt.Errorf("%w: block %s", common.ErrBlockNotFound, currentBlockID.ToHex())
 			}
 
 			// stop processing the stack if the caller returns an error
-			if err := t.onMissingParent(currentMessageID); err != nil {
+			if err := t.onMissingParent(currentBlockID); err != nil {
 				return err
 			}
 
 			return nil
 		}
-		defer cachedMsgMeta.Release(true) // meta -1
+		defer cachedBlockMeta.Release(true) // meta -1
 
-		// check condition to decide if msg should be consumed and traversed
-		traverse, err := t.condition(cachedMsgMeta.Retain()) // meta pass +1
+		// check condition to decide if block should be consumed and traversed
+		traverse, err := t.condition(cachedBlockMeta.Retain()) // meta pass +1
 		if err != nil {
 			// there was an error, stop processing the stack
 			return err
@@ -268,22 +268,22 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 		}
 
 		if t.consumer != nil {
-			// consume the message
-			if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta pass +1
+			// consume the block
+			if err := t.consumer(cachedBlockMeta.Retain()); err != nil { // meta pass +1
 				// there was an error, stop processing the stack
 				return err
 			}
 		}
 
-		for _, parentMessageID := range cachedMsgMeta.Metadata().Parents() {
-			if !wasProcessed(parentMessageID) {
+		for _, parentBlockID := range cachedBlockMeta.Metadata().Parents() {
+			if !wasProcessed(parentBlockID) {
 				// do not walk further parents if the traversal was already done
 				if err := contextutils.ReturnErrIfChannelClosed(doneChan, ErrTraversalDone); err != nil {
 					return err
 				}
 
 				// parent was not processed yet, add it to the pipeline
-				t.traverseMessage(parentMessageID)
+				t.traverseBlock(parentBlockID)
 			}
 		}
 
@@ -300,9 +300,9 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 		case <-doneChan:
 			return
 
-		case messageID := <-t.stackChanOut:
+		case blockID := <-t.stackChanOut:
 
-			if err := processStackParents(messageID); err != nil {
+			if err := processStackParents(blockID); err != nil {
 				if errors.Is(err, ErrTraversalDone) {
 					return
 				}

@@ -33,11 +33,11 @@ type nodeStatus struct {
 }
 
 type nodeMetrics struct {
-	// The current rate of new messages per second.
-	MessagesPerSecond float64 `json:"messagesPerSecond"`
-	// The current rate of referenced messages per second.
-	ReferencedMessagesPerSecond float64 `json:"referencedMessagesPerSecond"`
-	// The ratio of referenced messages in relation to new messages of the last confirmed milestone.
+	// The current rate of new blocks per second.
+	BlocksPerSecond float64 `json:"blocksPerSecond"`
+	// The current rate of referenced blocks per second.
+	ReferencedBlocksPerSecond float64 `json:"referencedBlocksPerSecond"`
+	// The ratio of referenced blocks in relation to new blocks of the last confirmed milestone.
 	ReferencedRate float64 `json:"referencedRate"`
 }
 
@@ -63,8 +63,8 @@ type infoResponse struct {
 
 // tipsResponse defines the response of a GET tips REST API call.
 type tipsResponse struct {
-	// The hex encoded message IDs of the tips.
-	Tips []string `json:"tipMessageIds"`
+	// The hex encoded block IDs of the tips.
+	Tips []string `json:"tips"`
 }
 
 // receiptsResponse defines the response of a receipts REST API call.
@@ -72,44 +72,44 @@ type receiptsResponse struct {
 	Receipts []*utxo.ReceiptTuple `json:"receipts"`
 }
 
-// messageMetadataResponse defines the response of a GET message metadata REST API call.
-type messageMetadataResponse struct {
-	// The hex encoded message ID of the message.
-	MessageID string `json:"messageId"`
-	// The hex encoded message IDs of the parents the message references.
-	Parents []string `json:"parentMessageIds"`
-	// Whether the message is solid.
+// blockMetadataResponse defines the response of a GET block metadata REST API call.
+type blockMetadataResponse struct {
+	// The hex encoded block ID of the block.
+	BlockID string `json:"blockId"`
+	// The hex encoded block IDs of the parents the block references.
+	Parents []string `json:"parents"`
+	// Whether the block is solid.
 	Solid bool `json:"isSolid"`
-	// The milestone index that references this message.
+	// The milestone index that references this block.
 	ReferencedByMilestoneIndex *milestone.Index `json:"referencedByMilestoneIndex,omitempty"`
-	// If this message represents a milestone this is the milestone index
+	// If this block represents a milestone this is the milestone index
 	MilestoneIndex *milestone.Index `json:"milestoneIndex,omitempty"`
 	// The ledger inclusion state of the transaction payload.
 	LedgerInclusionState *string `json:"ledgerInclusionState,omitempty"`
-	// The reason why this message is marked as conflicting.
+	// The reason why this block is marked as conflicting.
 	ConflictReason *storage.Conflict `json:"conflictReason,omitempty"`
-	// Whether the message should be promoted.
+	// Whether the block should be promoted.
 	ShouldPromote *bool `json:"shouldPromote,omitempty"`
-	// Whether the message should be reattached.
+	// Whether the block should be reattached.
 	ShouldReattach *bool `json:"shouldReattach,omitempty"`
 }
 
-// messageCreatedResponse defines the response of a POST messages REST API call.
-type messageCreatedResponse struct {
-	// The hex encoded message ID of the message.
-	MessageID string `json:"messageId"`
+// blockCreatedResponse defines the response of a POST blocks REST API call.
+type blockCreatedResponse struct {
+	// The hex encoded block ID of the block.
+	BlockID string `json:"blockId"`
 }
 
 // childrenResponse defines the response of a GET children REST API call.
 type childrenResponse struct {
-	// The hex encoded message ID of the message.
-	MessageID string `json:"messageId"`
+	// The hex encoded block ID of the block.
+	BlockID string `json:"blockId"`
 	// The maximum count of results that are returned by the node.
 	MaxResults uint32 `json:"maxResults"`
 	// The actual count of results that are returned.
 	Count uint32 `json:"count"`
-	// The hex encoded message IDs of the children of this message.
-	Children []string `json:"childrenMessageIds"`
+	// The hex encoded block IDs of the children of this block.
+	Children []string `json:"children"`
 }
 
 // milestoneUTXOChangesResponse defines the response of a GET milestone UTXO changes REST API call.
@@ -124,8 +124,8 @@ type milestoneUTXOChangesResponse struct {
 
 // OutputMetadataResponse defines the response of a GET outputs metadata REST API call.
 type OutputMetadataResponse struct {
-	// The hex encoded message ID of the message.
-	MessageID string `json:"messageId"`
+	// The hex encoded block ID of the block.
+	BlockID string `json:"blockId"`
 	// The hex encoded transaction id from which this output originated.
 	TransactionID string `json:"transactionId"`
 	// The index of the output.
@@ -225,16 +225,16 @@ type ComputeWhiteFlagMutationsRequest struct {
 	Index milestone.Index `json:"index"`
 	// The timestamp of the milestone.
 	Timestamp uint32 `json:"timestamp"`
-	// The hex encoded message IDs of the parents the milestone references.
-	Parents []string `json:"parentMessageIds"`
+	// The hex encoded block IDs of the parents the milestone references.
+	Parents []string `json:"parents"`
 	// The hex encoded milestone ID of the previous milestone.
 	PreviousMilestoneID string `json:"previousMilestoneId"`
 }
 
 // ComputeWhiteFlagMutationsResponse defines the response for a POST debugComputeWhiteFlagMutations REST API call.
 type ComputeWhiteFlagMutationsResponse struct {
-	// The hex encoded confirmed merkle tree root as a result of the white flag computation.
-	ConfirmedMerkleRoot string `json:"confirmedMerkleRoot"`
+	// The hex encoded inclusion merkle tree root as a result of the white flag computation.
+	InclusionMerkleRoot string `json:"inclusionMerkleRoot"`
 	// The hex encoded applied merkle tree root as a result of the white flag computation.
 	AppliedMerkleRoot string `json:"appliedMerkleRoot"`
 }

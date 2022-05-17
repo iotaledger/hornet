@@ -27,17 +27,17 @@ import (
 )
 
 var (
-	// Returned when a critical error stops the execution of a task.
+	// ErrCritical is returned when a critical error stops the execution of a task.
 	ErrCritical = errors.New("critical error")
-	// Returned when unsupported snapshot data is read.
+	// ErrUnsupportedSnapshot is returned when unsupported snapshot data is read.
 	ErrUnsupportedSnapshot = errors.New("unsupported snapshot data")
-	// Returned when a child message wasn't found.
-	ErrChildMsgNotFound = errors.New("child message not found")
-	// Returned when the milestone diff that should be applied is not the current or next milestone.
+	// ErrChildBlockNotFound is returned when a child block wasn't found.
+	ErrChildBlockNotFound = errors.New("child block not found")
+	// ErrWrongMilestoneDiffIndex is returned when the milestone diff that should be applied is not the current or next milestone.
 	ErrWrongMilestoneDiffIndex = errors.New("wrong milestone diff index")
-	// Returned when the final milestone after loading the snapshot is not equal to the solid entry point index.
+	// ErrFinalLedgerIndexDoesNotMatchSEPIndex is returned when the final milestone after loading the snapshot is not equal to the solid entry point index.
 	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
-	// Returned when a delta snapshot is available, but no full snapshot is found.
+	// ErrInvalidSnapshotAvailabilityState is returned when a delta snapshot is available, but no full snapshot is found.
 	ErrInvalidSnapshotAvailabilityState = errors.New("invalid snapshot files availability")
 
 	ErrNoSnapshotSpecified                   = errors.New("no snapshot file was specified in the config")
@@ -190,7 +190,7 @@ func forEachSolidEntryPoint(
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
-	metadataMemcache := storage.NewMetadataMemcache(dbStorage.CachedMessageMetadata)
+	metadataMemcache := storage.NewMetadataMemcache(dbStorage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(dbStorage, metadataMemcache)
 	memcachedChildrenTraverserStorage := dag.NewMemcachedChildrenTraverserStorage(dbStorage, metadataMemcache)
 
@@ -199,37 +199,37 @@ func forEachSolidEntryPoint(
 		memcachedParentsTraverserStorage.Cleanup(true)
 		memcachedChildrenTraverserStorage.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
-	// we share the same traverser for all milestones, so we don't cleanup the cachedMessages in between.
+	// we share the same traverser for all milestones, so we don't cleanup the cachedBlocks in between.
 	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
 
-	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
-	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) (bool, error) {
-		childMessageIDs, err := memcachedChildrenTraverserStorage.ChildrenMessageIDs(messageID)
+	// isSolidEntryPoint checks whether any direct child of the given block was referenced by a milestone which is above the target milestone.
+	isSolidEntryPoint := func(blockID hornet.BlockID, targetIndex milestone.Index) (bool, error) {
+		childBlockIDs, err := memcachedChildrenTraverserStorage.ChildrenBlockIDs(blockID)
 		if err != nil {
 			return false, err
 		}
 
-		for _, childMessageID := range childMessageIDs {
-			cachedMsgMeta, err := memcachedChildrenTraverserStorage.CachedMessageMetadata(childMessageID) // meta +1
+		for _, childBlockID := range childBlockIDs {
+			cachedBlockMeta, err := memcachedChildrenTraverserStorage.CachedBlockMetadata(childBlockID) // meta +1
 			if err != nil {
 				return false, err
 			}
 
-			if cachedMsgMeta == nil {
-				// Ignore this message since it doesn't exist anymore
+			if cachedBlockMeta == nil {
+				// Ignore this block since it doesn't exist anymore
 				continue
 			}
 
-			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
+			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
 				// referenced by a later milestone than targetIndex => solidEntryPoint
-				cachedMsgMeta.Release(true) // meta -1
+				cachedBlockMeta.Release(true) // meta -1
 				return true, nil
 			}
-			cachedMsgMeta.Release(true) // meta -1
+			cachedBlockMeta.Release(true) // meta -1
 		}
 		return false, nil
 	}
@@ -248,31 +248,31 @@ func forEachSolidEntryPoint(
 			return errors.Wrapf(ErrCritical, "milestone (%d) not found!", milestoneIndex)
 		}
 
-		// traverse the milestone and collect all messages that were referenced by this milestone or newer
+		// traverse the milestone and collect all blocks that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
 			ctx,
 			milestoneParents,
-			// traversal stops if no more messages pass the given condition
+			// traversal stops if no more blocks pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
+			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
 
-				// collect all msgs that were referenced by that milestone or newer
-				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+				// collect all blocks that were referenced by that milestone or newer
+				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				return referenced && at >= milestoneIndex, nil
 			},
 			// consumer
-			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
+			func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
 
 				if err := contextutils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
 					// stop snapshot creation if node was shutdown
 					return err
 				}
 
-				messageID := cachedMsgMeta.Metadata().MessageID()
+				blockID := cachedBlockMeta.Metadata().BlockID()
 
-				isEntryPoint, err := isSolidEntryPoint(messageID, targetIndex)
+				isEntryPoint, err := isSolidEntryPoint(blockID, targetIndex)
 				if err != nil {
 					return err
 				}
@@ -281,15 +281,15 @@ func forEachSolidEntryPoint(
 					return nil
 				}
 
-				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				if !referenced {
-					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", messageID.ToHex())
+					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", blockID.ToHex())
 				}
 
-				messageIDMapKey := messageID.ToMapKey()
-				if _, exists := solidEntryPoints[messageIDMapKey]; !exists {
-					solidEntryPoints[messageIDMapKey] = at
-					if !solidEntryPointConsumer(&storage.SolidEntryPoint{MessageID: messageID, Index: at}) {
+				blockIDMapKey := blockID.ToMapKey()
+				if _, exists := solidEntryPoints[blockIDMapKey]; !exists {
+					solidEntryPoints[blockIDMapKey] = at
+					if !solidEntryPointConsumer(&storage.SolidEntryPoint{BlockID: blockID, Index: at}) {
 						return ErrSnapshotCreationWasAborted
 					}
 				}

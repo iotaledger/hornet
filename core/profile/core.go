@@ -144,7 +144,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			Messages: &profile.CacheOpts{
+			Blocks: &profile.CacheOpts{
 				CacheTime:                  "30s",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -153,7 +153,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			UnreferencedMessages: &profile.CacheOpts{
+			UnreferencedBlocks: &profile.CacheOpts{
 				CacheTime:                  "500ms",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -162,7 +162,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			IncomingMessagesFilter: &profile.CacheOpts{
+			IncomingBlocksFilter: &profile.CacheOpts{
 				CacheTime:                  "5s",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -203,7 +203,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			Messages: &profile.CacheOpts{
+			Blocks: &profile.CacheOpts{
 				CacheTime:                  "15s",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -212,7 +212,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			UnreferencedMessages: &profile.CacheOpts{
+			UnreferencedBlocks: &profile.CacheOpts{
 				CacheTime:                  "500ms",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -221,7 +221,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			IncomingMessagesFilter: &profile.CacheOpts{
+			IncomingBlocksFilter: &profile.CacheOpts{
 				CacheTime:                  "5s",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -262,7 +262,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			Messages: &profile.CacheOpts{
+			Blocks: &profile.CacheOpts{
 				CacheTime:                  "5s",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -271,7 +271,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			UnreferencedMessages: &profile.CacheOpts{
+			UnreferencedBlocks: &profile.CacheOpts{
 				CacheTime:                  "100ms",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -280,7 +280,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			IncomingMessagesFilter: &profile.CacheOpts{
+			IncomingBlocksFilter: &profile.CacheOpts{
 				CacheTime:                  "2.5s",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -321,7 +321,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			Messages: &profile.CacheOpts{
+			Blocks: &profile.CacheOpts{
 				CacheTime:                  "1.5s",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -330,7 +330,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			UnreferencedMessages: &profile.CacheOpts{
+			UnreferencedBlocks: &profile.CacheOpts{
 				CacheTime:                  "100ms",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -339,7 +339,7 @@ var (
 					MaxConsumerHoldTime:   "100s",
 				},
 			},
-			IncomingMessagesFilter: &profile.CacheOpts{
+			IncomingBlocksFilter: &profile.CacheOpts{
 				CacheTime:                  "2s",
 				ReleaseExecutorWorkerCount: 10,
 				LeakDetectionOptions: &profile.LeakDetectionOpts{

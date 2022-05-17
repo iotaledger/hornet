@@ -91,12 +91,12 @@ type Storage struct {
 	snapshotStore kvstore.KVStore
 
 	// object storages
-	childrenStorage             *objectstorage.ObjectStorage
-	messagesStorage             *objectstorage.ObjectStorage
-	metadataStorage             *objectstorage.ObjectStorage
-	milestoneIndexStorage       *objectstorage.ObjectStorage
-	milestoneStorage            *objectstorage.ObjectStorage
-	unreferencedMessagesStorage *objectstorage.ObjectStorage
+	childrenStorage           *objectstorage.ObjectStorage
+	blocksStorage             *objectstorage.ObjectStorage
+	metadataStorage           *objectstorage.ObjectStorage
+	milestoneIndexStorage     *objectstorage.ObjectStorage
+	milestoneStorage          *objectstorage.ObjectStorage
+	unreferencedBlocksStorage *objectstorage.ObjectStorage
 
 	// solid entry points
 	solidEntryPoints     *SolidEntryPoints
@@ -203,7 +203,7 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 				MaxConsumerHoldTime:   "0ms",
 			},
 		},
-		Messages: &profile.CacheOpts{
+		Blocks: &profile.CacheOpts{
 			CacheTime:                  "0ms",
 			ReleaseExecutorWorkerCount: 10,
 			LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -212,7 +212,7 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 				MaxConsumerHoldTime:   "0ms",
 			},
 		},
-		UnreferencedMessages: &profile.CacheOpts{
+		UnreferencedBlocks: &profile.CacheOpts{
 			CacheTime:                  "0ms",
 			ReleaseExecutorWorkerCount: 10,
 			LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -221,7 +221,7 @@ func (s *Storage) profileCachesDisabled() *profile.Caches {
 				MaxConsumerHoldTime:   "0ms",
 			},
 		},
-		IncomingMessagesFilter: &profile.CacheOpts{
+		IncomingBlocksFilter: &profile.CacheOpts{
 			CacheTime:                  "0ms",
 			ReleaseExecutorWorkerCount: 10,
 			LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -263,7 +263,7 @@ func (s *Storage) profileCacheEnabled() *profile.Caches {
 				MaxConsumerHoldTime:   "0ms",
 			},
 		},
-		Messages: &profile.CacheOpts{
+		Blocks: &profile.CacheOpts{
 			CacheTime:                  "500ms",
 			ReleaseExecutorWorkerCount: 1,
 			LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -272,7 +272,7 @@ func (s *Storage) profileCacheEnabled() *profile.Caches {
 				MaxConsumerHoldTime:   "0ms",
 			},
 		},
-		UnreferencedMessages: &profile.CacheOpts{
+		UnreferencedBlocks: &profile.CacheOpts{
 			CacheTime:                  "500ms",
 			ReleaseExecutorWorkerCount: 1,
 			LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -281,7 +281,7 @@ func (s *Storage) profileCacheEnabled() *profile.Caches {
 				MaxConsumerHoldTime:   "0ms",
 			},
 		},
-		IncomingMessagesFilter: &profile.CacheOpts{
+		IncomingBlocksFilter: &profile.CacheOpts{
 			CacheTime:                  "500ms",
 			ReleaseExecutorWorkerCount: 1,
 			LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -323,7 +323,7 @@ func (s *Storage) profileLeakDetectionEnabled() *profile.Caches {
 				MaxConsumerHoldTime:   "1s",
 			},
 		},
-		Messages: &profile.CacheOpts{
+		Blocks: &profile.CacheOpts{
 			CacheTime:                  "0ms",
 			ReleaseExecutorWorkerCount: 1,
 			LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -332,7 +332,7 @@ func (s *Storage) profileLeakDetectionEnabled() *profile.Caches {
 				MaxConsumerHoldTime:   "1s",
 			},
 		},
-		UnreferencedMessages: &profile.CacheOpts{
+		UnreferencedBlocks: &profile.CacheOpts{
 			CacheTime:                  "0ms",
 			ReleaseExecutorWorkerCount: 1,
 			LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -341,7 +341,7 @@ func (s *Storage) profileLeakDetectionEnabled() *profile.Caches {
 				MaxConsumerHoldTime:   "1s",
 			},
 		},
-		IncomingMessagesFilter: &profile.CacheOpts{
+		IncomingBlocksFilter: &profile.CacheOpts{
 			CacheTime:                  "0ms",
 			ReleaseExecutorWorkerCount: 1,
 			LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -360,7 +360,7 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 		cachesOpts = cachesProfile[0]
 	}
 
-	if err := s.configureMessageStorage(tangleStore, cachesOpts.Messages); err != nil {
+	if err := s.configureBlockStorage(tangleStore, cachesOpts.Blocks); err != nil {
 		return err
 	}
 
@@ -372,7 +372,7 @@ func (s *Storage) configureStorages(tangleStore kvstore.KVStore, cachesProfile .
 		return err
 	}
 
-	if err := s.configureUnreferencedMessageStorage(tangleStore, cachesOpts.UnreferencedMessages); err != nil {
+	if err := s.configureUnreferencedBlocksStorage(tangleStore, cachesOpts.UnreferencedBlocks); err != nil {
 		return err
 	}
 
@@ -404,15 +404,15 @@ func (s *Storage) FlushAndCloseStores() error {
 // FlushStorages flushes all storages.
 func (s *Storage) FlushStorages() {
 	s.FlushMilestoneStorage()
-	s.FlushMessagesStorage()
+	s.FlushBlocksStorage()
 	s.FlushChildrenStorage()
-	s.FlushUnreferencedMessagesStorage()
+	s.FlushUnreferencedBlocksStorage()
 }
 
 // ShutdownStorages shuts down all storages.
 func (s *Storage) ShutdownStorages() {
 	s.ShutdownMilestoneStorage()
-	s.ShutdownMessagesStorage()
+	s.ShutdownBlocksStorage()
 	s.ShutdownChildrenStorage()
-	s.ShutdownUnreferencedMessagesStorage()
+	s.ShutdownUnreferencedBlocksStorage()
 }

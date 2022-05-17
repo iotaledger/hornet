@@ -122,7 +122,7 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 
 	requestedIndex := milestone.Index(req.GetMilestoneIndex())
 	requestedTimestamp := req.GetMilestoneTimestamp()
-	requestedParents := MessageIDsFromINXMessageIDs(req.GetParents())
+	requestedParents := BlockIDsFromINXBlockIDs(req.GetParents())
 	requestedPreviousMilestoneID := req.GetPreviousMilestoneId().Unwrap()
 
 	mutations, err := deps.Tangle.CheckSolidityAndComputeWhiteFlagMutations(ctx, requestedIndex, requestedTimestamp, requestedParents, requestedPreviousMilestoneID)
@@ -142,7 +142,7 @@ func (s *INXServer) ComputeWhiteFlag(ctx context.Context, req *inx.WhiteFlagRequ
 	}
 
 	return &inx.WhiteFlagResponse{
-		MilestoneConfirmedMerkleRoot: mutations.ConfirmedMerkleRoot[:],
+		MilestoneInclusionMerkleRoot: mutations.InclusionMerkleRoot[:],
 		MilestoneAppliedMerkleRoot:   mutations.AppliedMerkleRoot[:],
 	}, nil
 }

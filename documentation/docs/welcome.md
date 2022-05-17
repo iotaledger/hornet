@@ -32,7 +32,7 @@ previous versions of Hornet, such as 0.5.x and below.
 By running your own node you have the following benefits:
 
 - You have direct access to an IOTA network, instead of having to connect to and trust someone else's node.
-- You help the IOTA network to become more distributed and resilient by validating messages and value transactions in
+- You help the IOTA network to become more distributed and resilient by validating blocks and value transactions in
   the IOTA network.
 
 ## Roadmap

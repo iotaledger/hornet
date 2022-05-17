@@ -19,10 +19,10 @@ type ParametersRestAPI struct {
 	} `name:"jwtAuth"`
 
 	PoW struct {
-		// whether the node does PoW if messages are received via API
-		Enabled bool `default:"false" usage:"whether the node does PoW if messages are received via API"`
-		// the amount of workers used for calculating PoW when issuing messages via API
-		WorkerCount int `default:"1" usage:"the amount of workers used for calculating PoW when issuing messages via API"`
+		// whether the node does PoW if blocks are received via API
+		Enabled bool `default:"false" usage:"whether the node does PoW if blocks are received via API"`
+		// the amount of workers used for calculating PoW when issuing blocks via API
+		WorkerCount int `default:"1" usage:"the amount of workers used for calculating PoW when issuing blocks via API"`
 	} `name:"pow"`
 
 	Limits struct {
@@ -38,7 +38,7 @@ var ParamsRestAPI = &ParametersRestAPI{
 		"/health",
 		"/api/v2/info",
 		"/api/v2/tips",
-		"/api/v2/messages*",
+		"/api/v2/blocks*",
 		"/api/v2/transactions*",
 		"/api/v2/milestones*",
 		"/api/v2/outputs*",
@@ -48,9 +48,9 @@ var ParamsRestAPI = &ParametersRestAPI{
 		"/api/plugins/debug/v1/*",
 		"/api/plugins/indexer/v1/*",
 		"/api/plugins/mqtt/v1",
-		"/api/plugins/participation/v1/events*",
-		"/api/plugins/participation/v1/outputs*",
-		"/api/plugins/participation/v1/addresses*",
+		"/api/plugins/participation/v2/events*",
+		"/api/plugins/participation/v2/outputs*",
+		"/api/plugins/participation/v2/addresses*",
 	},
 	ProtectedRoutes: []string{
 		"/api/v2/*",

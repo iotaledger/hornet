@@ -10,7 +10,7 @@ const (
 	maxDashboardAuthUsernameSize = 25
 )
 
-// ParamsDashboard contains the definition of the parameters used by WarpSync.
+// ParametersNode contains the definition of the parameters used by WarpSync.
 type ParametersNode struct {
 	// CfgAppAlias set an alias to identify a node
 	Alias string `default:"HORNET node" usage:"set an alias to identify a node"`

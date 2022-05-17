@@ -19,15 +19,15 @@ import (
 )
 
 func RandUTXOOutput(outputType iotago.OutputType) *Output {
-	return CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(outputType))
+	return CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(outputType))
 }
 
 func RandUTXOOutputOnAddress(outputType iotago.OutputType, address iotago.Address) *Output {
-	return CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddress(outputType, address))
+	return CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddress(outputType, address))
 }
 
 func RandUTXOOutputOnAddressWithAmount(outputType iotago.OutputType, address iotago.Address, amount uint64) *Output {
-	return CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddressWithAmount(outputType, address, amount))
+	return CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutputOnAddressWithAmount(outputType, address, amount))
 }
 
 func RandUTXOSpent(output *Output, index milestone.Index, timestamp uint32) *Spent {
@@ -92,15 +92,15 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	require.True(t, has)
 }
 
-func CreateOutputAndAssertSerialization(t *testing.T, messageID hornet.MessageID, msIndex milestone.Index, msTimestamp uint32, outputID *iotago.OutputID, iotaOutput iotago.Output) *Output {
-	output := CreateOutput(outputID, messageID, msIndex, msTimestamp, iotaOutput)
+func CreateOutputAndAssertSerialization(t *testing.T, blockID hornet.BlockID, msIndex milestone.Index, msTimestamp uint32, outputID *iotago.OutputID, iotaOutput iotago.Output) *Output {
+	output := CreateOutput(outputID, blockID, msIndex, msTimestamp, iotaOutput)
 	outputBytes, err := output.Output().Serialize(serializer.DeSeriModeNoValidation, nil)
 	require.NoError(t, err)
 
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:]), output.kvStorableKey())
 
 	value := output.kvStorableValue()
-	require.Equal(t, messageID, hornet.MessageIDFromSlice(value[:32]))
+	require.Equal(t, blockID, hornet.BlockIDFromSlice(value[:32]))
 	require.Equal(t, uint32(msIndex), binary.LittleEndian.Uint32(value[32:36]))
 	require.Equal(t, msTimestamp, binary.LittleEndian.Uint32(value[36:40]))
 	require.Equal(t, outputBytes, value[40:])
@@ -132,7 +132,7 @@ func CreateSpentAndAssertSerialization(t *testing.T, output *Output) *Spent {
 func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	messageID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	senderAddress := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	tag := utils.RandBytes(23)
@@ -142,11 +142,11 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 
 	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
-		Blocks: iotago.FeatureBlocks{
-			&iotago.SenderFeatureBlock{
+		Features: iotago.Features{
+			&iotago.SenderFeature{
 				Address: senderAddress,
 			},
-			&iotago.TagFeatureBlock{
+			&iotago.TagFeature{
 				Tag: tag,
 			},
 		},
@@ -157,7 +157,7 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 		},
 	}
 
-	output := CreateOutputAndAssertSerialization(t, messageID, msIndex, msTimestamp, outputID, iotaOutput)
+	output := CreateOutputAndAssertSerialization(t, blockID, msIndex, msTimestamp, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
 	require.ElementsMatch(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputUnspent}, outputID[:]), output.unspentLookupKey())
@@ -167,7 +167,7 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	messageID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	senderAddress := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	amount := rand.Uint64()
@@ -176,8 +176,8 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 
 	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
-		Blocks: iotago.FeatureBlocks{
-			&iotago.SenderFeatureBlock{
+		Features: iotago.Features{
+			&iotago.SenderFeature{
 				Address: senderAddress,
 			},
 		},
@@ -191,7 +191,7 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 		},
 	}
 
-	output := CreateOutputAndAssertSerialization(t, messageID, msIndex, msTimestamp, outputID, iotaOutput)
+	output := CreateOutputAndAssertSerialization(t, blockID, msIndex, msTimestamp, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
 	require.ElementsMatch(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputUnspent}, outputID[:]), output.unspentLookupKey())
@@ -201,7 +201,7 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 func TestNFTOutputSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	messageID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	nftID := utils.RandNFTID()
 	amount := rand.Uint64()
@@ -211,8 +211,8 @@ func TestNFTOutputSerialization(t *testing.T) {
 	iotaOutput := &iotago.NFTOutput{
 		Amount: amount,
 		NFTID:  nftID,
-		ImmutableBlocks: iotago.FeatureBlocks{
-			&iotago.MetadataFeatureBlock{
+		ImmutableFeatures: iotago.Features{
+			&iotago.MetadataFeature{
 				Data: utils.RandBytes(12),
 			},
 		},
@@ -223,7 +223,7 @@ func TestNFTOutputSerialization(t *testing.T) {
 		},
 	}
 
-	output := CreateOutputAndAssertSerialization(t, messageID, msIndex, msTimestamp, outputID, iotaOutput)
+	output := CreateOutputAndAssertSerialization(t, blockID, msIndex, msTimestamp, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
 	require.ElementsMatch(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputUnspent}, outputID[:]), output.unspentLookupKey())
@@ -233,7 +233,7 @@ func TestNFTOutputSerialization(t *testing.T) {
 func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	messageID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	address := utils.RandNFTID()
 	issuerAddress := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
 	nftID := utils.RandNFTID()
@@ -244,11 +244,11 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 	iotaOutput := &iotago.NFTOutput{
 		Amount: amount,
 		NFTID:  nftID,
-		ImmutableBlocks: iotago.FeatureBlocks{
-			&iotago.MetadataFeatureBlock{
+		ImmutableFeatures: iotago.Features{
+			&iotago.MetadataFeature{
 				Data: utils.RandBytes(12),
 			},
-			&iotago.IssuerFeatureBlock{
+			&iotago.IssuerFeature{
 				Address: issuerAddress,
 			},
 		},
@@ -263,7 +263,7 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 		},
 	}
 
-	output := CreateOutputAndAssertSerialization(t, messageID, msIndex, msTimestamp, outputID, iotaOutput)
+	output := CreateOutputAndAssertSerialization(t, blockID, msIndex, msTimestamp, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
 	require.ElementsMatch(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputUnspent}, outputID[:]), output.unspentLookupKey())
@@ -273,7 +273,7 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 func TestAliasOutputSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	messageID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	aliasID := utils.RandAliasID()
 	stateController := utils.RandAliasID()
 	governor := utils.RandAddress(iotago.AddressEd25519).(*iotago.Ed25519Address)
@@ -286,13 +286,13 @@ func TestAliasOutputSerialization(t *testing.T) {
 	iotaOutput := &iotago.AliasOutput{
 		Amount:  amount,
 		AliasID: aliasID,
-		Blocks: iotago.FeatureBlocks{
-			&iotago.SenderFeatureBlock{
+		Features: iotago.Features{
+			&iotago.SenderFeature{
 				Address: sender.ToAddress(),
 			},
 		},
-		ImmutableBlocks: iotago.FeatureBlocks{
-			&iotago.IssuerFeatureBlock{
+		ImmutableFeatures: iotago.Features{
+			&iotago.IssuerFeature{
 				Address: issuer.ToAddress(),
 			},
 		},
@@ -306,7 +306,7 @@ func TestAliasOutputSerialization(t *testing.T) {
 		},
 	}
 
-	output := CreateOutputAndAssertSerialization(t, messageID, msIndex, msTimestamp, outputID, iotaOutput)
+	output := CreateOutputAndAssertSerialization(t, blockID, msIndex, msTimestamp, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
 	require.ElementsMatch(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputUnspent}, outputID[:]), output.unspentLookupKey())
@@ -316,7 +316,7 @@ func TestAliasOutputSerialization(t *testing.T) {
 func TestFoundryOutputSerialization(t *testing.T) {
 
 	outputID := utils.RandOutputID()
-	messageID := utils.RandMessageID()
+	blockID := utils.RandBlockID()
 	aliasID := utils.RandAliasID()
 	amount := rand.Uint64()
 	msIndex := utils.RandMilestoneIndex()
@@ -338,7 +338,7 @@ func TestFoundryOutputSerialization(t *testing.T) {
 		},
 	}
 
-	output := CreateOutputAndAssertSerialization(t, messageID, msIndex, msTimestamp, outputID, iotaOutput)
+	output := CreateOutputAndAssertSerialization(t, blockID, msIndex, msTimestamp, outputID, iotaOutput)
 	spent := CreateSpentAndAssertSerialization(t, output)
 
 	require.ElementsMatch(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutputUnspent}, outputID[:]), output.unspentLookupKey())

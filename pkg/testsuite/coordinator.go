@@ -37,30 +37,30 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 
 	te.coo.bootstrap()
 
-	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
-	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
+	blocksMemcache := storage.NewBlocksMemcache(te.storage.CachedBlock)
+	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
 	defer func() {
 		// all releases are forced since the cone is referenced and not needed anymore
 		memcachedParentsTraverserStorage.Cleanup(true)
 
-		// release all messages at the end
-		messagesMemcache.Cleanup(true)
+		// release all blocks at the end
+		blocksMemcache.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
-		messagesMemcache.CachedMessage,
+		blocksMemcache.CachedBlock,
 		te.protoParas,
 		te.LastMilestonePayload(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
-		whiteflag.DefaultCheckMessageReferencedFunc,
-		whiteflag.DefaultSetMessageReferencedFunc,
+		whiteflag.DefaultCheckBlockReferencedFunc,
+		whiteflag.DefaultSetBlockReferencedFunc,
 		te.serverMetrics,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
@@ -72,7 +72,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		nil,
 	)
 	require.NoError(te.TestInterface, err)
-	require.Equal(te.TestInterface, 0, confirmedMilestoneStats.MessagesReferenced)
+	require.Equal(te.TestInterface, 0, confirmedMilestoneStats.BlocksReferenced)
 }
 
 func (te *TestEnvironment) milestoneIDForIndex(msIndex milestone.Index) iotago.MilestoneID {
@@ -89,61 +89,61 @@ func (te *TestEnvironment) milestoneForIndex(msIndex milestone.Index) *storage.M
 	return ms.Milestone()
 }
 
-func (te *TestEnvironment) ReattachMessage(messageID hornet.MessageID, parents ...hornet.MessageID) hornet.MessageID {
-	message := te.storage.CachedMessageOrNil(messageID)
-	require.NotNil(te.TestInterface, message)
-	defer message.Release(true)
+func (te *TestEnvironment) ReattachBlock(blockID hornet.BlockID, parents ...hornet.BlockID) hornet.BlockID {
+	block := te.storage.CachedBlockOrNil(blockID)
+	require.NotNil(te.TestInterface, block)
+	defer block.Release(true)
 
-	iotagoMessage := message.Message().Message()
+	iotaBlock := block.Block().Block()
 
-	newParents := iotagoMessage.Parents
+	newParents := iotaBlock.Parents
 	if len(parents) > 0 {
-		newParents = hornet.MessageIDs(parents).RemoveDupsAndSortByLexicalOrder().ToSliceOfArrays()
+		newParents = hornet.BlockIDs(parents).RemoveDupsAndSortByLexicalOrder().ToSliceOfArrays()
 	}
 
-	newMessage := &iotago.Message{
-		ProtocolVersion: iotagoMessage.ProtocolVersion,
+	newBlock := &iotago.Block{
+		ProtocolVersion: iotaBlock.ProtocolVersion,
 		Parents:         newParents,
-		Payload:         iotagoMessage.Payload,
-		Nonce:           iotagoMessage.Nonce,
+		Payload:         iotaBlock.Payload,
+		Nonce:           iotaBlock.Nonce,
 	}
 
-	_, err := te.PoWHandler.DoPoW(context.Background(), newMessage, 1)
+	_, err := te.PoWHandler.DoPoW(context.Background(), newBlock, 1)
 	require.NoError(te.TestInterface, err)
 
 	// We brute-force a new nonce until it is different than the original one (this is important when reattaching valid milestones)
 	powMinScore := te.protoParas.MinPoWScore
-	for newMessage.Nonce == iotagoMessage.Nonce {
+	for newBlock.Nonce == iotaBlock.Nonce {
 		powMinScore += 10.0
 		// Use a higher PowScore on every iteration to force a different nonce
 		handler := pow.New(powMinScore, 5*time.Minute)
-		_, err := handler.DoPoW(context.Background(), newMessage, 1)
+		_, err := handler.DoPoW(context.Background(), newBlock, 1)
 		require.NoError(te.TestInterface, err)
 	}
 
-	storedMessage, err := storage.NewMessage(newMessage, serializer.DeSeriModePerformValidation, te.protoParas)
+	storedBlock, err := storage.NewBlock(newBlock, serializer.DeSeriModePerformValidation, te.protoParas)
 	require.NoError(te.TestInterface, err)
 
-	cachedMessage := te.StoreMessage(storedMessage)
-	require.NotNil(te.TestInterface, cachedMessage)
+	cachedBlock := te.StoreBlock(storedBlock)
+	require.NotNil(te.TestInterface, cachedBlock)
 
-	return storedMessage.MessageID()
+	return storedBlock.BlockID()
 }
 
 func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago.Milestone) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats, error) {
 
-	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
-	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
+	blocksMemcache := storage.NewBlocksMemcache(te.storage.CachedBlock)
+	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
 	defer func() {
 		// all releases are forced since the cone is referenced and not needed anymore
 		memcachedParentsTraverserStorage.Cleanup(true)
 
-		// release all messages at the end
-		messagesMemcache.Cleanup(true)
+		// release all blocks at the end
+		blocksMemcache.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
@@ -151,12 +151,12 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		te.UTXOManager(),
 		memcachedParentsTraverserStorage,
-		messagesMemcache.CachedMessage,
+		blocksMemcache.CachedBlock,
 		te.protoParas,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
-		whiteflag.DefaultCheckMessageReferencedFunc,
-		whiteflag.DefaultSetMessageReferencedFunc,
+		whiteflag.DefaultCheckBlockReferencedFunc,
+		whiteflag.DefaultSetBlockReferencedFunc,
 		te.serverMetrics,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
@@ -206,12 +206,12 @@ func (te *TestEnvironment) ConfirmMilestone(ms *storage.Milestone, createConfirm
 }
 
 // IssueMilestoneOnTips creates a milestone on top of the given tips.
-func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) (*storage.Milestone, hornet.MessageID, error) {
+func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.BlockIDs, addLastMilestoneAsParent bool) (*storage.Milestone, hornet.BlockID, error) {
 	return te.coo.issueMilestoneOnTips(tips, addLastMilestoneAsParent)
 }
 
 // IssueAndConfirmMilestoneOnTips creates a milestone on top of the given tips and confirms it.
-func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
+func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.BlockIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
 
 	currentIndex := te.syncManager.ConfirmedMilestoneIndex()
 	te.VerifyLMI(currentIndex)

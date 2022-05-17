@@ -76,29 +76,29 @@ func TestValue(t *testing.T) {
 		Build(protoParas, iotago.NewInMemoryAddressSigner(genesisAddrKey))
 	require.NoError(t, err)
 
-	// build message
-	msg, err := builder.NewMessageBuilder(protoParas.Version).Payload(tx).Build()
+	// build block
+	block, err := builder.NewBlockBuilder(protoParas.Version).Payload(tx).Build()
 	require.NoError(t, err)
 
 	// broadcast to a node
 	log.Println("submitting transaction...")
-	submittedMsg, err := n.Nodes[2].DebugNodeAPIClient.SubmitMessage(context.Background(), msg, protoParas)
+	submittedBlock, err := n.Nodes[2].DebugNodeAPIClient.SubmitBlock(context.Background(), block, protoParas)
 	require.NoError(t, err)
 
-	// eventually the message should be confirmed
-	submittedMsgID, err := submittedMsg.ID()
+	// eventually the block should be confirmed
+	submittedBlockID, err := submittedBlock.ID()
 	require.NoError(t, err)
 
 	log.Println("checking that the transaction gets confirmed...")
 	require.Eventually(t, func() bool {
-		msgMeta, err := n.Coordinator().DebugNodeAPIClient.MessageMetadataByMessageID(context.Background(), *submittedMsgID)
+		blockMeta, err := n.Coordinator().DebugNodeAPIClient.BlockMetadataByBlockID(context.Background(), *submittedBlockID)
 		if err != nil {
 			return false
 		}
-		if msgMeta.LedgerInclusionState == nil {
+		if blockMeta.LedgerInclusionState == nil {
 			return false
 		}
-		return *msgMeta.LedgerInclusionState == "included"
+		return *blockMeta.LedgerInclusionState == "included"
 	}, 30*time.Second, 100*time.Millisecond)
 
 	// check that indeed the balances are available

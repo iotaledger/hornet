@@ -39,7 +39,7 @@ var (
 	deps   dependencies
 
 	// closures
-	onMessageSolid                   *events.Closure
+	onBlockSolid                     *events.Closure
 	onConfirmedMilestoneIndexChanged *events.Closure
 )
 
@@ -116,8 +116,8 @@ func run() error {
 }
 
 func configureEvents() {
-	onMessageSolid = events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
+	onBlockSolid = events.NewClosure(func(cachedBlockMeta *storage.CachedMetadata) {
+		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
 			// do not add tips during syncing, because it is not needed at all
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
@@ -143,11 +143,11 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
+	deps.Tangle.Events.BlockSolid.Attach(onBlockSolid)
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 }
 
 func detachEvents() {
-	deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
+	deps.Tangle.Events.BlockSolid.Detach(onBlockSolid)
 	deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 }

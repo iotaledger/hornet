@@ -8,16 +8,16 @@ import (
 func ouputOwnerAddress(output *utxo.Output) iotago.Address {
 	switch o := output.Output().(type) {
 	case *iotago.AliasOutput:
-		return o.UnlockConditions().MustSet().GovernorAddress().Address
+		return o.UnlockConditionsSet().GovernorAddress().Address
 	case *iotago.FoundryOutput:
-		return o.UnlockConditions().MustSet().ImmutableAlias().Address
+		return o.UnlockConditionsSet().ImmutableAlias().Address
 	default:
-		return o.UnlockConditions().MustSet().Address().Address
+		return o.UnlockConditionsSet().Address().Address
 	}
 }
 
 func outputHasSpendingConstraint(output *utxo.Output) bool {
-	conditions := output.Output().UnlockConditions().MustSet()
+	conditions := output.Output().UnlockConditionsSet()
 	return conditions.HasStorageDepositReturnCondition() || conditions.HasExpirationCondition() || conditions.HasTimelockCondition()
 }
 

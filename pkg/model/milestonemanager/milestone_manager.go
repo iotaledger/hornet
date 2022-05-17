@@ -43,7 +43,7 @@ func New(
 		milestonePublicKeyCount: milestonePublicKeyCount,
 
 		Events: &packageEvents{
-			ReceivedValidMilestone: events.NewEvent(storage.MilestoneWithMessageIdAndRequestedCaller),
+			ReceivedValidMilestone: events.NewEvent(storage.MilestoneWithBlockIDAndRequestedCaller),
 		},
 	}
 	return t
@@ -80,19 +80,19 @@ func (m *MilestoneManager) FindClosestNextMilestoneIndex(index milestone.Index) 
 	}
 }
 
-// VerifyMilestoneMessage checks if the message contains a valid milestone payload.
+// VerifyMilestoneBlock checks if the block contains a valid milestone payload.
 // Returns a milestone payload if the signature is valid.
-func (m *MilestoneManager) VerifyMilestoneMessage(message *iotago.Message) *iotago.Milestone {
+func (m *MilestoneManager) VerifyMilestoneBlock(block *iotago.Block) *iotago.Milestone {
 
-	milestonePayload, ok := message.Payload.(*iotago.Milestone)
+	milestonePayload, ok := block.Payload.(*iotago.Milestone)
 	if !ok {
 		// not a milestone payload
 		return nil
 	}
 
-	for idx, parent := range message.Parents {
+	for idx, parent := range block.Parents {
 		if parent != milestonePayload.Parents[idx] {
-			// parents in message and payload have to be equal
+			// parents in block and payload have to be equal
 			return nil
 		}
 	}
@@ -105,7 +105,7 @@ func (m *MilestoneManager) VerifyMilestoneMessage(message *iotago.Message) *iota
 }
 
 // VerifyMilestonePayload checks if milestone payload is valid.
-// Attention: It does not check if the milestone payload parents match the message parents.
+// Attention: It does not check if the milestone payload parents match the block parents.
 // Returns a milestone payload if the signature is valid.
 func (m *MilestoneManager) VerifyMilestonePayload(payload iotago.Payload) *iotago.Milestone {
 
@@ -123,13 +123,13 @@ func (m *MilestoneManager) VerifyMilestonePayload(payload iotago.Payload) *iotag
 }
 
 // StoreMilestone stores the milestone in the storage layer and triggers the ReceivedValidMilestone event.
-func (m *MilestoneManager) StoreMilestone(cachedMsg *storage.CachedMessage, milestonePayload *iotago.Milestone, requested bool) {
-	defer cachedMsg.Release(true) // message -1
+func (m *MilestoneManager) StoreMilestone(cachedBlock *storage.CachedBlock, milestonePayload *iotago.Milestone, requested bool) {
+	defer cachedBlock.Release(true) // block -1
 
-	// Mark every valid milestone message as milestone in the database (needed for whiteflag to find last milestone)
-	cachedMsg.Metadata().SetMilestone(true)
+	// Mark every valid milestone block as milestone in the database (needed for whiteflag to find last milestone)
+	cachedBlock.Metadata().SetMilestone(true)
 
-	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestonePayload, cachedMsg.Message().MessageID()) // milestone +1
+	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestonePayload, cachedBlock.Block().BlockID()) // milestone +1
 
 	// Force release to store milestones without caching
 	defer cachedMilestone.Release(true) // milestone -1
@@ -138,5 +138,5 @@ func (m *MilestoneManager) StoreMilestone(cachedMsg *storage.CachedMessage, mile
 		return
 	}
 
-	m.Events.ReceivedValidMilestone.Trigger(cachedMsg.Metadata().MessageID(), cachedMilestone, requested) // milestone pass +1
+	m.Events.ReceivedValidMilestone.Trigger(cachedBlock.Metadata().BlockID(), cachedMilestone, requested) // milestone pass +1
 }

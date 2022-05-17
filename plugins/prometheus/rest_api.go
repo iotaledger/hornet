@@ -12,7 +12,7 @@ var (
 	restapiHTTPErrorCount prometheus.Gauge
 
 	restapiPoWCompletedCount prometheus.Gauge
-	restapiPoWMessageSizes   prometheus.Histogram
+	restapiPoWBlockSizes     prometheus.Histogram
 	restapiPoWDurations      prometheus.Histogram
 )
 
@@ -35,13 +35,13 @@ func configureRestAPI() {
 		},
 	)
 
-	restapiPoWMessageSizes = prometheus.NewHistogram(
+	restapiPoWBlockSizes = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Namespace: "iota",
 			Subsystem: "restapi",
-			Name:      "pow_message_sizes",
-			Help:      "The message size of REST API PoW requests.",
-			Buckets:   powMessageSizeBuckets,
+			Name:      "pow_block_sizes",
+			Help:      "The block size of REST API PoW requests.",
+			Buckets:   powBlockSizeBuckets,
 		})
 
 	restapiPoWDurations = prometheus.NewHistogram(
@@ -56,11 +56,11 @@ func configureRestAPI() {
 	registry.MustRegister(restapiHTTPErrorCount)
 
 	registry.MustRegister(restapiPoWCompletedCount)
-	registry.MustRegister(restapiPoWMessageSizes)
+	registry.MustRegister(restapiPoWBlockSizes)
 	registry.MustRegister(restapiPoWDurations)
 
-	deps.RestAPIMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(messageSize int, duration time.Duration) {
-		restapiPoWMessageSizes.Observe(float64(messageSize))
+	deps.RestAPIMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(blockSize int, duration time.Duration) {
+		restapiPoWBlockSizes.Observe(float64(blockSize))
 		restapiPoWDurations.Observe(duration.Seconds())
 	}))
 

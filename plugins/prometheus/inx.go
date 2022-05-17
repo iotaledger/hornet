@@ -10,7 +10,7 @@ import (
 
 var (
 	inxPoWCompletedCount prometheus.Gauge
-	inxPoWMessageSizes   prometheus.Histogram
+	inxPoWBlockSizes     prometheus.Histogram
 	inxPoWDurations      prometheus.Histogram
 )
 
@@ -25,13 +25,13 @@ func configureINX() {
 		},
 	)
 
-	inxPoWMessageSizes = prometheus.NewHistogram(
+	inxPoWBlockSizes = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Namespace: "iota",
 			Subsystem: "inx",
-			Name:      "pow_message_sizes",
-			Help:      "The message size of INX PoW requests.",
-			Buckets:   powMessageSizeBuckets,
+			Name:      "pow_block_sizes",
+			Help:      "The block size of INX PoW requests.",
+			Buckets:   powBlockSizeBuckets,
 		})
 
 	inxPoWDurations = prometheus.NewHistogram(
@@ -44,11 +44,11 @@ func configureINX() {
 		})
 
 	registry.MustRegister(inxPoWCompletedCount)
-	registry.MustRegister(inxPoWMessageSizes)
+	registry.MustRegister(inxPoWBlockSizes)
 	registry.MustRegister(inxPoWDurations)
 
-	deps.INXMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(messageSize int, duration time.Duration) {
-		inxPoWMessageSizes.Observe(float64(messageSize))
+	deps.INXMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(blockSize int, duration time.Duration) {
+		inxPoWBlockSizes.Observe(float64(blockSize))
 		inxPoWDurations.Observe(duration.Seconds())
 	}))
 

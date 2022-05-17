@@ -104,7 +104,7 @@ func provide(c *dig.Container) error {
 			deps.ServerMetrics,
 			deps.ProtocolParameters,
 			&gossip.Options{
-				WorkUnitCacheOpts: deps.Profile.Caches.IncomingMessagesFilter,
+				WorkUnitCacheOpts: deps.Profile.Caches.IncomingBlocksFilter,
 			})
 		if err != nil {
 			CoreComponent.LogPanicf("MessageProcessor initialization failed: %s", err)
@@ -390,7 +390,7 @@ func attachEventsGossipService() {
 }
 
 func attachEventsBroadcastQueue() {
-	deps.MessageProcessor.Events.BroadcastMessage.Attach(onMessageProcessorBroadcastMessage)
+	deps.MessageProcessor.Events.BroadcastBlock.Attach(onMessageProcessorBroadcastMessage)
 }
 
 func detachEventsGossipService() {
@@ -399,5 +399,5 @@ func detachEventsGossipService() {
 }
 
 func detachEventsBroadcastQueue() {
-	deps.MessageProcessor.Events.BroadcastMessage.Detach(onMessageProcessorBroadcastMessage)
+	deps.MessageProcessor.Events.BroadcastBlock.Detach(onMessageProcessorBroadcastMessage)
 }

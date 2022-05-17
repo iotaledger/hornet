@@ -15,12 +15,12 @@ const (
 	MsgTypePublicNodeStatus = 1
 	// MsgTypeNodeStatus is the type of the NodeStatus message.
 	MsgTypeNodeStatus = 2
-	// MsgTypeMPSMetric is the type of the messages per second (MPS) metric message.
-	MsgTypeMPSMetric = 3
+	// MsgTypeBPSMetric is the type of the blocks per second (BPS) metric message.
+	MsgTypeBPSMetric = 3
 	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric = 4
-	// MsgTypeMs is the type of the Ms message.
-	MsgTypeMs = 5
+	// MsgTypeMilestone is the type of the Milestone message.
+	MsgTypeMilestone = 5
 	// MsgTypePeerMetric is the type of the PeerMetric message.
 	MsgTypePeerMetric = 6
 	// MsgTypeConfirmedMsMetrics is the type of the ConfirmedMsMetrics message.
@@ -55,8 +55,8 @@ func websocketRoute(ctx echo.Context) error {
 	publicTopics := []byte{
 		MsgTypeSyncStatus,
 		MsgTypePublicNodeStatus,
-		MsgTypeMPSMetric,
-		MsgTypeMs,
+		MsgTypeBPSMetric,
+		MsgTypeMilestone,
 		MsgTypeConfirmedMsMetrics,
 		MsgTypeVertex,
 		MsgTypeSolidInfo,
@@ -100,11 +100,11 @@ func websocketRoute(ctx echo.Context) error {
 		case MsgTypeDatabaseCleanupEvent:
 			client.Send(&Msg{Type: MsgTypeDatabaseCleanupEvent, Data: lastDBCleanup})
 
-		case MsgTypeMs:
+		case MsgTypeMilestone:
 			start := deps.SyncManager.LatestMilestoneIndex()
 			for msIndex := start - 10; msIndex <= start; msIndex++ {
 				if milestoneIDHex, err := getMilestoneIDHex(msIndex); err == nil {
-					client.Send(&Msg{Type: MsgTypeMs, Data: &LivefeedMilestone{MilestoneID: milestoneIDHex, Index: msIndex}})
+					client.Send(&Msg{Type: MsgTypeMilestone, Data: &LivefeedMilestone{MilestoneID: milestoneIDHex, Index: msIndex}})
 				} else {
 					break
 				}

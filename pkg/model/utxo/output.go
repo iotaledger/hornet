@@ -48,7 +48,7 @@ type Output struct {
 	kvStorable
 
 	outputID           *iotago.OutputID
-	messageID          hornet.MessageID
+	blockID            hornet.BlockID
 	milestoneIndex     milestone.Index
 	milestoneTimestamp uint32
 
@@ -63,8 +63,8 @@ func (o *Output) mapKey() string {
 	return string(o.outputID[:])
 }
 
-func (o *Output) MessageID() hornet.MessageID {
-	return o.messageID
+func (o *Output) BlockID() hornet.BlockID {
+	return o.blockID
 }
 
 func (o *Output) MilestoneIndex() milestone.Index {
@@ -97,17 +97,17 @@ func (o Outputs) ToOutputSet() iotago.OutputSet {
 	return outputSet
 }
 
-func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
+func CreateOutput(outputID *iotago.OutputID, blockID hornet.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
 	return &Output{
 		outputID:           outputID,
-		messageID:          messageID,
+		blockID:            blockID,
 		milestoneIndex:     milestoneIndex,
 		milestoneTimestamp: milestoneTimestamp,
 		output:             output,
 	}
 }
 
-func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(blockID hornet.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	txID, err := transaction.ID()
 	if err != nil {
@@ -121,7 +121,7 @@ func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, miles
 	output = transaction.Essence.Outputs[int(index)]
 	outputID := iotago.OutputIDFromTransactionIDAndIndex(*txID, index)
 
-	return CreateOutput(&outputID, messageID, milestoneIndex, milestoneTimestamp, output), nil
+	return CreateOutput(&outputID, blockID, milestoneIndex, milestoneTimestamp, output), nil
 }
 
 //- kvStorable
@@ -139,7 +139,7 @@ func (o *Output) kvStorableKey() (key []byte) {
 
 func (o *Output) kvStorableValue() (value []byte) {
 	ms := marshalutil.New(40)
-	ms.WriteBytes(o.messageID)               // 32 bytes
+	ms.WriteBytes(o.blockID)                 // 32 bytes
 	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
 	ms.WriteUint32(o.milestoneTimestamp)     // 4 bytes
 
@@ -171,8 +171,8 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	// Parse value
 	valueUtil := marshalutil.New(value)
 
-	// Read MessageID
-	if o.messageID, err = ParseMessageID(valueUtil); err != nil {
+	// Read BlockID
+	if o.blockID, err = ParseBlockID(valueUtil); err != nil {
 		return err
 	}
 
@@ -236,8 +236,8 @@ func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID *iotago.Ou
 		return nil, err
 	}
 
-	// messageID + milestoneIndex + milestoneTimestamp
-	offset := iotago.MessageIDLength + serializer.UInt32ByteSize + serializer.UInt32ByteSize
+	// blockID + milestoneIndex + milestoneTimestamp
+	offset := iotago.BlockIDLength + serializer.UInt32ByteSize + serializer.UInt32ByteSize
 	if len(value) <= offset {
 		return nil, errors.New("invalid UTXO output length")
 	}

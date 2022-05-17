@@ -38,7 +38,7 @@ const (
                 1 byte          +     34 bytes
 
    Value:
-       MessageID + MilestoneIndex + MilestoneTimestamp + iotago.Output.Serialized()
+       BlockID + MilestoneIndex + MilestoneTimestamp + iotago.Output.Serialized()
         32 bytes +    4 bytes     +      4 bytes       +   1 byte type + X bytes
 
    Spent Output:

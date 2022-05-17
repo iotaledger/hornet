@@ -21,13 +21,13 @@ var (
 type RequestType int
 
 const (
-	RequestTypeMessageID RequestType = iota
+	RequestTypeBlockID RequestType = iota
 	RequestTypeMilestoneIndex
 )
 
 func getRequestMapKey(data interface{}) string {
 	switch value := data.(type) {
-	case hornet.MessageID:
+	case hornet.BlockID:
 		return value.ToMapKey()
 
 	case milestone.Index:
@@ -100,12 +100,12 @@ func NewRequestQueue(latencyResolution ...int32) RequestQueue {
 	return q
 }
 
-// Request is a request for a particular message.
+// Request is a request for a particular block.
 type Request struct {
 	// The type of the request.
 	RequestType RequestType
-	// The MessageID of the message to request.
-	MessageID hornet.MessageID
+	// The BlockID of the block to request.
+	BlockID hornet.BlockID
 	// The milestone index under which this request is linked.
 	MilestoneIndex milestone.Index
 	// Tells the request queue to not remove this request if the enqueue time is
@@ -116,20 +116,20 @@ type Request struct {
 	EnqueueTime time.Time
 }
 
-// NewMessageIDRequest creates a new message request for a specific messageID.
-func NewMessageIDRequest(messageID hornet.MessageID, msIndex milestone.Index) *Request {
-	return &Request{RequestType: RequestTypeMessageID, MessageID: messageID, MilestoneIndex: msIndex}
+// NewBlockIDRequest creates a new block request for a specific blockID.
+func NewBlockIDRequest(blockID hornet.BlockID, msIndex milestone.Index) *Request {
+	return &Request{RequestType: RequestTypeBlockID, BlockID: blockID, MilestoneIndex: msIndex}
 }
 
-// NewMilestoneIndexRequest creates a new message request for a specific milestone index
+// NewMilestoneIndexRequest creates a new block request for a specific milestone index
 func NewMilestoneIndexRequest(msIndex milestone.Index) *Request {
 	return &Request{RequestType: RequestTypeMilestoneIndex, MilestoneIndex: msIndex}
 }
 
 func (r *Request) MapKey() string {
 	switch r.RequestType {
-	case RequestTypeMessageID:
-		return r.MessageID.ToMapKey()
+	case RequestTypeBlockID:
+		return r.BlockID.ToMapKey()
 	case RequestTypeMilestoneIndex:
 		return r.MilestoneIndex.String()
 	default:

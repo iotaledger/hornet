@@ -15,11 +15,11 @@ import (
 //nolint:unparam // even if the error is never used, the structure of all routes should be the same
 func info() (*infoResponse, error) {
 
-	var messagesPerSecond, referencedMessagesPerSecond, referencedRate float64
+	var blocksPerSecond, referencedBlocksPerSecond, referencedRate float64
 	lastConfirmedMilestoneMetric := deps.Tangle.LastConfirmedMilestoneMetric()
 	if lastConfirmedMilestoneMetric != nil {
-		messagesPerSecond = lastConfirmedMilestoneMetric.MPS
-		referencedMessagesPerSecond = lastConfirmedMilestoneMetric.RMPS
+		blocksPerSecond = lastConfirmedMilestoneMetric.BPS
+		referencedBlocksPerSecond = lastConfirmedMilestoneMetric.RBPS
 		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
 	}
 
@@ -72,9 +72,9 @@ func info() (*infoResponse, error) {
 		Protocol:  deps.ProtocolParameters,
 		BaseToken: deps.BaseToken,
 		Metrics: nodeMetrics{
-			MessagesPerSecond:           messagesPerSecond,
-			ReferencedMessagesPerSecond: referencedMessagesPerSecond,
-			ReferencedRate:              referencedRate,
+			BlocksPerSecond:           blocksPerSecond,
+			ReferencedBlocksPerSecond: referencedBlocksPerSecond,
+			ReferencedRate:            referencedRate,
 		},
 		Features: features,
 		Plugins:  deps.RestPluginManager.Plugins(),
@@ -90,7 +90,7 @@ func tips(c echo.Context) (*tipsResponse, error) {
 		}
 	}
 
-	var tips hornet.MessageIDs
+	var tips hornet.BlockIDs
 	var err error
 
 	if !spammerTips {

@@ -103,7 +103,7 @@ func databaseMerge(args []string) error {
 		var err error
 
 		// we don't need to check the health of the source db.
-		// it is fine as long as all messages in the cone are found.
+		// it is fine as long as all blocks in the cone are found.
 		tangleStoreSource, err = getTangleStorage(*databasePathSourceFlag, "source", *databaseEngineSourceFlag, true, false, false, true)
 		if err != nil {
 			return err
@@ -184,24 +184,24 @@ func databaseMerge(args []string) error {
 	return nil
 }
 
-// copyMilestoneCone copies all messages of a milestone cone to the target storage.
+// copyMilestoneCone copies all blocks of a milestone cone to the target storage.
 func copyMilestoneCone(
 	ctx context.Context,
 	protoParas *iotago.ProtocolParameters,
 	msIndex milestone.Index,
 	milestonePayload *iotago.Milestone,
 	parentsTraverserInterface dag.ParentsTraverserInterface,
-	cachedMessageFuncSource storage.CachedMessageFunc,
-	storeMessageTarget StoreMessageInterface,
+	cachedBlockFuncSource storage.CachedBlockFunc,
+	storeBlockTarget StoreBlockInterface,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
-	// traversal stops if no more messages pass the given condition
+	// traversal stops if no more blocks pass the given condition
 	// Caution: condition func is not in DFS order
-	condition := func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-		defer cachedMsgMeta.Release(true) // meta -1
+	condition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+		defer cachedBlockMeta.Release(true) // meta -1
 
-		// collect all msgs that were referenced by that milestone
-		referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+		// collect all blocks that were referenced by that milestone
+		referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 
 		if referenced {
 			if at > msIndex {
@@ -209,50 +209,50 @@ func copyMilestoneCone(
 			}
 
 			if at < msIndex {
-				// do not traverse messages that were referenced by an older milestonee
+				// do not traverse blocks that were referenced by an older milestonee
 				return false, nil
 			}
 		}
 
-		cachedMsg, err := cachedMessageFuncSource(cachedMsgMeta.Metadata().MessageID()) // message +1
+		cachedBlock, err := cachedBlockFuncSource(cachedBlockMeta.Metadata().BlockID()) // block +1
 		if err != nil {
 			return false, err
 		}
-		if cachedMsg == nil {
-			return false, fmt.Errorf("message not found: %s", cachedMsgMeta.Metadata().MessageID().ToHex())
+		if cachedBlock == nil {
+			return false, fmt.Errorf("block not found: %s", cachedBlockMeta.Metadata().BlockID().ToHex())
 		}
-		defer cachedMsg.Release(true) // message -1
+		defer cachedBlock.Release(true) // block -1
 
-		// store the message in the target storage
-		cachedMsgNew, err := storeMessage(protoParas, storeMessageTarget, milestoneManager, cachedMsg.Message().Message()) // message +1
+		// store the block in the target storage
+		cachedBlockNew, err := storeBlock(protoParas, storeBlockTarget, milestoneManager, cachedBlock.Block().Block()) // block +1
 		if err != nil {
 			return false, err
 		}
-		defer cachedMsgNew.Release(true) // message -1
+		defer cachedBlockNew.Release(true) // block -1
 
-		cachedMsgMetaNew := cachedMsgNew.CachedMetadata() // meta +1
-		defer cachedMsgMetaNew.Release(true)              // meta -1
+		cachedBlockMetaNew := cachedBlockNew.CachedMetadata() // meta +1
+		defer cachedBlockMetaNew.Release(true)                // meta -1
 
-		// we need to mark all messages that contain a milestone payload,
+		// we need to mark all blocks that contain a milestone payload,
 		// but we can not trust the metadata of the parentsTraverserInterface for correct info about milestones
 		// because it could be a proxystorage, which doesn't know the correct milestones yet.
-		if cachedMsgNew.Message().IsMilestone() {
-			milestonePayload := milestoneManager.VerifyMilestonePayload(cachedMsgNew.Message().Milestone())
+		if cachedBlockNew.Block().IsMilestone() {
+			milestonePayload := milestoneManager.VerifyMilestonePayload(cachedBlockNew.Block().Milestone())
 			if milestonePayload != nil {
-				cachedMsgMetaNew.Metadata().SetMilestone(true)
+				cachedBlockMetaNew.Metadata().SetMilestone(true)
 			}
 		}
 
-		// set the new message as solid
-		cachedMsgMetaNew.Metadata().SetSolid(true)
+		// set the new block as solid
+		cachedBlockMetaNew.Metadata().SetSolid(true)
 
 		return true, nil
 	}
 
-	// traverse the milestone and collect all messages that were referenced by this milestone or newer
+	// traverse the milestone and collect all blocks that were referenced by this milestone or newer
 	if err := parentsTraverserInterface.Traverse(
 		ctx,
-		hornet.MessageIDsFromSliceOfArrays(milestonePayload.Parents),
+		hornet.BlockIDsFromSliceOfArrays(milestonePayload.Parents),
 		condition,
 		nil,
 		// called on missing parents
@@ -270,7 +270,7 @@ func copyMilestoneCone(
 
 type confStats struct {
 	msIndex              milestone.Index
-	messagesReferenced   int
+	blocksReferenced     int
 	durationCopy         time.Duration
 	durationConfirmation time.Duration
 }
@@ -283,10 +283,10 @@ func copyAndVerifyMilestoneCone(
 	msIndex milestone.Index,
 	getMilestonePayload func(msIndex milestone.Index) (*iotago.Milestone, error),
 	parentsTraverserInterfaceSource dag.ParentsTraverserInterface,
-	cachedMessageFuncSource storage.CachedMessageFunc,
-	cachedMessageFuncTarget storage.CachedMessageFunc,
+	cachedBlockFuncSource storage.CachedBlockFunc,
+	cachedBlockFuncTarget storage.CachedBlockFunc,
 	utxoManagerTarget *utxo.Manager,
-	storeMessageTarget StoreMessageInterface,
+	storeBlockTarget StoreBlockInterface,
 	parentsTraverserStorageTarget dag.ParentsTraverserStorage,
 	milestoneManager *milestonemanager.MilestoneManager) (*confStats, error) {
 
@@ -307,13 +307,13 @@ func copyAndVerifyMilestoneCone(
 	ts := time.Now()
 
 	if err := copyMilestoneCone(
-		context.Background(), // we do not want abort the copying of the messages itself
+		context.Background(), // we do not want abort the copying of the blocks itself
 		protoParas,
 		msIndex,
 		milestonePayload,
 		parentsTraverserInterfaceSource,
-		cachedMessageFuncSource,
-		storeMessageTarget,
+		cachedBlockFuncSource,
+		storeBlockTarget,
 		milestoneManager); err != nil {
 		return nil, err
 	}
@@ -323,12 +323,12 @@ func copyAndVerifyMilestoneCone(
 	confirmedMilestoneStats, _, err := whiteflag.ConfirmMilestone(
 		utxoManagerTarget,
 		parentsTraverserStorageTarget,
-		cachedMessageFuncTarget,
+		cachedBlockFuncTarget,
 		protoParas,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
-		whiteflag.DefaultCheckMessageReferencedFunc,
-		whiteflag.DefaultSetMessageReferencedFunc,
+		whiteflag.DefaultCheckBlockReferencedFunc,
+		whiteflag.DefaultSetBlockReferencedFunc,
 		nil,
 		nil,
 		nil,
@@ -344,7 +344,7 @@ func copyAndVerifyMilestoneCone(
 
 	return &confStats{
 		msIndex:              confirmedMilestoneStats.Index,
-		messagesReferenced:   confirmedMilestoneStats.MessagesReferenced,
+		blocksReferenced:     confirmedMilestoneStats.BlocksReferenced,
 		durationCopy:         timeCopyMilestoneCone.Sub(ts).Truncate(time.Millisecond),
 		durationConfirmation: timeConfirmMilestone.Sub(timeCopyMilestoneCone).Truncate(time.Millisecond),
 	}, nil
@@ -361,16 +361,16 @@ func mergeViaAPI(
 	chronicleMode bool,
 	apiParallelism int) error {
 
-	getMessageViaAPI := func(messageID hornet.MessageID) (*iotago.Message, error) {
+	getBlockViaAPI := func(blockID hornet.BlockID) (*iotago.Block, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		msg, err := client.MessageByMessageID(ctx, messageID.ToArray(), protoParas)
+		block, err := client.BlockByBlockID(ctx, blockID.ToArray(), protoParas)
 		if err != nil {
 			return nil, err
 		}
 
-		return msg, nil
+		return block, nil
 	}
 
 	getMilestonePayloadViaAPI := func(client *nodeclient.Client, msIndex milestone.Index) (*iotago.Milestone, error) {
@@ -385,7 +385,7 @@ func mergeViaAPI(
 		return milestone, nil
 	}
 
-	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getMessageViaAPI)
+	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, getBlockViaAPI)
 	if err != nil {
 		return err
 	}
@@ -401,8 +401,8 @@ func mergeViaAPI(
 			return getMilestonePayloadViaAPI(client, msIndex)
 		},
 		dag.NewConcurrentParentsTraverser(proxyStorage, apiParallelism),
-		proxyStorage.CachedMessage,
-		proxyStorage.CachedMessage,
+		proxyStorage.CachedBlock,
+		proxyStorage.CachedBlock,
 		storeTarget.UTXOManager(),
 		proxyStorage,
 		proxyStorage,
@@ -419,9 +419,9 @@ func mergeViaAPI(
 
 	te := time.Now()
 
-	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
+	println(fmt.Sprintf("confirmed milestone %d, blocks: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
 		confStats.msIndex,
-		confStats.messagesReferenced,
+		confStats.blocksReferenced,
 		confStats.durationCopy,
 		confStats.durationConfirmation,
 		te.Sub(timeMergeStoragesStart).Truncate(time.Millisecond),
@@ -439,7 +439,7 @@ func mergeViaSourceDatabase(
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager) error {
 
-	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, storeSource.Message)
+	proxyStorage, err := NewProxyStorage(protoParas, storeTarget, milestoneManager, storeSource.Block)
 	if err != nil {
 		return err
 	}
@@ -455,8 +455,8 @@ func mergeViaSourceDatabase(
 			return getMilestonePayloadFromStorage(storeSource, msIndex)
 		},
 		dag.NewConcurrentParentsTraverser(storeSource),
-		storeSource.CachedMessage,
-		proxyStorage.CachedMessage,
+		storeSource.CachedBlock,
+		proxyStorage.CachedBlock,
 		storeTarget.UTXOManager(),
 		proxyStorage,
 		proxyStorage,
@@ -473,9 +473,9 @@ func mergeViaSourceDatabase(
 
 	te := time.Now()
 
-	println(fmt.Sprintf("confirmed milestone %d, messages: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
+	println(fmt.Sprintf("confirmed milestone %d, blocks: %d, duration copy: %v, duration conf.: %v, duration merge: %v, total: %v",
 		confStats.msIndex,
-		confStats.messagesReferenced,
+		confStats.blocksReferenced,
 		confStats.durationCopy,
 		confStats.durationConfirmation,
 		te.Sub(timeMergeStoragesStart).Truncate(time.Millisecond),
@@ -605,7 +605,7 @@ func getNodeHTTPAPIClient(nodeURL string, chronicleMode bool, chronicleKeyspace 
 	return client
 }
 
-type GetMessageFunc func(messageID hornet.MessageID) (*iotago.Message, error)
+type GetBlockFunc func(blockID hornet.BlockID) (*iotago.Block, error)
 
 // ProxyStorage is used to temporarily store changes to an intermediate storage,
 // which then can be merged with the target store in a single commit.
@@ -614,14 +614,14 @@ type ProxyStorage struct {
 	storeTarget      *storage.Storage
 	storeProxy       *storage.Storage
 	milestoneManager *milestonemanager.MilestoneManager
-	getMessageFunc   GetMessageFunc
+	getBlockFunc     GetBlockFunc
 }
 
 func NewProxyStorage(
 	protoParas *iotago.ProtocolParameters,
 	storeTarget *storage.Storage,
 	milestoneManager *milestonemanager.MilestoneManager,
-	getMessageFunc GetMessageFunc) (*ProxyStorage, error) {
+	getBlockFunc GetBlockFunc) (*ProxyStorage, error) {
 
 	storeProxy, err := createTangleStorage("proxy", "", "", database.EngineMapDB)
 	if err != nil {
@@ -633,56 +633,56 @@ func NewProxyStorage(
 		storeTarget:      storeTarget,
 		storeProxy:       storeProxy,
 		milestoneManager: milestoneManager,
-		getMessageFunc:   getMessageFunc,
+		getBlockFunc:     getBlockFunc,
 	}, nil
 }
 
-// message +1
-func (s *ProxyStorage) CachedMessage(messageID hornet.MessageID) (*storage.CachedMessage, error) {
-	if !s.storeTarget.ContainsMessage(messageID) {
-		if !s.storeProxy.ContainsMessage(messageID) {
-			msg, err := s.getMessageFunc(messageID)
+// block +1
+func (s *ProxyStorage) CachedBlock(blockID hornet.BlockID) (*storage.CachedBlock, error) {
+	if !s.storeTarget.ContainsBlock(blockID) {
+		if !s.storeProxy.ContainsBlock(blockID) {
+			block, err := s.getBlockFunc(blockID)
 			if err != nil {
 				return nil, err
 			}
 
-			cachedMsg, err := storeMessage(s.protoParas, s.storeProxy, s.milestoneManager, msg) // message +1
+			cachedBlock, err := storeBlock(s.protoParas, s.storeProxy, s.milestoneManager, block) // block +1
 			if err != nil {
 				return nil, err
 			}
 
-			// set the new message as solid
-			cachedMsgMeta := cachedMsg.CachedMetadata() // meta +1
-			defer cachedMsgMeta.Release(true)           // meta -1
+			// set the new block as solid
+			cachedBlockMeta := cachedBlock.CachedMetadata() // meta +1
+			defer cachedBlockMeta.Release(true)             // meta -1
 
-			cachedMsgMeta.Metadata().SetSolid(true)
+			cachedBlockMeta.Metadata().SetSolid(true)
 
-			return cachedMsg, nil
+			return cachedBlock, nil
 		}
-		return s.storeProxy.CachedMessage(messageID) // message +1
+		return s.storeProxy.CachedBlock(blockID) // block +1
 	}
-	return s.storeTarget.CachedMessage(messageID) // message +1
+	return s.storeTarget.CachedBlock(blockID) // block +1
 }
 
 // meta +1
-func (s *ProxyStorage) CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
-	cachedMsg, err := s.CachedMessage(messageID) // message +1
+func (s *ProxyStorage) CachedBlockMetadata(blockID hornet.BlockID) (*storage.CachedMetadata, error) {
+	cachedBlock, err := s.CachedBlock(blockID) // block +1
 	if err != nil {
 		return nil, err
 	}
-	if cachedMsg == nil {
+	if cachedBlock == nil {
 		return nil, nil
 	}
-	defer cachedMsg.Release(true)          // message -1
-	return cachedMsg.CachedMetadata(), nil // meta +1
+	defer cachedBlock.Release(true)          // block -1
+	return cachedBlock.CachedMetadata(), nil // meta +1
 }
 
-func (s *ProxyStorage) SolidEntryPointsContain(messageID hornet.MessageID) (bool, error) {
-	return s.storeTarget.SolidEntryPointsContain(messageID)
+func (s *ProxyStorage) SolidEntryPointsContain(blockID hornet.BlockID) (bool, error) {
+	return s.storeTarget.SolidEntryPointsContain(blockID)
 }
 
-func (s *ProxyStorage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool, error) {
-	return s.storeTarget.SolidEntryPointsIndex(messageID)
+func (s *ProxyStorage) SolidEntryPointsIndex(blockID hornet.BlockID) (milestone.Index, bool, error) {
+	return s.storeTarget.SolidEntryPointsIndex(blockID)
 }
 
 func (s *ProxyStorage) MergeStorages() error {
@@ -701,15 +701,15 @@ func (s *ProxyStorage) Cleanup() {
 	s.storeProxy.FlushAndCloseStores()
 }
 
-// StoreMessageInterface
-func (s *ProxyStorage) StoreMessageIfAbsent(message *storage.Message) (cachedMsg *storage.CachedMessage, newlyAdded bool) {
-	return s.storeProxy.StoreMessageIfAbsent(message)
+// StoreBlockInterface
+func (s *ProxyStorage) StoreBlockIfAbsent(block *storage.Block) (cachedBlock *storage.CachedBlock, newlyAdded bool) {
+	return s.storeProxy.StoreBlockIfAbsent(block)
 }
 
-func (s *ProxyStorage) StoreChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *storage.CachedChild {
-	return s.storeProxy.StoreChild(parentMessageID, childMessageID)
+func (s *ProxyStorage) StoreChild(parentBlockID hornet.BlockID, childBlockID hornet.BlockID) *storage.CachedChild {
+	return s.storeProxy.StoreChild(parentBlockID, childBlockID)
 }
 
-func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, messageID hornet.MessageID) (*storage.CachedMilestone, bool) {
-	return s.storeProxy.StoreMilestoneIfAbsent(milestone, messageID)
+func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, blockID hornet.BlockID) (*storage.CachedMilestone, bool) {
+	return s.storeProxy.StoreMilestoneIfAbsent(milestone, blockID)
 }

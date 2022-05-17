@@ -21,11 +21,11 @@ const (
 // newWorkUnit creates a new WorkUnit and initializes values by unmarshaling key.
 func newWorkUnit(key []byte, messageProcessor *MessageProcessor) *WorkUnit {
 	wu := &WorkUnit{
-		receivedMsgBytes: make([]byte, len(key)),
+		receivedBytes:    make([]byte, len(key)),
 		receivedFrom:     make([]*Protocol, 0),
 		messageProcessor: messageProcessor,
 	}
-	copy(wu.receivedMsgBytes, key)
+	copy(wu.receivedBytes, key)
 	return wu
 }
 
@@ -39,9 +39,9 @@ func (c *CachedWorkUnit) WorkUnit() *WorkUnit {
 	return c.Get().(*WorkUnit)
 }
 
-// WorkUnit defines the work around processing a received message and its
+// WorkUnit defines the work around processing a received block and its
 // associated requests from peers. There is at most one WorkUnit active per same
-// message bytes.
+// block bytes.
 type WorkUnit struct {
 	objectstorage.StorableObjectFlags
 	processingLock syncutils.Mutex
@@ -49,9 +49,9 @@ type WorkUnit struct {
 	messageProcessor *MessageProcessor
 
 	// data
-	receivedMsgBytes []byte
-	msg              *storage.Message
-	requested        bool
+	receivedBytes []byte
+	block         *storage.Block
+	requested     bool
 
 	// status
 	stateLock syncutils.RWMutex
@@ -67,7 +67,7 @@ func (wu *WorkUnit) Update(_ objectstorage.StorableObject) {
 }
 
 func (wu *WorkUnit) ObjectStorageKey() []byte {
-	return wu.receivedMsgBytes
+	return wu.receivedBytes
 }
 
 func (wu *WorkUnit) ObjectStorageValue() []byte {
@@ -96,14 +96,14 @@ func (wu *WorkUnit) addReceivedFrom(p *Protocol) {
 	wu.receivedFrom = append(wu.receivedFrom, p)
 }
 
-// punishes, respectively increases the invalid message metric of all peers
-// which sent the given underlying message of this WorkUnit.
+// punishes, respectively increases the invalid block metric of all peers
+// which sent the given underlying block of this WorkUnit.
 // it also closes the connection to these peers.
 func (wu *WorkUnit) punish(reason error) {
 	wu.receivedFromLock.Lock()
 	defer wu.receivedFromLock.Unlock()
 	for _, p := range wu.receivedFrom {
-		wu.messageProcessor.serverMetrics.InvalidMessages.Inc()
+		wu.messageProcessor.serverMetrics.InvalidBlocks.Inc()
 
 		// drop the connection to the peer
 		_ = wu.messageProcessor.peeringManager.DisconnectPeer(p.PeerID, errors.WithMessagef(reason, "peer was punished"))
@@ -119,12 +119,12 @@ func (wu *WorkUnit) broadcast() *Broadcast {
 		exclude[p.PeerID] = struct{}{}
 	}
 	return &Broadcast{
-		MsgData:      wu.receivedMsgBytes,
+		Data:         wu.receivedBytes,
 		ExcludePeers: exclude,
 	}
 }
 
-// increases the known message metric of all peers
+// increases the known block metric of all peers
 // except the given peer
 func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *Protocol) {
 	wu.receivedFromLock.Lock()
@@ -134,7 +134,7 @@ func (wu *WorkUnit) increaseKnownTxCount(excludedPeer *Protocol) {
 		if p.PeerID == excludedPeer.PeerID {
 			continue
 		}
-		wu.messageProcessor.serverMetrics.KnownMessages.Inc()
-		p.Metrics.KnownMessages.Inc()
+		wu.messageProcessor.serverMetrics.KnownBlocks.Inc()
+		p.Metrics.KnownBlocks.Inc()
 	}
 }

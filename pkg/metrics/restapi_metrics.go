@@ -9,7 +9,7 @@ import (
 )
 
 func PoWCompletedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(messageSize int, duration time.Duration))(params[0].(int), params[1].(time.Duration))
+	handler.(func(blockSize int, duration time.Duration))(params[0].(int), params[1].(time.Duration))
 }
 
 type RestAPIEvents struct {
@@ -27,9 +27,9 @@ type RestAPIMetrics struct {
 	Events *RestAPIEvents
 }
 
-func (m *RestAPIMetrics) PoWCompleted(messageSize int, duration time.Duration) {
+func (m *RestAPIMetrics) PoWCompleted(blockSize int, duration time.Duration) {
 	m.PoWCompletedCounter.Inc()
 	if m.Events != nil && m.Events.PoWCompleted != nil {
-		m.Events.PoWCompleted.Trigger(messageSize, duration)
+		m.Events.PoWCompleted.Trigger(blockSize, duration)
 	}
 }

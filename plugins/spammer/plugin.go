@@ -52,12 +52,12 @@ var (
 	spammerInstance *spammer.Spammer
 	spammerLock     syncutils.RWMutex
 
-	spammerStartTime    time.Time
-	spammerAvgHeap      *timeheap.TimeHeap
-	lastSentSpamMsgsCnt uint32
+	spammerStartTime   time.Time
+	spammerAvgHeap     *timeheap.TimeHeap
+	lastSentSpamBlocks uint32
 
 	isRunning             bool
-	mpsRateLimitRunning   float64
+	bpsRateLimitRunning   float64
 	cpuMaxUsageRunning    float64
 	spammerWorkersRunning int
 
@@ -109,17 +109,17 @@ func configure() error {
 	// start the CPU usage updater
 	cpuUsageUpdater()
 
-	// helper function to send the message to the network
-	sendMessage := func(msg *storage.Message) error {
-		if err := deps.MessageProcessor.Emit(msg); err != nil {
+	// helper function to send the block to the network
+	sendBlock := func(block *storage.Block) error {
+		if err := deps.MessageProcessor.Emit(block); err != nil {
 			return err
 		}
 
-		deps.ServerMetrics.SentSpamMessages.Inc()
+		deps.ServerMetrics.SentSpamBlocks.Inc()
 		return nil
 	}
 
-	mpsRateLimitRunning = ParamsSpammer.MPSRateLimit
+	bpsRateLimitRunning = ParamsSpammer.BPSRateLimit
 	cpuMaxUsageRunning = ParamsSpammer.CPUMaxUsage
 	spammerWorkersRunning = ParamsSpammer.Workers
 	if spammerWorkersRunning == 0 {
@@ -134,7 +134,7 @@ func configure() error {
 		ParamsSpammer.TagSemiLazy,
 		deps.TipSelector.SelectSpammerTips,
 		deps.PoWHandler,
-		sendMessage,
+		sendBlock,
 		deps.ServerMetrics,
 	)
 	return nil
@@ -163,7 +163,7 @@ func run() error {
 }
 
 // start starts the spammer to spam with the given settings, otherwise it uses the settings from the config.
-func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) error {
+func start(bpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) error {
 	if spammerInstance == nil {
 		return ErrSpammerDisabled
 	}
@@ -173,12 +173,12 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) err
 
 	stopWithoutLocking()
 
-	mpsRateLimitCfg := ParamsSpammer.MPSRateLimit
+	bpsRateLimitCfg := ParamsSpammer.BPSRateLimit
 	cpuMaxUsageCfg := ParamsSpammer.CPUMaxUsage
 	spammerWorkerCount := ParamsSpammer.Workers
 
-	if mpsRateLimit != nil {
-		mpsRateLimitCfg = *mpsRateLimit
+	if bpsRateLimit != nil {
+		bpsRateLimitCfg = *bpsRateLimit
 	}
 
 	if cpuMaxUsage != nil {
@@ -206,13 +206,13 @@ func start(mpsRateLimit *float64, cpuMaxUsage *float64, spammerWorkers *int) err
 		spammerWorkerCount = 1
 	}
 
-	startSpammerWorkers(mpsRateLimitCfg, cpuMaxUsageCfg, spammerWorkerCount)
+	startSpammerWorkers(bpsRateLimitCfg, cpuMaxUsageCfg, spammerWorkerCount)
 
 	return nil
 }
 
-func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorkerCount int) {
-	mpsRateLimitRunning = mpsRateLimit
+func startSpammerWorkers(bpsRateLimit float64, cpuMaxUsage float64, spammerWorkerCount int) {
+	bpsRateLimitRunning = bpsRateLimit
 	cpuMaxUsageRunning = cpuMaxUsage
 	spammerWorkersRunning = spammerWorkerCount
 	isRunning = true
@@ -220,7 +220,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 	var rateLimitChannel chan struct{} = nil
 	var rateLimitAbortSignal chan struct{} = nil
 
-	if mpsRateLimit != 0.0 {
+	if bpsRateLimit != 0.0 {
 		rateLimitChannel = make(chan struct{}, spammerWorkerCount*2)
 		rateLimitAbortSignal = make(chan struct{})
 
@@ -230,7 +230,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 			defer spammerWaitGroup.Done()
 
 			currentProcessID := processID.Load()
-			interval := time.Duration(int64(float64(time.Second) / mpsRateLimit))
+			interval := time.Duration(int64(float64(time.Second) / bpsRateLimit))
 			timeout := interval * 2
 			if timeout < time.Second {
 				timeout = time.Second
@@ -249,7 +249,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 					break rateLimitLoop
 				}
 
-				// measure the last interval error and multiply by two to compensate (to reach target MPS)
+				// measure the last interval error and multiply by two to compensate (to reach target BPS)
 				lastIntervalError := (lastDuration - interval) * 2.0
 				if lastIntervalError < 0 {
 					lastIntervalError = 0
@@ -302,7 +302,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 						break spammerLoop
 					}
 
-					if mpsRateLimit != 0 {
+					if bpsRateLimit != 0 {
 						// if rateLimit is activated, wait until this spammer thread gets a signal
 						select {
 						case <-rateLimitAbortSignal:
@@ -390,11 +390,11 @@ func measureSpammerMetrics() {
 		return
 	}
 
-	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamMessages.Load()
-	newMessagesCnt := math.Uint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
-	lastSentSpamMsgsCnt = sentSpamMsgsCnt
+	sentSpamBlocks := deps.ServerMetrics.SentSpamBlocks.Load()
+	newBlocks := math.Uint32Diff(sentSpamBlocks, lastSentSpamBlocks)
+	lastSentSpamBlocks = sentSpamBlocks
 
-	spammerAvgHeap.Add(uint64(newMessagesCnt))
+	spammerAvgHeap.Add(uint64(newBlocks))
 
 	timeDiff := time.Since(spammerStartTime)
 	if timeDiff > 60*time.Second {
@@ -404,7 +404,7 @@ func measureSpammerMetrics() {
 
 	// trigger events for outside listeners
 	Events.AvgSpamMetricsUpdated.Trigger(&spammer.AvgSpamMetrics{
-		NewMessages:              newMessagesCnt,
-		AverageMessagesPerSecond: spammerAvgHeap.AveragePerSecond(timeDiff),
+		NewBlocks:              newBlocks,
+		AverageBlocksPerSecond: spammerAvgHeap.AveragePerSecond(timeDiff),
 	})
 }

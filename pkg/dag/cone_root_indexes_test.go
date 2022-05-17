@@ -24,23 +24,23 @@ func TestConeRootIndexes(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
-	initMessagesCount := 10
+	initBlocksCount := 10
 	milestonesCount := 30
-	minMessagesPerMilestone := 10
-	maxMessagesPerMilestone := 100
+	minBlocksPerMilestone := 10
+	maxBlocksPerMilestone := 100
 
-	// build a tangle with 30 milestones and 10 - 100 messages between the milestones
-	_, _ = te.BuildTangle(initMessagesCount, BelowMaxDepth, milestonesCount, minMessagesPerMilestone, maxMessagesPerMilestone,
+	// build a tangle with 30 milestones and 10 - 100 blocks between the milestones
+	_, _ = te.BuildTangle(initBlocksCount, BelowMaxDepth, milestonesCount, minBlocksPerMilestone, maxBlocksPerMilestone,
 		nil,
-		func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs {
-			return hornet.MessageIDs{messages[len(messages)-1]}
+		func(blockIDs hornet.BlockIDs, blockIDsPerMilestones []hornet.BlockIDs) hornet.BlockIDs {
+			return hornet.BlockIDs{blockIDs[len(blockIDs)-1]}
 		},
-		func(msIndex milestone.Index, messages hornet.MessageIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
+		func(msIndex milestone.Index, blockIDs hornet.BlockIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
 			cmi := latestMilestone.Milestone().Index()
 
-			cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(messages[len(messages)-1])
-			ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta, cmi)
+			cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(blockIDs[len(blockIDs)-1])
+			ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 			require.NoError(te.TestInterface, err)
 
 			minOldestConeRootIndex := milestone.Index(1)
@@ -60,11 +60,11 @@ func TestConeRootIndexes(t *testing.T) {
 	cmi := latestMilestone.Milestone().Index()
 
 	// Use Null hash and last milestone hash as parents
-	parents := append(latestMilestone.Milestone().Parents(), hornet.NullMessageID())
-	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
+	parents := append(latestMilestone.Milestone().Parents(), hornet.NullBlockID())
+	block := te.NewBlockBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
 
-	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID())
-	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta, cmi)
+	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(block.StoredBlockID())
+	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 	require.NoError(te.TestInterface, err)
 
 	// NullHash is SEP for index 0

@@ -4,7 +4,7 @@ image: /img/Banner/banner_hornet_nodes_101.png
 keywords:
 - IOTA Node 
 - Hornet Node
-- messages
+- blocks
 - syncing
 - synchronizing
 - UTXO
@@ -24,16 +24,6 @@ Nodes are responsible for:
 - Providing an API to interact with the Tangle/IOTA network.
 - Validating [messages](https://wiki.iota.org/chrysalis-docs/guides/developer#messages-payloads-and-transactions) and ledger mutations for consistency.
 - Providing data for other nodes to synchronize to the latest state of the network.
-
-## Attaching New Messages to the Tangle
-
-A _message_ is a data structure that is actually being broadcast in the IOTA network and represents a vertex in the
-Tangle graph. When nodes receive a new message, they attach it to the Tangle by adding the message to their local database.
-
-As a result, at any point in time, all nodes may have different messages in their local databases. These messages make
-up a node's view of the Tangle.
-
-To distribute the messages across the rest of the network, nodes synchronize their local databases with their neighbors.
 
 ## Synchronizing With the Rest of the Network
 

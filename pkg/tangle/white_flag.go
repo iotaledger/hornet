@@ -24,7 +24,7 @@ var (
 // with given milestone index, timestamp and previousMilestoneID.
 // Attention: this call puts missing parents of the cone as undiscardable requests into the request queue.
 // Therefore the caller needs to be trustful (e.g. coordinator plugin).
-func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, previousMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
+func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.BlockIDs, previousMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
 
 	// check if the requested milestone index would be the next one
 	if index > t.syncManager.ConfirmedMilestoneIndex()+1 {
@@ -35,55 +35,55 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		return nil, ErrParentsNotGiven
 	}
 
-	// register all parents for message solid events
+	// register all parents for block solid events
 	// this has to be done, even if the parents may be solid already, to prevent race conditions
-	msgSolidEventChans := make([]chan struct{}, len(parents))
+	blockSolidEventChans := make([]chan struct{}, len(parents))
 	for i, parent := range parents {
-		msgSolidEventChans[i] = t.RegisterMessageSolidEvent(parent)
+		blockSolidEventChans[i] = t.RegisterBlockSolidEvent(parent)
 	}
 
 	// check all parents for solidity
 	for _, parent := range parents {
-		cachedMsgMeta := t.storage.CachedMessageMetadataOrNil(parent)
-		if cachedMsgMeta == nil {
+		cachedBlockMeta := t.storage.CachedBlockMetadataOrNil(parent)
+		if cachedBlockMeta == nil {
 			contains, err := t.storage.SolidEntryPointsContain(parent)
 			if err != nil {
 				return nil, err
 			}
 			if contains {
 				// deregister the event, because the parent is already solid (this also fires the event)
-				t.DeregisterMessageSolidEvent(parent)
+				t.DeregisterBlockSolidEvent(parent)
 			}
 			continue
 		}
 
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
+		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
 			if !metadata.IsSolid() {
 				return
 			}
 
 			// deregister the event, because the parent is already solid (this also fires the event)
-			t.DeregisterMessageSolidEvent(parent)
+			t.DeregisterBlockSolidEvent(parent)
 		})
 	}
 
-	messagesMemcache := storage.NewMessagesMemcache(t.storage.CachedMessage)
-	metadataMemcache := storage.NewMetadataMemcache(t.storage.CachedMessageMetadata)
+	blocksMemcache := storage.NewBlocksMemcache(t.storage.CachedBlock)
+	metadataMemcache := storage.NewMetadataMemcache(t.storage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(t.storage, metadataMemcache)
 
 	defer func() {
 		// deregister the events to free the memory
 		for _, parent := range parents {
-			t.DeregisterMessageSolidEvent(parent)
+			t.DeregisterBlockSolidEvent(parent)
 		}
 
 		// all releases are forced since the cone is referenced and not needed anymore
 		memcachedTraverserStorage.Cleanup(true)
 
-		// release all messages at the end
-		messagesMemcache.Cleanup(true)
+		// release all blocks at the end
+		blocksMemcache.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
@@ -101,9 +101,9 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		ctx, cancel := context.WithTimeout(ctx, t.whiteFlagParentsSolidTimeout)
 		defer cancel()
 
-		for _, msgSolidEventChan := range msgSolidEventChans {
-			// wait until the message is solid
-			if err := events.WaitForChannelClosed(ctx, msgSolidEventChan); err != nil {
+		for _, blockSolidEventChan := range blockSolidEventChans {
+			// wait until the block is solid
+			if err := events.WaitForChannelClosed(ctx, blockSolidEventChan); err != nil {
 				return nil, ErrParentsNotSolid
 			}
 		}
@@ -117,7 +117,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		ctx,
 		t.storage.UTXOManager(),
 		parentsTraverser,
-		messagesMemcache.CachedMessage,
+		blocksMemcache.CachedBlock,
 		index,
 		timestamp,
 		parents,

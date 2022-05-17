@@ -183,29 +183,29 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 
 }
 
-type sepRetrieverFunc func() hornet.MessageIDs
+type sepRetrieverFunc func() hornet.BlockIDs
 
 func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
-	var generatedSEPs hornet.MessageIDs
-	return func() (hornet.MessageID, error) {
+	var generatedSEPs hornet.BlockIDs
+	return func() (hornet.BlockID, error) {
 			if count == 0 {
 				return nil, nil
 			}
 			count--
-			msgID := utils.RandMessageID()
-			generatedSEPs = append(generatedSEPs, msgID)
-			return msgID, nil
-		}, func() hornet.MessageIDs {
+			blockID := utils.RandBlockID()
+			generatedSEPs = append(generatedSEPs, blockID)
+			return blockID, nil
+		}, func() hornet.BlockIDs {
 			return generatedSEPs
 		}
 }
 
 func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
-	var generatedSEPs hornet.MessageIDs
-	return func(sep hornet.MessageID) error {
+	var generatedSEPs hornet.BlockIDs
+	return func(sep hornet.BlockID) error {
 			generatedSEPs = append(generatedSEPs, sep)
 			return nil
-		}, func() hornet.MessageIDs {
+		}, func() hornet.BlockIDs {
 			return generatedSEPs
 		}
 }
@@ -259,7 +259,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			}
 			count--
 
-			parents := iotago.MilestoneParentMessageIDs{utils.RandMessageID().ToArray()}
+			parents := iotago.MilestoneParentBlockIDs{utils.RandBlockID().ToArray()}
 			milestonePayload := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), protoParas.Version, utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
 
 			treasuryInput := &iotago.TreasuryInput{}
@@ -336,16 +336,16 @@ func unspentTreasuryOutputEqualFunc(t *testing.T, originUnspentTreasuryOutput *u
 }
 
 func randLSTransactionUnspentOutputs() *utxo.Output {
-	return utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType()))
+	return utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType()))
 }
 
 func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
-	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandMessageID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex, rand.Uint32())
+	return utxo.NewSpent(utxo.CreateOutput(utils.RandOutputID(), utils.RandBlockID(), utils.RandMilestoneIndex(), rand.Uint32(), utils.RandOutput(utils.RandOutputType())), utils.RandTransactionID(), msIndex, rand.Uint32())
 }
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
-	require.Equal(t, expected.MessageID()[:], actual.MessageID()[:])
+	require.Equal(t, expected.BlockID()[:], actual.BlockID()[:])
 	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
 	require.Equal(t, expected.OutputType(), actual.OutputType())
 	require.Equal(t, expected.Deposit(), actual.Deposit())

@@ -21,7 +21,7 @@ const (
 	// The supported snapshot file version.
 	SupportedFormatVersion byte = 2
 	// The length of a solid entry point hash.
-	SolidEntryPointHashLength = iotago.MessageIDLength
+	SolidEntryPointHashLength = iotago.BlockIDLength
 
 	// The offset of counters within a snapshot file:
 	// version + type + timestamp + network-id + sep-ms-index + ledger-ms-index
@@ -61,7 +61,7 @@ var snapshotNames = map[Type]string{
 }
 
 // MilestoneDiff represents the outputs which were created and consumed for the given milestone
-// and the message itself which contains the milestone.
+// and the block itself which contains the milestone.
 type MilestoneDiff struct {
 	// The milestone payload itself.
 	Milestone *iotago.Milestone
@@ -147,11 +147,11 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 }
 
 // SEPProducerFunc yields a solid entry point to be written to a snapshot or nil if no more is available.
-type SEPProducerFunc func() (hornet.MessageID, error)
+type SEPProducerFunc func() (hornet.BlockID, error)
 
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
-type SEPConsumerFunc func(hornet.MessageID) error
+type SEPConsumerFunc func(hornet.BlockID) error
 
 // HeaderConsumerFunc consumes the snapshot file header.
 // A returned error signals to cancel further reading.
@@ -456,11 +456,11 @@ func StreamSnapshotDataFrom(reader io.ReadSeeker,
 	}
 
 	for i := uint64(0); i < readHeader.SEPCount; i++ {
-		solidEntryPointMessageID := make(hornet.MessageID, iotago.MessageIDLength)
-		if _, err := io.ReadFull(reader, solidEntryPointMessageID); err != nil {
+		solidEntryPointBlockID := make(hornet.BlockID, iotago.BlockIDLength)
+		if _, err := io.ReadFull(reader, solidEntryPointBlockID); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}
-		if err := sepConsumer(solidEntryPointMessageID); err != nil {
+		if err := sepConsumer(solidEntryPointBlockID); err != nil {
 			return fmt.Errorf("SEP consumer error at pos %d: %w", i, err)
 		}
 	}

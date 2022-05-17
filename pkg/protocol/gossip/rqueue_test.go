@@ -20,52 +20,52 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func randMessageID() hornet.MessageID {
-	return hornet.MessageID(randBytes(iotago.MessageIDLength))
+func randBlockID() hornet.BlockID {
+	return hornet.BlockID(randBytes(iotago.BlockIDLength))
 }
 
 func TestRequestQueue(t *testing.T) {
 	q := gossip.NewRequestQueue()
 
 	var (
-		hashA = randMessageID()
-		hashB = randMessageID()
-		hashZ = randMessageID()
-		hashC = randMessageID()
-		hashD = randMessageID()
+		hashA = randBlockID()
+		hashB = randBlockID()
+		hashZ = randBlockID()
+		hashC = randBlockID()
+		hashD = randBlockID()
 	)
 
 	requests := []*gossip.Request{
 		{
 			// 0
-			MessageID:      hashA,
+			BlockID:        hashA,
 			MilestoneIndex: 10,
 		},
 		{
 			// 1
-			MessageID:      hashB,
+			BlockID:        hashB,
 			MilestoneIndex: 7,
 		},
 		{
 			// 2
-			MessageID:      hashZ,
+			BlockID:        hashZ,
 			MilestoneIndex: 7,
 		},
 		{
 			// 3
-			MessageID:      hashC,
+			BlockID:        hashC,
 			MilestoneIndex: 5,
 		},
 		{
 			// 4
-			MessageID:      hashD,
+			BlockID:        hashD,
 			MilestoneIndex: 2,
 		},
 	}
 
 	for _, r := range requests {
 		assert.True(t, q.Enqueue(r))
-		assert.True(t, q.IsQueued(r.MessageID))
+		assert.True(t, q.IsQueued(r.BlockID))
 	}
 
 	queued, pending, processing := q.Size()
@@ -83,11 +83,11 @@ func TestRequestQueue(t *testing.T) {
 		// since we have two request under the same milestone/priority
 		// we need to make a special case
 		if i == 1 || i == 2 {
-			assert.Contains(t, hornet.MessageIDs{hashB, hashZ}, r.MessageID)
+			assert.Contains(t, hornet.BlockIDs{hashB, hashZ}, r.BlockID)
 		} else {
 			assert.Equal(t, r, requests[i])
 		}
-		assert.True(t, q.IsPending(r.MessageID))
+		assert.True(t, q.IsPending(r.BlockID))
 	}
 
 	// queued drained, therefore all reqs pending and non queued
@@ -97,7 +97,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Zero(t, processing)
 
 	// mark last from test set as received
-	req := q.Received(requests[len(requests)-1].MessageID)
+	req := q.Received(requests[len(requests)-1].BlockID)
 
 	// check if the correct request was returned
 	assert.Equal(t, req, requests[len(requests)-1])
@@ -109,7 +109,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, processing, 1)
 
 	// mark last from test set as processed
-	req = q.Processed(requests[len(requests)-1].MessageID)
+	req = q.Processed(requests[len(requests)-1].BlockID)
 
 	// check if the correct request was returned
 	assert.Equal(t, req, requests[len(requests)-1])
@@ -133,8 +133,8 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, requests[3], q.Peek())
 
 	// mark last from test set as received and processed
-	q.Received(requests[len(requests)-1].MessageID)
-	q.Processed(requests[len(requests)-1].MessageID)
+	q.Received(requests[len(requests)-1].BlockID)
+	q.Processed(requests[len(requests)-1].BlockID)
 
 	queued, pending, processing = q.Size()
 	assert.Equal(t, queued, len(requests)-1)
@@ -146,7 +146,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, len(queuedReqs))
 	for i := 0; i < len(requests)-1; i++ {
 		queuedReq := queuedReqs[i]
-		assert.False(t, bytes.Equal(queuedReq.MessageID, requests[len(requests)-1].MessageID))
+		assert.False(t, bytes.Equal(queuedReq.BlockID, requests[len(requests)-1].BlockID))
 	}
 	assert.Zero(t, len(pendingReqs))
 	assert.Zero(t, len(processingReq))
@@ -159,7 +159,7 @@ func TestRequestQueue(t *testing.T) {
 
 	for _, r := range requests {
 		assert.True(t, q.Enqueue(r))
-		assert.True(t, q.IsQueued(r.MessageID))
+		assert.True(t, q.IsQueued(r.BlockID))
 	}
 
 	for i := 0; i < len(requests); i++ {
@@ -170,14 +170,14 @@ func TestRequestQueue(t *testing.T) {
 	q.EnqueuePending(0)
 
 	for _, r := range requests {
-		req := q.Received(r.MessageID)
+		req := q.Received(r.BlockID)
 
 		// check if the correct request was returned
 		assert.Equal(t, req, r)
 	}
 
 	for _, r := range requests {
-		req := q.Processed(r.MessageID)
+		req := q.Processed(r.BlockID)
 
 		// check if the correct request was returned
 		assert.Equal(t, req, r)

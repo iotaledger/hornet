@@ -107,8 +107,8 @@
   },
   "tangle": {
     "milestoneTimeout": "30s",
-    "maxDeltaMsgYoungestConeRootIndexToCMI": 8,
-    "maxDeltaMsgOldestConeRootIndexToCMI": 13,
+    "maxDeltaBlockYoungestConeRootIndexToCMI": 8,
+    "maxDeltaBlockOldestConeRootIndexToCMI": 13,
     "whiteFlagParentsSolidTimeout": "2s"
   },
   "snapshots": {
@@ -146,7 +146,7 @@
       "/health",
       "/api/v2/info",
       "/api/v2/tips",
-      "/api/v2/messages*",
+      "/api/v2/blocks*",
       "/api/v2/transactions*",
       "/api/v2/milestones*",
       "/api/v2/outputs*",
@@ -156,9 +156,9 @@
       "/api/plugins/debug/v1/*",
       "/api/plugins/indexer/v1/*",
       "/api/plugins/mqtt/v1",
-      "/api/plugins/participation/v1/events*",
-      "/api/plugins/participation/v1/outputs*",
-      "/api/plugins/participation/v1/addresses*"
+      "/api/plugins/participation/v2/events*",
+      "/api/plugins/participation/v2/outputs*",
+      "/api/plugins/participation/v2/addresses*"
     ],
     "protectedRoutes": [
       "/api/v2/*",
@@ -208,7 +208,7 @@
     "tag": "HORNET Spammer",
     "tagSemiLazy": "HORNET Spammer Semi-Lazy",
     "cpuMaxUsage": 0.8,
-    "mpsRateLimit": 0.0,
+    "bpsRateLimit": 0.0,
     "workers": 0,
     "autostart": false
   },

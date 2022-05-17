@@ -104,7 +104,7 @@ func (p *Protocol) Enqueue(data []byte) {
 	select {
 	case p.SendQueue <- data:
 	default:
-		p.ServerMetrics.DroppedMessages.Inc()
+		p.ServerMetrics.DroppedPackets.Inc()
 		p.Metrics.DroppedPackets.Inc()
 	}
 }
@@ -155,40 +155,40 @@ func (p *Protocol) Send(message []byte) error {
 	return nil
 }
 
-// SendMessage sends a storage.Message to the given peer.
-func (p *Protocol) SendMessage(msgData []byte) {
-	messageMsg, err := NewMessageMsg(msgData)
+// SendBlock sends a storage.Block to the given peer.
+func (p *Protocol) SendBlock(blockData []byte) {
+	blockMessage, err := NewBlockMessage(blockData)
 	if err != nil {
 		return
 	}
-	p.Enqueue(messageMsg)
+	p.Enqueue(blockMessage)
 }
 
 // SendHeartbeat sends a Heartbeat to the given peer.
 func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex milestone.Index, latestMsIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) {
-	heartbeatData, err := NewHeartbeatMsg(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
+	heartbeatData, err := NewHeartbeatMessage(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
 	if err != nil {
 		return
 	}
 	p.Enqueue(heartbeatData)
 }
 
-// SendMessageRequest sends a storage.Message request message to the given peer.
-func (p *Protocol) SendMessageRequest(requestedMessageID hornet.MessageID) {
-	txReqData, err := NewMessageRequestMsg(requestedMessageID)
+// SendBlockRequest sends a block request message to the given peer.
+func (p *Protocol) SendBlockRequest(requestedBlockID hornet.BlockID) {
+	blockRequestMessage, err := NewBlockRequestMessage(requestedBlockID)
 	if err != nil {
 		return
 	}
-	p.Enqueue(txReqData)
+	p.Enqueue(blockRequestMessage)
 }
 
-// SendMilestoneRequest sends a storage.Milestone request to the given peer.
+// SendMilestoneRequest sends a milestone request to the given peer.
 func (p *Protocol) SendMilestoneRequest(index milestone.Index) {
-	milestoneRequestData, err := NewMilestoneRequestMsg(index)
+	milestoneRequestMessage, err := NewMilestoneRequestMessage(index)
 	if err != nil {
 		return
 	}
-	p.Enqueue(milestoneRequestData)
+	p.Enqueue(milestoneRequestMessage)
 }
 
 // SendLatestMilestoneRequest sends a storage.Milestone request which requests the latest known milestone from the given peer.
@@ -242,24 +242,24 @@ func (p *Protocol) Info() *Info {
 
 // Metrics defines a set of metrics regarding a gossip protocol instance.
 type Metrics struct {
-	// The number of received messages which are new.
-	NewMessages atomic.Uint32
-	// The number of received messages which are already known.
-	KnownMessages atomic.Uint32
-	// The number of received messages.
-	ReceivedMessages atomic.Uint32
-	// The number of received message requests.
-	ReceivedMessageRequests atomic.Uint32
+	// The number of received blocks which are new.
+	NewBlocks atomic.Uint32
+	// The number of received blocks which are already known.
+	KnownBlocks atomic.Uint32
+	// The number of received blocks.
+	ReceivedBlocks atomic.Uint32
+	// The number of received block requests.
+	ReceivedBlockRequests atomic.Uint32
 	// The number of received milestone requests.
 	ReceivedMilestoneRequests atomic.Uint32
 	// The number of received heartbeats.
 	ReceivedHeartbeats atomic.Uint32
 	// The number of sent packets.
 	SentPackets atomic.Uint32
-	// The number of sent messages.
-	SentMessages atomic.Uint32
-	// The number of sent message requests.
-	SentMessageRequests atomic.Uint32
+	// The number of sent blocks.
+	SentBlocks atomic.Uint32
+	// The number of sent block requests.
+	SentBlockRequests atomic.Uint32
 	// The number of sent milestone requests.
 	SentMilestoneRequests atomic.Uint32
 	// The number of sent heartbeats.
@@ -271,33 +271,33 @@ type Metrics struct {
 // Snapshot returns MetricsSnapshot of the Metrics.
 func (m *Metrics) Snapshot() MetricsSnapshot {
 	return MetricsSnapshot{
-		ReceivedMessages:     m.ReceivedMessages.Load(),
-		NewMessages:          m.NewMessages.Load(),
-		KnownMessages:        m.KnownMessages.Load(),
-		ReceivedMessageReq:   m.ReceivedMessageRequests.Load(),
-		ReceivedMilestoneReq: m.ReceivedMilestoneRequests.Load(),
-		ReceivedHeartbeats:   m.ReceivedHeartbeats.Load(),
-		SentMessages:         m.SentMessages.Load(),
-		SentMessageReq:       m.SentMessageRequests.Load(),
-		SentMilestoneReq:     m.SentMilestoneRequests.Load(),
-		SentHeartbeats:       m.SentHeartbeats.Load(),
-		DroppedPackets:       m.DroppedPackets.Load(),
+		ReceivedBlocks:            m.ReceivedBlocks.Load(),
+		NewBlocks:                 m.NewBlocks.Load(),
+		KnownBlocks:               m.KnownBlocks.Load(),
+		ReceivedBlockRequests:     m.ReceivedBlockRequests.Load(),
+		ReceivedMilestoneRequests: m.ReceivedMilestoneRequests.Load(),
+		ReceivedHeartbeats:        m.ReceivedHeartbeats.Load(),
+		SentBlocks:                m.SentBlocks.Load(),
+		SentBlockRequests:         m.SentBlockRequests.Load(),
+		SentMilestoneRequests:     m.SentMilestoneRequests.Load(),
+		SentHeartbeats:            m.SentHeartbeats.Load(),
+		DroppedPackets:            m.DroppedPackets.Load(),
 	}
 }
 
 // MetricsSnapshot represents a snapshot of the gossip protocol metrics.
 type MetricsSnapshot struct {
-	NewMessages          uint32 `json:"newMessages"`
-	KnownMessages        uint32 `json:"knownMessages"`
-	ReceivedMessages     uint32 `json:"receivedMessages"`
-	ReceivedMessageReq   uint32 `json:"receivedMessageRequests"`
-	ReceivedMilestoneReq uint32 `json:"receivedMilestoneRequests"`
-	ReceivedHeartbeats   uint32 `json:"receivedHeartbeats"`
-	SentMessages         uint32 `json:"sentMessages"`
-	SentMessageReq       uint32 `json:"sentMessageRequests"`
-	SentMilestoneReq     uint32 `json:"sentMilestoneRequests"`
-	SentHeartbeats       uint32 `json:"sentHeartbeats"`
-	DroppedPackets       uint32 `json:"droppedPackets"`
+	NewBlocks                 uint32 `json:"newBlocks"`
+	KnownBlocks               uint32 `json:"knownBlocks"`
+	ReceivedBlocks            uint32 `json:"receivedBlocks"`
+	ReceivedBlockRequests     uint32 `json:"receivedBlockRequests"`
+	ReceivedMilestoneRequests uint32 `json:"receivedMilestoneRequests"`
+	ReceivedHeartbeats        uint32 `json:"receivedHeartbeats"`
+	SentBlocks                uint32 `json:"sentBlocks"`
+	SentBlockRequests         uint32 `json:"sentBlockRequests"`
+	SentMilestoneRequests     uint32 `json:"sentMilestoneRequests"`
+	SentHeartbeats            uint32 `json:"sentHeartbeats"`
+	DroppedPackets            uint32 `json:"droppedPackets"`
 }
 
 // Info represents information about an ongoing gossip protocol.
