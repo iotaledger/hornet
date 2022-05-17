@@ -281,11 +281,11 @@ func (proc *MessageProcessor) WorkUnitsSize() int {
 }
 
 // gets a CachedWorkUnit or creates a new one if it not existent.
-func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
+func (proc *MessageProcessor) workUnitFor(receivedBlockBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
 	return &CachedWorkUnit{
-		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(_ []byte) objectstorage.StorableObject { // cachedWorkUnit +1
+		proc.workUnits.ComputeIfAbsent(receivedBlockBytes, func(_ []byte) objectstorage.StorableObject { // cachedWorkUnit +1
 			newlyAdded = true
-			return newWorkUnit(receivedTxBytes, proc)
+			return newWorkUnit(receivedBlockBytes, proc)
 		}),
 	}, newlyAdded
 }
