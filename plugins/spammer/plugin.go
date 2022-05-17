@@ -109,9 +109,9 @@ func configure() error {
 	// start the CPU usage updater
 	cpuUsageUpdater()
 
-	// helper function to send the message to the network
-	sendMessage := func(msg *storage.Block) error {
-		if err := deps.MessageProcessor.Emit(msg); err != nil {
+	// helper function to send the block to the network
+	sendBlock := func(block *storage.Block) error {
+		if err := deps.MessageProcessor.Emit(block); err != nil {
 			return err
 		}
 
@@ -134,7 +134,7 @@ func configure() error {
 		ParamsSpammer.TagSemiLazy,
 		deps.TipSelector.SelectSpammerTips,
 		deps.PoWHandler,
-		sendMessage,
+		sendBlock,
 		deps.ServerMetrics,
 	)
 	return nil
@@ -391,10 +391,10 @@ func measureSpammerMetrics() {
 	}
 
 	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamBlocks.Load()
-	newMessagesCnt := math.Uint32Diff(sentSpamMsgsCnt, lastSentSpamBlocksCount)
+	newBlocksCount := math.Uint32Diff(sentSpamMsgsCnt, lastSentSpamBlocksCount)
 	lastSentSpamBlocksCount = sentSpamMsgsCnt
 
-	spammerAvgHeap.Add(uint64(newMessagesCnt))
+	spammerAvgHeap.Add(uint64(newBlocksCount))
 
 	timeDiff := time.Since(spammerStartTime)
 	if timeDiff > 60*time.Second {
@@ -404,7 +404,7 @@ func measureSpammerMetrics() {
 
 	// trigger events for outside listeners
 	Events.AvgSpamMetricsUpdated.Trigger(&spammer.AvgSpamMetrics{
-		NewBlocks:              newMessagesCnt,
+		NewBlocks:              newBlocksCount,
 		AverageBlocksPerSecond: spammerAvgHeap.AveragePerSecond(timeDiff),
 	})
 }
