@@ -72,10 +72,10 @@ func (t *Tangle) RunTangleProcessor() {
 		t.futureConeSolidifier.Cleanup(true)
 	})
 
-	onBPSMetricsUpdated := events.NewClosure(func(mpsMetrics *MPSMetrics) {
-		t.lastIncomingMPS = mpsMetrics.Incoming
-		t.lastNewMPS = mpsMetrics.New
-		t.lastOutgoingMPS = mpsMetrics.Outgoing
+	onBPSMetricsUpdated := events.NewClosure(func(bpsMetrics *BPSMetrics) {
+		t.lastIncomingBPS = bpsMetrics.Incoming
+		t.lastNewBPS = bpsMetrics.New
+		t.lastOutgoingBPS = bpsMetrics.Outgoing
 	})
 
 	// send all solid blocks back to the block processor, which broadcasts them to other nodes
@@ -108,10 +108,10 @@ func (t *Tangle) RunTangleProcessor() {
 	}
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[UpdateMetrics]", func(ctx context.Context) {
-		t.Events.MPSMetricsUpdated.Attach(onBPSMetricsUpdated)
+		t.Events.BPSMetricsUpdated.Attach(onBPSMetricsUpdated)
 		t.startWaitGroup.Done()
 		<-ctx.Done()
-		t.Events.MPSMetricsUpdated.Detach(onBPSMetricsUpdated)
+		t.Events.BPSMetricsUpdated.Detach(onBPSMetricsUpdated)
 	}, daemon.PriorityMetricsUpdater); err != nil {
 		t.LogPanicf("failed to start worker: %s", err)
 	}
@@ -310,9 +310,9 @@ func (t *Tangle) PrintStatus() {
 			t.receiveBlockWorkerPool.GetPendingQueueSize(),
 			t.syncManager.ConfirmedMilestoneIndex(),
 			t.syncManager.LatestMilestoneIndex(),
-			t.lastIncomingMPS,
-			t.lastNewMPS,
-			t.lastOutgoingMPS,
+			t.lastIncomingBPS,
+			t.lastNewBPS,
+			t.lastOutgoingBPS,
 			t.serverMetrics.TipsNonLazy.Load(),
 			t.serverMetrics.TipsSemiLazy.Load()))
 }

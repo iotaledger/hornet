@@ -180,8 +180,8 @@ func run() error {
 		}
 	}()
 
-	onMPSMetricsUpdated := events.NewClosure(func(mpsMetrics *tangle.MPSMetrics) {
-		hub.BroadcastMsg(&Msg{Type: MsgTypeMPSMetric, Data: mpsMetrics})
+	onBPSMetricsUpdated := events.NewClosure(func(bpsMetrics *tangle.BPSMetrics) {
+		hub.BroadcastMsg(&Msg{Type: MsgTypeBPSMetric, Data: bpsMetrics})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePublicNodeStatus, Data: currentPublicNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypeNodeStatus, Data: currentNodeStatus()})
 		hub.BroadcastMsg(&Msg{Type: MsgTypePeerMetric, Data: peerMetrics()})
@@ -205,13 +205,13 @@ func run() error {
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[WSSend]", func(ctx context.Context) {
 		go hub.Run(ctx)
-		deps.Tangle.Events.MPSMetricsUpdated.Attach(onMPSMetricsUpdated)
+		deps.Tangle.Events.BPSMetricsUpdated.Attach(onBPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Attach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Attach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Attach(onNewConfirmedMilestoneMetric)
 		<-ctx.Done()
 		Plugin.LogInfo("Stopping Dashboard[WSSend] ...")
-		deps.Tangle.Events.MPSMetricsUpdated.Detach(onMPSMetricsUpdated)
+		deps.Tangle.Events.BPSMetricsUpdated.Detach(onBPSMetricsUpdated)
 		deps.Tangle.Events.ConfirmedMilestoneIndexChanged.Detach(onConfirmedMilestoneIndexChanged)
 		deps.Tangle.Events.LatestMilestoneIndexChanged.Detach(onLatestMilestoneIndexChanged)
 		deps.Tangle.Events.NewConfirmedMilestoneMetric.Detach(onNewConfirmedMilestoneMetric)

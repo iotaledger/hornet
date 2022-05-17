@@ -15,8 +15,8 @@ const (
 	MsgTypePublicNodeStatus = 1
 	// MsgTypeNodeStatus is the type of the NodeStatus message.
 	MsgTypeNodeStatus = 2
-	// MsgTypeMPSMetric is the type of the blocks per second (BPS) metric message.
-	MsgTypeMPSMetric = 3
+	// MsgTypeBPSMetric is the type of the blocks per second (BPS) metric message.
+	MsgTypeBPSMetric = 3
 	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric = 4
 	// MsgTypeMilestone is the type of the Milestone message.
@@ -55,7 +55,7 @@ func websocketRoute(ctx echo.Context) error {
 	publicTopics := []byte{
 		MsgTypeSyncStatus,
 		MsgTypePublicNodeStatus,
-		MsgTypeMPSMetric,
+		MsgTypeBPSMetric,
 		MsgTypeMilestone,
 		MsgTypeConfirmedMsMetrics,
 		MsgTypeVertex,

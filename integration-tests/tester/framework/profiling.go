@@ -74,10 +74,10 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 	var err error
 
 	// BPS
-	var mpsChartXAxis []string
-	var newMPS, incomingMPS, outgoingMPS []int32
-	mpsChart := charts.NewLine()
-	mpsChart.SetGlobalOptions(
+	var bpsChartXAxis []string
+	var newBPS, incomingBPS, outgoingBPS []int32
+	bpsChart := charts.NewLine()
+	bpsChart.SetGlobalOptions(
 		charts.TitleOpts{Title: "Blocks Per Second"},
 		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
 	)
@@ -134,7 +134,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 		return err
 	}
 
-	if err := registerWSTopics(conn, dashboard.MsgTypeMPSMetric, dashboard.MsgTypeTipSelMetric, dashboard.MsgTypeConfirmedMsMetrics,
+	if err := registerWSTopics(conn, dashboard.MsgTypeBPSMetric, dashboard.MsgTypeTipSelMetric, dashboard.MsgTypeConfirmedMsMetrics,
 		dashboard.MsgTypeDatabaseSizeMetric, dashboard.MsgTypeNodeStatus); err != nil {
 		return err
 	}
@@ -158,15 +158,15 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 		}
 		switch m.Type {
 
-		case dashboard.MsgTypeMPSMetric:
-			mpsMetric := &tangle.MPSMetrics{}
-			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: mpsMetric}); err != nil {
+		case dashboard.MsgTypeBPSMetric:
+			bpsMetric := &tangle.BPSMetrics{}
+			if err := json.Unmarshal(msgRaw, &dashboard.Msg{Data: bpsMetric}); err != nil {
 				return err
 			}
-			mpsChartXAxis = append(mpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
-			incomingMPS = append(incomingMPS, int32(mpsMetric.Incoming))
-			outgoingMPS = append(outgoingMPS, -int32(mpsMetric.Outgoing))
-			newMPS = append(newMPS, int32(mpsMetric.New))
+			bpsChartXAxis = append(bpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
+			incomingBPS = append(incomingBPS, int32(bpsMetric.Incoming))
+			outgoingBPS = append(outgoingBPS, -int32(bpsMetric.Outgoing))
+			newBPS = append(newBPS, int32(bpsMetric.New))
 
 		case dashboard.MsgTypeTipSelMetric:
 			tipSelMetric := &tipselect.TipSelStats{}
@@ -174,7 +174,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 				return err
 			}
 
-			tipSelXAxis = append(mpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
+			tipSelXAxis = append(bpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
 			tipSelDur = append(tipSelDur, int64(tipSelMetric.Duration)/int64(time.Millisecond))
 
 		case dashboard.MsgTypeConfirmedMsMetrics:
@@ -199,7 +199,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 				continue
 			}
 			dbSizeMetric := dbSizeMetrics[len(dbSizeMetrics)-1]
-			dbSizeXAxis = append(mpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
+			dbSizeXAxis = append(bpsChartXAxis, fmt.Sprintf("%s sec", strconv.Itoa(int(time.Since(s).Seconds()))))
 			dbSizeTotal = append(dbSizeTotal, dbSizeMetric.Total/byteMBDivider)
 
 		case dashboard.MsgTypeNodeStatus:
@@ -224,10 +224,10 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 		}
 	}
 
-	mpsChart.AddXAxis(mpsChartXAxis).
-		AddYAxis("New", newMPS).
-		AddYAxis("Incoming", incomingMPS).
-		AddYAxis("Outgoing", outgoingMPS)
+	bpsChart.AddXAxis(bpsChartXAxis).
+		AddYAxis("New", newBPS).
+		AddYAxis("Incoming", incomingBPS).
+		AddYAxis("Outgoing", outgoingBPS)
 
 	referencedRateChart.AddXAxis(confIssXAxis).
 		AddYAxis("Ref. Rate %", referencedRate)
@@ -252,7 +252,7 @@ func (n *Profiler) GraphMetrics(dur time.Duration) error {
 
 	chartPage := charts.NewPage()
 	chartPage.PageTitle = n.targetName
-	chartPage.Add(mpsChart, memChart, dbSizeChart, memObjsChart, tipSelChart, referencedRateChart, issuanceRateChart)
+	chartPage.Add(bpsChart, memChart, dbSizeChart, memObjsChart, tipSelChart, referencedRateChart, issuanceRateChart)
 
 	var buf bytes.Buffer
 	if err := chartPage.Render(&buf); err != nil {

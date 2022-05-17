@@ -15,7 +15,7 @@ func (t *Tangle) measureBPS() {
 	incomingNewBlocksCount := t.serverMetrics.NewBlocks.Load()
 	outgoingBlocksCount := t.serverMetrics.SentBlocks.Load()
 
-	mpsMetrics := &MPSMetrics{
+	bpsMetrics := &BPSMetrics{
 		Incoming: math.Uint32Diff(incomingBlocksCount, t.lastIncomingBlocksCount),
 		New:      math.Uint32Diff(incomingNewBlocksCount, t.lastIncomingNewBlocksCount),
 		Outgoing: math.Uint32Diff(outgoingBlocksCount, t.lastOutgoingBlocksCount),
@@ -27,5 +27,5 @@ func (t *Tangle) measureBPS() {
 	t.lastOutgoingBlocksCount = outgoingBlocksCount
 
 	// trigger events for outside listeners
-	t.Events.MPSMetricsUpdated.Trigger(mpsMetrics)
+	t.Events.BPSMetricsUpdated.Trigger(bpsMetrics)
 }

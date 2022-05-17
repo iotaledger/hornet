@@ -79,9 +79,9 @@ type Tangle struct {
 	lastIncomingNewBlocksCount uint32
 	lastOutgoingBlocksCount    uint32
 
-	lastIncomingMPS uint32
-	lastNewMPS      uint32
-	lastOutgoingMPS uint32
+	lastIncomingBPS uint32
+	lastNewBPS      uint32
+	lastOutgoingBPS uint32
 
 	startWaitGroup sync.WaitGroup
 
@@ -159,7 +159,7 @@ func New(
 		blockSolidSyncEvent:              events.NewSyncEvent(),
 		milestoneConfirmedSyncEvent:      events.NewSyncEvent(),
 		Events: &Events{
-			MPSMetricsUpdated:              events.NewEvent(MPSMetricsCaller),
+			BPSMetricsUpdated:              events.NewEvent(BPSMetricsCaller),
 			ReceivedNewBlock:               events.NewEvent(storage.NewBlockCaller),
 			ReceivedKnownBlock:             events.NewEvent(storage.BlockCaller),
 			ProcessedBlock:                 events.NewEvent(storage.BlockIDCaller),
