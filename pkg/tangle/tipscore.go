@@ -22,13 +22,13 @@ const (
 type TipScoreCalculator struct {
 	storage *storage.Storage
 	// maxDeltaBlockYoungestConeRootIndexToCMI is the maximum allowed delta
-	// value for the YCRI of a given message in relation to the current CMI before it gets lazy.
+	// value for the YCRI of a given block in relation to the current CMI before it gets lazy.
 	maxDeltaBlockYoungestConeRootIndexToCMI milestone.Index
 	// maxDeltaBlockOldestConeRootIndexToCMI is the maximum allowed delta
-	// value between OCRI of a given message in relation to the current CMI before it gets semi-lazy.
+	// value between OCRI of a given block in relation to the current CMI before it gets semi-lazy.
 	maxDeltaBlockOldestConeRootIndexToCMI milestone.Index
 	// belowMaxDepth is the maximum allowed delta
-	// value between OCRI of a given message in relation to the current CMI before it gets lazy.
+	// value between OCRI of a given block in relation to the current CMI before it gets lazy.
 	belowMaxDepth milestone.Index
 }
 

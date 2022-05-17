@@ -43,7 +43,7 @@ type tipinfo struct {
 	IsTip bool   `json:"is_tip"`
 }
 
-func runVisualizer() {
+func runVisualizerFeed() {
 
 	onReceivedNewBlock := events.NewClosure(func(cachedBlock *storage.CachedBlock, _ milestone.Index, _ milestone.Index) {
 		cachedBlock.ConsumeBlockAndMetadata(func(block *storage.Block, metadata *storage.BlockMetadata) { // block -1

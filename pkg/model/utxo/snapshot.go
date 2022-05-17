@@ -38,7 +38,7 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 
 	blockID := iotago.BlockID{}
 	if _, err := io.ReadFull(reader, blockID[:]); err != nil {
-		return nil, fmt.Errorf("unable to read LS message ID: %w", err)
+		return nil, fmt.Errorf("unable to read LS block ID: %w", err)
 	}
 
 	var confirmationIndex uint32

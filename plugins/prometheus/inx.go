@@ -31,7 +31,7 @@ func configureINX() {
 			Subsystem: "inx",
 			Name:      "pow_block_sizes",
 			Help:      "The block size of INX PoW requests.",
-			Buckets:   powMessageSizeBuckets,
+			Buckets:   powBlockSizeBuckets,
 		})
 
 	inxPoWDurations = prometheus.NewHistogram(
@@ -47,8 +47,8 @@ func configureINX() {
 	registry.MustRegister(inxPoWBlockSizes)
 	registry.MustRegister(inxPoWDurations)
 
-	deps.INXMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(messageSize int, duration time.Duration) {
-		inxPoWBlockSizes.Observe(float64(messageSize))
+	deps.INXMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(blockSize int, duration time.Duration) {
+		inxPoWBlockSizes.Observe(float64(blockSize))
 		inxPoWDurations.Observe(duration.Seconds())
 	}))
 

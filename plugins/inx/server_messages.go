@@ -141,10 +141,10 @@ func (s *INXServer) ListenToBlocks(filter *inx.BlockFilter, srv inx.INX_ListenTo
 func (s *INXServer) ListenToSolidBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToSolidBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		msgMeta := task.Param(0).(*storage.CachedMetadata)
-		defer msgMeta.Release(true) // meta -1
+		blockMeta := task.Param(0).(*storage.CachedMetadata)
+		defer blockMeta.Release(true) // meta -1
 
-		payload, err := INXNewBlockMetadata(msgMeta.Metadata().BlockID(), msgMeta.Metadata())
+		payload, err := INXNewBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -156,9 +156,9 @@ func (s *INXServer) ListenToSolidBlocks(filter *inx.BlockFilter, srv inx.INX_Lis
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(msgMeta *storage.CachedMetadata) {
+	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata) {
 		//TODO: apply filter?
-		wp.Submit(msgMeta)
+		wp.Submit(blockMeta)
 	})
 	wp.Start()
 	deps.Tangle.Events.BlockSolid.Attach(closure)
@@ -171,10 +171,10 @@ func (s *INXServer) ListenToSolidBlocks(filter *inx.BlockFilter, srv inx.INX_Lis
 func (s *INXServer) ListenToReferencedBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToReferencedBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
-		msgMeta := task.Param(0).(*storage.CachedMetadata)
-		defer msgMeta.Release(true) // meta -1
+		blockMeta := task.Param(0).(*storage.CachedMetadata)
+		defer blockMeta.Release(true) // meta -1
 
-		payload, err := INXNewBlockMetadata(msgMeta.Metadata().BlockID(), msgMeta.Metadata())
+		payload, err := INXNewBlockMetadata(blockMeta.Metadata().BlockID(), blockMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -186,9 +186,9 @@ func (s *INXServer) ListenToReferencedBlocks(filter *inx.BlockFilter, srv inx.IN
 		}
 		task.Return(nil)
 	}, workerpool.WorkerCount(workerCount), workerpool.QueueSize(workerQueueSize), workerpool.FlushTasksAtShutdown(true))
-	closure := events.NewClosure(func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
+	closure := events.NewClosure(func(blockMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
 		//TODO: apply filter?
-		wp.Submit(msgMeta)
+		wp.Submit(blockMeta)
 	})
 	wp.Start()
 	deps.Tangle.Events.BlockReferenced.Attach(closure)

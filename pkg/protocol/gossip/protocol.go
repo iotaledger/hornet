@@ -156,8 +156,8 @@ func (p *Protocol) Send(message []byte) error {
 }
 
 // SendBlock sends a storage.Block to the given peer.
-func (p *Protocol) SendBlock(msgData []byte) {
-	blockMessage, err := NewBlockMessage(msgData)
+func (p *Protocol) SendBlock(blockData []byte) {
+	blockMessage, err := NewBlockMessage(blockData)
 	if err != nil {
 		return
 	}

@@ -5,5 +5,5 @@ import (
 )
 
 type PoWMetrics interface {
-	PoWCompleted(messageSize int, duration time.Duration)
+	PoWCompleted(blockSize int, duration time.Duration)
 }

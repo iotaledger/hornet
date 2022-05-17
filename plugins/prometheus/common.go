@@ -13,7 +13,7 @@ var (
 		MWM: 17, Length: 10762
 		MWM: 18, Length: 32286
 	*/
-	powMessageSizeBuckets = []float64{
+	powBlockSizeBuckets = []float64{
 		45,
 		133,
 		399,

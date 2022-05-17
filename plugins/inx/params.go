@@ -10,8 +10,8 @@ type ParametersINX struct {
 	BindAddress string `default:"localhost:9029" usage:"the bind address on which the INX can be accessed from"`
 
 	PoW struct {
-		// the amount of workers used for calculating PoW when issuing messages via INX
-		WorkerCount int `default:"0" usage:"the amount of workers used for calculating PoW when issuing messages via INX. (use 0 to use the maximum possible)"`
+		// the amount of workers used for calculating PoW when issuing blocks via INX
+		WorkerCount int `default:"0" usage:"the amount of workers used for calculating PoW when issuing blocks via INX. (use 0 to use the maximum possible)"`
 	} `name:"pow"`
 }
 

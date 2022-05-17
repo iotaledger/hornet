@@ -21,9 +21,9 @@ type INXMetrics struct {
 	Events *INXEvents
 }
 
-func (m *INXMetrics) PoWCompleted(messageSize int, duration time.Duration) {
+func (m *INXMetrics) PoWCompleted(blockSize int, duration time.Duration) {
 	m.PoWCompletedCounter.Inc()
 	if m.Events != nil && m.Events.PoWCompleted != nil {
-		m.Events.PoWCompleted.Trigger(messageSize, duration)
+		m.Events.PoWCompleted.Trigger(blockSize, duration)
 	}
 }

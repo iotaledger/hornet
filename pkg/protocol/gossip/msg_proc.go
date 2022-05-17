@@ -262,8 +262,8 @@ func (proc *MessageProcessor) Emit(block *storage.Block) error {
 		return nil
 	}
 
-	for _, parentMsgID := range block.Parents() {
-		err := checkParentFunc(parentMsgID)
+	for _, parentBlockID := range block.Parents() {
+		err := checkParentFunc(parentBlockID)
 		if err != nil {
 			return err
 		}
@@ -392,19 +392,19 @@ func (proc *MessageProcessor) processBlockData(p *Protocol, data []byte) {
 // it is safe to call this function for the same WorkUnit multiple times.
 func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
-	processRequests := func(wu *WorkUnit, msg *storage.Block, isMilestonePayload bool) Requests {
+	processRequests := func(wu *WorkUnit, block *storage.Block, isMilestonePayload bool) Requests {
 
 		var requests Requests
 
 		// mark the block as received
-		request := proc.requestQueue.Received(msg.BlockID())
+		request := proc.requestQueue.Received(block.BlockID())
 		if request != nil {
 			requests = append(requests, request)
 		}
 
 		if isMilestonePayload {
 			// mark the milestone as received
-			msRequest := proc.requestQueue.Received(milestone.Index(msg.Milestone().Index))
+			msRequest := proc.requestQueue.Received(milestone.Index(block.Milestone().Index))
 			if msRequest != nil {
 				requests = append(requests, msRequest)
 			}

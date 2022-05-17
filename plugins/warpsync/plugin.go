@@ -134,7 +134,7 @@ func configureEvents() {
 
 	onWarpSyncDone = events.NewClosure(func(deltaSynced int, referencedBlocksTotal int, took time.Duration) {
 		// we need to cleanup all memoized things in the requester, so we have a clean state at next run and free the memory.
-		// we can only reset the "traversed" messages here, because otherwise it may happen that the requester always
+		// we can only reset the "traversed" blocks here, because otherwise it may happen that the requester always
 		// walks the whole cone if there are already paths between newer milestones in the database.
 		warpSyncMilestoneRequester.Cleanup()
 

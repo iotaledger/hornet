@@ -41,7 +41,7 @@ func configureRestAPI() {
 			Subsystem: "restapi",
 			Name:      "pow_block_sizes",
 			Help:      "The block size of REST API PoW requests.",
-			Buckets:   powMessageSizeBuckets,
+			Buckets:   powBlockSizeBuckets,
 		})
 
 	restapiPoWDurations = prometheus.NewHistogram(
@@ -59,8 +59,8 @@ func configureRestAPI() {
 	registry.MustRegister(restapiPoWBlockSizes)
 	registry.MustRegister(restapiPoWDurations)
 
-	deps.RestAPIMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(messageSize int, duration time.Duration) {
-		restapiPoWBlockSizes.Observe(float64(messageSize))
+	deps.RestAPIMetrics.Events.PoWCompleted.Attach(events.NewClosure(func(blockSize int, duration time.Duration) {
+		restapiPoWBlockSizes.Observe(float64(blockSize))
 		restapiPoWDurations.Observe(duration.Seconds())
 	}))
 

@@ -61,7 +61,7 @@ var snapshotNames = map[Type]string{
 }
 
 // MilestoneDiff represents the outputs which were created and consumed for the given milestone
-// and the message itself which contains the milestone.
+// and the block itself which contains the milestone.
 type MilestoneDiff struct {
 	// The milestone payload itself.
 	Milestone *iotago.Milestone

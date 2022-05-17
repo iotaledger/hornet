@@ -35,11 +35,11 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		return nil, ErrParentsNotGiven
 	}
 
-	// register all parents for message solid events
+	// register all parents for block solid events
 	// this has to be done, even if the parents may be solid already, to prevent race conditions
-	msgSolidEventChans := make([]chan struct{}, len(parents))
+	blockSolidEventChans := make([]chan struct{}, len(parents))
 	for i, parent := range parents {
-		msgSolidEventChans[i] = t.RegisterBlockSolidEvent(parent)
+		blockSolidEventChans[i] = t.RegisterBlockSolidEvent(parent)
 	}
 
 	// check all parents for solidity
@@ -67,7 +67,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		})
 	}
 
-	messagesMemcache := storage.NewBlocksMemcache(t.storage.CachedBlock)
+	blocksMemcache := storage.NewBlocksMemcache(t.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(t.storage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(t.storage, metadataMemcache)
 
@@ -80,10 +80,10 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		// all releases are forced since the cone is referenced and not needed anymore
 		memcachedTraverserStorage.Cleanup(true)
 
-		// release all messages at the end
-		messagesMemcache.Cleanup(true)
+		// release all blocks at the end
+		blocksMemcache.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
@@ -101,9 +101,9 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		ctx, cancel := context.WithTimeout(ctx, t.whiteFlagParentsSolidTimeout)
 		defer cancel()
 
-		for _, msgSolidEventChan := range msgSolidEventChans {
-			// wait until the message is solid
-			if err := events.WaitForChannelClosed(ctx, msgSolidEventChan); err != nil {
+		for _, blockSolidEventChan := range blockSolidEventChans {
+			// wait until the block is solid
+			if err := events.WaitForChannelClosed(ctx, blockSolidEventChan); err != nil {
 				return nil, ErrParentsNotSolid
 			}
 		}
@@ -117,7 +117,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 		ctx,
 		t.storage.UTXOManager(),
 		parentsTraverser,
-		messagesMemcache.CachedBlock,
+		blocksMemcache.CachedBlock,
 		index,
 		timestamp,
 		parents,

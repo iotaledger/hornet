@@ -55,9 +55,9 @@ func TestVisualizer(t *testing.T) {
 		l := len(vertices)
 		parents := hornet.BlockIDs{}
 		for j := 2; j <= 2+rand.Intn(7); j++ {
-			msgID, err := hornet.BlockIDFromHex(vertices[l-1-rand.Intn(getFromLast)].BlockID)
+			blockID, err := hornet.BlockIDFromHex(vertices[l-1-rand.Intn(getFromLast)].BlockID)
 			assert.NoError(t, err)
-			parents = append(parents, msgID)
+			parents = append(parents, blockID)
 		}
 		parents = parents.RemoveDupsAndSortByLexicalOrder()
 		v.Parents = parents.ToHex()

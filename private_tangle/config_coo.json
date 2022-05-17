@@ -4,10 +4,10 @@
     "interval": "10s",
     "powWorkerCount": 0,
     "checkpoints": {
-      "maxTrackedMessages": 10000
+      "maxTrackedBlocks": 10000
     },
     "tipsel": {
-      "minHeaviestBranchUnreferencedMessagesThreshold": 20,
+      "minHeaviestBranchUnreferencedBlocksThreshold": 20,
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 3,
       "heaviestBranchSelectionTimeout": "100ms"

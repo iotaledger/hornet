@@ -221,10 +221,10 @@ func run() error {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 
-	// run the message live feed
-	runLiveFeed()
-	// run the visualizer message feed
-	runVisualizer()
+	// run the milestone live feed
+	runMilestoneLiveFeed()
+	// run the visualizer feed
+	runVisualizerFeed()
 
 	if deps.TipSelector != nil {
 		// run the tipselection feed

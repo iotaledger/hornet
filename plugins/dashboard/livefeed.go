@@ -8,7 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 )
 
-func runLiveFeed() {
+func runMilestoneLiveFeed() {
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(msIndex milestone.Index) {
 		if milestoneIDHex, err := getMilestoneIDHex(msIndex); err == nil {
