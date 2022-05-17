@@ -21,11 +21,11 @@ const (
 // newWorkUnit creates a new WorkUnit and initializes values by unmarshaling key.
 func newWorkUnit(key []byte, messageProcessor *MessageProcessor) *WorkUnit {
 	wu := &WorkUnit{
-		receivedMsgBytes: make([]byte, len(key)),
+		receivedBytes:    make([]byte, len(key)),
 		receivedFrom:     make([]*Protocol, 0),
 		messageProcessor: messageProcessor,
 	}
-	copy(wu.receivedMsgBytes, key)
+	copy(wu.receivedBytes, key)
 	return wu
 }
 
@@ -49,9 +49,9 @@ type WorkUnit struct {
 	messageProcessor *MessageProcessor
 
 	// data
-	receivedMsgBytes []byte
-	msg              *storage.Block
-	requested        bool
+	receivedBytes []byte
+	block         *storage.Block
+	requested     bool
 
 	// status
 	stateLock syncutils.RWMutex
@@ -67,7 +67,7 @@ func (wu *WorkUnit) Update(_ objectstorage.StorableObject) {
 }
 
 func (wu *WorkUnit) ObjectStorageKey() []byte {
-	return wu.receivedMsgBytes
+	return wu.receivedBytes
 }
 
 func (wu *WorkUnit) ObjectStorageValue() []byte {
@@ -119,7 +119,7 @@ func (wu *WorkUnit) broadcast() *Broadcast {
 		exclude[p.PeerID] = struct{}{}
 	}
 	return &Broadcast{
-		Data:         wu.receivedMsgBytes,
+		Data:         wu.receivedBytes,
 		ExcludePeers: exclude,
 	}
 }

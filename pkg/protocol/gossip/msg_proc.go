@@ -435,12 +435,12 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 		// we need to check for requests here again because there is a race condition
 		// between processing received blocks and enqueuing requests.
-		requests := processRequests(wu, wu.msg, wu.msg.IsMilestone())
+		requests := processRequests(wu, wu.block, wu.block.IsMilestone())
 		if wu.requested {
-			proc.Events.BlockProcessed.Trigger(wu.msg, requests, p)
+			proc.Events.BlockProcessed.Trigger(wu.block, requests, p)
 		}
 
-		if proc.storage.ContainsBlock(wu.msg.BlockID()) {
+		if proc.storage.ContainsBlock(wu.block.BlockID()) {
 			proc.serverMetrics.KnownBlocks.Inc()
 			p.Metrics.KnownBlocks.Inc()
 		}
@@ -452,7 +452,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.processingLock.Unlock()
 
 	// build HORNET representation of the block
-	msg, err := storage.BlockFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation, proc.protoParas)
+	block, err := storage.BlockFromBytes(wu.receivedBytes, serializer.DeSeriModePerformValidation, proc.protoParas)
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.WithMessagef(err, "peer sent an invalid block"))
@@ -460,35 +460,35 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	}
 
 	// check the network ID of the block
-	if msg.ProtocolVersion() != proc.protoParas.Version {
+	if block.ProtocolVersion() != proc.protoParas.Version {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.New("peer sent a block with an invalid protocol version"))
 		return
 	}
 
-	isMilestonePayload := msg.IsMilestone()
+	isMilestonePayload := block.IsMilestone()
 
 	// mark the block as received
-	requests := processRequests(wu, msg, isMilestonePayload)
+	requests := processRequests(wu, block, isMilestonePayload)
 
 	if !isMilestonePayload {
 		// validate PoW score
-		if !wu.requested && pow.Score(wu.receivedMsgBytes) < proc.protoParas.MinPoWScore {
+		if !wu.requested && pow.Score(wu.receivedBytes) < proc.protoParas.MinPoWScore {
 			wu.UpdateState(Invalid)
-			wu.punish(errors.New("peer sent a msg with insufficient PoW score"))
+			wu.punish(errors.New("peer sent a block with insufficient PoW score"))
 			return
 		}
 	} else {
-		// enforce milestone msg nonce == 0
-		if msg.Block().Nonce != 0 {
-			wu.punish(errors.New("milestone msg nonce must be zero"))
+		// enforce milestone block nonce == 0
+		if block.Block().Nonce != 0 {
+			wu.punish(errors.New("milestone block nonce must be zero"))
 		}
 
 		// TODO: refactor data flow
 	}
 
-	// safe to set the msg here, because it is protected by the state "Hashing"
-	wu.msg = msg
+	// safe to set the block here, because it is protected by the state "Hashing"
+	wu.block = block
 	wu.UpdateState(Hashed)
 
 	// increase the known block count for all other peers
@@ -502,7 +502,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		return
 	}
 
-	proc.Events.BlockProcessed.Trigger(msg, requests, p)
+	proc.Events.BlockProcessed.Trigger(block, requests, p)
 }
 
 func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {
@@ -548,7 +548,7 @@ func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata)
 
 	// if the workunit was already evicted, it may happen that
 	// we send the block back to peers which already sent us the same block.
-	// we should never access the "msg", because it may not be set in this context.
+	// we should never access the "block", because it may not be set in this context.
 
 	// broadcast the block to all peers that didn't sent it to us yet
 	proc.Events.BroadcastBlock.Trigger(wu.broadcast())

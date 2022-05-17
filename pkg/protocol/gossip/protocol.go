@@ -274,7 +274,7 @@ func (m *Metrics) Snapshot() MetricsSnapshot {
 		ReceivedBlocks:            m.ReceivedBlocks.Load(),
 		NewBlocks:                 m.NewBlocks.Load(),
 		KnownBlocks:               m.KnownBlocks.Load(),
-		ReceivedBlocksRequests:    m.ReceivedBlockRequests.Load(),
+		ReceivedBlockRequests:     m.ReceivedBlockRequests.Load(),
 		ReceivedMilestoneRequests: m.ReceivedMilestoneRequests.Load(),
 		ReceivedHeartbeats:        m.ReceivedHeartbeats.Load(),
 		SentBlocks:                m.SentBlocks.Load(),
@@ -290,7 +290,7 @@ type MetricsSnapshot struct {
 	NewBlocks                 uint32 `json:"newBlocks"`
 	KnownBlocks               uint32 `json:"knownBlocks"`
 	ReceivedBlocks            uint32 `json:"receivedBlocks"`
-	ReceivedBlocksRequests    uint32 `json:"ReceivedBlocksRequests"`
+	ReceivedBlockRequests     uint32 `json:"receivedBlockRequests"`
 	ReceivedMilestoneRequests uint32 `json:"receivedMilestoneRequests"`
 	ReceivedHeartbeats        uint32 `json:"receivedHeartbeats"`
 	SentBlocks                uint32 `json:"sentBlocks"`
