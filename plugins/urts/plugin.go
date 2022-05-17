@@ -39,7 +39,7 @@ var (
 	deps   dependencies
 
 	// closures
-	onBlockSolid                   *events.Closure
+	onBlockSolid                     *events.Closure
 	onConfirmedMilestoneIndexChanged *events.Closure
 )
 

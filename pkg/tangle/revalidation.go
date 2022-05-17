@@ -434,9 +434,9 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 	unreferencedMilestoneIndexes := make(map[milestone.Index]struct{})
 
 	lastStatusTime := time.Now()
-	var unreferencedTxsCounter int64
+	var unreferencedBlocksCounter int64
 	t.storage.NonCachedStorage().ForEachUnreferencedBlock(func(msIndex milestone.Index, _ hornet.BlockID) bool {
-		unreferencedTxsCounter++
+		unreferencedBlocksCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
 			lastStatusTime = time.Now()
@@ -445,14 +445,14 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 				return false
 			}
 
-			t.LogInfof("analyzed %d unreferenced blocks", unreferencedTxsCounter)
+			t.LogInfof("analyzed %d unreferenced blocks", unreferencedBlocksCounter)
 		}
 
 		unreferencedMilestoneIndexes[msIndex] = struct{}{}
 
 		return true
 	})
-	t.LogInfof("analyzed %d unreferenced blocks", unreferencedTxsCounter)
+	t.LogInfof("analyzed %d unreferenced blocks", unreferencedBlocksCounter)
 
 	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err

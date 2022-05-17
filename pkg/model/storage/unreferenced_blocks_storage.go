@@ -111,10 +111,10 @@ func (ns *NonCachedStorage) ForEachUnreferencedBlock(consumer UnreferencedBlockC
 }
 
 // StoreUnreferencedBlock stores the unreferenced block in the persistence layer and returns a cached object.
-// unreferencedTx +1
+// unreferencedBlock +1
 func (s *Storage) StoreUnreferencedBlock(msIndex milestone.Index, blockID hornet.BlockID) *CachedUnreferencedBlock {
-	unreferencedTx := NewUnreferencedBlock(msIndex, blockID)
-	return &CachedUnreferencedBlock{CachedObject: s.unreferencedBlocksStorage.Store(unreferencedTx)}
+	unreferencedBlock := NewUnreferencedBlock(msIndex, blockID)
+	return &CachedUnreferencedBlock{CachedObject: s.unreferencedBlocksStorage.Store(unreferencedBlock)}
 }
 
 // DeleteUnreferencedBlocks deletes unreferenced block entries in the cache/persistence layer.
