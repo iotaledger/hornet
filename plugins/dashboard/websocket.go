@@ -15,7 +15,7 @@ const (
 	MsgTypePublicNodeStatus = 1
 	// MsgTypeNodeStatus is the type of the NodeStatus message.
 	MsgTypeNodeStatus = 2
-	// MsgTypeMPSMetric is the type of the messages per second (MPS) metric message.
+	// MsgTypeMPSMetric is the type of the messages per second (BPS) metric message.
 	MsgTypeMPSMetric = 3
 	// MsgTypeTipSelMetric is the type of the TipSelMetric message.
 	MsgTypeTipSelMetric = 4

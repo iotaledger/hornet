@@ -19,7 +19,7 @@ const (
 )
 
 // newWorkUnit creates a new WorkUnit and initializes values by unmarshaling key.
-func newWorkUnit(key []byte, messageProcessor *MessageProcessor) *WorkUnit {
+func newWorkUnit(key []byte, messageProcessor *BlockProcessor) *WorkUnit {
 	wu := &WorkUnit{
 		receivedMsgBytes: make([]byte, len(key)),
 		receivedFrom:     make([]*Protocol, 0),
@@ -46,7 +46,7 @@ type WorkUnit struct {
 	objectstorage.StorableObjectFlags
 	processingLock syncutils.Mutex
 
-	messageProcessor *MessageProcessor
+	messageProcessor *BlockProcessor
 
 	// data
 	receivedMsgBytes []byte

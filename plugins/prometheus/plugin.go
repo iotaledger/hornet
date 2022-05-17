@@ -77,7 +77,7 @@ type dependencies struct {
 	Tangle           *tangle.Tangle
 	PeeringManager   *p2p.Manager
 	RequestQueue     gossip.RequestQueue
-	MessageProcessor *gossip.MessageProcessor
+	MessageProcessor *gossip.BlockProcessor
 	TipSelector      *tipselect.TipSelector `optional:"true"`
 	SnapshotManager  *snapshot.SnapshotManager
 	PrometheusEcho   *echo.Echo     `name:"prometheusEcho"`

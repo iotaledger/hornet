@@ -63,7 +63,7 @@ type WhiteFlagMutations struct {
 	// The messages which were excluded because they did not include a value transaction.
 	MessagesExcludedWithoutTransactions hornet.BlockIDs
 	// The messages which were referenced by the milestone (should be the sum of MessagesIncludedWithTransactions + MessagesExcludedWithConflictingTransactions + MessagesExcludedWithoutTransactions).
-	MessagesReferenced hornet.BlockIDs
+	BlocksReferenced hornet.BlockIDs
 	// Contains the newly created Unspent Outputs by the given confirmation.
 	NewOutputs map[string]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
@@ -77,7 +77,7 @@ type WhiteFlagMutations struct {
 // ComputeWhiteFlagMutations computes the ledger changes in accordance to the white-flag rules for the cone referenced by the parents.
 // Via a post-order depth-first search the approved messages of the given cone are traversed and
 // in their corresponding order applied/mutated against the previous ledger state, respectively previous applied mutations.
-// Messages within the approving cone must be valid. Messages causing conflicts are ignored but do not create an error.
+// Blocks within the approving cone must be valid. Blocks causing conflicts are ignored but do not create an error.
 // It also computes the merkle tree root hash consisting out of the IDs of the messages which are part of the set
 // which mutated the ledger state when applying the white-flag approach.
 // The ledger state must be write locked while this function is getting called in order to ensure consistency.
@@ -95,7 +95,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 		MessagesIncludedWithTransactions:            make(hornet.BlockIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
 		MessagesExcludedWithoutTransactions:         make(hornet.BlockIDs, 0),
-		MessagesReferenced:                          make(hornet.BlockIDs, 0),
+		BlocksReferenced:                            make(hornet.BlockIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
 		NewSpents:                                   make(map[string]*utxo.Spent),
 	}
@@ -174,7 +174,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 
 		// exclude message without transactions
 		if !message.IsTransaction() {
-			wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, blockID)
+			wfConf.BlocksReferenced = append(wfConf.BlocksReferenced, blockID)
 			wfConf.MessagesExcludedWithoutTransactions = append(wfConf.MessagesExcludedWithoutTransactions, blockID)
 			return nil
 		}
@@ -261,7 +261,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			}
 		}
 
-		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, blockID)
+		wfConf.BlocksReferenced = append(wfConf.BlocksReferenced, blockID)
 
 		if conflict != storage.ConflictNone {
 			wfConf.MessagesExcludedWithConflictingTransactions = append(wfConf.MessagesExcludedWithConflictingTransactions, MessageWithConflict{
@@ -294,7 +294,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	// This function does the DFS and computes the mutations a white-flag confirmation would create.
 	// If the parents are SEPs, are already processed or already referenced,
 	// then the mutations from the messages retrieved from the stack are accumulated to the given Confirmation struct's mutations.
-	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.MessagesIncludedWithTransactions.
+	// If the popped message was used to mutate the Confirmation struct, it will also be appended to Confirmation.BlocksIncludedWithTransactions.
 	if err := parentsTraverser.Traverse(
 		ctx,
 		parents,
@@ -315,9 +315,9 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	}
 
 	// compute past cone merkle tree root hash
-	confirmedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesReferenced))
-	for i := range wfConf.MessagesReferenced {
-		confirmedMarshalers[i] = wfConf.MessagesReferenced[i]
+	confirmedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.BlocksReferenced))
+	for i := range wfConf.BlocksReferenced {
+		confirmedMarshalers[i] = wfConf.BlocksReferenced[i]
 	}
 	confirmedMerkleHash, err := NewHasher(crypto.BLAKE2b_256).Hash(confirmedMarshalers)
 	if err != nil {
@@ -336,7 +336,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	}
 	copy(wfConf.AppliedMerkleRoot[:], appliedMerkleHash)
 
-	if len(wfConf.MessagesIncludedWithTransactions) != (len(wfConf.MessagesReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
+	if len(wfConf.MessagesIncludedWithTransactions) != (len(wfConf.BlocksReferenced) - len(wfConf.MessagesExcludedWithConflictingTransactions) - len(wfConf.MessagesExcludedWithoutTransactions)) {
 		return nil, ErrIncludedMessagesSumDoesntMatch
 	}
 

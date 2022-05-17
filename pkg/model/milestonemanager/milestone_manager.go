@@ -80,9 +80,9 @@ func (m *MilestoneManager) FindClosestNextMilestoneIndex(index milestone.Index) 
 	}
 }
 
-// VerifyMilestoneMessage checks if the message contains a valid milestone payload.
+// VerifyMilestoneBlock checks if the message contains a valid milestone payload.
 // Returns a milestone payload if the signature is valid.
-func (m *MilestoneManager) VerifyMilestoneMessage(message *iotago.Block) *iotago.Milestone {
+func (m *MilestoneManager) VerifyMilestoneBlock(message *iotago.Block) *iotago.Milestone {
 
 	milestonePayload, ok := message.Payload.(*iotago.Milestone)
 	if !ok {

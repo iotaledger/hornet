@@ -90,7 +90,7 @@ func TestTipSelect(t *testing.T) {
 				}
 			}
 
-			err := dag.TraverseParentsOfMessage(
+			err := dag.TraverseParentsOfBlock(
 				context.Background(),
 				te.Storage(),
 				tip,
@@ -148,7 +148,7 @@ func TestTipSelect(t *testing.T) {
 		if i%10 == 0 {
 			// Issue a new milestone every 10 messages
 			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{msgMeta.BlockID()}, false)
-			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
+			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), conf.Mutations.BlocksReferenced, conf.MilestoneIndex)
 			ts.UpdateScores()
 		}
 	}

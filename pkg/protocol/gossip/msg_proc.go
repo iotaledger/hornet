@@ -54,7 +54,7 @@ func BroadcastCaller(handler interface{}, params ...interface{}) {
 	handler.(func(b *Broadcast))(params[0].(*Broadcast))
 }
 
-// MessageProcessorEvents are the events fired by the MessageProcessor.
+// MessageProcessorEvents are the events fired by the BlockProcessor.
 type MessageProcessorEvents struct {
 	// Fired when a message was fully processed.
 	MessageProcessed *events.Event
@@ -62,13 +62,13 @@ type MessageProcessorEvents struct {
 	BroadcastMessage *events.Event
 }
 
-// The Options for the MessageProcessor.
+// The Options for the BlockProcessor.
 type Options struct {
 	WorkUnitCacheOpts *profile.CacheOpts
 }
 
-// MessageProcessor processes submitted messages in parallel and fires appropriate completion events.
-type MessageProcessor struct {
+// BlockProcessor processes submitted messages in parallel and fires appropriate completion events.
+type BlockProcessor struct {
 	// used to access the node storage.
 	storage *storage.Storage
 	// used to determine the sync status of the node.
@@ -105,9 +105,9 @@ func NewMessageProcessor(
 	peeringManager *p2p.Manager,
 	serverMetrics *metrics.ServerMetrics,
 	protoParas *iotago.ProtocolParameters,
-	opts *Options) (*MessageProcessor, error) {
+	opts *Options) (*BlockProcessor, error) {
 
-	proc := &MessageProcessor{
+	proc := &BlockProcessor{
 		storage:        dbStorage,
 		syncManager:    syncManager,
 		requestQueue:   requestQueue,
@@ -171,7 +171,7 @@ func NewMessageProcessor(
 }
 
 // Run runs the processor and blocks until the shutdown signal is triggered.
-func (proc *MessageProcessor) Run(ctx context.Context) {
+func (proc *BlockProcessor) Run(ctx context.Context) {
 	proc.wp.Start()
 	<-ctx.Done()
 	proc.Shutdown()
@@ -179,7 +179,7 @@ func (proc *MessageProcessor) Run(ctx context.Context) {
 
 // Shutdown signals the internal worker pool and object storage
 // to shut down and sets the shutdown flag.
-func (proc *MessageProcessor) Shutdown() {
+func (proc *BlockProcessor) Shutdown() {
 	proc.shutdownMutex.Lock()
 	defer proc.shutdownMutex.Unlock()
 
@@ -189,7 +189,7 @@ func (proc *MessageProcessor) Shutdown() {
 }
 
 // Process submits the given message to the processor for processing.
-func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []byte) {
+func (proc *BlockProcessor) Process(p *Protocol, msgType message.Type, data []byte) {
 	proc.wp.Submit(p, msgType, data)
 }
 
@@ -197,7 +197,7 @@ func (proc *MessageProcessor) Process(p *Protocol, msgType message.Type, data []
 // All messages passed to this function must be checked with "DeSeriModePerformValidation" before.
 // We also check if the parents are solid and not BMD before we broadcast the message, otherwise
 // this message would be seen as invalid gossip by other peers.
-func (proc *MessageProcessor) Emit(msg *storage.Block) error {
+func (proc *BlockProcessor) Emit(msg *storage.Block) error {
 
 	if msg.ProtocolVersion() != proc.protoParas.Version {
 		return fmt.Errorf("msg has invalid protocol version %d instead of %d", msg.ProtocolVersion(), proc.protoParas.Version)
@@ -276,12 +276,12 @@ func (proc *MessageProcessor) Emit(msg *storage.Block) error {
 }
 
 // WorkUnitsSize returns the size of WorkUnits currently cached.
-func (proc *MessageProcessor) WorkUnitsSize() int {
+func (proc *BlockProcessor) WorkUnitsSize() int {
 	return proc.workUnits.GetSize()
 }
 
 // gets a CachedWorkUnit or creates a new one if it not existent.
-func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
+func (proc *BlockProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUnit *CachedWorkUnit, newlyAdded bool) {
 	return &CachedWorkUnit{
 		proc.workUnits.ComputeIfAbsent(receivedTxBytes, func(_ []byte) objectstorage.StorableObject { // cachedWorkUnit +1
 			newlyAdded = true
@@ -291,7 +291,7 @@ func (proc *MessageProcessor) workUnitFor(receivedTxBytes []byte) (cachedWorkUni
 }
 
 // processes the given milestone request by parsing it and then replying to the peer with it.
-func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) {
+func (proc *BlockProcessor) processMilestoneRequest(p *Protocol, data []byte) {
 	msIndex, err := ExtractRequestedMilestoneIndex(data)
 	if err != nil {
 		proc.serverMetrics.InvalidRequests.Inc()
@@ -347,7 +347,7 @@ func constructMilestoneMessage(protoParas *iotago.ProtocolParameters, cachedMile
 }
 
 // processes the given message request by parsing it and then replying to the peer with it.
-func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
+func (proc *BlockProcessor) processMessageRequest(p *Protocol, data []byte) {
 	if len(data) != iotago.BlockIDLength {
 		return
 	}
@@ -375,7 +375,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 }
 
 // gets or creates a new WorkUnit for the given message and then processes the WorkUnit.
-func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
+func (proc *BlockProcessor) processMessage(p *Protocol, data []byte) {
 	cachedWorkUnit, newlyAdded := proc.workUnitFor(data) // workUnit +1
 
 	// force release if not newly added, so the cache time is only active the first time the message is received.
@@ -390,7 +390,7 @@ func (proc *MessageProcessor) processMessage(p *Protocol, data []byte) {
 // if the WorkUnit is invalid (because the underlying message is invalid), the given peer is punished.
 // if the WorkUnit is already completed, and the message was requested, this function emits a MessageProcessed event.
 // it is safe to call this function for the same WorkUnit multiple times.
-func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
+func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 	processRequests := func(wu *WorkUnit, msg *storage.Block, isMilestonePayload bool) Requests {
 
@@ -505,7 +505,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	proc.Events.MessageProcessed.Trigger(msg, requests, p)
 }
 
-func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {
+func (proc *BlockProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {
 	proc.shutdownMutex.RLock()
 	defer proc.shutdownMutex.RUnlock()
 	defer cachedBlockMeta.Release(true) // meta -1

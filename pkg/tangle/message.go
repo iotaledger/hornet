@@ -17,7 +17,7 @@ func AddMessageToStorage(dbStorage *storage.Storage, milestoneManager *milestone
 		if requested && cachedBlock.Block().IsMilestone() && !dbStorage.ContainsMilestoneIndex(milestone.Index(cachedBlock.Block().Milestone().Index)) {
 			// if the message was requested, was already known, but contains an unknown milestone payload, we need to re-verfiy the milestone payload.
 			// (maybe caused by formerly invalid milestones e.g. because of missing COO public keys in the node config).
-			if milestonePayload := milestoneManager.VerifyMilestoneMessage(block.Block()); milestonePayload != nil {
+			if milestonePayload := milestoneManager.VerifyMilestoneBlock(block.Block()); milestonePayload != nil {
 				milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, requested) // block pass +1
 			}
 		}
@@ -34,7 +34,7 @@ func AddMessageToStorage(dbStorage *storage.Storage, milestoneManager *milestone
 		dbStorage.StoreUnreferencedBlock(latestMilestoneIndex, cachedBlock.Block().BlockID()).Release(true) // unreferencedTx +-0
 	}
 
-	if milestonePayload := milestoneManager.VerifyMilestoneMessage(block.Block()); milestonePayload != nil {
+	if milestonePayload := milestoneManager.VerifyMilestoneBlock(block.Block()); milestonePayload != nil {
 		milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, requested) // block pass +1
 	}
 

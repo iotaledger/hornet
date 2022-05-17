@@ -327,8 +327,8 @@ func copyAndVerifyMilestoneCone(
 		protoParas,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
-		whiteflag.DefaultCheckMessageReferencedFunc,
-		whiteflag.DefaultSetMessageReferencedFunc,
+		whiteflag.DefaultCheckBlockReferencedFunc,
+		whiteflag.DefaultSetBlockReferencedFunc,
 		nil,
 		nil,
 		nil,
@@ -344,7 +344,7 @@ func copyAndVerifyMilestoneCone(
 
 	return &confStats{
 		msIndex:              confirmedMilestoneStats.Index,
-		messagesReferenced:   confirmedMilestoneStats.MessagesReferenced,
+		messagesReferenced:   confirmedMilestoneStats.BlocksReferenced,
 		durationCopy:         timeCopyMilestoneCone.Sub(ts).Truncate(time.Millisecond),
 		durationConfirmation: timeConfirmMilestone.Sub(timeCopyMilestoneCone).Truncate(time.Millisecond),
 	}, nil

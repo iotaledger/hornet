@@ -62,9 +62,9 @@ func configureGossipNode() {
 
 func collectServer() {
 	gossipMessages.WithLabelValues("all").Set(float64(deps.ServerMetrics.Messages.Load()))
-	gossipMessages.WithLabelValues("new").Set(float64(deps.ServerMetrics.NewMessages.Load()))
+	gossipMessages.WithLabelValues("new").Set(float64(deps.ServerMetrics.NewBlocks.Load()))
 	gossipMessages.WithLabelValues("known").Set(float64(deps.ServerMetrics.KnownMessages.Load()))
-	gossipMessages.WithLabelValues("referenced").Set(float64(deps.ServerMetrics.ReferencedMessages.Load()))
+	gossipMessages.WithLabelValues("referenced").Set(float64(deps.ServerMetrics.ReferencedBlocks.Load()))
 	gossipMessages.WithLabelValues("invalid").Set(float64(deps.ServerMetrics.InvalidMessages.Load()))
 	gossipMessages.WithLabelValues("sent").Set(float64(deps.ServerMetrics.SentMessages.Load()))
 	gossipMessages.WithLabelValues("sent_spam").Set(float64(deps.ServerMetrics.SentSpamMessages.Load()))

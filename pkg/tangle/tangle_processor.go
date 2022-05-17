@@ -81,7 +81,7 @@ func (t *Tangle) RunTangleProcessor() {
 	// send all solid messages back to the message processor, which broadcasts them to other nodes
 	// after passing some additional rules.
 	onMessageSolid := events.NewClosure(func(cachedBlockMeta *storage.CachedMetadata) {
-		t.messageProcessor.Broadcast(cachedBlockMeta) // meta pass +1
+		t.blockProcessor.Broadcast(cachedBlockMeta) // meta pass +1
 	})
 
 	onReceivedValidMilestone := events.NewClosure(func(blockID hornet.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
@@ -99,8 +99,8 @@ func (t *Tangle) RunTangleProcessor() {
 		}
 	})
 
-	// create a background worker that "measures" the MPS value every second
-	if err := t.daemon.BackgroundWorker("Metrics MPS Updater", func(ctx context.Context) {
+	// create a background worker that "measures" the BPS value every second
+	if err := t.daemon.BackgroundWorker("Metrics BPS Updater", func(ctx context.Context) {
 		ticker := timeutil.NewTicker(t.measureMPS, 1*time.Second, ctx)
 		ticker.WaitForGracefulShutdown()
 	}, daemon.PriorityMetricsUpdater); err != nil {
@@ -118,14 +118,14 @@ func (t *Tangle) RunTangleProcessor() {
 
 	if err := t.daemon.BackgroundWorker("TangleProcessor[ReceiveTx]", func(ctx context.Context) {
 		t.LogInfo("Starting TangleProcessor[ReceiveTx] ... done")
-		t.messageProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
-		t.Events.MessageSolid.Attach(onMessageSolid)
+		t.blockProcessor.Events.MessageProcessed.Attach(onMsgProcessed)
+		t.Events.BlockSolid.Attach(onMessageSolid)
 		t.receiveMsgWorkerPool.Start()
 		t.startWaitGroup.Done()
 		<-ctx.Done()
 		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ...")
-		t.messageProcessor.Events.MessageProcessed.Detach(onMsgProcessed)
-		t.Events.MessageSolid.Detach(onMessageSolid)
+		t.blockProcessor.Events.MessageProcessed.Detach(onMsgProcessed)
+		t.Events.BlockSolid.Detach(onMessageSolid)
 		t.receiveMsgWorkerPool.StopAndWait()
 		t.LogInfo("Stopping TangleProcessor[ReceiveTx] ... done")
 	}, daemon.PriorityReceiveTxWorker); err != nil {
@@ -201,7 +201,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Block, requests gossip.R
 	defer cachedBlock.Release(!isNodeSyncedWithinBelowMaxDepth) // block -1
 
 	if !alreadyAdded {
-		t.serverMetrics.NewMessages.Inc()
+		t.serverMetrics.NewBlocks.Inc()
 
 		if proto != nil {
 			proto.Metrics.NewMessages.Inc()
@@ -226,22 +226,22 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Block, requests gossip.R
 			t.futureConeSolidifierWorkerPool.Submit(cachedBlock.CachedMetadata()) // meta pass +1
 		}
 
-		t.Events.ReceivedNewMessage.Trigger(cachedBlock, latestMilestoneIndex, confirmedMilestoneIndex)
+		t.Events.ReceivedNewBlock.Trigger(cachedBlock, latestMilestoneIndex, confirmedMilestoneIndex)
 
 	} else {
 		t.serverMetrics.KnownMessages.Inc()
 		if proto != nil {
 			proto.Metrics.KnownMessages.Inc()
 		}
-		t.Events.ReceivedKnownMessage.Trigger(cachedBlock)
+		t.Events.ReceivedKnownBlock.Trigger(cachedBlock)
 	}
 
-	// "ProcessedMessage" event has to be fired after "ReceivedNewMessage" event,
+	// "ProcessedBlock" event has to be fired after "ReceivedNewBlock" event,
 	// otherwise there is a race condition in the coordinator plugin that tries to "ComputeMerkleTreeRootHash"
 	// with the message it issued itself because the message may be not solid yet and therefore their database entries
 	// are not created yet.
-	t.Events.ProcessedMessage.Trigger(incomingMsg.BlockID())
-	t.messageProcessedSyncEvent.Trigger(incomingMsg.BlockID().ToMapKey())
+	t.Events.ProcessedBlock.Trigger(incomingMsg.BlockID())
+	t.blockProcessedSyncEvent.Trigger(incomingMsg.BlockID().ToMapKey())
 
 	for _, request := range requests {
 		// mark the received request as processed
@@ -260,22 +260,22 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Block, requests gossip.R
 
 // RegisterMessageProcessedEvent returns a channel that gets closed when the message is processed.
 func (t *Tangle) RegisterMessageProcessedEvent(blockID hornet.BlockID) chan struct{} {
-	return t.messageProcessedSyncEvent.RegisterEvent(blockID.ToMapKey())
+	return t.blockProcessedSyncEvent.RegisterEvent(blockID.ToMapKey())
 }
 
 // DeregisterMessageProcessedEvent removes a registered event to free the memory if not used.
 func (t *Tangle) DeregisterMessageProcessedEvent(blockID hornet.BlockID) {
-	t.messageProcessedSyncEvent.DeregisterEvent(blockID.ToMapKey())
+	t.blockProcessedSyncEvent.DeregisterEvent(blockID.ToMapKey())
 }
 
 // RegisterMessageSolidEvent returns a channel that gets closed when the message is marked as solid.
 func (t *Tangle) RegisterMessageSolidEvent(blockID hornet.BlockID) chan struct{} {
-	return t.messageSolidSyncEvent.RegisterEvent(blockID.ToMapKey())
+	return t.blockSolidSyncEvent.RegisterEvent(blockID.ToMapKey())
 }
 
 // DeregisterMessageSolidEvent removes a registered event to free the memory if not used.
 func (t *Tangle) DeregisterMessageSolidEvent(blockID hornet.BlockID) {
-	t.messageSolidSyncEvent.DeregisterEvent(blockID.ToMapKey())
+	t.blockSolidSyncEvent.DeregisterEvent(blockID.ToMapKey())
 }
 
 // RegisterMilestoneConfirmedEvent returns a channel that gets closed when the milestone is confirmed.
@@ -303,7 +303,7 @@ func (t *Tangle) PrintStatus() {
 				"reqQMs: %d, "+
 				"processor: %05d, "+
 				"CMI/LMI: %d/%d, "+
-				"MPS (in/new/out): %05d/%05d/%05d, "+
+				"BPS (in/new/out): %05d/%05d/%05d, "+
 				"Tips (non-/semi-lazy): %d/%d",
 			queued, pending, processing, avgLatency,
 			currentLowestMilestoneIndexInReqQ,

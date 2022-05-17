@@ -44,7 +44,7 @@ type Message struct {
 	storedMessageID hornet.BlockID
 }
 
-func (te *TestEnvironment) NewMessageBuilder(optionalTag ...string) *MessageBuilder {
+func (te *TestEnvironment) NewBlockBuilder(optionalTag ...string) *MessageBuilder {
 	tag := ""
 	if len(optionalTag) > 0 {
 		tag = optionalTag[0]
@@ -287,7 +287,7 @@ func (m *Message) StoredMessage() *storage.Block {
 	return m.message
 }
 
-func (m *Message) StoredMessageID() hornet.BlockID {
+func (m *Message) StoredBlockID() hornet.BlockID {
 	require.NotNil(m.builder.te.TestInterface, m.storedMessageID)
 	return m.storedMessageID
 }

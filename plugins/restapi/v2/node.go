@@ -18,8 +18,8 @@ func info() (*infoResponse, error) {
 	var messagesPerSecond, referencedMessagesPerSecond, referencedRate float64
 	lastConfirmedMilestoneMetric := deps.Tangle.LastConfirmedMilestoneMetric()
 	if lastConfirmedMilestoneMetric != nil {
-		messagesPerSecond = lastConfirmedMilestoneMetric.MPS
-		referencedMessagesPerSecond = lastConfirmedMilestoneMetric.RMPS
+		messagesPerSecond = lastConfirmedMilestoneMetric.BPS
+		referencedMessagesPerSecond = lastConfirmedMilestoneMetric.RBPS
 		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
 	}
 

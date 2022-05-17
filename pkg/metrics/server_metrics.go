@@ -9,11 +9,11 @@ type ServerMetrics struct {
 	// The number of total received messages.
 	Messages atomic.Uint32
 	// The number of received messages which are new.
-	NewMessages atomic.Uint32
+	NewBlocks atomic.Uint32
 	// The number of received messages which are already known.
 	KnownMessages atomic.Uint32
 	// The number of referenced messages.
-	ReferencedMessages atomic.Uint32
+	ReferencedBlocks atomic.Uint32
 	// The number of messages with a transaction payload.
 	IncludedTransactionMessages atomic.Uint32
 	// The number of messages without a transaction payload.

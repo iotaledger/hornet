@@ -24,22 +24,22 @@ func TestConeRootIndexes(t *testing.T) {
 	te := testsuite.SetupTestEnvironment(t, &iotago.Ed25519Address{}, 0, BelowMaxDepth, MinPoWScore, false)
 	defer te.CleanupTestEnvironment(true)
 
-	initMessagesCount := 10
+	initBlocksCount := 10
 	milestonesCount := 30
-	minMessagesPerMilestone := 10
-	maxMessagesPerMilestone := 100
+	minBlocksPerMilestone := 10
+	maxBlocksPerMilestone := 100
 
-	// build a tangle with 30 milestones and 10 - 100 messages between the milestones
-	_, _ = te.BuildTangle(initMessagesCount, BelowMaxDepth, milestonesCount, minMessagesPerMilestone, maxMessagesPerMilestone,
+	// build a tangle with 30 milestones and 10 - 100 blocks between the milestones
+	_, _ = te.BuildTangle(initBlocksCount, BelowMaxDepth, milestonesCount, minBlocksPerMilestone, maxBlocksPerMilestone,
 		nil,
-		func(messages hornet.BlockIDs, messagesPerMilestones []hornet.BlockIDs) hornet.BlockIDs {
-			return hornet.BlockIDs{messages[len(messages)-1]}
+		func(blockIDs hornet.BlockIDs, blockIDsPerMilestones []hornet.BlockIDs) hornet.BlockIDs {
+			return hornet.BlockIDs{blockIDs[len(blockIDs)-1]}
 		},
-		func(msIndex milestone.Index, messages hornet.BlockIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
+		func(msIndex milestone.Index, blockIDs hornet.BlockIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
 			cmi := latestMilestone.Milestone().Index()
 
-			cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(messages[len(messages)-1])
+			cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(blockIDs[len(blockIDs)-1])
 			ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 			require.NoError(te.TestInterface, err)
 
@@ -61,9 +61,9 @@ func TestConeRootIndexes(t *testing.T) {
 
 	// Use Null hash and last milestone hash as parents
 	parents := append(latestMilestone.Milestone().Parents(), hornet.NullBlockID())
-	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
+	msg := te.NewBlockBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
 
-	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(msg.StoredMessageID())
+	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(msg.StoredBlockID())
 	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 	require.NoError(te.TestInterface, err)
 

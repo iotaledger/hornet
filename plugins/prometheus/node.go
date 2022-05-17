@@ -119,8 +119,8 @@ func collectInfo() {
 
 	lastConfirmedMilestoneMetric := deps.Tangle.LastConfirmedMilestoneMetric()
 	if lastConfirmedMilestoneMetric != nil {
-		messagesPerSecond.Set(lastConfirmedMilestoneMetric.MPS)
-		referencedMessagesPerSecond.Set(lastConfirmedMilestoneMetric.RMPS)
+		messagesPerSecond.Set(lastConfirmedMilestoneMetric.BPS)
+		referencedMessagesPerSecond.Set(lastConfirmedMilestoneMetric.RBPS)
 		referencedRate.Set(lastConfirmedMilestoneMetric.ReferencedRate)
 	}
 

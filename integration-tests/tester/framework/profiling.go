@@ -69,16 +69,16 @@ func (n *Profiler) TakeHeapSnapshot() error {
 	return n.writeProfile(fileName, profileBytes)
 }
 
-// GraphMetrics graphs metrics about MPS, memory consumption, confirmation rate of the node and saves it into the log dir.
+// GraphMetrics graphs metrics about BPS, memory consumption, confirmation rate of the node and saves it into the log dir.
 func (n *Profiler) GraphMetrics(dur time.Duration) error {
 	var err error
 
-	// MPS
+	// BPS
 	var mpsChartXAxis []string
 	var newMPS, incomingMPS, outgoingMPS []int32
 	mpsChart := charts.NewLine()
 	mpsChart.SetGlobalOptions(
-		charts.TitleOpts{Title: "Messages Per Second"},
+		charts.TitleOpts{Title: "Blocks Per Second"},
 		charts.DataZoomOpts{XAxisIndex: []int{0}, Start: 0, End: 100},
 	)
 

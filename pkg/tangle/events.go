@@ -45,12 +45,12 @@ func ReceiptCaller(handler interface{}, params ...interface{}) {
 
 type Events struct {
 	MPSMetricsUpdated              *events.Event
-	ReceivedNewMessage             *events.Event
-	ReceivedKnownMessage           *events.Event
-	ProcessedMessage               *events.Event
-	MessageSolid                   *events.Event
-	MessageReferenced              *events.Event
-	ReceivedNewMilestoneMessage    *events.Event
+	ReceivedNewBlock               *events.Event
+	ReceivedKnownBlock             *events.Event
+	ProcessedBlock                 *events.Event
+	BlockSolid                     *events.Event
+	BlockReferenced                *events.Event
+	ReceivedNewMilestoneBlock      *events.Event
 	LatestMilestoneChanged         *events.Event
 	LatestMilestoneIndexChanged    *events.Event
 	MilestoneConfirmed             *events.Event

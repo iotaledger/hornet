@@ -12,7 +12,7 @@ import (
 	"github.com/gohornet/hornet/integration-tests/tester/framework"
 )
 
-// TestNetworkBenchmark boots up a statically peered network and then graphs MPS, CPU and memory profiles
+// TestNetworkBenchmark boots up a statically peered network and then graphs BPS, CPU and memory profiles
 // while the network is sustaining a high inflow of transactions.
 func TestNetworkBenchmark(t *testing.T) {
 	n, err := f.CreateStaticNetwork("test_benchmark", nil, framework.DefaultStaticPeeringLayout())

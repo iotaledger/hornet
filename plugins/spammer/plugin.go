@@ -80,7 +80,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	MessageProcessor   *gossip.MessageProcessor
+	MessageProcessor   *gossip.BlockProcessor
 	SyncManager        *syncmanager.SyncManager
 	ServerMetrics      *metrics.ServerMetrics
 	PoWHandler         *pow.Handler
@@ -249,7 +249,7 @@ func startSpammerWorkers(mpsRateLimit float64, cpuMaxUsage float64, spammerWorke
 					break rateLimitLoop
 				}
 
-				// measure the last interval error and multiply by two to compensate (to reach target MPS)
+				// measure the last interval error and multiply by two to compensate (to reach target BPS)
 				lastIntervalError := (lastDuration - interval) * 2.0
 				if lastIntervalError < 0 {
 					lastIntervalError = 0

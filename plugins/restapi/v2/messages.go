@@ -145,7 +145,7 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults
-	childrenMessageIDs, err := deps.Storage.ChildrenMessageIDs(blockID, storage.WithIteratorMaxIterations(maxResults))
+	childrenMessageIDs, err := deps.Storage.ChildrenBlockIDs(blockID, storage.WithIteratorMaxIterations(maxResults))
 	if err != nil {
 		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}

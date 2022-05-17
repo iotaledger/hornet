@@ -145,7 +145,7 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Block) 
 
 	msgProcessedChan := a.tangle.RegisterMessageProcessedEvent(message.BlockID())
 
-	if err := a.tangle.messageProcessor.Emit(message); err != nil {
+	if err := a.tangle.blockProcessor.Emit(message); err != nil {
 		a.tangle.DeregisterMessageProcessedEvent(message.BlockID())
 		return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
 	}

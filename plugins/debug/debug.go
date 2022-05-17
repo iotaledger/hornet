@@ -220,7 +220,7 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 	entryPoints := []*entryPoint{}
 	tanglePath := []*messageWithParents{}
 
-	if err := dag.TraverseParentsOfMessage(
+	if err := dag.TraverseParentsOfBlock(
 		Plugin.Daemon().ContextStopped(),
 		deps.Storage,
 		blockID,

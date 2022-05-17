@@ -133,7 +133,7 @@ func storeBlock(protoParas *iotago.ProtocolParameters, dbStorage StoreBlockInter
 		dbStorage.StoreChild(parent, cachedBlock.Block().BlockID()).Release(true) // child +-0
 	}
 
-	if milestonePayload := milestoneManager.VerifyMilestoneMessage(message.Block()); milestonePayload != nil {
+	if milestonePayload := milestoneManager.VerifyMilestoneBlock(message.Block()); milestonePayload != nil {
 		cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload, message.BlockID()) // milestone +1
 
 		// Force release to store milestones without caching

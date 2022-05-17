@@ -16,12 +16,12 @@ import (
 )
 
 type ConfirmedMilestoneStats struct {
-	Index                                       milestone.Index
-	ConfirmationTime                            int64
-	MessagesReferenced                          int
-	MessagesExcludedWithConflictingTransactions int
-	MessagesIncludedWithTransactions            int
-	MessagesExcludedWithoutTransactions         int
+	Index                                     milestone.Index
+	ConfirmationTime                          int64
+	BlocksReferenced                          int
+	BlocksExcludedWithConflictingTransactions int
+	BlocksIncludedWithTransactions            int
+	BlocksExcludedWithoutTransactions         int
 }
 
 // ConfirmationMetrics holds metrics about a confirmation run.
@@ -48,10 +48,10 @@ type CheckMessageReferencedFunc func(meta *storage.BlockMetadata) bool
 type SetMessageReferencedFunc func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index)
 
 var (
-	DefaultCheckMessageReferencedFunc = func(meta *storage.BlockMetadata) bool {
+	DefaultCheckBlockReferencedFunc = func(meta *storage.BlockMetadata) bool {
 		return meta.IsReferenced()
 	}
-	DefaultSetMessageReferencedFunc = func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index) {
+	DefaultSetBlockReferencedFunc = func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index) {
 		meta.SetReferenced(referenced, msIndex)
 	}
 )
@@ -220,11 +220,11 @@ func ConfirmMilestone(
 			if !checkMessageReferencedFunc(meta.Metadata()) {
 				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-				confirmedMilestoneStats.MessagesReferenced++
-				confirmedMilestoneStats.MessagesIncludedWithTransactions++
+				confirmedMilestoneStats.BlocksReferenced++
+				confirmedMilestoneStats.BlocksIncludedWithTransactions++
 				if serverMetrics != nil {
 					serverMetrics.IncludedTransactionMessages.Inc()
-					serverMetrics.ReferencedMessages.Inc()
+					serverMetrics.ReferencedBlocks.Inc()
 				}
 				if forEachReferencedMessage != nil {
 					forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
@@ -243,11 +243,11 @@ func ConfirmMilestone(
 			if !checkMessageReferencedFunc(meta.Metadata()) {
 				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-				confirmedMilestoneStats.MessagesReferenced++
-				confirmedMilestoneStats.MessagesExcludedWithoutTransactions++
+				confirmedMilestoneStats.BlocksReferenced++
+				confirmedMilestoneStats.BlocksExcludedWithoutTransactions++
 				if serverMetrics != nil {
 					serverMetrics.NoTransactionMessages.Inc()
-					serverMetrics.ReferencedMessages.Inc()
+					serverMetrics.ReferencedBlocks.Inc()
 				}
 				if forEachReferencedMessage != nil {
 					forEachReferencedMessage(meta, milestoneIndex, confirmationTime)
@@ -266,11 +266,11 @@ func ConfirmMilestone(
 			if !checkMessageReferencedFunc(meta.Metadata()) {
 				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
-				confirmedMilestoneStats.MessagesReferenced++
-				confirmedMilestoneStats.MessagesExcludedWithConflictingTransactions++
+				confirmedMilestoneStats.BlocksReferenced++
+				confirmedMilestoneStats.BlocksExcludedWithConflictingTransactions++
 				if serverMetrics != nil {
 					serverMetrics.ConflictingTransactionMessages.Inc()
-					serverMetrics.ReferencedMessages.Inc()
+					serverMetrics.ReferencedBlocks.Inc()
 				}
 				if forEachReferencedMessage != nil {
 					forEachReferencedMessage(meta, milestoneIndex, confirmationTime)

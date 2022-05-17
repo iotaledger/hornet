@@ -180,10 +180,10 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 
 	for i := 1; i <= numberOfMilestones; i++ {
 		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{}, false)
-		require.Equal(te.TestInterface, 1, confStats.MessagesReferenced)                  // 1 for previous milestone
-		require.Equal(te.TestInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for previous milestone
-		require.Equal(te.TestInterface, 0, confStats.MessagesIncludedWithTransactions)
-		require.Equal(te.TestInterface, 0, confStats.MessagesExcludedWithConflictingTransactions)
+		require.Equal(te.TestInterface, 1, confStats.BlocksReferenced)                  // 1 for previous milestone
+		require.Equal(te.TestInterface, 1, confStats.BlocksExcludedWithoutTransactions) // 1 for previous milestone
+		require.Equal(te.TestInterface, 0, confStats.BlocksIncludedWithTransactions)
+		require.Equal(te.TestInterface, 0, confStats.BlocksExcludedWithConflictingTransactions)
 	}
 
 	return te
@@ -260,9 +260,9 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 }
 
 func (te *TestEnvironment) NewTestMessage(index int, parents hornet.BlockIDs) *storage.BlockMetadata {
-	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
-	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(msg.StoredMessageID()) // meta +1
-	defer cachedBlockMeta.Release(true)                                             // meta -1
+	msg := te.NewBlockBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
+	cachedBlockMeta := te.Storage().CachedBlockMetadataOrNil(msg.StoredBlockID()) // meta +1
+	defer cachedBlockMeta.Release(true)                                           // meta -1
 	return cachedBlockMeta.Metadata()
 }
 

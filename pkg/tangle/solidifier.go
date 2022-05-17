@@ -26,8 +26,8 @@ var (
 
 type ConfirmedMilestoneMetric struct {
 	MilestoneIndex         milestone.Index `json:"ms_index"`
-	MPS                    float64         `json:"mps"`
-	RMPS                   float64         `json:"rmps"`
+	BPS                    float64         `json:"mps"`
+	RBPS                   float64         `json:"rmps"`
 	ReferencedRate         float64         `json:"referenced_rate"`
 	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }
@@ -37,18 +37,18 @@ func (t *Tangle) TriggerSolidifier() {
 	t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
 }
 
-func (t *Tangle) markMessageAsSolid(cachedBlockMeta *storage.CachedMetadata) {
+func (t *Tangle) markBlockAsSolid(cachedBlockMeta *storage.CachedMetadata) {
 	defer cachedBlockMeta.Release(true) // meta -1
 
-	// update the solidity flags of this message
+	// update the solidity flags of this block
 	cachedBlockMeta.Metadata().SetSolid(true)
 
-	t.Events.MessageSolid.Trigger(cachedBlockMeta)
-	t.messageSolidSyncEvent.Trigger(cachedBlockMeta.Metadata().BlockID().ToMapKey())
+	t.Events.BlockSolid.Trigger(cachedBlockMeta)
+	t.blockSolidSyncEvent.Trigger(cachedBlockMeta.Metadata().BlockID().ToMapKey())
 }
 
 // SolidQueueCheck traverses a milestone and checks if it is solid.
-// Missing messages are requested.
+// Missing blocks are requested.
 // Can be aborted if the given context is canceled.
 func (t *Tangle) SolidQueueCheck(
 	ctx context.Context,
@@ -68,7 +68,7 @@ func (t *Tangle) SolidQueueCheck(
 	if err := parentsTraverser.Traverse(
 		ctx,
 		parents,
-		// traversal stops if no more messages pass the given condition
+		// traversal stops if no more blocks pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
@@ -89,9 +89,9 @@ func (t *Tangle) SolidQueueCheck(
 			return nil
 		},
 		// called on missing parents
-		func(parentMessageID hornet.BlockID) error {
+		func(parentBlockID hornet.BlockID) error {
 			// msg does not exist => request missing msg
-			blockIDsToRequest[parentMessageID.ToMapKey()] = struct{}{}
+			blockIDsToRequest[parentBlockID.ToMapKey()] = struct{}{}
 			return nil
 		},
 		// called on solid entry points
@@ -116,12 +116,12 @@ func (t *Tangle) SolidQueueCheck(
 		return false, false
 	}
 
-	// no messages to request => the whole cone is solid
-	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
+	// no blocks to request => the whole cone is solid
+	// we mark all blocks as solid in order from oldest to latest (needed for the tip pool)
 	for _, blockID := range blockIDsToSolidify {
 		cachedBlockMeta, err := memcachedTraverserStorage.CachedBlockMetadata(blockID)
 		if err != nil {
-			t.LogPanicf("solidQueueCheck: Get message metadata failed: %v, Error: %w", blockID.ToHex(), err)
+			t.LogPanicf("solidQueueCheck: Get block metadata failed: %v, Error: %w", blockID.ToHex(), err)
 			return
 		}
 		if cachedBlockMeta == nil {
@@ -129,8 +129,8 @@ func (t *Tangle) SolidQueueCheck(
 			return
 		}
 
-		t.markMessageAsSolid(cachedBlockMeta.Retain()) // meta pass +1
-		cachedBlockMeta.Release(true)                  // meta -1
+		t.markBlockAsSolid(cachedBlockMeta.Retain()) // meta pass +1
+		cachedBlockMeta.Release(true)                // meta -1
 	}
 
 	tSolid := time.Now()
@@ -229,7 +229,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		return
 	}
 
-	milestoneMessageIDToSolidify, err := t.storage.MilestoneMessageIDByIndex(milestoneIndexToSolidify)
+	milestoneBlockIDToSolidify, err := t.storage.MilestoneBlockIDByIndex(milestoneIndexToSolidify)
 	if err != nil {
 		// Milestone not found
 		t.LogPanic(storage.ErrMilestoneNotFound)
@@ -251,7 +251,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	milestoneSolidificationCtx, milestoneSolidificationCancelFunc := t.newMilestoneSolidificationCtx()
 	defer milestoneSolidificationCancelFunc()
 
-	messagesMemcache := storage.NewBlocksMemcache(t.storage.CachedBlock)
+	blocksMemcache := storage.NewBlocksMemcache(t.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(t.storage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(t.storage, metadataMemcache)
 
@@ -259,10 +259,10 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		// all releases are forced since the cone is referenced and not needed anymore
 		memcachedTraverserStorage.Cleanup(true)
 
-		// release all messages at the end
-		messagesMemcache.Cleanup(true)
+		// release all blocks at the end
+		blocksMemcache.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
@@ -271,7 +271,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		milestoneSolidificationCtx,
 		memcachedTraverserStorage,
 		milestoneIndexToSolidify,
-		hornet.BlockIDs{milestoneMessageIDToSolidify},
+		hornet.BlockIDs{milestoneBlockIDToSolidify},
 	); !becameSolid {
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
@@ -324,15 +324,15 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	confirmedMilestoneStats, confirmationMetrics, err := whiteflag.ConfirmMilestone(
 		t.storage.UTXOManager(),
 		memcachedTraverserStorage,
-		messagesMemcache.CachedBlock,
+		blocksMemcache.CachedBlock,
 		t.protoParas,
 		milestonePayloadToSolidify,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
-		whiteflag.DefaultCheckMessageReferencedFunc,
-		whiteflag.DefaultSetMessageReferencedFunc,
+		whiteflag.DefaultCheckBlockReferencedFunc,
+		whiteflag.DefaultSetBlockReferencedFunc,
 		t.serverMetrics,
 		func(msgMeta *storage.CachedMetadata, index milestone.Index, confTime uint32) {
-			t.Events.MessageReferenced.Trigger(msgMeta, index, confTime)
+			t.Events.BlockReferenced.Trigger(msgMeta, index, confTime)
 		},
 		func(confirmation *whiteflag.Confirmation) {
 			timeStartConfirmation = time.Now()
@@ -341,9 +341,9 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			}
 			timeSetConfirmedMilestoneIndex = time.Now()
 			if t.syncManager.IsNodeAlmostSynced() {
-				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, message broadcasting, etc...)
+				// propagate new cone root indexes to the future cone (needed for URTS, heaviest branch tipselection, block broadcasting, etc...)
 				// we can safely ignore errors of the future cone solidifier.
-				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.MessagesReferenced, confirmation.MilestoneIndex)
+				_ = dag.UpdateConeRootIndexes(milestoneSolidificationCtx, memcachedTraverserStorage, confirmation.Mutations.BlocksReferenced, confirmation.MilestoneIndex)
 			}
 			timeUpdateConeRootIndexes = time.Now()
 			t.Events.ConfirmedMilestoneChanged.Trigger(cachedMilestoneToSolidify) // milestone pass +1
@@ -388,10 +388,10 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	t.LogInfof("Milestone confirmed (%d): txsReferenced: %v, txsValue: %v, txsZeroValue: %v, txsConflicting: %v, collect: %v, total: %v",
 		confirmedMilestoneStats.Index,
-		confirmedMilestoneStats.MessagesReferenced,
-		confirmedMilestoneStats.MessagesIncludedWithTransactions,
-		confirmedMilestoneStats.MessagesExcludedWithoutTransactions,
-		confirmedMilestoneStats.MessagesExcludedWithConflictingTransactions,
+		confirmedMilestoneStats.BlocksReferenced,
+		confirmedMilestoneStats.BlocksIncludedWithTransactions,
+		confirmedMilestoneStats.BlocksExcludedWithoutTransactions,
+		confirmedMilestoneStats.BlocksExcludedWithConflictingTransactions,
 		confirmationMetrics.DurationWhiteflag.Truncate(time.Millisecond),
 		time.Since(timeStart).Truncate(time.Millisecond),
 	)
@@ -406,10 +406,10 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 
 	t.Events.ConfirmationMetricsUpdated.Trigger(confirmationMetrics)
 
-	var rmpsMessage string
+	var rbpsBlock string
 	if metric, err := t.calcConfirmedMilestoneMetric(milestonePayloadToSolidify); err == nil {
 		if t.syncManager.IsNodeSynced() {
-			// Only trigger the metrics event if the node is sync (otherwise the MPS and conf.rate is wrong)
+			// Only trigger the metrics event if the node is sync (otherwise the BPS and conf.rate is wrong)
 			if t.firstSyncedMilestone == 0 {
 				t.firstSyncedMilestone = milestoneIndexToSolidify
 			}
@@ -423,15 +423,15 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 			t.lastConfirmedMilestoneMetric = metric
 			t.lastConfirmedMilestoneMetricLock.Unlock()
 
-			// Ignore the first two milestones after node was sync (otherwise the MPS and conf.rate is wrong)
-			rmpsMessage = fmt.Sprintf(", %0.2f MPS, %0.2f RMPS, %0.2f%% ref.rate", metric.MPS, metric.RMPS, metric.ReferencedRate)
+			// Ignore the first two milestones after node was sync (otherwise the BPS and conf.rate is wrong)
+			rbpsBlock = fmt.Sprintf(", %0.2f BPS, %0.2f RBPS, %0.2f%% ref.rate", metric.BPS, metric.RBPS, metric.ReferencedRate)
 			t.Events.NewConfirmedMilestoneMetric.Trigger(metric)
 		} else {
-			rmpsMessage = fmt.Sprintf(", %0.2f RMPS", metric.RMPS)
+			rbpsBlock = fmt.Sprintf(", %0.2f RBPS", metric.RBPS)
 		}
 	}
 
-	t.LogInfof("New confirmed milestone: %d%s", confirmedMilestoneStats.Index, rmpsMessage)
+	t.LogInfof("New confirmed milestone: %d%s", confirmedMilestoneStats.Index, rbpsBlock)
 
 	// Run check for next milestone
 	t.setSolidifierMilestoneIndex(0)
@@ -462,11 +462,11 @@ func (t *Tangle) calcConfirmedMilestoneMetric(milestonePayloadToSolidify *iotago
 
 	timeDiffFloat := float64(timeDiff)
 
-	newNewMsgCount := t.serverMetrics.NewMessages.Load()
+	newNewMsgCount := t.serverMetrics.NewBlocks.Load()
 	newMsgDiff := math.Uint32Diff(newNewMsgCount, t.oldNewMsgCount)
 	t.oldNewMsgCount = newNewMsgCount
 
-	newReferencedMsgCount := t.serverMetrics.ReferencedMessages.Load()
+	newReferencedMsgCount := t.serverMetrics.ReferencedBlocks.Load()
 	referencedMsgDiff := math.Uint32Diff(newReferencedMsgCount, t.oldReferencedMsgCount)
 	t.oldReferencedMsgCount = newReferencedMsgCount
 
@@ -477,8 +477,8 @@ func (t *Tangle) calcConfirmedMilestoneMetric(milestonePayloadToSolidify *iotago
 
 	metric := &ConfirmedMilestoneMetric{
 		MilestoneIndex:         index,
-		MPS:                    float64(newMsgDiff) / timeDiffFloat,
-		RMPS:                   float64(referencedMsgDiff) / timeDiffFloat,
+		BPS:                    float64(newMsgDiff) / timeDiffFloat,
+		RBPS:                   float64(referencedMsgDiff) / timeDiffFloat,
 		ReferencedRate:         referencedRate,
 		TimeSinceLastMilestone: timeDiffFloat,
 	}
@@ -503,23 +503,23 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 		ctx,
 		t.storage,
 		milestoneParents,
-		// traversal stops if no more messages pass the given condition
+		// traversal stops if no more blocks pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			// if the message is referenced by an older milestone, there is no need to traverse its parents
+			// if the block is referenced by an older milestone, there is no need to traverse its parents
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced && (at <= confirmedMilestoneIndex) {
 				return false, nil
 			}
 
 			cachedBlock := t.storage.CachedBlockOrNil(cachedBlockMeta.Metadata().BlockID()) // block +1
 			if cachedBlock == nil {
-				return false, fmt.Errorf("%w message ID: %s", common.ErrBlockNotFound, cachedBlockMeta.Metadata().BlockID().ToHex())
+				return false, fmt.Errorf("%w block ID: %s", common.ErrBlockNotFound, cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
 			defer cachedBlock.Release(true) // block -1
 
-			milestonePayload := t.milestoneManager.VerifyMilestoneMessage(cachedBlock.Block().Block())
+			milestonePayload := t.milestoneManager.VerifyMilestoneBlock(cachedBlock.Block().Block())
 			if milestonePayload == nil {
 				return true, nil
 			}

@@ -8,7 +8,7 @@ import (
 func (t *Tangle) processValidMilestone(blockID hornet.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
 	defer cachedMilestone.Release(true) // milestone -1
 
-	t.Events.ReceivedNewMilestoneMessage.Trigger(blockID)
+	t.Events.ReceivedNewMilestoneBlock.Trigger(blockID)
 
 	confirmedMsIndex := t.syncManager.ConfirmedMilestoneIndex()
 	msIndex := cachedMilestone.Milestone().Index()

@@ -21,7 +21,7 @@ type ChildrenTraverser struct {
 	// stack holding the ordered msg to process.
 	stack *list.List
 
-	// discovers map with already found messages.
+	// discovers map with already found blocks.
 	discovered map[string]struct{}
 
 	ctx                   context.Context
@@ -113,7 +113,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 		if cachedBlockMeta == nil {
 			// there was an error, stop processing the stack
-			return errors.Wrapf(common.ErrBlockNotFound, "message ID: %s", currentBlockID.ToHex())
+			return errors.Wrapf(common.ErrBlockNotFound, "block ID: %s", currentBlockID.ToHex())
 		}
 		defer cachedBlockMeta.Release(true) // meta -1
 
@@ -125,12 +125,12 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 
 		if !traverse {
-			// message will not get consumed and children are not traversed
+			// block will not get consumed and children are not traversed
 			return nil
 		}
 
 		if t.consumer != nil {
-			// consume the message
+			// consume the block
 			if err := t.consumer(cachedBlockMeta.Retain()); err != nil { // meta pass +1
 				// there was an error, stop processing the stack
 				return err
@@ -138,24 +138,24 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		}
 	}
 
-	childrenMessageIDs, err := t.childrenTraverserStorage.ChildrenMessageIDs(currentBlockID)
+	childrenBlockIDs, err := t.childrenTraverserStorage.ChildrenBlockIDs(currentBlockID)
 	if err != nil {
 		return err
 	}
 
-	for _, childMessageID := range childrenMessageIDs {
+	for _, childBlockID := range childrenBlockIDs {
 		if !t.walkAlreadyDiscovered {
-			childMessageIDMapKey := childMessageID.ToMapKey()
-			if _, childDiscovered := t.discovered[childMessageIDMapKey]; childDiscovered {
+			childBlockIDMapKey := childBlockID.ToMapKey()
+			if _, childDiscovered := t.discovered[childBlockIDMapKey]; childDiscovered {
 				// child was already discovered
 				continue
 			}
 
-			t.discovered[childMessageIDMapKey] = struct{}{}
+			t.discovered[childBlockIDMapKey] = struct{}{}
 		}
 
 		// traverse the child
-		t.stack.PushBack(childMessageID)
+		t.stack.PushBack(childBlockID)
 	}
 
 	return nil

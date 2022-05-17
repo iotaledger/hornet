@@ -22,8 +22,8 @@ func (m *MemcachedTraverserStorage) CachedBlockMetadata(blockID hornet.BlockID) 
 	return m.metadataMemcache.CachedBlockMetadata(blockID)
 }
 
-func (m *MemcachedTraverserStorage) ChildrenMessageIDs(blockID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error) {
-	return m.traverserStorage.ChildrenMessageIDs(blockID, iteratorOptions...)
+func (m *MemcachedTraverserStorage) ChildrenBlockIDs(blockID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error) {
+	return m.traverserStorage.ChildrenBlockIDs(blockID, iteratorOptions...)
 }
 
 func (m *MemcachedTraverserStorage) SolidEntryPointsContain(blockID hornet.BlockID) (bool, error) {
@@ -83,7 +83,7 @@ func (m *MemcachedChildrenTraverserStorage) CachedMessageMetadata(blockID hornet
 }
 
 func (m *MemcachedChildrenTraverserStorage) ChildrenMessageIDs(blockID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error) {
-	return m.childrenTraverserStorage.ChildrenMessageIDs(blockID, iteratorOptions...)
+	return m.childrenTraverserStorage.ChildrenBlockIDs(blockID, iteratorOptions...)
 }
 
 func (m *MemcachedChildrenTraverserStorage) Cleanup(forceRelease bool) {

@@ -42,7 +42,7 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Issue some transactions
-	messageA := te.NewMessageBuilder("A").
+	messageA := te.NewBlockBuilder("A").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
@@ -55,19 +55,19 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Confirming milestone at message A
-	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageA.StoredMessageID()}, true)
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + previous milestone
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageA.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // 1 + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 0)
 	te.AssertWalletBalance(seed2Wallet, te.ProtocolParameters().TokenSupply)
 
 	// Issue some transactions
-	messageB := te.NewMessageBuilder("B").
-		Parents(append(te.LastMilestoneParents(), messageA.StoredMessageID())).
+	messageB := te.NewBlockBuilder("B").
+		Parents(append(te.LastMilestoneParents(), messageA.StoredBlockID())).
 		FromWallet(seed2Wallet).
 		ToWallet(seed1Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
@@ -76,11 +76,11 @@ func TestWhiteFlagSendAllCoins(t *testing.T) {
 		BookOnWallets()
 
 	// Confirming milestone at message C (message D and E are not included)
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageB.StoredMessageID()}, true)
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + previous milestone
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageB.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // 1 + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, te.ProtocolParameters().TokenSupply)
@@ -108,7 +108,7 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 
 	// Issue some transactions
 	// Valid transfer from seed1 (iotago.TokenSupply) with remainder seed1 (2_779_530_282_277_761) to seed2 (1_000_000)
-	messageA := te.NewMessageBuilder("A").
+	messageA := te.NewBlockBuilder("A").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
@@ -121,8 +121,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Valid transfer from seed1 (2_779_530_282_277_761) with remainder seed1 (2_779_530_280_277_761) to seed2 (2_000_000)
-	messageB := te.NewMessageBuilder("B").
-		Parents(append(te.LastMilestoneParents(), messageA.StoredMessageID())).
+	messageB := te.NewBlockBuilder("B").
+		Parents(append(te.LastMilestoneParents(), messageA.StoredBlockID())).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(2_000_000).
@@ -134,8 +134,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Invalid transfer from seed3 (0) to seed2 (1_000_000) (invalid input)
-	messageC := te.NewMessageBuilder("C").
-		Parents(append(te.LastMilestoneParents(), messageB.StoredMessageID())).
+	messageC := te.NewBlockBuilder("C").
+		Parents(append(te.LastMilestoneParents(), messageB.StoredBlockID())).
 		FromWallet(seed3Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_000_000).
@@ -144,14 +144,14 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		Store()
 
 	// Confirming milestone at message C (message D and E are not included)
-	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageC.StoredMessageID()}, true)
-	require.Equal(t, 3+1, confStats.MessagesReferenced) // 3 + previous milestone
-	require.Equal(t, 2, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageC.StoredBlockID()}, true)
+	require.Equal(t, 3+1, confStats.BlocksReferenced) // 3 + previous milestone
+	require.Equal(t, 2, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	// Verify the messages have the expected conflict reason
-	te.AssertMessageConflictReason(messageC.StoredMessageID(), storage.ConflictInputUTXONotFound)
+	te.AssertMessageConflictReason(messageC.StoredBlockID(), storage.ConflictInputUTXONotFound)
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
@@ -160,8 +160,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te.AssertWalletBalance(seed4Wallet, 0)
 
 	// Invalid transfer from seed4 (0) to seed2 (1_500_000) (invalid input)
-	messageD := te.NewMessageBuilder("D").
-		Parents(hornet.BlockIDs{messageA.StoredMessageID(), messageC.StoredMessageID()}).
+	messageD := te.NewBlockBuilder("D").
+		Parents(hornet.BlockIDs{messageA.StoredBlockID(), messageC.StoredBlockID()}).
 		FromWallet(seed4Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_500_000).
@@ -170,8 +170,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		Store()
 
 	// Valid transfer from seed2 (1_000_000) and seed2 (2_000_000) with remainder seed2 (1_500_000) to seed4 (1_500_000)
-	messageE := te.NewMessageBuilder("E").
-		Parents(hornet.BlockIDs{messageB.StoredMessageID(), messageD.StoredMessageID()}).
+	messageE := te.NewBlockBuilder("E").
+		Parents(hornet.BlockIDs{messageB.StoredBlockID(), messageD.StoredBlockID()}).
 		FromWallet(seed2Wallet).
 		ToWallet(seed4Wallet).
 		Amount(1_500_000).
@@ -185,14 +185,14 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	seed4Wallet.PrintStatus()
 
 	// Confirming milestone at message E
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageE.StoredMessageID()}, true)
-	require.Equal(t, 2+1, confStats.MessagesReferenced) // 2 + previous milestone
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageE.StoredBlockID()}, true)
+	require.Equal(t, 2+1, confStats.BlocksReferenced) // 2 + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	// Verify the messages have the expected conflict reason
-	te.AssertMessageConflictReason(messageD.StoredMessageID(), storage.ConflictInputUTXONotFound)
+	te.AssertMessageConflictReason(messageD.StoredBlockID(), storage.ConflictInputUTXONotFound)
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
@@ -201,8 +201,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te.AssertWalletBalance(seed4Wallet, 1_500_000)
 
 	// Invalid transfer from seed3 (0) to seed2 (1_000_000) (already spent (genesis))
-	messageF := te.NewMessageBuilder("F").
-		Parents(append(te.LastMilestoneParents(), messageE.StoredMessageID())).
+	messageF := te.NewBlockBuilder("F").
+		Parents(append(te.LastMilestoneParents(), messageE.StoredBlockID())).
 		FromWallet(seed3Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_000_000).
@@ -211,14 +211,14 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		Store()
 
 	// Confirming milestone at message F
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageF.StoredMessageID()}, true)
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 + previous milestone
-	require.Equal(t, 0, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageF.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // 1 + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	// Verify the messages have the expected conflict reason
-	te.AssertMessageConflictReason(messageF.StoredMessageID(), storage.ConflictInputUTXOAlreadySpent)
+	te.AssertMessageConflictReason(messageF.StoredBlockID(), storage.ConflictInputUTXOAlreadySpent)
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
@@ -227,8 +227,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 	te.AssertWalletBalance(seed4Wallet, 1_500_000)
 
 	// Valid transfer from seed4 to seed3 (1_500_000)
-	messageG := te.NewMessageBuilder("G").
-		Parents(append(te.LastMilestoneParents(), messageF.StoredMessageID())).
+	messageG := te.NewBlockBuilder("G").
+		Parents(append(te.LastMilestoneParents(), messageF.StoredBlockID())).
 		FromWallet(seed4Wallet).
 		ToWallet(seed3Wallet).
 		Amount(1_500_000).
@@ -238,8 +238,8 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		BookOnWallets()
 
 	// Valid transfer from seed4 to seed2 (1_500_000) (double spend -> already spent)
-	messageH := te.NewMessageBuilder("H").
-		Parents(hornet.BlockIDs{messageG.StoredMessageID()}).
+	messageH := te.NewBlockBuilder("H").
+		Parents(hornet.BlockIDs{messageG.StoredBlockID()}).
 		FromWallet(seed4Wallet).
 		ToWallet(seed2Wallet).
 		Amount(1_500_000).
@@ -248,14 +248,14 @@ func TestWhiteFlagWithMultipleConflicting(t *testing.T) {
 		Store()
 
 	// Confirming milestone at message H
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageH.StoredMessageID()}, true)
-	require.Equal(t, 2+1, confStats.MessagesReferenced) // 1 + previous milestone
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageH.StoredBlockID()}, true)
+	require.Equal(t, 2+1, confStats.BlocksReferenced) // 1 + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	// Verify the messages have the expected conflict reason
-	te.AssertMessageConflictReason(messageH.StoredMessageID(), storage.ConflictInputUTXOAlreadySpentInThisMilestone)
+	te.AssertMessageConflictReason(messageH.StoredBlockID(), storage.ConflictInputUTXOAlreadySpentInThisMilestone)
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 2_779_530_280_277_761)
@@ -276,29 +276,29 @@ func TestWhiteFlagWithOnlyZeroTx(t *testing.T) {
 	genesisWallet.BookOutput(te.GenesisOutput)
 
 	// Issue some transactions
-	messageA := te.NewMessageBuilder("A").Parents(te.LastMilestoneParents()).BuildTaggedData().Store()
-	messageB := te.NewMessageBuilder("B").Parents(append(te.LastMilestoneParents(), messageA.StoredMessageID())).BuildTaggedData().Store()
-	messageC := te.NewMessageBuilder("C").Parents(te.LastMilestoneParents()).BuildTaggedData().Store()
-	messageD := te.NewMessageBuilder("D").Parents(hornet.BlockIDs{messageB.StoredMessageID(), messageC.StoredMessageID()}).BuildTaggedData().Store()
-	messageE := te.NewMessageBuilder("E").Parents(hornet.BlockIDs{messageB.StoredMessageID(), messageA.StoredMessageID()}).BuildTaggedData().Store()
+	messageA := te.NewBlockBuilder("A").Parents(te.LastMilestoneParents()).BuildTaggedData().Store()
+	messageB := te.NewBlockBuilder("B").Parents(append(te.LastMilestoneParents(), messageA.StoredBlockID())).BuildTaggedData().Store()
+	messageC := te.NewBlockBuilder("C").Parents(te.LastMilestoneParents()).BuildTaggedData().Store()
+	messageD := te.NewBlockBuilder("D").Parents(hornet.BlockIDs{messageB.StoredBlockID(), messageC.StoredBlockID()}).BuildTaggedData().Store()
+	messageE := te.NewBlockBuilder("E").Parents(hornet.BlockIDs{messageB.StoredBlockID(), messageA.StoredBlockID()}).BuildTaggedData().Store()
 
 	// Confirming milestone include all msg up to message E. This should only include A, B and E
-	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageE.StoredMessageID()}, true)
-	require.Equal(t, 3+1, confStats.MessagesReferenced) // A, B, E + previous milestone
-	require.Equal(t, 0, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 3+1, confStats.MessagesExcludedWithoutTransactions) // 1 is for previous milestone
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageE.StoredBlockID()}, true)
+	require.Equal(t, 3+1, confStats.BlocksReferenced) // A, B, E + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 3+1, confStats.BlocksExcludedWithoutTransactions) // 1 is for previous milestone
 
 	// Issue another message
-	messageF := te.NewMessageBuilder("F").Parents(hornet.BlockIDs{messageD.StoredMessageID(), messageE.StoredMessageID()}).BuildTaggedData().Store()
+	messageF := te.NewBlockBuilder("F").Parents(hornet.BlockIDs{messageD.StoredBlockID(), messageE.StoredBlockID()}).BuildTaggedData().Store()
 
 	// Confirming milestone at message F. This should confirm D, C and F
-	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageF.StoredMessageID()}, true)
+	_, confStats = te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageF.StoredBlockID()}, true)
 
-	require.Equal(t, 3+1, confStats.MessagesReferenced) // D, C, F + previous milestone
-	require.Equal(t, 0, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 3+1, confStats.MessagesExcludedWithoutTransactions) // 1 is for previous milestone
+	require.Equal(t, 3+1, confStats.BlocksReferenced) // D, C, F + previous milestone
+	require.Equal(t, 0, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 3+1, confStats.BlocksExcludedWithoutTransactions) // 1 is for previous milestone
 }
 
 func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
@@ -319,7 +319,7 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Issue some transactions
-	messageA := te.NewMessageBuilder("A").
+	messageA := te.NewBlockBuilder("A").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
@@ -332,19 +332,19 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Confirming milestone at message A
-	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageA.StoredMessageID()}, true)
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // A + previous milestone
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageA.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // A + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 0)
 	te.AssertWalletBalance(seed2Wallet, te.ProtocolParameters().TokenSupply)
 
 	// Issue some transactions
-	messageB := te.NewMessageBuilder("B").
-		Parents(append(te.LastMilestoneParents(), messageA.StoredMessageID())).
+	messageB := te.NewBlockBuilder("B").
+		Parents(append(te.LastMilestoneParents(), messageA.StoredBlockID())).
 		FromWallet(seed2Wallet).
 		ToWallet(seed1Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
@@ -353,7 +353,7 @@ func TestWhiteFlagLastMilestoneNotInPastCone(t *testing.T) {
 		BookOnWallets()
 
 	// Issue milestone 5 that does not include the milestone 4 in the past
-	_, _, err := te.IssueMilestoneOnTips(hornet.BlockIDs{messageB.StoredMessageID()}, false)
+	_, _, err := te.IssueMilestoneOnTips(hornet.BlockIDs{messageB.StoredBlockID()}, false)
 	require.Error(t, err)
 }
 
@@ -375,7 +375,7 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Issue some transactions
-	messageA := te.NewMessageBuilder("A").
+	messageA := te.NewBlockBuilder("A").
 		Parents(te.LastMilestoneParents()).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
@@ -388,19 +388,19 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	seed2Wallet.PrintStatus()
 
 	// Confirming milestone at message A
-	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageA.StoredMessageID()}, true)
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // A + previous milestone
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
+	_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{messageA.StoredBlockID()}, true)
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // A + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	// Verify balances
 	te.AssertWalletBalance(seed1Wallet, 0)
 	te.AssertWalletBalance(seed2Wallet, te.ProtocolParameters().TokenSupply)
 
 	// Issue some transactions
-	messageB := te.NewMessageBuilder("B").
-		Parents(append(te.LastMilestoneParents(), messageA.StoredMessageID())).
+	messageB := te.NewBlockBuilder("B").
+		Parents(append(te.LastMilestoneParents(), messageA.StoredBlockID())).
 		FromWallet(seed2Wallet).
 		ToWallet(seed1Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
@@ -409,24 +409,24 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 		BookOnWallets()
 
 	// Issue milestone 5
-	milestone5, blockIDMilestone5, err := te.IssueMilestoneOnTips(hornet.BlockIDs{messageB.StoredMessageID()}, true)
+	milestone5, blockIDMilestone5, err := te.IssueMilestoneOnTips(hornet.BlockIDs{messageB.StoredBlockID()}, true)
 	require.NoError(t, err)
 
 	_, confStats = te.ConfirmMilestone(milestone5, false)
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // B + previous milestone
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // B + previous milestone
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // previous milestone
 
 	// Valid reattachment with same parents and different nonce
 	milestone5Reattachment := te.ReattachMessage(blockIDMilestone5)
 
 	// Invalid reattachment with different parents
-	invalidMilestone5Reattachment := te.ReattachMessage(blockIDMilestone5, messageB.StoredMessageID(), hornet.NullBlockID())
+	invalidMilestone5Reattachment := te.ReattachMessage(blockIDMilestone5, messageB.StoredBlockID(), hornet.NullBlockID())
 
 	// Issue a transaction referencing the milestone5 reattached message specifically
-	messageC := te.NewMessageBuilder("C").
-		Parents(hornet.BlockIDs{messageB.StoredMessageID(), milestone5Reattachment}).
+	messageC := te.NewBlockBuilder("C").
+		Parents(hornet.BlockIDs{messageB.StoredBlockID(), milestone5Reattachment}).
 		FromWallet(seed1Wallet).
 		ToWallet(seed2Wallet).
 		Amount(te.ProtocolParameters().TokenSupply).
@@ -435,13 +435,13 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 		BookOnWallets()
 
 	// Issue milestone 6 that confirms a message that is attached to the reattached milestone 5 and the reattached milestone 5 (leaving 5 unconfirmed)
-	milestone6, _, err := te.IssueMilestoneOnTips(hornet.BlockIDs{messageC.StoredMessageID(), milestone5Reattachment}, false)
+	milestone6, _, err := te.IssueMilestoneOnTips(hornet.BlockIDs{messageC.StoredBlockID(), milestone5Reattachment}, false)
 	require.NoError(t, err)
 	_, confStats = te.ConfirmMilestone(milestone6, false)
-	require.Equal(t, 1+1, confStats.MessagesReferenced) // 1 +  reattachment
-	require.Equal(t, 1, confStats.MessagesIncludedWithTransactions)
-	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
-	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // reattachment
+	require.Equal(t, 1+1, confStats.BlocksReferenced) // 1 +  reattachment
+	require.Equal(t, 1, confStats.BlocksIncludedWithTransactions)
+	require.Equal(t, 0, confStats.BlocksExcludedWithConflictingTransactions)
+	require.Equal(t, 1, confStats.BlocksExcludedWithoutTransactions) // reattachment
 
 	milestone5Metadata := te.Storage().CachedBlockMetadataOrNil(blockIDMilestone5)
 	require.NotNil(t, milestone5Metadata)

@@ -91,7 +91,7 @@ func configureEvents() {
 	})
 
 	onMilestoneConfirmed = events.NewClosure(func(confirmation *whiteflag.Confirmation) {
-		warpSync.AddReferencedMessagesCount(len(confirmation.Mutations.MessagesReferenced))
+		warpSync.AddReferencedMessagesCount(len(confirmation.Mutations.BlocksReferenced))
 		warpSync.UpdateCurrentConfirmedMilestone(confirmation.MilestoneIndex)
 	})
 
@@ -138,7 +138,7 @@ func configureEvents() {
 		// walks the whole cone if there are already paths between newer milestones in the database.
 		warpSyncMilestoneRequester.Cleanup()
 
-		Plugin.LogInfof("Synchronized %d milestones in %v (%0.2f MPS)", deltaSynced, took.Truncate(time.Millisecond), float64(referencedMessagesTotal)/took.Seconds())
+		Plugin.LogInfof("Synchronized %d milestones in %v (%0.2f BPS)", deltaSynced, took.Truncate(time.Millisecond), float64(referencedMessagesTotal)/took.Seconds())
 		deps.RequestQueue.Filter(nil)
 	})
 }

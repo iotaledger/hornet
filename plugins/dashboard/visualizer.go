@@ -164,12 +164,12 @@ func runVisualizer() {
 	})
 
 	if err := Plugin.Daemon().BackgroundWorker("Dashboard[Visualizer]", func(ctx context.Context) {
-		deps.Tangle.Events.ReceivedNewMessage.Attach(onReceivedNewMessage)
-		defer deps.Tangle.Events.ReceivedNewMessage.Detach(onReceivedNewMessage)
-		deps.Tangle.Events.MessageSolid.Attach(onMessageSolid)
-		defer deps.Tangle.Events.MessageSolid.Detach(onMessageSolid)
-		deps.Tangle.Events.ReceivedNewMilestoneMessage.Attach(onReceivedNewMilestoneMessage)
-		defer deps.Tangle.Events.ReceivedNewMilestoneMessage.Detach(onReceivedNewMilestoneMessage)
+		deps.Tangle.Events.ReceivedNewBlock.Attach(onReceivedNewMessage)
+		defer deps.Tangle.Events.ReceivedNewBlock.Detach(onReceivedNewMessage)
+		deps.Tangle.Events.BlockSolid.Attach(onMessageSolid)
+		defer deps.Tangle.Events.BlockSolid.Detach(onMessageSolid)
+		deps.Tangle.Events.ReceivedNewMilestoneBlock.Attach(onReceivedNewMilestoneMessage)
+		defer deps.Tangle.Events.ReceivedNewMilestoneBlock.Detach(onReceivedNewMilestoneMessage)
 		deps.Tangle.Events.MilestoneConfirmed.Attach(onMilestoneConfirmed)
 		defer deps.Tangle.Events.MilestoneConfirmed.Detach(onMilestoneConfirmed)
 

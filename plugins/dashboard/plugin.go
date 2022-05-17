@@ -83,7 +83,7 @@ type dependencies struct {
 	ServerMetrics            *metrics.ServerMetrics
 	RequestQueue             gossip.RequestQueue
 	PeeringManager           *p2p.Manager
-	MessageProcessor         *gossip.MessageProcessor
+	MessageProcessor         *gossip.BlockProcessor
 	TipSelector              *tipselect.TipSelector `optional:"true"`
 	RestAPIBindAddress       string                 `name:"restAPIBindAddress"`
 	AppInfo                  *app.AppInfo
@@ -417,7 +417,7 @@ func currentNodeStatus() *NodeStatus {
 	// server metrics
 	status.ServerMetrics = &ServerMetrics{
 		AllMessages:          deps.ServerMetrics.Messages.Load(),
-		NewMessages:          deps.ServerMetrics.NewMessages.Load(),
+		NewMessages:          deps.ServerMetrics.NewBlocks.Load(),
 		KnownMessages:        deps.ServerMetrics.KnownMessages.Load(),
 		InvalidMessages:      deps.ServerMetrics.InvalidMessages.Load(),
 		InvalidRequests:      deps.ServerMetrics.InvalidRequests.Load(),

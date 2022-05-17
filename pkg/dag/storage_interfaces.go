@@ -17,7 +17,7 @@ type ParentsTraverserStorage interface {
 type ChildrenTraverserStorage interface {
 	CachedBlockMetadata(blockID hornet.BlockID) (*storage.CachedMetadata, error)
 	SolidEntryPointsContain(blockID hornet.BlockID) (bool, error)
-	ChildrenMessageIDs(blockID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error)
+	ChildrenBlockIDs(blockID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error)
 }
 
 // TraverserStorage provides the interface to the used storage in the ParentsTraverser and ChildrenTraverser.

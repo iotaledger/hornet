@@ -9,10 +9,10 @@ func (t *Tangle) LastConfirmedMilestoneMetric() *ConfirmedMilestoneMetric {
 	return t.lastConfirmedMilestoneMetric
 }
 
-// measures the MPS values
+// measures the BPS values
 func (t *Tangle) measureMPS() {
 	incomingMsgCnt := t.serverMetrics.Messages.Load()
-	incomingNewMsgCnt := t.serverMetrics.NewMessages.Load()
+	incomingNewMsgCnt := t.serverMetrics.NewBlocks.Load()
 	outgoingMsgCnt := t.serverMetrics.SentMessages.Load()
 
 	mpsMetrics := &MPSMetrics{

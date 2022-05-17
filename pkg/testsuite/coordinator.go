@@ -59,8 +59,8 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		te.protoParas,
 		te.LastMilestonePayload(),
 		whiteflag.DefaultWhiteFlagTraversalCondition,
-		whiteflag.DefaultCheckMessageReferencedFunc,
-		whiteflag.DefaultSetMessageReferencedFunc,
+		whiteflag.DefaultCheckBlockReferencedFunc,
+		whiteflag.DefaultSetBlockReferencedFunc,
 		te.serverMetrics,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {
@@ -72,7 +72,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 		nil,
 	)
 	require.NoError(te.TestInterface, err)
-	require.Equal(te.TestInterface, 0, confirmedMilestoneStats.MessagesReferenced)
+	require.Equal(te.TestInterface, 0, confirmedMilestoneStats.BlocksReferenced)
 }
 
 func (te *TestEnvironment) milestoneIDForIndex(msIndex milestone.Index) iotago.MilestoneID {
@@ -155,8 +155,8 @@ func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago
 		te.protoParas,
 		milestonePayload,
 		whiteflag.DefaultWhiteFlagTraversalCondition,
-		whiteflag.DefaultCheckMessageReferencedFunc,
-		whiteflag.DefaultSetMessageReferencedFunc,
+		whiteflag.DefaultCheckBlockReferencedFunc,
+		whiteflag.DefaultSetBlockReferencedFunc,
 		te.serverMetrics,
 		nil,
 		func(confirmation *whiteflag.Confirmation) {

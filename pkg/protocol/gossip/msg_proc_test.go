@@ -68,7 +68,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	}
 
 	processor, err := gossip.NewMessageProcessor(te.Storage(), te.SyncManager(), gossip.NewRequestQueue(), manager, serverMetrics, protoParas, &gossip.Options{
-		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingMessagesFilter,
+		WorkUnitCacheOpts: testsuite.TestProfileCaches.IncomingBlocksFilter,
 	})
 	require.NoError(t, err)
 

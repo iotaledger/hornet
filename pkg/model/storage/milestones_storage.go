@@ -425,10 +425,10 @@ func (s *Storage) CachedMilestoneByIndexOrNil(milestoneIndex milestone.Index) *C
 	return s.CachedMilestoneOrNil(cachedMilestoneIdx.MilestoneIndex().MilestoneID()) // milestone +1
 }
 
-// MilestoneMessageIDByIndex returns the message ID of a milestone.
+// MilestoneBlockIDByIndex returns the message ID of a milestone.
 // Attention: this can be different from node to node, because only the first seen reattachment of milestone payload
 // is stored in a node. This information should never be exposed via external API in any way.
-func (s *Storage) MilestoneMessageIDByIndex(milestoneIndex milestone.Index) (hornet.BlockID, error) {
+func (s *Storage) MilestoneBlockIDByIndex(milestoneIndex milestone.Index) (hornet.BlockID, error) {
 	cachedMilestoneIdx := s.cachedMilestoneIndexOrNil(milestoneIndex) // milestoneIndex +1
 	if cachedMilestoneIdx == nil {
 		return nil, ErrMilestoneNotFound

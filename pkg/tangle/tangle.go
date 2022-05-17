@@ -36,15 +36,15 @@ type Tangle struct {
 	syncManager *syncmanager.SyncManager
 	// milestoneManager is used to retrieve, verify and store milestones.
 	milestoneManager *milestonemanager.MilestoneManager
-	// contains requests for needed messages.
+	// contains requests for needed blocks.
 	requestQueue gossip.RequestQueue
 	// used to access gossip gossipService.
 	gossipService *gossip.Service
-	// used to parses and emit new messages.
-	messageProcessor *gossip.MessageProcessor
+	// used to parses and emit new blocks.
+	blockProcessor *gossip.BlockProcessor
 	// shared server metrics instance.
 	serverMetrics *metrics.ServerMetrics
-	// used to request messages from peers.
+	// used to request blocks from peers.
 	requester *gossip.Requester
 	// used to persist and validate batches of receipts.
 	receiptService *migrator.ReceiptService
@@ -85,8 +85,8 @@ type Tangle struct {
 
 	startWaitGroup sync.WaitGroup
 
-	messageProcessedSyncEvent   *events.SyncEvent
-	messageSolidSyncEvent       *events.SyncEvent
+	blockProcessedSyncEvent     *events.SyncEvent
+	blockSolidSyncEvent         *events.SyncEvent
 	milestoneConfirmedSyncEvent *events.SyncEvent
 
 	milestoneSolidificationCtxLock    syncutils.Mutex
@@ -118,7 +118,7 @@ func New(
 	milestoneManager *milestonemanager.MilestoneManager,
 	requestQueue gossip.RequestQueue,
 	gossipService *gossip.Service,
-	messageProcessor *gossip.MessageProcessor,
+	blockProcessor *gossip.BlockProcessor,
 	serverMetrics *metrics.ServerMetrics,
 	requester *gossip.Requester,
 	receiptService *migrator.ReceiptService,
@@ -136,7 +136,7 @@ func New(
 		milestoneManager:             milestoneManager,
 		requestQueue:                 requestQueue,
 		gossipService:                gossipService,
-		messageProcessor:             messageProcessor,
+		blockProcessor:               blockProcessor,
 		serverMetrics:                serverMetrics,
 		requester:                    requester,
 		receiptService:               receiptService,
@@ -155,17 +155,17 @@ func New(
 		processValidMilestoneQueueSize:   1000,
 		milestoneSolidifierWorkerCount:   2, // must be two, so a new request can abort another, in case it is an older milestone
 		milestoneSolidifierQueueSize:     2,
-		messageProcessedSyncEvent:        events.NewSyncEvent(),
-		messageSolidSyncEvent:            events.NewSyncEvent(),
+		blockProcessedSyncEvent:          events.NewSyncEvent(),
+		blockSolidSyncEvent:              events.NewSyncEvent(),
 		milestoneConfirmedSyncEvent:      events.NewSyncEvent(),
 		Events: &Events{
 			MPSMetricsUpdated:              events.NewEvent(MPSMetricsCaller),
-			ReceivedNewMessage:             events.NewEvent(storage.NewBlockCaller),
-			ReceivedKnownMessage:           events.NewEvent(storage.BlockCaller),
-			ProcessedMessage:               events.NewEvent(storage.BlockIDCaller),
-			MessageSolid:                   events.NewEvent(storage.BlockMetadataCaller),
-			MessageReferenced:              events.NewEvent(storage.BlockReferencedCaller),
-			ReceivedNewMilestoneMessage:    events.NewEvent(storage.BlockIDCaller),
+			ReceivedNewBlock:               events.NewEvent(storage.NewBlockCaller),
+			ReceivedKnownBlock:             events.NewEvent(storage.BlockCaller),
+			ProcessedBlock:                 events.NewEvent(storage.BlockIDCaller),
+			BlockSolid:                     events.NewEvent(storage.BlockMetadataCaller),
+			BlockReferenced:                events.NewEvent(storage.BlockReferencedCaller),
+			ReceivedNewMilestoneBlock:      events.NewEvent(storage.BlockIDCaller),
 			LatestMilestoneChanged:         events.NewEvent(storage.MilestoneCaller),
 			LatestMilestoneIndexChanged:    events.NewEvent(milestone.IndexCaller),
 			MilestoneConfirmed:             events.NewEvent(ConfirmedMilestoneCaller),
@@ -180,7 +180,7 @@ func New(
 			NewReceipt:                     events.NewEvent(ReceiptCaller),
 		},
 	}
-	t.futureConeSolidifier = NewFutureConeSolidifier(t.storage, t.markMessageAsSolid)
+	t.futureConeSolidifier = NewFutureConeSolidifier(t.storage, t.markBlockAsSolid)
 	t.ResetMilestoneTimeoutTicker()
 	return t
 }
