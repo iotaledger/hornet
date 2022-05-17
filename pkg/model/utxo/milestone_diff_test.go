@@ -20,7 +20,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	milestoneTimestamp := rand.Uint32()
 
 	outputID := utils.RandOutputID()
-	messageID := utils.RandMessageID()
+	blockID := utils.RandMessageID()
 	address := utils.RandAddress(iotago.AddressEd25519)
 	amount := uint64(832493)
 	iotaOutput := &iotago.BasicOutput{
@@ -31,7 +31,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 			},
 		},
 	}
-	output := CreateOutput(outputID, messageID, milestoneIndex, milestoneTimestamp, iotaOutput)
+	output := CreateOutput(outputID, blockID, milestoneIndex, milestoneTimestamp, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
@@ -60,7 +60,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 
 func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	outputID := utils.RandOutputID()
-	messageID := utils.RandMessageID()
+	blockID := utils.RandMessageID()
 	address := utils.RandAddress(iotago.AddressEd25519)
 	amount := uint64(235234)
 	msIndex := utils.RandMilestoneIndex()
@@ -73,7 +73,7 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 			},
 		},
 	}
-	output := CreateOutput(outputID, messageID, msIndex, msTimestamp, iotaOutput)
+	output := CreateOutput(outputID, blockID, msIndex, msTimestamp, iotaOutput)
 
 	transactionID := &iotago.TransactionID{}
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))

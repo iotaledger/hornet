@@ -296,16 +296,16 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 		milestoneParents,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-			defer cachedMsgMeta.Release(true) // meta -1
+		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedBlockMeta.Release(true) // meta -1
 
-			mapKey := cachedMsgMeta.Metadata().MessageID().ToMapKey()
+			mapKey := cachedBlockMeta.Metadata().MessageID().ToMapKey()
 			if _, previouslyTraversed := w.traversed[mapKey]; previouslyTraversed {
 				return false, nil
 			}
 			w.traversed[mapKey] = struct{}{}
 
-			if cachedMsgMeta.Metadata().IsSolid() {
+			if cachedBlockMeta.Metadata().IsSolid() {
 				return false, nil
 			}
 

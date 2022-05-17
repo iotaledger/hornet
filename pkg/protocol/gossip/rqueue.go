@@ -116,9 +116,9 @@ type Request struct {
 	EnqueueTime time.Time
 }
 
-// NewMessageIDRequest creates a new message request for a specific messageID.
-func NewMessageIDRequest(messageID hornet.BlockID, msIndex milestone.Index) *Request {
-	return &Request{RequestType: RequestTypeMessageID, MessageID: messageID, MilestoneIndex: msIndex}
+// NewMessageIDRequest creates a new message request for a specific blockID.
+func NewMessageIDRequest(blockID hornet.BlockID, msIndex milestone.Index) *Request {
+	return &Request{RequestType: RequestTypeMessageID, MessageID: blockID, MilestoneIndex: msIndex}
 }
 
 // NewMilestoneIndexRequest creates a new message request for a specific milestone index

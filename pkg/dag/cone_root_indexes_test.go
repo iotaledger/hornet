@@ -39,8 +39,8 @@ func TestConeRootIndexes(t *testing.T) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
 			cmi := latestMilestone.Milestone().Index()
 
-			cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(messages[len(messages)-1])
-			ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta, cmi)
+			cachedBlockMeta := te.Storage().CachedMessageMetadataOrNil(messages[len(messages)-1])
+			ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 			require.NoError(te.TestInterface, err)
 
 			minOldestConeRootIndex := milestone.Index(1)
@@ -63,8 +63,8 @@ func TestConeRootIndexes(t *testing.T) {
 	parents := append(latestMilestone.Milestone().Parents(), hornet.NullBlockID())
 	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
 
-	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID())
-	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedMsgMeta, cmi)
+	cachedBlockMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID())
+	ycri, ocri, err := dag.ConeRootIndexes(context.Background(), te.Storage(), cachedBlockMeta, cmi)
 	require.NoError(te.TestInterface, err)
 
 	// NullHash is SEP for index 0

@@ -409,7 +409,7 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 		BookOnWallets()
 
 	// Issue milestone 5
-	milestone5, messageIDMilestone5, err := te.IssueMilestoneOnTips(hornet.BlockIDs{messageB.StoredMessageID()}, true)
+	milestone5, blockIDMilestone5, err := te.IssueMilestoneOnTips(hornet.BlockIDs{messageB.StoredMessageID()}, true)
 	require.NoError(t, err)
 
 	_, confStats = te.ConfirmMilestone(milestone5, false)
@@ -419,10 +419,10 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // previous milestone
 
 	// Valid reattachment with same parents and different nonce
-	milestone5Reattachment := te.ReattachMessage(messageIDMilestone5)
+	milestone5Reattachment := te.ReattachMessage(blockIDMilestone5)
 
 	// Invalid reattachment with different parents
-	invalidMilestone5Reattachment := te.ReattachMessage(messageIDMilestone5, messageB.StoredMessageID(), hornet.NullBlockID())
+	invalidMilestone5Reattachment := te.ReattachMessage(blockIDMilestone5, messageB.StoredMessageID(), hornet.NullBlockID())
 
 	// Issue a transaction referencing the milestone5 reattached message specifically
 	messageC := te.NewMessageBuilder("C").
@@ -443,7 +443,7 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	require.Equal(t, 0, confStats.MessagesExcludedWithConflictingTransactions)
 	require.Equal(t, 1, confStats.MessagesExcludedWithoutTransactions) // reattachment
 
-	milestone5Metadata := te.Storage().CachedMessageMetadataOrNil(messageIDMilestone5)
+	milestone5Metadata := te.Storage().CachedMessageMetadataOrNil(blockIDMilestone5)
 	require.NotNil(t, milestone5Metadata)
 	defer milestone5Metadata.Release(true)
 	require.False(t, milestone5Metadata.Metadata().IsReferenced())

@@ -8,16 +8,16 @@ import (
 )
 
 // Predicate defines whether a traversal should continue or not.
-type Predicate func(cachedMsgMeta *storage.CachedMetadata) (bool, error)
+type Predicate func(cachedBlockMeta *storage.CachedMetadata) (bool, error)
 
 // Consumer consumes the given message metadata during traversal.
-type Consumer func(cachedMsgMeta *storage.CachedMetadata) error
+type Consumer func(cachedBlockMeta *storage.CachedMetadata) error
 
 // OnMissingParent gets called when during traversal a parent is missing.
 type OnMissingParent func(parentMessageID hornet.BlockID) error
 
 // OnSolidEntryPoint gets called when during traversal the startMsg or parent is a solid entry point.
-type OnSolidEntryPoint func(messageID hornet.BlockID) error
+type OnSolidEntryPoint func(blockID hornet.BlockID) error
 
 // TraverseParents starts to traverse the parents (past cone) in the given order until
 // the traversal stops due to no more messages passing the given condition.

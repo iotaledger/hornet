@@ -54,9 +54,9 @@ func (s *SolidEntryPoints) copy() []*SolidEntryPoint {
 
 	i := 0
 	for hash, msIndex := range s.entryPointsMap {
-		messageID := hornet.BlockIDFromMapKey(hash)
+		blockID := hornet.BlockIDFromMapKey(hash)
 		result[i] = &SolidEntryPoint{
-			MessageID: messageID,
+			MessageID: blockID,
 			Index:     msIndex,
 		}
 		i++
@@ -65,21 +65,21 @@ func (s *SolidEntryPoints) copy() []*SolidEntryPoint {
 	return result
 }
 
-func (s *SolidEntryPoints) Contains(messageID hornet.BlockID) bool {
-	_, exists := s.entryPointsMap[messageID.ToMapKey()]
+func (s *SolidEntryPoints) Contains(blockID hornet.BlockID) bool {
+	_, exists := s.entryPointsMap[blockID.ToMapKey()]
 	return exists
 }
 
-func (s *SolidEntryPoints) Index(messageID hornet.BlockID) (milestone.Index, bool) {
-	index, exists := s.entryPointsMap[messageID.ToMapKey()]
+func (s *SolidEntryPoints) Index(blockID hornet.BlockID) (milestone.Index, bool) {
+	index, exists := s.entryPointsMap[blockID.ToMapKey()]
 	return index, exists
 }
 
-func (s *SolidEntryPoints) Add(messageID hornet.BlockID, milestoneIndex milestone.Index) {
-	messageIDMapKey := messageID.ToMapKey()
-	if _, exists := s.entryPointsMap[messageIDMapKey]; !exists {
-		s.entryPointsMap[messageIDMapKey] = milestoneIndex
-		s.entryPointsSlice = append(s.entryPointsSlice, messageID)
+func (s *SolidEntryPoints) Add(blockID hornet.BlockID, milestoneIndex milestone.Index) {
+	blockIDMapKey := blockID.ToMapKey()
+	if _, exists := s.entryPointsMap[blockIDMapKey]; !exists {
+		s.entryPointsMap[blockIDMapKey] = milestoneIndex
+		s.entryPointsSlice = append(s.entryPointsSlice, blockID)
 		s.SetModified(true)
 	}
 }
@@ -121,10 +121,10 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 
 	solidEntryPointsCount := len(solidEntryPointsBytes) / (32 + 4)
 	for i := 0; i < solidEntryPointsCount; i++ {
-		messageIDBuf := make([]byte, 32)
+		blockIDBuf := make([]byte, 32)
 		var msIndex uint32
 
-		err = binary.Read(bytesReader, binary.LittleEndian, messageIDBuf)
+		err = binary.Read(bytesReader, binary.LittleEndian, blockIDBuf)
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
@@ -133,7 +133,7 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
-		s.Add(hornet.BlockIDFromSlice(messageIDBuf), milestone.Index(msIndex))
+		s.Add(hornet.BlockIDFromSlice(blockIDBuf), milestone.Index(msIndex))
 	}
 
 	return s, nil

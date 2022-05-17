@@ -53,7 +53,7 @@ func (s *Storage) loadSolidEntryPoints() error {
 	return nil
 }
 
-func (s *Storage) SolidEntryPointsContain(messageID hornet.BlockID) (bool, error) {
+func (s *Storage) SolidEntryPointsContain(blockID hornet.BlockID) (bool, error) {
 	s.ReadLockSolidEntryPoints()
 	defer s.ReadUnlockSolidEntryPoints()
 
@@ -61,11 +61,11 @@ func (s *Storage) SolidEntryPointsContain(messageID hornet.BlockID) (bool, error
 		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	return s.solidEntryPoints.Contains(messageID), nil
+	return s.solidEntryPoints.Contains(blockID), nil
 }
 
 // SolidEntryPointsIndex returns the index of a solid entry point and whether the message is a solid entry point or not.
-func (s *Storage) SolidEntryPointsIndex(messageID hornet.BlockID) (milestone.Index, bool, error) {
+func (s *Storage) SolidEntryPointsIndex(blockID hornet.BlockID) (milestone.Index, bool, error) {
 	s.ReadLockSolidEntryPoints()
 	defer s.ReadUnlockSolidEntryPoints()
 
@@ -74,18 +74,18 @@ func (s *Storage) SolidEntryPointsIndex(messageID hornet.BlockID) (milestone.Ind
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
 
-	index, contains := s.solidEntryPoints.Index(messageID)
+	index, contains := s.solidEntryPoints.Index(blockID)
 	return index, contains, nil
 }
 
 // SolidEntryPointsAddWithoutLocking adds a message to the solid entry points.
 // WriteLockSolidEntryPoints must be held while entering this function.
-func (s *Storage) SolidEntryPointsAddWithoutLocking(messageID hornet.BlockID, milestoneIndex milestone.Index) {
+func (s *Storage) SolidEntryPointsAddWithoutLocking(blockID hornet.BlockID, milestoneIndex milestone.Index) {
 	if s.solidEntryPoints == nil {
 		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)
 	}
-	s.solidEntryPoints.Add(messageID, milestoneIndex)
+	s.solidEntryPoints.Add(blockID, milestoneIndex)
 }
 
 // ResetSolidEntryPointsWithoutLocking resets the solid entry points.

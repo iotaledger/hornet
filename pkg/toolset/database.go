@@ -106,31 +106,31 @@ func getStorageMilestoneRange(tangleStore *storage.Storage) (milestone.Index, mi
 	return msIndexStart, msIndexEnd
 }
 
-type StoreMessageInterface interface {
-	StoreMessageIfAbsent(message *storage.Message) (cachedMsg *storage.CachedMessage, newlyAdded bool)
-	StoreChild(parentMessageID hornet.BlockID, childMessageID hornet.BlockID) *storage.CachedChild
-	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, messageID hornet.BlockID) (*storage.CachedMilestone, bool)
+type StoreBlockInterface interface {
+	StoreBlockIfAbsent(block *storage.Message) (cachedBlock *storage.CachedMessage, newlyAdded bool)
+	StoreChild(parentBlockID hornet.BlockID, childBlockID hornet.BlockID) *storage.CachedChild
+	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blockID hornet.BlockID) (*storage.CachedMilestone, bool)
 }
 
-// storeMessage adds a new message to the storage,
+// storeBlock adds a new message to the storage,
 // including all additional information like
 // metadata, children, indexation and milestone entries.
 // message +1
-func storeMessage(protoParas *iotago.ProtocolParameters, dbStorage StoreMessageInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Block) (*storage.CachedMessage, error) {
+func storeBlock(protoParas *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Block) (*storage.CachedMessage, error) {
 
 	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
 	}
 
-	cachedMsg, isNew := dbStorage.StoreMessageIfAbsent(message) // message +1
+	cachedBlock, isNew := dbStorage.StoreBlockIfAbsent(message) // message +1
 	if !isNew {
 		// no need to process known messages
-		return cachedMsg, nil
+		return cachedBlock, nil
 	}
 
 	for _, parent := range message.Parents() {
-		dbStorage.StoreChild(parent, cachedMsg.Message().MessageID()).Release(true) // child +-0
+		dbStorage.StoreChild(parent, cachedBlock.Message().MessageID()).Release(true) // child +-0
 	}
 
 	if milestonePayload := milestoneManager.VerifyMilestoneMessage(message.Message()); milestonePayload != nil {
@@ -140,7 +140,7 @@ func storeMessage(protoParas *iotago.ProtocolParameters, dbStorage StoreMessageI
 		cachedMilestone.Release(true) // milestone -1
 	}
 
-	return cachedMsg, nil
+	return cachedBlock, nil
 }
 
 // getTangleStorage returns a tangle storage. If specified, it checks if the database exists,

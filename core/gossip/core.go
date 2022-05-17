@@ -233,7 +233,7 @@ func run() error {
 		deps.MessageProcessor.Run(ctx)
 
 		CoreComponent.LogInfo("Stopped MessageProcessor")
-	}, daemon.PriorityMessageProcessor); err != nil {
+	}, daemon.PriorityBlockProcessor); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 

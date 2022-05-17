@@ -4,18 +4,18 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
-type CachedMessageFunc func(messageID hornet.BlockID) (*CachedMessage, error)
+type CachedMessageFunc func(blockID hornet.BlockID) (*CachedMessage, error)
 
 type MessagesMemcache struct {
 	cachedMessageFunc CachedMessageFunc
-	cachedMsgs        map[string]*CachedMessage
+	cachedBlocks      map[string]*CachedMessage
 }
 
 // NewMessagesMemcache creates a new MessagesMemcache instance.
 func NewMessagesMemcache(cachedMessageFunc CachedMessageFunc) *MessagesMemcache {
 	return &MessagesMemcache{
 		cachedMessageFunc: cachedMessageFunc,
-		cachedMsgs:        make(map[string]*CachedMessage),
+		cachedBlocks:      make(map[string]*CachedMessage),
 	}
 }
 
@@ -24,33 +24,33 @@ func NewMessagesMemcache(cachedMessageFunc CachedMessageFunc) *MessagesMemcache 
 func (c *MessagesMemcache) Cleanup(forceRelease bool) {
 
 	// release all msgs at the end
-	for _, cachedMsg := range c.cachedMsgs {
-		cachedMsg.Release(forceRelease) // message -1
+	for _, cachedBlock := range c.cachedBlocks {
+		cachedBlock.Release(forceRelease) // message -1
 	}
-	c.cachedMsgs = make(map[string]*CachedMessage)
+	c.cachedBlocks = make(map[string]*CachedMessage)
 }
 
 // CachedMessage returns a cached message object.
 // message +1
-func (c *MessagesMemcache) CachedMessage(messageID hornet.BlockID) (*CachedMessage, error) {
-	messageIDMapKey := messageID.ToMapKey()
+func (c *MessagesMemcache) CachedMessage(blockID hornet.BlockID) (*CachedMessage, error) {
+	blockIDMapKey := blockID.ToMapKey()
 
 	var err error
 
 	// load up msg
-	cachedMsg, exists := c.cachedMsgs[messageIDMapKey]
+	cachedBlock, exists := c.cachedBlocks[blockIDMapKey]
 	if !exists {
-		cachedMsg, err = c.cachedMessageFunc(messageID) // message +1 (this is the one that gets cleared by "Cleanup")
+		cachedBlock, err = c.cachedMessageFunc(blockID) // message +1 (this is the one that gets cleared by "Cleanup")
 		if err != nil {
 			return nil, err
 		}
-		if cachedMsg == nil {
+		if cachedBlock == nil {
 			return nil, nil
 		}
 
 		// add the cachedObject to the map, it will be released by calling "Cleanup" at the end
-		c.cachedMsgs[messageIDMapKey] = cachedMsg
+		c.cachedBlocks[blockIDMapKey] = cachedBlock
 	}
 
-	return cachedMsg.Retain(), nil // message +1
+	return cachedBlock.Retain(), nil // message +1
 }

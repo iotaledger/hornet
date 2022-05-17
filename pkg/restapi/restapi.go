@@ -21,7 +21,7 @@ const (
 
 const (
 	// ParameterMessageID is used to identify a message by its ID.
-	ParameterMessageID = "messageID"
+	ParameterMessageID = "blockID"
 
 	// ParameterTransactionID is used to identify a transaction by its ID.
 	ParameterTransactionID = "transactionID"
@@ -117,13 +117,13 @@ func GetRequestContentType(c echo.Context, supportedContentTypes ...string) (str
 }
 
 func ParseMessageIDParam(c echo.Context) (hornet.BlockID, error) {
-	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
+	blockIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
-	messageID, err := hornet.BlockIDFromHex(messageIDHex)
+	blockID, err := hornet.BlockIDFromHex(blockIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
+		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid message ID: %s, error: %s", blockIDHex, err)
 	}
-	return messageID, nil
+	return blockID, nil
 }
 
 func ParseTransactionIDParam(c echo.Context) (*iotago.TransactionID, error) {

@@ -174,22 +174,22 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	messageID := messageMeta.MessageID()
-	messageIDMapKey := messageID.ToMapKey()
+	blockID := messageMeta.MessageID()
+	blockIDMapKey := blockID.ToMapKey()
 
-	if _, exists := ts.nonLazyTipsMap[messageIDMapKey]; exists {
+	if _, exists := ts.nonLazyTipsMap[blockIDMapKey]; exists {
 		// tip already exists
 		return
 	}
 
-	if _, exists := ts.semiLazyTipsMap[messageIDMapKey]; exists {
+	if _, exists := ts.semiLazyTipsMap[blockIDMapKey]; exists {
 		// tip already exists
 		return
 	}
 
 	cmi := ts.syncManager.ConfirmedMilestoneIndex()
 
-	score, err := ts.calculateScore(messageID, cmi)
+	score, err := ts.calculateScore(blockID, cmi)
 	if err != nil {
 		// do not add tips if the calculation failed
 		return
@@ -203,17 +203,17 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 
 	tip := &Tip{
 		Score:          score,
-		MessageID:      messageID,
+		MessageID:      blockID,
 		TimeFirstChild: time.Time{},
 		ChildrenCount:  atomic.NewUint32(0),
 	}
 
 	switch tip.Score {
 	case ScoreNonLazy:
-		ts.nonLazyTipsMap[messageIDMapKey] = tip
+		ts.nonLazyTipsMap[blockIDMapKey] = tip
 		ts.serverMetrics.TipsNonLazy.Add(1)
 	case ScoreSemiLazy:
-		ts.semiLazyTipsMap[messageIDMapKey] = tip
+		ts.semiLazyTipsMap[blockIDMapKey] = tip
 		ts.serverMetrics.TipsSemiLazy.Add(1)
 	}
 
@@ -271,10 +271,10 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 }
 
 // removeTipWithoutLocking removes the given message from the tipsMap without acquiring the lock.
-func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, messageID hornet.BlockID) bool {
-	messageIDMapKey := messageID.ToMapKey()
-	if tip, exists := tipsMap[messageIDMapKey]; exists {
-		delete(tipsMap, messageIDMapKey)
+func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, blockID hornet.BlockID) bool {
+	blockIDMapKey := blockID.ToMapKey()
+	if tip, exists := tipsMap[blockIDMapKey]; exists {
+		delete(tipsMap, blockIDMapKey)
 		ts.Events.TipRemoved.Trigger(tip)
 		return true
 	}
@@ -539,9 +539,9 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 }
 
 // calculateScore calculates the tip selection score of this message
-func (ts *TipSelector) calculateScore(messageID hornet.BlockID, cmi milestone.Index) (Score, error) {
+func (ts *TipSelector) calculateScore(blockID hornet.BlockID, cmi milestone.Index) (Score, error) {
 
-	tipScore, err := ts.tipScoreCalculator.TipScore(ts.shutdownCtx, messageID, cmi)
+	tipScore, err := ts.tipScoreCalculator.TipScore(ts.shutdownCtx, blockID, cmi)
 	if err != nil {
 		return ScoreLazy, err
 	}

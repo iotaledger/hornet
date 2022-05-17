@@ -45,8 +45,8 @@ type tipinfo struct {
 
 func runVisualizer() {
 
-	onReceivedNewMessage := events.NewClosure(func(cachedMsg *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
-		cachedMsg.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // message -1
+	onReceivedNewMessage := events.NewClosure(func(cachedBlock *storage.CachedMessage, _ milestone.Index, _ milestone.Index) {
+		cachedBlock.ConsumeMessageAndMetadata(func(msg *storage.Message, metadata *storage.MessageMetadata) { // message -1
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
@@ -72,8 +72,8 @@ func runVisualizer() {
 		})
 	})
 
-	onMessageSolid := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
+	onMessageSolid := events.NewClosure(func(cachedBlockMeta *storage.CachedMetadata) {
+		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
 
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
@@ -90,7 +90,7 @@ func runVisualizer() {
 		})
 	})
 
-	onReceivedNewMilestoneMessage := events.NewClosure(func(messageID hornet.BlockID) {
+	onReceivedNewMilestoneMessage := events.NewClosure(func(blockID hornet.BlockID) {
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}
@@ -99,7 +99,7 @@ func runVisualizer() {
 			&Msg{
 				Type: MsgTypeMilestoneInfo,
 				Data: &metainfo{
-					ID: messageID.ToHex()[:VisualizerIDLength],
+					ID: blockID.ToHex()[:VisualizerIDLength],
 				},
 			},
 		)
@@ -116,8 +116,8 @@ func runVisualizer() {
 		}
 
 		excludedIDs := make([]string, len(confirmation.Mutations.MessagesExcludedWithConflictingTransactions))
-		for i, messageID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
-			excludedIDs[i] = messageID.MessageID.ToHex()[:VisualizerIDLength]
+		for i, blockID := range confirmation.Mutations.MessagesExcludedWithConflictingTransactions {
+			excludedIDs[i] = blockID.MessageID.ToHex()[:VisualizerIDLength]
 		}
 
 		hub.BroadcastMsg(

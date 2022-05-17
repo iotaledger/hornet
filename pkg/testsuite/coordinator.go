@@ -38,7 +38,7 @@ func (te *TestEnvironment) configureCoordinator(cooPrivateKeys []ed25519.Private
 	te.coo.bootstrap()
 
 	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
-	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
+	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
 	defer func() {
@@ -89,8 +89,8 @@ func (te *TestEnvironment) milestoneForIndex(msIndex milestone.Index) *storage.M
 	return ms.Milestone()
 }
 
-func (te *TestEnvironment) ReattachMessage(messageID hornet.BlockID, parents ...hornet.BlockID) hornet.BlockID {
-	message := te.storage.CachedMessageOrNil(messageID)
+func (te *TestEnvironment) ReattachMessage(blockID hornet.BlockID, parents ...hornet.BlockID) hornet.BlockID {
+	message := te.storage.CachedMessageOrNil(blockID)
 	require.NotNil(te.TestInterface, message)
 	defer message.Release(true)
 
@@ -133,7 +133,7 @@ func (te *TestEnvironment) ReattachMessage(messageID hornet.BlockID, parents ...
 func (te *TestEnvironment) PerformWhiteFlagConfirmation(milestonePayload *iotago.Milestone) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats, error) {
 
 	messagesMemcache := storage.NewMessagesMemcache(te.storage.CachedMessage)
-	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedMessageMetadata)
+	metadataMemcache := storage.NewMetadataMemcache(te.storage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(te.storage, metadataMemcache)
 
 	defer func() {

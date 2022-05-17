@@ -96,11 +96,11 @@ func TestTipSelect(t *testing.T) {
 				tip,
 				// traversal stops if no more messages pass the given condition
 				// Caution: condition func is not in DFS order
-				func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-					defer cachedMsgMeta.Release(true) // meta -1
+				func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+					defer cachedBlockMeta.Release(true) // meta -1
 
 					// first check if the msg was referenced => update ycri and ocri with the confirmation index
-					if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced {
+					if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 						updateIndexes(at, at)
 						return false, nil
 					}
@@ -113,9 +113,9 @@ func TestTipSelect(t *testing.T) {
 				// return error on missing parents
 				nil,
 				// called on solid entry points
-				func(messageID hornet.BlockID) error {
+				func(blockID hornet.BlockID) error {
 					// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
-					at, _, err := te.Storage().SolidEntryPointsIndex(messageID)
+					at, _, err := te.Storage().SolidEntryPointsIndex(blockID)
 					if err != nil {
 						return err
 					}

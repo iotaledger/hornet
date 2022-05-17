@@ -190,7 +190,7 @@ func forEachSolidEntryPoint(
 
 	solidEntryPoints := make(map[string]milestone.Index)
 
-	metadataMemcache := storage.NewMetadataMemcache(dbStorage.CachedMessageMetadata)
+	metadataMemcache := storage.NewMetadataMemcache(dbStorage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(dbStorage, metadataMemcache)
 	memcachedChildrenTraverserStorage := dag.NewMemcachedChildrenTraverserStorage(dbStorage, metadataMemcache)
 
@@ -207,29 +207,29 @@ func forEachSolidEntryPoint(
 	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
 
 	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
-	isSolidEntryPoint := func(messageID hornet.BlockID, targetIndex milestone.Index) (bool, error) {
-		childMessageIDs, err := memcachedChildrenTraverserStorage.ChildrenMessageIDs(messageID)
+	isSolidEntryPoint := func(blockID hornet.BlockID, targetIndex milestone.Index) (bool, error) {
+		childMessageIDs, err := memcachedChildrenTraverserStorage.ChildrenMessageIDs(blockID)
 		if err != nil {
 			return false, err
 		}
 
 		for _, childMessageID := range childMessageIDs {
-			cachedMsgMeta, err := memcachedChildrenTraverserStorage.CachedMessageMetadata(childMessageID) // meta +1
+			cachedBlockMeta, err := memcachedChildrenTraverserStorage.CachedMessageMetadata(childMessageID) // meta +1
 			if err != nil {
 				return false, err
 			}
 
-			if cachedMsgMeta == nil {
+			if cachedBlockMeta == nil {
 				// Ignore this message since it doesn't exist anymore
 				continue
 			}
 
-			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
+			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced && (at > targetIndex) {
 				// referenced by a later milestone than targetIndex => solidEntryPoint
-				cachedMsgMeta.Release(true) // meta -1
+				cachedBlockMeta.Release(true) // meta -1
 				return true, nil
 			}
-			cachedMsgMeta.Release(true) // meta -1
+			cachedBlockMeta.Release(true) // meta -1
 		}
 		return false, nil
 	}
@@ -254,25 +254,25 @@ func forEachSolidEntryPoint(
 			milestoneParents,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
+			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
 
 				// collect all msgs that were referenced by that milestone or newer
-				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				return referenced && at >= milestoneIndex, nil
 			},
 			// consumer
-			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
+			func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
 
 				if err := contextutils.ReturnErrIfCtxDone(ctx, ErrSnapshotCreationWasAborted); err != nil {
 					// stop snapshot creation if node was shutdown
 					return err
 				}
 
-				messageID := cachedMsgMeta.Metadata().MessageID()
+				blockID := cachedBlockMeta.Metadata().MessageID()
 
-				isEntryPoint, err := isSolidEntryPoint(messageID, targetIndex)
+				isEntryPoint, err := isSolidEntryPoint(blockID, targetIndex)
 				if err != nil {
 					return err
 				}
@@ -281,15 +281,15 @@ func forEachSolidEntryPoint(
 					return nil
 				}
 
-				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				if !referenced {
-					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", messageID.ToHex())
+					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", blockID.ToHex())
 				}
 
-				messageIDMapKey := messageID.ToMapKey()
-				if _, exists := solidEntryPoints[messageIDMapKey]; !exists {
-					solidEntryPoints[messageIDMapKey] = at
-					if !solidEntryPointConsumer(&storage.SolidEntryPoint{MessageID: messageID, Index: at}) {
+				blockIDMapKey := blockID.ToMapKey()
+				if _, exists := solidEntryPoints[blockIDMapKey]; !exists {
+					solidEntryPoints[blockIDMapKey] = at
+					if !solidEntryPointConsumer(&storage.SolidEntryPoint{MessageID: blockID, Index: at}) {
 						return ErrSnapshotCreationWasAborted
 					}
 				}

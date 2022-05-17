@@ -209,18 +209,18 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 
 	switch value := data.(type) {
 	case hornet.BlockID:
-		messageID := value
-		contains, err := r.storage.SolidEntryPointsContain(messageID)
+		blockID := value
+		contains, err := r.storage.SolidEntryPointsContain(blockID)
 		if err != nil {
 			panic(err)
 		}
 		if contains {
 			return false
 		}
-		if r.storage.ContainsMessage(messageID) {
+		if r.storage.ContainsBlock(blockID) {
 			return false
 		}
-		request = NewMessageIDRequest(messageID, msIndex)
+		request = NewMessageIDRequest(blockID, msIndex)
 
 	case milestone.Index:
 		msIndex := value
@@ -241,10 +241,10 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 }
 
 // RequestMultiple works like Request but takes multiple message IDs.
-func (r *Requester) RequestMultiple(messageIDs hornet.BlockIDs, msIndex milestone.Index, preventDiscard ...bool) int {
+func (r *Requester) RequestMultiple(blockIDs hornet.BlockIDs, msIndex milestone.Index, preventDiscard ...bool) int {
 	requested := 0
-	for _, messageID := range messageIDs {
-		if r.Request(messageID, msIndex, preventDiscard...) {
+	for _, blockID := range blockIDs {
+		if r.Request(blockID, msIndex, preventDiscard...) {
 			requested++
 		}
 	}
@@ -253,11 +253,11 @@ func (r *Requester) RequestMultiple(messageIDs hornet.BlockIDs, msIndex mileston
 
 // RequestParents enqueues requests for the parents of the given message to the request queue, if the
 // given message is not a solid entry point and neither its parents are and also not in the database.
-func (r *Requester) RequestParents(cachedMsg *storage.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
-	cachedMsg.ConsumeMetadata(func(metadata *storage.MessageMetadata) {
-		messageID := metadata.MessageID()
+func (r *Requester) RequestParents(cachedBlock *storage.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
+	cachedBlock.ConsumeMetadata(func(metadata *storage.MessageMetadata) {
+		blockID := metadata.MessageID()
 
-		contains, err := r.storage.SolidEntryPointsContain(messageID)
+		contains, err := r.storage.SolidEntryPointsContain(blockID)
 		if err != nil {
 			panic(err)
 		}

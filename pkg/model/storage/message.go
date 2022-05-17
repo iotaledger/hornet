@@ -14,7 +14,7 @@ type Message struct {
 	objectstorage.StorableObjectFlags
 
 	// Key
-	messageID hornet.BlockID
+	blockID hornet.BlockID
 
 	// Value
 	data        []byte
@@ -33,9 +33,9 @@ func NewMessage(iotaMsg *iotago.Block, deSeriMode serializer.DeSerializationMode
 	if err != nil {
 		return nil, err
 	}
-	messageID := hornet.BlockIDFromArray(*msgHash)
+	blockID := hornet.BlockIDFromArray(*msgHash)
 
-	msg := &Message{messageID: messageID, data: data}
+	msg := &Message{blockID: blockID, data: data}
 
 	msg.messageOnce.Do(func() {
 		msg.message = iotaMsg
@@ -55,9 +55,9 @@ func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, pr
 	if err != nil {
 		return nil, err
 	}
-	messageID := hornet.BlockIDFromArray(*msgHash)
+	blockID := hornet.BlockIDFromArray(*msgHash)
 
-	msg := &Message{messageID: messageID, data: data}
+	msg := &Message{blockID: blockID, data: data}
 
 	msg.messageOnce.Do(func() {
 		msg.message = iotaMsg
@@ -67,7 +67,7 @@ func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, pr
 }
 
 func (msg *Message) MessageID() hornet.BlockID {
-	return msg.messageID
+	return msg.blockID
 }
 
 func (msg *Message) Data() []byte {
@@ -79,7 +79,7 @@ func (msg *Message) Message() *iotago.Block {
 		iotaMsg := &iotago.Block{}
 		// No need to verify the message again here
 		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation, nil); err != nil {
-			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.ToHex(), err))
+			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.blockID.ToHex(), err))
 		}
 
 		msg.message = iotaMsg
@@ -204,11 +204,11 @@ func (msg *Message) SignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Sig
 // ObjectStorage interface
 
 func (msg *Message) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("Message should never be updated: %v", msg.messageID.ToHex()))
+	panic(fmt.Sprintf("Message should never be updated: %v", msg.blockID.ToHex()))
 }
 
 func (msg *Message) ObjectStorageKey() []byte {
-	return msg.messageID
+	return msg.blockID
 }
 
 func (msg *Message) ObjectStorageValue() []byte {

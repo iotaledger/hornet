@@ -142,12 +142,12 @@ func (t *ParentsTraverser) processStackParents() error {
 		}
 	}
 
-	cachedMsgMeta, err := t.parentsTraverserStorage.CachedMessageMetadata(currentMessageID) // meta +1
+	cachedBlockMeta, err := t.parentsTraverserStorage.CachedBlockMetadata(currentMessageID) // meta +1
 	if err != nil {
 		return err
 	}
 
-	if cachedMsgMeta == nil {
+	if cachedBlockMeta == nil {
 		// remove the message from the stack, the parents are not traversed
 		t.processed[currentMessageIDMapKey] = struct{}{}
 		delete(t.checked, currentMessageIDMapKey)
@@ -155,20 +155,20 @@ func (t *ParentsTraverser) processStackParents() error {
 
 		if t.onMissingParent == nil {
 			// stop processing the stack with an error
-			return fmt.Errorf("%w: message %s", common.ErrMessageNotFound, currentMessageID.ToHex())
+			return fmt.Errorf("%w: message %s", common.ErrBlockNotFound, currentMessageID.ToHex())
 		}
 
 		// stop processing the stack if the caller returns an error
 		return t.onMissingParent(currentMessageID)
 	}
-	defer cachedMsgMeta.Release(true) // meta -1
+	defer cachedBlockMeta.Release(true) // meta -1
 
 	traverse, checkedBefore := t.checked[currentMessageIDMapKey]
 	if !checkedBefore {
 		var err error
 
 		// check condition to decide if msg should be consumed and traversed
-		traverse, err = t.condition(cachedMsgMeta.Retain()) // meta pass +1
+		traverse, err = t.condition(cachedBlockMeta.Retain()) // meta pass +1
 		if err != nil {
 			// there was an error, stop processing the stack
 			return err
@@ -187,7 +187,7 @@ func (t *ParentsTraverser) processStackParents() error {
 		return nil
 	}
 
-	for _, parentMessageID := range cachedMsgMeta.Metadata().Parents() {
+	for _, parentMessageID := range cachedBlockMeta.Metadata().Parents() {
 		if _, parentProcessed := t.processed[parentMessageID.ToMapKey()]; !parentProcessed {
 			// parent was not processed yet
 			// traverse this message
@@ -203,7 +203,7 @@ func (t *ParentsTraverser) processStackParents() error {
 
 	if t.consumer != nil {
 		// consume the message
-		if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta pass +1
+		if err := t.consumer(cachedBlockMeta.Retain()); err != nil { // meta pass +1
 			// there was an error, stop processing the stack
 			return err
 		}

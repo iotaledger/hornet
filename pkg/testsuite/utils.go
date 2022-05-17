@@ -34,7 +34,7 @@ type MessageBuilder struct {
 
 type Message struct {
 	builder *MessageBuilder
-	message *storage.Message
+	block   *storage.Message
 
 	consumedOutputs []*utxo.Output
 	sentOutput      *utxo.Output

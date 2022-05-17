@@ -117,7 +117,7 @@ type MessageMetadata struct {
 	objectstorage.StorableObjectFlags
 	syncutils.RWMutex
 
-	messageID hornet.BlockID
+	blockID hornet.BlockID
 
 	// Metadata
 	metadata bitmask.BitMask
@@ -140,15 +140,15 @@ type MessageMetadata struct {
 	parents hornet.BlockIDs
 }
 
-func NewMessageMetadata(messageID hornet.BlockID, parents hornet.BlockIDs) *MessageMetadata {
+func NewMessageMetadata(blockID hornet.BlockID, parents hornet.BlockIDs) *MessageMetadata {
 	return &MessageMetadata{
-		messageID: messageID,
-		parents:   parents,
+		blockID: blockID,
+		parents: parents,
 	}
 }
 
 func (m *MessageMetadata) MessageID() hornet.BlockID {
-	return m.messageID
+	return m.blockID
 }
 
 func (m *MessageMetadata) Parents() hornet.BlockIDs {
@@ -297,11 +297,11 @@ func (m *MessageMetadata) Metadata() byte {
 // ObjectStorage interface
 
 func (m *MessageMetadata) Update(_ objectstorage.StorableObject) {
-	panic(fmt.Sprintf("MessageMetadata should never be updated: %v", m.messageID.ToHex()))
+	panic(fmt.Sprintf("MessageMetadata should never be updated: %v", m.blockID.ToHex()))
 }
 
 func (m *MessageMetadata) ObjectStorageKey() []byte {
-	return m.messageID
+	return m.blockID
 }
 
 func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
@@ -381,7 +381,7 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	}
 
 	m := &MessageMetadata{
-		messageID: hornet.BlockIDFromSlice(key[:32]),
+		blockID: hornet.BlockIDFromSlice(key[:32]),
 	}
 
 	m.metadata = bitmask.BitMask(metadataByte)

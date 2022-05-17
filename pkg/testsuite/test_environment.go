@@ -261,9 +261,9 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 
 func (te *TestEnvironment) NewTestMessage(index int, parents hornet.BlockIDs) *storage.MessageMetadata {
 	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
-	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // meta +1
-	defer cachedMsgMeta.Release(true)                                               // meta -1
-	return cachedMsgMeta.Metadata()
+	cachedBlockMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // meta +1
+	defer cachedBlockMeta.Release(true)                                               // meta -1
+	return cachedBlockMeta.Metadata()
 }
 
 // BuildTangle builds a tangle structure without a tipselection algorithm, but random tips from the last

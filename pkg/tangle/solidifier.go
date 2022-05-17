@@ -37,14 +37,14 @@ func (t *Tangle) TriggerSolidifier() {
 	t.milestoneSolidifierWorkerPool.TrySubmit(milestone.Index(0), true)
 }
 
-func (t *Tangle) markMessageAsSolid(cachedMsgMeta *storage.CachedMetadata) {
-	defer cachedMsgMeta.Release(true) // meta -1
+func (t *Tangle) markMessageAsSolid(cachedBlockMeta *storage.CachedMetadata) {
+	defer cachedBlockMeta.Release(true) // meta -1
 
 	// update the solidity flags of this message
-	cachedMsgMeta.Metadata().SetSolid(true)
+	cachedBlockMeta.Metadata().SetSolid(true)
 
-	t.Events.MessageSolid.Trigger(cachedMsgMeta)
-	t.messageSolidSyncEvent.Trigger(cachedMsgMeta.Metadata().MessageID().ToMapKey())
+	t.Events.MessageSolid.Trigger(cachedBlockMeta)
+	t.messageSolidSyncEvent.Trigger(cachedBlockMeta.Metadata().MessageID().ToMapKey())
 }
 
 // SolidQueueCheck traverses a milestone and checks if it is solid.
@@ -59,8 +59,8 @@ func (t *Tangle) SolidQueueCheck(
 	ts := time.Now()
 
 	msgsChecked := 0
-	var messageIDsToSolidify hornet.BlockIDs
-	messageIDsToRequest := make(map[string]struct{})
+	var blockIDsToSolidify hornet.BlockIDs
+	blockIDsToRequest := make(map[string]struct{})
 
 	parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
 
@@ -70,28 +70,28 @@ func (t *Tangle) SolidQueueCheck(
 		parents,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-			defer cachedMsgMeta.Release(true) // meta -1
+		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedBlockMeta.Release(true) // meta -1
 
 			// if the msg is solid, there is no need to traverse its parents
-			return !cachedMsgMeta.Metadata().IsSolid(), nil
+			return !cachedBlockMeta.Metadata().IsSolid(), nil
 		},
 		// consumer
-		func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
-			defer cachedMsgMeta.Release(true) // meta -1
+		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
+			defer cachedBlockMeta.Release(true) // meta -1
 
 			// mark the msg as checked
 			msgsChecked++
 
 			// collect the txToSolidify in an ordered way
-			messageIDsToSolidify = append(messageIDsToSolidify, cachedMsgMeta.Metadata().MessageID())
+			blockIDsToSolidify = append(blockIDsToSolidify, cachedBlockMeta.Metadata().MessageID())
 
 			return nil
 		},
 		// called on missing parents
 		func(parentMessageID hornet.BlockID) error {
 			// msg does not exist => request missing msg
-			messageIDsToRequest[parentMessageID.ToMapKey()] = struct{}{}
+			blockIDsToRequest[parentMessageID.ToMapKey()] = struct{}{}
 			return nil
 		},
 		// called on solid entry points
@@ -106,38 +106,38 @@ func (t *Tangle) SolidQueueCheck(
 
 	tCollect := time.Now()
 
-	if len(messageIDsToRequest) > 0 {
-		messageIDs := make(hornet.BlockIDs, 0, len(messageIDsToRequest))
-		for messageID := range messageIDsToRequest {
-			messageIDs = append(messageIDs, hornet.BlockIDFromMapKey(messageID))
+	if len(blockIDsToRequest) > 0 {
+		blockIDs := make(hornet.BlockIDs, 0, len(blockIDsToRequest))
+		for blockID := range blockIDsToRequest {
+			blockIDs = append(blockIDs, hornet.BlockIDFromMapKey(blockID))
 		}
-		requested := t.requester.RequestMultiple(messageIDs, milestoneIndex, true)
-		t.LogWarnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(messageIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
+		requested := t.requester.RequestMultiple(blockIDs, milestoneIndex, true)
+		t.LogWarnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(blockIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
 		return false, false
 	}
 
 	// no messages to request => the whole cone is solid
 	// we mark all messages as solid in order from oldest to latest (needed for the tip pool)
-	for _, messageID := range messageIDsToSolidify {
-		cachedMsgMeta, err := memcachedTraverserStorage.CachedMessageMetadata(messageID)
+	for _, blockID := range blockIDsToSolidify {
+		cachedBlockMeta, err := memcachedTraverserStorage.CachedBlockMetadata(blockID)
 		if err != nil {
-			t.LogPanicf("solidQueueCheck: Get message metadata failed: %v, Error: %w", messageID.ToHex(), err)
+			t.LogPanicf("solidQueueCheck: Get message metadata failed: %v, Error: %w", blockID.ToHex(), err)
 			return
 		}
-		if cachedMsgMeta == nil {
-			t.LogPanicf("solidQueueCheck: Message metadata not found: %v", messageID.ToHex())
+		if cachedBlockMeta == nil {
+			t.LogPanicf("solidQueueCheck: Message metadata not found: %v", blockID.ToHex())
 			return
 		}
 
-		t.markMessageAsSolid(cachedMsgMeta.Retain()) // meta pass +1
-		cachedMsgMeta.Release(true)                  // meta -1
+		t.markMessageAsSolid(cachedBlockMeta.Retain()) // meta pass +1
+		cachedBlockMeta.Release(true)                  // meta -1
 	}
 
 	tSolid := time.Now()
 
 	if t.syncManager.IsNodeAlmostSynced() {
 		// propagate solidity to the future cone (msgs attached to the msgs of this milestone)
-		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(ctx, memcachedTraverserStorage, messageIDsToSolidify); err != nil {
+		if err := t.futureConeSolidifier.SolidifyFutureConesWithMetadataMemcache(ctx, memcachedTraverserStorage, blockIDsToSolidify); err != nil {
 			t.LogDebugf("SolidifyFutureConesWithMetadataMemcache failed: %s", err)
 		}
 	}
@@ -252,7 +252,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 	defer milestoneSolidificationCancelFunc()
 
 	messagesMemcache := storage.NewMessagesMemcache(t.storage.CachedMessage)
-	metadataMemcache := storage.NewMetadataMemcache(t.storage.CachedMessageMetadata)
+	metadataMemcache := storage.NewMetadataMemcache(t.storage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(t.storage, metadataMemcache)
 
 	defer func() {
@@ -505,21 +505,21 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 		milestoneParents,
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
-		func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-			defer cachedMsgMeta.Release(true) // meta -1
+		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedBlockMeta.Release(true) // meta -1
 
 			// if the message is referenced by an older milestone, there is no need to traverse its parents
-			if referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex(); referenced && (at <= confirmedMilestoneIndex) {
+			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced && (at <= confirmedMilestoneIndex) {
 				return false, nil
 			}
 
-			cachedMsg := t.storage.CachedMessageOrNil(cachedMsgMeta.Metadata().MessageID()) // message +1
-			if cachedMsg == nil {
-				return false, fmt.Errorf("%w message ID: %s", common.ErrMessageNotFound, cachedMsgMeta.Metadata().MessageID().ToHex())
+			cachedBlock := t.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().MessageID()) // message +1
+			if cachedBlock == nil {
+				return false, fmt.Errorf("%w message ID: %s", common.ErrBlockNotFound, cachedBlockMeta.Metadata().MessageID().ToHex())
 			}
-			defer cachedMsg.Release(true) // message -1
+			defer cachedBlock.Release(true) // message -1
 
-			milestonePayload := t.milestoneManager.VerifyMilestoneMessage(cachedMsg.Message().Message())
+			milestonePayload := t.milestoneManager.VerifyMilestoneMessage(cachedBlock.Message().Message())
 			if milestonePayload == nil {
 				return true, nil
 			}
@@ -530,7 +530,7 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 			}
 
 			// milestone found!
-			t.milestoneManager.StoreMilestone(cachedMsg.Retain(), milestonePayload, false) // message pass +1
+			t.milestoneManager.StoreMilestone(cachedBlock.Retain(), milestonePayload, false) // message pass +1
 
 			milestoneFound = true
 			return true, nil // we keep searching for all missing milestones

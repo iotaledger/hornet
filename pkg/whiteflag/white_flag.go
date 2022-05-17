@@ -27,11 +27,11 @@ var (
 
 	// traversal stops if no more messages pass the given condition
 	// Caution: condition func is not in DFS order
-	DefaultWhiteFlagTraversalCondition = func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-		defer cachedMsgMeta.Release(true) // meta -1
+	DefaultWhiteFlagTraversalCondition = func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+		defer cachedBlockMeta.Release(true) // meta -1
 
 		// only traverse and process the message if it was not referenced yet
-		return !cachedMsgMeta.Metadata().IsReferenced(), nil
+		return !cachedBlockMeta.Metadata().IsReferenced(), nil
 	}
 
 	emptyMilestoneID = iotago.MilestoneID{}
@@ -118,20 +118,20 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	// Use a custom traversal condition that tracks if the previousMilestoneID was seen in the past cone
 	// Skip this check for the first milestone
 	seenPreviousMilestoneID := isFirstMilestone
-	internalTraversalCondition := func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-		if !seenPreviousMilestoneID && cachedMsgMeta.Metadata().IsMilestone() {
-			msgMilestone, err := cachedMessageFunc(cachedMsgMeta.Metadata().MessageID()) // message +1
+	internalTraversalCondition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+		if !seenPreviousMilestoneID && cachedBlockMeta.Metadata().IsMilestone() {
+			msgMilestone, err := cachedMessageFunc(cachedBlockMeta.Metadata().MessageID()) // message +1
 			if err != nil {
 				return false, err
 			}
 			if msgMilestone == nil {
-				return false, fmt.Errorf("ComputeWhiteFlagMutations: message not found for milestone message ID: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
+				return false, fmt.Errorf("ComputeWhiteFlagMutations: message not found for milestone message ID: %v", cachedBlockMeta.Metadata().MessageID().ToHex())
 			}
 			defer msgMilestone.Release(true) // message -1
 
 			milestonePayload := msgMilestone.Message().Milestone()
 			if milestonePayload == nil {
-				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedMsgMeta.Metadata().MessageID().ToHex())
+				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedBlockMeta.Metadata().MessageID().ToHex())
 			}
 
 			msIDPtr, err := milestonePayload.ID()
@@ -144,38 +144,38 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			if seenPreviousMilestoneID {
 				// Check that the milestone timestamp has increased
 				if milestonePayload.Timestamp >= msTimestamp {
-					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone timestamp is smaller or equal to previous milestone timestamp (old: %d, new: %d): %v", milestonePayload.Timestamp, msTimestamp, cachedMsgMeta.Metadata().MessageID().ToHex())
+					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone timestamp is smaller or equal to previous milestone timestamp (old: %d, new: %d): %v", milestonePayload.Timestamp, msTimestamp, cachedBlockMeta.Metadata().MessageID().ToHex())
 				}
 				if (milestonePayload.Index + 1) != uint32(msIndex) {
-					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone index did not increase by one compared to previous milestone index (old: %d, new: %d): %v", milestonePayload.Index, msIndex, cachedMsgMeta.Metadata().MessageID().ToHex())
+					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone index did not increase by one compared to previous milestone index (old: %d, new: %d): %v", milestonePayload.Index, msIndex, cachedBlockMeta.Metadata().MessageID().ToHex())
 				}
 			}
 		}
-		return traversalCondition(cachedMsgMeta) // meta pass +1
+		return traversalCondition(cachedBlockMeta) // meta pass +1
 	}
 
 	// consumer
-	consumer := func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
-		defer cachedMsgMeta.Release(true) // meta -1
+	consumer := func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
+		defer cachedBlockMeta.Release(true) // meta -1
 
-		messageID := cachedMsgMeta.Metadata().MessageID()
+		blockID := cachedBlockMeta.Metadata().MessageID()
 
 		// load up message
-		cachedMsg, err := cachedMessageFunc(messageID) // message +1
+		cachedBlock, err := cachedMessageFunc(blockID) // message +1
 		if err != nil {
 			return err
 		}
-		if cachedMsg == nil {
-			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrMessageNotFound, messageID.ToHex(), messageID.ToHex())
+		if cachedBlock == nil {
+			return fmt.Errorf("%w: message %s of candidate msg %s doesn't exist", common.ErrBlockNotFound, blockID.ToHex(), blockID.ToHex())
 		}
-		defer cachedMsg.Release(true) // message -1
+		defer cachedBlock.Release(true) // message -1
 
-		message := cachedMsg.Message()
+		message := cachedBlock.Message()
 
 		// exclude message without transactions
 		if !message.IsTransaction() {
-			wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, messageID)
-			wfConf.MessagesExcludedWithoutTransactions = append(wfConf.MessagesExcludedWithoutTransactions, messageID)
+			wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, blockID)
+			wfConf.MessagesExcludedWithoutTransactions = append(wfConf.MessagesExcludedWithoutTransactions, blockID)
 			return nil
 		}
 
@@ -253,7 +253,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			}
 
 			for i := 0; i < len(transactionEssence.Outputs); i++ {
-				output, err := utxo.NewOutput(messageID, msIndex, msTimestamp, transaction, uint16(i))
+				output, err := utxo.NewOutput(blockID, msIndex, msTimestamp, transaction, uint16(i))
 				if err != nil {
 					return err
 				}
@@ -261,18 +261,18 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			}
 		}
 
-		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, messageID)
+		wfConf.MessagesReferenced = append(wfConf.MessagesReferenced, blockID)
 
 		if conflict != storage.ConflictNone {
 			wfConf.MessagesExcludedWithConflictingTransactions = append(wfConf.MessagesExcludedWithConflictingTransactions, MessageWithConflict{
-				MessageID: messageID,
+				MessageID: blockID,
 				Conflict:  conflict,
 			})
 			return nil
 		}
 
 		// mark the given message to be part of milestone ledger by changing message inclusion set
-		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, messageID)
+		wfConf.MessagesIncludedWithTransactions = append(wfConf.MessagesIncludedWithTransactions, blockID)
 
 		newSpents := make(utxo.Spents, len(inputOutputs))
 

@@ -4,18 +4,18 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
-type CachedMessageMetadataFunc func(messageID hornet.BlockID) (*CachedMetadata, error)
+type CachedMessageMetadataFunc func(blockID hornet.BlockID) (*CachedMetadata, error)
 
 type MetadataMemcache struct {
 	cachedMessageMetadataFunc CachedMessageMetadataFunc
-	cachedMsgMetas            map[string]*CachedMetadata
+	cachedBlockMetas          map[string]*CachedMetadata
 }
 
 // NewMetadataMemcache creates a new NewMetadataMemcache instance.
 func NewMetadataMemcache(cachedMessageMetadataFunc CachedMessageMetadataFunc) *MetadataMemcache {
 	return &MetadataMemcache{
 		cachedMessageMetadataFunc: cachedMessageMetadataFunc,
-		cachedMsgMetas:            make(map[string]*CachedMetadata),
+		cachedBlockMetas:          make(map[string]*CachedMetadata),
 	}
 }
 
@@ -24,33 +24,33 @@ func NewMetadataMemcache(cachedMessageMetadataFunc CachedMessageMetadataFunc) *M
 func (c *MetadataMemcache) Cleanup(forceRelease bool) {
 
 	// release all msg metadata at the end
-	for _, cachedMsgMeta := range c.cachedMsgMetas {
-		cachedMsgMeta.Release(forceRelease) // meta -1
+	for _, cachedBlockMeta := range c.cachedBlockMetas {
+		cachedBlockMeta.Release(forceRelease) // meta -1
 	}
-	c.cachedMsgMetas = make(map[string]*CachedMetadata)
+	c.cachedBlockMetas = make(map[string]*CachedMetadata)
 }
 
-// CachedMessageMetadata returns a cached metadata object.
+// CachedBlockMetadata returns a cached metadata object.
 // meta +1
-func (c *MetadataMemcache) CachedMessageMetadata(messageID hornet.BlockID) (*CachedMetadata, error) {
-	messageIDMapKey := messageID.ToMapKey()
+func (c *MetadataMemcache) CachedBlockMetadata(blockID hornet.BlockID) (*CachedMetadata, error) {
+	blockIDMapKey := blockID.ToMapKey()
 
 	var err error
 
 	// load up msg metadata
-	cachedMsgMeta, exists := c.cachedMsgMetas[messageIDMapKey]
+	cachedBlockMeta, exists := c.cachedBlockMetas[blockIDMapKey]
 	if !exists {
-		cachedMsgMeta, err = c.cachedMessageMetadataFunc(messageID) // meta +1 (this is the one that gets cleared by "Cleanup")
+		cachedBlockMeta, err = c.cachedMessageMetadataFunc(blockID) // meta +1 (this is the one that gets cleared by "Cleanup")
 		if err != nil {
 			return nil, err
 		}
-		if cachedMsgMeta == nil {
+		if cachedBlockMeta == nil {
 			return nil, nil
 		}
 
 		// add the cachedObject to the map, it will be released by calling "Cleanup" at the end
-		c.cachedMsgMetas[messageIDMapKey] = cachedMsgMeta
+		c.cachedBlockMetas[blockIDMapKey] = cachedBlockMeta
 	}
 
-	return cachedMsgMeta.Retain(), nil // meta +1
+	return cachedBlockMeta.Retain(), nil // meta +1
 }

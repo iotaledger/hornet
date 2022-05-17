@@ -55,8 +55,8 @@ func (t *Tangle) RunTangleProcessor() {
 
 	t.startWaitGroup.Add(5)
 
-	onMsgProcessed := events.NewClosure(func(message *storage.Message, requests gossip.Requests, proto *gossip.Protocol) {
-		t.receiveMsgWorkerPool.Submit(message, requests, proto)
+	onMsgProcessed := events.NewClosure(func(block *storage.Message, requests gossip.Requests, proto *gossip.Protocol) {
+		t.receiveMsgWorkerPool.Submit(block, requests, proto)
 	})
 
 	onLatestMilestoneIndexChanged := events.NewClosure(func(_ milestone.Index) {
@@ -80,11 +80,11 @@ func (t *Tangle) RunTangleProcessor() {
 
 	// send all solid messages back to the message processor, which broadcasts them to other nodes
 	// after passing some additional rules.
-	onMessageSolid := events.NewClosure(func(cachedMsgMeta *storage.CachedMetadata) {
-		t.messageProcessor.Broadcast(cachedMsgMeta) // meta pass +1
+	onMessageSolid := events.NewClosure(func(cachedBlockMeta *storage.CachedMetadata) {
+		t.messageProcessor.Broadcast(cachedBlockMeta) // meta pass +1
 	})
 
-	onReceivedValidMilestone := events.NewClosure(func(messageID hornet.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
+	onReceivedValidMilestone := events.NewClosure(func(blockID hornet.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
 
 		if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 			// do not process the milestone if the node was shut down
@@ -92,7 +92,7 @@ func (t *Tangle) RunTangleProcessor() {
 			return
 		}
 
-		_, added := t.processValidMilestoneWorkerPool.Submit(messageID, cachedMilestone, requested) // milestone pass +1
+		_, added := t.processValidMilestoneWorkerPool.Submit(blockID, cachedMilestone, requested) // milestone pass +1
 		if !added {
 			// Release shouldn't be forced, to cache the latest milestones
 			cachedMilestone.Release() // milestone -1
@@ -195,10 +195,10 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 	requested := requests.HasRequest()
 
 	// The msg will be added to the storage inside this function, so the message object automatically updates
-	cachedMsg, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // message +1
+	cachedBlock, alreadyAdded := AddMessageToStorage(t.storage, t.milestoneManager, incomingMsg, latestMilestoneIndex, requested, !isNodeSyncedWithinBelowMaxDepth) // message +1
 
 	// Release shouldn't be forced, to cache the latest messages
-	defer cachedMsg.Release(!isNodeSyncedWithinBelowMaxDepth) // message -1
+	defer cachedBlock.Release(!isNodeSyncedWithinBelowMaxDepth) // message -1
 
 	if !alreadyAdded {
 		t.serverMetrics.NewMessages.Inc()
@@ -212,7 +212,7 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 		for _, request := range requests {
 			// add this newly received message's parents to the request queue
 			if request.RequestType == gossip.RequestTypeMessageID {
-				t.requester.RequestParents(cachedMsg.Retain(), request.MilestoneIndex, true) // message pass +1
+				t.requester.RequestParents(cachedBlock.Retain(), request.MilestoneIndex, true) // message pass +1
 			}
 		}
 
@@ -223,17 +223,17 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 
 		if t.syncManager.IsNodeAlmostSynced() {
 			// try to solidify the message and its future cone
-			t.futureConeSolidifierWorkerPool.Submit(cachedMsg.CachedMetadata()) // meta pass +1
+			t.futureConeSolidifierWorkerPool.Submit(cachedBlock.CachedMetadata()) // meta pass +1
 		}
 
-		t.Events.ReceivedNewMessage.Trigger(cachedMsg, latestMilestoneIndex, confirmedMilestoneIndex)
+		t.Events.ReceivedNewMessage.Trigger(cachedBlock, latestMilestoneIndex, confirmedMilestoneIndex)
 
 	} else {
 		t.serverMetrics.KnownMessages.Inc()
 		if proto != nil {
 			proto.Metrics.KnownMessages.Inc()
 		}
-		t.Events.ReceivedKnownMessage.Trigger(cachedMsg)
+		t.Events.ReceivedKnownMessage.Trigger(cachedBlock)
 	}
 
 	// "ProcessedMessage" event has to be fired after "ReceivedNewMessage" event,
@@ -259,23 +259,23 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 }
 
 // RegisterMessageProcessedEvent returns a channel that gets closed when the message is processed.
-func (t *Tangle) RegisterMessageProcessedEvent(messageID hornet.BlockID) chan struct{} {
-	return t.messageProcessedSyncEvent.RegisterEvent(messageID.ToMapKey())
+func (t *Tangle) RegisterMessageProcessedEvent(blockID hornet.BlockID) chan struct{} {
+	return t.messageProcessedSyncEvent.RegisterEvent(blockID.ToMapKey())
 }
 
 // DeregisterMessageProcessedEvent removes a registered event to free the memory if not used.
-func (t *Tangle) DeregisterMessageProcessedEvent(messageID hornet.BlockID) {
-	t.messageProcessedSyncEvent.DeregisterEvent(messageID.ToMapKey())
+func (t *Tangle) DeregisterMessageProcessedEvent(blockID hornet.BlockID) {
+	t.messageProcessedSyncEvent.DeregisterEvent(blockID.ToMapKey())
 }
 
 // RegisterMessageSolidEvent returns a channel that gets closed when the message is marked as solid.
-func (t *Tangle) RegisterMessageSolidEvent(messageID hornet.BlockID) chan struct{} {
-	return t.messageSolidSyncEvent.RegisterEvent(messageID.ToMapKey())
+func (t *Tangle) RegisterMessageSolidEvent(blockID hornet.BlockID) chan struct{} {
+	return t.messageSolidSyncEvent.RegisterEvent(blockID.ToMapKey())
 }
 
 // DeregisterMessageSolidEvent removes a registered event to free the memory if not used.
-func (t *Tangle) DeregisterMessageSolidEvent(messageID hornet.BlockID) {
-	t.messageSolidSyncEvent.DeregisterEvent(messageID.ToMapKey())
+func (t *Tangle) DeregisterMessageSolidEvent(blockID hornet.BlockID) {
+	t.messageSolidSyncEvent.DeregisterEvent(blockID.ToMapKey())
 }
 
 // RegisterMilestoneConfirmedEvent returns a channel that gets closed when the milestone is confirmed.

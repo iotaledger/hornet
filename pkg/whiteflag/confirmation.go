@@ -195,16 +195,16 @@ func ConfirmMilestone(
 	timeConfirmation := time.Now()
 
 	// load the message for the given id
-	forMessageMetadataWithMessageID := func(messageID hornet.BlockID, do func(meta *storage.CachedMetadata)) error {
-		cachedMsgMeta, err := parentsTraverserStorage.CachedMessageMetadata(messageID) // meta +1
+	forMessageMetadataWithMessageID := func(blockID hornet.BlockID, do func(meta *storage.CachedMetadata)) error {
+		cachedBlockMeta, err := parentsTraverserStorage.CachedBlockMetadata(blockID) // meta +1
 		if err != nil {
-			return fmt.Errorf("confirmMilestone: get message failed: %v, Error: %w", messageID.ToHex(), err)
+			return fmt.Errorf("confirmMilestone: get message failed: %v, Error: %w", blockID.ToHex(), err)
 		}
-		if cachedMsgMeta == nil {
-			return fmt.Errorf("confirmMilestone: message not found: %v", messageID.ToHex())
+		if cachedBlockMeta == nil {
+			return fmt.Errorf("confirmMilestone: message not found: %v", blockID.ToHex())
 		}
-		do(cachedMsgMeta)
-		cachedMsgMeta.Release(true) // meta -1
+		do(cachedBlockMeta)
+		cachedBlockMeta.Release(true) // meta -1
 		return nil
 	}
 
@@ -215,8 +215,8 @@ func ConfirmMilestone(
 	confirmationTime := milestonePayload.Timestamp
 
 	// confirm all included messages
-	for _, messageID := range mutations.MessagesIncludedWithTransactions {
-		if err := forMessageMetadataWithMessageID(messageID, func(meta *storage.CachedMetadata) {
+	for _, blockID := range mutations.MessagesIncludedWithTransactions {
+		if err := forMessageMetadataWithMessageID(blockID, func(meta *storage.CachedMetadata) {
 			if !checkMessageReferencedFunc(meta.Metadata()) {
 				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)
 				meta.Metadata().SetConeRootIndexes(milestoneIndex, milestoneIndex, milestoneIndex)
@@ -237,8 +237,8 @@ func ConfirmMilestone(
 	timeApplyIncludedWithTransactions := time.Now()
 
 	// confirm all excluded messages not containing ledger transactions
-	for _, messageID := range mutations.MessagesExcludedWithoutTransactions {
-		if err := forMessageMetadataWithMessageID(messageID, func(meta *storage.CachedMetadata) {
+	for _, blockID := range mutations.MessagesExcludedWithoutTransactions {
+		if err := forMessageMetadataWithMessageID(blockID, func(meta *storage.CachedMetadata) {
 			meta.Metadata().SetIsNoTransaction(true)
 			if !checkMessageReferencedFunc(meta.Metadata()) {
 				setMessageReferencedFunc(meta.Metadata(), true, milestoneIndex)

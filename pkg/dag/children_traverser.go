@@ -51,10 +51,10 @@ func (t *ChildrenTraverser) reset() {
 	t.stack = list.New()
 }
 
-// Traverse starts to traverse the children (future cone) of the given start message until
-// the traversal stops due to no more messages passing the given condition.
+// Traverse starts to traverse the children (future cone) of the given start block until
+// the traversal stops due to no more blocks passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(ctx context.Context, startMessageID hornet.BlockID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
+func (t *ChildrenTraverser) Traverse(ctx context.Context, startBlockID hornet.BlockID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -70,9 +70,9 @@ func (t *ChildrenTraverser) Traverse(ctx context.Context, startMessageID hornet.
 	// Prepare for a new traversal
 	t.reset()
 
-	t.stack.PushFront(startMessageID)
+	t.stack.PushFront(startBlockID)
 	if !t.walkAlreadyDiscovered {
-		t.discovered[startMessageID.ToMapKey()] = struct{}{}
+		t.discovered[startBlockID.ToMapKey()] = struct{}{}
 	}
 
 	for t.stack.Len() > 0 {
@@ -92,33 +92,33 @@ func (t *ChildrenTraverser) processStackChildren() error {
 		return err
 	}
 
-	// load candidate msg
+	// load candidate block
 	ele := t.stack.Front()
-	currentMessageID := ele.Value.(hornet.BlockID)
+	currentBlockID := ele.Value.(hornet.BlockID)
 
-	// remove the message from the stack
+	// remove the block from the stack
 	t.stack.Remove(ele)
 
 	// we also need to walk the children of solid entry points, but we don't consume them
-	contains, err := t.childrenTraverserStorage.SolidEntryPointsContain(currentMessageID)
+	contains, err := t.childrenTraverserStorage.SolidEntryPointsContain(currentBlockID)
 	if err != nil {
 		return err
 	}
 
 	if !contains {
-		cachedMsgMeta, err := t.childrenTraverserStorage.CachedMessageMetadata(currentMessageID) // meta +1
+		cachedBlockMeta, err := t.childrenTraverserStorage.CachedBlockMetadata(currentBlockID) // meta +1
 		if err != nil {
 			return err
 		}
 
-		if cachedMsgMeta == nil {
+		if cachedBlockMeta == nil {
 			// there was an error, stop processing the stack
-			return errors.Wrapf(common.ErrMessageNotFound, "message ID: %s", currentMessageID.ToHex())
+			return errors.Wrapf(common.ErrBlockNotFound, "message ID: %s", currentBlockID.ToHex())
 		}
-		defer cachedMsgMeta.Release(true) // meta -1
+		defer cachedBlockMeta.Release(true) // meta -1
 
 		// check condition to decide if msg should be consumed and traversed
-		traverse, err := t.condition(cachedMsgMeta.Retain()) // meta pass +1
+		traverse, err := t.condition(cachedBlockMeta.Retain()) // meta pass +1
 		if err != nil {
 			// there was an error, stop processing the stack
 			return err
@@ -131,14 +131,14 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 		if t.consumer != nil {
 			// consume the message
-			if err := t.consumer(cachedMsgMeta.Retain()); err != nil { // meta pass +1
+			if err := t.consumer(cachedBlockMeta.Retain()); err != nil { // meta pass +1
 				// there was an error, stop processing the stack
 				return err
 			}
 		}
 	}
 
-	childrenMessageIDs, err := t.childrenTraverserStorage.ChildrenMessageIDs(currentMessageID)
+	childrenMessageIDs, err := t.childrenTraverserStorage.ChildrenMessageIDs(currentBlockID)
 	if err != nil {
 		return err
 	}

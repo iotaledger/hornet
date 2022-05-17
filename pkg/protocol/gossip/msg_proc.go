@@ -221,11 +221,11 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
 	cmi := proc.syncManager.ConfirmedMilestoneIndex()
 
-	checkParentFunc := func(messageID hornet.BlockID) error {
-		cachedMsgMeta := proc.storage.CachedMessageMetadataOrNil(messageID) // meta +1
-		if cachedMsgMeta == nil {
+	checkParentFunc := func(blockID hornet.BlockID) error {
+		cachedBlockMeta := proc.storage.CachedMessageMetadataOrNil(blockID) // meta +1
+		if cachedBlockMeta == nil {
 			// parent not found
-			entryPointIndex, exists, err := proc.storage.SolidEntryPointsIndex(messageID)
+			entryPointIndex, exists, err := proc.storage.SolidEntryPointsIndex(blockID)
 			if err != nil {
 				return err
 			}
@@ -241,15 +241,15 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 			// message is a SEP and not below max depth
 			return nil
 		}
-		defer cachedMsgMeta.Release(true) // meta -1
+		defer cachedBlockMeta.Release(true) // meta -1
 
-		if !cachedMsgMeta.Metadata().IsSolid() {
+		if !cachedBlockMeta.Metadata().IsSolid() {
 			// if the parent is not solid, the message itself can't be solid
 			return ErrMessageNotSolid
 		}
 
 		// we pass a background context here to not prevent emitting messages at shutdown (COO etc).
-		_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), cmi) // meta pass +1
+		_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedBlockMeta.Retain(), cmi) // meta pass +1
 		if err != nil {
 			return err
 		}
@@ -352,14 +352,14 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	cachedMsg := proc.storage.CachedMessageOrNil(hornet.BlockIDFromSlice(data)) // message +1
-	if cachedMsg == nil {
+	cachedBlock := proc.storage.CachedMessageOrNil(hornet.BlockIDFromSlice(data)) // message +1
+	if cachedBlock == nil {
 		// can't reply if we don't have the requested message
 		return
 	}
-	defer cachedMsg.Release(true) // message -1
+	defer cachedBlock.Release(true) // message -1
 
-	requestedData, err := cachedMsg.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
+	requestedData, err := cachedBlock.Message().Message().Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -440,7 +440,7 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 			proc.Events.MessageProcessed.Trigger(wu.msg, requests, p)
 		}
 
-		if proc.storage.ContainsMessage(wu.msg.MessageID()) {
+		if proc.storage.ContainsBlock(wu.msg.MessageID()) {
 			proc.serverMetrics.KnownMessages.Inc()
 			p.Metrics.KnownMessages.Inc()
 		}
@@ -505,10 +505,10 @@ func (proc *MessageProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	proc.Events.MessageProcessed.Trigger(msg, requests, p)
 }
 
-func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
+func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {
 	proc.shutdownMutex.RLock()
 	defer proc.shutdownMutex.RUnlock()
-	defer cachedMsgMeta.Release(true) // meta -1
+	defer cachedBlockMeta.Release(true) // meta -1
 
 	if proc.shutdown {
 		// do not broadcast if the message processor was shut down
@@ -521,7 +521,7 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 	}
 
 	// we pass a background context here to not prevent broadcasting messages at shutdown (COO etc).
-	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedMsgMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex()) // meta pass +1
+	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedBlockMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex()) // meta pass +1
 	if err != nil {
 		return
 	}
@@ -531,14 +531,14 @@ func (proc *MessageProcessor) Broadcast(cachedMsgMeta *storage.CachedMetadata) {
 		return
 	}
 
-	cachedMsg := proc.storage.CachedMessageOrNil(cachedMsgMeta.Metadata().MessageID()) // message +1
-	if cachedMsg == nil {
+	cachedBlock := proc.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().MessageID()) // message +1
+	if cachedBlock == nil {
 		return
 	}
-	defer cachedMsg.Release(true) // message -1
+	defer cachedBlock.Release(true) // message -1
 
-	cachedWorkUnit, _ := proc.workUnitFor(cachedMsg.Message().Data()) // workUnit +1
-	defer cachedWorkUnit.Release(true)                                // workUnit -1
+	cachedWorkUnit, _ := proc.workUnitFor(cachedBlock.Message().Data()) // workUnit +1
+	defer cachedWorkUnit.Release(true)                                  // workUnit -1
 	wu := cachedWorkUnit.WorkUnit()
 
 	if wu.requested {

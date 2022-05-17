@@ -27,18 +27,18 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
 	}
 
-	messageID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(messageID)
-	if cachedMsgMeta == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
+	cachedBlockMeta := deps.Storage.CachedMessageMetadataOrNil(blockID)
+	if cachedBlockMeta == nil {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", blockID.ToHex())
 	}
-	defer cachedMsgMeta.Release(true) // meta -1
+	defer cachedBlockMeta.Release(true) // meta -1
 
-	metadata := cachedMsgMeta.Metadata()
+	metadata := cachedBlockMeta.Metadata()
 
 	var referencedByMilestone *milestone.Index = nil
 	referenced, referencedIndex := metadata.ReferencedWithIndex()
@@ -74,7 +74,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
-		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), cachedMsgMeta.Metadata().MessageID(), cmi)
+		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), cachedBlockMeta.Metadata().MessageID(), cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
@@ -107,18 +107,18 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 }
 
 func storageMessageByID(c echo.Context) (*storage.Message, error) {
-	messageID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
-	cachedMsg := deps.Storage.CachedMessageOrNil(messageID) // message +1
-	if cachedMsg == nil {
-		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", messageID.ToHex())
+	cachedBlock := deps.Storage.CachedMessageOrNil(blockID) // message +1
+	if cachedBlock == nil {
+		return nil, errors.WithMessagef(echo.ErrNotFound, "message not found: %s", blockID.ToHex())
 	}
-	defer cachedMsg.Release(true) // message -1
+	defer cachedBlock.Release(true) // message -1
 
-	return cachedMsg.Message(), nil
+	return cachedBlock.Message(), nil
 }
 
 func messageByID(c echo.Context) (*iotago.Block, error) {
@@ -139,19 +139,19 @@ func messageBytesByID(c echo.Context) ([]byte, error) {
 
 func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 
-	messageID, err := restapi.ParseMessageIDParam(c)
+	blockID, err := restapi.ParseMessageIDParam(c)
 	if err != nil {
 		return nil, err
 	}
 
 	maxResults := deps.RestAPILimitsMaxResults
-	childrenMessageIDs, err := deps.Storage.ChildrenMessageIDs(messageID, storage.WithIteratorMaxIterations(maxResults))
+	childrenMessageIDs, err := deps.Storage.ChildrenMessageIDs(blockID, storage.WithIteratorMaxIterations(maxResults))
 	if err != nil {
 		return nil, errors.WithMessage(echo.ErrInternalServerError, err.Error())
 	}
 
 	return &childrenResponse{
-		MessageID:  messageID.ToHex(),
+		MessageID:  blockID.ToHex(),
 		MaxResults: uint32(maxResults),
 		Count:      uint32(len(childrenMessageIDs)),
 		Children:   childrenMessageIDs.ToHex(),
@@ -212,7 +212,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	mergedCtx, mergedCtxCancel := contextutils.MergeContexts(c.Request().Context(), Plugin.Daemon().ContextStopped())
 	defer mergedCtxCancel()
 
-	messageID, err := attacher.AttachMessage(mergedCtx, msg)
+	blockID, err := attacher.AttachMessage(mergedCtx, msg)
 	if err != nil {
 		if errors.Is(err, tangle.ErrMessageAttacherAttachingNotPossible) {
 			return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())
@@ -224,6 +224,6 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 	}
 
 	return &messageCreatedResponse{
-		MessageID: messageID.ToHex(),
+		MessageID: blockID.ToHex(),
 	}, nil
 }

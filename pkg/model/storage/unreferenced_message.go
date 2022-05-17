@@ -11,13 +11,13 @@ import (
 type UnreferencedMessage struct {
 	objectstorage.StorableObjectFlags
 	latestMilestoneIndex milestone.Index
-	messageID            hornet.BlockID
+	blockID              hornet.BlockID
 }
 
-func NewUnreferencedMessage(msIndex milestone.Index, messageID hornet.BlockID) *UnreferencedMessage {
+func NewUnreferencedMessage(msIndex milestone.Index, blockID hornet.BlockID) *UnreferencedMessage {
 	return &UnreferencedMessage{
 		latestMilestoneIndex: msIndex,
-		messageID:            messageID,
+		blockID:              blockID,
 	}
 }
 
@@ -26,7 +26,7 @@ func (t *UnreferencedMessage) LatestMilestoneIndex() milestone.Index {
 }
 
 func (t *UnreferencedMessage) MessageID() hornet.BlockID {
-	return t.messageID
+	return t.blockID
 }
 
 // ObjectStorage interface
@@ -38,7 +38,7 @@ func (t *UnreferencedMessage) Update(_ objectstorage.StorableObject) {
 func (t *UnreferencedMessage) ObjectStorageKey() []byte {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(t.latestMilestoneIndex))
-	return append(key, t.messageID...)
+	return append(key, t.blockID...)
 }
 
 func (t *UnreferencedMessage) ObjectStorageValue() []byte {

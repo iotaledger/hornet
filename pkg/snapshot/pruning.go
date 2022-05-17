@@ -75,35 +75,35 @@ func (s *SnapshotManager) calcTargetIndexBySize(targetSizeBytes ...int64) (miles
 // pruneUnreferencedMessages prunes all unreferenced messages from the database for the given milestone
 func (s *SnapshotManager) pruneUnreferencedMessages(targetIndex milestone.Index) (msgCountDeleted int, msgCountChecked int) {
 
-	messageIDsToDeleteMap := make(map[string]struct{})
+	blockIDsToDeleteMap := make(map[string]struct{})
 
 	// Check if message is still unreferenced
-	for _, messageID := range s.storage.UnreferencedMessageIDs(targetIndex) {
-		messageIDMapKey := messageID.ToMapKey()
-		if _, exists := messageIDsToDeleteMap[messageIDMapKey]; exists {
+	for _, blockID := range s.storage.UnreferencedMessageIDs(targetIndex) {
+		blockIDMapKey := blockID.ToMapKey()
+		if _, exists := blockIDsToDeleteMap[blockIDMapKey]; exists {
 			continue
 		}
 
-		cachedMsgMeta := s.storage.CachedMessageMetadataOrNil(messageID) // meta +1
-		if cachedMsgMeta == nil {
+		cachedBlockMeta := s.storage.CachedMessageMetadataOrNil(blockID) // meta +1
+		if cachedBlockMeta == nil {
 			// message was already deleted or marked for deletion
 			continue
 		}
 
-		if cachedMsgMeta.Metadata().IsReferenced() {
+		if cachedBlockMeta.Metadata().IsReferenced() {
 			// message was already referenced
-			cachedMsgMeta.Release(true) // meta -1
+			cachedBlockMeta.Release(true) // meta -1
 			continue
 		}
 
-		cachedMsgMeta.Release(true) // meta -1
-		messageIDsToDeleteMap[messageIDMapKey] = struct{}{}
+		cachedBlockMeta.Release(true) // meta -1
+		blockIDsToDeleteMap[blockIDMapKey] = struct{}{}
 	}
 
-	msgCountDeleted = s.pruneMessages(messageIDsToDeleteMap)
+	msgCountDeleted = s.pruneMessages(blockIDsToDeleteMap)
 	s.storage.DeleteUnreferencedMessages(targetIndex)
 
-	return msgCountDeleted, len(messageIDsToDeleteMap)
+	return msgCountDeleted, len(blockIDsToDeleteMap)
 }
 
 // pruneMilestone prunes the milestone metadata and the ledger diffs from the database for the given milestone
@@ -119,18 +119,18 @@ func (s *SnapshotManager) pruneMilestone(milestoneIndex milestone.Index, receipt
 }
 
 // pruneMessages removes all the associated data of the given message IDs from the database
-func (s *SnapshotManager) pruneMessages(messageIDsToDeleteMap map[string]struct{}) int {
+func (s *SnapshotManager) pruneMessages(blockIDsToDeleteMap map[string]struct{}) int {
 
-	for messageIDToDelete := range messageIDsToDeleteMap {
+	for blockIDToDelete := range blockIDsToDeleteMap {
 
-		msgID := hornet.BlockIDFromMapKey(messageIDToDelete)
+		msgID := hornet.BlockIDFromMapKey(blockIDToDelete)
 
-		cachedMsgMeta := s.storage.CachedMessageMetadataOrNil(msgID) // meta +1
-		if cachedMsgMeta == nil {
+		cachedBlockMeta := s.storage.CachedMessageMetadataOrNil(msgID) // meta +1
+		if cachedBlockMeta == nil {
 			continue
 		}
 
-		cachedMsgMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
+		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
 			// Delete the reference in the parents
 			for _, parent := range metadata.Parents() {
 				s.storage.DeleteChild(parent, msgID)
@@ -144,7 +144,7 @@ func (s *SnapshotManager) pruneMessages(messageIDsToDeleteMap map[string]struct{
 		s.storage.DeleteMessage(msgID)
 	}
 
-	return len(messageIDsToDeleteMap)
+	return len(blockIDsToDeleteMap)
 }
 
 func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milestone.Index) (milestone.Index, error) {
@@ -244,7 +244,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			continue
 		}
 
-		messageIDsToDeleteMap := make(map[string]struct{})
+		blockIDsToDeleteMap := make(map[string]struct{})
 
 		if err := dag.TraverseParents(
 			ctx,
@@ -252,15 +252,15 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			cachedMilestone.Milestone().Parents(),
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
+			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
 				// everything that was referenced by that milestone can be pruned (even messages of older milestones)
 				return true, nil
 			},
 			// consumer
-			func(cachedMsgMeta *storage.CachedMetadata) error { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
-				messageIDsToDeleteMap[cachedMsgMeta.Metadata().MessageID().ToMapKey()] = struct{}{}
+			func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
+				blockIDsToDeleteMap[cachedBlockMeta.Metadata().MessageID().ToMapKey()] = struct{}{}
 				return nil
 			},
 			// called on missing parents
@@ -293,8 +293,8 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 		}
 		timePruneMilestone := time.Now()
 
-		msgCountChecked += len(messageIDsToDeleteMap)
-		txCountDeleted += s.pruneMessages(messageIDsToDeleteMap)
+		msgCountChecked += len(blockIDsToDeleteMap)
+		txCountDeleted += s.pruneMessages(blockIDsToDeleteMap)
 		timePruneMessages := time.Now()
 
 		snapshotInfo.PruningIndex = milestoneIndex

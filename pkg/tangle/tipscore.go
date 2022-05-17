@@ -41,14 +41,14 @@ func NewTipScoreCalculator(storage *storage.Storage, maxDeltaMsgYoungestConeRoot
 	}
 }
 
-func (t *TipScoreCalculator) TipScore(ctx context.Context, messageID hornet.BlockID, cmi milestone.Index) (TipScore, error) {
-	cachedMsgMeta := t.storage.CachedMessageMetadataOrNil(messageID) // meta +1
-	if cachedMsgMeta == nil {
+func (t *TipScoreCalculator) TipScore(ctx context.Context, blockID hornet.BlockID, cmi milestone.Index) (TipScore, error) {
+	cachedBlockMeta := t.storage.CachedMessageMetadataOrNil(blockID) // meta +1
+	if cachedBlockMeta == nil {
 		return TipScoreNotFound, nil
 	}
-	defer cachedMsgMeta.Release(true)
+	defer cachedBlockMeta.Release(true)
 
-	ycri, ocri, err := dag.ConeRootIndexes(ctx, t.storage, cachedMsgMeta.Retain(), cmi) // meta +1
+	ycri, ocri, err := dag.ConeRootIndexes(ctx, t.storage, cachedBlockMeta.Retain(), cmi) // meta +1
 	if err != nil {
 		return TipScoreNotFound, err
 	}

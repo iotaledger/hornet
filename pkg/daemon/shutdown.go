@@ -11,8 +11,8 @@ const (
 	PriorityMilestoneSolidifier // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker, PriorityMilestoneProcessor, PriorityMilestoneSolidifier, PriorityCoordinator, PriorityRestAPI, PriorityWarpSync
 	PriorityMilestoneProcessor  // depends on PriorityFlushToDatabase, PriorityMilestoneSolidifier, triggered by PriorityReceiveTxWorker, PriorityMilestoneSolidifier (searchMissingMilestone)
 	PrioritySolidifierGossip    // depends on PriorityFlushToDatabase, triggered by PriorityReceiveTxWorker
-	PriorityReceiveTxWorker     // triggered by PriorityMessageProcessor
-	PriorityMessageProcessor
+	PriorityReceiveTxWorker     // triggered by PriorityBlockProcessor
+	PriorityBlockProcessor
 	PriorityPeerGossipProtocolWrite
 	PriorityPeerGossipProtocolRead
 	PriorityGossipService

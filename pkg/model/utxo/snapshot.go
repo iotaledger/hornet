@@ -17,7 +17,7 @@ import (
 func (o *Output) SnapshotBytes() []byte {
 	m := marshalutil.New()
 	m.WriteBytes(o.outputID[:])
-	m.WriteBytes(o.messageID)
+	m.WriteBytes(o.blockID)
 	m.WriteUint32(uint32(o.milestoneIndex))
 	m.WriteUint32(o.milestoneTimestamp)
 
@@ -36,8 +36,8 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("unable to read LS output ID: %w", err)
 	}
 
-	messageID := iotago.BlockID{}
-	if _, err := io.ReadFull(reader, messageID[:]); err != nil {
+	blockID := iotago.BlockID{}
+	if _, err := io.ReadFull(reader, blockID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS message ID: %w", err)
 	}
 
@@ -77,7 +77,7 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("invalid LS output length: %w", err)
 	}
 
-	return CreateOutput(&outputID, hornet.BlockIDFromArray(messageID), milestone.Index(confirmationIndex), milestoneTimestamp, output), nil
+	return CreateOutput(&outputID, hornet.BlockIDFromArray(blockID), milestone.Index(confirmationIndex), milestoneTimestamp, output), nil
 }
 
 func (s *Spent) SnapshotBytes() []byte {

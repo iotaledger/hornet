@@ -150,15 +150,15 @@ func verifyDatabase(
 
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
-		condition := func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-			defer cachedMsgMeta.Release(true) // meta -1
+		condition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+			defer cachedBlockMeta.Release(true) // meta -1
 
 			// collect all msgs that were referenced by that milestone
-			referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+			referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 
 			if !referenced {
 				// all existing messages in the database must be referenced by a milestone
-				return false, fmt.Errorf("message was not referenced (msIndex: %d, msgID: %s)", msIndex, cachedMsgMeta.Metadata().MessageID().ToHex())
+				return false, fmt.Errorf("message was not referenced (msIndex: %d, msgID: %s)", msIndex, cachedBlockMeta.Metadata().MessageID().ToHex())
 			}
 
 			if at > msIndex {
@@ -171,17 +171,17 @@ func verifyDatabase(
 			}
 
 			// check if the message exists
-			cachedMsg, err := cachedMessageFunc(cachedMsgMeta.Metadata().MessageID()) // message +1
+			cachedBlock, err := cachedMessageFunc(cachedBlockMeta.Metadata().MessageID()) // message +1
 			if err != nil {
 				return false, err
 			}
-			if cachedMsg == nil {
-				return false, fmt.Errorf("message not found: %s", cachedMsgMeta.Metadata().MessageID().ToHex())
+			if cachedBlock == nil {
+				return false, fmt.Errorf("message not found: %s", cachedBlockMeta.Metadata().MessageID().ToHex())
 			}
-			defer cachedMsg.Release(true) // message -1
+			defer cachedBlock.Release(true) // message -1
 
 			if onNewMilestoneConeMsg != nil {
-				onNewMilestoneConeMsg(cachedMsg.Retain()) // message pass +1
+				onNewMilestoneConeMsg(cachedBlock.Retain()) // message pass +1
 			}
 
 			return true, nil
@@ -237,11 +237,11 @@ func verifyDatabase(
 			milestonePayload,
 			// traversal stops if no more messages pass the given condition
 			// Caution: condition func is not in DFS order
-			func(cachedMsgMeta *storage.CachedMetadata) (bool, error) { // meta +1
-				defer cachedMsgMeta.Release(true) // meta -1
+			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
+				defer cachedBlockMeta.Release(true) // meta -1
 
 				// collect all msgs that were referenced by that milestone
-				referenced, at := cachedMsgMeta.Metadata().ReferencedWithIndex()
+				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				return referenced && at == msIndex, nil
 			},
 			func(meta *storage.MessageMetadata) bool {
@@ -292,8 +292,8 @@ func verifyDatabase(
 			ctx,
 			tangleStoreSource.CachedMessage,
 			milestoneManager,
-			func(cachedMsg *storage.CachedMessage) {
-				defer cachedMsg.Release(true) // message -1
+			func(cachedBlock *storage.CachedMessage) {
+				defer cachedBlock.Release(true) // message -1
 				msgsCount++
 			}, msIndex); err != nil {
 			return err
