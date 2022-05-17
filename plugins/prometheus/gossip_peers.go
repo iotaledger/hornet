@@ -103,8 +103,8 @@ func collectGossipPeers() {
 		}
 
 		gossipPeersMessages.With(getLabels("all")).Set(float64(gossipProto.Metrics.ReceivedMessages.Load()))
-		gossipPeersMessages.With(getLabels("new")).Set(float64(gossipProto.Metrics.NewMessages.Load()))
-		gossipPeersMessages.With(getLabels("known")).Set(float64(gossipProto.Metrics.KnownMessages.Load()))
+		gossipPeersMessages.With(getLabels("new")).Set(float64(gossipProto.Metrics.NewBlocks.Load()))
+		gossipPeersMessages.With(getLabels("known")).Set(float64(gossipProto.Metrics.KnownBlocks.Load()))
 		gossipPeersMessages.With(getLabels("sent")).Set(float64(gossipProto.Metrics.SentMessages.Load()))
 
 		gossipPeersRequests.With(getLabels("received_message")).Set(float64(gossipProto.Metrics.ReceivedMessageRequests.Load()))

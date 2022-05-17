@@ -114,7 +114,7 @@ func (b *MessageBuilder) BuildTaggedData() *Message {
 	_, err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
+	message, err := storage.NewBlock(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
 	require.NoError(b.te.TestInterface, err)
 
 	return &Message{
@@ -208,7 +208,7 @@ func (b *MessageBuilder) Build() *Message {
 	_, err = b.te.PoWHandler.DoPoW(context.Background(), msg, 1)
 	require.NoError(b.te.TestInterface, err)
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
+	message, err := storage.NewBlock(msg, serializer.DeSeriModePerformValidation, b.te.protoParas)
 	require.NoError(b.te.TestInterface, err)
 
 	log := fmt.Sprintf("Send %d iota from %s to %s and remaining %d iota to original wallet", b.amount, fromAddr.Bech32(iotago.PrefixTestnet), toAddr.Bech32(iotago.PrefixTestnet), remainderAmount)

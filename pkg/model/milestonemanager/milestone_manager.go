@@ -43,7 +43,7 @@ func New(
 		milestonePublicKeyCount: milestonePublicKeyCount,
 
 		Events: &packageEvents{
-			ReceivedValidMilestone: events.NewEvent(storage.MilestoneWithMessageIdAndRequestedCaller),
+			ReceivedValidMilestone: events.NewEvent(storage.MilestoneWithBlockIDAndRequestedCaller),
 		},
 	}
 	return t
@@ -80,19 +80,19 @@ func (m *MilestoneManager) FindClosestNextMilestoneIndex(index milestone.Index) 
 	}
 }
 
-// VerifyMilestoneBlock checks if the message contains a valid milestone payload.
+// VerifyMilestoneBlock checks if the block contains a valid milestone payload.
 // Returns a milestone payload if the signature is valid.
-func (m *MilestoneManager) VerifyMilestoneBlock(message *iotago.Block) *iotago.Milestone {
+func (m *MilestoneManager) VerifyMilestoneBlock(block *iotago.Block) *iotago.Milestone {
 
-	milestonePayload, ok := message.Payload.(*iotago.Milestone)
+	milestonePayload, ok := block.Payload.(*iotago.Milestone)
 	if !ok {
 		// not a milestone payload
 		return nil
 	}
 
-	for idx, parent := range message.Parents {
+	for idx, parent := range block.Parents {
 		if parent != milestonePayload.Parents[idx] {
-			// parents in message and payload have to be equal
+			// parents in block and payload have to be equal
 			return nil
 		}
 	}
@@ -105,7 +105,7 @@ func (m *MilestoneManager) VerifyMilestoneBlock(message *iotago.Block) *iotago.M
 }
 
 // VerifyMilestonePayload checks if milestone payload is valid.
-// Attention: It does not check if the milestone payload parents match the message parents.
+// Attention: It does not check if the milestone payload parents match the block parents.
 // Returns a milestone payload if the signature is valid.
 func (m *MilestoneManager) VerifyMilestonePayload(payload iotago.Payload) *iotago.Milestone {
 
@@ -126,7 +126,7 @@ func (m *MilestoneManager) VerifyMilestonePayload(payload iotago.Payload) *iotag
 func (m *MilestoneManager) StoreMilestone(cachedBlock *storage.CachedBlock, milestonePayload *iotago.Milestone, requested bool) {
 	defer cachedBlock.Release(true) // block -1
 
-	// Mark every valid milestone message as milestone in the database (needed for whiteflag to find last milestone)
+	// Mark every valid milestone block as milestone in the database (needed for whiteflag to find last milestone)
 	cachedBlock.Metadata().SetMilestone(true)
 
 	cachedMilestone, newlyAdded := m.storage.StoreMilestoneIfAbsent(milestonePayload, cachedBlock.Block().BlockID()) // milestone +1

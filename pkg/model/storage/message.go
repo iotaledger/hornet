@@ -17,53 +17,53 @@ type Block struct {
 	blockID hornet.BlockID
 
 	// Value
-	data        []byte
-	messageOnce sync.Once
-	message     *iotago.Block
+	data      []byte
+	blockOnce sync.Once
+	block     *iotago.Block
 }
 
-func NewMessage(iotaMsg *iotago.Block, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Block, error) {
+func NewBlock(iotaBlock *iotago.Block, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Block, error) {
 
-	data, err := iotaMsg.Serialize(deSeriMode, protoParas)
+	data, err := iotaBlock.Serialize(deSeriMode, protoParas)
 	if err != nil {
 		return nil, err
 	}
 
-	msgHash, err := iotaMsg.ID()
+	blockHash, err := iotaBlock.ID()
 	if err != nil {
 		return nil, err
 	}
-	blockID := hornet.BlockIDFromArray(*msgHash)
+	blockID := hornet.BlockIDFromArray(*blockHash)
 
 	msg := &Block{blockID: blockID, data: data}
 
-	msg.messageOnce.Do(func() {
-		msg.message = iotaMsg
+	msg.blockOnce.Do(func() {
+		msg.block = iotaBlock
 	})
 
 	return msg, nil
 }
 
-func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Block, error) {
+func BlockFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Block, error) {
 
-	iotaMsg := &iotago.Block{}
-	if _, err := iotaMsg.Deserialize(data, deSeriMode, protoParas); err != nil {
+	iotaBlock := &iotago.Block{}
+	if _, err := iotaBlock.Deserialize(data, deSeriMode, protoParas); err != nil {
 		return nil, err
 	}
 
-	msgHash, err := iotaMsg.ID()
+	msgHash, err := iotaBlock.ID()
 	if err != nil {
 		return nil, err
 	}
 	blockID := hornet.BlockIDFromArray(*msgHash)
 
-	msg := &Block{blockID: blockID, data: data}
+	block := &Block{blockID: blockID, data: data}
 
-	msg.messageOnce.Do(func() {
-		msg.message = iotaMsg
+	block.blockOnce.Do(func() {
+		block.block = iotaBlock
 	})
 
-	return msg, nil
+	return block, nil
 }
 
 func (msg *Block) BlockID() hornet.BlockID {
@@ -75,16 +75,16 @@ func (msg *Block) Data() []byte {
 }
 
 func (msg *Block) Block() *iotago.Block {
-	msg.messageOnce.Do(func() {
+	msg.blockOnce.Do(func() {
 		iotaMsg := &iotago.Block{}
-		// No need to verify the message again here
+		// No need to verify the block again here
 		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation, nil); err != nil {
-			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.blockID.ToHex(), err))
+			panic(fmt.Sprintf("failed to deserialize block: %v, error: %s", msg.blockID.ToHex(), err))
 		}
 
-		msg.message = iotaMsg
+		msg.block = iotaMsg
 	})
-	return msg.message
+	return msg.block
 }
 
 func (msg *Block) ProtocolVersion() byte {

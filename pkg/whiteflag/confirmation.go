@@ -223,7 +223,7 @@ func ConfirmMilestone(
 				confirmedMilestoneStats.BlocksReferenced++
 				confirmedMilestoneStats.BlocksIncludedWithTransactions++
 				if serverMetrics != nil {
-					serverMetrics.IncludedTransactionMessages.Inc()
+					serverMetrics.IncludedTransactionBlocks.Inc()
 					serverMetrics.ReferencedBlocks.Inc()
 				}
 				if forEachReferencedMessage != nil {
@@ -246,7 +246,7 @@ func ConfirmMilestone(
 				confirmedMilestoneStats.BlocksReferenced++
 				confirmedMilestoneStats.BlocksExcludedWithoutTransactions++
 				if serverMetrics != nil {
-					serverMetrics.NoTransactionMessages.Inc()
+					serverMetrics.NoTransactionBlocks.Inc()
 					serverMetrics.ReferencedBlocks.Inc()
 				}
 				if forEachReferencedMessage != nil {
@@ -269,7 +269,7 @@ func ConfirmMilestone(
 				confirmedMilestoneStats.BlocksReferenced++
 				confirmedMilestoneStats.BlocksExcludedWithConflictingTransactions++
 				if serverMetrics != nil {
-					serverMetrics.ConflictingTransactionMessages.Inc()
+					serverMetrics.ConflictingTransactionBlocks.Inc()
 					serverMetrics.ReferencedBlocks.Inc()
 				}
 				if forEachReferencedMessage != nil {

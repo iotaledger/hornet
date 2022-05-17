@@ -57,7 +57,7 @@ func BroadcastCaller(handler interface{}, params ...interface{}) {
 // MessageProcessorEvents are the events fired by the BlockProcessor.
 type MessageProcessorEvents struct {
 	// Fired when a message was fully processed.
-	MessageProcessed *events.Event
+	BlockProcessed *events.Event
 	// Fired when a message is meant to be broadcasted.
 	BroadcastMessage *events.Event
 }
@@ -116,7 +116,7 @@ func NewMessageProcessor(
 		protoParas:     protoParas,
 		opts:           *opts,
 		Events: &MessageProcessorEvents{
-			MessageProcessed: events.NewEvent(MessageProcessedCaller),
+			BlockProcessed:   events.NewEvent(MessageProcessedCaller),
 			BroadcastMessage: events.NewEvent(BroadcastCaller),
 		},
 	}
@@ -156,9 +156,9 @@ func NewMessageProcessor(
 		data := task.Param(2).([]byte)
 
 		switch task.Param(1).(message.Type) {
-		case MessageTypeMessage:
+		case MessageTypeBlock:
 			proc.processMessage(p, data)
-		case MessageTypeMessageRequest:
+		case MessageTypeBlockRequest:
 			proc.processMessageRequest(p, data)
 		case MessageTypeMilestoneRequest:
 			proc.processMilestoneRequest(p, data)
@@ -193,7 +193,7 @@ func (proc *BlockProcessor) Process(p *Protocol, msgType message.Type, data []by
 	proc.wp.Submit(p, msgType, data)
 }
 
-// Emit triggers MessageProcessed and BroadcastMessage events for the given message.
+// Emit triggers BlockProcessed and BroadcastMessage events for the given message.
 // All messages passed to this function must be checked with "DeSeriModePerformValidation" before.
 // We also check if the parents are solid and not BMD before we broadcast the message, otherwise
 // this message would be seen as invalid gossip by other peers.
@@ -269,7 +269,7 @@ func (proc *BlockProcessor) Emit(msg *storage.Block) error {
 		}
 	}
 
-	proc.Events.MessageProcessed.Trigger(msg, (Requests)(nil), (*Protocol)(nil))
+	proc.Events.BlockProcessed.Trigger(msg, (Requests)(nil), (*Protocol)(nil))
 	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msg.Data()})
 
 	return nil
@@ -325,7 +325,7 @@ func (proc *BlockProcessor) processMilestoneRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	msg, err := NewMessageMsg(requestedData)
+	msg, err := NewBlockMessage(requestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -365,7 +365,7 @@ func (proc *BlockProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	msg, err := NewMessageMsg(requestedData)
+	msg, err := NewBlockMessage(requestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -388,7 +388,7 @@ func (proc *BlockProcessor) processMessage(p *Protocol, data []byte) {
 
 // tries to process the WorkUnit by first checking in what state it is.
 // if the WorkUnit is invalid (because the underlying message is invalid), the given peer is punished.
-// if the WorkUnit is already completed, and the message was requested, this function emits a MessageProcessed event.
+// if the WorkUnit is already completed, and the message was requested, this function emits a BlockProcessed event.
 // it is safe to call this function for the same WorkUnit multiple times.
 func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
@@ -424,7 +424,7 @@ func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	case wu.Is(Invalid):
 		wu.processingLock.Unlock()
 
-		proc.serverMetrics.InvalidMessages.Inc()
+		proc.serverMetrics.InvalidBlocks.Inc()
 
 		// drop the connection to the peer
 		_ = proc.peeringManager.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid message"))
@@ -437,12 +437,12 @@ func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		// between processing received messages and enqueuing requests.
 		requests := processRequests(wu, wu.msg, wu.msg.IsMilestone())
 		if wu.requested {
-			proc.Events.MessageProcessed.Trigger(wu.msg, requests, p)
+			proc.Events.BlockProcessed.Trigger(wu.msg, requests, p)
 		}
 
 		if proc.storage.ContainsBlock(wu.msg.BlockID()) {
-			proc.serverMetrics.KnownMessages.Inc()
-			p.Metrics.KnownMessages.Inc()
+			proc.serverMetrics.KnownBlocks.Inc()
+			p.Metrics.KnownBlocks.Inc()
 		}
 
 		return
@@ -452,7 +452,7 @@ func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.processingLock.Unlock()
 
 	// build HORNET representation of the message
-	msg, err := storage.MessageFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation, proc.protoParas)
+	msg, err := storage.BlockFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation, proc.protoParas)
 	if err != nil {
 		wu.UpdateState(Invalid)
 		wu.punish(errors.WithMessagef(err, "peer sent an invalid message"))
@@ -502,7 +502,7 @@ func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		return
 	}
 
-	proc.Events.MessageProcessed.Trigger(msg, requests, p)
+	proc.Events.BlockProcessed.Trigger(msg, requests, p)
 }
 
 func (proc *BlockProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {

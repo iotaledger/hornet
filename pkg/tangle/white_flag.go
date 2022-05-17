@@ -39,7 +39,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 	// this has to be done, even if the parents may be solid already, to prevent race conditions
 	msgSolidEventChans := make([]chan struct{}, len(parents))
 	for i, parent := range parents {
-		msgSolidEventChans[i] = t.RegisterMessageSolidEvent(parent)
+		msgSolidEventChans[i] = t.RegisterBlockSolidEvent(parent)
 	}
 
 	// check all parents for solidity
@@ -52,7 +52,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 			}
 			if contains {
 				// deregister the event, because the parent is already solid (this also fires the event)
-				t.DeregisterMessageSolidEvent(parent)
+				t.DeregisterBlockSolidEvent(parent)
 			}
 			continue
 		}
@@ -63,7 +63,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 			}
 
 			// deregister the event, because the parent is already solid (this also fires the event)
-			t.DeregisterMessageSolidEvent(parent)
+			t.DeregisterBlockSolidEvent(parent)
 		})
 	}
 
@@ -74,7 +74,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 	defer func() {
 		// deregister the events to free the memory
 		for _, parent := range parents {
-			t.DeregisterMessageSolidEvent(parent)
+			t.DeregisterBlockSolidEvent(parent)
 		}
 
 		// all releases are forced since the cone is referenced and not needed anymore

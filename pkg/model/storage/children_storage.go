@@ -91,7 +91,7 @@ func (s *Storage) configureChildrenStorage(store kvstore.KVStore, opts *profile.
 	return nil
 }
 
-// ChildrenMessageIDs returns the message IDs of the children of the given message.
+// ChildrenMessageIDs returns the block IDs of the children of the given block.
 // children +-0
 func (s *Storage) ChildrenBlockIDs(blockID hornet.BlockID, iteratorOptions ...IteratorOption) (hornet.BlockIDs, error) {
 	var childrenMessageIDs hornet.BlockIDs
@@ -109,7 +109,7 @@ func (s *Storage) ContainsChild(blockID hornet.BlockID, childMessageID hornet.Bl
 	return s.childrenStorage.Contains(append(blockID, childMessageID...), readOptions...)
 }
 
-// CachedChildrenOfMessageID returns the cached children of a message.
+// CachedChildrenOfMessageID returns the cached children of a block.
 // children +1
 func (s *Storage) CachedChildrenOfMessageID(blockID hornet.BlockID, iteratorOptions ...IteratorOption) CachedChildren {
 
@@ -154,7 +154,7 @@ func (s *Storage) DeleteChild(blockID hornet.BlockID, childMessageID hornet.Bloc
 	s.childrenStorage.Delete(child.ObjectStorageKey())
 }
 
-// DeleteChildren deletes the children of the given message in the cache/persistence layer.
+// DeleteChildren deletes the children of the given block in the cache/persistence layer.
 // child +-0
 func (s *Storage) DeleteChildren(blockID hornet.BlockID, iteratorOptions ...IteratorOption) {
 

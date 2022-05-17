@@ -81,7 +81,7 @@ func (coo *MockCoo) LastMilestoneParents() hornet.BlockIDs {
 }
 
 func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.BlockID {
-	msg, err := storage.NewMessage(message, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
+	msg, err := storage.NewBlock(message, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
 	require.NoError(coo.te.TestInterface, err)
 	cachedBlock := coo.te.StoreMessage(msg) // block +1, no need to release, since we remember all the messages for later cleanup
 

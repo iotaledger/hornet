@@ -92,7 +92,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg := &iotago.Block{}
 	assert.NoError(t, json.Unmarshal([]byte(msgData), msg))
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	message, err := storage.NewBlock(msg, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
 	// should fail because parents not solid
@@ -107,7 +107,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	message, err = storage.NewBlock(msg, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
 	// should not fail
@@ -122,7 +122,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	message, err = storage.NewBlock(msg, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
 	// message should fail because of wrong network ID
@@ -137,7 +137,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	assert.NoError(t, err)
 
 	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	message, err = storage.NewBlock(msg, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
 	// should not fail
@@ -148,7 +148,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	msg.Nonce = 123
 
 	// need to create a new message, so the iotago message is serialized again
-	message, err = storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	message, err = storage.NewBlock(msg, serializer.DeSeriModePerformValidation, protoParas)
 	assert.NoError(t, err)
 
 	// should fail because of wrong score

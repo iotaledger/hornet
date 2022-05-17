@@ -115,7 +115,7 @@ func configure() error {
 			return err
 		}
 
-		deps.ServerMetrics.SentSpamMessages.Inc()
+		deps.ServerMetrics.SentSpamBlocks.Inc()
 		return nil
 	}
 
@@ -390,7 +390,7 @@ func measureSpammerMetrics() {
 		return
 	}
 
-	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamMessages.Load()
+	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamBlocks.Load()
 	newMessagesCnt := math.Uint32Diff(sentSpamMsgsCnt, lastSentSpamMsgsCnt)
 	lastSentSpamMsgsCnt = sentSpamMsgsCnt
 

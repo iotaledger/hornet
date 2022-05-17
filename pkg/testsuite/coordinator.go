@@ -121,7 +121,7 @@ func (te *TestEnvironment) ReattachMessage(blockID hornet.BlockID, parents ...ho
 		require.NoError(te.TestInterface, err)
 	}
 
-	storedMessage, err := storage.NewMessage(newMessage, serializer.DeSeriModePerformValidation, te.protoParas)
+	storedMessage, err := storage.NewBlock(newMessage, serializer.DeSeriModePerformValidation, te.protoParas)
 	require.NoError(te.TestInterface, err)
 
 	cachedMessage := te.StoreMessage(storedMessage)

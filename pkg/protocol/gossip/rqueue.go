@@ -21,7 +21,7 @@ var (
 type RequestType int
 
 const (
-	RequestTypeMessageID RequestType = iota
+	RequestTypeBlockID RequestType = iota
 	RequestTypeMilestoneIndex
 )
 
@@ -118,7 +118,7 @@ type Request struct {
 
 // NewMessageIDRequest creates a new message request for a specific blockID.
 func NewMessageIDRequest(blockID hornet.BlockID, msIndex milestone.Index) *Request {
-	return &Request{RequestType: RequestTypeMessageID, MessageID: blockID, MilestoneIndex: msIndex}
+	return &Request{RequestType: RequestTypeBlockID, MessageID: blockID, MilestoneIndex: msIndex}
 }
 
 // NewMilestoneIndexRequest creates a new message request for a specific milestone index
@@ -128,7 +128,7 @@ func NewMilestoneIndexRequest(msIndex milestone.Index) *Request {
 
 func (r *Request) MapKey() string {
 	switch r.RequestType {
-	case RequestTypeMessageID:
+	case RequestTypeBlockID:
 		return r.MessageID.ToMapKey()
 	case RequestTypeMilestoneIndex:
 		return r.MilestoneIndex.String()

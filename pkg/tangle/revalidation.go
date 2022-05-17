@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	// printStatusInterval is the interval for printing status messages
+	// printStatusInterval is the interval for printing status blocks
 	printStatusInterval = 2 * time.Second
 )
 
@@ -33,7 +33,7 @@ var (
 // If the node crashes, it is not guaranteed that all data in the cache was already persisted to the disk.
 // Thats why we flag the database as corrupted.
 //
-// This function tries to restore a clean database state by deleting all existing messages
+// This function tries to restore a clean database state by deleting all existing blocks
 // since last local snapshot, deleting all ledger states and changes, and loading a valid snapshot ledger state.
 //
 // This way HORNET should be able to re-solidify the existing tangle in the database.
@@ -97,24 +97,24 @@ func (t *Tangle) RevalidateDatabase(snapshotManager *snapshot.SnapshotManager, p
 		return err
 	}
 
-	// deletes all messages which metadata doesn't exist anymore, are not referenced, not solid or
+	// deletes all blocks which metadata doesn't exist anymore, are not referenced, not solid or
 	// their confirmation milestone is newer than the last local snapshot's milestone.
-	if err := t.cleanupMessages(snapshotInfo); err != nil {
+	if err := t.cleanupBlocks(snapshotInfo); err != nil {
 		return err
 	}
 
-	// deletes all message metadata where the messages doesn't exist in the database anymore.
-	if err := t.cleanupMessageMetadata(); err != nil {
+	// deletes all block metadata where the blocks doesn't exist in the database anymore.
+	if err := t.cleanupBlockMetadata(); err != nil {
 		return err
 	}
 
-	// deletes all children where the message metadata doesn't exist in the database anymore.
+	// deletes all children where the block metadata doesn't exist in the database anymore.
 	if err := t.cleanupChildren(); err != nil {
 		return err
 	}
 
-	// deletes all unreferenced messages that are left in the database (we do not need them since we deleted all unreferenced messages).
-	if err := t.cleanupUnreferencedMsgs(); err != nil {
+	// deletes all unreferenced blocks that are left in the database (we do not need them since we deleted all unreferenced blocks).
+	if err := t.cleanupUnreferencedBlocks(); err != nil {
 		return err
 	}
 
@@ -210,13 +210,13 @@ func (t *Tangle) cleanupMilestones(info *storage.SnapshotInfo) error {
 	return nil
 }
 
-// deletes all messages which metadata doesn't exist anymore, are not referenced, not solid or
+// deletes all blocks which metadata doesn't exist anymore, are not referenced, not solid or
 // their confirmation milestone is newer than the last local snapshot's milestone.
-func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
+func (t *Tangle) cleanupBlocks(info *storage.SnapshotInfo) error {
 
 	start := time.Now()
 
-	messagesToDelete := make(map[string]struct{})
+	blocksToDelete := make(map[string]struct{})
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
@@ -230,40 +230,40 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 				return false
 			}
 
-			t.LogInfof("analyzed %d messages", txsCounter)
+			t.LogInfof("analyzed %d blocks", txsCounter)
 		}
 
 		storedTxMeta := t.storage.StoredMetadataOrNil(blockID)
 
-		// delete message if metadata doesn't exist
+		// delete block if metadata doesn't exist
 		if storedTxMeta == nil {
-			messagesToDelete[blockID.ToMapKey()] = struct{}{}
+			blocksToDelete[blockID.ToMapKey()] = struct{}{}
 			return true
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			messagesToDelete[blockID.ToMapKey()] = struct{}{}
+			blocksToDelete[blockID.ToMapKey()] = struct{}{}
 			return true
 		}
 
 		// not referenced or above snapshot index
 		if referenced, by := storedTxMeta.ReferencedWithIndex(); !referenced || by > info.SnapshotIndex {
-			messagesToDelete[blockID.ToMapKey()] = struct{}{}
+			blocksToDelete[blockID.ToMapKey()] = struct{}{}
 			return true
 		}
 
 		return true
 	})
-	t.LogInfof("analyzed %d messages", txsCounter)
+	t.LogInfof("analyzed %d blocks", txsCounter)
 
 	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
 	}
 
-	total := len(messagesToDelete)
+	total := len(blocksToDelete)
 	var deletionCounter int64
-	for blockID := range messagesToDelete {
+	for blockID := range blocksToDelete {
 		deletionCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -274,7 +274,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.LogInfof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting blocks...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteBlock(hornet.BlockIDFromMapKey(blockID))
@@ -282,13 +282,13 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 
 	t.storage.FlushBlocksStorage()
 
-	t.LogInfof("deleting messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting blocks...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
 
-// deletes all message metadata where the message doesn't exist in the database anymore.
-func (t *Tangle) cleanupMessageMetadata() error {
+// deletes all block metadata where the block doesn't exist in the database anymore.
+func (t *Tangle) cleanupBlockMetadata() error {
 
 	start := time.Now()
 
@@ -306,17 +306,17 @@ func (t *Tangle) cleanupMessageMetadata() error {
 				return false
 			}
 
-			t.LogInfof("analyzed %d message metadata", metadataCounter)
+			t.LogInfof("analyzed %d block metadata", metadataCounter)
 		}
 
-		// delete metadata if message doesn't exist
+		// delete metadata if block doesn't exist
 		if !t.storage.BlockExistsInStore(blockID) {
 			metadataToDelete[blockID.ToMapKey()] = struct{}{}
 		}
 
 		return true
 	})
-	t.LogInfof("analyzed %d message metadata", metadataCounter)
+	t.LogInfof("analyzed %d block metadata", metadataCounter)
 
 	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -335,7 +335,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.LogInfof("deleting message metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting block metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteBlockMetadata(hornet.BlockIDFromMapKey(blockID))
@@ -343,17 +343,17 @@ func (t *Tangle) cleanupMessageMetadata() error {
 
 	t.storage.FlushBlocksStorage()
 
-	t.LogInfof("deleting message metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting block metadata...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }
 
-// deletes all children where the message metadata doesn't exist in the database anymore.
+// deletes all children where the block metadata doesn't exist in the database anymore.
 func (t *Tangle) cleanupChildren() error {
 
 	type child struct {
-		blockID        hornet.BlockID
-		childMessageID hornet.BlockID
+		blockID      hornet.BlockID
+		childBlockID hornet.BlockID
 	}
 
 	start := time.Now()
@@ -362,7 +362,7 @@ func (t *Tangle) cleanupChildren() error {
 
 	lastStatusTime := time.Now()
 	var childCounter int64
-	t.storage.NonCachedStorage().ForEachChild(func(blockID hornet.BlockID, childMessageID hornet.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachChild(func(blockID hornet.BlockID, childBlockID hornet.BlockID) bool {
 		childCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -375,21 +375,21 @@ func (t *Tangle) cleanupChildren() error {
 			t.LogInfof("analyzed %d children", childCounter)
 		}
 
-		childrenMapKey := blockID.ToMapKey() + childMessageID.ToMapKey()
+		childrenMapKey := blockID.ToMapKey() + childBlockID.ToMapKey()
 
 		// we do not check if the parent still exists, to speed up the revalidation of children by 50%.
-		// if children entries would remain, but the message is missing, we would never start a walk from the
-		// parent message, since we always walk the future cone.
+		// if children entries would remain, but the block is missing, we would never start a walk from the
+		// parent block, since we always walk the future cone.
 		/*
-			// delete child if message metadata doesn't exist
+			// delete child if block metadata doesn't exist
 			if !t.storage.BlockMetadataExistsInStore(blockID) {
-				childrenToDelete[childrenMapKey] = &child{blockID: blockID, childMessageID: childMessageID}
+				childrenToDelete[childrenMapKey] = &child{blockID: blockID, childBlockID: childBlockID}
 			}
 		*/
 
-		// delete child if child message metadata doesn't exist
-		if !t.storage.BlockMetadataExistsInStore(childMessageID) {
-			childrenToDelete[childrenMapKey] = &child{blockID: blockID, childMessageID: childMessageID}
+		// delete child if child block metadata doesn't exist
+		if !t.storage.BlockMetadataExistsInStore(childBlockID) {
+			childrenToDelete[childrenMapKey] = &child{blockID: blockID, childBlockID: childBlockID}
 		}
 
 		return true
@@ -416,7 +416,7 @@ func (t *Tangle) cleanupChildren() error {
 			t.LogInfof("deleting children...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		t.storage.DeleteChild(child.blockID, child.childMessageID)
+		t.storage.DeleteChild(child.blockID, child.childBlockID)
 	}
 
 	t.storage.FlushChildrenStorage()
@@ -426,8 +426,8 @@ func (t *Tangle) cleanupChildren() error {
 	return nil
 }
 
-// deletes all unreferenced messages that are left in the database (we do not need them since we deleted all unreferenced messages).
-func (t *Tangle) cleanupUnreferencedMsgs() error {
+// deletes all unreferenced blocks that are left in the database (we do not need them since we deleted all unreferenced blocks).
+func (t *Tangle) cleanupUnreferencedBlocks() error {
 
 	start := time.Now()
 
@@ -445,14 +445,14 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 				return false
 			}
 
-			t.LogInfof("analyzed %d unreferenced messages", unreferencedTxsCounter)
+			t.LogInfof("analyzed %d unreferenced blocks", unreferencedTxsCounter)
 		}
 
 		unreferencedMilestoneIndexes[msIndex] = struct{}{}
 
 		return true
 	})
-	t.LogInfof("analyzed %d unreferenced messages", unreferencedTxsCounter)
+	t.LogInfof("analyzed %d unreferenced blocks", unreferencedTxsCounter)
 
 	if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 		return err
@@ -471,7 +471,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 			}
 
 			percentage, remaining := utils.EstimateRemainingTime(start, deletionCounter, int64(total))
-			t.LogInfof("deleting unreferenced messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
+			t.LogInfof("deleting unreferenced blocks...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
 		t.storage.DeleteUnreferencedBlocks(msIndex)
@@ -479,7 +479,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 
 	t.storage.FlushUnreferencedBlocksStorage()
 
-	t.LogInfof("deleting unreferenced messages...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
+	t.LogInfof("deleting unreferenced blocks...%d/%d (100.00%%) done. took %v", total, total, time.Since(start).Truncate(time.Millisecond))
 
 	return nil
 }

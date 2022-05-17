@@ -112,29 +112,29 @@ type StoreBlockInterface interface {
 	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blockID hornet.BlockID) (*storage.CachedMilestone, bool)
 }
 
-// storeBlock adds a new message to the storage,
+// storeBlock adds a new block to the storage,
 // including all additional information like
 // metadata, children, indexation and milestone entries.
 // block +1
-func storeBlock(protoParas *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Block) (*storage.CachedBlock, error) {
+func storeBlock(protoParas *iotago.ProtocolParameters, dbStorage StoreBlockInterface, milestoneManager *milestonemanager.MilestoneManager, blk *iotago.Block) (*storage.CachedBlock, error) {
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
+	block, err := storage.NewBlock(blk, serializer.DeSeriModePerformValidation, protoParas)
 	if err != nil {
-		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid message, error: %s", err)
+		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid block, error: %s", err)
 	}
 
-	cachedBlock, isNew := dbStorage.StoreBlockIfAbsent(message) // block +1
+	cachedBlock, isNew := dbStorage.StoreBlockIfAbsent(block) // block +1
 	if !isNew {
-		// no need to process known messages
+		// no need to process known blocks
 		return cachedBlock, nil
 	}
 
-	for _, parent := range message.Parents() {
+	for _, parent := range block.Parents() {
 		dbStorage.StoreChild(parent, cachedBlock.Block().BlockID()).Release(true) // child +-0
 	}
 
-	if milestonePayload := milestoneManager.VerifyMilestoneBlock(message.Block()); milestonePayload != nil {
-		cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload, message.BlockID()) // milestone +1
+	if milestonePayload := milestoneManager.VerifyMilestoneBlock(block.Block()); milestonePayload != nil {
+		cachedMilestone, _ := dbStorage.StoreMilestoneIfAbsent(milestonePayload, block.BlockID()) // milestone +1
 
 		// Force release to store milestones without caching
 		cachedMilestone.Release(true) // milestone -1

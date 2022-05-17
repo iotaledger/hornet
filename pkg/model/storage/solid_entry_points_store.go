@@ -64,7 +64,7 @@ func (s *Storage) SolidEntryPointsContain(blockID hornet.BlockID) (bool, error) 
 	return s.solidEntryPoints.Contains(blockID), nil
 }
 
-// SolidEntryPointsIndex returns the index of a solid entry point and whether the message is a solid entry point or not.
+// SolidEntryPointsIndex returns the index of a solid entry point and whether the block is a solid entry point or not.
 func (s *Storage) SolidEntryPointsIndex(blockID hornet.BlockID) (milestone.Index, bool, error) {
 	s.ReadLockSolidEntryPoints()
 	defer s.ReadUnlockSolidEntryPoints()
@@ -78,7 +78,7 @@ func (s *Storage) SolidEntryPointsIndex(blockID hornet.BlockID) (milestone.Index
 	return index, contains, nil
 }
 
-// SolidEntryPointsAddWithoutLocking adds a message to the solid entry points.
+// SolidEntryPointsAddWithoutLocking adds a block to the solid entry points.
 // WriteLockSolidEntryPoints must be held while entering this function.
 func (s *Storage) SolidEntryPointsAddWithoutLocking(blockID hornet.BlockID, milestoneIndex milestone.Index) {
 	if s.solidEntryPoints == nil {

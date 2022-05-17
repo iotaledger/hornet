@@ -138,15 +138,15 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Block) 
 		}
 	}
 
-	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, a.tangle.protoParas)
+	message, err := storage.NewBlock(msg, serializer.DeSeriModePerformValidation, a.tangle.protoParas)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
 	}
 
-	msgProcessedChan := a.tangle.RegisterMessageProcessedEvent(message.BlockID())
+	msgProcessedChan := a.tangle.RegisterBlockProcessedEvent(message.BlockID())
 
 	if err := a.tangle.blockProcessor.Emit(message); err != nil {
-		a.tangle.DeregisterMessageProcessedEvent(message.BlockID())
+		a.tangle.DeregisterBlockProcessedEvent(message.BlockID())
 		return nil, errors.WithMessagef(ErrMessageAttacherInvalidMessage, err.Error())
 	}
 
@@ -155,7 +155,7 @@ func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Block) 
 	defer cancel()
 
 	if err := events.WaitForChannelClosed(ctx, msgProcessedChan); errors.Is(err, context.DeadlineExceeded) {
-		a.tangle.DeregisterMessageProcessedEvent(message.BlockID())
+		a.tangle.DeregisterBlockProcessedEvent(message.BlockID())
 	}
 
 	return message.BlockID(), nil

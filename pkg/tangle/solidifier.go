@@ -26,8 +26,8 @@ var (
 
 type ConfirmedMilestoneMetric struct {
 	MilestoneIndex         milestone.Index `json:"ms_index"`
-	BPS                    float64         `json:"mps"`
-	RBPS                   float64         `json:"rmps"`
+	BPS                    float64         `json:"bps"`
+	RBPS                   float64         `json:"rbps"`
 	ReferencedRate         float64         `json:"referenced_rate"`
 	TimeSinceLastMilestone float64         `json:"time_since_last_ms"`
 }

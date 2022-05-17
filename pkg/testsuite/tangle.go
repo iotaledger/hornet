@@ -21,7 +21,7 @@ import (
 func (te *TestEnvironment) StoreMessage(msg *storage.Block) *storage.CachedBlock {
 
 	// Store message in the database
-	cachedBlock, alreadyAdded := tangle.AddMessageToStorage(te.storage, te.milestoneManager, msg, te.syncManager.LatestMilestoneIndex(), false, true)
+	cachedBlock, alreadyAdded := tangle.AddBlockToStorage(te.storage, te.milestoneManager, msg, te.syncManager.LatestMilestoneIndex(), false, true)
 	require.NotNil(te.TestInterface, cachedBlock)
 	require.False(te.TestInterface, alreadyAdded)
 

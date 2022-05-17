@@ -178,7 +178,7 @@ func (ms *MilestoneIndex) ObjectStorageKey() []byte {
 func (ms *MilestoneIndex) ObjectStorageValue() (data []byte) {
 	/*
 		32 byte milestone ID
-		32 byte message ID
+		32 byte block ID
 	*/
 
 	return marshalutil.New(64).
@@ -425,7 +425,7 @@ func (s *Storage) CachedMilestoneByIndexOrNil(milestoneIndex milestone.Index) *C
 	return s.CachedMilestoneOrNil(cachedMilestoneIdx.MilestoneIndex().MilestoneID()) // milestone +1
 }
 
-// MilestoneBlockIDByIndex returns the message ID of a milestone.
+// MilestoneBlockIDByIndex returns the block ID of a milestone.
 // Attention: this can be different from node to node, because only the first seen reattachment of milestone payload
 // is stored in a node. This information should never be exposed via external API in any way.
 func (s *Storage) MilestoneBlockIDByIndex(milestoneIndex milestone.Index) (hornet.BlockID, error) {

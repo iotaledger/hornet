@@ -104,7 +104,7 @@ func (p *Protocol) Enqueue(data []byte) {
 	select {
 	case p.SendQueue <- data:
 	default:
-		p.ServerMetrics.DroppedMessages.Inc()
+		p.ServerMetrics.DroppedBlocks.Inc()
 		p.Metrics.DroppedPackets.Inc()
 	}
 }
@@ -157,7 +157,7 @@ func (p *Protocol) Send(message []byte) error {
 
 // SendMessage sends a storage.Block to the given peer.
 func (p *Protocol) SendMessage(msgData []byte) {
-	messageMsg, err := NewMessageMsg(msgData)
+	messageMsg, err := NewBlockMessage(msgData)
 	if err != nil {
 		return
 	}
@@ -166,7 +166,7 @@ func (p *Protocol) SendMessage(msgData []byte) {
 
 // SendHeartbeat sends a Heartbeat to the given peer.
 func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex milestone.Index, latestMsIndex milestone.Index, connectedNeighbors uint8, syncedNeighbors uint8) {
-	heartbeatData, err := NewHeartbeatMsg(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
+	heartbeatData, err := NewHeartbeatMessage(solidMsIndex, pruningMsIndex, latestMsIndex, connectedNeighbors, syncedNeighbors)
 	if err != nil {
 		return
 	}
@@ -175,7 +175,7 @@ func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex mi
 
 // SendMessageRequest sends a storage.Block request message to the given peer.
 func (p *Protocol) SendMessageRequest(requestedMessageID hornet.BlockID) {
-	txReqData, err := NewMessageRequestMsg(requestedMessageID)
+	txReqData, err := NewBlockRequestMessage(requestedMessageID)
 	if err != nil {
 		return
 	}
@@ -184,7 +184,7 @@ func (p *Protocol) SendMessageRequest(requestedMessageID hornet.BlockID) {
 
 // SendMilestoneRequest sends a storage.Milestone request to the given peer.
 func (p *Protocol) SendMilestoneRequest(index milestone.Index) {
-	milestoneRequestData, err := NewMilestoneRequestMsg(index)
+	milestoneRequestData, err := NewMilestoneRequestMessage(index)
 	if err != nil {
 		return
 	}
@@ -243,9 +243,9 @@ func (p *Protocol) Info() *Info {
 // Metrics defines a set of metrics regarding a gossip protocol instance.
 type Metrics struct {
 	// The number of received messages which are new.
-	NewMessages atomic.Uint32
+	NewBlocks atomic.Uint32
 	// The number of received messages which are already known.
-	KnownMessages atomic.Uint32
+	KnownBlocks atomic.Uint32
 	// The number of received messages.
 	ReceivedMessages atomic.Uint32
 	// The number of received message requests.
@@ -272,8 +272,8 @@ type Metrics struct {
 func (m *Metrics) Snapshot() MetricsSnapshot {
 	return MetricsSnapshot{
 		ReceivedMessages:     m.ReceivedMessages.Load(),
-		NewMessages:          m.NewMessages.Load(),
-		KnownMessages:        m.KnownMessages.Load(),
+		NewMessages:          m.NewBlocks.Load(),
+		KnownMessages:        m.KnownBlocks.Load(),
 		ReceivedMessageReq:   m.ReceivedMessageRequests.Load(),
 		ReceivedMilestoneReq: m.ReceivedMilestoneRequests.Load(),
 		ReceivedHeartbeats:   m.ReceivedHeartbeats.Load(),

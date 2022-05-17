@@ -10,28 +10,28 @@ import (
 // sets up the event handlers which propagate STING messages.
 func attachEventsProtocolMessages(proto *gossip.Protocol) {
 
-	proto.Parser.Events.Received[gossip.MessageTypeMessage].Attach(events.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeBlock].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMessages.Inc()
-		deps.ServerMetrics.Messages.Inc()
-		deps.MessageProcessor.Process(proto, gossip.MessageTypeMessage, data)
+		deps.ServerMetrics.Blocks.Inc()
+		deps.MessageProcessor.Process(proto, gossip.MessageTypeBlock, data)
 	}))
 
-	proto.Events.Sent[gossip.MessageTypeMessage].Attach(events.NewClosure(func() {
+	proto.Events.Sent[gossip.MessageTypeBlock].Attach(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentMessages.Inc()
-		deps.ServerMetrics.SentMessages.Inc()
+		deps.ServerMetrics.SentBlocks.Inc()
 	}))
 
-	proto.Parser.Events.Received[gossip.MessageTypeMessageRequest].Attach(events.NewClosure(func(data []byte) {
+	proto.Parser.Events.Received[gossip.MessageTypeBlockRequest].Attach(events.NewClosure(func(data []byte) {
 		proto.Metrics.ReceivedMessageRequests.Inc()
-		deps.ServerMetrics.ReceivedMessageRequests.Inc()
-		deps.MessageProcessor.Process(proto, gossip.MessageTypeMessageRequest, data)
+		deps.ServerMetrics.ReceivedBlockRequests.Inc()
+		deps.MessageProcessor.Process(proto, gossip.MessageTypeBlockRequest, data)
 	}))
 
-	proto.Events.Sent[gossip.MessageTypeMessageRequest].Attach(events.NewClosure(func() {
+	proto.Events.Sent[gossip.MessageTypeBlockRequest].Attach(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
 		proto.Metrics.SentMessageRequests.Inc()
-		deps.ServerMetrics.SentMessageRequests.Inc()
+		deps.ServerMetrics.SentBlockRequests.Inc()
 	}))
 
 	proto.Parser.Events.Received[gossip.MessageTypeMilestoneRequest].Attach(events.NewClosure(func(data []byte) {

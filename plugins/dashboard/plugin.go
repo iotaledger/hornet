@@ -416,21 +416,21 @@ func currentNodeStatus() *NodeStatus {
 
 	// server metrics
 	status.ServerMetrics = &ServerMetrics{
-		AllMessages:          deps.ServerMetrics.Messages.Load(),
+		AllMessages:          deps.ServerMetrics.Blocks.Load(),
 		NewMessages:          deps.ServerMetrics.NewBlocks.Load(),
-		KnownMessages:        deps.ServerMetrics.KnownMessages.Load(),
-		InvalidMessages:      deps.ServerMetrics.InvalidMessages.Load(),
+		KnownMessages:        deps.ServerMetrics.KnownBlocks.Load(),
+		InvalidMessages:      deps.ServerMetrics.InvalidBlocks.Load(),
 		InvalidRequests:      deps.ServerMetrics.InvalidRequests.Load(),
-		ReceivedMessageReq:   deps.ServerMetrics.ReceivedMessageRequests.Load(),
+		ReceivedMessageReq:   deps.ServerMetrics.ReceivedBlockRequests.Load(),
 		ReceivedMilestoneReq: deps.ServerMetrics.ReceivedMilestoneRequests.Load(),
 		ReceivedHeartbeats:   deps.ServerMetrics.ReceivedHeartbeats.Load(),
-		SentMessages:         deps.ServerMetrics.SentMessages.Load(),
-		SentMessageReq:       deps.ServerMetrics.SentMessageRequests.Load(),
+		SentMessages:         deps.ServerMetrics.SentBlocks.Load(),
+		SentMessageReq:       deps.ServerMetrics.SentBlockRequests.Load(),
 		SentMilestoneReq:     deps.ServerMetrics.SentMilestoneRequests.Load(),
 		SentHeartbeats:       deps.ServerMetrics.SentHeartbeats.Load(),
-		DroppedSentPackets:   deps.ServerMetrics.DroppedMessages.Load(),
-		SentSpamMsgsCount:    deps.ServerMetrics.SentSpamMessages.Load(),
-		ValidatedMessages:    deps.ServerMetrics.ValidatedMessages.Load(),
+		DroppedSentPackets:   deps.ServerMetrics.DroppedBlocks.Load(),
+		SentSpamMsgsCount:    deps.ServerMetrics.SentSpamBlocks.Load(),
+		ValidatedMessages:    deps.ServerMetrics.ValidatedBlocks.Load(),
 	}
 
 	// memory metrics

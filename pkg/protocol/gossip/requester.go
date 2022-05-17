@@ -96,7 +96,7 @@ func (r *Requester) RunRequestQueueDrainer(ctx context.Context) {
 
 				sendRequest := func(request *Request, proto *Protocol) {
 					switch request.RequestType {
-					case RequestTypeMessageID:
+					case RequestTypeBlockID:
 						proto.SendMessageRequest(request.MessageID)
 					case RequestTypeMilestoneIndex:
 						proto.SendMilestoneRequest(request.MilestoneIndex)
