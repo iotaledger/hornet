@@ -81,7 +81,7 @@ type MessageProcessor struct {
 	serverMetrics *metrics.ServerMetrics
 	// protocol parameters including byte costs
 	protoParas *iotago.ProtocolParameters
-	// holds the block processor options.
+	// holds the message processor options.
 	opts Options
 
 	// events of the block processor.
@@ -93,11 +93,11 @@ type MessageProcessor struct {
 
 	// mutex to secure the shutdown flag.
 	shutdownMutex syncutils.RWMutex
-	// indicates that the block processor was shut down.
+	// indicates that the message processor was shut down.
 	shutdown bool
 }
 
-// NewMessageProcessor creates a new processor which parses blocks.
+// NewMessageProcessor creates a new processor which processes messages.
 func NewMessageProcessor(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
