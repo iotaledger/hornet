@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/protocol/message"
 	"github.com/iotaledger/hive.go/protocol/tlv"
@@ -89,7 +88,7 @@ func NewBlockMessage(blockData []byte) ([]byte, error) {
 }
 
 // NewBlockRequestMessage creates a block request message.
-func NewBlockRequestMessage(requestedBlockID hornet.BlockID) ([]byte, error) {
+func NewBlockRequestMessage(requestedBlockID iotago.BlockID) ([]byte, error) {
 	buf := bytes.NewBuffer(make([]byte, 0, tlv.HeaderMessageDefinition.MaxBytesLength+BlockRequestMessageDefinition.MaxBytesLength))
 	if err := tlv.WriteHeader(buf, MessageTypeBlockRequest, BlockRequestMessageDefinition.MaxBytesLength); err != nil {
 		return nil, err

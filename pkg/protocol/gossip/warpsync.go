@@ -6,11 +6,12 @@ import (
 	"sync"
 	"time"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -254,7 +255,7 @@ type WarpSyncMilestoneRequester struct {
 	// do not remove requests if the enqueue time is over the given threshold.
 	preventDiscard bool
 	// map of already traversed blocks to to prevent traversing the same cones multiple times.
-	traversed map[string]struct{}
+	traversed map[iotago.BlockID]struct{}
 }
 
 // NewWarpSyncMilestoneRequester creates a new WarpSyncMilestoneRequester instance.
@@ -269,7 +270,7 @@ func NewWarpSyncMilestoneRequester(
 		syncManager:    syncManager,
 		requester:      requester,
 		preventDiscard: preventDiscard,
-		traversed:      make(map[string]struct{}),
+		traversed:      make(map[iotago.BlockID]struct{}),
 	}
 }
 
@@ -299,11 +300,11 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			mapKey := cachedBlockMeta.Metadata().BlockID().ToMapKey()
-			if _, previouslyTraversed := w.traversed[mapKey]; previouslyTraversed {
+			blockID := cachedBlockMeta.Metadata().BlockID()
+			if _, previouslyTraversed := w.traversed[blockID]; previouslyTraversed {
 				return false, nil
 			}
-			w.traversed[mapKey] = struct{}{}
+			w.traversed[blockID] = struct{}{}
 
 			if cachedBlockMeta.Metadata().IsSolid() {
 				return false, nil
@@ -314,7 +315,7 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 		// consumer
 		nil,
 		// called on missing parents
-		func(parentBlockID hornet.BlockID) error {
+		func(parentBlockID iotago.BlockID) error {
 			w.requester.Request(parentBlockID, msIndex, w.preventDiscard)
 			return nil
 		},
@@ -329,7 +330,7 @@ func (w *WarpSyncMilestoneRequester) Cleanup() {
 	w.Lock()
 	defer w.Unlock()
 
-	w.traversed = make(map[string]struct{})
+	w.traversed = make(map[iotago.BlockID]struct{})
 }
 
 // RequestMilestoneRange requests up to N milestones nearest to the current confirmed milestone index.

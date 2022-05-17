@@ -7,12 +7,12 @@ import (
 	"sync"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/contextutils"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type ParentsTraverserInterface interface {
-	Traverse(ctx context.Context, parents hornet.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error
+	Traverse(ctx context.Context, parents iotago.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error
 }
 
 // ParentsTraverser can be used to walk the dag in direction of the parents (past cone).
@@ -24,10 +24,10 @@ type ParentsTraverser struct {
 	stack *list.List
 
 	// processed map with already processed blocks.
-	processed map[string]struct{}
+	processed map[iotago.BlockID]struct{}
 
 	// checked map with result of traverse condition.
-	checked map[string]bool
+	checked map[iotago.BlockID]bool
 
 	ctx                      context.Context
 	condition                Predicate
@@ -45,8 +45,8 @@ func NewParentsTraverser(parentsTraverserStorage ParentsTraverserStorage) *Paren
 	t := &ParentsTraverser{
 		parentsTraverserStorage: parentsTraverserStorage,
 		stack:                   list.New(),
-		processed:               make(map[string]struct{}),
-		checked:                 make(map[string]bool),
+		processed:               make(map[iotago.BlockID]struct{}),
+		checked:                 make(map[iotago.BlockID]bool),
 	}
 
 	return t
@@ -55,8 +55,8 @@ func NewParentsTraverser(parentsTraverserStorage ParentsTraverserStorage) *Paren
 // reset the traverser for the next walk.
 func (t *ParentsTraverser) reset() {
 
-	t.processed = make(map[string]struct{})
-	t.checked = make(map[string]bool)
+	t.processed = make(map[iotago.BlockID]struct{})
+	t.checked = make(map[iotago.BlockID]bool)
 	t.stack = list.New()
 }
 
@@ -64,7 +64,7 @@ func (t *ParentsTraverser) reset() {
 // the traversal stops due to no more blocks passing the given condition.
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func (t *ParentsTraverser) Traverse(ctx context.Context, parents hornet.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
+func (t *ParentsTraverser) Traverse(ctx context.Context, parents iotago.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -110,10 +110,9 @@ func (t *ParentsTraverser) processStackParents() error {
 
 	// load candidate block
 	ele := t.stack.Front()
-	currentBlockID := ele.Value.(hornet.BlockID)
-	currentBlockIDMapKey := currentBlockID.ToMapKey()
+	currentBlockID := ele.Value.(iotago.BlockID)
 
-	if _, wasProcessed := t.processed[currentBlockIDMapKey]; wasProcessed {
+	if _, wasProcessed := t.processed[currentBlockID]; wasProcessed {
 		// block was already processed
 		// remove the block from the stack
 		t.stack.Remove(ele)
@@ -135,8 +134,8 @@ func (t *ParentsTraverser) processStackParents() error {
 
 		if !t.traverseSolidEntryPoints {
 			// remove the block from the stack, the parents are not traversed
-			t.processed[currentBlockIDMapKey] = struct{}{}
-			delete(t.checked, currentBlockIDMapKey)
+			t.processed[currentBlockID] = struct{}{}
+			delete(t.checked, currentBlockID)
 			t.stack.Remove(ele)
 			return nil
 		}
@@ -149,8 +148,8 @@ func (t *ParentsTraverser) processStackParents() error {
 
 	if cachedBlockMeta == nil {
 		// remove the block from the stack, the parents are not traversed
-		t.processed[currentBlockIDMapKey] = struct{}{}
-		delete(t.checked, currentBlockIDMapKey)
+		t.processed[currentBlockID] = struct{}{}
+		delete(t.checked, currentBlockID)
 		t.stack.Remove(ele)
 
 		if t.onMissingParent == nil {
@@ -163,7 +162,7 @@ func (t *ParentsTraverser) processStackParents() error {
 	}
 	defer cachedBlockMeta.Release(true) // meta -1
 
-	traverse, checkedBefore := t.checked[currentBlockIDMapKey]
+	traverse, checkedBefore := t.checked[currentBlockID]
 	if !checkedBefore {
 		var err error
 
@@ -175,20 +174,20 @@ func (t *ParentsTraverser) processStackParents() error {
 		}
 
 		// mark the block as checked and remember the result of the traverse condition
-		t.checked[currentBlockIDMapKey] = traverse
+		t.checked[currentBlockID] = traverse
 	}
 
 	if !traverse {
 		// remove the block from the stack, the parents are not traversed
 		// parent will not get consumed
-		t.processed[currentBlockIDMapKey] = struct{}{}
-		delete(t.checked, currentBlockIDMapKey)
+		t.processed[currentBlockID] = struct{}{}
+		delete(t.checked, currentBlockID)
 		t.stack.Remove(ele)
 		return nil
 	}
 
 	for _, parentBlockID := range cachedBlockMeta.Metadata().Parents() {
-		if _, parentProcessed := t.processed[parentBlockID.ToMapKey()]; !parentProcessed {
+		if _, parentProcessed := t.processed[parentBlockID]; !parentProcessed {
 			// parent was not processed yet
 			// traverse this block
 			t.stack.PushFront(parentBlockID)
@@ -197,8 +196,8 @@ func (t *ParentsTraverser) processStackParents() error {
 	}
 
 	// remove the block from the stack
-	t.processed[currentBlockIDMapKey] = struct{}{}
-	delete(t.checked, currentBlockIDMapKey)
+	t.processed[currentBlockID] = struct{}{}
+	delete(t.checked, currentBlockID)
 	t.stack.Remove(ele)
 
 	if t.consumer != nil {

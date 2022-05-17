@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/bitmask"
 	"github.com/iotaledger/hive.go/marshalutil"
@@ -117,7 +116,7 @@ type BlockMetadata struct {
 	objectstorage.StorableObjectFlags
 	syncutils.RWMutex
 
-	blockID hornet.BlockID
+	blockID iotago.BlockID
 
 	// Metadata
 	metadata bitmask.BitMask
@@ -137,21 +136,21 @@ type BlockMetadata struct {
 	coneRootCalculationIndex milestone.Index
 
 	// parents are the parents of the block
-	parents hornet.BlockIDs
+	parents iotago.BlockIDs
 }
 
-func NewBlockMetadata(blockID hornet.BlockID, parents hornet.BlockIDs) *BlockMetadata {
+func NewBlockMetadata(blockID iotago.BlockID, parents iotago.BlockIDs) *BlockMetadata {
 	return &BlockMetadata{
 		blockID: blockID,
 		parents: parents,
 	}
 }
 
-func (m *BlockMetadata) BlockID() hornet.BlockID {
+func (m *BlockMetadata) BlockID() iotago.BlockID {
 	return m.blockID
 }
 
-func (m *BlockMetadata) Parents() hornet.BlockIDs {
+func (m *BlockMetadata) Parents() iotago.BlockIDs {
 	return m.parents
 }
 
@@ -301,7 +300,7 @@ func (m *BlockMetadata) Update(_ objectstorage.StorableObject) {
 }
 
 func (m *BlockMetadata) ObjectStorageKey() []byte {
-	return m.blockID
+	return m.blockID[:]
 }
 
 func (m *BlockMetadata) ObjectStorageValue() (data []byte) {
@@ -380,9 +379,8 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		return nil, err
 	}
 
-	m := &BlockMetadata{
-		blockID: hornet.BlockIDFromSlice(key[:32]),
-	}
+	m := &BlockMetadata{}
+	copy(m.blockID[:], key[:iotago.BlockIDLength])
 
 	m.metadata = bitmask.BitMask(metadataByte)
 	m.referencedIndex = milestone.Index(referencedIndex)
@@ -396,15 +394,13 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		return nil, err
 	}
 
-	m.parents = make(hornet.BlockIDs, parentsCount)
+	m.parents = make(iotago.BlockIDs, parentsCount)
 	for i := 0; i < int(parentsCount); i++ {
 		parentBytes, err := marshalUtil.ReadBytes(iotago.BlockIDLength)
 		if err != nil {
 			return nil, err
 		}
-
-		parent := hornet.BlockIDFromSlice(parentBytes)
-		m.parents[i] = parent
+		copy(m.parents[i][:], parentBytes)
 	}
 
 	return m, nil

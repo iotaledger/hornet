@@ -1,11 +1,11 @@
 package tangle
 
 import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func (t *Tangle) processValidMilestone(blockID hornet.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
+func (t *Tangle) processValidMilestone(blockID iotago.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
 	defer cachedMilestone.Release(true) // milestone -1
 
 	t.Events.ReceivedNewMilestoneBlock.Trigger(blockID)

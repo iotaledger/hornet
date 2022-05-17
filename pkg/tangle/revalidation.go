@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"time"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/contextutils"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/snapshot"
@@ -216,11 +217,11 @@ func (t *Tangle) cleanupBlocks(info *storage.SnapshotInfo) error {
 
 	start := time.Now()
 
-	blocksToDelete := make(map[string]struct{})
+	blocksToDelete := make(map[iotago.BlockID]struct{})
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
-	t.storage.NonCachedStorage().ForEachBlockID(func(blockID hornet.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachBlockID(func(blockID iotago.BlockID) bool {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -237,19 +238,19 @@ func (t *Tangle) cleanupBlocks(info *storage.SnapshotInfo) error {
 
 		// delete block if metadata doesn't exist
 		if storedTxMeta == nil {
-			blocksToDelete[blockID.ToMapKey()] = struct{}{}
+			blocksToDelete[blockID] = struct{}{}
 			return true
 		}
 
 		// not solid
 		if !storedTxMeta.IsSolid() {
-			blocksToDelete[blockID.ToMapKey()] = struct{}{}
+			blocksToDelete[blockID] = struct{}{}
 			return true
 		}
 
 		// not referenced or above snapshot index
 		if referenced, by := storedTxMeta.ReferencedWithIndex(); !referenced || by > info.SnapshotIndex {
-			blocksToDelete[blockID.ToMapKey()] = struct{}{}
+			blocksToDelete[blockID] = struct{}{}
 			return true
 		}
 
@@ -277,7 +278,7 @@ func (t *Tangle) cleanupBlocks(info *storage.SnapshotInfo) error {
 			t.LogInfof("deleting blocks...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		t.storage.DeleteBlock(hornet.BlockIDFromMapKey(blockID))
+		t.storage.DeleteBlock(blockID)
 	}
 
 	t.storage.FlushBlocksStorage()
@@ -292,11 +293,11 @@ func (t *Tangle) cleanupBlockMetadata() error {
 
 	start := time.Now()
 
-	metadataToDelete := make(map[string]struct{})
+	metadataToDelete := make(map[iotago.BlockID]struct{})
 
 	lastStatusTime := time.Now()
 	var metadataCounter int64
-	t.storage.NonCachedStorage().ForEachBlockMetadataBlockID(func(blockID hornet.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachBlockMetadataBlockID(func(blockID iotago.BlockID) bool {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -311,7 +312,7 @@ func (t *Tangle) cleanupBlockMetadata() error {
 
 		// delete metadata if block doesn't exist
 		if !t.storage.BlockExistsInStore(blockID) {
-			metadataToDelete[blockID.ToMapKey()] = struct{}{}
+			metadataToDelete[blockID] = struct{}{}
 		}
 
 		return true
@@ -338,7 +339,7 @@ func (t *Tangle) cleanupBlockMetadata() error {
 			t.LogInfof("deleting block metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		t.storage.DeleteBlockMetadata(hornet.BlockIDFromMapKey(blockID))
+		t.storage.DeleteBlockMetadata(blockID)
 	}
 
 	t.storage.FlushBlocksStorage()
@@ -352,17 +353,17 @@ func (t *Tangle) cleanupBlockMetadata() error {
 func (t *Tangle) cleanupChildren() error {
 
 	type child struct {
-		blockID      hornet.BlockID
-		childBlockID hornet.BlockID
+		blockID      iotago.BlockID
+		childBlockID iotago.BlockID
 	}
 
 	start := time.Now()
 
-	childrenToDelete := make(map[string]*child)
+	childrenToDelete := make(map[[iotago.BlockIDLength + iotago.BlockIDLength]byte]*child)
 
 	lastStatusTime := time.Now()
 	var childCounter int64
-	t.storage.NonCachedStorage().ForEachChild(func(blockID hornet.BlockID, childBlockID hornet.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachChild(func(blockID iotago.BlockID, childBlockID iotago.BlockID) bool {
 		childCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -375,7 +376,9 @@ func (t *Tangle) cleanupChildren() error {
 			t.LogInfof("analyzed %d children", childCounter)
 		}
 
-		childrenMapKey := blockID.ToMapKey() + childBlockID.ToMapKey()
+		childrenMapKey := [iotago.BlockIDLength + iotago.BlockIDLength]byte{}
+		copy(childrenMapKey[:iotago.BlockIDLength], blockID[:])
+		copy(childrenMapKey[iotago.BlockIDLength:], childBlockID[:])
 
 		// we do not check if the parent still exists, to speed up the revalidation of children by 50%.
 		// if children entries would remain, but the block is missing, we would never start a walk from the
@@ -435,7 +438,7 @@ func (t *Tangle) cleanupUnreferencedBlocks() error {
 
 	lastStatusTime := time.Now()
 	var unreferencedBlocksCounter int64
-	t.storage.NonCachedStorage().ForEachUnreferencedBlock(func(msIndex milestone.Index, _ hornet.BlockID) bool {
+	t.storage.NonCachedStorage().ForEachUnreferencedBlock(func(msIndex milestone.Index, _ iotago.BlockID) bool {
 		unreferencedBlocksCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {

@@ -10,7 +10,7 @@ import (
 
 func EqualOutput(t *testing.T, expected *Output, actual *Output) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
-	require.Equal(t, expected.BlockID()[:], actual.BlockID()[:])
+	require.Equal(t, expected.BlockID(), actual.BlockID())
 	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
 	require.Equal(t, expected.OutputType(), actual.OutputType())
 	require.Equal(t, expected.Deposit(), actual.Deposit())

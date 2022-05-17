@@ -10,7 +10,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -89,7 +88,7 @@ func (te *TestEnvironment) milestoneForIndex(msIndex milestone.Index) *storage.M
 	return ms.Milestone()
 }
 
-func (te *TestEnvironment) ReattachBlock(blockID hornet.BlockID, parents ...hornet.BlockID) hornet.BlockID {
+func (te *TestEnvironment) ReattachBlock(blockID iotago.BlockID, parents ...iotago.BlockID) iotago.BlockID {
 	block := te.storage.CachedBlockOrNil(blockID)
 	require.NotNil(te.TestInterface, block)
 	defer block.Release(true)
@@ -98,7 +97,7 @@ func (te *TestEnvironment) ReattachBlock(blockID hornet.BlockID, parents ...horn
 
 	newParents := iotaBlock.Parents
 	if len(parents) > 0 {
-		newParents = hornet.BlockIDs(parents).RemoveDupsAndSortByLexicalOrder().ToSliceOfArrays()
+		newParents = iotago.BlockIDs(parents).RemoveDupsAndSort()
 	}
 
 	newBlock := &iotago.Block{
@@ -206,12 +205,12 @@ func (te *TestEnvironment) ConfirmMilestone(ms *storage.Milestone, createConfirm
 }
 
 // IssueMilestoneOnTips creates a milestone on top of the given tips.
-func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.BlockIDs, addLastMilestoneAsParent bool) (*storage.Milestone, hornet.BlockID, error) {
+func (te *TestEnvironment) IssueMilestoneOnTips(tips iotago.BlockIDs, addLastMilestoneAsParent bool) (*storage.Milestone, iotago.BlockID, error) {
 	return te.coo.issueMilestoneOnTips(tips, addLastMilestoneAsParent)
 }
 
 // IssueAndConfirmMilestoneOnTips creates a milestone on top of the given tips and confirms it.
-func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.BlockIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
+func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips iotago.BlockIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
 
 	currentIndex := te.syncManager.ConfirmedMilestoneIndex()
 	te.VerifyLMI(currentIndex)

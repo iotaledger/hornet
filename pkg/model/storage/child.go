@@ -1,28 +1,28 @@
 package storage
 
 import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/iotaledger/hive.go/objectstorage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type Child struct {
 	objectstorage.StorableObjectFlags
-	parentBlockID hornet.BlockID
-	childBlockID  hornet.BlockID
+	parentBlockID iotago.BlockID
+	childBlockID  iotago.BlockID
 }
 
-func NewChild(parentBlockID hornet.BlockID, childBlockID hornet.BlockID) *Child {
+func NewChild(parentBlockID iotago.BlockID, childBlockID iotago.BlockID) *Child {
 	return &Child{
 		parentBlockID: parentBlockID,
 		childBlockID:  childBlockID,
 	}
 }
 
-func (a *Child) ParentBlockID() hornet.BlockID {
+func (a *Child) ParentBlockID() iotago.BlockID {
 	return a.parentBlockID
 }
 
-func (a *Child) ChildBlockID() hornet.BlockID {
+func (a *Child) ChildBlockID() iotago.BlockID {
 	return a.childBlockID
 }
 
@@ -33,7 +33,7 @@ func (a *Child) Update(_ objectstorage.StorableObject) {
 }
 
 func (a *Child) ObjectStorageKey() []byte {
-	return append(a.parentBlockID, a.childBlockID...)
+	return append(a.parentBlockID[:], a.childBlockID[:]...)
 }
 
 func (a *Child) ObjectStorageValue() []byte {

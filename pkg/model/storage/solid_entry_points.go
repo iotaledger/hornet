@@ -5,15 +5,16 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"sort"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type SolidEntryPoint struct {
-	BlockID hornet.BlockID
+	BlockID iotago.BlockID
 	Index   milestone.Index
 }
 
@@ -26,7 +27,7 @@ func (l LexicalOrderedSolidEntryPoints) Len() int {
 }
 
 func (l LexicalOrderedSolidEntryPoints) Less(i, j int) bool {
-	return bytes.Compare(l[i].BlockID, l[j].BlockID) < 0
+	return bytes.Compare(l[i].BlockID[:], l[j].BlockID[:]) < 0
 }
 
 func (l LexicalOrderedSolidEntryPoints) Swap(i, j int) {
@@ -34,8 +35,8 @@ func (l LexicalOrderedSolidEntryPoints) Swap(i, j int) {
 }
 
 type SolidEntryPoints struct {
-	entryPointsMap   map[string]milestone.Index
-	entryPointsSlice hornet.BlockIDs
+	entryPointsMap   map[iotago.BlockID]milestone.Index
+	entryPointsSlice iotago.BlockIDs
 
 	// Status
 	statusMutex syncutils.RWMutex
@@ -44,7 +45,7 @@ type SolidEntryPoints struct {
 
 func NewSolidEntryPoints() *SolidEntryPoints {
 	return &SolidEntryPoints{
-		entryPointsMap: make(map[string]milestone.Index),
+		entryPointsMap: make(map[iotago.BlockID]milestone.Index),
 	}
 }
 
@@ -53,8 +54,7 @@ func (s *SolidEntryPoints) copy() []*SolidEntryPoint {
 	result := make([]*SolidEntryPoint, solidEntryPointsCount)
 
 	i := 0
-	for hash, msIndex := range s.entryPointsMap {
-		blockID := hornet.BlockIDFromMapKey(hash)
+	for blockID, msIndex := range s.entryPointsMap {
 		result[i] = &SolidEntryPoint{
 			BlockID: blockID,
 			Index:   msIndex,
@@ -65,28 +65,27 @@ func (s *SolidEntryPoints) copy() []*SolidEntryPoint {
 	return result
 }
 
-func (s *SolidEntryPoints) Contains(blockID hornet.BlockID) bool {
-	_, exists := s.entryPointsMap[blockID.ToMapKey()]
+func (s *SolidEntryPoints) Contains(blockID iotago.BlockID) bool {
+	_, exists := s.entryPointsMap[blockID]
 	return exists
 }
 
-func (s *SolidEntryPoints) Index(blockID hornet.BlockID) (milestone.Index, bool) {
-	index, exists := s.entryPointsMap[blockID.ToMapKey()]
+func (s *SolidEntryPoints) Index(blockID iotago.BlockID) (milestone.Index, bool) {
+	index, exists := s.entryPointsMap[blockID]
 	return index, exists
 }
 
-func (s *SolidEntryPoints) Add(blockID hornet.BlockID, milestoneIndex milestone.Index) {
-	blockIDMapKey := blockID.ToMapKey()
-	if _, exists := s.entryPointsMap[blockIDMapKey]; !exists {
-		s.entryPointsMap[blockIDMapKey] = milestoneIndex
+func (s *SolidEntryPoints) Add(blockID iotago.BlockID, milestoneIndex milestone.Index) {
+	if _, exists := s.entryPointsMap[blockID]; !exists {
+		s.entryPointsMap[blockID] = milestoneIndex
 		s.entryPointsSlice = append(s.entryPointsSlice, blockID)
 		s.SetModified(true)
 	}
 }
 
 func (s *SolidEntryPoints) Clear() {
-	s.entryPointsMap = make(map[string]milestone.Index)
-	s.entryPointsSlice = make(hornet.BlockIDs, 0)
+	s.entryPointsMap = make(map[iotago.BlockID]milestone.Index)
+	s.entryPointsSlice = make(iotago.BlockIDs, 0)
 	s.SetModified(true)
 }
 
@@ -104,7 +103,7 @@ func (s *SolidEntryPoints) SetModified(modified bool) {
 	s.modified = modified
 }
 
-// sort the solid entry points lexicographically by their BlockID
+// Sorted sorts the solid entry points lexicographically by their BlockID
 func (s *SolidEntryPoints) Sorted() []*SolidEntryPoint {
 
 	var sortedSolidEntryPoints LexicalOrderedSolidEntryPoints = s.copy()
@@ -121,10 +120,10 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 
 	solidEntryPointsCount := len(solidEntryPointsBytes) / (32 + 4)
 	for i := 0; i < solidEntryPointsCount; i++ {
-		blockIDBuf := make([]byte, 32)
 		var msIndex uint32
 
-		err = binary.Read(bytesReader, binary.LittleEndian, blockIDBuf)
+		blockID := iotago.BlockID{}
+		_, err = io.ReadFull(bytesReader, blockID[:])
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
@@ -133,7 +132,7 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
-		s.Add(hornet.BlockIDFromSlice(blockIDBuf), milestone.Index(msIndex))
+		s.Add(blockID, milestone.Index(msIndex))
 	}
 
 	return s, nil
@@ -144,7 +143,7 @@ func (s *SolidEntryPoints) Bytes() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, len(s.entryPointsMap)*(32+4)))
 
 	for _, sep := range s.Sorted() {
-		err := binary.Write(buf, binary.LittleEndian, sep.BlockID)
+		err := binary.Write(buf, binary.LittleEndian, sep.BlockID[:])
 		if err != nil {
 			return nil
 		}

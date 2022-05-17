@@ -15,7 +15,6 @@ import (
 
 	coreDatabase "github.com/gohornet/hornet/core/database"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -110,16 +109,14 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 	// calculate sha256 hash of the current ledger state
 	snapshotHashSumWithoutSEPs := lsHash.Sum(nil)
 
-	var solidEntryPoints hornet.LexicalOrderedBlockIDs
+	var solidEntryPoints iotago.BlockIDs
 	dbStorage.ForEachSolidEntryPointWithoutLocking(func(sep *storage.SolidEntryPoint) bool {
 		solidEntryPoints = append(solidEntryPoints, sep.BlockID)
 		return true
 	})
-	// sort the solid entry points lexicographically by their BlockID
-	sort.Sort(solidEntryPoints)
 
 	// write all solid entry points in lexicographical order
-	for _, solidEntryPoint := range solidEntryPoints {
+	for _, solidEntryPoint := range solidEntryPoints.RemoveDupsAndSort() {
 		sepBytes, err := solidEntryPoint.MarshalBinary()
 		if err != nil {
 			return fmt.Errorf("unable to serialize solid entry point %s: %w", solidEntryPoint.ToHex(), err)

@@ -3,8 +3,9 @@ package dashboard
 import (
 	"context"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/gohornet/hornet/pkg/daemon"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/tipselect"
@@ -55,12 +56,12 @@ func runVisualizerFeed() {
 			for i, parent := range block.Parents() {
 				parentsHex[i] = parent.ToHex()[:VisualizerIDLength]
 			}
-
+			blockID := block.BlockID()
 			hub.BroadcastMsg(
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:           block.BlockID().ToHex(),
+						ID:           blockID.ToHex(),
 						Parents:      parentsHex,
 						IsSolid:      metadata.IsSolid(),
 						IsReferenced: metadata.IsReferenced(),
@@ -78,19 +79,19 @@ func runVisualizerFeed() {
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
-
+			blockID := metadata.BlockID()
 			hub.BroadcastMsg(
 				&Msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: metadata.BlockID().ToHex()[:VisualizerIDLength],
+						ID: blockID.ToHex()[:VisualizerIDLength],
 					},
 				},
 			)
 		})
 	})
 
-	onReceivedNewMilestoneBlock := events.NewClosure(func(blockID hornet.BlockID) {
+	onReceivedNewMilestoneBlock := events.NewClosure(func(blockID iotago.BlockID) {
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}

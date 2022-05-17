@@ -1,9 +1,9 @@
 package dag
 
 import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type MemcachedTraverserStorage struct {
@@ -18,19 +18,19 @@ func NewMemcachedTraverserStorage(traverserStorage TraverserStorage, metadataMem
 	}
 }
 
-func (m *MemcachedTraverserStorage) CachedBlockMetadata(blockID hornet.BlockID) (*storage.CachedMetadata, error) {
+func (m *MemcachedTraverserStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.CachedMetadata, error) {
 	return m.metadataMemcache.CachedBlockMetadata(blockID)
 }
 
-func (m *MemcachedTraverserStorage) ChildrenBlockIDs(blockID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error) {
+func (m *MemcachedTraverserStorage) ChildrenBlockIDs(blockID iotago.BlockID, iteratorOptions ...storage.IteratorOption) (iotago.BlockIDs, error) {
 	return m.traverserStorage.ChildrenBlockIDs(blockID, iteratorOptions...)
 }
 
-func (m *MemcachedTraverserStorage) SolidEntryPointsContain(blockID hornet.BlockID) (bool, error) {
+func (m *MemcachedTraverserStorage) SolidEntryPointsContain(blockID iotago.BlockID) (bool, error) {
 	return m.traverserStorage.SolidEntryPointsContain(blockID)
 
 }
-func (m *MemcachedTraverserStorage) SolidEntryPointsIndex(blockID hornet.BlockID) (milestone.Index, bool, error) {
+func (m *MemcachedTraverserStorage) SolidEntryPointsIndex(blockID iotago.BlockID) (milestone.Index, bool, error) {
 	return m.traverserStorage.SolidEntryPointsIndex(blockID)
 }
 
@@ -50,15 +50,15 @@ func NewMemcachedParentsTraverserStorage(parentsTraverserStorage ParentsTraverse
 	}
 }
 
-func (m *MemcachedParentsTraverserStorage) CachedBlockMetadata(blockID hornet.BlockID) (*storage.CachedMetadata, error) {
+func (m *MemcachedParentsTraverserStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.CachedMetadata, error) {
 	return m.metadataMemcache.CachedBlockMetadata(blockID)
 }
 
-func (m *MemcachedParentsTraverserStorage) SolidEntryPointsContain(blockID hornet.BlockID) (bool, error) {
+func (m *MemcachedParentsTraverserStorage) SolidEntryPointsContain(blockID iotago.BlockID) (bool, error) {
 	return m.parentsTraverserStorage.SolidEntryPointsContain(blockID)
 
 }
-func (m *MemcachedParentsTraverserStorage) SolidEntryPointsIndex(blockID hornet.BlockID) (milestone.Index, bool, error) {
+func (m *MemcachedParentsTraverserStorage) SolidEntryPointsIndex(blockID iotago.BlockID) (milestone.Index, bool, error) {
 	return m.parentsTraverserStorage.SolidEntryPointsIndex(blockID)
 }
 
@@ -78,11 +78,11 @@ func NewMemcachedChildrenTraverserStorage(childrenTraverserStorage ChildrenTrave
 	}
 }
 
-func (m *MemcachedChildrenTraverserStorage) CachedBlockMetadata(blockID hornet.BlockID) (*storage.CachedMetadata, error) {
+func (m *MemcachedChildrenTraverserStorage) CachedBlockMetadata(blockID iotago.BlockID) (*storage.CachedMetadata, error) {
 	return m.metadataMemcache.CachedBlockMetadata(blockID)
 }
 
-func (m *MemcachedChildrenTraverserStorage) ChildrenBlockIDs(blockID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error) {
+func (m *MemcachedChildrenTraverserStorage) ChildrenBlockIDs(blockID iotago.BlockID, iteratorOptions ...storage.IteratorOption) (iotago.BlockIDs, error) {
 	return m.childrenTraverserStorage.ChildrenBlockIDs(blockID, iteratorOptions...)
 }
 

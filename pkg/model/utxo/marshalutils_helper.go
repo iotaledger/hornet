@@ -1,7 +1,6 @@
 package utxo
 
 import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/marshalutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -28,12 +27,14 @@ func parseTransactionID(ms *marshalutil.MarshalUtil) (*iotago.TransactionID, err
 	return t, nil
 }
 
-func ParseBlockID(ms *marshalutil.MarshalUtil) (hornet.BlockID, error) {
+func ParseBlockID(ms *marshalutil.MarshalUtil) (iotago.BlockID, error) {
 	bytes, err := ms.ReadBytes(iotago.BlockIDLength)
 	if err != nil {
-		return nil, err
+		return iotago.EmptyBlockID(), err
 	}
-	return hornet.BlockIDFromSlice(bytes), nil
+	blockID := iotago.BlockID{}
+	copy(blockID[:], bytes)
+	return blockID, nil
 }
 
 func parseMilestoneIndex(ms *marshalutil.MarshalUtil) (milestone.Index, error) {

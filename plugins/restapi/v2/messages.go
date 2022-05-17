@@ -47,7 +47,7 @@ func blockMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 	}
 
 	response := &blockMetadataResponse{
-		BlockID:                    metadata.BlockID().ToHex(),
+		BlockID:                    blockID.ToHex(),
 		Parents:                    metadata.Parents().ToHex(),
 		Solid:                      metadata.IsSolid(),
 		ReferencedByMilestoneIndex: referencedByMilestone,

@@ -5,7 +5,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/restapi"
 	"github.com/gohornet/hornet/pkg/tangle"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -20,7 +19,7 @@ func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsRespon
 
 	requestedIndex := request.Index
 	requestedTimestamp := request.Timestamp
-	requestedParents, err := hornet.BlockIDsFromHex(request.Parents)
+	requestedParents, err := iotago.BlockIDsFromHexString(request.Parents)
 	if err != nil {
 		return nil, errors.WithMessagef(restapi.ErrInvalidParameter, "invalid parents, error: %s", err)
 	}

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/pow"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -17,7 +16,7 @@ import (
 type SendBlockFunc = func(block *storage.Block) error
 
 // SpammerTipselFunc selects tips for the spammer.
-type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.BlockIDs, err error)
+type SpammerTipselFunc = func() (isSemiLazy bool, tips iotago.BlockIDs, err error)
 
 // Spammer is used to issue blocks to the IOTA network to create load on the tangle.
 type Spammer struct {
@@ -83,12 +82,12 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 
 	iotaBlock := &iotago.Block{
 		ProtocolVersion: s.protoParas.Version,
-		Parents:         tips.ToSliceOfArrays(),
+		Parents:         tips,
 		Payload:         &iotago.TaggedData{Tag: tagBytes, Data: []byte(messageString)},
 	}
 
 	timeStart = time.Now()
-	if _, err := s.powHandler.DoPoW(ctx, iotaBlock, 1, func() (tips hornet.BlockIDs, err error) {
+	if _, err := s.powHandler.DoPoW(ctx, iotaBlock, 1, func() (tips iotago.BlockIDs, err error) {
 		// refresh tips of the spammer if PoW takes longer than a configured duration.
 		_, refreshedTips, err := s.tipselFunc()
 		return refreshedTips, err

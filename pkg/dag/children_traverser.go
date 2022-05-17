@@ -5,12 +5,13 @@ import (
 	"context"
 	"sync"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/contextutils"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
 // ChildrenTraverser can be used to walk the dag in direction of the tips (future cone).
@@ -22,7 +23,7 @@ type ChildrenTraverser struct {
 	stack *list.List
 
 	// discovers map with already found blocks.
-	discovered map[string]struct{}
+	discovered map[iotago.BlockID]struct{}
 
 	ctx                   context.Context
 	condition             Predicate
@@ -38,7 +39,7 @@ func NewChildrenTraverser(childrenTraverserStorage ChildrenTraverserStorage) *Ch
 	t := &ChildrenTraverser{
 		childrenTraverserStorage: childrenTraverserStorage,
 		stack:                    list.New(),
-		discovered:               make(map[string]struct{}),
+		discovered:               make(map[iotago.BlockID]struct{}),
 	}
 
 	return t
@@ -47,14 +48,14 @@ func NewChildrenTraverser(childrenTraverserStorage ChildrenTraverserStorage) *Ch
 // reset the traverser for the next walk.
 func (t *ChildrenTraverser) reset() {
 
-	t.discovered = make(map[string]struct{})
+	t.discovered = make(map[iotago.BlockID]struct{})
 	t.stack = list.New()
 }
 
 // Traverse starts to traverse the children (future cone) of the given start block until
 // the traversal stops due to no more blocks passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(ctx context.Context, startBlockID hornet.BlockID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
+func (t *ChildrenTraverser) Traverse(ctx context.Context, startBlockID iotago.BlockID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -72,7 +73,7 @@ func (t *ChildrenTraverser) Traverse(ctx context.Context, startBlockID hornet.Bl
 
 	t.stack.PushFront(startBlockID)
 	if !t.walkAlreadyDiscovered {
-		t.discovered[startBlockID.ToMapKey()] = struct{}{}
+		t.discovered[startBlockID] = struct{}{}
 	}
 
 	for t.stack.Len() > 0 {
@@ -94,7 +95,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	// load candidate block
 	ele := t.stack.Front()
-	currentBlockID := ele.Value.(hornet.BlockID)
+	currentBlockID := ele.Value.(iotago.BlockID)
 
 	// remove the block from the stack
 	t.stack.Remove(ele)
@@ -145,13 +146,12 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	for _, childBlockID := range childrenBlockIDs {
 		if !t.walkAlreadyDiscovered {
-			childBlockIDMapKey := childBlockID.ToMapKey()
-			if _, childDiscovered := t.discovered[childBlockIDMapKey]; childDiscovered {
+			if _, childDiscovered := t.discovered[childBlockID]; childDiscovered {
 				// child was already discovered
 				continue
 			}
 
-			t.discovered[childBlockIDMapKey] = struct{}{}
+			t.discovered[childBlockID] = struct{}{}
 		}
 
 		// traverse the child

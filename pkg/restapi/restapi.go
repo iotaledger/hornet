@@ -10,7 +10,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -116,12 +115,12 @@ func GetRequestContentType(c echo.Context, supportedContentTypes ...string) (str
 	return "", echo.ErrUnsupportedMediaType
 }
 
-func ParseBlockIDParam(c echo.Context) (hornet.BlockID, error) {
+func ParseBlockIDParam(c echo.Context) (iotago.BlockID, error) {
 	blockIDHex := strings.ToLower(c.Param(ParameterBlockID))
 
-	blockID, err := hornet.BlockIDFromHex(blockIDHex)
+	blockID, err := iotago.BlockIDFromHexString(blockIDHex)
 	if err != nil {
-		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid block ID: %s, error: %s", blockIDHex, err)
+		return iotago.EmptyBlockID(), errors.WithMessagef(ErrInvalidParameter, "invalid block ID: %s, error: %s", blockIDHex, err)
 	}
 	return blockID, nil
 }

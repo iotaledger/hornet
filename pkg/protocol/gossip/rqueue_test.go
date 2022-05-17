@@ -1,13 +1,11 @@
 package gossip_test
 
 import (
-	"bytes"
 	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/protocol/gossip"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -20,8 +18,10 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func randBlockID() hornet.BlockID {
-	return hornet.BlockID(randBytes(iotago.BlockIDLength))
+func randBlockID() iotago.BlockID {
+	blockID := iotago.BlockID{}
+	copy(blockID[:], randBytes(iotago.BlockIDLength))
+	return blockID
 }
 
 func TestRequestQueue(t *testing.T) {
@@ -83,7 +83,7 @@ func TestRequestQueue(t *testing.T) {
 		// since we have two request under the same milestone/priority
 		// we need to make a special case
 		if i == 1 || i == 2 {
-			assert.Contains(t, hornet.BlockIDs{hashB, hashZ}, r.BlockID)
+			assert.Contains(t, iotago.BlockIDs{hashB, hashZ}, r.BlockID)
 		} else {
 			assert.Equal(t, r, requests[i])
 		}
@@ -146,7 +146,7 @@ func TestRequestQueue(t *testing.T) {
 	assert.Equal(t, len(requests)-1, len(queuedReqs))
 	for i := 0; i < len(requests)-1; i++ {
 		queuedReq := queuedReqs[i]
-		assert.False(t, bytes.Equal(queuedReq.BlockID, requests[len(requests)-1].BlockID))
+		assert.NotEqual(t, queuedReq.BlockID, requests[len(requests)-1].BlockID)
 	}
 	assert.Zero(t, len(pendingReqs))
 	assert.Zero(t, len(processingReq))

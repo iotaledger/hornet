@@ -3,12 +3,13 @@ package debug
 import (
 	"time"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/restapi"
@@ -231,7 +232,8 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 				if !startBlockReferenced || (at < startBlockReferencedAt) {
-					entryPoints = append(entryPoints, &entryPoint{BlockID: cachedBlockMeta.Metadata().BlockID().ToHex(), ReferencedByMilestone: at})
+					entryPointBlockID := cachedBlockMeta.Metadata().BlockID()
+					entryPoints = append(entryPoints, &entryPoint{BlockID: entryPointBlockID.ToHex(), ReferencedByMilestone: at})
 					return false, nil
 				}
 			}
@@ -241,9 +243,10 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 		// consumer
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 			cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
+				id := metadata.BlockID()
 				tanglePath = append(tanglePath,
 					&blockWithParents{
-						BlockID: metadata.BlockID().ToHex(),
+						BlockID: id.ToHex(),
 						Parents: metadata.Parents().ToHex(),
 					},
 				)
@@ -255,7 +258,7 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(blockID hornet.BlockID) error {
+		func(blockID iotago.BlockID) error {
 			entryPoints = append(entryPoints, &entryPoint{BlockID: blockID.ToHex(), ReferencedByMilestone: entryPointIndex})
 			return nil
 		},

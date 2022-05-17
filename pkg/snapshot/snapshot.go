@@ -15,7 +15,6 @@ import (
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
@@ -31,14 +30,14 @@ var (
 	ErrCritical = errors.New("critical error")
 	// ErrUnsupportedSnapshot is returned when unsupported snapshot data is read.
 	ErrUnsupportedSnapshot = errors.New("unsupported snapshot data")
-	// ErrChildBlockNotFound is returned when a child block wasn't found.
-	ErrChildBlockNotFound = errors.New("child block not found")
 	// ErrWrongMilestoneDiffIndex is returned when the milestone diff that should be applied is not the current or next milestone.
 	ErrWrongMilestoneDiffIndex = errors.New("wrong milestone diff index")
 	// ErrFinalLedgerIndexDoesNotMatchSEPIndex is returned when the final milestone after loading the snapshot is not equal to the solid entry point index.
 	ErrFinalLedgerIndexDoesNotMatchSEPIndex = errors.New("final ledger index does not match solid entry point index")
 	// ErrInvalidSnapshotAvailabilityState is returned when a delta snapshot is available, but no full snapshot is found.
 	ErrInvalidSnapshotAvailabilityState = errors.New("invalid snapshot files availability")
+
+	ErrNoMoreSEPToProduce = errors.New("no more SEP to produce")
 
 	ErrNoSnapshotSpecified                   = errors.New("no snapshot file was specified in the config")
 	ErrNoSnapshotDownloadURL                 = errors.New("no download URL specified for snapshot files in config")
@@ -188,7 +187,7 @@ func forEachSolidEntryPoint(
 	solidEntryPointCheckThresholdPast milestone.Index,
 	solidEntryPointConsumer func(sep *storage.SolidEntryPoint) bool) error {
 
-	solidEntryPoints := make(map[string]milestone.Index)
+	solidEntryPoints := make(map[iotago.BlockID]milestone.Index)
 
 	metadataMemcache := storage.NewMetadataMemcache(dbStorage.CachedBlockMetadata)
 	memcachedParentsTraverserStorage := dag.NewMemcachedParentsTraverserStorage(dbStorage, metadataMemcache)
@@ -207,7 +206,7 @@ func forEachSolidEntryPoint(
 	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
 
 	// isSolidEntryPoint checks whether any direct child of the given block was referenced by a milestone which is above the target milestone.
-	isSolidEntryPoint := func(blockID hornet.BlockID, targetIndex milestone.Index) (bool, error) {
+	isSolidEntryPoint := func(blockID iotago.BlockID, targetIndex milestone.Index) (bool, error) {
 		childBlockIDs, err := memcachedChildrenTraverserStorage.ChildrenBlockIDs(blockID)
 		if err != nil {
 			return false, err
@@ -286,9 +285,8 @@ func forEachSolidEntryPoint(
 					return errors.Wrapf(ErrCritical, "solid entry point (%v) not referenced!", blockID.ToHex())
 				}
 
-				blockIDMapKey := blockID.ToMapKey()
-				if _, exists := solidEntryPoints[blockIDMapKey]; !exists {
-					solidEntryPoints[blockIDMapKey] = at
+				if _, exists := solidEntryPoints[blockID]; !exists {
+					solidEntryPoints[blockID] = at
 					if !solidEntryPointConsumer(&storage.SolidEntryPoint{BlockID: blockID, Index: at}) {
 						return ErrSnapshotCreationWasAborted
 					}

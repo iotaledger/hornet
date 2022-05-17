@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 )
@@ -208,7 +209,7 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 	var request *Request
 
 	switch value := data.(type) {
-	case hornet.BlockID:
+	case iotago.BlockID:
 		blockID := value
 		contains, err := r.storage.SolidEntryPointsContain(blockID)
 		if err != nil {
@@ -241,7 +242,7 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 }
 
 // RequestMultiple works like Request but takes multiple block IDs.
-func (r *Requester) RequestMultiple(blockIDs hornet.BlockIDs, msIndex milestone.Index, preventDiscard ...bool) int {
+func (r *Requester) RequestMultiple(blockIDs iotago.BlockIDs, msIndex milestone.Index, preventDiscard ...bool) int {
 	requested := 0
 	for _, blockID := range blockIDs {
 		if r.Request(blockID, msIndex, preventDiscard...) {

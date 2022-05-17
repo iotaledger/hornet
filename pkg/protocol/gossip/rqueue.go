@@ -9,7 +9,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/gohornet/hornet/pkg/model/milestone"
 )
 
@@ -27,8 +28,8 @@ const (
 
 func getRequestMapKey(data interface{}) string {
 	switch value := data.(type) {
-	case hornet.BlockID:
-		return value.ToMapKey()
+	case iotago.BlockID:
+		return string(value[:])
 
 	case milestone.Index:
 		return value.String()
@@ -105,7 +106,7 @@ type Request struct {
 	// The type of the request.
 	RequestType RequestType
 	// The BlockID of the block to request.
-	BlockID hornet.BlockID
+	BlockID iotago.BlockID
 	// The milestone index under which this request is linked.
 	MilestoneIndex milestone.Index
 	// Tells the request queue to not remove this request if the enqueue time is
@@ -117,7 +118,7 @@ type Request struct {
 }
 
 // NewBlockIDRequest creates a new block request for a specific blockID.
-func NewBlockIDRequest(blockID hornet.BlockID, msIndex milestone.Index) *Request {
+func NewBlockIDRequest(blockID iotago.BlockID, msIndex milestone.Index) *Request {
 	return &Request{RequestType: RequestTypeBlockID, BlockID: blockID, MilestoneIndex: msIndex}
 }
 
@@ -129,7 +130,7 @@ func NewMilestoneIndexRequest(msIndex milestone.Index) *Request {
 func (r *Request) MapKey() string {
 	switch r.RequestType {
 	case RequestTypeBlockID:
-		return r.BlockID.ToMapKey()
+		return string(r.BlockID[:])
 	case RequestTypeMilestoneIndex:
 		return r.MilestoneIndex.String()
 	default:

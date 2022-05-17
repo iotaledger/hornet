@@ -1,14 +1,14 @@
 package testsuite
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/stretchr/testify/require"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -83,7 +83,7 @@ func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 	require.NoError(te.TestInterface, err)
 }
 
-func (te *TestEnvironment) AssertBlockConflictReason(blockID hornet.BlockID, conflict storage.Conflict) {
+func (te *TestEnvironment) AssertBlockConflictReason(blockID iotago.BlockID, conflict storage.Conflict) {
 	cachedBlockMeta := te.storage.CachedBlockMetadataOrNil(blockID)
 	require.NotNil(te.TestInterface, cachedBlockMeta)
 	defer cachedBlockMeta.Release(true) // meta -1
@@ -93,13 +93,13 @@ func (te *TestEnvironment) AssertBlockConflictReason(blockID hornet.BlockID, con
 // generateDotFileFromConfirmation generates a dot file from a whiteflag confirmation cone.
 func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confirmation) string {
 
-	indexOf := func(hash hornet.BlockID) int {
+	indexOf := func(blockID iotago.BlockID) int {
 		if conf == nil {
 			return -1
 		}
 
 		for i := 0; i < len(conf.Mutations.BlocksReferenced)-1; i++ {
-			if bytes.Equal(conf.Mutations.BlocksReferenced[i], hash) {
+			if conf.Mutations.BlocksReferenced[i] == blockID {
 				return i
 			}
 		}
@@ -107,7 +107,7 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		return -1
 	}
 
-	visitedCachedBlocks := make(map[string]*storage.CachedBlock)
+	visitedCachedBlocks := make(map[iotago.BlockID]*storage.CachedBlock)
 
 	milestoneParents, err := te.storage.MilestoneParentsByIndex(conf.MilestoneIndex)
 	require.NoError(te.TestInterface, err, "milestone doesn't exist (%d)", conf.MilestoneIndex)
@@ -126,10 +126,10 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			if _, visited := visitedCachedBlocks[cachedBlockMeta.Metadata().BlockID().ToMapKey()]; !visited {
+			if _, visited := visitedCachedBlocks[cachedBlockMeta.Metadata().BlockID()]; !visited {
 				cachedBlock := te.storage.CachedBlockOrNil(cachedBlockMeta.Metadata().BlockID()) // block +1
 				require.NotNil(te.TestInterface, cachedBlock)
-				visitedCachedBlocks[cachedBlockMeta.Metadata().BlockID().ToMapKey()] = cachedBlock
+				visitedCachedBlocks[cachedBlockMeta.Metadata().BlockID()] = cachedBlock
 			}
 
 			return nil

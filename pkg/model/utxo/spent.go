@@ -3,7 +3,6 @@ package utxo
 import (
 	"bytes"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
@@ -52,7 +51,7 @@ func (s *Spent) mapKey() string {
 	return string(s.outputID[:])
 }
 
-func (s *Spent) BlockID() hornet.BlockID {
+func (s *Spent) BlockID() iotago.BlockID {
 	return s.output.BlockID()
 }
 

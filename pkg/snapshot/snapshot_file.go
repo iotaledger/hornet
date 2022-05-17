@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -147,11 +146,11 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 }
 
 // SEPProducerFunc yields a solid entry point to be written to a snapshot or nil if no more is available.
-type SEPProducerFunc func() (hornet.BlockID, error)
+type SEPProducerFunc func() (iotago.BlockID, error)
 
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
-type SEPConsumerFunc func(hornet.BlockID) error
+type SEPConsumerFunc func(iotago.BlockID) error
 
 // HeaderConsumerFunc consumes the snapshot file header.
 // A returned error signals to cancel further reading.
@@ -282,11 +281,10 @@ func StreamSnapshotDataTo(writeSeeker io.WriteSeeker, timestamp uint32, header *
 	for {
 		sep, err := sepProd()
 		if err != nil {
+			if errors.Is(err, ErrNoMoreSEPToProduce) {
+				break
+			}
 			return nil, fmt.Errorf("unable to get next LS SEP #%d: %w", sepsCount+1, err)
-		}
-
-		if sep == nil {
-			break
 		}
 
 		sepsCount++
@@ -456,8 +454,8 @@ func StreamSnapshotDataFrom(reader io.ReadSeeker,
 	}
 
 	for i := uint64(0); i < readHeader.SEPCount; i++ {
-		solidEntryPointBlockID := make(hornet.BlockID, iotago.BlockIDLength)
-		if _, err := io.ReadFull(reader, solidEntryPointBlockID); err != nil {
+		solidEntryPointBlockID := iotago.BlockID{}
+		if _, err := io.ReadFull(reader, solidEntryPointBlockID[:]); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}
 		if err := sepConsumer(solidEntryPointBlockID); err != nil {

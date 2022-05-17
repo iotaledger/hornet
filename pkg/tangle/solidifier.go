@@ -13,7 +13,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
@@ -44,7 +43,7 @@ func (t *Tangle) markBlockAsSolid(cachedBlockMeta *storage.CachedMetadata) {
 	cachedBlockMeta.Metadata().SetSolid(true)
 
 	t.Events.BlockSolid.Trigger(cachedBlockMeta)
-	t.blockSolidSyncEvent.Trigger(cachedBlockMeta.Metadata().BlockID().ToMapKey())
+	t.blockSolidSyncEvent.Trigger(cachedBlockMeta.Metadata().BlockID())
 }
 
 // SolidQueueCheck traverses a milestone and checks if it is solid.
@@ -54,13 +53,13 @@ func (t *Tangle) SolidQueueCheck(
 	ctx context.Context,
 	memcachedTraverserStorage dag.TraverserStorage,
 	milestoneIndex milestone.Index,
-	parents hornet.BlockIDs) (solid bool, aborted bool) {
+	parents iotago.BlockIDs) (solid bool, aborted bool) {
 
 	ts := time.Now()
 
 	blocksChecked := 0
-	var blockIDsToSolidify hornet.BlockIDs
-	blockIDsToRequest := make(map[string]struct{})
+	var blockIDsToSolidify iotago.BlockIDs
+	blockIDsToRequest := make(map[iotago.BlockID]struct{})
 
 	parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
 
@@ -89,9 +88,9 @@ func (t *Tangle) SolidQueueCheck(
 			return nil
 		},
 		// called on missing parents
-		func(parentBlockID hornet.BlockID) error {
+		func(parentBlockID iotago.BlockID) error {
 			// block does not exist => request missing block
-			blockIDsToRequest[parentBlockID.ToMapKey()] = struct{}{}
+			blockIDsToRequest[parentBlockID] = struct{}{}
 			return nil
 		},
 		// called on solid entry points
@@ -107,9 +106,9 @@ func (t *Tangle) SolidQueueCheck(
 	tCollect := time.Now()
 
 	if len(blockIDsToRequest) > 0 {
-		blockIDs := make(hornet.BlockIDs, 0, len(blockIDsToRequest))
+		blockIDs := iotago.BlockIDs{}
 		for blockID := range blockIDsToRequest {
-			blockIDs = append(blockIDs, hornet.BlockIDFromMapKey(blockID))
+			blockIDs = append(blockIDs, blockID)
 		}
 		requested := t.requester.RequestMultiple(blockIDs, milestoneIndex, true)
 		t.LogWarnf("Stopped solidifier due to missing block -> Requested missing blocks (%d/%d), collect: %v", requested, len(blockIDs), tCollect.Sub(ts).Truncate(time.Millisecond))
@@ -271,7 +270,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		milestoneSolidificationCtx,
 		memcachedTraverserStorage,
 		milestoneIndexToSolidify,
-		hornet.BlockIDs{milestoneBlockIDToSolidify},
+		iotago.BlockIDs{milestoneBlockIDToSolidify},
 	); !becameSolid {
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
@@ -493,7 +492,7 @@ func (t *Tangle) setSolidifierMilestoneIndex(index milestone.Index) {
 }
 
 // searchMissingMilestones searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
-func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneParents hornet.BlockIDs) (found bool, err error) {
+func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneParents iotago.BlockIDs) (found bool, err error) {
 
 	var milestoneFound bool
 
@@ -513,9 +512,10 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 				return false, nil
 			}
 
-			cachedBlock := t.storage.CachedBlockOrNil(cachedBlockMeta.Metadata().BlockID()) // block +1
+			blockID := cachedBlockMeta.Metadata().BlockID()
+			cachedBlock := t.storage.CachedBlockOrNil(blockID) // block +1
 			if cachedBlock == nil {
-				return false, fmt.Errorf("%w block ID: %s", common.ErrBlockNotFound, cachedBlockMeta.Metadata().BlockID().ToHex())
+				return false, fmt.Errorf("%w block ID: %s", common.ErrBlockNotFound, blockID.ToHex())
 			}
 			defer cachedBlock.Release(true) // block -1
 

@@ -14,7 +14,6 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/model/utxo/utils"
@@ -183,29 +182,29 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 
 }
 
-type sepRetrieverFunc func() hornet.BlockIDs
+type sepRetrieverFunc func() iotago.BlockIDs
 
 func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
-	var generatedSEPs hornet.BlockIDs
-	return func() (hornet.BlockID, error) {
+	var generatedSEPs iotago.BlockIDs
+	return func() (iotago.BlockID, error) {
 			if count == 0 {
-				return nil, nil
+				return iotago.EmptyBlockID(), snapshot.ErrNoMoreSEPToProduce
 			}
 			count--
 			blockID := utils.RandBlockID()
 			generatedSEPs = append(generatedSEPs, blockID)
 			return blockID, nil
-		}, func() hornet.BlockIDs {
+		}, func() iotago.BlockIDs {
 			return generatedSEPs
 		}
 }
 
 func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
-	var generatedSEPs hornet.BlockIDs
-	return func(sep hornet.BlockID) error {
+	var generatedSEPs iotago.BlockIDs
+	return func(sep iotago.BlockID) error {
 			generatedSEPs = append(generatedSEPs, sep)
 			return nil
-		}, func() hornet.BlockIDs {
+		}, func() iotago.BlockIDs {
 			return generatedSEPs
 		}
 }
@@ -259,7 +258,7 @@ func newMsDiffGenerator(count int) (snapshot.MilestoneDiffProducerFunc, msDiffRe
 			}
 			count--
 
-			parents := iotago.MilestoneParentBlockIDs{utils.RandBlockID().ToArray()}
+			parents := iotago.BlockIDs{utils.RandBlockID()}
 			milestonePayload := iotago.NewMilestone(rand.Uint32(), rand.Uint32(), protoParas.Version, utils.RandMilestoneID(), parents, utils.Rand32ByteHash(), utils.Rand32ByteHash())
 
 			treasuryInput := &iotago.TreasuryInput{}
@@ -345,7 +344,7 @@ func randLSTransactionSpents(msIndex milestone.Index) *utxo.Spent {
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
-	require.Equal(t, expected.BlockID()[:], actual.BlockID()[:])
+	require.Equal(t, expected.BlockID(), actual.BlockID())
 	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
 	require.Equal(t, expected.OutputType(), actual.OutputType())
 	require.Equal(t, expected.Deposit(), actual.Deposit())

@@ -3,18 +3,18 @@ package storage
 import (
 	"encoding/binary"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/objectstorage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type UnreferencedBlock struct {
 	objectstorage.StorableObjectFlags
 	latestMilestoneIndex milestone.Index
-	blockID              hornet.BlockID
+	blockID              iotago.BlockID
 }
 
-func NewUnreferencedBlock(msIndex milestone.Index, blockID hornet.BlockID) *UnreferencedBlock {
+func NewUnreferencedBlock(msIndex milestone.Index, blockID iotago.BlockID) *UnreferencedBlock {
 	return &UnreferencedBlock{
 		latestMilestoneIndex: msIndex,
 		blockID:              blockID,
@@ -25,7 +25,7 @@ func (t *UnreferencedBlock) LatestMilestoneIndex() milestone.Index {
 	return t.latestMilestoneIndex
 }
 
-func (t *UnreferencedBlock) BlockID() hornet.BlockID {
+func (t *UnreferencedBlock) BlockID() iotago.BlockID {
 	return t.blockID
 }
 
@@ -38,7 +38,7 @@ func (t *UnreferencedBlock) Update(_ objectstorage.StorableObject) {
 func (t *UnreferencedBlock) ObjectStorageKey() []byte {
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(t.latestMilestoneIndex))
-	return append(key, t.blockID...)
+	return append(key, t.blockID[:]...)
 }
 
 func (t *UnreferencedBlock) ObjectStorageValue() []byte {

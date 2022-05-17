@@ -1,21 +1,19 @@
 package storage
 
-import (
-	"github.com/gohornet/hornet/pkg/model/hornet"
-)
+import iotago "github.com/iotaledger/iota.go/v3"
 
-type CachedBlockMetadataFunc func(blockID hornet.BlockID) (*CachedMetadata, error)
+type CachedBlockMetadataFunc func(blockID iotago.BlockID) (*CachedMetadata, error)
 
 type MetadataMemcache struct {
 	cachedBlockMetadataFunc CachedBlockMetadataFunc
-	cachedBlockMetas        map[string]*CachedMetadata
+	cachedBlockMetas        map[iotago.BlockID]*CachedMetadata
 }
 
 // NewMetadataMemcache creates a new NewMetadataMemcache instance.
 func NewMetadataMemcache(cachedBlockMetadataFunc CachedBlockMetadataFunc) *MetadataMemcache {
 	return &MetadataMemcache{
 		cachedBlockMetadataFunc: cachedBlockMetadataFunc,
-		cachedBlockMetas:        make(map[string]*CachedMetadata),
+		cachedBlockMetas:        make(map[iotago.BlockID]*CachedMetadata),
 	}
 }
 
@@ -27,18 +25,16 @@ func (c *MetadataMemcache) Cleanup(forceRelease bool) {
 	for _, cachedBlockMeta := range c.cachedBlockMetas {
 		cachedBlockMeta.Release(forceRelease) // meta -1
 	}
-	c.cachedBlockMetas = make(map[string]*CachedMetadata)
+	c.cachedBlockMetas = make(map[iotago.BlockID]*CachedMetadata)
 }
 
 // CachedBlockMetadata returns a cached metadata object.
 // meta +1
-func (c *MetadataMemcache) CachedBlockMetadata(blockID hornet.BlockID) (*CachedMetadata, error) {
-	blockIDMapKey := blockID.ToMapKey()
-
+func (c *MetadataMemcache) CachedBlockMetadata(blockID iotago.BlockID) (*CachedMetadata, error) {
 	var err error
 
 	// load up block metadata
-	cachedBlockMeta, exists := c.cachedBlockMetas[blockIDMapKey]
+	cachedBlockMeta, exists := c.cachedBlockMetas[blockID]
 	if !exists {
 		cachedBlockMeta, err = c.cachedBlockMetadataFunc(blockID) // meta +1 (this is the one that gets cleared by "Cleanup")
 		if err != nil {
@@ -49,7 +45,7 @@ func (c *MetadataMemcache) CachedBlockMetadata(blockID hornet.BlockID) (*CachedM
 		}
 
 		// add the cachedObject to the map, it will be released by calling "Cleanup" at the end
-		c.cachedBlockMetas[blockIDMapKey] = cachedBlockMeta
+		c.cachedBlockMetas[blockID] = cachedBlockMeta
 	}
 
 	return cachedBlockMeta.Retain(), nil // meta +1

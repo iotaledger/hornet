@@ -6,13 +6,14 @@ import (
 	"runtime"
 	"sync"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
 	"github.com/iotaledger/hive.go/contextutils"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
 var (
@@ -33,10 +34,10 @@ type ConcurrentParentsTraverser struct {
 	stackCounter *atomic.Uint64
 
 	// used to fill the pipeline with elements to traverse.
-	stackChanIn chan<- (hornet.BlockID)
+	stackChanIn chan<- (iotago.BlockID)
 
 	// used to get the next element from the pipeline to traverse.
-	stackChanOut <-chan (hornet.BlockID)
+	stackChanOut <-chan (iotago.BlockID)
 
 	ctx                      context.Context
 	parallelism              int
@@ -70,25 +71,25 @@ func NewConcurrentParentsTraverser(parentsTraverserStorage ParentsTraverserStora
 func (t *ConcurrentParentsTraverser) reset() {
 
 	// create an unbuffered channel because we don't know the size of the cone to walk upfront
-	unbufferedChannel := func() (chan<- hornet.BlockID, <-chan hornet.BlockID) {
+	unbufferedChannel := func() (chan<- iotago.BlockID, <-chan iotago.BlockID) {
 
-		inbound := make(chan hornet.BlockID)
-		outbound := make(chan hornet.BlockID)
+		inbound := make(chan iotago.BlockID)
+		outbound := make(chan iotago.BlockID)
 
 		go func() {
-			var inboundQueue hornet.BlockIDs
+			var inboundQueue iotago.BlockIDs
 
-			nextValue := func() hornet.BlockID {
+			nextValue := func() iotago.BlockID {
 				// in case the inbound queue is empty, we return nil to block the nil channel
 				// produced by "outboundChannel" until the next element flows in or the
 				// inbound channel is closed.
 				if len(inboundQueue) == 0 {
-					return nil
+					return iotago.EmptyBlockID()
 				}
 				return inboundQueue[0]
 			}
 
-			outboundChannel := func(nextItem bool) chan hornet.BlockID {
+			outboundChannel := func(nextItem bool) chan iotago.BlockID {
 				// in case the inbound queue is empty, we return a nil channel to block
 				// until the next element flows in or the inbound channel is closed.
 				if len(inboundQueue) == 0 {
@@ -97,7 +98,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 				return outbound
 			}
 
-			var out chan hornet.BlockID = nil
+			var out chan iotago.BlockID = nil
 
 		inboundLoop:
 			for {
@@ -126,7 +127,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 }
 
 // traverseBlock adds the blockID to the pipeline and increases the counter of remaining elements.
-func (t *ConcurrentParentsTraverser) traverseBlock(blockID hornet.BlockID) {
+func (t *ConcurrentParentsTraverser) traverseBlock(blockID iotago.BlockID) {
 	t.stackCounter.Inc()
 	t.stackChanIn <- blockID
 }
@@ -135,7 +136,7 @@ func (t *ConcurrentParentsTraverser) traverseBlock(blockID hornet.BlockID) {
 // unsorted way in direction of the parents.
 // the traversal stops due to no more blocks passing the given condition.
 // Caution: not in DFS order
-func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents hornet.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
+func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents iotago.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -186,15 +187,15 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents horne
 // processStack processes elements from the pipeline until there are no elements left or an error occurs.
 func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errChan chan error) {
 
-	wasProcessed := func(blockID hornet.BlockID) bool {
+	wasProcessed := func(blockID iotago.BlockID) bool {
 
-		_, wasProcessed := t.processed.Load(blockID.ToMapKey())
+		_, wasProcessed := t.processed.Load(blockID)
 		return wasProcessed
 	}
 
-	markAsProcessed := func(blockID hornet.BlockID) bool {
+	markAsProcessed := func(blockID iotago.BlockID) bool {
 
-		_, wasProcessed := t.processed.LoadOrStore(blockID.ToMapKey(), struct{}{})
+		_, wasProcessed := t.processed.LoadOrStore(blockID, struct{}{})
 		return wasProcessed
 	}
 
@@ -202,7 +203,7 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 	// the logic in this walker is quite different.
 	// we do not walk in any order, we just process every
 	// single block and traverse their parents afterwards.
-	processStackParents := func(currentBlockID hornet.BlockID) error {
+	processStackParents := func(currentBlockID iotago.BlockID) error {
 		if err := contextutils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
 			return err
 		}

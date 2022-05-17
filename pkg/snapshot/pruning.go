@@ -5,13 +5,14 @@ import (
 	"math"
 	"time"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/contextutils"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 )
@@ -75,12 +76,11 @@ func (s *SnapshotManager) calcTargetIndexBySize(targetSizeBytes ...int64) (miles
 // pruneUnreferencedBlocks prunes all unreferenced blocks from the database for the given milestone
 func (s *SnapshotManager) pruneUnreferencedBlocks(targetIndex milestone.Index) (blocksCountDeleted int, blocksCountChecked int) {
 
-	blockIDsToDeleteMap := make(map[string]struct{})
+	blockIDsToDeleteMap := make(map[iotago.BlockID]struct{})
 
 	// Check if block is still unreferenced
 	for _, blockID := range s.storage.UnreferencedBlockIDs(targetIndex) {
-		blockIDMapKey := blockID.ToMapKey()
-		if _, exists := blockIDsToDeleteMap[blockIDMapKey]; exists {
+		if _, exists := blockIDsToDeleteMap[blockID]; exists {
 			continue
 		}
 
@@ -97,7 +97,7 @@ func (s *SnapshotManager) pruneUnreferencedBlocks(targetIndex milestone.Index) (
 		}
 
 		cachedBlockMeta.Release(true) // meta -1
-		blockIDsToDeleteMap[blockIDMapKey] = struct{}{}
+		blockIDsToDeleteMap[blockID] = struct{}{}
 	}
 
 	blocksCountDeleted = s.pruneBlocks(blockIDsToDeleteMap)
@@ -119,11 +119,9 @@ func (s *SnapshotManager) pruneMilestone(milestoneIndex milestone.Index, receipt
 }
 
 // pruneBlocks removes all the associated data of the given block IDs from the database
-func (s *SnapshotManager) pruneBlocks(blockIDsToDeleteMap map[string]struct{}) int {
+func (s *SnapshotManager) pruneBlocks(blockIDsToDeleteMap map[iotago.BlockID]struct{}) int {
 
-	for blockIDToDelete := range blockIDsToDeleteMap {
-
-		blockID := hornet.BlockIDFromMapKey(blockIDToDelete)
+	for blockID := range blockIDsToDeleteMap {
 
 		cachedBlockMeta := s.storage.CachedBlockMetadataOrNil(blockID) // meta +1
 		if cachedBlockMeta == nil {
@@ -244,7 +242,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			continue
 		}
 
-		blockIDsToDeleteMap := make(map[string]struct{})
+		blockIDsToDeleteMap := make(map[iotago.BlockID]struct{})
 
 		if err := dag.TraverseParents(
 			ctx,
@@ -260,11 +258,11 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			// consumer
 			func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
-				blockIDsToDeleteMap[cachedBlockMeta.Metadata().BlockID().ToMapKey()] = struct{}{}
+				blockIDsToDeleteMap[cachedBlockMeta.Metadata().BlockID()] = struct{}{}
 				return nil
 			},
 			// called on missing parents
-			func(parentBlockID hornet.BlockID) error { return nil },
+			func(parentBlockID iotago.BlockID) error { return nil },
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,

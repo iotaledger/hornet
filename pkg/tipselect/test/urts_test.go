@@ -10,7 +10,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/tangle"
@@ -113,7 +112,7 @@ func TestTipSelect(t *testing.T) {
 				// return error on missing parents
 				nil,
 				// called on solid entry points
-				func(blockID hornet.BlockID) error {
+				func(blockID iotago.BlockID) error {
 					// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 					at, _, err := te.Storage().SolidEntryPointsIndex(blockID)
 					if err != nil {
@@ -147,7 +146,7 @@ func TestTipSelect(t *testing.T) {
 
 		if i%10 == 0 {
 			// Issue a new milestone every 10 blocks
-			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{blockMeta.BlockID()}, false)
+			conf, _ := te.IssueAndConfirmMilestoneOnTips(iotago.BlockIDs{blockMeta.BlockID()}, false)
 			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), conf.Mutations.BlocksReferenced, conf.MilestoneIndex)
 			ts.UpdateScores()
 		}

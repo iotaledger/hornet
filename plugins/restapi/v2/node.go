@@ -3,11 +3,12 @@ package v2
 import (
 	"strings"
 
+	iotago "github.com/iotaledger/iota.go/v3"
+
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/tipselect"
 )
@@ -90,7 +91,7 @@ func tips(c echo.Context) (*tipsResponse, error) {
 		}
 	}
 
-	var tips hornet.BlockIDs
+	var tips iotago.BlockIDs
 	var err error
 
 	if !spammerTips {

@@ -12,7 +12,6 @@ import (
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	inx "github.com/iotaledger/inx/go"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func main() {
@@ -45,10 +44,11 @@ func main() {
 			panic(err)
 		}
 		block := payload.MustUnwrapBlock(serializer.DeSeriModeNoValidation, nil)
+		blockID := payload.UnwrapBlockID()
 		jsonBlock, err := json.Marshal(block)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Rec: %s => %s\n", iotago.BlockIDToHexString(payload.UnwrapBlockID()), string(jsonBlock))
+		fmt.Printf("Rec: %s => %s\n", blockID.ToHex(), string(jsonBlock))
 	}
 }

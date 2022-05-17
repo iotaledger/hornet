@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/marshalutil"
@@ -48,7 +47,7 @@ type Output struct {
 	kvStorable
 
 	outputID           *iotago.OutputID
-	blockID            hornet.BlockID
+	blockID            iotago.BlockID
 	milestoneIndex     milestone.Index
 	milestoneTimestamp uint32
 
@@ -63,7 +62,7 @@ func (o *Output) mapKey() string {
 	return string(o.outputID[:])
 }
 
-func (o *Output) BlockID() hornet.BlockID {
+func (o *Output) BlockID() iotago.BlockID {
 	return o.blockID
 }
 
@@ -97,7 +96,7 @@ func (o Outputs) ToOutputSet() iotago.OutputSet {
 	return outputSet
 }
 
-func CreateOutput(outputID *iotago.OutputID, blockID hornet.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
+func CreateOutput(outputID *iotago.OutputID, blockID iotago.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
 	return &Output{
 		outputID:           outputID,
 		blockID:            blockID,
@@ -107,7 +106,7 @@ func CreateOutput(outputID *iotago.OutputID, blockID hornet.BlockID, milestoneIn
 	}
 }
 
-func NewOutput(blockID hornet.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(blockID iotago.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	txID, err := transaction.ID()
 	if err != nil {
@@ -139,7 +138,7 @@ func (o *Output) kvStorableKey() (key []byte) {
 
 func (o *Output) kvStorableValue() (value []byte) {
 	ms := marshalutil.New(40)
-	ms.WriteBytes(o.blockID)                 // 32 bytes
+	ms.WriteBytes(o.blockID[:])              // 32 bytes
 	ms.WriteUint32(uint32(o.milestoneIndex)) // 4 bytes
 	ms.WriteUint32(o.milestoneTimestamp)     // 4 bytes
 

@@ -12,7 +12,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/milestonemanager"
 	"github.com/gohornet/hornet/pkg/model/storage"
@@ -156,9 +155,11 @@ func verifyDatabase(
 			// collect all blocks that were referenced by that milestone
 			referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 
+			blockID := cachedBlockMeta.Metadata().BlockID()
+
 			if !referenced {
 				// all existing blocks in the database must be referenced by a milestone
-				return false, fmt.Errorf("block was not referenced (msIndex: %d, blockID: %s)", msIndex, cachedBlockMeta.Metadata().BlockID().ToHex())
+				return false, fmt.Errorf("block was not referenced (msIndex: %d, blockID: %s)", msIndex, blockID.ToHex())
 			}
 
 			if at > msIndex {
@@ -171,12 +172,12 @@ func verifyDatabase(
 			}
 
 			// check if the block exists
-			cachedBlock, err := cachedBlockFunc(cachedBlockMeta.Metadata().BlockID()) // block +1
+			cachedBlock, err := cachedBlockFunc(blockID) // block +1
 			if err != nil {
 				return false, err
 			}
 			if cachedBlock == nil {
-				return false, fmt.Errorf("block not found: %s", cachedBlockMeta.Metadata().BlockID().ToHex())
+				return false, fmt.Errorf("block not found: %s", blockID.ToHex())
 			}
 			defer cachedBlock.Release(true) // block -1
 
@@ -197,7 +198,7 @@ func verifyDatabase(
 		// traverse the milestone and collect all blocks that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
 			ctx,
-			hornet.BlockIDsFromSliceOfArrays(milestonePayload.Parents),
+			milestonePayload.Parents,
 			condition,
 			nil,
 			// called on missing parents
@@ -224,7 +225,7 @@ func verifyDatabase(
 			return err
 		}
 
-		referencedBlocks := make(map[string]struct{})
+		referencedBlocks := make(map[iotago.BlockID]struct{})
 
 		// confirm the milestone with the help of a special walker condition.
 		// we re-confirm the existing milestones in the source database, but apply the
@@ -247,15 +248,15 @@ func verifyDatabase(
 			func(meta *storage.BlockMetadata) bool {
 				referenced, at := meta.ReferencedWithIndex()
 				if referenced && at == msIndex {
-					_, exists := referencedBlocks[meta.BlockID().ToMapKey()]
+					_, exists := referencedBlocks[meta.BlockID()]
 					return exists
 				}
 
 				return meta.IsReferenced()
 			},
 			func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index) {
-				if _, exists := referencedBlocks[meta.BlockID().ToMapKey()]; !exists {
-					referencedBlocks[meta.BlockID().ToMapKey()] = struct{}{}
+				if _, exists := referencedBlocks[meta.BlockID()]; !exists {
+					referencedBlocks[meta.BlockID()] = struct{}{}
 					meta.SetReferenced(referenced, msIndex)
 				}
 			},

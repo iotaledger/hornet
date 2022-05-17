@@ -3,21 +3,20 @@ package tipselect
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
+
+	iotago "github.com/iotaledger/iota.go/v3"
 
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/metrics"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/gohornet/hornet/pkg/tangle"
 	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/syncutils"
 )
 
@@ -25,7 +24,7 @@ import (
 type Score int
 
 // TipSelectionFunc is a function which performs a tipselection and returns tips.
-type TipSelectionFunc = func() (hornet.BlockIDs, error)
+type TipSelectionFunc = func() (iotago.BlockIDs, error)
 
 // TipSelStats holds the stats for a tipselection run.
 type TipSelStats struct {
@@ -64,7 +63,7 @@ type Tip struct {
 	// Score is the score of the tip.
 	Score Score
 	// BlockID is the block ID of the tip.
-	BlockID hornet.BlockID
+	BlockID iotago.BlockID
 	// TimeFirstChild is the timestamp the tip was referenced for the first time by another block.
 	TimeFirstChild time.Time
 	// ChildrenCount is the amount the tip was referenced by other blocks.
@@ -122,9 +121,9 @@ type TipSelector struct {
 	// this is used to support the network if someone attacks the tangle by spamming a lot of tips. (semi-lazy pool)
 	spammerTipsThresholdSemiLazy int
 	// nonLazyTipsMap contains only non-lazy tips.
-	nonLazyTipsMap map[string]*Tip
+	nonLazyTipsMap map[iotago.BlockID]*Tip
 	// semiLazyTipsMap contains only semi-lazy tips.
-	semiLazyTipsMap map[string]*Tip
+	semiLazyTipsMap map[iotago.BlockID]*Tip
 	// lock for the tipsMaps
 	tipsLock syncutils.Mutex
 	// Events are the events that are triggered by the TipSelector.
@@ -159,8 +158,8 @@ func New(
 		maxReferencedTipAgeSemiLazy:     maxReferencedTipAgeSemiLazy,
 		maxChildrenSemiLazy:             maxChildrenSemiLazy,
 		spammerTipsThresholdSemiLazy:    spammerTipsThresholdSemiLazy,
-		nonLazyTipsMap:                  make(map[string]*Tip),
-		semiLazyTipsMap:                 make(map[string]*Tip),
+		nonLazyTipsMap:                  make(map[iotago.BlockID]*Tip),
+		semiLazyTipsMap:                 make(map[iotago.BlockID]*Tip),
 		Events: &Events{
 			TipAdded:        events.NewEvent(TipCaller),
 			TipRemoved:      events.NewEvent(TipCaller),
@@ -175,14 +174,13 @@ func (ts *TipSelector) AddTip(blockMeta *storage.BlockMetadata) {
 	defer ts.tipsLock.Unlock()
 
 	blockID := blockMeta.BlockID()
-	blockIDMapKey := blockID.ToMapKey()
 
-	if _, exists := ts.nonLazyTipsMap[blockIDMapKey]; exists {
+	if _, exists := ts.nonLazyTipsMap[blockID]; exists {
 		// tip already exists
 		return
 	}
 
-	if _, exists := ts.semiLazyTipsMap[blockIDMapKey]; exists {
+	if _, exists := ts.semiLazyTipsMap[blockID]; exists {
 		// tip already exists
 		return
 	}
@@ -210,10 +208,10 @@ func (ts *TipSelector) AddTip(blockMeta *storage.BlockMetadata) {
 
 	switch tip.Score {
 	case ScoreNonLazy:
-		ts.nonLazyTipsMap[blockIDMapKey] = tip
+		ts.nonLazyTipsMap[blockID] = tip
 		ts.serverMetrics.TipsNonLazy.Add(1)
 	case ScoreSemiLazy:
-		ts.semiLazyTipsMap[blockIDMapKey] = tip
+		ts.semiLazyTipsMap[blockID] = tip
 		ts.serverMetrics.TipsSemiLazy.Add(1)
 	}
 
@@ -221,12 +219,12 @@ func (ts *TipSelector) AddTip(blockMeta *storage.BlockMetadata) {
 
 	// the parents are the blocks this tip approves
 	// remove them from the tip pool
-	parentBlockIDs := map[string]struct{}{}
+	parentBlockIDs := map[iotago.BlockID]struct{}{}
 	for _, parent := range blockMeta.Parents() {
-		parentBlockIDs[parent.ToMapKey()] = struct{}{}
+		parentBlockIDs[parent] = struct{}{}
 	}
 
-	checkTip := func(tipsMap map[string]*Tip, parentTip *Tip, retentionRulesTipsLimit int, maxChildren uint32, maxReferencedTipAge time.Duration) bool {
+	checkTip := func(tipsMap map[iotago.BlockID]*Tip, parentTip *Tip, retentionRulesTipsLimit int, maxChildren uint32, maxReferencedTipAge time.Duration) bool {
 		// if the amount of known tips is above the limit, remove the tip directly
 		if len(tipsMap) > retentionRulesTipsLimit {
 			return ts.removeTipWithoutLocking(tipsMap, parentTip.BlockID)
@@ -271,10 +269,9 @@ func (ts *TipSelector) AddTip(blockMeta *storage.BlockMetadata) {
 }
 
 // removeTipWithoutLocking removes the given block from the tipsMap without acquiring the lock.
-func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, blockID hornet.BlockID) bool {
-	blockIDMapKey := blockID.ToMapKey()
-	if tip, exists := tipsMap[blockIDMapKey]; exists {
-		delete(tipsMap, blockIDMapKey)
+func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[iotago.BlockID]*Tip, blockID iotago.BlockID) bool {
+	if tip, exists := tipsMap[blockID]; exists {
+		delete(tipsMap, blockID)
 		ts.Events.TipRemoved.Trigger(tip)
 		return true
 	}
@@ -282,11 +279,11 @@ func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, blockID 
 }
 
 // randomTipWithoutLocking picks a random tip from the pool and checks it's "own" score again without acquiring the lock.
-func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.BlockID, error) {
+func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[iotago.BlockID]*Tip) (iotago.BlockID, error) {
 
 	if len(tipsMap) == 0 {
 		// no semi-/non-lazy tips available
-		return nil, ErrNoTipsAvailable
+		return iotago.EmptyBlockID(), ErrNoTipsAvailable
 	}
 
 	// get a random number between 0 and the amount of tips-1
@@ -304,14 +301,14 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 	}
 
 	// no tips
-	return nil, ErrNoTipsAvailable
+	return iotago.EmptyBlockID(), ErrNoTipsAvailable
 }
 
 // selectTipWithoutLocking selects a tip.
-func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.BlockID, error) {
+func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[iotago.BlockID]*Tip) (iotago.BlockID, error) {
 
 	if !ts.syncManager.IsNodeAlmostSynced() {
-		return nil, common.ErrNodeNotSynced
+		return iotago.EmptyBlockID(), common.ErrNodeNotSynced
 	}
 
 	// record stats
@@ -324,18 +321,17 @@ func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 }
 
 // SelectTips selects multiple tips.
-func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.BlockIDs, error) {
+func (ts *TipSelector) selectTips(tipsMap map[iotago.BlockID]*Tip) (iotago.BlockIDs, error) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
 	tipCount := ts.optimalTipCount()
 	maxRetries := (tipCount - 1) * 10
 
-	seen := make(map[string]struct{})
-	orderedSlicesWithoutDups := make(serializer.LexicalOrderedByteSlices, tipCount)
+	seen := make(map[iotago.BlockID]struct{})
+	tips := iotago.BlockIDs{}
 
 	// retry the tipselection several times if parents not unique
-	uniqueElements := 0
 	for i := 0; i < maxRetries; i++ {
 		tip, err := ts.selectTipWithoutLocking(tipsMap)
 		if err != nil {
@@ -347,31 +343,19 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.BlockIDs, err
 			return nil, err
 		}
 
-		tipMapKey := tip.ToMapKey()
-		if _, has := seen[tipMapKey]; has {
+		if _, has := seen[tip]; has {
 			// ignore duplicates
 			continue
 		}
-		seen[tipMapKey] = struct{}{}
-		orderedSlicesWithoutDups[uniqueElements] = tip
-		uniqueElements++
+		seen[tip] = struct{}{}
+		tips = append(tips, tip)
 
-		if uniqueElements >= tipCount {
+		if len(tips) >= tipCount {
 			// collected enough tips
 			break
 		}
 	}
-	orderedSlicesWithoutDups = orderedSlicesWithoutDups[:uniqueElements]
-	sort.Sort(orderedSlicesWithoutDups)
-
-	result := make(hornet.BlockIDs, len(orderedSlicesWithoutDups))
-	for i, v := range orderedSlicesWithoutDups {
-		// this is necessary, otherwise we create a pointer to the loop variable
-		tmp := v
-		result[i] = tmp
-	}
-
-	return result, nil
+	return tips.RemoveDupsAndSort(), nil
 }
 
 // optimalTipCount returns the optimal number of tips.
@@ -386,16 +370,16 @@ func (ts *TipSelector) TipCount() (int, int) {
 }
 
 // SelectSemiLazyTips selects two semi-lazy tips.
-func (ts *TipSelector) SelectSemiLazyTips() (hornet.BlockIDs, error) {
+func (ts *TipSelector) SelectSemiLazyTips() (iotago.BlockIDs, error) {
 	return ts.selectTips(ts.semiLazyTipsMap)
 }
 
 // SelectNonLazyTips selects two non-lazy tips.
-func (ts *TipSelector) SelectNonLazyTips() (hornet.BlockIDs, error) {
+func (ts *TipSelector) SelectNonLazyTips() (iotago.BlockIDs, error) {
 	return ts.selectTips(ts.nonLazyTipsMap)
 }
 
-func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.BlockIDs, err error) {
+func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips iotago.BlockIDs, err error) {
 	if ts.spammerTipsThresholdSemiLazy != 0 && len(ts.semiLazyTipsMap) > ts.spammerTipsThresholdSemiLazy {
 		// threshold was defined and reached, return semi-lazy tips for the spammer
 		tips, err = ts.SelectSemiLazyTips()
@@ -430,7 +414,7 @@ func (ts *TipSelector) CleanUpReferencedTips() int {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	checkTip := func(tipsMap map[string]*Tip, tip *Tip, maxReferencedTipAge time.Duration) bool {
+	checkTip := func(tipsMap map[iotago.BlockID]*Tip, tip *Tip, maxReferencedTipAge time.Duration) bool {
 		if tip.TimeFirstChild.IsZero() {
 			// not referenced by another block
 			return false
@@ -496,7 +480,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 				ts.serverMetrics.TipsNonLazy.Sub(1)
 			}
 			// add the tip to the semi-lazy tips map
-			ts.semiLazyTipsMap[tip.BlockID.ToMapKey()] = tip
+			ts.semiLazyTipsMap[tip.BlockID] = tip
 			ts.Events.TipAdded.Trigger(tip)
 			ts.serverMetrics.TipsSemiLazy.Add(1)
 			count--
@@ -528,7 +512,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 				ts.serverMetrics.TipsSemiLazy.Sub(1)
 			}
 			// add the tip to the non-lazy tips map
-			ts.nonLazyTipsMap[tip.BlockID.ToMapKey()] = tip
+			ts.nonLazyTipsMap[tip.BlockID] = tip
 			ts.Events.TipAdded.Trigger(tip)
 			ts.serverMetrics.TipsNonLazy.Add(1)
 			count--
@@ -539,7 +523,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 }
 
 // calculateScore calculates the tip selection score of this block
-func (ts *TipSelector) calculateScore(blockID hornet.BlockID, cmi milestone.Index) (Score, error) {
+func (ts *TipSelector) calculateScore(blockID iotago.BlockID, cmi milestone.Index) (Score, error) {
 
 	tipScore, err := ts.tipScoreCalculator.TipScore(ts.shutdownCtx, blockID, cmi)
 	if err != nil {

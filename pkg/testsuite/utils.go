@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/testsuite/utils"
@@ -21,7 +20,7 @@ type BlockBuilder struct {
 	tag     string
 	tagData []byte
 
-	parents hornet.BlockIDs
+	parents iotago.BlockIDs
 
 	fromWallet *utils.HDWallet
 	toWallet   *utils.HDWallet
@@ -41,7 +40,7 @@ type Block struct {
 	remainderOutput *utxo.Output
 
 	booked        bool
-	storedBlockID hornet.BlockID
+	storedBlockID iotago.BlockID
 }
 
 func (te *TestEnvironment) NewBlockBuilder(optionalTag ...string) *BlockBuilder {
@@ -56,10 +55,10 @@ func (te *TestEnvironment) NewBlockBuilder(optionalTag ...string) *BlockBuilder 
 }
 
 func (b *BlockBuilder) LatestMilestoneAsParents() *BlockBuilder {
-	return b.Parents(hornet.BlockIDs{b.te.coo.lastMilestoneBlockID})
+	return b.Parents(iotago.BlockIDs{b.te.coo.lastMilestoneBlockID})
 }
 
-func (b *BlockBuilder) Parents(parents hornet.BlockIDs) *BlockBuilder {
+func (b *BlockBuilder) Parents(parents iotago.BlockIDs) *BlockBuilder {
 	b.parents = parents
 	return b
 }
@@ -153,7 +152,7 @@ func (b *BlockBuilder) Build() *Block {
 					},
 				},
 			}
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, hornet.NullBlockID(), 0, 0, fakeInput))
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, iotago.EmptyBlockID(), 0, 0, fakeInput))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}
@@ -201,7 +200,7 @@ func (b *BlockBuilder) Build() *Block {
 	require.NotNil(b.te.TestInterface, b.parents)
 
 	iotaBlock, err := builder.NewBlockBuilder(b.te.protoParas.Version).
-		Parents(b.parents.ToSliceOfSlices()).
+		ParentsBlockIDs(b.parents).
 		Payload(transaction).Build()
 	require.NoError(b.te.TestInterface, err)
 
@@ -253,7 +252,7 @@ func (b *BlockBuilder) Build() *Block {
 }
 
 func (m *Block) Store() *Block {
-	require.Nil(m.builder.te.TestInterface, m.storedBlockID)
+	require.True(m.builder.te.TestInterface, m.storedBlockID.Empty())
 	m.storedBlockID = m.builder.te.StoreBlock(m.block).Block().BlockID()
 	return m
 }
@@ -287,7 +286,7 @@ func (m *Block) StoredBlock() *storage.Block {
 	return m.block
 }
 
-func (m *Block) StoredBlockID() hornet.BlockID {
+func (m *Block) StoredBlockID() iotago.BlockID {
 	require.NotNil(m.builder.te.TestInterface, m.storedBlockID)
 	return m.storedBlockID
 }

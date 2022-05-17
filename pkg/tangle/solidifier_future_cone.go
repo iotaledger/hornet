@@ -1,13 +1,12 @@
 package tangle
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/gohornet/hornet/pkg/dag"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type MarkBlockAsSolidFunc func(*storage.CachedMetadata)
@@ -55,12 +54,12 @@ func (s *FutureConeSolidifier) SolidifyBlockAndFutureCone(ctx context.Context, c
 
 	defer cachedBlockMeta.Release(true) // meta -1
 
-	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markBlockAsSolidFunc, hornet.BlockIDs{cachedBlockMeta.Metadata().BlockID()})
+	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markBlockAsSolidFunc, iotago.BlockIDs{cachedBlockMeta.Metadata().BlockID()})
 }
 
 // SolidifyFutureConesWithMetadataMemcache updates the solidity of the given blocks and their future cones (blocks approving the given blocks).
 // This function doesn't use the same memcache nor traverser like the FutureConeSolidifier, but it holds the lock, so no other solidifications are done in parallel.
-func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(ctx context.Context, memcachedTraverserStorage dag.TraverserStorage, blockIDs hornet.BlockIDs) error {
+func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(ctx context.Context, memcachedTraverserStorage dag.TraverserStorage, blockIDs iotago.BlockIDs) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -73,7 +72,7 @@ func solidifyFutureCone(
 	ctx context.Context,
 	traverserStorage dag.TraverserStorage,
 	markBlockAsSolidFunc MarkBlockAsSolidFunc,
-	blockIDs hornet.BlockIDs) error {
+	blockIDs iotago.BlockIDs) error {
 
 	childrenTraverser := dag.NewChildrenTraverser(traverserStorage)
 
@@ -88,7 +87,7 @@ func solidifyFutureCone(
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 
-				if cachedBlockMeta.Metadata().IsSolid() && !bytes.Equal(startBlockID, cachedBlockMeta.Metadata().BlockID()) {
+				if cachedBlockMeta.Metadata().IsSolid() && startBlockID != cachedBlockMeta.Metadata().BlockID() {
 					// do not walk the future cone if the current block is already solid, except it was the startTx
 					return false, nil
 				}

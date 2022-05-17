@@ -36,7 +36,7 @@ func randomSpent(output *utxo.Output, msIndex ...milestone.Index) *utxo.Spent {
 
 func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
-	require.Equal(t, expected.BlockID()[:], actual.BlockID()[:])
+	require.Equal(t, expected.BlockID(), actual.BlockID())
 	require.Equal(t, expected.OutputType(), actual.OutputType())
 
 	var expectedIdent iotago.Address
