@@ -6,12 +6,12 @@ type Profile struct {
 }
 
 type Caches struct {
-	Addresses              *CacheOpts `koanf:"addresses"`
-	Children               *CacheOpts `koanf:"children"`
-	Milestones             *CacheOpts `koanf:"milestones"`
-	Messages               *CacheOpts `koanf:"messages"`
-	IncomingMessagesFilter *CacheOpts `koanf:"incomingMessagesFilter"`
-	UnreferencedMessages   *CacheOpts `koanf:"unreferencedMessages"`
+	Addresses            *CacheOpts `koanf:"addresses"`
+	Children             *CacheOpts `koanf:"children"`
+	Milestones           *CacheOpts `koanf:"milestones"`
+	Blocks               *CacheOpts `koanf:"blocks"`
+	IncomingBlocksFilter *CacheOpts `koanf:"incomingBlocksFilter"`
+	UnreferencedBlocks   *CacheOpts `koanf:"unreferencedBlocks"`
 }
 
 type CacheOpts struct {

@@ -28,7 +28,7 @@
           "maxConsumerHoldTime": "30s"
         }
       },
-      "messages": {
+      "blocks": {
         "cacheTime": "1.5s",
         "releaseExecutorWorkerCount": 10,
         "leakDetection": {
@@ -37,7 +37,7 @@
           "maxConsumerHoldTime": "30s"
         }
       },
-      "unreferencedMessages": {
+      "unreferencedBlocks": {
         "cacheTime": "100ms",
         "releaseExecutorWorkerCount": 10,
         "leakDetection": {
@@ -46,7 +46,7 @@
           "maxConsumerHoldTime": "30s"
         }
       },
-      "incomingMessagesFilter": {
+      "incomingBlocksFilter": {
         "cacheTime": "2s",
         "releaseExecutorWorkerCount": 10,
         "leakDetection": {
@@ -86,7 +86,7 @@
           "maxConsumerHoldTime": "30s"
         }
       },
-      "messages": {
+      "blocks": {
         "cacheTime": "1.5s",
         "releaseExecutorWorkerCount": 10,
         "leakDetection": {
@@ -95,7 +95,7 @@
           "maxConsumerHoldTime": "30s"
         }
       },
-      "unreferencedMessages": {
+      "unreferencedBlocks": {
         "cacheTime": "1.5s",
         "releaseExecutorWorkerCount": 10,
         "leakDetection": {
@@ -104,7 +104,7 @@
           "maxConsumerHoldTime": "30s"
         }
       },
-      "incomingMessagesFilter": {
+      "incomingBlocksFilter": {
         "cacheTime": "1.5s",
         "releaseExecutorWorkerCount": 10,
         "leakDetection": {

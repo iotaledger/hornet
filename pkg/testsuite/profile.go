@@ -30,7 +30,7 @@ var TestProfileCaches = &profile.Caches{
 			MaxConsumerHoldTime:   "100s",
 		},
 	},
-	Messages: &profile.CacheOpts{
+	Blocks: &profile.CacheOpts{
 		CacheTime:                  "5s",
 		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -39,7 +39,7 @@ var TestProfileCaches = &profile.Caches{
 			MaxConsumerHoldTime:   "100s",
 		},
 	},
-	UnreferencedMessages: &profile.CacheOpts{
+	UnreferencedBlocks: &profile.CacheOpts{
 		CacheTime:                  "100ms",
 		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
@@ -48,7 +48,7 @@ var TestProfileCaches = &profile.Caches{
 			MaxConsumerHoldTime:   "100s",
 		},
 	},
-	IncomingMessagesFilter: &profile.CacheOpts{
+	IncomingBlocksFilter: &profile.CacheOpts{
 		CacheTime:                  "2.5s",
 		ReleaseExecutorWorkerCount: 10,
 		LeakDetectionOptions: &profile.LeakDetectionOpts{
