@@ -31,7 +31,7 @@ func AddBlockToStorage(dbStorage *storage.Storage, milestoneManager *milestonema
 	// Store only non-requested blocks, since all requested blocks are referenced by a milestone anyway
 	// This is only used to delete unreferenced blocks from the database at pruning
 	if !requested {
-		dbStorage.StoreUnreferencedBlock(latestMilestoneIndex, cachedBlock.Block().BlockID()).Release(true) // unreferencedTx +-0
+		dbStorage.StoreUnreferencedBlock(latestMilestoneIndex, cachedBlock.Block().BlockID()).Release(true) // unreferencedBlock +-0
 	}
 
 	if milestonePayload := milestoneManager.VerifyMilestoneBlock(block.Block()); milestonePayload != nil {

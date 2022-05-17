@@ -80,17 +80,17 @@ func (coo *MockCoo) LastMilestoneParents() hornet.BlockIDs {
 	return hornet.BlockIDsFromSliceOfArrays(lastMilestonePayload.Parents)
 }
 
-func (coo *MockCoo) storeBlock(message *iotago.Block) hornet.BlockID {
-	msg, err := storage.NewBlock(message, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
+func (coo *MockCoo) storeBlock(iotaBlock *iotago.Block) hornet.BlockID {
+	block, err := storage.NewBlock(iotaBlock, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
 	require.NoError(coo.te.TestInterface, err)
-	cachedBlock := coo.te.StoreBlock(msg) // block +1, no need to release, since we remember all the messages for later cleanup
+	cachedBlock := coo.te.StoreBlock(block) // iotaBlock +1, no need to release, since we remember all the blocks for later cleanup
 
 	milestonePayload := cachedBlock.Block().Milestone()
 	if milestonePayload != nil {
-		// message is a milestone
+		// iotaBlock is a milestone
 		coo.te.syncManager.SetLatestMilestoneIndex(milestone.Index(milestonePayload.Index))
 	}
-	return msg.BlockID()
+	return block.BlockID()
 }
 
 func (coo *MockCoo) bootstrap() {
@@ -100,7 +100,7 @@ func (coo *MockCoo) bootstrap() {
 }
 
 func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, parents hornet.BlockIDs, lastMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
-	messagesMemcache := storage.NewBlocksMemcache(coo.te.storage.CachedBlock)
+	blocksMemcache := storage.NewBlocksMemcache(coo.te.storage.CachedBlock)
 	metadataMemcache := storage.NewMetadataMemcache(coo.te.storage.CachedBlockMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(coo.te.storage, metadataMemcache)
 
@@ -108,10 +108,10 @@ func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, pa
 		// all releases are forced since the cone is referenced and not needed anymore
 		memcachedTraverserStorage.Cleanup(true)
 
-		// release all messages at the end
-		messagesMemcache.Cleanup(true)
+		// release all blocks at the end
+		blocksMemcache.Cleanup(true)
 
-		// Release all message metadata at the end
+		// Release all block metadata at the end
 		metadataMemcache.Cleanup(true)
 	}()
 
@@ -121,7 +121,7 @@ func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, pa
 	return whiteflag.ComputeWhiteFlagMutations(context.Background(),
 		coo.te.UTXOManager(),
 		parentsTraverser,
-		messagesMemcache.CachedBlock,
+		blocksMemcache.CachedBlock,
 		index,
 		timestamp,
 		parents,
