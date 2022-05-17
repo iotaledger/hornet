@@ -214,12 +214,12 @@ func copyMilestoneCone(
 			}
 		}
 
-		cachedBlock, err := cachedMessageFuncSource(cachedBlockMeta.Metadata().MessageID()) // message +1
+		cachedBlock, err := cachedMessageFuncSource(cachedBlockMeta.Metadata().BlockID()) // message +1
 		if err != nil {
 			return false, err
 		}
 		if cachedBlock == nil {
-			return false, fmt.Errorf("message not found: %s", cachedBlockMeta.Metadata().MessageID().ToHex())
+			return false, fmt.Errorf("message not found: %s", cachedBlockMeta.Metadata().BlockID().ToHex())
 		}
 		defer cachedBlock.Release(true) // message -1
 

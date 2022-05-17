@@ -299,7 +299,7 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			mapKey := cachedBlockMeta.Metadata().MessageID().ToMapKey()
+			mapKey := cachedBlockMeta.Metadata().BlockID().ToMapKey()
 			if _, previouslyTraversed := w.traversed[mapKey]; previouslyTraversed {
 				return false, nil
 			}

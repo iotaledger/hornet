@@ -231,7 +231,7 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 				if !startMsgReferened || (at < startMsgReferenedAt) {
-					entryPoints = append(entryPoints, &entryPoint{MessageID: cachedBlockMeta.Metadata().MessageID().ToHex(), ReferencedByMilestone: at})
+					entryPoints = append(entryPoints, &entryPoint{MessageID: cachedBlockMeta.Metadata().BlockID().ToHex(), ReferencedByMilestone: at})
 					return false, nil
 				}
 			}
@@ -240,10 +240,10 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		},
 		// consumer
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
-			cachedBlockMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
+			cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
 				tanglePath = append(tanglePath,
 					&messageWithParents{
-						MessageID: metadata.MessageID().ToHex(),
+						MessageID: metadata.BlockID().ToHex(),
 						Parents:   metadata.Parents().ToHex(),
 					},
 				)

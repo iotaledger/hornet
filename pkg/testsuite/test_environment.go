@@ -259,7 +259,7 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	}
 }
 
-func (te *TestEnvironment) NewTestMessage(index int, parents hornet.BlockIDs) *storage.MessageMetadata {
+func (te *TestEnvironment) NewTestMessage(index int, parents hornet.BlockIDs) *storage.BlockMetadata {
 	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
 	cachedBlockMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // meta +1
 	defer cachedBlockMeta.Release(true)                                               // meta -1
@@ -273,7 +273,7 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 	milestonesCount int,
 	minMessagesPerMilestone int,
 	maxMessagesPerMilestone int,
-	onNewMessage func(cmi milestone.Index, msgMeta *storage.MessageMetadata),
+	onNewMessage func(cmi milestone.Index, msgMeta *storage.BlockMetadata),
 	milestoneTipSelectFunc func(messages hornet.BlockIDs, messagesPerMilestones []hornet.BlockIDs) hornet.BlockIDs,
 	onNewMilestone func(msIndex milestone.Index, messages hornet.BlockIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats)) (messages hornet.BlockIDs, messagesPerMilestones []hornet.BlockIDs) {
 
@@ -317,8 +317,8 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 			messageTotalCount++
 			msgMeta := te.NewTestMessage(messageTotalCount, getParents())
 
-			messages = append(messages, msgMeta.MessageID())
-			messagesPerMilestones[len(messagesPerMilestones)-1] = append(messagesPerMilestones[len(messagesPerMilestones)-1], msgMeta.MessageID())
+			messages = append(messages, msgMeta.BlockID())
+			messagesPerMilestones[len(messagesPerMilestones)-1] = append(messagesPerMilestones[len(messagesPerMilestones)-1], msgMeta.BlockID())
 
 			if onNewMessage != nil {
 				onNewMessage(cmi, msgMeta)

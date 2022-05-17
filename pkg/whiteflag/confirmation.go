@@ -44,14 +44,14 @@ type ConfirmationMetrics struct {
 	DurationTotal                                    time.Duration
 }
 
-type CheckMessageReferencedFunc func(meta *storage.MessageMetadata) bool
-type SetMessageReferencedFunc func(meta *storage.MessageMetadata, referenced bool, msIndex milestone.Index)
+type CheckMessageReferencedFunc func(meta *storage.BlockMetadata) bool
+type SetMessageReferencedFunc func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index)
 
 var (
-	DefaultCheckMessageReferencedFunc = func(meta *storage.MessageMetadata) bool {
+	DefaultCheckMessageReferencedFunc = func(meta *storage.BlockMetadata) bool {
 		return meta.IsReferenced()
 	}
-	DefaultSetMessageReferencedFunc = func(meta *storage.MessageMetadata, referenced bool, msIndex milestone.Index) {
+	DefaultSetMessageReferencedFunc = func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index) {
 		meta.SetReferenced(referenced, msIndex)
 	}
 )

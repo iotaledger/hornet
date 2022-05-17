@@ -531,7 +531,7 @@ func (proc *MessageProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata)
 		return
 	}
 
-	cachedBlock := proc.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().MessageID()) // message +1
+	cachedBlock := proc.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().BlockID()) // message +1
 	if cachedBlock == nil {
 		return
 	}

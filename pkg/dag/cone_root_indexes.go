@@ -60,7 +60,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 	// are no solid entry points and have no recent calculation index
 	var outdatedMessageIDs hornet.BlockIDs
 
-	startMessageID := cachedBlockMeta.Metadata().MessageID()
+	startMessageID := cachedBlockMeta.Metadata().BlockID()
 
 	indexesValid := true
 
@@ -69,7 +69,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 	if err := TraverseParentsOfMessage(
 		ctx,
 		parentsTraverserStorage,
-		cachedBlockMeta.Metadata().MessageID(),
+		cachedBlockMeta.Metadata().BlockID(),
 		// traversal stops if no more messages pass the given condition
 		// Caution: condition func is not in DFS order
 		func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
@@ -81,7 +81,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 				return false, nil
 			}
 
-			if bytes.Equal(startMessageID, cachedBlockMeta.Metadata().MessageID()) {
+			if bytes.Equal(startMessageID, cachedBlockMeta.Metadata().BlockID()) {
 				// do not update indexes for the start message
 				return true, nil
 			}
@@ -100,12 +100,12 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			if bytes.Equal(startMessageID, cachedBlockMeta.Metadata().MessageID()) {
+			if bytes.Equal(startMessageID, cachedBlockMeta.Metadata().BlockID()) {
 				// skip the start message, so it doesn't get added to the outdatedMessageIDs
 				return nil
 			}
 
-			outdatedMessageIDs = append(outdatedMessageIDs, cachedBlockMeta.Metadata().MessageID())
+			outdatedMessageIDs = append(outdatedMessageIDs, cachedBlockMeta.Metadata().BlockID())
 			return nil
 		},
 		// called on missing parents
@@ -169,7 +169,7 @@ func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorag
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 
-				_, previouslyTraversed := traversed[cachedBlockMeta.Metadata().MessageID().ToMapKey()]
+				_, previouslyTraversed := traversed[cachedBlockMeta.Metadata().BlockID().ToMapKey()]
 
 				// only traverse this message if it was not traversed before and is solid
 				return !previouslyTraversed && cachedBlockMeta.Metadata().IsSolid(), nil
@@ -177,7 +177,7 @@ func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorag
 			// consumer
 			func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
-				traversed[cachedBlockMeta.Metadata().MessageID().ToMapKey()] = struct{}{}
+				traversed[cachedBlockMeta.Metadata().BlockID().ToMapKey()] = struct{}{}
 
 				// updates the cone root indexes of the outdated past cone for this message
 				if _, _, err := ConeRootIndexes(ctx, traverserStorage, cachedBlockMeta.Retain(), cmi); err != nil { // meta pass +1

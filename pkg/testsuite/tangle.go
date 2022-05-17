@@ -126,10 +126,10 @@ func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confi
 		func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 			defer cachedBlockMeta.Release(true) // meta -1
 
-			if _, visited := visitedCachedMessages[cachedBlockMeta.Metadata().MessageID().ToMapKey()]; !visited {
-				cachedBlock := te.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().MessageID()) // message +1
+			if _, visited := visitedCachedMessages[cachedBlockMeta.Metadata().BlockID().ToMapKey()]; !visited {
+				cachedBlock := te.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().BlockID()) // message +1
 				require.NotNil(te.TestInterface, cachedBlock)
-				visitedCachedMessages[cachedBlockMeta.Metadata().MessageID().ToMapKey()] = cachedBlock
+				visitedCachedMessages[cachedBlockMeta.Metadata().BlockID().ToMapKey()] = cachedBlock
 			}
 
 			return nil

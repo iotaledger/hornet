@@ -47,7 +47,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 	}
 
 	messageMetadataResponse := &messageMetadataResponse{
-		MessageID:                  metadata.MessageID().ToHex(),
+		MessageID:                  metadata.BlockID().ToHex(),
 		Parents:                    metadata.Parents().ToHex(),
 		Solid:                      metadata.IsSolid(),
 		ReferencedByMilestoneIndex: referencedByMilestone,
@@ -74,7 +74,7 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		// determine info about the quality of the tip if not referenced
 		cmi := deps.SyncManager.ConfirmedMilestoneIndex()
 
-		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), cachedBlockMeta.Metadata().MessageID(), cmi)
+		tipScore, err := deps.TipScoreCalculator.TipScore(Plugin.Daemon().ContextStopped(), cachedBlockMeta.Metadata().BlockID(), cmi)
 		if err != nil {
 			if errors.Is(err, common.ErrOperationAborted) {
 				return nil, errors.WithMessage(echo.ErrServiceUnavailable, err.Error())

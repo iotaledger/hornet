@@ -158,7 +158,7 @@ func verifyDatabase(
 
 			if !referenced {
 				// all existing messages in the database must be referenced by a milestone
-				return false, fmt.Errorf("message was not referenced (msIndex: %d, msgID: %s)", msIndex, cachedBlockMeta.Metadata().MessageID().ToHex())
+				return false, fmt.Errorf("message was not referenced (msIndex: %d, msgID: %s)", msIndex, cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
 
 			if at > msIndex {
@@ -171,12 +171,12 @@ func verifyDatabase(
 			}
 
 			// check if the message exists
-			cachedBlock, err := cachedMessageFunc(cachedBlockMeta.Metadata().MessageID()) // message +1
+			cachedBlock, err := cachedMessageFunc(cachedBlockMeta.Metadata().BlockID()) // message +1
 			if err != nil {
 				return false, err
 			}
 			if cachedBlock == nil {
-				return false, fmt.Errorf("message not found: %s", cachedBlockMeta.Metadata().MessageID().ToHex())
+				return false, fmt.Errorf("message not found: %s", cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
 			defer cachedBlock.Release(true) // message -1
 
@@ -244,18 +244,18 @@ func verifyDatabase(
 				referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex()
 				return referenced && at == msIndex, nil
 			},
-			func(meta *storage.MessageMetadata) bool {
+			func(meta *storage.BlockMetadata) bool {
 				referenced, at := meta.ReferencedWithIndex()
 				if referenced && at == msIndex {
-					_, exists := referencedMessages[meta.MessageID().ToMapKey()]
+					_, exists := referencedMessages[meta.BlockID().ToMapKey()]
 					return exists
 				}
 
 				return meta.IsReferenced()
 			},
-			func(meta *storage.MessageMetadata, referenced bool, msIndex milestone.Index) {
-				if _, exists := referencedMessages[meta.MessageID().ToMapKey()]; !exists {
-					referencedMessages[meta.MessageID().ToMapKey()] = struct{}{}
+			func(meta *storage.BlockMetadata, referenced bool, msIndex milestone.Index) {
+				if _, exists := referencedMessages[meta.BlockID().ToMapKey()]; !exists {
+					referencedMessages[meta.BlockID().ToMapKey()] = struct{}{}
 					meta.SetReferenced(referenced, msIndex)
 				}
 			},

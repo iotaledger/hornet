@@ -41,7 +41,7 @@ var (
 // Object Storages:
 //		- Milestone							=> will be removed and added again if missing by receiving the msg
 //		- Message							=> will be removed and added again by requesting the msg at solidification
-//		- MessageMetadata   				=> will be removed and added again if missing by receiving the msg
+//		- BlockMetadata   				=> will be removed and added again if missing by receiving the msg
 //		- Children							=> will be removed and added again if missing by receiving the msg
 //		- Indexation						=> will be removed and added again if missing by receiving the msg
 //		- UnreferencedMessage 				=> will be removed at pruning anyway

@@ -44,7 +44,7 @@ func (t *Tangle) markMessageAsSolid(cachedBlockMeta *storage.CachedMetadata) {
 	cachedBlockMeta.Metadata().SetSolid(true)
 
 	t.Events.MessageSolid.Trigger(cachedBlockMeta)
-	t.messageSolidSyncEvent.Trigger(cachedBlockMeta.Metadata().MessageID().ToMapKey())
+	t.messageSolidSyncEvent.Trigger(cachedBlockMeta.Metadata().BlockID().ToMapKey())
 }
 
 // SolidQueueCheck traverses a milestone and checks if it is solid.
@@ -84,7 +84,7 @@ func (t *Tangle) SolidQueueCheck(
 			msgsChecked++
 
 			// collect the txToSolidify in an ordered way
-			blockIDsToSolidify = append(blockIDsToSolidify, cachedBlockMeta.Metadata().MessageID())
+			blockIDsToSolidify = append(blockIDsToSolidify, cachedBlockMeta.Metadata().BlockID())
 
 			return nil
 		},
@@ -513,9 +513,9 @@ func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestone
 				return false, nil
 			}
 
-			cachedBlock := t.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().MessageID()) // message +1
+			cachedBlock := t.storage.CachedMessageOrNil(cachedBlockMeta.Metadata().BlockID()) // message +1
 			if cachedBlock == nil {
-				return false, fmt.Errorf("%w message ID: %s", common.ErrBlockNotFound, cachedBlockMeta.Metadata().MessageID().ToHex())
+				return false, fmt.Errorf("%w message ID: %s", common.ErrBlockNotFound, cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
 			defer cachedBlock.Release(true) // message -1
 

@@ -55,7 +55,7 @@ func (s *FutureConeSolidifier) SolidifyMessageAndFutureCone(ctx context.Context,
 
 	defer cachedBlockMeta.Release(true) // meta -1
 
-	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markMessageAsSolidFunc, hornet.BlockIDs{cachedBlockMeta.Metadata().MessageID()})
+	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markMessageAsSolidFunc, hornet.BlockIDs{cachedBlockMeta.Metadata().BlockID()})
 }
 
 // SolidifyFutureConesWithMetadataMemcache updates the solidity of the given messages and their future cones (messages approving the given messages).
@@ -88,7 +88,7 @@ func solidifyFutureCone(
 			func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
 
-				if cachedBlockMeta.Metadata().IsSolid() && !bytes.Equal(startMessageID, cachedBlockMeta.Metadata().MessageID()) {
+				if cachedBlockMeta.Metadata().IsSolid() && !bytes.Equal(startMessageID, cachedBlockMeta.Metadata().BlockID()) {
 					// do not walk the future cone if the current message is already solid, except it was the startTx
 					return false, nil
 				}

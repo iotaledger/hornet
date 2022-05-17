@@ -138,5 +138,5 @@ func (m *MilestoneManager) StoreMilestone(cachedBlock *storage.CachedMessage, mi
 		return
 	}
 
-	m.Events.ReceivedValidMilestone.Trigger(cachedBlock.Metadata().MessageID(), cachedMilestone, requested) // milestone pass +1
+	m.Events.ReceivedValidMilestone.Trigger(cachedBlock.Metadata().BlockID(), cachedMilestone, requested) // milestone pass +1
 }

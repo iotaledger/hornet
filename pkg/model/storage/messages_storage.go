@@ -86,13 +86,13 @@ func (c *CachedMessage) CachedMetadata() *CachedMetadata {
 }
 
 // Metadata retrieves the metadata, that is cached in this container.
-func (c *CachedMessage) Metadata() *MessageMetadata {
-	return c.metadata.Get().(*MessageMetadata)
+func (c *CachedMessage) Metadata() *BlockMetadata {
+	return c.metadata.Get().(*BlockMetadata)
 }
 
 // Metadata retrieves the metadata, that is cached in this container.
-func (c *CachedMetadata) Metadata() *MessageMetadata {
-	return c.Get().(*MessageMetadata)
+func (c *CachedMetadata) Metadata() *BlockMetadata {
+	return c.Get().(*BlockMetadata)
 }
 
 // Retain registers a new consumer for the cached message and metadata.
@@ -119,11 +119,11 @@ func (c *CachedMessage) Exists() bool {
 // ConsumeMessageAndMetadata consumes the underlying message and metadata.
 // message -1
 // meta -1
-func (c *CachedMessage) ConsumeMessageAndMetadata(consumer func(*Message, *MessageMetadata)) {
+func (c *CachedMessage) ConsumeMessageAndMetadata(consumer func(*Message, *BlockMetadata)) {
 
 	c.msg.Consume(func(txObject objectstorage.StorableObject) { // message -1
 		c.metadata.Consume(func(metadataObject objectstorage.StorableObject) { // meta -1
-			consumer(txObject.(*Message), metadataObject.(*MessageMetadata))
+			consumer(txObject.(*Message), metadataObject.(*BlockMetadata))
 		}, true)
 	}, true)
 }
@@ -141,18 +141,18 @@ func (c *CachedMessage) ConsumeMessage(consumer func(*Message)) {
 // ConsumeMetadata consumes the underlying metadata.
 // message -1
 // meta -1
-func (c *CachedMessage) ConsumeMetadata(consumer func(*MessageMetadata)) {
+func (c *CachedMessage) ConsumeMetadata(consumer func(*BlockMetadata)) {
 	defer c.msg.Release(true)                                      // message -1
 	c.metadata.Consume(func(object objectstorage.StorableObject) { // meta -1
-		consumer(object.(*MessageMetadata))
+		consumer(object.(*BlockMetadata))
 	}, true)
 }
 
 // ConsumeMetadata consumes the metadata.
 // meta -1
-func (c *CachedMetadata) ConsumeMetadata(consumer func(*MessageMetadata)) {
+func (c *CachedMetadata) ConsumeMetadata(consumer func(*BlockMetadata)) {
 	c.Consume(func(object objectstorage.StorableObject) { // meta -1
-		consumer(object.(*MessageMetadata))
+		consumer(object.(*BlockMetadata))
 	}, true)
 }
 
@@ -294,12 +294,12 @@ func (s *Storage) CachedBlockMetadata(blockID hornet.BlockID) (*CachedMetadata, 
 }
 
 // StoredMetadataOrNil returns a metadata object without accessing the cache layer.
-func (s *Storage) StoredMetadataOrNil(blockID hornet.BlockID) *MessageMetadata {
+func (s *Storage) StoredMetadataOrNil(blockID hornet.BlockID) *BlockMetadata {
 	storedMeta := s.metadataStorage.LoadObjectFromStore(blockID)
 	if storedMeta == nil {
 		return nil
 	}
-	return storedMeta.(*MessageMetadata)
+	return storedMeta.(*BlockMetadata)
 }
 
 // ContainsBlock returns if the given message exists in the cache/persistence layer.
@@ -327,7 +327,7 @@ func (s *Storage) StoreBlockIfAbsent(message *Message) (cachedBlock *CachedMessa
 	cachedBlockData := s.messagesStorage.ComputeIfAbsent(message.ObjectStorageKey(), func(_ []byte) objectstorage.StorableObject { // message +1
 		newlyAdded = true
 
-		metadata := &MessageMetadata{
+		metadata := &BlockMetadata{
 			blockID: message.MessageID(),
 			parents: message.Parents(),
 		}

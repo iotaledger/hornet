@@ -130,7 +130,7 @@ func (s *SnapshotManager) pruneMessages(blockIDsToDeleteMap map[string]struct{})
 			continue
 		}
 
-		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
+		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
 			// Delete the reference in the parents
 			for _, parent := range metadata.Parents() {
 				s.storage.DeleteChild(parent, msgID)
@@ -260,7 +260,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 			// consumer
 			func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 				defer cachedBlockMeta.Release(true) // meta -1
-				blockIDsToDeleteMap[cachedBlockMeta.Metadata().MessageID().ToMapKey()] = struct{}{}
+				blockIDsToDeleteMap[cachedBlockMeta.Metadata().BlockID().ToMapKey()] = struct{}{}
 				return nil
 			},
 			// called on missing parents

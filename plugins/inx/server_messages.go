@@ -36,7 +36,7 @@ func BlockIDsFromINXBlockIDs(blockIDs []*inx.BlockId) hornet.BlockIDs {
 	return result
 }
 
-func INXNewBlockMetadata(blockID hornet.BlockID, metadata *storage.MessageMetadata) (*inx.BlockMetadata, error) {
+func INXNewBlockMetadata(blockID hornet.BlockID, metadata *storage.BlockMetadata) (*inx.BlockMetadata, error) {
 	m := &inx.BlockMetadata{
 		BlockId: inx.NewBlockId(blockID.ToArray()),
 		Parents: INXBlockIDsFromBlockIDs(metadata.Parents()),
@@ -110,7 +110,7 @@ func (s *INXServer) ReadBlockMetadata(_ context.Context, blockID *inx.BlockId) (
 		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", hornet.BlockIDFromArray(blockID.Unwrap()).ToHex())
 	}
 	defer cachedBlockMeta.Release(true) // meta -1
-	return INXNewBlockMetadata(cachedBlockMeta.Metadata().MessageID(), cachedBlockMeta.Metadata())
+	return INXNewBlockMetadata(cachedBlockMeta.Metadata().BlockID(), cachedBlockMeta.Metadata())
 }
 
 func (s *INXServer) ListenToBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToBlocksServer) error {
@@ -144,7 +144,7 @@ func (s *INXServer) ListenToSolidBlocks(filter *inx.BlockFilter, srv inx.INX_Lis
 		msgMeta := task.Param(0).(*storage.CachedMetadata)
 		defer msgMeta.Release(true) // meta -1
 
-		payload, err := INXNewBlockMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		payload, err := INXNewBlockMetadata(msgMeta.Metadata().BlockID(), msgMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -174,7 +174,7 @@ func (s *INXServer) ListenToReferencedBlocks(filter *inx.BlockFilter, srv inx.IN
 		msgMeta := task.Param(0).(*storage.CachedMetadata)
 		defer msgMeta.Release(true) // meta -1
 
-		payload, err := INXNewBlockMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		payload, err := INXNewBlockMetadata(msgMeta.Metadata().BlockID(), msgMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()

@@ -57,7 +57,7 @@ func (t *Tangle) CheckSolidityAndComputeWhiteFlagMutations(ctx context.Context, 
 			continue
 		}
 
-		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.MessageMetadata) { // meta -1
+		cachedBlockMeta.ConsumeMetadata(func(metadata *storage.BlockMetadata) { // meta -1
 			if !metadata.IsSolid() {
 				return
 			}

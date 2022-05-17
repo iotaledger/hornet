@@ -147,7 +147,7 @@ func TestTipSelect(t *testing.T) {
 
 		if i%10 == 0 {
 			// Issue a new milestone every 10 messages
-			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{msgMeta.MessageID()}, false)
+			conf, _ := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{msgMeta.BlockID()}, false)
 			_ = dag.UpdateConeRootIndexes(context.Background(), te.Storage(), conf.Mutations.MessagesReferenced, conf.MilestoneIndex)
 			ts.UpdateScores()
 		}

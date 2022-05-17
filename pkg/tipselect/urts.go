@@ -170,11 +170,11 @@ func New(
 }
 
 // AddTip adds the given message as a tip.
-func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
+func (ts *TipSelector) AddTip(messageMeta *storage.BlockMetadata) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
-	blockID := messageMeta.MessageID()
+	blockID := messageMeta.BlockID()
 	blockIDMapKey := blockID.ToMapKey()
 
 	if _, exists := ts.nonLazyTipsMap[blockIDMapKey]; exists {

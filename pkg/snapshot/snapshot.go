@@ -270,7 +270,7 @@ func forEachSolidEntryPoint(
 					return err
 				}
 
-				blockID := cachedBlockMeta.Metadata().MessageID()
+				blockID := cachedBlockMeta.Metadata().BlockID()
 
 				isEntryPoint, err := isSolidEntryPoint(blockID, targetIndex)
 				if err != nil {

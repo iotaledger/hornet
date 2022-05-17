@@ -254,8 +254,8 @@ func (r *Requester) RequestMultiple(blockIDs hornet.BlockIDs, msIndex milestone.
 // RequestParents enqueues requests for the parents of the given message to the request queue, if the
 // given message is not a solid entry point and neither its parents are and also not in the database.
 func (r *Requester) RequestParents(cachedBlock *storage.CachedMessage, msIndex milestone.Index, preventDiscard ...bool) {
-	cachedBlock.ConsumeMetadata(func(metadata *storage.MessageMetadata) {
-		blockID := metadata.MessageID()
+	cachedBlock.ConsumeMetadata(func(metadata *storage.BlockMetadata) {
+		blockID := metadata.BlockID()
 
 		contains, err := r.storage.SolidEntryPointsContain(blockID)
 		if err != nil {

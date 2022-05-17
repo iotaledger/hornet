@@ -120,18 +120,18 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	seenPreviousMilestoneID := isFirstMilestone
 	internalTraversalCondition := func(cachedBlockMeta *storage.CachedMetadata) (bool, error) { // meta +1
 		if !seenPreviousMilestoneID && cachedBlockMeta.Metadata().IsMilestone() {
-			msgMilestone, err := cachedMessageFunc(cachedBlockMeta.Metadata().MessageID()) // message +1
+			msgMilestone, err := cachedMessageFunc(cachedBlockMeta.Metadata().BlockID()) // message +1
 			if err != nil {
 				return false, err
 			}
 			if msgMilestone == nil {
-				return false, fmt.Errorf("ComputeWhiteFlagMutations: message not found for milestone message ID: %v", cachedBlockMeta.Metadata().MessageID().ToHex())
+				return false, fmt.Errorf("ComputeWhiteFlagMutations: message not found for milestone message ID: %v", cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
 			defer msgMilestone.Release(true) // message -1
 
 			milestonePayload := msgMilestone.Message().Milestone()
 			if milestonePayload == nil {
-				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedBlockMeta.Metadata().MessageID().ToHex())
+				return false, fmt.Errorf("ComputeWhiteFlagMutations: message for milestone message ID does not contain a milestone payload: %v", cachedBlockMeta.Metadata().BlockID().ToHex())
 			}
 
 			msIDPtr, err := milestonePayload.ID()
@@ -144,10 +144,10 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 			if seenPreviousMilestoneID {
 				// Check that the milestone timestamp has increased
 				if milestonePayload.Timestamp >= msTimestamp {
-					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone timestamp is smaller or equal to previous milestone timestamp (old: %d, new: %d): %v", milestonePayload.Timestamp, msTimestamp, cachedBlockMeta.Metadata().MessageID().ToHex())
+					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone timestamp is smaller or equal to previous milestone timestamp (old: %d, new: %d): %v", milestonePayload.Timestamp, msTimestamp, cachedBlockMeta.Metadata().BlockID().ToHex())
 				}
 				if (milestonePayload.Index + 1) != uint32(msIndex) {
-					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone index did not increase by one compared to previous milestone index (old: %d, new: %d): %v", milestonePayload.Index, msIndex, cachedBlockMeta.Metadata().MessageID().ToHex())
+					return false, fmt.Errorf("ComputeWhiteFlagMutations: milestone index did not increase by one compared to previous milestone index (old: %d, new: %d): %v", milestonePayload.Index, msIndex, cachedBlockMeta.Metadata().BlockID().ToHex())
 				}
 			}
 		}
@@ -158,7 +158,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	consumer := func(cachedBlockMeta *storage.CachedMetadata) error { // meta +1
 		defer cachedBlockMeta.Release(true) // meta -1
 
-		blockID := cachedBlockMeta.Metadata().MessageID()
+		blockID := cachedBlockMeta.Metadata().BlockID()
 
 		// load up message
 		cachedBlock, err := cachedMessageFunc(blockID) // message +1
