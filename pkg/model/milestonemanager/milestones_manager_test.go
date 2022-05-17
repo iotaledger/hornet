@@ -101,7 +101,7 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	    "parents": [
 	      "0x35fefbb0927ce9da0f4c6f5567ec9d390ec4f5dc88a610ecbd2aa6cb08628f5e"
 	    ],
-	    "confirmedMerkleRoot": "0xf4e43e9b04c116777a25a5f216855edf7ef6b4235685d15e51d6ed53a2c1c06d",
+	    "inclusionMerkleRoot": "0xf4e43e9b04c116777a25a5f216855edf7ef6b4235685d15e51d6ed53a2c1c06d",
 	    "appliedMerkleRoot": "0x0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
 	    "signatures": [
 	      {
