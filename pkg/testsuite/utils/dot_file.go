@@ -7,9 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/gohornet/hornet/pkg/model/storage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // ShortenedHash returns a shortened hex encoded hash for the given hash.

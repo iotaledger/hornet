@@ -6,8 +6,6 @@ import (
 	"sync"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
@@ -17,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/syncmanager"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // NewWarpSync creates a new WarpSync instance with the given advancement range and criteria func.

@@ -5,16 +5,14 @@ import (
 	"math"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/pkg/errors"
-
-	"github.com/iotaledger/hive.go/contextutils"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/dag"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	"github.com/iotaledger/hive.go/contextutils"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func (s *SnapshotManager) setIsPruning(value bool) {

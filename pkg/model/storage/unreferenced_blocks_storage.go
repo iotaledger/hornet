@@ -4,13 +4,12 @@ import (
 	"encoding/binary"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/profile"
 	"github.com/iotaledger/hive.go/kvstore"
 	"github.com/iotaledger/hive.go/objectstorage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // CachedUnreferencedBlock represents a cached unreferenced block.

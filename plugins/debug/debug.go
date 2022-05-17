@@ -3,8 +3,6 @@ package debug
 import (
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
@@ -15,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/restapi"
 	restapiv2 "github.com/gohornet/hornet/plugins/restapi/v2"
 	"github.com/iotaledger/hive.go/kvstore"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func outputsIDs(c echo.Context) (*outputIDsResponse, error) {

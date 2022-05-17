@@ -3,14 +3,13 @@ package dashboard
 import (
 	"context"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/gohornet/hornet/pkg/daemon"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/tipselect"
 	"github.com/gohornet/hornet/pkg/whiteflag"
 	"github.com/iotaledger/hive.go/events"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (

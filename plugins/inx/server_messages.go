@@ -3,8 +3,6 @@ package inx
 import (
 	"context"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -19,6 +17,7 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hive.go/workerpool"
 	inx "github.com/iotaledger/inx/go"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func INXBlockIDsFromBlockIDs(blockIDs iotago.BlockIDs) []*inx.BlockId {

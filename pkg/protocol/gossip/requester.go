@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // RequesterOptions are options around a Requester.

@@ -5,13 +5,11 @@ import (
 	"context"
 	"sync"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/contextutils"
-
 	"github.com/gohornet/hornet/pkg/common"
+	"github.com/iotaledger/hive.go/contextutils"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // ChildrenTraverser can be used to walk the dag in direction of the tips (future cone).

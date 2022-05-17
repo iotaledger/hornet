@@ -6,11 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // updateOutdatedConeRootIndexes updates the cone root indexes of the given blocks.

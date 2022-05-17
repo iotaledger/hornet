@@ -4,17 +4,15 @@ import (
 	"fmt"
 	"time"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/pkg/errors"
-
-	"github.com/iotaledger/hive.go/contextutils"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
 	"github.com/gohornet/hornet/pkg/snapshot"
 	"github.com/gohornet/hornet/pkg/utils"
+	"github.com/iotaledger/hive.go/contextutils"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (

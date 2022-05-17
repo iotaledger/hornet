@@ -3,14 +3,13 @@ package v2
 import (
 	"strings"
 
-	iotago "github.com/iotaledger/iota.go/v3"
-
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/tipselect"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 //nolint:unparam // even if the error is never used, the structure of all routes should be the same
