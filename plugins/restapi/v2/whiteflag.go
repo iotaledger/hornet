@@ -53,7 +53,7 @@ func computeWhiteFlagMutations(c echo.Context) (*ComputeWhiteFlagMutationsRespon
 	}
 
 	return &ComputeWhiteFlagMutationsResponse{
-		ConfirmedMerkleRoot: iotago.EncodeHex(mutations.InclusionMerkleRoot[:]),
+		InclusionMerkleRoot: iotago.EncodeHex(mutations.InclusionMerkleRoot[:]),
 		AppliedMerkleRoot:   iotago.EncodeHex(mutations.AppliedMerkleRoot[:]),
 	}, nil
 }

@@ -102,14 +102,14 @@ func collectGossipPeers() {
 			continue
 		}
 
-		gossipPeersMessages.With(getLabels("all")).Set(float64(gossipProto.Metrics.ReceivedMessages.Load()))
+		gossipPeersMessages.With(getLabels("all")).Set(float64(gossipProto.Metrics.ReceivedBlocks.Load()))
 		gossipPeersMessages.With(getLabels("new")).Set(float64(gossipProto.Metrics.NewBlocks.Load()))
 		gossipPeersMessages.With(getLabels("known")).Set(float64(gossipProto.Metrics.KnownBlocks.Load()))
-		gossipPeersMessages.With(getLabels("sent")).Set(float64(gossipProto.Metrics.SentMessages.Load()))
+		gossipPeersMessages.With(getLabels("sent")).Set(float64(gossipProto.Metrics.SentBlocks.Load()))
 
-		gossipPeersRequests.With(getLabels("received_message")).Set(float64(gossipProto.Metrics.ReceivedMessageRequests.Load()))
+		gossipPeersRequests.With(getLabels("received_message")).Set(float64(gossipProto.Metrics.ReceivedBlockRequests.Load()))
 		gossipPeersRequests.With(getLabels("received_milestone")).Set(float64(gossipProto.Metrics.ReceivedMilestoneRequests.Load()))
-		gossipPeersRequests.With(getLabels("sent_message")).Set(float64(gossipProto.Metrics.SentMessageRequests.Load()))
+		gossipPeersRequests.With(getLabels("sent_message")).Set(float64(gossipProto.Metrics.SentBlockRequests.Load()))
 		gossipPeersRequests.With(getLabels("sent_milestone")).Set(float64(gossipProto.Metrics.SentMilestoneRequests.Load()))
 
 		gossipPeersHeartbeats.With(getLabels("received")).Set(float64(gossipProto.Metrics.ReceivedHeartbeats.Load()))

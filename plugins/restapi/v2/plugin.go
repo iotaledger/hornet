@@ -260,7 +260,7 @@ func configure() error {
 		if err != nil {
 			return err
 		}
-		c.Response().Header().Set(echo.HeaderLocation, resp.MessageID)
+		c.Response().Header().Set(echo.HeaderLocation, resp.BlockID)
 		return restapipkg.JSONResponse(c, http.StatusCreated, resp)
 	})
 

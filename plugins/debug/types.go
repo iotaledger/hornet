@@ -69,7 +69,7 @@ type messageWithParents struct {
 	// The hex encoded message ID of the message.
 	MessageID string `json:"messageId"`
 	// The hex encoded message IDs of the parents the message references.
-	Parents []string `json:"parentMessageIds"`
+	Parents []string `json:"parents"`
 }
 
 // messageConeResponse defines the response of a GET debug message cone REST API call.

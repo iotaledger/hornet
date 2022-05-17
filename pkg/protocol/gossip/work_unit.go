@@ -119,7 +119,7 @@ func (wu *WorkUnit) broadcast() *Broadcast {
 		exclude[p.PeerID] = struct{}{}
 	}
 	return &Broadcast{
-		MsgData:      wu.receivedMsgBytes,
+		BlockData:    wu.receivedMsgBytes,
 		ExcludePeers: exclude,
 	}
 }

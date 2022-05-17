@@ -96,7 +96,7 @@ func provide(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func(deps msgProcDeps) *gossip.BlockProcessor {
-		msgProc, err := gossip.NewMessageProcessor(
+		msgProc, err := gossip.NewBlockProcessor(
 			deps.Storage,
 			deps.SyncManager,
 			deps.RequestQueue,
@@ -390,7 +390,7 @@ func attachEventsGossipService() {
 }
 
 func attachEventsBroadcastQueue() {
-	deps.MessageProcessor.Events.BroadcastMessage.Attach(onMessageProcessorBroadcastMessage)
+	deps.MessageProcessor.Events.BroadcastBlock.Attach(onMessageProcessorBroadcastMessage)
 }
 
 func detachEventsGossipService() {
@@ -399,5 +399,5 @@ func detachEventsGossipService() {
 }
 
 func detachEventsBroadcastQueue() {
-	deps.MessageProcessor.Events.BroadcastMessage.Detach(onMessageProcessorBroadcastMessage)
+	deps.MessageProcessor.Events.BroadcastBlock.Detach(onMessageProcessorBroadcastMessage)
 }

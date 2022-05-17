@@ -32,20 +32,20 @@ const (
 )
 
 var (
-	workerCount             = 64
-	ErrInvalidTimestamp     = errors.New("invalid timestamp")
-	ErrMessageNotSolid      = errors.New("msg is not solid")
-	ErrMessageBelowMaxDepth = errors.New("msg is below max depth")
+	workerCount           = 64
+	ErrInvalidTimestamp   = errors.New("invalid timestamp")
+	ErrBlockNotSolid      = errors.New("block is not solid")
+	ErrBlockBelowMaxDepth = errors.New("block is below max depth")
 )
 
-func MessageProcessedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(msg *storage.Block, requests Requests, proto *Protocol))(params[0].(*storage.Block), params[1].(Requests), params[2].(*Protocol))
+func BlockProcessedCaller(handler interface{}, params ...interface{}) {
+	handler.(func(block *storage.Block, requests Requests, proto *Protocol))(params[0].(*storage.Block), params[1].(Requests), params[2].(*Protocol))
 }
 
-// Broadcast defines a message which should be broadcasted.
+// Broadcast defines a block which should be broadcasted.
 type Broadcast struct {
-	// The message data to broadcast.
-	MsgData []byte
+	// The block data to broadcast.
+	BlockData []byte
 	// The IDs of the peers to exclude from broadcasting.
 	ExcludePeers map[peer.ID]struct{}
 }
@@ -54,12 +54,12 @@ func BroadcastCaller(handler interface{}, params ...interface{}) {
 	handler.(func(b *Broadcast))(params[0].(*Broadcast))
 }
 
-// MessageProcessorEvents are the events fired by the BlockProcessor.
-type MessageProcessorEvents struct {
-	// Fired when a message was fully processed.
+// BlockProcessorEvents are the events fired by the BlockProcessor.
+type BlockProcessorEvents struct {
+	// Fired when a block was fully processed.
 	BlockProcessed *events.Event
-	// Fired when a message is meant to be broadcasted.
-	BroadcastMessage *events.Event
+	// Fired when a block is meant to be broadcasted.
+	BroadcastBlock *events.Event
 }
 
 // The Options for the BlockProcessor.
@@ -67,13 +67,13 @@ type Options struct {
 	WorkUnitCacheOpts *profile.CacheOpts
 }
 
-// BlockProcessor processes submitted messages in parallel and fires appropriate completion events.
+// BlockProcessor processes submitted blocks in parallel and fires appropriate completion events.
 type BlockProcessor struct {
 	// used to access the node storage.
 	storage *storage.Storage
 	// used to determine the sync status of the node.
 	syncManager *syncmanager.SyncManager
-	// contains requests for needed messages.
+	// contains requests for needed blocks.
 	requestQueue RequestQueue
 	// used to manage connected peers.
 	peeringManager *p2p.Manager
@@ -81,24 +81,24 @@ type BlockProcessor struct {
 	serverMetrics *metrics.ServerMetrics
 	// protocol parameters including byte costs
 	protoParas *iotago.ProtocolParameters
-	// holds the message processor options.
+	// holds the block processor options.
 	opts Options
 
-	// events of the message processor.
-	Events *MessageProcessorEvents
-	// cache that holds processed incomming messages.
+	// events of the block processor.
+	Events *BlockProcessorEvents
+	// cache that holds processed incomming blocks.
 	workUnits *objectstorage.ObjectStorage
-	// worker pool for incomming messages.
+	// worker pool for incoming blocks.
 	wp *workerpool.WorkerPool
 
 	// mutex to secure the shutdown flag.
 	shutdownMutex syncutils.RWMutex
-	// indicates that the message processor was shut down.
+	// indicates that the block processor was shut down.
 	shutdown bool
 }
 
-// NewMessageProcessor creates a new processor which parses messages.
-func NewMessageProcessor(
+// NewBlockProcessor creates a new processor which parses blocks.
+func NewBlockProcessor(
 	dbStorage *storage.Storage,
 	syncManager *syncmanager.SyncManager,
 	requestQueue RequestQueue,
@@ -115,9 +115,9 @@ func NewMessageProcessor(
 		serverMetrics:  serverMetrics,
 		protoParas:     protoParas,
 		opts:           *opts,
-		Events: &MessageProcessorEvents{
-			BlockProcessed:   events.NewEvent(MessageProcessedCaller),
-			BroadcastMessage: events.NewEvent(BroadcastCaller),
+		Events: &BlockProcessorEvents{
+			BlockProcessed: events.NewEvent(BlockProcessedCaller),
+			BroadcastBlock: events.NewEvent(BroadcastCaller),
 		},
 	}
 
@@ -157,9 +157,9 @@ func NewMessageProcessor(
 
 		switch task.Param(1).(message.Type) {
 		case MessageTypeBlock:
-			proc.processMessage(p, data)
+			proc.processBlockData(p, data)
 		case MessageTypeBlockRequest:
-			proc.processMessageRequest(p, data)
+			proc.processBlockRequest(p, data)
 		case MessageTypeMilestoneRequest:
 			proc.processMilestoneRequest(p, data)
 		}
@@ -193,10 +193,10 @@ func (proc *BlockProcessor) Process(p *Protocol, msgType message.Type, data []by
 	proc.wp.Submit(p, msgType, data)
 }
 
-// Emit triggers BlockProcessed and BroadcastMessage events for the given message.
-// All messages passed to this function must be checked with "DeSeriModePerformValidation" before.
-// We also check if the parents are solid and not BMD before we broadcast the message, otherwise
-// this message would be seen as invalid gossip by other peers.
+// Emit triggers BlockProcessed and BroadcastBlock events for the given block.
+// All blocks passed to this function must be checked with "DeSeriModePerformValidation" before.
+// We also check if the parents are solid and not BMD before we broadcast the block, otherwise
+// this block would be seen as invalid gossip by other peers.
 func (proc *BlockProcessor) Emit(msg *storage.Block) error {
 
 	if msg.ProtocolVersion() != proc.protoParas.Version {
@@ -230,25 +230,25 @@ func (proc *BlockProcessor) Emit(msg *storage.Block) error {
 				return err
 			}
 			if !exists {
-				return ErrMessageNotSolid
+				return ErrBlockNotSolid
 			}
 
 			if (cmi - entryPointIndex) > milestone.Index(proc.protoParas.BelowMaxDepth) {
 				// the parent is below max depth
-				return ErrMessageBelowMaxDepth
+				return ErrBlockBelowMaxDepth
 			}
 
-			// message is a SEP and not below max depth
+			// block is a SEP and not below max depth
 			return nil
 		}
 		defer cachedBlockMeta.Release(true) // meta -1
 
 		if !cachedBlockMeta.Metadata().IsSolid() {
-			// if the parent is not solid, the message itself can't be solid
-			return ErrMessageNotSolid
+			// if the parent is not solid, the block itself can't be solid
+			return ErrBlockNotSolid
 		}
 
-		// we pass a background context here to not prevent emitting messages at shutdown (COO etc).
+		// we pass a background context here to not prevent emitting blocks at shutdown (COO etc).
 		_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedBlockMeta.Retain(), cmi) // meta pass +1
 		if err != nil {
 			return err
@@ -256,7 +256,7 @@ func (proc *BlockProcessor) Emit(msg *storage.Block) error {
 
 		if (cmi - ocri) > milestone.Index(proc.protoParas.BelowMaxDepth) {
 			// the parent is below max depth
-			return ErrMessageBelowMaxDepth
+			return ErrBlockBelowMaxDepth
 		}
 
 		return nil
@@ -270,7 +270,7 @@ func (proc *BlockProcessor) Emit(msg *storage.Block) error {
 	}
 
 	proc.Events.BlockProcessed.Trigger(msg, (Requests)(nil), (*Protocol)(nil))
-	proc.Events.BroadcastMessage.Trigger(&Broadcast{MsgData: msg.Data()})
+	proc.Events.BroadcastBlock.Trigger(&Broadcast{BlockData: msg.Data()})
 
 	return nil
 }
@@ -313,13 +313,13 @@ func (proc *BlockProcessor) processMilestoneRequest(p *Protocol, data []byte) {
 	}
 	defer cachedMilestone.Release(true) // milestone -1
 
-	milestoneMsg, err := constructMilestoneMessage(proc.protoParas, cachedMilestone.Retain()) // milestone +1
+	milestoneBlock, err := constructMilestoneBlock(proc.protoParas, cachedMilestone.Retain()) // milestone +1
 	if err != nil {
-		// can't reply if creating milestone message fails
+		// can't reply if creating milestone block fails
 		return
 	}
 
-	requestedData, err := milestoneMsg.Serialize(serializer.DeSeriModeNoValidation, nil)
+	requestedData, err := milestoneBlock.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -335,10 +335,10 @@ func (proc *BlockProcessor) processMilestoneRequest(p *Protocol, data []byte) {
 }
 
 // TODO: this is a workaround, we need to create a different channel for milestone payloads in STING instead.
-func constructMilestoneMessage(protoParas *iotago.ProtocolParameters, cachedMilestone *storage.CachedMilestone) (*iotago.Block, error) {
+func constructMilestoneBlock(protoParas *iotago.ProtocolParameters, cachedMilestone *storage.CachedMilestone) (*iotago.Block, error) {
 	defer cachedMilestone.Release(true) // milestone -1
 
-	// we don't need to do proof of work for milestone messages because milestones have Nonce = 0.
+	// we don't need to do proof of work for milestone blocks because milestones have Nonce = 0.
 	// TODO: this is enforced by TIP-???
 	return builder.NewBlockBuilder(protoParas.Version).
 		Payload(cachedMilestone.Milestone().Milestone()).
@@ -346,15 +346,15 @@ func constructMilestoneMessage(protoParas *iotago.ProtocolParameters, cachedMile
 		Build()
 }
 
-// processes the given message request by parsing it and then replying to the peer with it.
-func (proc *BlockProcessor) processMessageRequest(p *Protocol, data []byte) {
+// processes the given block request by parsing it and then replying to the peer with it.
+func (proc *BlockProcessor) processBlockRequest(p *Protocol, data []byte) {
 	if len(data) != iotago.BlockIDLength {
 		return
 	}
 
 	cachedBlock := proc.storage.CachedBlockOrNil(hornet.BlockIDFromSlice(data)) // block +1
 	if cachedBlock == nil {
-		// can't reply if we don't have the requested message
+		// can't reply if we don't have the requested block
 		return
 	}
 	defer cachedBlock.Release(true) // block -1
@@ -374,11 +374,11 @@ func (proc *BlockProcessor) processMessageRequest(p *Protocol, data []byte) {
 	p.Enqueue(msg)
 }
 
-// gets or creates a new WorkUnit for the given message and then processes the WorkUnit.
-func (proc *BlockProcessor) processMessage(p *Protocol, data []byte) {
+// gets or creates a new WorkUnit for the given block data and then processes the WorkUnit.
+func (proc *BlockProcessor) processBlockData(p *Protocol, data []byte) {
 	cachedWorkUnit, newlyAdded := proc.workUnitFor(data) // workUnit +1
 
-	// force release if not newly added, so the cache time is only active the first time the message is received.
+	// force release if not newly added, so the cache time is only active the first time the block is received.
 	defer cachedWorkUnit.Release(!newlyAdded) // workUnit -1
 
 	workUnit := cachedWorkUnit.WorkUnit()
@@ -387,8 +387,8 @@ func (proc *BlockProcessor) processMessage(p *Protocol, data []byte) {
 }
 
 // tries to process the WorkUnit by first checking in what state it is.
-// if the WorkUnit is invalid (because the underlying message is invalid), the given peer is punished.
-// if the WorkUnit is already completed, and the message was requested, this function emits a BlockProcessed event.
+// if the WorkUnit is invalid (because the underlying block is invalid), the given peer is punished.
+// if the WorkUnit is already completed, and the block was requested, this function emits a BlockProcessed event.
 // it is safe to call this function for the same WorkUnit multiple times.
 func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
@@ -396,7 +396,7 @@ func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 
 		var requests Requests
 
-		// mark the message as received
+		// mark the block as received
 		request := proc.requestQueue.Received(msg.BlockID())
 		if request != nil {
 			requests = append(requests, request)
@@ -427,14 +427,14 @@ func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 		proc.serverMetrics.InvalidBlocks.Inc()
 
 		// drop the connection to the peer
-		_ = proc.peeringManager.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid message"))
+		_ = proc.peeringManager.DisconnectPeer(p.PeerID, errors.New("peer sent an invalid block"))
 		return
 
 	case wu.Is(Hashed):
 		wu.processingLock.Unlock()
 
 		// we need to check for requests here again because there is a race condition
-		// between processing received messages and enqueuing requests.
+		// between processing received blocks and enqueuing requests.
 		requests := processRequests(wu, wu.msg, wu.msg.IsMilestone())
 		if wu.requested {
 			proc.Events.BlockProcessed.Trigger(wu.msg, requests, p)
@@ -451,24 +451,24 @@ func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.UpdateState(Hashing)
 	wu.processingLock.Unlock()
 
-	// build HORNET representation of the message
+	// build HORNET representation of the block
 	msg, err := storage.BlockFromBytes(wu.receivedMsgBytes, serializer.DeSeriModePerformValidation, proc.protoParas)
 	if err != nil {
 		wu.UpdateState(Invalid)
-		wu.punish(errors.WithMessagef(err, "peer sent an invalid message"))
+		wu.punish(errors.WithMessagef(err, "peer sent an invalid block"))
 		return
 	}
 
-	// check the network ID of the message
+	// check the network ID of the block
 	if msg.ProtocolVersion() != proc.protoParas.Version {
 		wu.UpdateState(Invalid)
-		wu.punish(errors.New("peer sent a message with an invalid protocol version"))
+		wu.punish(errors.New("peer sent a block with an invalid protocol version"))
 		return
 	}
 
 	isMilestonePayload := msg.IsMilestone()
 
-	// mark the message as received
+	// mark the block as received
 	requests := processRequests(wu, msg, isMilestonePayload)
 
 	if !isMilestonePayload {
@@ -491,12 +491,12 @@ func (proc *BlockProcessor) processWorkUnit(wu *WorkUnit, p *Protocol) {
 	wu.msg = msg
 	wu.UpdateState(Hashed)
 
-	// increase the known message count for all other peers
+	// increase the known block count for all other peers
 	wu.increaseKnownTxCount(p)
 
 	// do not process gossip if we are not in sync.
-	// we ignore all received messages if we didn't request them and it's not a milestone.
-	// otherwise these messages would get evicted from the cache, and it's heavier to load them
+	// we ignore all received blocks if we didn't request them and it's not a milestone.
+	// otherwise these blocks would get evicted from the cache, and it's heavier to load them
 	// from the storage than to request them again.
 	if !wu.requested && !proc.syncManager.IsNodeAlmostSynced() && !isMilestonePayload {
 		return
@@ -511,23 +511,23 @@ func (proc *BlockProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {
 	defer cachedBlockMeta.Release(true) // meta -1
 
 	if proc.shutdown {
-		// do not broadcast if the message processor was shut down
+		// do not broadcast if the block processor was shut down
 		return
 	}
 
 	if !proc.syncManager.IsNodeSyncedWithinBelowMaxDepth() {
-		// no need to broadcast messages if the node is not sync within "below max depth"
+		// no need to broadcast blocks if the node is not sync within "below max depth"
 		return
 	}
 
-	// we pass a background context here to not prevent broadcasting messages at shutdown (COO etc).
+	// we pass a background context here to not prevent broadcasting blocks at shutdown (COO etc).
 	_, ocri, err := dag.ConeRootIndexes(context.Background(), proc.storage, cachedBlockMeta.Retain(), proc.syncManager.ConfirmedMilestoneIndex()) // meta pass +1
 	if err != nil {
 		return
 	}
 
 	if (proc.syncManager.LatestMilestoneIndex() - ocri) > milestone.Index(proc.protoParas.BelowMaxDepth) {
-		// the solid message was below max depth in relation to the latest milestone index, do not broadcast
+		// the solid block was below max depth in relation to the latest milestone index, do not broadcast
 		return
 	}
 
@@ -542,14 +542,14 @@ func (proc *BlockProcessor) Broadcast(cachedBlockMeta *storage.CachedMetadata) {
 	wu := cachedWorkUnit.WorkUnit()
 
 	if wu.requested {
-		// no need to broadcast if the message was requested
+		// no need to broadcast if the block was requested
 		return
 	}
 
 	// if the workunit was already evicted, it may happen that
-	// we send the message back to peers which already sent us the same message.
+	// we send the block back to peers which already sent us the same block.
 	// we should never access the "msg", because it may not be set in this context.
 
-	// broadcast the message to all peers that didn't sent it to us yet
-	proc.Events.BroadcastMessage.Trigger(wu.broadcast())
+	// broadcast the block to all peers that didn't sent it to us yet
+	proc.Events.BroadcastBlock.Trigger(wu.broadcast())
 }

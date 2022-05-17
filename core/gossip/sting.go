@@ -11,26 +11,26 @@ import (
 func attachEventsProtocolMessages(proto *gossip.Protocol) {
 
 	proto.Parser.Events.Received[gossip.MessageTypeBlock].Attach(events.NewClosure(func(data []byte) {
-		proto.Metrics.ReceivedMessages.Inc()
+		proto.Metrics.ReceivedBlocks.Inc()
 		deps.ServerMetrics.Blocks.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeBlock, data)
 	}))
 
 	proto.Events.Sent[gossip.MessageTypeBlock].Attach(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
-		proto.Metrics.SentMessages.Inc()
+		proto.Metrics.SentBlocks.Inc()
 		deps.ServerMetrics.SentBlocks.Inc()
 	}))
 
 	proto.Parser.Events.Received[gossip.MessageTypeBlockRequest].Attach(events.NewClosure(func(data []byte) {
-		proto.Metrics.ReceivedMessageRequests.Inc()
+		proto.Metrics.ReceivedBlockRequests.Inc()
 		deps.ServerMetrics.ReceivedBlockRequests.Inc()
 		deps.MessageProcessor.Process(proto, gossip.MessageTypeBlockRequest, data)
 	}))
 
 	proto.Events.Sent[gossip.MessageTypeBlockRequest].Attach(events.NewClosure(func() {
 		proto.Metrics.SentPackets.Inc()
-		proto.Metrics.SentMessageRequests.Inc()
+		proto.Metrics.SentBlockRequests.Inc()
 		deps.ServerMetrics.SentBlockRequests.Inc()
 	}))
 

@@ -72,9 +72,9 @@ func info() (*infoResponse, error) {
 		Protocol:  deps.ProtocolParameters,
 		BaseToken: deps.BaseToken,
 		Metrics: nodeMetrics{
-			MessagesPerSecond:           messagesPerSecond,
-			ReferencedMessagesPerSecond: referencedMessagesPerSecond,
-			ReferencedRate:              referencedRate,
+			BlocksPerSecond:           messagesPerSecond,
+			ReferencedBlocksPerSecond: referencedMessagesPerSecond,
+			ReferencedRate:            referencedRate,
 		},
 		Features: features,
 		Plugins:  deps.RestPluginManager.Plugins(),

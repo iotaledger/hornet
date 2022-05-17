@@ -21,7 +21,7 @@ var (
 	messageProcessedTimeout = 1 * time.Second
 )
 
-func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
+func messageMetadataByID(c echo.Context) (*blockMetadataResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
@@ -46,8 +46,8 @@ func messageMetadataByID(c echo.Context) (*messageMetadataResponse, error) {
 		referencedByMilestone = &referencedIndex
 	}
 
-	messageMetadataResponse := &messageMetadataResponse{
-		MessageID:                  metadata.BlockID().ToHex(),
+	messageMetadataResponse := &blockMetadataResponse{
+		BlockID:                    metadata.BlockID().ToHex(),
 		Parents:                    metadata.Parents().ToHex(),
 		Solid:                      metadata.IsSolid(),
 		ReferencedByMilestoneIndex: referencedByMilestone,
@@ -151,14 +151,14 @@ func childrenIDsByID(c echo.Context) (*childrenResponse, error) {
 	}
 
 	return &childrenResponse{
-		MessageID:  blockID.ToHex(),
+		BlockID:    blockID.ToHex(),
 		MaxResults: uint32(maxResults),
 		Count:      uint32(len(childrenMessageIDs)),
 		Children:   childrenMessageIDs.ToHex(),
 	}, nil
 }
 
-func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
+func sendMessage(c echo.Context) (*blockCreatedResponse, error) {
 
 	if !deps.SyncManager.IsNodeAlmostSynced() {
 		return nil, errors.WithMessage(echo.ErrServiceUnavailable, "node is not synced")
@@ -223,7 +223,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, err
 	}
 
-	return &messageCreatedResponse{
-		MessageID: blockID.ToHex(),
+	return &blockCreatedResponse{
+		BlockID: blockID.ToHex(),
 	}, nil
 }
