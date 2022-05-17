@@ -242,7 +242,7 @@ type Milestone struct {
 	objectstorage.StorableObjectFlags
 
 	// Key
-	milestoneID iotago.BlockID
+	milestoneID iotago.MilestoneID
 
 	// Value
 	data []byte
