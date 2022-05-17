@@ -29,7 +29,9 @@ func randBytes(length int) []byte {
 }
 
 func randBlockID() iotago.BlockID {
-	return iotago.BlockID(randBytes(iotago.BlockIDLength))
+	blockID := iotago.BlockID{}
+	copy(blockID[:], randBytes(iotago.BlockIDLength))
+	return blockID
 }
 
 func TestVisualizer(t *testing.T) {
@@ -43,7 +45,8 @@ func TestVisualizer(t *testing.T) {
 	var vertices []Vertex
 	const getFromLast = 30
 	for i := 0; i < 1000; i++ {
-		v := Vertex{BlockID: randBlockID().ToHex()}
+		blockID := randBlockID()
+		v := Vertex{BlockID: blockID.ToHex()}
 		if i <= getFromLast {
 			// only one parent at the beginning
 			v.Parents = iotago.BlockIDs{iotago.EmptyBlockID()}.ToHex()
@@ -54,11 +57,11 @@ func TestVisualizer(t *testing.T) {
 		l := len(vertices)
 		parents := iotago.BlockIDs{}
 		for j := 2; j <= 2+rand.Intn(7); j++ {
-			blockID, err := hornet.BlockIDFromHex(vertices[l-1-rand.Intn(getFromLast)].BlockID)
+			blockID, err := iotago.BlockIDFromHexString(vertices[l-1-rand.Intn(getFromLast)].BlockID)
 			assert.NoError(t, err)
 			parents = append(parents, blockID)
 		}
-		parents = parents.RemoveDupsAndSortByLexicalOrder()
+		parents = parents.RemoveDupsAndSort()
 		v.Parents = parents.ToHex()
 		vertices = append(vertices, v)
 	}
