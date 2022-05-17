@@ -77,7 +77,7 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("invalid LS output length: %w", err)
 	}
 
-	return CreateOutput(&outputID, hornet.MessageIDFromArray(messageID), milestone.Index(confirmationIndex), milestoneTimestamp, output), nil
+	return CreateOutput(&outputID, hornet.BlockIDFromArray(messageID), milestone.Index(confirmationIndex), milestoneTimestamp, output), nil
 }
 
 func (s *Spent) SnapshotBytes() []byte {

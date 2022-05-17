@@ -352,7 +352,7 @@ func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	cachedMsg := proc.storage.CachedMessageOrNil(hornet.MessageIDFromSlice(data)) // message +1
+	cachedMsg := proc.storage.CachedMessageOrNil(hornet.BlockIDFromSlice(data)) // message +1
 	if cachedMsg == nil {
 		// can't reply if we don't have the requested message
 		return

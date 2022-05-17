@@ -114,7 +114,7 @@ func snapshotGen(args []string) error {
 	}
 
 	// solid entry points
-	// add "NullMessageID" as sole entry point
+	// add "NullBlockID" as sole entry point
 	nullHashAdded := false
 	solidEntryPointProducerFunc := func() (hornet.BlockID, error) {
 		if nullHashAdded {
@@ -123,7 +123,7 @@ func snapshotGen(args []string) error {
 
 		nullHashAdded = true
 
-		return hornet.NullMessageID(), nil
+		return hornet.NullBlockID(), nil
 	}
 
 	// unspent transaction outputs
@@ -135,7 +135,7 @@ func snapshotGen(args []string) error {
 
 		outputAdded = true
 
-		return utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, 0, &iotago.BasicOutput{
+		return utxo.CreateOutput(&iotago.OutputID{}, hornet.NullBlockID(), 0, 0, &iotago.BasicOutput{
 			Amount: protoParas.TokenSupply - treasury,
 			Conditions: iotago.UnlockConditions{
 				&iotago.AddressUnlockCondition{Address: &address},

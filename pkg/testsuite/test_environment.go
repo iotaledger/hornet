@@ -145,7 +145,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	require.NoError(te.TestInterface, err)
 
 	// Initialize SEP
-	te.storage.SolidEntryPointsAddWithoutLocking(hornet.NullMessageID(), 0)
+	te.storage.SolidEntryPointsAddWithoutLocking(hornet.NullBlockID(), 0)
 
 	// Initialize SyncManager
 	te.syncManager, err = syncmanager.New(te.storage.UTXOManager(), milestone.Index(belowMaxDepth))
@@ -163,7 +163,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 			},
 		},
 	}
-	te.GenesisOutput = utxo.CreateOutput(&iotago.OutputID{}, hornet.NullMessageID(), 0, 0, output)
+	te.GenesisOutput = utxo.CreateOutput(&iotago.OutputID{}, hornet.NullBlockID(), 0, 0, output)
 	err = te.storage.UTXOManager().AddUnspentOutput(te.GenesisOutput)
 	require.NoError(te.TestInterface, err)
 

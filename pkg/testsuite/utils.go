@@ -153,7 +153,7 @@ func (b *MessageBuilder) Build() *Message {
 					},
 				},
 			}
-			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, hornet.NullMessageID(), 0, 0, fakeInput))
+			outputsThatCanBeConsumed = append(outputsThatCanBeConsumed, utxo.CreateOutput(&fakeInputID, hornet.NullBlockID(), 0, 0, fakeInput))
 		} else {
 			outputsThatCanBeConsumed = b.fromWallet.Outputs()
 		}

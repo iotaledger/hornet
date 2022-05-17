@@ -33,7 +33,7 @@ func (c *CachedUnreferencedMessage) UnreferencedMessage() *UnreferencedMessage {
 
 func unreferencedMessageFactory(key []byte, _ []byte) (objectstorage.StorableObject, error) {
 
-	unreferencedTx := NewUnreferencedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromSlice(key[4:36]))
+	unreferencedTx := NewUnreferencedMessage(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.BlockIDFromSlice(key[4:36]))
 	return unreferencedTx, nil
 }
 
@@ -86,7 +86,7 @@ func (s *Storage) UnreferencedMessageIDs(msIndex milestone.Index, iteratorOption
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
 
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
-		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.MessageIDFromSlice(key[4:36]))
+		unreferencedMessageIDs = append(unreferencedMessageIDs, hornet.BlockIDFromSlice(key[4:36]))
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(key))...)
 
@@ -99,14 +99,14 @@ type UnreferencedMessageConsumer func(msIndex milestone.Index, messageID hornet.
 // ForEachUnreferencedMessage loops over all unreferenced messages.
 func (s *Storage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, iteratorOptions ...IteratorOption) {
 	s.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromSlice(key[4:36]))
+		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.BlockIDFromSlice(key[4:36]))
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
 
 // ForEachUnreferencedMessage loops over all unreferenced messages.
 func (ns *NonCachedStorage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, iteratorOptions ...IteratorOption) {
 	ns.storage.unreferencedMessagesStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.MessageIDFromSlice(key[4:36]))
+		return consumer(milestone.Index(binary.LittleEndian.Uint32(key[:4])), hornet.BlockIDFromSlice(key[4:36]))
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 

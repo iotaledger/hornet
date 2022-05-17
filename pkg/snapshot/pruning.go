@@ -123,7 +123,7 @@ func (s *SnapshotManager) pruneMessages(messageIDsToDeleteMap map[string]struct{
 
 	for messageIDToDelete := range messageIDsToDeleteMap {
 
-		msgID := hornet.MessageIDFromMapKey(messageIDToDelete)
+		msgID := hornet.BlockIDFromMapKey(messageIDToDelete)
 
 		cachedMsgMeta := s.storage.CachedMessageMetadataOrNil(msgID) // meta +1
 		if cachedMsgMeta == nil {

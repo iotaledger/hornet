@@ -47,7 +47,7 @@ func TestVisualizer(t *testing.T) {
 		v := Vertex{MessageID: randMessageID().ToHex()}
 		if i <= getFromLast {
 			// only one parent at the beginning
-			v.Parents = hornet.BlockIDs{hornet.NullMessageID()}.ToHex()
+			v.Parents = hornet.BlockIDs{hornet.NullBlockID()}.ToHex()
 			vertices = append(vertices, v)
 			continue
 		}
@@ -55,7 +55,7 @@ func TestVisualizer(t *testing.T) {
 		l := len(vertices)
 		parents := hornet.BlockIDs{}
 		for j := 2; j <= 2+rand.Intn(7); j++ {
-			msgID, err := hornet.MessageIDFromHex(vertices[l-1-rand.Intn(getFromLast)].MessageID)
+			msgID, err := hornet.BlockIDFromHex(vertices[l-1-rand.Intn(getFromLast)].MessageID)
 			assert.NoError(t, err)
 			parents = append(parents, msgID)
 		}

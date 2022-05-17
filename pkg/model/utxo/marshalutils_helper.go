@@ -33,7 +33,7 @@ func ParseMessageID(ms *marshalutil.MarshalUtil) (hornet.BlockID, error) {
 	if err != nil {
 		return nil, err
 	}
-	return hornet.MessageIDFromSlice(bytes), nil
+	return hornet.BlockIDFromSlice(bytes), nil
 }
 
 func parseMilestoneIndex(ms *marshalutil.MarshalUtil) (milestone.Index, error) {

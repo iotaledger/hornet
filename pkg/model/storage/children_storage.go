@@ -47,7 +47,7 @@ func (c *CachedChild) Child() *Child {
 }
 
 func childrenFactory(key []byte, _ []byte) (objectstorage.StorableObject, error) {
-	child := NewChild(hornet.MessageIDFromSlice(key[:iotago.BlockIDLength]), hornet.MessageIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
+	child := NewChild(hornet.BlockIDFromSlice(key[:iotago.BlockIDLength]), hornet.BlockIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
 	return child, nil
 }
 
@@ -97,7 +97,7 @@ func (s *Storage) ChildrenMessageIDs(messageID hornet.BlockID, iteratorOptions .
 	var childrenMessageIDs hornet.BlockIDs
 
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
-		childrenMessageIDs = append(childrenMessageIDs, hornet.MessageIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
+		childrenMessageIDs = append(childrenMessageIDs, hornet.BlockIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
 		return true
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorPrefix(messageID))...)
 
@@ -128,7 +128,7 @@ type ChildConsumer func(messageID hornet.BlockID, childMessageID hornet.BlockID)
 func (s *Storage) ForEachChild(consumer ChildConsumer, iteratorOptions ...IteratorOption) {
 
 	s.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(hornet.MessageIDFromSlice(key[:iotago.BlockIDLength]), hornet.MessageIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
+		return consumer(hornet.BlockIDFromSlice(key[:iotago.BlockIDLength]), hornet.BlockIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
 
@@ -136,7 +136,7 @@ func (s *Storage) ForEachChild(consumer ChildConsumer, iteratorOptions ...Iterat
 func (ns *NonCachedStorage) ForEachChild(consumer ChildConsumer, iteratorOptions ...IteratorOption) {
 
 	ns.storage.childrenStorage.ForEachKeyOnly(func(key []byte) bool {
-		return consumer(hornet.MessageIDFromSlice(key[:iotago.BlockIDLength]), hornet.MessageIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
+		return consumer(hornet.BlockIDFromSlice(key[:iotago.BlockIDLength]), hornet.BlockIDFromSlice(key[iotago.BlockIDLength:iotago.BlockIDLength+iotago.BlockIDLength]))
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 

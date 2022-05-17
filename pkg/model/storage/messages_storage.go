@@ -165,7 +165,7 @@ func (c *CachedMessage) Release(force ...bool) {
 
 func MessageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	msg := &Message{
-		messageID: hornet.MessageIDFromSlice(key[:iotago.BlockIDLength]),
+		messageID: hornet.BlockIDFromSlice(key[:iotago.BlockIDLength]),
 		data:      data,
 	}
 
@@ -354,7 +354,7 @@ type MessageIDConsumer func(messageID hornet.BlockID) bool
 func (s *Storage) ForEachMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
 
 	s.messagesStorage.ForEachKeyOnly(func(messageID []byte) bool {
-		return consumer(hornet.MessageIDFromSlice(messageID))
+		return consumer(hornet.BlockIDFromSlice(messageID))
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
 
@@ -362,7 +362,7 @@ func (s *Storage) ForEachMessageID(consumer MessageIDConsumer, iteratorOptions .
 func (ns *NonCachedStorage) ForEachMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
 
 	ns.storage.messagesStorage.ForEachKeyOnly(func(messageID []byte) bool {
-		return consumer(hornet.MessageIDFromSlice(messageID))
+		return consumer(hornet.BlockIDFromSlice(messageID))
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 
@@ -370,7 +370,7 @@ func (ns *NonCachedStorage) ForEachMessageID(consumer MessageIDConsumer, iterato
 func (s *Storage) ForEachMessageMetadataMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
 
 	s.metadataStorage.ForEachKeyOnly(func(messageID []byte) bool {
-		return consumer(hornet.MessageIDFromSlice(messageID))
+		return consumer(hornet.BlockIDFromSlice(messageID))
 	}, ObjectStorageIteratorOptions(iteratorOptions...)...)
 }
 
@@ -378,7 +378,7 @@ func (s *Storage) ForEachMessageMetadataMessageID(consumer MessageIDConsumer, it
 func (ns *NonCachedStorage) ForEachMessageMetadataMessageID(consumer MessageIDConsumer, iteratorOptions ...IteratorOption) {
 
 	ns.storage.metadataStorage.ForEachKeyOnly(func(messageID []byte) bool {
-		return consumer(hornet.MessageIDFromSlice(messageID))
+		return consumer(hornet.BlockIDFromSlice(messageID))
 	}, append(ObjectStorageIteratorOptions(iteratorOptions...), objectstorage.WithIteratorSkipCache(true))...)
 }
 

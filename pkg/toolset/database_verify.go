@@ -197,7 +197,7 @@ func verifyDatabase(
 		// traverse the milestone and collect all messages that were referenced by this milestone or newer
 		if err := parentsTraverser.Traverse(
 			ctx,
-			hornet.MessageIDsFromSliceOfArrays(milestonePayload.Parents),
+			hornet.BlockIDsFromSliceOfArrays(milestonePayload.Parents),
 			condition,
 			nil,
 			// called on missing parents

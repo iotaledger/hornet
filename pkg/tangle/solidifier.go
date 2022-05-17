@@ -109,7 +109,7 @@ func (t *Tangle) SolidQueueCheck(
 	if len(messageIDsToRequest) > 0 {
 		messageIDs := make(hornet.BlockIDs, 0, len(messageIDsToRequest))
 		for messageID := range messageIDsToRequest {
-			messageIDs = append(messageIDs, hornet.MessageIDFromMapKey(messageID))
+			messageIDs = append(messageIDs, hornet.BlockIDFromMapKey(messageID))
 		}
 		requested := t.requester.RequestMultiple(messageIDs, milestoneIndex, true)
 		t.LogWarnf("Stopped solidifier due to missing msg -> Requested missing msgs (%d/%d), collect: %v", requested, len(messageIDs), tCollect.Sub(ts).Truncate(time.Millisecond))

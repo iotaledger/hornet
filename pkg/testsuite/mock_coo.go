@@ -75,9 +75,9 @@ func (coo *MockCoo) LastMilestoneParents() hornet.BlockIDs {
 	lastMilestonePayload := coo.LastMilestonePayload()
 	if lastMilestonePayload == nil {
 		// return genesis hash
-		return hornet.BlockIDs{hornet.NullMessageID()}
+		return hornet.BlockIDs{hornet.NullBlockID()}
 	}
-	return hornet.MessageIDsFromSliceOfArrays(lastMilestonePayload.Parents)
+	return hornet.BlockIDsFromSliceOfArrays(lastMilestonePayload.Parents)
 }
 
 func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.BlockID {
@@ -95,7 +95,7 @@ func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.BlockID {
 
 func (coo *MockCoo) bootstrap() {
 	coo.lastMilestonePayload = nil
-	coo.lastMilestoneMessageID = hornet.NullMessageID()
+	coo.lastMilestoneMessageID = hornet.NullBlockID()
 	coo.issueMilestoneOnTips(hornet.BlockIDs{}, true)
 }
 

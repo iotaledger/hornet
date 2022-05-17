@@ -110,7 +110,7 @@ func writeFullSnapshot() {
 	fullSnapSEPProd := func() (hornet.BlockID, error) {
 		seps++
 		if seps == 1 {
-			return hornet.NullMessageID(), nil
+			return hornet.NullBlockID(), nil
 		}
 		if seps > sepsMax {
 			return nil, nil
@@ -261,7 +261,7 @@ func static32ByteID(fill byte) [32]byte {
 }
 
 func staticMessageID(fill byte) hornet.BlockID {
-	return hornet.MessageIDFromArray(static32ByteID(fill))
+	return hornet.BlockIDFromArray(static32ByteID(fill))
 }
 
 func staticOutputID(fill byte) *iotago.OutputID {

@@ -31,7 +31,7 @@ func INXBlockIDsFromBlockIDs(messageIDs hornet.BlockIDs) []*inx.BlockId {
 func BlockIDsFromINXBlockIDs(messageIDs []*inx.BlockId) hornet.BlockIDs {
 	result := make([]hornet.BlockID, len(messageIDs))
 	for i := range messageIDs {
-		result[i] = hornet.MessageIDFromArray(messageIDs[i].Unwrap())
+		result[i] = hornet.BlockIDFromArray(messageIDs[i].Unwrap())
 	}
 	return result
 }
@@ -96,18 +96,18 @@ func INXNewBlockMetadata(messageID hornet.BlockID, metadata *storage.MessageMeta
 }
 
 func (s *INXServer) ReadBlock(_ context.Context, messageID *inx.BlockId) (*inx.RawBlock, error) {
-	cachedMsg := deps.Storage.CachedMessageOrNil(hornet.MessageIDFromArray(messageID.Unwrap())) // message +1
+	cachedMsg := deps.Storage.CachedMessageOrNil(hornet.BlockIDFromArray(messageID.Unwrap())) // message +1
 	if cachedMsg == nil {
-		return nil, status.Errorf(codes.NotFound, "message %s not found", hornet.MessageIDFromArray(messageID.Unwrap()).ToHex())
+		return nil, status.Errorf(codes.NotFound, "message %s not found", hornet.BlockIDFromArray(messageID.Unwrap()).ToHex())
 	}
 	defer cachedMsg.Release(true) // message -1
 	return inx.WrapBlock(cachedMsg.Message().Message())
 }
 
 func (s *INXServer) ReadBlockMetadata(_ context.Context, messageID *inx.BlockId) (*inx.BlockMetadata, error) {
-	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(hornet.MessageIDFromArray(messageID.Unwrap())) // meta +1
+	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(hornet.BlockIDFromArray(messageID.Unwrap())) // meta +1
 	if cachedMsgMeta == nil {
-		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", hornet.MessageIDFromArray(messageID.Unwrap()).ToHex())
+		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", hornet.BlockIDFromArray(messageID.Unwrap()).ToHex())
 	}
 	defer cachedMsgMeta.Release(true) // meta -1
 	return INXNewBlockMetadata(cachedMsgMeta.Metadata().MessageID(), cachedMsgMeta.Metadata())

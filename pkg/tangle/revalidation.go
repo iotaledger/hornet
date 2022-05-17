@@ -277,7 +277,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 			t.LogInfof("deleting messages...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		t.storage.DeleteMessage(hornet.MessageIDFromMapKey(messageID))
+		t.storage.DeleteMessage(hornet.BlockIDFromMapKey(messageID))
 	}
 
 	t.storage.FlushMessagesStorage()
@@ -338,7 +338,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 			t.LogInfof("deleting message metadata...%d/%d (%0.2f%%). %v left...", deletionCounter, total, percentage, remaining.Truncate(time.Second))
 		}
 
-		t.storage.DeleteMessageMetadata(hornet.MessageIDFromMapKey(messageID))
+		t.storage.DeleteMessageMetadata(hornet.BlockIDFromMapKey(messageID))
 	}
 
 	t.storage.FlushMessagesStorage()

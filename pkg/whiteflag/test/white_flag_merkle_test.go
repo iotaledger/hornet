@@ -17,7 +17,7 @@ import (
 )
 
 func mustMessageIDFromHexString(h string) encoding.BinaryMarshaler {
-	msgID, err := hornet.MessageIDFromHex(h)
+	msgID, err := hornet.BlockIDFromHex(h)
 	if err != nil {
 		panic(err)
 	}

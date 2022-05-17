@@ -88,7 +88,7 @@ func ConfirmMilestone(
 	previousMilestoneID := milestonePayload.PreviousMilestoneID
 	milestoneIndex := milestone.Index(milestonePayload.Index)
 	milestoneTimestamp := milestonePayload.Timestamp
-	milestoneParents := hornet.MessageIDsFromSliceOfArrays(milestonePayload.Parents)
+	milestoneParents := hornet.BlockIDsFromSliceOfArrays(milestonePayload.Parents)
 
 	timeStart := time.Now()
 

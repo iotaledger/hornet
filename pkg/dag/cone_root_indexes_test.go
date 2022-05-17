@@ -60,7 +60,7 @@ func TestConeRootIndexes(t *testing.T) {
 	cmi := latestMilestone.Milestone().Index()
 
 	// Use Null hash and last milestone hash as parents
-	parents := append(latestMilestone.Milestone().Parents(), hornet.NullMessageID())
+	parents := append(latestMilestone.Milestone().Parents(), hornet.NullBlockID())
 	msg := te.NewMessageBuilder("below max depth").Parents(parents.RemoveDupsAndSortByLexicalOrder()).BuildTaggedData().Store()
 
 	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID())

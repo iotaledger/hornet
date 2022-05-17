@@ -322,7 +322,7 @@ func (ms *Milestone) Index() milestone.Index {
 }
 
 func (ms *Milestone) Parents() hornet.BlockIDs {
-	return hornet.MessageIDsFromSliceOfArrays(ms.Milestone().Parents)
+	return hornet.BlockIDsFromSliceOfArrays(ms.Milestone().Parents)
 }
 
 func (ms *Milestone) Timestamp() time.Time {

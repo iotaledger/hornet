@@ -100,7 +100,7 @@ func CreateOutputAndAssertSerialization(t *testing.T, messageID hornet.BlockID, 
 	require.Equal(t, byteutils.ConcatBytes([]byte{UTXOStoreKeyPrefixOutput}, outputID[:]), output.kvStorableKey())
 
 	value := output.kvStorableValue()
-	require.Equal(t, messageID, hornet.MessageIDFromSlice(value[:32]))
+	require.Equal(t, messageID, hornet.BlockIDFromSlice(value[:32]))
 	require.Equal(t, uint32(msIndex), binary.LittleEndian.Uint32(value[32:36]))
 	require.Equal(t, msTimestamp, binary.LittleEndian.Uint32(value[36:40]))
 	require.Equal(t, outputBytes, value[40:])

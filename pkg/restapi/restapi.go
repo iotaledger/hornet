@@ -119,7 +119,7 @@ func GetRequestContentType(c echo.Context, supportedContentTypes ...string) (str
 func ParseMessageIDParam(c echo.Context) (hornet.BlockID, error) {
 	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
-	messageID, err := hornet.MessageIDFromHex(messageIDHex)
+	messageID, err := hornet.BlockIDFromHex(messageIDHex)
 	if err != nil {
 		return nil, errors.WithMessagef(ErrInvalidParameter, "invalid message ID: %s, error: %s", messageIDHex, err)
 	}

@@ -381,7 +381,7 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 	}
 
 	m := &MessageMetadata{
-		messageID: hornet.MessageIDFromSlice(key[:32]),
+		messageID: hornet.BlockIDFromSlice(key[:32]),
 	}
 
 	m.metadata = bitmask.BitMask(metadataByte)
@@ -403,7 +403,7 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 			return nil, err
 		}
 
-		parent := hornet.MessageIDFromSlice(parentBytes)
+		parent := hornet.BlockIDFromSlice(parentBytes)
 		m.parents[i] = parent
 	}
 

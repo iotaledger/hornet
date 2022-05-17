@@ -33,7 +33,7 @@ func NewMessage(iotaMsg *iotago.Block, deSeriMode serializer.DeSerializationMode
 	if err != nil {
 		return nil, err
 	}
-	messageID := hornet.MessageIDFromArray(*msgHash)
+	messageID := hornet.BlockIDFromArray(*msgHash)
 
 	msg := &Message{messageID: messageID, data: data}
 
@@ -55,7 +55,7 @@ func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, pr
 	if err != nil {
 		return nil, err
 	}
-	messageID := hornet.MessageIDFromArray(*msgHash)
+	messageID := hornet.BlockIDFromArray(*msgHash)
 
 	msg := &Message{messageID: messageID, data: data}
 
@@ -92,7 +92,7 @@ func (msg *Message) ProtocolVersion() byte {
 }
 
 func (msg *Message) Parents() hornet.BlockIDs {
-	return hornet.MessageIDsFromSliceOfArrays(msg.Message().Parents)
+	return hornet.BlockIDsFromSliceOfArrays(msg.Message().Parents)
 }
 
 func (msg *Message) IsMilestone() bool {

@@ -422,7 +422,7 @@ func TestWhiteFlagConfirmWithReattachedMilestone(t *testing.T) {
 	milestone5Reattachment := te.ReattachMessage(messageIDMilestone5)
 
 	// Invalid reattachment with different parents
-	invalidMilestone5Reattachment := te.ReattachMessage(messageIDMilestone5, messageB.StoredMessageID(), hornet.NullMessageID())
+	invalidMilestone5Reattachment := te.ReattachMessage(messageIDMilestone5, messageB.StoredMessageID(), hornet.NullBlockID())
 
 	// Issue a transaction referencing the milestone5 reattached message specifically
 	messageC := te.NewMessageBuilder("C").

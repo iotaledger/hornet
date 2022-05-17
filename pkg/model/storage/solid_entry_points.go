@@ -54,7 +54,7 @@ func (s *SolidEntryPoints) copy() []*SolidEntryPoint {
 
 	i := 0
 	for hash, msIndex := range s.entryPointsMap {
-		messageID := hornet.MessageIDFromMapKey(hash)
+		messageID := hornet.BlockIDFromMapKey(hash)
 		result[i] = &SolidEntryPoint{
 			MessageID: messageID,
 			Index:     msIndex,
@@ -133,7 +133,7 @@ func SolidEntryPointsFromBytes(solidEntryPointsBytes []byte) (*SolidEntryPoints,
 		if err != nil {
 			return nil, fmt.Errorf("solidEntryPoints: %s", err)
 		}
-		s.Add(hornet.MessageIDFromSlice(messageIDBuf), milestone.Index(msIndex))
+		s.Add(hornet.BlockIDFromSlice(messageIDBuf), milestone.Index(msIndex))
 	}
 
 	return s, nil
