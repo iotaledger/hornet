@@ -142,11 +142,11 @@ func TestExtendedOutputOnEd25519WithoutSpendConstraintsSerialization(t *testing.
 
 	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
-		Blocks: iotago.FeatureBlocks{
-			&iotago.SenderFeatureBlock{
+		Features: iotago.Features{
+			&iotago.SenderFeature{
 				Address: senderAddress,
 			},
-			&iotago.TagFeatureBlock{
+			&iotago.TagFeature{
 				Tag: tag,
 			},
 		},
@@ -176,8 +176,8 @@ func TestExtendedOutputOnEd25519WithSpendConstraintsSerialization(t *testing.T) 
 
 	iotaOutput := &iotago.BasicOutput{
 		Amount: amount,
-		Blocks: iotago.FeatureBlocks{
-			&iotago.SenderFeatureBlock{
+		Features: iotago.Features{
+			&iotago.SenderFeature{
 				Address: senderAddress,
 			},
 		},
@@ -211,8 +211,8 @@ func TestNFTOutputSerialization(t *testing.T) {
 	iotaOutput := &iotago.NFTOutput{
 		Amount: amount,
 		NFTID:  nftID,
-		ImmutableBlocks: iotago.FeatureBlocks{
-			&iotago.MetadataFeatureBlock{
+		ImmutableFeatures: iotago.Features{
+			&iotago.MetadataFeature{
 				Data: utils.RandBytes(12),
 			},
 		},
@@ -244,11 +244,11 @@ func TestNFTOutputWithSpendConstraintsSerialization(t *testing.T) {
 	iotaOutput := &iotago.NFTOutput{
 		Amount: amount,
 		NFTID:  nftID,
-		ImmutableBlocks: iotago.FeatureBlocks{
-			&iotago.MetadataFeatureBlock{
+		ImmutableFeatures: iotago.Features{
+			&iotago.MetadataFeature{
 				Data: utils.RandBytes(12),
 			},
-			&iotago.IssuerFeatureBlock{
+			&iotago.IssuerFeature{
 				Address: issuerAddress,
 			},
 		},
@@ -286,13 +286,13 @@ func TestAliasOutputSerialization(t *testing.T) {
 	iotaOutput := &iotago.AliasOutput{
 		Amount:  amount,
 		AliasID: aliasID,
-		Blocks: iotago.FeatureBlocks{
-			&iotago.SenderFeatureBlock{
+		Features: iotago.Features{
+			&iotago.SenderFeature{
 				Address: sender.ToAddress(),
 			},
 		},
-		ImmutableBlocks: iotago.FeatureBlocks{
-			&iotago.IssuerFeatureBlock{
+		ImmutableFeatures: iotago.Features{
+			&iotago.IssuerFeature{
 				Address: issuer.ToAddress(),
 			},
 		},
