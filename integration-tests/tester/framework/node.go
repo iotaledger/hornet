@@ -111,7 +111,7 @@ func (p *Node) Spam(dur time.Duration, parallelism int) (int32, error) {
 
 				txCount := atomic.AddInt32(&spammed, 1)
 				data := fmt.Sprintf("Count: %06d, Timestamp: %s", txCount, time.Now().Format(time.RFC3339))
-				iotaMsg := &iotago.Message{
+				iotaMsg := &iotago.Block{
 					ProtocolVersion: p.Config.Protocol.ProtocolParameters().Version,
 					Payload: &iotago.TaggedData{
 						Tag:  []byte("SPAM"),

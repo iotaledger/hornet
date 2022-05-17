@@ -335,20 +335,20 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 }
 
 // TODO: this is a workaround, we need to create a different channel for milestone payloads in STING instead.
-func constructMilestoneMessage(protoParas *iotago.ProtocolParameters, cachedMilestone *storage.CachedMilestone) (*iotago.Message, error) {
+func constructMilestoneMessage(protoParas *iotago.ProtocolParameters, cachedMilestone *storage.CachedMilestone) (*iotago.Block, error) {
 	defer cachedMilestone.Release(true) // milestone -1
 
 	// we don't need to do proof of work for milestone messages because milestones have Nonce = 0.
 	// TODO: this is enforced by TIP-???
-	return builder.NewMessageBuilder(protoParas.Version).
+	return builder.NewBlockBuilder(protoParas.Version).
 		Payload(cachedMilestone.Milestone().Milestone()).
-		ParentsMessageIDs(cachedMilestone.Milestone().Milestone().Parents).
+		ParentsBlockIDs(cachedMilestone.Milestone().Milestone().Parents).
 		Build()
 }
 
 // processes the given message request by parsing it and then replying to the peer with it.
 func (proc *MessageProcessor) processMessageRequest(p *Protocol, data []byte) {
-	if len(data) != iotago.MessageIDLength {
+	if len(data) != iotago.BlockIDLength {
 		return
 	}
 

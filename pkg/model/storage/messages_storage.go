@@ -165,7 +165,7 @@ func (c *CachedMessage) Release(force ...bool) {
 
 func MessageFactory(key []byte, data []byte) (objectstorage.StorableObject, error) {
 	msg := &Message{
-		messageID: hornet.MessageIDFromSlice(key[:iotago.MessageIDLength]),
+		messageID: hornet.MessageIDFromSlice(key[:iotago.BlockIDLength]),
 		data:      data,
 	}
 
@@ -262,7 +262,7 @@ func (s *Storage) CachedMessage(messageID hornet.MessageID) (*CachedMessage, err
 }
 
 // Message returns an iotago message object.
-func (s *Storage) Message(messageID hornet.MessageID) (*iotago.Message, error) {
+func (s *Storage) Message(messageID hornet.MessageID) (*iotago.Block, error) {
 	cachedMsg, err := s.CachedMessage(messageID)
 	if err != nil {
 		return nil, err

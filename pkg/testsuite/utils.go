@@ -279,7 +279,7 @@ func (m *Message) RemainderUTXO() *utxo.Output {
 	return m.remainderOutput
 }
 
-func (m *Message) IotaMessage() *iotago.Message {
+func (m *Message) IotaMessage() *iotago.Block {
 	return m.message.Message()
 }
 

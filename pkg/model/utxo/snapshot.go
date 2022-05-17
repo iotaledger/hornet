@@ -36,7 +36,7 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("unable to read LS output ID: %w", err)
 	}
 
-	messageID := iotago.MessageID{}
+	messageID := iotago.BlockID{}
 	if _, err := io.ReadFull(reader, messageID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS message ID: %w", err)
 	}
@@ -51,7 +51,7 @@ func OutputFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolP
 		return nil, fmt.Errorf("unable to read LS output milestone timestamp: %w", err)
 	}
 
-	buffer := make([]byte, iotago.MessageBinSerializedMaxSize)
+	buffer := make([]byte, iotago.BlockBinSerializedMaxSize)
 	bufferLen, err := reader.Read(buffer)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read LS output bytes: %w", err)

@@ -49,6 +49,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Rec: %s => %s\n", iotago.MessageIDToHexString(message.UnwrapMessageID()), string(jsonMsg))
+		fmt.Printf("Rec: %s => %s\n", iotago.BlockIDToHexString(message.UnwrapMessageID()), string(jsonMsg))
 	}
 }

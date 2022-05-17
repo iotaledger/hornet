@@ -116,7 +116,7 @@ type StoreMessageInterface interface {
 // including all additional information like
 // metadata, children, indexation and milestone entries.
 // message +1
-func storeMessage(protoParas *iotago.ProtocolParameters, dbStorage StoreMessageInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Message) (*storage.CachedMessage, error) {
+func storeMessage(protoParas *iotago.ProtocolParameters, dbStorage StoreMessageInterface, milestoneManager *milestonemanager.MilestoneManager, msg *iotago.Block) (*storage.CachedMessage, error) {
 
 	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
 	if err != nil {

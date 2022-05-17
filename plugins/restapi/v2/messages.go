@@ -121,7 +121,7 @@ func storageMessageByID(c echo.Context) (*storage.Message, error) {
 	return cachedMsg.Message(), nil
 }
 
-func messageByID(c echo.Context) (*iotago.Message, error) {
+func messageByID(c echo.Context) (*iotago.Block, error) {
 	message, err := storageMessageByID(c)
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func sendMessage(c echo.Context) (*messageCreatedResponse, error) {
 		return nil, err
 	}
 
-	msg := &iotago.Message{}
+	msg := &iotago.Block{}
 
 	switch mimeType {
 	case echo.MIMEApplicationJSON:

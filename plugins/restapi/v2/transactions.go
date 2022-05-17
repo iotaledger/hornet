@@ -38,7 +38,7 @@ func storageMessageByTransactionID(c echo.Context) (*storage.Message, error) {
 	return cachedMsg.Message(), nil
 }
 
-func messageByTransactionID(c echo.Context) (*iotago.Message, error) {
+func messageByTransactionID(c echo.Context) (*iotago.Block, error) {
 	message, err := storageMessageByTransactionID(c)
 	if err != nil {
 		return nil, err

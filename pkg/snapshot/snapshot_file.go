@@ -21,7 +21,7 @@ const (
 	// The supported snapshot file version.
 	SupportedFormatVersion byte = 2
 	// The length of a solid entry point hash.
-	SolidEntryPointHashLength = iotago.MessageIDLength
+	SolidEntryPointHashLength = iotago.BlockIDLength
 
 	// The offset of counters within a snapshot file:
 	// version + type + timestamp + network-id + sep-ms-index + ledger-ms-index
@@ -456,7 +456,7 @@ func StreamSnapshotDataFrom(reader io.ReadSeeker,
 	}
 
 	for i := uint64(0); i < readHeader.SEPCount; i++ {
-		solidEntryPointMessageID := make(hornet.MessageID, iotago.MessageIDLength)
+		solidEntryPointMessageID := make(hornet.MessageID, iotago.BlockIDLength)
 		if _, err := io.ReadFull(reader, solidEntryPointMessageID); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}

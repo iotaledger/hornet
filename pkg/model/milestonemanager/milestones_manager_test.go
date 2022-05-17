@@ -119,7 +119,7 @@ func TestMilestoneManager_KeyManager(t *testing.T) {
 	  "nonce": "0"
 	}
 	`
-	jsonMsg := &iotago.Message{}
+	jsonMsg := &iotago.Block{}
 	err := json.Unmarshal([]byte(jsonString), jsonMsg)
 	require.NoError(t, err)
 	milestoneMessageBytes, err := jsonMsg.Serialize(serializer.DeSeriModePerformValidation, te.ProtocolParameters())

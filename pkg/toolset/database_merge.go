@@ -361,11 +361,11 @@ func mergeViaAPI(
 	chronicleMode bool,
 	apiParallelism int) error {
 
-	getMessageViaAPI := func(messageID hornet.MessageID) (*iotago.Message, error) {
+	getMessageViaAPI := func(messageID hornet.MessageID) (*iotago.Block, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		msg, err := client.MessageByMessageID(ctx, messageID.ToArray(), protoParas)
+		msg, err := client.BlockByBlockID(ctx, messageID.ToArray(), protoParas)
 		if err != nil {
 			return nil, err
 		}
@@ -605,7 +605,7 @@ func getNodeHTTPAPIClient(nodeURL string, chronicleMode bool, chronicleKeyspace 
 	return client
 }
 
-type GetMessageFunc func(messageID hornet.MessageID) (*iotago.Message, error)
+type GetMessageFunc func(messageID hornet.MessageID) (*iotago.Block, error)
 
 // ProxyStorage is used to temporarily store changes to an intermediate storage,
 // which then can be merged with the target store in a single commit.

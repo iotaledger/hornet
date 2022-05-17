@@ -89,7 +89,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 		}
 		`
 
-	msg := &iotago.Message{}
+	msg := &iotago.Block{}
 	assert.NoError(t, json.Unmarshal([]byte(msgData), msg))
 
 	message, err := storage.NewMessage(msg, serializer.DeSeriModePerformValidation, protoParas)
@@ -100,7 +100,7 @@ func TestMsgProcessorEmit(t *testing.T) {
 	assert.Error(t, err)
 
 	// set valid parents
-	msg.Parents = iotago.MessageIDs{[32]byte{}}
+	msg.Parents = iotago.BlockIDs{[32]byte{}}
 
 	// pow again, so we have a valid message
 	_, err = te.PoWHandler.DoPoW(context.Background(), msg, 1)

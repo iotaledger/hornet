@@ -57,7 +57,7 @@ func (h *Handler) PoWType() string {
 
 // DoPoW does the proof-of-work required to hit the target score configured on this Handler.
 // The given iota.Message's nonce is automatically updated.
-func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (messageSize int, err error) {
+func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Block, parallelism int, refreshTipsFunc ...RefreshTipsFunc) (messageSize int, err error) {
 
 	if err := contextutils.ReturnErrIfCtxDone(ctx, common.ErrOperationAborted); err != nil {
 		return 0, err
@@ -69,7 +69,7 @@ func (h *Handler) DoPoW(ctx context.Context, msg *iotago.Message, parallelism in
 		return 0, nil
 	}
 
-	getPoWData := func(msg *iotago.Message) (powData []byte, err error) {
+	getPoWData := func(msg *iotago.Block) (powData []byte, err error) {
 		msgData, err := msg.Serialize(serializer.DeSeriModeNoValidation, nil)
 		if err != nil {
 			return nil, fmt.Errorf("unable to perform PoW as msg can't be serialized: %w", err)

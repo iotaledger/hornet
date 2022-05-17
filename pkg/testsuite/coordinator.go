@@ -101,7 +101,7 @@ func (te *TestEnvironment) ReattachMessage(messageID hornet.MessageID, parents .
 		newParents = hornet.MessageIDs(parents).RemoveDupsAndSortByLexicalOrder().ToSliceOfArrays()
 	}
 
-	newMessage := &iotago.Message{
+	newMessage := &iotago.Block{
 		ProtocolVersion: iotagoMessage.ProtocolVersion,
 		Parents:         newParents,
 		Payload:         iotagoMessage.Payload,

@@ -118,10 +118,10 @@ func ConfirmMilestone(
 		Mutations:        mutations,
 	}
 
-	// Verify the calculated ConfirmedMerkleRoot with the one inside the milestone
-	confirmedMerkleTreeHash := milestonePayload.ConfirmedMerkleRoot
-	if mutations.ConfirmedMerkleRoot != confirmedMerkleTreeHash {
-		return nil, nil, fmt.Errorf("confirmMilestone: computed AppliedMerkleRoot %s does not match the value in the milestone %s", hex.EncodeToString(mutations.ConfirmedMerkleRoot[:]), hex.EncodeToString(confirmedMerkleTreeHash[:]))
+	// Verify the calculated InclusionMerkleRoot with the one inside the milestone
+	inclusionMerkleTreeHash := milestonePayload.InclusionMerkleRoot
+	if mutations.InclusionMerkleRoot != inclusionMerkleTreeHash {
+		return nil, nil, fmt.Errorf("confirmMilestone: computed InclusionMerkleRoot %s does not match the value in the milestone %s", hex.EncodeToString(mutations.InclusionMerkleRoot[:]), hex.EncodeToString(inclusionMerkleTreeHash[:]))
 	}
 
 	// Verify the calculated AppliedMerkleRoot with the one inside the milestone

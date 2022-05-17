@@ -69,7 +69,7 @@ type WhiteFlagMutations struct {
 	// Contains the Spent Outputs for the given confirmation.
 	NewSpents map[string]*utxo.Spent
 	// The merkle tree root hash of all referenced messages in the past cone.
-	ConfirmedMerkleRoot [iotago.MilestoneMerkleProofLength]byte
+	InclusionMerkleRoot [iotago.MilestoneMerkleProofLength]byte
 	// The merkle tree root hash of all included transaction messages.
 	AppliedMerkleRoot [iotago.MilestoneMerkleProofLength]byte
 }
@@ -323,7 +323,7 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute confirmed merkle tree root: %w", err)
 	}
-	copy(wfConf.ConfirmedMerkleRoot[:], confirmedMerkleHash)
+	copy(wfConf.InclusionMerkleRoot[:], confirmedMerkleHash)
 
 	// compute inclusion merkle tree root hash
 	appliedMarshalers := make([]encoding.BinaryMarshaler, len(wfConf.MessagesIncludedWithTransactions))

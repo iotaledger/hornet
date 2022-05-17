@@ -183,7 +183,7 @@ func (ms *MilestoneIndex) ObjectStorageValue() (data []byte) {
 
 	return marshalutil.New(64).
 		WriteBytes(ms.milestoneID[:]).
-		WriteBytes(ms.messageID[:iotago.MessageIDLength]).
+		WriteBytes(ms.messageID[:iotago.BlockIDLength]).
 		Bytes()
 }
 
@@ -242,7 +242,7 @@ type Milestone struct {
 	objectstorage.StorableObjectFlags
 
 	// Key
-	milestoneID iotago.MessageID
+	milestoneID iotago.BlockID
 
 	// Value
 	data []byte

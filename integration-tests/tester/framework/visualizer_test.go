@@ -30,7 +30,7 @@ func randBytes(length int) []byte {
 }
 
 func randMessageID() hornet.MessageID {
-	return hornet.MessageID(randBytes(iotago.MessageIDLength))
+	return hornet.MessageID(randBytes(iotago.BlockIDLength))
 }
 
 func TestVisualizer(t *testing.T) {

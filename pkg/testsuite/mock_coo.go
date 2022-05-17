@@ -80,7 +80,7 @@ func (coo *MockCoo) LastMilestoneParents() hornet.MessageIDs {
 	return hornet.MessageIDsFromSliceOfArrays(lastMilestonePayload.Parents)
 }
 
-func (coo *MockCoo) storeMessage(message *iotago.Message) hornet.MessageID {
+func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.MessageID {
 	msg, err := storage.NewMessage(message, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
 	require.NoError(coo.te.TestInterface, err)
 	cachedMsg := coo.te.StoreMessage(msg) // message +1, no need to release, since we remember all the messages for later cleanup
@@ -141,7 +141,7 @@ func (coo *MockCoo) milestonePayload(parents hornet.MessageIDs) (*iotago.Milesto
 		return nil, err
 	}
 
-	milestonePayload := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.te.protoParas.Version, coo.LastMilestoneID(), sortedParents.ToSliceOfArrays(), mutations.ConfirmedMerkleRoot, mutations.AppliedMerkleRoot)
+	milestonePayload := iotago.NewMilestone(uint32(milestoneIndex), milestoneTimestamp, coo.te.protoParas.Version, coo.LastMilestoneID(), sortedParents.ToSliceOfArrays(), mutations.InclusionMerkleRoot, mutations.AppliedMerkleRoot)
 
 	keymapping := coo.keyManager.MilestonePublicKeyMappingForMilestoneIndex(milestoneIndex, coo.cooPrivateKeys, len(coo.cooPrivateKeys))
 

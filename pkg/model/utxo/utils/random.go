@@ -25,7 +25,7 @@ func Rand32ByteHash() [32]byte {
 }
 
 func RandMessageID() hornet.MessageID {
-	return RandBytes(iotago.MessageIDLength)
+	return RandBytes(iotago.BlockIDLength)
 }
 
 func RandTransactionID() *iotago.TransactionID {

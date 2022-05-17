@@ -36,8 +36,8 @@ func (m MessageID) ToHex() string {
 }
 
 // ToArray converts the MessageID to an array.
-func (m MessageID) ToArray() iotago.MessageID {
-	var messageID iotago.MessageID
+func (m MessageID) ToArray() iotago.BlockID {
+	var messageID iotago.BlockID
 	copy(messageID[:], m)
 	return messageID
 }
@@ -71,7 +71,7 @@ func MessageIDFromHex(hexString string) (MessageID, error) {
 		return nil, err
 	}
 
-	if len(b) != iotago.MessageIDLength {
+	if len(b) != iotago.BlockIDLength {
 		return nil, fmt.Errorf("unknown messageID length (%d)", len(b))
 	}
 
@@ -80,7 +80,7 @@ func MessageIDFromHex(hexString string) (MessageID, error) {
 
 // MessageIDFromMapKey creates a MessageID from a map key representation.
 func MessageIDFromMapKey(mapKey string) MessageID {
-	if len(mapKey) != iotago.MessageIDLength {
+	if len(mapKey) != iotago.BlockIDLength {
 		panic(fmt.Sprintf("unknown messageID length (%d)", len(mapKey)))
 	}
 
@@ -90,7 +90,7 @@ func MessageIDFromMapKey(mapKey string) MessageID {
 // MessageIDFromSlice creates a MessageID from a byte slice.
 func MessageIDFromSlice(b []byte) MessageID {
 
-	if len(b) != iotago.MessageIDLength {
+	if len(b) != iotago.BlockIDLength {
 		panic(fmt.Sprintf("unknown messageID length (%d)", len(b)))
 	}
 
@@ -98,7 +98,7 @@ func MessageIDFromSlice(b []byte) MessageID {
 }
 
 // MessageIDFromArray creates a MessageID from a byte array.
-func MessageIDFromArray(b iotago.MessageID) MessageID {
+func MessageIDFromArray(b iotago.BlockID) MessageID {
 	return append(MessageID{}, b[:]...)
 }
 
@@ -121,8 +121,8 @@ func (m MessageIDs) ToSliceOfSlices() [][]byte {
 }
 
 // ToSliceOfArrays converts the MessageIDs to a slice of byte arrays.
-func (m MessageIDs) ToSliceOfArrays() iotago.MessageIDs {
-	results := make(iotago.MessageIDs, len(m))
+func (m MessageIDs) ToSliceOfArrays() iotago.BlockIDs {
+	results := make(iotago.BlockIDs, len(m))
 	for i, msgID := range m {
 		results[i] = msgID.ToArray()
 	}
@@ -166,7 +166,7 @@ func MessageIDsFromHex(hexStrings []string) (MessageIDs, error) {
 }
 
 // MessageIDsFromSliceOfArrays creates a slice of MessageIDs from a slice of arrays.
-func MessageIDsFromSliceOfArrays(b iotago.MessageIDs) MessageIDs {
+func MessageIDsFromSliceOfArrays(b iotago.BlockIDs) MessageIDs {
 	results := make(MessageIDs, len(b))
 	for i, msgID := range b {
 		// as msgID is reused between iterations, it must be copied

@@ -81,7 +81,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	messageString += fmt.Sprintf("\nTimestamp: %s", now.Format(time.RFC3339))
 	messageString += fmt.Sprintf("\nTipselection: %v", durationGTTA.Truncate(time.Microsecond))
 
-	iotaMsg := &iotago.Message{
+	iotaMsg := &iotago.Block{
 		ProtocolVersion: s.protoParas.Version,
 		Parents:         tips.ToSliceOfArrays(),
 		Payload:         &iotago.TaggedData{Tag: tagBytes, Data: []byte(messageString)},

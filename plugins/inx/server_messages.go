@@ -20,15 +20,15 @@ import (
 	inx "github.com/iotaledger/inx/go"
 )
 
-func INXMessageIDsFromMessageIDs(messageIDs hornet.MessageIDs) []*inx.MessageId {
-	result := make([]*inx.MessageId, len(messageIDs))
+func INXBlockIDsFromBlockIDs(messageIDs hornet.MessageIDs) []*inx.BlockId {
+	result := make([]*inx.BlockId, len(messageIDs))
 	for i := range messageIDs {
-		result[i] = inx.NewMessageId(messageIDs[i].ToArray())
+		result[i] = inx.NewBlockId(messageIDs[i].ToArray())
 	}
 	return result
 }
 
-func MessageIDsFromINXMessageIDs(messageIDs []*inx.MessageId) hornet.MessageIDs {
+func BlockIDsFromINXBlockIDs(messageIDs []*inx.BlockId) hornet.MessageIDs {
 	result := make([]hornet.MessageID, len(messageIDs))
 	for i := range messageIDs {
 		result[i] = hornet.MessageIDFromArray(messageIDs[i].Unwrap())
@@ -36,23 +36,23 @@ func MessageIDsFromINXMessageIDs(messageIDs []*inx.MessageId) hornet.MessageIDs 
 	return result
 }
 
-func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.MessageMetadata) (*inx.MessageMetadata, error) {
-	m := &inx.MessageMetadata{
-		MessageId: inx.NewMessageId(messageID.ToArray()),
-		Parents:   INXMessageIDsFromMessageIDs(metadata.Parents()),
-		Solid:     metadata.IsSolid(),
+func INXNewBlockMetadata(messageID hornet.MessageID, metadata *storage.MessageMetadata) (*inx.BlockMetadata, error) {
+	m := &inx.BlockMetadata{
+		BlockId: inx.NewBlockId(messageID.ToArray()),
+		Parents: INXBlockIDsFromBlockIDs(metadata.Parents()),
+		Solid:   metadata.IsSolid(),
 	}
 
 	referenced, msIndex := metadata.ReferencedWithIndex()
 	if referenced {
 		m.ReferencedByMilestoneIndex = uint32(msIndex)
-		inclusionState := inx.MessageMetadata_NO_TRANSACTION
+		inclusionState := inx.BlockMetadata_NO_TRANSACTION
 		conflict := metadata.Conflict()
 		if conflict != storage.ConflictNone {
-			inclusionState = inx.MessageMetadata_CONFLICTING
-			m.ConflictReason = inx.MessageMetadata_ConflictReason(conflict)
+			inclusionState = inx.BlockMetadata_CONFLICTING
+			m.ConflictReason = inx.BlockMetadata_ConflictReason(conflict)
 		} else if metadata.IsIncludedTxInLedger() {
-			inclusionState = inx.MessageMetadata_INCLUDED
+			inclusionState = inx.BlockMetadata_INCLUDED
 		}
 		m.LedgerInclusionState = inclusionState
 
@@ -95,31 +95,31 @@ func INXNewMessageMetadata(messageID hornet.MessageID, metadata *storage.Message
 	return m, nil
 }
 
-func (s *INXServer) ReadMessage(_ context.Context, messageID *inx.MessageId) (*inx.RawMessage, error) {
+func (s *INXServer) ReadBlock(_ context.Context, messageID *inx.BlockId) (*inx.RawBlock, error) {
 	cachedMsg := deps.Storage.CachedMessageOrNil(hornet.MessageIDFromArray(messageID.Unwrap())) // message +1
 	if cachedMsg == nil {
 		return nil, status.Errorf(codes.NotFound, "message %s not found", hornet.MessageIDFromArray(messageID.Unwrap()).ToHex())
 	}
 	defer cachedMsg.Release(true) // message -1
-	return inx.WrapMessage(cachedMsg.Message().Message())
+	return inx.WrapBlock(cachedMsg.Message().Message())
 }
 
-func (s *INXServer) ReadMessageMetadata(_ context.Context, messageID *inx.MessageId) (*inx.MessageMetadata, error) {
+func (s *INXServer) ReadBlockMetadata(_ context.Context, messageID *inx.BlockId) (*inx.BlockMetadata, error) {
 	cachedMsgMeta := deps.Storage.CachedMessageMetadataOrNil(hornet.MessageIDFromArray(messageID.Unwrap())) // meta +1
 	if cachedMsgMeta == nil {
 		return nil, status.Errorf(codes.NotFound, "message metadata %s not found", hornet.MessageIDFromArray(messageID.Unwrap()).ToHex())
 	}
 	defer cachedMsgMeta.Release(true) // meta -1
-	return INXNewMessageMetadata(cachedMsgMeta.Metadata().MessageID(), cachedMsgMeta.Metadata())
+	return INXNewBlockMetadata(cachedMsgMeta.Metadata().MessageID(), cachedMsgMeta.Metadata())
 }
 
-func (s *INXServer) ListenToMessages(filter *inx.MessageFilter, srv inx.INX_ListenToMessagesServer) error {
+func (s *INXServer) ListenToBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		cachedMsg := task.Param(0).(*storage.CachedMessage)
 		defer cachedMsg.Release(true) // message -1
 
-		payload := inx.NewMessageWithBytes(cachedMsg.Message().MessageID().ToArray(), cachedMsg.Message().Data())
+		payload := inx.NewBlockWithBytes(cachedMsg.Message().MessageID().ToArray(), cachedMsg.Message().Data())
 		if err := srv.Send(payload); err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -138,13 +138,13 @@ func (s *INXServer) ListenToMessages(filter *inx.MessageFilter, srv inx.INX_List
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToSolidMessages(filter *inx.MessageFilter, srv inx.INX_ListenToSolidMessagesServer) error {
+func (s *INXServer) ListenToSolidBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToSolidBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		msgMeta := task.Param(0).(*storage.CachedMetadata)
 		defer msgMeta.Release(true) // meta -1
 
-		payload, err := INXNewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		payload, err := INXNewBlockMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -168,13 +168,13 @@ func (s *INXServer) ListenToSolidMessages(filter *inx.MessageFilter, srv inx.INX
 	return ctx.Err()
 }
 
-func (s *INXServer) ListenToReferencedMessages(filter *inx.MessageFilter, srv inx.INX_ListenToReferencedMessagesServer) error {
+func (s *INXServer) ListenToReferencedBlocks(filter *inx.BlockFilter, srv inx.INX_ListenToReferencedBlocksServer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	wp := workerpool.New(func(task workerpool.Task) {
 		msgMeta := task.Param(0).(*storage.CachedMetadata)
 		defer msgMeta.Release(true) // meta -1
 
-		payload, err := INXNewMessageMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
+		payload, err := INXNewBlockMetadata(msgMeta.Metadata().MessageID(), msgMeta.Metadata())
 		if err != nil {
 			Plugin.LogInfof("Send error: %v", err)
 			cancel()
@@ -198,8 +198,8 @@ func (s *INXServer) ListenToReferencedMessages(filter *inx.MessageFilter, srv in
 	return ctx.Err()
 }
 
-func (s *INXServer) SubmitMessage(context context.Context, message *inx.RawMessage) (*inx.MessageId, error) {
-	msg, err := message.UnwrapMessage(serializer.DeSeriModeNoValidation, nil)
+func (s *INXServer) SubmitBlock(context context.Context, message *inx.RawBlock) (*inx.BlockId, error) {
+	msg, err := message.UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -211,5 +211,5 @@ func (s *INXServer) SubmitMessage(context context.Context, message *inx.RawMessa
 	if err != nil {
 		return nil, err
 	}
-	return inx.NewMessageId(messageID.ToArray()), nil
+	return inx.NewBlockId(messageID.ToArray()), nil
 }

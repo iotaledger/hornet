@@ -50,7 +50,7 @@ var (
 	// MessageMessageDefinition defines a message message's format.
 	MessageMessageDefinition = &message.Definition{
 		ID:             MessageTypeMessage,
-		MaxBytesLength: iotago.MessageBinSerializedMaxSize,
+		MaxBytesLength: iotago.BlockBinSerializedMaxSize,
 		VariableLength: true,
 	}
 

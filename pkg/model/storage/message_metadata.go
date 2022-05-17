@@ -92,7 +92,7 @@ var errorToConflictMapping = map[error]Conflict{
 	iotago.ErrNativeTokenSumUnbalanced:           ConflictInvalidNativeTokens,
 
 	// Sender validation
-	iotago.ErrSenderFeatureBlockNotUnlocked: ConflictInvalidSender,
+	iotago.ErrSenderFeatureNotUnlocked: ConflictInvalidSender,
 
 	// Unlock validation
 	iotago.ErrInvalidInputUnlock: ConflictInvalidInputUnlock,
@@ -319,7 +319,7 @@ func (m *MessageMetadata) ObjectStorageValue() (data []byte) {
 		parents count * 32 bytes parent id
 	*/
 
-	marshalUtil := marshalutil.New(19 + len(m.parents)*iotago.MessageIDLength)
+	marshalUtil := marshalutil.New(19 + len(m.parents)*iotago.BlockIDLength)
 
 	marshalUtil.WriteByte(byte(m.metadata))
 	marshalUtil.WriteUint32(uint32(m.referencedIndex))
@@ -398,7 +398,7 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 
 	m.parents = make(hornet.MessageIDs, parentsCount)
 	for i := 0; i < int(parentsCount); i++ {
-		parentBytes, err := marshalUtil.ReadBytes(iotago.MessageIDLength)
+		parentBytes, err := marshalUtil.ReadBytes(iotago.BlockIDLength)
 		if err != nil {
 			return nil, err
 		}

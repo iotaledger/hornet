@@ -237,7 +237,7 @@ func (u *Manager) ReadRawOutputBytesByOutputIDWithoutLocking(outputID *iotago.Ou
 	}
 
 	// messageID + milestoneIndex + milestoneTimestamp
-	offset := iotago.MessageIDLength + serializer.UInt32ByteSize + serializer.UInt32ByteSize
+	offset := iotago.BlockIDLength + serializer.UInt32ByteSize + serializer.UInt32ByteSize
 	if len(value) <= offset {
 		return nil, errors.New("invalid UTXO output length")
 	}

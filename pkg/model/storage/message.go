@@ -19,10 +19,10 @@ type Message struct {
 	// Value
 	data        []byte
 	messageOnce sync.Once
-	message     *iotago.Message
+	message     *iotago.Block
 }
 
-func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Message, error) {
+func NewMessage(iotaMsg *iotago.Block, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Message, error) {
 
 	data, err := iotaMsg.Serialize(deSeriMode, protoParas)
 	if err != nil {
@@ -46,7 +46,7 @@ func NewMessage(iotaMsg *iotago.Message, deSeriMode serializer.DeSerializationMo
 
 func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, protoParas *iotago.ProtocolParameters) (*Message, error) {
 
-	iotaMsg := &iotago.Message{}
+	iotaMsg := &iotago.Block{}
 	if _, err := iotaMsg.Deserialize(data, deSeriMode, protoParas); err != nil {
 		return nil, err
 	}
@@ -74,9 +74,9 @@ func (msg *Message) Data() []byte {
 	return msg.data
 }
 
-func (msg *Message) Message() *iotago.Message {
+func (msg *Message) Message() *iotago.Block {
 	msg.messageOnce.Do(func() {
-		iotaMsg := &iotago.Message{}
+		iotaMsg := &iotago.Block{}
 		// No need to verify the message again here
 		if _, err := iotaMsg.Deserialize(msg.data, serializer.DeSeriModeNoValidation, nil); err != nil {
 			panic(fmt.Sprintf("failed to deserialize message: %v, error: %s", msg.messageID.ToHex(), err))
@@ -184,15 +184,15 @@ func (msg *Message) TransactionEssenceUTXOInputs() []*iotago.OutputID {
 func (msg *Message) SignatureForInputIndex(inputIndex uint16) *iotago.Ed25519Signature {
 
 	if transaction := msg.Transaction(); transaction != nil {
-		switch unlockBlock := transaction.UnlockBlocks[inputIndex].(type) {
-		case *iotago.SignatureUnlockBlock:
+		switch unlockBlock := transaction.Unlocks[inputIndex].(type) {
+		case *iotago.SignatureUnlock:
 			switch signature := unlockBlock.Signature.(type) {
 			case *iotago.Ed25519Signature:
 				return signature
 			default:
 				return nil
 			}
-		case *iotago.ReferenceUnlockBlock:
+		case *iotago.ReferenceUnlock:
 			return msg.SignatureForInputIndex(unlockBlock.Reference)
 		default:
 			return nil
