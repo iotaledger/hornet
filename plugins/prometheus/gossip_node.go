@@ -68,7 +68,6 @@ func collectServer() {
 	gossipBlocks.WithLabelValues("invalid").Set(float64(deps.ServerMetrics.InvalidBlocks.Load()))
 	gossipBlocks.WithLabelValues("sent").Set(float64(deps.ServerMetrics.SentBlocks.Load()))
 	gossipBlocks.WithLabelValues("sent_spam").Set(float64(deps.ServerMetrics.SentSpamBlocks.Load()))
-	gossipBlocks.WithLabelValues("validated").Set(float64(deps.ServerMetrics.ValidatedBlocks.Load()))
 
 	gossipRequests.WithLabelValues("invalid").Set(float64(deps.ServerMetrics.InvalidRequests.Load()))
 	gossipRequests.WithLabelValues("received_block").Set(float64(deps.ServerMetrics.ReceivedBlockRequests.Load()))

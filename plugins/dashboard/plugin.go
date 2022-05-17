@@ -309,7 +309,6 @@ type ServerMetrics struct {
 	SentHeartbeats            uint32 `json:"sent_heartbeat"`
 	DroppedSentPackets        uint32 `json:"dropped_sent_packets"`
 	SentSpamBlocksCount       uint32 `json:"sent_spam_blocks"`
-	ValidatedBlocks           uint32 `json:"validated_blocks"`
 }
 
 // MemMetrics represents memory metrics.
@@ -430,7 +429,6 @@ func currentNodeStatus() *NodeStatus {
 		SentHeartbeats:            deps.ServerMetrics.SentHeartbeats.Load(),
 		DroppedSentPackets:        deps.ServerMetrics.DroppedPackets.Load(),
 		SentSpamBlocksCount:       deps.ServerMetrics.SentSpamBlocks.Load(),
-		ValidatedBlocks:           deps.ServerMetrics.ValidatedBlocks.Load(),
 	}
 
 	// memory metrics

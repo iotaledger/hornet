@@ -42,8 +42,6 @@ type ServerMetrics struct {
 	DroppedPackets atomic.Uint32
 	// The number of sent spam blocks.
 	SentSpamBlocks atomic.Uint32
-	// The number of validated blocks.
-	ValidatedBlocks atomic.Uint32
 	// The number of non-lazy tips.
 	TipsNonLazy atomic.Uint32
 	// The number of semi-lazy tips.
