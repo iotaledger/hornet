@@ -105,7 +105,7 @@ func provide(c *dig.Container) error {
 	type cfgResult struct {
 		dig.Out
 		MaxDeltaBlockYoungestConeRootIndexToCMI int `name:"maxDeltaBlockYoungestConeRootIndexToCMI"`
-		MaxDeltaBlockOldestConeRootIndexToCMI   int `name:"maxDeltaMsgOldestConeRootIndexToCMI"`
+		MaxDeltaBlockOldestConeRootIndexToCMI   int `name:"maxDeltaBlockOldestConeRootIndexToCMI"`
 	}
 
 	if err := c.Provide(func() cfgResult {
