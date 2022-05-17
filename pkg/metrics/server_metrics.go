@@ -38,8 +38,8 @@ type ServerMetrics struct {
 	SentMilestoneRequests atomic.Uint32
 	// The number of sent heartbeats.
 	SentHeartbeats atomic.Uint32
-	// The number of dropped blocks.
-	DroppedBlocks atomic.Uint32
+	// The number of dropped packets.
+	DroppedPackets atomic.Uint32
 	// The number of sent spam blocks.
 	SentSpamBlocks atomic.Uint32
 	// The number of validated blocks.

@@ -295,21 +295,21 @@ type NodeStatus struct {
 
 // ServerMetrics are global metrics of the server.
 type ServerMetrics struct {
-	AllMessages          uint32 `json:"all_msgs"`
-	NewMessages          uint32 `json:"new_msgs"`
-	KnownMessages        uint32 `json:"known_msgs"`
-	InvalidMessages      uint32 `json:"invalid_msgs"`
-	InvalidRequests      uint32 `json:"invalid_req"`
-	ReceivedMessageReq   uint32 `json:"rec_msg_req"`
-	ReceivedMilestoneReq uint32 `json:"rec_ms_req"`
-	ReceivedHeartbeats   uint32 `json:"rec_heartbeat"`
-	SentMessages         uint32 `json:"sent_msgs"`
-	SentMessageReq       uint32 `json:"sent_msg_req"`
-	SentMilestoneReq     uint32 `json:"sent_ms_req"`
-	SentHeartbeats       uint32 `json:"sent_heartbeat"`
-	DroppedSentPackets   uint32 `json:"dropped_sent_packets"`
-	SentSpamMsgsCount    uint32 `json:"sent_spam_messages"`
-	ValidatedMessages    uint32 `json:"validated_messages"`
+	AllBlocks                 uint32 `json:"all_blocks"`
+	NewBlocks                 uint32 `json:"new_blocks"`
+	KnownBlocks               uint32 `json:"known_blocks"`
+	InvalidBlocks             uint32 `json:"invalid_blocks"`
+	InvalidRequests           uint32 `json:"invalid_req"`
+	ReceivedBlockRequests     uint32 `json:"rec_block_req"`
+	ReceivedMilestoneRequests uint32 `json:"rec_ms_req"`
+	ReceivedHeartbeats        uint32 `json:"rec_heartbeat"`
+	SentBlocks                uint32 `json:"sent_blocks"`
+	SentBlockRequests         uint32 `json:"sent_block_req"`
+	SentMilestoneRequests     uint32 `json:"sent_ms_req"`
+	SentHeartbeats            uint32 `json:"sent_heartbeat"`
+	DroppedSentPackets        uint32 `json:"dropped_sent_packets"`
+	SentSpamBlocksCount       uint32 `json:"sent_spam_blocks"`
+	ValidatedBlocks           uint32 `json:"validated_blocks"`
 }
 
 // MemMetrics represents memory metrics.
@@ -329,11 +329,11 @@ type MemMetrics struct {
 
 // CachesMetric represents cache metrics.
 type CachesMetric struct {
-	RequestQueue             Cache `json:"request_queue"`
-	Children                 Cache `json:"children"`
-	Milestones               Cache `json:"milestones"`
-	Messages                 Cache `json:"messages"`
-	IncomingMessageWorkUnits Cache `json:"incoming_message_work_units"`
+	RequestQueue            Cache `json:"request_queue"`
+	Children                Cache `json:"children"`
+	Milestones              Cache `json:"milestones"`
+	Blocks                  Cache `json:"blocks"`
+	IncomingBlocksWorkUnits Cache `json:"incoming_block_work_units"`
 }
 
 // Cache represents metrics about a cache.
@@ -406,31 +406,31 @@ func currentNodeStatus() *NodeStatus {
 		Milestones: Cache{
 			Size: deps.Storage.MilestoneStorageSize(),
 		},
-		Messages: Cache{
+		Blocks: Cache{
 			Size: deps.Storage.BlockStorageSize(),
 		},
-		IncomingMessageWorkUnits: Cache{
+		IncomingBlocksWorkUnits: Cache{
 			Size: deps.MessageProcessor.WorkUnitsSize(),
 		},
 	}
 
 	// server metrics
 	status.ServerMetrics = &ServerMetrics{
-		AllMessages:          deps.ServerMetrics.Blocks.Load(),
-		NewMessages:          deps.ServerMetrics.NewBlocks.Load(),
-		KnownMessages:        deps.ServerMetrics.KnownBlocks.Load(),
-		InvalidMessages:      deps.ServerMetrics.InvalidBlocks.Load(),
-		InvalidRequests:      deps.ServerMetrics.InvalidRequests.Load(),
-		ReceivedMessageReq:   deps.ServerMetrics.ReceivedBlockRequests.Load(),
-		ReceivedMilestoneReq: deps.ServerMetrics.ReceivedMilestoneRequests.Load(),
-		ReceivedHeartbeats:   deps.ServerMetrics.ReceivedHeartbeats.Load(),
-		SentMessages:         deps.ServerMetrics.SentBlocks.Load(),
-		SentMessageReq:       deps.ServerMetrics.SentBlockRequests.Load(),
-		SentMilestoneReq:     deps.ServerMetrics.SentMilestoneRequests.Load(),
-		SentHeartbeats:       deps.ServerMetrics.SentHeartbeats.Load(),
-		DroppedSentPackets:   deps.ServerMetrics.DroppedBlocks.Load(),
-		SentSpamMsgsCount:    deps.ServerMetrics.SentSpamBlocks.Load(),
-		ValidatedMessages:    deps.ServerMetrics.ValidatedBlocks.Load(),
+		AllBlocks:                 deps.ServerMetrics.Blocks.Load(),
+		NewBlocks:                 deps.ServerMetrics.NewBlocks.Load(),
+		KnownBlocks:               deps.ServerMetrics.KnownBlocks.Load(),
+		InvalidBlocks:             deps.ServerMetrics.InvalidBlocks.Load(),
+		InvalidRequests:           deps.ServerMetrics.InvalidRequests.Load(),
+		ReceivedBlockRequests:     deps.ServerMetrics.ReceivedBlockRequests.Load(),
+		ReceivedMilestoneRequests: deps.ServerMetrics.ReceivedMilestoneRequests.Load(),
+		ReceivedHeartbeats:        deps.ServerMetrics.ReceivedHeartbeats.Load(),
+		SentBlocks:                deps.ServerMetrics.SentBlocks.Load(),
+		SentBlockRequests:         deps.ServerMetrics.SentBlockRequests.Load(),
+		SentMilestoneRequests:     deps.ServerMetrics.SentMilestoneRequests.Load(),
+		SentHeartbeats:            deps.ServerMetrics.SentHeartbeats.Load(),
+		DroppedSentPackets:        deps.ServerMetrics.DroppedPackets.Load(),
+		SentSpamBlocksCount:       deps.ServerMetrics.SentSpamBlocks.Load(),
+		ValidatedBlocks:           deps.ServerMetrics.ValidatedBlocks.Load(),
 	}
 
 	// memory metrics

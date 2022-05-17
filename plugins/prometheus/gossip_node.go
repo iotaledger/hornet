@@ -79,5 +79,5 @@ func collectServer() {
 	gossipHeartbeats.WithLabelValues("received").Set(float64(deps.ServerMetrics.ReceivedHeartbeats.Load()))
 	gossipHeartbeats.WithLabelValues("sent").Set(float64(deps.ServerMetrics.SentHeartbeats.Load()))
 
-	gossipDroppedPackets.WithLabelValues("sent").Set(float64(deps.ServerMetrics.DroppedBlocks.Load()))
+	gossipDroppedPackets.WithLabelValues("sent").Set(float64(deps.ServerMetrics.DroppedPackets.Load()))
 }

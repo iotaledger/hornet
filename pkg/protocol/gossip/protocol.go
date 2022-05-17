@@ -104,7 +104,7 @@ func (p *Protocol) Enqueue(data []byte) {
 	select {
 	case p.SendQueue <- data:
 	default:
-		p.ServerMetrics.DroppedBlocks.Inc()
+		p.ServerMetrics.DroppedPackets.Inc()
 		p.Metrics.DroppedPackets.Inc()
 	}
 }
