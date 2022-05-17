@@ -55,12 +55,12 @@ func (s *FutureConeSolidifier) SolidifyMessageAndFutureCone(ctx context.Context,
 
 	defer cachedMsgMeta.Release(true) // meta -1
 
-	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markMessageAsSolidFunc, hornet.MessageIDs{cachedMsgMeta.Metadata().MessageID()})
+	return solidifyFutureCone(ctx, s.memcachedTraverserStorage, s.markMessageAsSolidFunc, hornet.BlockIDs{cachedMsgMeta.Metadata().MessageID()})
 }
 
 // SolidifyFutureConesWithMetadataMemcache updates the solidity of the given messages and their future cones (messages approving the given messages).
 // This function doesn't use the same memcache nor traverser like the FutureConeSolidifier, but it holds the lock, so no other solidifications are done in parallel.
-func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(ctx context.Context, memcachedTraverserStorage dag.TraverserStorage, messageIDs hornet.MessageIDs) error {
+func (s *FutureConeSolidifier) SolidifyFutureConesWithMetadataMemcache(ctx context.Context, memcachedTraverserStorage dag.TraverserStorage, messageIDs hornet.BlockIDs) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -73,7 +73,7 @@ func solidifyFutureCone(
 	ctx context.Context,
 	traverserStorage dag.TraverserStorage,
 	markMessageAsSolidFunc MarkMessageAsSolidFunc,
-	messageIDs hornet.MessageIDs) error {
+	messageIDs hornet.BlockIDs) error {
 
 	childrenTraverser := dag.NewChildrenTraverser(traverserStorage)
 

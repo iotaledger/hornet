@@ -147,11 +147,11 @@ func (md *MilestoneDiff) MarshalBinary() ([]byte, error) {
 }
 
 // SEPProducerFunc yields a solid entry point to be written to a snapshot or nil if no more is available.
-type SEPProducerFunc func() (hornet.MessageID, error)
+type SEPProducerFunc func() (hornet.BlockID, error)
 
 // SEPConsumerFunc consumes the given solid entry point.
 // A returned error signals to cancel further reading.
-type SEPConsumerFunc func(hornet.MessageID) error
+type SEPConsumerFunc func(hornet.BlockID) error
 
 // HeaderConsumerFunc consumes the snapshot file header.
 // A returned error signals to cancel further reading.
@@ -456,7 +456,7 @@ func StreamSnapshotDataFrom(reader io.ReadSeeker,
 	}
 
 	for i := uint64(0); i < readHeader.SEPCount; i++ {
-		solidEntryPointMessageID := make(hornet.MessageID, iotago.BlockIDLength)
+		solidEntryPointMessageID := make(hornet.BlockID, iotago.BlockIDLength)
 		if _, err := io.ReadFull(reader, solidEntryPointMessageID); err != nil {
 			return fmt.Errorf("unable to read LS SEP at pos %d: %w", i, err)
 		}

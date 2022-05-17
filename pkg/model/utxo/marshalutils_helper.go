@@ -28,7 +28,7 @@ func parseTransactionID(ms *marshalutil.MarshalUtil) (*iotago.TransactionID, err
 	return t, nil
 }
 
-func ParseMessageID(ms *marshalutil.MarshalUtil) (hornet.MessageID, error) {
+func ParseMessageID(ms *marshalutil.MarshalUtil) (hornet.BlockID, error) {
 	bytes, err := ms.ReadBytes(iotago.BlockIDLength)
 	if err != nil {
 		return nil, err

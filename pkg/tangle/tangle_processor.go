@@ -32,7 +32,7 @@ func (t *Tangle) ConfigureTangleProcessor() {
 	}, workerpool.WorkerCount(t.futureConeSolidifierWorkerCount), workerpool.QueueSize(t.futureConeSolidifierQueueSize), workerpool.FlushTasksAtShutdown(true))
 
 	t.processValidMilestoneWorkerPool = workerpool.New(func(task workerpool.Task) {
-		t.processValidMilestone(task.Param(0).(hornet.MessageID), task.Param(1).(*storage.CachedMilestone), task.Param(2).(bool)) // milestone pass +1
+		t.processValidMilestone(task.Param(0).(hornet.BlockID), task.Param(1).(*storage.CachedMilestone), task.Param(2).(bool)) // milestone pass +1
 		task.Return(nil)
 	}, workerpool.WorkerCount(t.processValidMilestoneWorkerCount), workerpool.QueueSize(t.processValidMilestoneQueueSize), workerpool.FlushTasksAtShutdown(true))
 
@@ -84,7 +84,7 @@ func (t *Tangle) RunTangleProcessor() {
 		t.messageProcessor.Broadcast(cachedMsgMeta) // meta pass +1
 	})
 
-	onReceivedValidMilestone := events.NewClosure(func(messageID hornet.MessageID, cachedMilestone *storage.CachedMilestone, requested bool) {
+	onReceivedValidMilestone := events.NewClosure(func(messageID hornet.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
 
 		if err := contextutils.ReturnErrIfCtxDone(t.shutdownCtx, common.ErrOperationAborted); err != nil {
 			// do not process the milestone if the node was shut down
@@ -259,22 +259,22 @@ func (t *Tangle) processIncomingTx(incomingMsg *storage.Message, requests gossip
 }
 
 // RegisterMessageProcessedEvent returns a channel that gets closed when the message is processed.
-func (t *Tangle) RegisterMessageProcessedEvent(messageID hornet.MessageID) chan struct{} {
+func (t *Tangle) RegisterMessageProcessedEvent(messageID hornet.BlockID) chan struct{} {
 	return t.messageProcessedSyncEvent.RegisterEvent(messageID.ToMapKey())
 }
 
 // DeregisterMessageProcessedEvent removes a registered event to free the memory if not used.
-func (t *Tangle) DeregisterMessageProcessedEvent(messageID hornet.MessageID) {
+func (t *Tangle) DeregisterMessageProcessedEvent(messageID hornet.BlockID) {
 	t.messageProcessedSyncEvent.DeregisterEvent(messageID.ToMapKey())
 }
 
 // RegisterMessageSolidEvent returns a channel that gets closed when the message is marked as solid.
-func (t *Tangle) RegisterMessageSolidEvent(messageID hornet.MessageID) chan struct{} {
+func (t *Tangle) RegisterMessageSolidEvent(messageID hornet.BlockID) chan struct{} {
 	return t.messageSolidSyncEvent.RegisterEvent(messageID.ToMapKey())
 }
 
 // DeregisterMessageSolidEvent removes a registered event to free the memory if not used.
-func (t *Tangle) DeregisterMessageSolidEvent(messageID hornet.MessageID) {
+func (t *Tangle) DeregisterMessageSolidEvent(messageID hornet.BlockID) {
 	t.messageSolidSyncEvent.DeregisterEvent(messageID.ToMapKey())
 }
 

@@ -17,7 +17,7 @@ import (
 type SendMessageFunc = func(msg *storage.Message) error
 
 // SpammerTipselFunc selects tips for the spammer.
-type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.MessageIDs, err error)
+type SpammerTipselFunc = func() (isSemiLazy bool, tips hornet.BlockIDs, err error)
 
 // Spammer is used to issue messages to the IOTA network to create load on the tangle.
 type Spammer struct {
@@ -88,7 +88,7 @@ func (s *Spammer) DoSpam(ctx context.Context) (time.Duration, time.Duration, err
 	}
 
 	timeStart = time.Now()
-	if _, err := s.powHandler.DoPoW(ctx, iotaMsg, 1, func() (tips hornet.MessageIDs, err error) {
+	if _, err := s.powHandler.DoPoW(ctx, iotaMsg, 1, func() (tips hornet.BlockIDs, err error) {
 		// refresh tips of the spammer if PoW takes longer than a configured duration.
 		_, refreshedTips, err := s.tipselFunc()
 		return refreshedTips, err

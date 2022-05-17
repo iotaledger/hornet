@@ -15,7 +15,7 @@ import (
 
 // updateOutdatedConeRootIndexes updates the cone root indexes of the given messages.
 // the "outdatedMessageIDs" should be ordered from oldest to latest to avoid recursion.
-func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, outdatedMessageIDs hornet.MessageIDs, cmi milestone.Index) error {
+func updateOutdatedConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTraverserStorage, outdatedMessageIDs hornet.BlockIDs, cmi milestone.Index) error {
 	for _, outdatedMessageID := range outdatedMessageIDs {
 		cachedMsgMeta, err := parentsTraverserStorage.CachedMessageMetadata(outdatedMessageID)
 		if err != nil {
@@ -58,7 +58,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 
 	// collect all parents in the cone that are not referenced,
 	// are no solid entry points and have no recent calculation index
-	var outdatedMessageIDs hornet.MessageIDs
+	var outdatedMessageIDs hornet.BlockIDs
 
 	startMessageID := cachedMsgMeta.Metadata().MessageID()
 
@@ -112,7 +112,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(messageID hornet.MessageID) error {
+		func(messageID hornet.BlockID) error {
 			// if the parent is a solid entry point, use the index of the solid entry point as ORTSI
 			entryPointIndex, _, err := parentsTraverserStorage.SolidEntryPointsIndex(messageID)
 			if err != nil {
@@ -154,7 +154,7 @@ func ConeRootIndexes(ctx context.Context, parentsTraverserStorage ParentsTravers
 // we have to walk the future cone, and update the past cone of all messages that reference an old cone.
 // as a special property, invocations of the yielded function share the same 'already traversed' set to circumvent
 // walking the future cone of the same messages multiple times.
-func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorage, messageIDs hornet.MessageIDs, cmi milestone.Index) error {
+func UpdateConeRootIndexes(ctx context.Context, traverserStorage TraverserStorage, messageIDs hornet.BlockIDs, cmi milestone.Index) error {
 	traversed := map[string]struct{}{}
 
 	t := NewChildrenTraverser(traverserStorage)

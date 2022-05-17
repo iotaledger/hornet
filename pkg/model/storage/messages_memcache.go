@@ -4,7 +4,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 )
 
-type CachedMessageFunc func(messageID hornet.MessageID) (*CachedMessage, error)
+type CachedMessageFunc func(messageID hornet.BlockID) (*CachedMessage, error)
 
 type MessagesMemcache struct {
 	cachedMessageFunc CachedMessageFunc
@@ -32,7 +32,7 @@ func (c *MessagesMemcache) Cleanup(forceRelease bool) {
 
 // CachedMessage returns a cached message object.
 // message +1
-func (c *MessagesMemcache) CachedMessage(messageID hornet.MessageID) (*CachedMessage, error) {
+func (c *MessagesMemcache) CachedMessage(messageID hornet.BlockID) (*CachedMessage, error) {
 	messageIDMapKey := messageID.ToMapKey()
 
 	var err error

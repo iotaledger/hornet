@@ -195,7 +195,7 @@ func ConfirmMilestone(
 	timeConfirmation := time.Now()
 
 	// load the message for the given id
-	forMessageMetadataWithMessageID := func(messageID hornet.MessageID, do func(meta *storage.CachedMetadata)) error {
+	forMessageMetadataWithMessageID := func(messageID hornet.BlockID, do func(meta *storage.CachedMetadata)) error {
 		cachedMsgMeta, err := parentsTraverserStorage.CachedMessageMetadata(messageID) // meta +1
 		if err != nil {
 			return fmt.Errorf("confirmMilestone: get message failed: %v, Error: %w", messageID.ToHex(), err)

@@ -8,16 +8,16 @@ import (
 
 // ParentsTraverserStorage provides the interface to the used storage in the ParentsTraverser.
 type ParentsTraverserStorage interface {
-	CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error)
-	SolidEntryPointsContain(messageID hornet.MessageID) (bool, error)
-	SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool, error)
+	CachedMessageMetadata(messageID hornet.BlockID) (*storage.CachedMetadata, error)
+	SolidEntryPointsContain(messageID hornet.BlockID) (bool, error)
+	SolidEntryPointsIndex(messageID hornet.BlockID) (milestone.Index, bool, error)
 }
 
 // ChildrenTraverserStorage provides the interface to the used storage in the ChildrenTraverser.
 type ChildrenTraverserStorage interface {
-	CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error)
-	SolidEntryPointsContain(messageID hornet.MessageID) (bool, error)
-	ChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...storage.IteratorOption) (hornet.MessageIDs, error)
+	CachedMessageMetadata(messageID hornet.BlockID) (*storage.CachedMetadata, error)
+	SolidEntryPointsContain(messageID hornet.BlockID) (bool, error)
+	ChildrenMessageIDs(messageID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error)
 }
 
 // TraverserStorage provides the interface to the used storage in the ParentsTraverser and ChildrenTraverser.

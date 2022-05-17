@@ -22,7 +22,7 @@ const (
 type proofOfWorkFunc func(ctx context.Context, data []byte, parallelism ...int) (uint64, error)
 
 // RefreshTipsFunc refreshes tips of the message if PoW takes longer than a configured duration.
-type RefreshTipsFunc = func() (tips hornet.MessageIDs, err error)
+type RefreshTipsFunc = func() (tips hornet.BlockIDs, err error)
 
 // Handler handles PoW requests of the node and uses local PoW.
 // It refreshes the tips of messages during PoW.

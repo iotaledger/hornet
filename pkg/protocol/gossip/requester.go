@@ -208,7 +208,7 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 	var request *Request
 
 	switch value := data.(type) {
-	case hornet.MessageID:
+	case hornet.BlockID:
 		messageID := value
 		contains, err := r.storage.SolidEntryPointsContain(messageID)
 		if err != nil {
@@ -241,7 +241,7 @@ func (r *Requester) Request(data interface{}, msIndex milestone.Index, preventDi
 }
 
 // RequestMultiple works like Request but takes multiple message IDs.
-func (r *Requester) RequestMultiple(messageIDs hornet.MessageIDs, msIndex milestone.Index, preventDiscard ...bool) int {
+func (r *Requester) RequestMultiple(messageIDs hornet.BlockIDs, msIndex milestone.Index, preventDiscard ...bool) int {
 	requested := 0
 	for _, messageID := range messageIDs {
 		if r.Request(messageID, msIndex, preventDiscard...) {

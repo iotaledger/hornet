@@ -9,5 +9,5 @@ func MilestoneCaller(handler interface{}, params ...interface{}) {
 }
 
 func MilestoneWithMessageIdAndRequestedCaller(handler interface{}, params ...interface{}) {
-	handler.(func(messageID hornet.MessageID, cachedMilestone *CachedMilestone, requested bool))(params[0].(hornet.MessageID), params[1].(*CachedMilestone).Retain(), params[2].(bool)) // milestone pass +1
+	handler.(func(messageID hornet.BlockID, cachedMilestone *CachedMilestone, requested bool))(params[0].(hornet.BlockID), params[1].(*CachedMilestone).Retain(), params[2].(bool)) // milestone pass +1
 }

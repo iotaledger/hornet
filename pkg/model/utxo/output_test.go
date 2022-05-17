@@ -92,7 +92,7 @@ func AssertOutputUnspentAndSpentTransitions(t *testing.T, output *Output, spent 
 	require.True(t, has)
 }
 
-func CreateOutputAndAssertSerialization(t *testing.T, messageID hornet.MessageID, msIndex milestone.Index, msTimestamp uint32, outputID *iotago.OutputID, iotaOutput iotago.Output) *Output {
+func CreateOutputAndAssertSerialization(t *testing.T, messageID hornet.BlockID, msIndex milestone.Index, msTimestamp uint32, outputID *iotago.OutputID, iotaOutput iotago.Output) *Output {
 	output := CreateOutput(outputID, messageID, msIndex, msTimestamp, iotaOutput)
 	outputBytes, err := output.Output().Serialize(serializer.DeSeriModeNoValidation, nil)
 	require.NoError(t, err)

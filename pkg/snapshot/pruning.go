@@ -264,7 +264,7 @@ func (s *SnapshotManager) pruneDatabase(ctx context.Context, targetIndex milesto
 				return nil
 			},
 			// called on missing parents
-			func(parentMessageID hornet.MessageID) error { return nil },
+			func(parentMessageID hornet.BlockID) error { return nil },
 			// called on solid entry points
 			// Ignore solid entry points (snapshot milestone included)
 			nil,

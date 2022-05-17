@@ -5,7 +5,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/storage"
 )
 
-func (t *Tangle) processValidMilestone(messageID hornet.MessageID, cachedMilestone *storage.CachedMilestone, requested bool) {
+func (t *Tangle) processValidMilestone(messageID hornet.BlockID, cachedMilestone *storage.CachedMilestone, requested bool) {
 	defer cachedMilestone.Release(true) // milestone -1
 
 	t.Events.ReceivedNewMilestoneMessage.Trigger(messageID)

@@ -179,7 +179,7 @@ func SetupTestEnvironment(testInterface testing.TB, genesisAddress *iotago.Ed255
 	te.VerifyCMI(1)
 
 	for i := 1; i <= numberOfMilestones; i++ {
-		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.MessageIDs{}, false)
+		_, confStats := te.IssueAndConfirmMilestoneOnTips(hornet.BlockIDs{}, false)
 		require.Equal(te.TestInterface, 1, confStats.MessagesReferenced)                  // 1 for previous milestone
 		require.Equal(te.TestInterface, 1, confStats.MessagesExcludedWithoutTransactions) // 1 for previous milestone
 		require.Equal(te.TestInterface, 0, confStats.MessagesIncludedWithTransactions)
@@ -229,11 +229,11 @@ func (te *TestEnvironment) LastPreviousMilestoneID() iotago.MilestoneID {
 	return te.coo.LastPreviousMilestoneID()
 }
 
-func (te *TestEnvironment) LastMilestoneMessageID() hornet.MessageID {
+func (te *TestEnvironment) LastMilestoneMessageID() hornet.BlockID {
 	return te.coo.LastMilestoneMessageID()
 }
 
-func (te *TestEnvironment) LastMilestoneParents() hornet.MessageIDs {
+func (te *TestEnvironment) LastMilestoneParents() hornet.BlockIDs {
 	return te.coo.LastMilestoneParents()
 }
 
@@ -259,7 +259,7 @@ func (te *TestEnvironment) CleanupTestEnvironment(removeTempDir bool) {
 	}
 }
 
-func (te *TestEnvironment) NewTestMessage(index int, parents hornet.MessageIDs) *storage.MessageMetadata {
+func (te *TestEnvironment) NewTestMessage(index int, parents hornet.BlockIDs) *storage.MessageMetadata {
 	msg := te.NewMessageBuilder(fmt.Sprintf("%d", index)).Parents(parents).BuildTaggedData().Store()
 	cachedMsgMeta := te.Storage().CachedMessageMetadataOrNil(msg.StoredMessageID()) // meta +1
 	defer cachedMsgMeta.Release(true)                                               // meta -1
@@ -274,21 +274,21 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 	minMessagesPerMilestone int,
 	maxMessagesPerMilestone int,
 	onNewMessage func(cmi milestone.Index, msgMeta *storage.MessageMetadata),
-	milestoneTipSelectFunc func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs,
-	onNewMilestone func(msIndex milestone.Index, messages hornet.MessageIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats)) (messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) {
+	milestoneTipSelectFunc func(messages hornet.BlockIDs, messagesPerMilestones []hornet.BlockIDs) hornet.BlockIDs,
+	onNewMilestone func(msIndex milestone.Index, messages hornet.BlockIDs, conf *whiteflag.Confirmation, confStats *whiteflag.ConfirmedMilestoneStats)) (messages hornet.BlockIDs, messagesPerMilestones []hornet.BlockIDs) {
 
 	messageTotalCount := 0
-	messages = hornet.MessageIDs{}
-	messagesPerMilestones = make([]hornet.MessageIDs, 0)
+	messages = hornet.BlockIDs{}
+	messagesPerMilestones = make([]hornet.BlockIDs, 0)
 
-	getParents := func() hornet.MessageIDs {
+	getParents := func() hornet.BlockIDs {
 
 		if len(messages) < initMessagesCount {
 			// reference the first milestone at the beginning
-			return hornet.MessageIDs{te.LastMilestoneMessageID()}
+			return hornet.BlockIDs{te.LastMilestoneMessageID()}
 		}
 
-		parents := hornet.MessageIDs{}
+		parents := hornet.BlockIDs{}
 		for j := 2; j <= 2+rand.Intn(7); j++ {
 			msIndex := rand.Intn(belowMaxDepth)
 			if msIndex > len(messagesPerMilestones)-1 {
@@ -308,7 +308,7 @@ func (te *TestEnvironment) BuildTangle(initMessagesCount int,
 
 	// build a tangle
 	for msIndex := 2; msIndex < milestonesCount; msIndex++ {
-		messagesPerMilestones = append(messagesPerMilestones, hornet.MessageIDs{})
+		messagesPerMilestones = append(messagesPerMilestones, hornet.BlockIDs{})
 
 		cmi := te.SyncManager().ConfirmedMilestoneIndex()
 

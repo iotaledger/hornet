@@ -221,7 +221,7 @@ func (proc *MessageProcessor) Emit(msg *storage.Message) error {
 
 	cmi := proc.syncManager.ConfirmedMilestoneIndex()
 
-	checkParentFunc := func(messageID hornet.MessageID) error {
+	checkParentFunc := func(messageID hornet.BlockID) error {
 		cachedMsgMeta := proc.storage.CachedMessageMetadataOrNil(messageID) // meta +1
 		if cachedMsgMeta == nil {
 			// parent not found

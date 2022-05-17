@@ -54,7 +54,7 @@ func (t *ChildrenTraverser) reset() {
 // Traverse starts to traverse the children (future cone) of the given start message until
 // the traversal stops due to no more messages passing the given condition.
 // It is unsorted BFS because the children are not ordered in the database.
-func (t *ChildrenTraverser) Traverse(ctx context.Context, startMessageID hornet.MessageID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
+func (t *ChildrenTraverser) Traverse(ctx context.Context, startMessageID hornet.BlockID, condition Predicate, consumer Consumer, walkAlreadyDiscovered bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -94,7 +94,7 @@ func (t *ChildrenTraverser) processStackChildren() error {
 
 	// load candidate msg
 	ele := t.stack.Front()
-	currentMessageID := ele.Value.(hornet.MessageID)
+	currentMessageID := ele.Value.(hornet.BlockID)
 
 	// remove the message from the stack
 	t.stack.Remove(ele)

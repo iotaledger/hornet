@@ -14,7 +14,7 @@ type Message struct {
 	objectstorage.StorableObjectFlags
 
 	// Key
-	messageID hornet.MessageID
+	messageID hornet.BlockID
 
 	// Value
 	data        []byte
@@ -66,7 +66,7 @@ func MessageFromBytes(data []byte, deSeriMode serializer.DeSerializationMode, pr
 	return msg, nil
 }
 
-func (msg *Message) MessageID() hornet.MessageID {
+func (msg *Message) MessageID() hornet.BlockID {
 	return msg.messageID
 }
 
@@ -91,7 +91,7 @@ func (msg *Message) ProtocolVersion() byte {
 	return msg.Message().ProtocolVersion
 }
 
-func (msg *Message) Parents() hornet.MessageIDs {
+func (msg *Message) Parents() hornet.BlockIDs {
 	return hornet.MessageIDsFromSliceOfArrays(msg.Message().Parents)
 }
 

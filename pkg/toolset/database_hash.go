@@ -115,7 +115,7 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		solidEntryPoints = append(solidEntryPoints, sep.MessageID)
 		return true
 	})
-	// sort the solid entry points lexicographically by their MessageID
+	// sort the solid entry points lexicographically by their BlockID
 	sort.Sort(solidEntryPoints)
 
 	// write all solid entry points in lexicographical order

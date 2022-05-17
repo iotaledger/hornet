@@ -13,12 +13,12 @@ import (
 )
 
 type SolidEntryPoint struct {
-	MessageID hornet.MessageID
+	MessageID hornet.BlockID
 	Index     milestone.Index
 }
 
 // LexicalOrderedSolidEntryPoints are solid entry points
-// ordered in lexical order by their MessageID.
+// ordered in lexical order by their BlockID.
 type LexicalOrderedSolidEntryPoints []*SolidEntryPoint
 
 func (l LexicalOrderedSolidEntryPoints) Len() int {
@@ -35,7 +35,7 @@ func (l LexicalOrderedSolidEntryPoints) Swap(i, j int) {
 
 type SolidEntryPoints struct {
 	entryPointsMap   map[string]milestone.Index
-	entryPointsSlice hornet.MessageIDs
+	entryPointsSlice hornet.BlockIDs
 
 	// Status
 	statusMutex syncutils.RWMutex
@@ -65,17 +65,17 @@ func (s *SolidEntryPoints) copy() []*SolidEntryPoint {
 	return result
 }
 
-func (s *SolidEntryPoints) Contains(messageID hornet.MessageID) bool {
+func (s *SolidEntryPoints) Contains(messageID hornet.BlockID) bool {
 	_, exists := s.entryPointsMap[messageID.ToMapKey()]
 	return exists
 }
 
-func (s *SolidEntryPoints) Index(messageID hornet.MessageID) (milestone.Index, bool) {
+func (s *SolidEntryPoints) Index(messageID hornet.BlockID) (milestone.Index, bool) {
 	index, exists := s.entryPointsMap[messageID.ToMapKey()]
 	return index, exists
 }
 
-func (s *SolidEntryPoints) Add(messageID hornet.MessageID, milestoneIndex milestone.Index) {
+func (s *SolidEntryPoints) Add(messageID hornet.BlockID, milestoneIndex milestone.Index) {
 	messageIDMapKey := messageID.ToMapKey()
 	if _, exists := s.entryPointsMap[messageIDMapKey]; !exists {
 		s.entryPointsMap[messageIDMapKey] = milestoneIndex
@@ -86,7 +86,7 @@ func (s *SolidEntryPoints) Add(messageID hornet.MessageID, milestoneIndex milest
 
 func (s *SolidEntryPoints) Clear() {
 	s.entryPointsMap = make(map[string]milestone.Index)
-	s.entryPointsSlice = make(hornet.MessageIDs, 0)
+	s.entryPointsSlice = make(hornet.BlockIDs, 0)
 	s.SetModified(true)
 }
 
@@ -104,7 +104,7 @@ func (s *SolidEntryPoints) SetModified(modified bool) {
 	s.modified = modified
 }
 
-// sort the solid entry points lexicographically by their MessageID
+// sort the solid entry points lexicographically by their BlockID
 func (s *SolidEntryPoints) Sorted() []*SolidEntryPoint {
 
 	var sortedSolidEntryPoints LexicalOrderedSolidEntryPoints = s.copy()

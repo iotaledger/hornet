@@ -11,10 +11,10 @@ import (
 type UnreferencedMessage struct {
 	objectstorage.StorableObjectFlags
 	latestMilestoneIndex milestone.Index
-	messageID            hornet.MessageID
+	messageID            hornet.BlockID
 }
 
-func NewUnreferencedMessage(msIndex milestone.Index, messageID hornet.MessageID) *UnreferencedMessage {
+func NewUnreferencedMessage(msIndex milestone.Index, messageID hornet.BlockID) *UnreferencedMessage {
 	return &UnreferencedMessage{
 		latestMilestoneIndex: msIndex,
 		messageID:            messageID,
@@ -25,7 +25,7 @@ func (t *UnreferencedMessage) LatestMilestoneIndex() milestone.Index {
 	return t.latestMilestoneIndex
 }
 
-func (t *UnreferencedMessage) MessageID() hornet.MessageID {
+func (t *UnreferencedMessage) MessageID() hornet.BlockID {
 	return t.messageID
 }
 

@@ -90,7 +90,7 @@ func runVisualizer() {
 		})
 	})
 
-	onReceivedNewMilestoneMessage := events.NewClosure(func(messageID hornet.MessageID) {
+	onReceivedNewMilestoneMessage := events.NewClosure(func(messageID hornet.BlockID) {
 		if !deps.SyncManager.IsNodeAlmostSynced() {
 			return
 		}

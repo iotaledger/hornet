@@ -12,7 +12,7 @@ import (
 )
 
 type ParentsTraverserInterface interface {
-	Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error
+	Traverse(ctx context.Context, parents hornet.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error
 }
 
 // ParentsTraverser can be used to walk the dag in direction of the parents (past cone).
@@ -64,7 +64,7 @@ func (t *ParentsTraverser) reset() {
 // the traversal stops due to no more messages passing the given condition.
 // It is a DFS of the paths of the parents one after another.
 // Caution: condition func is not in DFS order
-func (t *ParentsTraverser) Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
+func (t *ParentsTraverser) Traverse(ctx context.Context, parents hornet.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -110,7 +110,7 @@ func (t *ParentsTraverser) processStackParents() error {
 
 	// load candidate msg
 	ele := t.stack.Front()
-	currentMessageID := ele.Value.(hornet.MessageID)
+	currentMessageID := ele.Value.(hornet.BlockID)
 	currentMessageIDMapKey := currentMessageID.ToMapKey()
 
 	if _, wasProcessed := t.processed[currentMessageIDMapKey]; wasProcessed {

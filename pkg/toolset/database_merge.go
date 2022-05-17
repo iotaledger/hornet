@@ -361,7 +361,7 @@ func mergeViaAPI(
 	chronicleMode bool,
 	apiParallelism int) error {
 
-	getMessageViaAPI := func(messageID hornet.MessageID) (*iotago.Block, error) {
+	getMessageViaAPI := func(messageID hornet.BlockID) (*iotago.Block, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
@@ -605,7 +605,7 @@ func getNodeHTTPAPIClient(nodeURL string, chronicleMode bool, chronicleKeyspace 
 	return client
 }
 
-type GetMessageFunc func(messageID hornet.MessageID) (*iotago.Block, error)
+type GetMessageFunc func(messageID hornet.BlockID) (*iotago.Block, error)
 
 // ProxyStorage is used to temporarily store changes to an intermediate storage,
 // which then can be merged with the target store in a single commit.
@@ -638,7 +638,7 @@ func NewProxyStorage(
 }
 
 // message +1
-func (s *ProxyStorage) CachedMessage(messageID hornet.MessageID) (*storage.CachedMessage, error) {
+func (s *ProxyStorage) CachedMessage(messageID hornet.BlockID) (*storage.CachedMessage, error) {
 	if !s.storeTarget.ContainsMessage(messageID) {
 		if !s.storeProxy.ContainsMessage(messageID) {
 			msg, err := s.getMessageFunc(messageID)
@@ -665,7 +665,7 @@ func (s *ProxyStorage) CachedMessage(messageID hornet.MessageID) (*storage.Cache
 }
 
 // meta +1
-func (s *ProxyStorage) CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
+func (s *ProxyStorage) CachedMessageMetadata(messageID hornet.BlockID) (*storage.CachedMetadata, error) {
 	cachedMsg, err := s.CachedMessage(messageID) // message +1
 	if err != nil {
 		return nil, err
@@ -677,11 +677,11 @@ func (s *ProxyStorage) CachedMessageMetadata(messageID hornet.MessageID) (*stora
 	return cachedMsg.CachedMetadata(), nil // meta +1
 }
 
-func (s *ProxyStorage) SolidEntryPointsContain(messageID hornet.MessageID) (bool, error) {
+func (s *ProxyStorage) SolidEntryPointsContain(messageID hornet.BlockID) (bool, error) {
 	return s.storeTarget.SolidEntryPointsContain(messageID)
 }
 
-func (s *ProxyStorage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool, error) {
+func (s *ProxyStorage) SolidEntryPointsIndex(messageID hornet.BlockID) (milestone.Index, bool, error) {
 	return s.storeTarget.SolidEntryPointsIndex(messageID)
 }
 
@@ -706,10 +706,10 @@ func (s *ProxyStorage) StoreMessageIfAbsent(message *storage.Message) (cachedMsg
 	return s.storeProxy.StoreMessageIfAbsent(message)
 }
 
-func (s *ProxyStorage) StoreChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *storage.CachedChild {
+func (s *ProxyStorage) StoreChild(parentMessageID hornet.BlockID, childMessageID hornet.BlockID) *storage.CachedChild {
 	return s.storeProxy.StoreChild(parentMessageID, childMessageID)
 }
 
-func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, messageID hornet.MessageID) (*storage.CachedMilestone, bool) {
+func (s *ProxyStorage) StoreMilestoneIfAbsent(milestone *iotago.Milestone, messageID hornet.BlockID) (*storage.CachedMilestone, bool) {
 	return s.storeProxy.StoreMilestoneIfAbsent(milestone, messageID)
 }

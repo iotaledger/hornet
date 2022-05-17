@@ -117,7 +117,7 @@ type MessageMetadata struct {
 	objectstorage.StorableObjectFlags
 	syncutils.RWMutex
 
-	messageID hornet.MessageID
+	messageID hornet.BlockID
 
 	// Metadata
 	metadata bitmask.BitMask
@@ -137,21 +137,21 @@ type MessageMetadata struct {
 	coneRootCalculationIndex milestone.Index
 
 	// parents are the parents of the message
-	parents hornet.MessageIDs
+	parents hornet.BlockIDs
 }
 
-func NewMessageMetadata(messageID hornet.MessageID, parents hornet.MessageIDs) *MessageMetadata {
+func NewMessageMetadata(messageID hornet.BlockID, parents hornet.BlockIDs) *MessageMetadata {
 	return &MessageMetadata{
 		messageID: messageID,
 		parents:   parents,
 	}
 }
 
-func (m *MessageMetadata) MessageID() hornet.MessageID {
+func (m *MessageMetadata) MessageID() hornet.BlockID {
 	return m.messageID
 }
 
-func (m *MessageMetadata) Parents() hornet.MessageIDs {
+func (m *MessageMetadata) Parents() hornet.BlockIDs {
 	return m.parents
 }
 
@@ -396,7 +396,7 @@ func MetadataFactory(key []byte, data []byte) (objectstorage.StorableObject, err
 		return nil, err
 	}
 
-	m.parents = make(hornet.MessageIDs, parentsCount)
+	m.parents = make(hornet.BlockIDs, parentsCount)
 	for i := 0; i < int(parentsCount); i++ {
 		parentBytes, err := marshalUtil.ReadBytes(iotago.BlockIDLength)
 		if err != nil {

@@ -83,7 +83,7 @@ func (te *TestEnvironment) AssertTotalSupplyStillValid() {
 	require.NoError(te.TestInterface, err)
 }
 
-func (te *TestEnvironment) AssertMessageConflictReason(messageID hornet.MessageID, conflict storage.Conflict) {
+func (te *TestEnvironment) AssertMessageConflictReason(messageID hornet.BlockID, conflict storage.Conflict) {
 	cachedMsgMeta := te.storage.CachedMessageMetadataOrNil(messageID)
 	require.NotNil(te.TestInterface, cachedMsgMeta)
 	defer cachedMsgMeta.Release(true) // meta -1
@@ -93,7 +93,7 @@ func (te *TestEnvironment) AssertMessageConflictReason(messageID hornet.MessageI
 // generateDotFileFromConfirmation generates a dot file from a whiteflag confirmation cone.
 func (te *TestEnvironment) generateDotFileFromConfirmation(conf *whiteflag.Confirmation) string {
 
-	indexOf := func(hash hornet.MessageID) int {
+	indexOf := func(hash hornet.BlockID) int {
 		if conf == nil {
 			return -1
 		}

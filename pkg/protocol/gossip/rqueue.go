@@ -27,7 +27,7 @@ const (
 
 func getRequestMapKey(data interface{}) string {
 	switch value := data.(type) {
-	case hornet.MessageID:
+	case hornet.BlockID:
 		return value.ToMapKey()
 
 	case milestone.Index:
@@ -105,7 +105,7 @@ type Request struct {
 	// The type of the request.
 	RequestType RequestType
 	// The MessageID of the message to request.
-	MessageID hornet.MessageID
+	MessageID hornet.BlockID
 	// The milestone index under which this request is linked.
 	MilestoneIndex milestone.Index
 	// Tells the request queue to not remove this request if the enqueue time is
@@ -117,7 +117,7 @@ type Request struct {
 }
 
 // NewMessageIDRequest creates a new message request for a specific messageID.
-func NewMessageIDRequest(messageID hornet.MessageID, msIndex milestone.Index) *Request {
+func NewMessageIDRequest(messageID hornet.BlockID, msIndex milestone.Index) *Request {
 	return &Request{RequestType: RequestTypeMessageID, MessageID: messageID, MilestoneIndex: msIndex}
 }
 

@@ -314,7 +314,7 @@ func (w *WarpSyncMilestoneRequester) RequestMissingMilestoneParents(ctx context.
 		// consumer
 		nil,
 		// called on missing parents
-		func(parentMessageID hornet.MessageID) error {
+		func(parentMessageID hornet.BlockID) error {
 			w.requester.Request(parentMessageID, msIndex, w.preventDiscard)
 			return nil
 		},

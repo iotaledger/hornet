@@ -52,7 +52,7 @@ func (s *Spent) mapKey() string {
 	return string(s.outputID[:])
 }
 
-func (s *Spent) MessageID() hornet.MessageID {
+func (s *Spent) MessageID() hornet.BlockID {
 	return s.output.MessageID()
 }
 

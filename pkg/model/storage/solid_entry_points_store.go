@@ -53,7 +53,7 @@ func (s *Storage) loadSolidEntryPoints() error {
 	return nil
 }
 
-func (s *Storage) SolidEntryPointsContain(messageID hornet.MessageID) (bool, error) {
+func (s *Storage) SolidEntryPointsContain(messageID hornet.BlockID) (bool, error) {
 	s.ReadLockSolidEntryPoints()
 	defer s.ReadUnlockSolidEntryPoints()
 
@@ -65,7 +65,7 @@ func (s *Storage) SolidEntryPointsContain(messageID hornet.MessageID) (bool, err
 }
 
 // SolidEntryPointsIndex returns the index of a solid entry point and whether the message is a solid entry point or not.
-func (s *Storage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool, error) {
+func (s *Storage) SolidEntryPointsIndex(messageID hornet.BlockID) (milestone.Index, bool, error) {
 	s.ReadLockSolidEntryPoints()
 	defer s.ReadUnlockSolidEntryPoints()
 
@@ -80,7 +80,7 @@ func (s *Storage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.I
 
 // SolidEntryPointsAddWithoutLocking adds a message to the solid entry points.
 // WriteLockSolidEntryPoints must be held while entering this function.
-func (s *Storage) SolidEntryPointsAddWithoutLocking(messageID hornet.MessageID, milestoneIndex milestone.Index) {
+func (s *Storage) SolidEntryPointsAddWithoutLocking(messageID hornet.BlockID, milestoneIndex milestone.Index) {
 	if s.solidEntryPoints == nil {
 		// this can only happen at startup of the node, no need to return an unused error all the time
 		panic(ErrSolidEntryPointsNotInitialized)

@@ -44,26 +44,26 @@ type Confirmation struct {
 	// The milestone ID of the milestone that got confirmed.
 	MilestoneID iotago.MilestoneID
 	// The parents of the milestone that got confirmed.
-	MilestoneParents hornet.MessageIDs
+	MilestoneParents hornet.BlockIDs
 	// The ledger mutations and referenced messages of this milestone.
 	Mutations *WhiteFlagMutations
 }
 
 type MessageWithConflict struct {
-	MessageID hornet.MessageID
+	MessageID hornet.BlockID
 	Conflict  storage.Conflict
 }
 
 // WhiteFlagMutations contains the ledger mutations and referenced messages applied to a cone under the "white-flag" approach.
 type WhiteFlagMutations struct {
 	// The messages which mutate the ledger in the order in which they were applied.
-	MessagesIncludedWithTransactions hornet.MessageIDs
+	MessagesIncludedWithTransactions hornet.BlockIDs
 	// The messages which were excluded as they were conflicting with the mutations.
 	MessagesExcludedWithConflictingTransactions []MessageWithConflict
 	// The messages which were excluded because they did not include a value transaction.
-	MessagesExcludedWithoutTransactions hornet.MessageIDs
+	MessagesExcludedWithoutTransactions hornet.BlockIDs
 	// The messages which were referenced by the milestone (should be the sum of MessagesIncludedWithTransactions + MessagesExcludedWithConflictingTransactions + MessagesExcludedWithoutTransactions).
-	MessagesReferenced hornet.MessageIDs
+	MessagesReferenced hornet.BlockIDs
 	// Contains the newly created Unspent Outputs by the given confirmation.
 	NewOutputs map[string]*utxo.Output
 	// Contains the Spent Outputs for the given confirmation.
@@ -87,15 +87,15 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 	cachedMessageFunc storage.CachedMessageFunc,
 	msIndex milestone.Index,
 	msTimestamp uint32,
-	parents hornet.MessageIDs,
+	parents hornet.BlockIDs,
 	previousMilestoneID iotago.MilestoneID,
 	traversalCondition dag.Predicate) (*WhiteFlagMutations, error) {
 
 	wfConf := &WhiteFlagMutations{
-		MessagesIncludedWithTransactions:            make(hornet.MessageIDs, 0),
+		MessagesIncludedWithTransactions:            make(hornet.BlockIDs, 0),
 		MessagesExcludedWithConflictingTransactions: make([]MessageWithConflict, 0),
-		MessagesExcludedWithoutTransactions:         make(hornet.MessageIDs, 0),
-		MessagesReferenced:                          make(hornet.MessageIDs, 0),
+		MessagesExcludedWithoutTransactions:         make(hornet.BlockIDs, 0),
+		MessagesReferenced:                          make(hornet.BlockIDs, 0),
 		NewOutputs:                                  make(map[string]*utxo.Output),
 		NewSpents:                                   make(map[string]*utxo.Spent),
 	}

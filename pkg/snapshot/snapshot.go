@@ -207,7 +207,7 @@ func forEachSolidEntryPoint(
 	parentsTraverser := dag.NewParentsTraverser(memcachedParentsTraverserStorage)
 
 	// isSolidEntryPoint checks whether any direct child of the given message was referenced by a milestone which is above the target milestone.
-	isSolidEntryPoint := func(messageID hornet.MessageID, targetIndex milestone.Index) (bool, error) {
+	isSolidEntryPoint := func(messageID hornet.BlockID, targetIndex milestone.Index) (bool, error) {
 		childMessageIDs, err := memcachedChildrenTraverserStorage.ChildrenMessageIDs(messageID)
 		if err != nil {
 			return false, err

@@ -7,22 +7,22 @@ import (
 
 type Child struct {
 	objectstorage.StorableObjectFlags
-	parentMessageID hornet.MessageID
-	childMessageID  hornet.MessageID
+	parentMessageID hornet.BlockID
+	childMessageID  hornet.BlockID
 }
 
-func NewChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *Child {
+func NewChild(parentMessageID hornet.BlockID, childMessageID hornet.BlockID) *Child {
 	return &Child{
 		parentMessageID: parentMessageID,
 		childMessageID:  childMessageID,
 	}
 }
 
-func (a *Child) ParentMessageID() hornet.MessageID {
+func (a *Child) ParentMessageID() hornet.BlockID {
 	return a.parentMessageID
 }
 
-func (a *Child) ChildMessageID() hornet.MessageID {
+func (a *Child) ChildMessageID() hornet.BlockID {
 	return a.childMessageID
 }
 

@@ -29,8 +29,8 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func randMessageID() hornet.MessageID {
-	return hornet.MessageID(randBytes(iotago.BlockIDLength))
+func randMessageID() hornet.BlockID {
+	return hornet.BlockID(randBytes(iotago.BlockIDLength))
 }
 
 func TestVisualizer(t *testing.T) {
@@ -47,13 +47,13 @@ func TestVisualizer(t *testing.T) {
 		v := Vertex{MessageID: randMessageID().ToHex()}
 		if i <= getFromLast {
 			// only one parent at the beginning
-			v.Parents = hornet.MessageIDs{hornet.NullMessageID()}.ToHex()
+			v.Parents = hornet.BlockIDs{hornet.NullMessageID()}.ToHex()
 			vertices = append(vertices, v)
 			continue
 		}
 
 		l := len(vertices)
-		parents := hornet.MessageIDs{}
+		parents := hornet.BlockIDs{}
 		for j := 2; j <= 2+rand.Intn(7); j++ {
 			msgID, err := hornet.MessageIDFromHex(vertices[l-1-rand.Intn(getFromLast)].MessageID)
 			assert.NoError(t, err)

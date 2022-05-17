@@ -21,7 +21,7 @@ type MessageBuilder struct {
 	tag     string
 	tagData []byte
 
-	parents hornet.MessageIDs
+	parents hornet.BlockIDs
 
 	fromWallet *utils.HDWallet
 	toWallet   *utils.HDWallet
@@ -41,7 +41,7 @@ type Message struct {
 	remainderOutput *utxo.Output
 
 	booked          bool
-	storedMessageID hornet.MessageID
+	storedMessageID hornet.BlockID
 }
 
 func (te *TestEnvironment) NewMessageBuilder(optionalTag ...string) *MessageBuilder {
@@ -56,10 +56,10 @@ func (te *TestEnvironment) NewMessageBuilder(optionalTag ...string) *MessageBuil
 }
 
 func (b *MessageBuilder) LatestMilestoneAsParents() *MessageBuilder {
-	return b.Parents(hornet.MessageIDs{b.te.coo.lastMilestoneMessageID})
+	return b.Parents(hornet.BlockIDs{b.te.coo.lastMilestoneMessageID})
 }
 
-func (b *MessageBuilder) Parents(parents hornet.MessageIDs) *MessageBuilder {
+func (b *MessageBuilder) Parents(parents hornet.BlockIDs) *MessageBuilder {
 	b.parents = parents
 	return b
 }
@@ -287,7 +287,7 @@ func (m *Message) StoredMessage() *storage.Message {
 	return m.message
 }
 
-func (m *Message) StoredMessageID() hornet.MessageID {
+func (m *Message) StoredMessageID() hornet.BlockID {
 	require.NotNil(m.builder.te.TestInterface, m.storedMessageID)
 	return m.storedMessageID
 }

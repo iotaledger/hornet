@@ -33,10 +33,10 @@ type ConcurrentParentsTraverser struct {
 	stackCounter *atomic.Uint64
 
 	// used to fill the pipeline with elements to traverse.
-	stackChanIn chan<- (hornet.MessageID)
+	stackChanIn chan<- (hornet.BlockID)
 
 	// used to get the next element from the pipeline to traverse.
-	stackChanOut <-chan (hornet.MessageID)
+	stackChanOut <-chan (hornet.BlockID)
 
 	ctx                      context.Context
 	parallelism              int
@@ -70,15 +70,15 @@ func NewConcurrentParentsTraverser(parentsTraverserStorage ParentsTraverserStora
 func (t *ConcurrentParentsTraverser) reset() {
 
 	// create an unbuffered channel because we don't know the size of the cone to walk upfront
-	unbufferedChannel := func() (chan<- hornet.MessageID, <-chan hornet.MessageID) {
+	unbufferedChannel := func() (chan<- hornet.BlockID, <-chan hornet.BlockID) {
 
-		inbound := make(chan hornet.MessageID)
-		outbound := make(chan hornet.MessageID)
+		inbound := make(chan hornet.BlockID)
+		outbound := make(chan hornet.BlockID)
 
 		go func() {
-			var inboundQueue hornet.MessageIDs
+			var inboundQueue hornet.BlockIDs
 
-			nextValue := func() hornet.MessageID {
+			nextValue := func() hornet.BlockID {
 				// in case the inbound queue is empty, we return nil to block the nil channel
 				// produced by "outboundChannel" until the next element flows in or the
 				// inbound channel is closed.
@@ -88,7 +88,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 				return inboundQueue[0]
 			}
 
-			outboundChannel := func(nextItem bool) chan hornet.MessageID {
+			outboundChannel := func(nextItem bool) chan hornet.BlockID {
 				// in case the inbound queue is empty, we return a nil channel to block
 				// until the next element flows in or the inbound channel is closed.
 				if len(inboundQueue) == 0 {
@@ -97,7 +97,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 				return outbound
 			}
 
-			var out chan hornet.MessageID = nil
+			var out chan hornet.BlockID = nil
 
 		inboundLoop:
 			for {
@@ -126,7 +126,7 @@ func (t *ConcurrentParentsTraverser) reset() {
 }
 
 // traverseMessage adds the messageID to the pipeline and increases the counter of remaining elements.
-func (t *ConcurrentParentsTraverser) traverseMessage(messageID hornet.MessageID) {
+func (t *ConcurrentParentsTraverser) traverseMessage(messageID hornet.BlockID) {
 	t.stackCounter.Inc()
 	t.stackChanIn <- messageID
 }
@@ -135,7 +135,7 @@ func (t *ConcurrentParentsTraverser) traverseMessage(messageID hornet.MessageID)
 // unsorted way in direction of the parents.
 // the traversal stops due to no more messages passing the given condition.
 // Caution: not in DFS order
-func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents hornet.MessageIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
+func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents hornet.BlockIDs, condition Predicate, consumer Consumer, onMissingParent OnMissingParent, onSolidEntryPoint OnSolidEntryPoint, traverseSolidEntryPoints bool) error {
 
 	// make sure only one traversal is running
 	t.traverserLock.Lock()
@@ -186,13 +186,13 @@ func (t *ConcurrentParentsTraverser) Traverse(ctx context.Context, parents horne
 // processStack processes elements from the pipeline until there are no elements left or an error occurs.
 func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errChan chan error) {
 
-	wasProcessed := func(messageID hornet.MessageID) bool {
+	wasProcessed := func(messageID hornet.BlockID) bool {
 
 		_, wasProcessed := t.processed.Load(messageID.ToMapKey())
 		return wasProcessed
 	}
 
-	markAsProcessed := func(messageID hornet.MessageID) bool {
+	markAsProcessed := func(messageID hornet.BlockID) bool {
 
 		_, wasProcessed := t.processed.LoadOrStore(messageID.ToMapKey(), struct{}{})
 		return wasProcessed
@@ -202,7 +202,7 @@ func (t *ConcurrentParentsTraverser) processStack(doneChan chan struct{}, errCha
 	// the logic in this walker is quite different.
 	// we do not walk in any order, we just process every
 	// single message and traverse their parents afterwards.
-	processStackParents := func(currentMessageID hornet.MessageID) error {
+	processStackParents := func(currentMessageID hornet.BlockID) error {
 		if err := contextutils.ReturnErrIfCtxDone(t.ctx, common.ErrOperationAborted); err != nil {
 			return err
 		}

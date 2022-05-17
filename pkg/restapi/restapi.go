@@ -116,7 +116,7 @@ func GetRequestContentType(c echo.Context, supportedContentTypes ...string) (str
 	return "", echo.ErrUnsupportedMediaType
 }
 
-func ParseMessageIDParam(c echo.Context) (hornet.MessageID, error) {
+func ParseMessageIDParam(c echo.Context) (hornet.BlockID, error) {
 	messageIDHex := strings.ToLower(c.Param(ParameterMessageID))
 
 	messageID, err := hornet.MessageIDFromHex(messageIDHex)

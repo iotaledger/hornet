@@ -183,11 +183,11 @@ func TestStreamLocalSnapshotDataToAndFrom(t *testing.T) {
 
 }
 
-type sepRetrieverFunc func() hornet.MessageIDs
+type sepRetrieverFunc func() hornet.BlockIDs
 
 func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
-	var generatedSEPs hornet.MessageIDs
-	return func() (hornet.MessageID, error) {
+	var generatedSEPs hornet.BlockIDs
+	return func() (hornet.BlockID, error) {
 			if count == 0 {
 				return nil, nil
 			}
@@ -195,17 +195,17 @@ func newSEPGenerator(count int) (snapshot.SEPProducerFunc, sepRetrieverFunc) {
 			msgID := utils.RandMessageID()
 			generatedSEPs = append(generatedSEPs, msgID)
 			return msgID, nil
-		}, func() hornet.MessageIDs {
+		}, func() hornet.BlockIDs {
 			return generatedSEPs
 		}
 }
 
 func newSEPCollector() (snapshot.SEPConsumerFunc, sepRetrieverFunc) {
-	var generatedSEPs hornet.MessageIDs
-	return func(sep hornet.MessageID) error {
+	var generatedSEPs hornet.BlockIDs
+	return func(sep hornet.BlockID) error {
 			generatedSEPs = append(generatedSEPs, sep)
 			return nil
-		}, func() hornet.MessageIDs {
+		}, func() hornet.BlockIDs {
 			return generatedSEPs
 		}
 }

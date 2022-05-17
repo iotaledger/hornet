@@ -93,12 +93,12 @@ func newSEPsProducer(
 	}()
 
 	binder := producerFromChannels(prodChan, errChan)
-	return func() (hornet.MessageID, error) {
+	return func() (hornet.BlockID, error) {
 		obj, err := binder()
 		if obj == nil || err != nil {
 			return nil, err
 		}
-		return obj.(hornet.MessageID), nil
+		return obj.(hornet.BlockID), nil
 	}
 }
 
@@ -226,7 +226,7 @@ func newMsDiffsFromPreviousDeltaSnapshot(snapshotDeltaPath string, originLedgerI
 				}
 				return nil
 			},
-			func(id hornet.MessageID) error {
+			func(id hornet.BlockID) error {
 				// we don't care about solid entry points
 				return nil
 			}, nil, nil,
@@ -573,13 +573,13 @@ func createSnapshotFromCurrentStorageState(dbStorage *storage.Storage, filePath 
 		}()
 
 		binder := producerFromChannels(prodChan, nil)
-		return func() (hornet.MessageID, error) {
+		return func() (hornet.BlockID, error) {
 			obj, err := binder()
 			if obj == nil || err != nil {
 				return nil, err
 			}
 			sepsCount++
-			return obj.(hornet.MessageID), nil
+			return obj.(hornet.BlockID), nil
 		}
 	}()
 
@@ -728,7 +728,7 @@ func CreateSnapshotFromStorage(
 	// create a prepped solid entry point producer which counts how many went through
 	sepsCount := 0
 	sepProducer := newSEPsProducer(ctx, dbStorage, targetIndex, solidEntryPointCheckThresholdPast)
-	countingSepProducer := func() (hornet.MessageID, error) {
+	countingSepProducer := func() (hornet.BlockID, error) {
 		sep, err := sepProducer()
 		if sep != nil {
 			sepsCount++

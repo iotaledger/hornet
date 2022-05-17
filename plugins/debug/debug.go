@@ -255,7 +255,7 @@ func messageCone(c echo.Context) (*messageConeResponse, error) {
 		// return error on missing parents
 		nil,
 		// called on solid entry points
-		func(messageID hornet.MessageID) error {
+		func(messageID hornet.BlockID) error {
 			entryPoints = append(entryPoints, &entryPoint{MessageID: messageID.ToHex(), ReferencedByMilestone: entryPointIndex})
 			return nil
 		},

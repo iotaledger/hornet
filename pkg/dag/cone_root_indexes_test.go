@@ -32,10 +32,10 @@ func TestConeRootIndexes(t *testing.T) {
 	// build a tangle with 30 milestones and 10 - 100 messages between the milestones
 	_, _ = te.BuildTangle(initMessagesCount, BelowMaxDepth, milestonesCount, minMessagesPerMilestone, maxMessagesPerMilestone,
 		nil,
-		func(messages hornet.MessageIDs, messagesPerMilestones []hornet.MessageIDs) hornet.MessageIDs {
-			return hornet.MessageIDs{messages[len(messages)-1]}
+		func(messages hornet.BlockIDs, messagesPerMilestones []hornet.BlockIDs) hornet.BlockIDs {
+			return hornet.BlockIDs{messages[len(messages)-1]}
 		},
-		func(msIndex milestone.Index, messages hornet.MessageIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
+		func(msIndex milestone.Index, messages hornet.BlockIDs, _ *whiteflag.Confirmation, _ *whiteflag.ConfirmedMilestoneStats) {
 			latestMilestone := te.Milestones[len(te.Milestones)-1]
 			cmi := latestMilestone.Milestone().Index()
 

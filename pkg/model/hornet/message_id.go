@@ -9,14 +9,14 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// MessageID is the ID of a Message.
-type MessageID []byte
+// BlockID is the ID of a Block.
+type BlockID []byte
 
-// MessageIDs is a slice of MessageID.
-type MessageIDs []MessageID
+// BlockIDs is a slice of BlockID.
+type BlockIDs []BlockID
 
-// LexicalOrderedOutputs are MessageIDs ordered in lexical order.
-type LexicalOrderedMessageIDs MessageIDs
+// LexicalOrderedOutputs are BlockIDs ordered in lexical order.
+type LexicalOrderedMessageIDs BlockIDs
 
 func (l LexicalOrderedMessageIDs) Len() int {
 	return len(l)
@@ -30,41 +30,41 @@ func (l LexicalOrderedMessageIDs) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
 
-// ToHex converts the MessageID to its hex representation.
-func (m MessageID) ToHex() string {
+// ToHex converts the BlockID to its hex representation.
+func (m BlockID) ToHex() string {
 	return iotago.EncodeHex(m)
 }
 
-// ToArray converts the MessageID to an array.
-func (m MessageID) ToArray() iotago.BlockID {
+// ToArray converts the BlockID to an array.
+func (m BlockID) ToArray() iotago.BlockID {
 	var messageID iotago.BlockID
 	copy(messageID[:], m)
 	return messageID
 }
 
-// ToMapKey converts the MessageID to a string that can be used as a map key.
-func (m MessageID) ToMapKey() string {
+// ToMapKey converts the BlockID to a string that can be used as a map key.
+func (m BlockID) ToMapKey() string {
 	return string(m)
 }
 
 // MarshalBinary implements the encoding.BinaryMarshaler interface.
-func (m MessageID) MarshalBinary() ([]byte, error) {
+func (m BlockID) MarshalBinary() ([]byte, error) {
 	return m, nil
 }
 
 // IsNullMessageID returns the true if it is the genesis message ID.
-func (m MessageID) IsNullMessageID() bool {
+func (m BlockID) IsNullMessageID() bool {
 	return bytes.Equal(m[:], NullMessageID()[:])
 }
 
 // NullMessageID returns the ID of the genesis message.
-func NullMessageID() MessageID {
-	nullMessageID := make(MessageID, 32)
+func NullMessageID() BlockID {
+	nullMessageID := make(BlockID, 32)
 	return nullMessageID
 }
 
-// MessageIDFromHex creates a MessageID from a hex string representation.
-func MessageIDFromHex(hexString string) (MessageID, error) {
+// MessageIDFromHex creates a BlockID from a hex string representation.
+func MessageIDFromHex(hexString string) (BlockID, error) {
 
 	b, err := iotago.DecodeHex(hexString)
 	if err != nil {
@@ -75,35 +75,35 @@ func MessageIDFromHex(hexString string) (MessageID, error) {
 		return nil, fmt.Errorf("unknown messageID length (%d)", len(b))
 	}
 
-	return MessageID(b), nil
+	return BlockID(b), nil
 }
 
-// MessageIDFromMapKey creates a MessageID from a map key representation.
-func MessageIDFromMapKey(mapKey string) MessageID {
+// MessageIDFromMapKey creates a BlockID from a map key representation.
+func MessageIDFromMapKey(mapKey string) BlockID {
 	if len(mapKey) != iotago.BlockIDLength {
 		panic(fmt.Sprintf("unknown messageID length (%d)", len(mapKey)))
 	}
 
-	return MessageID(mapKey)
+	return BlockID(mapKey)
 }
 
-// MessageIDFromSlice creates a MessageID from a byte slice.
-func MessageIDFromSlice(b []byte) MessageID {
+// MessageIDFromSlice creates a BlockID from a byte slice.
+func MessageIDFromSlice(b []byte) BlockID {
 
 	if len(b) != iotago.BlockIDLength {
 		panic(fmt.Sprintf("unknown messageID length (%d)", len(b)))
 	}
 
-	return MessageID(b)
+	return BlockID(b)
 }
 
-// MessageIDFromArray creates a MessageID from a byte array.
-func MessageIDFromArray(b iotago.BlockID) MessageID {
-	return append(MessageID{}, b[:]...)
+// MessageIDFromArray creates a BlockID from a byte array.
+func MessageIDFromArray(b iotago.BlockID) BlockID {
+	return append(BlockID{}, b[:]...)
 }
 
-// ToHex converts the MessageIDs to their hex string representation.
-func (m MessageIDs) ToHex() []string {
+// ToHex converts the BlockIDs to their hex string representation.
+func (m BlockIDs) ToHex() []string {
 	results := make([]string, len(m))
 	for i, msgID := range m {
 		results[i] = msgID.ToHex()
@@ -111,8 +111,8 @@ func (m MessageIDs) ToHex() []string {
 	return results
 }
 
-// ToSliceOfSlices converts the MessageIDs to a slice of byte slices.
-func (m MessageIDs) ToSliceOfSlices() [][]byte {
+// ToSliceOfSlices converts the BlockIDs to a slice of byte slices.
+func (m BlockIDs) ToSliceOfSlices() [][]byte {
 	results := make([][]byte, len(m))
 	for i, msgID := range m {
 		results[i] = msgID
@@ -120,8 +120,8 @@ func (m MessageIDs) ToSliceOfSlices() [][]byte {
 	return results
 }
 
-// ToSliceOfArrays converts the MessageIDs to a slice of byte arrays.
-func (m MessageIDs) ToSliceOfArrays() iotago.BlockIDs {
+// ToSliceOfArrays converts the BlockIDs to a slice of byte arrays.
+func (m BlockIDs) ToSliceOfArrays() iotago.BlockIDs {
 	results := make(iotago.BlockIDs, len(m))
 	for i, msgID := range m {
 		results[i] = msgID.ToArray()
@@ -129,8 +129,8 @@ func (m MessageIDs) ToSliceOfArrays() iotago.BlockIDs {
 	return results
 }
 
-// RemoveDupsAndSortByLexicalOrder returns a new slice of MessageIDs sorted by lexical order and without duplicates.
-func (m MessageIDs) RemoveDupsAndSortByLexicalOrder() MessageIDs {
+// RemoveDupsAndSortByLexicalOrder returns a new slice of BlockIDs sorted by lexical order and without duplicates.
+func (m BlockIDs) RemoveDupsAndSortByLexicalOrder() BlockIDs {
 	// sort the messages lexicographically
 	sorted := make(serializer.LexicalOrderedByteSlices, len(m))
 	for i, id := range m {
@@ -138,8 +138,8 @@ func (m MessageIDs) RemoveDupsAndSortByLexicalOrder() MessageIDs {
 	}
 	sort.Sort(sorted)
 
-	var result MessageIDs
-	var prev MessageID
+	var result BlockIDs
+	var prev BlockID
 	for i, id := range sorted {
 		// only add to the result, if it its different from its predecessor
 		if i == 0 || !bytes.Equal(prev, id) {
@@ -150,9 +150,9 @@ func (m MessageIDs) RemoveDupsAndSortByLexicalOrder() MessageIDs {
 	return result
 }
 
-// MessageIDsFromHex creates a slice of MessageIDs from a slice of hex string representations.
-func MessageIDsFromHex(hexStrings []string) (MessageIDs, error) {
-	results := make(MessageIDs, len(hexStrings))
+// MessageIDsFromHex creates a slice of BlockIDs from a slice of hex string representations.
+func MessageIDsFromHex(hexStrings []string) (BlockIDs, error) {
+	results := make(BlockIDs, len(hexStrings))
 
 	for i, hexString := range hexStrings {
 		msgID, err := MessageIDFromHex(hexString)
@@ -165,9 +165,9 @@ func MessageIDsFromHex(hexStrings []string) (MessageIDs, error) {
 	return results, nil
 }
 
-// MessageIDsFromSliceOfArrays creates a slice of MessageIDs from a slice of arrays.
-func MessageIDsFromSliceOfArrays(b iotago.BlockIDs) MessageIDs {
-	results := make(MessageIDs, len(b))
+// MessageIDsFromSliceOfArrays creates a slice of BlockIDs from a slice of arrays.
+func MessageIDsFromSliceOfArrays(b iotago.BlockIDs) BlockIDs {
+	results := make(BlockIDs, len(b))
 	for i, msgID := range b {
 		// as msgID is reused between iterations, it must be copied
 		results[i] = MessageIDFromArray(msgID)
@@ -175,8 +175,8 @@ func MessageIDsFromSliceOfArrays(b iotago.BlockIDs) MessageIDs {
 	return results
 }
 
-func MessageIDsFromSliceOfSlices(s [][]byte) MessageIDs {
-	results := make(MessageIDs, len(s))
+func MessageIDsFromSliceOfSlices(s [][]byte) BlockIDs {
+	results := make(BlockIDs, len(s))
 	for i, msgID := range s {
 		// as msgID is reused between iterations, it must be copied
 		results[i] = MessageIDFromSlice(msgID)

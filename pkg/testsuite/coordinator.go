@@ -89,7 +89,7 @@ func (te *TestEnvironment) milestoneForIndex(msIndex milestone.Index) *storage.M
 	return ms.Milestone()
 }
 
-func (te *TestEnvironment) ReattachMessage(messageID hornet.MessageID, parents ...hornet.MessageID) hornet.MessageID {
+func (te *TestEnvironment) ReattachMessage(messageID hornet.BlockID, parents ...hornet.BlockID) hornet.BlockID {
 	message := te.storage.CachedMessageOrNil(messageID)
 	require.NotNil(te.TestInterface, message)
 	defer message.Release(true)
@@ -98,7 +98,7 @@ func (te *TestEnvironment) ReattachMessage(messageID hornet.MessageID, parents .
 
 	newParents := iotagoMessage.Parents
 	if len(parents) > 0 {
-		newParents = hornet.MessageIDs(parents).RemoveDupsAndSortByLexicalOrder().ToSliceOfArrays()
+		newParents = hornet.BlockIDs(parents).RemoveDupsAndSortByLexicalOrder().ToSliceOfArrays()
 	}
 
 	newMessage := &iotago.Block{
@@ -206,12 +206,12 @@ func (te *TestEnvironment) ConfirmMilestone(ms *storage.Milestone, createConfirm
 }
 
 // IssueMilestoneOnTips creates a milestone on top of the given tips.
-func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) (*storage.Milestone, hornet.MessageID, error) {
+func (te *TestEnvironment) IssueMilestoneOnTips(tips hornet.BlockIDs, addLastMilestoneAsParent bool) (*storage.Milestone, hornet.BlockID, error) {
 	return te.coo.issueMilestoneOnTips(tips, addLastMilestoneAsParent)
 }
 
 // IssueAndConfirmMilestoneOnTips creates a milestone on top of the given tips and confirms it.
-func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.MessageIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
+func (te *TestEnvironment) IssueAndConfirmMilestoneOnTips(tips hornet.BlockIDs, createConfirmationGraph bool) (*whiteflag.Confirmation, *whiteflag.ConfirmedMilestoneStats) {
 
 	currentIndex := te.syncManager.ConfirmedMilestoneIndex()
 	te.VerifyLMI(currentIndex)

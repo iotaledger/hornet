@@ -20,8 +20,8 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func randMessageID() hornet.MessageID {
-	return hornet.MessageID(randBytes(iotago.BlockIDLength))
+func randMessageID() hornet.BlockID {
+	return hornet.BlockID(randBytes(iotago.BlockIDLength))
 }
 
 func TestRequestQueue(t *testing.T) {
@@ -83,7 +83,7 @@ func TestRequestQueue(t *testing.T) {
 		// since we have two request under the same milestone/priority
 		// we need to make a special case
 		if i == 1 || i == 2 {
-			assert.Contains(t, hornet.MessageIDs{hashB, hashZ}, r.MessageID)
+			assert.Contains(t, hornet.BlockIDs{hashB, hashZ}, r.MessageID)
 		} else {
 			assert.Equal(t, r, requests[i])
 		}

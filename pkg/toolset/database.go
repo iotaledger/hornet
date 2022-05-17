@@ -108,8 +108,8 @@ func getStorageMilestoneRange(tangleStore *storage.Storage) (milestone.Index, mi
 
 type StoreMessageInterface interface {
 	StoreMessageIfAbsent(message *storage.Message) (cachedMsg *storage.CachedMessage, newlyAdded bool)
-	StoreChild(parentMessageID hornet.MessageID, childMessageID hornet.MessageID) *storage.CachedChild
-	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, messageID hornet.MessageID) (*storage.CachedMilestone, bool)
+	StoreChild(parentMessageID hornet.BlockID, childMessageID hornet.BlockID) *storage.CachedChild
+	StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, messageID hornet.BlockID) (*storage.CachedMilestone, bool)
 }
 
 // storeMessage adds a new message to the storage,

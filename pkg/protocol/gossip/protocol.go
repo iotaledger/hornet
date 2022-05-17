@@ -174,7 +174,7 @@ func (p *Protocol) SendHeartbeat(solidMsIndex milestone.Index, pruningMsIndex mi
 }
 
 // SendMessageRequest sends a storage.Message request message to the given peer.
-func (p *Protocol) SendMessageRequest(requestedMessageID hornet.MessageID) {
+func (p *Protocol) SendMessageRequest(requestedMessageID hornet.BlockID) {
 	txReqData, err := NewMessageRequestMsg(requestedMessageID)
 	if err != nil {
 		return

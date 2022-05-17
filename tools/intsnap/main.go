@@ -107,7 +107,7 @@ func writeFullSnapshot() {
 	defer func() { _ = full.Close() }()
 
 	var seps, sepsMax = 0, 10
-	fullSnapSEPProd := func() (hornet.MessageID, error) {
+	fullSnapSEPProd := func() (hornet.BlockID, error) {
 		seps++
 		if seps == 1 {
 			return hornet.NullMessageID(), nil
@@ -209,7 +209,7 @@ func writeDeltaSnapshot() {
 	defer func() { _ = delta.Close() }()
 
 	var seps, sepsMax = 0, 10
-	deltaSnapSEPProd := func() (hornet.MessageID, error) {
+	deltaSnapSEPProd := func() (hornet.BlockID, error) {
 		seps++
 		if seps > sepsMax {
 			return nil, nil
@@ -237,8 +237,8 @@ func must(err error) {
 	}
 }
 
-func randMsgID() hornet.MessageID {
-	b := make(hornet.MessageID, 32)
+func randMsgID() hornet.BlockID {
+	b := make(hornet.BlockID, 32)
 	_, err := rand.Read(b[:])
 	must(err)
 	return b
@@ -260,7 +260,7 @@ func static32ByteID(fill byte) [32]byte {
 	return b
 }
 
-func staticMessageID(fill byte) hornet.MessageID {
+func staticMessageID(fill byte) hornet.BlockID {
 	return hornet.MessageIDFromArray(static32ByteID(fill))
 }
 

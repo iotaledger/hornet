@@ -20,7 +20,7 @@ import (
 	inx "github.com/iotaledger/inx/go"
 )
 
-func INXBlockIDsFromBlockIDs(messageIDs hornet.MessageIDs) []*inx.BlockId {
+func INXBlockIDsFromBlockIDs(messageIDs hornet.BlockIDs) []*inx.BlockId {
 	result := make([]*inx.BlockId, len(messageIDs))
 	for i := range messageIDs {
 		result[i] = inx.NewBlockId(messageIDs[i].ToArray())
@@ -28,15 +28,15 @@ func INXBlockIDsFromBlockIDs(messageIDs hornet.MessageIDs) []*inx.BlockId {
 	return result
 }
 
-func BlockIDsFromINXBlockIDs(messageIDs []*inx.BlockId) hornet.MessageIDs {
-	result := make([]hornet.MessageID, len(messageIDs))
+func BlockIDsFromINXBlockIDs(messageIDs []*inx.BlockId) hornet.BlockIDs {
+	result := make([]hornet.BlockID, len(messageIDs))
 	for i := range messageIDs {
 		result[i] = hornet.MessageIDFromArray(messageIDs[i].Unwrap())
 	}
 	return result
 }
 
-func INXNewBlockMetadata(messageID hornet.MessageID, metadata *storage.MessageMetadata) (*inx.BlockMetadata, error) {
+func INXNewBlockMetadata(messageID hornet.BlockID, metadata *storage.MessageMetadata) (*inx.BlockMetadata, error) {
 	m := &inx.BlockMetadata{
 		BlockId: inx.NewBlockId(messageID.ToArray()),
 		Parents: INXBlockIDsFromBlockIDs(metadata.Parents()),

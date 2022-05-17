@@ -18,19 +18,19 @@ func NewMemcachedTraverserStorage(traverserStorage TraverserStorage, metadataMem
 	}
 }
 
-func (m *MemcachedTraverserStorage) CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
+func (m *MemcachedTraverserStorage) CachedMessageMetadata(messageID hornet.BlockID) (*storage.CachedMetadata, error) {
 	return m.metadataMemcache.CachedMessageMetadata(messageID)
 }
 
-func (m *MemcachedTraverserStorage) ChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...storage.IteratorOption) (hornet.MessageIDs, error) {
+func (m *MemcachedTraverserStorage) ChildrenMessageIDs(messageID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error) {
 	return m.traverserStorage.ChildrenMessageIDs(messageID, iteratorOptions...)
 }
 
-func (m *MemcachedTraverserStorage) SolidEntryPointsContain(messageID hornet.MessageID) (bool, error) {
+func (m *MemcachedTraverserStorage) SolidEntryPointsContain(messageID hornet.BlockID) (bool, error) {
 	return m.traverserStorage.SolidEntryPointsContain(messageID)
 
 }
-func (m *MemcachedTraverserStorage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool, error) {
+func (m *MemcachedTraverserStorage) SolidEntryPointsIndex(messageID hornet.BlockID) (milestone.Index, bool, error) {
 	return m.traverserStorage.SolidEntryPointsIndex(messageID)
 }
 
@@ -50,15 +50,15 @@ func NewMemcachedParentsTraverserStorage(parentsTraverserStorage ParentsTraverse
 	}
 }
 
-func (m *MemcachedParentsTraverserStorage) CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
+func (m *MemcachedParentsTraverserStorage) CachedMessageMetadata(messageID hornet.BlockID) (*storage.CachedMetadata, error) {
 	return m.metadataMemcache.CachedMessageMetadata(messageID)
 }
 
-func (m *MemcachedParentsTraverserStorage) SolidEntryPointsContain(messageID hornet.MessageID) (bool, error) {
+func (m *MemcachedParentsTraverserStorage) SolidEntryPointsContain(messageID hornet.BlockID) (bool, error) {
 	return m.parentsTraverserStorage.SolidEntryPointsContain(messageID)
 
 }
-func (m *MemcachedParentsTraverserStorage) SolidEntryPointsIndex(messageID hornet.MessageID) (milestone.Index, bool, error) {
+func (m *MemcachedParentsTraverserStorage) SolidEntryPointsIndex(messageID hornet.BlockID) (milestone.Index, bool, error) {
 	return m.parentsTraverserStorage.SolidEntryPointsIndex(messageID)
 }
 
@@ -78,11 +78,11 @@ func NewMemcachedChildrenTraverserStorage(childrenTraverserStorage ChildrenTrave
 	}
 }
 
-func (m *MemcachedChildrenTraverserStorage) CachedMessageMetadata(messageID hornet.MessageID) (*storage.CachedMetadata, error) {
+func (m *MemcachedChildrenTraverserStorage) CachedMessageMetadata(messageID hornet.BlockID) (*storage.CachedMetadata, error) {
 	return m.metadataMemcache.CachedMessageMetadata(messageID)
 }
 
-func (m *MemcachedChildrenTraverserStorage) ChildrenMessageIDs(messageID hornet.MessageID, iteratorOptions ...storage.IteratorOption) (hornet.MessageIDs, error) {
+func (m *MemcachedChildrenTraverserStorage) ChildrenMessageIDs(messageID hornet.BlockID, iteratorOptions ...storage.IteratorOption) (hornet.BlockIDs, error) {
 	return m.childrenTraverserStorage.ChildrenMessageIDs(messageID, iteratorOptions...)
 }
 

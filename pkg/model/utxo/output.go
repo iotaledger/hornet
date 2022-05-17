@@ -48,7 +48,7 @@ type Output struct {
 	kvStorable
 
 	outputID           *iotago.OutputID
-	messageID          hornet.MessageID
+	messageID          hornet.BlockID
 	milestoneIndex     milestone.Index
 	milestoneTimestamp uint32
 
@@ -63,7 +63,7 @@ func (o *Output) mapKey() string {
 	return string(o.outputID[:])
 }
 
-func (o *Output) MessageID() hornet.MessageID {
+func (o *Output) MessageID() hornet.BlockID {
 	return o.messageID
 }
 
@@ -97,7 +97,7 @@ func (o Outputs) ToOutputSet() iotago.OutputSet {
 	return outputSet
 }
 
-func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
+func CreateOutput(outputID *iotago.OutputID, messageID hornet.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, output iotago.Output) *Output {
 	return &Output{
 		outputID:           outputID,
 		messageID:          messageID,
@@ -107,7 +107,7 @@ func CreateOutput(outputID *iotago.OutputID, messageID hornet.MessageID, milesto
 	}
 }
 
-func NewOutput(messageID hornet.MessageID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
+func NewOutput(messageID hornet.BlockID, milestoneIndex milestone.Index, milestoneTimestamp uint32, transaction *iotago.Transaction, index uint16) (*Output, error) {
 
 	txID, err := transaction.ID()
 	if err != nil {
@@ -171,7 +171,7 @@ func (o *Output) kvStorableLoad(_ *Manager, key []byte, value []byte) error {
 	// Parse value
 	valueUtil := marshalutil.New(value)
 
-	// Read MessageID
+	// Read BlockID
 	if o.messageID, err = ParseMessageID(valueUtil); err != nil {
 		return err
 	}

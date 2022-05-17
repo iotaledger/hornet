@@ -25,7 +25,7 @@ type MockCoo struct {
 	keyManager     *keymanager.KeyManager
 
 	lastMilestonePayload   *iotago.Milestone
-	lastMilestoneMessageID hornet.MessageID
+	lastMilestoneMessageID hornet.BlockID
 }
 
 func (coo *MockCoo) LastMilestonePayload() *iotago.Milestone {
@@ -67,20 +67,20 @@ func (coo *MockCoo) LastPreviousMilestoneID() iotago.MilestoneID {
 	return lastMilestonePayload.PreviousMilestoneID
 }
 
-func (coo *MockCoo) LastMilestoneMessageID() hornet.MessageID {
+func (coo *MockCoo) LastMilestoneMessageID() hornet.BlockID {
 	return coo.lastMilestoneMessageID
 }
 
-func (coo *MockCoo) LastMilestoneParents() hornet.MessageIDs {
+func (coo *MockCoo) LastMilestoneParents() hornet.BlockIDs {
 	lastMilestonePayload := coo.LastMilestonePayload()
 	if lastMilestonePayload == nil {
 		// return genesis hash
-		return hornet.MessageIDs{hornet.NullMessageID()}
+		return hornet.BlockIDs{hornet.NullMessageID()}
 	}
 	return hornet.MessageIDsFromSliceOfArrays(lastMilestonePayload.Parents)
 }
 
-func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.MessageID {
+func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.BlockID {
 	msg, err := storage.NewMessage(message, serializer.DeSeriModeNoValidation, nil) // no need to validate bytes, they come pre-validated from the coo
 	require.NoError(coo.te.TestInterface, err)
 	cachedMsg := coo.te.StoreMessage(msg) // message +1, no need to release, since we remember all the messages for later cleanup
@@ -96,10 +96,10 @@ func (coo *MockCoo) storeMessage(message *iotago.Block) hornet.MessageID {
 func (coo *MockCoo) bootstrap() {
 	coo.lastMilestonePayload = nil
 	coo.lastMilestoneMessageID = hornet.NullMessageID()
-	coo.issueMilestoneOnTips(hornet.MessageIDs{}, true)
+	coo.issueMilestoneOnTips(hornet.BlockIDs{}, true)
 }
 
-func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
+func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, parents hornet.BlockIDs, lastMilestoneID iotago.MilestoneID) (*whiteflag.WhiteFlagMutations, error) {
 	messagesMemcache := storage.NewMessagesMemcache(coo.te.storage.CachedMessage)
 	metadataMemcache := storage.NewMetadataMemcache(coo.te.storage.CachedMessageMetadata)
 	memcachedTraverserStorage := dag.NewMemcachedTraverserStorage(coo.te.storage, metadataMemcache)
@@ -129,7 +129,7 @@ func (coo *MockCoo) computeWhiteflag(index milestone.Index, timestamp uint32, pa
 		whiteflag.DefaultWhiteFlagTraversalCondition)
 }
 
-func (coo *MockCoo) milestonePayload(parents hornet.MessageIDs) (*iotago.Milestone, error) {
+func (coo *MockCoo) milestonePayload(parents hornet.BlockIDs) (*iotago.Milestone, error) {
 
 	sortedParents := parents.RemoveDupsAndSortByLexicalOrder()
 
@@ -166,7 +166,7 @@ func (coo *MockCoo) milestonePayload(parents hornet.MessageIDs) (*iotago.Milesto
 }
 
 // issueMilestoneOnTips creates a milestone on top of the given tips.
-func (coo *MockCoo) issueMilestoneOnTips(tips hornet.MessageIDs, addLastMilestoneAsParent bool) (*storage.Milestone, hornet.MessageID, error) {
+func (coo *MockCoo) issueMilestoneOnTips(tips hornet.BlockIDs, addLastMilestoneAsParent bool) (*storage.Milestone, hornet.BlockID, error) {
 
 	currentIndex := coo.LastMilestoneIndex()
 	coo.te.VerifyLMI(currentIndex)

@@ -90,7 +90,7 @@ func tips(c echo.Context) (*tipsResponse, error) {
 		}
 	}
 
-	var tips hornet.MessageIDs
+	var tips hornet.BlockIDs
 	var err error
 
 	if !spammerTips {

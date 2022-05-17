@@ -84,7 +84,7 @@ func (t *Tangle) MessageAttacher(opts ...MessageAttacherOption) *MessageAttacher
 	}
 }
 
-func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Block) (hornet.MessageID, error) {
+func (a *MessageAttacher) AttachMessage(ctx context.Context, msg *iotago.Block) (hornet.BlockID, error) {
 
 	var tipSelFunc pow.RefreshTipsFunc
 

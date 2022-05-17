@@ -25,7 +25,7 @@ import (
 type Score int
 
 // TipSelectionFunc is a function which performs a tipselection and returns tips.
-type TipSelectionFunc = func() (hornet.MessageIDs, error)
+type TipSelectionFunc = func() (hornet.BlockIDs, error)
 
 // TipSelStats holds the stats for a tipselection run.
 type TipSelStats struct {
@@ -64,7 +64,7 @@ type Tip struct {
 	// Score is the score of the tip.
 	Score Score
 	// MessageID is the message ID of the tip.
-	MessageID hornet.MessageID
+	MessageID hornet.BlockID
 	// TimeFirstChild is the timestamp the tip was referenced for the first time by another message.
 	TimeFirstChild time.Time
 	// ChildrenCount is the amount the tip was referenced by other messages.
@@ -271,7 +271,7 @@ func (ts *TipSelector) AddTip(messageMeta *storage.MessageMetadata) {
 }
 
 // removeTipWithoutLocking removes the given message from the tipsMap without acquiring the lock.
-func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, messageID hornet.MessageID) bool {
+func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, messageID hornet.BlockID) bool {
 	messageIDMapKey := messageID.ToMapKey()
 	if tip, exists := tipsMap[messageIDMapKey]; exists {
 		delete(tipsMap, messageIDMapKey)
@@ -282,7 +282,7 @@ func (ts *TipSelector) removeTipWithoutLocking(tipsMap map[string]*Tip, messageI
 }
 
 // randomTipWithoutLocking picks a random tip from the pool and checks it's "own" score again without acquiring the lock.
-func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.MessageID, error) {
+func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.BlockID, error) {
 
 	if len(tipsMap) == 0 {
 		// no semi-/non-lazy tips available
@@ -308,7 +308,7 @@ func (ts *TipSelector) randomTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 }
 
 // selectTipWithoutLocking selects a tip.
-func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.MessageID, error) {
+func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.BlockID, error) {
 
 	if !ts.syncManager.IsNodeAlmostSynced() {
 		return nil, common.ErrNodeNotSynced
@@ -324,7 +324,7 @@ func (ts *TipSelector) selectTipWithoutLocking(tipsMap map[string]*Tip) (hornet.
 }
 
 // SelectTips selects multiple tips.
-func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.MessageIDs, error) {
+func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.BlockIDs, error) {
 	ts.tipsLock.Lock()
 	defer ts.tipsLock.Unlock()
 
@@ -364,7 +364,7 @@ func (ts *TipSelector) selectTips(tipsMap map[string]*Tip) (hornet.MessageIDs, e
 	orderedSlicesWithoutDups = orderedSlicesWithoutDups[:uniqueElements]
 	sort.Sort(orderedSlicesWithoutDups)
 
-	result := make(hornet.MessageIDs, len(orderedSlicesWithoutDups))
+	result := make(hornet.BlockIDs, len(orderedSlicesWithoutDups))
 	for i, v := range orderedSlicesWithoutDups {
 		// this is necessary, otherwise we create a pointer to the loop variable
 		tmp := v
@@ -386,16 +386,16 @@ func (ts *TipSelector) TipCount() (int, int) {
 }
 
 // SelectSemiLazyTips selects two semi-lazy tips.
-func (ts *TipSelector) SelectSemiLazyTips() (hornet.MessageIDs, error) {
+func (ts *TipSelector) SelectSemiLazyTips() (hornet.BlockIDs, error) {
 	return ts.selectTips(ts.semiLazyTipsMap)
 }
 
 // SelectNonLazyTips selects two non-lazy tips.
-func (ts *TipSelector) SelectNonLazyTips() (hornet.MessageIDs, error) {
+func (ts *TipSelector) SelectNonLazyTips() (hornet.BlockIDs, error) {
 	return ts.selectTips(ts.nonLazyTipsMap)
 }
 
-func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.MessageIDs, err error) {
+func (ts *TipSelector) SelectSpammerTips() (isSemiLazy bool, tips hornet.BlockIDs, err error) {
 	if ts.spammerTipsThresholdSemiLazy != 0 && len(ts.semiLazyTipsMap) > ts.spammerTipsThresholdSemiLazy {
 		// threshold was defined and reached, return semi-lazy tips for the spammer
 		tips, err = ts.SelectSemiLazyTips()
@@ -539,7 +539,7 @@ func (ts *TipSelector) UpdateScores() (int, error) {
 }
 
 // calculateScore calculates the tip selection score of this message
-func (ts *TipSelector) calculateScore(messageID hornet.MessageID, cmi milestone.Index) (Score, error) {
+func (ts *TipSelector) calculateScore(messageID hornet.BlockID, cmi milestone.Index) (Score, error) {
 
 	tipScore, err := ts.tipScoreCalculator.TipScore(ts.shutdownCtx, messageID, cmi)
 	if err != nil {

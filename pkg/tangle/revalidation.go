@@ -220,7 +220,7 @@ func (t *Tangle) cleanupMessages(info *storage.SnapshotInfo) error {
 
 	lastStatusTime := time.Now()
 	var txsCounter int64
-	t.storage.NonCachedStorage().ForEachMessageID(func(messageID hornet.MessageID) bool {
+	t.storage.NonCachedStorage().ForEachMessageID(func(messageID hornet.BlockID) bool {
 		txsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -296,7 +296,7 @@ func (t *Tangle) cleanupMessageMetadata() error {
 
 	lastStatusTime := time.Now()
 	var metadataCounter int64
-	t.storage.NonCachedStorage().ForEachMessageMetadataMessageID(func(messageID hornet.MessageID) bool {
+	t.storage.NonCachedStorage().ForEachMessageMetadataMessageID(func(messageID hornet.BlockID) bool {
 		metadataCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -352,8 +352,8 @@ func (t *Tangle) cleanupMessageMetadata() error {
 func (t *Tangle) cleanupChildren() error {
 
 	type child struct {
-		messageID      hornet.MessageID
-		childMessageID hornet.MessageID
+		messageID      hornet.BlockID
+		childMessageID hornet.BlockID
 	}
 
 	start := time.Now()
@@ -362,7 +362,7 @@ func (t *Tangle) cleanupChildren() error {
 
 	lastStatusTime := time.Now()
 	var childCounter int64
-	t.storage.NonCachedStorage().ForEachChild(func(messageID hornet.MessageID, childMessageID hornet.MessageID) bool {
+	t.storage.NonCachedStorage().ForEachChild(func(messageID hornet.BlockID, childMessageID hornet.BlockID) bool {
 		childCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {
@@ -435,7 +435,7 @@ func (t *Tangle) cleanupUnreferencedMsgs() error {
 
 	lastStatusTime := time.Now()
 	var unreferencedTxsCounter int64
-	t.storage.NonCachedStorage().ForEachUnreferencedMessage(func(msIndex milestone.Index, _ hornet.MessageID) bool {
+	t.storage.NonCachedStorage().ForEachUnreferencedMessage(func(msIndex milestone.Index, _ hornet.BlockID) bool {
 		unreferencedTxsCounter++
 
 		if time.Since(lastStatusTime) >= printStatusInterval {

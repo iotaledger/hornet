@@ -54,12 +54,12 @@ func (t *Tangle) SolidQueueCheck(
 	ctx context.Context,
 	memcachedTraverserStorage dag.TraverserStorage,
 	milestoneIndex milestone.Index,
-	parents hornet.MessageIDs) (solid bool, aborted bool) {
+	parents hornet.BlockIDs) (solid bool, aborted bool) {
 
 	ts := time.Now()
 
 	msgsChecked := 0
-	var messageIDsToSolidify hornet.MessageIDs
+	var messageIDsToSolidify hornet.BlockIDs
 	messageIDsToRequest := make(map[string]struct{})
 
 	parentsTraverser := dag.NewParentsTraverser(memcachedTraverserStorage)
@@ -89,7 +89,7 @@ func (t *Tangle) SolidQueueCheck(
 			return nil
 		},
 		// called on missing parents
-		func(parentMessageID hornet.MessageID) error {
+		func(parentMessageID hornet.BlockID) error {
 			// msg does not exist => request missing msg
 			messageIDsToRequest[parentMessageID.ToMapKey()] = struct{}{}
 			return nil
@@ -107,7 +107,7 @@ func (t *Tangle) SolidQueueCheck(
 	tCollect := time.Now()
 
 	if len(messageIDsToRequest) > 0 {
-		messageIDs := make(hornet.MessageIDs, 0, len(messageIDsToRequest))
+		messageIDs := make(hornet.BlockIDs, 0, len(messageIDsToRequest))
 		for messageID := range messageIDsToRequest {
 			messageIDs = append(messageIDs, hornet.MessageIDFromMapKey(messageID))
 		}
@@ -271,7 +271,7 @@ func (t *Tangle) solidifyMilestone(newMilestoneIndex milestone.Index, force bool
 		milestoneSolidificationCtx,
 		memcachedTraverserStorage,
 		milestoneIndexToSolidify,
-		hornet.MessageIDs{milestoneMessageIDToSolidify},
+		hornet.BlockIDs{milestoneMessageIDToSolidify},
 	); !becameSolid {
 		if aborted {
 			// check was aborted due to older milestones/other solidifier running
@@ -493,7 +493,7 @@ func (t *Tangle) setSolidifierMilestoneIndex(index milestone.Index) {
 }
 
 // searchMissingMilestones searches milestones in the cone that are not persisted in the DB yet by traversing the tangle
-func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneParents hornet.MessageIDs) (found bool, err error) {
+func (t *Tangle) searchMissingMilestones(ctx context.Context, confirmedMilestoneIndex milestone.Index, startMilestoneIndex milestone.Index, milestoneParents hornet.BlockIDs) (found bool, err error) {
 
 	var milestoneFound bool
 

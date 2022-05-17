@@ -78,9 +78,9 @@ func (s *Storage) configureUnreferencedMessageStorage(store kvstore.KVStore, opt
 }
 
 // UnreferencedMessageIDs returns all message IDs of unreferenced messages for that milestone.
-func (s *Storage) UnreferencedMessageIDs(msIndex milestone.Index, iteratorOptions ...IteratorOption) hornet.MessageIDs {
+func (s *Storage) UnreferencedMessageIDs(msIndex milestone.Index, iteratorOptions ...IteratorOption) hornet.BlockIDs {
 
-	var unreferencedMessageIDs hornet.MessageIDs
+	var unreferencedMessageIDs hornet.BlockIDs
 
 	key := make([]byte, 4)
 	binary.LittleEndian.PutUint32(key, uint32(msIndex))
@@ -94,7 +94,7 @@ func (s *Storage) UnreferencedMessageIDs(msIndex milestone.Index, iteratorOption
 }
 
 // UnreferencedMessageConsumer consumes the given unreferenced message during looping through all unreferenced messages.
-type UnreferencedMessageConsumer func(msIndex milestone.Index, messageID hornet.MessageID) bool
+type UnreferencedMessageConsumer func(msIndex milestone.Index, messageID hornet.BlockID) bool
 
 // ForEachUnreferencedMessage loops over all unreferenced messages.
 func (s *Storage) ForEachUnreferencedMessage(consumer UnreferencedMessageConsumer, iteratorOptions ...IteratorOption) {
@@ -112,7 +112,7 @@ func (ns *NonCachedStorage) ForEachUnreferencedMessage(consumer UnreferencedMess
 
 // StoreUnreferencedMessage stores the unreferenced message in the persistence layer and returns a cached object.
 // unreferencedTx +1
-func (s *Storage) StoreUnreferencedMessage(msIndex milestone.Index, messageID hornet.MessageID) *CachedUnreferencedMessage {
+func (s *Storage) StoreUnreferencedMessage(msIndex milestone.Index, messageID hornet.BlockID) *CachedUnreferencedMessage {
 	unreferencedTx := NewUnreferencedMessage(msIndex, messageID)
 	return &CachedUnreferencedMessage{CachedObject: s.unreferencedMessagesStorage.Store(unreferencedTx)}
 }
