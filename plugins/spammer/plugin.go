@@ -52,9 +52,9 @@ var (
 	spammerInstance *spammer.Spammer
 	spammerLock     syncutils.RWMutex
 
-	spammerStartTime        time.Time
-	spammerAvgHeap          *timeheap.TimeHeap
-	lastSentSpamBlocksCount uint32
+	spammerStartTime   time.Time
+	spammerAvgHeap     *timeheap.TimeHeap
+	lastSentSpamBlocks uint32
 
 	isRunning             bool
 	bpsRateLimitRunning   float64
@@ -390,11 +390,11 @@ func measureSpammerMetrics() {
 		return
 	}
 
-	sentSpamMsgsCnt := deps.ServerMetrics.SentSpamBlocks.Load()
-	newBlocksCount := math.Uint32Diff(sentSpamMsgsCnt, lastSentSpamBlocksCount)
-	lastSentSpamBlocksCount = sentSpamMsgsCnt
+	sentSpamBlocks := deps.ServerMetrics.SentSpamBlocks.Load()
+	newBlocks := math.Uint32Diff(sentSpamBlocks, lastSentSpamBlocks)
+	lastSentSpamBlocks = sentSpamBlocks
 
-	spammerAvgHeap.Add(uint64(newBlocksCount))
+	spammerAvgHeap.Add(uint64(newBlocks))
 
 	timeDiff := time.Since(spammerStartTime)
 	if timeDiff > 60*time.Second {
@@ -404,7 +404,7 @@ func measureSpammerMetrics() {
 
 	// trigger events for outside listeners
 	Events.AvgSpamMetricsUpdated.Trigger(&spammer.AvgSpamMetrics{
-		NewBlocks:              newBlocksCount,
+		NewBlocks:              newBlocks,
 		AverageBlocksPerSecond: spammerAvgHeap.AveragePerSecond(timeDiff),
 	})
 }

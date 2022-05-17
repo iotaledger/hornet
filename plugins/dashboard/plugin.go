@@ -269,70 +269,70 @@ type SyncStatus struct {
 
 // PublicNodeStatus represents the public node status.
 type PublicNodeStatus struct {
-	SnapshotIndex milestone.Index `json:"snapshot_index"`
-	PruningIndex  milestone.Index `json:"pruning_index"`
-	IsHealthy     bool            `json:"is_healthy"`
-	IsSynced      bool            `json:"is_synced"`
+	SnapshotIndex milestone.Index `json:"snapshotIndex"`
+	PruningIndex  milestone.Index `json:"pruningIndex"`
+	IsHealthy     bool            `json:"isHealthy"`
+	IsSynced      bool            `json:"isSynced"`
 }
 
 // NodeStatus represents the node status.
 type NodeStatus struct {
 	Version                string          `json:"version"`
-	LatestVersion          string          `json:"latest_version"`
+	LatestVersion          string          `json:"latestVersion"`
 	Uptime                 int64           `json:"uptime"`
-	NodeID                 string          `json:"node_id"`
-	NodeAlias              string          `json:"node_alias"`
-	ConnectedPeersCount    int             `json:"connected_peers_count"`
-	CurrentRequestedMs     milestone.Index `json:"current_requested_ms"`
-	RequestQueueQueued     int             `json:"request_queue_queued"`
-	RequestQueuePending    int             `json:"request_queue_pending"`
-	RequestQueueProcessing int             `json:"request_queue_processing"`
-	RequestQueueAvgLatency int64           `json:"request_queue_avg_latency"`
-	ServerMetrics          *ServerMetrics  `json:"server_metrics"`
+	NodeID                 string          `json:"nodeId"`
+	NodeAlias              string          `json:"nodeAlias"`
+	ConnectedPeersCount    int             `json:"connectedPeersCount"`
+	CurrentRequestedMs     milestone.Index `json:"currentRequestedMs"`
+	RequestQueueQueued     int             `json:"requestQueueQueued"`
+	RequestQueuePending    int             `json:"requestQueuePending"`
+	RequestQueueProcessing int             `json:"requestQueueProcessing"`
+	RequestQueueAvgLatency int64           `json:"requestQueueAvgLatency"`
+	ServerMetrics          *ServerMetrics  `json:"serverMetrics"`
 	Mem                    *MemMetrics     `json:"mem"`
 	Caches                 *CachesMetric   `json:"caches"`
 }
 
 // ServerMetrics are global metrics of the server.
 type ServerMetrics struct {
-	AllBlocks                 uint32 `json:"all_blocks"`
-	NewBlocks                 uint32 `json:"new_blocks"`
-	KnownBlocks               uint32 `json:"known_blocks"`
-	InvalidBlocks             uint32 `json:"invalid_blocks"`
-	InvalidRequests           uint32 `json:"invalid_req"`
-	ReceivedBlockRequests     uint32 `json:"rec_block_req"`
-	ReceivedMilestoneRequests uint32 `json:"rec_ms_req"`
-	ReceivedHeartbeats        uint32 `json:"rec_heartbeat"`
-	SentBlocks                uint32 `json:"sent_blocks"`
-	SentBlockRequests         uint32 `json:"sent_block_req"`
-	SentMilestoneRequests     uint32 `json:"sent_ms_req"`
-	SentHeartbeats            uint32 `json:"sent_heartbeat"`
-	DroppedSentPackets        uint32 `json:"dropped_sent_packets"`
-	SentSpamBlocksCount       uint32 `json:"sent_spam_blocks"`
+	AllBlocks                 uint32 `json:"allBlocks"`
+	NewBlocks                 uint32 `json:"newBlocks"`
+	KnownBlocks               uint32 `json:"knownBlocks"`
+	InvalidBlocks             uint32 `json:"invalidBlocks"`
+	InvalidRequests           uint32 `json:"invalidRequests"`
+	ReceivedBlockRequests     uint32 `json:"receivedBlockRequests"`
+	ReceivedMilestoneRequests uint32 `json:"receivedMilestoneRequests"`
+	ReceivedHeartbeats        uint32 `json:"receivedHeartbeats"`
+	SentBlocks                uint32 `json:"sentBlocks"`
+	SentBlockRequests         uint32 `json:"sentBlockRequests"`
+	SentMilestoneRequests     uint32 `json:"sentMilestoneRequests"`
+	SentHeartbeats            uint32 `json:"sentHeartbeats"`
+	DroppedSentPackets        uint32 `json:"droppedSentPackets"`
+	SentSpamBlocks            uint32 `json:"sentSpamBlocks"`
 }
 
 // MemMetrics represents memory metrics.
 type MemMetrics struct {
 	Sys          uint64 `json:"sys"`
-	HeapSys      uint64 `json:"heap_sys"`
-	HeapInuse    uint64 `json:"heap_inuse"`
-	HeapIdle     uint64 `json:"heap_idle"`
-	HeapReleased uint64 `json:"heap_released"`
-	HeapObjects  uint64 `json:"heap_objects"`
-	MSpanInuse   uint64 `json:"m_span_inuse"`
-	MCacheInuse  uint64 `json:"m_cache_inuse"`
-	StackSys     uint64 `json:"stack_sys"`
-	NumGC        uint32 `json:"num_gc"`
-	LastPauseGC  uint64 `json:"last_pause_gc"`
+	HeapSys      uint64 `json:"heapSys""`
+	HeapInuse    uint64 `json:"HeapInuse"`
+	HeapIdle     uint64 `json:"HeapIdle"`
+	HeapReleased uint64 `json:"heapReleased"`
+	HeapObjects  uint64 `json:"heapObjects"`
+	MSpanInuse   uint64 `json:"mSpanInuse"`
+	MCacheInuse  uint64 `json:"mCacheInuse"`
+	StackSys     uint64 `json:"stackSys"`
+	NumGC        uint32 `json:"numGC"`
+	LastPauseGC  uint64 `json:"lastPauseGC"`
 }
 
 // CachesMetric represents cache metrics.
 type CachesMetric struct {
-	RequestQueue            Cache `json:"request_queue"`
+	RequestQueue            Cache `json:"requestQueue"`
 	Children                Cache `json:"children"`
 	Milestones              Cache `json:"milestones"`
 	Blocks                  Cache `json:"blocks"`
-	IncomingBlocksWorkUnits Cache `json:"incoming_block_work_units"`
+	IncomingBlocksWorkUnits Cache `json:"incomingBlocksWorkUnits"`
 }
 
 // Cache represents metrics about a cache.
@@ -428,7 +428,7 @@ func currentNodeStatus() *NodeStatus {
 		SentMilestoneRequests:     deps.ServerMetrics.SentMilestoneRequests.Load(),
 		SentHeartbeats:            deps.ServerMetrics.SentHeartbeats.Load(),
 		DroppedSentPackets:        deps.ServerMetrics.DroppedPackets.Load(),
-		SentSpamBlocksCount:       deps.ServerMetrics.SentSpamBlocks.Load(),
+		SentSpamBlocks:            deps.ServerMetrics.SentSpamBlocks.Load(),
 	}
 
 	// memory metrics

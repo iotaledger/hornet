@@ -15,11 +15,11 @@ import (
 //nolint:unparam // even if the error is never used, the structure of all routes should be the same
 func info() (*infoResponse, error) {
 
-	var messagesPerSecond, referencedMessagesPerSecond, referencedRate float64
+	var blocksPerSecond, referencedBlocksPerSecond, referencedRate float64
 	lastConfirmedMilestoneMetric := deps.Tangle.LastConfirmedMilestoneMetric()
 	if lastConfirmedMilestoneMetric != nil {
-		messagesPerSecond = lastConfirmedMilestoneMetric.BPS
-		referencedMessagesPerSecond = lastConfirmedMilestoneMetric.RBPS
+		blocksPerSecond = lastConfirmedMilestoneMetric.BPS
+		referencedBlocksPerSecond = lastConfirmedMilestoneMetric.RBPS
 		referencedRate = lastConfirmedMilestoneMetric.ReferencedRate
 	}
 
@@ -72,8 +72,8 @@ func info() (*infoResponse, error) {
 		Protocol:  deps.ProtocolParameters,
 		BaseToken: deps.BaseToken,
 		Metrics: nodeMetrics{
-			BlocksPerSecond:           messagesPerSecond,
-			ReferencedBlocksPerSecond: referencedMessagesPerSecond,
+			BlocksPerSecond:           blocksPerSecond,
+			ReferencedBlocksPerSecond: referencedBlocksPerSecond,
 			ReferencedRate:            referencedRate,
 		},
 		Features: features,

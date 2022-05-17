@@ -33,29 +33,29 @@ const (
 	// GET returns the tips.
 	RouteTips = "/tips"
 
-	// RouteBlock is the route for getting a message by its blockID.
-	// GET returns the message based on the given type in the request "Accept" header.
+	// RouteBlock is the route for getting a block by its blockID.
+	// GET returns the block based on the given type in the request "Accept" header.
 	// MIMEApplicationJSON => json
 	// MIMEVendorIOTASerializer => bytes
 	RouteBlock = "/blocks/:" + restapipkg.ParameterBlockID
 
-	// RouteBlockMetadata is the route for getting message metadata by its blockID.
-	// GET returns message metadata (including info about "promotion/reattachment needed").
+	// RouteBlockMetadata is the route for getting block metadata by its blockID.
+	// GET returns block metadata (including info about "promotion/reattachment needed").
 	RouteBlockMetadata = "/blocks/:" + restapipkg.ParameterBlockID + "/metadata"
 
-	// RouteBlockChildren is the route for getting message IDs of the children of a message, identified by its blockID.
-	// GET returns the message IDs of all children.
+	// RouteBlockChildren is the route for getting block IDs of the children of a block, identified by its blockID.
+	// GET returns the block IDs of all children.
 	RouteBlockChildren = "/blocks/:" + restapipkg.ParameterBlockID + "/children"
 
-	// RouteBlocks is the route for creating new messages.
-	// POST creates a single new message and returns the new message ID.
-	// The message is parsed based on the given type in the request "Content-Type" header.
+	// RouteBlocks is the route for creating new blocks.
+	// POST creates a single new block and returns the new block ID.
+	// The block is parsed based on the given type in the request "Content-Type" header.
 	// MIMEApplicationJSON => json
 	// MIMEVendorIOTASerializer => bytes
 	RouteBlocks = "/blocks"
 
-	// RouteTransactionsIncludedBlock is the route for getting the message that was included in the ledger for a given transaction ID.
-	// GET returns the message based on the given type in the request "Accept" header.
+	// RouteTransactionsIncludedBlock is the route for getting the block that was included in the ledger for a given transaction ID.
+	// GET returns the block based on the given type in the request "Accept" header.
 	// MIMEApplicationJSON => json
 	// MIMEVendorIOTASerializer => bytes
 	RouteTransactionsIncludedBlock = "/transactions/:" + restapipkg.ParameterTransactionID + "/included-block"
