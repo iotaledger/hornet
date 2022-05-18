@@ -97,15 +97,8 @@ func (b *BlockBuilder) BuildTaggedData() *Block {
 
 	require.NotEmpty(b.te.TestInterface, b.tag)
 
-	parents := [][]byte{}
-	require.NotNil(b.te.TestInterface, b.parents)
-	for _, parent := range b.parents {
-		require.NotNil(b.te.TestInterface, parent)
-		parents = append(parents, parent[:])
-	}
-
 	iotaBlock, err := builder.NewBlockBuilder(b.te.protoParas.Version).
-		Parents(parents).
+		ParentsBlockIDs(b.parents).
 		Payload(&iotago.TaggedData{Tag: []byte(b.tag), Data: b.tagData}).
 		Build()
 	require.NoError(b.te.TestInterface, err)
