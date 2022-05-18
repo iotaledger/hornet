@@ -192,9 +192,6 @@ func (coo *MockCoo) issueMilestoneOnTips(tips iotago.BlockIDs, addLastMilestoneA
 	}
 
 	milestoneBlockID := coo.storeBlock(iotaBlock)
-	if err != nil {
-		return nil, iotago.EmptyBlockID(), err
-	}
 	coo.lastMilestoneBlockID = milestoneBlockID
 
 	coo.te.VerifyLMI(milestoneIndex)

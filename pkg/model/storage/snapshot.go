@@ -4,14 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/serializer/v2"
-)
-
-var (
-	ErrParseSnapshotInfoFailed = errors.New("Parsing of snapshot info failed")
 )
 
 type SnapshotInfo struct {

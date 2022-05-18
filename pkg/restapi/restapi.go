@@ -48,9 +48,6 @@ var (
 	// ErrInvalidParameter defines the invalid parameter error.
 	ErrInvalidParameter = echo.NewHTTPError(http.StatusBadRequest, "invalid parameter")
 
-	// ErrServiceNotImplemented defines the service not implemented error.
-	ErrServiceNotImplemented = echo.NewHTTPError(http.StatusNotImplemented, "service not implemented")
-
 	// ErrNotAcceptable defines the not acceptable error.
 	ErrNotAcceptable = echo.NewHTTPError(http.StatusNotAcceptable)
 )

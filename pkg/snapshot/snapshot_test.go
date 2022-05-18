@@ -59,6 +59,8 @@ func EqualOutput(t *testing.T, expected *utxo.Output, actual *utxo.Output) {
 		require.Fail(t, "unsupported output type")
 	}
 
+	require.NotNil(t, expectedIdent)
+	require.NotNil(t, actualIdent)
 	require.True(t, expectedIdent.Equal(actualIdent))
 	require.Equal(t, expected.Deposit(), actual.Deposit())
 }

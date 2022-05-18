@@ -15,25 +15,12 @@ import (
 
 	"github.com/gohornet/dashboard"
 	"github.com/gohornet/hornet/pkg/jwt"
+	"github.com/gohornet/hornet/pkg/restapi"
 )
 
 const (
 	WebsocketCmdRegister   = 0
 	WebsocketCmdUnregister = 1
-)
-
-var (
-	// ErrInvalidParameter defines the invalid parameter error.
-	ErrInvalidParameter = echo.ErrBadRequest
-
-	// ErrInternalError defines the internal error.
-	ErrInternalError = echo.ErrInternalServerError
-
-	// ErrNotFound defines the not found error.
-	ErrNotFound = echo.ErrNotFound
-
-	// ErrForbidden defines the forbidden error.
-	ErrForbidden = echo.ErrForbidden
 )
 
 func devModeReverseProxyMiddleware() echo.MiddlewareFunc {
@@ -120,7 +107,7 @@ func authRoute(c echo.Context) error {
 	request := &loginRequest{}
 
 	if err := c.Bind(request); err != nil {
-		return errors.WithMessagef(ErrInvalidParameter, "invalid request, error: %s", err)
+		return errors.WithMessagef(restapi.ErrInvalidParameter, "invalid request, error: %s", err)
 	}
 
 	if len(request.JWT) > 0 {

@@ -32,10 +32,10 @@ import (
 	"github.com/iotaledger/hive.go/app"
 )
 
-// RouteMetrics is the route for getting the prometheus metrics.
+// routeMetrics is the route for getting the prometheus metrics.
 // GET returns metrics.
 const (
-	RouteMetrics = "/metrics"
+	routeMetrics = "/metrics"
 )
 
 func init() {
@@ -56,7 +56,6 @@ var (
 	Plugin *app.Plugin
 	deps   dependencies
 
-	server   *http.Server
 	registry = prometheus.NewRegistry()
 	collects []func()
 )
@@ -188,7 +187,7 @@ func run() error {
 	if err := Plugin.Daemon().BackgroundWorker("Prometheus exporter", func(ctx context.Context) {
 		Plugin.LogInfo("Starting Prometheus exporter ... done")
 
-		deps.PrometheusEcho.GET(RouteMetrics, func(c echo.Context) error {
+		deps.PrometheusEcho.GET(routeMetrics, func(c echo.Context) error {
 			for _, collect := range collects {
 				collect()
 			}

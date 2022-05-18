@@ -19,8 +19,6 @@ import (
 const (
 	// SupportedFormatVersion the supported snapshot file version.
 	SupportedFormatVersion byte = 2
-	// SolidEntryPointHashLength the length of a solid entry point hash.
-	SolidEntryPointHashLength = iotago.BlockIDLength
 
 	// The offset of counters within a snapshot file:
 	// version + type + timestamp + network-id + sep-ms-index + ledger-ms-index

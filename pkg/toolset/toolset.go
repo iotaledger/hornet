@@ -53,8 +53,6 @@ const (
 	FlagToolBenchmarkThreads  = "threads"
 	FlagToolBenchmarkDuration = "duration"
 
-	FlagToolCoordinatorFixStateCooStateFilePath = "stateFilePath"
-
 	FlagToolSnapGenMintAddress        = "mintAddress"
 	FlagToolSnapGenTreasuryAllocation = "treasuryAllocation"
 
@@ -86,11 +84,10 @@ const (
 )
 
 const (
-	DefaultValueAPIJWTTokenSalt          = "HORNET"
-	DefaultValueMainnetDatabasePath      = "mainnetdb"
-	DefaultValueP2PDatabasePath          = "p2pstore"
-	DefaultValueCoordinatorStateFilePath = "coordinator.state"
-	DefaultValueDatabaseEngine           = database.EngineRocksDB
+	DefaultValueAPIJWTTokenSalt     = "HORNET"
+	DefaultValueMainnetDatabasePath = "mainnetdb"
+	DefaultValueP2PDatabasePath     = "p2pstore"
+	DefaultValueDatabaseEngine      = database.EngineRocksDB
 )
 
 const (

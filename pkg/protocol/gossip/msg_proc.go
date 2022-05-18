@@ -291,7 +291,7 @@ func (proc *MessageProcessor) workUnitFor(receivedBlockBytes []byte) (cachedWork
 
 // processes the given milestone request by parsing it and then replying to the peer with it.
 func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) {
-	msIndex, err := ExtractRequestedMilestoneIndex(data)
+	msIndex, err := extractRequestedMilestoneIndex(data)
 	if err != nil {
 		proc.serverMetrics.InvalidRequests.Inc()
 
@@ -301,7 +301,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 	}
 
 	// peers can request the latest milestone we know
-	if msIndex == LatestMilestoneRequestIndex {
+	if msIndex == latestMilestoneRequestIndex {
 		msIndex = proc.syncManager.LatestMilestoneIndex()
 	}
 
@@ -324,7 +324,7 @@ func (proc *MessageProcessor) processMilestoneRequest(p *Protocol, data []byte) 
 		return
 	}
 
-	msg, err := NewBlockMessage(requestedData)
+	msg, err := newBlockMessage(requestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return
@@ -365,7 +365,7 @@ func (proc *MessageProcessor) processBlockRequest(p *Protocol, data []byte) {
 		return
 	}
 
-	msg, err := NewBlockMessage(requestedData)
+	msg, err := newBlockMessage(requestedData)
 	if err != nil {
 		// can't reply if serialization fails
 		return

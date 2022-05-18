@@ -3,7 +3,6 @@ package utxo
 import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/marshalutil"
-	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -43,35 +42,4 @@ func parseMilestoneIndex(ms *marshalutil.MarshalUtil) (milestone.Index, error) {
 		return 0, err
 	}
 	return milestone.Index(index), nil
-}
-
-func parseAddress(ms *marshalutil.MarshalUtil) (iotago.Address, error) {
-
-	addrType, err := ms.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-
-	// Move the cursor back
-	ms.ReadSeek(-1)
-
-	addr, err := iotago.AddressSelector(uint32(addrType))
-	if err != nil {
-		return nil, err
-	}
-
-	address := addr.(iotago.Address)
-
-	pre := ms.ReadOffset()
-	readBytes, err := address.Deserialize(ms.ReadRemainingBytes(), serializer.DeSeriModePerformValidation, nil)
-	if err != nil {
-		return nil, err
-	}
-	post := ms.ReadOffset()
-
-	bytesReadTooFar := post - pre - readBytes
-	// Move the cursor back some bytes
-	ms.ReadSeek(-bytesReadTooFar)
-
-	return address, err
 }

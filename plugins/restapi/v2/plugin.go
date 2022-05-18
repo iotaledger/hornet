@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/core/protocfg"
@@ -140,9 +139,6 @@ var (
 	Plugin   *app.Plugin
 	features = []string{}
 	attacher *tangle.BlockAttacher
-
-	// ErrNodeNotSync is returned when the node was not synced.
-	ErrNodeNotSync = errors.New("node not synced")
 
 	deps dependencies
 )
