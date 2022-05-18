@@ -118,7 +118,7 @@ func NewOutput(blockID iotago.BlockID, milestoneIndex milestone.Index, milestone
 		return nil, errors.New("output not found")
 	}
 	output = transaction.Essence.Outputs[int(index)]
-	outputID := iotago.OutputIDFromTransactionIDAndIndex(*txID, index)
+	outputID := iotago.OutputIDFromTransactionIDAndIndex(txID, index)
 
 	return CreateOutput(&outputID, blockID, milestoneIndex, milestoneTimestamp, output), nil
 }

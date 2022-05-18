@@ -108,7 +108,7 @@ func CreateOutputAndAssertSerialization(t *testing.T, blockID iotago.BlockID, ms
 }
 
 func CreateSpentAndAssertSerialization(t *testing.T, output *Output) *Spent {
-	transactionID := &iotago.TransactionID{}
+	transactionID := iotago.TransactionID{}
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
 	confirmationIndex := milestone.Index(6788362)

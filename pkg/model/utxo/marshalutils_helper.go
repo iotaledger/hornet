@@ -17,12 +17,12 @@ func ParseOutputID(ms *marshalutil.MarshalUtil) (*iotago.OutputID, error) {
 	return o, nil
 }
 
-func parseTransactionID(ms *marshalutil.MarshalUtil) (*iotago.TransactionID, error) {
+func parseTransactionID(ms *marshalutil.MarshalUtil) (iotago.TransactionID, error) {
+	t := iotago.TransactionID{}
 	bytes, err := ms.ReadBytes(iotago.TransactionIDLength)
 	if err != nil {
-		return nil, err
+		return t, err
 	}
-	t := &iotago.TransactionID{}
 	copy(t[:], bytes)
 	return t, nil
 }

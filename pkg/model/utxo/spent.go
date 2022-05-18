@@ -32,7 +32,7 @@ type Spent struct {
 	kvStorable
 
 	outputID            *iotago.OutputID
-	targetTransactionID *iotago.TransactionID
+	targetTransactionID iotago.TransactionID
 	milestoneIndex      milestone.Index
 	milestoneTimestamp  uint32
 
@@ -63,7 +63,7 @@ func (s *Spent) Deposit() uint64 {
 	return s.output.Deposit()
 }
 
-func (s *Spent) TargetTransactionID() *iotago.TransactionID {
+func (s *Spent) TargetTransactionID() iotago.TransactionID {
 	return s.targetTransactionID
 }
 
@@ -77,7 +77,7 @@ func (s *Spent) MilestoneTimestamp() uint32 {
 
 type Spents []*Spent
 
-func NewSpent(output *Output, targetTransactionID *iotago.TransactionID, confirmationIndex milestone.Index, confirmationTimestamp uint32) *Spent {
+func NewSpent(output *Output, targetTransactionID iotago.TransactionID, confirmationIndex milestone.Index, confirmationTimestamp uint32) *Spent {
 	return &Spent{
 		outputID:            output.outputID,
 		output:              output,

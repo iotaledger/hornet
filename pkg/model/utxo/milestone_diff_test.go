@@ -33,7 +33,7 @@ func TestSimpleMilestoneDiffSerialization(t *testing.T) {
 	}
 	output := CreateOutput(outputID, blockID, milestoneIndex, milestoneTimestamp, iotaOutput)
 
-	transactionID := &iotago.TransactionID{}
+	transactionID := iotago.TransactionID{}
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
 	spent := NewSpent(output, transactionID, milestoneIndex, milestoneTimestamp)
@@ -75,7 +75,7 @@ func TestTreasuryMilestoneDiffSerialization(t *testing.T) {
 	}
 	output := CreateOutput(outputID, blockID, msIndex, msTimestamp, iotaOutput)
 
-	transactionID := &iotago.TransactionID{}
+	transactionID := iotago.TransactionID{}
 	copy(transactionID[:], utils.RandBytes(iotago.TransactionIDLength))
 
 	milestoneIndex := milestone.Index(255975)

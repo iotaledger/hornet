@@ -29,8 +29,8 @@ func RandBlockID() iotago.BlockID {
 	return blockID
 }
 
-func RandTransactionID() *iotago.TransactionID {
-	transactionID := &iotago.TransactionID{}
+func RandTransactionID() iotago.TransactionID {
+	transactionID := iotago.TransactionID{}
 	copy(transactionID[:], RandBytes(iotago.TransactionIDLength))
 	return transactionID
 }

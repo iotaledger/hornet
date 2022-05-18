@@ -92,7 +92,7 @@ func SpentFromSnapshotReader(reader io.ReadSeeker, protoParas *iotago.ProtocolPa
 		return nil, err
 	}
 
-	transactionID := &iotago.TransactionID{}
+	transactionID := iotago.TransactionID{}
 	if _, err := io.ReadFull(reader, transactionID[:]); err != nil {
 		return nil, fmt.Errorf("unable to read LS target transaction ID: %w", err)
 	}

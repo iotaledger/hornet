@@ -81,7 +81,7 @@ func EqualOutputs(t *testing.T, expected utxo.Outputs, actual utxo.Outputs) {
 
 func EqualSpent(t *testing.T, expected *utxo.Spent, actual *utxo.Spent) {
 	require.Equal(t, expected.OutputID()[:], actual.OutputID()[:])
-	require.Equal(t, expected.TargetTransactionID()[:], actual.TargetTransactionID()[:])
+	require.Equal(t, expected.TargetTransactionID(), actual.TargetTransactionID())
 	require.Equal(t, expected.MilestoneIndex(), actual.MilestoneIndex())
 	EqualOutput(t, expected.Output(), actual.Output())
 }
