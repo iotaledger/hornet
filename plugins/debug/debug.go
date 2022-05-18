@@ -231,8 +231,7 @@ func blockCone(c echo.Context) (*blockConeResponse, error) {
 
 			if referenced, at := cachedBlockMeta.Metadata().ReferencedWithIndex(); referenced {
 				if !startBlockReferenced || (at < startBlockReferencedAt) {
-					entryPointBlockID := cachedBlockMeta.Metadata().BlockID()
-					entryPoints = append(entryPoints, &entryPoint{BlockID: entryPointBlockID.ToHex(), ReferencedByMilestone: at})
+					entryPoints = append(entryPoints, &entryPoint{BlockID: cachedBlockMeta.Metadata().BlockID().ToHex(), ReferencedByMilestone: at})
 					return false, nil
 				}
 			}

@@ -44,11 +44,10 @@ func main() {
 			panic(err)
 		}
 		block := payload.MustUnwrapBlock(serializer.DeSeriModeNoValidation, nil)
-		blockID := payload.UnwrapBlockID()
 		jsonBlock, err := json.Marshal(block)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Rec: %s => %s\n", blockID.ToHex(), string(jsonBlock))
+		fmt.Printf("Rec: %s => %s\n", payload.UnwrapBlockID().ToHex(), string(jsonBlock))
 	}
 }

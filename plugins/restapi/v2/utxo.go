@@ -14,11 +14,9 @@ import (
 )
 
 func NewOutputMetadataResponse(output *utxo.Output, ledgerIndex milestone.Index) *OutputMetadataResponse {
-	transactionID := output.OutputID().TransactionID()
-	blockID := output.BlockID()
 	return &OutputMetadataResponse{
-		BlockID:                  blockID.ToHex(),
-		TransactionID:            transactionID.ToHex(),
+		BlockID:                  output.BlockID().ToHex(),
+		TransactionID:            output.OutputID().TransactionID().ToHex(),
 		Spent:                    false,
 		OutputIndex:              output.OutputID().Index(),
 		MilestoneIndexBooked:     output.MilestoneIndex(),

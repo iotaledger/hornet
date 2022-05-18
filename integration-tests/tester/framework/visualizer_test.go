@@ -45,8 +45,7 @@ func TestVisualizer(t *testing.T) {
 	var vertices []Vertex
 	const getFromLast = 30
 	for i := 0; i < 1000; i++ {
-		blockID := randBlockID()
-		v := Vertex{BlockID: blockID.ToHex()}
+		v := Vertex{BlockID: randBlockID().ToHex()}
 		if i <= getFromLast {
 			// only one parent at the beginning
 			v.Parents = iotago.BlockIDs{iotago.EmptyBlockID()}.ToHex()

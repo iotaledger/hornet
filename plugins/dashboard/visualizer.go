@@ -55,12 +55,11 @@ func runVisualizerFeed() {
 			for i, parent := range block.Parents() {
 				parentsHex[i] = parent.ToHex()[:VisualizerIDLength]
 			}
-			blockID := block.BlockID()
 			hub.BroadcastMsg(
 				&Msg{
 					Type: MsgTypeVertex,
 					Data: &vertex{
-						ID:           blockID.ToHex(),
+						ID:           block.BlockID().ToHex(),
 						Parents:      parentsHex,
 						IsSolid:      metadata.IsSolid(),
 						IsReferenced: metadata.IsReferenced(),
@@ -78,12 +77,11 @@ func runVisualizerFeed() {
 			if !deps.SyncManager.IsNodeAlmostSynced() {
 				return
 			}
-			blockID := metadata.BlockID()
 			hub.BroadcastMsg(
 				&Msg{
 					Type: MsgTypeSolidInfo,
 					Data: &metainfo{
-						ID: blockID.ToHex()[:VisualizerIDLength],
+						ID: metadata.BlockID().ToHex()[:VisualizerIDLength],
 					},
 				},
 			)
