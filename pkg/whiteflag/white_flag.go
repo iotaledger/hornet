@@ -134,13 +134,13 @@ func ComputeWhiteFlagMutations(ctx context.Context,
 				return false, fmt.Errorf("ComputeWhiteFlagMutations: block for milestone block ID does not contain a milestone payload: %v", blockID.ToHex())
 			}
 
-			msIDPtr, err := milestonePayload.ID()
+			msID, err := milestonePayload.ID()
 			if err != nil {
 				return false, err
 			}
 
 			// Compare this milestones ID with the previousMilestoneID
-			seenPreviousMilestoneID = *msIDPtr == previousMilestoneID
+			seenPreviousMilestoneID = msID == previousMilestoneID
 			if seenPreviousMilestoneID {
 				// Check that the milestone timestamp has increased
 				if milestonePayload.Timestamp >= msTimestamp {

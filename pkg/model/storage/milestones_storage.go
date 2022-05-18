@@ -145,11 +145,11 @@ func NewMilestoneIndex(milestonePayload *iotago.Milestone, blockID iotago.BlockI
 	if len(milestoneID) > 0 {
 		msID = milestoneID[0]
 	} else {
-		msIDPtr, err := milestonePayload.ID()
+		var err error
+		msID, err = milestonePayload.ID()
 		if err != nil {
 			return nil, err
 		}
-		msID = *msIDPtr
 	}
 
 	msIndex := &MilestoneIndex{
@@ -262,11 +262,11 @@ func NewMilestone(milestonePayload *iotago.Milestone, deSeriMode serializer.DeSe
 	if len(milestoneID) > 0 {
 		msID = milestoneID[0]
 	} else {
-		msIDPtr, err := milestonePayload.ID()
+		var err error
+		msID, err = milestonePayload.ID()
 		if err != nil {
 			return nil, err
 		}
-		msID = *msIDPtr
 	}
 
 	ms := &Milestone{
@@ -288,13 +288,13 @@ func MilestoneFromBytes(data []byte, deSeriMode serializer.DeSerializationMode) 
 		return nil, err
 	}
 
-	msIDPtr, err := milestonePayload.ID()
+	msID, err := milestonePayload.ID()
 	if err != nil {
 		return nil, err
 	}
 
 	ms := &Milestone{
-		milestoneID: *msIDPtr,
+		milestoneID: msID,
 		data:        data,
 	}
 
@@ -490,11 +490,11 @@ func (s *Storage) SearchLatestMilestoneIndexInStore() milestone.Index {
 func (s *Storage) StoreMilestoneIfAbsent(milestonePayload *iotago.Milestone, blockID iotago.BlockID) (cachedMilestone *CachedMilestone, newlyAdded bool) {
 
 	// compute the milestone ID
-	msIDPtr, err := milestonePayload.ID()
+	msID, err := milestonePayload.ID()
 	if err != nil {
 		return nil, false
 	}
-	milestoneID := *msIDPtr
+	milestoneID := msID
 
 	msIndexLookup, err := NewMilestoneIndex(milestonePayload, blockID, milestoneID)
 	if err != nil {

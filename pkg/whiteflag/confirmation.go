@@ -78,12 +78,12 @@ func ConfirmMilestone(
 	utxoManager.WriteLockLedger()
 	defer utxoManager.WriteUnlockLedger()
 
-	msIDPtr, err := milestonePayload.ID()
+	msID, err := milestonePayload.ID()
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to compute milestone Id: %w", err)
 	}
 
-	milestoneID := *msIDPtr
+	milestoneID := msID
 	previousMilestoneID := milestonePayload.PreviousMilestoneID
 	milestoneIndex := milestone.Index(milestonePayload.Index)
 	milestoneTimestamp := milestonePayload.Timestamp
