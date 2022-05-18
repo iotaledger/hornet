@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"time"
 
 	"github.com/pkg/errors"
@@ -17,7 +16,6 @@ import (
 	"github.com/gohornet/hornet/pkg/database"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/iotaledger/hive.go/configuration"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -83,18 +81,14 @@ func calculateDatabaseLedgerHash(dbStorage *storage.Storage, outputJSON bool) er
 		}
 	}
 
-	// get all UTXOs and sort them by outputID
+	// get all UTXOs
 	outputIDs, err := dbStorage.UTXOManager().UnspentOutputsIDs()
 	if err != nil {
 		return err
 	}
 
-	// sort the OutputIDs lexicographically by their ID
-	sortedOutputIDs := utxo.LexicalOrderedOutputIDs(outputIDs)
-	sort.Sort(sortedOutputIDs)
-
 	// write all unspent outputs in lexicographical order
-	for _, outputID := range sortedOutputIDs {
+	for _, outputID := range outputIDs.RemoveDupsAndSort() {
 		output, err := dbStorage.UTXOManager().ReadOutputByOutputID(outputID)
 		if err != nil {
 			return err

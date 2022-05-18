@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"sort"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -390,10 +389,7 @@ func (u *Manager) LedgerStateSHA256Sum() ([]byte, error) {
 		return nil, err
 	}
 
-	sortedOutputIDs := LexicalOrderedOutputIDs(outputIDs)
-	sort.Sort(sortedOutputIDs)
-
-	for _, outputID := range sortedOutputIDs {
+	for _, outputID := range outputIDs.RemoveDupsAndSort() {
 		output, err := u.ReadOutputByOutputID(outputID)
 		if err != nil {
 			return nil, err
